@@ -81,12 +81,32 @@
       el.querySelectorAll('input').forEach(function (input) { input.disabled = !on; });
     });
 
+    // came through a friend's ?ref= link (kept by base.js / auth.js, sent at sign-up): say so on the client form
+    var invite = $('au-invite'), inviteCopy = state.type === 'client' ? inviteText() : '';
+    if (invite) { invite.textContent = inviteCopy; invite.hidden = !inviteCopy; }
+
     $('au-login-email').placeholder = state.type === 'venue' ? 'email organizator / staff' : 'emailul folosit la comandă';
     $('au-reg-email').placeholder = state.type === 'venue' ? 'email@locatie.ro' : 'email@example.ro';
     setIdle($('au-login-submit'), textFor(state.type, 'login', 'submit'));
     setIdle($('au-register-submit'), textFor(state.type, 'register', 'submit'));
     $('au-switch-text').textContent = state.mode === 'login' ? 'Nu ai cont?' : 'Ai deja cont?';
     $('au-switch').textContent = state.mode === 'login' ? 'Creează unul acum' : 'Intră în cont';
+  }
+
+  function inviteText() {
+    var code = '', info = null;
+    try {
+      code = localStorage.getItem('bileteonline_referral_code') || '';
+      info = JSON.parse(localStorage.getItem('bileteonline_referral_info') || 'null');
+    } catch (e) {}
+    if (!code) return '';
+    var name = info && typeof info.referrer_name === 'string' ? info.referrer_name.trim() : '';
+    var who = name && name !== 'Un prieten' ? 'Ai fost invitat de ' + name + '.' : 'Ai fost invitat de un prieten.';
+    var reward = info ? Math.floor(Number(info.referred_reward) || 0) : 0;
+    if (reward <= 0) return who + ' Creează contul ca invitația să fie înregistrată.';
+    var r = reward % 100;
+    var gift = info.reward_type && info.reward_type !== 'points' ? reward + ' lei' : (reward === 1 ? '1 punct' : reward + (r === 0 || r >= 20 ? ' de puncte' : ' puncte'));
+    return who + ' Creează contul și primești ' + gift + ' bonus.';
   }
 
   function setIdle(button, text) {

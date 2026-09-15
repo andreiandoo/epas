@@ -203,6 +203,7 @@ include __DIR__ . '/includes/v2/header.php';
 
               <!-- REGISTER -->
               <form class="au-form" id="au-register"<?= $isLogin ? ' hidden' : '' ?>>
+                <p class="au-invite" id="au-invite" role="status" hidden></p>
                 <div class="au-row2" data-for="client"<?= $forType('client') ?>>
                   <div class="au-field"><label for="au-first">Prenume</label><input id="au-first" placeholder="Prenume" autocomplete="given-name" required></div>
                   <div class="au-field"><label for="au-last">Nume</label><input id="au-last" placeholder="Nume" autocomplete="family-name" required></div>

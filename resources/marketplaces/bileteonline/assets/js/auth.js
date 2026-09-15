@@ -736,6 +736,10 @@ const BileteOnlineAuth = {
         // Don't show if already logged in
         if (this.isLoggedIn()) return;
 
+        // v2 pages (header #hdr) show the invite in their own design (sign-up form); this Tailwind banner would
+        // land unstyled at the top of the page there
+        if (document.getElementById('hdr')) return;
+
         // Create banner if it doesn't exist
         let banner = document.getElementById('referral-banner');
         if (banner) return; // Already showing
