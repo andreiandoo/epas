@@ -1997,7 +1997,7 @@ switch ($action) {
 
     case 'customer.referrals.regenerate':
         $method = 'POST';
-        $endpoint = '/customer/referrals/regenerate-code';
+        $endpoint = '/customer/referrals/regenerate'; // core's route (was /regenerate-code, a 404)
         $requiresAuth = true;
         break;
 
