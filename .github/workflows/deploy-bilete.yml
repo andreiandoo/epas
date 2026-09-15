@@ -1,0 +1,123 @@
+# Deploys bilete.online on every push to `core` that touches the marketplace folder.
+#
+# Same steps as deploy-bilete.bat, but from the committed files: build Tailwind, minify
+# JS/CSS, commit the result to the `bilete` branch. That push fires the repository webhook,
+# and https://bilete.online/_webhook-deploy.php installs the branch on the server. The job
+# then waits for the new deploy-version.txt to be served and resets OPcache.
+#
+# Skip a deploy with [skip ci] in the commit message. Run it by hand from the Actions tab.
+name: Deploy bilete.online
+
+on:
+  push:
+    branches: [core]
+    paths:
+      - 'resources/marketplaces/bileteonline/**'
+      - '.github/workflows/deploy-bilete.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-bilete
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    if: github.repository == 'andreiandoo/epas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the marketplace folder from core
+        uses: actions/checkout@v4
+        with:
+          path: src
+          sparse-checkout: resources/marketplaces/bileteonline
+
+      - name: Check out the bilete branch
+        uses: actions/checkout@v4
+        with:
+          ref: bilete
+          path: site
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install the build tools (same versions as the local deploy script)
+        run: npm install -g tailwindcss@3.2.4 terser@5.46.0 clean-css-cli@5.6.3
+
+      - name: Replace the site files, keeping data/
+        run: |
+          find site -mindepth 1 -maxdepth 1 ! -name .git ! -name data -exec rm -rf {} +
+          cp -a src/resources/marketplaces/bileteonline/. site/
+
+      - name: Build Tailwind
+        working-directory: site
+        run: |
+          mkdir -p assets/css/bundles
+          for b in home event listing single checkout auth account organizer static error; do
+            if [ -f "assets/css/build/tailwind.$b.cjs" ]; then
+              tailwindcss -c "assets/css/build/tailwind.$b.cjs" -i "assets/css/build/input-$b.css" -o "assets/css/bundles/$b.css" --minify \
+                || echo "::warning::Tailwind bundle $b failed"
+            fi
+          done
+          tailwindcss -c tailwind.config.cjs -i assets/css/tailwind-input.css -o assets/css/tailwind.min.css --minify
+
+      - name: Minify JS and CSS
+        working-directory: site
+        run: |
+          find assets/js -name '*.js' -print0 | while IFS= read -r -d '' f; do
+            if terser "$f" --compress --mangle -o "$f.tmp"; then mv "$f.tmp" "$f"; else rm -f "$f.tmp"; echo "::warning::terser failed on $f"; fi
+          done
+          cleancss -o assets/css/custom.css.tmp assets/css/custom.css && mv assets/css/custom.css.tmp assets/css/custom.css
+          cat assets/css/custom.css assets/css/tailwind.min.css > assets/css/styles.css
+
+      - name: Stamp this deploy
+        id: stamp
+        working-directory: site
+        run: |
+          date -u '+%Y-%m-%d %H:%M:%S' > .deploy-timestamp
+          token="gha-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "$token" > deploy-version.txt
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Push to the bilete branch
+        id: push
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          subject="$(git -C ../src log -1 --format=%s | head -c 120)"
+          git commit -q -m "Deploy bilete ${GITHUB_SHA::9}: ${subject}"
+          git push origin HEAD:bilete
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for bilete.online to install it, then reset OPcache
+        env:
+          TOKEN: ${{ steps.stamp.outputs.token }}
+          SHA: ${{ steps.push.outputs.sha }}
+          DEPLOY_SECRET: ${{ secrets.BILETE_DEPLOY_SECRET }}
+        run: |
+          landed() { curl -fsS "https://bilete.online/deploy-version.txt?cb=${RANDOM}${RANDOM}" 2>/dev/null | grep -q "$TOKEN"; }
+          wait_for_it() { for i in $(seq 1 40); do sleep 3; if landed; then echo "Live after ~$((i * 3)) s"; return 0; fi; done; return 1; }
+
+          if ! wait_for_it && [ -n "$DEPLOY_SECRET" ]; then
+            # Fallback when the webhook delivery didn't arrive: call the deploy script with a signed payload.
+            echo "::warning::Deploy not live after 120 s, calling _webhook-deploy.php directly"
+            # "after" lets the script skip it if the webhook delivery was only late and has installed this commit meanwhile
+            body="{\"ref\":\"refs/heads/bilete\",\"after\":\"${SHA}\",\"pusher\":{\"name\":\"github-actions\"}}"
+            sig="sha256=$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$DEPLOY_SECRET" | sed 's/^.* //')"
+            curl -sS -o /dev/null -w "webhook HTTP %{http_code}\n" -X POST -H "Content-Type: application/json" \
+              -H "X-Hub-Signature-256: $sig" --data "$body" https://bilete.online/_webhook-deploy.php || true
+            wait_for_it || true
+          fi
+
+          if ! landed; then
+            echo "::error::bilete.online did not install deploy $TOKEN. Check the webhook deliveries (repo Settings > Webhooks) and the hosting disk space."
+            exit 1
+          fi
+          curl -sS -o /dev/null -w "opcache-reset HTTP %{http_code}\n" "https://bilete.online/opcache-reset.php?t=deploy"
