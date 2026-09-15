@@ -138,7 +138,7 @@ $navIcon = function (string $page) use ($currentPage): string {
                 <p class="truncate text-sm font-bold" id="sidebar-org-name">Organizator</p>
                 <p class="truncate text-xs text-paper/50" id="sidebar-org-plan">—</p>
             </div>
-            <button type="button" onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutOrganizer){BileteOnlineAuth.logoutOrganizer();}else{location.href='/organizator/login';}"
+            <button type="button" onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutOrganizer){BileteOnlineAuth.logoutOrganizer();}else{location.href='/autentificare?ca=venue';}"
                     class="grid h-8 w-8 place-items-center rounded-lg text-paper/55 transition hover:bg-vermilion/15 hover:text-vermilion" title="Deconectare" aria-label="Deconectare">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>

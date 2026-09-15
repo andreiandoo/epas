@@ -578,7 +578,7 @@ const BileteOnlineAuth = {
         if (!this.isOrganizer()) {
             const currentUrl = redirectUrl || window.location.href;
             this.setRedirectAfterLogin(currentUrl);
-            window.location.href = '/organizator/login';
+            window.location.href = '/autentificare?ca=venue'; // straight to the organizer login (/organizator/login only redirects there)
             return false;
         }
         return true;
