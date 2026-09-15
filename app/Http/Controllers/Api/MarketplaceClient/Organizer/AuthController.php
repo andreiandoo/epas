@@ -8,6 +8,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
 use App\Models\MarketplaceOrganizerBankAccount;
 use App\Models\OrganizerDocument;
+use App\Services\Marketplace\AccountPasswordSync;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -80,6 +81,12 @@ class AuthController extends BaseController
             ->where('email', $validated['email'])
             ->exists()) {
             return $this->error('An account with this email already exists', 422);
+        }
+
+        $conflicts = rescue(fn () => app(AccountPasswordSync::class)
+            ->conflictingAccounts($client->id, $validated['email'], $validated['password'], 'organizer'), []);
+        if ($conflicts) {
+            return $this->error(AccountPasswordSync::conflictMessage($conflicts), 422);
         }
 
         // Build contact name from first_name + last_name if not provided
@@ -613,7 +620,18 @@ class AuthController extends BaseController
             'password' => Hash::make($validated['password']),
         ]);
 
-        return $this->success(null, 'Password updated');
+        $linked = rescue(fn () => app(AccountPasswordSync::class)->applyToMatching(
+            $organizer->marketplace_client_id,
+            $organizer->email,
+            $validated['current_password'],
+            $validated['password'],
+            $organizer
+        ), ['updated' => [], 'different' => []]);
+
+        return $this->success([
+            'linked_accounts' => $linked,
+            'notice' => AccountPasswordSync::changeNotice($linked),
+        ], 'Password updated');
     }
 
     /**
@@ -753,7 +771,11 @@ class AuthController extends BaseController
         // Revoke all tokens
         $organizer->tokens()->delete();
 
-        return $this->success(null, 'Password has been reset successfully. Please login with your new password.');
+        // The reset link proves the email, so client / venue accounts with it get the same password
+        $linkedUpdated = rescue(fn () => app(AccountPasswordSync::class)
+            ->applyToAll($client->id, $organizer->email, $validated['password'], $organizer, true), []);
+
+        return $this->success(['linked_accounts_updated' => $linkedUpdated], 'Password has been reset successfully. Please login with your new password.');
     }
 
     /**
@@ -1575,6 +1597,8 @@ HTML;
             $domain = 'https://' . $domain;
         }
 
+        $linkedNotice = rescue(fn () => app(AccountPasswordSync::class)
+            ->resetEmailNotice($client->id, $organizer->email, $organizer), null);
         $resetUrl = $domain . '/organizator/resetare-parola?' . http_build_query([
             'token' => $token,
             'email' => $organizer->email,
@@ -1595,6 +1619,7 @@ HTML;
             . '<div style="text-align:center;margin:24px 0">'
             . '<a href="' . htmlspecialchars($resetUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Resetează parola</a>'
             . '</div>'
+            . ($linkedNotice ? '<p style="font-size:14px;color:#475569;margin:0 0 16px;text-align:center">' . htmlspecialchars($linkedNotice) . '</p>' : '')
             . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul expiră în ' . $expireMinutes . ' de minute.</p>'
             . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai solicitat resetarea parolei, nu este necesară nicio acțiune.</p>'
             . '</div>'

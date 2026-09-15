@@ -145,8 +145,8 @@ class OrganizerResource extends Resource
                                 ->dehydrated(fn ($state) => filled($state))
                                 ->helperText(fn (string $context): string =>
                                     $context === 'create'
-                                        ? 'Parola pentru contul organizatorului'
-                                        : 'Lasă gol pentru a păstra parola existentă')
+                                        ? 'Parola pentru contul organizatorului. Se aplică și contului de client / locație cu același email.'
+                                        : 'Lasă gol pentru a păstra parola existentă. O parolă nouă se aplică și contului de client / locație cu același email.')
                                 ->revealable()
                                 ->columnSpanFull(),
 

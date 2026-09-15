@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         try {
             const res = await AmbiletVenueAPI.changePassword(current, next, confirm);
             if (res && res.success) {
-                showMessage('Parola a fost schimbată cu succes. Alte dispozitive vor fi deconectate.', 'success');
+                showMessage('Parola a fost schimbată cu succes. Alte dispozitive vor fi deconectate. Dacă ai și cont de client sau organizator cu același email, parola nouă se aplică și acolo.', 'success');
                 form.reset();
             } else {
                 showMessage((res && res.message) || 'Eroare la schimbare parolei.', 'error');

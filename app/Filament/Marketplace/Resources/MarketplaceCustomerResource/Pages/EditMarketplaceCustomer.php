@@ -55,7 +55,11 @@ class EditMarketplaceCustomer extends EditRecord
         // Handle password change
         if (!empty($data['new_password'])) {
             $this->record->password = Hash::make($data['new_password']);
+            $this->record->wp_password_hash = null;
             $this->record->save();
+
+            $linkedUpdated = rescue(fn () => app(\App\Services\Marketplace\AccountPasswordSync::class)
+                ->applyToAll($this->record->marketplace_client_id, $this->record->email, $data['new_password'], $this->record), []);
 
             // Send notification email
             $customer = $this->record;
@@ -97,7 +101,7 @@ class EditMarketplaceCustomer extends EditRecord
 
             Notification::make()
                 ->title('Parola a fost schimbată')
-                ->body("Clientul {$name} a fost notificat pe email.")
+                ->body("Clientul {$name} a fost notificat pe email." . ($linkedUpdated ? ' ' . \App\Services\Marketplace\AccountPasswordSync::appliedNotice($linkedUpdated) : ''))
                 ->success()
                 ->send();
         }

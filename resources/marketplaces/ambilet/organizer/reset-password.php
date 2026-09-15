@@ -134,7 +134,7 @@ require_once __DIR__ . '/../includes/head.php';
                     </div>
 
                     <h2 class="mb-2 text-2xl font-bold text-secondary">Parolă schimbată!</h2>
-                    <p class="mb-8 text-muted">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
+                    <p class="mb-8 text-muted">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.<span id="linkedAccountsNotice"></span></p>
 
                     <a href="/organizator/login" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
                         Mergi la autentificare
@@ -327,6 +327,13 @@ const ResetPage = {
             if (response.success !== false) {
                 document.getElementById('resetForm').classList.add('hidden');
                 document.getElementById('successState').classList.remove('hidden');
+                const linkedTypes = (response.data && response.data.linked_accounts_updated) || [];
+                const linkedNotice = document.getElementById('linkedAccountsNotice');
+                if (linkedNotice && linkedTypes.length) {
+                    const names = { 'customer': 'contul de client', 'organizer': 'contul de organizator', 'venue-owner': 'contul de locație' };
+                    linkedNotice.className = 'block mt-2';
+                    linkedNotice.textContent = 'Parola nouă se aplică și pentru ' + linkedTypes.map(function (t) { return names[t] || t; }).join(' și ') + '.';
+                }
 
                 let countdown = 5;
                 const countdownEl = document.getElementById('countdown');

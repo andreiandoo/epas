@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
+use App\Services\Marketplace\AccountPasswordSync;
 use App\Models\Gamification\CustomerPoints;
 use App\Models\Gamification\ExperienceAction;
 use App\Services\Gamification\ExperienceService;
@@ -40,6 +41,14 @@ class AuthController extends BaseController
         $existing = MarketplaceCustomer::where('marketplace_client_id', $client->id)
             ->where('email', $validated['email'])
             ->first();
+
+        if (!$existing || $existing->isGuest()) {
+            $conflicts = rescue(fn () => app(AccountPasswordSync::class)
+                ->conflictingAccounts($client->id, $validated['email'], $validated['password'], 'customer'), []);
+            if ($conflicts) {
+                return $this->error(AccountPasswordSync::conflictMessage($conflicts), 422);
+            }
+        }
 
         if ($existing) {
             // If guest account exists, convert to registered
@@ -376,7 +385,18 @@ class AuthController extends BaseController
             'password' => Hash::make($validated['password']),
         ]);
 
-        return $this->success(null, 'Password updated');
+        $linked = rescue(fn () => app(AccountPasswordSync::class)->applyToMatching(
+            $customer->marketplace_client_id,
+            $customer->email,
+            $validated['current_password'],
+            $validated['password'],
+            $customer
+        ), ['updated' => [], 'different' => []]);
+
+        return $this->success([
+            'linked_accounts' => $linked,
+            'notice' => AccountPasswordSync::changeNotice($linked),
+        ], 'Password updated');
     }
 
     /**
@@ -621,6 +641,7 @@ class AuthController extends BaseController
 
         $customer->update([
             'password' => Hash::make($validated['password']),
+            'wp_password_hash' => null,
         ]);
 
         // Delete the reset record
@@ -629,7 +650,11 @@ class AuthController extends BaseController
         // Revoke all tokens
         $customer->tokens()->delete();
 
-        return $this->success(null, 'Password has been reset successfully. Please login with your new password.');
+        // The reset link proves the email, so organizer / venue accounts with it get the same password
+        $linkedUpdated = rescue(fn () => app(AccountPasswordSync::class)
+            ->applyToAll($client->id, $customer->email, $validated['password'], $customer, true), []);
+
+        return $this->success(['linked_accounts_updated' => $linkedUpdated], 'Password has been reset successfully. Please login with your new password.');
     }
 
     /**
@@ -1030,6 +1055,8 @@ class AuthController extends BaseController
             $domain = 'https://' . $domain;
         }
 
+        $linkedNotice = rescue(fn () => app(AccountPasswordSync::class)
+            ->resetEmailNotice($client->id, $customer->email, $customer), null);
         $resetUrl = $domain . '/reset-password?' . http_build_query([
             'token' => $token,
             'email' => $customer->email,
@@ -1050,6 +1077,7 @@ class AuthController extends BaseController
             . '<div style="text-align:center;margin:24px 0">'
             . '<a href="' . htmlspecialchars($resetUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Resetează parola</a>'
             . '</div>'
+            . ($linkedNotice ? '<p style="font-size:14px;color:#475569;margin:0 0 16px;text-align:center">' . htmlspecialchars($linkedNotice) . '</p>' : '')
             . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul expiră în ' . $expireMinutes . ' de minute.</p>'
             . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai solicitat resetarea parolei, nu este necesară nicio acțiune.</p>'
             . '</div>'

@@ -132,7 +132,7 @@ class MarketplaceCustomerResource extends Resource
                                 ->revealable()
                                 ->minLength(8)
                                 ->dehydrated(false)
-                                ->helperText('Leave empty to keep current password.'),
+                                ->helperText('Leave empty to keep current password. A new password also applies to the organizer / venue account with the same email.'),
 
                             Forms\Components\TextInput::make('new_password_confirmation')
                                 ->label('Confirm Password')

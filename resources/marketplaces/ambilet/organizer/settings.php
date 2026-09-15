@@ -754,7 +754,15 @@ async function changePassword(e) {
     try {
         const data = { current_password: document.getElementById('current-password').value, password: document.getElementById('new-password').value, password_confirmation: document.getElementById('confirm-password').value };
         const response = await AmbiletAPI.put('/organizer/settings/password', data);
-        if (response.success) { AmbiletNotifications.success('Parola a fost schimbata'); e.target.reset(); }
+        if (response.success) {
+            AmbiletNotifications.success('Parola a fost schimbata');
+            e.target.reset();
+            if (response.data && response.data.notice) {
+                const linked = response.data.linked_accounts;
+                if (linked && linked.different && linked.different.length) AmbiletNotifications.warning(response.data.notice, 10000);
+                else AmbiletNotifications.info(response.data.notice, 6000);
+            }
+        }
         else { AmbiletNotifications.error(response.message || 'Eroare la schimbare parola'); }
     } catch (error) { AmbiletNotifications.error('Eroare la schimbare parola'); }
 }

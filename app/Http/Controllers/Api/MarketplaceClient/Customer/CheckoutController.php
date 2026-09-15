@@ -19,6 +19,7 @@ use App\Models\Activity;
 use App\Models\ActivityBooking;
 use App\Models\ActivityVariant;
 use App\Services\Activities\SlotResolver;
+use App\Services\Marketplace\AccountPasswordSync;
 use App\Services\Seating\SeatHoldService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -282,6 +283,11 @@ class CheckoutController extends BaseController
             // week as "Checkout failed").
             $plainPassword = $validated['customer']['password'] ?? null;
             $autoCreatedPassword = null;
+            // Same email already has an organizer / venue account with another password: the client stays a guest.
+            if ($plainPassword && rescue(fn () => app(AccountPasswordSync::class)
+                ->conflictingAccounts($client->id, $validated['customer']['email'], $plainPassword, 'customer'), [])) {
+                $plainPassword = null;
+            }
 
             $customer = MarketplaceCustomer::firstOrCreate(
                 [
@@ -309,8 +315,7 @@ class CheckoutController extends BaseController
                     'phone' => $validated['customer']['phone'] ?? $customer->phone,
                 ]);
                 // If customer exists but has no password and one was provided, set it
-                if (!$customer->password && !empty($validated['customer']['password'])) {
-                    $plainPassword = $validated['customer']['password'];
+                if (!$customer->password && $plainPassword) {
                     $customer->update(['password' => Hash::make($plainPassword)]);
                     $autoCreatedPassword = $plainPassword;
                 }
@@ -1564,6 +1569,11 @@ class CheckoutController extends BaseController
             // instead of where->first + create).
             $plainPassword = $validated['customer']['password'] ?? null;
             $autoCreatedPassword = null;
+            // Same email already has an organizer / venue account with another password: the client stays a guest.
+            if ($plainPassword && rescue(fn () => app(AccountPasswordSync::class)
+                ->conflictingAccounts($client->id, $validated['customer']['email'], $plainPassword, 'customer'), [])) {
+                $plainPassword = null;
+            }
 
             $customer = MarketplaceCustomer::firstOrCreate(
                 [
@@ -1589,8 +1599,7 @@ class CheckoutController extends BaseController
                     'last_name'  => $validated['customer']['last_name'],
                     'phone'      => $validated['customer']['phone'] ?? $customer->phone,
                 ]);
-                if (!$customer->password && !empty($validated['customer']['password'])) {
-                    $plainPassword = $validated['customer']['password'];
+                if (!$customer->password && $plainPassword) {
                     $customer->update(['password' => Hash::make($plainPassword)]);
                     $autoCreatedPassword = $plainPassword;
                 }

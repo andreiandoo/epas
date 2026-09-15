@@ -188,15 +188,32 @@ class EditOrganizer extends EditRecord
             : null;
         unset($data['audience_subscriptions']);
 
+        $this->passwordForLinkedAccounts = filled($data['password'] ?? null) ? $data['password'] : null;
+
         return $data;
     }
 
     protected ?array $trackingFormState = null;
     protected ?array $capiFormState = null;
     protected ?array $audienceSubscriptionsFormState = null;
+    protected ?string $passwordForLinkedAccounts = null;
 
     protected function afterSave(): void
     {
+        if ($this->passwordForLinkedAccounts) {
+            $password = $this->passwordForLinkedAccounts;
+            $this->passwordForLinkedAccounts = null;
+            $updated = rescue(fn () => app(\App\Services\Marketplace\AccountPasswordSync::class)
+                ->applyToAll($this->record->marketplace_client_id, $this->record->email, $password, $this->record), []);
+            if ($updated) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Parola a fost aplicată și celorlalte conturi')
+                    ->body(\App\Services\Marketplace\AccountPasswordSync::appliedNotice($updated))
+                    ->success()
+                    ->send();
+            }
+        }
+
         try {
             $this->syncTrackingIntegrations();
         } catch (\Throwable $e) {

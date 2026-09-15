@@ -59,6 +59,24 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Venue owners share one password with their marketplace client / organizer accounts.
+        static::updated(function (User $user) {
+            if (!$user->wasChanged('password')) {
+                return;
+            }
+            try {
+                app(\App\Services\Marketplace\AccountPasswordSync::class)->applyFromVenueOwner($user);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Venue owner password sync failed', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+    }
+
 
     public function isSuperAdmin(): bool { return $this->role === 'super-admin'; }
     public function isAdmin(): bool { return $this->role === 'admin'; }
