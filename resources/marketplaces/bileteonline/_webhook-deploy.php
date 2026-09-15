@@ -13,6 +13,18 @@
  *    - Content type: application/json
  *    - Secret: (același cu DEPLOY_SECRET)
  *    - Events: Just the push event
+ *
+ * Deploy-urile nu se mai pot suprapune (2026-09-15: GitHub a trimis același push de două ori în aceeași secundă, cele
+ * două rulări au folosit aceleași fișiere temporare și a doua a golit site-ul):
+ * - un singur deploy o dată: lacăt în data/deploy.lock, a doua livrare așteaptă să termine prima;
+ * - un commit instalat deja în ultimele DUPLICATE_WINDOW secunde este sărit (livrare dublă); un Redeliver făcut mai
+ *   târziu sau „Test Manual Deploy” instalează din nou;
+ * - fiecare rulare are fișierele ei temporare, șterse și când deploy-ul se oprește cu eroare;
+ * - un ZIP care nu arată ca site-ul (sub MIN_FILES fișiere, fără index.php / .htaccess) e refuzat înainte să fie atins
+ *   ceva pe server;
+ * - fișierele se înlocuiesc pe loc (copiere în fișier temporar + rename), .htaccess la final, apoi se șterg doar
+ *   fișierele care nu mai sunt în repo: site-ul nu mai rămâne gol nici măcar o clipă. Dacă vreun fișier nu se poate
+ *   scrie, curățarea nu mai rulează și deploy-ul e raportat ca eșuat.
  */
 
 // ===================== CONFIGURATION =====================
@@ -27,11 +39,12 @@ define('DEPLOY_SECRET', (string) (getenv('DEPLOY_SECRET') ?: (is_file($deploySec
 define('GITHUB_USER', 'andreiandoo');
 define('GITHUB_REPO', 'epas');
 define('GITHUB_BRANCH', 'bilete');
+define('ZIP_URL', 'https://github.com/' . GITHUB_USER . '/' . GITHUB_REPO . '/archive/refs/heads/' . GITHUB_BRANCH . '.zip');
 
 // Deploy path (unde să extragă fișierele)
 define('DEPLOY_PATH', __DIR__);
 
-// Fișiere/foldere care NU trebuie șterse la deploy (relative la DEPLOY_PATH)
+// Fișiere/foldere de pe primul nivel care NU se ating la deploy (relative la DEPLOY_PATH)
 // NOTĂ: .htaccess NU mai e protejat - se actualizează din repo
 define('PRESERVE_FILES', [
     '_webhook-deploy.php',
@@ -49,6 +62,16 @@ define('PRESERVE_FILES', [
 
 // Log file
 define('LOG_FILE', __DIR__ . '/deploy.log');
+
+// One deploy at a time, and what was installed last (both in data/, which deploys never touch)
+define('STATE_DIR', is_dir(__DIR__ . '/data') && is_writable(__DIR__ . '/data') ? __DIR__ . '/data' : sys_get_temp_dir());
+define('LOCK_FILE', STATE_DIR . '/deploy.lock');
+define('STATE_FILE', STATE_DIR . '/deploy-state.json');
+define('DUPLICATE_WINDOW', 600); // s: the same commit delivered again within this time is a duplicate
+
+// A ZIP that doesn't look like the site is never installed
+define('MIN_FILES', 100);
+define('REQUIRED_FILES', ['index.php', '.htaccess']);
 
 // ===================== FUNCTIONS =====================
 
@@ -90,60 +113,100 @@ function downloadFile($url, $destination) {
     return true;
 }
 
-function deleteDirectory($dir, $preserve = []) {
-    if (!is_dir($dir)) return;
-
-    $items = scandir($dir);
-    foreach ($items as $item) {
-        if ($item === '.' || $item === '..') continue;
-
-        $path = $dir . DIRECTORY_SEPARATOR . $item;
-        $relativePath = str_replace(DEPLOY_PATH . DIRECTORY_SEPARATOR, '', $path);
-
-        // Skip preserved files
-        foreach ($preserve as $preserved) {
-            if (strpos($relativePath, $preserved) === 0 || $relativePath === $preserved) {
-                continue 2;
-            }
-        }
-
-        if (is_dir($path)) {
-            deleteDirectory($path, $preserve);
-            @rmdir($path);
-        } else {
-            @unlink($path);
-        }
-    }
+/** Path relative to a root, always with "/" */
+function relativeTo($root, $path) {
+    return str_replace('\\', '/', substr($path, strlen($root) + 1));
 }
 
-function copyDirectory($src, $dst, $preserve = []) {
-    if (!is_dir($src)) return;
-
-    if (!is_dir($dst)) {
-        mkdir($dst, 0755, true);
-    }
-
-    $items = scandir($src);
-    foreach ($items as $item) {
-        if ($item === '.' || $item === '..') continue;
-
-        $srcPath = $src . DIRECTORY_SEPARATOR . $item;
-        $dstPath = $dst . DIRECTORY_SEPARATOR . $item;
-
-        // Skip preserved files in destination
-        $relativePath = str_replace(DEPLOY_PATH . DIRECTORY_SEPARATOR, '', $dstPath);
-        foreach ($preserve as $preserved) {
-            if ($relativePath === $preserved || strpos($relativePath, $preserved . DIRECTORY_SEPARATOR) === 0) {
-                continue 2;
-            }
+/** True for a preserved first-level entry or anything inside it */
+function isPreserved($relativePath) {
+    foreach (PRESERVE_FILES as $preserved) {
+        if ($relativePath === $preserved || strpos($relativePath, $preserved . '/') === 0) {
+            return true;
         }
+    }
+    return false;
+}
 
-        if (is_dir($srcPath)) {
-            copyDirectory($srcPath, $dstPath, $preserve);
+/**
+ * Writes every file of $src over DEPLOY_PATH in place: each file is copied next to its target under a temporary name
+ * and renamed over it, so a visitor gets either the old file or the new one. .htaccess files go last, once the files
+ * their rules point to are there. Returns [entries now in the site (relative => true), entries that failed].
+ */
+function installFiles($src, $runId) {
+    $wanted = [];
+    $failed = [];
+    $late = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($src, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    $put = function ($from, $rel) use (&$wanted, &$failed, $runId) {
+        $dst = DEPLOY_PATH . '/' . $rel;
+        if (is_dir($dst) && !is_link($dst)) {
+            cleanupTemp($dst); // a folder that became a file
+        }
+        $tmp = $dst . '.deploy-' . $runId;
+        if (@copy($from, $tmp) && @rename($tmp, $dst)) {
+            $wanted[$rel] = true;
         } else {
-            copy($srcPath, $dstPath);
+            @unlink($tmp);
+            $failed[] = $rel;
+        }
+    };
+    foreach ($iterator as $item) {
+        $rel = relativeTo($src, $item->getPathname());
+        if (isPreserved($rel)) continue;
+        if ($item->isDir()) {
+            $dst = DEPLOY_PATH . '/' . $rel;
+            if (is_file($dst) || is_link($dst)) {
+                @unlink($dst); // a file that became a folder
+            }
+            if (is_dir($dst) || @mkdir($dst, 0755, true)) {
+                $wanted[$rel] = true;
+            } else {
+                $failed[] = $rel . '/';
+            }
+            continue;
+        }
+        if ($item->getFilename() === '.htaccess') {
+            $late[$rel] = $item->getPathname();
+            continue;
+        }
+        $put($item->getPathname(), $rel);
+    }
+    foreach ($late as $rel => $from) {
+        $put($from, $rel);
+    }
+    return [$wanted, $failed];
+}
+
+/** Removes what the new release no longer has (files, then folders left empty); preserved entries are never read. */
+function removeStale(array $wanted) {
+    $removed = 0;
+    foreach (scandir(DEPLOY_PATH) as $top) {
+        if ($top === '.' || $top === '..' || isPreserved($top)) continue;
+        $path = DEPLOY_PATH . '/' . $top;
+        if (is_dir($path) && !is_link($path)) {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST
+            );
+            foreach ($iterator as $item) {
+                $rel = relativeTo(DEPLOY_PATH, $item->getPathname());
+                if (isset($wanted[$rel])) continue;
+                if ($item->isDir() && !$item->isLink()) {
+                    if (@rmdir($item->getPathname())) $removed++;
+                } elseif (@unlink($item->getPathname())) {
+                    $removed++;
+                }
+            }
+            if (!isset($wanted[$top]) && @rmdir($path)) $removed++;
+        } elseif (!isset($wanted[$top]) && @unlink($path)) {
+            $removed++;
         }
     }
+    return $removed;
 }
 
 function cleanupTemp($path) {
@@ -269,13 +332,38 @@ if ($data) {
     }
 }
 
+// Keep going if GitHub stops waiting (it gives a delivery 10 s), and give a slow download time to finish
+ignore_user_abort(true);
+@set_time_limit(300);
+
+$sha = (is_array($data) && preg_match('/^[0-9a-f]{40}$/', (string) ($data['after'] ?? ''))) ? $data['after'] : '';
+
+// One deploy at a time: a second delivery waits here until the first one has finished
+$lock = @fopen(LOCK_FILE, 'c');
+if (!$lock || !flock($lock, LOCK_EX)) {
+    logMsg("Could not take the deploy lock " . LOCK_FILE, 'ERROR');
+}
+
+$state = is_file(STATE_FILE) ? json_decode((string) @file_get_contents(STATE_FILE), true) : null;
+if (!$isManualTest && $sha !== '' && is_array($state) && ($state['sha'] ?? '') === $sha && time() - (int) ($state['at'] ?? 0) < DUPLICATE_WINDOW) {
+    logMsg("Skipped: commit " . substr($sha, 0, 9) . " was installed " . (time() - (int) $state['at']) . " s ago (duplicate delivery)");
+    echo json_encode(['success' => true, 'message' => 'Already deployed', 'sha' => $sha]);
+    exit;
+}
+
+// This run's own temp files, removed however the script ends
+$runId = date('YmdHis') . '-' . bin2hex(random_bytes(4));
+$zipFile = sys_get_temp_dir() . '/deploy_' . $runId . '.zip';
+$extractPath = sys_get_temp_dir() . '/deploy_extract_' . $runId;
+register_shutdown_function(function () use ($zipFile, $extractPath) {
+    @unlink($zipFile);
+    cleanupTemp($extractPath);
+});
+
 // Download ZIP from GitHub
-$zipUrl = "https://github.com/" . GITHUB_USER . "/" . GITHUB_REPO . "/archive/refs/heads/" . GITHUB_BRANCH . ".zip";
-$zipFile = sys_get_temp_dir() . '/deploy_' . time() . '.zip';
+logMsg("Run $runId" . ($sha !== '' ? ", commit " . substr($sha, 0, 9) : '') . ". Downloading: " . ZIP_URL);
 
-logMsg("Downloading: $zipUrl");
-
-if (!downloadFile($zipUrl, $zipFile)) {
+if (!downloadFile(ZIP_URL, $zipFile)) {
     logMsg("Failed to download ZIP from GitHub", 'ERROR');
 }
 
@@ -283,14 +371,15 @@ logMsg("Downloaded to: $zipFile (" . round(filesize($zipFile) / 1024) . " KB)");
 
 // Extract ZIP
 $zip = new ZipArchive();
-$extractPath = sys_get_temp_dir() . '/deploy_extract_' . time();
 
 if ($zip->open($zipFile) !== true) {
-    @unlink($zipFile);
     logMsg("Failed to open ZIP file", 'ERROR');
 }
 
-$zip->extractTo($extractPath);
+if (!$zip->extractTo($extractPath)) {
+    $zip->close();
+    logMsg("Failed to extract the ZIP file", 'ERROR');
+}
 $zip->close();
 @unlink($zipFile);
 
@@ -311,7 +400,6 @@ if (!is_dir($extractedFolder)) {
 }
 
 if (!is_dir($extractedFolder)) {
-    cleanupTemp($extractPath);
     logMsg("Extracted folder not found", 'ERROR');
 }
 
@@ -319,22 +407,27 @@ logMsg("Source folder: $extractedFolder");
 
 // Count files to deploy
 $fileCount = 0;
-$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($extractedFolder));
+$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($extractedFolder, FilesystemIterator::SKIP_DOTS));
 foreach ($iterator as $file) {
     if ($file->isFile()) $fileCount++;
 }
 logMsg("Files to deploy: $fileCount");
 
-// Clean old files (preserving configured files)
-logMsg("Cleaning old files...");
-deleteDirectory(DEPLOY_PATH, PRESERVE_FILES);
+$missing = array_values(array_filter(REQUIRED_FILES, function ($f) use ($extractedFolder) {
+    return !is_file($extractedFolder . '/' . $f);
+}));
+if ($fileCount < MIN_FILES || $missing) {
+    logMsg("Refused: the ZIP has $fileCount files" . ($missing ? ' and no ' . implode(', ', $missing) : '') . ". Nothing on the server was changed", 'ERROR');
+}
 
-// Copy new files
-logMsg("Copying new files...");
-copyDirectory($extractedFolder, DEPLOY_PATH, PRESERVE_FILES);
-
-// Cleanup temp
-cleanupTemp($extractPath);
+// Replace the files in place, then remove what the new release no longer has
+logMsg("Installing files in place...");
+[$wanted, $failed] = installFiles($extractedFolder, $runId);
+if ($failed) {
+    logMsg(count($failed) . " files could not be written (" . implode(', ', array_slice($failed, 0, 5)) . "). Old files were not removed", 'ERROR');
+}
+$removed = removeStale($wanted);
+logMsg("Installed " . count($wanted) . " files and folders, removed $removed no longer in the repository");
 
 // Clear OPcache if available
 if (function_exists('opcache_reset')) {
@@ -342,7 +435,11 @@ if (function_exists('opcache_reset')) {
     logMsg("OPcache cleared");
 }
 
+@file_put_contents(STATE_FILE, json_encode(['sha' => $sha, 'at' => time(), 'run' => $runId, 'files' => $fileCount]), LOCK_EX);
 logMsg("=== Deploy completed successfully! ===");
+
+flock($lock, LOCK_UN);
+fclose($lock);
 
 // Response
 http_response_code(200);
@@ -351,5 +448,6 @@ echo json_encode([
     'success' => true,
     'message' => 'Deployed successfully',
     'files' => $fileCount,
-    'branch' => GITHUB_BRANCH
+    'branch' => GITHUB_BRANCH,
+    'sha' => $sha,
 ]);
