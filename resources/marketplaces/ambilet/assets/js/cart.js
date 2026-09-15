@@ -135,6 +135,7 @@ const AmbiletCart = {
                     max_per_order: ticketTypeData.max_per_order || 10,
                     multiplier: ticketTypeData.multiplier || 1, // Step increment for cart +/- buttons
                     commission: ticketTypeData.commission || null, // Per-ticket commission settings
+                    commission_floor: Number(ticketTypeData.commission_floor) || 0, // Organizer minimum commission per ticket
                     is_refundable: ticketTypeData.is_refundable || false,
                     is_parking: ticketTypeData.is_parking || false,
                     requires_vehicle_info: ticketTypeData.requires_vehicle_info || false,
@@ -373,6 +374,16 @@ const AmbiletCart = {
         }
         const basePrice = item.ticketType.price || 0;
         const commission = item.ticketType.commission;
+        // Organizer minimum per ticket, as checkout charges it (0 when it does not apply)
+        const floor = Number(item.ticketType.commission_floor) || 0;
+        const withFloor = (result) => {
+            if (floor > 0 && result.amount < floor) {
+                result.amount = floor;
+                result.floor_applied = true;
+                result.floor = floor;
+            }
+            return result;
+        };
 
         // If ticket has per-ticket commission settings
         if (commission && commission.type) {
@@ -388,25 +399,25 @@ const AmbiletCart = {
                     amount = (basePrice * ((commission.rate || 0) / 100)) + (commission.fixed || 0);
                     break;
             }
-            return {
+            return withFloor({
                 amount: amount,
                 rate: commission.rate || 0,
                 fixed: commission.fixed || 0,
                 mode: commission.mode || 'included',
                 type: commission.type
-            };
+            });
         }
 
         // Fall back to event-level commission
         const eventRate = item.event?.commission_rate || 5;
         const eventMode = item.event?.commission_mode || 'included';
-        return {
+        return withFloor({
             amount: basePrice * (eventRate / 100),
             rate: eventRate,
             fixed: 0,
             mode: eventMode,
             type: 'percentage'
-        };
+        });
     },
 
     /**

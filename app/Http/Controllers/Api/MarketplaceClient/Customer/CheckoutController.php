@@ -524,10 +524,10 @@ class CheckoutController extends BaseController
                 // nu poate fi mai mic decat fixed_commission_default. Cand NU
                 // bifat (default pentru toti org-urii existenti): floor-ul e 0
                 // -> zero impact fata de comportamentul dinainte.
-                // The free-with-code companion ticket has its own commission and never gets
-                // the organizer floor; every other ticket, 0-lei ones included, does.
+                // The organizer floor applies to every ticket, 0-lei ones included, unless the
+                // type opts out: free-with-code companion, or custom fixed commission of 0.
                 $organizerFloorPerTicket = ($event?->marketplaceOrganizer?->commission_use_floor
-                        && !($ticketType instanceof TicketType && $ticketType->isFreeWithCode()))
+                        && !($ticketType instanceof TicketType && !$ticketType->allowsCommissionFloor()))
                     ? (float) ($event?->marketplaceOrganizer?->fixed_commission_default ?? 0)
                     : 0.0;
 

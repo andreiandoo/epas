@@ -59,6 +59,17 @@ const EventPage = {
             return { amount: 0, rate: 0, fixed: 0, mode: 'included', type: 'percentage' };
         }
 
+        // Organizer minimum per ticket, as checkout charges it (0 when it does not apply)
+        const floor = Number(ticketType.commission_floor) || 0;
+        const withFloor = function (result) {
+            if (floor > 0 && result.amount < floor) {
+                result.amount = floor;
+                result.floor_applied = true;
+                result.floor = floor;
+            }
+            return result;
+        };
+
         // Check if ticket has custom commission settings
         if (ticketType.commission && ticketType.commission.type) {
             const comm = ticketType.commission;
@@ -76,13 +87,13 @@ const EventPage = {
                     break;
             }
 
-            return {
+            return withFloor({
                 amount: Math.round(amount * 100) / 100,
                 rate: comm.rate || null,
                 fixed: comm.fixed || null,
                 mode: comm.mode || this.event.commission_mode || 'included',
                 type: comm.type
-            };
+            });
         }
 
         // Fall back to event-level commission (percentage only)
@@ -90,13 +101,13 @@ const EventPage = {
         const mode = this.event.commission_mode || 'included';
         const amount = basePrice * (rate / 100);
 
-        return {
+        return withFloor({
             amount: Math.round(amount * 100) / 100,
             rate: rate,
             fixed: null,
             mode: mode,
             type: 'percentage'
-        };
+        });
     },
 
     // DOM element IDs
@@ -764,6 +775,7 @@ const EventPage = {
                     seating_sections: tt.seating_sections || [],
                     seating_rows: tt.seating_rows || [],
                     commission: tt.commission || null,
+                    commission_floor: Number(tt.commission_floor) || 0,
                     is_refundable: tt.is_refundable || false,
                     ticket_group: tt.ticket_group || null,
                     perks: tt.perks || [],
@@ -2612,10 +2624,15 @@ const EventPage = {
             } else {
                 commissionLabel = ticketComm.rate + '%';
             }
+            if (ticketComm.floor_applied) {
+                commissionLabel = 'minim ' + ticketComm.floor.toFixed(2) + ' lei';
+            }
 
             if (ticketComm.mode === 'included') {
                 // Commission is included - calculate base price from effective display price
-                if (ticketComm.type === 'fixed') {
+                if (ticketComm.floor_applied) {
+                    basePrice = displayPrice - ticketComm.amount;
+                } else if (ticketComm.type === 'fixed') {
                     basePrice = displayPrice - ticketComm.fixed;
                 } else if (ticketComm.type === 'both') {
                     basePrice = (displayPrice - ticketComm.fixed) / (1 + ticketComm.rate / 100);
@@ -3270,6 +3287,7 @@ const EventPage = {
                         multiplier: tt.multiplier || 1, // Step increment for cart +/- buttons
                         // Per-ticket commission (null means use event defaults)
                         commission: tt.commission || null,
+                        commission_floor: Number(tt.commission_floor) || 0,
                         is_refundable: tt.is_refundable || false
                     };
                     if (tt.is_free_with_code) {
@@ -6247,6 +6265,7 @@ const EventPage = {
                 original_price: baseOriginalPrice,
                 description: tt.description,
                 commission: tt.commission || null,
+                commission_floor: Number(tt.commission_floor) || 0,
                 is_refundable: tt.is_refundable || false
             };
 
@@ -6313,6 +6332,7 @@ const EventPage = {
                                 originalPrice: ticketTypeData.original_price,
                                 description: ticketTypeData.description,
                                 commission: ticketTypeData.commission || null,
+                                commission_floor: Number(ticketTypeData.commission_floor) || 0,
                                 is_refundable: ticketTypeData.is_refundable || false,
                                 ...(tt.is_free_with_code ? { is_free_with_code: true } : {})
                             },
@@ -6400,6 +6420,7 @@ const EventPage = {
                         originalPrice: ticketTypeData.original_price,
                         description: ticketTypeData.description,
                         commission: ticketTypeData.commission || null,
+                        commission_floor: Number(ticketTypeData.commission_floor) || 0,
                         is_refundable: ticketTypeData.is_refundable || false,
                         ...(tt.is_free_with_code ? { is_free_with_code: true } : {})
                     },

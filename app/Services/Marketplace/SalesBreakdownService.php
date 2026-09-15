@@ -397,7 +397,7 @@ class SalesBreakdownService
                     $gross = $unitPrice * $validCount;
                     $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
                     // Aplica floor per bilet daca organizator > 0 si biletul are pret > 0
-                    if ($organizerFloor > 0 && $unitPrice > 0 && $commPerTicket < $organizerFloor) {
+                    if ($organizerFloor > 0 && $unitPrice > 0 && $tt->allowsCommissionFloor() && $commPerTicket < $organizerFloor) {
                         $commPerTicket = $organizerFloor;
                     }
                     $commission = $commPerTicket * $validCount;
@@ -905,7 +905,7 @@ class SalesBreakdownService
             // Aplica floor per bilet daca organizatorul are fixed_commission_default > 0
             // si biletul are pret > 0 (biletele bonus/componente pachet = 0 lei NU
             // genereaza comision — floor-ul e o regula pentru bilete platite).
-            if ($organizerFloor > 0 && $commissionBase > 0 && $commPerTicket < $organizerFloor) {
+            if ($organizerFloor > 0 && $commissionBase > 0 && $tt->allowsCommissionFloor() && $commPerTicket < $organizerFloor) {
                 $commPerTicket = $organizerFloor;
             }
             $commissionAmount = $commPerTicket * $qty;

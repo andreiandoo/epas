@@ -857,6 +857,14 @@ class MarketplaceEventsController extends BaseController
         $venue = $event->venue;
         $organizer = $event->marketplaceOrganizer;
 
+        // Organizer minimum commission per ticket (commission_use_floor), exposed per
+        // ticket type so the event page and cart show what checkout charges.
+        $organizerFloor = $event->marketplace_organizer_id
+            ? (float) (\App\Models\MarketplaceOrganizer::whereKey($event->marketplace_organizer_id)
+                ->where('commission_use_floor', true)
+                ->value('fixed_commission_default') ?? 0)
+            : 0.0;
+
         // Get commission settings (event > organizer > marketplace default)
         $commissionMode = $event->commission_mode ?? $organizer?->commission_mode ?? $client->commission_mode ?? 'included';
         $commissionRate = $event->commission_rate ?? $organizer?->commission_rate ?? $client->commission_rate ?? 5.0;
@@ -1058,7 +1066,7 @@ class MarketplaceEventsController extends BaseController
             // "Bilet gratuit cu cod" — see $freeCodeTypes above.
             'has_free_code_tickets' => $freeCodeTypes->contains(fn ($tt) => $tt->isFreeCodeActive()),
             'free_code' => $freeCodeInfo,
-            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && (!$tt->isFreeWithCode() || $unlockedFreeIds->contains($tt->id)))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate, $event) {
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && (!$tt->isFreeWithCode() || $unlockedFreeIds->contains($tt->id)))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate, $event, $organizerFloor) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -1167,6 +1175,8 @@ class MarketplaceEventsController extends BaseController
                     'free_trigger_ticket_type_ids' => $freeCfg['trigger_ticket_type_ids'] ?? [],
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
+                    // Organizer minimum commission per ticket (0 when it does not apply)
+                    'commission_floor' => ($organizerFloor > 0 && $tt->allowsCommissionFloor()) ? $organizerFloor : 0.0,
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
                     'is_refundable' => (bool) ($tt->is_refundable ?? false),
                     'ticket_group' => $tt->ticket_group,
@@ -1301,6 +1311,14 @@ class MarketplaceEventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
+        // Organizer minimum commission per ticket (commission_use_floor), exposed per
+        // ticket type so the event page and cart show what checkout charges.
+        $organizerFloor = $event->marketplace_organizer_id
+            ? (float) (\App\Models\MarketplaceOrganizer::whereKey($event->marketplace_organizer_id)
+                ->where('commission_use_floor', true)
+                ->value('fixed_commission_default') ?? 0)
+            : 0.0;
+
         $ticketTypes = $event->ticketTypes()
             ->where('status', 'active')
             ->where(function ($q) {
@@ -1311,7 +1329,7 @@ class MarketplaceEventsController extends BaseController
             // live availability refresh keeps an unlocked type on the page.
             ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos()
                 && (!$tt->isFreeWithCode() || $tt->freeCodeMatches($request->query('free_code'))))
-            ->map(function ($tt) {
+            ->map(function ($tt) use ($organizerFloor) {
                 $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
 
@@ -1336,6 +1354,7 @@ class MarketplaceEventsController extends BaseController
                     'multiplier' => $tt->multiplier ?? 1,
                     'status' => (($available <= 0) || (bool) ($tt->is_sold_out ?? false)) ? 'sold_out' : 'available',
                     'commission' => $ticketCommission,
+                    'commission_floor' => ($organizerFloor > 0 && $tt->allowsCommissionFloor()) ? $organizerFloor : 0.0,
                 ];
             });
 

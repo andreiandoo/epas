@@ -275,7 +275,9 @@ const CartPage = {
         if (commissionMode === 'added_on_top' && commissionAmount > 0) {
             // Build commission description based on type
             let commissionLabel = 'Taxe procesare';
-            if (commission.type === 'percentage') {
+            if (commission.floor_applied) {
+                commissionLabel += ' (minim ' + commission.floor.toFixed(2) + ' lei)';
+            } else if (commission.type === 'percentage') {
                 commissionLabel += ' (' + commission.rate + '%)';
             } else if (commission.type === 'fixed') {
                 commissionLabel += ' (fix)';

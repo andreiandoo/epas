@@ -709,6 +709,20 @@ class TicketType extends Model
         return $this->freeWithCodeConfig() !== null;
     }
 
+    /**
+     * Whether the organizer's minimum commission per ticket (commission_use_floor)
+     * may raise this type's commission. Not for the free-with-code companion
+     * ticket, nor when the operator set a custom fixed commission of 0.
+     */
+    public function allowsCommissionFloor(): bool
+    {
+        if ($this->isFreeWithCode()) {
+            return false;
+        }
+
+        return !($this->commission_type === 'fixed' && (float) ($this->commission_fixed ?? 0) === 0.0);
+    }
+
     public function isFreeCodeActive(): bool
     {
         return (bool) ($this->freeWithCodeConfig()['enabled'] ?? false);
