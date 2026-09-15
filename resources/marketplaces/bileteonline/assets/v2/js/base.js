@@ -168,6 +168,15 @@
     });
   }
 
+  /* ---------- language menu (the site is in Romanian) ---------- */
+  var langBtn = $('lang-btn'), langMenu = $('lang-menu');
+  if (langBtn && langMenu) {
+    var setLang = function (open) { langMenu.hidden = !open; langBtn.setAttribute('aria-expanded', String(open)); };
+    langBtn.addEventListener('click', function (e) { e.stopPropagation(); setLang(langMenu.hidden); });
+    document.addEventListener('click', function (e) { if (!langMenu.hidden && !langMenu.contains(e.target)) setLang(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !langMenu.hidden) { setLang(false); langBtn.focus(); } });
+  }
+
   /* ---------- rails with prev/next ---------- */
   document.querySelectorAll('.rail-btns').forEach(function (group) {
     var rail = $(group.getAttribute('data-for'));
@@ -195,6 +204,31 @@
     }, { passive: true });
     window.addEventListener('resize', update);
     update();
+    // data-drag: the mouse can drag the rail sideways; a drag never opens the card under the pointer
+    if (rail.hasAttribute('data-drag')) {
+      var drag = null, dragged = false;
+      rail.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        drag = { x: e.clientX, left: rail.scrollLeft, id: e.pointerId };
+        dragged = false;
+      });
+      rail.addEventListener('pointermove', function (e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        var dx = e.clientX - drag.x;
+        if (!dragged && Math.abs(dx) < 6) return;
+        if (!dragged) { dragged = true; rail.classList.add('is-dragging'); }
+        rail.scrollLeft = drag.left - dx;
+      });
+      var endDrag = function (e) {
+        if (!drag || (e && e.pointerId !== drag.id)) return;
+        drag = null;
+        rail.classList.remove('is-dragging');
+      };
+      rail.addEventListener('pointercancel', endDrag);
+      window.addEventListener('pointerup', endDrag);
+      rail.addEventListener('click', function (e) { if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false; } }, true);
+      rail.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    }
   });
 })();
 
@@ -261,7 +295,7 @@
       if (!email.checkValidity()) { email.reportValidity(); return; }
       busy = true;
       btn.disabled = true;
-      btn.textContent = 'Se trimite…';
+      if (btn.hasAttribute('data-icon-only')) btn.setAttribute('aria-busy', 'true'); else btn.textContent = 'Se trimite…';
       var payload = { email: email.value.trim(), source: form.getAttribute('data-newsletter') };
       if (form.elements.city && form.elements.city.value) payload.city = form.elements.city.value;
       fetch('/api/proxy.php?action=newsletter.subscribe', {
@@ -282,12 +316,12 @@
           btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Gata';
         } else {
           form.reset();
-          btn.disabled = false;
+          btn.disabled = false; btn.removeAttribute('aria-busy');
           btn.innerHTML = label;
         }
       }).catch(function (err) {
         say(false, err && err.fromServer && err.message ? err.message : form.getAttribute('data-err'));
-        btn.disabled = false;
+        btn.disabled = false; btn.removeAttribute('aria-busy');
         btn.innerHTML = label;
       }).then(function () { busy = false; });
     });

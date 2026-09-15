@@ -10,6 +10,14 @@
  */
 $v2FootCities = array_slice($V2NAV['citiesList'], 0, 8);
 $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
+// Every visible city for the newsletter city field (the browser filters them while typing).
+$v2Fold = function (string $s): string {
+    return strtr(mb_strtolower($s), ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
+};
+$v2FootCityNames = array_values(array_unique(array_filter(array_column(!empty($V2NAV['allCities']) ? $V2NAV['allCities'] : $V2NAV['citiesList'], 'name'))));
+usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
+    return strcmp($v2Fold($a), $v2Fold($b));
+});
 ?>
 <footer class="ftr" aria-labelledby="ftr-h">
   <svg class="ftr-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true"><use href="#drum-g"/></svg>
@@ -21,12 +29,13 @@ $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
       <form class="ftr-nl-form" data-newsletter="footer" data-msg="ftr-nl-msg" data-ok="Gata! Verifică emailul pentru confirmare." data-err="Nu am putut finaliza abonarea. Încearcă din nou.">
         <label class="sr" for="ftr-email">Email</label>
         <input id="ftr-email" name="email" type="email" required placeholder="emailul tău" autocomplete="email">
-        <label class="sr" for="ftr-city">Orașul tău (opțional)</label>
-        <select id="ftr-city" name="city">
-          <option value="">Orașul tău (opțional)</option>
-          <?php foreach ($v2FootCities as $c): ?><option value="<?= v2_e($c['name']) ?>"><?= v2_e($c['name']) ?></option><?php endforeach; ?>
-        </select>
-        <button class="btn btn-light" type="submit">Abonează-mă</button>
+        <span class="ftr-nl-city">
+          <?= v2_ic('map-pin') ?>
+          <label class="sr" for="ftr-city">Orașul tău (opțional)</label>
+          <input id="ftr-city" name="city" type="text" list="ftr-cities" maxlength="80" placeholder="Orașul tău (opțional)" autocomplete="off">
+        </span>
+        <datalist id="ftr-cities"><?php foreach ($v2FootCityNames as $n): ?><option value="<?= v2_e($n) ?>"></option><?php endforeach; ?></datalist>
+        <button class="ftr-nl-go" type="submit" aria-label="Abonează-mă" data-icon-only><?= v2_ic('arrow-right') ?></button>
       </form>
       <p class="form-msg" id="ftr-nl-msg" role="status" hidden></p>
       <p class="ftr-fine">Prin abonare accepți să primești comunicări editoriale și comerciale. Te poți dezabona oricând.</p>
@@ -59,10 +68,19 @@ $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
   <div class="wrap ftr-bottom">
     <div>
       <p>© <?= date('Y') ?> bilete.online. Toate drepturile rezervate. Platformă operată tehnologic de <a href="https://tixello.ro" rel="noopener">Tixello</a> (SC TIXELLO SRL).</p>
-      <div class="ftr-legal"><a href="/termeni">Termeni</a><a href="/confidentialitate">Confidențialitate</a><a href="/cookies">Cookies</a><button type="button" data-cc-action="open">Setări cookies</button><a href="/contact">Contact</a></div>
-      <div class="ftr-meta"><p class="ftr-pay"><?= v2_ic('credit-card') ?>Card · Apple Pay · Google Pay · Revolut</p><a class="ftr-up" href="#">Înapoi sus<?= v2_ic('arrow-right') ?></a></div>
+      <div class="ftr-legal"><a href="/termeni">Termeni</a><a href="/confidentialitate">Confidențialitate</a><a href="/cookies">Cookies</a><a href="/contact">Contact</a></div>
+      <div class="ftr-meta"><a class="ftr-up" href="#">Înapoi sus<?= v2_ic('arrow-right') ?></a></div>
     </div>
-    <details class="credits"><summary>Fotografii provizorii și licențe</summary><ul><?php readfile(__DIR__ . '/credits.html'); ?></ul></details>
+    <div class="ftr-trust">
+      <div class="ftr-trust-row">
+        <div class="ftr-paywrap"><span>Plătești cu:</span><ul class="pay-badges" aria-label="Metode de plată"><li>VISA</li><li>Mastercard</li><li>Google Pay</li><li>Apple Pay</li></ul></div>
+        <button class="ftr-cc" type="button" data-cc-action="open"><?= v2_ic('gear-six') ?>Setări cookies</button>
+      </div>
+      <div class="ftr-anpc">
+        <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+        <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+      </div>
+    </div>
   </div>
 </footer>
 

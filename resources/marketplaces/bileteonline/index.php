@@ -35,8 +35,7 @@ $structuredData = [[
 $v2Styles = ['home.css'];
 $v2Scripts = ['home.js'];
 $v2HeaderOverlay = true;
-$v2HeadExtra = '<link rel="preload" as="image" media="(min-width: 1024px)" href="' . v2_asset('img/hero-1920.webp') . '" imagesrcset="'
-    . v2_asset('img/hero-900.webp') . ' 900w, ' . v2_asset('img/hero-1440.webp') . ' 1440w, ' . v2_asset('img/hero-1920.webp') . ' 1920w" imagesizes="100vw" fetchpriority="high">';
+// No hero preload: the hero photo is picked at random in the page (includes/v2/home/sections.php).
 $v2ClientData = [
     'libs' => [v2_asset('vendor/gsap-3.15.0.min.js'), v2_asset('vendor/ScrollTrigger-3.15.0.min.js'), v2_asset('vendor/lenis-1.3.26.min.js')],
     'cities' => $V2['suggest']['cities'],
