@@ -5,7 +5,10 @@
 # and https://bilete.online/_webhook-deploy.php installs the branch on the server. The job
 # then waits for the new deploy-version.txt to be served and resets OPcache.
 #
-# Skip a deploy with [skip ci] in the commit message. Run it by hand from the Actions tab.
+# Skip a deploy with [skip ci] in the commit message. GitHub reads the whole message, body included, so a commit that
+# should deploy must not quote it anywhere. Running it by hand from the Actions tab (workflow_dispatch) only works once
+# this file is also on the default branch, `main`; until then redeploy with a commit that touches the folder, or with
+# Redeliver on the last webhook delivery.
 name: Deploy bilete.online
 
 on:
