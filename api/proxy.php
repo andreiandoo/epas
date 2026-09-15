@@ -4008,6 +4008,22 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.team.activate':
+        // A pending member becomes active at once with the password the organizer sets {member_id, password}.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/activate';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.reset-password':
+        // A new password for an active member {member_id, password}; core also applies it to the same e-mail in other teams.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/reset-password';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER API KEY ====================
 
     case 'organizer.api-key':
