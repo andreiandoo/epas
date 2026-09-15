@@ -44,6 +44,36 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                 </div>
             </section>
 
+            <!-- Android app -->
+            <section class="relative overflow-hidden rounded-2xl shadow-xl" style="background:linear-gradient(135deg, #052e16 0%, #166534 55%, #16a34a 100%);">
+                <div class="absolute top-0 right-0 w-80 h-80 rounded-full opacity-20" style="background:radial-gradient(circle, #86efac 0%, transparent 70%); transform:translate(30%, -40%);"></div>
+                <div class="relative p-5 lg:p-8">
+                    <div class="flex items-center justify-between gap-6 flex-wrap">
+                        <div class="flex items-start gap-4" style="max-width:680px;">
+                            <div class="flex items-center justify-center w-11 h-11 rounded-xl" style="background:rgba(255,255,255,0.15); flex-shrink:0;">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider" style="color:#bbf7d0;">Aplicația AmBilet · Android</p>
+                                <h2 class="mt-1 font-extrabold text-white" style="font-size:22px; line-height:1.25;">Scanează biletele și vinde la intrare direct din telefon</h2>
+                                <ol class="mt-3 text-sm" style="color:rgba(255,255,255,0.88); padding-left:18px; list-style:decimal; line-height:1.7;">
+                                    <li>Deschide <strong class="text-white">ambilet.ro/android</strong> de pe telefonul Android și descarcă aplicația (fișier APK).</li>
+                                    <li>Deschide fișierul descărcat. Dacă telefonul îți cere, permite instalarea din această sursă, apoi apasă Instalează.</li>
+                                    <li>Intră în aplicație cu același email și aceeași parolă ca în acest panou.</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-start gap-2">
+                            <a href="/android" class="inline-flex items-center gap-2 font-bold rounded-xl shadow-lg transition-all hover:-translate-y-0.5" style="background:#ffffff; color:#14532d; padding:14px 22px; font-size:15px;">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                Descarcă aplicația (APK)
+                            </a>
+                            <p class="text-xs" style="color:rgba(255,255,255,0.75);">Doar Android · nu este încă în Google Play</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- KPI cards -->
             <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div class="group relative overflow-hidden p-5 bg-white border rounded-2xl border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-0.5">
