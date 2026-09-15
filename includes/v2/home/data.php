@@ -24,12 +24,25 @@ const V2_PICKED_ATTRACTIONS = [
     'cetatea-deva-deva', 'cetatea-medievala-din-targu-mures-targu-mures', 'castelul-sturdza-de-la-miclauseni-miclauseni',
 ];
 
-// slug => [label, accent, intro, "see all" link, photo, photo focus, categories shown while no activity is tagged]
-const V2_TRAVELERS = [
-    'familii' => ['Familii', '#F2A900', 'Experiențe sigure, pe placul copiilor și al părinților.', '/activitati-copii', 'who-familii', '44% 45%', ['familie-copii', 'acvarii-zoo-animale', 'parcuri-de-distractii']],
-    'prieteni' => ['Prieteni', '#E43A33', 'Adrenalină, provocări și ieșiri despre care o să tot vorbiți.', '/cauta?traveler_types=prieteni', 'who-prieteni', '60% 55%', ['escape-rooms', 'parcuri-de-aventura', 'natura-outdoor']],
-    'cupluri' => ['Cupluri', '#2D6CCD', 'Locuri frumoase pentru o zi sau o seară în doi.', '/activitati-cupluri', 'who-cupluri', '22% 50%', ['cultura-arta', 'tururi-experiente-turistice', 'muzee-expozitii']],
+// Hero photo candidates: key (local WebP copies hero-{key}-{900,1440,1920}.webp) => [slug, name, city, type while the API has no record]
+const V2_HERO_ATTRACTIONS = [
+    'bran' => ['castelul-bran-bran', 'Castelul Bran', 'Bran', 'Castel & palat'],
+    'peles' => ['castelul-peles-sinaia', 'Castelul Peleș', 'Sinaia', 'Castel & palat'],
+    'banffy' => ['castelul-banffy-de-la-bontida-bontida', 'Castelul Bánffy de la Bonțida', 'Bonțida', 'Castel & palat'],
+    'mogosoaia' => ['palatul-mogosoaia-mogosoaia', 'Palatul Mogoșoaia', 'Mogoșoaia', 'Castel & palat'],
+    'targu-mures' => ['cetatea-medievala-din-targu-mures-targu-mures', 'Cetatea medievală din Târgu Mureș', 'Târgu Mureș', 'Castel & palat'],
 ];
+
+// slug => [label, accent, intro, "see all" link, "see all" text, photo, photo focus, categories shown while no activity fits]
+const V2_TRAVELERS = [
+    'familii' => ['Familii', '#F2A900', 'Experiențe sigure, pe placul copiilor și al părinților.', '/activitati-copii', 'Toate experiențele pentru familii', 'who-familii', '44% 45%', ['familie-copii', 'acvarii-zoo-animale', 'parcuri-de-distractii']],
+    'prieteni' => ['Prieteni', '#E43A33', 'Adrenalină, provocări și ieșiri despre care o să tot vorbiți.', '/cauta?traveler_types=prieteni', 'Toate experiențele pentru prieteni', 'who-prieteni', '60% 55%', ['escape-rooms', 'parcuri-de-aventura', 'natura-outdoor']],
+    'cupluri' => ['Cupluri', '#2D6CCD', 'Locuri frumoase pentru o zi sau o seară în doi.', '/activitati-cupluri', 'Toate experiențele pentru cupluri', 'who-cupluri', '22% 50%', ['cultura-arta', 'tururi-experiente-turistice', 'muzee-expozitii']],
+    'weekend' => ['Activități de weekend', '#2BB673', 'Idei pentru sâmbătă și duminică, în oraș sau într-o escapadă scurtă.', '/activitati-weekend', 'Toate activitățile de weekend', 'who-weekend', '50% 40%', ['natura-outdoor', 'parcuri-de-distractii', 'tururi-experiente-turistice']],
+    'cadou' => ['Experiențe cadou', '#F2A900', 'Dăruiește o ieșire în locul unui obiect: un atelier, o aventură sau o zi într-un loc frumos.', '/card-cadou', 'Vezi cardul cadou', 'who-cadou', '50% 50%', ['ateliere-experiente-creative', 'parcuri-de-aventura', 'educatie-invatare-experientiala']],
+];
+// the traveller types activities are tagged with (traveler_types); "weekend" uses the next days' availability, "cadou" the categories
+const V2_TRAVELER_TYPES = ['familii', 'prieteni', 'cupluri'];
 
 const V2_FAQ = [
     ['Ce tip de bilete găsesc pe bilete.online?', 'Bilete pentru experiențe și atracții: escape rooms, parcuri de distracții, muzee, castele, parcuri de aventură, acvarii, grădini zoologice și ateliere. Toate locurile unde te duci să faci ceva.'],
@@ -51,7 +64,7 @@ $v2Jobs = [
 for ($p = 1; $p <= 3; $p++) {
     $v2Jobs['castles' . $p] = ['key' => 'v2_castles_' . $p, 'endpoint' => '/attractions', 'params' => ['type' => 'castel-palat', 'per_page' => 50, 'page' => $p], 'ttl' => 86400];
 }
-foreach (array_keys(V2_TRAVELERS) as $k) {
+foreach (V2_TRAVELER_TYPES as $k) {
     $v2Jobs['who_' . $k] = ['key' => 'v2_who_' . $k, 'endpoint' => '/activities', 'params' => ['traveler_types' => $k, 'per_page' => 3], 'ttl' => 600];
 }
 foreach (array_keys(V2_ATTRACTION_TYPES) as $t) {
@@ -121,7 +134,17 @@ foreach ($v2Pool as $s => $a) {
         $v2Seen[] = $s;
     }
 }
-$V2['heroAttraction'] = $v2Pool['castelul-peles-sinaia'] ?? null;
+$V2['heroOptions'] = [];
+foreach (V2_HERO_ATTRACTIONS as $key => [$slug, $name, $city, $type]) {
+    $a = $v2Pool[$slug] ?? null;
+    $V2['heroOptions'][] = [
+        'key' => $key,
+        'name' => $a['name'] ?? $name,
+        'city' => $a ? $a['city'] : $city,
+        'type' => ($a['type'] ?? '') !== '' ? $a['type'] : $type,
+        'href' => $a['href'] ?? '/atractie/' . $slug,
+    ];
+}
 
 $V2['types'] = [];
 foreach (V2_ATTRACTION_TYPES as $slug => $label) {
@@ -205,9 +228,13 @@ if ($v2Acts) {
 }
 $V2['activities'] = $v2Acts;
 $V2['days'] = [];
+$v2WeekendDays = [];
 for ($i = 0; $i < 10; $i++) {
     $d = $v2Today->modify('+' . $i . ' day');
     $iso = $d->format('Y-m-d');
+    if (in_array((int) $d->format('w'), [0, 6], true)) {
+        $v2WeekendDays[] = $iso;
+    }
     $count = 0;
     foreach ($v2Acts as $a) {
         if (in_array($iso, $a['dates'], true)) {
@@ -228,16 +255,27 @@ foreach ($v2Acts as $a) {
 
 // ------------------------------------------------------------------ recommended for
 $V2['who'] = [];
-foreach (V2_TRAVELERS as $k => [$label, $color, $intro, $href, $img, $pos, $fallbackCats]) {
+$v2WhoCard = function (array $n): array {
+    return [
+        'title' => $n['title'],
+        'meta' => v2_e($n['city']) . ($n['price'] ? ($n['city'] ? ', ' : '') . 'de la <b>' . $n['price'] . ' lei</b>' : ''),
+        'image' => $n['image'],
+        'href' => $n['href'],
+    ];
+};
+foreach (V2_TRAVELERS as $k => [$label, $color, $intro, $href, $allText, $img, $pos, $fallbackCats]) {
     $cards = [];
-    foreach ((array) ($v2Data('who_' . $k)['items'] ?? []) as $a) {
-        if (count($cards) < 3 && is_array($a) && ($n = v2_activity($a))) {
-            $cards[] = [
-                'title' => $n['title'],
-                'meta' => v2_e($n['city']) . ($n['price'] ? ($n['city'] ? ', ' : '') . 'de la <b>' . $n['price'] . ' lei</b>' : ''),
-                'image' => $n['image'],
-                'href' => $n['href'],
-            ];
+    if (in_array($k, V2_TRAVELER_TYPES, true)) {
+        foreach ((array) ($v2Data('who_' . $k)['items'] ?? []) as $a) {
+            if (count($cards) < 3 && is_array($a) && ($n = v2_activity($a))) {
+                $cards[] = $v2WhoCard($n);
+            }
+        }
+    } elseif ($k === 'weekend') {
+        foreach ($v2Acts as $n) {
+            if (count($cards) < 3 && array_intersect($n['dates'], $v2WeekendDays)) {
+                $cards[] = $v2WhoCard($n);
+            }
         }
     }
     if (!$cards) {
@@ -248,7 +286,7 @@ foreach (V2_TRAVELERS as $k => [$label, $color, $intro, $href, $img, $pos, $fall
             }
         }
     }
-    $V2['who'][] = ['k' => $k, 'label' => $label, 'color' => $color, 'intro' => $intro, 'href' => $href, 'img' => $img, 'pos' => $pos, 'cards' => $cards];
+    $V2['who'][] = ['k' => $k, 'label' => $label, 'color' => $color, 'intro' => $intro, 'href' => $href, 'all' => $allText, 'img' => $img, 'pos' => $pos, 'cards' => $cards];
 }
 
 // ------------------------------------------------------------------ search suggestions (client side)

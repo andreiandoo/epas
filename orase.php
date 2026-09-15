@@ -2,8 +2,9 @@
 /**
  * Cities catalog: /orase (v2 design).
  *
- * Every city the site features (the shell's cached `/locations/cities/featured`, with the provisional local photos),
- * most activities first; a curated static list keeps the page useful if the API returns none. Search and the region
+ * Every visible city: the featured ones first (the shell's cached `/locations/cities/featured`, with the provisional
+ * local photos, most activities first), then all the others alphabetically, so each region lists as many cities as the
+ * menu counts; a curated static list keeps the page useful if the API returns none. Search and the region
  * filter run over the server-rendered cards (cities.js), so every city is in the HTML for crawlers.
  *
  * Top to bottom: hero (search with live suggestions, popular cities, discovery card), region filter + city cards,
@@ -45,6 +46,25 @@ foreach ($V2NAV['citiesList'] as $city) {
         'count' => $city['count'],
         'photo' => $city['photo'],
         'description' => navFlatName($raw['description'] ?? '') ?: 'Activități, experiențe și locuri de vizitat în ' . $city['name'] . '.',
+    ];
+}
+
+// Every other visible city, alphabetically.
+$ctSeen = array_flip(array_column($cities, 'slug'));
+$ctRest = array_values(array_filter($V2NAV['allCities'] ?? [], fn ($c) => !isset($ctSeen[$c['slug']]) && $c['name'] !== ''));
+usort($ctRest, fn ($a, $b) => strcmp($ctKey($a['name']), $ctKey($b['name'])));
+foreach ($ctRest as $c) {
+    $region = $c['region'] !== '' ? $c['region'] : 'România';
+    $cities[] = [
+        'name' => $c['name'],
+        'slug' => $c['slug'],
+        'url' => '/' . $c['slug'],
+        'region' => $region,
+        'regionKey' => $ctKey($region),
+        'county' => $c['county'],
+        'count' => $c['count'],
+        'photo' => $c['image'] ? [$c['image'], 0, 0, ''] : null,
+        'description' => 'Activități, experiențe și locuri de vizitat în ' . $c['name'] . '.',
     ];
 }
 

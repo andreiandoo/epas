@@ -49,6 +49,9 @@ $v2NavR = api_cached_many([
     'cats' => ['key' => 'v2_categories_all', 'endpoint' => '/events/categories', 'params' => ['all' => 1], 'ttl' => 900],
     'cities' => ['key' => 'v2_cities_featured', 'endpoint' => '/locations/cities/featured', 'params' => [], 'ttl' => 1800],
     'regions' => ['key' => 'v2_regions', 'endpoint' => '/locations/regions', 'params' => [], 'ttl' => 3600],
+    // every visible city (the menu counts them per region): /orase lists them, the newsletter city field suggests them
+    'allCities1' => ['key' => 'v2_cities_all_1', 'endpoint' => '/locations/cities', 'params' => ['per_page' => 200, 'page' => 1, 'sort' => 'name'], 'ttl' => 21600],
+    'allCities2' => ['key' => 'v2_cities_all_2', 'endpoint' => '/locations/cities', 'params' => ['per_page' => 200, 'page' => 2, 'sort' => 'name'], 'ttl' => 21600],
     'blog' => ['key' => 'v2_blog', 'endpoint' => '/blog-articles', 'params' => ['per_page' => 6, 'status' => 'published'], 'ttl' => 900],
 ]);
 $v2NavData = function (string $k) use ($v2NavR): array {
@@ -120,6 +123,22 @@ uasort($v2Cities, function ($a, $b) use ($v2CityRank) {
 });
 $V2NAV['cities'] = $v2Cities;
 $V2NAV['citiesList'] = array_values($v2Cities);
+$V2NAV['allCities'] = [];
+foreach (['allCities1', 'allCities2'] as $v2Page) {
+    foreach ($v2NavData($v2Page) as $c) {
+        if (!is_array($c) || empty($c['slug']) || isset($V2NAV['allCities'][$c['slug']])) {
+            continue;
+        }
+        $V2NAV['allCities'][$c['slug']] = [
+            'slug' => $c['slug'],
+            'name' => navFlatName($c['name'] ?? ''),
+            'region' => (string) ($c['region'] ?? ''),
+            'county' => is_array($c['county'] ?? null) ? navFlatName($c['county']['name'] ?? '') : '',
+            'count' => (int) ($c['events_count'] ?? 0),
+            'image' => v2_media_url($c['image'] ?? null),
+        ];
+    }
+}
 
 $v2RegionsRaw = $v2NavData('regions');
 $v2RegionsRaw = isset($v2RegionsRaw['regions']) ? $v2RegionsRaw['regions'] : $v2RegionsRaw;

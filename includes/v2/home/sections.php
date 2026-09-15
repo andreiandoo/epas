@@ -3,9 +3,16 @@
  * bilete.online v2 homepage: hero and every section of <main>.
  * Expects $V2 from v2/home/data.php. Sections without data are left out.
  */
-$hv2Meta = require dirname(__DIR__) . '/photo-meta.php';
 $hv2Arches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
-$hv2Peles = $V2['heroAttraction'];
+// Hero photo: a popular attraction picked at random on every visit, in the page, because the HTML is cached for everyone.
+$hv2Heroes = array_map(function ($h) {
+    $img = function ($w) use ($h) {
+        return v2_asset('img/hero-' . $h['key'] . '-' . $w . '.webp');
+    };
+    return ['k' => $h['key'], 'title' => $h['name'] . ($h['city'] ? ', ' . $h['city'] : ''), 'type' => $h['type'], 'href' => $h['href'],
+        'src' => $img(1920), 'srcset' => $img(900) . ' 900w, ' . $img(1440) . ' 1440w, ' . $img(1920) . ' 1920w'];
+}, $V2['heroOptions']);
+$hv2Hero = $hv2Heroes[0];
 $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupluri'], ['copii', 'Copii'], ['grupuri', 'Grupuri'], ['solo', 'Solo'], ['turisti', 'Turiști'], ['seniori', 'Seniori']];
 ?>
 <section class="hero" id="hero" aria-labelledby="hero-h">
@@ -70,14 +77,27 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
 
     <div class="arch-slot" id="arch-slot">
       <div class="hero-media" id="hero-media">
-        <img id="hero-img" src="<?= v2_asset('img/hero-1920.webp') ?>" srcset="<?= v2_asset('img/hero-900.webp') ?> 900w, <?= v2_asset('img/hero-1440.webp') ?> 1440w, <?= v2_asset('img/hero-1920.webp') ?> 1920w" sizes="100vw" width="1920" height="1372" decoding="async" alt="<?= v2_e($hv2Meta['hero_alt']) ?>">
+        <img id="hero-img" sizes="100vw" width="1920" height="1372" decoding="async" fetchpriority="high" alt="">
+        <noscript><img class="hero-img-ns" src="<?= v2_e($hv2Hero['src']) ?>" width="1920" height="1372" alt="<?= v2_e($hv2Hero['title']) ?>"></noscript>
         <div class="hero-feature" id="hero-feature">
-          <a class="hf-card" href="<?= v2_e($hv2Peles['href'] ?? v2_cauta('Castelul Peleș')) ?>">
+          <a class="hf-card" href="<?= v2_e($hv2Hero['href']) ?>">
             <span class="hf-kicker">În fotografie</span>
-            <strong><?= v2_e($hv2Peles ? $hv2Peles['name'] . ($hv2Peles['city'] ? ', ' . $hv2Peles['city'] : '') : 'Castelul Peleș, Sinaia') ?></strong>
-            <span class="hf-meta"><span><?= v2_e($hv2Peles['type'] ?? 'Castel & palat') ?></span><span class="hf-cta">Vezi atracția<?= v2_ic('arrow-right') ?></span></span>
+            <strong><?= v2_e($hv2Hero['title']) ?></strong>
+            <span class="hf-meta"><span data-hero-type><?= v2_e($hv2Hero['type']) ?></span><span class="hf-cta">Vezi atracția<?= v2_ic('arrow-right') ?></span></span>
           </a>
         </div>
+        <script>(function () {
+          var o = <?= json_encode($hv2Heroes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, n = o.length, i = 0, last = null;
+          if (!n) return;
+          try { last = sessionStorage.getItem('bo_hero'); } catch (e) {}
+          if (n > 1) { do { i = Math.floor(Math.random() * n); } while (o[i].k === last); }
+          var h = o[i], img = document.getElementById('hero-img'), card = document.getElementById('hero-feature');
+          try { sessionStorage.setItem('bo_hero', h.k); } catch (e) {}
+          img.alt = h.title; img.srcset = h.srcset; img.src = h.src;
+          card.querySelector('a').href = h.href;
+          card.querySelector('strong').textContent = h.title;
+          card.querySelector('[data-hero-type]').textContent = h.type;
+        })();</script>
       </div>
     </div>
   </div>
@@ -147,7 +167,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
             <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?></span>
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($a['catName']) ?></span>
-              <span class="xp-title"><?= v2_e($a['title']) ?></span>
+              <span class="xp-title" title="<?= v2_e($a['title']) ?>"><?= v2_e($a['title']) ?></span>
               <span class="xp-meta"><?php if ($a['city']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['city']) ?></span><?php endif; ?><?php if ($a['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['dur']) ?></span><?php endif; ?><?php if ($a['reviews']): ?><span class="xp-rating"><?= v2_ic('star') ?><?= str_replace('.', ',', (string) $a['rating']) ?> (<?= v2_thousands($a['reviews']) ?>)</span><?php endif; ?></span>
               <span class="xp-foot"><span class="xp-avail"><?= v2_ic('check-circle') ?><span class="xp-avail-t"><?= $a['nextLabel'] ? 'Disponibil ' . v2_e($a['nextLabel']) : 'Verifică disponibilitatea' ?></span></span><?php if ($a['price']): ?><span class="xp-price">de la<b><?= $a['price'] ?> lei</b></span><?php endif; ?></span>
             </span>
@@ -162,7 +182,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
 
   <?php if ($V2['attractions']): ?>
   <section class="sec attr" aria-labelledby="attr-h">
-    <svg class="attr-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <svg class="attr-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="wrap">
       <div class="sec-head">
         <h2 id="attr-h">Atracții de neratat</h2>
@@ -174,7 +194,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
           </div>
         </div>
       </div>
-      <ul class="rail" id="attr-rail">
+      <ul class="rail" id="attr-rail" data-drag>
         <?php foreach ($V2['attractions'] as $a): ?>
         <li class="at"><a href="<?= v2_e($a['href']) ?>">
           <span class="at-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['name']) ?></span>
@@ -190,7 +210,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
   <section class="sec rec" aria-labelledby="rec-h">
     <div class="wrap rec-head">
       <h2 id="rec-h">Recomandat pentru</h2>
-      <p>Alege cu cine ieși. Îți arătăm experiențele pe care locațiile le recomandă pentru familii, prieteni sau cupluri.</p>
+      <p>Alege cu cine ieși sau ce plănuiești. Îți arătăm experiențe potrivite pentru familii, prieteni, cupluri, weekend sau cadou.</p>
     </div>
     <ul class="who">
       <?php foreach ($V2['who'] as $i => $w): $on = $i === 0; ?>
@@ -208,7 +228,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
                 <?php endforeach; ?>
               </ul>
               <?php endif; ?>
-              <a class="wp-all" href="<?= v2_e($w['href']) ?>">Toate experiențele pentru <?= v2_e(mb_strtolower($w['label'])) ?><?= v2_ic('arrow-right') ?></a>
+              <a class="wp-all" href="<?= v2_e($w['href']) ?>"><?= v2_e($w['all']) ?><?= v2_ic('arrow-right') ?></a>
             </div>
           </div>
         </div>

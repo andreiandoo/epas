@@ -7,7 +7,7 @@
 .hero-copy{position:relative;z-index:3}
 .hero-h{margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:var(--on-deep)}
 .hero-h em{font-style:normal;color:var(--online)}
-.hero-sub{margin:var(--space-4) 0 0;max-width:40ch;font-size:var(--text-lead);line-height:1.45;color:var(--on-deep-muted)}
+.hero-sub{margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.45;color:var(--on-deep-muted)}
 
 .hero-line{position:relative;z-index:2;display:block;width:100%;height:auto;aspect-ratio:3240 / 310;pointer-events:none;clip-path:inset(0 0 0 0)}
 .js .hero-line{clip-path:inset(0 100% 0 0)}
@@ -464,7 +464,7 @@
     .sec-head h2,.rec-head h2,.why-head,.gift h2,.partners h2,.top h2,.seo h2,.faq-col h2{animation:sd-rise linear both;animation-timeline:view();animation-range:entry 0% cover 24%}
     .cat-media img,.dc img,.ia-media img,.wp-img{scale:1.12;animation:sd-par linear both;animation-timeline:view();animation-range:cover}
     .topo,.deco-arches{animation:sd-drift linear both;animation-timeline:view();animation-range:cover}
-    .attr-line,.why-bgline{animation:sd-slide linear both;animation-timeline:view();animation-range:cover}
+    .why-bgline{animation:sd-slide linear both;animation-timeline:view();animation-range:cover}
     .why-stage{animation:sd-stage linear both;animation-timeline:view();animation-range:entry 0% entry 45%}
     .phone{animation:sd-phone linear both;animation-timeline:view();animation-range:entry 0% cover 40%}
     .gc-wrap{animation:sd-card linear both;animation-timeline:view();animation-range:entry 0% cover 42%}
@@ -478,3 +478,22 @@
 /* skip rendering work for light sections far below the fold until they approach the viewport
    (not on dark ones: axe then reads the page background behind their light text) */
 .days,.attr,.dest,.gift,.insp,.top,.faq{content-visibility:auto;contain-intrinsic-size:auto 900px}
+
+/* =================== fixes 2026-09-15 =================== */
+/* hero photo without JavaScript */
+.hero-img-ns{position:absolute;inset:0}
+/* Ce faci în zilele următoare: titles on one line */
+.days .xp a,.days .xp-body{grid-template-columns:minmax(0,1fr)}
+.days .xp-title{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* Recomandat pentru: five panels; closed ones show their name upright along the arch */
+@media (min-width:1024px){
+  .wp.is-open{flex-grow:4}
+  .wp-content{width:calc(min(100vw, 1720px) * .46)}
+  .wp:not(.is-open) .wp-name{writing-mode:vertical-rl;transform:rotate(180deg);font-size:1.5rem;white-space:nowrap}
+}
+@media (prefers-reduced-motion: no-preference){
+  @supports (animation-timeline: view()){
+    .wp:nth-child(4){animation-range:entry 0% cover 54%}
+    .wp:nth-child(5){animation-range:entry 0% cover 62%}
+  }
+}

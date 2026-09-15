@@ -41,6 +41,13 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       <button type="submit" aria-label="Caută"><?= v2_ic('arrow-right') ?></button>
     </form>
     <div class="hdr-tools">
+      <div class="lang-wrap">
+        <button class="icon-btn lang" id="lang-btn" type="button" aria-expanded="false" aria-controls="lang-menu"><?= v2_ic('globe-simple') ?><span aria-hidden="true">RO</span><span class="sr">Limba site-ului: română</span></button>
+        <div class="lang-menu" id="lang-menu" hidden>
+          <p class="lang-h">Limba site-ului</p>
+          <p class="lang-opt" aria-current="true" lang="ro"><?= v2_ic('check') ?>Română</p>
+        </div>
+      </div>
       <a class="icon-btn" href="/cos" aria-label="Coșul de cumpărături"><?= v2_ic('shopping-cart-simple') ?><span class="hdr-badge" data-cart-count hidden></span></a>
       <a class="icon-btn" href="/cont" aria-label="Contul meu" data-account><?= v2_ic('user-circle') ?><span class="acct-ini" hidden></span></a>
       <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Deschide meniul"><?= v2_ic('list') ?></button>

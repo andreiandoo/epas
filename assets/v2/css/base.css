@@ -543,3 +543,47 @@ body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{transition-duration:0ms !important;transition-delay:0ms !important;animation-duration:0ms !important;animation-delay:0ms !important}
 }
+
+/* =================== fixes 2026-09-15 =================== */
+/* header language menu (desktop, as in the design) */
+.lang-wrap{position:relative;display:none}
+@media (min-width:1024px){.lang-wrap{display:block}}
+.lang-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:70;min-width:210px;padding:10px;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);box-shadow:0 24px 60px -24px rgba(14,72,55,.45)}
+.lang-h{margin:0 0 6px;padding:4px 8px 0;font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lang-opt{display:flex;align-items:center;gap:8px;margin:0;padding:10px;border-radius:12px;background:var(--surface-2);font-weight:700}
+.lang-opt .ic{width:18px;height:18px;color:var(--green)}
+/* rails that can be dragged with the mouse */
+@media (hover:hover) and (pointer:fine){.rail[data-drag]{cursor:grab}}
+.rail.is-dragging{cursor:grabbing;scroll-snap-type:none;user-select:none;-webkit-user-select:none}
+.rail.is-dragging a{pointer-events:none}
+/* footer newsletter: email, city and the button in one box */
+.ftr .ftr-nl-form{display:flex;align-items:center;gap:0;margin-top:var(--space-5);padding:5px;border-radius:999px;background:#F7F7F5}
+.ftr .ftr-nl-form:focus-within{box-shadow:0 0 0 3px rgba(43,182,115,.5)}
+.ftr .ftr-nl-form input{flex:1 1 0;width:0;min-width:0;min-height:46px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--ink);font:500 1rem/1.2 var(--font)}
+.ftr .ftr-nl-form input:focus-visible{outline:none}
+.ftr .ftr-nl-form #ftr-email{flex-grow:1.35}
+.ftr-nl-city{display:flex;flex:1 1 0;align-items:center;min-width:0;padding-left:12px;border-left:1px solid #D9DDD8}
+.ftr-nl-city .ic{flex:none;width:18px;height:18px;color:var(--muted)}
+.ftr .ftr-nl-city input{padding-left:8px}
+.ftr-nl-go{display:grid;place-items:center;flex:none;width:46px;height:46px;padding:0;border:0;border-radius:50%;background:var(--action);color:#FFFFFF;cursor:pointer}
+.ftr-nl-go:hover{background:var(--green)}
+.ftr-nl-go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ftr-nl-go .ic{width:20px;height:20px}
+.ftr-nl-go[aria-busy="true"]{opacity:.7;cursor:progress}
+@media (max-width:479px){.ftr .ftr-nl-form input{padding:0 10px;font-size:.9375rem}.ftr-nl-city{padding-left:4px}.ftr-nl-city .ic{display:none}}
+/* footer bottom: payment methods, cookie settings, ANPC */
+.ftr-bottom > .ftr-trust{display:grid;gap:14px;justify-items:start}
+@media (min-width:1024px){.ftr-bottom > .ftr-trust{justify-items:end}}
+.ftr-trust-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.ftr-paywrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.pay-badges{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.pay-badges li{display:grid;place-items:center;min-width:48px;height:30px;padding:0 10px;border-radius:7px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.75rem;font-weight:700;letter-spacing:.02em}
+.ftr-cc{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 14px;border:1px solid rgba(247,247,245,.28);border-radius:10px;background:transparent;color:#F7F7F5;font:600 .8125rem/1 var(--font);cursor:pointer}
+.ftr-cc:hover{border-color:rgba(247,247,245,.6)}
+.ftr-cc:focus-visible{outline:2px solid var(--online);outline-offset:2px}
+.ftr-cc .ic{width:17px;height:17px}
+.ftr-anpc{display:flex;flex-wrap:wrap;gap:10px}
+.ftr-anpc a{display:block;border-radius:8px}
+.ftr-anpc a:focus-visible{outline:2px solid var(--online);outline-offset:2px}
+.ftr-anpc img{display:block;width:200px;height:auto}
+.ftr-card{min-width:0}
