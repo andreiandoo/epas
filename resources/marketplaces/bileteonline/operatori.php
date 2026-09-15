@@ -1,12 +1,21 @@
 <?php
 /**
- * bilete.online — /operatori
+ * Operators catalog: /operatori (v2 design).
  *
- * Listing of OPERATORS — the companies (organizers) that sell activities on the
- * platform. Replaces the old "Locații" listing (venues) for this activity-first
- * marketplace. Pulls real organizers from /marketplace-events/organizers and
- * falls back to a small static list so the page is never empty. Single operator
- * profiles live at /operator/{slug} (served by public.php).
+ * The companies that sell activities on bilete.online. `/marketplace-events/organizers` gives the operators (name, slug,
+ * logo, verified) but counts only core events and has no city or description, so each operator's activities, cities,
+ * categories and lowest price come from the `/activities` listing grouped by organizer slug (the same cached pages
+ * /operator/{slug} reads), and the description from the operator's profile (tagline / about, cached like on the profile
+ * page). Search, city and "verified" filters run over the server-rendered cards (operators.js), so every operator is in
+ * the HTML for crawlers.
+ *
+ * Top to bottom: hero (search, quick filters, a real operator with its first activities), filters + operator cards,
+ * what an operator page holds, final CTA for operators.
+ *
+ * Changed on the way: every card said "România", showed no activity count and the same stock sentence (the organizers
+ * endpoint has no city, counts only events and has no description), and the hero card listed "Activitate 1/2/3"
+ * placeholders. When the API can't be reached the page no longer shows three invented operators (their links were
+ * 404s): it says the list is unavailable, answers 503 and isn't cached.
  */
 
 $pageCacheTTL = 600;
@@ -14,277 +23,352 @@ require_once __DIR__ . '/includes/page-cache.php';
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
 
-// =========================================================================
-// DATA — fetch operators (organizers)
-// =========================================================================
-$opsResp = api_cached('operators_all', function () {
-    return api_get('/marketplace-events/organizers', ['per_page' => 100, 'sort' => 'name']);
-}, 600);
+$osKey = fn (string $s): string => trim(preg_replace('/[^a-z0-9]+/', '-', mb_strtolower(strtr($s, [
+    'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+    'Ă' => 'a', 'Â' => 'a', 'Î' => 'i', 'Ș' => 's', 'Ş' => 's', 'Ț' => 't', 'Ţ' => 't',
+]))), '-');
+$osSlugOk = fn ($s): bool => is_string($s) && preg_match('/^[a-z0-9][a-z0-9-]*$/', $s) === 1;
+$osShort = function (string $s, int $max = 170): string {
+    $s = trim(preg_replace('/\s+/u', ' ', strip_tags($s)));
+    if (mb_strlen($s) <= $max) {
+        return $s;
+    }
+    $cut = mb_substr($s, 0, $max);
+    $space = mb_strrpos($cut, ' ');
+    return rtrim($space !== false && $space > 80 ? mb_substr($cut, 0, $space) : $cut, " ,.;:-") . '…';
+};
+$osInitial = fn (string $name): string => mb_strtoupper(mb_substr(preg_replace('/[^\p{L}\p{N}]+/u', '', $name), 0, 1)) ?: 'O';
 
-$rawOps = $opsResp['data']['items']
-    ?? $opsResp['data']['data']
-    ?? (is_array($opsResp['data'] ?? null) ? $opsResp['data'] : []);
-if (! is_array($rawOps)) $rawOps = [];
+// ------------------------------------------------------------------ operators
+$opsResp = api_cached('operators_all', fn () => api_get('/marketplace-events/organizers', ['per_page' => 100, 'sort' => 'name']), 600);
+$opsData = $opsResp['data'] ?? [];
+$rawOps = is_array($opsData['items'] ?? null) ? $opsData['items']
+    : (is_array($opsData['data'] ?? null) ? $opsData['data'] : (is_array($opsData) && array_is_list($opsData) ? $opsData : []));
+
+// Activities per operator, from the listing (the organizers endpoint doesn't list them).
+$groups = [];
+$activitiesOk = false;
+for ($listPage = 1; $listPage <= 4; $listPage++) {
+    $listResp = api_cached("operator_activities_p{$listPage}", fn () => api_get('/activities', ['per_page' => 50, 'page' => $listPage]), 600);
+    if (!empty($listResp['success'])) {
+        $activitiesOk = true;
+    }
+    foreach ((array) ($listResp['data']['items'] ?? []) as $a) {
+        $org = is_array($a) && is_array($a['organizer'] ?? null) ? $a['organizer'] : null;
+        if (!$org || !$osSlugOk($org['slug'] ?? null) || !($card = v2_activity($a))) {
+            continue;
+        }
+        $group = &$groups[$org['slug']];
+        $group['name'] = $group['name'] ?? navFlatName($org['name'] ?? '');
+        $group['activities'][] = $card;
+        $citySlug = is_array($a['city'] ?? null) ? (string) ($a['city']['slug'] ?? '') : '';
+        if ($card['city'] !== '' && $osSlugOk($citySlug)) {
+            $group['cities'][$citySlug] = [$card['city'], ($group['cities'][$citySlug][1] ?? 0) + 1];
+        }
+        unset($group);
+    }
+    if ($listPage >= (int) ($listResp['data']['pagination']['last_page'] ?? 1)) {
+        break;
+    }
+}
 
 $operators = [];
 foreach ($rawOps as $o) {
-    $name = navFlatName($o['name'] ?? '');
-    $slug = $o['slug'] ?? '';
-    if (! $name || ! $slug) continue;
+    $opName = is_array($o) ? navFlatName($o['name'] ?? '') : '';
+    if ($opName === '' || !$osSlugOk($o['slug'] ?? null)) {
+        continue;
+    }
+    $operators[$o['slug']] = ['slug' => $o['slug'], 'name' => $opName, 'logo' => v2_media_url($o['logo'] ?? null), 'verified' => !empty($o['verified'])];
+}
+// operators the organizers list doesn't return but whose activities are on sale
+foreach ($groups as $groupSlug => $group) {
+    if (!isset($operators[$groupSlug]) && ($group['name'] ?? '') !== '') {
+        $operators[$groupSlug] = ['slug' => (string) $groupSlug, 'name' => $group['name'], 'logo' => null, 'verified' => false];
+    }
+}
+$activityCount = fn (array $op): int => count($groups[$op['slug']]['activities'] ?? []);
+uasort($operators, fn ($a, $b) => [$activityCount($b), $osKey($a['name'])] <=> [$activityCount($a), $osKey($b['name'])]);
 
-    $cityName = navFlatName(is_array($o['city'] ?? null) ? ($o['city']['name'] ?? '') : ($o['city'] ?? ''));
-    $citySlug = is_array($o['city'] ?? null) ? ($o['city']['slug'] ?? '') : '';
+// Profiles (tagline / about, avatar, cover) for the first 24, fetched together and cached like on /operator/{slug}.
+$profileJobs = [];
+foreach (array_slice(array_keys($operators), 0, 24) as $profileSlug) {
+    $profileJobs[(string) $profileSlug] = ['key' => "operator_profile_{$profileSlug}", 'endpoint' => '/marketplace-events/organizers/' . rawurlencode((string) $profileSlug), 'params' => [], 'ttl' => 300];
+}
+$profiles = $profileJobs ? api_cached_many($profileJobs) : [];
 
-    $operators[] = [
-        'name'        => $name,
-        'slug'        => $slug,
-        'city'        => $cityName ?: 'România',
-        'citySlug'    => $citySlug ?: '',
-        'logo'        => $o['logo'] ?? null,
-        'verified'    => ! empty($o['verified']),
-        'count'       => (int) ($o['activities_count'] ?? $o['event_count'] ?? 0),
-        'description' => navFlatName($o['description'] ?? $o['short_description'] ?? '') ?: 'Operator partener bilete.online cu activități disponibile online.',
+$list = [];
+foreach ($operators as $op) {
+    $group = $groups[$op['slug']] ?? [];
+    $acts = $group['activities'] ?? [];
+    $profile = $profiles[$op['slug']] ?? null;
+    $pd = is_array($profile) && !empty($profile['success']) && is_array($profile['data'] ?? null) ? $profile['data'] : [];
+    $cities = $group['cities'] ?? [];
+    uasort($cities, fn ($a, $b) => $b[1] <=> $a[1]);
+    $mainSlug = (string) (array_key_first($cities) ?? '');
+    $mainCity = $mainSlug !== '' ? $cities[$mainSlug][0] : '';
+    $categories = array_values(array_unique(array_filter(array_column($acts, 'catName'))));
+    $prices = array_filter(array_column($acts, 'price'), fn ($p) => $p > 0);
+    $cover = v2_media_url(is_string($pd['cover_image'] ?? null) ? $pd['cover_image'] : null);
+    foreach ($acts as $act) {
+        if ($cover) {
+            break;
+        }
+        $cover = $act['image'] ?: null;
+    }
+    $location = is_string($pd['location'] ?? null) ? trim($pd['location']) : '';
+    $about = $osShort(navFlatName($pd['tagline'] ?? '') ?: navFlatName($pd['about'] ?? ''));
+    $count = count($acts);
+    $list[] = [
+        'slug' => $op['slug'],
+        'name' => $op['name'],
+        'url' => '/operator/' . $op['slug'],
+        'verified' => $op['verified'] || !empty($pd['verified']),
+        'logo' => $op['logo'] ?: v2_media_url(is_string($pd['avatar'] ?? null) ? $pd['avatar'] : null),
+        'cover' => $cover,
+        'city' => $mainCity ?: ($location ?: 'România'),
+        'cityUrl' => $mainSlug !== '' ? '/' . $mainSlug : '',
+        'cityKeys' => array_map('strval', array_keys($cities)),
+        'cityNames' => array_column($cities, 0),
+        'count' => $count,
+        'categories' => array_slice($categories, 0, 2),
+        'priceFrom' => $prices ? min($prices) : 0,
+        'activities' => array_slice($acts, 0, 3),
+        'description' => $about !== '' ? $about : ($count > 0
+            ? 'Operator partener bilete.online cu ' . v2_num($count, 'activitate', 'activități') . ($mainCity !== '' ? ' în ' . $mainCity : '') . '.'
+            : 'Operator partener bilete.online cu activități disponibile online.'),
     ];
 }
 
-// Static fallback if API empty (keeps the page presentable pre-launch).
-if (empty($operators)) {
-    $operators = [
-        ['name' => 'Mystery Rooms București', 'slug' => 'mystery-rooms-bucuresti', 'city' => 'București', 'citySlug' => 'bucuresti', 'logo' => null, 'verified' => true, 'count' => 4, 'description' => 'Operator de escape rooms tematice pentru grupuri mici și mari în centrul Bucureștiului.'],
-        ['name' => 'Prestige Tours Romania', 'slug' => 'prestige-tours-romania', 'city' => 'București', 'citySlug' => 'bucuresti', 'logo' => null, 'verified' => true, 'count' => 9, 'description' => 'Tururi ghidate, excursii de o zi și experiențe culturale în București, Sinaia, Bran și Brașov.'],
-        ['name' => 'Atelier Ceramică Cluj', 'slug' => 'atelier-ceramica-cluj', 'city' => 'Cluj-Napoca', 'citySlug' => 'cluj-napoca', 'logo' => null, 'verified' => false, 'count' => 3, 'description' => 'Ateliere de ceramică pentru începători și avansați, în grupuri mici.'],
-    ];
+$apiDown = !$list && (empty($opsResp['success']) || !$activitiesOk);
+if (empty($opsResp['success']) || !$activitiesOk) {
+    $skipPageCache = true; // never keep a degraded list in the page cache
+}
+if ($apiDown) {
+    http_response_code(503);
+    header('Retry-After: 120');
 }
 
-// Unique cities (for the filter).
-$citiesList = array_values(array_unique(array_filter(array_map(fn ($o) => $o['city'], $operators))));
-sort($citiesList);
+$cityOptions = [];
+foreach ($list as $op) {
+    foreach ($op['cityKeys'] as $ci => $cityKey) {
+        $cityOptions[$cityKey] = $op['cityNames'][$ci];
+    }
+}
+uasort($cityOptions, fn ($a, $b) => strcmp($osKey($a), $osKey($b)));
+$verifiedCount = count(array_filter($list, fn ($op) => $op['verified']));
+$lead = $list[0] ?? null;
+$searchQuery = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 60) : '';
 
-// SEO
-$pageTitleRaw    = 'Operatori — companii care vând activități · ' . SITE_NAME;
+// ------------------------------------------------------------------ page
+$pageTitleRaw = 'Operatori — companii care vând activități · ' . SITE_NAME;
 $pageDescription = 'Descoperă operatorii parteneri bilete.online: companiile care organizează și vând activități, experiențe și tururi. Profil dedicat, activități listate, bilete cu QR pe email.';
-$canonicalUrl    = SITE_URL . '/operatori';
-$currentPage     = 'operatori';
-$cssBundle       = 'listing';
-
-$breadcrumbs = [
-    ['name' => 'Acasă', 'url' => SITE_URL . '/'],
-    ['name' => 'Operatori', 'url' => $canonicalUrl],
-];
-
+$canonicalUrl = SITE_URL . '/operatori';
+$noindex = $apiDown;
 $structuredData = [[
-    '@context'   => 'https://schema.org',
-    '@type'      => 'CollectionPage',
-    'name'       => $pageTitleRaw,
+    '@context' => 'https://schema.org',
+    '@type' => 'CollectionPage',
+    'name' => $pageTitleRaw,
     'description' => $pageDescription,
-    'url'        => $canonicalUrl,
+    'url' => $canonicalUrl,
     'inLanguage' => 'ro-RO',
+    'mainEntity' => [
+        '@type' => 'ItemList',
+        'numberOfItems' => count($list),
+        'itemListElement' => array_map(fn ($pos, $op) => [
+            '@type' => 'ListItem',
+            'position' => $pos + 1,
+            'name' => $op['name'],
+            'url' => SITE_URL . $op['url'],
+        ], array_keys($list), $list),
+    ],
+], [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Operatori', 'item' => $canonicalUrl],
+    ],
 ]];
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+$osArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
+$v2Styles = ['cities.css', 'operators.css'];
+$v2Scripts = ['operators.js'];
+$v2HeaderOverlay = true;
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
+<main id="main" tabindex="-1">
+  <!-- ===================== HERO ===================== -->
+  <section class="ct-hero os-hero" aria-labelledby="os-h">
+    <?= $osArches ?>
+    <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="ct-in">
+      <div>
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Operatori</span></nav>
+        <p class="ct-kicker">Operatori · companii · activități</p>
+        <h1 class="ct-h" id="os-h">Cine organizează experiențele.</h1>
+        <p class="ct-lead">Operatorii sunt companiile care creează și vând activitățile de pe platformă: escape rooms, tururi ghidate, ateliere, experiențe și multe altele. Fiecare are profil dedicat cu activitățile lui.</p>
 
-<main x-data="operatorsPage(<?= htmlspecialchars(json_encode([
-    'operators' => $operators,
-    'cities'    => $citiesList,
-]), ENT_QUOTES) ?>)">
-
-<!-- HERO -->
-<section class="relative overflow-hidden border-b-2 border-ink">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_82%_14%,rgba(232,69,39,.24),transparent_30%),radial-gradient(circle_at_16%_72%,rgba(30,74,61,.22),transparent_34%),radial-gradient(circle_at_50%_44%,rgba(218,154,51,.18),transparent_30%)]"></div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
-        <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
-            <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Operatori</span>
-        </nav>
-        <div class="mt-8 grid lg:grid-cols-[1fr_.92fr] gap-12 items-center">
-            <div>
-                <p class="inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">OPERATORI · COMPANII · ACTIVITĂȚI</p>
-                <h1 class="mt-6 font-display text-6xl sm:text-8xl font-bold leading-[.82]">Cine organizează experiențele.</h1>
-                <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
-                    Operatorii sunt companiile care creează și vând activitățile de pe platformă: escape rooms, tururi ghidate, ateliere, experiențe și multe altele. Fiecare are profil dedicat cu activitățile lui.
-                </p>
-                <div class="mt-8 max-w-2xl">
-                    <label class="sr-only" for="operator-search">Caută operator</label>
-                    <div class="relative">
-                        <input id="operator-search" type="text" class="field text-lg pr-14" x-model="search" placeholder="Caută: nume operator, oraș...">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft">
-                            <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        </span>
-                    </div>
-                </div>
-                <div class="mt-6 flex flex-wrap gap-2">
-                    <button @click="activeCity='all'; onlyVerified=false" class="rounded-full bg-paper/70 border border-ink/10 px-4 py-2 font-bold hover:bg-ink hover:text-paper transition">Toți operatorii</button>
-                    <button @click="onlyVerified=true" class="rounded-full bg-paper/70 border border-ink/10 px-4 py-2 font-bold hover:bg-ink hover:text-paper transition">Verificați</button>
-                </div>
-            </div>
-            <div class="relative min-h-[420px] hidden lg:block">
-                <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[-2deg] shadow-deep"></div>
-                <div class="absolute top-0 left-0 right-0 mx-auto max-w-[540px] bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep rotate-[2deg]">
-                    <div class="p-6 sm:p-8">
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">OPERATOR GRAPH</p>
-                        <h2 class="mt-3 font-display text-3xl font-bold leading-none">Un operator poate avea mai multe activități.</h2>
-                        <div class="mt-7 rounded-3xl bg-paper-2 border border-ink/10 p-5">
-                            <div class="flex items-center gap-3">
-                                <span class="grid place-items-center w-12 h-12 rounded-2xl bg-vermilion text-paper font-display text-xl font-bold"><?= htmlspecialchars(mb_substr($operators[0]['name'] ?? 'O', 0, 1)) ?></span>
-                                <div>
-                                    <p class="font-display text-2xl font-bold"><?= htmlspecialchars($operators[0]['name'] ?? 'Operator') ?></p>
-                                    <p class="text-sm text-ink-soft"><?= htmlspecialchars($operators[0]['city'] ?? '') ?></p>
-                                </div>
-                            </div>
-                            <div class="mt-5 grid gap-3">
-                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Activitate 1</span><span class="text-forest font-bold">bilete</span></div>
-                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Activitate 2</span><span class="text-forest font-bold">bilete</span></div>
-                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Activitate 3</span><span class="text-ochre font-bold">soon</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <form class="ct-search" id="os-form" action="/operatori" method="get" role="search">
+          <label class="sr" for="os-q">Caută operator</label>
+          <input id="os-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Caută: nume operator, oraș..." value="<?= v2_e($searchQuery) ?>">
+          <button type="submit" aria-label="Arată operatorii găsiți"><?= v2_ic('magnifying-glass') ?></button>
+        </form>
+        <p class="ct-status" id="os-status" role="status"></p>
+        <?php if ($list): ?>
+        <div class="os-quick" role="group" aria-label="Filtre rapide">
+          <button type="button" data-quick="all" aria-pressed="true">Toți operatorii<span><?= count($list) ?></span></button>
+          <button type="button" data-quick="verified" aria-pressed="false">Verificați<span><?= $verifiedCount ?></span></button>
         </div>
-    </div>
-</section>
+        <?php endif; ?>
+      </div>
 
-<!-- LIST + FILTER -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-    <div class="grid lg:grid-cols-[300px_1fr] gap-8 items-start">
-        <aside class="lg:sticky lg:top-28">
-            <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRARE OPERATORI</p>
-                <label class="block mt-4">
-                    <span class="block mb-1.5 text-sm font-bold">Oraș</span>
-                    <select class="field" x-model="activeCity">
-                        <option value="all">Toate orașele</option>
-                        <template x-for="city in cities" :key="city">
-                            <option :value="city" x-text="city"></option>
-                        </template>
-                    </select>
-                </label>
-                <label class="mt-4 flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" x-model="onlyVerified" class="h-5 w-5 accent-vermilion">
-                    <span class="font-bold">Doar operatori verificați</span>
-                </label>
-                <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
-                    <p class="font-bold text-forest">Ești operator?</p>
-                    <p class="mt-1 text-sm text-ink-soft">Ai activități de vândut? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
-                    <a href="/devino-partener" class="mt-3 inline-flex font-bold text-forest underline-wobble">Devino partener</a>
-                </div>
+      <div class="ct-art" aria-hidden="true">
+        <div class="ct-art-card os-graph">
+          <p class="kicker">Operator graph</p>
+          <p class="ct-art-h">Un operator poate avea mai multe activități.</p>
+          <?php if ($lead): ?>
+          <div class="os-graph-box">
+            <div class="os-graph-op">
+              <span class="os-avatar"><?= $lead['logo'] ? v2_photo([$lead['logo'], 0, 0, '']) : v2_e($osInitial($lead['name'])) ?></span>
+              <div><b><?= v2_e($lead['name']) ?></b><small><?= v2_e($lead['city']) ?></small></div>
             </div>
-        </aside>
-
-        <section>
-            <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                <div>
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">OPERATORI</p>
-                    <h2 class="mt-2 font-display text-5xl font-bold leading-none">Operatori parteneri</h2>
-                </div>
-                <p class="text-ink-soft" x-text="filteredOperators().length + ' din <?= count($operators) ?> operatori'"></p>
-            </div>
-
-            <div class="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-                <template x-for="op in filteredOperators()" :key="op.slug">
-                    <article class="group rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
-                        <a :href="'/operator/' + op.slug" class="block p-5">
-                            <div class="flex items-center gap-4">
-                                <template x-if="op.logo">
-                                    <img :src="op.logo" :alt="op.name" class="h-16 w-16 rounded-2xl object-cover border-2 border-ink/10" loading="lazy" onerror="this.style.display='none'">
-                                </template>
-                                <template x-if="!op.logo">
-                                    <span class="grid h-16 w-16 place-items-center rounded-2xl bg-ink text-paper font-display text-2xl font-bold" x-text="op.name.charAt(0)"></span>
-                                </template>
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2">
-                                        <h3 class="font-display text-2xl font-bold leading-none group-hover:text-vermilion truncate" x-text="op.name"></h3>
-                                        <span x-show="op.verified" class="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-0.5 text-[10px] font-bold text-forest" title="Operator verificat">✓ verificat</span>
-                                    </div>
-                                    <p class="mt-1 text-sm text-ink-soft" x-text="op.city"></p>
-                                </div>
-                            </div>
-                        </a>
-                        <div class="px-5 pb-5">
-                            <p class="text-ink-soft leading-relaxed line-clamp-3" x-text="op.description"></p>
-                            <div class="mt-5 flex items-center justify-between gap-3">
-                                <a :href="'/operator/' + op.slug" class="font-bold text-vermilion underline-wobble">Vezi operatorul</a>
-                                <span x-show="op.count > 0" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="op.count + ' activități'"></span>
-                            </div>
-                        </div>
-                    </article>
-                </template>
-            </div>
-
-            <div x-show="filteredOperators().length === 0" class="mt-10 rounded-[2rem] border-2 border-ink bg-paper-2 p-10 text-center">
-                <p class="font-display text-3xl font-bold">Niciun operator găsit</p>
-                <p class="mt-2 text-ink-soft">Încearcă alt oraș sau șterge filtrele.</p>
-            </div>
-        </section>
-    </div>
-</section>
-
-<!-- WHAT IS AN OPERATOR -->
-<section class="border-y-2 border-ink bg-paper-2/65">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10 items-start">
-            <div class="lg:sticky lg:top-28">
-                <p class="inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">PAGINĂ OPERATOR</p>
-                <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Un operator e mai mult decât un nume.</h2>
-                <p class="mt-5 text-lg text-ink-soft leading-relaxed">Pagina unui operator arată cine este, ce activități oferă, unde operează, review-urile clienților și cum poți rezerva.</p>
-            </div>
-            <div class="grid sm:grid-cols-2 gap-4">
-                <article class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6"><p class="font-mono text-xs tracking-[.18em] text-vermilion">01</p><h3 class="mt-2 font-display text-3xl font-bold">Identitate</h3><p class="mt-2 text-ink-soft">Nume, logo, descriere, orașe, încredere.</p></article>
-                <article class="rounded-3xl border-2 border-ink/15 bg-mint p-6"><p class="font-mono text-xs tracking-[.18em] text-forest">02</p><h3 class="mt-2 font-display text-3xl font-bold">Activități</h3><p class="mt-2 text-ink-soft">Lista activităților, bilete, prețuri, disponibilitate.</p></article>
-                <article class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6"><p class="font-mono text-xs tracking-[.18em] text-vermilion">03</p><h3 class="mt-2 font-display text-3xl font-bold">Review-uri</h3><p class="mt-2 text-ink-soft">Recenzii verificate de la clienți care au participat.</p></article>
-                <article class="rounded-3xl border-2 border-ink/15 bg-ink text-paper p-6"><p class="font-mono text-xs tracking-[.18em] text-ochre">04</p><h3 class="mt-2 font-display text-3xl font-bold">Contact</h3><p class="mt-2 text-paper/60">Întrebări, politici, informații pentru grupuri.</p></article>
-            </div>
+            <?php if ($lead['activities']): ?>
+            <ul class="os-graph-rows">
+              <?php foreach ($lead['activities'] as $act): ?>
+              <li><span><?= v2_e($act['title']) ?></span><b><?= $act['price'] > 0 ? 'de la ' . $act['price'] . ' lei' : 'bilete' ?></b></li>
+              <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+          </div>
+          <?php else: ?>
+          <p class="os-graph-empty">Identitate, activități, review-uri și contact, într-o singură pagină.</p>
+          <?php endif; ?>
         </div>
+      </div>
     </div>
-</section>
+  </section>
+  <div id="hdr-sentinel" aria-hidden="true"></div>
 
-<!-- FINAL CTA -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
-        <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
-        <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
-            <div>
-                <p class="font-mono text-xs tracking-[.2em] text-paper/60">OPERATORI</p>
-                <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Ești operator? Vinde activități online.</h2>
-                <p class="mt-4 max-w-2xl text-paper/75 text-lg">Pagină dedicată, activități, bilete QR, dashboard, scanner check-in și rapoarte.</p>
-            </div>
-            <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
-                <a href="/devino-partener" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Devino partener</a>
-                <a href="/organizator/inregistrare" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Solicită cont</a>
-            </div>
+  <!-- ===================== FILTERS + OPERATORS ===================== -->
+  <section class="sec ct-main" id="lista" aria-labelledby="os-title">
+    <div class="wrap ct-layout">
+      <aside class="ct-side" aria-label="Filtrează operatorii">
+        <div class="ct-filter os-filter">
+          <p class="kicker">Filtrare operatori</p>
+          <?php if ($list): ?>
+          <div class="os-field">
+            <label for="os-city">Oraș</label>
+            <span class="os-select"><select id="os-city"><option value="all">Toate orașele</option><?php foreach ($cityOptions as $cityKey => $cityName): ?><option value="<?= v2_e($cityKey) ?>"><?= v2_e($cityName) ?></option><?php endforeach; ?></select><?= v2_ic('caret-down') ?></span>
+          </div>
+          <label class="os-check" for="os-verified"><input type="checkbox" id="os-verified"><span>Doar operatori verificați</span></label>
+          <?php endif; ?>
+          <div class="ct-note">
+            <b>Ești operator?</b>
+            <p>Ai activități de vândut? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
+            <a href="/devino-partener">Devino partener<?= v2_ic('arrow-right') ?></a>
+          </div>
         </div>
-    </div>
-</section>
+      </aside>
 
+      <div>
+        <div class="ct-head">
+          <div><p class="kicker">Operatori</p><h2 id="os-title" tabindex="-1">Operatori parteneri</h2></div>
+          <?php if ($list): ?><p id="os-count" aria-live="polite"><?= count($list) ?> din <?= count($list) ?> operatori</p><?php endif; ?>
+        </div>
+
+        <?php if ($apiDown): ?>
+        <div class="os-state is-error" role="alert">
+          <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
+          <h3>Lista operatorilor nu poate fi încărcată acum.</h3>
+          <p>Încearcă din nou în câteva minute. Între timp poți căuta direct activitățile.</p>
+          <div class="os-state-cta"><a class="btn btn-primary" href="/operatori">Reîncearcă</a><a class="btn btn-ghost" href="/cauta">Caută activități</a></div>
+        </div>
+        <?php elseif (!$list): ?>
+        <div class="os-state">
+          <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
+          <h3>Încă nu avem operatori listați.</h3>
+          <p>Primii operatori parteneri apar aici imediat ce își publică activitățile.</p>
+          <div class="os-state-cta"><a class="btn btn-primary" href="/devino-partener">Devino partener</a></div>
+        </div>
+        <?php else: ?>
+        <ul class="ct-grid os-grid" id="os-grid">
+          <?php foreach ($list as $oi => $op): ?>
+          <li class="ct-card os-card<?= $oi >= 12 ? ' is-extra' : '' ?>" data-cities="<?= v2_e(implode(' ', $op['cityKeys'])) ?>" data-verified="<?= $op['verified'] ? '1' : '0' ?>" data-q="<?= v2_e(implode(' ', array_merge([$op['name'], $op['city'], $op['description']], $op['cityNames'], $op['categories']))) ?>">
+            <a class="ct-top" href="<?= v2_e($op['url']) ?>">
+              <span class="ct-media"><?= $op['cover'] ? v2_photo([$op['cover'], 0, 0, '']) : v2_fallback($op['name'], $oi) ?></span>
+              <?php if ($op['logo']): ?><span class="os-logo"><?= v2_photo([$op['logo'], 0, 0, '']) ?></span><?php endif; ?>
+              <span class="ct-over"><small><?= v2_e($op['city']) ?></small><h3><?= v2_e($op['name']) ?></h3></span>
+              <?php if ($op['count'] > 0): ?><span class="ct-badge"><?= v2_e(v2_num($op['count'], 'activitate', 'activități')) ?></span><?php endif; ?>
+            </a>
+            <div class="ct-body">
+              <?php if ($op['verified'] || $op['categories'] || $op['priceFrom'] > 0): ?>
+              <ul class="os-meta" aria-label="<?= v2_e($op['name']) ?>: pe scurt">
+                <?php if ($op['verified']): ?><li class="os-verified"><?= v2_ic('check-circle') ?>Verificat</li><?php endif; ?>
+                <?php foreach ($op['categories'] as $category): ?><li class="os-chip"><?= v2_e($category) ?></li><?php endforeach; ?>
+                <?php if ($op['priceFrom'] > 0): ?><li class="os-chip">de la <?= $op['priceFrom'] ?> lei</li><?php endif; ?>
+              </ul>
+              <?php endif; ?>
+              <p><?= v2_e($op['description']) ?></p>
+              <ul class="ct-links" aria-label="<?= v2_e($op['name']) ?>: linkuri">
+                <?php if ($op['cityUrl'] !== ''): ?><li><a href="<?= v2_e($op['cityUrl']) ?>">Activități în <?= v2_e($op['city']) ?></a></li><?php endif; ?>
+                <li><a class="is-main" href="<?= v2_e($op['url']) ?>">Vezi operatorul<?= v2_ic('arrow-right') ?></a></li>
+              </ul>
+            </div>
+          </li>
+          <?php endforeach; ?>
+        </ul>
+        <?php if (count($list) > 12): ?>
+        <button class="btn btn-ghost ct-more" type="button" id="os-more" hidden>Arată toți cei <?= v2_e(v2_num(count($list), 'operator', 'operatori')) ?><?= v2_ic('caret-down') ?></button>
+        <?php endif; ?>
+        <div class="ct-none" id="os-none" hidden>
+          <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
+          <p>Niciun operator găsit</p>
+          <p class="os-none-sub">Încearcă alt oraș sau șterge filtrele.</p>
+          <button class="btn btn-ghost" type="button" id="os-reset">Arată toți operatorii</button>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WHAT AN OPERATOR PAGE HOLDS ===================== -->
+  <section class="sec ct-hubs os-about" aria-labelledby="os-about-h">
+    <div class="wrap ct-hubs-grid">
+      <div class="ct-hubs-intro">
+        <p class="kicker">Pagină operator</p>
+        <h2 id="os-about-h">Un operator e mai mult decât un nume.</h2>
+        <p>Pagina unui operator arată cine este, ce activități oferă, unde operează, review-urile clienților și cum poți rezerva.</p>
+      </div>
+      <ul class="os-features">
+        <li class="os-feature"><small>01</small><h3>Identitate</h3><p>Nume, logo, descriere, orașe, încredere.</p></li>
+        <li class="os-feature is-mint"><small>02</small><h3>Activități</h3><p>Lista activităților, bilete, prețuri, disponibilitate.</p></li>
+        <li class="os-feature"><small>03</small><h3>Review-uri</h3><p>Recenzii verificate de la clienți care au participat.</p></li>
+        <li class="os-feature is-deep"><small>04</small><h3>Contact</h3><p>Întrebări, politici, informații pentru grupuri.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== FINAL CTA ===================== -->
+  <section class="ct-final" aria-labelledby="os-final-h">
+    <div class="wrap">
+      <div class="ct-final-in">
+        <?= $osArches ?>
+        <div>
+          <p class="kicker">Operatori</p>
+          <h2 id="os-final-h">Ești operator? Vinde activități online.</h2>
+          <p>Pagină dedicată, activități, bilete QR, dashboard, scanner check-in și rapoarte.</p>
+        </div>
+        <div class="ct-final-cta">
+          <a class="btn btn-light" href="/devino-partener">Devino partener<?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-outline-light" href="/organizator/inregistrare">Solicită cont</a>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
-
-<script>
-function operatorsPage(data) {
-    return {
-        search: '',
-        activeCity: 'all',
-        onlyVerified: false,
-        operators: data.operators || [],
-        cities: data.cities || [],
-        norm(s) {
-            return (s || '').toString().toLowerCase().normalize('NFD')
-                .replace(/[̀-ͯ]/g, '')
-                .replace(/[şș]/g, 's').replace(/[ţț]/g, 't')
-                .replace(/[ăâ]/g, 'a').replace(/[î]/g, 'i').trim();
-        },
-        filteredOperators() {
-            const q = this.norm(this.search);
-            return this.operators.filter(o => {
-                const matchesCity = this.activeCity === 'all' || o.city === this.activeCity;
-                const matchesVerified = !this.onlyVerified || o.verified;
-                const matchesSearch = !q || this.norm(o.name + ' ' + o.city + ' ' + o.description).includes(q);
-                return matchesCity && matchesVerified && matchesSearch;
-            });
-        },
-    };
-}
-</script>
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>
