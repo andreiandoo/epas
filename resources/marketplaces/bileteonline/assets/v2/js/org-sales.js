@@ -467,6 +467,14 @@
       return fetch(base + '?' + p.toString(), { headers: { Authorization: 'Bearer ' + token, Accept: 'text/csv' } }).then(function (res) {
         if (!res.ok) { var e = new Error('export'); e.status = res.status; throw e; }
         return res.text();
+      }).then(function (t) {
+        // core's file starts with its "Data,..." header; a refused token gets core's sign-in page instead (as 200,
+        // the proxy follows the redirect), which must never be saved as a .csv
+        var head = String(t || '').replace(/^﻿/, '').replace(/^\s+/, '');
+        if (head.indexOf('Data,') === 0) return t;
+        var e = new Error('export');
+        e.html = head.charAt(0) === '<';
+        throw e;
       });
     })).then(function (texts) {
       var csv = mergeCsv(texts);
@@ -479,12 +487,16 @@
       setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
       O.flash('Exportul a fost descărcat: ' + F.count(csv.rows.length, 'rând', 'rânduri') + ', câte unul pe bilet.' + (S.status ? '' : ' Include și comenzile anulate sau expirate.') + (S.q ? ' Căutarea nu se aplică exportului.' : ''));
     }).catch(function (err) {
-      if (err && err.status === 401) {
+      function failed() { O.flash('Nu am putut genera exportul. Încearcă din nou.', true); }
+      function signOut() {
         O.flash('Sesiunea a expirat. Te trimitem la autentificare.', true);
         setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); // a refused token ends the session there
-        return;
       }
-      O.flash('Nu am putut genera exportul. Încearcă din nou.', true);
+      if (err && err.status === 401) return signOut();
+      if (err && err.html) { // a web page instead of the file: ask core whether the session still stands
+        return O.api('/organizer/me', { quiet: true }).then(failed, function (e) { if (e && e.status === 401) signOut(); else failed(); });
+      }
+      failed();
     }).then(function () {
       btn.removeAttribute('aria-busy');
       label.textContent = 'Export CSV';
