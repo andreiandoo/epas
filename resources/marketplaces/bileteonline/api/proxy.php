@@ -3403,6 +3403,25 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Per-day net revenue, issued tickets and page views over all of the organizer's activities (the v2 dashboard chart):
+    // a preset window (days) or a from / to range; core caps it at 365 days.
+    case 'organizer.dashboard.analytics-timeline':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['days'])) $params['days'] = max(1, min((int)$_GET['days'], 365));
+        foreach (['from', 'to'] as $rangeKey) {
+            if (isset($_GET[$rangeKey]) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$_GET[$rangeKey])) $params[$rangeKey] = $_GET[$rangeKey];
+        }
+        $endpoint = '/organizer/dashboard/analytics-timeline' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.dashboard.recent-orders':
+        $method = 'GET';
+        $endpoint = '/organizer/dashboard/recent-orders?' . http_build_query(['limit' => max(1, min((int)($_GET['limit'] ?? 10), 50))]);
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER EVENTS ====================
 
     case 'organizer.events':

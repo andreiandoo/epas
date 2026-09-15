@@ -1066,6 +1066,8 @@ const BileteOnlineAPI = {
         if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
         if (endpoint.includes('/organizer/dashboard/sales-timeline')) return 'organizer.dashboard.sales-timeline';
+        if (endpoint === '/organizer/dashboard/analytics-timeline') return 'organizer.dashboard.analytics-timeline';
+        if (endpoint === '/organizer/dashboard/recent-orders') return 'organizer.dashboard.recent-orders';
 
         // Organizer events
         // Leisure venue endpoints (organizer-side)
