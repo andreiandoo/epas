@@ -26,23 +26,222 @@
     checkSolid();
   }
 
-  /* ---------- mobile menu ---------- */
+  /* ---------- mobile menu ----------
+     Opens as a circle growing from the menu button, the sections (Explorează, Activități, Inspirație) slide in as
+     panels with a back button, categories unfold their types, and the search suggests cities, categories and guides
+     from #mm-data while typing. Escape steps back, then closes; focus stays inside while it is open. */
   var menu = $('menu'), menuBtn = $('menu-btn');
-  function toggleMenu(open) {
-    menu.classList.toggle('is-open', open);
-    hdr.classList.toggle('menu-open', open);
-    menuBtn.setAttribute('aria-expanded', String(open));
-    menuBtn.setAttribute('aria-label', open ? 'Închide meniul' : 'Deschide meniul');
-    menuBtn.querySelector('use').setAttribute('href', open ? '#i-x' : '#i-list');
-    // smooth scrolling (homepage, desktop) pauses while the menu is open
-    if (window.v2Lenis) { if (open) window.v2Lenis.stop(); else window.v2Lenis.start(); }
-  }
-  if (hdr && menu && menuBtn) {
-    menuBtn.addEventListener('click', function () { toggleMenu(!menu.classList.contains('is-open')); });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && menu.classList.contains('is-open')) toggleMenu(false);
+  if (hdr && menu && menuBtn && menu.querySelector('.mm-sheet')) (function () {
+    var sheet = menu.querySelector('.mm-sheet'), root = $('mm-root'), current = root;
+    var q = $('mm-q'), sug = $('mm-suggest'), closeTimer = null, lastFocus = null, active = -1;
+    var OPEN_MS = reduce ? 0 : 620, CLOSE_MS = reduce ? 0 : 440, PANEL_MS = reduce ? 0 : 540;
+    var data = null;
+    try { data = JSON.parse(($('mm-data') || {}).textContent || 'null'); } catch (x) { data = null; }
+
+    function isOpen() { return menu.classList.contains('is-open'); }
+    function place() {
+      var b = menuBtn.getBoundingClientRect(), x = b.left + b.width / 2;
+      sheet.style.setProperty('--mx', Math.round(x) + 'px');
+      sheet.style.setProperty('--mr', Math.ceil(Math.hypot(Math.max(x, window.innerWidth - x), window.innerHeight)) + 'px');
+    }
+    function setOpen(open, opts) {
+      opts = opts || {};
+      if (open === isOpen()) return;
+      clearTimeout(closeTimer);
+      hdr.classList.toggle('menu-open', open);
+      menuBtn.setAttribute('aria-expanded', String(open));
+      menuBtn.setAttribute('aria-label', open ? 'Închide meniul' : 'Deschide meniul');
+      menuBtn.querySelector('use').setAttribute('href', open ? '#i-x' : '#i-list');
+      document.documentElement.classList.toggle('mm-lock', open);
+      // smooth scrolling (homepage, desktop) pauses while the menu is open
+      if (window.v2Lenis) { if (open) window.v2Lenis.stop(); else window.v2Lenis.start(); }
+      if (open) {
+        lastFocus = document.activeElement;
+        menu.classList.remove('is-closing');
+        resetPanels();
+        menu.hidden = false;
+        place();
+        void sheet.offsetWidth;
+        menu.classList.add('is-open');
+        if (opts.search) q.focus({ preventScroll: true }); else sheet.focus({ preventScroll: true });
+      } else {
+        hideSuggest();
+        menu.classList.add('is-closing');
+        menu.classList.remove('is-open');
+        closeTimer = setTimeout(function () { menu.hidden = true; menu.classList.remove('is-closing'); }, CLOSE_MS);
+        if (opts.restore !== false) (lastFocus && document.contains(lastFocus) && lastFocus !== document.body ? lastFocus : menuBtn).focus({ preventScroll: true });
+      }
+    }
+
+    /* panels */
+    function afterMove(el, fn) {
+      if (!PANEL_MS) { fn(); return; }
+      var done = false;
+      var go = function (e) {
+        if (done || (e && (e.target !== el || e.propertyName !== 'transform'))) return;
+        done = true;
+        el.removeEventListener('transitionend', go);
+        fn();
+      };
+      el.addEventListener('transitionend', go);
+      setTimeout(go, PANEL_MS + 80);
+    }
+    function show(panel, back) {
+      if (!panel || panel === current) return;
+      var from = current;
+      current = panel;
+      hideSuggest();
+      panel.hidden = false;
+      panel.classList.remove('is-in');
+      panel.classList.add(back ? 'is-left' : 'is-right');
+      if (!back) panel.scrollTop = 0;
+      void panel.offsetWidth;
+      panel.classList.remove('is-left', 'is-right');
+      if (!back) panel.classList.add('is-in');
+      from.classList.add(back ? 'is-right' : 'is-left');
+      afterMove(from, function () {
+        if (from === current) return;
+        from.hidden = true;
+        from.classList.remove('is-left', 'is-right', 'is-in');
+      });
+      var target = back ? root.querySelector('[data-mm-go="' + from.id + '"]') : panel.querySelector('.mm-back');
+      if (target) target.focus({ preventScroll: true });
+    }
+    function resetPanels() {
+      [].forEach.call(menu.querySelectorAll('.mm-panel'), function (p) {
+        p.hidden = p !== root;
+        p.classList.remove('is-left', 'is-right', 'is-in');
+      });
+      current = root;
+    }
+
+    menuBtn.addEventListener('click', function () { setOpen(!isOpen()); });
+    [].forEach.call(document.querySelectorAll('[data-mm-search]'), function (b) {
+      b.addEventListener('click', function () { if (isOpen()) q.focus(); else setOpen(true, { search: true }); });
     });
-  }
+    menu.addEventListener('click', function (e) {
+      var t = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+      if (!t) return;
+      var go = t.closest('[data-mm-go]'), tg = t.closest('.mm-cat-tg');
+      if (t.closest('[data-mm-close]')) { setOpen(false); return; }
+      if (go) { show($(go.getAttribute('data-mm-go'))); return; }
+      if (t.closest('[data-mm-back]')) { show(root, true); return; }
+      if (tg) {
+        var on = tg.getAttribute('aria-expanded') !== 'true', sub = $(tg.getAttribute('aria-controls'));
+        tg.setAttribute('aria-expanded', String(on));
+        if (sub) sub.classList.toggle('is-open', on);
+        return;
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!isOpen()) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (!sug.hidden) hideSuggest();
+        else if (current !== root) show(root, true);
+        else setOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      var list = [menuBtn].concat([].slice.call(menu.querySelectorAll('.mm-searchbar input, .mm-searchbar button, .mm-searchbar a[href]')), [].slice.call(current.querySelectorAll('a[href], button')))
+        .filter(function (el) { return el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden'; });
+      var i = list.indexOf(document.activeElement);
+      if (i < 0 || (e.shiftKey && i === 0) || (!e.shiftKey && i === list.length - 1)) {
+        e.preventDefault();
+        list[e.shiftKey ? (i <= 0 ? list.length - 1 : i - 1) : (i < 0 || i === list.length - 1 ? 0 : i + 1)].focus();
+      }
+    });
+    desktopMQ.addEventListener('change', function (m) { if (m.matches && isOpen()) setOpen(false, { restore: false }); });
+
+    /* search suggestions */
+    function fold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+    function hideSuggest() {
+      sug.hidden = true;
+      sug.textContent = '';
+      q.setAttribute('aria-expanded', 'false');
+      q.removeAttribute('aria-activedescendant');
+      active = -1;
+    }
+    function icon(name) {
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      svg.setAttribute('class', 'ic');
+      svg.setAttribute('aria-hidden', 'true');
+      use.setAttribute('href', '#i-' + name);
+      svg.appendChild(use);
+      return svg;
+    }
+    function option(id, href, ic, label, needle, meta, extra) {
+      var a = document.createElement('a'), b = document.createElement('b'), f = fold(label), at = needle ? f.indexOf(needle) : -1;
+      a.className = 'mm-sg' + (extra || '');
+      a.href = href;
+      a.id = id;
+      a.setAttribute('role', 'option');
+      a.setAttribute('aria-selected', 'false');
+      a.appendChild(icon(ic));
+      if (at > -1 && f.length === label.length) {
+        var m = document.createElement('mark');
+        m.textContent = label.slice(at, at + needle.length);
+        b.appendChild(document.createTextNode(label.slice(0, at)));
+        b.appendChild(m);
+        b.appendChild(document.createTextNode(label.slice(at + needle.length)));
+      } else {
+        b.textContent = label;
+      }
+      a.appendChild(b);
+      if (meta) { var s = document.createElement('small'); s.textContent = meta; a.appendChild(s); }
+      return a;
+    }
+    function hits(list, needle, max) {
+      var first = [], rest = [];
+      for (var i = 0; i < list.length && first.length < max; i++) {
+        var f = fold(list[i][0]), at = f.indexOf(needle);
+        if (at === 0 || (at > 0 && /[\s\-(]/.test(f.charAt(at - 1)))) first.push(list[i]);
+        else if (at > 0 && rest.length < max) rest.push(list[i]);
+      }
+      return first.concat(rest).slice(0, max);
+    }
+    function suggest() {
+      var text = q.value.trim(), needle = fold(text);
+      if (!data || needle.length < 2) { hideSuggest(); return; }
+      sug.textContent = '';
+      var n = 0;
+      [['Orașe', 'map-pin', data.c || [], 5], ['Categorii', 'squares-four', data.k || [], 3], ['Ghiduri', 'sun', data.g || [], 2]].forEach(function (g) {
+        var found = hits(g[2], needle, g[3]);
+        if (!found.length) return;
+        var k = document.createElement('p');
+        k.className = 'mm-sg-k';
+        k.textContent = g[0];
+        sug.appendChild(k);
+        found.forEach(function (it) {
+          var href = it[it.length - 1];
+          if (typeof href !== 'string' || !/^\/(?!\/)/.test(href)) return;
+          sug.appendChild(option('mm-sg-' + n++, href, g[1], String(it[0]), needle, it.length > 2 ? it[1] : ''));
+        });
+      });
+      sug.appendChild(option('mm-sg-' + n++, '/cauta?q=' + encodeURIComponent(text), 'magnifying-glass', 'Caută „' + text + '”', '', '', ' mm-sg-all'));
+      sug.hidden = false;
+      q.setAttribute('aria-expanded', 'true');
+      active = -1;
+    }
+    function move(step) {
+      var opts = [].slice.call(sug.querySelectorAll('.mm-sg'));
+      if (!opts.length) return;
+      if (opts[active]) opts[active].setAttribute('aria-selected', 'false');
+      active = (active + step + opts.length) % opts.length;
+      opts[active].setAttribute('aria-selected', 'true');
+      opts[active].scrollIntoView({ block: 'nearest' });
+      q.setAttribute('aria-activedescendant', opts[active].id);
+    }
+    q.addEventListener('input', suggest);
+    q.addEventListener('focus', function () { if (q.value.trim().length > 1 && sug.hidden) suggest(); });
+    q.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (sug.hidden) suggest(); e.preventDefault(); move(e.key === 'ArrowDown' ? 1 : -1); }
+      else if (e.key === 'Enter' && active > -1) {
+        var opt = sug.querySelectorAll('.mm-sg')[active];
+        if (opt) { e.preventDefault(); window.location.href = opt.href; }
+      }
+    });
+  })();
 
   /* ---------- tabs: [data-tabs] role=tablist, panels via aria-controls ---------- */
   function bindTabs(list) {
