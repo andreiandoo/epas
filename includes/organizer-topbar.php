@@ -78,7 +78,7 @@ $skipJsComponents = true;
                         Ajutor & suport
                     </a>
                     <div class="my-1 border-t border-ink/10"></div>
-                    <button type="button" onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutOrganizer){BileteOnlineAuth.logoutOrganizer();}else{location.href='/organizator/login';}"
+                    <button type="button" onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutOrganizer){BileteOnlineAuth.logoutOrganizer();}else{location.href='/autentificare?ca=venue';}"
                             class="flex w-full items-center gap-2 px-4 py-2 text-sm font-bold text-vermilion transition hover:bg-vermilion/5" role="menuitem">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                         Deconectare

@@ -365,7 +365,7 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
         <div class="ct-final-cta">
           <a class="btn btn-light" href="/devino-partener">Devino partener<?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="/organizator/inregistrare">Solicită cont</a>
+          <a class="btn btn-outline-light" href="/inregistrare-locatie">Solicită cont</a>
         </div>
       </div>
     </div>
