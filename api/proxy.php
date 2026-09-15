@@ -1402,13 +1402,56 @@ switch ($action) {
 
     case 'ticket.download-pdf':
         $method = 'GET';
-        $ticketId = $_GET['id'] ?? '';
-        if (!$ticketId) {
+        $ticketId = (string) ($_GET['id'] ?? '');
+        if (!ctype_digit($ticketId)) {
             http_response_code(400);
             echo json_encode(['error' => 'Missing ticket ID']);
             exit;
         }
-        $endpoint = '/tickets/' . urlencode($ticketId) . '/download';
+        // Core's /tickets/{id}/download only checks that the ticket belongs to this marketplace, and ticket ids are
+        // sequential: without this check anyone could download any customer's ticket (QR included) by counting ids.
+        // Only the signed-in owner gets the PDF: the id must be in their own /customer/tickets/all list.
+        $ownerAuth = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+        if ($ownerAuth === '') {
+            http_response_code(401);
+            echo json_encode(['error' => 'Authentication required']);
+            exit;
+        }
+        $ownerCh = curl_init(API_BASE_URL . '/customer/tickets/all?filter=all');
+        curl_setopt_array($ownerCh, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_HTTPHEADER => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+                'Authorization: ' . $ownerAuth,
+                'User-Agent: bilete.online Marketplace/1.0',
+            ],
+        ]);
+        $ownerBody = curl_exec($ownerCh);
+        $ownerStatus = (int) curl_getinfo($ownerCh, CURLINFO_HTTP_CODE);
+        curl_close($ownerCh);
+        $ownsTicket = false;
+        if ($ownerStatus === 200 && is_string($ownerBody)) {
+            $ownerJson = json_decode($ownerBody, true);
+            foreach (($ownerJson['data']['tickets'] ?? []) as $ownedTicket) {
+                if ((string) ($ownedTicket['id'] ?? '') === $ticketId) {
+                    $ownsTicket = true;
+                    break;
+                }
+            }
+        }
+        if (!$ownsTicket) {
+            $deny = $ownerStatus === 401 ? 401 : ($ownerStatus === 200 ? 404 : 502);
+            http_response_code($deny);
+            echo json_encode(['error' => $deny === 401 ? 'Unauthenticated' : ($deny === 404 ? 'Ticket not found' : 'Could not verify the ticket')]);
+            exit;
+        }
+        $endpoint = '/tickets/' . $ticketId . '/download';
+        $requiresAuth = true; // keeps the PDF out of the proxy cache
         $rawResponse = true;
         break;
 

@@ -16,7 +16,6 @@
   var num = new Intl.NumberFormat('ro-RO');
   var whole = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
   var cents = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  var encoder = window.TextEncoder ? new TextEncoder() : null;
   var PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><rect width="160" height="120" fill="#E6F4EC"/><path d="M58 44h44a6 6 0 0 1 6 6v6a8 8 0 0 0 0 16v6a6 6 0 0 1-6 6H58a6 6 0 0 1-6-6v-6a8 8 0 0 0 0-16v-6a6 6 0 0 1 6-6z" fill="none" stroke="#1B7F4E" stroke-width="4" stroke-linejoin="round"/></svg>');
   var pointsPerLei = 100, next = null, refReady = false;
 
@@ -88,36 +87,10 @@
     };
   }
 
-  // ---------- calendar (.ics) ----------
-  function icsText(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
-  function icsDate(d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
-  function icsFold(line) { // RFC 5545: at most 75 octets per line, continuation lines start with a space
-    var done = '', cur = '', size = 0;
-    Array.from(line).forEach(function (ch) {
-      var b = encoder ? encoder.encode(ch).length : 4;
-      if (size + b > 75) { done += cur + '\r\n '; cur = ''; size = 1; }
-      cur += ch; size += b;
-    });
-    return done + cur;
-  }
-  function fileSlug(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').slice(0, 60).replace(/^-+|-+$/g, ''); }
+  // ---------- calendar (.ics), made by the account shell ----------
   function downloadIcs(t) {
     if (!t || !t.date) return;
-    var page = window.location.origin + '/cont/bilete', where = [t.venue, t.city].filter(Boolean).join(', ');
-    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//bilete.online//Contul meu//RO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-      'UID:' + icsText('bilet-' + (t.order || 'x') + '-' + (t.id || t.date.getTime())) + '@bilete.online',
-      'DTSTAMP:' + icsDate(new Date()), 'DTSTART:' + icsDate(t.date), 'DURATION:PT2H', 'SUMMARY:' + icsText(t.title)];
-    if (where) lines.push('LOCATION:' + icsText(where));
-    lines.push('DESCRIPTION:' + icsText('Biletele tale sunt în contul bilete.online: ' + page), 'URL:' + page,
-      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsText(t.title), 'TRIGGER:-PT2H', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR');
-    var url = URL.createObjectURL(new Blob([lines.map(icsFold).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' }));
-    var a = el('a');
-    a.href = url;
-    a.download = (fileSlug(t.title) || 'bilet') + '.ics';
-    a.hidden = true;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
+    account.calendar([{ title: t.title, date: t.date, venue: t.venue, city: t.city, uid: 'bilet-' + (t.order || 'x') + '-' + (t.id || t.date.getTime()) }], t.title);
   }
   $('db-next-cal').addEventListener('click', function () { downloadIcs(next); });
 
