@@ -1672,7 +1672,7 @@ class MarketplaceEventsController extends BaseController
 
         // Get location data from IP (uses multi-provider fallback: ipgeolocation.io -> ip-api.com -> ipwhois.io)
         $geoIpService = app(GeoIpService::class);
-        $location = $geoIpService->getLocation($request->ip());
+        $location = $geoIpService->getLocation(\App\Support\VisitorIp::from($request));
 
         // Analytics tracking must never break the page-view request (e.g. a value
         // too long for a column, or a transient DB error). Best-effort insert.
@@ -1706,7 +1706,7 @@ class MarketplaceEventsController extends BaseController
             'fbc' => $request->input('fbc'),
             'fbp' => $request->input('fbp'),
             // Device and location info
-            'ip_address' => $request->ip(),
+            'ip_address' => \App\Support\VisitorIp::from($request),
             'country_code' => $location['country_code'] ?? null,
             'region' => $location['region'] ?? null,
             'city' => $location['city'] ?? null,

@@ -81,7 +81,7 @@ class MarketplaceTrackingController extends Controller
 
         // Get location from IP (uses multi-provider fallback: ipgeolocation.io -> ip-api.com -> ipwhois.io)
         $geoIpService = app(GeoIpService::class);
-        $location = $geoIpService->getLocation($request->ip());
+        $location = $geoIpService->getLocation(\App\Support\VisitorIp::from($request));
 
         // Determine event category
         $eventCategory = $this->determineEventCategory($request->input('event_type'));
@@ -141,7 +141,7 @@ class MarketplaceTrackingController extends Controller
             'os_version' => $uaParsed['os_version'],
             'screen_width' => $request->input('screen_width'),
             'screen_height' => $request->input('screen_height'),
-            'ip_address' => $request->ip(),
+            'ip_address' => \App\Support\VisitorIp::from($request),
             'country_code' => $location['country_code'] ?? null,
             'region' => $location['region'] ?? null,
             'city' => $location['city'] ?? null,
@@ -718,7 +718,7 @@ class MarketplaceTrackingController extends Controller
     protected function generateVisitorId(Request $request): string
     {
         $fingerprint = implode('|', [
-            $request->ip(),
+            \App\Support\VisitorIp::from($request),
             $request->userAgent(),
             $request->header('Accept-Language'),
         ]);
@@ -901,7 +901,7 @@ class MarketplaceTrackingController extends Controller
                     'first_name' => $t($request->input('customer_name') ? explode(' ', $request->input('customer_name'), 2)[0] : null),
                     'last_name' => $t($request->input('customer_name') && str_contains($request->input('customer_name'), ' ') ? explode(' ', $request->input('customer_name'), 2)[1] : null),
                     'phone' => $t($request->input('customer_phone')),
-                    'ip_address' => $request->ip(),
+                    'ip_address' => \App\Support\VisitorIp::from($request),
                     'device_type' => $event->device_type,
                     'browser' => $event->browser,
                     'os' => $event->os,

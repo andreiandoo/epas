@@ -3054,6 +3054,24 @@ class EventsController extends BaseController
             $topLocations = [];
         }
 
+        // Live visitors: distinct visitors with a page view on this event in the
+        // last 5 minutes, independent of the selected period.
+        try {
+            $liveQuery = \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
+            })
+                ->where('event_type', \App\Models\Platform\CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->where('created_at', '>=', now()->subMinutes(5));
+            if ($channel) {
+                $trackingChannelClause($liveQuery);
+            }
+            $liveVisitors = (int) $liveQuery->distinct()->count('visitor_id');
+        } catch (\Throwable $e) {
+            \Log::warning('live_visitors query failed', ['error' => $e->getMessage()]);
+            $liveVisitors = 0;
+        }
+
         // Recent sales
         $recentSales = $scopedOrders()
             ->orderBy('created_at', 'desc')
@@ -3107,6 +3125,7 @@ class EventsController extends BaseController
                 'capacity' => $capacity,
                 'page_views' => $pageViews,
                 'unique_visitors' => $pageViews,
+                'live_visitors' => $liveVisitors,
                 'conversion_rate' => $conversionRate,
                 'revenue_change' => $revenueChange,
                 'tickets_change' => $ticketsChange,

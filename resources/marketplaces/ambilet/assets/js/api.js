@@ -73,6 +73,12 @@ const AmbiletAPI = {
             ...options.headers
         };
 
+        // Same visitor id as tracking.js, so event page views are not counted as new visitors
+        try {
+            const visitorId = localStorage.getItem('epas_visitor_id');
+            if (visitorId) headers['X-Visitor-ID'] = visitorId;
+        } catch (e) {}
+
         // Add auth token if available
         const authToken = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
         if (authToken) {

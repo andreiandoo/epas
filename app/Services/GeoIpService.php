@@ -54,7 +54,7 @@ class GeoIpService
             || str_starts_with($ip, '172.17.')
             || str_starts_with($ip, '172.18.')
             || str_starts_with($ip, '172.19.')
-            || str_starts_with($ip, '172.2')
+            || preg_match('/^172\.2[0-9]\./', $ip) === 1
             || str_starts_with($ip, '172.30.')
             || str_starts_with($ip, '172.31.');
     }

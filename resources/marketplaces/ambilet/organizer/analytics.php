@@ -519,8 +519,8 @@ $eventId = $_GET['event'] ?? null;
         <div class="absolute overflow-hidden border shadow-lg bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl border-slate-200" style="z-index: 1000;">
             <div class="p-4 border-b border-slate-200">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-semibold text-slate-800">Live Activity</span>
-                    <span class="text-xs text-slate-400">Last 5 minutes</span>
+                    <span class="text-sm font-semibold text-slate-800">Visitors by city</span>
+                    <span class="text-xs text-slate-400">Selected period</span>
                 </div>
             </div>
             <div id="globe-live-activity" class="p-2 overflow-y-auto max-h-64">
@@ -1530,12 +1530,12 @@ async function loadLiveVisitors() {
     try {
         // Try to get live visitors data from analytics
         if (eventData?.top_locations) {
-            renderGlobeData(eventData.top_locations);
+            renderGlobeData(eventData.top_locations, eventData.overview?.live_visitors);
         } else {
             // Fallback to showing the analytics data
             const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=1d`);
             if (response.success && response.data?.top_locations) {
-                renderGlobeData(response.data.top_locations);
+                renderGlobeData(response.data.top_locations, response.data.overview?.live_visitors);
             }
         }
     } catch (error) {
@@ -1561,13 +1561,13 @@ function getFlag(country) {
     return countryFlags[country] || '🌍';
 }
 
-function renderGlobeData(locations) {
+function renderGlobeData(locations, liveVisitors) {
     const liveCountEl = document.getElementById('globe-live-count');
     const activityEl = document.getElementById('globe-live-activity');
     const topLocationsEl = document.getElementById('globe-top-locations');
 
     if (!locations || locations.length === 0) {
-        liveCountEl.textContent = '0';
+        liveCountEl.textContent = formatNumber(liveVisitors || 0);
         activityEl.innerHTML = `
             <div class="flex items-center gap-3 p-2 rounded-lg">
                 <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">🌍</div>
@@ -1582,9 +1582,7 @@ function renderGlobeData(locations) {
         return;
     }
 
-    // Calculate totals
-    const totalVisitors = locations.reduce((sum, l) => sum + (l.visitors || l.count || 0), 0);
-    liveCountEl.textContent = formatNumber(totalVisitors);
+    liveCountEl.textContent = formatNumber(liveVisitors || 0);
 
     // Initialize Leaflet map
     initLeafletMap(locations);
@@ -1592,7 +1590,7 @@ function renderGlobeData(locations) {
     // Render live activity list
     const activityHtml = locations.slice(0, 8).map(l => {
         const flag = getFlag(l.country || 'RO');
-        const action = `Viewed event page`;
+        const action = formatNumber(l.visitors || l.count || 0) + ' visitors';
         const city = l.city || 'Unknown';
         const country = l.country || 'RO';
         return `
@@ -1602,7 +1600,6 @@ function renderGlobeData(locations) {
                     <div class="text-sm truncate text-slate-800">${action}</div>
                     <div class="text-xs text-slate-400">${city}, ${country}</div>
                 </div>
-                <div class="text-xs text-slate-300">now</div>
             </div>
         `;
     }).join('');
