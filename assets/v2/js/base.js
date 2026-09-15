@@ -365,3 +365,37 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 })();
+
+/* ---------- invite links: https://<site>/?ref=<code> ----------
+   Core builds referral links this way. The code used to be caught by auth.js, which the v2 pages don't load, so nobody
+   who arrived through an invite was credited. Check the code once (the public validate action also counts the click),
+   keep it where BileteOnlineAuth.registerCustomer() looks for it (it is sent as referral_code and cleared after
+   sign-up), and take ?ref out of the address bar. Visitors already signed in have nothing to be credited for. */
+(function () {
+  'use strict';
+  var KEY = 'bileteonline_referral_code', INFO = 'bileteonline_referral_info', code = '';
+  try { code = (new URLSearchParams(window.location.search).get('ref') || '').trim(); } catch (e) { return; }
+  if (!code) return;
+  function clean() {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.delete('ref');
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    } catch (e) {}
+  }
+  try {
+    var signedIn = localStorage.getItem('bileteonline_customer_token') || localStorage.getItem('bileteonline_organizer_token');
+    if (!/^[A-Za-z0-9_-]{3,20}$/.test(code) || signedIn || localStorage.getItem(KEY) === code) { clean(); return; }
+  } catch (e) { clean(); return; }
+  fetch('/api/proxy.php?action=customer.referrals.validate&code=' + encodeURIComponent(code), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (res) {
+      if (!(res && res.success && res.data && res.data.valid)) return;
+      try {
+        localStorage.setItem(KEY, code);
+        localStorage.setItem(INFO, JSON.stringify(res.data));
+      } catch (e) {}
+    })
+    .catch(function () {})
+    .then(clean);
+})();

@@ -114,3 +114,6 @@
 .au-faq-in{max-width:calc(840px + 2 * var(--gutter))}
 .au-faq-head{margin-bottom:var(--space-5);text-align:center}
 .au-faq h2{margin:0;font-size:var(--text-h2);font-weight:700;line-height:1.02;letter-spacing:-.04em;color:var(--green)}
+/* invite: shown on the client sign-up form when the visitor came through a friend's ?ref= link */
+.au-invite{margin:0;padding:12px 14px;border:1px solid #CDE6D8;border-radius:12px;background:var(--tint-green);color:var(--green);font-size:.9375rem;font-weight:600;line-height:1.45}
+.au-invite[hidden]{display:none}
