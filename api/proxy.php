@@ -3249,6 +3249,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.contract.sign':
+        // The drawn or typed signature (PNG data URI) + the agreement; core applies it and returns the signed PDF.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/contract/sign';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.documents.upload':
         $method = 'POST';
         $endpoint = '/organizer/documents/upload';
