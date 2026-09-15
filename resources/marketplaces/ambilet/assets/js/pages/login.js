@@ -3,10 +3,8 @@
 // Attempts /auth/multi-login first (detects customer + organizer +
 // venue-owner roles for the same email in a single round-trip). Behaves
 // exactly like the pre-existing customer-only flow when only a customer
-// role is detected. When multiple roles come back, shows an inline role
-// picker so the user chooses which panel to enter — tokens for all roles
-// are persisted at that point so a future "switch role" header action
-// (Faza 3) doesn't require re-authentication.
+// role is detected. When multiple roles come back, the login card turns
+// into an account picker so the user chooses which panel to enter.
 //
 // Safe fallback: if the multi-login endpoint is unavailable (deploy
 // mid-flight, 404, network hiccup), the code falls through to the
@@ -44,20 +42,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 return;
             }
 
-            // Persist all detected roles' tokens up-front so the header
-            // switcher (Faza 3) can flip without another login round-trip.
+            // Keep every role's token in cookies so a later "switch role"
+            // doesn't need another login round-trip.
             const active = AmbiletMultiAuth.persistAllRoles(roles, primary);
 
             if (roles.length === 1) {
+                const role = active || roles[0];
+                await activateRoleSession(role);
                 AmbiletNotifications.success('Conectare reusita!');
-                const redirect = AmbiletUtils.getUrlParam('redirect')
-                    || AmbiletMultiAuth.redirectFor(active ? active.type : roles[0].type);
-                setTimeout(() => window.location.href = redirect, 500);
+                setTimeout(() => window.location.href = redirectForRole(role.type), 500);
                 return;
             }
 
             // Multiple roles — user chooses.
-            showRolePicker(roles, primary);
+            showRolePicker(roles, primary, email);
             return;
         }
 
@@ -79,65 +77,171 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 });
 
 /**
- * Render an inline role picker under the login form. Keeps the same
- * page (no navigation flash) — user clicks their preferred role and we
- * redirect to the matching panel.
+ * Multi-login keeps the tokens in cookies only, but the customer and
+ * organizer pages read their session from localStorage (AmbiletAuth).
+ * Without this, /cont loaded for a moment and bounced straight back to
+ * /autentificare. Mirrors setCustomerSession / setOrganizerSession, then
+ * caches the profile. If the profile fetch fails, AmbiletAuth.init()
+ * fetches it on the next page. Venue owners use their cookie token.
  */
-function showRolePicker(roles, primary) {
-    const container = document.getElementById('multi-role-picker')
-        || createRolePickerContainer();
+async function activateRoleSession(role) {
+    if (!role || !role.token) return;
+    const K = AmbiletAuth.KEYS;
+    try {
+        if (role.type === 'customer') {
+            localStorage.setItem(K.CUSTOMER_TOKEN, role.token);
+            localStorage.setItem(K.USER_TYPE, 'customer');
+            localStorage.removeItem(K.CUSTOMER_DATA);
+            localStorage.removeItem(K.ORGANIZER_TOKEN);
+            localStorage.removeItem(K.ORGANIZER_DATA);
+            const res = await AmbiletAPI.get('/customer/me');
+            if (res && res.success && res.data) {
+                AmbiletAuth.setCustomerSession(role.token, res.data.customer || res.data);
+            }
+        } else if (role.type === 'organizer') {
+            localStorage.setItem(K.ORGANIZER_TOKEN, role.token);
+            localStorage.setItem(K.USER_TYPE, 'organizer');
+            localStorage.removeItem(K.ORGANIZER_DATA);
+            localStorage.removeItem(K.CUSTOMER_TOKEN);
+            localStorage.removeItem(K.CUSTOMER_DATA);
+            const res = await AmbiletAPI.get('/organizer/me');
+            if (res && res.success && res.data) {
+                AmbiletAuth.setOrganizerSession(role.token, res.data.organizer || res.data);
+            }
+        }
+    } catch (e) {
+        // Token is stored; the profile is re-fetched on the next page.
+    }
+}
 
-    const labels = {
-        'customer':    { icon: '🎫', title: 'Cont Client',        subtitle: 'Bilete cumparate, favorite, comenzi' },
-        'organizer':   { icon: '🎪', title: 'Cont Organizator',   subtitle: 'Evenimente proprii, vanzari, deconturi' },
-        'venue-owner': { icon: '🏛️', title: 'Cont Locatie',       subtitle: 'Evenimente gazduite, analytics locatie' },
-    };
+/**
+ * ?redirect= is honoured only when it leads into the chosen account's area
+ * (e.g. a customer never lands on /organizator/...).
+ */
+function redirectForRole(type) {
+    const requested = AmbiletUtils.getUrlParam('redirect');
+    if (requested && requested.startsWith('/') && !requested.startsWith('//')) {
+        const path = requested.split('?')[0];
+        const isOrganizerArea = path.startsWith('/organizator');
+        const isVenueArea = path.startsWith('/venue');
+        const fits = type === 'organizer' ? isOrganizerArea
+            : type === 'venue-owner' ? isVenueArea
+            : !isOrganizerArea && !isVenueArea;
+        if (fits) return requested;
+    }
+    return AmbiletMultiAuth.redirectFor(type);
+}
 
-    const roleCards = roles.map(role => {
-        const meta = labels[role.type] || { icon: '👤', title: role.type, subtitle: '' };
-        const isPrimary = role.type === primary ? 'ambilet-role-card--primary' : '';
+const ROLE_ICON = (path) =>
+    `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${path}"/></svg>`;
+
+const ROLE_META = {
+    'customer': {
+        title: 'Cont client',
+        description: 'Biletele tale, comenzi, favorite și puncte',
+        icon: ROLE_ICON('M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'),
+    },
+    'organizer': {
+        title: 'Cont organizator',
+        description: 'Evenimente, vânzări, participanți și deconturi',
+        icon: ROLE_ICON('M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'),
+    },
+    'venue-owner': {
+        title: 'Cont locație',
+        description: 'Evenimentele găzduite și statisticile locației',
+        icon: ROLE_ICON('M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'),
+    },
+};
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Turn the login card into an account picker: everything that belongs to
+ * the sign-in step (title, form, sign-up link, organizer CTA) is hidden so
+ * only the authenticated accounts remain.
+ */
+function showRolePicker(roles, primary, email) {
+    injectRolePickerStyles();
+
+    ['customerCta', 'loginHeader', 'signupLink', 'organizerCta', 'login-form'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const card = document.getElementById('loginCardForm');
+    if (card) card.style.display = '';
+
+    const container = document.getElementById('multi-role-picker') || createRolePickerContainer();
+    const ordered = [...roles].sort((a, b) => (b.type === primary) - (a.type === primary));
+
+    const cards = ordered.map((role) => {
+        const meta = ROLE_META[role.type] || { title: role.type, description: '', icon: ROLE_ICON('M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z') };
         return `
-            <button type="button"
-                    class="ambilet-role-card ${isPrimary}"
-                    data-role-type="${role.type}">
-                <span class="ambilet-role-card__icon">${meta.icon}</span>
-                <span class="ambilet-role-card__text">
-                    <strong>${meta.title}</strong>
-                    <small>${meta.subtitle}</small>
-                    <em>${role.display_name || ''}</em>
+            <button type="button" class="amb-rp__card" data-role-type="${escapeHtml(role.type)}">
+                <span class="amb-rp__icon amb-rp__icon--${escapeHtml(role.type)}">${meta.icon}</span>
+                <span class="amb-rp__body">
+                    <span class="amb-rp__name">${escapeHtml(meta.title)}</span>
+                    <span class="amb-rp__desc">${escapeHtml(meta.description)}</span>
+                    ${role.display_name ? `<span class="amb-rp__who">${escapeHtml(role.display_name)}</span>` : ''}
                 </span>
+                <span class="amb-rp__go">${ROLE_ICON('M9 5l7 7-7 7')}</span>
             </button>
         `;
     }).join('');
 
     container.innerHTML = `
-        <div class="ambilet-role-picker">
-            <h3>Alege contul cu care vrei sa continui</h3>
-            <p class="ambilet-role-picker__hint">Poti schimba oricand din meniul contului tau.</p>
-            <div class="ambilet-role-picker__grid">${roleCards}</div>
+        <div class="amb-rp">
+            <div class="amb-rp__head">
+                <div class="amb-rp__badge">${ROLE_ICON('M5 13l4 4L19 7')}</div>
+                <h2 class="amb-rp__title">Alege contul</h2>
+                <p class="amb-rp__subtitle">${email
+                    ? `Adresa <strong>${escapeHtml(email)}</strong> are acces la mai multe conturi. Unde vrei să intri?`
+                    : 'Ai acces la mai multe conturi. Unde vrei să intri?'}</p>
+            </div>
+            <div class="amb-rp__list">${cards}</div>
+            <button type="button" class="amb-rp__back">Nu ești tu? Folosește alt cont</button>
         </div>
     `;
-
     container.style.display = 'block';
 
-    // Hide the login form while the picker is active so it's not visually
-    // competing with the cards.
-    const form = document.getElementById('login-form');
-    if (form) form.style.display = 'none';
+    container.querySelectorAll('[data-role-type]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            if (container.dataset.busy === '1') return;
+            const role = roles.find((r) => r.type === btn.getAttribute('data-role-type'));
+            if (!role) return;
 
-    container.querySelectorAll('[data-role-type]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const type = btn.getAttribute('data-role-type');
-            document.cookie = `ambilet_active_role=${type}; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
-            const redirect = AmbiletUtils.getUrlParam('redirect')
-                || AmbiletMultiAuth.redirectFor(type);
-            window.location.href = redirect;
+            if (role.requires_2fa) {
+                window.location.href = '/verificare-2fa?challenge=' + encodeURIComponent(role.challenge || '');
+                return;
+            }
+
+            container.dataset.busy = '1';
+            container.querySelectorAll('.amb-rp__card').forEach((c) => { c.disabled = true; });
+            btn.classList.add('is-loading');
+            const go = btn.querySelector('.amb-rp__go');
+            if (go) go.innerHTML = '<span class="amb-rp__spinner" aria-hidden="true"></span>';
+
+            AmbiletMultiAuth.activateRole(role);
+            await activateRoleSession(role);
+            window.location.href = redirectForRole(role.type);
         });
     });
+
+    const back = container.querySelector('.amb-rp__back');
+    if (back) {
+        back.addEventListener('click', () => {
+            window.location.assign(window.location.pathname + window.location.search);
+        });
+    }
 }
 
 function createRolePickerContainer() {
-    injectRolePickerStyles();
     const c = document.createElement('div');
     c.id = 'multi-role-picker';
     c.style.display = 'none';
@@ -156,19 +260,34 @@ function injectRolePickerStyles() {
     _rolePickerStylesInjected = true;
     const style = document.createElement('style');
     style.textContent = `
-        .ambilet-role-picker { padding: 8px 0; }
-        .ambilet-role-picker h3 { font-size: 20px; font-weight: 700; margin: 0 0 8px 0; color: var(--color-secondary, #1a1a2e); text-align: center; }
-        .ambilet-role-picker__hint { font-size: 13px; color: var(--color-muted, #6b7280); text-align: center; margin: 0 0 24px 0; }
-        .ambilet-role-picker__grid { display: flex; flex-direction: column; gap: 12px; }
-        .ambilet-role-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; background: #fff; border: 1.5px solid rgba(0,0,0,0.08); border-radius: 14px; cursor: pointer; text-align: left; transition: all 0.15s ease; }
-        .ambilet-role-card:hover { border-color: var(--color-primary, #e05c44); background: rgba(224,92,68,0.04); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-        .ambilet-role-card--primary { border-color: var(--color-primary, #e05c44); background: rgba(224,92,68,0.03); }
-        .ambilet-role-card--primary::after { content: 'Recomandat'; display: inline-block; padding: 3px 8px; font-size: 10px; font-weight: 700; background: var(--color-primary, #e05c44); color: #fff; border-radius: 6px; margin-left: auto; letter-spacing: 0.3px; text-transform: uppercase; }
-        .ambilet-role-card__icon { font-size: 30px; line-height: 1; flex-shrink: 0; }
-        .ambilet-role-card__text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-        .ambilet-role-card__text strong { font-size: 15px; font-weight: 700; color: var(--color-secondary, #1a1a2e); }
-        .ambilet-role-card__text small { font-size: 12px; color: var(--color-muted, #6b7280); }
-        .ambilet-role-card__text em { font-size: 11px; color: var(--color-primary, #e05c44); font-style: normal; font-weight: 500; margin-top: 2px; }
+        .amb-rp { padding: 4px 0; }
+        .amb-rp__head { text-align: center; margin-bottom: 24px; }
+        .amb-rp__badge { width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .amb-rp__badge svg { width: 24px; height: 24px; }
+        .amb-rp__title { margin: 0; font-size: 22px; font-weight: 800; color: var(--color-secondary, #1E293B); }
+        .amb-rp__subtitle { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: var(--color-muted, #64748B); }
+        .amb-rp__subtitle strong { font-weight: 600; color: var(--color-secondary, #1E293B); word-break: break-all; }
+        .amb-rp__list { display: flex; flex-direction: column; gap: 12px; }
+        .amb-rp__card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; text-align: left; cursor: pointer; background: #fff; border: 1px solid var(--color-border, #E2E8F0); border-radius: 16px; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+        .amb-rp__card:hover:not(:disabled), .amb-rp__card:focus-visible { border-color: var(--color-primary, #A51C30); box-shadow: 0 10px 24px -14px rgba(165, 28, 48, 0.45); transform: translateY(-1px); outline: none; }
+        .amb-rp__card:disabled { cursor: default; opacity: .5; }
+        .amb-rp__card.is-loading { opacity: 1; border-color: var(--color-primary, #A51C30); }
+        .amb-rp__icon { flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .amb-rp__icon svg { width: 24px; height: 24px; }
+        .amb-rp__icon--customer { background: rgba(165, 28, 48, 0.08); color: var(--color-primary, #A51C30); }
+        .amb-rp__icon--organizer { background: var(--color-secondary, #1E293B); color: #fff; }
+        .amb-rp__icon--venue-owner { background: rgba(230, 126, 34, 0.14); color: #C2410C; }
+        .amb-rp__body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+        .amb-rp__name { font-size: 15px; font-weight: 700; color: var(--color-secondary, #1E293B); }
+        .amb-rp__desc { font-size: 13px; line-height: 1.4; color: var(--color-muted, #64748B); }
+        .amb-rp__who { margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--color-primary, #A51C30); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .amb-rp__go { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: var(--color-surface, #F8FAFC); color: var(--color-secondary, #1E293B); transition: background .15s ease, color .15s ease; }
+        .amb-rp__go svg { width: 16px; height: 16px; }
+        .amb-rp__card:hover:not(:disabled) .amb-rp__go, .amb-rp__card.is-loading .amb-rp__go { background: var(--color-primary, #A51C30); color: #fff; }
+        .amb-rp__spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 9999px; animation: amb-rp-spin .7s linear infinite; }
+        @keyframes amb-rp-spin { to { transform: rotate(360deg); } }
+        .amb-rp__back { display: block; margin: 20px auto 0; padding: 6px 10px; font-size: 14px; color: var(--color-muted, #64748B); background: none; border: 0; cursor: pointer; }
+        .amb-rp__back:hover { color: var(--color-primary, #A51C30); text-decoration: underline; }
     `;
     document.head.appendChild(style);
 }

@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
             </div>
 
             <div class="p-8 mb-8 bg-white border rounded-2xl border-border" id="loginCardForm" style="display:none;">
-                <div class="mb-8 text-center">
+                <div class="mb-8 text-center" id="loginHeader">
                     <h2 class="text-2xl font-bold text-secondary">Conectează-te</h2>
                     <p class="mt-2 text-muted">Introdu datele tale pentru a accesa contul de client</p>
                 </div>
@@ -115,14 +115,14 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     </div>
                 </div>
 
-                <p class="mt-8 text-center text-muted">
+                <p class="mt-8 text-center text-muted" id="signupLink">
                     Nu ai cont?
                     <a href="/inregistrare" class="font-medium text-primary">Creează cont gratuit</a>
                 </p>
             </div>
             
             <!-- Organizer CTA -->
-            <a href="/organizator/login" class="flex items-center gap-3 p-4 mb-6 text-right transition-all rounded-xl" style="background:linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);">
+            <a href="/organizator/login" id="organizerCta" class="flex items-center gap-3 p-4 mb-6 text-right transition-all rounded-xl" style="background:linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);">
                 <div class="flex-1">
                     <p class="text-sm font-bold text-white">Ești organizator?</p>
                     <p class="text-xs text-white/70">Click aici pentru autentificare →</p>
