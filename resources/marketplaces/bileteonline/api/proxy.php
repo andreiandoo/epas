@@ -1671,9 +1671,17 @@ switch ($action) {
         break;
 
     case 'customer.support.index':
-        $method = 'GET';
-        $endpoint = '/customer/support-tickets';
+        // api.js resolves both GET (list) and POST (create) /customer/support-tickets to this action. It used to force
+        // GET, so every new ticket silently became a list request and was never created: dispatch on the method, as
+        // organizer.support.tickets does.
         $requiresAuth = true;
+        $endpoint = '/customer/support-tickets';
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+            $method = 'POST';
+            $body = file_get_contents('php://input');
+        } else {
+            $method = 'GET';
+        }
         break;
 
     case 'customer.support.store':

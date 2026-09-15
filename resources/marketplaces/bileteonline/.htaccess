@@ -382,7 +382,8 @@ RewriteRule ^cont/tichete-support/?$ user/support.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^cont/tichete-support/([0-9a-z-]+)/?$ user/support-detail.php?id=$1 [L,QSA]
+# one ticket opens in its dialog on the list page (user/support-detail.php never existed)
+RewriteRule ^cont/tichete-support/([0-9]+)/?$ user/support.php?ticket=$1 [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
