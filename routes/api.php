@@ -1913,6 +1913,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.statistics');
         Route::get('/events/{event}/analytics', [OrganizerEventsController::class, 'analytics'])
             ->name('api.marketplace-client.organizer.events.analytics');
+        Route::get('/events/{event}/analytics/sources', [OrganizerEventsController::class, 'analyticsSources'])
+            ->name('api.marketplace-client.organizer.events.analytics.sources');
         Route::get('/events/{event}/staff-report', [OrganizerEventsController::class, 'staffReport'])
             ->name('api.marketplace-client.organizer.events.staff-report');
 

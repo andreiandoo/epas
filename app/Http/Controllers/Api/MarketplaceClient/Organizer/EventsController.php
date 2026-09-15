@@ -3150,6 +3150,274 @@ class EventsController extends BaseController
     }
 
     /**
+     * Entry links and referrer sites for one event: the first page view (with a URL)
+     * of every tracking session on the event, grouped by exact link (parameters
+     * sorted, click-id values masked) and by referrer domain, plus the paid orders
+     * whose purchase event belongs to a session (only orders whose thank-you page
+     * loaded can be attributed).
+     */
+    public function analyticsSources(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $period = $request->input('period', '30d');
+        $channel = $request->input('channel');
+        if ($channel && !in_array($channel, ['marketplace', 'whitelabel'], true)) {
+            $channel = null;
+        }
+        $channelClause = function ($q) use ($channel) {
+            if ($channel === 'whitelabel') {
+                $q->where('channel', 'whitelabel');
+            } elseif ($channel === 'marketplace') {
+                $q->where(fn ($qq) => $qq->where('channel', '!=', 'whitelabel')->orWhereNull('channel'));
+            }
+        };
+
+        $now = now();
+        $eventCreatedAt = $event->created_at->copy()->startOfDay();
+        if ($request->input('start_date') && $request->input('end_date')) {
+            $rangeStart = Carbon::parse($request->input('start_date'))->startOfDay();
+            $rangeEnd = Carbon::parse($request->input('end_date'))->endOfDay();
+        } else {
+            $rangeEnd = $now;
+            $rangeStart = match ($period) {
+                '7d' => $now->copy()->subDays(7)->startOfDay(),
+                '90d' => $now->copy()->subDays(90)->startOfDay(),
+                'all' => $eventCreatedAt,
+                default => $now->copy()->subDays(30)->startOfDay(),
+            };
+        }
+        if ($rangeStart < $eventCreatedAt) {
+            $rangeStart = $eventCreatedAt;
+        }
+
+        $trackingModel = \App\Models\Platform\CoreCustomerEvent::class;
+        $sessionLimit = 50000;
+
+        $entries = collect();
+        try {
+            $entryQuery = $trackingModel::query()
+                ->where(fn ($q) => $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id))
+                ->where('event_type', $trackingModel::TYPE_PAGE_VIEW)
+                ->whereNotNull('session_id')
+                ->whereNotNull('page_url')
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+            if ($channel) {
+                $channelClause($entryQuery);
+            }
+            $entries = $entryQuery
+                ->selectRaw('DISTINCT ON (session_id) session_id, visitor_id, page_url, referrer, created_at')
+                ->orderBy('session_id')
+                ->orderBy('created_at')
+                ->limit($sessionLimit)
+                ->get()
+                ->keyBy('session_id');
+        } catch (\Throwable $e) {
+            \Log::warning('analytics sources: entry query failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
+        $orders = collect();
+        try {
+            $orders = $event->orders()
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->whereIn('status', ['paid', 'completed'])
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+                ->when($channel, fn ($q) => $channelClause($q))
+                ->get(['id', 'total']);
+        } catch (\Throwable $e) {
+            \Log::warning('analytics sources: orders query failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
+        $orderSession = [];
+        foreach ($orders->pluck('id')->chunk(1000) as $chunk) {
+            try {
+                $trackingModel::query()
+                    ->whereIn('order_id', $chunk->all())
+                    ->where('event_type', $trackingModel::TYPE_PURCHASE)
+                    ->whereNotNull('session_id')
+                    ->orderBy('created_at')
+                    ->get(['order_id', 'session_id'])
+                    ->each(function ($row) use (&$orderSession) {
+                        $orderSession[$row->order_id] ??= $row->session_id;
+                    });
+            } catch (\Throwable $e) {
+                \Log::warning('analytics sources: purchase lookup failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        // Sessions that bought but whose first event page view is outside the range:
+        // used for attribution only, not counted as visits.
+        $orderEntries = [];
+        $missingSessions = array_values(array_diff(array_unique(array_values($orderSession)), $entries->keys()->all()));
+        foreach (array_chunk($missingSessions, 1000) as $chunk) {
+            try {
+                $trackingModel::query()
+                    ->whereIn('session_id', $chunk)
+                    ->where('event_type', $trackingModel::TYPE_PAGE_VIEW)
+                    ->whereNotNull('page_url')
+                    ->selectRaw('DISTINCT ON (session_id) session_id, visitor_id, page_url, referrer, created_at')
+                    ->orderBy('session_id')
+                    ->orderBy('created_at')
+                    ->get()
+                    ->each(function ($row) use (&$orderEntries) {
+                        $orderEntries[$row->session_id] = $row;
+                    });
+            } catch (\Throwable $e) {
+                \Log::warning('analytics sources: order session lookup failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        $marketplaceHost = $this->sourceHost((string) ($organizer->marketplaceClient?->domain ?? ''));
+        $links = [];
+        $domains = [];
+        $empty = ['sessions' => 0, 'visitors' => [], 'orders' => 0, 'revenue' => 0.0];
+
+        foreach ($entries as $row) {
+            $link = $this->sourceLink($row->page_url);
+            if ($link) {
+                $links[$link['key']] ??= $link + $empty;
+                $links[$link['key']]['sessions']++;
+                if ($row->visitor_id) {
+                    $links[$link['key']]['visitors'][$row->visitor_id] = true;
+                }
+            }
+            $domain = $this->sourceDomain($row->referrer, $marketplaceHost);
+            $domains[$domain] ??= ['domain' => $domain] + $empty;
+            $domains[$domain]['sessions']++;
+            if ($row->visitor_id) {
+                $domains[$domain]['visitors'][$row->visitor_id] = true;
+            }
+        }
+
+        $attributed = 0;
+        $attributedRevenue = 0.0;
+        foreach ($orders as $order) {
+            $session = $orderSession[$order->id] ?? null;
+            $row = $session ? ($entries->get($session) ?? $orderEntries[$session] ?? null) : null;
+            if (!$row) {
+                continue;
+            }
+            $attributed++;
+            $attributedRevenue += (float) $order->total;
+
+            $link = $this->sourceLink($row->page_url);
+            if ($link) {
+                $links[$link['key']] ??= $link + $empty;
+                $links[$link['key']]['orders']++;
+                $links[$link['key']]['revenue'] += (float) $order->total;
+            }
+            $domain = $this->sourceDomain($row->referrer, $marketplaceHost);
+            $domains[$domain] ??= ['domain' => $domain] + $empty;
+            $domains[$domain]['orders']++;
+            $domains[$domain]['revenue'] += (float) $order->total;
+        }
+
+        $finish = function (array $bucket): array {
+            $rows = array_map(function (array $r) {
+                $r['visitors'] = count($r['visitors']);
+                $r['revenue'] = round($r['revenue'], 2);
+                return $r;
+            }, array_values($bucket));
+            usort($rows, fn ($a, $b) => [$b['sessions'], $b['orders']] <=> [$a['sessions'], $a['orders']]);
+            return array_slice($rows, 0, 200);
+        };
+
+        return $this->success([
+            'links' => $finish($links),
+            'domains' => $finish($domains),
+            'totals' => [
+                'sessions' => $entries->count(),
+                'orders' => $orders->count(),
+                'orders_attributed' => $attributed,
+                'revenue' => round((float) $orders->sum('total'), 2),
+                'revenue_attributed' => round($attributedRevenue, 2),
+            ],
+            'truncated' => $entries->count() >= $sessionLimit,
+            'range' => ['start' => $rangeStart->toIso8601String(), 'end' => $rangeEnd->toIso8601String()],
+        ]);
+    }
+
+    private function sourceHost(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+        $host = parse_url(str_contains($value, '://') ? $value : 'https://' . $value, PHP_URL_HOST) ?: '';
+
+        return strtolower((string) preg_replace('/^www\./i', '', $host));
+    }
+
+    /**
+     * Entry link with its parameters, sorted, click-id values masked so one ad
+     * does not split into a row per click.
+     */
+    private function sourceLink(?string $url): ?array
+    {
+        if (!$url) {
+            return null;
+        }
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['host'])) {
+            return null;
+        }
+
+        $host = strtolower((string) preg_replace('/^www\./i', '', $parts['host']));
+        $path = $parts['path'] ?? '/';
+        parse_str($parts['query'] ?? '', $query);
+
+        $clickIds = ['fbclid', 'gclid', 'gbraid', 'wbraid', 'dclid', 'msclkid', 'ttclid', 'twclid', 'li_fat_id', 'igshid', '_gl', 'mc_eid', 'epik', 'srsltid'];
+        $params = [];
+        $copyParams = [];
+        foreach ($query as $name => $value) {
+            $name = (string) $name;
+            if (in_array(strtolower($name), $clickIds, true)) {
+                $params[$name] = '…';
+                continue;
+            }
+            $value = is_array($value) ? implode(',', array_filter($value, 'is_scalar')) : (string) $value;
+            $params[$name] = mb_substr($value, 0, 300);
+            $copyParams[$name] = $params[$name];
+        }
+        ksort($params);
+        ksort($copyParams);
+
+        $pairs = [];
+        foreach ($params as $name => $value) {
+            $pairs[] = $name . '=' . $value;
+        }
+
+        return [
+            'key' => mb_substr($host . $path . ($pairs ? '?' . implode('&', $pairs) : ''), 0, 2048),
+            'host' => $host,
+            'path' => $path,
+            'params' => $params,
+            'url' => 'https://' . $host . $path . ($copyParams ? '?' . http_build_query($copyParams) : ''),
+        ];
+    }
+
+    private function sourceDomain(?string $referrer, string $marketplaceHost): string
+    {
+        $host = $referrer ? $this->sourceHost($referrer) : '';
+        if ($host === '') {
+            return '(direct)';
+        }
+        if ($marketplaceHost !== '' && ($host === $marketplaceHost || str_ends_with($host, '.' . $marketplaceHost))) {
+            return '(internal)';
+        }
+
+        return $host;
+    }
+
+    /**
      * Per-staff-member sales report for a single event.
      * Aggregates orders attributed to each POS operator (via
      * order.meta.sold_by) and the residual "Online" bucket for sales that

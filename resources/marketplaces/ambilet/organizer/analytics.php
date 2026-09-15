@@ -285,6 +285,37 @@ $eventId = $_GET['event'] ?? null;
             </div>
         </div>
 
+        <!-- Source links -->
+        <div class="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Linkuri și site-uri sursă</h2>
+                    <p class="text-xs text-gray-500">Linkul exact prin care au intrat vizitatorii, cu toți parametrii, și site-urile care i-au trimis</p>
+                </div>
+                <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
+                    <button type="button" onclick="setSourcesTab('links')" data-sources-tab="links" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-gray-900">Linkuri</button>
+                    <button type="button" onclick="setSourcesTab('domains')" data-sources-tab="domains" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-gray-500">Site-uri</button>
+                </div>
+            </div>
+            <div id="sources-summary" class="mb-3 text-xs text-gray-500"></div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-100">
+                            <th id="sources-col-name" class="pb-3 text-xs font-medium text-left text-gray-500 uppercase">Link de intrare</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Sesiuni</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Vizitatori</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Comenzi</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Valoare</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sources-table">
+                        <tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Se încarcă...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Recent Sales & Goals -->
         <div class="grid gap-6 lg:grid-cols-3">
             <!-- Recent Sales -->
@@ -618,6 +649,7 @@ async function loadAnalytics() {
             eventData = response.data;
             updateDashboard(response.data);
         }
+        loadSources();
 
         // Load milestones/campaigns
         try {
@@ -1349,6 +1381,85 @@ function updateChangeIndicator(elementId, change) {
         <span>${isPositive ? '+' : ''}${value.toFixed(1)}%</span>
     `;
     el.className = `flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`;
+}
+
+let sourcesData = null;
+let sourcesTab = 'links';
+
+async function loadSources() {
+    if (!document.getElementById('sources-table')) return;
+    try {
+        const channelParam = currentChannel && currentChannel !== 'all' ? '&channel=' + encodeURIComponent(currentChannel) : '';
+        const response = await AmbiletAPI.get('/organizer/events/' + eventId + '/analytics/sources?period=' + currentPeriod + channelParam);
+        sourcesData = response && response.success ? response.data : null;
+    } catch (e) {
+        sourcesData = null;
+    }
+    renderSources();
+}
+
+function setSourcesTab(tab) {
+    sourcesTab = tab;
+    document.querySelectorAll('[data-sources-tab]').forEach(function (btn) {
+        const active = btn.dataset.sourcesTab === tab;
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-gray-900', active);
+        btn.classList.toggle('text-gray-500', !active);
+    });
+    renderSources();
+}
+
+function sourcesEsc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+function renderSources() {
+    const tbody = document.getElementById('sources-table');
+    const summary = document.getElementById('sources-summary');
+    const colName = document.getElementById('sources-col-name');
+    if (!tbody) return;
+    colName.textContent = sourcesTab === 'links' ? 'Link de intrare' : 'Site sursă (referrer)';
+
+    if (!sourcesData) {
+        summary.textContent = '';
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu am putut încărca sursele</td></tr>';
+        return;
+    }
+
+    const totals = sourcesData.totals || {};
+    let text = formatNumber(totals.sessions || 0) + ' sesiuni în perioada selectată · ' + formatNumber(totals.orders_attributed || 0) + ' din ' + formatNumber(totals.orders || 0) + ' comenzi legate de o sursă';
+    if (sourcesData.truncated) text += ' · sunt analizate primele 50.000 de sesiuni';
+    summary.textContent = text;
+
+    const rows = (sourcesTab === 'links' ? sourcesData.links : sourcesData.domains) || [];
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu există date de trafic pentru perioada selectată</td></tr>';
+        return;
+    }
+
+    const domainLabels = { '(direct)': 'Direct (fără site sursă)', '(internal)': 'Navigare internă pe site' };
+    tbody.innerHTML = rows.map(function (r) {
+        let name;
+        if (sourcesTab === 'links') {
+            const chips = Object.entries(r.params || {}).map(function (entry) {
+                return '<span class="inline-block px-1.5 py-0.5 mr-1 mt-1 text-[11px] rounded bg-gray-100 text-gray-700">' + sourcesEsc(entry[0]) + '=' + sourcesEsc(entry[1]) + '</span>';
+            }).join('');
+            name = '<div class="text-sm font-medium text-gray-900 break-all">' + sourcesEsc((r.host || '') + (r.path || '')) + '</div>'
+                + (chips ? '<div>' + chips + '</div>' : '<div class="mt-1 text-[11px] text-gray-400">fără parametri</div>');
+        } else {
+            name = '<div class="text-sm font-medium text-gray-900 break-all">' + sourcesEsc(domainLabels[r.domain] || r.domain) + '</div>';
+        }
+        return '<tr class="align-top border-b border-gray-50">'
+            + '<td class="py-3 pr-4">' + name + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-700">' + formatNumber(r.sessions || 0) + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-700">' + formatNumber(r.visitors || 0) + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-700">' + formatNumber(r.orders || 0) + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-900 whitespace-nowrap">' + formatCurrency(r.revenue || 0) + '</td>'
+            + '</tr>';
+    }).join('');
 }
 
 function formatCurrency(value) {

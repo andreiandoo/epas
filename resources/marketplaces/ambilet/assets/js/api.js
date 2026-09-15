@@ -453,6 +453,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/leisure/staff-checkins') return 'organizer.leisure.staff.checkins';
         if (endpoint === '/organizer/leisure/staff-export') return 'organizer.leisure.staff.export';
 
+        if (endpoint.match(/\/organizer\/events\/\d+\/analytics\/sources/)) return 'organizer.event.analytics-sources';
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/staff-report/)) return 'organizer.event.staff-report';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
