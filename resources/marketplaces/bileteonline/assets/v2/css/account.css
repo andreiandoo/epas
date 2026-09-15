@@ -137,3 +137,41 @@
 .acc-tag.is-wait{background:#FFF3D6;color:#6E4A00}
 .acc-tag.is-bad{background:#FCE9E8;color:var(--red-text)}
 .acc-tag.is-muted{background:#E9ECE9;color:#454A47}
+
+/* =================== PHONES: full-width sections, like a native app =================== */
+/* Under 768px the account sections stop being rounded boxes inset from the screen edges: each section runs edge to
+   edge, the page background shows as a thin band between them, statistics become one strip with hairlines, and the
+   rows inside a section become a flat list. Every selector starts with .acc-main so it wins over the page stylesheets
+   (dashboard.css, orders.css, ...), which load after this one. Desktop is unchanged. */
+@media (max-width:767px){
+  .acc-page{background:#EFEFEA}
+  .acc{gap:0;padding-bottom:0}
+  .acc-main :is(.acc-body,#db-content,#tk-content,.db-row,.db-side,.pt-row,.pt-side,.rc-layout){gap:10px}
+  .acc-main :is(.od-list,.tk-list,.rc-grid,.rv-list,.sp-list){gap:10px}
+
+  /* sections edge to edge */
+  .acc-main :is(.acc-hero,.db-hero,.tk-hero,.pt-aff,.acc-panel,.db-panel,.tk-panel,.acc-guard,.rc-box,.rv-info,.rv-guide,.rv-write,.st-aside,.acc-empty,.db-empty,.tk-empty,.tk-error,.rc-empty,.rv-empty,.od-order,.tk-ticket,.rc-card,.rv-card,.sp-row,.rv-more,.rc-skel,.rv-skel){margin-inline:calc(-1 * var(--gutter));border-radius:0;border-left:0;border-right:0;box-shadow:none}
+  .acc-main :is(.acc-skel,.tk-skel) i{margin-inline:calc(-1 * var(--gutter));border-radius:0}
+  .acc-main :is(.acc-hero,.db-hero,.tk-hero,.pt-aff){padding:28px var(--gutter) 32px}
+  .acc-main :is(.acc-panel,.db-panel,.tk-panel,.rc-box,.rv-info,.rv-guide,.st-aside,.acc-guard){padding:22px var(--gutter) 24px}
+  .acc-main :is(.acc-empty,.db-empty,.tk-empty,.tk-error,.rc-empty,.rv-empty){border-style:solid;border-color:var(--line);background:var(--surface)}
+  .acc-main .acc-empty.is-error{border-color:#F3C1BE;background:#FFF8F7}
+  /* short notes inside a panel stay inside it, without a box */
+  .acc-main .db-empty.is-inline{margin-inline:0;padding-inline:0;border:0;background:transparent}
+  /* strips that pulled themselves out by the desktop panel padding follow the panel padding on phones */
+  .acc-main :is(.rc-pills){margin-inline:calc(-1 * var(--gutter));padding-inline:var(--gutter)}
+  .acc-main :is(.od-body,.tk-main,.rc-body){padding-inline:var(--gutter)}
+  .acc-main .sp-row{padding-inline:var(--gutter)}
+  /* the cards inside the dark headers use the whole width */
+  .acc-main :is(.db-hero-card,.db-next,.db-pointscard,.tk-next,.pt-wallet,.pt-link,.rc-signals,.rv-score,.st-completion,.sp-count){max-width:none}
+
+  /* statistics: one strip, hairlines between the cells */
+  .acc-main :is(.db-stats,.tk-stats,.pt-stats,.rc-stats,.rv-stats,.st-stats){margin-inline:calc(-1 * var(--gutter));gap:1px;background:var(--line);border-block:1px solid var(--line)}
+  .acc-main :is(.db-stat,.tk-stat,.pt-stat,.rc-stat,.rv-stat,.st-stat){border:0;border-radius:0;background:var(--surface);padding:16px var(--gutter) 18px}
+
+  /* rows inside a section: a flat list */
+  .acc-main :is(.db-upcoming,.db-tasks,.st-toggles,.st-cards,.st-bens,.pt-steps){gap:0}
+  .acc-main :is(.db-tk,.db-task,.st-toggle,.st-cards li,.st-ben,.pt-steps li){margin-inline:calc(-1 * var(--gutter));padding-inline:var(--gutter);border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+  .acc-main .st-block{margin-inline:calc(-1 * var(--gutter));padding:18px var(--gutter);border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+  .acc-main :is(.db-table-wrap,.pt-table-wrap){margin-inline:calc(-1 * var(--gutter));border-radius:0;border-left:0;border-right:0}
+}
