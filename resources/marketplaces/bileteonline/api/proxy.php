@@ -77,6 +77,8 @@ class ApiCache {
         'artists' => 300,
         'organizers' => 300,
         'organizer' => 300,
+        // a one-time invitation check must never be cached: 'organizer' above would match it by prefix
+        'organizer.validate-invite' => 0,
 
         // Single item views need quick updates. Event detail is NOT cached
         // because its payload bundles per-seat statuses for seated events;
