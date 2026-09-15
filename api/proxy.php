@@ -3665,6 +3665,23 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.analytics-sources':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period'];
+        if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
+        if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
+        if (isset($_GET['channel'])) $params['channel'] = $_GET['channel'];
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/analytics/sources' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.staff-report':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {
@@ -4970,6 +4987,16 @@ $headers = [
     'User-Agent: Ambilet Marketplace/1.0',
     'X-Session-ID: ' . $sessionIdForHeader  // Pass session ID for cart/checkout functionality
 ];
+
+// Visitor identity for analytics: core geolocates X-Visitor-IP (otherwise every
+// request looks like it comes from this server) and reuses the tracking.js visitor id.
+$visitorIpForHeader = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+if (filter_var($visitorIpForHeader, FILTER_VALIDATE_IP)) {
+    $headers[] = 'X-Visitor-IP: ' . $visitorIpForHeader;
+}
+if (!empty($_SERVER['HTTP_X_VISITOR_ID']) && preg_match('/^[A-Za-z0-9._:-]{8,64}$/', $_SERVER['HTTP_X_VISITOR_ID'])) {
+    $headers[] = 'X-Visitor-ID: ' . $_SERVER['HTTP_X_VISITOR_ID'];
+}
 
 // Forward X-Auto-Refresh through to the upstream (share-link.data uses
 // this to skip the access_count bump on background polls).

@@ -9,7 +9,6 @@ $headExtra = '
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
     .stat-card { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%); backdrop-filter: blur(10px); }
-    .forecast-card { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
     .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
     @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
     .milestone-card { transition: all 0.2s ease; }
@@ -192,10 +191,9 @@ $eventId = $_GET['event'] ?? null;
             </div>
         </div>
 
-        <!-- Chart + Forecast -->
-        <div class="grid gap-6 mb-6 lg:grid-cols-3">
-            <!-- Main Chart -->
-            <div class="p-6 bg-white border border-gray-100 shadow-sm lg:col-span-2 rounded-2xl">
+        <!-- Sales Chart -->
+        <div class="mb-6">
+            <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">Performanță vânzări</h2>
@@ -231,50 +229,6 @@ $eventId = $_GET['event'] ?? null;
                     </div>
                     <div class="pt-3 mt-3 border-t border-gray-100">
                         <div id="milestone-tooltip-dates" class="text-xs text-gray-500"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Forecast / Summary -->
-            <div id="forecast-card" class="p-6 text-white forecast-card rounded-2xl">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-semibold">Estimări</h2>
-                        <p class="text-xs text-white/90">Predicții bazate pe trend</p>
-                    </div>
-                </div>
-                <div class="p-4 mb-4 rounded-xl bg-white/10">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-white/80">Următoarele 7 zile</span>
-                        <span class="text-xs px-2 py-0.5 bg-emerald-500/30 text-emerald-300 rounded-full">Trend</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div id="forecast-revenue" class="text-xl font-bold">0 lei</div>
-                            <div class="text-xs text-white/90">Venituri estimate</div>
-                        </div>
-                        <div>
-                            <div id="forecast-tickets" class="text-xl font-bold">+0</div>
-                            <div class="text-xs text-white/90">Bilete estimate</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-4 rounded-xl bg-white/10">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-white/80">La final</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div id="forecast-total-revenue" class="text-xl font-bold">0 lei</div>
-                            <div class="text-xs text-white/90">Total estimat</div>
-                        </div>
-                        <div>
-                            <div id="forecast-total-tickets" class="text-xl font-bold">0</div>
-                            <div class="text-xs text-white/90">Bilete total</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -328,6 +282,37 @@ $eventId = $_GET['event'] ?? null;
             <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <h2 class="mb-4 text-lg font-semibold text-gray-900">Locații top</h2>
                 <div id="locations-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Source links -->
+        <div class="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Linkuri și site-uri sursă</h2>
+                    <p class="text-xs text-gray-500">Linkul exact prin care au intrat vizitatorii, cu toți parametrii, și site-urile care i-au trimis</p>
+                </div>
+                <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
+                    <button type="button" onclick="setSourcesTab('links')" data-sources-tab="links" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-gray-900">Linkuri</button>
+                    <button type="button" onclick="setSourcesTab('domains')" data-sources-tab="domains" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-gray-500">Site-uri</button>
+                </div>
+            </div>
+            <div id="sources-summary" class="mb-3 text-xs text-gray-500"></div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-100">
+                            <th id="sources-col-name" class="pb-3 text-xs font-medium text-left text-gray-500 uppercase">Link de intrare</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Sesiuni</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Vizitatori</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Comenzi</th>
+                            <th class="pb-3 pl-3 text-xs font-medium text-right text-gray-500 uppercase">Valoare</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sources-table">
+                        <tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Se încarcă...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -565,8 +550,8 @@ $eventId = $_GET['event'] ?? null;
         <div class="absolute overflow-hidden border shadow-lg bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl border-slate-200" style="z-index: 1000;">
             <div class="p-4 border-b border-slate-200">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-semibold text-slate-800">Live Activity</span>
-                    <span class="text-xs text-slate-400">Last 5 minutes</span>
+                    <span class="text-sm font-semibold text-slate-800">Visitors by city</span>
+                    <span class="text-xs text-slate-400">Selected period</span>
                 </div>
             </div>
             <div id="globe-live-activity" class="p-2 overflow-y-auto max-h-64">
@@ -664,6 +649,7 @@ async function loadAnalytics() {
             eventData = response.data;
             updateDashboard(response.data);
         }
+        loadSources();
 
         // Load milestones/campaigns
         try {
@@ -807,9 +793,6 @@ function updateDashboard(data) {
             document.getElementById('live-indicator').classList.add('flex');
             document.getElementById('live-count').textContent = o.live_visitors + ' online';
         }
-
-        // Forecast
-        updateForecast(o);
     }
 
     // Chart
@@ -1184,51 +1167,6 @@ function toggleChartMetric(metric) {
     }
 }
 
-function updateForecast(overview) {
-    const daysRemaining = overview.days_until || 7;
-    const chart = eventData?.chart;
-
-    // Use actual chart data for daily averages instead of dividing by arbitrary number
-    let avgDailyRevenue = 0;
-    let avgDailyTickets = 0;
-
-    if (chart && chart.revenue && chart.revenue.length > 0) {
-        // Only count days that have actually passed (have data)
-        const daysWithData = chart.revenue.length;
-        const totalChartRevenue = chart.revenue.reduce((sum, v) => sum + (v || 0), 0);
-        const totalChartTickets = chart.tickets ? chart.tickets.reduce((sum, v) => sum + (v || 0), 0) : 0;
-
-        if (daysWithData > 0) {
-            // Weight recent days more heavily (last 7 days get 2x weight)
-            const recentDays = Math.min(7, daysWithData);
-            const recentRevenue = chart.revenue.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0);
-            const recentTickets = chart.tickets ? chart.tickets.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0) : 0;
-
-            if (recentDays < daysWithData && totalChartRevenue > 0) {
-                // Blend: 60% recent trend, 40% overall average
-                avgDailyRevenue = (recentRevenue / recentDays) * 0.6 + (totalChartRevenue / daysWithData) * 0.4;
-                avgDailyTickets = (recentTickets / recentDays) * 0.6 + (totalChartTickets / daysWithData) * 0.4;
-            } else {
-                avgDailyRevenue = totalChartRevenue / daysWithData;
-                avgDailyTickets = totalChartTickets / daysWithData;
-            }
-        }
-    } else if (overview.total_revenue > 0) {
-        // Fallback: if no chart data, use event creation to now
-        const createdAt = eventData?.event?.created_at;
-        const daysSinceCreation = createdAt
-            ? Math.max(1, Math.ceil((Date.now() - new Date(createdAt)) / (1000 * 60 * 60 * 24)))
-            : 1;
-        avgDailyRevenue = overview.total_revenue / daysSinceCreation;
-        avgDailyTickets = overview.tickets_sold / daysSinceCreation;
-    }
-
-    document.getElementById('forecast-revenue').textContent = formatCurrency(avgDailyRevenue * 7);
-    document.getElementById('forecast-tickets').textContent = '+' + Math.round(avgDailyTickets * 7);
-    document.getElementById('forecast-total-revenue').textContent = formatCurrency(overview.total_revenue + avgDailyRevenue * daysRemaining);
-    document.getElementById('forecast-total-tickets').textContent = formatNumber(overview.tickets_sold + Math.round(avgDailyTickets * daysRemaining));
-}
-
 function updateTicketTypes(tickets) {
     const tbody = document.getElementById('ticket-types-table');
     if (!tickets || tickets.length === 0) {
@@ -1445,6 +1383,85 @@ function updateChangeIndicator(elementId, change) {
     el.className = `flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`;
 }
 
+let sourcesData = null;
+let sourcesTab = 'links';
+
+async function loadSources() {
+    if (!document.getElementById('sources-table')) return;
+    try {
+        const channelParam = currentChannel && currentChannel !== 'all' ? '&channel=' + encodeURIComponent(currentChannel) : '';
+        const response = await AmbiletAPI.get('/organizer/events/' + eventId + '/analytics/sources?period=' + currentPeriod + channelParam);
+        sourcesData = response && response.success ? response.data : null;
+    } catch (e) {
+        sourcesData = null;
+    }
+    renderSources();
+}
+
+function setSourcesTab(tab) {
+    sourcesTab = tab;
+    document.querySelectorAll('[data-sources-tab]').forEach(function (btn) {
+        const active = btn.dataset.sourcesTab === tab;
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-gray-900', active);
+        btn.classList.toggle('text-gray-500', !active);
+    });
+    renderSources();
+}
+
+function sourcesEsc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+function renderSources() {
+    const tbody = document.getElementById('sources-table');
+    const summary = document.getElementById('sources-summary');
+    const colName = document.getElementById('sources-col-name');
+    if (!tbody) return;
+    colName.textContent = sourcesTab === 'links' ? 'Link de intrare' : 'Site sursă (referrer)';
+
+    if (!sourcesData) {
+        summary.textContent = '';
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu am putut încărca sursele</td></tr>';
+        return;
+    }
+
+    const totals = sourcesData.totals || {};
+    let text = formatNumber(totals.sessions || 0) + ' sesiuni în perioada selectată · ' + formatNumber(totals.orders_attributed || 0) + ' din ' + formatNumber(totals.orders || 0) + ' comenzi legate de o sursă';
+    if (sourcesData.truncated) text += ' · sunt analizate primele 50.000 de sesiuni';
+    summary.textContent = text;
+
+    const rows = (sourcesTab === 'links' ? sourcesData.links : sourcesData.domains) || [];
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu există date de trafic pentru perioada selectată</td></tr>';
+        return;
+    }
+
+    const domainLabels = { '(direct)': 'Direct (fără site sursă)', '(internal)': 'Navigare internă pe site' };
+    tbody.innerHTML = rows.map(function (r) {
+        let name;
+        if (sourcesTab === 'links') {
+            const chips = Object.entries(r.params || {}).map(function (entry) {
+                return '<span class="inline-block px-1.5 py-0.5 mr-1 mt-1 text-[11px] rounded bg-gray-100 text-gray-700">' + sourcesEsc(entry[0]) + '=' + sourcesEsc(entry[1]) + '</span>';
+            }).join('');
+            name = '<div class="text-sm font-medium text-gray-900 break-all">' + sourcesEsc((r.host || '') + (r.path || '')) + '</div>'
+                + (chips ? '<div>' + chips + '</div>' : '<div class="mt-1 text-[11px] text-gray-400">fără parametri</div>');
+        } else {
+            name = '<div class="text-sm font-medium text-gray-900 break-all">' + sourcesEsc(domainLabels[r.domain] || r.domain) + '</div>';
+        }
+        return '<tr class="align-top border-b border-gray-50">'
+            + '<td class="py-3 pr-4">' + name + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-700">' + formatNumber(r.sessions || 0) + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-700">' + formatNumber(r.visitors || 0) + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-700">' + formatNumber(r.orders || 0) + '</td>'
+            + '<td class="py-3 pl-3 text-sm text-right text-gray-900 whitespace-nowrap">' + formatCurrency(r.revenue || 0) + '</td>'
+            + '</tr>';
+    }).join('');
+}
+
 function formatCurrency(value) {
     return new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0) + ' lei';
 }
@@ -1624,12 +1641,12 @@ async function loadLiveVisitors() {
     try {
         // Try to get live visitors data from analytics
         if (eventData?.top_locations) {
-            renderGlobeData(eventData.top_locations);
+            renderGlobeData(eventData.top_locations, eventData.overview?.live_visitors);
         } else {
             // Fallback to showing the analytics data
             const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=1d`);
             if (response.success && response.data?.top_locations) {
-                renderGlobeData(response.data.top_locations);
+                renderGlobeData(response.data.top_locations, response.data.overview?.live_visitors);
             }
         }
     } catch (error) {
@@ -1655,13 +1672,13 @@ function getFlag(country) {
     return countryFlags[country] || '🌍';
 }
 
-function renderGlobeData(locations) {
+function renderGlobeData(locations, liveVisitors) {
     const liveCountEl = document.getElementById('globe-live-count');
     const activityEl = document.getElementById('globe-live-activity');
     const topLocationsEl = document.getElementById('globe-top-locations');
 
     if (!locations || locations.length === 0) {
-        liveCountEl.textContent = '0';
+        liveCountEl.textContent = formatNumber(liveVisitors || 0);
         activityEl.innerHTML = `
             <div class="flex items-center gap-3 p-2 rounded-lg">
                 <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">🌍</div>
@@ -1676,9 +1693,7 @@ function renderGlobeData(locations) {
         return;
     }
 
-    // Calculate totals
-    const totalVisitors = locations.reduce((sum, l) => sum + (l.visitors || l.count || 0), 0);
-    liveCountEl.textContent = formatNumber(totalVisitors);
+    liveCountEl.textContent = formatNumber(liveVisitors || 0);
 
     // Initialize Leaflet map
     initLeafletMap(locations);
@@ -1686,7 +1701,7 @@ function renderGlobeData(locations) {
     // Render live activity list
     const activityHtml = locations.slice(0, 8).map(l => {
         const flag = getFlag(l.country || 'RO');
-        const action = `Viewed event page`;
+        const action = formatNumber(l.visitors || l.count || 0) + ' visitors';
         const city = l.city || 'Unknown';
         const country = l.country || 'RO';
         return `
@@ -1696,7 +1711,6 @@ function renderGlobeData(locations) {
                     <div class="text-sm truncate text-slate-800">${action}</div>
                     <div class="text-xs text-slate-400">${city}, ${country}</div>
                 </div>
-                <div class="text-xs text-slate-300">now</div>
             </div>
         `;
     }).join('');

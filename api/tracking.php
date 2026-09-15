@@ -63,7 +63,7 @@ $ch = curl_init($url);
 // downstream Facebook CAPI dispatch) sees the actual visitor, not this
 // PHP proxy host. Backend must trust this proxy's IP for these headers
 // to take effect (config/trustedproxy or similar).
-$clientIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+$clientIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
 $clientUa = $_SERVER['HTTP_USER_AGENT'] ?? '';
 $existingForwardedFor = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
 
@@ -79,6 +79,7 @@ if ($clientIp !== '') {
         : $clientIp;
     $headers[] = 'X-Forwarded-For: ' . $forwardedFor;
     $headers[] = 'X-Real-IP: ' . $clientIp;
+    $headers[] = 'X-Visitor-IP: ' . $clientIp;
 }
 
 curl_setopt_array($ch, [
