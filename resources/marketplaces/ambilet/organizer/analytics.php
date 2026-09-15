@@ -9,7 +9,6 @@ $headExtra = '
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
     .stat-card { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%); backdrop-filter: blur(10px); }
-    .forecast-card { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
     .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
     @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
     .milestone-card { transition: all 0.2s ease; }
@@ -192,10 +191,9 @@ $eventId = $_GET['event'] ?? null;
             </div>
         </div>
 
-        <!-- Chart + Forecast -->
-        <div class="grid gap-6 mb-6 lg:grid-cols-3">
-            <!-- Main Chart -->
-            <div class="p-6 bg-white border border-gray-100 shadow-sm lg:col-span-2 rounded-2xl">
+        <!-- Sales Chart -->
+        <div class="mb-6">
+            <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">Performanță vânzări</h2>
@@ -231,50 +229,6 @@ $eventId = $_GET['event'] ?? null;
                     </div>
                     <div class="pt-3 mt-3 border-t border-gray-100">
                         <div id="milestone-tooltip-dates" class="text-xs text-gray-500"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Forecast / Summary -->
-            <div id="forecast-card" class="p-6 text-white forecast-card rounded-2xl">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-semibold">Estimări</h2>
-                        <p class="text-xs text-white/90">Predicții bazate pe trend</p>
-                    </div>
-                </div>
-                <div class="p-4 mb-4 rounded-xl bg-white/10">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-white/80">Următoarele 7 zile</span>
-                        <span class="text-xs px-2 py-0.5 bg-emerald-500/30 text-emerald-300 rounded-full">Trend</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div id="forecast-revenue" class="text-xl font-bold">0 lei</div>
-                            <div class="text-xs text-white/90">Venituri estimate</div>
-                        </div>
-                        <div>
-                            <div id="forecast-tickets" class="text-xl font-bold">+0</div>
-                            <div class="text-xs text-white/90">Bilete estimate</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-4 rounded-xl bg-white/10">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-white/80">La final</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div id="forecast-total-revenue" class="text-xl font-bold">0 lei</div>
-                            <div class="text-xs text-white/90">Total estimat</div>
-                        </div>
-                        <div>
-                            <div id="forecast-total-tickets" class="text-xl font-bold">0</div>
-                            <div class="text-xs text-white/90">Bilete total</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -807,9 +761,6 @@ function updateDashboard(data) {
             document.getElementById('live-indicator').classList.add('flex');
             document.getElementById('live-count').textContent = o.live_visitors + ' online';
         }
-
-        // Forecast
-        updateForecast(o);
     }
 
     // Chart
@@ -1182,51 +1133,6 @@ function toggleChartMetric(metric) {
     if (eventData?.chart) {
         updateMainChart(eventData.chart);
     }
-}
-
-function updateForecast(overview) {
-    const daysRemaining = overview.days_until || 7;
-    const chart = eventData?.chart;
-
-    // Use actual chart data for daily averages instead of dividing by arbitrary number
-    let avgDailyRevenue = 0;
-    let avgDailyTickets = 0;
-
-    if (chart && chart.revenue && chart.revenue.length > 0) {
-        // Only count days that have actually passed (have data)
-        const daysWithData = chart.revenue.length;
-        const totalChartRevenue = chart.revenue.reduce((sum, v) => sum + (v || 0), 0);
-        const totalChartTickets = chart.tickets ? chart.tickets.reduce((sum, v) => sum + (v || 0), 0) : 0;
-
-        if (daysWithData > 0) {
-            // Weight recent days more heavily (last 7 days get 2x weight)
-            const recentDays = Math.min(7, daysWithData);
-            const recentRevenue = chart.revenue.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0);
-            const recentTickets = chart.tickets ? chart.tickets.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0) : 0;
-
-            if (recentDays < daysWithData && totalChartRevenue > 0) {
-                // Blend: 60% recent trend, 40% overall average
-                avgDailyRevenue = (recentRevenue / recentDays) * 0.6 + (totalChartRevenue / daysWithData) * 0.4;
-                avgDailyTickets = (recentTickets / recentDays) * 0.6 + (totalChartTickets / daysWithData) * 0.4;
-            } else {
-                avgDailyRevenue = totalChartRevenue / daysWithData;
-                avgDailyTickets = totalChartTickets / daysWithData;
-            }
-        }
-    } else if (overview.total_revenue > 0) {
-        // Fallback: if no chart data, use event creation to now
-        const createdAt = eventData?.event?.created_at;
-        const daysSinceCreation = createdAt
-            ? Math.max(1, Math.ceil((Date.now() - new Date(createdAt)) / (1000 * 60 * 60 * 24)))
-            : 1;
-        avgDailyRevenue = overview.total_revenue / daysSinceCreation;
-        avgDailyTickets = overview.tickets_sold / daysSinceCreation;
-    }
-
-    document.getElementById('forecast-revenue').textContent = formatCurrency(avgDailyRevenue * 7);
-    document.getElementById('forecast-tickets').textContent = '+' + Math.round(avgDailyTickets * 7);
-    document.getElementById('forecast-total-revenue').textContent = formatCurrency(overview.total_revenue + avgDailyRevenue * daysRemaining);
-    document.getElementById('forecast-total-tickets').textContent = formatNumber(overview.tickets_sold + Math.round(avgDailyTickets * daysRemaining));
 }
 
 function updateTicketTypes(tickets) {
