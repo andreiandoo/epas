@@ -1,6 +1,7 @@
 /* bilete.online v2: forgot password. Posts the email through the API proxy and turns the card into "check your inbox".
    The backend answers alike for known and unknown emails, so a successful answer always means "sent"; a failed request
-   (no connection, too many attempts, server error) is said instead of pretending. Resend waits 30 seconds. */
+   (no connection, too many attempts, server error) is said instead of pretending. Resend waits 30 seconds.
+   In organizer mode (form data-type="venue", from ?ca=venue) the email goes to /organizer/forgot-password. */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -11,6 +12,7 @@
   var formView = $('fp-form-view'), sentView = $('fp-sent-view');
   var resend = $('fp-resend'), resendError = $('fp-resend-error'), resent = $('fp-resent');
   var LABEL = submit.textContent, RESEND_LABEL = resend.textContent, COOLDOWN = 30;
+  var venue = form.getAttribute('data-type') === 'venue';
   var sentTo = '', busy = false, timer = null;
 
   function say(box, text, field) {
@@ -28,7 +30,7 @@
   }
   function send(email) {
     if (typeof BileteOnlineAPI === 'undefined') return Promise.reject({ status: -1 });
-    return BileteOnlineAPI.post('/customer/forgot-password', { email: email }).then(function (resp) {
+    return BileteOnlineAPI.post(venue ? '/organizer/forgot-password' : '/customer/forgot-password', { email: email }).then(function (resp) {
       if (!(resp && resp.success !== false)) throw { status: -1 };
       return resp;
     });
@@ -63,7 +65,7 @@
       .then(function () {
         sentTo = email;
         $('fp-sent-email').textContent = email;
-        $('fp-login').href = '/autentificare?email=' + encodeURIComponent(email);
+        $('fp-login').href = '/autentificare?' + (venue ? 'ca=venue&' : '') + 'email=' + encodeURIComponent(email);
         resendError.hidden = true;
         resent.hidden = true;
         formView.hidden = true;

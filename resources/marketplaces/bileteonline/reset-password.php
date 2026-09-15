@@ -6,6 +6,10 @@
  * password" for accounts created at checkout, and the account-created notification. They all link to
  * `/reset-password?token=…&email=…`, which had no page on bilete.online (404), so none of those links worked.
  *
+ * Organizers get the same page in organizer mode (?ca=venue): core e-mails them /organizator/resetare-parola (and the
+ * notification /organizer/reset-password), which had no page either; .htaccess rewrites those paths here with ca=venue,
+ * and reset.js then posts to `/organizer/reset-password`.
+ *
  * reset.js posts token, email and the new password (with confirmation) to `/customer/reset-password` through the API
  * proxy. Core checks the token (60 minutes, 7 days for bulk invitations), needs 8+ characters, and signs the account
  * out everywhere, so a matching local session is cleared after success.
@@ -25,6 +29,8 @@ require_once __DIR__ . '/includes/v2/nav.php';
 // Only decides which card shows before the script runs; the values themselves are read in the browser.
 $hasLink = is_string($_GET['token'] ?? null) && $_GET['token'] !== ''
     && is_string($_GET['email'] ?? null) && filter_var($_GET['email'], FILTER_VALIDATE_EMAIL);
+$rpVenue = ($_GET['ca'] ?? '') === 'venue';
+$rpLogin = $rpVenue ? '/autentificare?ca=venue' : '/autentificare';
 
 $pageTitleRaw = 'Setează parola nouă — ' . SITE_NAME;
 $pageDescription = 'Setează o parolă nouă pentru contul tău bilete.online.';
@@ -40,7 +46,8 @@ $v2HeadExtra = '<meta name="referrer" content="no-referrer">'
     . '<script>(function(){try{var q=new URLSearchParams(location.search),t=q.get("token"),e=q.get("email");'
     . 'if(t===null&&e===null)return;window.BO_RESET_LINK={token:t||"",email:e||""};'
     . 'try{if(t&&e)sessionStorage.setItem("bo_reset_link",JSON.stringify({token:t,email:e,at:Date.now()}));}catch(s){}'
-    . 'history.replaceState(null,"",location.pathname+location.hash);}catch(x){}})();</script>'
+    . 'q.delete("token");q.delete("email");var s=q.toString();'
+    . 'history.replaceState(null,"",location.pathname+(s?"?"+s:"")+location.hash);}catch(x){}})();</script>'
     . '<script>window.BILETEONLINE = ' . json_encode([
         'siteName' => SITE_NAME,
         'siteUrl' => SITE_URL,
@@ -61,8 +68,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="af-hero" aria-labelledby="af-h">
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>    <div class="af-in">
       <div class="af-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="/autentificare">Autentificare</a><span aria-hidden="true">/</span><span aria-current="page">Parolă nouă</span></nav>
-        <p class="af-kicker">Parolă nouă · client</p>
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="<?= $rpLogin ?>">Autentificare</a><span aria-hidden="true">/</span><span aria-current="page">Parolă nouă</span></nav>
+        <p class="af-kicker"><?= $rpVenue ? 'Parolă nouă · organizator' : 'Parolă nouă · client' ?></p>
         <h1 class="af-h" id="af-h">Aproape gata!</h1>
         <p class="af-lead">Setează o parolă nouă pentru contul tău și vei putea accesa din nou toate funcționalitățile.</p>
         <div class="af-tips">
@@ -78,12 +85,12 @@ include __DIR__ . '/includes/v2/header.php';
         <div id="hdr-sentinel" aria-hidden="true"></div>
         <!-- FORM -->
         <div class="af-view" id="rp-form-view"<?= $hasLink ? '' : ' hidden' ?>>
-          <a class="af-back" href="/autentificare"><?= v2_ic('arrow-left') ?>Înapoi la autentificare</a>
+          <a class="af-back" href="<?= $rpLogin ?>"><?= v2_ic('arrow-left') ?>Înapoi la autentificare</a>
           <p class="af-card-k">Resetare parolă</p>
           <h2 class="af-card-h">Setează parolă nouă</h2>
           <p class="af-card-p">Introdu noua parolă pentru contul tău<span id="rp-for" hidden>: <strong id="rp-email"></strong></span>.</p>
           <p class="af-error" id="rp-error" role="alert" hidden></p>
-          <form class="af-form" id="rp-form" novalidate>
+          <form class="af-form" id="rp-form" data-type="<?= $rpVenue ? 'venue' : 'client' ?>" novalidate>
             <!-- lets password managers save the new password for the right account -->
             <input type="email" id="rp-username" name="email" autocomplete="username" hidden>
             <div class="af-field">
@@ -114,7 +121,7 @@ include __DIR__ . '/includes/v2/header.php';
           <h2 class="af-card-h" id="rp-done-h" tabindex="-1">Parolă schimbată!</h2>
           <p class="af-card-p">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
           <div class="af-actions">
-            <a class="btn btn-primary" id="rp-login" href="/autentificare">Mergi la autentificare<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-primary" id="rp-login" href="<?= $rpLogin ?>">Mergi la autentificare<?= v2_ic('arrow-right') ?></a>
           </div>
         </div>
 
@@ -125,8 +132,8 @@ include __DIR__ . '/includes/v2/header.php';
           <h2 class="af-card-h" id="rp-expired-h" tabindex="-1">Link expirat</h2>
           <p class="af-card-p">Linkul de resetare a expirat sau a fost deja folosit. Te rugăm să soliciți un nou link.</p>
           <div class="af-actions">
-            <a class="btn btn-primary" id="rp-new-link" href="/parola-uitata">Solicită link nou</a>
-            <a class="btn btn-ghost" href="/autentificare">Înapoi la autentificare</a>
+            <a class="btn btn-primary" id="rp-new-link" href="<?= $rpVenue ? '/parola-uitata?ca=venue' : '/parola-uitata' ?>">Solicită link nou</a>
+            <a class="btn btn-ghost" href="<?= $rpLogin ?>">Înapoi la autentificare</a>
           </div>
         </div>
       </section>

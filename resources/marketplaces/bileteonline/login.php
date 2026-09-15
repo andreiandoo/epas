@@ -187,7 +187,7 @@ include __DIR__ . '/includes/v2/header.php';
                 </div>
                 <div class="au-line">
                   <label class="au-check"><input class="au-cb" type="checkbox" id="au-remember" checked><span>Ține-mă minte</span></label>
-                  <a href="/parola-uitata">Am uitat parola</a>
+                  <a href="/parola-uitata" id="au-forgot">Am uitat parola</a>
                 </div>
                 <div class="au-box" data-for="client"<?= $forType('client') ?>>
                   <b>Ai cumpărat fără cont?</b>

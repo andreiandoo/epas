@@ -123,38 +123,22 @@ RewriteRule ^cities/?$ /orase [R=301,L,QSA]
 # ORGANIZER AUTH + DASHBOARD ROUTES
 # ============================================
 
-# Auth pages - must come BEFORE the public profile rule
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/login/?$ organizer/login.php [L]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/inregistrare/?$ organizer/register.php [L]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/register/?$ organizer/register.php [L]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/landing/?$ organizer/landing.php [L]
+# Auth pages - must come BEFORE the public profile rule.
+# organizer/login.php, register.php, landing.php, forgot-password.php and reset-password.php no longer exist, so these
+# routes were 404s: the organizer login guard (assets/js/auth.js), "Solicită cont" links and the password e-mails led
+# nowhere. They go to the shared v2 pages, in organizer mode (?ca=venue) where the page has one.
+RewriteRule ^organizator/login/?$ /autentificare?ca=venue [R=302,L,QSA]
+RewriteRule ^organizator/(inregistrare|register)/?$ /inregistrare-locatie [R=301,L,QSA]
+RewriteRule ^organizator/landing/?$ /devino-partener [R=301,L,QSA]
+RewriteRule ^organizator/forgot-password/?$ /parola-uitata?ca=venue [R=301,L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/accept-invite/?$ organizer/accept-invite.php [L,QSA]
 
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/forgot-password/?$ organizer/forgot-password.php [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/resetare-parola/?$ organizer/reset-password.php [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/reset-password/?$ organizer/reset-password.php [L,QSA]
+# Password links core e-mails to organizers (/organizator/resetare-parola; the notification uses /organizer/reset-password):
+# the reset page in organizer mode. An internal rewrite, so token and email stay in the query for its head script to remove.
+RewriteRule ^(organizator/resetare-parola|organizator/reset-password|organizer/reset-password)/?$ reset-password.php?ca=venue [L,QSA]
 
 # Dashboard sections
 RewriteCond %{REQUEST_FILENAME} !-f
