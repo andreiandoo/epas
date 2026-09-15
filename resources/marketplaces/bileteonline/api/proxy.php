@@ -1842,9 +1842,15 @@ switch ($action) {
 
     case 'customer.review.store':
         $method = 'POST';
-        $body = file_get_contents('php://input');
         $endpoint = '/customer/reviews';
         $requiresAuth = true;
+        // Core only accepts photos as uploaded files (photos.* image, max 5 MB): a review with photos arrives as
+        // multipart/form-data and is forwarded as such; without photos it stays JSON.
+        if (stripos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') === 0) {
+            $isMultipart = true;
+        } else {
+            $body = file_get_contents('php://input');
+        }
         break;
 
     case 'customer.review.show':

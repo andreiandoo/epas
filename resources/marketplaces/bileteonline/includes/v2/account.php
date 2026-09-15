@@ -17,6 +17,7 @@ const V2_ACCOUNT_NAV = [
     ['orders', '/cont/comenzi', 'Comenzile mele', 'shopping-cart-simple'],
     ['points', '/cont/puncte', 'Punctele mele', 'coins'],
     ['recommendations', '/cont/recomandari', 'Recomandări', 'star'],
+    ['reviews', '/cont/recenzii', 'Recenziile mele', 'check-circle'],
     ['support', '/cont/tichete-support', 'Tichete support', 'headset'],
     ['settings', '/cont/setari', 'Setări', 'lock-simple'],
 ];

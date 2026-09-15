@@ -1,548 +1,278 @@
 <?php
 /**
- * bilete.online — /cont/recenzii (Recenziile mele, v2 full template)
+ * Customer reviews: /cont/recenzii (v2 design).
  *
- * Implements template-client-reviews-bilete-online-v2.html end-to-end:
- *   - Hero w/ REVIEW SCORE card (avg rating, count, pending review hint)
- *   - 4 stats (PUBLICATE / DE EVALUAT / DRAFTURI / MODERARE)
- *   - "De evaluat" section: per pending event a card with star picker +
- *     textarea + suitable-for select + age select + photos upload +
- *     Save draft + Publish CTA + sidebar guide card
- *   - "Istoric" section: search + status + rating filters + 2-col grid of
- *     published/drafts/moderation review cards with edit/view/delete
- *   - 3 bottom utility cards (PERSONALIZARE / COMUNITATE / BONUS)
+ * Inside the v2 account shell (includes/v2/account.php). Hero with the average rating given, four counters, "De
+ * evaluat" (one activity at a time: stars, text, who it suits, detailed ratings, photos, draft / publish, writing
+ * guide), "Istoric" (search, status and rating filters, review cards with edit / delete, drafts), three info cards.
+ * reviews.js talks to /customer/reviews (list, paginated), /customer/reviews/events-to-review, /customer/reviews/meta,
+ * POST /customer/reviews (JSON, or multipart when photos are attached), PUT + DELETE /customer/reviews/{id}.
  *
- * Backend already exposes:
- *   GET    /customer/reviews
- *   POST   /customer/reviews
- *   GET    /customer/reviews/events-to-review
- *   GET    /customer/reviews/{review}
- *   PUT    /customer/reviews/{review}
- *   DELETE /customer/reviews/{review}
+ * Fixed on the way: "Salvează draft" POSTed the review, and core has no drafts (every review goes to moderation), so a
+ * draft was really submitted: drafts are kept on this device now. Photos went as data URLs inside JSON, which core
+ * rejects (it takes uploaded files only), so any review with photos failed: they are uploaded as files now (the proxy
+ * forwards multipart). Core needs at least 20 characters; the old page let a 10-character review through to a 422.
+ * Rejected reviews were shown as published. Editing loaded a review into the form of another activity and re-sent the
+ * rating and text every time, which sends an approved review back to moderation: it opens in its own dialog and only
+ * changed fields are sent. confirm() / alert() became inline confirmations and messages.
  */
 
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/api.php';
+require_once __DIR__ . '/../includes/nav-helpers.php';
+require_once __DIR__ . '/../includes/v2/helpers.php';
+require_once __DIR__ . '/../includes/v2/nav.php';
+require_once __DIR__ . '/../includes/v2/account.php';
 
-$pageTitleRaw    = 'Recenziile mele — ' . SITE_NAME;
+$pageTitleRaw = 'Recenziile mele — ' . SITE_NAME;
 $pageDescription = 'Recenziile mele pe bilete.online: scrie pentru activitățile la care ai fost, editează drafturi și ajută alți clienți să aleagă.';
-$canonicalUrl    = SITE_URL . '/cont/recenzii';
-$noindex         = true;
-$currentPage     = 'cont';
-$cssBundle       = 'auth';
+$canonicalUrl = SITE_URL . '/cont/recenzii';
+$noindex = true;
+$skipPageCache = true;
 
-include __DIR__ . '/../includes/head.php';
-include __DIR__ . '/../includes/header.php';
+$v2Styles = ['account.css', 'reviews.css'];
+$v2Scripts = ['account.js', 'reviews.js'];
+$v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
+$v2HeadExtra = v2_account_client_config();
+
+$rvStar = '<svg class="rv-star-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l2.84 5.93 6.53.86-4.78 4.53 1.2 6.47L12 17.25l-5.79 3.15 1.2-6.47L2.63 9.39l6.53-.86z"/></svg>';
+$rvStars = function (string $name, bool $small = false, bool $optional = false) use ($rvStar): string {
+    $html = '<div class="rv-stars' . ($small ? ' is-small' : '') . '" data-stars="' . $name . '"' . ($optional ? ' data-optional' : '') . '>';
+    for ($n = 1; $n <= 5; $n++) {
+        $html .= '<label class="rv-star"><input type="radio" name="' . $name . '" value="' . $n . '"><span class="sr">'
+            . ($n === 1 ? '1 stea' : $n . ' stele') . '</span>' . $rvStar . '</label>';
+    }
+    return $html . '</div>';
+};
+$rvSuitable = [['children', 'Copii'], ['family', 'Familie'], ['couple', 'Cuplu'], ['groups', 'Grupuri'], ['team_building', 'Team building'], ['solo', 'Solo']];
+$rvAges = [['3-6', '3–6 ani'], ['6-10', '6–10 ani'], ['10-14', '10–14 ani'], ['14-18', '14–18 ani'], ['adults', 'Adulți'], ['all', 'Toate vârstele']];
+$rvAspects = ['show' => 'Experiența', 'venue' => 'Locația', 'organization' => 'Organizarea', 'value' => 'Raport calitate-preț'];
+$rvCaret = v2_ic('caret-down');
+
+include __DIR__ . '/../includes/v2/head.php';
+include __DIR__ . '/../includes/v2/header.php';
 ?>
+<main id="main" tabindex="-1" class="page-main acc-page">
+  <div class="wrap">
+    <?php v2_account_start('reviews'); ?>
 
-<div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 lg:py-8">
-    <div class="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+    <!-- not signed in -->
+    <section class="acc-guard" id="rv-guard" hidden aria-labelledby="rv-guard-h">
+      <span class="acc-guard-ic" aria-hidden="true"><?= v2_ic('lock-simple') ?></span>
+      <h1 id="rv-guard-h">Trebuie să fii autentificat</h1>
+      <p>Intră în cont pentru a-ți vedea și scrie recenziile.</p>
+      <a class="btn btn-primary" href="/autentificare?redirect=%2Fcont%2Frecenzii">Intră în cont<?= v2_ic('arrow-right') ?></a>
+    </section>
 
-        <?php $currentClientPage = 'reviews'; include __DIR__ . '/../includes/client-sidebar-v2.php'; ?>
+    <div class="acc-body" id="rv-content">
+      <!-- HERO -->
+      <section class="acc-hero rv-hero" aria-labelledby="rv-h">
+        <div>
+          <p class="acc-kicker">Client reviews</p>
+          <h1 class="acc-h" id="rv-h">Recenziile mele</h1>
+          <p class="acc-lead">Scrie recenzii pentru activitățile la care ai fost, vezi ce ai publicat, editează drafturi și ajută sistemul să îți recomande experiențe mai potrivite.</p>
+          <div class="rv-cta">
+            <a class="btn btn-light" href="#de-evaluat"><?= v2_ic('star') ?>Scrie recenzie</a>
+            <a class="btn btn-outline-light" href="/cont/recomandari">Vezi recomandări</a>
+          </div>
+        </div>
+        <article class="rv-score" aria-labelledby="rv-score-k">
+          <p class="acc-k" id="rv-score-k">Review score</p>
+          <p class="rv-score-v" id="rv-avg">0,0</p>
+          <p class="rv-score-l">rating mediu oferit · <span id="rv-pub-label">0 recenzii publicate</span></p>
+          <div class="rv-score-stars" id="rv-avg-stars" role="img" aria-label="Rating mediu 0,0 din 5"><?= str_repeat($rvStar, 5) ?></div>
+          <p class="rv-score-hint" id="rv-score-hint">Se verifică activitățile de evaluat…</p>
+        </article>
+      </section>
 
-        <main class="min-w-0" x-data="clientReviewsPage()" x-init="init()">
+      <!-- COUNTERS -->
+      <section class="rv-stats" aria-label="Pe scurt">
+        <article class="rv-stat"><p class="acc-k">Publicate</p><p class="rv-stat-v" id="rv-s-pub">—</p><p class="rv-stat-p">recenzii vizibile</p></article>
+        <article class="rv-stat is-mint"><p class="acc-k">De evaluat</p><p class="rv-stat-v" id="rv-s-todo">—</p><p class="rv-stat-p" id="rv-s-todo-p">se verifică…</p></article>
+        <article class="rv-stat"><p class="acc-k">Drafturi</p><p class="rv-stat-v" id="rv-s-draft">—</p><p class="rv-stat-p">nefinalizate, pe acest dispozitiv</p></article>
+        <article class="rv-stat is-rose"><p class="acc-k">Moderare</p><p class="rv-stat-v" id="rv-s-mod">—</p><p class="rv-stat-p">în verificare</p></article>
+      </section>
+      <p class="rv-flash" id="rv-flash" role="status" aria-live="polite"></p>
 
-            <!-- HERO -->
-            <section class="rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 shadow-deep">
-                <div class="grid xl:grid-cols-[1fr_380px] gap-8 items-center">
-                    <div>
-                        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">CLIENT REVIEWS</p>
-                        <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Recenziile mele</h1>
-                        <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">Scrie recenzii pentru activitățile la care ai fost, vezi ce ai publicat, editează drafturi și ajută sistemul să îți recomande experiențe mai potrivite.</p>
-                        <div class="mt-7 flex flex-wrap gap-3">
-                            <a href="#de-evaluat" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Scrie recenzie</a>
-                            <a href="/cont/recomandari" class="rounded-full border-2 border-paper/50 px-6 py-4 font-bold hover:bg-paper hover:text-ink transition">Vezi recomandări</a>
-                        </div>
-                    </div>
-                    <div class="rounded-[2rem] border-2 border-paper/20 bg-paper text-ink p-6 rotate-[-2deg]">
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REVIEW SCORE</p>
-                        <p class="mt-3 font-display text-7xl font-bold leading-none" x-text="avgRating.toFixed(1)">0.0</p>
-                        <p class="mt-2 text-ink-soft">rating mediu oferit · <span x-text="stats.published"></span> recenzii publicate</p>
-                        <div class="mt-5 flex text-3xl text-ochre" x-text="starsFor(Math.round(avgRating))">★★★★★</div>
-                        <p class="mt-3 text-sm text-ink-soft" x-text="stats.toReview > 0 ? (stats.toReview + ' recenzii așteaptă să fie scrise.') : 'Felicitări! Toate sunt scrise.'"></p>
-                    </div>
-                </div>
-            </section>
+      <!-- TO REVIEW -->
+      <section class="acc-panel rv-panel" id="de-evaluat" aria-labelledby="rv-todo-h">
+        <div class="rv-head">
+          <div><p class="acc-k">De evaluat</p><h2 id="rv-todo-h">Activități care așteaptă recenzia ta</h2></div>
+          <div class="rv-pager" id="rv-pager" hidden>
+            <button class="rv-pager-btn" type="button" id="rv-prev" aria-label="Activitatea anterioară"><?= v2_ic('arrow-left') ?></button>
+            <span class="rv-pager-t" id="rv-pos">1 din 1</span>
+            <button class="rv-pager-btn" type="button" id="rv-next" aria-label="Activitatea următoare"><?= v2_ic('arrow-right') ?></button>
+          </div>
+        </div>
 
-            <!-- 4 STATS -->
-            <section class="mt-6 grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PUBLICATE</p>
-                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.published">0</p>
-                    <p class="mt-1 text-ink-soft">recenzii vizibile</p>
-                </article>
-                <article class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-forest">DE EVALUAT</p>
-                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.toReview">0</p>
-                    <p class="mt-1 text-ink-soft" x-text="stats.toReview > 0 ? 'experiențe recente' : 'toate scrise'">—</p>
-                </article>
-                <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">DRAFTURI</p>
-                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.draft">0</p>
-                    <p class="mt-1 text-ink-soft">nefinalizate</p>
-                </article>
-                <article class="rounded-[2rem] border-2 border-ink bg-rose p-5 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-vermilion">MODERARE</p>
-                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.moderation">0</p>
-                    <p class="mt-1 text-ink-soft">în verificare</p>
-                </article>
-            </section>
+        <div class="rv-skel is-tall" id="rv-todo-skel" aria-hidden="true"></div>
+        <div class="rv-empty is-error" id="rv-todo-error" hidden>
+          <h3>Nu am putut încărca activitățile de evaluat</h3>
+          <p>Verifică conexiunea și încearcă din nou.</p>
+          <button class="btn btn-ghost" type="button" id="rv-todo-retry">Reîncearcă</button>
+        </div>
+        <div class="rv-empty" id="rv-todo-empty" hidden>
+          <span class="rv-empty-ic" aria-hidden="true"><?= v2_ic('check-circle') ?></span>
+          <h3 id="rv-todo-empty-h" tabindex="-1">Nicio activitate de evaluat acum</h3>
+          <p>După ce participi la o activitate, va apărea aici pentru recenzie.</p>
+        </div>
 
-            <!-- DE EVALUAT -->
-            <section id="de-evaluat" class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
-                <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-                    <div>
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">DE EVALUAT</p>
-                        <h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Activități care așteaptă recenzia ta</h2>
-                    </div>
-                    <div x-show="toReviewEvents.length > 1" class="flex gap-2">
-                        <button @click="selectEventIdx = Math.max(0, selectEventIdx - 1)" :disabled="selectEventIdx === 0" class="rounded-full border-2 border-ink px-4 py-2 font-bold disabled:opacity-40">←</button>
-                        <span class="px-3 py-2 font-bold" x-text="(selectEventIdx + 1) + ' din ' + toReviewEvents.length"></span>
-                        <button @click="selectEventIdx = Math.min(toReviewEvents.length - 1, selectEventIdx + 1)" :disabled="selectEventIdx >= toReviewEvents.length - 1" class="rounded-full border-2 border-ink px-4 py-2 font-bold disabled:opacity-40">→</button>
-                    </div>
-                </div>
+        <div class="rv-todo" id="rv-todo" hidden>
+          <article class="rv-write" aria-labelledby="rv-ev-title">
+            <div class="rv-write-media is-empty" id="rv-ev-media"><?= v2_ic('star') ?></div>
+            <div class="rv-write-body">
+              <div class="rv-tags"><span class="acc-tag is-ok">participare confirmată</span><span class="acc-tag" id="rv-ev-date"></span></div>
+              <h3 class="rv-ev-title" id="rv-ev-title" tabindex="-1"></h3>
+              <p class="rv-ev-where" id="rv-ev-where"></p>
 
-                <div x-show="toReviewEvents.length === 0 && !loadingToReview" class="mt-6 rounded-3xl border-2 border-dashed border-ink/20 bg-paper-2/50 p-8 text-center">
-                    <p class="text-5xl">✨</p>
-                    <p class="mt-3 font-display text-3xl font-bold">Nicio activitate de evaluat acum</p>
-                    <p class="mt-2 text-ink-soft">După ce participi la o activitate, va apărea aici pentru recenzie.</p>
-                </div>
+              <form class="rv-form" id="rv-form" novalidate>
+                <fieldset class="rv-rate">
+                  <legend>Rating rapid</legend>
+                  <?= $rvStars('rv-rating') ?>
+                  <span class="rv-rate-t" id="rv-rating-t" aria-live="polite">Alege de la 1 la 5 stele</span>
+                </fieldset>
 
-                <div x-show="loadingToReview" class="mt-6 h-64 rounded-3xl bg-paper-2/60 animate-pulse"></div>
-
-                <div x-show="!loadingToReview && toReviewEvents.length > 0" class="mt-6 grid lg:grid-cols-[1fr_420px] gap-6">
-                    <article class="rounded-[2rem] border-2 border-ink bg-paper-2/70 overflow-hidden">
-                        <div class="grid md:grid-cols-[260px_1fr]">
-                            <img :src="currentEvent?.image || fallbackImage" :alt="currentEvent?.title || ''" class="w-full h-64 md:h-full object-cover" onerror="this.style.opacity='.4'">
-                            <div class="p-5 sm:p-6">
-                                <div class="flex flex-wrap gap-2">
-                                    <span class="rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold">participare confirmată</span>
-                                    <span class="rounded-full bg-paper border border-ink/10 px-3 py-1 text-xs font-bold" x-text="currentEvent?.date"></span>
-                                </div>
-                                <h3 class="mt-4 font-display text-4xl font-bold leading-none" x-text="currentEvent?.title"></h3>
-                                <p class="mt-2 text-ink-soft" x-text="(currentEvent?.location || '') + (currentEvent?.tickets_count ? ' · ' + currentEvent.tickets_count + ' bilete scanate' : '')"></p>
-
-                                <div class="mt-5">
-                                    <p class="font-bold">Rating rapid</p>
-                                    <div class="mt-2 flex gap-1 text-4xl">
-                                        <template x-for="star in 5" :key="star">
-                                            <button @click="newReview.rating = star" type="button" class="transition" :class="newReview.rating >= star ? 'text-ochre' : 'text-ink/20'">★</button>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                <label class="block mt-5">
-                                    <span class="block mb-1.5 text-sm font-bold">Ce ți-a plăcut sau ce ar trebui să știe alții?</span>
-                                    <textarea class="field min-h-32" x-model="newReview.text" :maxlength="meta.text_max_chars" placeholder="Scrie sincer, util și concret. De exemplu: cât a durat, pentru ce vârstă e potrivit, cum a fost accesul, dacă ai merge din nou."></textarea>
-                                    <span class="block mt-1 text-xs text-ink-soft" x-text="(newReview.text.length || 0) + ' / ' + meta.text_max_chars">0 / 2000</span>
-                                </label>
-
-                                <div class="mt-4 grid sm:grid-cols-2 gap-3">
-                                    <label>
-                                        <span class="block mb-1.5 text-sm font-bold">Potrivit pentru</span>
-                                        <select class="field" x-model="newReview.suitable">
-                                            <template x-for="opt in meta.suitable_for" :key="opt.value">
-                                                <option :value="opt.value" x-text="opt.label"></option>
-                                            </template>
-                                        </select>
-                                    </label>
-                                    <label>
-                                        <span class="block mb-1.5 text-sm font-bold">Vârsta recomandată</span>
-                                        <select class="field" x-model="newReview.age">
-                                            <template x-for="opt in meta.age_groups" :key="opt.value">
-                                                <option :value="opt.value" x-text="opt.label"></option>
-                                            </template>
-                                        </select>
-                                    </label>
-                                </div>
-
-                                <div x-show="newReview.photos.length > 0" class="mt-4 flex flex-wrap gap-2">
-                                    <template x-for="(photo, idx) in newReview.photos" :key="idx">
-                                        <div class="relative w-20 h-20 rounded-xl overflow-hidden border border-ink/10">
-                                            <img :src="photo" class="w-full h-full object-cover">
-                                            <button @click="newReview.photos.splice(idx, 1)" type="button" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-ink text-paper text-xs">×</button>
-                                        </div>
-                                    </template>
-                                </div>
-
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    <label class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition cursor-pointer">
-                                        Atașează poze
-                                        <input type="file" accept="image/*" multiple class="hidden" @change="handlePhotoUpload($event)">
-                                    </label>
-                                    <button @click="saveReview('draft')" :disabled="savingReview" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition disabled:opacity-60">
-                                        <span x-show="!savingReview">Salvează draft</span>
-                                        <span x-show="savingReview" x-cloak>Se salvează…</span>
-                                    </button>
-                                    <button @click="saveReview('publish')" :disabled="savingReview || !canSubmit" class="rounded-full bg-vermilion text-paper px-5 py-2 text-sm font-bold hover:bg-vermilion-d transition disabled:opacity-60">
-                                        <span x-show="!savingReview">Publică recenzia</span>
-                                        <span x-show="savingReview" x-cloak>Se publică…</span>
-                                    </button>
-                                </div>
-                                <div x-show="formMessage" x-cloak class="mt-3 rounded-2xl border-2 px-4 py-3 text-sm font-bold" :class="formMessageType === 'error' ? 'border-vermilion bg-vermilion/10 text-vermilion' : 'border-forest bg-mint text-forest'" x-text="formMessage"></div>
-                            </div>
-                        </div>
-                    </article>
-
-                    <aside class="rounded-[2rem] border-2 border-forest bg-mint p-6">
-                        <p class="font-mono text-xs tracking-[.18em] text-forest">GHID RECENZIE BUNĂ</p>
-                        <h3 class="mt-2 font-display text-4xl font-bold leading-none">Scrie pentru omul care decide.</h3>
-                        <div class="mt-5 space-y-3 text-ink-soft">
-                            <p><strong class="text-ink">Concret:</strong> spune durata reală, accesul, aglomerația, vârsta potrivită.</p>
-                            <p><strong class="text-ink">Util:</strong> menționează dacă ai merge din nou și cu cine.</p>
-                            <p><strong class="text-ink">Corect:</strong> evită date personale sau informații care nu țin de activitate.</p>
-                        </div>
-                    </aside>
-                </div>
-            </section>
-
-            <!-- ISTORIC -->
-            <section class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
-                <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-                    <div>
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ISTORIC</p>
-                        <h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Recenzii publicate și drafturi</h2>
-                    </div>
-                    <div class="grid sm:grid-cols-3 gap-2">
-                        <input class="field" x-model="search" placeholder="Caută recenzie...">
-                        <select class="field" x-model="statusFilter">
-                            <template x-for="opt in meta.status_filters" :key="opt.value">
-                                <option :value="opt.value" x-text="opt.label"></option>
-                            </template>
-                        </select>
-                        <select class="field" x-model="ratingFilter">
-                            <template x-for="opt in meta.rating_filters" :key="opt.value">
-                                <option :value="opt.value" x-text="opt.label"></option>
-                            </template>
-                        </select>
-                    </div>
+                <div class="acc-field">
+                  <label for="rv-text">Ce ți-a plăcut sau ce ar trebui să știe alții?</label>
+                  <textarea class="rv-textarea" id="rv-text" rows="5" maxlength="2000" aria-describedby="rv-text-count" placeholder="Scrie sincer, util și concret. De exemplu: cât a durat, pentru ce vârstă e potrivit, cum a fost accesul, dacă ai merge din nou."></textarea>
+                  <small class="rv-count" id="rv-text-count">0 / 2.000 · mai scrie 20 de caractere</small>
                 </div>
 
-                <div x-show="loadingReviews" class="mt-6 grid xl:grid-cols-2 gap-5">
-                    <div class="h-44 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
-                    <div class="h-44 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
+                <div class="rv-grid">
+                  <div class="acc-field">
+                    <label for="rv-suitable">Potrivit pentru</label>
+                    <span class="acc-select"><select id="rv-suitable"><?php foreach ($rvSuitable as [$rvValue, $rvLabel]): ?><option value="<?= v2_e($rvValue) ?>"<?= $rvValue === 'family' ? ' selected' : '' ?>><?= v2_e($rvLabel) ?></option><?php endforeach; ?></select><?= $rvCaret ?></span>
+                  </div>
+                  <div class="acc-field">
+                    <label for="rv-age">Vârsta recomandată</label>
+                    <span class="acc-select"><select id="rv-age"><?php foreach ($rvAges as [$rvValue, $rvLabel]): ?><option value="<?= v2_e($rvValue) ?>"<?= $rvValue === 'all' ? ' selected' : '' ?>><?= v2_e($rvLabel) ?></option><?php endforeach; ?></select><?= $rvCaret ?></span>
+                  </div>
                 </div>
 
-                <div x-show="!loadingReviews && filteredReviews().length > 0" class="mt-6 grid xl:grid-cols-2 gap-5">
-                    <template x-for="review in filteredReviews()" :key="review.id">
-                        <article class="rounded-[2rem] border-2 border-ink bg-paper overflow-hidden">
-                            <div class="grid sm:grid-cols-[180px_1fr]">
-                                <img :src="review.image || fallbackImage" :alt="review.title" class="w-full h-48 sm:h-full object-cover" onerror="this.style.opacity='.4'">
-                                <div class="p-5">
-                                    <div class="flex flex-wrap gap-2">
-                                        <span class="rounded-full px-3 py-1 text-xs font-bold" :class="review.statusClass" x-text="review.statusLabel"></span>
-                                        <span class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="review.date"></span>
-                                    </div>
-                                    <h3 class="mt-3 font-display text-3xl font-bold leading-none" x-text="review.title"></h3>
-                                    <p class="mt-1 text-ink-soft" x-text="review.location"></p>
-                                    <div class="mt-3 text-2xl text-ochre" x-text="starsFor(review.rating)"></div>
-                                    <p class="mt-3 text-ink-soft leading-relaxed line-clamp-3" x-text="review.text"></p>
-                                    <div class="mt-4 flex flex-wrap gap-2">
-                                        <button @click="editReview(review)" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Editează</button>
-                                        <a :href="review.activityUrl" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Vezi activitatea</a>
-                                        <button @click="deleteReview(review)" class="rounded-full border border-vermilion/30 bg-rose text-vermilion px-4 py-2 text-sm font-bold hover:bg-vermilion hover:text-paper transition">Șterge</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    </template>
+                <details class="rv-more" id="rv-more">
+                  <summary><span>Evaluare detaliată și opțiuni <small>(opțional)</small></span></summary>
+                  <div class="rv-more-body">
+                    <?php foreach ($rvAspects as $rvKey => $rvLabel): ?>
+                    <fieldset class="rv-aspect"><legend><?= v2_e($rvLabel) ?></legend><?= $rvStars('rv-a-' . $rvKey, true, true) ?></fieldset>
+                    <?php endforeach; ?>
+                    <p class="rv-note">Apasă din nou pe steaua aleasă ca să ștergi o notă detaliată.</p>
+                    <label class="rv-switch-row" for="rv-recommend"><span>Recomand această activitate</span><input class="rv-switch" type="checkbox" role="switch" id="rv-recommend" checked></label>
+                    <label class="rv-switch-row" for="rv-anonymous"><span>Publică fără numele meu</span><input class="rv-switch" type="checkbox" role="switch" id="rv-anonymous"></label>
+                  </div>
+                </details>
+
+                <div class="rv-photos">
+                  <ul class="rv-thumbs" id="rv-thumbs" aria-label="Poze atașate" hidden></ul>
+                  <button class="btn btn-ghost" type="button" id="rv-attach"><?= v2_ic('plus') ?>Atașează poze</button>
+                  <input class="rv-file" type="file" id="rv-photo-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+                  <small class="rv-note" id="rv-photo-note">Până la 5 poze JPG, PNG, WebP sau GIF, maximum 5 MB fiecare.</small>
                 </div>
 
-                <div x-show="!loadingReviews && filteredReviews().length === 0" class="mt-6 rounded-[2rem] border-2 border-ink bg-paper-2 p-8 text-center">
-                    <p class="font-display text-4xl font-bold" x-text="reviews.length === 0 ? 'Încă nu ai recenzii' : 'Nu am găsit recenzii pentru filtre'"></p>
-                    <p class="mt-2 text-ink-soft">Schimbă filtrele sau caută după alt termen.</p>
+                <p class="rv-error" id="rv-form-error" role="alert" hidden></p>
+                <div class="rv-actions">
+                  <button class="btn btn-ghost" type="button" id="rv-draft">Salvează draft</button>
+                  <button class="btn btn-primary" type="submit" id="rv-submit">Publică recenzia</button>
                 </div>
-            </section>
-
-            <!-- 3 BOTTOM CARDS -->
-            <section class="mt-6 grid md:grid-cols-3 gap-5">
-                <article class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PERSONALIZARE</p>
-                    <h2 class="mt-2 font-display text-4xl font-bold leading-none">Recenziile antrenează recomandările.</h2>
-                    <p class="mt-3 text-ink-soft">Ratingurile și preferințele din review-uri pot îmbunătăți recomandările viitoare.</p>
-                </article>
-                <article class="rounded-[2rem] border-2 border-ink bg-mint p-6 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-forest">COMUNITATE</p>
-                    <h2 class="mt-2 font-display text-4xl font-bold leading-none">Ajută alți clienți.</h2>
-                    <p class="mt-3 text-ink-soft">O recenzie bună reduce incertitudinea și crește încrederea în activități.</p>
-                </article>
-                <article class="rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-6 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-paper/60">BONUS</p>
-                    <h2 class="mt-2 font-display text-4xl font-bold leading-none">Review-uri cu puncte?</h2>
-                    <p class="mt-3 text-paper/70">Recenziile eligibile pot aduce puncte bonus când campaniile sunt active.</p>
-                </article>
-            </section>
-
-            <!-- AUTH GUARD -->
-            <div x-show="isAuth === false" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
-                <p class="font-display text-3xl font-bold text-vermilion">Trebuie să fii autentificat</p>
-                <a href="/autentificare?redirect=/cont/recenzii" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Intră în cont</a>
+                <small class="rv-note" id="rv-draft-note">Recenziile apar pe site după o scurtă verificare.</small>
+              </form>
             </div>
-        </main>
+          </article>
+
+          <aside class="rv-guide" aria-labelledby="rv-guide-h">
+            <p class="acc-k">Ghid recenzie bună</p>
+            <h3 id="rv-guide-h">Scrie pentru omul care decide.</h3>
+            <p><strong>Concret:</strong> spune durata reală, accesul, aglomerația, vârsta potrivită.</p>
+            <p><strong>Util:</strong> menționează dacă ai merge din nou și cu cine.</p>
+            <p><strong>Corect:</strong> evită date personale sau informații care nu țin de activitate.</p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section class="acc-panel rv-panel" id="istoric" aria-labelledby="rv-list-h">
+        <p class="acc-k">Istoric</p>
+        <h2 id="rv-list-h" tabindex="-1">Recenzii publicate și drafturi</h2>
+        <div class="rv-filters">
+          <div class="acc-field">
+            <label for="rv-q">Caută</label>
+            <span class="acc-input"><?= v2_ic('magnifying-glass') ?><input id="rv-q" type="search" maxlength="100" placeholder="Caută recenzie..." autocomplete="off"></span>
+          </div>
+          <div class="acc-field">
+            <label for="rv-status">Status</label>
+            <span class="acc-select"><select id="rv-status"><option value="all">Toate</option><option value="published">Publicate</option><option value="draft">Drafturi</option><option value="moderation">În moderare</option><option value="rejected">Respinse</option></select><?= $rvCaret ?></span>
+          </div>
+          <div class="acc-field">
+            <label for="rv-rating-filter">Rating</label>
+            <span class="acc-select"><select id="rv-rating-filter"><option value="all">Orice rating</option><option value="5">5 stele</option><option value="4">4 stele</option><option value="3">3 stele</option><option value="2">2 stele</option><option value="1">1 stea</option></select><?= $rvCaret ?></span>
+          </div>
+        </div>
+        <div class="rv-list-head">
+          <p class="rv-list-count" id="rv-list-count" aria-live="polite"></p>
+          <button class="btn btn-ghost" type="button" id="rv-reset" hidden>Resetează filtrele</button>
+        </div>
+
+        <div class="rv-skels" id="rv-list-skel" aria-hidden="true"><div class="rv-skel"></div><div class="rv-skel"></div></div>
+        <div class="rv-empty is-error" id="rv-list-error" hidden>
+          <h3>Nu am putut încărca recenziile</h3>
+          <p>Verifică conexiunea și încearcă din nou.</p>
+          <button class="btn btn-ghost" type="button" id="rv-list-retry">Reîncearcă</button>
+        </div>
+        <ul class="rv-list" id="rv-list" hidden></ul>
+        <div class="rv-empty" id="rv-list-empty" hidden>
+          <h3 id="rv-list-empty-h">Încă nu ai recenzii</h3>
+          <p id="rv-list-empty-p">Recenziile pe care le scrii apar aici, împreună cu drafturile.</p>
+          <button class="btn btn-ghost" type="button" id="rv-list-empty-reset" hidden>Resetează filtrele</button>
+        </div>
+      </section>
+
+      <!-- INFO -->
+      <section class="rv-cards" aria-label="De ce contează recenziile">
+        <article class="rv-info"><p class="acc-k">Personalizare</p><h2>Recenziile antrenează recomandările.</h2><p>Ratingurile și preferințele din review-uri pot îmbunătăți recomandările viitoare.</p></article>
+        <article class="rv-info is-mint"><p class="acc-k">Comunitate</p><h2>Ajută alți clienți.</h2><p>O recenzie bună reduce incertitudinea și crește încrederea în activități.</p></article>
+        <article class="rv-info is-deep"><p class="acc-k">Bonus</p><h2>Review-uri cu puncte?</h2><p>Recenziile eligibile pot aduce puncte bonus când campaniile sunt active.</p></article>
+      </section>
+
+      <!-- EDIT -->
+      <dialog class="rv-dialog" id="rv-edit" aria-labelledby="rv-edit-h">
+        <form class="rv-d-form" id="rv-edit-form" novalidate>
+          <div class="rv-d-head">
+            <div><p class="acc-k">Editează recenzia</p><h2 id="rv-edit-h"></h2></div>
+            <button class="rv-d-close" type="button" data-close aria-label="Închide"><?= v2_ic('x') ?></button>
+          </div>
+          <div class="rv-d-body">
+            <p class="rv-d-intro">Dacă schimbi ratingul sau textul, recenzia trece din nou prin verificare și nu apare pe site până la aprobare.</p>
+            <fieldset class="rv-rate">
+              <legend>Rating</legend>
+              <?= $rvStars('rv-e-rating') ?>
+              <span class="rv-rate-t" id="rv-e-rating-t" aria-live="polite"></span>
+            </fieldset>
+            <div class="acc-field">
+              <label for="rv-e-text">Recenzia ta</label>
+              <textarea class="rv-textarea" id="rv-e-text" rows="6" maxlength="2000" aria-describedby="rv-e-text-count"></textarea>
+              <small class="rv-count" id="rv-e-text-count"></small>
+            </div>
+            <details class="rv-more" id="rv-e-more">
+              <summary><span>Evaluare detaliată și opțiuni</span></summary>
+              <div class="rv-more-body">
+                <?php foreach ($rvAspects as $rvKey => $rvLabel): ?>
+                <fieldset class="rv-aspect"><legend><?= v2_e($rvLabel) ?></legend><?= $rvStars('rv-e-a-' . $rvKey, true, true) ?></fieldset>
+                <?php endforeach; ?>
+                <label class="rv-switch-row" for="rv-e-recommend"><span>Recomand această activitate</span><input class="rv-switch" type="checkbox" role="switch" id="rv-e-recommend"></label>
+                <label class="rv-switch-row" for="rv-e-anonymous"><span>Publică fără numele meu</span><input class="rv-switch" type="checkbox" role="switch" id="rv-e-anonymous"></label>
+              </div>
+            </details>
+            <p class="rv-note" id="rv-e-photos" hidden></p>
+            <p class="rv-error" id="rv-edit-error" role="alert" hidden></p>
+          </div>
+          <div class="rv-d-foot">
+            <button class="btn btn-primary" type="submit" id="rv-edit-save">Salvează modificările</button>
+            <button class="btn btn-ghost" type="button" data-close>Renunță</button>
+          </div>
+        </form>
+      </dialog>
     </div>
-</div>
 
-<script>
-function clientReviewsPage() {
-    return {
-        isAuth: null,
-        loadingToReview: true,
-        loadingReviews: true,
-        savingReview: false,
-        formMessage: '',
-        formMessageType: 'success',
-
-        toReviewEvents: [],
-        selectEventIdx: 0,
-        reviews: [],
-
-        search: '',
-        statusFilter: 'all',
-        ratingFilter: 'all',
-
-        newReview: { rating: 0, text: '', suitable: 'family', age: 'all', photos: [], editingId: null },
-
-        // Loaded from /customer/reviews/meta — falls back to backend defaults
-        meta: {
-            suitable_for: [
-                { value: 'children',     label: 'Copii' },
-                { value: 'family',       label: 'Familie' },
-                { value: 'couple',       label: 'Cuplu' },
-                { value: 'groups',       label: 'Grupuri' },
-                { value: 'team_building',label: 'Team building' },
-                { value: 'solo',         label: 'Solo' },
-            ],
-            age_groups: [
-                { value: '3-6',    label: '3–6 ani' },
-                { value: '6-10',   label: '6–10 ani' },
-                { value: '10-14',  label: '10–14 ani' },
-                { value: '14-18',  label: '14–18 ani' },
-                { value: 'adults', label: 'Adulți' },
-                { value: 'all',    label: 'Toate vârstele' },
-            ],
-            rating_filters: [
-                { value: 'all', label: 'Orice rating' },
-                { value: '5',   label: '5 stele' },
-                { value: '4',   label: '4 stele' },
-                { value: '3',   label: '3 stele' },
-                { value: '2',   label: '2 stele' },
-                { value: '1',   label: '1 stea' },
-            ],
-            status_filters: [
-                { value: 'all',        label: 'Toate' },
-                { value: 'published',  label: 'Publicate' },
-                { value: 'draft',      label: 'Drafturi' },
-                { value: 'moderation', label: 'În moderare' },
-            ],
-            text_min_chars: 10,
-            text_max_chars: 2000,
-            photos_max_count: 5,
-            photos_max_size_mb: 5,
-        },
-
-        fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231B1714" width="100" height="100"/><text x="50" y="58" text-anchor="middle" fill="%23E84527" font-size="40">⭐</text></svg>',
-
-        get currentEvent() { return this.toReviewEvents[this.selectEventIdx] || null; },
-
-        get canSubmit() {
-            return this.currentEvent && this.newReview.rating > 0 && (this.newReview.text || '').trim().length >= (this.meta.text_min_chars || 10);
-        },
-
-        get stats() {
-            const published = this.reviews.filter(r => r.statusKey === 'published').length;
-            const draft     = this.reviews.filter(r => r.statusKey === 'draft').length;
-            const moderation= this.reviews.filter(r => r.statusKey === 'moderation').length;
-            return { published, draft, moderation, toReview: this.toReviewEvents.length };
-        },
-
-        get avgRating() {
-            const published = this.reviews.filter(r => r.statusKey === 'published');
-            if (published.length === 0) return 0;
-            return published.reduce((s, r) => s + (r.rating || 0), 0) / published.length;
-        },
-
-        init() {
-            try { if (window.BileteOnlineAuth && BileteOnlineAuth.getToken && BileteOnlineAuth.getToken()) this.isAuth = true; } catch (e) {}
-            if (this.isAuth === false) { this.loadingToReview = false; this.loadingReviews = false; return; }
-            this.loadMeta();
-            this.loadToReview();
-            this.loadReviews();
-        },
-
-        async loadMeta() {
-            try {
-                const r = await BileteOnlineAPI.get('/customer/reviews/meta');
-                const d = (r && r.data) || {};
-                if (Array.isArray(d.suitable_for) && d.suitable_for.length) this.meta.suitable_for = d.suitable_for;
-                if (Array.isArray(d.age_groups)   && d.age_groups.length)   this.meta.age_groups   = d.age_groups;
-                if (Array.isArray(d.rating_filters)) this.meta.rating_filters = d.rating_filters;
-                if (Array.isArray(d.status_filters)) this.meta.status_filters = d.status_filters;
-                if (d.text_min_chars)     this.meta.text_min_chars     = d.text_min_chars;
-                if (d.text_max_chars)     this.meta.text_max_chars     = d.text_max_chars;
-                if (d.photos_max_count)   this.meta.photos_max_count   = d.photos_max_count;
-                if (d.photos_max_size_mb) this.meta.photos_max_size_mb = d.photos_max_size_mb;
-            } catch (e) {}
-        },
-
-        async loadToReview() {
-            try {
-                const r = await BileteOnlineAPI.get('/customer/reviews/events-to-review');
-                const list = (r && r.data && (r.data.events || r.data.items)) || (r && r.data) || [];
-                this.toReviewEvents = (Array.isArray(list) ? list : []).map(e => this.normalizeEvent(e));
-            } catch (e) {}
-            this.loadingToReview = false;
-        },
-
-        async loadReviews() {
-            try {
-                const r = await BileteOnlineAPI.get('/customer/reviews', { per_page: 50 });
-                const list = (r && r.data && (r.data.reviews || r.data.items)) || (r && r.data) || [];
-                this.reviews = (Array.isArray(list) ? list : []).map(r => this.normalizeReview(r));
-            } catch (e) {}
-            this.loadingReviews = false;
-        },
-
-        normalizeEvent(ev) {
-            const date = ev.event_date || ev.date || ev.last_attended_at;
-            return {
-                id:    ev.id || ev.event_id || ev.slug,
-                title: ev.title || ev.name,
-                location: (ev.venue && (ev.venue.name || ev.venue)) || ev.location || '',
-                image: ev.cover_image_url || ev.image || null,
-                tickets_count: ev.tickets_count || ev.attended_tickets || 0,
-                date:  date ? new Date(date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : '',
-                slug:  ev.slug || '',
-                activityUrl: ev.slug ? ('/activitate/' + ev.slug) : '#',
-            };
-        },
-
-        normalizeReview(r) {
-            const sRaw = (r.status || 'published').toLowerCase();
-            let key = 'published', label = 'publicată', cls = 'bg-mint text-forest';
-            if (sRaw === 'draft' || sRaw === 'pending_publish') { key = 'draft'; label = 'draft'; cls = 'bg-ochre text-ink'; }
-            else if (sRaw === 'pending' || sRaw === 'pending_moderation' || sRaw === 'moderation' || sRaw === 'flagged') { key = 'moderation'; label = 'în moderare'; cls = 'bg-rose text-vermilion'; }
-
-            const event = r.event || {};
-            return {
-                id:      r.id,
-                title:   (event.title || event.name) || r.event_title || 'Activitate',
-                location:(event.venue && (event.venue.name || event.venue)) || r.location || event.city || '',
-                image:   event.cover_image_url || event.image || r.image || null,
-                date:    r.created_at ? new Date(r.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : '',
-                rating:  parseInt(r.rating || 0) || 0,
-                text:    r.text || r.body || r.comment || '',
-                suitable:r.suitable_for || r.meta?.suitable || 'Familie',
-                age:     r.age_group || r.meta?.age || 'Toate vârstele',
-                statusKey:  key,
-                statusLabel:label,
-                statusClass:cls,
-                activityUrl: event.slug ? ('/activitate/' + event.slug) : '#',
-            };
-        },
-
-        starsFor(n) {
-            n = parseInt(n) || 0;
-            return '★'.repeat(Math.max(0, Math.min(5, n))) + '☆'.repeat(Math.max(0, 5 - n));
-        },
-
-        handlePhotoUpload(ev) {
-            const maxCount = this.meta.photos_max_count || 5;
-            const maxBytes = (this.meta.photos_max_size_mb || 5) * 1024 * 1024;
-            const files = Array.from(ev.target.files || []).slice(0, maxCount - this.newReview.photos.length);
-            files.forEach(file => {
-                if (! file.type.startsWith('image/')) return;
-                if (file.size > maxBytes) {
-                    this.flashForm('Imaginile trebuie să fie sub ' + (this.meta.photos_max_size_mb || 5) + ' MB.', 'error');
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = e => { this.newReview.photos.push(e.target.result); };
-                reader.readAsDataURL(file);
-            });
-        },
-
-        async saveReview(mode) {
-            if (mode === 'publish' && ! this.canSubmit) {
-                this.flashForm('Adaugă cel puțin 10 caractere și un rating înainte de publicare.', 'error');
-                return;
-            }
-            if (! this.currentEvent && ! this.newReview.editingId) return;
-
-            this.savingReview = true;
-            try {
-                const payload = {
-                    event_id: this.currentEvent ? this.currentEvent.id : undefined,
-                    rating:   this.newReview.rating,
-                    text:     this.newReview.text,
-                    body:     this.newReview.text,
-                    suitable_for: this.newReview.suitable,
-                    age_group:    this.newReview.age,
-                    photos:       this.newReview.photos,
-                    status:       mode === 'publish' ? 'published' : 'draft',
-                };
-
-                let r;
-                if (this.newReview.editingId) {
-                    r = await BileteOnlineAPI.put('/customer/reviews/' + this.newReview.editingId, payload);
-                } else {
-                    r = await BileteOnlineAPI.post('/customer/reviews', payload);
-                }
-
-                if (r && r.success) {
-                    this.flashForm(mode === 'publish' ? 'Recenzia a fost publicată. Mulțumim!' : 'Draft salvat.', 'success');
-                    this.newReview = { rating: 0, text: '', suitable: 'Familie', age: 'Toate vârstele', photos: [], editingId: null };
-                    await this.loadReviews();
-                    await this.loadToReview();
-                    if (this.selectEventIdx >= this.toReviewEvents.length) this.selectEventIdx = Math.max(0, this.toReviewEvents.length - 1);
-                } else {
-                    this.flashForm((r && r.message) || 'Nu am putut salva recenzia.', 'error');
-                }
-            } catch (e) {
-                this.flashForm((e && e.message) || 'Eroare la salvare.', 'error');
-            }
-            this.savingReview = false;
-        },
-
-        editReview(review) {
-            this.newReview = {
-                rating: review.rating,
-                text:   review.text,
-                suitable: review.suitable || 'Familie',
-                age:    review.age || 'Toate vârstele',
-                photos: [],
-                editingId: review.id,
-            };
-            try { document.getElementById('de-evaluat').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
-        },
-
-        async deleteReview(review) {
-            if (! confirm('Sigur ștergi recenzia pentru "' + review.title + '"?')) return;
-            try {
-                const r = await BileteOnlineAPI.delete('/customer/reviews/' + review.id, {});
-                if (r && r.success) {
-                    this.reviews = this.reviews.filter(x => x.id !== review.id);
-                }
-            } catch (e) {
-                alert('Eroare la ștergere.');
-            }
-        },
-
-        flashForm(msg, type) {
-            this.formMessage = msg;
-            this.formMessageType = type || 'success';
-            setTimeout(() => { this.formMessage = ''; }, 4500);
-        },
-
-        filteredReviews() {
-            const q = (this.search || '').toLowerCase().trim();
-            return this.reviews.filter(r => {
-                if (this.statusFilter !== 'all' && r.statusKey !== this.statusFilter) return false;
-                if (this.ratingFilter !== 'all' && String(r.rating) !== this.ratingFilter) return false;
-                if (! q) return true;
-                return (r.title + ' ' + r.text + ' ' + r.location).toLowerCase().includes(q);
-            });
-        },
-    };
-}
-</script>
-
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+    <?php v2_account_end(); ?>
+  </div>
+</main>
+<?php include __DIR__ . '/../includes/v2/footer.php'; ?>
