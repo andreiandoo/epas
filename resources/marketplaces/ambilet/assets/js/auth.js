@@ -175,6 +175,10 @@ const AmbiletAuth = {
      * Logout customer
      */
     async logoutCustomer() {
+        if (typeof AmbiletMultiAuth !== 'undefined' && AmbiletMultiAuth.logoutAll) {
+            return this.logoutAllAccounts();
+        }
+
         try {
             await AmbiletAPI.customer.logout();
         } catch (e) {
@@ -182,6 +186,19 @@ const AmbiletAuth = {
         }
 
         this.clearCustomerSession();
+        window.location.href = '/';
+    },
+
+    /**
+     * Sign out of every account opened in this browser (client, organizer, venue)
+     */
+    async logoutAllAccounts() {
+        try {
+            await AmbiletMultiAuth.logoutAll();
+        } catch (e) {
+            this.clearCustomerSession();
+            this.clearOrganizerSession();
+        }
         window.location.href = '/';
     },
 
@@ -284,6 +301,10 @@ const AmbiletAuth = {
      * Logout organizer
      */
     async logoutOrganizer() {
+        if (typeof AmbiletMultiAuth !== 'undefined' && AmbiletMultiAuth.logoutAll) {
+            return this.logoutAllAccounts();
+        }
+
         try {
             await AmbiletAPI.organizer.logout();
         } catch (e) {

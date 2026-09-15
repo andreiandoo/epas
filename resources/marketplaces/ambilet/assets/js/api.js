@@ -2393,54 +2393,248 @@ const AmbiletMultiAuth = {
         return AmbiletAPI.post('/auth/multi-login', { email, password });
     },
 
+    // Per-realm token cookies: every account opened at login stays here so
+    // the header switcher can move between them without a new login.
+    COOKIES: {
+        'customer': 'ambilet_token',
+        'organizer': 'ambilet_organizer_token',
+        'venue-owner': 'ambilet_venue_token',
+    },
+    // localStorage record of the accounts opened together at one login:
+    // { accounts: { customer: { id, name }, ... } } where id is the Sanctum
+    // token id. An account is offered only while its cookie still holds that
+    // token, so leftovers from another person's session are never shown.
+    ACCOUNTS_KEY: 'ambilet_accounts',
+    // sessionStorage flag set by head.php while an admin impersonates a user.
+    IMPERSONATION_KEY: 'ambilet_impersonating',
+    COOKIE_MAX_AGE: 60 * 60 * 24 * 30,
+
+    _cookie(name) {
+        const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        if (!match) return null;
+        try { return decodeURIComponent(match[1]); } catch (e) { return match[1]; }
+    },
+
+    _setCookie(name, value, maxAge) {
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+    },
+
+    _tokenId(token) {
+        return token ? String(token).split('|')[0] : null;
+    },
+
+    _readAccounts() {
+        try {
+            const record = JSON.parse(localStorage.getItem(this.ACCOUNTS_KEY) || 'null');
+            return record && record.accounts && typeof record.accounts === 'object' ? record : null;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    _writeAccounts(record) {
+        try {
+            if (record && Object.keys(record.accounts).length) {
+                localStorage.setItem(this.ACCOUNTS_KEY, JSON.stringify(record));
+            } else {
+                localStorage.removeItem(this.ACCOUNTS_KEY);
+            }
+        } catch (e) {}
+    },
+
+    isImpersonating() {
+        try { return sessionStorage.getItem(this.IMPERSONATION_KEY) === '1'; } catch (e) { return false; }
+    },
+
     /**
-     * After the user picks a role in the picker, activate it: persist
-     * the corresponding token under the canonical cookie name for that
-     * realm so all subsequent AmbiletAPI calls authenticate correctly.
-     *
-     * Cookie keys match the existing AmbiletAuth conventions so any
-     * page that already reads `ambilet_token` / `ambilet_organizer_token`
-     * / `ambilet_venue_token` (Faza 3) continues to work.
+     * Store a role's token in its realm cookie and mark it as the active one.
      */
     activateRole(role) {
-        if (!role || !role.token) return false;
-        const maxAge = 60 * 60 * 24 * 30; // 30 days
-        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-        const common = `; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
-
-        // Persist per-realm tokens so a user with multiple roles can
-        // switch without re-entering credentials — Faza 3 shell picks
-        // these up.
-        if (role.type === 'customer') {
-            document.cookie = `ambilet_token=${role.token}${common}`;
-        } else if (role.type === 'organizer') {
-            document.cookie = `ambilet_organizer_token=${role.token}${common}`;
-        } else if (role.type === 'venue-owner') {
-            document.cookie = `ambilet_venue_token=${role.token}${common}`;
-        }
-        // Remember which one is active — used by header switcher (Faza 3).
-        document.cookie = `ambilet_active_role=${role.type}${common}`;
+        if (!role || !role.token || !this.COOKIES[role.type]) return false;
+        this._setCookie(this.COOKIES[role.type], role.token, this.COOKIE_MAX_AGE);
+        this._setCookie('ambilet_active_role', role.type, this.COOKIE_MAX_AGE);
         return true;
     },
 
     /**
-     * Save every token from a multi-role login response at once, so a
-     * later "switch role" click doesn't need a fresh login. Auto-picks
-     * the primary role for immediate activation.
+     * Save every token from a multi-role login response, replacing whatever
+     * accounts an earlier login left in this browser. Returns the role to
+     * open first: the primary one, else the first that needs no 2FA.
      */
     persistAllRoles(roles, primary) {
         if (!Array.isArray(roles)) return null;
+        Object.values(this.COOKIES).forEach((name) => this._setCookie(name, '', -1));
+        const record = { accounts: {} };
         let active = null;
         for (const role of roles) {
-            if (role.requires_2fa || !role.token) continue;
+            if (role.requires_2fa || !role.token || !this.COOKIES[role.type]) continue;
             this.activateRole(role);
+            record.accounts[role.type] = { id: this._tokenId(role.token), name: role.display_name || '' };
             if (role.type === primary) active = role;
         }
-        // Fallback if primary role had no token (e.g. requires_2fa).
+        this._writeAccounts(record);
+        try { sessionStorage.removeItem(this.IMPERSONATION_KEY); } catch (e) {}
         if (!active) {
             active = roles.find(r => r.token && !r.requires_2fa) || null;
         }
         return active;
+    },
+
+    /**
+     * Venue shell: remember the organizer account the backend linked to the
+     * signed-in venue owner, next to the current venue session.
+     */
+    addLinkedAccount(type, token, name, current) {
+        if (this.isImpersonating() || !token || !this.COOKIES[type] || !current || !current.token) return false;
+        const currentId = this._tokenId(current.token);
+        let record = this._readAccounts();
+        if (!record || !record.accounts[current.type] || record.accounts[current.type].id !== currentId) {
+            record = { accounts: { [current.type]: { id: currentId, name: current.name || '' } } };
+        }
+        record.accounts[type] = { id: this._tokenId(token), name: name || '' };
+        this._setCookie(this.COOKIES[type], token, this.COOKIE_MAX_AGE);
+        this._writeAccounts(record);
+        return true;
+    },
+
+    /**
+     * Accounts the header switcher may offer. `current` is { type, token } of
+     * the session the page runs under. Returns [] unless that session belongs
+     * to the stored login and at least one other account from it is present.
+     */
+    getAccounts(current) {
+        if (this.isImpersonating() || !current || !current.token) return [];
+        const record = this._readAccounts();
+        const own = record && record.accounts[current.type];
+        if (!own || own.id !== this._tokenId(current.token)) return [];
+        const list = [];
+        ['customer', 'organizer', 'venue-owner'].forEach((type) => {
+            const account = record.accounts[type];
+            if (!account) return;
+            if (type === current.type) {
+                list.push({ type, name: account.name, current: true });
+                return;
+            }
+            const token = this._cookie(this.COOKIES[type]);
+            if (token && this._tokenId(token) === account.id) {
+                list.push({ type, name: account.name, current: false });
+            }
+        });
+        return list.length > 1 ? list : [];
+    },
+
+    forgetAccount(type) {
+        const record = this._readAccounts();
+        if (record && record.accounts[type]) {
+            delete record.accounts[type];
+            this._writeAccounts(record);
+        }
+        if (this.COOKIES[type]) this._setCookie(this.COOKIES[type], '', -1);
+    },
+
+    async _fetchProfile(type, token) {
+        const actions = { 'customer': 'customer.me', 'organizer': 'organizer.me', 'venue-owner': 'venue-owner.me' };
+        try {
+            const res = await fetch(`${AmbiletAPI.getApiUrl()}?action=${actions[type]}`, {
+                headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
+            });
+            if (res.status === 401) return { expired: true, data: null };
+            const json = res.ok ? await res.json() : null;
+            return { expired: false, data: json && json.success ? json.data : null };
+        } catch (e) {
+            return { expired: false, data: null };
+        }
+    },
+
+    /**
+     * Open a role's session the way its pages expect it: client and organizer
+     * pages read localStorage (AmbiletAuth), the venue shell reads its cookie.
+     * A token the API rejects resolves { ok: false, expired: true } and leaves
+     * the current session untouched.
+     */
+    async openSession(role) {
+        if (!role || !role.token || !this.COOKIES[role.type]) return { ok: false };
+        const profile = await this._fetchProfile(role.type, role.token);
+        if (profile.expired) return { ok: false, expired: true };
+
+        if (role.type === 'customer' || role.type === 'organizer') {
+            const K = AmbiletAuth.KEYS;
+            const isCustomer = role.type === 'customer';
+            const data = profile.data ? (profile.data[role.type] || profile.data) : null;
+            if (data) {
+                if (isCustomer) AmbiletAuth.setCustomerSession(role.token, data);
+                else AmbiletAuth.setOrganizerSession(role.token, data);
+            } else {
+                // Profile unavailable right now; AmbiletAuth.init() fetches it on the next page.
+                try {
+                    localStorage.setItem(isCustomer ? K.CUSTOMER_TOKEN : K.ORGANIZER_TOKEN, role.token);
+                    localStorage.setItem(K.USER_TYPE, role.type);
+                    localStorage.removeItem(isCustomer ? K.CUSTOMER_DATA : K.ORGANIZER_DATA);
+                    localStorage.removeItem(isCustomer ? K.ORGANIZER_TOKEN : K.CUSTOMER_TOKEN);
+                    localStorage.removeItem(isCustomer ? K.ORGANIZER_DATA : K.CUSTOMER_DATA);
+                } catch (e) {}
+            }
+        }
+        this.activateRole(role);
+        return { ok: true };
+    },
+
+    /**
+     * Header switcher: open another account from the stored login. Resolves
+     * { ok: true, redirect } or { ok: false, expired } — an expired account
+     * is dropped from the list.
+     */
+    async switchTo(type) {
+        const record = this._readAccounts();
+        const account = record && record.accounts[type];
+        const token = this.COOKIES[type] ? this._cookie(this.COOKIES[type]) : null;
+        if (!account || !token || this._tokenId(token) !== account.id) {
+            this.forgetAccount(type);
+            return { ok: false, expired: true };
+        }
+        const result = await this.openSession({ type, token, display_name: account.name });
+        if (!result.ok) {
+            if (result.expired) this.forgetAccount(type);
+            return result;
+        }
+        return { ok: true, redirect: this.redirectFor(type) };
+    },
+
+    /**
+     * Sign out of every account in this browser: revoke each known token
+     * (waiting at most 2.5s), then clear the cookies, the account record and
+     * the AmbiletAuth sessions. Callers redirect afterwards.
+     */
+    async logoutAll() {
+        const actions = { 'customer': 'customer.logout', 'organizer': 'organizer.logout', 'venue-owner': 'venue-owner.logout' };
+        const tokens = new Map();
+        const add = (type, token) => { if (token) tokens.set(type + ':' + token, { type, token }); };
+        Object.entries(this.COOKIES).forEach(([type, name]) => add(type, this._cookie(name)));
+        if (typeof AmbiletAuth !== 'undefined') {
+            try {
+                add('customer', localStorage.getItem(AmbiletAuth.KEYS.CUSTOMER_TOKEN));
+                add('organizer', localStorage.getItem(AmbiletAuth.KEYS.ORGANIZER_TOKEN));
+            } catch (e) {}
+        }
+        const base = AmbiletAPI.getApiUrl();
+        const calls = Array.from(tokens.values()).map(({ type, token }) =>
+            fetch(`${base}?action=${actions[type]}`, {
+                method: 'POST',
+                keepalive: true,
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: '{}',
+            }).catch(() => null)
+        );
+        await Promise.race([Promise.allSettled(calls), new Promise((resolve) => setTimeout(resolve, 2500))]);
+
+        Object.values(this.COOKIES).forEach((name) => this._setCookie(name, '', -1));
+        this._setCookie('ambilet_active_role', '', -1);
+        try { localStorage.removeItem(this.ACCOUNTS_KEY); } catch (e) {}
+        if (typeof AmbiletAuth !== 'undefined') {
+            AmbiletAuth.clearCustomerSession();
+            AmbiletAuth.clearOrganizerSession();
+        }
     },
 
     redirectFor(roleType) {

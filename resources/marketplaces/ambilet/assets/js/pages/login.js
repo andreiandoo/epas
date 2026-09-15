@@ -77,41 +77,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 });
 
 /**
- * Multi-login keeps the tokens in cookies only, but the customer and
- * organizer pages read their session from localStorage (AmbiletAuth).
- * Without this, /cont loaded for a moment and bounced straight back to
- * /autentificare. Mirrors setCustomerSession / setOrganizerSession, then
- * caches the profile. If the profile fetch fails, AmbiletAuth.init()
- * fetches it on the next page. Venue owners use their cookie token.
+ * Opens the chosen account's session (localStorage for client and organizer
+ * pages, cookie for the venue shell). Shared with the header account switcher.
  */
 async function activateRoleSession(role) {
-    if (!role || !role.token) return;
-    const K = AmbiletAuth.KEYS;
-    try {
-        if (role.type === 'customer') {
-            localStorage.setItem(K.CUSTOMER_TOKEN, role.token);
-            localStorage.setItem(K.USER_TYPE, 'customer');
-            localStorage.removeItem(K.CUSTOMER_DATA);
-            localStorage.removeItem(K.ORGANIZER_TOKEN);
-            localStorage.removeItem(K.ORGANIZER_DATA);
-            const res = await AmbiletAPI.get('/customer/me');
-            if (res && res.success && res.data) {
-                AmbiletAuth.setCustomerSession(role.token, res.data.customer || res.data);
-            }
-        } else if (role.type === 'organizer') {
-            localStorage.setItem(K.ORGANIZER_TOKEN, role.token);
-            localStorage.setItem(K.USER_TYPE, 'organizer');
-            localStorage.removeItem(K.ORGANIZER_DATA);
-            localStorage.removeItem(K.CUSTOMER_TOKEN);
-            localStorage.removeItem(K.CUSTOMER_DATA);
-            const res = await AmbiletAPI.get('/organizer/me');
-            if (res && res.success && res.data) {
-                AmbiletAuth.setOrganizerSession(role.token, res.data.organizer || res.data);
-            }
-        }
-    } catch (e) {
-        // Token is stored; the profile is re-fetched on the next page.
-    }
+    await AmbiletMultiAuth.openSession(role);
 }
 
 /**

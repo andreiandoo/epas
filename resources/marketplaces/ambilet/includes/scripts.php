@@ -149,6 +149,7 @@
     <script defer src="<?= asset('assets/js/components/search.js') ?>"></script>
     <?php endif; ?>
     <script defer src="<?= asset('assets/js/components/notifications.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/account-switcher.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/notification-sound.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/notification-poller.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/event-card.js') ?>"></script>
