@@ -1,0 +1,177 @@
+/* bilete.online v2: organizer activity report (/organizator/report/{id}). Needs base.css + organizer.css; markup in
+   organizer/report.php, behaviour in assets/v2/js/org-report.js. Prints as a clean A4 report. */
+
+.or{display:grid;gap:var(--space-5);min-width:0}
+.or [hidden]{display:none!important}
+.or-body{display:grid;gap:var(--space-5);min-width:0}
+@media (max-width:599px){.or,.or-body{gap:var(--space-4)}}
+
+.or-head{display:grid;gap:10px}
+.or-back{display:inline-flex;align-items:center;justify-self:start;gap:8px;min-height:36px;font-weight:700;color:var(--muted);text-decoration:none}
+.or-back:hover{color:var(--ink)}
+.or-back .ic{width:16px;height:16px}
+.or-head-row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+.or-head-t{min-width:0}
+.or-h{margin:6px 0 0;font-size:clamp(1.875rem, 3.2vw, 2.75rem);font-weight:700;line-height:1.06;letter-spacing:-.045em;color:var(--green);overflow-wrap:anywhere}
+.or-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:10px 0 0;font-size:1rem;color:var(--muted)}
+.or-actions{display:flex;flex-wrap:wrap;gap:10px}
+@media (max-width:599px){.or-actions{width:100%}.or-actions .btn{flex:1 1 0}}
+.org-main .or .btn[aria-busy="true"]{opacity:.7;cursor:progress}
+
+.or-stats{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+@media (min-width:1100px){.or-stats{grid-template-columns:repeat(4, minmax(0,1fr));gap:16px}}
+.or-stat{min-width:0;padding:18px 20px;border:1px solid var(--line);border-radius:22px;background:var(--surface)}
+.or-stat:first-child{border-color:#CDE6D8;background:var(--tint-green)}
+.or-stat-k{margin:0;font-size:.875rem;font-weight:700;color:var(--muted)}
+.or-stat-v{margin:6px 0 0;font-size:clamp(1.5rem, 2.4vw, 2.125rem);font-weight:700;line-height:1.1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--green);overflow-wrap:anywhere}
+.or-stat-p{margin:6px 0 0;font-size:.8125rem;line-height:1.4;color:var(--muted)}
+.or-stat-p:empty{display:none}
+.or-sk{display:block;width:60%;height:30px}
+.or-sk-row{display:block;height:44px}
+
+.or-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-5);align-items:start}
+@media (min-width:1100px){.or-grid{grid-template-columns:repeat(2, minmax(0,1fr))}.or-grid.is-charts{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)}}
+@media (max-width:599px){.or-grid{gap:var(--space-4)}}
+
+/* =================== SALES CHART =================== */
+.or-chart{container-type:inline-size}
+.or-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 10px;padding:0;list-style:none;font-size:.8125rem;font-weight:600;color:var(--muted)}
+.or-legend li{display:inline-flex;align-items:center;gap:8px}
+.or-legend i{display:inline-block;width:14px;height:10px;border-radius:3px}
+.or-legend i.is-bar{background:#9CCBB1}
+.or-legend i.is-line{height:3px;border-radius:2px;background:#D98E00}
+.or-plot{position:relative;min-height:220px;border-radius:12px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.or-plot:focus-visible{outline:2px solid var(--action);outline-offset:4px}
+@media (min-width:560px){.or-plot{min-height:280px}}
+.or-svg{display:block;max-width:100%;height:auto;overflow:visible}
+.or-gl{stroke:#E6E8E4;stroke-width:1}
+.or-gl.is-zero{stroke:#C9CEC9}
+.or-ax{fill:#6B736D;font:600 11px/1 var(--font);font-variant-numeric:tabular-nums}
+.or-band{fill:rgba(27,127,78,.07)}
+.or-bar{fill:#9CCBB1}
+.or-bar.is-on{fill:var(--action)}
+.or-area{fill:rgba(242,169,0,.1)}
+.or-line{fill:none;stroke:#D98E00;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.or-pt{fill:#FFFFFF;stroke:#D98E00;stroke-width:2.5}
+.or-hit{fill:transparent;cursor:crosshair}
+.or-plot-msg{position:absolute;inset:0 0 34px 0;display:grid;place-items:center;margin:0;color:var(--muted);font-weight:600;pointer-events:none}
+.or-tip{position:absolute;top:6px;left:0;z-index:3;width:max-content;max-width:min(260px, calc(100% - 8px));padding:12px 14px;border-radius:14px;background:#0B2F24;color:#F7F7F5;font-size:.8125rem;line-height:1.4;box-shadow:0 18px 40px -18px rgba(0,0,0,.6);pointer-events:none}
+.or-tip b{display:block;margin-bottom:6px;font-size:.875rem}
+.or-tip dl{display:grid;grid-template-columns:auto auto;gap:2px 14px;margin:0}
+.or-tip dt{color:rgba(247,247,245,.7)}
+.or-tip dd{margin:0;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.or-totals{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:1px;margin:var(--space-4) 0 0;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--line)}
+.or-totals div{padding:12px 14px;background:var(--surface)}
+.or-totals dt{font-size:.75rem;font-weight:700;color:var(--muted)}
+.or-totals dd{margin:4px 0 0;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+@container (min-width:620px){.or-totals{grid-template-columns:repeat(4, minmax(0,1fr))}}
+
+/* =================== DONUT =================== */
+.or-donut{position:relative;display:grid;place-items:center;max-width:240px;margin:4px auto 16px}
+.or-donut svg{display:block;width:100%;height:auto}
+.or-donut-c{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none}
+.or-donut-c b{font-size:1.75rem;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--green)}
+.or-donut-c span{font-size:.8125rem;color:var(--muted)}
+.or-donut-legend{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.or-donut-legend li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;font-size:.9375rem}
+.or-donut-legend i{width:12px;height:12px;border-radius:4px;background:var(--c, #8E958F)}
+.or-donut-legend span{min-width:0;overflow-wrap:anywhere}
+.or-donut-legend b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.or-donut-legend small{margin-left:6px;font-weight:600;color:var(--muted)}
+.or-empty-p{margin:0;padding:18px 14px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);text-align:center}
+.or-empty-p a{font-weight:700;color:var(--action)}
+
+/* =================== TABLE =================== */
+.or-table-wrap{min-width:0;overflow-x:auto;border:1px solid var(--line);border-radius:18px}
+.or-table{width:100%;border-collapse:collapse;font-size:.9375rem}
+.or-table th{height:44px;padding:0 14px;background:#FBFBF9;color:var(--muted);font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-align:left;text-transform:uppercase;white-space:nowrap}
+.or-table td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
+.or-table .is-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.or-table tfoot td{border-top:2px solid var(--line);background:#FBFBF9;font-weight:700}
+.or-type{display:flex;align-items:center;gap:10px;min-width:0}
+.or-type i{flex:none;width:6px;height:26px;border-radius:999px;background:var(--c, #8E958F)}
+.or-type b{overflow-wrap:anywhere}
+.or-type small{display:block;font-size:.8125rem;font-weight:500;color:var(--muted)}
+.or-sub{display:block;font-size:.8125rem;color:var(--muted)}
+.or-share{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:120px}
+.or-share span{display:block;width:72px;height:6px;overflow:hidden;border-radius:999px;background:#EFEFEB}
+.or-share span i{display:block;height:100%;border-radius:inherit;background:var(--c, var(--action))}
+.or-share b{width:40px;font-size:.8125rem;text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:599px){.or-table th.is-share,.or-table td.is-share{display:none}}
+
+/* =================== GOALS / CAMPAIGNS =================== */
+.or-goals,.or-camps{display:grid;gap:12px}
+.or-goal,.or-camp{padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.or-goal.is-done{border-color:#CDE6D8;background:var(--tint-green)}
+.or-goal-top,.or-camp-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.or-goal-top b,.or-camp-top b{overflow-wrap:anywhere}
+.or-goal-v{margin:8px 0 6px;font-variant-numeric:tabular-nums}
+.or-goal-v strong{font-size:1.375rem;letter-spacing:-.02em}
+.or-goal-v span{color:var(--muted)}
+.or-meter{height:8px;overflow:hidden;border-radius:999px;background:#EFEFEB}
+.or-meter i{display:block;height:100%;border-radius:inherit;background:var(--action)}
+.or-meter i.is-mid{background:#2D6CCD}
+.or-meter i.is-low{background:#F2A900}
+.or-goal-s{margin:6px 0 0;font-size:.8125rem;color:var(--muted)}
+.or-goal-s.is-done{font-weight:700;color:var(--green)}
+.or-goal-s.is-late{font-weight:700;color:#B42E27}
+.or-camp-figs{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:8px;margin:10px 0 0}
+.or-camp-figs dt{font-size:.75rem;font-weight:700;color:var(--muted)}
+.or-camp-figs dd{margin:2px 0 0;font-weight:700;font-variant-numeric:tabular-nums}
+.or-camp-figs .is-net{color:var(--green)}
+
+/* =================== TRAFFIC / LOCATIONS / ROWS =================== */
+.or-bars,.or-rank,.or-rows{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.or-bars li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.or-bars li:first-child,.or-rank li:first-child,.or-rows li:first-child{border-top:0}
+.or-bars b{font-weight:600;overflow-wrap:anywhere}
+.or-bars .or-bar-v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.or-bars .or-bar-v small{margin-left:6px;font-weight:600;color:var(--muted)}
+.or-bars .or-meter{grid-column:1 / -1;height:6px}
+.or-rank li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.or-rank-n{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#F0F0EC;font-size:.8125rem;font-weight:700;color:var(--muted)}
+.or-rank b{font-weight:600;overflow-wrap:anywhere}
+.or-rank small{display:block;font-size:.8125rem;color:var(--muted)}
+.or-rank .or-rank-v{font-weight:700;font-variant-numeric:tabular-nums}
+.or-refunds-total{margin:0;font-size:1.125rem;font-weight:700;font-variant-numeric:tabular-nums;color:#B42E27}
+.or-rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.or-rows b{font-weight:700;overflow-wrap:anywhere}
+.or-rows .or-row-v{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.or-rows .is-refund{color:#B42E27}
+.or-rows .org-tag{margin-top:4px}
+.or-note{margin:10px 0 0;font-size:.8125rem;color:var(--muted)}
+.or-all-sales{white-space:nowrap}
+
+/* =================== FINANCIAL SUMMARY =================== */
+.or-fin{padding:22px 24px;border-radius:24px;background:var(--deep);color:#F7F7F5}
+.or-fin-h{margin:0 0 16px;font-size:1.25rem;font-weight:700;letter-spacing:-.02em}
+.or-fin-grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:16px 20px;margin:0}
+@media (min-width:900px){.or-fin-grid{grid-template-columns:repeat(4, minmax(0,1fr))}}
+.or-fin-grid dt{font-size:.875rem;color:rgba(247,247,245,.72)}
+.or-fin-grid dd{margin:4px 0 0;font-size:clamp(1.25rem, 2vw, 1.75rem);font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.or-fin-grid dd small{display:block;font-size:.75rem;font-weight:600;letter-spacing:0;color:rgba(247,247,245,.7)}
+.or-fin-grid .is-refund{color:#FFB4AE}
+.or-fin-grid .is-comm{color:#FFD76B}
+.or-fin-grid .is-net{color:#9FE3BF}
+.or-fin-p{margin:14px 0 0;font-size:.8125rem;line-height:1.45;color:rgba(247,247,245,.72)}
+.or-fin-p:empty{display:none}
+.or-generated{margin:0;font-size:.8125rem;color:var(--muted);text-align:right}
+
+.or-none{margin-top:4px}
+.or-none .or-empty-cta{display:flex;justify-content:center;margin-top:12px}
+
+/* =================== PRINT =================== */
+@media print{
+  @page{size:A4;margin:14mm}
+  .org-side,.org-top,.org-ftr,#org-flash,.or-back,.or-actions,.or-all-sales,.or-tip{display:none!important}
+  .org{display:block!important;min-height:0!important} /* the shell's sidebar column would otherwise keep the report 272px wide */
+  .org-col{display:block!important;min-height:0!important}
+  .org-main{max-width:none!important;margin:0!important;padding:0!important}
+  body{background:#FFFFFF!important}
+  .or,.or-body{gap:12px}
+  .or-grid,.or-grid.is-charts{grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+  .org-panel,.or-stat,.or-fin,.or-table-wrap{break-inside:avoid;box-shadow:none!important}
+  .or-stats{grid-template-columns:repeat(4, minmax(0,1fr))}
+  .or-fin{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .or-bar,.or-meter i,.or-donut svg,.or-type i,.or-share i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
