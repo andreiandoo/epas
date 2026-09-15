@@ -1,6 +1,7 @@
 /* bilete.online v2: set a new password from an emailed link. The head script has already moved token and email out of
    the address bar (window.BO_RESET_LINK, and sessionStorage for reloads). This checks the password as it's typed
-   (length, strength, match), posts it through the API proxy, and shows success or the expired-link card. */
+   (length, strength, match), posts it through the API proxy, and shows success or the expired-link card.
+   In organizer mode (form data-type="venue") it posts to /organizer/reset-password and the links keep ?ca=venue. */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -11,6 +12,13 @@
   var pass = $('rp-pass'), pass2 = $('rp-pass2'), submit = $('rp-submit'), error = $('rp-error');
   var meter = $('rp-meter'), strength = $('rp-strength'), match = $('rp-match');
   var LABEL = submit.textContent, busy = false, visible = false;
+  var venue = form.getAttribute('data-type') === 'venue';
+  function query(email) {
+    var parts = [];
+    if (venue) parts.push('ca=venue');
+    if (email) parts.push('email=' + encodeURIComponent(email));
+    return parts.length ? '?' + parts.join('&') : '';
+  }
   var STRENGTH = { 1: ['Slabă', 'bad'], 2: ['Medie', 'mid'], 3: ['Puternică', 'ok'], 4: ['Foarte puternică', 'ok'] };
 
   function readLink() {
@@ -32,7 +40,7 @@
   function expired(focus) {
     forget();
     var email = link && link.email;
-    $('rp-new-link').href = '/parola-uitata' + (email ? '?email=' + encodeURIComponent(email) : '');
+    $('rp-new-link').href = '/parola-uitata' + query(email);
     show('rp-expired-view', focus ? 'rp-expired-h' : null);
   }
   function say(text, field) {
@@ -96,10 +104,11 @@
   function signOutLocally(email) {
     // core ends every session of this account; drop a stored one for the same email so the header stops showing it
     try {
-      var data = JSON.parse(localStorage.getItem('bileteonline_customer_data') || 'null');
+      var kind = venue ? 'organizer' : 'customer';
+      var data = JSON.parse(localStorage.getItem('bileteonline_' + kind + '_data') || 'null');
       if (data && String(data.email || '').toLowerCase() === email.toLowerCase()) {
-        ['bileteonline_customer_token', 'bileteonline_customer_data'].forEach(function (k) { localStorage.removeItem(k); });
-        if (localStorage.getItem('bileteonline_user_type') === 'customer') localStorage.removeItem('bileteonline_user_type');
+        ['bileteonline_' + kind + '_token', 'bileteonline_' + kind + '_data'].forEach(function (k) { localStorage.removeItem(k); });
+        if (localStorage.getItem('bileteonline_user_type') === kind) localStorage.removeItem('bileteonline_user_type');
       }
     } catch (e) {}
   }
@@ -115,13 +124,13 @@
     busy = true;
     submit.disabled = true;
     submit.textContent = 'Se salvează…';
-    BileteOnlineAPI.post('/customer/reset-password', { token: link.token, email: link.email, password: pass.value, password_confirmation: pass2.value })
+    BileteOnlineAPI.post(venue ? '/organizer/reset-password' : '/customer/reset-password', { token: link.token, email: link.email, password: pass.value, password_confirmation: pass2.value })
       .then(function (resp) {
         if (!(resp && resp.success !== false)) throw { status: -1 };
         forget();
         signOutLocally(link.email);
         pass.value = pass2.value = '';
-        $('rp-login').href = '/autentificare?email=' + encodeURIComponent(link.email);
+        $('rp-login').href = '/autentificare' + query(link.email);
         show('rp-done-view', 'rp-done-h');
       })
       .catch(function (err) {

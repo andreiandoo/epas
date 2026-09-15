@@ -86,6 +86,7 @@
     if (invite) { invite.textContent = inviteCopy; invite.hidden = !inviteCopy; }
 
     $('au-login-email').placeholder = state.type === 'venue' ? 'email organizator / staff' : 'emailul folosit la comandă';
+    if ($('au-forgot')) $('au-forgot').href = state.type === 'venue' ? '/parola-uitata?ca=venue' : '/parola-uitata';
     $('au-reg-email').placeholder = state.type === 'venue' ? 'email@locatie.ro' : 'email@example.ro';
     setIdle($('au-login-submit'), textFor(state.type, 'login', 'submit'));
     setIdle($('au-register-submit'), textFor(state.type, 'register', 'submit'));
@@ -107,6 +108,26 @@
     var r = reward % 100;
     var gift = info.reward_type && info.reward_type !== 'points' ? reward + ' lei' : (reward === 1 ? '1 punct' : reward + (r === 0 || r >= 20 ? ' de puncte' : ' puncte'));
     return who + ' Creează contul și primești ' + gift + ' bonus.';
+  }
+
+  // The organizer page the login guard came from (auth.js keeps it for this tab): only a page of the organizer area on
+  // this site, otherwise the dashboard. Worked out once, because the login event and the form both ask for it.
+  var orgTarget = '';
+  function organizerTarget() {
+    if (orgTarget) return orgTarget;
+    var saved = '';
+    try {
+      saved = sessionStorage.getItem('bileteonline_redirect_after_login') || '';
+      sessionStorage.removeItem('bileteonline_redirect_after_login');
+    } catch (e) {}
+    orgTarget = '/organizator/panou';
+    try {
+      var u = new URL(saved, window.location.origin);
+      if (saved && u.origin === window.location.origin && /^\/organizator\/./.test(u.pathname) && !/^\/organizator\/login\b/.test(u.pathname)) {
+        orgTarget = u.pathname + u.search + u.hash;
+      }
+    } catch (e) {}
+    return orgTarget;
   }
 
   function setIdle(button, text) {
@@ -182,7 +203,7 @@
 
       if (result && result.success) {
         showMessage('Conectare reușită. Te redirecționăm…', 'success');
-        var target = state.type === 'venue' ? '/organizator/panou' : redirectAfter;
+        var target = state.type === 'venue' ? organizerTarget() : redirectAfter;
         setTimeout(function () { window.location.href = target; }, 500);
       } else {
         showMessage((result && result.message) || 'Email sau parolă incorecte.', 'error');
@@ -311,7 +332,7 @@
   function goIfSignedIn() {
     if (hasAuth() && typeof BileteOnlineAuth.isLoggedIn === 'function' && BileteOnlineAuth.isLoggedIn()) {
       var isOrg = BileteOnlineAuth.isOrganizer && BileteOnlineAuth.isOrganizer();
-      window.location.replace(isOrg ? '/organizator/panou' : redirectAfter);
+      window.location.replace(isOrg ? organizerTarget() : redirectAfter);
       return true;
     }
     return false;
