@@ -105,3 +105,20 @@
 .af-stack .btn[hidden]{display:none}
 .af-small{margin:var(--space-4) 0 0;font-size:.875rem;line-height:1.5;color:var(--muted)}
 .af-small a{color:var(--green);font-weight:700}
+.af-field label small{font-size:.8125rem;font-weight:500;color:var(--muted)}
+.af-actions .btn[hidden]{display:none}
+
+/* team invitation (/organizator/accept-invite): who invites, and with what role */
+.ai-org{display:flex;align-items:center;gap:14px;margin-top:var(--space-5);padding:14px 16px;border:1px solid #CFE8D9;border-radius:var(--r-m);background:var(--tint-green)}
+.ai-org [hidden]{display:none}
+.ai-org-ic{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--deep);color:#F7F7F5}
+.ai-org-ic .ic{width:24px;height:24px}
+.ai-org > div{display:grid;gap:2px;min-width:0}
+.ai-org small{font-size:var(--text-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ai-org b{font-size:1.125rem;line-height:1.25;color:var(--green);overflow-wrap:anywhere}
+.ai-org > div > span{font-size:.875rem;line-height:1.35;color:var(--muted);overflow-wrap:anywhere}
+.ai-who{margin:var(--space-3) 0 0;padding:0}
+.ai-who > div{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:baseline;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.ai-who > div[hidden]{display:none}
+.ai-who dt{font-size:.875rem;font-weight:600;color:var(--muted)}
+.ai-who dd{margin:0;font-weight:700;overflow-wrap:anywhere}
