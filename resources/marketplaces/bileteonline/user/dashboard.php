@@ -30,16 +30,7 @@ $skipPageCache = true;
 $v2Styles = ['account.css', 'dashboard.css'];
 $v2Scripts = ['account.js', 'dashboard.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
-    'siteName' => SITE_NAME,
-    'siteUrl' => SITE_URL,
-    'apiUrl' => '/api/proxy.php',
-    'storageUrl' => STORAGE_URL,
-    'env' => API_ENV,
-    'locale' => SITE_LOCALE,
-    'currency' => 'RON',
-    'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
-], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
+$v2HeadExtra = v2_account_client_config();
 
 include __DIR__ . '/../includes/v2/head.php';
 include __DIR__ . '/../includes/v2/header.php';

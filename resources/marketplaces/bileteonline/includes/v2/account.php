@@ -21,6 +21,21 @@ const V2_ACCOUNT_NAV = [
     ['settings', '/cont/setari', 'Setări', 'lock-simple'],
 ];
 
+/** The window.BILETEONLINE settings the legacy api.js / auth.js read; account pages put it in $v2HeadExtra. */
+function v2_account_client_config(): string
+{
+    return '<script>window.BILETEONLINE = ' . json_encode([
+        'siteName' => SITE_NAME,
+        'siteUrl' => SITE_URL,
+        'apiUrl' => '/api/proxy.php',
+        'storageUrl' => STORAGE_URL,
+        'env' => API_ENV,
+        'locale' => SITE_LOCALE,
+        'currency' => 'RON',
+        'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
+}
+
 function v2_account_start(string $active): void
 {
     ?>
