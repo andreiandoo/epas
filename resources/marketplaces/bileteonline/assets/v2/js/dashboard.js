@@ -241,10 +241,11 @@
   }
   function renderReferral(ref, legacyCode) {
     ref = ref && typeof ref === 'object' ? ref : {};
-    var code = txt(ref.referral_code || ref.code || (ref.referralCode && ref.referralCode.code) || legacyCode);
-    var link = txt(ref.referral_link || ref.share_url);
+    var code = txt(ref.code || ref.referral_code || (ref.referralCode && ref.referralCode.code) || legacyCode);
+    var link = txt(ref.link || ref.referral_link || ref.share_url);
     if (!code && !link) return;
-    $('db-ref-url').value = /^https?:\/\//i.test(link) ? link.replace(/^https?:\/\//i, '') : window.location.hostname.replace(/^www\./, '') + '/r/' + encodeURIComponent(code);
+    // core's link is https://<site>/?ref=<code> (what auth.js reads); /r/<code> is a 404 on this site
+    $('db-ref-url').value = /^https?:\/\//i.test(link) ? link.replace(/^https?:\/\//i, '') : window.location.host.replace(/^www\./, '') + '/?ref=' + encodeURIComponent(code);
     refReady = true;
   }
 
