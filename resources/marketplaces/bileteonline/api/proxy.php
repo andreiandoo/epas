@@ -3917,6 +3917,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.notifications.delete':
+        // Delete one of the organizer's notifications.
+        $notificationId = $_GET['id'] ?? '';
+        if (!preg_match('/^\d+$/', (string) $notificationId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing notification id']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/organizer/notifications/' . $notificationId;
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER PROMO CODES ====================
 
     case 'organizer.promo-codes':

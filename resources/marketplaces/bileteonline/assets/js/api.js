@@ -484,7 +484,9 @@ const BileteOnlineAPI = {
         if (endpoint.includes('/organizer/notifications/unread-count')) return 'organizer.notifications.unread-count';
         if (endpoint.includes('/organizer/notifications/mark-read')) return 'organizer.notifications.mark-read';
         if (endpoint.includes('/organizer/notifications/mark-all-read')) return 'organizer.notifications.mark-all-read';
+        if (endpoint === '/organizer/notifications/read-all') return 'organizer.notifications.read-all';
         if (endpoint.match(/\/organizer\/notifications\/\d+\/read$/)) return 'organizer.notifications.read';
+        if (endpoint.match(/\/organizer\/notifications\/\d+$/)) return 'organizer.notifications.delete';
         if (endpoint === '/organizer/notifications' || endpoint.includes('/organizer/notifications?')) return 'organizer.notifications';
 
         // Organizer dashboard
@@ -939,7 +941,7 @@ const BileteOnlineAPI = {
         }
 
         // Organizer notification read - extract notification ID
-        const organizerNotificationReadMatch = endpoint.match(/\/organizer\/notifications\/(\d+)\/read$/);
+        const organizerNotificationReadMatch = endpoint.match(/\/organizer\/notifications\/(\d+)(?:\/read)?$/);
         if (organizerNotificationReadMatch) {
             return `id=${encodeURIComponent(organizerNotificationReadMatch[1])}`;
         }
