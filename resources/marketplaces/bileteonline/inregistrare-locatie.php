@@ -1,377 +1,153 @@
 <?php
 /**
- * bilete.online — /inregistrare-locatie
+ * Venue signup: /inregistrare-locatie (v2 design). Three-step onboarding form for venues and organizers.
  *
- * 3-step onboarding form for prospective venues / organizers. Inherits the
- * site's header + footer (so the logo + tagline + nav match the rest of
- * the public pages — no separate chrome). Form submits to
- * /api/proxy.php?action=leads.create which persists a real lead row +
- * activity event, instead of the prior contact-only path.
+ * Step 1 what they sell (category cards or a short description), step 2 who they are, step 3 the venue. onboarding.js
+ * checks each step before moving on (saying what's missing instead of greying the button out), then posts to the lead
+ * pipeline (proxy leads.create → core LeadsController::create) and pings the funnel (leads.track page_view_onboarding)
+ * on the bo_lead_sid session shared with /devino-partener. Core's English errors are said in Romanian and the form
+ * goes back to the step that holds the field.
  *
- * Pre-fills `category_slug` from ?tip=… and `location_name` from ?loc=…
- * so a personalized campaign URL on /devino-partener flows continuously
- * into the form.
+ * ?tip=<type> preselects the category and ?loc=<name> fills in the venue name, so a personalised campaign link on
+ * /devino-partener continues here. No page cache: the URL fills the form. UTM parameters are captured in <head>
+ * because v2 head.php strips them from the address bar after 15 s.
  */
 
-$pageCacheTTL = 0; // form page — must not cache (would serve someone else's prefill)
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
+require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/nav.php';
 
-$categoriesResp   = api_cached('categories_full_tree', fn () => api_get('/event-categories'), 900);
-$rawCategories    = $categoriesResp['data']['categories'] ?? [];
-$parentCategories = is_array($rawCategories)
-    ? array_values(array_filter($rawCategories, fn ($c) => empty($c['parent_id'])))
-    : [];
-usort($parentCategories, fn ($a, $b) => ($a['sort_order'] ?? 0) <=> ($b['sort_order'] ?? 0));
-
-$peel = static function ($value): string {
-    if (is_string($value)) return $value;
-    if (is_array($value))  return (string) ($value['ro'] ?? $value['en'] ?? reset($value) ?? '');
-    return '';
-};
-
-$categoryPickerData = array_values(array_map(fn ($c) => [
-    'id'    => (int) ($c['id'] ?? 0),
-    'slug'  => $c['slug'] ?? '',
-    'name'  => $peel($c['name'] ?? ''),
-    'emoji' => $c['icon_emoji'] ?? '',
-], $parentCategories));
-
-$tipToSlug = [
+$obTipToSlug = [
     'escape' => 'escape-rooms', 'escape-room' => 'escape-rooms', 'escape-rooms' => 'escape-rooms',
-    'muzeu'  => 'muzee-expozitii', 'muzee' => 'muzee-expozitii',
-    'parc-distractii' => 'parcuri-de-distractii', 'distractii' => 'parcuri-de-distractii',
-    'parc-aventura'   => 'parcuri-de-aventura', 'aventura' => 'parcuri-de-aventura',
-    'natura' => 'natura-outdoor',
-    'acvarii-zoo' => 'acvarii-zoo-animale', 'zoo' => 'acvarii-zoo-animale',
-    'ateliere' => 'ateliere-experiente-creative', 'atelier' => 'ateliere-experiente-creative',
-    'tururi' => 'tururi-experiente-turistice', 'tur' => 'tururi-experiente-turistice',
-    'educatie' => 'educatie-invatare-experientiala',
-    'familie'  => 'familie-copii', 'copii' => 'familie-copii',
-    'corporate' => 'corporate-grupuri', 'grupuri' => 'corporate-grupuri',
-    'cultura'   => 'cultura-arta',
+    'muzeu' => 'muzee-expozitii', 'muzee' => 'muzee-expozitii', 'muzee-expozitii' => 'muzee-expozitii',
+    'parc-distractii' => 'parcuri-de-distractii', 'distractii' => 'parcuri-de-distractii', 'parcuri-de-distractii' => 'parcuri-de-distractii',
+    'parc-aventura' => 'parcuri-de-aventura', 'aventura' => 'parcuri-de-aventura', 'parcuri-de-aventura' => 'parcuri-de-aventura',
+    'natura' => 'natura-outdoor', 'natura-outdoor' => 'natura-outdoor',
+    'acvarii-zoo' => 'acvarii-zoo-animale', 'zoo' => 'acvarii-zoo-animale', 'acvarii-zoo-animale' => 'acvarii-zoo-animale',
+    'ateliere' => 'ateliere-experiente-creative', 'atelier' => 'ateliere-experiente-creative', 'ateliere-experiente-creative' => 'ateliere-experiente-creative',
+    'tururi' => 'tururi-experiente-turistice', 'tur' => 'tururi-experiente-turistice', 'tururi-experiente-turistice' => 'tururi-experiente-turistice',
+    'educatie' => 'educatie-invatare-experientiala', 'educatie-invatare-experientiala' => 'educatie-invatare-experientiala',
+    'familie' => 'familie-copii', 'copii' => 'familie-copii', 'familie-copii' => 'familie-copii',
+    'corporate' => 'corporate-grupuri', 'grupuri' => 'corporate-grupuri', 'corporate-grupuri' => 'corporate-grupuri',
+    'cultura' => 'cultura-arta', 'cultura-arta' => 'cultura-arta',
 ];
-$prefillTip    = strtolower(trim((string) ($_GET['tip'] ?? '')));
-$prefillSlug   = $tipToSlug[$prefillTip] ?? '';
-$prefillLoc    = trim((string) ($_GET['loc'] ?? ''));
-$prefillLocJs  = json_encode($prefillLoc,  JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-$prefillTipJs  = json_encode($prefillTip,  JSON_UNESCAPED_UNICODE);
-$prefillSlugJs = json_encode($prefillSlug, JSON_UNESCAPED_UNICODE);
+$obPrefillTip = is_string($_GET['tip'] ?? null) ? substr(strtolower(trim($_GET['tip'])), 0, 80) : '';
+$obPrefillSlug = $obTipToSlug[$obPrefillTip] ?? '';
+$obPrefillLoc = is_string($_GET['loc'] ?? null) ? mb_substr(trim($_GET['loc']), 0, 160) : '';
+$obCategories = array_values(array_filter($V2NAV['categories'] ?? [], fn ($c) => !empty($c['slug']) && !empty($c['name'])));
+$obVolumes = ['' => 'Alege un interval', '0-100' => 'Până la 100 bilete', '100-500' => 'Între 100 și 500', '500-2000' => 'Între 500 și 2.000', '2000-10000' => 'Între 2.000 și 10.000', '10000+' => 'Peste 10.000'];
 
-$pageTitleRaw    = 'Înregistrare locație — ' . SITE_NAME;
+$pageTitleRaw = 'Înregistrare locație — ' . SITE_NAME;
 $pageDescription = 'Începe în 5 minute. Spune-ne ce vinzi, cine ești și cum te contactăm. Te ghidăm prin restul.';
-$canonicalUrl    = SITE_URL . '/inregistrare-locatie';
-$noindex         = true;
+$canonicalUrl = SITE_URL . '/inregistrare-locatie';
+$noindex = true;
 $hideFromSitemap = true;
-$currentPage     = 'devino-partener'; // share active nav state with the landing
-$cssBundle       = 'listing';
+$skipPageCache = true;
 
-$extraHead = <<<'HTML'
-<style>
-.partner-card { transition: transform .2s ease, box-shadow .2s ease; }
-.partner-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 #1B1714; }
-.shadow-hard { box-shadow: 6px 6px 0 0 #1B1714; }
-.shadow-hard-sm { box-shadow: 3px 3px 0 0 #1B1714; }
-[x-cloak] { display: none !important; }
-</style>
-HTML;
+$v2Styles = ['onboarding.css'];
+$v2Scripts = ['onboarding.js'];
+$v2HeaderOverlay = true;
+$v2ClientData = ['supportEmail' => SUPPORT_EMAIL];
+$v2HeadExtra = '<script>(function(){try{var q=new URLSearchParams(location.search),u={};["utm_source","utm_medium","utm_campaign","utm_content","utm_term"].forEach(function(k){if(q.get(k))u[k]=q.get(k).slice(0,150)});window.BO_UTM=u;}catch(e){}})();</script>';
 
-include __DIR__ . '/includes/head.php';
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
-
-<main id="top" class="bg-paper">
-<section class="py-12 sm:py-16">
-  <div class="max-w-3xl mx-auto px-5 sm:px-8"
-       x-data='onboardingForm(<?= htmlspecialchars(json_encode($categoryPickerData, JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>, <?= $prefillLocJs ?>, <?= $prefillSlugJs ?>, <?= $prefillTipJs ?>)'>
-
-    <div class="text-center mb-10">
-      <p class="font-mono text-sm uppercase tracking-widest text-vermilion mb-3">Onboarding · 5 minute</p>
-      <h1 class="font-display font-bold text-4xl sm:text-5xl leading-[0.95]">Hai să-ți punem<br>locația online.</h1>
-      <p class="mt-5 text-ink-soft max-w-xl mx-auto">Spune-ne ce vinzi, cine ești și cum te contactăm. Vorbim cu tine în următoarea zi lucrătoare și te ghidăm prin restul.</p>
+<main id="main" tabindex="-1">
+  <section class="ob-hero" aria-labelledby="ob-h">
+    <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
+    <div class="ob-hero-in">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="/devino-partener">Devino partener</a><span aria-hidden="true">/</span><span aria-current="page">Înregistrare locație</span></nav>
+      <p class="ob-kicker">Onboarding · 5 minute</p>
+      <h1 class="ob-h" id="ob-h">Hai <span class="ob-nw">să-ți</span> punem locația online.</h1>
+      <p class="ob-lead">Spune-ne ce vinzi, cine ești și cum te contactăm. Vorbim cu tine în următoarea zi lucrătoare și te ghidăm prin restul.</p>
     </div>
+  </section>
 
-    <!-- Progress -->
-    <div class="mb-10">
-      <div class="flex items-center justify-between mb-3">
-        <span class="font-mono text-xs uppercase tracking-widest text-ink/50" x-text="step === 'done' ? 'Trimis' : `Pasul ${step} din 3`">Pasul 1 din 3</span>
-        <span class="font-mono text-xs uppercase tracking-widest text-ink/50" x-text="step === 'done' ? '' : ['Activitate','Tu','Locație'][step-1]">Activitate</span>
+  <section class="ob-body" aria-label="Formular înregistrare locație">
+    <div class="ob-wrap">
+      <div class="ob-card" id="ob-card">
+        <!-- the header turns solid when the white card reaches it -->
+        <div id="hdr-sentinel" aria-hidden="true"></div>
+        <div class="ob-progress">
+          <p class="ob-progress-top"><span id="ob-step-t">Pasul 1 din 3</span><span id="ob-step-l">Activitate</span></p>
+          <div class="ob-bar" aria-hidden="true"><i id="ob-bar" style="width:33.333%"></i></div>
+          <ol class="ob-dots" aria-hidden="true"><li class="is-on">Activitate</li><li>Tu</li><li>Locație</li></ol>
+        </div>
+
+        <form class="ob-form" id="ob-form" novalidate data-prefill-tip="<?= v2_e($obPrefillTip) ?>" data-prefill-loc="<?= v2_e($obPrefillLoc) ?>">
+          <p class="ob-error" id="ob-error" role="alert" tabindex="-1" hidden></p>
+          <!-- people never see or reach this; a bot that fills it gets a quiet "sent" -->
+          <div class="ob-trap" aria-hidden="true"><label for="ob-fax">Fax (nu completa)</label><input id="ob-fax" name="fax" type="text" tabindex="-1" autocomplete="off"></div>
+
+          <!-- STEP 1 — what they sell -->
+          <fieldset class="ob-step" data-step="1">
+            <legend class="ob-step-h" tabindex="-1">Ce vinzi?</legend>
+            <p class="ob-step-p">Alege categoria care se potrivește cel mai bine. O folosim doar ca să-ți pregătim setup-ul.</p>
+            <div class="ob-cats">
+              <?php foreach ($obCategories as $cat): ?>
+              <label class="ob-cat">
+                <input type="radio" name="category_slug" value="<?= v2_e($cat['slug']) ?>" data-name="<?= v2_e($cat['name']) ?>"<?= $cat['slug'] === $obPrefillSlug ? ' checked' : '' ?>>
+                <?php if (!empty($cat['thumb'])): ?><img src="<?= v2_e($cat['thumb']) ?>" alt="" width="320" height="200" loading="lazy" decoding="async"><?php else: ?><span class="ob-cat-ph"><?= v2_ic('ticket') ?></span><?php endif; ?>
+                <span class="ob-cat-name"><?= v2_e($cat['name']) ?></span>
+                <span class="ob-cat-check" aria-hidden="true"><?= v2_ic('check') ?></span>
+              </label>
+              <?php endforeach; ?>
+            </div>
+            <div class="ob-field">
+              <label for="ob-other">Sau descrie scurt (opțional)</label>
+              <input id="ob-other" name="category_other" type="text" maxlength="120" placeholder="ex. Centru de echitație, planetariu, observator">
+            </div>
+            <div class="ob-nav is-end">
+              <button class="btn btn-primary" type="button" data-next>Continuă<?= v2_ic('arrow-right') ?></button>
+            </div>
+          </fieldset>
+
+          <!-- STEP 2 — who they are -->
+          <fieldset class="ob-step" data-step="2" hidden>
+            <legend class="ob-step-h" tabindex="-1">Cine ești?</legend>
+            <p class="ob-step-p">Datele tale de contact. Le folosim doar ca să te sunăm și să-ți răspundem.</p>
+            <div class="ob-fields">
+              <div class="ob-field is-wide"><label for="ob-name">Nume și prenume *</label><input id="ob-name" name="contact_name" type="text" autocomplete="name" maxlength="120" required></div>
+              <div class="ob-field"><label for="ob-email">Email *</label><input id="ob-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="160" required></div>
+              <div class="ob-field"><label for="ob-phone">Telefon</label><input id="ob-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="07xx xxx xxx"></div>
+            </div>
+            <div class="ob-nav">
+              <button class="ob-back" type="button" data-prev><?= v2_ic('arrow-left') ?>Înapoi</button>
+              <button class="btn btn-primary" type="button" data-next>Continuă<?= v2_ic('arrow-right') ?></button>
+            </div>
+          </fieldset>
+
+          <!-- STEP 3 — the venue -->
+          <fieldset class="ob-step" data-step="3" hidden>
+            <legend class="ob-step-h" tabindex="-1">Despre locație</legend>
+            <p class="ob-step-p">Detaliile despre locația ta. Câteva minute și am terminat.</p>
+            <div class="ob-fields">
+              <div class="ob-field is-wide"><label for="ob-venue">Numele locației / organizației *</label><input id="ob-venue" name="location_name" type="text" autocomplete="organization" maxlength="160" required value="<?= v2_e($obPrefillLoc) ?>"></div>
+              <div class="ob-field"><label for="ob-city">Oraș *</label><input id="ob-city" name="city" type="text" autocomplete="address-level2" maxlength="80" required placeholder="ex. Cluj-Napoca"></div>
+              <div class="ob-field"><label for="ob-website">Site web (opțional)</label><input id="ob-website" name="website" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="200" placeholder="https://…"></div>
+              <div class="ob-field is-wide"><label for="ob-volume">Volum estimat de bilete / lună</label><select class="select" id="ob-volume" name="volume_estimate"><?php foreach ($obVolumes as $volValue => $volLabel): ?><option value="<?= v2_e($volValue) ?>"><?= v2_e($volLabel) ?></option><?php endforeach; ?></select></div>
+              <div class="ob-field is-wide"><label for="ob-notes">Spune-ne ce e important (opțional)</label><textarea id="ob-notes" name="notes" rows="3" maxlength="800" placeholder="ex. avem sloturi la 30 min, vrem să integrăm cu casa de marcat existentă, etc."></textarea></div>
+              <label class="ob-check is-wide"><input id="ob-gdpr" name="gdpr" type="checkbox" required><span>Sunt de acord cu prelucrarea datelor în scopul contactării — datele sunt folosite doar pentru a-ți răspunde.</span></label>
+            </div>
+            <div class="ob-nav">
+              <button class="ob-back" type="button" data-prev><?= v2_ic('arrow-left') ?>Înapoi</button>
+              <button class="btn btn-primary" id="ob-submit" type="submit">Trimite cererea<?= v2_ic('arrow-right') ?></button>
+            </div>
+          </fieldset>
+        </form>
+
+        <div class="ob-done" id="ob-done" hidden>
+          <span class="ob-done-ic" aria-hidden="true"><?= v2_ic('check') ?></span>
+          <h2 id="ob-done-h" tabindex="-1">Mulțumim!</h2>
+          <p>Cererea ta a ajuns la echipa bilete.online. Te contactăm în următoarea zi lucrătoare pe <strong id="ob-done-email"></strong>.</p>
+          <a class="btn btn-ghost" href="/devino-partener"><?= v2_ic('arrow-left') ?>Înapoi la prezentare</a>
+        </div>
       </div>
-      <div class="h-1.5 bg-paper-2 border border-ink/10 rounded-full overflow-hidden">
-        <div class="h-full bg-vermilion transition-all duration-400" :style="`width:${step === 'done' ? 100 : (step/3)*100}%`"></div>
-      </div>
+      <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2%* plătit de cumpărător</p>
     </div>
-
-    <div class="bg-paper-2 border-2 border-ink rounded-2xl shadow-hard p-6 sm:p-10" x-cloak>
-
-      <!-- STEP 1 — what they sell -->
-      <div x-show="step===1" x-transition.opacity.duration.300ms>
-        <h2 class="font-display font-bold text-2xl sm:text-3xl mb-1">Ce vinzi?</h2>
-        <p class="text-ink/65 mb-6 text-sm">Alege categoria care se potrivește cel mai bine. O folosim doar ca să-ți pregătim setup-ul.</p>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <template x-for="cat in categories" :key="cat.slug">
-            <button type="button"
-              @click="form.category_slug = cat.slug; form.category_name = cat.name"
-              class="text-left p-4 rounded-2xl border-2 transition-all duration-150 partner-card bg-paper"
-              :class="form.category_slug === cat.slug
-                ? 'border-vermilion shadow-hard-sm -translate-y-0.5'
-                : 'border-ink/20 hover:border-ink hover:-translate-y-0.5'">
-              <div class="text-2xl mb-2" x-text="cat.emoji || '🎫'"></div>
-              <p class="font-display font-bold text-sm leading-tight" x-text="cat.name"></p>
-            </button>
-          </template>
-        </div>
-
-        <label class="block mt-6">
-          <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Sau descrie scurt (opțional)</span>
-          <input type="text" x-model="form.category_other" placeholder="ex. Centru de echitație, planetariu, observator"
-            class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition" maxlength="120">
-        </label>
-
-        <div class="mt-8 flex justify-end">
-          <button type="button" @click="goNext()" :disabled="!canGoFromStep1()"
-            class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">
-            Continuă →
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 2 — who they are -->
-      <div x-show="step===2" x-transition.opacity.duration.300ms>
-        <h2 class="font-display font-bold text-2xl sm:text-3xl mb-1">Cine ești?</h2>
-        <p class="text-ink/65 mb-6 text-sm">Datele tale de contact. Le folosim doar ca să te sunăm și să-ți răspundem.</p>
-
-        <div class="grid sm:grid-cols-2 gap-4">
-          <label class="block sm:col-span-2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Nume și prenume *</span>
-            <input type="text" x-model="form.contact_name" required maxlength="120"
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-          </label>
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Email *</span>
-            <input type="email" x-model="form.email" required maxlength="160"
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-          </label>
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Telefon</span>
-            <input type="tel" x-model="form.phone" maxlength="40" placeholder="07xx xxx xxx"
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-          </label>
-        </div>
-
-        <div class="mt-8 flex items-center justify-between">
-          <button type="button" @click="goPrev()" class="text-sm font-semibold text-ink/60 hover:text-ink rounded-full px-4 py-2">← Înapoi</button>
-          <button type="button" @click="goNext()" :disabled="!canGoFromStep2()"
-            class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">
-            Continuă →
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 3 — the location -->
-      <div x-show="step===3" x-transition.opacity.duration.300ms>
-        <h2 class="font-display font-bold text-2xl sm:text-3xl mb-1">Despre locație</h2>
-        <p class="text-ink/65 mb-6 text-sm">Detaliile despre locația ta. Câteva minute și am terminat.</p>
-
-        <div class="grid sm:grid-cols-2 gap-4">
-          <label class="block sm:col-span-2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Numele locației / organizației *</span>
-            <input type="text" x-model="form.location_name" required maxlength="160"
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-          </label>
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Oraș *</span>
-            <input type="text" x-model="form.city" required maxlength="80" placeholder="ex. Cluj-Napoca"
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-          </label>
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Site web (opțional)</span>
-            <input type="url" x-model="form.website" maxlength="200" placeholder="https://…"
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-          </label>
-          <label class="block sm:col-span-2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Volum estimat de bilete / lună</span>
-            <select x-model="form.volume_estimate" class="mt-1.5 w-full border-2 border-ink/20 rounded-full px-5 py-3 bg-paper focus:outline-none focus:border-ink transition">
-              <option value="">Alege un interval</option>
-              <option value="0-100">Până la 100 bilete</option>
-              <option value="100-500">Între 100 și 500</option>
-              <option value="500-2000">Între 500 și 2.000</option>
-              <option value="2000-10000">Între 2.000 și 10.000</option>
-              <option value="10000+">Peste 10.000</option>
-            </select>
-          </label>
-          <label class="block sm:col-span-2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-ink/60">Spune-ne ce e important (opțional)</span>
-            <textarea x-model="form.notes" rows="3" maxlength="800"
-              placeholder="ex. avem sloturi la 30 min, vrem să integrăm cu casa de marcat existentă, etc."
-              class="mt-1.5 w-full border-2 border-ink/20 rounded-2xl px-5 py-3 bg-paper focus:outline-none focus:border-ink transition resize-none"></textarea>
-          </label>
-        </div>
-
-        <div class="mt-5 flex items-start gap-2 text-xs text-ink/60">
-          <input type="checkbox" id="gdpr" x-model="form.gdpr" required class="mt-0.5 w-4 h-4 accent-vermilion">
-          <label for="gdpr">Sunt de acord cu prelucrarea datelor în scopul contactării — datele sunt folosite doar pentru a-ți răspunde.</label>
-        </div>
-
-        <div class="mt-8 flex items-center justify-between">
-          <button type="button" @click="goPrev()" :disabled="submitting" class="text-sm font-semibold text-ink/60 hover:text-ink disabled:opacity-40 rounded-full px-4 py-2">← Înapoi</button>
-          <button type="button" @click="submit()" :disabled="!canSubmit() || submitting"
-            class="inline-flex items-center gap-2 bg-ink text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">
-            <span x-show="!submitting">Trimite cererea →</span>
-            <span x-show="submitting">Se trimite…</span>
-          </button>
-        </div>
-
-        <p x-show="errorMessage" x-text="errorMessage" class="mt-4 text-sm text-vermilion font-semibold"></p>
-      </div>
-
-      <!-- DONE -->
-      <div x-show="step==='done'" x-transition.opacity.duration.300ms class="text-center py-8">
-        <div class="w-16 h-16 rounded-full bg-forest text-paper grid place-items-center text-3xl mx-auto mb-4">✓</div>
-        <h2 class="font-display font-bold text-3xl sm:text-4xl">Mulțumim, <span x-text="form.contact_name.split(' ')[0] || 'partenere'"></span>!</h2>
-        <p class="mt-4 text-ink-soft max-w-md mx-auto">Cererea ta a ajuns la echipa bilete.online. Te contactăm în următoarea zi lucrătoare pe <strong x-text="form.email"></strong>.</p>
-        <a href="/devino-partener" class="mt-8 inline-flex items-center gap-2 border-2 border-ink font-bold px-7 py-3 rounded-full hover:bg-ink hover:text-paper transition">← Înapoi la prezentare</a>
-      </div>
-    </div>
-
-    <p class="mt-6 text-center text-xs text-ink/50">
-      Fără cost de pornire · Activități nelimitate · Comision 2%* plătit de cumpărător
-    </p>
-  </div>
-</section>
+  </section>
 </main>
-
-<script>
-/* Ping the funnel — fire on load so we record that this prospect reached
-   the onboarding step, even if they bail before submitting. */
-(function pingOnboarding(){
-  try {
-    let sid = (document.cookie.match(/(?:^|;\s*)bo_lead_sid=([^;]+)/)||[])[1];
-    if (!sid) {
-      sid = (crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
-      const yr = new Date(); yr.setFullYear(yr.getFullYear()+1);
-      document.cookie = `bo_lead_sid=${sid}; expires=${yr.toUTCString()}; path=/; SameSite=Lax`;
-    }
-    const p = new URLSearchParams(window.location.search);
-    const utm = {};
-    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k => { if (p.get(k)) utm[k] = p.get(k); });
-    fetch('/api/proxy.php?action=leads.track', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        session_token: sid,
-        event_type: 'page_view_onboarding',
-        page_url: window.location.pathname + window.location.search,
-        referrer: document.referrer || null,
-        prefill_tip: p.get('tip') || null,
-        prefill_loc: p.get('loc') || null,
-        utm,
-      }),
-      keepalive: true,
-    }).catch(() => {});
-  } catch (_) {}
-})();
-
-function onboardingForm(categories, prefillLoc, prefillSlug, prefillTip) {
-  return {
-    step: 1,
-    submitting: false,
-    errorMessage: '',
-    categories: categories || [],
-    form: {
-      category_slug: prefillSlug || '',
-      category_name: '',
-      category_other: '',
-      contact_name: '',
-      email: '',
-      phone: '',
-      location_name: prefillLoc || '',
-      city: '',
-      website: '',
-      volume_estimate: '',
-      notes: '',
-      gdpr: false,
-    },
-
-    init() {
-      if (this.form.category_slug) {
-        const cat = this.categories.find(c => c.slug === this.form.category_slug);
-        if (cat) this.form.category_name = cat.name;
-      }
-    },
-
-    canGoFromStep1() { return !!(this.form.category_slug || (this.form.category_other && this.form.category_other.trim().length > 1)); },
-    canGoFromStep2() { return this.form.contact_name.trim().length > 1 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.form.email.trim()); },
-    canSubmit()      { return this.form.location_name.trim().length > 1 && this.form.city.trim().length > 1 && this.form.gdpr === true; },
-
-    goNext() {
-      if (this.step === 1 && !this.canGoFromStep1()) return;
-      if (this.step === 2 && !this.canGoFromStep2()) return;
-      this.step++;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-    goPrev() {
-      if (typeof this.step === 'number' && this.step > 1) {
-        this.step--;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    },
-
-    async submit() {
-      if (!this.canSubmit() || this.submitting) return;
-      this.submitting = true;
-      this.errorMessage = '';
-
-      const sid = (document.cookie.match(/(?:^|;\s*)bo_lead_sid=([^;]+)/)||[])[1] || '';
-      const p = new URLSearchParams(window.location.search);
-      const utm = {};
-      ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k => { if (p.get(k)) utm[k] = p.get(k); });
-
-      const payload = {
-        session_token: sid,
-        contact_name: this.form.contact_name,
-        email: this.form.email,
-        phone: this.form.phone || null,
-        location_name: this.form.location_name,
-        city: this.form.city,
-        website: this.form.website || null,
-        category_slug: this.form.category_slug || null,
-        category_name: this.form.category_name || null,
-        category_other: this.form.category_other || null,
-        volume_estimate: this.form.volume_estimate || null,
-        notes: this.form.notes || null,
-        prefill_tip: <?= $prefillTipJs ?> || null,
-        prefill_loc: <?= $prefillLocJs ?> || null,
-        referrer: document.referrer || null,
-        utm,
-      };
-
-      try {
-        const res = await fetch('/api/proxy.php?action=leads.create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok && !data.success) {
-          throw new Error(data.message || data.error || 'A apărut o problemă la trimitere.');
-        }
-        this.step = 'done';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        try {
-          if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
-            EPASTracking.trackLead('partner-signup', { category: this.form.category_name || this.form.category_other, city: this.form.city });
-          }
-        } catch (_) {}
-      } catch (e) {
-        this.errorMessage = e.message || 'Trimiterea nu a reușit. Te rugăm să încerci din nou sau să ne scrii la contact@bilete.online.';
-      } finally {
-        this.submitting = false;
-      }
-    }
-  }
-}
-</script>
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/v2/footer.php'; ?>
