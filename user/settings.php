@@ -685,6 +685,14 @@ const SettingsPage = {
 
             if (response.success) {
                 AmbiletNotifications.success('Parola a fost schimbată cu succes!');
+                if (response.data && response.data.notice) {
+                    const linked = response.data.linked_accounts;
+                    if (linked && linked.different && linked.different.length) {
+                        AmbiletNotifications.warning(response.data.notice, 10000);
+                    } else {
+                        AmbiletNotifications.info(response.data.notice, 6000);
+                    }
+                }
                 document.getElementById('passwordForm').reset();
                 document.getElementById('passwordStrength').className = 'password-strength';
             } else {

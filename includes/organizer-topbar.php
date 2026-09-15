@@ -135,6 +135,7 @@ $skipJsComponents = true;
 
         <!-- Right Actions -->
         <div class="flex items-center gap-2">
+            <div data-account-switcher="organizer" class="amb-acct amb-acct--dark" hidden></div>
             <!-- Quick Create (ascuns pentru organizatori leisure) -->
             <a data-org-show="standard" href="/organizator/events?action=create" style="display:none" class="items-center hidden gap-2 px-4 py-2 text-sm font-semibold text-white btn btn-primary bg-primary sm:flex rounded-xl mobile:flex">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>

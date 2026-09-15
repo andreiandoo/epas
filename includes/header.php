@@ -505,6 +505,8 @@ $ambiletBackendDown = isBackendUnreachable();
                     <span class="hidden md:inline">Contul meu</span>
                 </a>
 
+                <div data-account-switcher="auto" class="amb-acct amb-acct--hide-mobile" hidden></div>
+
                 <!-- User Menu (shown when logged in) -->
                 <div id="headerUserMenu" class="" style="display: none;">
                     <div class="relative dropdown">

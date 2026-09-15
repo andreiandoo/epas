@@ -419,6 +419,7 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     // after this handler runs the current page is fully authenticated
     // as that venue owner without any further round-trip.
     var vt=p.get('_admin_venue_token');
+    if(t||ct||vt||p.get('_admin_artist_token')){try{sessionStorage.setItem('ambilet_impersonating','1');}catch(e){}}
     if(vt){
         try{
             var maxAge=60*60*24*30; // 30 days
