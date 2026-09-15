@@ -558,6 +558,8 @@ const BileteOnlineAPI = {
         if (endpoint === '/organizer/team/remove') return 'organizer.team.remove';
         if (endpoint === '/organizer/team/resend-invite') return 'organizer.team.resend-invite';
         if (endpoint === '/organizer/team/resend-all-invites') return 'organizer.team.resend-all-invites';
+        if (endpoint === '/organizer/team/activate') return 'organizer.team.activate';
+        if (endpoint === '/organizer/team/reset-password') return 'organizer.team.reset-password';
 
         // Organizer billing/invoices
         if (endpoint.match(/\/organizer\/invoices\/\d+\/pdf$/)) return 'organizer.invoice.pdf';
