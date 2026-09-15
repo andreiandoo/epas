@@ -1592,7 +1592,10 @@ switch ($action) {
 
     // Beneficiaries (Familie)
     case 'customer.beneficiaries':
-        $method = 'GET';
+        // api.js resolves GET (list) and POST (create) /customer/beneficiaries to this action; forcing GET meant a new
+        // beneficiary was never created. Dispatch on the method.
+        $method = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? 'POST' : 'GET';
+        if ($method === 'POST') $body = file_get_contents('php://input');
         $endpoint = '/customer/beneficiaries';
         $requiresAuth = true;
         break;
@@ -1603,7 +1606,9 @@ switch ($action) {
         $requiresAuth = true;
         break;
     case 'customer.beneficiaries.update':
-        $method = 'PUT';
+        // api.js resolves both PUT and DELETE /customer/beneficiaries/{id} here; forcing PUT turned every delete into an
+        // empty update (422). Dispatch on the method.
+        $method = ($_SERVER['REQUEST_METHOD'] ?? 'PUT') === 'DELETE' ? 'DELETE' : 'PUT';
         $bid = (int) ($_GET['id'] ?? 0);
         if (! $bid) { http_response_code(400); echo json_encode(['error' => 'Missing beneficiary id']); exit; }
         $body = file_get_contents('php://input');
@@ -1658,6 +1663,69 @@ switch ($action) {
         $endpoint = '/customer/gdpr/export';
         $requiresAuth = true;
         break;
+    case 'customer.gdpr.download':
+        // The archive link core returns (and e-mails) points at a path without /api (404), and the real route needs the
+        // API key. The account page downloads through here. The export token alone would do for core, but through this
+        // proxy it only works for the signed-in owner: it must be one of the links in their own export status.
+        // (The parameter is not called "token": for raw responses the proxy reads ?token= as the bearer token.)
+        $method = 'GET';
+        $gdprToken = (string) ($_GET['export'] ?? '');
+        if (!preg_match('/^[A-Za-z0-9]{20,128}$/', $gdprToken)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid export token']);
+            exit;
+        }
+        $gdprAuth = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+        if ($gdprAuth === '') {
+            http_response_code(401);
+            echo json_encode(['error' => 'Authentication required']);
+            exit;
+        }
+        $gdprCh = curl_init(API_BASE_URL . '/customer/gdpr/export/status');
+        curl_setopt_array($gdprCh, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_HTTPHEADER => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+                'Authorization: ' . $gdprAuth,
+                'User-Agent: bilete.online Marketplace/1.0',
+            ],
+        ]);
+        $gdprBody = curl_exec($gdprCh);
+        $gdprStatus = (int) curl_getinfo($gdprCh, CURLINFO_HTTP_CODE);
+        curl_close($gdprCh);
+        if ($gdprStatus === 401) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Authentication required']);
+            exit;
+        }
+        $gdprOwned = false;
+        if ($gdprStatus === 200 && is_string($gdprBody)) {
+            $gdprJson = json_decode($gdprBody, true);
+            $gdprRows = $gdprJson['data']['history'] ?? [];
+            if (!empty($gdprJson['data']['latest'])) $gdprRows[] = $gdprJson['data']['latest'];
+            foreach ((array) $gdprRows as $gdprRow) {
+                $gdprUrl = is_array($gdprRow) ? (string) ($gdprRow['download_url'] ?? '') : '';
+                if ($gdprUrl !== '' && hash_equals('/' . $gdprToken, substr($gdprUrl, -strlen($gdprToken) - 1))) {
+                    $gdprOwned = true;
+                    break;
+                }
+            }
+        }
+        if (!$gdprOwned) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Export not found']);
+            exit;
+        }
+        $endpoint = '/customer/gdpr/download/' . $gdprToken;
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
     case 'customer.gdpr.export.status':
         $method = 'GET';
         $endpoint = '/customer/gdpr/export/status';
