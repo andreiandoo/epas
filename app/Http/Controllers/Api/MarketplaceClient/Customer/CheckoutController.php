@@ -524,9 +524,10 @@ class CheckoutController extends BaseController
                 // nu poate fi mai mic decat fixed_commission_default. Cand NU
                 // bifat (default pentru toti org-urii existenti): floor-ul e 0
                 // -> zero impact fata de comportamentul dinainte.
-                // 0-lei tickets (e.g. "bilet gratuit cu cod") get no floor — the
-                // same rule as SalesBreakdownService, so checkout and decont agree.
-                $organizerFloorPerTicket = ($event?->marketplaceOrganizer?->commission_use_floor && $unitPrice > 0)
+                // The free-with-code companion ticket has its own commission and never gets
+                // the organizer floor; every other ticket, 0-lei ones included, does.
+                $organizerFloorPerTicket = ($event?->marketplaceOrganizer?->commission_use_floor
+                        && !($ticketType instanceof TicketType && $ticketType->isFreeWithCode()))
                     ? (float) ($event?->marketplaceOrganizer?->fixed_commission_default ?? 0)
                     : 0.0;
 
@@ -1419,6 +1420,34 @@ class CheckoutController extends BaseController
             }
 
             DB::commit();
+
+            // Free orders never reach the payment callback, so their seats are marked sold here
+            // (PaymentController does the same after a paid order).
+            if ($isFreeOrder && !empty($seatedItemsMeta)) {
+                foreach ($seatedItemsMeta as $seatedItem) {
+                    try {
+                        $confirmResult = $this->seatHoldService->confirmPurchase(
+                            (int) $seatedItem['event_seating_id'],
+                            $seatedItem['seat_uids'],
+                            'free-order',
+                            0
+                        );
+                        if (!empty($confirmResult['failed'])) {
+                            Log::channel('marketplace')->warning('Some seats could not be confirmed for free order', [
+                                'order_id' => $order->id,
+                                'event_seating_id' => $seatedItem['event_seating_id'],
+                                'failed' => $confirmResult['failed'],
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        Log::channel('marketplace')->error('Failed to confirm seats for free order', [
+                            'order_id' => $order->id,
+                            'event_seating_id' => $seatedItem['event_seating_id'],
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
 
             // Confirmarea email pentru comenzile FREE / TEST auto-confirmate DIRECT in checkout.
             // Pentru comenzile paid, email-ul se trimite din PaymentController dupa Netopia
