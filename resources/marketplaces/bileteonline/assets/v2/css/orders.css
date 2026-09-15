@@ -1,0 +1,90 @@
+/* bilete.online v2: customer orders (/cont/comenzi). Needs base.css + account.css (shared page parts); markup in
+   user/orders.php, filled in by assets/v2/js/orders.js. */
+
+/* =================== HERO COUNTERS =================== */
+@media (min-width:1200px){.od-hero{grid-template-columns:minmax(0,1fr) auto;align-items:end}}
+.od-kpis{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:10px;margin:0}
+@media (min-width:600px) and (max-width:1199px){.od-kpis{grid-template-columns:repeat(4, minmax(0,1fr))}}
+@media (min-width:1200px){.od-kpis{min-width:380px}}
+.od-kpis div{min-width:0;padding:14px 16px;border:1px solid rgba(247,247,245,.14);border-radius:16px;background:rgba(247,247,245,.07)}
+.od-kpis dt{font-size:.625rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--on-deep-muted)}
+.od-kpis dd{margin:4px 0 0;font-size:clamp(1.5rem, 2.4vw, 2rem);font-weight:700;line-height:1.1;letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:#F7F7F5;white-space:nowrap}
+@media (max-width:399px){.od-kpis div{padding:12px}.od-kpis dd{font-size:1.375rem}}
+
+/* =================== ORDERS =================== */
+.od-list{display:grid;gap:16px;margin:0;padding:0;list-style:none}
+.od-card{min-width:0;scroll-margin-top:calc(var(--hdr-h) + 24px)}
+@media (max-width:1023px){.od-card{scroll-margin-top:calc(var(--hdr-h) + 88px)}}
+.od-order{border:1px solid var(--line);border-radius:22px;background:var(--surface);overflow:hidden;transition:border-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-state) var(--ease-out)}
+.od-order:hover{border-color:#B9D9C8;box-shadow:0 18px 40px -30px rgba(14,72,55,.5)}
+.od-card.is-target .od-order{border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.2)}
+.od-body{padding:20px 22px 22px}
+.od-top{display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:16px 18px;align-items:start}
+.od-img{display:block;width:88px;height:88px;border-radius:16px;object-fit:cover;background:var(--tint-green)}
+.od-tags{display:flex;flex-wrap:wrap;gap:6px}
+.od-num{margin:10px 0 0;font-size:clamp(1.375rem, 2vw, 1.75rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--green);overflow-wrap:anywhere}
+.od-what{margin:4px 0 0;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.od-meta{margin:2px 0 0;font-size:.875rem;color:var(--muted)}
+.od-total{text-align:right}
+.od-total-v{margin:4px 0 0;font-size:clamp(1.75rem, 2.6vw, 2.25rem);font-weight:700;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+.od-points{margin:6px 0 0;font-size:.8125rem;font-weight:700;color:var(--action-hover)}
+@media (max-width:767px){
+  .od-top{grid-template-columns:64px minmax(0,1fr)}
+  .od-img{width:64px;height:64px;border-radius:14px}
+  .od-total{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding-top:12px;border-top:1px dashed var(--line);text-align:left}
+  .od-total-v{margin:0}
+}
+@media (max-width:599px){.od-body{padding:18px}}
+
+.od-costs{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:8px;margin:18px 0 0}
+@media (max-width:599px){.od-costs{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.od-costs div{min-width:0;padding:10px 12px;border-radius:12px;background:#F5F5F1}
+.od-costs dt{font-size:.625rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.od-costs dd{margin:3px 0 0;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+.od-costs dd.is-discount{color:var(--action-hover)}
+
+.od-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.acc-body .od-actions .btn{min-height:42px;padding:0 14px;font-size:.875rem}
+.acc-body .od-actions .btn .ic{width:18px;height:18px}
+.od-toggle .ic{transition:transform var(--dur-state) var(--ease-out)}
+.od-toggle[aria-expanded="true"] .ic{transform:rotate(180deg)}
+/* an invoice or a refund goes through the contact form: quieter links under the main actions */
+.od-more{display:flex;flex-wrap:wrap;align-items:center;gap:0 20px;margin-top:10px}
+.od-more a{display:inline-flex;align-items:center;min-height:36px;font-size:.875rem;font-weight:700;color:var(--action);text-decoration:underline;text-decoration-color:rgba(27,127,78,.35);text-underline-offset:3px}
+.od-more a:hover{text-decoration-color:currentColor}
+.od-more a.is-refund{color:var(--red-text);text-decoration-color:rgba(200,50,43,.35)}
+
+/* =================== DETAILS =================== */
+.od-details{border-top:2px dashed var(--line);background:#FAFAF7}
+.od-details-in{display:grid;gap:20px;padding:20px 22px 22px}
+@media (min-width:1100px){.od-details-in{grid-template-columns:minmax(0,1fr) 340px}}
+@media (max-width:599px){.od-details-in{padding:18px}}
+.od-d-state{margin:10px 0 0;font-size:.9375rem;color:var(--muted)}
+.od-d-state.is-error{color:var(--red-text)}
+.od-d-state button{margin-left:6px;padding:0;border:0;background:none;color:var(--action);font:700 .9375rem/1.4 var(--font);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.od-tickets{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.od-tickets li{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.od-tickets li > div{min-width:0}
+.od-tickets b{display:block;font-size:.9375rem;overflow-wrap:anywhere}
+.od-tickets small{display:block;margin-top:2px;font-size:.8125rem;color:var(--muted);overflow-wrap:anywhere}
+.od-tickets code{font:600 .8125rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.od-tickets a{font-size:.875rem;font-weight:700;color:var(--action)}
+.od-sub{margin-top:18px}
+.od-timeline{position:relative;display:grid;gap:12px;margin:12px 0 0;padding:0 0 0 24px;list-style:none}
+.od-timeline::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--line)}
+.od-timeline li{position:relative}
+.od-timeline li::before{content:"";position:absolute;left:-24px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--action);box-shadow:0 0 0 3px #FAFAF7}
+.od-timeline li.is-bad::before{background:var(--red-text)}
+.od-timeline b{display:block;font-size:.9375rem}
+.od-timeline time{font-size:.8125rem;color:var(--muted)}
+.od-summary{min-width:0;padding:18px 20px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.od-summary dl{display:grid;gap:10px;margin:12px 0 0}
+.od-summary dl div{display:flex;justify-content:space-between;gap:12px;font-size:.9375rem}
+.od-summary dt{color:var(--muted)}
+.od-summary dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.od-summary .is-total{padding-top:10px;border-top:1px solid var(--line);font-size:1.0625rem}
+.od-summary .is-total dt{font-weight:700;color:var(--ink)}
+.od-note,.od-pay{margin:12px 0 0;font-size:.8125rem;line-height:1.45;color:var(--muted)}
+.od-pay{margin-top:4px}
+.od-help{display:inline-flex;margin-top:12px;font-size:.875rem;font-weight:700;color:var(--action);text-decoration:underline;text-decoration-color:rgba(27,127,78,.35);text-underline-offset:3px}
+.od-help:hover{text-decoration-color:currentColor}
