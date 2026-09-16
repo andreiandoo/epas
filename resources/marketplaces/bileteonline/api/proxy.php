@@ -3387,6 +3387,38 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.scans':
+        // GET /organizer/events/{id}/leisure/scans — per day: scans expected, valid tickets, staff and refused codes.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/scans'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.scans-detail':
+        // GET /organizer/events/{id}/leisure/scans-detail?date= — every scan of one day, in order.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        $venDate = (string) ($_GET['date'] ?? '');
+        if (!$venEventId || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $venDate)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id or date']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/scans-detail?' . http_build_query(['date' => $venDate]);
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.sales.summary':
         // GET /organizer/events/{id}/leisure/sales/summary — gross, commission and net, online and at the counter.
         $venEventId = (int) ($_GET['event'] ?? 0);

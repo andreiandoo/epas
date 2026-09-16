@@ -269,6 +269,52 @@
 .ve-inv-table{min-width:1040px}
 .ve-inv-table td{vertical-align:top}
 
+/* ---------- report: issuing companies, bar rows, scans ---------- */
+.ve-main.is-loading .ve-issuers,.ve-main.is-loading .ve-brows{opacity:.5;transition:opacity .2s ease}
+.ve-mcard > p.ve-mnote{margin:8px 0 0;font-size:.75rem;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);overflow-wrap:anywhere}
+.ve-issuers{display:grid;gap:10px}
+.ve-issuers:empty{display:none}
+@media (min-width:900px){.ve-issuers.is-two{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.ve-issuer{min-width:0;padding:16px 18px;border:1.5px solid #CDE6D8;border-radius:20px;background:var(--surface)}
+.ve-issuer.is-second{border-color:#D9CDEB}
+.ve-issuer-k{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ve-issuer-k .ic{width:14px;height:14px;color:var(--green)}
+.ve-issuer-n{margin:4px 0 0;font-size:1rem;font-weight:700;overflow-wrap:anywhere}
+.ve-issuer-sum{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin:8px 0 0}
+.ve-issuer-sum b{font-size:1.625rem;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.ve-issuer-sum span{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ve-issuer-facts{margin-top:4px}
+.ve-issuer-pay{list-style:none;display:grid;gap:6px;margin:12px 0 0;padding:10px 0 0;border-top:1px solid var(--line);font-size:.8125rem}
+.ve-issuer-pay li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px}
+.ve-issuer-pay li > span:first-child{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.ve-issuer-pay .ic{width:14px;height:14px;color:var(--muted)}
+.ve-issuer-pay b{font-variant-numeric:tabular-nums}
+@media (min-width:1100px){.ve-grid.ve-grid-even{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.ve-brows{list-style:none;display:grid;gap:14px;margin:0;padding:0}
+.ve-brows .ve-tb-top b{display:inline-flex;align-items:center;gap:6px}
+.ve-brows .ve-tb-top .ic{width:15px;height:15px;color:var(--muted)}
+.ve-brows .ve-tb-bar i[data-key="card"]{background:#4F5BD5}
+.ve-brows .ve-tb-bar i[data-key="online"]{background:#2E86C1}
+.ve-brows small{margin-top:4px}
+.ve-cashier-table{min-width:620px}
+.ve-report-table{min-width:760px}
+.ve-scan-legend{margin:0 0 6px}
+.ve-sl{display:inline-flex;align-items:center;gap:6px;font-size:.8125rem;color:var(--muted)}
+.ve-sl::before{content:"";width:12px;height:12px;border-radius:4px;background:#CFCFC8}
+.ve-sl.is-valid::before{background:var(--action)}
+.ve-sl.is-staff::before{background:#2E86C1}
+.ve-sl.is-bad::before{background:#C8453C}
+.ve-sb.is-exp{fill:#DADAD3}
+.ve-sb.is-valid{fill:var(--action)}
+.ve-sb.is-staff{fill:#2E86C1}
+.ve-sb.is-bad{fill:#C8453C}
+.ve-today{stroke:var(--deep);stroke-width:1;stroke-dasharray:3 3}
+.ve-hit:focus-visible{outline:none;fill:rgba(27,127,78,.12)}
+.ve-hit:hover{fill:rgba(16,24,20,.04)}
+.ve-modal-card.ve-modal-wide{width:min(920px, 100%)}
+.ve-modal-head.ve-modal-plain h2{color:var(--ink)}
+.ve-scan-table{min-width:720px}
+
 /* ---------- team: the people, the weekly rota, the timesheet ---------- */
 .ve-people-table{min-width:900px}
 .ve-people-table tr.is-off{color:var(--muted)}
