@@ -519,6 +519,9 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/payouts$/)) return 'organizer.event.leisure.payouts';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement\/cumulative$/)) return 'organizer.event.leisure.settlement.cumulative';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement$/)) return 'organizer.event.leisure.settlement';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/scans-detail$/)) return 'organizer.event.leisure.scans-detail';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/scans$/)) return 'organizer.event.leisure.scans';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales\/summary$/)) return 'organizer.event.leisure.sales.summary';
