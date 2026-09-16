@@ -2256,9 +2256,11 @@ switch ($action) {
             exit;
         }
         $params = [];
-        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
-        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
-        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        foreach (['from', 'to', 'visit_from', 'visit_to', 'status', 'checkin', 'ticket_type_id', 'search'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $params[$venKey] = $_GET[$venKey];
+            }
+        }
         if (isset($_GET['page'])) $params['page'] = (int) $_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = (int) $_GET['per_page'];
         $endpoint = '/organizer/events/' . $eventId . '/leisure/participants'
@@ -3272,6 +3274,7 @@ switch ($action) {
         $method = 'GET';
         $params = [];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
         if (isset($_GET['read'])) $params['read'] = $_GET['read'];
         if (isset($_GET['type'])) $params['type'] = $_GET['type'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
@@ -3425,29 +3428,7 @@ switch ($action) {
     // Same endpoints the Ambilet POS uses; every one is scoped to an event that is set up
     // as a venue (display_template = leisure_venue) and needs the organizer token.
 
-    case 'organizer.event.leisure.config':
-        $posEventId = (int) ($_GET['event'] ?? 0);
-        if (!$posEventId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing event id']);
-            exit;
-        }
-        $endpoint = '/organizer/events/' . $posEventId . '/leisure/config';
-        $requiresAuth = true;
-        break;
-
-    case 'organizer.event.leisure.pos-sale':
-        $posEventId = (int) ($_GET['event'] ?? 0);
-        if (!$posEventId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing event id']);
-            exit;
-        }
-        $method = 'POST';
-        $body = file_get_contents('php://input');
-        $endpoint = '/organizer/events/' . $posEventId . '/leisure/pos-sale';
-        $requiresAuth = true;
-        break;
+    // The venue config and the sale itself are handled by the leisure block higher up in this switch.
 
     case 'organizer.event.leisure.cashier.current':
         $posEventId = (int) ($_GET['event'] ?? 0);
@@ -4021,23 +4002,7 @@ switch ($action) {
 
     // ==================== ORGANIZER NOTIFICATIONS ====================
 
-    case 'organizer.notifications':
-        $method = 'GET';
-        $params = [];
-        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
-        if (isset($_GET['read'])) $params['read'] = $_GET['read'];
-        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
-        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
-        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
-        $endpoint = '/organizer/notifications' . ($params ? '?' . http_build_query($params) : '');
-        $requiresAuth = true;
-        break;
-
-    case 'organizer.notifications.unread-count':
-        $method = 'GET';
-        $endpoint = '/organizer/notifications/unread-count';
-        $requiresAuth = true;
-        break;
+    // The notification list and the unread count are handled higher up in this switch.
 
     case 'organizer.notifications.recent':
         $method = 'GET';
