@@ -49,7 +49,23 @@ if ($category) {
     return;
 }
 
-// 3. Try city.
+// 3. Try region (/muntenia, /transilvania …): only a slug from the cached region list reaches the region endpoint.
+$regionList = api_cached('v2_regions', function () {
+    return api_get('/locations/regions');
+}, 3600);
+$regionList = $regionList['data']['regions'] ?? $regionList['data'] ?? [];
+if (in_array($slug, array_column(array_filter((array) $regionList, 'is_array'), 'slug'), true)) {
+    $regionSlug = $slug;
+    $regionResp = api_cached('v2_region_' . $slug, function () use ($slug) {
+        return api_get('/locations/regions/' . rawurlencode($slug));
+    }, 3600);
+    if (!empty($regionResp['success'])) {
+        require __DIR__ . '/region.php';
+        return;
+    }
+}
+
+// 4. Try city.
 $cityData = navGetCityBySlug($slug);
 if ($cityData) {
     require __DIR__ . '/city.php';

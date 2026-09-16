@@ -1,0 +1,69 @@
+/* bilete.online v2: region page (/{regiune}, e.g. /muntenia). Loaded after cities.css, whose hero, city cards,
+   index, hubs, FAQ and final CTA it reuses; only what the region adds lives here. */
+
+/* =================== HERO =================== */
+.rg-in{padding-bottom:clamp(48px, 6vw, 88px)}
+@media (min-width:1024px){.rg-in{grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr)}}
+.rg-h{max-width:16ch;font-size:clamp(2.5rem, 5.4vw, 4.25rem)}
+.rg-facts{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:var(--space-5) 0 0;padding:0}
+.rg-facts li{padding:7px 13px;border-radius:999px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.875rem;font-weight:600;font-variant-numeric:tabular-nums}
+.rg-search{margin-top:var(--space-5)}
+.rg-status{min-height:1.5em;margin:10px 0 0;font-size:.9375rem;color:var(--on-deep-muted)}
+
+.rg-switch{min-width:0}
+.rg-switch-h{margin:0 0 10px;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9FE0BF}
+.rg-switch ul{list-style:none;display:flex;gap:8px;margin:0 calc(-1 * var(--gutter));padding:0 var(--gutter) 4px;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+.rg-switch ul::-webkit-scrollbar{display:none}
+.rg-switch li{flex:none}
+.rg-switch a{display:flex;align-items:baseline;gap:8px;min-height:44px;padding:10px 15px;border:1.5px solid rgba(247,247,245,.24);border-radius:999px;color:#F7F7F5;font-weight:700;text-decoration:none;white-space:nowrap;transition:border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out)}
+.rg-switch a small{font-size:.8125rem;font-weight:500;color:var(--on-deep-muted)}
+.rg-switch a:hover{border-color:#F7F7F5;background:rgba(247,247,245,.08)}
+.rg-switch a[aria-current="page"]{border-color:#F7F7F5;background:#F7F7F5;color:var(--green)}
+.rg-switch a[aria-current="page"] small{color:var(--muted)}
+@media (min-width:1024px){
+  .rg-switch{padding:20px;border:1px solid rgba(247,247,245,.14);border-radius:var(--r-l);background:rgba(247,247,245,.06)}
+  .rg-switch ul{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:4px;margin:0;padding:0;overflow:visible}
+  .rg-switch a{display:grid;gap:2px;min-height:0;padding:10px 12px;border:0;border-radius:12px;white-space:normal}
+}
+
+/* =================== ACTIVITIES =================== */
+.rg-acts{padding-block:clamp(48px, 7vw, 96px);background:var(--bg)}
+.rg-cats{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:calc(-1 * var(--space-4)) 0 var(--space-6);padding:0}
+.rg-cats a{display:inline-flex;align-items:center;min-height:40px;padding:0 15px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:600;text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
+.rg-cats a:hover{border-color:var(--green);color:var(--green)}
+.rg-more-acts{margin:var(--space-5) 0 0;color:var(--muted)}
+.rg-empty{display:grid;gap:var(--space-5);padding:clamp(24px, 4vw, 40px);border:1.5px dashed #CFD3CC;border-radius:var(--r-l);background:var(--surface)}
+@media (min-width:1024px){.rg-empty{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-6)}}
+.rg-empty-ic{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--tint-green);color:var(--green)}
+.rg-empty-ic .ic{width:28px;height:28px}
+.rg-empty .kicker{margin-bottom:6px}
+.rg-empty h2{max-width:28ch;margin:0;font-size:clamp(1.5rem, 2.6vw, 2rem);font-weight:700;line-height:1.15;letter-spacing:-.03em;color:var(--green)}
+.rg-empty h2 + p{max-width:62ch;margin:8px 0 0;line-height:1.55;color:var(--muted)}
+.rg-empty-cta{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+@media (min-width:1024px){.rg-empty-cta{flex-direction:column}}
+
+/* =================== MAIN CITIES =================== */
+.rg-top{background:var(--surface)}
+.rg-top .ct-card{background:var(--bg)}
+/* the grid follows how many cities there are: no lonely card on a row of three */
+@media (min-width:1024px){.rg-top-grid.is-n4{grid-template-columns:repeat(4, minmax(0,1fr))}.rg-top-grid.is-n4 .ct-over h3{font-size:1.75rem}.rg-top-grid.is-n1{grid-template-columns:minmax(0,560px)}}
+@media (min-width:640px){.rg-top-grid.is-n2{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.rg-top .ct-links a{background:var(--surface)}
+.rg-top .ct-links .is-kids{background:var(--tint-green)}
+.rg-top .ct-links .is-main{background:var(--action)}
+
+/* =================== EVERY CITY, BY COUNTY =================== */
+.rg-all:focus{outline:none}
+.rg-all-head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:8px 24px}
+.rg-all-count{margin:0;font-weight:600;color:var(--on-deep-muted);font-variant-numeric:tabular-nums}
+.rg-counties{list-style:none;margin:var(--space-7) 0 0;padding:0;columns:4 250px;column-gap:12px}
+.rg-county{margin:0 0 12px;break-inside:avoid}
+.rg-county[hidden],.rg-county li[hidden]{display:none}
+.rg-county h3{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:1.25rem;letter-spacing:-.01em}
+.rg-county h3 small{font-size:.8125rem;font-weight:600;color:var(--on-deep-muted);font-variant-numeric:tabular-nums}
+.rg-county a{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.rg-n{flex:none;font-size:.75rem;font-weight:700;color:#9FE0BF}
+.rg-none{display:grid;justify-items:center;gap:14px;margin-top:var(--space-6);padding:36px 24px;border:1.5px dashed rgba(247,247,245,.22);border-radius:var(--r-l);text-align:center}
+.rg-none[hidden]{display:none}
+.rg-none p{margin:0;font-weight:600;color:#F7F7F5}
+.rg-none-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-3)}

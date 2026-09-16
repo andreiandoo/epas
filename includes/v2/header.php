@@ -87,7 +87,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
             <?php foreach ($links as $l): ?><li><a href="<?= v2_e($l['href']) ?>"><?= v2_e($l['name']) ?></a></li><?php endforeach; ?>
           </ul>
           <?php endif; ?>
-          <a class="mega-all" href="/orase">Toate cele <?= v2_num($r['citiesCount'], 'oraș', 'orașe') ?> din <?= v2_e($r['name']) ?><?= v2_ic('arrow-right') ?></a>
+          <a class="mega-all" href="/<?= v2_e($r['slug']) ?>">Toate cele <?= v2_num($r['citiesCount'], 'oraș', 'orașe') ?> din <?= v2_e($r['name']) ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <?php endforeach; ?>
       </div>
@@ -247,7 +247,7 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
           <p class="mm-k">Alte orașe din <?= v2_e($r['name']) ?></p>
           <ul class="mm-links"><?php foreach ($mmLinks as $l): ?><li><a href="<?= v2_e($l['href']) ?>"><?= v2_e($l['name']) ?></a></li><?php endforeach; ?></ul>
           <?php endif; ?>
-          <a class="mm-all" href="/orase">Toate cele <?= v2_num($r['citiesCount'], 'oraș', 'orașe') ?> din <?= v2_e($r['name']) ?><?= v2_ic('arrow-right') ?></a>
+          <a class="mm-all" href="/<?= v2_e($r['slug']) ?>">Toate cele <?= v2_num($r['citiesCount'], 'oraș', 'orașe') ?> din <?= v2_e($r['name']) ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <?php endforeach; ?>
       </section>
