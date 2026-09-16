@@ -331,6 +331,8 @@
     try { token = typeof BileteOnlineAuth !== 'undefined' ? BileteOnlineAuth.getToken() : null; } catch (e) {}
     fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      // Only a real CSV is saved: anything else (an error page, a login page) must not become a file named .csv.
+      if ((res.headers.get('content-type') || '').toLowerCase().indexOf('text/csv') === -1) throw new Error('not a csv');
       return res.blob();
     }).then(function (blob) {
       var a = document.createElement('a'), href = URL.createObjectURL(blob);

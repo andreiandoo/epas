@@ -45,6 +45,7 @@ const V2_ORG_NAV = [
     ['settings', 'Setări', [
         ['billing', '/organizator/facturare', 'Facturare', 'receipt', null],
         ['settings', '/organizator/setari', 'Cont & companie', 'gear-six', null],
+        ['team', '/organizator/echipa', 'Echipa contului', 'users-three', null],
         ['support', '/organizator/suport', 'Tichete suport', 'headset', 'support'],
         ['help', '/organizator/help', 'Centru de ajutor', 'question', null],
     ]],
