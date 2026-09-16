@@ -3387,6 +3387,21 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.upload-image':
+        // POST /organizer/events/{id}/leisure/upload-image — a product or display-category picture (multipart; core
+        // accepts JPG, PNG or WebP up to 10 MB and answers with the stored path and its public URL).
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/upload-image';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
     case 'organizer.event.leisure.issuers':
         // GET/PUT /organizer/events/{id}/leisure/issuers — the two companies that issue the venue's tickets and invoices.
         // The primary one is the account's own company data (name, tax id, IBAN), so a save here changes those too.
