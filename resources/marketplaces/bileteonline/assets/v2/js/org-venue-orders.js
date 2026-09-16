@@ -28,8 +28,13 @@
   function show(id, on) { var e = $(id); if (e) e.hidden = !on; }
   function histOpen() { return $('vo-hist-btn').getAttribute('aria-expanded') === 'true'; }
   function tag(list) { var s = STATUS[list] || [txt(list) || '—', 'is-muted']; return el('span', { class: 'org-tag ' + s[1], text: s[0] }); }
+  /** "120,50 lei" — F.money already says lei; any other currency replaces that word instead of following it. */
+  function amount(v, cur) {
+    var c = txt(cur).toUpperCase(), lei = F.money(F.toNum(v));
+    return !c || c === 'RON' || c === 'LEI' ? lei : lei.replace(/ lei$/, '') + ' ' + c;
+  }
   function money(v, cur) {
-    return el('span', { class: 've-total' }, [document.createTextNode(F.money(F.toNum(v))), el('span', { class: 've-cur', text: txt(cur) || 'RON' })]);
+    return el('span', { class: 've-total', text: amount(v, cur) });
   }
   function state(bodyId, cols, text) {
     var body = $(bodyId);
@@ -192,7 +197,7 @@
     $('vo-del-nr').textContent = txt(o.order_number) || ('#' + F.toNum(o.id));
     var sum = $('vo-del-sum');
     sum.textContent = '';
-    [['Client', txt(o.customer_name) || '—'], ['Total', F.money(F.toNum(o.total)) + ' ' + (txt(o.currency) || 'RON')],
+    [['Client', txt(o.customer_name) || '—'], ['Total', amount(o.total, o.currency)],
       ['Bilete', F.num(F.toNum(o.tickets_count))], ['Sursă', o.source === 'pos' ? 'La casă' : 'Pe site']].forEach(function (pair) {
       sum.appendChild(el('div', null, [el('dt', { text: pair[0] }), el('dd', { text: pair[1] })]));
     });

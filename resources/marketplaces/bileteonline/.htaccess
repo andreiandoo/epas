@@ -222,6 +222,10 @@ RewriteRule ^organizator/locatie/echipa/?$ organizer/venue-team.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/locatie/vanzari/?$ organizer/venue-sales.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f

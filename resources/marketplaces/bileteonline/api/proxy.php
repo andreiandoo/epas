@@ -3387,6 +3387,65 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.sales.summary':
+        // GET /organizer/events/{id}/leisure/sales/summary — gross, commission and net, online and at the counter.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/sales/summary'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.sales.range-csv':
+        // GET /organizer/events/{id}/leisure/sales/range-csv — one line per ticket over the period, streamed by core.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/sales/range-csv'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // CSV stream
+        $customTimeout = 90;
+        break;
+
+    case 'organizer.event.leisure.invoices.index':
+        // GET /organizer/events/{id}/leisure/invoices — counter orders for which a company invoice was asked or issued.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to', 'search', 'page', 'per_page'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/invoices'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.leisure.staff.collection':
         // GET/POST /organizer/leisure/staff — the venue's own people. Not scoped to an event: they belong to the
         // organizer, and the scanning app knows them by the QR code the core gives each of them.
