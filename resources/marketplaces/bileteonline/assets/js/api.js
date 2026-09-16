@@ -519,6 +519,11 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders\/deletion-history$/)) return 'organizer.event.leisure.orders.deletion-history';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders\/\d+$/)) {
+            return method === 'DELETE' ? 'organizer.event.leisure.orders.destroy' : 'organizer.event.leisure.orders.show';
+        }
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders$/)) return 'organizer.event.leisure.orders.index';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/tickets\/\d+\/manual-checkin$/)) return 'organizer.event.leisure.tickets.manual-checkin';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/weather$/)) return 'organizer.event.leisure.weather';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/compare$/)) return 'organizer.event.leisure.dashboard.compare';
@@ -672,6 +677,12 @@ const BileteOnlineAPI = {
         const genInvoiceMatch = endpoint.match(/\/organizer\/orders\/(\d+)\/generate-invoice$/);
         if (genInvoiceMatch) {
             return `id=${encodeURIComponent(genInvoiceMatch[1])}`;
+        }
+
+        // Extract event ID + order ID from the venue's order detail and deletion
+        const venueOrderMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/orders\/(\d+)/);
+        if (venueOrderMatch) {
+            return `event=${encodeURIComponent(venueOrderMatch[1])}&order_id=${encodeURIComponent(venueOrderMatch[2])}`;
         }
 
         // Extract event ID + ticket ID from the venue's manual check-in

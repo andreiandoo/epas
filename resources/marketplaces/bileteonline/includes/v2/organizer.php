@@ -33,6 +33,7 @@ const V2_ORG_NAV = [
     ['venue', 'Locație', [
         ['venue-live', '/organizator/locatie/live', 'Dashboard live', 'lightning', 'nou'],
         ['venue-participants', '/organizator/locatie/participanti', 'Participanți', 'users-three', null],
+        ['venue-orders', '/organizator/locatie/comenzi', 'Comenzi', 'receipt', null],
         ['pos', '/organizator/pos', 'Casă & POS', 'scan', null],
     ]],
     ['marketing', 'Marketing', [
