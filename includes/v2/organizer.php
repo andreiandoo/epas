@@ -27,9 +27,12 @@ const V2_ORG_NAV = [
         ['events', '/organizator/activities', 'Activități', 'calendar-blank', 'events'],
         ['participants', '/organizator/participanti', 'Participanți', 'users-three', null],
         ['sales', '/organizator/vanzari', 'Vânzări', 'shopping-cart-simple', null],
-        ['pos', '/organizator/pos', 'Casă & POS', 'scan', 'nou'],
         ['finance', '/organizator/sold', 'Sold', 'wallet', null],
         ['documents', '/organizator/documente', 'Documente', 'file-text', null],
+    ]],
+    ['venue', 'Locație', [
+        ['venue-live', '/organizator/locatie/live', 'Dashboard live', 'lightning', 'nou'],
+        ['pos', '/organizator/pos', 'Casă & POS', 'scan', null],
     ]],
     ['marketing', 'Marketing', [
         ['services', '/organizator/servicii', 'Servicii extra', 'lightning', 'nou'],

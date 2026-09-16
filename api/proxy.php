@@ -3384,6 +3384,28 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.weather':
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/weather';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.dashboard.compare':
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/dashboard/compare';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER POS (on-site sale at a venue) ====================
     // Same endpoints the Ambilet POS uses; every one is scoped to an event that is set up
     // as a venue (display_template = leisure_venue) and needs the organizer token.
