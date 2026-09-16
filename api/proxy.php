@@ -3387,6 +3387,51 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.payouts':
+        // GET /organizer/events/{id}/leisure/payouts — every payout of the venue, with its tickets and invoices.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/payouts';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.settlement':
+        // GET /organizer/events/{id}/leisure/settlement?from=&to= — who owes whom for a period, online against the counter.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to'] as $venKey) {
+            if (isset($_GET[$venKey]) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $_GET[$venKey])) {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/settlement'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        $customTimeout = 60;
+        break;
+
+    case 'organizer.event.leisure.settlement.cumulative':
+        // GET /organizer/events/{id}/leisure/settlement/cumulative — the running totals since sales began.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/settlement/cumulative';
+        $requiresAuth = true;
+        $customTimeout = 90;
+        break;
+
     case 'organizer.event.leisure.scans':
         // GET /organizer/events/{id}/leisure/scans — per day: scans expected, valid tickets, staff and refused codes.
         $venEventId = (int) ($_GET['event'] ?? 0);
