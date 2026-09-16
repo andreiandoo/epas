@@ -88,6 +88,29 @@
 .gc-build-lead{max-width:56ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--muted)}
 .gc-form{margin-top:var(--space-6);padding:clamp(20px, 3vw, 32px);border:1px solid var(--line);border-radius:var(--r-l);background:var(--bg)}
 .gc-fields{display:grid;gap:16px}
+/* the finder: a hint before the fields, or the experiences picked there */
+.gc-finder{display:flex;align-items:flex-start;gap:10px;margin:0 0 18px;font-size:.9375rem;line-height:1.5;color:var(--muted)}
+.gc-finder[hidden]{display:none}
+.gc-finder .ic{flex:none;width:20px;height:20px;margin-top:1px;color:var(--action)}
+.gc-finder a{color:var(--green);font-weight:700}
+.gc-picked{margin:0 0 20px;padding:16px 18px;border:1.5px solid var(--action);border-radius:var(--r-m);background:var(--surface)}
+.gc-picked[hidden]{display:none}
+.gc-picked-head{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:12px}
+.gc-picked-ic{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--tint-green);color:var(--green)}
+.gc-picked-ic .ic{width:19px;height:19px}
+.gc-picked-head p{margin:0;line-height:1.4}
+.gc-picked-head b{display:block;color:var(--green)}
+.gc-picked-head span{font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.gc-picked-list{list-style:none;display:grid;gap:6px;margin:12px 0 0;padding:0}
+.gc-picked-list li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:.9375rem}
+.gc-picked-list a{color:var(--ink);font-weight:700;text-decoration:none}
+.gc-picked-list a:hover{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+.gc-picked-list small{color:var(--muted);font-variant-numeric:tabular-nums}
+.gc-picked-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin-top:10px}
+.gc-finder-link{display:inline-flex;align-items:center;gap:8px;margin-top:var(--space-5);padding:6px 0;color:#F7F7F5;font-weight:700;text-decoration:none}
+.gc-finder-link:hover{text-decoration:underline;text-underline-offset:3px}
+.gc-finder-link .ic{flex:none;width:18px;height:18px}
+.gc-finder-link .ic:first-child{color:#FFB4AE}
 @media (min-width:640px){.gc-fields{grid-template-columns:repeat(2, minmax(0,1fr))}.gc-field.is-wide{grid-column:1 / -1}}
 .gc-field[hidden]{display:none}
 .gc-field label{display:block;margin-bottom:6px;font-size:.875rem;font-weight:700}

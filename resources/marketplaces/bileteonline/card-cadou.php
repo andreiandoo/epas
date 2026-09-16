@@ -4,7 +4,9 @@
  *
  * Static landing with a live configurator: value, recipient, delivery, design and message update the card previews
  * (gift.js). Buying a gift card is not wired on this site (no proxy action, cart item or payment step), so "Adaugă
- * în coș" says so and points to the contact page instead of silently doing nothing.
+ * în coș" says so and opens the contact page with the configuration filled in, instead of silently doing nothing.
+ * Experiences picked in the finder (/experiente-cadou) arrive through localStorage: the configurator starts from
+ * their value and lists them.
  *
  * Top to bottom: hero (live card), why, configurator + preview, how it works, occasions, eligible activities,
  * balance check, FAQ, final CTA.
@@ -103,6 +105,7 @@ include __DIR__ . '/includes/v2/header.php';
           <a class="btn btn-light" href="#cumpara">Cumpără card cadou<?= v2_ic('arrow-right') ?></a>
           <a class="btn btn-outline-light" href="#cum-functioneaza">Cum funcționează</a>
         </div>
+        <a class="gc-finder-link" href="/experiente-cadou"><?= v2_ic('gift') ?>Nu știi ce experiență să dăruiești? Folosește calculatorul de cadouri<?= v2_ic('arrow-right') ?></a>
       </div>
 
       <div class="gc-hero-art" aria-hidden="true">
@@ -147,6 +150,18 @@ include __DIR__ . '/includes/v2/header.php';
         <p class="gc-build-lead">Alege valoarea, destinatarul, mesajul și momentul livrării. Cardul se generează și se trimite digital pe email.</p>
 
         <form class="gc-form" id="gc-form" novalidate>
+          <div class="gc-picked" id="gc-picked" hidden>
+            <div class="gc-picked-head">
+              <span class="gc-picked-ic"><?= v2_ic('check-circle') ?></span>
+              <p><b>Experiențele alese pentru cadou</b><span id="gc-picked-sum"></span></p>
+            </div>
+            <ul class="gc-picked-list" id="gc-picked-list"></ul>
+            <div class="gc-picked-actions">
+              <a class="sec-link" href="/experiente-cadou#calculator">Schimbă experiențele<?= v2_ic('arrow-right') ?></a>
+              <button class="link-btn" type="button" id="gc-picked-clear">Elimină din card</button>
+            </div>
+          </div>
+          <p class="gc-finder" id="gc-finder"><?= v2_ic('gift') ?><span>Nu știi ce să alegi? <a href="/experiente-cadou">Găsește experiența potrivită</a> și îți calculăm valoarea cardului.</span></p>
           <div class="gc-fields">
             <div class="gc-field">
               <label for="gc-amount">Valoare card</label>

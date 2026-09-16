@@ -154,6 +154,13 @@
     var picked = MOTIV[motiv] || (REASONS[motiv] ? motiv : '');
     if (picked) {
       f.reason.value = picked;
+      // a gift card configured on /card-cadou (gift.js) arrives written out; typed text is never overwritten
+      var pre = JSON.parse(localStorage.getItem('bo_contact_prefill') || 'null');
+      if (pre && pre.v === 1 && pre.reason === picked && Date.now() - Number(pre.ts) < 3600 * 1000) {
+        if (!f.subject.value && typeof pre.subject === 'string') f.subject.value = pre.subject.slice(0, Number(f.subject.getAttribute('maxlength')) || 150);
+        if (!f.message.value && typeof pre.message === 'string') f.message.value = pre.message.slice(0, MAX);
+        localStorage.removeItem('bo_contact_prefill');
+      }
       if (!window.location.hash) {
         window.addEventListener('load', function () { $('formular').scrollIntoView({ block: 'start' }); });
       }
