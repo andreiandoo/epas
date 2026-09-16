@@ -173,30 +173,12 @@ class PrintInvitationsController extends Controller
                         $recipientEmail = $recipient['email'] ?? '';
                         $qrData = $invite->qr_data ?: url("/verify/{$invite->invite_code}");
 
-                        $d = $variableService->getSampleData();
-                        $d['event'] = array_merge($d['event'], [
-                            'name' => $eventTitle,
-                            'date' => $eventDate,
-                            'time' => $eventTime,
-                            'venue' => $venueName ?? '',
-                            'image' => $eventImageUrl,
+                        // Full template data from the real event, venue, date and organizer
+                        // (same as the organizer flow); no sample value can reach the sheet.
+                        $d = app(\App\Services\Invitations\InvitationTemplateData::class)->build($invite, $event, [
+                            'ticket_label' => $invite->batch?->options['ticket_label'] ?? null,
+                            'qrcode' => $qrData,
                         ]);
-                        $d['ticket'] = array_merge($d['ticket'], [
-                            'type' => 'INVITAȚIE',
-                            'price' => 'GRATUIT',
-                            'price_detail' => 'Invitație',
-                            'code_short' => $invite->invite_code,
-                            'code_long' => $invite->invite_code,
-                            'serial' => $invite->invite_code,
-                        ], $seatResolver->templateFields($seatResolver->resolve($invite, $event->id), $invite->seat_ref));
-                        $d['buyer'] = array_merge($d['buyer'], [
-                            'name' => $recipientName,
-                            'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
-                            'last_name' => explode(' ', $recipientName, 2)[1] ?? '',
-                            'email' => $recipientEmail,
-                        ]);
-                        $d['barcode'] = $invite->invite_code;
-                        $d['qrcode'] = $qrData;
 
                         // Two mutations to make the template safely embeddable
                         // in a small grid cell:

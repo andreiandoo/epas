@@ -724,29 +724,12 @@ class Invitations extends Page
                         // Build data matching TicketVariableService format
                         $recipientName = $invite->getRecipientName() ?: 'Invitat';
                         $recipientEmail = $invite->getRecipientEmail() ?: '';
-                        $data = $variableService->getSampleData();
-                        $data['event'] = array_merge($data['event'], [
-                            'name' => $eventTitle,
-                            'date' => $eventDate,
-                            'time' => $eventTime ?? '',
-                            'venue' => $venueName ?? '',
+                        // Full template data from the real event, venue, date and organizer
+                        // (same as the organizer flow); no sample value can reach the PDF.
+                        $data = app(\App\Services\Invitations\InvitationTemplateData::class)->build($invite, $event, [
+                            'ticket_label' => $batch->options['ticket_label'] ?? null,
+                            'qrcode' => $qrData,
                         ]);
-                        $data['ticket'] = array_merge($data['ticket'], [
-                            'type' => 'INVITAȚIE',
-                            'price' => 'GRATUIT',
-                            'price_detail' => 'Invitație',
-                            'code_short' => $invite->invite_code,
-                            'code_long' => $invite->invite_code,
-                            'serial' => $invite->invite_code,
-                        ], $seatResolver->templateFields($inviteSeat, $invite->seat_ref));
-                        $data['buyer'] = array_merge($data['buyer'], [
-                            'name' => $recipientName,
-                            'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
-                            'last_name' => explode(' ', $recipientName, 2)[1] ?? '',
-                            'email' => $recipientEmail,
-                        ]);
-                        $data['barcode'] = $invite->invite_code;
-                        $data['qrcode'] = $qrData;
 
                         $content = $generator->renderToHtml($template->template_data, $data);
 
