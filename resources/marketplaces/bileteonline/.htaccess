@@ -284,6 +284,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^pentru-locatii/?$ pentru-locatii.php [L]
 
+# Sales page for venues and operators: the product itself (dashboard, on-site POS, scanning app)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^vinde-bilete/?$ vinde-bilete.php [L]
+
 # Generic public organizer profile - keep LAST in /organizator/* block
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
