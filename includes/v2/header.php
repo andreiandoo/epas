@@ -11,7 +11,7 @@ $v2Overlay = !empty($v2HeaderOverlay);
 $v2Ideas = [
     ['sun', 'Idei de weekend', '/activitati-weekend'], ['users-three', 'Activități cu copiii', '/activitati-copii'],
     ['cloud-rain', 'Indoor când plouă', '/activitati-zile-ploioase'], ['coins', 'Sub 50 lei', '/activitati-sub-50-lei'],
-    ['heart', 'Pentru cupluri', '/activitati-cupluri'], ['gift', 'Experiențe cadou', '/card-cadou'],
+    ['heart', 'Pentru cupluri', '/activitati-cuplu'], ['gift', 'Experiențe cadou', '/card-cadou'],
 ];
 $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV) {
     return $V2NAV['cities'][$s] ?? null;
