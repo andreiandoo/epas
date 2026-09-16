@@ -230,6 +230,45 @@
 .ve-danger{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;border:0;border-radius:999px;background:var(--red-text);color:#FFF;font:700 .9375rem/1 var(--font);cursor:pointer}
 .ve-danger:hover{filter:brightness(1.08)}
 .ve-danger[disabled]{opacity:.6;cursor:progress}
+/* ---------- sales: money by channel, how it was paid, ticket types, the chart's pointer ---------- */
+.ve-main.is-loading .ve-money,.ve-main.is-loading .ve-kpis,.ve-main.is-loading .ve-grid{opacity:.5;transition:opacity .2s ease}
+.ve-money{display:grid;gap:10px}
+@media (min-width:900px){.ve-money{grid-template-columns:repeat(3, minmax(0,1fr))}}
+.ve-mcard{min-width:0;padding:16px 18px;border:1px solid var(--line);border-radius:20px;background:var(--surface)}
+.ve-mcard.is-gross{border-color:#CDE6D8;background:var(--tint-green)}
+.ve-mcard.is-fee{border-color:#F1DDA8;background:#FFF8E8}
+.ve-mcard.is-net{border-color:#CFE0F1;background:#EEF5FC}
+.ve-mcard > p{margin:0;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ve-mcard > b{display:block;margin-top:4px;font-size:clamp(1.5rem, 2.6vw, 2rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ink);overflow-wrap:anywhere}
+.ve-split{display:grid;gap:4px;margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(16,24,20,.08);font-size:.8125rem}
+.ve-split div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px}
+.ve-split dt{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.ve-split dt .ic{width:14px;height:14px}
+.ve-split dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+@media (min-width:1100px){.ve-kpis.is-4{grid-template-columns:repeat(4, minmax(0,1fr))}}
+.ve-kpi.is-wide > div{width:100%}
+.ve-kpi a{color:var(--action)}
+.ve-catlist{list-style:none;display:grid;gap:3px;margin:6px 0 0;padding:0;font-size:.8125rem}
+.ve-catlist li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px}
+.ve-catlist span{color:var(--muted);font-variant-numeric:tabular-nums}
+.ve-types-bars{list-style:none;display:grid;gap:12px;max-height:560px;margin:0;padding:0 4px 0 0;overflow-y:auto}
+.ve-tb-top{display:flex;justify-content:space-between;gap:10px;font-size:.8125rem}
+.ve-tb-top b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ve-tb-top span{flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
+.ve-tb-bar{height:8px;margin-top:5px;border-radius:999px;background:#EFEFEA;overflow:hidden}
+.ve-tb-bar i{display:block;height:100%;border-radius:inherit;background:var(--action)}
+.ve-tb-bar i[data-cat="parking"]{background:#6D5BD0}
+.ve-tb-bar i[data-cat="rental"]{background:#C98A12}
+.ve-tb-bar i[data-cat="activity"]{background:#2E86C1}
+.ve-tb-bar i[data-cat="extra"]{background:#7A8580}
+.ve-tb-bar i[data-cat="package"]{background:#C2417A}
+.ve-hit{fill:transparent;cursor:crosshair}
+.ve-pt{fill:var(--action)}
+.ve-tip br{display:block;content:""}
+.ve-sessions-table{min-width:860px}
+.ve-inv-table{min-width:1040px}
+.ve-inv-table td{vertical-align:top}
+
 /* ---------- team: the people, the weekly rota, the timesheet ---------- */
 .ve-people-table{min-width:900px}
 .ve-people-table tr.is-off{color:var(--muted)}
