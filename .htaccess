@@ -584,6 +584,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^card-cadou/?$ card-cadou.php [L]
 
+# Gift experience finder (calculator in front of the gift card)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^experiente-cadou/?$ experiente-cadou.php [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizatori/?$ organizers.php [L]
