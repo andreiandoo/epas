@@ -3387,6 +3387,54 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.leisure.staff.collection':
+        // GET/POST /organizer/leisure/staff — the venue's own people. Not scoped to an event: they belong to the
+        // organizer, and the scanning app knows them by the QR code the core gives each of them.
+        $method = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
+        $body = $method === 'POST' ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/leisure/staff';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.leisure.staff.item':
+        // PUT/DELETE /organizer/leisure/staff/{id} — editing a person, or taking them out of service.
+        $venStaffId = (int) ($_GET['id'] ?? 0);
+        if (!$venStaffId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing staff id']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'] === 'DELETE' ? 'DELETE' : 'PUT';
+        $body = $method === 'PUT' ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/leisure/staff/' . $venStaffId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.leisure.staff.checkins':
+        // GET /organizer/leisure/staff-checkins — when each person started work.
+        $venParams = [];
+        foreach (['from', 'to', 'staff_id', 'event_id', 'limit'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/leisure/staff-checkins' . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.leisure.staff.export':
+        // GET /organizer/leisure/staff-export — the same list as a CSV the core streams, passed through as it comes.
+        $venParams = [];
+        foreach (['from', 'to', 'staff_id', 'event_id'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/leisure/staff-export' . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // CSV stream
+        break;
+
     case 'organizer.event.leisure.orders.index':
         // GET /organizer/events/{id}/leisure/orders — the venue's orders, online and at the counter.
         $venEventId = (int) ($_GET['event'] ?? 0);

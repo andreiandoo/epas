@@ -3,6 +3,8 @@
 
 .ve{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-5);min-width:0}
 .ve [hidden]{display:none!important}
+/* An icon is decoration inside a control: a tap must reach the button, never the drawing. */
+.ve button .ic,.ve summary .ic{pointer-events:none}
 .ve-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ve-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
 .ve-eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0;font-size:.8125rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--action)}
@@ -228,6 +230,37 @@
 .ve-danger{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;border:0;border-radius:999px;background:var(--red-text);color:#FFF;font:700 .9375rem/1 var(--font);cursor:pointer}
 .ve-danger:hover{filter:brightness(1.08)}
 .ve-danger[disabled]{opacity:.6;cursor:progress}
+/* ---------- team: the people, the weekly rota, the timesheet ---------- */
+.ve-people-table{min-width:900px}
+.ve-people-table tr.is-off{color:var(--muted)}
+.ve-qr{display:inline-flex;align-items:center;gap:6px}
+.ve-qr .ic{width:16px;height:16px;color:var(--green)}
+.ve-icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);cursor:pointer}
+.ve-icon-btn:hover{border-color:var(--green)}
+.ve-icon-btn .ic{width:16px;height:16px}
+.ve-weeknav{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ve-weeknav b{min-width:150px;text-align:center;font-size:.9375rem}
+.ve-week-table{min-width:1040px}
+.ve-week-table th small{display:block;font-weight:500;text-transform:none;letter-spacing:0}
+.ve-week-table td{vertical-align:top}
+.ve-cell{min-width:132px}
+.ve-chip{display:grid;gap:2px;width:100%;margin-bottom:6px;padding:6px 8px;border:1px solid #CDE6D8;border-radius:12px;background:var(--tint-green);color:var(--green);font:inherit;text-align:left;cursor:pointer}
+.ve-chip:hover{border-color:var(--action)}
+.ve-chip b{font-size:.75rem;line-height:1.2;overflow-wrap:anywhere}
+.ve-chip span{font-size:.6875rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.ve-chip[data-role="shift_manager"]{border-color:#D9CDEB;background:#F6F2FC;color:#4B2E83}
+.ve-chip[data-role="sales_operator"]{border-color:#F3D9A8;background:#FFFBF2;color:#6B4E12}
+.ve-chip[data-role="accountant"]{border-color:#BFD7F2;background:#F2F7FD;color:#1B4E82}
+.ve-add{display:grid;place-items:center;width:100%;min-height:28px;border:1px dashed var(--line);border-radius:10px;background:none;color:var(--muted);cursor:pointer}
+.ve-add:hover{border-color:var(--green);color:var(--green)}
+.ve-add .ic{width:14px;height:14px}
+.ve-two{display:grid;gap:12px}
+@media (min-width:520px){.ve-two{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.ve-sum-cards{display:grid;gap:10px;margin-bottom:12px}
+@media (min-width:640px){.ve-sum-cards{grid-template-columns:repeat(2, minmax(0,1fr))}}
+@media (min-width:1000px){.ve-sum-cards{grid-template-columns:repeat(4, minmax(0,1fr))}}
+.ve-time-table{min-width:760px}
+
 .ve-hist{margin-top:4px}
 .ve-hist-btn .ic{transition:transform .18s ease}
 .ve-hist-btn[aria-expanded="true"] .ic{transform:rotate(180deg)}
