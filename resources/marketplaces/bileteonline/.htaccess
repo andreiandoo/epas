@@ -709,6 +709,10 @@ RewriteRule ^ - [L]
 # collide with city / category / event single-segment routes.
 # ============================================
 
+# The couples intent is activitati-cuplu; the menus used to link /activitati-cupluri
+RewriteRule ^activitati-cupluri/?$ /activitati-cuplu [R=301,L,QSA]
+RewriteRule ^([a-z][a-z0-9-]{1,50})/activitati-cupluri/?$ /$1/activitati-cuplu [R=301,L,QSA]
+
 # 2-segment: /{city}/{activitati-*}
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

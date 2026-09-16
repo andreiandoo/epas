@@ -92,7 +92,7 @@ $intentHubs = [
     ['Vreme', 'Zile caniculare', 'Activități răcoroase, indoor sau de seară.', 'activitati-zile-caniculare'],
     ['Buget', 'Sub 50 lei', 'Experiențe accesibile, potrivite pentru ieșiri spontane.', 'activitati-sub-50-lei'],
     ['Public', 'Activități pentru copii', 'Idei pentru copii și familie: muzee, ateliere, parcuri.', 'activitati-copii'],
-    ['Public', 'Activități pentru cupluri', 'Experiențe pentru doi: tururi, ateliere, date nights.', 'activitati-cupluri'],
+    ['Public', 'Activități pentru cupluri', 'Experiențe pentru doi: tururi, ateliere, date nights.', 'activitati-cuplu'],
     ['Ocazie', 'Zi de naștere', 'Idei pentru grupuri, copii, cupluri și cadouri.', 'activitati-zi-de-nastere'],
 ];
 $hubJobs = [];

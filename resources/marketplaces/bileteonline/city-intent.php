@@ -6,11 +6,14 @@
  *   /{intent}            — global (e.g. /activitati-azi)
  *
  * One PHP file → 100 cities × 25 intents × pagination = thousands of SEO pages.
- * Data and SEO meta come from the marketplace API; this file is pure render +
- * cross-link composition.
+ * SEO meta, events and cross links come from the marketplace intent API. That API only reads events, while most of
+ * what bilete.online sells are activities, so the activities that meet the same rule are read from /activities
+ * (date, price, audience and flag filters mirror the intent's filter_rule_json in MarketplaceCityIntentsSeeder) and
+ * listed first, on the first page. An intent whose rule has no activity equivalent lists events only.
  *
- * Top to bottom: hero (breadcrumbs, intent, intro, CTAs, cover or brand arch with the intent icon), results
- * (cards, pagination) or the empty state, cross links (other intents here, the same intent in other cities), SEO copy.
+ * Top to bottom: compact dark hero (breadcrumbs, intent, intro, facts, CTAs, the other ideas), results (the rule in
+ * plain words, city filter and sort, cards, pagination) or the empty state with what is available meanwhile, cross
+ * links (other intents here, the same intent in other cities), SEO copy.
  */
 
 $pageCacheTTL = 300;
@@ -22,13 +25,13 @@ $citySlug = $_GET['city'] ?? null;
 $intentSlug = $_GET['intent'] ?? null;
 $pageNum = max(1, (int) ($_GET['page'] ?? 1));
 
-if (!$intentSlug || !preg_match('/^[a-z0-9-]+$/', $intentSlug)) {
+if (!is_string($intentSlug) || !preg_match('/^[a-z0-9-]+$/', $intentSlug)) {
     http_response_code(404);
     require_once __DIR__ . '/404.php';
     exit;
 }
 
-if ($citySlug && !preg_match('/^[a-z0-9-]+$/', $citySlug)) {
+if ($citySlug !== null && (!is_string($citySlug) || !preg_match('/^[a-z0-9-]+$/', $citySlug))) {
     http_response_code(404);
     require_once __DIR__ . '/404.php';
     exit;
@@ -65,7 +68,7 @@ $crossLinks = array_merge(['other_intents_for_city' => [], 'same_intent_for_citi
 
 $currentPageNum = max(1, (int) $pagination['current_page']);
 $lastPage = max(1, (int) $pagination['last_page']);
-$total = max(0, (int) $pagination['total']);
+$eventTotal = max(0, (int) $pagination['total']);
 $otherIntents = array_values(array_filter((array) $crossLinks['other_intents_for_city'], fn ($l) => is_array($l) && !empty($l['path']) && !empty($l['name'])));
 $sameIntent = array_values(array_filter((array) $crossLinks['same_intent_for_cities'], fn ($l) => is_array($l) && !empty($l['path']) && !empty($l['name'])));
 
@@ -82,6 +85,7 @@ $clean = static function ($text): string {
 $intentName = (string) ($intent['name'] ?? 'Activități');
 $intentSlugSafe = (string) ($intent['slug'] ?? $intentSlug);
 $cityName = $city ? (string) ($city['name'] ?? '') : '';
+$citySlugSafe = $city ? (string) ($city['slug'] ?? '') : '';
 // The heading comes from meta h1 (or the title when there is none); either can end in " · bilete.online",
 // which belongs in <title> only
 $h1 = $clean(preg_replace('/\s*·\s*' . preg_quote(SITE_NAME, '/') . '\s*$/u', '', (string) ($meta['h1'] ?? $meta['title'] ?? $intentName)));
@@ -96,27 +100,130 @@ if (!empty($meta['seo_copy'])) {
     $seoParagraphs = array_values(array_filter(array_map($clean, preg_split('/\n\s*\n/', trim((string) $meta['seo_copy'])))));
 }
 
+// Sprite icons for the ideas the menus use; any other intent keeps its API emoji.
+const IT_ICONS = [
+    'activitati-weekend' => 'sun', 'activitati-copii' => 'users-three', 'activitati-familie' => 'users-three',
+    'activitati-zile-ploioase' => 'cloud-rain', 'activitati-indoor' => 'buildings', 'activitati-sub-50-lei' => 'coins',
+    'activitati-sub-100-lei' => 'coins', 'activitati-gratuite' => 'gift', 'activitati-cuplu' => 'heart',
+    'activitati-romantice' => 'heart', 'activitati-azi' => 'clock', 'activitati-maine' => 'calendar-blank',
+    'activitati-grupuri' => 'users-three', 'activitati-outdoor' => 'map-pin',
+];
+$itIcon = function (string $slug, string $emoji = ''): string {
+    if (isset(IT_ICONS[$slug])) {
+        return v2_ic(IT_ICONS[$slug]);
+    }
+    return $emoji !== '' ? '<span class="it-emoji">' . v2_e($emoji) . '</span>' : v2_ic('sun');
+};
+
+// ------------------------------------------------------------------ activities that meet the intent's rule
+$tz = new DateTimeZone('Europe/Bucharest');
+$today = new DateTimeImmutable('today', $tz);
+$dow = (int) $today->format('N');
+$weekendDays = $dow === 7 ? [$today] : ($dow === 6 ? [$today, $today->modify('+1 day')] : [$today->modify('next saturday'), $today->modify('next sunday')]);
+$roMonths = [1 => 'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
+$dayLabel = fn (DateTimeImmutable $d): string => $d->format('j') . ' ' . $roMonths[(int) $d->format('n')];
+$weekendLabel = count($weekendDays) === 2
+    ? ($weekendDays[0]->format('n') === $weekendDays[1]->format('n') ? $weekendDays[0]->format('j') . '–' . $dayLabel($weekendDays[1]) : $dayLabel($weekendDays[0]) . ' – ' . $dayLabel($weekendDays[1]))
+    : $dayLabel($weekendDays[0]);
+$tomorrow = $today->modify('+1 day');
+
+// Each rule: API params the activity list understands, then checks on the returned rows; `why` says it in words.
+$itRules = [
+    'activitati-azi' => ['dates' => [$today], 'why' => 'activități cu cel puțin un interval liber azi, ' . $dayLabel($today)],
+    'activitati-maine' => ['dates' => [$tomorrow], 'why' => 'activități cu cel puțin un interval liber mâine, ' . $dayLabel($tomorrow)],
+    'activitati-weekend' => ['dates' => $weekendDays, 'why' => 'activități cu locuri libere ' . (count($weekendDays) === 2 ? 'sâmbătă sau duminică' : 'duminică') . ' (' . $weekendLabel . ')'],
+    'activitati-indoor' => ['flag' => 'is_indoor', 'why' => 'activități care se desfășoară în interior'],
+    'activitati-zile-ploioase' => ['flag' => 'is_indoor', 'why' => 'activități în interior, la adăpost de ploaie'],
+    'activitati-outdoor' => ['flag' => 'is_outdoor', 'why' => 'activități în aer liber'],
+    'activitati-copii' => ['flag' => 'is_kid_friendly', 'why' => 'activități pe care organizatorul le-a marcat ca potrivite pentru copii'],
+    'activitati-accesibile' => ['flag' => 'is_accessible', 'why' => 'activități marcate ca accesibile persoanelor cu dizabilități'],
+    'activitati-gratuite' => ['min' => 0, 'max' => 0, 'why' => 'activități cu intrare gratuită'],
+    'activitati-sub-50-lei' => ['min' => 1, 'max' => 50, 'why' => 'activități cu bilete între 1 și 50 lei'],
+    'activitati-sub-100-lei' => ['max' => 100, 'why' => 'activități cu bilete de cel mult 100 lei'],
+    'activitati-familie' => ['params' => ['traveler_types' => 'familii'], 'why' => 'activități recomandate de organizatori pentru familii'],
+    'activitati-cuplu' => ['params' => ['traveler_types' => 'cupluri'], 'why' => 'activități recomandate de organizatori pentru cupluri'],
+    'activitati-romantice' => ['params' => ['interests' => 'romantic'], 'why' => 'activități cu interesul „Romantic”'],
+    'activitati-grupuri' => ['params' => ['traveler_types' => 'grupuri'], 'why' => 'activități recomandate de organizatori pentru grupuri'],
+    'activitati-team-building' => ['params' => ['traveler_types' => 'team-building'], 'why' => 'activități recomandate de organizatori pentru team building'],
+    'activitati-seniori' => ['params' => ['traveler_types' => 'seniori'], 'why' => 'activități recomandate de organizatori pentru seniori'],
+    'activitati-adolescenti' => ['params' => ['traveler_types' => 'adolescenti'], 'why' => 'activități recomandate de organizatori pentru adolescenți'],
+    'activitati-educationale' => ['params' => ['interests' => 'educational'], 'why' => 'activități cu interesul „Educațional”'],
+];
+$itRule = $itRules[$intentSlugSafe] ?? null;
+
+$actCards = [];
+if ($itRule && $pageNum === 1) {
+    $base = ['per_page' => 50] + ($citySlugSafe !== '' ? ['city' => $citySlugSafe] : []) + ($itRule['params'] ?? []);
+    if (!empty($itRule['max'])) {
+        $base['max_price_ron'] = (int) $itRule['max'];
+    }
+    $jobs = [];
+    foreach ($itRule['dates'] ?? [null] as $i => $day) {
+        $params = $base + ($day ? ['date' => $day->format('Y-m-d')] : []);
+        ksort($params);
+        $jobs['d' . $i] = ['key' => 'v2_intent_acts_' . md5(json_encode($params)), 'endpoint' => '/activities', 'params' => $params, 'ttl' => 300];
+    }
+    $seen = [];
+    foreach (api_cached_many($jobs) as $resp) {
+        foreach ((array) ($resp['data']['items'] ?? []) as $a) {
+            if (!is_array($a) || !($n = v2_activity($a)) || isset($seen[$n['slug']])) {
+                continue;
+            }
+            $cents = isset($a['cheapest_price_cents']) ? (int) $a['cheapest_price_cents'] : null;
+            if (isset($itRule['flag']) && empty($a['flags'][$itRule['flag']])) {
+                continue;
+            }
+            if (isset($itRule['min']) && ($cents === null || $cents < $itRule['min'] * 100)) {
+                continue;
+            }
+            if (isset($itRule['max']) && ($cents === null || $cents > $itRule['max'] * 100)) {
+                continue;
+            }
+            $seen[$n['slug']] = true;
+            $actCards[] = [
+                'title' => $n['title'],
+                'href' => $n['href'],
+                'category' => $n['catName'],
+                'city' => $n['city'],
+                'citySlug' => (string) ($a['city']['slug'] ?? ''),
+                'image' => $n['image'],
+                'cents' => $cents,
+                'dur' => $n['dur'],
+                'minutes' => (int) ($a['duration_minutes'] ?? 0),
+                'featured' => !empty($a['flags']['is_featured']),
+                'cta' => 'Vezi activitatea',
+            ];
+        }
+    }
+    usort($actCards, fn ($a, $b) => [(int) $b['featured'], $a['title']] <=> [(int) $a['featured'], $b['title']]);
+}
+$actTotal = count($actCards);
+$total = $actTotal + $eventTotal;
+
+$currentPage = 'intent';
 // SEO setup for head.php
 $pageTitleRaw = $clean($meta['title'] ?? ('Activități · ' . SITE_NAME));
 $pageDescription = $clean($meta['description'] ?? SITE_TAGLINE);
 $canonicalUrl = SITE_URL . $basePath . ($pageNum > 1 ? '?page=' . $pageNum : '');
 $ogImage = $cover;
-$noindex = !empty($meta['noindex']);
-$currentPage = 'intent';
+// the API decides from its events alone (fewer than 3 → noindex); the activities listed here count too
+$noindex = !empty($meta['noindex']) && $total < 3;
 $v2Styles = ['intent.css'];
+$v2Scripts = ['intent.js'];
+$v2HeaderOverlay = true;
 
 $pageUrl = static fn (int $p): string => $basePath . ($p > 1 ? '?page=' . $p : '');
-$searchUrl = '/cauta?intent=' . urlencode($intentSlugSafe) . ($city ? '&city=' . urlencode((string) ($city['slug'] ?? '')) : '');
+$searchUrl = '/cauta?intent=' . urlencode($intentSlugSafe) . ($city ? '&city=' . urlencode($citySlugSafe) : '');
 
 // Breadcrumbs
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
 if ($city) {
-    $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . ($city['slug'] ?? '')];
+    $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . $citySlugSafe];
 }
 $breadcrumbs[] = ['name' => $intentName, 'url' => SITE_URL . $basePath];
 
-// Cards
-$cards = [];
+// Cards: the activities first (page 1), then this page of events
+$cards = $actCards;
 foreach ($events as $ev) {
     if (!is_array($ev)) {
         continue;
@@ -136,21 +243,107 @@ foreach ($events as $ev) {
         'href' => $slug !== '' ? '/bilete/' . $slug : v2_cauta($title),
         'category' => $category,
         'city' => $cityLabel,
+        'citySlug' => is_array($ev['marketplace_city'] ?? null) ? (string) ($ev['marketplace_city']['slug'] ?? '') : '',
         'image' => v2_media_url($ev['cover_image_url'] ?? $ev['image_url'] ?? null),
         'cents' => $cents === null ? null : (int) $cents,
+        'dur' => '',
+        'minutes' => 0,
+        'featured' => false,
+        'cta' => 'Vezi bilete',
     ];
 }
 
-// Structured data: CollectionPage + ItemList of top 10 events, BreadcrumbList
+// Facts for the hero and the city filter (global pages whose results span several cities)
+$resultCities = [];
+foreach ($cards as $c) {
+    if ($c['city'] !== '') {
+        $key = $c['citySlug'] !== '' ? $c['citySlug'] : $c['city'];
+        $resultCities[$key] = ['name' => $c['city'], 'n' => ($resultCities[$key]['n'] ?? 0) + 1];
+    }
+}
+uasort($resultCities, fn ($a, $b) => [$b['n'], $a['name']] <=> [$a['n'], $b['name']]);
+$fromCents = null;
+foreach ($cards as $c) {
+    if ($c['cents'] !== null) {
+        $fromCents = $fromCents === null ? $c['cents'] : min($fromCents, $c['cents']);
+    }
+}
+$filterable = count($cards) > 1 && $lastPage === 1;
+
+// Meanwhile: when nothing meets the rule, what is available now (in this city when it has any, else anywhere)
+$altCards = [];
+$altWhere = '';
+if (!$cards) {
+    $all = api_cached_many(['p1' => ['key' => 'v2_all_activities_p1', 'endpoint' => '/activities', 'params' => ['per_page' => 50, 'page' => 1], 'ttl' => 300]]);
+    $pool = [];
+    foreach ((array) ($all['p1']['data']['items'] ?? []) as $a) {
+        if (is_array($a) && ($n = v2_activity($a))) {
+            $n['cents'] = isset($a['cheapest_price_cents']) ? (int) $a['cheapest_price_cents'] : null;
+            $n['citySlug'] = (string) ($a['city']['slug'] ?? '');
+            $n['featured'] = !empty($a['flags']['is_featured']);
+            $pool[] = $n;
+        }
+    }
+    usort($pool, fn ($a, $b) => [(int) $b['featured'], $a['title']] <=> [(int) $a['featured'], $b['title']]);
+    $inCity = $city ? array_values(array_filter($pool, fn ($a) => $a['citySlug'] === $citySlugSafe)) : [];
+    $altCards = array_slice($inCity ?: $pool, 0, 4);
+    $altWhere = $inCity ? 'în ' . $cityName : 'pe bilete.online';
+}
+
+// The ideas next to the heading: the menu's situations first, then the API's other intents, never this one
+$ideaSlugs = ['activitati-weekend' => 'Weekend', 'activitati-copii' => 'Copii', 'activitati-zile-ploioase' => 'Zile ploioase', 'activitati-sub-50-lei' => 'Sub 50 lei', 'activitati-cuplu' => 'Cuplu'];
+$ideas = [];
+foreach ($ideaSlugs as $slug => $name) {
+    if ($slug !== $intentSlugSafe) {
+        $ideas[$slug] = ['slug' => $slug, 'name' => $name, 'icon' => '', 'path' => ($city ? '/' . $citySlugSafe : '') . '/' . $slug];
+    }
+}
+foreach ($otherIntents as $li) {
+    $slug = (string) ($li['slug'] ?? '');
+    if ($slug !== '' && $slug !== $intentSlugSafe && !isset($ideas[$slug])) {
+        $ideas[$slug] = ['slug' => $slug, 'name' => (string) $li['name'], 'icon' => (string) ($li['icon'] ?? ''), 'path' => (string) $li['path']];
+    }
+}
+$ideas = array_slice(array_values($ideas), 0, 8);
+
+$priceHtml = function (?int $cents): string {
+    if ($cents === null) {
+        return '<span class="xp-price"><b>—</b></span>';
+    }
+    if ($cents === 0) {
+        return '<span class="xp-price"><b>Gratuit</b></span>';
+    }
+    return '<span class="xp-price">de la<b>' . v2_thousands((int) round($cents / 100)) . ' lei</b></span>';
+};
+$renderCard = function (array $c, int $i, bool $data) use ($priceHtml): void {
+    ?>
+        <li class="xp"<?php if ($data): ?> data-city="<?= v2_e($c['citySlug'] !== '' ? $c['citySlug'] : $c['city']) ?>" data-order="<?= $i ?>" data-price="<?= $c['cents'] === null ? '' : (int) $c['cents'] ?>" data-dur="<?= (int) $c['minutes'] ?>"<?php endif; ?>>
+          <a href="<?= v2_e($c['href']) ?>">
+            <span class="xp-media"><?= $c['image'] ? v2_photo([$c['image'], 0, 0, '']) : v2_fallback($c['title'], $i) ?></span>
+            <span class="xp-body">
+              <span class="xp-cat"><?= v2_e($c['category']) ?></span>
+              <span class="xp-title"><?= v2_e($c['title']) ?></span>
+              <span class="xp-meta">
+                <?php if ($c['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($c['city']) ?></span><?php endif; ?>
+                <?php if ($c['dur'] !== ''): ?><span><?= v2_ic('clock') ?><?= v2_e($c['dur']) ?></span><?php endif; ?>
+              </span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_e($c['cta']) ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($c['cents']) ?></span>
+            </span>
+          </a>
+        </li>
+    <?php
+};
+
+// Structured data: CollectionPage + ItemList of the first 10 results, BreadcrumbList
 $structuredData = [];
 if ($cards) {
     $itemListElements = [];
-    foreach (array_slice($events, 0, 10) as $i => $ev) {
+    foreach (array_slice($cards, 0, 10) as $i => $c) {
         $itemListElements[] = [
             '@type' => 'ListItem',
             'position' => $i + 1,
-            'name' => $cards[$i]['title'],
-            'url' => SITE_URL . '/bilete/' . ($ev['slug'] ?? ''),
+            'name' => $c['title'],
+            'url' => SITE_URL . $c['href'],
         ];
     }
     $structuredData[] = [
@@ -174,14 +367,19 @@ $structuredData[] = [
     'itemListElement' => array_map(fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc['name'], 'item' => $bc['url']], $breadcrumbs, array_keys($breadcrumbs)),
 ];
 
+$itArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
+
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" class="page-main" tabindex="-1">
 
   <!-- ============================== HERO ============================== -->
-  <section class="it-hero <?= $accentClass ?>" aria-labelledby="it-h">
-    <div class="wrap it-grid">
+  <section class="it-hero <?= $accentClass ?><?= $cover ? ' has-cover' : '' ?>" aria-labelledby="it-h">
+    <?php if ($cover): ?><img class="it-cover" src="<?= v2_e($cover) ?>" alt="" decoding="async" fetchpriority="high"><?php endif; ?>
+    <?= $itArches ?>
+    <svg class="it-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <div class="it-in">
       <div class="it-text">
         <nav class="crumbs" aria-label="Breadcrumb">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
@@ -193,88 +391,114 @@ include __DIR__ . '/includes/v2/header.php';
             <?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <?php if ($intentIcon !== ''): ?><span class="it-icon-sm" aria-hidden="true"><?= v2_e($intentIcon) ?></span><?php endif; ?>
-        <p class="kicker"><?= $city ? 'Local · ' . v2_e($cityName) : 'Catalog' ?></p>
+        <p class="it-kicker"><span class="it-icon" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span><?= $city ? 'Local · ' . v2_e($cityName) : 'Idei · toată țara' ?></p>
         <h1 class="it-h" id="it-h"><?= v2_e($h1) ?></h1>
         <?php if ($intro !== ''): ?><p class="it-lead"><?= v2_e($intro) ?></p><?php endif; ?>
+        <?php if ($total > 0): ?>
+        <ul class="it-facts" aria-label="Pe scurt">
+          <li><?= v2_e(v2_num($total, 'rezultat', 'rezultate')) ?></li>
+          <?php if (!$city && count($resultCities) > 1): ?><li>în <?= v2_e(v2_num(count($resultCities), 'oraș', 'orașe')) ?></li><?php endif; ?>
+          <?php if ($fromCents !== null): ?><li><?= $fromCents === 0 ? 'și opțiuni gratuite' : 'de la ' . v2_e(v2_thousands((int) round($fromCents / 100))) . ' lei' ?></li><?php endif; ?>
+        </ul>
+        <?php endif; ?>
         <div class="it-cta">
           <?php if ($total > 0): ?>
-          <a class="btn btn-primary" href="#activitati">Vezi <?= v2_e(v2_num($total, 'activitate', 'activități')) ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-light" href="#activitati">Vezi <?= v2_e(v2_num($total, 'rezultat', 'rezultate')) ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php /* with nothing listed yet, the way onward (the city, or all cities) becomes the main button */ ?>
-          <?php $itMoreClass = $total > 0 ? 'it-link' : 'btn btn-primary'; ?>
+          <?php $itMoreClass = $total > 0 ? 'it-link' : 'btn btn-light'; ?>
           <?php if ($city): ?>
-          <a class="<?= $itMoreClass ?>" href="/<?= v2_e($city['slug'] ?? '') ?>">Toate activitățile din <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+          <a class="<?= $itMoreClass ?>" href="/<?= v2_e($citySlugSafe) ?>">Toate activitățile din <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
           <?php else: ?>
           <a class="<?= $itMoreClass ?>" href="/orase">Caută după oraș<?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
         </div>
       </div>
-      <div class="it-art" aria-hidden="true">
-        <div class="it-arch<?= $cover ? '' : ' is-empty' ?>">
-          <?php if ($cover): ?><img src="<?= v2_e($cover) ?>" alt="" decoding="async" fetchpriority="high"><?php else: ?><?= v2_fallback($intentName) ?><?php endif; ?>
-          <?php if ($intentIcon !== ''): ?><span class="it-icon"><?= v2_e($intentIcon) ?></span><?php endif; ?>
-        </div>
-      </div>
+
+      <?php if ($ideas): ?>
+      <nav class="it-switch" aria-labelledby="it-switch-h">
+        <p class="it-switch-h" id="it-switch-h">Alte idei<?= $city ? ' în ' . v2_e($cityName) : '' ?></p>
+        <ul>
+          <?php foreach ($ideas as $idea): ?>
+          <li><a href="<?= v2_e($idea['path']) ?>"><span class="it-switch-ic" aria-hidden="true"><?= $itIcon($idea['slug'], $idea['icon']) ?></span><?= v2_e($idea['name']) ?></a></li>
+          <?php endforeach; ?>
+        </ul>
+      </nav>
+      <?php endif; ?>
     </div>
   </section>
+  <div id="hdr-sentinel" aria-hidden="true"></div>
 
   <!-- ============================== ACTIVITĂȚI ============================== -->
   <section class="it-list" id="activitati" aria-labelledby="it-list-h">
     <div class="wrap">
       <?php if (!$cards): ?>
       <div class="it-empty">
-        <h2 id="it-list-h">Nimic disponibil acum.</h2>
-        <p>Pagina rămâne activă — verifică din nou peste câteva zile sau încearcă o altă intenție.</p>
-        <?php if ($otherIntents): ?>
-        <div class="chips-links it-chips">
-          <?php foreach (array_slice($otherIntents, 0, 6) as $li): ?>
-          <a href="<?= v2_e($li['path']) ?>"><?php if (!empty($li['icon'])): ?><span aria-hidden="true"><?= v2_e($li['icon']) ?></span><?php endif; ?><?= v2_e($li['name']) ?></a>
-          <?php endforeach; ?>
+        <span class="it-empty-ic" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span>
+        <div class="it-empty-copy">
+          <h2 id="it-list-h">Nimic disponibil acum<?= $city ? ' în ' . v2_e($cityName) : '' ?>.</h2>
+          <p><?= $itRule ? 'Aici apar ' . v2_e($itRule['why']) . '. ' : '' ?>Pagina rămâne activă — verifică din nou peste câteva zile sau încearcă o altă intenție.</p>
+          <?php if ($otherIntents): ?>
+          <div class="chips-links it-chips">
+            <?php foreach (array_slice($otherIntents, 0, 6) as $li): ?>
+            <a href="<?= v2_e($li['path']) ?>"><?php if (!empty($li['icon'])): ?><span aria-hidden="true"><?= v2_e($li['icon']) ?></span><?php endif; ?><?= v2_e($li['name']) ?></a>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
         </div>
-        <?php endif; ?>
         <?php if ($city): ?>
-        <a class="btn btn-light" href="/<?= v2_e($city['slug'] ?? '') ?>">Toate activitățile din <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+        <a class="btn btn-primary" href="/<?= v2_e($citySlugSafe) ?>">Toate activitățile din <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
         <?php else: ?>
-        <a class="btn btn-light" href="/cauta"><?= v2_ic('magnifying-glass') ?>Caută activități</a>
+        <a class="btn btn-primary" href="/cauta"><?= v2_ic('magnifying-glass') ?>Caută activități</a>
         <?php endif; ?>
-        <svg class="it-empty-line" viewBox="1455 585 1210 310" aria-hidden="true"><use href="#drum-g"/></svg>
       </div>
+      <?php if ($altCards): ?>
+      <div class="it-alt">
+        <div class="sec-head it-head">
+          <div><p class="kicker">Între timp</p><h2>Disponibile acum <?= v2_e($altWhere) ?></h2></div>
+          <a class="sec-link" href="<?= $city && $altWhere !== 'pe bilete.online' ? '/' . v2_e($citySlugSafe) : '/cauta' ?>">Vezi toate<?= v2_ic('arrow-right') ?></a>
+        </div>
+        <ul class="xp-grid">
+          <?php foreach ($altCards as $i => $a): ?>
+          <?php $renderCard(['title' => $a['title'], 'href' => $a['href'], 'category' => $a['catName'], 'city' => $a['city'], 'citySlug' => $a['citySlug'], 'image' => $a['image'], 'cents' => $a['cents'], 'dur' => $a['dur'], 'minutes' => 0, 'cta' => 'Vezi activitatea'], $i, false); ?>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <?php endif; ?>
       <?php else: ?>
-      <div class="sec-head it-head">
+      <div class="it-head">
         <div>
-          <p class="kicker">Activități</p>
+          <p class="kicker">Rezultate</p>
           <h2 id="it-list-h"><?= v2_e($intentName) ?><?= $city ? ' în ' . v2_e($cityName) : '' ?></h2>
         </div>
-        <div class="it-meta">
-          <p><?= v2_e(v2_num($total, 'rezultat', 'rezultate')) ?><?php if ($lastPage > 1): ?> · pagina <?= $currentPageNum ?> din <?= $lastPage ?><?php endif; ?></p>
+        <div class="it-tools">
+          <p class="it-count" id="it-count" aria-live="polite"><?= v2_e(v2_num($total, 'rezultat', 'rezultate')) ?><?php if ($lastPage > 1): ?> · pagina <?= $currentPageNum ?> din <?= $lastPage ?><?php endif; ?></p>
+          <?php if ($filterable): ?>
+          <label class="it-sort"><span>Sortare</span>
+            <select class="select" id="it-sort">
+              <option value="recommended">Recomandate</option>
+              <option value="priceAsc">Preț crescător</option>
+              <option value="duration">Durată scurtă</option>
+            </select>
+          </label>
+          <?php endif; ?>
           <a class="sec-link" href="<?= v2_e($searchUrl) ?>">Filtre avansate<?= v2_ic('arrow-right') ?></a>
         </div>
       </div>
-
-      <ul class="xp-grid">
-        <?php foreach ($cards as $i => $c): ?>
-        <li class="xp">
-          <a href="<?= v2_e($c['href']) ?>">
-            <span class="xp-media"><?= $c['image'] ? v2_photo([$c['image'], 0, 0, '']) : v2_fallback($c['title'], $i) ?></span>
-            <span class="xp-body">
-              <span class="xp-cat"><?= v2_e(implode(' · ', array_filter([$c['category'], $c['city']]))) ?></span>
-              <span class="xp-title"><?= v2_e($c['title']) ?></span>
-              <span class="xp-meta"><?php if ($c['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($c['city']) ?></span><?php endif; ?></span>
-              <span class="xp-foot">
-                <span class="xp-go">Vezi bilete<?= v2_ic('arrow-right') ?></span>
-                <?php if ($c['cents'] === null): ?>
-                <span class="xp-price"><b>—</b></span>
-                <?php elseif ($c['cents'] === 0): ?>
-                <span class="xp-price"><b>Gratuit</b></span>
-                <?php else: ?>
-                <span class="xp-price">de la<b><?= v2_thousands((int) round($c['cents'] / 100)) ?> lei</b></span>
-                <?php endif; ?>
-              </span>
-            </span>
-          </a>
-        </li>
+      <?php if ($itRule && $actTotal > 0): ?>
+      <p class="it-why"><?= v2_ic('check-circle') ?><span><b>Cum alegem:</b> <?= v2_e($itRule['why']) ?><?= $city ? ', în ' . v2_e($cityName) : '' ?>.</span></p>
+      <?php endif; ?>
+      <?php if ($filterable && !$city && count($resultCities) > 1): ?>
+      <div class="it-cities" role="group" aria-label="Filtrează după oraș">
+        <button type="button" data-city="all" aria-pressed="true">Toate<span><?= count($cards) ?></span></button>
+        <?php foreach ($resultCities as $key => $rc): ?>
+        <button type="button" data-city="<?= v2_e($key) ?>" aria-pressed="false"><?= v2_e($rc['name']) ?><span><?= $rc['n'] ?></span></button>
         <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+
+      <ul class="xp-grid" id="it-grid">
+        <?php foreach ($cards as $i => $c) { $renderCard($c, $i, true); } ?>
       </ul>
 
       <?php if ($lastPage > 1):
@@ -300,7 +524,7 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="it-cross" aria-label="Explorează mai departe">
     <div class="wrap it-cross-grid">
       <?php if ($otherIntents): ?>
-      <div>
+      <div class="it-cross-card">
         <p class="kicker">Explorează alte intenții</p>
         <h2><?= $city ? 'Și mai multe activități în ' . v2_e($cityName) : 'Alte tipuri de activități' ?></h2>
         <div class="chips-links it-chips">
@@ -311,14 +535,14 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
       <?php endif; ?>
       <?php if ($sameIntent): ?>
-      <div>
+      <div class="it-cross-card">
         <p class="kicker">În alte orașe</p>
         <h2><?= v2_e($intentName) ?> în alte orașe</h2>
-        <div class="chips-links it-chips">
+        <ul class="it-towns">
           <?php foreach ($sameIntent as $li): ?>
-          <a href="<?= v2_e($li['path']) ?>"><?= v2_e($li['name']) ?></a>
+          <li><a href="<?= v2_e($li['path']) ?>"><?= v2_e($li['name']) ?><?= v2_ic('arrow-right') ?></a></li>
           <?php endforeach; ?>
-        </div>
+        </ul>
       </div>
       <?php endif; ?>
     </div>

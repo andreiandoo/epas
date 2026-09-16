@@ -37,7 +37,7 @@ const V2_HERO_ATTRACTIONS = [
 const V2_TRAVELERS = [
     'familii' => ['Familii', '#F2A900', 'Experiențe sigure, pe placul copiilor și al părinților.', '/activitati-copii', 'Toate experiențele pentru familii', 'who-familii', '44% 45%', ['familie-copii', 'acvarii-zoo-animale', 'parcuri-de-distractii']],
     'prieteni' => ['Prieteni', '#E43A33', 'Adrenalină, provocări și ieșiri despre care o să tot vorbiți.', '/cauta?traveler_types=prieteni', 'Toate experiențele pentru prieteni', 'who-prieteni', '60% 55%', ['escape-rooms', 'parcuri-de-aventura', 'natura-outdoor']],
-    'cupluri' => ['Cupluri', '#2D6CCD', 'Locuri frumoase pentru o zi sau o seară în doi.', '/activitati-cupluri', 'Toate experiențele pentru cupluri', 'who-cupluri', '22% 50%', ['cultura-arta', 'tururi-experiente-turistice', 'muzee-expozitii']],
+    'cupluri' => ['Cupluri', '#2D6CCD', 'Locuri frumoase pentru o zi sau o seară în doi.', '/activitati-cuplu', 'Toate experiențele pentru cupluri', 'who-cupluri', '22% 50%', ['cultura-arta', 'tururi-experiente-turistice', 'muzee-expozitii']],
     'weekend' => ['Activități de weekend', '#2BB673', 'Idei pentru sâmbătă și duminică, în oraș sau într-o escapadă scurtă.', '/activitati-weekend', 'Toate activitățile de weekend', 'who-weekend', '50% 40%', ['natura-outdoor', 'parcuri-de-distractii', 'tururi-experiente-turistice']],
     'cadou' => ['Experiențe cadou', '#F2A900', 'Dăruiește o ieșire în locul unui obiect: un atelier, o aventură sau o zi într-un loc frumos.', '/card-cadou', 'Vezi cardul cadou', 'who-cadou', '50% 50%', ['ateliere-experiente-creative', 'parcuri-de-aventura', 'educatie-invatare-experientiala']],
 ];
