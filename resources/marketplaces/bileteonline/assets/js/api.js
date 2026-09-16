@@ -519,6 +519,10 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint.match(/^\/organizer\/leisure\/staff-checkins$/)) return 'organizer.leisure.staff.checkins';
+        if (endpoint.match(/^\/organizer\/leisure\/staff-export$/)) return 'organizer.leisure.staff.export';
+        if (endpoint.match(/^\/organizer\/leisure\/staff\/\d+$/)) return 'organizer.leisure.staff.item';
+        if (endpoint.match(/^\/organizer\/leisure\/staff$/)) return 'organizer.leisure.staff.collection';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders\/deletion-history$/)) return 'organizer.event.leisure.orders.deletion-history';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/orders\/\d+$/)) {
             return method === 'DELETE' ? 'organizer.event.leisure.orders.destroy' : 'organizer.event.leisure.orders.show';
@@ -677,6 +681,12 @@ const BileteOnlineAPI = {
         const genInvoiceMatch = endpoint.match(/\/organizer\/orders\/(\d+)\/generate-invoice$/);
         if (genInvoiceMatch) {
             return `id=${encodeURIComponent(genInvoiceMatch[1])}`;
+        }
+
+        // Extract the person's id from the venue staff endpoints
+        const venueStaffMatch = endpoint.match(/^\/organizer\/leisure\/staff\/(\d+)$/);
+        if (venueStaffMatch) {
+            return `id=${encodeURIComponent(venueStaffMatch[1])}`;
         }
 
         // Extract event ID + order ID from the venue's order detail and deletion
