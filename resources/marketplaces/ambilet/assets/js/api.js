@@ -2405,6 +2405,7 @@ const AmbiletMultiAuth = {
     COOKIES: {
         'customer': 'ambilet_token',
         'organizer': 'ambilet_organizer_token',
+        'artist': 'ambilet_artist_token',
         'venue-owner': 'ambilet_venue_token',
     },
     // localStorage record of the accounts opened together at one login:
@@ -2516,7 +2517,7 @@ const AmbiletMultiAuth = {
         const own = record && record.accounts[current.type];
         if (!own || own.id !== this._tokenId(current.token)) return [];
         const list = [];
-        ['customer', 'organizer', 'venue-owner'].forEach((type) => {
+        ['customer', 'organizer', 'artist', 'venue-owner'].forEach((type) => {
             const account = record.accounts[type];
             if (!account) return;
             if (type === current.type) {
@@ -2541,7 +2542,7 @@ const AmbiletMultiAuth = {
     },
 
     async _fetchProfile(type, token) {
-        const actions = { 'customer': 'customer.me', 'organizer': 'organizer.me', 'venue-owner': 'venue-owner.me' };
+        const actions = { 'customer': 'customer.me', 'organizer': 'organizer.me', 'artist': 'artist.me', 'venue-owner': 'venue-owner.me' };
         try {
             const res = await fetch(`${AmbiletAPI.getApiUrl()}?action=${actions[type]}`, {
                 headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -2565,7 +2566,23 @@ const AmbiletMultiAuth = {
         const profile = await this._fetchProfile(role.type, role.token);
         if (profile.expired) return { ok: false, expired: true };
 
-        if (role.type === 'customer' || role.type === 'organizer') {
+        if (role.type === 'artist') {
+            const K = AmbiletAuth.KEYS;
+            const account = profile.data ? (profile.data.account || profile.data) : null;
+            if (account) {
+                AmbiletAuth.setArtistSession(role.token, account);
+            } else {
+                try {
+                    localStorage.setItem(K.ARTIST_TOKEN, role.token);
+                    localStorage.setItem(K.USER_TYPE, 'artist');
+                    localStorage.removeItem(K.ARTIST_DATA);
+                    localStorage.removeItem(K.CUSTOMER_TOKEN);
+                    localStorage.removeItem(K.CUSTOMER_DATA);
+                    localStorage.removeItem(K.ORGANIZER_TOKEN);
+                    localStorage.removeItem(K.ORGANIZER_DATA);
+                } catch (e) {}
+            }
+        } else if (role.type === 'customer' || role.type === 'organizer') {
             const K = AmbiletAuth.KEYS;
             const isCustomer = role.type === 'customer';
             const data = profile.data ? (profile.data[role.type] || profile.data) : null;
@@ -2614,7 +2631,7 @@ const AmbiletMultiAuth = {
      * the AmbiletAuth sessions. Callers redirect afterwards.
      */
     async logoutAll() {
-        const actions = { 'customer': 'customer.logout', 'organizer': 'organizer.logout', 'venue-owner': 'venue-owner.logout' };
+        const actions = { 'customer': 'customer.logout', 'organizer': 'organizer.logout', 'artist': 'artist.logout', 'venue-owner': 'venue-owner.logout' };
         const tokens = new Map();
         const add = (type, token) => { if (token) tokens.set(type + ':' + token, { type, token }); };
         Object.entries(this.COOKIES).forEach(([type, name]) => add(type, this._cookie(name)));
@@ -2622,6 +2639,7 @@ const AmbiletMultiAuth = {
             try {
                 add('customer', localStorage.getItem(AmbiletAuth.KEYS.CUSTOMER_TOKEN));
                 add('organizer', localStorage.getItem(AmbiletAuth.KEYS.ORGANIZER_TOKEN));
+                add('artist', localStorage.getItem(AmbiletAuth.KEYS.ARTIST_TOKEN));
             } catch (e) {}
         }
         const base = AmbiletAPI.getApiUrl();
@@ -2641,12 +2659,14 @@ const AmbiletMultiAuth = {
         if (typeof AmbiletAuth !== 'undefined') {
             AmbiletAuth.clearCustomerSession();
             AmbiletAuth.clearOrganizerSession();
+            AmbiletAuth.clearArtistSession();
         }
     },
 
     redirectFor(roleType) {
         switch (roleType) {
             case 'organizer':   return '/organizator/panou';
+            case 'artist':      return '/artist/cont/dashboard';
             case 'venue-owner': return '/venue/panou';
             case 'customer':
             default:            return '/cont';

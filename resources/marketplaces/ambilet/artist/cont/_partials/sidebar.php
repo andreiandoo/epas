@@ -135,6 +135,7 @@ $extendedArtistNav = [
     </nav>
 
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <div data-account-switcher="artist" class="amb-acct amb-acct--dark mb-2" hidden></div>
         <button id="artist-logout-btn" class="flex items-center w-full gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
@@ -215,6 +216,7 @@ $extendedArtistNav = [
         <?php endforeach; ?>
     </nav>
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <div data-account-switcher="artist" class="amb-acct amb-acct--dark mb-2" hidden></div>
         <button class="flex items-center w-full gap-3 px-4 py-3 text-sm font-medium artist-mobile-logout rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>

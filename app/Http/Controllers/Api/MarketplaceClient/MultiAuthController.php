@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Enums\TenantType;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\AuthController as CustomerAuthController;
+use App\Models\MarketplaceArtistAccount;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceOrganizer;
 use App\Models\User;
@@ -80,13 +81,19 @@ class MultiAuthController extends BaseController
             $roles[] = $venueRole;
         }
 
+        // ─── 4) Artist realm ────────────────────────────────────────
+        $artistRole = $this->tryArtist($client, $email, $password);
+        if ($artistRole) {
+            $roles[] = $artistRole;
+        }
+
         if (empty($roles)) {
             return $this->error('Invalid credentials', 401);
         }
 
         // Primary role heuristic — surface the one the frontend should
         // redirect to when the user picks "continue as default". Order:
-        // organizer > venue-owner > customer, because a person who's
+        // organizer > venue-owner > artist > customer, because a person who's
         // both an organizer AND a customer usually logs in for the
         // organizer capabilities first. The frontend can override.
         $primary = $this->pickPrimary($roles);
@@ -232,9 +239,41 @@ class MultiAuthController extends BaseController
         ];
     }
 
+    /**
+     * Match artist-account credentials. Mirrors Artist\AuthController::login:
+     * the account counts as a role only when its email is verified and the
+     * claim is approved — never while pending, rejected or suspended.
+     */
+    private function tryArtist($client, string $email, string $password): ?array
+    {
+        $account = MarketplaceArtistAccount::where('marketplace_client_id', $client->id)
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if (!$account || !$account->password || !Hash::check($password, $account->password)) {
+            return null;
+        }
+
+        if (!$account->isEmailVerified() || $account->isPending() || $account->isRejected() || $account->isSuspended()) {
+            return null;
+        }
+
+        $account->recordLogin();
+
+        $token = $account->createToken('artist-api')->plainTextToken;
+
+        return [
+            'type'         => 'artist',
+            'requires_2fa' => false,
+            'challenge'    => null,
+            'token'        => $token,
+            'display_name' => trim((string) $account->full_name) ?: $account->email,
+        ];
+    }
+
     private function pickPrimary(array $roles): string
     {
-        $order = ['organizer', 'venue-owner', 'customer'];
+        $order = ['organizer', 'venue-owner', 'artist', 'customer'];
         foreach ($order as $type) {
             foreach ($roles as $role) {
                 if ($role['type'] === $type) {

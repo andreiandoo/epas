@@ -24,6 +24,22 @@ document.addEventListener('DOMContentLoaded', () => {
         statusEl.classList.remove('hidden');
     }
 
+    async function loginArtistWithAccounts(email, password) {
+        if (typeof AmbiletMultiAuth !== 'undefined' && AmbiletMultiAuth.openSession) {
+            try {
+                const multi = await AmbiletMultiAuth.login(email, password);
+                const roles = multi && multi.success && multi.data && Array.isArray(multi.data.roles) ? multi.data.roles : [];
+                const artistRole = roles.find((r) => r.type === 'artist' && r.token && !r.requires_2fa);
+                if (artistRole) {
+                    AmbiletMultiAuth.persistAllRoles(roles, 'artist');
+                    const opened = await AmbiletMultiAuth.openSession(artistRole);
+                    if (opened.ok) return { success: true };
+                }
+            } catch (e) {}
+        }
+        return AmbiletAuth.loginArtist(email, password);
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -37,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('password').value;
 
         try {
-            const result = await AmbiletAuth.loginArtist(email, password);
+            const result = await loginArtistWithAccounts(email, password);
 
             if (result.success) {
                 AmbiletNotifications.success('Conectare reușită!');

@@ -51,6 +51,12 @@ class AuthController extends BaseController
             return $this->error('Există deja un cont de artist cu această adresă de email.', 422);
         }
 
+        $conflicts = rescue(fn () => app(\App\Services\Marketplace\AccountPasswordSync::class)
+            ->conflictingAccounts($client->id, $email, $validated['password'], 'artist'), []);
+        if ($conflicts) {
+            return $this->error(\App\Services\Marketplace\AccountPasswordSync::conflictMessage($conflicts), 422);
+        }
+
         // Resolve the claimed artist by either slug or id.
         $artist = null;
         if (!empty($validated['artist_id'])) {

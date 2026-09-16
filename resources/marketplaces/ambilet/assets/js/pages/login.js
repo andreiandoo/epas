@@ -94,9 +94,11 @@ function redirectForRole(type) {
         const path = requested.split('?')[0];
         const isOrganizerArea = path.startsWith('/organizator');
         const isVenueArea = path.startsWith('/venue');
+        const isArtistArea = path.startsWith('/artist');
         const fits = type === 'organizer' ? isOrganizerArea
             : type === 'venue-owner' ? isVenueArea
-            : !isOrganizerArea && !isVenueArea;
+            : type === 'artist' ? isArtistArea
+            : !isOrganizerArea && !isVenueArea && !isArtistArea;
         if (fits) return requested;
     }
     return AmbiletMultiAuth.redirectFor(type);
@@ -115,6 +117,11 @@ const ROLE_META = {
         title: 'Cont organizator',
         description: 'Evenimente, vânzări, participanți și deconturi',
         icon: ROLE_ICON('M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'),
+    },
+    'artist': {
+        title: 'Cont artist',
+        description: 'Profilul tău de artist, evenimente și statistici',
+        icon: ROLE_ICON('M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3'),
     },
     'venue-owner': {
         title: 'Cont locație',
@@ -246,6 +253,7 @@ function injectRolePickerStyles() {
         .amb-rp__icon svg { width: 24px; height: 24px; }
         .amb-rp__icon--customer { background: rgba(165, 28, 48, 0.08); color: var(--color-primary, #A51C30); }
         .amb-rp__icon--organizer { background: var(--color-secondary, #1E293B); color: #fff; }
+        .amb-rp__icon--artist { background: rgba(139, 92, 246, 0.14); color: #6D28D9; }
         .amb-rp__icon--venue-owner { background: rgba(230, 126, 34, 0.14); color: #C2410C; }
         .amb-rp__body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
         .amb-rp__name { font-size: 15px; font-weight: 700; color: var(--color-secondary, #1E293B); }

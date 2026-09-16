@@ -198,6 +198,7 @@ const AmbiletAuth = {
         } catch (e) {
             this.clearCustomerSession();
             this.clearOrganizerSession();
+            this.clearArtistSession();
         }
         window.location.href = '/';
     },
@@ -424,6 +425,10 @@ const AmbiletAuth = {
     },
 
     async logoutArtist() {
+        if (typeof AmbiletMultiAuth !== 'undefined' && AmbiletMultiAuth.logoutAll) {
+            return this.logoutAllAccounts();
+        }
+
         try {
             await AmbiletAPI.artist.logout();
         } catch (e) {

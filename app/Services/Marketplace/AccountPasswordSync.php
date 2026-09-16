@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Enums\TenantType;
+use App\Models\MarketplaceArtistAccount;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Tenant;
@@ -15,8 +16,9 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * One password per email for the accounts a person holds on a marketplace:
- * client (MarketplaceCustomer), organizer (MarketplaceOrganizer) and venue
- * owner (core User whose venue tenant partners with the marketplace).
+ * client (MarketplaceCustomer), organizer (MarketplaceOrganizer), artist
+ * (MarketplaceArtistAccount) and venue owner (core User whose venue tenant
+ * partners with the marketplace).
  *
  * Client and organizer accounts can be registered without confirming the
  * email, so a password only spreads from actions that prove ownership:
@@ -32,6 +34,7 @@ class AccountPasswordSync
     private const LABELS = [
         'customer' => 'client',
         'organizer' => 'organizator',
+        'artist' => 'artist',
         'venue-owner' => 'locație',
     ];
 
@@ -52,6 +55,9 @@ class AccountPasswordSync
                 ->whereRaw('LOWER(email) = ?', [$email])
                 ->first(),
             'organizer' => MarketplaceOrganizer::where('marketplace_client_id', $marketplaceClientId)
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->first(),
+            'artist' => MarketplaceArtistAccount::where('marketplace_client_id', $marketplaceClientId)
                 ->whereRaw('LOWER(email) = ?', [$email])
                 ->first(),
             'venue-owner' => $this->venueOwner($marketplaceClientId, $email),

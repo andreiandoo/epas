@@ -20,6 +20,12 @@ const AmbiletAccountSwitcher = {
             inline: 'contul de organizator',
             icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
         },
+        'artist': {
+            label: 'Artist',
+            title: 'Cont artist',
+            inline: 'contul de artist',
+            icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3',
+        },
         'venue-owner': {
             label: 'Locație',
             title: 'Cont locație',
@@ -60,7 +66,7 @@ const AmbiletAccountSwitcher = {
         }
         if (typeof AmbiletAuth === 'undefined') return null;
         const type = AmbiletAuth.getUserType();
-        if (type !== 'customer' && type !== 'organizer') return null;
+        if (type !== 'customer' && type !== 'organizer' && type !== 'artist') return null;
         if (context !== 'auto' && context !== type) return null;
         return { type, token: AmbiletAuth.getToken() };
     },
@@ -215,6 +221,7 @@ const AmbiletAccountSwitcher = {
             .amb-acct__icon svg { width: 18px; height: 18px; }
             .amb-acct__icon--customer { background: rgba(165, 28, 48, .08); color: var(--color-primary, #A51C30); }
             .amb-acct__icon--organizer { background: #1E293B; color: #fff; }
+            .amb-acct__icon--artist { background: rgba(139, 92, 246, .14); color: #6D28D9; }
             .amb-acct__icon--venue-owner { background: rgba(230, 126, 34, .14); color: #C2410C; }
             .amb-acct__text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
             .amb-acct__title { font-size: 14px; font-weight: 600; line-height: 1.25; }
