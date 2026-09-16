@@ -3384,6 +3384,21 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.tickets.manual-checkin':
+        // POST /organizer/events/{id}/leisure/tickets/{ticketId}/manual-checkin — check-in from the participants list.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        $venTicketId = (int) ($_GET['ticket_id'] ?? 0);
+        if (!$venEventId || !$venTicketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id or ticket id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/tickets/' . $venTicketId . '/manual-checkin';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.weather':
         $venEventId = (int) ($_GET['event'] ?? 0);
         if (!$venEventId) {
