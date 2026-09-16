@@ -163,6 +163,8 @@ foreach (V2_REGIONS as $name) {
     }
     $V2NAV['regions'][] = [
         'name' => $name,
+        // the region page lives at /{slug} (slug.php); the API slug wins, the folded name stands in without it
+        'slug' => (string) ($v2RegionInfo[$name]['slug'] ?? trim(preg_replace('/[^a-z0-9]+/', '-', strtr(mb_strtolower($name), ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't'])), '-')),
         'citiesCount' => (int) ($v2RegionInfo[$name]['cities_count'] ?? count($featured)),
         'featured' => $featured,
         'more' => $more,

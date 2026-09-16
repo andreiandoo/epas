@@ -111,12 +111,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^orase/?$ orase.php [L]
 
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^regiune/([a-z0-9-]+)/?$ region.php?slug=$1 [L,QSA]
+# Region pages live at /{slug} (slug.php, region.php); the older prefixed forms redirect there
+RewriteRule ^regiune/([a-z0-9-]+)/?$ /$1 [R=301,L,QSA]
 
 # Legacy redirects
-RewriteRule ^region/([a-z0-9-]+)/?$ /regiune/$1 [R=301,L,QSA]
+RewriteRule ^region/([a-z0-9-]+)/?$ /$1 [R=301,L,QSA]
 RewriteRule ^cities/?$ /orase [R=301,L,QSA]
 
 # ============================================
