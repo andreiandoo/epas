@@ -274,6 +274,7 @@ foreach ($activities as $ix => $a) {
         'travelerTypes' => array_values(array_filter(array_map(fn ($t) => $t['slug'] ?? '', (array) ($a['traveler_types'] ?? [])))),
         'badges'        => $badges,
         'text'          => mb_strtolower(implode(' ', [$title, $catLabel, $place, $description, implode(' ', $badges)])),
+        '_city'         => $citySlugA,
         '_lat'          => isset($a['venue']['lat']) ? (float) $a['venue']['lat'] : (isset($a['latitude']) ? (float) $a['latitude'] : null),
         '_lng'          => isset($a['venue']['lng']) ? (float) $a['venue']['lng'] : (isset($a['longitude']) ? (float) $a['longitude'] : null),
     ];
@@ -300,7 +301,41 @@ foreach ($acts as $k => $a) {
         $y = 50 + sin($ang) * (14 + ($k % 3) * 7);
     }
     $acts[$k]['map'] = ['x' => round(max(6, min(94, $x)), 1), 'y' => round(max(8, min(90, $y)), 1)];
-    unset($acts[$k]['_lat'], $acts[$k]['_lng']);
+}
+
+// Real map positions. The activity list carries no coordinates, so an activity without its own venue point sits on
+// its city's centre (city coordinates change rarely: cached for a day), spread in a small spiral when several share
+// a city so no pin hides another. `approx` tells the map these are city positions.
+$geoCities = [];
+foreach ($acts as $a) {
+    if ($a['_lat'] === null && $a['_city'] !== '' && count($geoCities) < 16) $geoCities[$a['_city']] = true;
+}
+$cityGeo = [];
+if ($geoCities) {
+    $geoJobs = [];
+    foreach (array_keys($geoCities) as $gs) {
+        $geoJobs[$gs] = ['key' => "v2_city_geo_{$gs}", 'endpoint' => '/locations/cities/' . rawurlencode($gs), 'params' => [], 'ttl' => 86400];
+    }
+    foreach (api_cached_many($geoJobs) as $gs => $res) {
+        $gc = $res['data']['city'] ?? null;
+        if (is_array($gc) && is_numeric($gc['latitude'] ?? null) && is_numeric($gc['longitude'] ?? null)) {
+            $cityGeo[$gs] = [(float) $gc['latitude'], (float) $gc['longitude']];
+        }
+    }
+}
+$geoSeen = [];
+foreach ($acts as $k => $a) {
+    $geo = null;
+    if ($a['_lat'] !== null && $a['_lng'] !== null) {
+        $geo = ['lat' => round($a['_lat'], 6), 'lng' => round($a['_lng'], 6), 'approx' => false];
+    } elseif (isset($cityGeo[$a['_city']])) {
+        $n = $geoSeen[$a['_city']] = ($geoSeen[$a['_city']] ?? -1) + 1;
+        $ang = $n * 137.508 * M_PI / 180;
+        $r = $n === 0 ? 0 : 0.0035 * sqrt($n);
+        $geo = ['lat' => round($cityGeo[$a['_city']][0] + sin($ang) * $r, 6), 'lng' => round($cityGeo[$a['_city']][1] + cos($ang) * $r * 1.4, 6), 'approx' => true];
+    }
+    $acts[$k]['geo'] = $geo;
+    unset($acts[$k]['_lat'], $acts[$k]['_lng'], $acts[$k]['_city']);
 }
 
 // Filter options derived from real data only.
@@ -717,7 +752,8 @@ include __DIR__ . '/includes/v2/header.php';
         <ul class="kmap-list" id="k-map-list"></ul>
       </aside>
       <section class="kmap-view" aria-label="Previzualizare hartă">
-        <span class="kmap-label"><?= v2_e($cityFilter ? $heroLocation : 'România') ?> · previzualizare hartă</span>
+        <span class="kmap-label" id="k-map-label"><?= v2_e($cityFilter ? $heroLocation : 'România') ?></span>
+        <div class="kmap-canvas" id="k-map-canvas"></div>
         <div id="k-map-pins"></div>
         <div class="kmap-card" id="k-map-card" hidden></div>
       </section>

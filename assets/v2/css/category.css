@@ -218,6 +218,16 @@ html:not(.js) .k-empty [data-reset]{display:none}
 .kpin:hover,.kpin.is-hot,.kpin[aria-pressed="true"]{z-index:3;background:var(--red-text);transform:scale(1.08)}
 .kmap-card{position:absolute;z-index:4;left:20px;bottom:20px;width:min(400px, calc(100% - 40px));overflow:hidden;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop)}
 .kmap-card[hidden]{display:none}
+/* The real map (Leaflet, loaded when the dialog first opens). Without it the grid preview and its % pins stay. */
+.kmap-canvas{position:absolute;inset:0;z-index:1;display:none}
+.kmap-view.has-map{background:#E4EEE6}
+.kmap-view.has-map .kmap-canvas{display:block}
+.kmap-view.has-map #k-map-pins{display:none}
+.kmap-canvas .leaflet-container,.kmap-canvas.leaflet-container{font:inherit;background:#E4EEE6}
+.kmap-canvas .kpin-wrap{background:none;border:0}
+.kmap-canvas .kpin{position:absolute;left:0;top:0;translate:-50% -100%}
+.kmap-canvas .leaflet-control-attribution{font-size:.6875rem}
+.kmap-note{display:block;margin-top:2px;font-size:.75rem;font-weight:500;color:var(--muted)}
 .kmc-media{height:160px}
 .kmc-body{padding:16px 18px 18px}
 .kmc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
