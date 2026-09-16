@@ -48,7 +48,7 @@ $otPassField = function (string $id, string $label, string $help) {
 $otPerms = ['events' => 'Activități', 'orders' => 'Comenzi', 'reports' => 'Rapoarte', 'team' => 'Echipă', 'checkin' => 'Check-in (aplicația mobilă)'];
 
 include __DIR__ . '/../includes/v2/head.php';
-v2_org_start('settings');
+v2_org_start('team');
 ?>
 <div class="ot" id="ot">
   <header class="ot-head">

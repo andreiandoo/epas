@@ -5172,6 +5172,17 @@ if ($requiresAuth) {
     }
 }
 
+// A download (PDF, CSV, ZIP) asks core with Accept: */*, so core does not answer a missing or expired session with a
+// 401: it redirects to its own login page, and cURL follows it. The browser then got that HTML page with a 200 — a
+// "CSV" that was a login form. Without a token there is nothing to ask for.
+if ($requiresAuth && !empty($rawResponse) && empty($authHeader)) {
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['error' => 'Authentication required']);
+    exit;
+}
+
 // Use curl (file_get_contents requires allow_url_fopen which may be disabled)
 $ch = curl_init($url);
 $curlHeaders = [];
@@ -5228,6 +5239,15 @@ if ($response === false || $statusCode === 0) {
     error_log("[proxy.php] CURL ERROR: {$method} {$url} => {$curlError}");
     $response = false;
     $statusCode = 502;
+}
+
+// With a token core no longer accepts (expired, revoked), the same redirect lands on the login page. No PDF, CSV, ZIP
+// or PNG starts as an HTML document, so that answer is the session ending, and says so.
+if (!empty($rawResponse) && $requiresAuth && $response !== false && $statusCode >= 200 && $statusCode < 300
+    && preg_match('/^\s*(<!DOCTYPE html|<html)/i', substr($response, 0, 512))) {
+    error_log("[proxy.php] RAW AUTH BOUNCE: {$method} {$url} | action={$action} answered with an HTML page");
+    $response = json_encode(['error' => 'Authentication required']);
+    $statusCode = 401;
 }
 
 // Debug log for non-2xx responses
