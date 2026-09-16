@@ -239,6 +239,23 @@ class Invitations extends Page
 
         $batch->update(['qty_generated' => $data['qty_planned']]);
 
+        // "Block Seats" prefill: attach the blocked seats to the invitations so
+        // PDFs and tickets carry section / row / seat instead of free text.
+        $prefillUids = array_filter(explode(',', (string) ($data['seat_uids'] ?? '')));
+        if ($prefillUids && !empty($data['event_ref'])) {
+            $seatResolver = app(\App\Services\Invitations\InviteSeatResolver::class);
+            $seats = $seatResolver->seatsByUid((int) $data['event_ref'], $prefillUids);
+            foreach ($batch->invites()->get()->values() as $i => $invite) {
+                if (!isset($seats[$i])) {
+                    break;
+                }
+                $invite->update([
+                    'seat_ref' => $seatResolver->label($seats[$i]),
+                    'meta' => array_merge($invite->meta ?? [], $seatResolver->ticketMeta($seats[$i])),
+                ]);
+            }
+        }
+
         Notification::make()
             ->success()
             ->title('Batch Created')
@@ -672,6 +689,9 @@ class Invitations extends Page
 
         foreach ($invitesWithRecipients as $invite) {
             try {
+                $seatResolver = app(\App\Services\Invitations\InviteSeatResolver::class);
+                $inviteSeat = $seatResolver->resolve($invite, $event?->id);
+
                 // Generate QR code for this invitation
                 $qrData = url("/verify/{$invite->invite_code}");
                 $qrCode = $this->generateQrCode($qrData);
@@ -706,8 +726,7 @@ class Invitations extends Page
                             'code_short' => $invite->invite_code,
                             'code_long' => $invite->invite_code,
                             'serial' => $invite->invite_code,
-                            'seat' => $invite->seat_ref ?? '',
-                        ]);
+                        ], $seatResolver->templateFields($inviteSeat, $invite->seat_ref));
                         $data['buyer'] = array_merge($data['buyer'], [
                             'name' => $recipientName,
                             'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
@@ -794,6 +813,17 @@ class Invitations extends Page
                 $rendered++;
 
                 // Create ticket record for this invitation (if not already exists)
+                // Re-render: give an existing invitation ticket its structured seat.
+                if ($inviteSeat) {
+                    $existingTicket = Ticket::where('code', $invite->invite_code)->first();
+                    if ($existingTicket && empty(($existingTicket->meta ?? [])['seat_uid'] ?? null)) {
+                        $existingTicket->update([
+                            'seat_label' => $seatResolver->label($inviteSeat),
+                            'meta' => array_merge($existingTicket->meta ?? [], $seatResolver->ticketMeta($inviteSeat)),
+                        ]);
+                    }
+                }
+
                 if ($invitationTicketType && !Ticket::where('code', $invite->invite_code)->exists()) {
                     Ticket::create([
                         'order_id' => null, // No order for invitations
@@ -802,8 +832,8 @@ class Invitations extends Page
                         'performance_id' => null,
                         'code' => $invite->invite_code,
                         'status' => 'valid',
-                        'seat_label' => $invite->seat_ref,
-                        'meta' => [
+                        'seat_label' => $inviteSeat ? $seatResolver->label($inviteSeat) : $invite->seat_ref,
+                        'meta' => array_merge($inviteSeat ? $seatResolver->ticketMeta($inviteSeat) : [], [
                             'is_invitation' => true,
                             'invite_batch_id' => $batch->id,
                             'beneficiary' => [
@@ -812,7 +842,7 @@ class Invitations extends Page
                                 'phone' => $invite->getRecipientPhone(),
                                 'company' => $invite->getRecipientCompany(),
                             ],
-                        ],
+                        ]),
                     ]);
 
                     // Keep the Invitatie ticket type's quota_sold in sync —

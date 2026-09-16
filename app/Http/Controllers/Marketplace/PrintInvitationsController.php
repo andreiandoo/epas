@@ -159,6 +159,8 @@ class PrintInvitationsController extends Controller
                 // `<img src="{{ event.image }}">` renders the placeholder text.
                 $eventImageUrl = $variableService->resolveEventImageUrl($event, null);
 
+                $seatResolver = app(\App\Services\Invitations\InviteSeatResolver::class);
+
                 foreach ($invites as $invite) {
                     try {
                         $recipient = is_array($invite->recipient) ? $invite->recipient : [];
@@ -186,8 +188,7 @@ class PrintInvitationsController extends Controller
                             'code_short' => $invite->invite_code,
                             'code_long' => $invite->invite_code,
                             'serial' => $invite->invite_code,
-                            'seat' => $invite->seat_ref ?? '',
-                        ]);
+                        ], $seatResolver->templateFields($seatResolver->resolve($invite, $event->id), $invite->seat_ref));
                         $d['buyer'] = array_merge($d['buyer'], [
                             'name' => $recipientName,
                             'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
