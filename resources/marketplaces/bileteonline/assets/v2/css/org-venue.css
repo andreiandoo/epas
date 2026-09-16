@@ -369,6 +369,31 @@
   .ve-fold-nums > span{min-width:0}
 }
 
+/* ---------- settings: issuing company forms, gates ---------- */
+.ve-types-table{min-width:720px}
+.ve-iss-forms{display:grid;gap:12px}
+@media (min-width:1200px){.ve-iss-forms{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.ve-iss-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.ve-iss-head .ve-issuer-k{margin:0}
+.ve-form{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:560px){.ve-form{grid-template-columns:repeat(2, minmax(0,1fr))}.ve-form .is-wide{grid-column:1 / -1}}
+.ve-form-k{margin:6px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ve-form.is-off{opacity:.55}
+.ve-upper{text-transform:uppercase}
+.ve-warn a{color:inherit;font-weight:700}
+.ve-gates{list-style:none;display:grid;gap:8px;margin:0;padding:0}
+.ve-gate{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.ve-gate.is-off{background:#FBFBF9}
+.ve-gate-ic{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--tint-green);color:var(--action)}
+.ve-gate-ic .ic{width:18px;height:18px}
+.ve-gate-t{display:grid;min-width:0}
+.ve-gate-t b{overflow-wrap:anywhere}
+@media (max-width:479px){
+  .ve-gate{grid-template-columns:auto minmax(0,1fr)}
+  .ve-gate .org-tag{justify-self:start}
+  .ve-gate .btn{grid-column:1 / -1;justify-content:center}
+}
+
 /* ---------- team: the people, the weekly rota, the timesheet ---------- */
 .ve-people-table{min-width:900px}
 .ve-people-table tr.is-off{color:var(--muted)}

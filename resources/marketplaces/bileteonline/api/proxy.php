@@ -3387,6 +3387,21 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.issuers':
+        // GET/PUT /organizer/events/{id}/leisure/issuers — the two companies that issue the venue's tickets and invoices.
+        // The primary one is the account's own company data (name, tax id, IBAN), so a save here changes those too.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'] === 'PUT' ? 'PUT' : 'GET';
+        $body = $method === 'PUT' ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/issuers';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.payouts':
         // GET /organizer/events/{id}/leisure/payouts — every payout of the venue, with its tickets and invoices.
         $venEventId = (int) ($_GET['event'] ?? 0);

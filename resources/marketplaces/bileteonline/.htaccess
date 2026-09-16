@@ -234,6 +234,10 @@ RewriteRule ^organizator/locatie/deconturi/?$ organizer/venue-payouts.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/locatie/setari/?$ organizer/venue-settings.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f

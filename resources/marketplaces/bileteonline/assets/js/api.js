@@ -319,6 +319,9 @@ const BileteOnlineAPI = {
         if (endpoint === '/organizer/event-categories') return 'organizer.event-categories';
         if (endpoint === '/organizer/event-genres' || endpoint.includes('/organizer/event-genres?')) return 'organizer.event-genres';
         if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
+        // A venue's gates, before the public /venues rules further down, which would otherwise take this path.
+        if (endpoint.match(/^\/organizer\/venues\/\d+\/gates\/\d+$/)) return 'organizer.venue-gates.item';
+        if (endpoint.match(/^\/organizer\/venues\/\d+\/gates$/)) return 'organizer.venue-gates.collection';
         if (endpoint === '/organizer/artists' || endpoint.includes('/organizer/artists?')) return 'organizer.artists';
 
         // Newsletter
@@ -508,8 +511,6 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts\/\d+/)) return 'organizer.event.leisure.shifts.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts/)) return 'organizer.event.leisure.shifts.collection';
-        if (endpoint.match(/\/organizer\/venues\/\d+\/gates\/\d+/)) return 'organizer.venue-gates.item';
-        if (endpoint.match(/\/organizer\/venues\/\d+\/gates/)) return 'organizer.venue-gates.collection';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/reorder/)) return 'organizer.event.leisure.products.reorder';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/\d+/)) return 'organizer.event.leisure.products.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products/)) return 'organizer.event.leisure.products.collection';
@@ -519,6 +520,7 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/issuers$/)) return 'organizer.event.leisure.issuers';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/payouts$/)) return 'organizer.event.leisure.payouts';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement\/cumulative$/)) return 'organizer.event.leisure.settlement.cumulative';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/settlement$/)) return 'organizer.event.leisure.settlement';
