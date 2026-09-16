@@ -3387,6 +3387,73 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.orders.index':
+        // GET /organizer/events/{id}/leisure/orders — the venue's orders, online and at the counter.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to', 'search', 'source', 'status', 'page', 'per_page'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/orders'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.orders.deletion-history':
+        // GET /organizer/events/{id}/leisure/orders/deletion-history — what was deleted, by whom and why.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        if (!$venEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $venParams = [];
+        foreach (['from', 'to', 'search', 'page', 'per_page'] as $venKey) {
+            if (isset($_GET[$venKey]) && $_GET[$venKey] !== '') {
+                $venParams[$venKey] = $_GET[$venKey];
+            }
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/orders/deletion-history'
+            . ($venParams ? '?' . http_build_query($venParams) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.orders.show':
+        // GET /organizer/events/{id}/leisure/orders/{orderId} — the order with its tickets.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        $venOrderId = (int) ($_GET['order_id'] ?? 0);
+        if (!$venEventId || !$venOrderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id or order id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/orders/' . $venOrderId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.orders.destroy':
+        // DELETE /organizer/events/{id}/leisure/orders/{orderId} — irreversible, and the written reason in the
+        // body is required by the core, which keeps it in the deletion history.
+        $venEventId = (int) ($_GET['event'] ?? 0);
+        $venOrderId = (int) ($_GET['order_id'] ?? 0);
+        if (!$venEventId || !$venOrderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id or order id']);
+            exit;
+        }
+        $method = 'DELETE';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $venEventId . '/leisure/orders/' . $venOrderId;
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.tickets.manual-checkin':
         // POST /organizer/events/{id}/leisure/tickets/{ticketId}/manual-checkin — check-in from the participants list.
         $venEventId = (int) ($_GET['event'] ?? 0);

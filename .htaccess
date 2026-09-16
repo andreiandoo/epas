@@ -214,6 +214,10 @@ RewriteRule ^organizator/locatie/participanti/?$ organizer/venue-participants.ph
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/locatie/comenzi/?$ organizer/venue-orders.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f

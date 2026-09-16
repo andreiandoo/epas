@@ -93,6 +93,9 @@
 /* ---------- comparison ---------- */
 .ve-table-wrap{min-width:0;overflow-x:auto;border:1px solid var(--line);border-radius:16px}
 .ve-table{width:100%;min-width:640px;border-collapse:collapse;font-size:.9375rem}
+/* A cell is the anchor for the labels only screen readers get: .ve-sr is absolute, and without this it would be
+   placed against the page instead, escaping the table's own horizontal scroll and widening the whole page. */
+.ve-table th,.ve-table td{position:relative}
 .ve-table th{height:42px;padding:0 14px;background:#FBFBF9;color:var(--muted);font-size:.75rem;font-weight:700;letter-spacing:.08em;text-align:left;text-transform:uppercase;white-space:nowrap}
 .ve-table td{padding:10px 14px;border-top:1px solid var(--line);vertical-align:middle}
 .ve-right{text-align:right!important}
@@ -175,3 +178,66 @@
 .ve .po-check input{flex:none;width:20px;height:20px;margin-top:1px;accent-color:var(--action)}
 .ve-head-tools .po-select{min-width:min(260px, 100%)}
 @media (min-width:1200px){.ve-types{align-self:end}}
+
+/* ---------- orders: rows that open, the deletion dialog, paging, the deletion history ---------- */
+.ve-ord-table{min-width:1040px}
+.ve-orow{cursor:pointer}
+.ve-orow:hover{background:#FBFBF9}
+.ve-orow[aria-expanded="true"]{background:var(--tint-green)}
+.ve-caret{display:inline-grid;place-items:center;width:22px;height:22px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
+.ve-caret .ic{width:14px;height:14px;transition:transform .18s ease}
+.ve-orow[aria-expanded="true"] .ve-caret .ic{transform:rotate(180deg)}
+@media (prefers-reduced-motion: reduce){.ve-caret .ic{transition:none}}
+.ve-drow > td{padding:0!important;background:#FBFBF9}
+.ve-dbox{padding:14px 16px;border-top:1px solid var(--line)}
+.ve-dbox > p{margin:0 0 10px;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ve-tt{width:100%;border-collapse:collapse;font-size:.8125rem}
+.ve-tt th{padding:0 10px 6px;color:var(--muted);font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-align:left;text-transform:uppercase}
+.ve-tt td{padding:7px 10px;border-top:1px solid var(--line)}
+.ve-tt .ve-r{text-align:right;font-variant-numeric:tabular-nums}
+.ve-note-line{margin:10px 0 0;font-size:.8125rem;color:var(--muted)}
+.ve-r{text-align:right;font-variant-numeric:tabular-nums}
+.ve-total{font-weight:700;white-space:nowrap}
+.ve-cur{margin-left:3px;font-size:.6875rem;font-weight:500;color:var(--muted)}
+.ve-del-btn{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px;border:1px solid #F3C1BE;border-radius:999px;background:#FFF8F7;color:var(--red-text);font:700 .75rem/1 var(--font);cursor:pointer}
+.ve-del-btn:hover{border-color:var(--red-text)}
+.ve-del-btn .ic{width:14px;height:14px}
+.ve-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:.875rem;color:var(--muted)}
+.ve-pg{display:flex;gap:8px}
+.ve-pg button{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:700 .8125rem/1 var(--font);cursor:pointer}
+.ve-pg button:hover:not([disabled]){border-color:var(--green)}
+.ve-pg button[disabled]{opacity:.45;cursor:default}
+.ve-pg .ic{width:14px;height:14px}
+
+.ve-modal{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:16px;background:rgba(16,24,20,.55)}
+.ve-modal[hidden]{display:none!important}
+.ve-modal-card{width:min(560px, 100%);max-height:calc(100dvh - 32px);overflow-y:auto;border-radius:20px;background:var(--surface);box-shadow:0 24px 60px rgba(16,24,20,.28)}
+.ve-modal-head{padding:18px 20px;border-bottom:1px solid var(--line)}
+.ve-modal-head h2{margin:0;font-size:1.125rem;font-weight:700;color:var(--red-text);overflow-wrap:anywhere}
+.ve-modal-body{display:grid;gap:14px;padding:18px 20px}
+.ve-modal-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;padding:16px 20px;border-top:1px solid var(--line)}
+.ve-warn{display:flex;gap:10px;padding:12px 14px;border:1px solid #F3D9A8;border-radius:14px;background:#FFFBF2;font-size:.8125rem;line-height:1.5;color:#6B4E12}
+.ve-warn .ic{flex:none;width:18px;height:18px;margin-top:1px}
+.ve-sum{display:grid;gap:4px;margin:0;font-size:.8125rem}
+.ve-sum div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
+.ve-sum dt{color:var(--muted)}
+.ve-sum dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.ve-ta{width:100%;min-width:0;min-height:96px;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font:500 .9375rem/1.45 var(--font);resize:vertical}
+.ve-ta:focus-visible{outline:none;border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.18)}
+.ve-hint{display:block;margin-top:4px;font-size:.75rem;color:var(--muted)}
+.ve-danger{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;border:0;border-radius:999px;background:var(--red-text);color:#FFF;font:700 .9375rem/1 var(--font);cursor:pointer}
+.ve-danger:hover{filter:brightness(1.08)}
+.ve-danger[disabled]{opacity:.6;cursor:progress}
+.ve-hist{margin-top:4px}
+.ve-hist-btn .ic{transition:transform .18s ease}
+.ve-hist-btn[aria-expanded="true"] .ic{transform:rotate(180deg)}
+@media (prefers-reduced-motion: reduce){.ve-hist-btn .ic{transition:none}}
+.ve-hist-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.ve-hist-table{min-width:900px}
+.ve-hist-note{max-width:320px;color:var(--muted);overflow-wrap:anywhere}
+@media (max-width:479px){
+  .ve-modal{padding:0;place-items:end stretch}
+  .ve-modal-card{width:100%;max-height:92dvh;border-radius:20px 20px 0 0}
+  .ve-modal-foot{flex-direction:column-reverse}
+  .ve-modal-foot > *{width:100%;justify-content:center}
+}
