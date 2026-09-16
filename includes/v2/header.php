@@ -104,32 +104,33 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
 
   <div class="mega mega-act" id="mega-activities" data-lenis-prevent hidden>
     <div class="mega-in">
-      <div>
-        <p class="mega-label">Categorii</p>
-        <div class="mega-tabs" role="tablist" aria-orientation="vertical" aria-label="Categorii" data-tabs data-hover>
-          <?php foreach ($V2NAV['categories'] as $i => $c): ?>
-          <button class="mega-tab" type="button" role="tab" id="mat-<?= v2_e($c['slug']) ?>" aria-controls="ma-<?= v2_e($c['slug']) ?>" aria-selected="<?= $i === 0 ? 'true' : 'false' ?>" tabindex="<?= $i === 0 ? 0 : -1 ?>"><span class="tt"><span class="thumb"><?= $c['thumb'] ? v2_photo([$c['thumb'], 0, 0, '']) : '' ?></span><span><?= v2_e($c['name']) ?></span></span></button>
+      <div class="ma-main">
+        <div class="ma-top">
+          <p class="mega-label">Toate categoriile, dintr-o privire</p>
+          <a class="mega-all" href="/categorii">Pagina categoriilor<?= v2_ic('arrow-right') ?></a>
+        </div>
+        <ul class="ma-dir">
+          <?php foreach ($V2NAV['categories'] as $c):
+              $maSubs = array_slice($c['subs'], 0, 4);
+              $maMore = count($c['subs']) - count($maSubs);
+          ?>
+          <li class="ma-cat">
+            <a class="ma-head" href="<?= v2_e($c['href']) ?>"><span class="thumb"><?= $c['thumb'] ? v2_photo([$c['thumb'], 0, 0, '']) : '' ?></span><span class="ma-t"><b><?= v2_e($c['name']) ?></b><?php if ($c['desc']): ?><small><?= v2_e($c['desc']) ?></small><?php endif; ?></span></a>
+            <ul class="ma-subs">
+              <?php foreach ($maSubs as $s): ?><li><a href="<?= v2_e($s['href']) ?>"><?= v2_e($s['name']) ?></a></li><?php endforeach; ?>
+              <li class="ma-more-li"><a class="ma-more" href="<?= v2_e($c['href']) ?>"><?= $maMore > 0 ? '+ încă ' . $maMore : 'Vezi tot' ?><?= v2_ic('arrow-right') ?></a></li>
+            </ul>
+          </li>
           <?php endforeach; ?>
+        </ul>
+        <div class="ma-ideas">
+          <p class="mega-label">Alege după situație</p>
+          <ul class="ideas ideas-row">
+            <?php foreach ($v2Ideas as [$icon, $text, $href]): ?>
+            <li><a class="idea" href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li>
+            <?php endforeach; ?>
+          </ul>
         </div>
-      </div>
-      <div>
-        <?php foreach ($V2NAV['categories'] as $i => $c): ?>
-        <div class="mega-panel" id="ma-<?= v2_e($c['slug']) ?>" role="tabpanel" aria-labelledby="mat-<?= v2_e($c['slug']) ?>"<?= $i ? ' hidden' : '' ?>>
-          <div class="ma-grid">
-            <div>
-              <p class="mega-h"><?= v2_e($c['name']) ?></p>
-              <?php if ($c['desc']): ?><p class="ma-desc"><?= v2_e($c['desc']) ?></p><?php endif; ?>
-              <?php if ($c['subs']): ?>
-              <ul class="mega-links two">
-                <?php foreach ($c['subs'] as $s): ?><li><a href="<?= v2_e($s['href']) ?>"><?= v2_e($s['name']) ?></a></li><?php endforeach; ?>
-              </ul>
-              <?php endif; ?>
-              <a class="mega-all" href="<?= v2_e($c['href']) ?>"><?= $c['count'] ? 'Vezi toate cele ' . v2_exp($c['count']) : 'Vezi categoria' ?><?= v2_ic('arrow-right') ?></a>
-            </div>
-            <a class="mega-feature" href="<?= v2_e($c['href']) ?>" aria-label="<?= v2_e($c['name']) ?>"><span class="mf-media"><?= $c['thumb'] ? v2_photo([$c['thumb'], 0, 0, '']) : v2_fallback($c['name']) ?></span></a>
-          </div>
-        </div>
-        <?php endforeach; ?>
       </div>
     </div>
   </div>
