@@ -519,6 +519,12 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/current$/)) return 'organizer.event.leisure.cashier.current';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/open$/)) return 'organizer.event.leisure.cashier.open';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/close$/)) return 'organizer.event.leisure.cashier.close';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/sessions/)) return 'organizer.event.leisure.cashier.sessions';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/cashier\/sales-csv/)) return 'organizer.event.leisure.cashier.sales-csv';
+        if (endpoint.match(/\/organizer\/orders\/\d+\/generate-invoice$/)) return 'organizer.orders.generate-invoice';
         if (endpoint === '/organizer/me/active-shift') return 'organizer.me.active-shift';
 
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
@@ -659,6 +665,12 @@ const BileteOnlineAPI = {
         if (venueGatesMatch) {
             return `venue=${encodeURIComponent(venueGatesMatch[1])}`;
         }
+        // Extract order ID from /organizer/orders/{id}/generate-invoice (POS invoice)
+        const genInvoiceMatch = endpoint.match(/\/organizer\/orders\/(\d+)\/generate-invoice$/);
+        if (genInvoiceMatch) {
+            return `id=${encodeURIComponent(genInvoiceMatch[1])}`;
+        }
+
         // Extract event ID from leisure organizer endpoints
         const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);
         if (leisureMatch) {
