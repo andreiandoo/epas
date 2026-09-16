@@ -216,12 +216,17 @@ class Invite extends Model
 
     public function markAsRendered(): void
     {
+        // Rendering again only replaces the PDF; the batch counter counts each invitation once.
+        $firstRender = $this->rendered_at === null;
+
         $this->update([
             'status' => 'rendered',
             'rendered_at' => now(),
         ]);
 
-        $this->batch->incrementRendered();
+        if ($firstRender) {
+            $this->batch->incrementRendered();
+        }
     }
 
     public function markAsEmailed(): void

@@ -129,6 +129,7 @@ class Invitations extends Page
         $marketplace = static::getMarketplaceClient();
 
         return InviteBatch::where('marketplace_client_id', $marketplace->id)
+            ->when($this->preselectedEventId, fn ($query) => $query->where('event_ref', $this->preselectedEventId))
             ->with(['template'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -609,6 +610,17 @@ class Invitations extends Page
             Notification::make()
                 ->danger()
                 ->title('Access denied')
+                ->send();
+            return;
+        }
+
+        // Only a draft can be rendered: repeated clicks on "Generate PDFs" used to
+        // render the whole batch again each time.
+        if ($batch->status !== 'draft') {
+            Notification::make()
+                ->warning()
+                ->title('PDF-urile sunt deja generate')
+                ->body('Lotul a fost generat deja sau se generează acum.')
                 ->send();
             return;
         }

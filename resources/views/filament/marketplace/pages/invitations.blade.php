@@ -275,9 +275,14 @@
 
                                 @if($canRender)
                                     <button wire:click="renderBatch('{{ $batch->id }}')"
+                                            wire:loading.attr="disabled"
+                                            wire:target="renderBatch('{{ $batch->id }}')"
                                             class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg shadow-sm hover:bg-orange-700">
-                                        <x-heroicon-o-document class="w-4 h-4" />
-                                        Generate PDFs ({{ $recipientCount }})
+                                        <span wire:loading.remove wire:target="renderBatch('{{ $batch->id }}')" class="inline-flex items-center gap-1.5">
+                                            <x-heroicon-o-document class="w-4 h-4" />
+                                            Generate PDFs ({{ $recipientCount }})
+                                        </span>
+                                        <span wire:loading wire:target="renderBatch('{{ $batch->id }}')">Se generează PDF-urile…</span>
                                     </button>
                                 @else
                                     <button disabled
