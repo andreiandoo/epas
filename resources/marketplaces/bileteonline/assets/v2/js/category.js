@@ -253,8 +253,79 @@
     body.appendChild(go);
     mapCard.appendChild(body);
   }
+  /* A real map: Leaflet from cdnjs, loaded the first time the dialog opens. CARTO's light tiles, OpenStreetMap's when
+     those fail. If the library can't load, the grid preview with % pins stays as it was. */
+  var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/', leafletLoad = null, lmap = null, lmarkers = null;
+  function loadLeaflet() {
+    if (window.L && window.L.map) return Promise.resolve(window.L);
+    if (leafletLoad) return leafletLoad;
+    leafletLoad = new Promise(function (resolve, reject) {
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = LEAFLET + 'leaflet.min.css';
+      document.head.appendChild(css);
+      var js = document.createElement('script');
+      js.src = LEAFLET + 'leaflet.min.js';
+      js.async = true;
+      js.onload = function () { if (window.L && window.L.map) resolve(window.L); else reject(new Error('leaflet')); };
+      js.onerror = function () { reject(new Error('leaflet')); };
+      document.head.appendChild(js);
+    });
+    return leafletLoad;
+  }
+  function ensureMap() {
+    var canvas = $('k-map-canvas');
+    if (!canvas || lmap) return Promise.resolve(lmap);
+    return loadLeaflet().then(function (L) {
+      if (lmap) return lmap;
+      lmap = L.map(canvas, { zoomControl: true, scrollWheelZoom: true, attributionControl: true }).setView([45.94, 24.97], 6);
+      var osm = false, tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      });
+      tiles.on('tileerror', function () {
+        if (osm) return;
+        osm = true;
+        lmap.removeLayer(tiles);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(lmap);
+      });
+      tiles.addTo(lmap);
+      lmarkers = L.layerGroup().addTo(lmap);
+      canvas.parentNode.classList.add('has-map');
+      return lmap;
+    }).catch(function () { return null; });
+  }
+  function drawMarkers(list) {
+    if (!lmap || !window.L) return;
+    var L = window.L, pts = [], approx = false;
+    lmarkers.clearLayers();
+    list.forEach(function (a) {
+      if (!a.geo || !isFinite(a.geo.lat) || !isFinite(a.geo.lng)) return;
+      var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
+      pin.type = 'button';
+      pin.setAttribute('data-pin', String(a.id));
+      pin.setAttribute('aria-label', a.title + (a.price ? ', de la ' + lei(a.price) : ''));
+      var m = L.marker([a.geo.lat, a.geo.lng], { icon: L.divIcon({ className: 'kpin-wrap', html: pin, iconSize: [0, 0] }), keyboard: false });
+      m.on('click', function () { selected = String(a.id); markPins(); renderCard(); });
+      lmarkers.addLayer(m);
+      pts.push([a.geo.lat, a.geo.lng]);
+      if (a.geo.approx) approx = true;
+    });
+    var label = $('k-map-label');
+    if (label) {
+      var note = label.querySelector('.kmap-note');
+      if (approx && !note) label.appendChild(node('small', 'kmap-note', 'Poziție după oraș acolo unde locul exact lipsește'));
+      if (!approx && note) note.remove();
+    }
+    lmap.invalidateSize();
+    if (pts.length === 1) lmap.setView(pts[0], 13);
+    else if (pts.length > 1) lmap.fitBounds(pts, { padding: [70, 70], maxZoom: 14 });
+    markPins();
+  }
   function renderMap(list) {
     if (!mapList || !mapPins) return;
+    if (lmap) drawMarkers(list);
+    else ensureMap().then(function (ok) { if (ok && !map.hidden) drawMarkers(sorted(acts.filter(matches))); });
     mapList.textContent = '';
     mapPins.textContent = '';
     list.forEach(function (a) {
@@ -327,7 +398,15 @@
     if (t === filters || t === map) { closeDlg(t); return; }
     if (t.closest('[data-subcat]')) { toggleSub(); return; }
     if ((b = t.closest('[data-fav]'))) { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); return; }
-    if ((b = t.closest('[data-pin]'))) { selected = b.getAttribute('data-pin'); markPins(); renderCard(); return; }
+    if ((b = t.closest('[data-pin]'))) {
+      selected = b.getAttribute('data-pin');
+      markPins();
+      renderCard();
+      if (lmap && b.closest('#k-map-list')) {
+        acts.forEach(function (x) { if (String(x.id) === selected && x.geo) lmap.panTo([x.geo.lat, x.geo.lng]); });
+      }
+      return;
+    }
     if (t.closest('[data-unpin]')) { selected = null; markPins(); renderCard(); return; }
     if (openPop && !t.closest('.kpop')) closePop(false);
   });
