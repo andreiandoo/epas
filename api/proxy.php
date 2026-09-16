@@ -3384,6 +3384,115 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER POS (on-site sale at a venue) ====================
+    // Same endpoints the Ambilet POS uses; every one is scoped to an event that is set up
+    // as a venue (display_template = leisure_venue) and needs the organizer token.
+
+    case 'organizer.event.leisure.config':
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/config';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.pos-sale':
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/pos-sale';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.current':
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/cashier/current';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.open':
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/cashier/open';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.close':
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/cashier/close';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.sessions':
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        foreach (['date', 'limit'] as $k) {
+            if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/cashier/sessions' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.cashier.sales-csv':
+        // Raw CSV of the day's sales for the register report; the download is checked client-side.
+        $posEventId = (int) ($_GET['event'] ?? 0);
+        if (!$posEventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['date'])) $params['date'] = $_GET['date'];
+        $endpoint = '/organizer/events/' . $posEventId . '/leisure/cashier/sales-csv' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.orders.generate-invoice':
+        // POST /organizer/orders/{id}/generate-invoice — the invoice for a POS order sold with company data.
+        $posOrderId = (int) ($_GET['id'] ?? 0);
+        if (!$posOrderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/organizer/orders/' . $posOrderId . '/generate-invoice';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':

@@ -198,6 +198,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/vanzari/?$ organizer/sales.php [L]
 
+# On-site sale at the venue (POS + cash register)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/pos/?$ organizer/pos.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
@@ -292,7 +297,7 @@ RewriteRule ^vinde-bilete/?$ vinde-bilete.php [L]
 # Generic public organizer profile - keep LAST in /organizator/* block
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|facturare|echipa|sold|panou|vanzari|widget-uri|widgets|invitatii|suport|leisure|leisure-event|leisure-dashboard|leisure-participants|leisure-sales|leisure-pos|leisure-team|leisure-raport|leisure-rentals|leisure-boats|inregistrare|forgot-password|resetare-parola|reset-password|accept-invite|facturare|apidoc)/?$
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|facturare|echipa|sold|panou|vanzari|widget-uri|widgets|invitatii|suport|pos|leisure|leisure-event|leisure-dashboard|leisure-participants|leisure-sales|leisure-pos|leisure-team|leisure-raport|leisure-rentals|leisure-boats|inregistrare|forgot-password|resetare-parola|reset-password|accept-invite|facturare|apidoc)/?$
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug
