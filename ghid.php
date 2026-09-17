@@ -8,8 +8,8 @@
  * from the guide, with a generic set when it has none. The body's h2/h3 get ids (kept when the editor set one) and make
  * the table of contents.
  *
- * A guide reads like an article, not like a listing: a light editorial head (topic, title, dek, byline with date and
- * read time), the guide's own image wide under it, then the text in a reading column with the contents beside it
+ * A guide reads like an article, not like a listing: a light editorial head (title, dek, byline with date and read
+ * time), the guide's own image wide under it, then the text in a reading column with the contents beside it
  * (a folding box on phones) and a reading-progress line. After the text: share, FAQ, where to go next (the linked
  * event, the topic's activities, the gift card), bookable activities, related guides to read next.
  */
@@ -294,10 +294,6 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($bi < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bc['url']) ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <p class="gd-kicker">
-          <span class="gd-kind"><?= v2_ic('file-text') ?>Ghid</span>
-          <?php if ($catName !== ''): ?><?php if ($topicHref !== ''): ?><a class="gd-topic" href="<?= v2_e($topicHref) ?>"><?= v2_e($catName) ?></a><?php else: ?><span class="gd-topic"><?= v2_e($catName) ?></span><?php endif; ?><?php endif; ?>
-        </p>
         <h1 class="gd-h" id="gd-h"><?= v2_e($title) ?></h1>
         <?php if ($excerpt !== ''): ?><p class="gd-lead"><?= v2_e($excerpt) ?></p><?php endif; ?>
         <div class="gd-byline">

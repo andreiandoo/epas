@@ -123,8 +123,9 @@ $v2HeadExtra = '<meta name="keywords" content="cum funcționează bilete online,
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 
+// every card leads to its category (the nav's link when it has one, else the short URL slug.php resolves)
 $hwCatHref = static function (string $slug) use ($V2NAV): string {
-    return isset($V2NAV['categoryBySlug'][$slug]) ? ($V2NAV['categoryBySlug'][$slug]['href'] ?? '/' . $slug) : '';
+    return (string) ($V2NAV['categoryBySlug'][$slug]['href'] ?? '/' . $slug);
 };
 ?>
 <main id="main" tabindex="-1">
@@ -251,9 +252,9 @@ $hwCatHref = static function (string $slug) use ($V2NAV): string {
           <img src="<?= v2_asset('img/cat-' . $typeSlug . '.webp') ?>" srcset="<?= v2_asset('img/cat-' . $typeSlug . '-320.webp') ?> 320w, <?= v2_asset('img/cat-' . $typeSlug . '.webp') ?> 640w" sizes="(min-width:1024px) 25vw, (min-width:640px) 50vw, 100vw" width="640" height="480" alt="<?= v2_e($typeAlt) ?>" loading="lazy" decoding="async">
           <div class="hw-type-body">
             <p class="hw-type-k"><?= v2_e($typeKicker) ?></p>
-            <h3><?= v2_e($typeTitle) ?></h3>
+            <h3><a class="hw-type-link" href="<?= v2_e($typeHref) ?>"><?= v2_e($typeTitle) ?></a></h3>
             <p><?= v2_e($typeText) ?></p>
-            <?php if ($typeHref): ?><a href="<?= v2_e($typeHref) ?>">Vezi activitățile<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+            <span class="hw-type-go" aria-hidden="true">Vezi activitățile<?= v2_ic('arrow-right') ?></span>
           </div>
         </article>
         <?php endforeach; ?>

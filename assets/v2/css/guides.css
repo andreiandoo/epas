@@ -18,17 +18,48 @@
 .gd-feature-body > p:not(.kicker){display:-webkit-box;margin:10px 0 0;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5;color:var(--muted)}
 .gd-feature .btn{margin-top:20px}
 
-/* =================== GUIDE CARDS (on .ct-card) =================== */
-.gd-topic{position:absolute;z-index:1;left:14px;top:14px;max-width:calc(100% - 110px);overflow:hidden;padding:6px 11px;border-radius:999px;background:rgba(247,247,245,.95);color:var(--ink);font-size:.75rem;font-weight:700;white-space:nowrap;text-overflow:ellipsis}
-.gd-grid .ct-badge{background:var(--tint-green);color:var(--green)}
-.gd-grid .ct-over h3{font-size:clamp(1.25rem, 1.8vw, 1.5rem);line-height:1.15;letter-spacing:-.02em}
-.gd-grid .ct-body > p{display:-webkit-box;overflow:hidden;-webkit-line-clamp:3;-webkit-box-orient:vertical}
-.gd-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
-.gd-foot a{display:inline-flex;align-items:center;gap:6px;padding:4px 0;color:var(--green);font-weight:700;text-decoration:none}
-.gd-foot .ic{width:18px;height:18px;transition:transform var(--dur-micro) var(--ease-out)}
-.gd-foot a:hover .ic{transform:translateX(3px)}
-.gd-foot span{font-size:.875rem;color:var(--muted);white-space:nowrap}
+/* =================== GUIDE CARDS =================== */
+/* editorial cards: the picture, a quiet line with the topic and the read time, the title and two lines of excerpt;
+   the whole card is the link */
+.gd-cards{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(28px, 3vw, 40px) var(--space-5);margin:0;padding:0}
+@media (min-width:640px){.gd-cards{grid-template-columns:repeat(2, minmax(0,1fr))}}
+@media (min-width:1280px){.gd-cards{grid-template-columns:repeat(3, minmax(0,1fr))}}
+.gd-card{min-width:0}
+.gd-card[hidden]{display:none}
+.gd-card a{display:grid;gap:10px;color:var(--ink);text-decoration:none;border-radius:var(--r-l)}
+.gd-card-media{position:relative;display:block;aspect-ratio:3 / 2;overflow:hidden;border-radius:var(--r-l);background:var(--deep)}
+.gd-card-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 900ms var(--ease-out)}
+.gd-card-media .fb{position:absolute;inset:0;place-items:end center;padding-bottom:12%}
+.gd-card-media .fb svg{height:46%}
+.gd-card a:hover .gd-card-media img{transform:scale(1.05)}
+.gd-card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:6px;font-size:.8125rem}
+.gd-card-topic{font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--action)}
+.gd-card-time{display:inline-flex;align-items:center;gap:5px;color:var(--muted)}
+.gd-card-time .ic{width:14px;height:14px}
+.gd-card-title{display:-webkit-box;margin:0;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:clamp(1.25rem, 1.8vw, 1.4375rem);font-weight:700;line-height:1.22;letter-spacing:-.02em;text-wrap:balance;transition:color var(--dur-micro) var(--ease-out)}
+.gd-card a:hover .gd-card-title{color:var(--green);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.gd-card-text{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.55;color:var(--muted)}
 .gd-none-text{font-weight:500 !important}
 
-/* the hubs sit on white here, so the final CTA gets the page ground around it */
-.gd-final{padding-top:clamp(40px, 6vw, 72px)}
+/* =================== ACTIVITIES BY CONTEXT =================== */
+.gd-context{background:var(--surface)}
+.gd-context-head h2{max-width:20ch;margin:0;font-size:var(--text-h2);font-weight:700;line-height:1.04;letter-spacing:-.04em;color:var(--green)}
+.gd-context-grid{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:var(--space-6) 0 0;padding:0}
+@media (min-width:640px){.gd-context-grid{grid-template-columns:repeat(2, minmax(0,1fr))}}
+@media (min-width:1100px){.gd-context-grid{grid-template-columns:repeat(4, minmax(0,1fr))}}
+.gd-context-grid > li{display:flex}
+.gd-ctx{--tone:var(--green);--soft:var(--tint-green);position:relative;flex:1;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:6px;min-height:250px;padding:24px;overflow:hidden;overflow:clip;border-radius:var(--r-l);background:var(--soft);color:var(--ink);text-decoration:none;transition:transform var(--dur-state) var(--ease-out), box-shadow var(--dur-state) var(--ease-out)}
+.gd-ctx.is-yellow{--tone:#8F6200;--soft:#FFF4D6}
+.gd-ctx.is-blue{--tone:#2D6CCD;--soft:#E6EEF9}
+.gd-ctx.is-red{--tone:var(--red-text);--soft:#FDEDEC}
+.gd-ctx::after{content:"";position:absolute;right:-60px;bottom:-60px;width:180px;height:180px;border:2px solid var(--tone);border-radius:50%;opacity:.12;transition:transform 600ms var(--ease-out)}
+.gd-ctx:hover{transform:translateY(-3px);box-shadow:0 26px 44px -32px rgba(14,72,55,.55)}
+.gd-ctx:hover::after{transform:scale(1.25)}
+.gd-ctx-ic{display:grid;place-items:center;width:48px;height:48px;margin-bottom:8px;border-radius:50%;background:var(--surface);color:var(--tone)}
+.gd-ctx-ic .ic{width:24px;height:24px}
+.gd-ctx small{font-size:var(--text-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tone)}
+.gd-ctx b{font-size:1.375rem;font-weight:700;line-height:1.15;letter-spacing:-.02em}
+.gd-ctx > span:not(.gd-ctx-ic):not(.gd-ctx-go){line-height:1.5;color:var(--muted)}
+.gd-ctx-go{justify-self:start;display:grid;place-items:center;width:40px;height:40px;margin-top:10px;border-radius:50%;background:var(--tone);color:#FFFFFF;transition:transform var(--dur-micro) var(--ease-out)}
+.gd-ctx-go .ic{width:18px;height:18px}
+.gd-ctx:hover .gd-ctx-go{transform:translateX(4px)}
