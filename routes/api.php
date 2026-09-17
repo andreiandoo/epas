@@ -4482,3 +4482,38 @@ Route::prefix('marketplace-client/chat')
         Route::get('/conversations/{reference}/attachments/{token}', [\App\Http\Controllers\Api\MarketplaceClient\ChatController::class, 'attachment'])
             ->name('api.marketplace-client.chat.attachment');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Partner API — microservice media-partners
+|--------------------------------------------------------------------------
+|
+| Read access for external media partners (e.g. the Maximum Rock magazine),
+| each with its own scoped key from marketplace_partners. Kept apart from
+| /marketplace-client, whose key also reaches orders and stats.
+|
+*/
+Route::prefix('partner/v1')->group(function () {
+    Route::middleware('partner.auth:events:read')->group(function () {
+        Route::get('/events', [\App\Http\Controllers\Api\Partner\EventsController::class, 'index'])
+            ->name('api.partner.events.index');
+        Route::get('/events/deleted', [\App\Http\Controllers\Api\Partner\EventsController::class, 'deleted'])
+            ->name('api.partner.events.deleted');
+        Route::get('/events/{id}', [\App\Http\Controllers\Api\Partner\EventsController::class, 'show'])
+            ->whereNumber('id')
+            ->name('api.partner.events.show');
+    });
+
+    Route::middleware('partner.auth:artists:read')->group(function () {
+        Route::get('/artists', [\App\Http\Controllers\Api\Partner\ArtistsController::class, 'index'])
+            ->name('api.partner.artists.index');
+        Route::get('/artists/{id}', [\App\Http\Controllers\Api\Partner\ArtistsController::class, 'show'])
+            ->whereNumber('id')
+            ->name('api.partner.artists.show');
+    });
+
+    Route::get('/artists/{id}/events', [\App\Http\Controllers\Api\Partner\EventsController::class, 'forArtist'])
+        ->whereNumber('id')
+        ->middleware('partner.auth:artists:read,events:read')
+        ->name('api.partner.artists.events');
+});

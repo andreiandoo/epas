@@ -57,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'cashless.active' => \App\Http\Middleware\EnsureCashlessActive::class,
             'venue.owner' => \App\Http\Middleware\EnsureVenueOwner::class,
             'extended.artist' => \App\Http\Middleware\RequireExtendedArtist::class,
+            'partner.auth' => \App\Http\Middleware\PartnerApiAuth::class,
         ]);
 
         // Add global middleware for API routes

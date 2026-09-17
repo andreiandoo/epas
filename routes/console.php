@@ -1229,3 +1229,11 @@ Schedule::command('shorts:generate')
     ->dailyAt('02:30')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
+
+// Media-partner event feed (microservice media-partners). Recomputes what partners
+// see on /api/partner/v1/events and records changes, including price, artist and
+// availability changes that never touch events.updated_at, and deleted events.
+Schedule::command('partners:refresh-event-feed')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(30)
+    ->runInBackground();
