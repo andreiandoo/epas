@@ -5,12 +5,13 @@
  * One editorial guide authored in /marketplace/blog-articles. The body is the admin RichEditor's HTML, shown as
  * written; `[activities …]` shortcodes in it become activity cards: ids="1,5,9" hand-picked, or city="…"
  * category="…" limit="6" sort="recent|cheapest|soon" pulled from the listing; style="small|large|long". FAQs come
- * from the guide, with a generic set when it has none. There is deliberately no table of contents: the body has no
- * stable heading anchors.
+ * from the guide, with a generic set when it has none. The body's h2/h3 get ids (kept when the editor set one) and make
+ * the table of contents.
  *
- * Top to bottom: hero (topic, read time, date, title, excerpt, and the guide's own image in an arch beside them),
- * "activities for this guide" strip, body + FAQ
- * beside the sidebar (linked event, gift card, share), recommended activities rail, related guides.
+ * A guide reads like an article, not like a listing: a light editorial head (topic, title, dek, byline with date and
+ * read time), the guide's own image wide under it, then the text in a reading column with the contents beside it
+ * (a folding box on phones) and a reading-progress line. After the text: share, FAQ, where to go next (the linked
+ * event, the topic's activities, the gift card), bookable activities, related guides to read next.
  */
 
 $pageCacheTTL = 300;
@@ -124,6 +125,43 @@ $dateLabel = $ts ? (int) date('j', $ts) . ' ' . $gdMonths[(int) date('n', $ts)] 
 $coverUrl = v2_media_url($article['image_url'] ?? null);
 $content = (string) ($article['content'] ?? '');
 $contentHtml = trim(strip_tags($content, '<img><iframe>')) !== '' ? $gdRenderShortcodes($content) : '';
+
+// Contents: every h2/h3 of the body gets an id (the editor's own when set) and an entry; h3 nest under their h2.
+$gdToc = [];
+if ($contentHtml !== '') {
+    $gdUsed = [];
+    $contentHtml = preg_replace_callback('#<(h[23])(\b[^>]*)>(.*?)</\1>#is', function ($m) use (&$gdToc, &$gdUsed) {
+        $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($m[3]), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        if ($text === '') {
+            return $m[0];
+        }
+        $attrs = $m[2];
+        if (preg_match('/\sid\s*=\s*["\']([^"\']+)["\']/i', $attrs, $idm)) {
+            $id = $idm[1];
+        } else {
+            $id = trim(preg_replace('/[^a-z0-9]+/', '-', strtr(mb_strtolower($text), ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't'])), '-');
+            $id = mb_substr($id !== '' ? $id : 'sectiune', 0, 60);
+            $baseId = $id;
+            for ($n = 2; isset($gdUsed[$id]); $n++) {
+                $id = $baseId . '-' . $n;
+            }
+            $attrs .= ' id="' . htmlspecialchars($id, ENT_QUOTES) . '"';
+        }
+        $gdUsed[$id] = true;
+        $level = (int) substr($m[1], 1);
+        if ($level === 3 && $gdToc) {
+            $gdToc[count($gdToc) - 1]['subs'][] = ['id' => $id, 'text' => $text];
+        } else {
+            $gdToc[] = ['id' => $id, 'text' => $text, 'subs' => [], 'level' => $level];
+        }
+        return '<' . $m[1] . $attrs . '>' . $m[3] . '</' . $m[1] . '>';
+    }, $contentHtml);
+}
+// a contents list earns its place from two sections up
+$gdTocCount = count($gdToc) + array_sum(array_map(fn ($t) => count($t['subs']), $gdToc));
+if ($gdTocCount < 2) {
+    $gdToc = [];
+}
 
 $event = is_array($article['event'] ?? null) && preg_match('/^[a-z0-9][a-z0-9-]*$/', (string) ($article['event']['slug'] ?? '')) ? $article['event'] : null;
 $eventTitle = $event ? navFlatName($event['title'] ?? $event['name'] ?? '') : '';
@@ -239,65 +277,72 @@ $structuredData = [$gdClean([
 
 $v2Styles = ['guide.css'];
 $v2Scripts = ['guide.js'];
-$v2HeaderOverlay = true;
 $v2HeadExtra = $coverUrl ? '<link rel="preload" as="image" href="' . v2_e($coverUrl) . '" fetchpriority="high">' : '';
 
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
+  <div class="gd-progress" aria-hidden="true"><span id="gd-progress"></span></div>
   <article class="gd" aria-labelledby="gd-h">
-    <!-- ===================== HERO ===================== -->
-    <header class="gd-hero<?= $coverUrl ? ' has-art' : '' ?>">
-      <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
-      <svg class="gd-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
-      <div class="wrap gd-hero-in">
-        <div class="gd-hero-copy">
+    <!-- ===================== HEAD ===================== -->
+    <header class="gd-head">
+      <div class="wrap gd-head-in">
         <nav class="crumbs" aria-label="Breadcrumb">
           <?php foreach ($breadcrumbs as $bi => $bc): ?>
             <?php if ($bi > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($bi < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bc['url']) ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <p class="gd-meta">
-          <?php if ($catName !== ''): ?><?php if ($topicHref !== ''): ?><a class="gd-topic-link" href="<?= v2_e($topicHref) ?>"><?= v2_e($catName) ?></a><?php else: ?><span class="gd-topic-link"><?= v2_e($catName) ?></span><?php endif; ?><?php endif; ?>
-          <span><?= v2_ic('clock') ?><?= v2_e($readTime) ?> citire</span>
-          <?php if ($dateLabel !== ''): ?><span><?= v2_ic('calendar-blank') ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time></span><?php endif; ?>
+        <p class="gd-kicker">
+          <span class="gd-kind"><?= v2_ic('file-text') ?>Ghid</span>
+          <?php if ($catName !== ''): ?><?php if ($topicHref !== ''): ?><a class="gd-topic" href="<?= v2_e($topicHref) ?>"><?= v2_e($catName) ?></a><?php else: ?><span class="gd-topic"><?= v2_e($catName) ?></span><?php endif; ?><?php endif; ?>
         </p>
         <h1 class="gd-h" id="gd-h"><?= v2_e($title) ?></h1>
         <?php if ($excerpt !== ''): ?><p class="gd-lead"><?= v2_e($excerpt) ?></p><?php endif; ?>
+        <div class="gd-byline">
+          <span class="gd-avatar" aria-hidden="true"><svg viewBox="24 33 148 205"><use href="#sym-g"/></svg></span>
+          <p class="gd-by"><b>Ghid bilete.online</b><span><?php if ($dateLabel !== ''): ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time><span aria-hidden="true">·</span><?php endif; ?><?= v2_e($readTime) ?> de citit</span></p>
+          <a class="gd-share-jump" href="#gd-share"><?= v2_ic('link') ?>Trimite ghidul</a>
         </div>
-        <?php if ($coverUrl): ?>
-        <figure class="gd-art">
-          <span class="gd-art-ring" aria-hidden="true"></span>
-          <span class="gd-art-frame"><img src="<?= v2_e($coverUrl) ?>" alt="<?= v2_e($title) ?>" fetchpriority="high" decoding="async"></span>
-          <span class="gd-art-tag" aria-hidden="true"><?= v2_ic('clock') ?><?= v2_e($readTime) ?> de citit<?php if ($catName !== ''): ?><b><?= v2_e($catName) ?></b><?php endif; ?></span>
-          <svg class="gd-art-line" viewBox="900 585 2340 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
-        </figure>
-        <?php endif; ?>
       </div>
+      <?php if ($coverUrl): ?>
+      <figure class="wrap gd-cover">
+        <img src="<?= v2_e($coverUrl) ?>" alt="<?= v2_e($title) ?>" fetchpriority="high" decoding="async">
+      </figure>
+      <?php endif; ?>
     </header>
-    <div id="hdr-sentinel" aria-hidden="true"></div>
 
+    <!-- ===================== TEXT ===================== -->
+    <div class="gd-body">
+      <div class="wrap gd-layout<?= $gdToc ? ' has-toc' : '' ?>">
+        <?php if ($gdToc): ?>
+        <nav class="gd-toc" aria-labelledby="gd-toc-h">
+          <button class="gd-toc-toggle" type="button" id="gd-toc-toggle" aria-expanded="false" aria-controls="gd-toc-list"><span id="gd-toc-h">În acest ghid</span><small><?= $gdTocCount ?> secțiuni</small><?= v2_ic('caret-down') ?></button>
+          <ol class="gd-toc-list" id="gd-toc-list">
+            <?php foreach ($gdToc as $ti => $t): ?>
+            <li><a href="#<?= v2_e($t['id']) ?>" data-toc="<?= v2_e($t['id']) ?>"><?php if ($t['level'] === 2): ?><span class="gd-toc-n" aria-hidden="true"><?= str_pad((string) (count(array_filter(array_slice($gdToc, 0, $ti + 1), fn ($x) => $x['level'] === 2))), 2, '0', STR_PAD_LEFT) ?></span><?php endif; ?><span><?= v2_e($t['text']) ?></span></a>
+              <?php if ($t['subs']): ?>
+              <ol>
+                <?php foreach ($t['subs'] as $sub): ?><li><a href="#<?= v2_e($sub['id']) ?>" data-toc="<?= v2_e($sub['id']) ?>" data-toc-parent="<?= v2_e($t['id']) ?>"><span><?= v2_e($sub['text']) ?></span></a></li><?php endforeach; ?>
+              </ol>
+              <?php endif; ?>
+            </li>
+            <?php endforeach; ?>
+          </ol>
+        </nav>
+        <?php endif; ?>
 
-    <?php if ($topicHref !== ''): ?>
-    <!-- ===================== ACTIVITIES FOR THIS GUIDE ===================== -->
-    <div class="wrap">
-      <div class="gd-strip">
-        <div><small>Vrei direct activități?</small><b>Vezi activități legate de acest ghid.</b></div>
-        <div class="gd-strip-cta">
-          <a class="btn btn-primary" href="<?= v2_e($topicHref) ?>"><?= v2_e($catName ?: 'Vezi activități') ?><?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-ghost" href="/categorii">Toate categoriile</a>
-        </div>
-      </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- ===================== BODY + SIDEBAR ===================== -->
-    <div class="sec gd-body">
-      <div class="wrap gd-layout">
         <div class="gd-main">
-          <div class="gd-prose">
+          <?php if ($event): ?>
+          <aside class="gd-event" aria-label="Eveniment din ghid">
+            <span class="gd-event-ic" aria-hidden="true"><?= v2_ic('ticket') ?></span>
+            <p><small>Eveniment din acest ghid</small><b><?= v2_e($eventTitle) ?></b></p>
+            <a class="btn btn-primary" href="/bilete/<?= v2_e($event['slug']) ?>">Vezi biletele<?= v2_ic('arrow-right') ?></a>
+          </aside>
+          <?php endif; ?>
+
+          <div class="gd-prose" id="gd-prose">
             <?php if ($contentHtml !== ''): ?>
             <?= $contentHtml /* authored in the admin RichEditor: trusted HTML */ ?>
             <?php else: ?>
@@ -305,43 +350,42 @@ include __DIR__ . '/includes/v2/header.php';
             <?php endif; ?>
           </div>
 
+          <section class="gd-end" id="gd-share" aria-labelledby="gd-share-h">
+            <h2 class="gd-end-h" id="gd-share-h">Ți-a fost util? Trimite-l cuiva cu care ieși.</h2>
+            <div class="gd-share">
+              <button class="is-native" type="button" data-native-share data-title="<?= v2_e($title) ?>" data-url="<?= v2_e($canonicalUrl) ?>" hidden>Trimite prin aplicații</button>
+              <?php foreach ($shareLinks as [$shareLabel, $shareUrl]): ?>
+              <a href="<?= v2_e($shareUrl) ?>"<?= $shareLabel !== 'Email' ? ' target="_blank" rel="noopener"' : '' ?> aria-label="Trimite ghidul pe <?= v2_e($shareLabel) ?>"><?= v2_e($shareLabel) ?></a>
+              <?php endforeach; ?>
+              <button type="button" data-copy="<?= v2_e($canonicalUrl) ?>"><?= v2_ic('link') ?>Copiază linkul</button>
+            </div>
+            <span class="sr" role="status" id="gd-copy-status"></span>
+          </section>
+
           <section class="gd-faq" aria-labelledby="faq">
             <h2 id="faq">Întrebări frecvente</h2>
             <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
             <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
             <?php endforeach; ?>
           </section>
+
+          <section class="gd-next" aria-labelledby="gd-next-h">
+            <h2 class="sr" id="gd-next-h">Mai departe</h2>
+            <?php if ($topicHref !== ''): ?>
+            <a class="gd-next-card is-topic" href="<?= v2_e($topicHref) ?>">
+              <small>Vrei direct activități?</small>
+              <b>Vezi activități legate de acest ghid</b>
+              <span class="gd-next-go"><?= v2_e($catName ?: 'Vezi activități') ?><?= v2_ic('arrow-right') ?></span>
+            </a>
+            <?php endif; ?>
+            <a class="gd-next-card is-gift" href="/card-cadou">
+              <small>Card cadou</small>
+              <b>Nu știi ce să alegi? Trimite un card cadou și lasă destinatarul să aleagă experiența.</b>
+              <span class="gd-next-go"><?= v2_ic('gift') ?>Cumpără card</span>
+            </a>
+            <p class="gd-next-more"><a href="/categorii">Toate categoriile<?= v2_ic('arrow-right') ?></a></p>
+          </section>
         </div>
-
-        <aside class="gd-side" aria-label="Mai departe">
-          <?php if ($event): ?>
-          <div class="gd-card is-event">
-            <small>Eveniment</small>
-            <h3><?= v2_e($eventTitle) ?></h3>
-            <a class="btn btn-primary" href="/bilete/<?= v2_e($event['slug']) ?>">Vezi biletele<?= v2_ic('arrow-right') ?></a>
-          </div>
-          <?php endif; ?>
-
-          <div class="gd-card is-gift">
-            <small>Card cadou</small>
-            <h3>Nu știi ce să alegi?</h3>
-            <p>Trimite un card cadou și lasă destinatarul să aleagă experiența.</p>
-            <a class="btn btn-primary" href="/card-cadou"><?= v2_ic('gift') ?>Cumpără card</a>
-          </div>
-
-          <div class="gd-card is-share">
-            <small>Share</small>
-            <h3>Trimite ghidul</h3>
-            <div class="gd-share">
-              <button class="is-native" type="button" data-native-share data-title="<?= v2_e($title) ?>" data-url="<?= v2_e($canonicalUrl) ?>" hidden>Trimite prin aplicații</button>
-              <?php foreach ($shareLinks as [$shareLabel, $shareUrl]): ?>
-              <a href="<?= v2_e($shareUrl) ?>"<?= $shareLabel !== 'Email' ? ' target="_blank" rel="noopener"' : '' ?> aria-label="Trimite ghidul pe <?= v2_e($shareLabel) ?>"><?= v2_e($shareLabel) ?></a>
-              <?php endforeach; ?>
-              <button type="button" data-copy="<?= v2_e($canonicalUrl) ?>">Copiază linkul</button>
-            </div>
-            <span class="sr" role="status" id="gd-copy-status"></span>
-          </div>
-        </aside>
       </div>
     </div>
   </article>
@@ -351,7 +395,7 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-rail" aria-labelledby="gd-rail-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="gd-rail-h">Activități recomandate</h2>
+        <div><p class="kicker">După lectură</p><h2 id="gd-rail-h">Activități recomandate</h2></div>
         <div class="rail-btns" data-for="gd-rail-list">
           <button class="rail-btn" type="button" data-dir="-1" aria-label="Activitățile anterioare"><?= v2_ic('arrow-left') ?></button>
           <button class="rail-btn" type="button" data-dir="1" aria-label="Activitățile următoare"><?= v2_ic('arrow-right') ?></button>
@@ -367,19 +411,21 @@ include __DIR__ . '/includes/v2/header.php';
   <?php if ($related): ?>
   <!-- ===================== RELATED GUIDES ===================== -->
   <section class="sec gd-related" aria-labelledby="gd-related-h">
-    <div class="wrap">
-      <div class="sec-head">
+    <div class="wrap gd-related-in">
+      <div class="gd-related-head">
+        <p class="kicker">Citește și</p>
         <h2 id="gd-related-h">Ghiduri similare</h2>
         <a class="sec-link" href="/ghiduri">Toate ghidurile<?= v2_ic('arrow-right') ?></a>
       </div>
-      <ul class="gd-rel-grid">
+      <ol class="gd-rel-list">
         <?php foreach ($related as $rgi => $rg): ?>
         <li><a class="gd-rel" href="<?= v2_e($rg['href']) ?>">
           <span class="gd-rel-media"><?= $rg['photo'] ? v2_photo($rg['photo']) : v2_fallback($rg['title'], $rgi) ?></span>
           <span class="gd-rel-body"><small><?= v2_e($rg['kicker']) ?></small><b><?= v2_e($rg['title']) ?></b><?php if ($rg['excerpt'] !== ''): ?><span><?= v2_e($rg['excerpt']) ?></span><?php endif; ?></span>
+          <?= v2_ic('arrow-right') ?>
         </a></li>
         <?php endforeach; ?>
-      </ul>
+      </ol>
     </div>
   </section>
   <?php endif; ?>
