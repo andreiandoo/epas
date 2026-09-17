@@ -73,13 +73,6 @@ $structuredData = [[
     '@context' => 'https://schema.org',
     '@type' => 'FAQPage',
     'mainEntity' => array_map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $faqs),
-], [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Card cadou', 'item' => $canonicalUrl],
-    ],
 ]];
 
 $gcArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
@@ -97,7 +90,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="gc-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="gc-hero-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Card cadou</span></nav>
         <p class="gc-kicker">Card cadou digital · experiențe · bilete QR</p>
         <h1 class="gc-h" id="gc-h">Dăruiește ceva de făcut.</h1>
         <p class="gc-lead">Un card cadou bilete.online nu obligă pe nimeni să aleagă un obiect. Îi lași să aleagă o experiență: escape room, muzeu, parc, atelier, natură sau o ieșire de weekend.</p>

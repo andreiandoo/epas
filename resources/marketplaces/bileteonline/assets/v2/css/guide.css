@@ -8,7 +8,6 @@
 /* =================== HEAD =================== */
 .gd-head{padding-block:clamp(20px, 3vw, 32px) 0;background:linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%)}
 .gd-head-in{max-width:calc(820px + 2 * var(--gutter))}
-.gd-head .crumbs [aria-current]{max-width:min(40ch, 100%);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .gd-kicker{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:var(--space-5) 0 0}
 .gd-kind{display:inline-flex;align-items:center;gap:6px;padding:5px 11px 5px 8px;border-radius:999px;background:var(--ink);color:#F7F7F5;font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
 .gd-kind .ic{width:14px;height:14px}

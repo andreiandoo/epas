@@ -11,8 +11,6 @@
 .af-in{position:relative;z-index:1;display:grid;gap:var(--space-7);min-height:min(100svh, 980px);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(72px, 10vw, 140px);align-content:center}
 @media (min-width:1024px){.af-in{grid-template-columns:minmax(0,1fr) minmax(0,500px);align-items:center;column-gap:var(--space-8)}}
 @media (max-width:1023px){.af-in{min-height:0}}
-.af-hero .crumbs,.af-hero .crumbs a{color:var(--on-deep-muted)}
-.af-hero .crumbs a:hover{color:#FFFFFF}
 .af-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
 .af-h{max-width:12ch;margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5}
 .af-lead{max-width:50ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}

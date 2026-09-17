@@ -39,8 +39,6 @@
 @media (max-width:599px){.dp-hero .deco-arches{display:none}}
 .dp-in{position:relative;z-index:1;display:grid;gap:var(--space-8);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(64px, 9vw, 120px)}
 @media (min-width:1024px){.dp-in{grid-template-columns:minmax(0,7fr) minmax(0,5fr);align-items:center;column-gap:var(--space-8)}}
-.dp-hero .crumbs,.dp-hero .crumbs a{color:var(--on-deep-muted)}
-.dp-hero .crumbs a:hover{color:#FFFFFF}
 .dp-hello{display:inline-block;margin:var(--space-4) 0 0;padding:8px 16px;border-radius:999px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.9375rem;line-height:1.4;overflow-wrap:anywhere}
 .dp-hello[hidden]{display:none}
 .dp-hello strong{color:#FFD66B}

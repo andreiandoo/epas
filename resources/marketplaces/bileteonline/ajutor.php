@@ -128,7 +128,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div class="ct-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Ajutor</span></nav>
         <p class="ct-kicker">FAQ · comenzi · bilete · locații</p>
         <h1 class="ct-h hp-h" id="hp-h">Răspunsuri rapide, fără ping-pong cu suportul.</h1>
         <p class="ct-lead">Găsește răspunsuri despre comenzi, bilete QR, plăți, taxe, retururi, protecție bilet, puncte bonus, carduri cadou, cont client și acces pentru locații.</p>

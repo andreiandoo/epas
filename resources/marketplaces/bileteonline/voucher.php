@@ -61,7 +61,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="vc-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="vc-in">
       <div class="vc-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="/ajutor">Ajutor</a><span aria-hidden="true">/</span><span aria-current="page">Verifică voucher</span></nav>
         <p class="vc-kicker">Card cadou · voucher · sold</p>
         <h1 class="vc-h" id="vc-h">Verifică un card cadou.</h1>
         <p class="vc-lead">Introdu codul cardului cadou ca să vezi cât mai are disponibil și până când poate fi folosit. Pentru cardurile cu PIN, ai nevoie și de PIN.</p>

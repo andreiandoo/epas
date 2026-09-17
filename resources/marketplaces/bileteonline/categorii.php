@@ -144,15 +144,6 @@ if ($categories) {
         ],
     ];
 }
-$structuredData[] = [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Categorii', 'item' => $canonicalUrl],
-    ],
-];
-
 $cgArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 $v2Styles = ['cities.css', 'categories.css'];
 $v2Scripts = ['categories.js'];
@@ -168,7 +159,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Categorii</span></nav>
         <p class="ct-kicker">Toate categoriile · activități · bilete online</p>
         <h1 class="ct-h" id="ct-h">Ce vrei să faci?</h1>
         <p class="ct-lead">Explorează activități după categorie, public, vreme, buget sau ocazie. De la escape rooms și muzee până la parcuri de aventură, peșteri, rezervații, ateliere și experiențe pentru familie.</p>

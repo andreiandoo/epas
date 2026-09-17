@@ -4,7 +4,7 @@
  *
  * Top to bottom: hero with a ticket mockup, a strip of activity types, three value props, the five steps (#pasii),
  * activity types with photos, the checkout explained (with a sample summary), the customer account, four secondary
- * props, the pitch for venues, FAQ, final CTA. JSON-LD: HowTo, FAQPage, BreadcrumbList.
+ * props, the pitch for venues, FAQ, final CTA. JSON-LD: HowTo, FAQPage.
  *
  * Payment methods follow what checkout offers (card with Apple Pay / Google Pay, Card Cultural when the event accepts
  * it); the old page also listed Revolut Pay and RoPay, which checkout doesn't have.
@@ -114,14 +114,6 @@ $structuredData = [
         '@type' => 'FAQPage',
         'mainEntity' => array_map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $hwFaqs),
     ],
-    [
-        '@context' => 'https://schema.org',
-        '@type' => 'BreadcrumbList',
-        'itemListElement' => [
-            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-            ['@type' => 'ListItem', 'position' => 2, 'name' => 'Cum funcționează', 'item' => $canonicalUrl],
-        ],
-    ],
 ];
 
 $v2Styles = ['how.css'];
@@ -141,7 +133,6 @@ $hwCatHref = static function (string $slug) use ($V2NAV): string {
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="hw-in">
       <div class="hw-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Cum funcționează</span></nav>
         <p class="hw-kicker">Ghid rapid · bilete QR · activități</p>
         <h1 class="hw-h" id="hw-h">Cauți. Rezervi. Intri cu QR.</h1>
         <p class="hw-lead">bilete.online îți adună într-un singur loc activități, experiențe și locuri de vizitat. Alegi ce vrei să faci, plătești online, primești biletul instant și mergi direct la intrare.</p>

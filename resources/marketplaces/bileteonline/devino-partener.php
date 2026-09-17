@@ -140,14 +140,6 @@ $structuredData = [
         '@type' => 'FAQPage',
         'mainEntity' => array_map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $dpFaqs),
     ],
-    [
-        '@context' => 'https://schema.org',
-        '@type' => 'BreadcrumbList',
-        'itemListElement' => [
-            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-            ['@type' => 'ListItem', 'position' => 2, 'name' => 'Devino partener', 'item' => $canonicalUrl],
-        ],
-    ],
 ];
 
 $v2Styles = ['partner.css'];
@@ -166,7 +158,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="dp-in">
       <div class="dp-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Devino partener</span></nav>
         <p class="dp-hello" id="dp-hello" hidden></p>
         <p class="dp-chip"><span class="dp-dot" aria-hidden="true"></span><span id="dp-chip-t">Ticketing &amp; booking pentru activități</span></p>
         <h1 class="dp-h" id="dp-h"><span id="dp-h1a">Vinzi bilete</span> <span id="dp-h1b" class="is-soft">la activitățile tale.</span> <span class="dp-h-line"><span id="dp-h1c" class="dp-mark">Prețul tău rămâne al tău.</span></span></h1>

@@ -184,13 +184,6 @@ $structuredData = [[
             'url' => SITE_URL . $op['url'],
         ], array_keys($list), $list),
     ],
-], [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Operatori', 'item' => $canonicalUrl],
-    ],
 ]];
 
 $osArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
@@ -208,7 +201,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Operatori</span></nav>
         <p class="ct-kicker">Operatori · companii · activități</p>
         <h1 class="ct-h" id="os-h">Cine organizează experiențele.</h1>
         <p class="ct-lead">Operatorii sunt companiile care creează și vând activitățile de pe platformă: escape rooms, tururi ghidate, ateliere, experiențe și multe altele. Fiecare are profil dedicat cu activitățile lui.</p>

@@ -97,7 +97,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div class="ct-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Contact</span></nav>
         <p class="ct-kicker">Suport · comenzi · bilete · locații</p>
         <h1 class="ct-h" id="ct-h">Cu ce te putem ajuta?</h1>
         <p class="ct-lead">Ai o întrebare despre o comandă, nu găsești biletele, vrei să listezi o locație sau ai nevoie de ajutor cu un card cadou? Alege motivul potrivit și ajungi mai repede la soluție.</p>
