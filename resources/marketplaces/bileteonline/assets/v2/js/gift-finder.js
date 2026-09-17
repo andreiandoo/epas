@@ -310,6 +310,50 @@
     } catch (e) {}
   });
 
+  /* the panel's own scrollbar: a thumb over the content, shown while it scrolls or is dragged */
+  (function () {
+    var panel = form.parentNode, thumb = $('gf-thumb');
+    if (!thumb || !panel.classList.contains('gf-panel')) return;
+    var hideTimer = null, drag = null;
+    function place() {
+      var view = form.clientHeight, full = form.scrollHeight;
+      if (full <= view + 1) { thumb.style.display = 'none'; return false; }
+      thumb.style.display = '';
+      var h = Math.max(32, Math.round(view * view / full));
+      thumb.style.height = h + 'px';
+      thumb.style.transform = 'translateY(' + Math.round(form.offsetTop + form.scrollTop / (full - view) * (view - h)) + 'px)';
+      return true;
+    }
+    function show() {
+      if (!place()) return;
+      panel.classList.add('is-scrolling');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () { if (!drag) panel.classList.remove('is-scrolling'); }, 900);
+    }
+    form.addEventListener('scroll', show, { passive: true });
+    window.addEventListener('resize', place);
+    thumb.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      drag = { y: e.clientY, top: form.scrollTop };
+      thumb.setPointerCapture(e.pointerId);
+      panel.classList.add('is-dragging');
+    });
+    thumb.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var view = form.clientHeight, full = form.scrollHeight, h = thumb.offsetHeight;
+      form.scrollTop = drag.top + (e.clientY - drag.y) * (full - view) / Math.max(1, view - h);
+    });
+    function end() {
+      if (!drag) return;
+      drag = null;
+      panel.classList.remove('is-dragging');
+      show();
+    }
+    thumb.addEventListener('pointerup', end);
+    thumb.addEventListener('pointercancel', end);
+    place();
+  })();
+
   restore();
   render();
 })();

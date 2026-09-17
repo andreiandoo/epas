@@ -213,7 +213,6 @@ html:not(.js) .k-empty [data-reset]{display:none}
 .kml-price{display:block;margin-top:6px;font-weight:700}
 .kmap-view{position:relative;display:none;overflow:hidden;background:linear-gradient(90deg, rgba(30,91,72,.07) 1px, transparent 1px), linear-gradient(rgba(30,91,72,.07) 1px, transparent 1px), radial-gradient(circle at 22% 24%, rgba(43,182,115,.18), transparent 26%), radial-gradient(circle at 78% 70%, rgba(242,169,0,.14), transparent 30%), #E4EEE6;background-size:48px 48px, 48px 48px, auto, auto, auto}
 @media (min-width:1024px){.kmap-view{display:block}}
-.kmap-label{position:absolute;z-index:3;right:20px;top:20px;padding:8px 14px;border-radius:999px;background:var(--surface);font-size:.875rem;font-weight:700;box-shadow:0 12px 24px -16px rgba(0,0,0,.45)}
 .kpin{position:absolute;z-index:2;translate:-50% -50%;padding:7px 12px;border:2px solid #FFFFFF;border-radius:999px;background:var(--deep);color:#FFFFFF;font:700 .8125rem/1 var(--font);white-space:nowrap;cursor:pointer;box-shadow:0 10px 20px -10px rgba(0,0,0,.5);transition:transform var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out)}
 .kpin:hover,.kpin.is-hot,.kpin[aria-pressed="true"]{z-index:3;background:var(--red-text);transform:scale(1.08)}
 .kmap-card{position:absolute;z-index:4;left:20px;bottom:20px;width:min(400px, calc(100% - 40px));overflow:hidden;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop)}
@@ -227,7 +226,14 @@ html:not(.js) .k-empty [data-reset]{display:none}
 .kmap-canvas .kpin-wrap{background:none;border:0}
 .kmap-canvas .kpin{position:absolute;left:0;top:0;translate:-50% -100%}
 .kmap-canvas .leaflet-control-attribution{font-size:.6875rem}
-.kmap-note{display:block;margin-top:2px;font-size:.75rem;font-weight:500;color:var(--muted)}
+.kmap-note{display:block;margin:6px 0 0;font-size:.75rem;font-weight:500;line-height:1.4;color:var(--muted)}
+/* the list follows the map: how much of the result is in view, and the way back to all of it */
+.kmap-zone{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;margin:6px 0 0;font-size:.875rem;font-weight:600;color:var(--green)}
+.kmap-zone .link-btn{padding:4px 2px;color:var(--green)}
+.kmap-note[hidden],.kmap-zone[hidden]{display:none}
+.kmap-empty{display:grid;gap:4px;padding:24px 16px;border:1.5px dashed #CFD3CC;border-radius:var(--r-m);text-align:center}
+.kmap-empty b{color:var(--green)}
+.kmap-empty span{font-size:.875rem;color:var(--muted)}
 .kmc-media{height:160px}
 .kmc-body{padding:16px 18px 18px}
 .kmc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}

@@ -739,7 +739,9 @@ include __DIR__ . '/includes/v2/header.php';
             <div>
               <p class="kicker">Hartă</p>
               <h2 id="km-h"><?= v2_e($catName) ?><?= $cityFilter ? ' în ' . v2_e($heroLocation) : '' ?></h2>
-              <p class="kmap-n"><span data-count><?= count($acts) ?></span> rezultate pe hartă</p>
+              <p class="kmap-n" id="k-map-n" aria-live="polite"><span data-count><?= count($acts) ?></span> rezultate pe hartă</p>
+              <p class="kmap-zone" id="k-map-zone" hidden><span id="k-map-zone-text"></span><button class="link-btn" type="button" data-map-all>Arată toate</button></p>
+              <p class="kmap-note" id="k-map-note" hidden>Unele activități apar pe hartă în centrul orașului, acolo unde locul exact lipsește.</p>
             </div>
             <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Închide harta</span></button>
           </div>
@@ -752,8 +754,7 @@ include __DIR__ . '/includes/v2/header.php';
         <ul class="kmap-list" id="k-map-list"></ul>
       </aside>
       <section class="kmap-view" aria-label="Previzualizare hartă">
-        <span class="kmap-label" id="k-map-label"><?= v2_e($cityFilter ? $heroLocation : 'România') ?></span>
-        <div class="kmap-canvas" id="k-map-canvas"></div>
+        <div class="kmap-canvas" id="k-map-canvas" data-carto-key="<?= v2_e(defined('CARTO_API_KEY') ? CARTO_API_KEY : '') ?>"></div>
         <div id="k-map-pins"></div>
         <div class="kmap-card" id="k-map-card" hidden></div>
       </section>
