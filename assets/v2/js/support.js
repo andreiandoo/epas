@@ -55,7 +55,7 @@
     line.classList.toggle('is-error', tone === 'error');
     if (tone !== 'error') sayTimer = setTimeout(function () { line.textContent = ''; }, 8000);
   }
-  function guard() { show('sp-content', false); show('sp-guard', true); }
+  function guard() { show('sp-content', false); show('sp-guard', true); account.toLogin(); } // the message shows only while the login page loads
   function isActive(t) { return !t.is_closed; }
   function tag(list, label, tone) { if (label) list.appendChild(el('span', 'acc-tag' + (tone ? ' ' + tone : ''), label)); }
   function fillTags(box, t) {

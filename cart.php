@@ -9,6 +9,8 @@
  * platformCommissionLabel, platformCommissionAmount, processingFeeRow, processingFeeAmount, discountRow,
  * discountAmount, savingsRow, savingsText, savings, totalPrice, pointsEarned, checkoutBtn.
  * The script shows and hides them with a `hidden` class (base.css).
+ * The head (title, steps, count) is for a cart with something in it: an inline script hides it before the first paint
+ * when the saved cart is empty, and cart.js keeps it in step with the empty state afterwards.
  */
 
 require_once __DIR__ . '/includes/config.php';
@@ -48,7 +50,7 @@ include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" class="page-main" tabindex="-1">
 
-  <section class="co-head" aria-labelledby="co-h">
+  <section class="co-head" id="co-head" aria-labelledby="co-h">
     <div class="wrap">
       <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Coș</span></nav>
       <div class="co-head-row">
@@ -68,7 +70,7 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
     </div>
   </section>
-
+  <script>(function () { try { var c = JSON.parse(localStorage.getItem('bileteonline_cart') || 'null'); if (!c || !Array.isArray(c.items) || !c.items.length) document.getElementById('co-head').hidden = true; } catch (e) {} })();</script>
   <div id="timer-bar" class="co-timer hidden" role="timer" aria-live="off">
     <div class="wrap co-timer-in">
       <?= v2_ic('clock') ?>
@@ -89,7 +91,7 @@ include __DIR__ . '/includes/v2/header.php';
 
       <div id="emptyCart" class="co-empty hidden">
         <div class="co-empty-art" aria-hidden="true"><?= v2_fallback('cos', 1) ?><?= v2_ic('shopping-cart-simple') ?></div>
-        <h2 tabindex="-1">Coșul tău e gol</h2>
+        <h1 class="co-empty-h" tabindex="-1">Coșul tău e gol</h1>
         <p>Nu ai nicio activitate sau eveniment în coș. Descoperă-le pe cele disponibile.</p>
         <a class="btn btn-primary" href="/categorii"><?= v2_ic('magnifying-glass') ?>Explorează activități</a>
         <p class="co-empty-small">Ai plătit deja? <a href="/cont/bilete">Vezi biletele tale</a> sau <a href="/recuperare-comanda">recuperează comanda</a>.</p>

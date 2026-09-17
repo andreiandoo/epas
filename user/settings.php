@@ -34,6 +34,7 @@ $v2Styles = ['account.css', 'settings.css'];
 $v2Scripts = ['vendor/qrcode.js', 'account.js', 'settings.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config();
+$v2FooterCompact = true;
 
 $stTabs = [
     'personal' => 'Date personale',

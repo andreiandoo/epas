@@ -33,6 +33,7 @@ $v2Styles = ['account.css', 'support.css'];
 $v2Scripts = ['account.js', 'support.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config();
+$v2FooterCompact = true;
 $v2ClientData = ['ticket' => $spTicket];
 
 include __DIR__ . '/../includes/v2/head.php';

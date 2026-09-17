@@ -51,7 +51,7 @@
   function shortDate(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
   function perLei() { return config && amount(config.points_per_lei) > 0 ? amount(config.points_per_lei) : 100; }
   function toLei(p) { return whole.format(Math.floor(count(p) / perLei())) + ' lei'; }
-  function guard() { show('pt-content', false); show('pt-guard', true); }
+  function guard() { show('pt-content', false); show('pt-guard', true); account.toLogin(); } // the message shows only while the login page loads
   function linkSay(message, tone) {
     var line = $('pt-link-status');
     clearTimeout(statusTimer);

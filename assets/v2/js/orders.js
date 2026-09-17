@@ -66,7 +66,7 @@
     line.classList.toggle('is-error', tone === 'error');
     if (tone !== 'error') sayTimer = setTimeout(function () { line.textContent = ''; }, 8000);
   }
-  function guard() { show('od-content', false); show('od-guard', true); }
+  function guard() { show('od-content', false); show('od-guard', true); account.toLogin(); } // the message shows only while the login page loads
   function button(cls, label, aria, onClick, icon) {
     var b = el('button', cls);
     b.type = 'button';

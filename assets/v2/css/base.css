@@ -596,6 +596,27 @@ body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
 .ftr-anpc a{display:block;border-radius:8px}
 .ftr-anpc a:focus-visible{outline:2px solid var(--online);outline-offset:2px}
 .ftr-anpc img{display:block;width:200px;height:auto}
+
+/* compact footer ($v2FooterCompact): one line on large screens, a few short rows on phones */
+.ftr-mini{margin-top:auto;border-top:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:.8125rem}
+.ftr-mini :focus-visible{outline:2px solid var(--action);outline-offset:2px}
+.ftr-mini-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;padding-block:14px}
+.ftr-mini-brand{display:inline-flex;border-radius:var(--r-s)}
+.ftr-mini-brand .brand .s{height:24px}
+.ftr-mini-brand .brand .w{height:14px}
+.ftr-mini-links{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px}
+.ftr-mini-links a,.ftr-mini-links button{padding:4px 0;border:0;background:none;color:var(--muted);font:500 .8125rem/1.2 var(--font);text-decoration:none;cursor:pointer}
+.ftr-mini-links a:hover,.ftr-mini-links button:hover{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+.ftr-mini-anpc{display:flex;gap:8px;margin-left:auto}
+.ftr-mini-anpc a{display:block;border-radius:6px}
+.ftr-mini-anpc img{display:block;width:auto;height:26px}
+.ftr-mini-copy{margin:0;white-space:nowrap}
+.ftr-mini-copy a{color:inherit;text-underline-offset:3px}
+@media (max-width:899px){
+  .ftr-mini-in{gap:8px 16px;padding-block:14px 18px}
+  .ftr-mini-anpc{order:4;margin-left:0}
+  .ftr-mini-copy{order:3;width:100%;white-space:normal}
+}
 .ftr-card{min-width:0}
 
 /* =================== MOBILE MENU =================== */

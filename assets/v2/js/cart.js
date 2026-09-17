@@ -1,7 +1,19 @@
 /* bilete.online v2: cart page. Phone checkout bar: mirrors the total and shows while the summary's own button is
-   off screen. Items, totals, promo and timer are rendered by assets/js/pages/cart-page.js. */
+   off screen. The head (title, steps, count) follows the cart: hidden while it is empty. Items, totals, promo and timer
+   are rendered by assets/js/pages/cart-page.js. */
 (function () {
   'use strict';
+  var head = document.getElementById('co-head'), emptyCart = document.getElementById('emptyCart'), items = document.getElementById('cartPageItems');
+  if (head && emptyCart && items) {
+    var syncHead = function () {
+      if (!emptyCart.classList.contains('hidden')) head.hidden = true;
+      else if (!items.classList.contains('hidden')) head.hidden = false;
+    };
+    new MutationObserver(syncHead).observe(emptyCart, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(syncHead).observe(items, { attributes: true, attributeFilter: ['class'] });
+    syncHead();
+  }
+
   var bar = document.getElementById('co-mbar');
   var total = document.getElementById('totalPrice');
   var summary = document.getElementById('summary-section');

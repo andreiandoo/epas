@@ -59,7 +59,7 @@
     if (s < 86400 * 30) return 'acum ' + plural(Math.floor(s / 86400), 'zi', 'zile');
     return 'pe ' + longDate(d);
   }
-  function guard() { show('db-content', false); show('db-guard', true); }
+  function guard() { show('db-content', false); show('db-guard', true); account.toLogin(); } // the message shows only while the login page loads
 
   // ---------- upcoming tickets ----------
   function upcomingList(u) {
