@@ -91,7 +91,7 @@ const BileteOnlineFooter = {
                     <div>
                         <h4 class="text-sm font-semibold uppercase tracking-wider mb-4">Organizatori</h4>
                         <ul class="space-y-3">
-                            <li><a href="/organizator/landing" class="text-white/90 hover:text-white text-sm transition-colors">Vinde bilete</a></li>
+                            <li><a href="/parteneri" class="text-white/90 hover:text-white text-sm transition-colors">Vinde bilete</a></li>
                             <li><a href="/inregistrare-locatie" class="text-white/90 hover:text-white text-sm transition-colors">ÃŽnregistrare organizator</a></li>
                             <li><a href="/autentificare?ca=venue" class="text-white/90 hover:text-white text-sm transition-colors">Login organizator</a></li>
                             <li><a href="/organizator/help" class="text-white/90 hover:text-white text-sm transition-colors">Ghid organizatori</a></li>

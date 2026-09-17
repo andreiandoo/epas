@@ -48,13 +48,13 @@ $ctTiles = [
     ['/recuperare-comanda', 'ticket', 'Recuperează comanda', 'Nu ai primit emailul sau nu găsești biletele?', ''],
     ['#formular', 'coins', 'Cerere retur', 'Verifică eligibilitatea și trimite o cerere.', 'refund'],
     ['/card-cadou', 'gift', 'Card cadou', 'Cumpără sau verifică sold-ul unui voucher.', ''],
-    ['/pentru-locatii', 'map-pin', 'Pentru locații', 'Listează activități și vinde bilete online.', ''],
+    ['/parteneri', 'map-pin', 'Pentru locații', 'Listează activități și vinde bilete online.', ''],
 ];
 $ctRoutes = [
     ['Client', 'ticket', 'Comenzi & bilete', 'Pentru bilete nelivrate, PDF, QR, nume beneficiar sau calendar.', '/recuperare-comanda', 'Recuperare comandă', '', ''],
     ['Retur', 'coins', 'Retur & protecție bilet', 'Pentru anulări, status, protecție bilet sau rambursări.', '#formular', 'Trimite cerere', 'refund', 'is-mint'],
     ['Gift', 'gift', 'Carduri cadou', 'Pentru coduri, sold, livrare sau voucher invalid.', '/voucher', 'Verifică voucher', '', ''],
-    ['B2B', 'map-pin', 'Locații & organizatori', 'Pentru listare, demo, dashboard sau activități noi.', '/pentru-locatii', 'Pentru locații', '', ''],
+    ['B2B', 'map-pin', 'Locații & organizatori', 'Pentru listare, demo, dashboard sau activități noi.', '/parteneri', 'Pentru locații', '', ''],
     ['Parteneriat', 'users-three', 'Afiliere & colaborări', 'Pentru ghiduri locale, influenceri, media, turism.', '#formular', 'Trimite propunere', 'partnership', 'is-deep'],
     ['Legal', 'lock-simple', 'Privacy, cookies, termeni', 'Pentru solicitări GDPR, termeni, cookies sau raportări.', '/confidentialitate', 'Confidențialitate', '', ''],
 ];

@@ -243,7 +243,7 @@ $footerAlpineSeed = json_encode([
                     <h3 class="mt-4 text-4xl font-bold leading-none font-display">Ai activități care pot fi rezervate online?</h3>
                     <p class="mt-4 text-paper/60">Listează locația, creează activități, vinde bilete, scanează QR și ajungi mai ușor la oamenii care caută experiențe ca ale tale.</p>
                     <div class="flex flex-wrap gap-2 mt-5">
-                        <a href="/pentru-locatii" class="px-5 py-3 font-bold transition rounded-full bg-paper text-ink hover:bg-vermilion hover:text-paper">Pentru locații</a>
+                        <a href="/parteneri" class="px-5 py-3 font-bold transition rounded-full bg-paper text-ink hover:bg-vermilion hover:text-paper">Pentru locații</a>
                         <a href="/contact?motiv=locatie" class="px-5 py-3 font-bold transition border rounded-full border-paper/25 text-paper hover:bg-paper hover:text-ink">Cere demo</a>
                     </div>
                 </section>

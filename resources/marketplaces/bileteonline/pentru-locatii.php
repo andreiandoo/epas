@@ -88,6 +88,7 @@ $fvFaqs = [
 $pageTitleRaw = 'Pentru locații — vinde bilete online pentru activități pe bilete.online';
 $pageDescription = 'Listează-ți locația pe bilete.online și vinde bilete online pentru escape rooms, muzee, parcuri, ateliere, peșteri, rezervații și experiențe locale. Pagini SEO, checkout, QR, scanare, rapoarte și dashboard.';
 $canonicalUrl = SITE_URL . '/pentru-locatii';
+$noindex = true; // /parteneri is the page to find; this one stays for old links
 $structuredData = [
     [
         '@context' => 'https://schema.org',
@@ -288,7 +289,7 @@ include __DIR__ . '/includes/v2/header.php';
         <p class="kicker">Model comercial</p>
         <h2 id="fv-price-h">Costuri clare, fără infrastructură construită de la zero.</h2>
         <p class="fv-p">Modelul poate include comision per bilet, servicii opționale sau pachete de promovare. Ideea este simplă: plătești pentru infrastructură care vinde, nu pentru promisiuni vagi.</p>
-        <a class="btn btn-primary fv-price-cta" href="/devino-partener#bani">Vezi pricing locații<?= v2_ic('arrow-right') ?></a>
+        <a class="btn btn-primary fv-price-cta" href="/parteneri#bani">Vezi pricing locații<?= v2_ic('arrow-right') ?></a>
       </div>
       <div class="fv-tiers">
         <?php foreach ($fvTiers as [$tierK, $tierTitle, $tierText, $tierTone]): ?>
@@ -339,7 +340,7 @@ include __DIR__ . '/includes/v2/header.php';
           <span class="fv-done-ic" aria-hidden="true"><?= v2_ic('check') ?></span>
           <h3 id="fv-done-h" tabindex="-1">Mulțumim!</h3>
           <p>Cererea ta a ajuns la echipa bilete.online. Te contactăm în următoarea zi lucrătoare pe <strong id="fv-done-email"></strong>.</p>
-          <a class="btn btn-ghost" href="/devino-partener">Vezi cum funcționează parteneriatul</a>
+          <a class="btn btn-ghost" href="/parteneri">Vezi cum funcționează parteneriatul</a>
         </div>
       </div>
     </div>
@@ -371,7 +372,7 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
         <div class="fv-final-cta">
           <a class="btn fv-btn-white" href="#demo">Solicită demo</a>
-          <a class="btn btn-outline-light" href="/devino-partener#bani">Vezi pricing</a>
+          <a class="btn btn-outline-light" href="/parteneri#bani">Vezi pricing</a>
         </div>
       </div>
     </div>

@@ -100,6 +100,7 @@ if (count($dpMarquee) > 0 && count($dpMarquee) < 6) {
 $pageTitleRaw = 'Vinde bilete la activități pe ' . SITE_NAME . ' — comision 2%* plătit de client';
 $pageDescription = 'Platforma de ticketing pentru activități: booking cu sloturi și calendar, analytics avansat, tracking 100% cu Facebook CAPI, deconturi periodice, app mobilă cu scanare offline. Comision 2%* plătit de cumpărător. Construit pe Tixello.';
 $canonicalUrl = SITE_URL . '/devino-partener';
+$noindex = true; // /parteneri is the page to find; this one stays for old links and personalised campaigns
 $structuredData = [
     [
         '@context' => 'https://schema.org',

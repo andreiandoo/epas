@@ -321,7 +321,7 @@ $hwCatHref = static function (string $slug) use ($V2NAV): string {
           <p class="hw-dark-k">Și pentru locații</p>
           <h2 id="hw-venue-h">Locațiile primesc o platformă de vânzare, nu doar un formular.</h2>
           <p class="hw-dark-p">Pentru organizatori și locații, bilete.online înseamnă pagini SEO, bilete QR, checkout, dashboard, scanări, rapoarte, carduri cadou, puncte bonus și posibilitatea de a transforma activitățile în produse ușor de cumpărat.</p>
-          <a class="btn btn-light" href="/pentru-locatii">Vezi pagina pentru locații<?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-light" href="/parteneri">Vezi pagina pentru locații<?= v2_ic('arrow-right') ?></a>
         </div>
         <div class="hw-venue-cards">
           <?php foreach ($hwVenue as [$venueK, $venueText]): ?>

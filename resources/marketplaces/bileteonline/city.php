@@ -811,7 +811,7 @@ include __DIR__ . '/includes/v2/header.php';
           <p class="kicker">Pentru operatori locali</p>
           <h3>Ai o activitate în <?= v2_e($cityName) ?>?</h3>
           <p>Pagină dedicată, bilete QR, disponibilitate online și comision 2%.</p>
-          <a class="btn btn-primary" href="/pentru-locatii">Listează activitatea<?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-primary" href="/parteneri">Listează activitatea<?= v2_ic('arrow-right') ?></a>
         </div>
       </aside>
     </div>
