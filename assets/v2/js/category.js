@@ -253,9 +253,12 @@
     body.appendChild(go);
     mapCard.appendChild(body);
   }
-  /* A real map: Leaflet from cdnjs, loaded the first time the dialog opens. CARTO's light tiles, OpenStreetMap's when
-     those fail. If the library can't load, the grid preview with % pins stays as it was. */
+  /* A real map: Leaflet from cdnjs, loaded the first time the dialog opens. CARTO's light tiles with the site's key
+     (data-carto-key), OpenStreetMap's when CARTO refuses them. If the library can't load, the grid preview with % pins
+     stays as it was. While the map is on screen the list beside it follows the map: it shows the activities inside
+     the area being looked at, and "Arată toate" brings every result back into view. */
   var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/', leafletLoad = null, lmap = null, lmarkers = null;
+  var mapAll = [], listKey = '';
   function loadLeaflet() {
     if (window.L && window.L.map) return Promise.resolve(window.L);
     if (leafletLoad) return leafletLoad;
@@ -279,7 +282,8 @@
     return loadLeaflet().then(function (L) {
       if (lmap) return lmap;
       lmap = L.map(canvas, { zoomControl: true, scrollWheelZoom: true, attributionControl: true }).setView([45.94, 24.97], 6);
-      var osm = false, tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      var key = canvas.getAttribute('data-carto-key') || '';
+      var osm = false, tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' + (key ? '?key=' + encodeURIComponent(key) : ''), {
         subdomains: 'abcd', maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
       });
@@ -292,15 +296,24 @@
       tiles.addTo(lmap);
       lmarkers = L.layerGroup().addTo(lmap);
       canvas.parentNode.classList.add('has-map');
+      lmap.on('moveend', syncList);
       return lmap;
     }).catch(function () { return null; });
   }
+  function located(a) { return !!(a.geo && isFinite(a.geo.lat) && isFinite(a.geo.lng)); }
+  function fitAll() {
+    if (!lmap) return;
+    var pts = mapAll.filter(located).map(function (a) { return [a.geo.lat, a.geo.lng]; });
+    lmap.invalidateSize();
+    if (pts.length === 1) lmap.setView(pts[0], 13);
+    else if (pts.length > 1) lmap.fitBounds(pts, { padding: [70, 70], maxZoom: 14 });
+  }
   function drawMarkers(list) {
     if (!lmap || !window.L) return;
-    var L = window.L, pts = [], approx = false;
+    var L = window.L;
     lmarkers.clearLayers();
     list.forEach(function (a) {
-      if (!a.geo || !isFinite(a.geo.lat) || !isFinite(a.geo.lng)) return;
+      if (!located(a)) return;
       var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
@@ -308,26 +321,41 @@
       var m = L.marker([a.geo.lat, a.geo.lng], { icon: L.divIcon({ className: 'kpin-wrap', html: pin, iconSize: [0, 0] }), keyboard: false });
       m.on('click', function () { selected = String(a.id); markPins(); renderCard(); });
       lmarkers.addLayer(m);
-      pts.push([a.geo.lat, a.geo.lng]);
-      if (a.geo.approx) approx = true;
     });
-    var label = $('k-map-label');
-    if (label) {
-      var note = label.querySelector('.kmap-note');
-      if (approx && !note) label.appendChild(node('small', 'kmap-note', 'Poziție după oraș acolo unde locul exact lipsește'));
-      if (!approx && note) note.remove();
-    }
-    lmap.invalidateSize();
-    if (pts.length === 1) lmap.setView(pts[0], 13);
-    else if (pts.length > 1) lmap.fitBounds(pts, { padding: [70, 70], maxZoom: 14 });
+    fitAll();
     markPins();
   }
-  function renderMap(list) {
-    if (!mapList || !mapPins) return;
-    if (lmap) drawMarkers(list);
-    else ensureMap().then(function (ok) { if (ok && !map.hidden) drawMarkers(sorted(acts.filter(matches))); });
+  // the map is really there (Leaflet loaded, dialog open, the map column shown: phones only get the list)
+  function mapShown() {
+    var canvas = $('k-map-canvas');
+    return !!(lmap && canvas && !map.hidden && canvas.offsetParent !== null && canvas.parentNode.classList.contains('has-map'));
+  }
+  function syncList() {
+    if (!mapList) return;
+    var zone = mapShown(), bounds = zone ? lmap.getBounds() : null;
+    var list = zone ? mapAll.filter(function (a) { return located(a) && bounds.contains([a.geo.lat, a.geo.lng]); }) : mapAll;
+    var zoneBox = $('k-map-zone');
+    if (zoneBox) {
+      var partial = zone && list.length < mapAll.length;
+      zoneBox.hidden = !partial;
+      if (partial) $('k-map-zone-text').textContent = list.length + ' din ' + mapAll.length + ' în zona hărții · ';
+    }
+    var note = $('k-map-note');
+    if (note) note.hidden = !mapAll.some(function (a) { return a.geo && a.geo.approx; });
+    renderList(list, zone);
+  }
+  function renderList(list, zone) {
+    var key = (zone ? 'z:' : 'a:') + list.map(function (a) { return a.id; }).join(',');
+    if (key === listKey) return; // same activities: keep the buttons (and the focus on them)
+    listKey = key;
+    var focused = document.activeElement && mapList.contains(document.activeElement) ? document.activeElement.getAttribute('data-pin') : null;
     mapList.textContent = '';
-    mapPins.textContent = '';
+    if (!list.length && zone) {
+      var li = node('li', 'kmap-empty');
+      li.appendChild(node('b', null, 'Nicio activitate în zona asta.'));
+      li.appendChild(node('span', null, 'Mută harta sau apasă „Arată toate”.'));
+      mapList.appendChild(li);
+    }
     list.forEach(function (a) {
       var li = node('li'), b = node('button', 'kml'), text = node('span');
       b.type = 'button';
@@ -340,6 +368,21 @@
       b.appendChild(text);
       li.appendChild(b);
       mapList.appendChild(li);
+    });
+    markPins();
+    if (focused) {
+      var again = mapList.querySelector('[data-pin="' + focused + '"]');
+      if (again) again.focus({ preventScroll: true });
+    }
+  }
+  function renderMap(list) {
+    if (!mapList || !mapPins) return;
+    mapAll = list;
+    listKey = '';
+    if (lmap) drawMarkers(list);
+    else ensureMap().then(function (ok) { if (ok && !map.hidden) { drawMarkers(mapAll); syncList(); } });
+    mapPins.textContent = '';
+    list.forEach(function (a) {
       var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
@@ -349,6 +392,7 @@
       mapPins.appendChild(pin);
     });
     if (selected && !list.some(function (a) { return String(a.id) === selected; })) selected = null;
+    syncList();
     markPins();
     renderCard();
   }
@@ -408,6 +452,7 @@
       return;
     }
     if (t.closest('[data-unpin]')) { selected = null; markPins(); renderCard(); return; }
+    if (t.closest('[data-map-all]')) { fitAll(); return; }
     if (openPop && !t.closest('.kpop')) closePop(false);
   });
   document.addEventListener('keydown', function (e) {

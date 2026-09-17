@@ -39,7 +39,18 @@
 @media (min-width:1280px){.gf-layout{grid-template-columns:400px minmax(0,1fr)}}
 
 .gf-form{display:grid;gap:18px;padding:clamp(20px, 3vw, 28px);border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface)}
-@media (min-width:1024px){.gf-form{position:sticky;top:calc(var(--hdr-h) + 20px);max-height:calc(100vh - var(--hdr-h) - 40px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}}
+/* large screens: the panel stays beside the results and scrolls on its own. The native scrollbar is hidden (it took
+   width from the panel); a thin thumb drawn over the content shows while scrolling (gift-finder.js) */
+.gf-panel{position:relative;min-width:0}
+@media (min-width:1024px){
+  .gf-panel{position:sticky;top:calc(var(--hdr-h) + 20px)}
+  .gf-form{max-height:calc(100vh - var(--hdr-h) - 40px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+  .gf-form::-webkit-scrollbar{display:none;width:0;height:0}
+}
+.gf-thumb{position:absolute;z-index:2;right:4px;top:0;width:6px;border-radius:6px;background:rgba(14,72,55,.38);opacity:0;pointer-events:none;touch-action:none;transition:opacity 260ms var(--ease-out), width var(--dur-micro) var(--ease-out)}
+.gf-panel.is-scrolling .gf-thumb,.gf-panel.is-dragging .gf-thumb{opacity:1;pointer-events:auto}
+.gf-panel.is-dragging .gf-thumb,.gf-thumb:hover{width:8px;background:rgba(14,72,55,.55)}
+.gf-panel.is-dragging{user-select:none}
 .gf-form-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .gf-form-head h2{margin:0;font-size:1.5rem;font-weight:700;line-height:1.15;letter-spacing:-.03em;color:var(--green)}
 .gf-reset{flex:none}
@@ -103,8 +114,8 @@
 @media (min-width:1280px){.gf-price b{display:block;margin:2px 0}}
 .gf-total{margin:0;font-size:.875rem;font-weight:600;color:var(--green)}
 .gf-total[hidden]{display:none}
-.gf-pick{gap:8px}
-.gf-pick .ic{width:18px;height:18px}
+.gf-pick{gap:6px;min-height:40px;padding:0 16px;font-size:.875rem}
+.gf-pick .ic{width:16px;height:16px}
 .gf-pick .gf-ic-on{display:none}
 .gf-pick[aria-pressed="true"]{border-color:var(--action);background:var(--action);color:#FFFFFF}
 .gf-pick[aria-pressed="true"] .gf-ic-add{display:none}

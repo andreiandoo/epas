@@ -217,6 +217,7 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== CALCULATOR ===================== -->
   <section class="gf-main" id="calculator" aria-labelledby="gf-calc-h">
     <div class="wrap gf-layout">
+      <div class="gf-panel">
       <form class="gf-form" id="gf-form" aria-labelledby="gf-calc-h" novalidate>
         <div class="gf-form-head">
           <h2 id="gf-calc-h">Pentru cine e cadoul?</h2>
@@ -282,6 +283,8 @@ include __DIR__ . '/includes/v2/header.php';
           </div>
         </div>
       </form>
+      <span class="gf-thumb" id="gf-thumb" aria-hidden="true"></span>
+      </div>
 
       <div class="gf-results">
         <div class="gf-results-head">

@@ -252,14 +252,6 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
 .chips-links.intents .ic{width:18px;height:18px;color:var(--green)}
 .lg-aside{display:grid;gap:var(--space-4)}
 .lg-aside h3{margin:0;font-size:1.5rem;font-weight:700;line-height:1.15;letter-spacing:-.03em}
-.snap{padding:24px;border-radius:var(--r-l);background:var(--deep);color:var(--on-deep)}
-.snap dl{margin:var(--space-4) 0 0;display:grid}
-.snap dl > div{display:flex;justify-content:space-between;gap:var(--space-5);padding:12px 0;border-bottom:1px solid rgba(247,247,245,.12)}
-.snap dl > div:last-child{padding-bottom:0;border-bottom:0}
-.snap dt{color:var(--on-deep-muted)}
-.snap dd{margin:0;font-weight:700;text-align:right}
-.snap-yes{display:inline-flex;align-items:center;gap:6px;color:#9FE0BF}
-.snap-yes .ic{width:18px;height:18px}
 .ocities{padding:24px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface)}
 .ocities h3{color:var(--green)}
 .ocities ul{list-style:none;margin:var(--space-4) 0 var(--space-2);padding:0;display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:8px}

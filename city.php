@@ -795,16 +795,6 @@ include __DIR__ . '/includes/v2/header.php';
       </article>
 
       <aside class="lg-aside">
-        <div class="snap">
-          <h3><?= v2_e($cityName) ?> pe scurt</h3>
-          <dl>
-            <div><dt>Activități listate</dt><dd><?= $eventCount ?: '—' ?></dd></div>
-            <?php if ($countyName): ?><div><dt>Județ</dt><dd><?= v2_e($countyName) ?></dd></div><?php endif; ?>
-            <?php if ($regionName): ?><div><dt>Regiune</dt><dd><?= v2_e($regionName) ?></dd></div><?php endif; ?>
-            <div><dt>Bilete QR</dt><dd class="snap-yes"><?= v2_ic('qr-code') ?>Da</dd></div>
-          </dl>
-        </div>
-
         <?php if (!empty($otherCities)): ?>
         <div class="ocities">
           <p class="kicker">Alte orașe</p>

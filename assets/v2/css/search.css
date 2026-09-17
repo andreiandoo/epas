@@ -22,6 +22,33 @@
 .sr-days .day[aria-current="true"]{border-color:var(--green);background:var(--tint-green)}
 .sr-days .day-num{font-size:1.375rem}
 .sr-days .day-any .ic{width:22px;height:22px;margin-top:4px;color:var(--green)}
+.sr-days .day{min-height:84px}
+.day-mon{font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1;color:var(--muted)}
+.sr-days .day[aria-current="true"] .day-mon{color:var(--green)}
+
+/* "Alte date": a button that opens the month calendar (the native date field is the no-JS fallback) */
+.sr-hero .wrap{position:relative}
+.day-more-btn{border-style:dashed}
+.day-more-btn[aria-expanded="true"]{border-style:solid;border-color:var(--green)}
+html.js .day-more-form,html:not(.js) .day-more-btn{display:none}
+.sr-cal{position:absolute;z-index:40;right:var(--gutter);top:calc(100% - var(--space-2));width:min(340px, calc(100% - 2 * var(--gutter)));padding:14px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop);animation:mega-in var(--dur-state) var(--ease-out)}
+.sr-cal[hidden]{display:none}
+.sr-cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sr-cal-head .icon-btn{color:var(--green)}
+.sr-cal-head .icon-btn:hover{background:var(--surface-2)}
+.sr-cal-head .icon-btn:disabled{opacity:.3;cursor:not-allowed}
+.sr-cal-head .icon-btn .ic{width:18px;height:18px}
+.sr-cal-title{margin:0;font-weight:700;color:var(--ink);text-transform:capitalize}
+.sr-cal-dow,.sr-cal-grid{display:grid;grid-template-columns:repeat(7, minmax(0,1fr));gap:3px;text-align:center}
+.sr-cal-dow{margin-top:8px;font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.sr-cal-grid{margin-top:4px}
+.sr-cal-day{display:grid;place-items:center;aspect-ratio:1;border-radius:10px;color:var(--ink);font-size:.9375rem;font-weight:600;font-variant-numeric:tabular-nums;text-decoration:none}
+a.sr-cal-day:hover{background:var(--tint-green);color:var(--green)}
+.sr-cal-day.is-today{box-shadow:inset 0 0 0 1.5px var(--green)}
+.sr-cal-day[aria-current="date"]{background:var(--green);color:#FFFFFF}
+.sr-cal-day.is-off{color:#B9BDB5;font-weight:500}
+.sr-cal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.sr-cal-foot small{font-size:.75rem;color:var(--muted)}
 
 /* =================== FILTERS + RESULTS =================== */
 .sr-body{padding-block:var(--space-6) var(--space-9)}
@@ -40,9 +67,47 @@ html:not(.js) .sr-filter-toggle{display:none}
 @media (min-width:1024px){
   .sr-filters{position:sticky;top:calc(var(--hdr-h) + 20px)}
   .sr-filters-h{display:block}
-  .sr-filter-toggle{display:none}
+  .sr-filters .sr-mbar{display:none}
   .sr-filter-body{display:grid;margin-top:0}
 }
+
+/* phones: "Filtre" and the sort select share one row */
+.sr-mbar{display:flex;gap:8px}
+.sr-mbar .sr-filter-toggle{flex:1;width:auto;min-width:0}
+.sr-msort{flex:1;display:flex;gap:6px;min-width:0}
+.sr-msort .select{width:100%;min-height:48px;font-size:1rem;font-weight:600}
+@media (max-width:1023px){.sr-bar .sr-sort{display:none}}
+
+/* filters as checkboxes */
+.sr-filter-body fieldset{min-width:0;margin:0;padding:0;border:0}
+.sr-filter-body legend{padding:0;margin-bottom:10px}
+.fchecks{list-style:none;display:grid;gap:2px;margin:0;padding:0}
+.fchecks li[hidden]{display:none}
+.fchecks.is-scroll{max-height:300px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.fcheck{display:flex;align-items:center;gap:10px;min-height:38px;padding:4px 8px;border-radius:10px;color:var(--ink);font-size:.9375rem;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out)}
+.fcheck:hover{background:var(--surface-2)}
+.fcheck input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.fbox{flex:none;display:grid;place-items:center;width:20px;height:20px;border:1.5px solid #B9BDB5;border-radius:6px;background:var(--surface);color:#FFFFFF;transition:background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out)}
+.fbox .ic{width:14px;height:14px;opacity:0;transform:scale(.6);transition:opacity var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out)}
+.fcheck input:checked + .fbox{border-color:var(--green);background:var(--green)}
+.fcheck input:checked + .fbox .ic{opacity:1;transform:none}
+.fcheck input:focus-visible + .fbox{outline:2px solid var(--action);outline-offset:2px}
+.fcheck:hover .fbox{border-color:var(--green)}
+.fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fcheck input:checked ~ .fname{font-weight:700;color:var(--green)}
+.fcheck small{flex:none;padding:1px 7px;border-radius:999px;background:var(--surface-2);font-size:.75rem;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.fsearch{position:relative;margin-bottom:6px}
+.fsearch .ic{position:absolute;left:12px;top:50%;width:16px;height:16px;color:var(--muted);transform:translateY(-50%);pointer-events:none}
+.fsearch input{display:block;width:100%;height:40px;padding:0 12px 0 36px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:500 .9375rem/1 var(--font);-webkit-appearance:none;appearance:none}
+.fsearch input:focus-visible{outline:none;border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.18)}
+.fmore{justify-self:start;margin-top:4px;padding:6px 8px;border:0;background:none;color:var(--green);font:700 .875rem/1.2 var(--font);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.fmore[hidden],.fnone[hidden]{display:none}
+.fnone{margin:4px 8px 0;font-size:.875rem;color:var(--muted)}
+.sr-apply{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.sr-apply .btn{min-height:46px}
+/* on large screens a tick applies at once; the button stays for browsers without JavaScript */
+@media (min-width:1024px){html.js .sr-apply .btn{display:none}}
+@media (max-width:1023px){.sr-apply{position:sticky;bottom:0;z-index:2;padding:12px 0;background:var(--bg)}.sr-apply .btn{flex:1}}
 
 .sr-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-5)}
 .sr-active{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
@@ -56,6 +121,8 @@ html:not(.js) .sr-filter-toggle{display:none}
 @media (min-width:600px){.sr-results .xp-grid{grid-template-columns:repeat(2, minmax(0,1fr))}}
 @media (min-width:1200px){.sr-results .xp-grid{grid-template-columns:repeat(3, minmax(0,1fr))}}
 .xp-avail.is-muted{color:var(--muted);font-weight:500}
+/* one-line titles, the full one on hover */
+.sr-results .xp-title{overflow:hidden;font-size:.9375rem;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}
 
 
 /* =================== EMPTY STATE =================== */
