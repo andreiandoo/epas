@@ -104,8 +104,12 @@ class PartnerEventFeed
             ->where('event_id', $eventId)
             ->first();
 
-        $change = $this->sync(PartnerEventPresenter::forClient($client), $client, $event, $row, now(), true);
-        if ($change !== null) {
+        $presenter = PartnerEventPresenter::forClient($client);
+        $change = $this->sync($presenter, $client, $event, $row, now(), true);
+
+        // A partner reading an old event must not make every partner hear about it;
+        // the regular pass notifies only for events that are still current.
+        if ($change !== null && $presenter->listedUntil($event)?->gte(now()->subDay())) {
             $this->webhooks->eventsChanged($client, [$eventId => $change]);
         }
 

@@ -62,7 +62,7 @@ class MarketplacePartnerResource extends Resource
                     ->label('Identificator')
                     ->required()
                     ->maxLength(64)
-                    ->alphaDash()
+                    ->regex('/^[a-z0-9_-]+$/')
                     ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule) => $rule
                         ->where('marketplace_client_id', static::getMarketplaceClientId()))
                     ->helperText('Litere mici, fără spații (ex. maximumrock). Implicit devine utm_source.'),
@@ -120,6 +120,7 @@ class MarketplacePartnerResource extends Resource
                     Forms\Components\TextInput::make('webhook_url')
                         ->label('URL webhook')
                         ->url()
+                        ->rule('starts_with:https://')
                         ->maxLength(2048)
                         ->placeholder('https://…')
                         ->helperText('Gol = fără notificări; partenerul se sincronizează singur.'),
@@ -137,6 +138,16 @@ class MarketplacePartnerResource extends Resource
                                 ->action(fn (Set $set) => $set('outbound_secret', Str::random(48)))
                         ),
                 ])->columns(2),
+
+            Section::make('Articole')
+                ->description('Articolele trimise de partener apar pe pagina artistului, cu link către site-ul partenerului.')
+                ->schema([
+                    Forms\Components\TextInput::make('settings.articles.domain')
+                        ->label('Domeniul site-ului partenerului')
+                        ->placeholder('maximumrock.ro')
+                        ->maxLength(191)
+                        ->helperText('Sunt acceptate doar articole cu link pe acest domeniu (și subdomeniile lui). Gol = niciun articol acceptat.'),
+                ]),
 
             Section::make('Linkuri de bilete')
                 ->description('Parametrii UTM adăugați linkurilor către evenimente pe care le primește partenerul.')

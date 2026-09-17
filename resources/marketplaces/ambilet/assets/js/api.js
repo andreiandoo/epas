@@ -265,6 +265,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/artists\/[a-z0-9-]+\/toggle-favorite$/i)) return 'artist.toggle-favorite';
         if (endpoint.match(/\/artists\/[a-z0-9-]+\/check-favorite$/i)) return 'artist.check-favorite';
         if (endpoint.match(/\/artists\/[a-z0-9-]+\/events/i)) return 'artist.events';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/articles$/i)) return 'artist.articles';
         if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
         if (endpoint.includes('/artists')) return 'artists';
 
@@ -763,6 +764,12 @@ const AmbiletAPI = {
                 return `slug=${encodeURIComponent(slug)}&${endpoint.substring(queryStart + 1)}`;
             }
             return `slug=${encodeURIComponent(slug)}`;
+        }
+
+        // Artist articles (media-partner press) - extract slug before /articles
+        const artistArticlesMatch = endpoint.match(/\/artists\/([a-z0-9-]+)\/articles$/i);
+        if (artistArticlesMatch) {
+            return `slug=${encodeURIComponent(artistArticlesMatch[1])}`;
         }
 
         const artistMatch = endpoint.match(/\/artists\/([a-z0-9-]+)$/i);

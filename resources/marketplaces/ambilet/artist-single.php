@@ -372,6 +372,23 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 </div>
+<div class="px-6 mx-auto max-w-7xl mobile:px-4">
+    <!-- Press Section: media-partner articles, filled by ArtistPage.loadArticles() -->
+    <section id="articlesSection" class="hidden mt-10">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                <span class="text-2xl">📰</span>
+                În presă
+            </h2>
+        </div>
+        <div id="articlesGrid" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+        <div class="mt-8 text-center">
+            <button type="button" id="articlesMoreBtn" class="hidden px-6 py-2.5 text-sm font-semibold text-gray-900 bg-white border border-gray-200 rounded-full hover:border-primary hover:text-primary transition-all" onclick="ArtistPage.loadArticles(ArtistPage.articlesPage + 1)">
+                Vezi mai multe articole
+            </button>
+        </div>
+    </section>
+</div>
 <div class="px-6 mx-auto max-w-7xl">
     <!-- Similar Artists Section -->
     <section class="mt-10 mb-16">

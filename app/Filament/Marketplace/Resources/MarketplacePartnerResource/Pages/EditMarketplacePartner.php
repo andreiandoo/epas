@@ -13,6 +13,17 @@ class EditMarketplacePartner extends EditRecord
 {
     protected static string $resource = MarketplacePartnerResource::class;
 
+    /**
+     * outbound_secret is a hidden attribute, so the default fill leaves it out and
+     * saving would erase it.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['outbound_secret'] = $this->record->outbound_secret;
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

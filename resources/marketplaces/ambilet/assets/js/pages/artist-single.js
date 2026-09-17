@@ -10,6 +10,8 @@ const ArtistPage = {
     artistSlug: '',
     artistData: null,
     isFollowing: false,
+    articlesPage: 0,
+    articlesLoading: false,
 
     // Month names for date formatting
     monthNames: ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
@@ -99,6 +101,9 @@ const ArtistPage = {
                 } else if (typeof ComedyLayout !== 'undefined' && ComedyLayout.isComedy(this.artistTypes)) {
                     ComedyLayout.apply(this.transformApiData(response.data), response.data);
                 }
+
+                // Media-partner articles load on their own; the section stays hidden without any.
+                this.loadArticles(1);
             } else {
                 console.error('Artist not found');
                 this.showNotFound();
@@ -1075,6 +1080,78 @@ const ArtistPage = {
                 '<div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/0 group-hover:bg-black/30">' + videoIcon + '</div>' +
             '</div>';
         }).join('');
+    },
+
+    /**
+     * Load a page of media-partner articles into the "În presă" section.
+     */
+    async loadArticles(page) {
+        if (!this.artistSlug || this.articlesLoading) return;
+        this.articlesLoading = true;
+
+        try {
+            var response = await AmbiletAPI.get('/artists/' + this.artistSlug + '/articles?page=' + page + '&per_page=6');
+            var articles = (response && response.success && Array.isArray(response.data)) ? response.data : [];
+            var section = document.getElementById('articlesSection');
+            var grid = document.getElementById('articlesGrid');
+            var moreBtn = document.getElementById('articlesMoreBtn');
+            if (!section || !grid) return;
+            if (articles.length === 0) {
+                if (moreBtn) moreBtn.classList.add('hidden');
+                return;
+            }
+
+            var self = this;
+            grid.insertAdjacentHTML('beforeend', articles.map(function(article) {
+                return self.renderArticleCard(article);
+            }).join(''));
+            section.classList.remove('hidden');
+            this.articlesPage = page;
+
+            var meta = response.meta || {};
+            if (moreBtn) moreBtn.classList.toggle('hidden', !(meta.current_page < meta.last_page));
+        } catch (e) {
+            console.log('[ArtistPage] Articles not loaded');
+        } finally {
+            this.articlesLoading = false;
+        }
+    },
+
+    /**
+     * One article card; the whole card links to the article on the partner's site.
+     */
+    renderArticleCard(article) {
+        var attr = function(value) {
+            return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        };
+        var clamp = function(lines) {
+            return 'display:-webkit-box;-webkit-line-clamp:' + lines + ';-webkit-box-orient:vertical;overflow:hidden';
+        };
+        var url = /^https?:\/\//i.test(article.url || '') ? article.url : '#';
+        var source = article.source || 'Presă';
+        var date = '';
+        if (article.published_at) {
+            var published = new Date(article.published_at);
+            if (!isNaN(published)) {
+                date = published.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+            }
+        }
+
+        var image = /^https?:\/\//i.test(article.image_url || '')
+            ? '<div class="overflow-hidden bg-gray-100 aspect-video">' +
+                '<img src="' + attr(article.image_url) + '" alt="' + attr(article.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.parentElement.style.display=\'none\'">' +
+              '</div>'
+            : '';
+
+        return '<a href="' + attr(url) + '" target="_blank" rel="noopener" class="flex flex-col overflow-hidden transition-all bg-white border border-gray-100 group rounded-2xl hover:shadow-lg">' +
+            image +
+            '<div class="flex flex-col flex-1 p-5">' +
+                '<p class="mb-2 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(source) + (date ? ' · ' + this.escapeHtml(date) : '') + '</p>' +
+                '<h3 class="mb-2 text-lg font-bold leading-snug text-gray-900 group-hover:text-primary" style="' + clamp(2) + '">' + this.escapeHtml(article.title) + '</h3>' +
+                (article.excerpt ? '<p class="mb-4 text-sm text-gray-500" style="' + clamp(3) + '">' + this.escapeHtml(article.excerpt) + '</p>' : '') +
+                '<span class="mt-auto text-sm font-semibold text-gray-900 group-hover:text-primary">Citește pe ' + this.escapeHtml(source) + ' →</span>' +
+            '</div>' +
+        '</a>';
     },
 
     /**

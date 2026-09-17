@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 /**
  * Sends a media-partner delivery, retrying after 1, 5 and 30 minutes when the
@@ -35,11 +36,24 @@ class DeliverPartnerRequestJob implements ShouldQueue
     {
         $delivery = MarketplacePartnerDelivery::with('partner')->find($this->deliveryId);
 
-        if (!$delivery || !$delivery->partner || $delivery->status !== MarketplacePartnerDelivery::STATUS_PENDING) {
+        if (!$delivery || $delivery->status !== MarketplacePartnerDelivery::STATUS_PENDING) {
+            return;
+        }
+
+        if (!$this->stillWanted($delivery)) {
+            $delivery->forceFill([
+                'status' => MarketplacePartnerDelivery::STATUS_FAILED,
+                'error' => 'Not sent: the partner was deactivated or its address changed.',
+            ])->save();
+
             return;
         }
 
         if ($sender->send($delivery)) {
+            return;
+        }
+
+        if ($delivery->status !== MarketplacePartnerDelivery::STATUS_PENDING) {
             return;
         }
 
@@ -51,5 +65,38 @@ class DeliverPartnerRequestJob implements ShouldQueue
         }
 
         $delivery->forceFill(['status' => MarketplacePartnerDelivery::STATUS_FAILED])->save();
+    }
+
+    /**
+     * An exception (e.g. an unreadable secret after an APP_KEY change) must not
+     * leave the delivery pending, where it could not be resent.
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        MarketplacePartnerDelivery::whereKey($this->deliveryId)
+            ->where('status', MarketplacePartnerDelivery::STATUS_PENDING)
+            ->update([
+                'status' => MarketplacePartnerDelivery::STATUS_FAILED,
+                'error' => Str::limit('Job failed: ' . ($exception?->getMessage() ?? 'unknown error'), 500),
+                'updated_at' => now(),
+            ]);
+    }
+
+    /**
+     * Retries can run half an hour later; by then the partner may be off or moved.
+     */
+    private function stillWanted(MarketplacePartnerDelivery $delivery): bool
+    {
+        $partner = $delivery->partner;
+
+        if (!$partner || !$partner->isActive()) {
+            return false;
+        }
+
+        if (str_starts_with($delivery->type, 'event.')) {
+            return $partner->wantsEventWebhooks() && $delivery->url === $partner->webhook_url;
+        }
+
+        return true;
     }
 }

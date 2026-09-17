@@ -27,9 +27,14 @@ abstract class PartnerController extends Controller
         return $request->attributes->get('marketplace_client');
     }
 
-    protected function fail(string $code, string $message, int $status): JsonResponse
+    protected function fail(string $code, string $message, int $status, array $errors = []): JsonResponse
     {
-        return response()->json(['error' => ['code' => $code, 'message' => $message]], $status);
+        $error = ['code' => $code, 'message' => $message];
+        if ($errors) {
+            $error['errors'] = $errors;
+        }
+
+        return response()->json(['error' => $error], $status);
     }
 
     protected function page(LengthAwarePaginator $paginator, array $items): JsonResponse

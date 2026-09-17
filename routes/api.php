@@ -3240,6 +3240,9 @@ Route::prefix('marketplace-client/artists')->middleware(['throttle:120,1', 'mark
         ->name('api.marketplace-client.artists.show');
     Route::get('/{slug}/events', [MarketplaceArtistsController::class, 'events'])
         ->name('api.marketplace-client.artists.events');
+    // Media-partner articles about the artist (microservice media-partners).
+    Route::get('/{slug}/articles', [\App\Http\Controllers\Api\MarketplaceClient\ArtistArticlesController::class, 'index'])
+        ->name('api.marketplace-client.artists.articles');
 });
 
 // Artist Accounts — self-service auth + profile claim. Distinct from
@@ -4516,4 +4519,16 @@ Route::prefix('partner/v1')->group(function () {
         ->whereNumber('id')
         ->middleware('partner.auth:artists:read,events:read')
         ->name('api.partner.artists.events');
+
+    Route::middleware('partner.auth:articles:write')->group(function () {
+        Route::put('/external-articles/{source}/{sourceId}', [\App\Http\Controllers\Api\Partner\ArticlesController::class, 'upsert'])
+            ->where(['source' => '[a-z0-9_-]+', 'sourceId' => '[A-Za-z0-9_-]{1,64}'])
+            ->name('api.partner.articles.upsert');
+        Route::delete('/external-articles/{source}/{sourceId}', [\App\Http\Controllers\Api\Partner\ArticlesController::class, 'destroy'])
+            ->where(['source' => '[a-z0-9_-]+', 'sourceId' => '[A-Za-z0-9_-]{1,64}'])
+            ->name('api.partner.articles.destroy');
+        Route::post('/external-articles/{source}/batch', [\App\Http\Controllers\Api\Partner\ArticlesController::class, 'batch'])
+            ->where('source', '[a-z0-9_-]+')
+            ->name('api.partner.articles.batch');
+    });
 });

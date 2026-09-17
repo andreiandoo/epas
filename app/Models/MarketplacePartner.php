@@ -21,6 +21,7 @@ class MarketplacePartner extends Model
     public const SCOPES = [
         'events:read' => 'Citire evenimente',
         'artists:read' => 'Citire artiști',
+        'articles:write' => 'Trimitere articole',
     ];
 
     protected $fillable = [
@@ -58,6 +59,32 @@ class MarketplacePartner extends Model
     public function deliveries(): HasMany
     {
         return $this->hasMany(MarketplacePartnerDelivery::class);
+    }
+
+    public function articles(): HasMany
+    {
+        return $this->hasMany(PartnerArticle::class);
+    }
+
+    /**
+     * Whether an article link points at the partner's own site (settings.articles.domain,
+     * subdomains included). Without a configured domain no article is accepted.
+     */
+    public function allowsArticleUrl(string $url): bool
+    {
+        // Accept "https://www.site.ro/" in the setting as well as "site.ro".
+        $domain = strtolower(trim((string) Arr::get($this->settings ?? [], 'articles.domain')));
+        if (str_contains($domain, '://')) {
+            $domain = (string) parse_url($domain, PHP_URL_HOST);
+        }
+        $domain = (string) preg_replace('/^www\./', '', trim(explode('/', $domain)[0], ' .'));
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        if ($domain === '' || $host === '') {
+            return false;
+        }
+
+        return $host === $domain || str_ends_with($host, '.' . $domain);
     }
 
     /**
