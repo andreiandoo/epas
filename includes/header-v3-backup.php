@@ -96,7 +96,7 @@ $headerSeed = json_encode([
             </button>
             <div class="flex shrink-0 items-center gap-4">
                 <a href="/recuperare-comanda" class="hidden text-ochre underline-wobble sm:inline">Recuperează comanda</a>
-                <a href="/pentru-locatii" x-show="!isClient" class="hidden text-paper/60 transition hover:text-ochre lg:inline">Pentru locații</a>
+                <a href="/parteneri" x-show="!isClient" class="hidden text-paper/60 transition hover:text-ochre lg:inline">Pentru locații</a>
                 <a href="/card-cadou" class="text-paper/60 transition hover:text-ochre">Card cadou</a>
             </div>
         </div>
@@ -312,7 +312,7 @@ $headerSeed = json_encode([
                     <a href="/operatori" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Operatori</a>
                     <a href="/ghiduri" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Ghiduri</a>
                     <a href="/card-cadou" class="rounded-2xl bg-mint px-4 py-4 font-display text-3xl font-bold text-forest">Card cadou</a>
-                    <a href="/pentru-locatii" x-show="!isClient" class="rounded-2xl bg-vermilion px-4 py-4 font-display text-3xl font-bold text-paper">Pentru locații</a>
+                    <a href="/parteneri" x-show="!isClient" class="rounded-2xl bg-vermilion px-4 py-4 font-display text-3xl font-bold text-paper">Pentru locații</a>
                 </div>
 
                 <!-- quick city chips (live) -->

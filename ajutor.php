@@ -65,7 +65,7 @@ $faqs = [
         'links' => [['Contul meu', '/cont']]],
     ['category' => 'venues', 'categoryLabel' => 'Locații', 'q' => 'Cum listez o locație pe bilete.online?',
         'a' => 'Accesează pagina Pentru locații și trimite detaliile despre locație, oraș, tipul activităților și cum vinzi acum biletele.',
-        'links' => [['Pentru locații', '/pentru-locatii']]],
+        'links' => [['Pentru locații', '/parteneri']]],
     ['category' => 'venues', 'categoryLabel' => 'Locații', 'q' => 'O locație poate avea mai multe activități?',
         'a' => 'Da. O locație poate avea o pagină principală și mai multe activități: escape rooms, tururi, ateliere, pachete, bilete de acces.'],
     ['category' => 'venues', 'categoryLabel' => 'Locații', 'q' => 'Cum se face check-in-ul la intrare?',

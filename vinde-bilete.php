@@ -29,6 +29,7 @@ $slCategories = count($V2NAV['categories']);
 $pageTitleRaw = 'Vinde bilete online și la fața locului — ' . SITE_NAME;
 $pageDescription = 'Panou de operator, POS pentru vânzarea la ghișeu, aplicație de scanare pe telefon și tabletă, bon pe imprimantă termică și decontări clare. Comision 2%, fără abonament.';
 $canonicalUrl = SITE_URL . '/vinde-bilete';
+$noindex = true; // /parteneri is the page to find; this one stays for old links
 $ogImage = SITE_URL . '/assets/v2/img/hero-1440.webp';
 
 $slFaq = [

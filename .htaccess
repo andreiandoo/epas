@@ -133,7 +133,7 @@ RewriteRule ^cities/?$ /orase [R=301,L,QSA]
 # nowhere. They go to the shared v2 pages, in organizer mode (?ca=venue) where the page has one.
 RewriteRule ^organizator/login/?$ /autentificare?ca=venue [R=302,L,QSA]
 RewriteRule ^organizator/(inregistrare|register)/?$ /inregistrare-locatie [R=301,L,QSA]
-RewriteRule ^organizator/landing/?$ /devino-partener [R=301,L,QSA]
+RewriteRule ^organizator/landing/?$ /parteneri [R=301,L,QSA]
 RewriteRule ^organizator/forgot-password/?$ /parola-uitata?ca=venue [R=301,L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f

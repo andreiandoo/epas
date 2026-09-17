@@ -262,7 +262,7 @@ include __DIR__ . '/includes/v2/header.php';
           <div class="ct-note">
             <b>Ești operator?</b>
             <p>Ai activități de vândut? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
-            <a href="/devino-partener">Devino partener<?= v2_ic('arrow-right') ?></a>
+            <a href="/parteneri">Devino partener<?= v2_ic('arrow-right') ?></a>
           </div>
         </div>
       </aside>
@@ -285,7 +285,7 @@ include __DIR__ . '/includes/v2/header.php';
           <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
           <h3>Încă nu avem operatori listați.</h3>
           <p>Primii operatori parteneri apar aici imediat ce își publică activitățile.</p>
-          <div class="os-state-cta"><a class="btn btn-primary" href="/devino-partener">Devino partener</a></div>
+          <div class="os-state-cta"><a class="btn btn-primary" href="/parteneri">Devino partener</a></div>
         </div>
         <?php else: ?>
         <ul class="ct-grid os-grid" id="os-grid">
@@ -356,7 +356,7 @@ include __DIR__ . '/includes/v2/header.php';
           <p>Pagină dedicată, activități, bilete QR, dashboard, scanner check-in și rapoarte.</p>
         </div>
         <div class="ct-final-cta">
-          <a class="btn btn-light" href="/devino-partener">Devino partener<?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-light" href="/parteneri">Devino partener<?= v2_ic('arrow-right') ?></a>
           <a class="btn btn-outline-light" href="/inregistrare-locatie">Solicită cont</a>
         </div>
       </div>

@@ -307,7 +307,7 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
         <div class="rg-empty-cta">
           <a class="btn btn-primary" href="/cauta"><?= v2_ic('magnifying-glass') ?>Caută activități</a>
-          <a class="btn btn-ghost" href="/pentru-locatii">Ai o locație aici?</a>
+          <a class="btn btn-ghost" href="/parteneri">Ai o locație aici?</a>
         </div>
       </div>
       <?php endif; ?>

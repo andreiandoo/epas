@@ -224,7 +224,7 @@ include __DIR__ . '/includes/header.php';
                 <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
                     <p class="font-bold text-forest">Pentru locații</p>
                     <p class="mt-1 text-sm text-ink-soft">Ai o locație cu activități? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
-                    <a href="/pentru-locatii" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi detalii</a>
+                    <a href="/parteneri" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi detalii</a>
                 </div>
             </div>
         </aside>
@@ -386,7 +386,7 @@ include __DIR__ . '/includes/header.php';
                 <p class="mt-4 max-w-2xl text-paper/75 text-lg">Pagina dedicată, activități, bilete QR, dashboard, scanner check-in și rapoarte.</p>
             </div>
             <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
-                <a href="/pentru-locatii" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Pentru locații</a>
+                <a href="/parteneri" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Pentru locații</a>
                 <a href="/autentificare?ca=venue&mode=register" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Solicită cont</a>
             </div>
         </div>

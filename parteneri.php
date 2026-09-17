@@ -7,10 +7,15 @@
  * Top to bottom: hero with the stage (personalised by ?tip=<type>&loc=<name>, copy shared with /devino-partener in
  * includes/v2/partner-profiles.php), ecosystem numbers, chapter nav, who it's for (+ live categories), the problem and
  * its fix, booking on slots (#booking), a day at the venue (#o-zi), the operator panel (#panou), the ticket office
- * (#ghiseu), the scanning app (#scanare), hardware, everything you get (#ce-primesti) and the modules, visibility / SEO
+ * (#ghiseu), the scanning app (#scanare), hardware, partner stories (#povesti: a film and a wall of quotes), everything
+ * you get (#ce-primesti) and the modules, visibility / SEO
  * (#vizibilitate), analytics and tracking (#analytics), payments (#plati), the money (#bani, calculator), fiscal / ANAF
- * (#fiscal), how to start (#cum), the Tixello engine (#tehnologie), FAQ (#intrebari), and the finale: self-service
- * signup or a demo request (#demo, same lead pipeline as /pentru-locatii through for-venues.js).
+ * (#fiscal), how to start (#cum), the Tixello engine (#tehnologie), FAQ (#intrebari), one large partner quote, and the
+ * finale: self-service signup or a demo request (#demo, same lead pipeline as /pentru-locatii through for-venues.js).
+ *
+ * The stories come from includes/v2/partner-testimonials.php. Stand-ins marked 'demo' show only in preview (?preview=1,
+ * which also skips the page cache) with a "Demo" tag, never to visitors; with nothing real to show, the stories
+ * sections and their chapter link are left out.
  *
  * The screens are HTML mock-ups with sample figures, marked as such; the catalogue counts come from the API.
  * partners.js runs the stage, the demos, the funnel pings (leads.track, like /devino-partener) and, on large screens
@@ -26,6 +31,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/partner-profiles.php';
+require_once __DIR__ . '/includes/v2/partner-testimonials.php';
 
 $ptAccent = '<strong class="pt-accent">doar 2%*</strong>';
 $ptProfiles = v2_partner_profiles($ptAccent);
@@ -195,7 +201,25 @@ $ptFaqGroups = [
 $ptFaqs = array_merge(...array_map(fn ($g) => $g[1], $ptFaqGroups));
 $ptRoles = ['Proprietar', 'Manager locație', 'Marketing', 'Operațiuni / ghișeu', 'Altul'];
 $ptCounts = ['1 activitate', '2-5 activități', '6-15 activități', '15+ activități'];
+// partner stories: real ones for everyone, stand-ins ('demo') only in preview
+$ptPreview = !empty($_GET['preview']);
+$ptStories = v2_partner_testimonials();
+$ptShown = static fn (array $item): bool => empty($item['demo']) || $ptPreview;
+$ptVideo = $ptShown($ptStories['video'] ?? ['demo' => true]) && preg_match('/^[A-Za-z0-9_-]{11}$/', (string) ($ptStories['video']['youtube'] ?? '')) ? $ptStories['video'] : null;
+$ptQuotes = array_values(array_filter($ptStories['quotes'] ?? [], $ptShown));
+$ptWall = array_values(array_filter($ptQuotes, fn ($q) => empty($q['pull'])));
+$ptPull = array_values(array_filter($ptQuotes, fn ($q) => !empty($q['pull'])))[0] ?? null;
+$ptWallMoves = count($ptWall) >= 5; // fewer quotes sit still in a grid
+$ptInitials = static function (string $name): string {
+    $parts = preg_split('/\s+/u', trim($name)) ?: [];
+    return mb_strtoupper(implode('', array_map(fn ($w) => mb_substr($w, 0, 1), array_slice($parts, 0, 2))));
+};
+$ptDemoTag = static fn (array $item): string => !empty($item['demo']) ? '<span class="pt-demo-tag">Demo</span>' : '';
+
 $ptChapters = [['pentru-cine', 'Pentru cine'], ['booking', 'Booking'], ['o-zi', 'Operațiuni'], ['ce-primesti', 'Ce primești'], ['vizibilitate', 'Vizibilitate'], ['bani', 'Bani'], ['cum', 'Cum începi'], ['intrebari', 'Întrebări']];
+if ($ptVideo || $ptWall) {
+    array_splice($ptChapters, 3, 0, [['povesti', 'Povești']]);
+}
 
 // A small QR-like pattern for the mock-ups: finder squares plus a fixed pseudo-random fill (not a real code), drawn as
 // one path of horizontal runs so five of them stay light.
@@ -742,6 +766,64 @@ include __DIR__ . '/includes/v2/header.php';
     </div>
   </section>
 
+  <?php if ($ptVideo || $ptWall): ?>
+  <!-- ===================== PARTNER STORIES ===================== -->
+  <section class="pt-sec pt-stories" id="povesti" data-chapter="povesti" aria-labelledby="pt-stories-h">
+    <div class="pt-stories-glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <?= $ptHead('pt-stories-h', 'Povești de la parteneri', 'Nu ne crede pe cuvânt. <span class="pt-nl">Ascultă-i pe ei.</span>', 'Locații care vând deja prin bilete.online, despre cum arată ziua lor acum: la intrare, la ghișeu și în rapoarte.', 'is-dark is-center') ?>
+
+      <?php if ($ptVideo): ?>
+      <div class="pt-feature<?= empty($ptVideo['quote']) ? ' is-solo' : '' ?>">
+        <div class="pt-video" id="pt-video" data-yt="<?= v2_e($ptVideo['youtube']) ?>" data-title="<?= v2_e($ptVideo['title']) ?>">
+          <img class="pt-video-poster" src="https://i.ytimg.com/vi/<?= v2_e($ptVideo['youtube']) ?>/maxresdefault.jpg" data-fallback="https://i.ytimg.com/vi/<?= v2_e($ptVideo['youtube']) ?>/hqdefault.jpg" alt="" width="1280" height="720" loading="lazy" decoding="async">
+          <button class="pt-video-play" type="button" data-track-cta="parteneri_video_play" aria-label="Pornește filmul: <?= v2_e($ptVideo['title']) ?><?= !empty($ptVideo['duration']) ? ' (' . v2_e($ptVideo['duration']) . ')' : '' ?>">
+            <span class="pt-play" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.5v13a1 1 0 0 0 1.52.85l10.4-6.5a1 1 0 0 0 0-1.7L9.52 4.65A1 1 0 0 0 8 5.5Z"/></svg></span>
+            <span class="pt-video-cta" aria-hidden="true"><b>Vezi filmul</b><small><?= !empty($ptVideo['duration']) ? v2_e($ptVideo['duration']) . ' · ' : '' ?>se încarcă de pe YouTube</small></span>
+          </button>
+          <p class="pt-video-title"><?= $ptDemoTag($ptVideo) ?><?= v2_e($ptVideo['title']) ?></p>
+        </div>
+        <?php if (!empty($ptVideo['quote'])): ?>
+        <figure class="pt-feature-quote">
+          <span class="pt-qmark" aria-hidden="true">“</span>
+          <blockquote><p><?= v2_e($ptVideo['quote']) ?></p></blockquote>
+          <figcaption><span class="pt-avatar" aria-hidden="true"><?= v2_e($ptInitials($ptVideo['name'])) ?></span><span><b><?= v2_e($ptVideo['name']) ?></b><small><?= v2_e($ptVideo['role'] . ' · ' . $ptVideo['place']) ?></small></span></figcaption>
+          <?php if (!empty($ptVideo['results'])): ?><ul class="pt-results"><?php foreach ($ptVideo['results'] as $r): ?><li><?= v2_ic('check') ?><?= v2_e($r) ?></li><?php endforeach; ?></ul><?php endif; ?>
+        </figure>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <?php if ($ptWall): ?>
+    <?php
+    $ptQuoteCard = static function (array $q, bool $copy) use ($ptInitials, $ptDemoTag): string {
+        return '<figure class="pt-quote"' . ($copy ? ' aria-hidden="true"' : '') . '>'
+            . '<p class="pt-quote-top"><span class="pt-quote-venue">' . v2_e($q['venue'] . ' · ' . $q['city']) . '</span>' . $ptDemoTag($q) . '</p>'
+            . '<blockquote><p>' . v2_e($q['quote']) . '</p></blockquote>'
+            . (!empty($q['result']) ? '<p class="pt-quote-result">' . v2_ic('trend-up') . v2_e($q['result']) . '</p>' : '')
+            . '<figcaption><span class="pt-avatar" aria-hidden="true">' . v2_e($ptInitials($q['name'])) . '</span><span><b>' . v2_e($q['name']) . '</b><small>' . v2_e($q['role']) . '</small></span></figcaption>'
+            . '</figure>';
+    };
+    ?>
+    <div class="pt-wall<?= $ptWallMoves ? ' is-moving' : '' ?>" id="pt-wall">
+      <?php if ($ptWallMoves): ?>
+      <div class="pt-wall-row">
+        <div class="pt-wall-set"><?php foreach ($ptWall as $q) { echo $ptQuoteCard($q, false); } ?></div>
+        <div class="pt-wall-set" aria-hidden="true"><?php foreach ($ptWall as $q) { echo $ptQuoteCard($q, true); } ?></div>
+      </div>
+      <div class="pt-wall-row is-rev" aria-hidden="true">
+        <?php for ($pass = 0; $pass < 2; $pass++): ?><div class="pt-wall-set"><?php foreach (array_reverse($ptWall) as $q) { echo $ptQuoteCard($q, true); } ?></div><?php endfor; ?>
+      </div>
+      <div class="wrap pt-wall-foot"><button class="pt-wall-toggle" id="pt-wall-toggle" type="button" aria-controls="pt-wall" hidden><span class="pt-wall-ic" aria-hidden="true"></span><span id="pt-wall-toggle-t">Oprește derularea</span></button></div>
+      <?php else: ?>
+      <div class="wrap"><div class="pt-wall-grid"><?php foreach ($ptWall as $q) { echo $ptQuoteCard($q, false); } ?></div></div>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+  </section>
+  <?php endif; ?>
+
   <!-- ===================== EVERYTHING YOU GET ===================== -->
   <section class="pt-sec pt-get" id="ce-primesti" data-chapter="ce-primesti" aria-labelledby="pt-get-h">
     <div class="wrap">
@@ -1064,6 +1146,23 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
     </div>
   </section>
+
+  <?php if ($ptPull): ?>
+  <!-- ===================== ONE LARGE QUOTE ===================== -->
+  <section class="pt-voice" data-chapter="intrebari" aria-label="Ce spune un partener">
+    <div class="wrap">
+      <figure class="pt-voice-in" id="pt-voice">
+        <span class="pt-voice-mark" aria-hidden="true">“</span>
+        <blockquote><p><?= v2_e($ptPull['quote']) ?></p></blockquote>
+        <figcaption>
+          <span class="pt-avatar" aria-hidden="true"><?= v2_e($ptInitials($ptPull['name'])) ?></span>
+          <span><b><?= v2_e($ptPull['name']) ?><?= $ptDemoTag($ptPull) ?></b><small><?= v2_e($ptPull['role'] . ' · ' . $ptPull['venue'] . ', ' . $ptPull['city']) ?></small></span>
+          <?php if (!empty($ptPull['result'])): ?><span class="pt-quote-result"><?= v2_ic('trend-up') ?><?= v2_e($ptPull['result']) ?></span><?php endif; ?>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+  <?php endif; ?>
 
   <!-- ===================== FINALE: start alone or talk to us ===================== -->
   <section class="pt-finale" id="demo" data-chapter="cum" aria-labelledby="pt-final-h">

@@ -142,7 +142,7 @@ include __DIR__ . '/includes/v2/header.php';
           <span class="ob-done-ic" aria-hidden="true"><?= v2_ic('check') ?></span>
           <h2 id="ob-done-h" tabindex="-1">Mulțumim!</h2>
           <p>Cererea ta a ajuns la echipa bilete.online. Te contactăm în următoarea zi lucrătoare pe <strong id="ob-done-email"></strong>.</p>
-          <a class="btn btn-ghost" href="/devino-partener"><?= v2_ic('arrow-left') ?>Înapoi la prezentare</a>
+          <a class="btn btn-ghost" href="/parteneri"><?= v2_ic('arrow-left') ?>Înapoi la prezentare</a>
         </div>
       </div>
       <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2%* plătit de cumpărător</p>

@@ -400,7 +400,7 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
       <div>
         <h2 id="partners-h">Ai o atracție sau o experiență? <em>Vinde bilete pe bilete.online.</em></h2>
         <div class="partners-cta">
-          <a class="btn btn-light" href="/pentru-locatii">Listează-ți locația<?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-light" href="/parteneri">Listează-ți locația<?= v2_ic('arrow-right') ?></a>
           <a class="link-light" href="/cum-functioneaza">Cum funcționează</a>
         </div>
       </div>

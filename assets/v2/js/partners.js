@@ -4,6 +4,7 @@
    - funnel pings to leads.track (page_view_landing, cta_click) on the bo_lead_sid session, like /devino-partener
    - the stage: entrance, then small loops while it is on screen (new orders, a receipt printing, tickets scanned,
      live toasts); a slight tilt that follows the pointer
+   - partner stories: a film that loads only when played, a wall of quotes that can be stopped, one large quote
    - the demos: booking in six steps, the operator panel's address bar, a ticket office you can use, the scanner's
      three answers (and a spell offline), the SEO address typing itself, the tracking flow, the ANAF documents
    - the calculator, the chapter nav, the ask that follows on phones
@@ -480,6 +481,38 @@
     }, 0.3);
   }
 
+  /* ---------- partner stories: the film loads only when played; the quote wall can be stopped ---------- */
+  var video = $('pt-video');
+  if (video) {
+    var poster = video.querySelector('.pt-video-poster'), playBtn = video.querySelector('.pt-video-play');
+    // YouTube has no large still for every film: it answers with an error or a 120px grey placeholder
+    var posterFallback = function () { if (poster.dataset.fallback && poster.getAttribute('src') !== poster.dataset.fallback) poster.src = poster.dataset.fallback; };
+    poster.addEventListener('error', posterFallback);
+    poster.addEventListener('load', function () { if (poster.naturalWidth > 0 && poster.naturalWidth < 200) posterFallback(); });
+    if (poster.complete && poster.naturalWidth > 0 && poster.naturalWidth < 200) posterFallback();
+    playBtn.addEventListener('click', function () {
+      var frame = document.createElement('iframe');
+      frame.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(video.getAttribute('data-yt')) + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+      frame.title = video.getAttribute('data-title') || 'Film';
+      frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      frame.setAttribute('allowfullscreen', '');
+      video.classList.add('is-playing');
+      video.appendChild(frame);
+      playBtn.remove();
+      frame.focus();
+    });
+  }
+  var wall = $('pt-wall'), wallToggle = $('pt-wall-toggle');
+  if (wall && wallToggle && !reduce) {
+    wallToggle.hidden = false;
+    wallToggle.addEventListener('click', function () {
+      var paused = wall.classList.toggle('is-paused');
+      $('pt-wall-toggle-t').textContent = paused ? 'Pornește derularea' : 'Oprește derularea';
+    });
+    whenVisible(wall, function (on) { wall.classList.toggle('is-offscreen', !on); }, 0.01); // no frames spent off screen
+  }
+  revealOnce($('pt-voice'), null, 0.35);
+
   /* ---------- how to start: the path draws ---------- */
   revealOnce($('pt-steps'), null, 0.3);
 
@@ -617,6 +650,14 @@
         if (!el) return;
         gsap.fromTo(el, { y: 50 }, { y: -50, ease: 'none', scrollTrigger: { trigger: el.closest('section'), start: 'top bottom', end: 'bottom top', scrub: true } });
       });
+      // the film opens up as it arrives
+      var film = $('pt-video');
+      if (film) {
+        gsap.fromTo(film, { clipPath: 'inset(9% 11% 9% 11% round 44px)', scale: 0.97 }, {
+          clipPath: 'inset(0% 0% 0% 0% round 28px)', scale: 1, ease: 'none',
+          scrollTrigger: { trigger: film, start: 'top 95%', end: 'top 35%', scrub: 0.6 }
+        });
+      }
       // the 2% grows into place
       var big = $('pt-big2');
       if (big) {
