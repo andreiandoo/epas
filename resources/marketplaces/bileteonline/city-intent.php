@@ -13,7 +13,8 @@
  *
  * Top to bottom: compact dark hero (breadcrumbs, intent, intro, facts, CTAs, the other ideas), results (the rule in
  * plain words, city filter and sort, cards, pagination) or the empty state with what is available meanwhile, cross
- * links (other intents here, the same intent in other cities), SEO copy.
+ * links (other intents here, the same intent in other cities). The intent's seo_copy is not shown: one templated
+ * paragraph repeated in every city added nothing for readers.
  */
 
 $pageCacheTTL = 300;
@@ -94,11 +95,6 @@ $intentIcon = (string) ($meta['icon'] ?? '');
 $cover = v2_media_url($meta['cover_image_url'] ?? null);
 $basePath = (string) ($meta['canonical_path'] ?? '/');
 $accentClass = ['vermilion' => 'is-red', 'forest' => 'is-green', 'ochre' => 'is-yellow', 'sky' => 'is-blue'][$meta['accent_color'] ?? 'vermilion'] ?? 'is-red';
-$seoParagraphs = [];
-if (!empty($meta['seo_copy'])) {
-    // seo_copy is plain text: paragraphs split on blank lines
-    $seoParagraphs = array_values(array_filter(array_map($clean, preg_split('/\n\s*\n/', trim((string) $meta['seo_copy'])))));
-}
 
 // Sprite icons for the ideas the menus use; any other intent keeps its API emoji.
 const IT_ICONS = [
@@ -375,7 +371,7 @@ $itArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" f
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>
-<main id="main" class="page-main" tabindex="-1">
+<main id="main" tabindex="-1">
 
   <!-- ============================== HERO ============================== -->
   <section class="it-hero <?= $accentClass ?><?= $cover ? ' has-cover' : '' ?>" aria-labelledby="it-h">
@@ -554,19 +550,6 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
   <?php endif; ?>
 
-  <!-- ============================== SEO COPY ============================== -->
-  <?php if ($seoParagraphs): ?>
-  <section class="it-seo" aria-labelledby="it-seo-h">
-    <div class="wrap">
-      <article class="seo it-seo-card">
-        <h2 id="it-seo-h"><?= v2_e($h1 !== '' ? $h1 : $intentName) ?></h2>
-        <?php foreach ($seoParagraphs as $p): ?>
-        <p><?= nl2br(v2_e($p)) ?></p>
-        <?php endforeach; ?>
-      </article>
-    </div>
-  </section>
-  <?php endif; ?>
 </main>
 
 <?php include __DIR__ . '/includes/v2/footer.php'; ?>

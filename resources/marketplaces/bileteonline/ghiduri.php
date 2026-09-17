@@ -6,8 +6,9 @@
  * to /ghiduri/{slug}. The topic filter lists the blog categories that have guides. Search and topics filter the
  * server-rendered cards (guides.js) and live in the URL (?q=, ?topic=).
  *
- * Top to bottom: hero (search, topic chips, recommended guide), topics + guide cards, editorial hubs, final CTA.
- * Hero, search, topic sidebar, cards, hubs and CTA styles come from cities.css; guides.css adds what is specific.
+ * Top to bottom: hero (search, topic chips, recommended guide), topics + guide cards (image, topic, read time, title,
+ * excerpt; the whole card is the link), activities by context (local, weekend, weather, gift).
+ * Hero, search and topic sidebar styles come from cities.css; guides.css adds the cards and the context tiles.
  */
 
 $pageCacheTTL = 300;
@@ -24,7 +25,6 @@ $rawArticles = $articlesResp['data']['articles'] ?? $articlesResp['data'] ?? [];
 $catsResp = api_cached('guides_categories', fn () => api_get('/blog-categories'), 600);
 $rawCats = $catsResp['data']['categories'] ?? $catsResp['data'] ?? [];
 
-$gdMonths = [1 => 'Ian', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mai', 6 => 'Iun', 7 => 'Iul', 8 => 'Aug', 9 => 'Sep', 10 => 'Oct', 11 => 'Noi', 12 => 'Dec'];
 $guides = [];
 foreach ((array) $rawArticles as $a) {
     if (!is_array($a)) {
@@ -37,7 +37,6 @@ foreach ((array) $rawArticles as $a) {
     }
     $cat = is_array($a['category'] ?? null) ? $a['category'] : [];
     $catName = navFlatName($cat['name'] ?? '');
-    $ts = strtotime((string) ($a['published_at'] ?? '') ?: (string) ($a['created_at'] ?? ''));
     $image = v2_media_url($a['image_url'] ?? null);
     $cover = V2_GUIDE_COVERS[$gSlug] ?? null;
     $guides[] = [
@@ -50,7 +49,6 @@ foreach ((array) $rawArticles as $a) {
         'topic' => (string) ($cat['slug'] ?? ''),
         'topicLabel' => $catName !== '' ? (V2_BLOG_CATEGORIES[$catName] ?? $catName) : 'Ghid',
         'readTime' => (int) ($a['read_time'] ?? 0) > 0 ? (int) $a['read_time'] . ' min' : '5 min',
-        'date' => $ts ? $gdMonths[(int) date('n', $ts)] . ' ' . date('Y', $ts) : '',
         'featured' => !empty($a['is_featured']),
     ];
 }
@@ -75,11 +73,13 @@ foreach ($guides as $g) {
 }
 $featuredGuide = $featuredGuide ?? ($guides[0] ?? null);
 
-$editorialHubs = [
-    ['Local', 'Ghiduri pe orașe', 'Ce să faci în București, Brașov, Cluj, Iași sau Timișoara.', '/orase'],
-    ['Intent', 'Ghiduri de weekend', 'Idei pentru weekend: copii, grupuri, cupluri.', '/activitati-weekend'],
-    ['Vreme', 'Zile ploioase', 'Activități indoor când vremea nu ține cu tine.', '/activitati-zile-ploioase'],
-    ['Cadou', 'Cadouri experiență', 'Idei de cadou: carduri cadou și activități memorabile.', '/card-cadou'],
+// Activities by context: straight to pages that list what can be booked (not more reading).
+$gdCityCount = count($V2NAV['allCities'] ?? []);
+$contextTiles = [
+    ['map-pin', 'Local', 'Activități în orașul tău', $gdCityCount > 0 ? 'Alege dintre ' . v2_num($gdCityCount, 'oraș', 'orașe') . ' și vezi ce e de făcut acolo.' : 'Alege orașul și vezi ce e de făcut acolo.', '/orase', 'is-green'],
+    ['sun', 'Weekend', 'Ce faci sâmbătă și duminică', 'Activități cu locuri libere în weekendul care vine.', '/activitati-weekend', 'is-yellow'],
+    ['cloud-rain', 'Vreme', 'Plouă? Mergi la adăpost', 'Activități în interior, pentru zilele ploioase.', '/activitati-zile-ploioase', 'is-blue'],
+    ['gift', 'Cadou', 'O experiență de dăruit', 'Calculatorul găsește activitatea potrivită și valoarea cardului cadou.', '/experiente-cadou', 'is-red'],
 ];
 
 // ------------------------------------------------------------------ page
@@ -167,10 +167,6 @@ include __DIR__ . '/includes/v2/header.php';
             <li><button type="button" data-topic="<?= v2_e($topic['key']) ?>" data-label="<?= v2_e($topic['label']) ?>" aria-pressed="false"><?= v2_e($topic['label']) ?><span><?= $topic['count'] ?></span></button></li>
             <?php endforeach; ?>
           </ul>
-          <div class="ct-note">
-            <b>Idei de ieșit în oraș</b>
-            <p>Ghidurile leagă orașe, categorii și activități reale cu bilete online.</p>
-          </div>
         </div>
       </aside>
 
@@ -188,22 +184,15 @@ include __DIR__ . '/includes/v2/header.php';
           <a class="btn btn-primary" href="/categorii">Explorează categorii<?= v2_ic('arrow-right') ?></a>
         </div>
         <?php else: ?>
-        <ul class="ct-grid gd-grid" id="gd-grid">
+        <ul class="gd-cards" id="gd-grid">
           <?php foreach ($guides as $gi => $g): ?>
-          <li class="ct-card" data-topic-key="<?= v2_e($g['topic']) ?>" data-q="<?= v2_e(implode(' ', [$g['title'], $g['excerpt'], $g['topicLabel']])) ?>">
-            <a class="ct-top" href="<?= v2_e($g['href']) ?>">
-              <span class="ct-media"><?= $g['photo'] ? v2_photo($g['photo']) : v2_fallback($g['title'], $gi) ?></span>
-              <span class="gd-topic"><?= v2_e($g['topicLabel']) ?></span>
-              <span class="ct-badge"><?= v2_e($g['readTime']) ?></span>
-              <span class="ct-over"><h3><?= v2_e($g['title']) ?></h3></span>
+          <li class="gd-card" data-topic-key="<?= v2_e($g['topic']) ?>" data-q="<?= v2_e(implode(' ', [$g['title'], $g['excerpt'], $g['topicLabel']])) ?>">
+            <a href="<?= v2_e($g['href']) ?>">
+              <span class="gd-card-media"><?= $g['photo'] ? v2_photo($g['photo']) : v2_fallback($g['title'], $gi) ?></span>
+              <span class="gd-card-meta"><span class="gd-card-topic"><?= v2_e($g['topicLabel']) ?></span><span class="gd-card-time"><?= v2_ic('clock') ?><?= v2_e($g['readTime']) ?></span></span>
+              <h3 class="gd-card-title"><?= v2_e($g['title']) ?></h3>
+              <?php if ($g['excerpt'] !== ''): ?><span class="gd-card-text"><?= v2_e($g['excerpt']) ?></span><?php endif; ?>
             </a>
-            <div class="ct-body">
-              <?php if ($g['excerpt'] !== ''): ?><p><?= v2_e($g['excerpt']) ?></p><?php endif; ?>
-              <div class="gd-foot">
-                <a href="<?= v2_e($g['href']) ?>" aria-label="Citește ghidul: <?= v2_e($g['title']) ?>">Citește ghidul<?= v2_ic('arrow-right') ?></a>
-                <?php if ($g['date'] !== ''): ?><span><?= v2_e($g['date']) ?></span><?php endif; ?>
-              </div>
-            </div>
           </li>
           <?php endforeach; ?>
         </ul>
@@ -217,37 +206,24 @@ include __DIR__ . '/includes/v2/header.php';
     </div>
   </section>
 
-  <!-- ===================== EDITORIAL HUBS ===================== -->
-  <section class="sec ct-hubs" aria-labelledby="ct-hubs-h">
-    <div class="wrap ct-hubs-grid">
-      <div class="ct-hubs-intro">
-        <p class="kicker">Huburi editoriale</p>
-        <h2 id="ct-hubs-h">Ghidurile acoperă intenții reale de căutare.</h2>
-        <p>Ghidurile explică, compară, recomandă și apoi trimit către categorii, orașe și activități cu bilete online.</p>
+  <!-- ===================== ACTIVITIES BY CONTEXT ===================== -->
+  <section class="sec gd-context" aria-labelledby="gd-context-h">
+    <div class="wrap">
+      <div class="gd-context-head">
+        <p class="kicker">Activități după context</p>
+        <h2 id="gd-context-h">Pornește de la ce ai chef azi.</h2>
       </div>
-      <ul class="ct-hub-list">
-        <?php foreach ($editorialHubs as [$hubKicker, $hubTitle, $hubText, $hubUrl]): ?>
-        <li><a class="ct-hub" href="<?= v2_e($hubUrl) ?>"><small><?= v2_e($hubKicker) ?></small><b><?= v2_e($hubTitle) ?></b><span><?= v2_e($hubText) ?></span><?= v2_ic('arrow-right') ?></a></li>
+      <ul class="gd-context-grid">
+        <?php foreach ($contextTiles as [$tIcon, $tKicker, $tTitle, $tText, $tHref, $tTone]): ?>
+        <li><a class="gd-ctx <?= $tTone ?>" href="<?= v2_e($tHref) ?>">
+          <span class="gd-ctx-ic" aria-hidden="true"><?= v2_ic($tIcon) ?></span>
+          <small><?= v2_e($tKicker) ?></small>
+          <b><?= v2_e($tTitle) ?></b>
+          <span><?= v2_e($tText) ?></span>
+          <span class="gd-ctx-go" aria-hidden="true"><?= v2_ic('arrow-right') ?></span>
+        </a></li>
         <?php endforeach; ?>
       </ul>
-    </div>
-  </section>
-
-  <!-- ===================== FINAL CTA ===================== -->
-  <section class="ct-final gd-final" aria-labelledby="ct-final-h">
-    <div class="wrap">
-      <div class="ct-final-in">
-        <?= $gdArches ?>
-        <div>
-          <p class="kicker">Explorează</p>
-          <h2 id="ct-final-h">Ai citit ghidul. Acum alege activitatea.</h2>
-          <p>Vezi categorii, orașe și activități disponibile cu bilete online.</p>
-        </div>
-        <div class="ct-final-cta">
-          <a class="btn btn-light" href="/categorii">Vezi categorii<?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="/orase">Alege orașul</a>
-        </div>
-      </div>
     </div>
   </section>
 </main>

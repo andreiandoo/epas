@@ -7,7 +7,7 @@
   if (!input || !grid) return;
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var cards = [].slice.call(grid.querySelectorAll('.ct-card'));
+  var cards = [].slice.call(grid.querySelectorAll('.gd-card'));
   var buttons = [].slice.call(document.querySelectorAll('.ct-regions [data-topic]'));
   var chips = [].slice.call(document.querySelectorAll('[data-topic-chip]'));
   var title = $('ct-title'), count = $('ct-count'), none = $('ct-none'), status = $('ct-status');

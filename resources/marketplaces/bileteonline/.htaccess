@@ -639,15 +639,15 @@ RewriteRule ^calendar/?$ events-calendar.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^intrebari/?$ ajutor.php [L,QSA]
+RewriteRule ^intrebari/?$ /ajutor#intrebari [R=301,NE,L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^faqs/?$ ajutor.php [L,QSA]
+RewriteRule ^faqs/?$ /ajutor#intrebari [R=301,NE,L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^faq/?$ ajutor.php [L,QSA]
+RewriteRule ^faq/?$ /ajutor#intrebari [R=301,NE,L]
 
 # Search
 RewriteCond %{REQUEST_FILENAME} !-f

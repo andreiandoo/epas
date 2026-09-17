@@ -1,6 +1,6 @@
 <?php
 /**
- * Help center: /ajutor (aliases /faqs, /intrebari) (v2 design).
+ * Help center: /ajutor (v2 design). /faqs, /faq and /intrebari redirect here, to the questions (#intrebari).
  *
  * Hero with search, quick chips and a route card, 4 fast actions, the FAQ list (categories with counts, search that
  * ignores diacritics and matches every word, links under answers), "still need help" contact routes, final CTA.
@@ -251,20 +251,5 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
 
   <!-- FINAL CTA -->
-  <section class="sec hp-final-sec">
-    <div class="wrap">
-      <div class="hp-final">
-        <div>
-          <p class="hp-final-k">Help center</p>
-          <h2>Rezolvă rapid. Apoi mergi la activitate.</h2>
-          <p>FAQ-ul scurtează drumul: răspuns, acțiune, bilet, acces.</p>
-        </div>
-        <div class="hp-final-cta">
-          <a class="btn hp-btn-white" href="/recuperare-comanda">Recuperează comanda</a>
-          <a class="btn btn-outline-light" href="/contact">Contact suport</a>
-        </div>
-      </div>
-    </div>
-  </section>
 </main>
 <?php include __DIR__ . '/includes/v2/footer.php'; ?>

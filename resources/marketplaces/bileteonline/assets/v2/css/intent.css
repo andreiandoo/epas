@@ -47,7 +47,7 @@
 }
 
 /* =================== RESULTS =================== */
-.it-list,.it-cross,.it-seo{padding-block:clamp(48px, 7vw, 96px)}
+.it-list,.it-cross{padding-block:clamp(48px, 7vw, 96px)}
 .it-list{background:var(--bg)}
 .it-head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px 24px;margin-bottom:var(--space-5)}
 .it-head h2{max-width:22ch;margin:0;font-size:var(--text-h2);font-weight:700;line-height:1.04;letter-spacing:-.04em;color:var(--green)}
@@ -96,5 +96,3 @@
 .it-towns a:hover{border-color:var(--green);color:var(--green)}
 .it-towns .ic{flex:none;width:16px;height:16px;color:var(--green);transition:transform var(--dur-micro) var(--ease-out)}
 .it-towns a:hover .ic{transform:translateX(3px)}
-.it-seo{background:var(--bg)}
-.it-seo-card{max-width:820px;margin-inline:auto}
