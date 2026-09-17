@@ -230,7 +230,7 @@ const CartPage = {
             emptyState.classList.remove('hidden');
             // The last line was removed from the keyboard: move focus to the empty-state heading.
             if (hadFocus) {
-                const heading = emptyState.querySelector('h2');
+                const heading = emptyState.querySelector('h1, h2');
                 if (heading) heading.focus();
             }
             // Reset the counters so the page doesn't show e.g. "1 bilet" next to "Coșul tău e gol".

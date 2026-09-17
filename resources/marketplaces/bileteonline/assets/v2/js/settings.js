@@ -219,7 +219,7 @@
       setTimeout(function () { b.textContent = label; delete b.dataset.copied; }, 2000);
     }, manual);
   }
-  function guard() { show('st-content', false); show('st-guard', true); }
+  function guard() { show('st-content', false); show('st-guard', true); account.toLogin(); } // the message shows only while the login page loads
   function remember(u) {
     try { if (BileteOnlineAuth.updateCustomerData) BileteOnlineAuth.updateCustomerData(u); } catch (e) {}
     account.setUser(u);

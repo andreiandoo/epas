@@ -22,10 +22,16 @@ const V2_ACCOUNT_NAV = [
     ['settings', '/cont/setari', 'Setări', 'lock-simple'],
 ];
 
-/** The window.BILETEONLINE settings the legacy api.js / auth.js read; account pages put it in $v2HeadExtra. */
+/**
+ * The window.BILETEONLINE settings the legacy api.js / auth.js read; account pages put it in $v2HeadExtra.
+ * It starts with the login guard: without a customer session (the keys auth.js keeps) the page is replaced by
+ * /autentificare?redirect=<this page> before it paints, so a visitor never sees the account shell signed out.
+ */
 function v2_account_client_config(): string
 {
-    return '<script>window.BILETEONLINE = ' . json_encode([
+    return '<script>(function () { var ok = false; try { var type = localStorage.getItem(\'bileteonline_user_type\'); ok = !!localStorage.getItem(\'bileteonline_customer_token\') && (!type || type === \'customer\'); } catch (e) {} '
+        . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; location.replace(\'/autentificare?redirect=\' + encodeURIComponent(location.pathname + location.search + location.hash)); } })();</script>'
+        . '<script>window.BILETEONLINE = ' . json_encode([
         'siteName' => SITE_NAME,
         'siteUrl' => SITE_URL,
         'apiUrl' => '/api/proxy.php',

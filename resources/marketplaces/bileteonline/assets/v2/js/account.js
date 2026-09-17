@@ -140,5 +140,13 @@
     return svg;
   }
 
-  window.BO_ACCOUNT = { isCustomer: isCustomer, cachedUser: cachedUser, setUser: setUser, setBadges: setBadges, save: save, calendar: calendar, qr: qr };
+  // A session the API no longer accepts (401) or none at all: forget it (otherwise the login page, seeing a token,
+  // would send the visitor straight back here) and go to the login page, which returns to this page afterwards.
+  function toLogin() {
+    var a = auth();
+    try { if (a && a.clearCustomerSession && a.getUserType() !== 'organizer') a.clearCustomerSession(); } catch (e) {}
+    window.location.replace('/autentificare?redirect=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash));
+  }
+
+  window.BO_ACCOUNT = { isCustomer: isCustomer, cachedUser: cachedUser, setUser: setUser, setBadges: setBadges, save: save, calendar: calendar, qr: qr, toLogin: toLogin };
 })();

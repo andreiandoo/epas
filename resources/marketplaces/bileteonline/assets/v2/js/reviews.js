@@ -181,7 +181,7 @@
     });
     no.focus();
   }
-  function guard() { show('rv-content', false); show('rv-guard', true); }
+  function guard() { show('rv-content', false); show('rv-guard', true); account.toLogin(); } // the message shows only while the login page loads
 
   // ---------- drafts (this device only) ----------
   function userKey() { var u = account.cachedUser() || {}; return String(u.id || u.email || 'client').toLowerCase(); }

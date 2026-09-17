@@ -59,7 +59,7 @@
     return storage ? storage + '/' + v : '';
   }
   function slugName(slug) { var s = String(slug || '').replace(/[-_]+/g, ' ').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
-  function guard() { show('rc-content', false); show('rc-guard', true); }
+  function guard() { show('rc-content', false); show('rc-guard', true); account.toLogin(); } // the message shows only while the login page loads
   function say(message, tone, undo) {
     var box = $('rc-flash'), t = $('rc-flash-t'), undoBtn = $('rc-flash-undo');
     clearTimeout(flashTimer);

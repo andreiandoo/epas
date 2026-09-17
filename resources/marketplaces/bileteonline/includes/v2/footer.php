@@ -7,7 +7,34 @@
  *   $v2LegacyScripts  scripts of the previous stack a page still needs, paths from the site root, loaded
  *                     before base.js, e.g. ['assets/js/config.js', 'assets/js/cart.js'] for the cart
  *   $v2ClientData     data for the page script, printed as JSON in #v2-data
+ *   $v2FooterCompact  true for the one-line footer (login page, customer account): brand, the help and legal links,
+ *                     cookie settings, the ANPC badges the law asks for and the copyright; nothing else
  */
+if (!empty($v2FooterCompact)) {
+    ?>
+<footer class="ftr-mini" aria-labelledby="ftr-h">
+  <h2 class="sr" id="ftr-h">Despre bilete.online</h2>
+  <div class="wrap ftr-mini-in">
+    <a class="ftr-mini-brand" href="/" aria-label="bilete.online, pagina principală"><?= v2_brand('brand') ?></a>
+    <nav class="ftr-mini-links" aria-label="Ajutor și informații legale">
+      <a href="/ajutor">Ajutor</a>
+      <a href="/contact">Contact</a>
+      <a href="/termeni">Termeni</a>
+      <a href="/confidentialitate">Confidențialitate</a>
+      <a href="/cookies">Cookies</a>
+      <button type="button" data-cc-action="open">Setări cookies</button>
+    </nav>
+    <div class="ftr-mini-anpc">
+      <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+      <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+    </div>
+    <p class="ftr-mini-copy">© <?= date('Y') ?> bilete.online · operat de <a href="https://tixello.ro" rel="noopener">Tixello</a></p>
+  </div>
+</footer>
+<?php
+    include __DIR__ . '/foot.php';
+    return;
+}
 $v2FootCities = array_slice($V2NAV['citiesList'], 0, 8);
 $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
 // Every visible city for the newsletter city field (the browser filters them while typing).

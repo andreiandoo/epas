@@ -1,7 +1,7 @@
-/* bilete.online v2: sign-in / sign-up (/autentificare). Vanilla port of the previous Alpine component (authPage) with the
-   same rules: account type (client / venue) and mode (login / register), the customer 2FA step, BileteOnlineAuth calls
-   and redirects, and the jump to the account for someone already signed in. The copy of each state comes from
-   login.php through #v2-data. */
+/* bilete.online v2: sign-in / sign-up (/autentificare). Account type (client / venue: the link under the card) and
+   mode (login / register: the two tabs), the customer 2FA step, BileteOnlineAuth calls and redirects, and the jump to
+   the account for someone already signed in. The copy of each state comes from login.php through #v2-data; the state
+   is kept in the address (?ca=venue, ?mode=register) so a reload or a shared link opens the same card. */
 (function () {
   'use strict';
   var root = document.getElementById('au');
@@ -54,21 +54,18 @@
   function render() {
     root.setAttribute('data-type', state.type);
     root.setAttribute('data-mode', state.mode);
-    // escaped text; hyphenated words wrapped so they never break at the hyphen (see .au-nw)
-    $('au-title').innerHTML = textFor(state.type, state.mode, 'hero')
-      .replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; })
-      .replace(/\S+-\S+/g, '<span class="au-nw">$&</span>');
-    $('au-text').textContent = textFor(state.type, state.mode, 'heroText');
-    $('au-form-title').textContent = textFor(state.type, state.mode, 'form');
-    $('au-form-text').textContent = textFor(state.type, state.mode, 'formText');
-    $('au-form-kicker').textContent = state.type === 'venue' ? 'Cont locație' : 'Cont client';
+    $('au-title').textContent = textFor(state.type, state.mode, 'title');
+    $('au-text').textContent = textFor(state.type, state.mode, 'text');
+    $('au-kind-text').textContent = state.type === 'venue' ? 'Cont locație' : 'Cont client';
 
-    root.querySelectorAll('[data-set-type]').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(b.getAttribute('data-set-type') === state.type));
-    });
+    // tabs: hidden during the 2FA step, which belongs to signing in
+    root.querySelector('.au-tabs').hidden = state.twofa;
     root.querySelectorAll('[data-set-mode]').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(b.getAttribute('data-set-mode') === state.mode));
+      var on = b.getAttribute('data-set-mode') === state.mode;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
     });
+    $('au-tab-register').textContent = state.type === 'venue' ? 'Cont nou de locație' : 'Cont nou';
 
     forms.login.hidden = !(state.mode === 'login' && !state.twofa);
     forms.twofa.hidden = !(state.mode === 'login' && state.twofa);
@@ -85,13 +82,22 @@
     var invite = $('au-invite'), inviteCopy = state.type === 'client' ? inviteText() : '';
     if (invite) { invite.textContent = inviteCopy; invite.hidden = !inviteCopy; }
 
-    $('au-login-email').placeholder = state.type === 'venue' ? 'email organizator / staff' : 'emailul folosit la comandă';
+    $('au-login-email').placeholder = state.type === 'venue' ? 'email administrator / staff' : 'email@exemplu.ro';
     if ($('au-forgot')) $('au-forgot').href = state.type === 'venue' ? '/parola-uitata?ca=venue' : '/parola-uitata';
-    $('au-reg-email').placeholder = state.type === 'venue' ? 'email@locatie.ro' : 'email@example.ro';
+    $('au-reg-email').placeholder = state.type === 'venue' ? 'email@locatie.ro' : 'email@exemplu.ro';
     setIdle($('au-login-submit'), textFor(state.type, 'login', 'submit'));
     setIdle($('au-register-submit'), textFor(state.type, 'register', 'submit'));
-    $('au-switch-text').textContent = state.mode === 'login' ? 'Nu ai cont?' : 'Ai deja cont?';
-    $('au-switch').textContent = state.mode === 'login' ? 'Creează unul acum' : 'Intră în cont';
+  }
+
+  // the address follows the card (redirect and email stay as they came)
+  function syncUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (state.type === 'venue') params.set('ca', 'venue'); else params.delete('ca');
+      if (state.mode === 'register') params.set('mode', 'register'); else params.delete('mode');
+      var q = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+    } catch (e) {}
   }
 
   function inviteText() {
@@ -135,25 +141,28 @@
     if (span && text) span.textContent = text;
   }
 
-  // ---------- tabs, quick buttons, password visibility ----------
+  // ---------- tabs, account type, password visibility ----------
   root.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-set-type], [data-set-mode], [data-go-type], [data-toggle-pass]');
+    var t = e.target.closest('[data-set-type], [data-set-mode], [data-toggle-pass]');
     if (!t) return;
 
     if (t.hasAttribute('data-set-type')) {
       state.type = t.getAttribute('data-set-type');
+      state.twofa = false;
+      showMessage('');
       render();
-    } else if (t.hasAttribute('data-set-mode')) {
-      state.mode = t.getAttribute('data-set-mode');
-      render();
-    } else if (t.hasAttribute('data-go-type')) {
-      state.type = t.getAttribute('data-go-type');
-      state.mode = 'login';
-      render();
+      syncUrl();
+      // the card changed under the pointer: start again from its top
+      var first = forms[state.mode === 'login' ? 'login' : 'register'].querySelector('input:not([disabled])');
       var card = $('au-card');
-      var r = card.getBoundingClientRect();
-      if (r.top < 0 || r.top > window.innerHeight * 0.6) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (!forms.login.hidden) $('au-login-email').focus({ preventScroll: true });
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (first) first.focus({ preventScroll: true });
+    } else if (t.hasAttribute('data-set-mode')) {
+      if (state.mode === t.getAttribute('data-set-mode')) return;
+      state.mode = t.getAttribute('data-set-mode');
+      showMessage('');
+      render();
+      syncUrl();
     } else {
       state.showPassword = !state.showPassword;
       ['au-login-pass', 'au-reg-pass', 'au-reg-pass2'].forEach(function (id) {
@@ -168,10 +177,18 @@
     }
   });
 
-  $('au-switch').addEventListener('click', function () {
-    state.mode = state.mode === 'login' ? 'register' : 'login';
+  // arrow keys move between the two tabs (the tab pattern)
+  root.querySelector('.au-tabs').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+    e.preventDefault();
+    var next = state.mode === 'login' ? 'register' : 'login';
+    if (e.key === 'Home') next = 'login';
+    if (e.key === 'End') next = 'register';
+    state.mode = next;
     showMessage('');
     render();
+    syncUrl();
+    $(next === 'login' ? 'au-tab-login' : 'au-tab-register').focus();
   });
 
   // ---------- login ----------
@@ -342,15 +359,6 @@
     window.addEventListener('bileteonline:auth:login', goIfSignedIn);
     setTimeout(goIfSignedIn, 400);
   }
-
-  // ---------- FAQ: one answer open at a time, like before ----------
-  var faqs = document.querySelectorAll('.au-faq details');
-  faqs.forEach(function (d) {
-    d.addEventListener('toggle', function () {
-      if (!d.open) return;
-      faqs.forEach(function (other) { if (other !== d) other.open = false; });
-    });
-  });
 
   render();
 })();

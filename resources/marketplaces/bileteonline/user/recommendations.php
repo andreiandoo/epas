@@ -32,6 +32,7 @@ $v2Styles = ['account.css', 'recommendations.css'];
 $v2Scripts = ['account.js', 'recommendations.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config();
+$v2FooterCompact = true;
 $rcCaret = v2_ic('caret-down');
 $rcPills = [['profile', 'Pentru profilul tău'], ['family', 'Cu copiii'], ['points', 'Folosește puncte'], ['weather', 'Weekend / vreme']];
 

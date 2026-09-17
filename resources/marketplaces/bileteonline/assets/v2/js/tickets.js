@@ -57,7 +57,7 @@
     });
     if (tone !== 'error') sayTimer = setTimeout(function () { $('tk-status-line').textContent = ''; $('tk-d-msg').textContent = ''; }, 8000);
   }
-  function guard() { show('tk-content', false); show('tk-guard', true); }
+  function guard() { show('tk-content', false); show('tk-guard', true); account.toLogin(); } // the message shows only while the login page loads
 
   // ---------- data ----------
   function norm(raw, i) {

@@ -34,6 +34,7 @@ $v2Styles = ['account.css', 'reviews.css'];
 $v2Scripts = ['account.js', 'reviews.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config();
+$v2FooterCompact = true;
 
 $rvStar = '<svg class="rv-star-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l2.84 5.93 6.53.86-4.78 4.53 1.2 6.47L12 17.25l-5.79 3.15 1.2-6.47L2.63 9.39l6.53-.86z"/></svg>';
 $rvStars = function (string $name, bool $small = false, bool $optional = false) use ($rvStar): string {
