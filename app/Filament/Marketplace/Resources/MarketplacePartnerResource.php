@@ -9,11 +9,13 @@ use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 
 /**
@@ -112,6 +114,30 @@ class MarketplacePartnerResource extends Resource
                     ->content(url('/api/partner/v1')),
             ])->columns(2),
 
+            Section::make('Notificări (webhook)')
+                ->description('La fiecare eveniment nou, modificat, anulat sau șters, partenerul primește un POST semnat și citește apoi evenimentul prin API.')
+                ->schema([
+                    Forms\Components\TextInput::make('webhook_url')
+                        ->label('URL webhook')
+                        ->url()
+                        ->maxLength(2048)
+                        ->placeholder('https://…')
+                        ->helperText('Gol = fără notificări; partenerul se sincronizează singur.'),
+
+                    Forms\Components\TextInput::make('outbound_secret')
+                        ->label('Secret de semnare')
+                        ->password()
+                        ->revealable()
+                        ->maxLength(255)
+                        ->helperText('Secret comun (HMAC-SHA256) pentru cererile trimise partenerului. Trimite-l pe un canal sigur.')
+                        ->suffixAction(
+                            \Filament\Actions\Action::make('generateOutboundSecret')
+                                ->icon('heroicon-m-arrow-path')
+                                ->label('Generează')
+                                ->action(fn (Set $set) => $set('outbound_secret', Str::random(48)))
+                        ),
+                ])->columns(2),
+
             Section::make('Linkuri de bilete')
                 ->description('Parametrii UTM adăugați linkurilor către evenimente pe care le primește partenerul.')
                 ->schema([
@@ -169,6 +195,13 @@ class MarketplacePartnerResource extends Resource
             ->warning()
             ->persistent()
             ->send();
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            MarketplacePartnerResource\RelationManagers\DeliveriesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

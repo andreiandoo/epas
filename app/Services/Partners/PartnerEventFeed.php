@@ -16,21 +16,30 @@ use Illuminate\Support\Str;
  *
  * Each pass recomputes the partner payload for upcoming events and bumps
  * changed_at only when the payload hash differs. Rows whose event was deleted,
- * unpublished or turned into a recurring template get removed_at.
+ * unpublished or turned into a recurring template get removed_at. Every change
+ * is passed to PartnerWebhooks.
  */
 class PartnerEventFeed
 {
     private const CHUNK = 200;
 
+    public function __construct(private readonly PartnerWebhooks $webhooks)
+    {
+    }
+
     /**
-     * @return array{checked: int, created: int, updated: int, removed: int}
+     * @return array{checked: int, created: int, updated: int, cancelled: int, removed: int, notified: int}
      */
     public function refresh(MarketplaceClient $client): array
     {
         $presenter = PartnerEventPresenter::forClient($client);
-        $stats = ['checked' => 0, 'created' => 0, 'updated' => 0, 'removed' => 0];
+        $stats = ['checked' => 0, 'created' => 0, 'updated' => 0, 'cancelled' => 0, 'removed' => 0, 'notified' => 0];
+        $changes = [];
         $now = now();
         $cutoff = $now->copy()->setTimezone($presenter->timezone())->subDay()->toDateString();
+
+        // The first pass fills the feed from scratch; that is not news to notify.
+        $initialFill = !PartnerEventFeedItem::where('marketplace_client_id', $client->id)->exists();
 
         $this->eligible($client)
             ->where(fn ($q) => $q
@@ -40,7 +49,7 @@ class PartnerEventFeed
                 ->orWhere('postponed_date', '>=', $cutoff)
                 ->orWhere('duration_mode', 'multi_day'))
             ->with($this->relations())
-            ->chunkById(self::CHUNK, function ($events) use ($client, $presenter, $now, &$stats) {
+            ->chunkById(self::CHUNK, function ($events) use ($client, $presenter, $now, &$stats, &$changes) {
                 $rows = PartnerEventFeedItem::where('marketplace_client_id', $client->id)
                     ->whereIn('event_id', $events->pluck('id'))
                     ->get()
@@ -51,7 +60,7 @@ class PartnerEventFeed
 
                     // One malformed event must not stall the feed for the others.
                     try {
-                        $result = $this->sync($presenter, $client, $event, $rows->get($event->id), $now, false);
+                        $change = $this->sync($presenter, $client, $event, $rows->get($event->id), $now, false);
                     } catch (\Throwable $e) {
                         Log::warning('Partner event feed: event skipped', [
                             'event_id' => $event->id,
@@ -60,13 +69,21 @@ class PartnerEventFeed
                         continue;
                     }
 
-                    if ($result !== null) {
-                        $stats[$result]++;
+                    if ($change !== null) {
+                        $changes[$event->id] = $change;
+                        $stats[Str::after($change, 'event.')]++;
                     }
                 }
             });
 
-        $stats['removed'] = $this->sweepRemoved($client);
+        foreach ($this->sweepRemoved($client) as $eventId) {
+            $changes[$eventId] = 'event.deleted';
+            $stats['removed']++;
+        }
+
+        if (!$initialFill) {
+            $stats['notified'] = $this->webhooks->eventsChanged($client, $changes);
+        }
 
         return $stats;
     }
@@ -87,7 +104,10 @@ class PartnerEventFeed
             ->where('event_id', $eventId)
             ->first();
 
-        $this->sync(PartnerEventPresenter::forClient($client), $client, $event, $row, now(), true);
+        $change = $this->sync(PartnerEventPresenter::forClient($client), $client, $event, $row, now(), true);
+        if ($change !== null) {
+            $this->webhooks->eventsChanged($client, [$eventId => $change]);
+        }
 
         return PartnerEventFeedItem::where('marketplace_client_id', $client->id)
             ->where('event_id', $eventId)
@@ -130,7 +150,8 @@ class PartnerEventFeed
     }
 
     /**
-     * @return string|null 'created', 'updated' or null when nothing changed
+     * @return string|null event.created (new or back after removal), event.cancelled,
+     *                     event.updated, or null when nothing changed
      */
     private function sync(
         PartnerEventPresenter $presenter,
@@ -180,21 +201,32 @@ class PartnerEventFeed
                 return null;
             }
 
-            return 'created';
+            return 'event.created';
         }
 
         if ($row->payload_hash === $hash && $row->removed_at === null) {
             return null;
         }
 
+        $change = match (true) {
+            $row->removed_at !== null => 'event.created',
+            $payload['status'] === 'cancelled' && $row->status !== 'cancelled' => 'event.cancelled',
+            default => 'event.updated',
+        };
+
         $row->fill($attributes)->save();
 
-        return 'updated';
+        return $change;
     }
 
-    private function sweepRemoved(MarketplaceClient $client): int
+    /**
+     * Mark rows whose event is gone (deleted, unpublished, now a template).
+     *
+     * @return array<int> event ids removed in this pass
+     */
+    private function sweepRemoved(MarketplaceClient $client): array
     {
-        $removed = 0;
+        $removed = [];
 
         PartnerEventFeedItem::where('marketplace_client_id', $client->id)
             ->whereNull('removed_at')
@@ -205,16 +237,16 @@ class PartnerEventFeed
                     ->pluck('id')
                     ->mapWithKeys(fn ($id) => [(int) $id => true]);
 
-                $gone = $rows->reject(fn ($row) => $live->has((int) $row->event_id))->pluck('id');
+                $gone = $rows->reject(fn ($row) => $live->has((int) $row->event_id));
 
                 if ($gone->isNotEmpty()) {
                     $now = now();
-                    PartnerEventFeedItem::whereIn('id', $gone)->update([
+                    PartnerEventFeedItem::whereIn('id', $gone->pluck('id'))->update([
                         'removed_at' => $now,
                         'changed_at' => $now,
                         'updated_at' => $now,
                     ]);
-                    $removed += $gone->count();
+                    array_push($removed, ...$gone->pluck('event_id')->map(fn ($id) => (int) $id)->all());
                 }
             });
 

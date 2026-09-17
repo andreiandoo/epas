@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\IpUtils;
@@ -31,6 +32,8 @@ class MarketplacePartner extends Model
         'allowed_ips',
         'rate_limit_per_minute',
         'settings',
+        'webhook_url',
+        'outbound_secret',
     ];
 
     protected $casts = [
@@ -39,15 +42,33 @@ class MarketplacePartner extends Model
         'settings' => 'array',
         'rate_limit_per_minute' => 'integer',
         'last_used_at' => 'datetime',
+        'outbound_secret' => 'encrypted',
     ];
 
     protected $hidden = [
         'api_key_hash',
+        'outbound_secret',
     ];
 
     public function marketplaceClient(): BelongsTo
     {
         return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(MarketplacePartnerDelivery::class);
+    }
+
+    /**
+     * Whether event changes should be pushed to this partner.
+     */
+    public function wantsEventWebhooks(): bool
+    {
+        return $this->isActive()
+            && !empty($this->webhook_url)
+            && !empty($this->outbound_secret)
+            && $this->hasScope('events:read');
     }
 
     /**
