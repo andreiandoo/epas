@@ -840,7 +840,10 @@ include __DIR__ . '/includes/v2/header.php';
             <?php elseif ($stackCls === 'is-checkout'): ?>
             <span class="pt-art-pay"><i>Card</i><i>Apple Pay</i><i>Google Pay</i><i class="is-on">Card Cultural</i></span>
             <?php elseif ($stackCls === 'is-qr'): ?>
-            <span class="pt-art-qr"><?= $ptQr('stack', 21) ?></span><span class="pt-art-ok"><?= v2_ic('check-circle') ?>Valid</span>
+            <span class="pt-art-ticket">
+              <span class="pt-art-qr"><?= $ptQr('stack', 21) ?></span>
+              <span class="pt-art-tk"><small>Bilet MKT-19024</small><b>Sâm, 19 oct · 14:00</b><span class="pt-art-tk-sub">Acces + experiență · 1 pers.</span><span class="pt-art-ok"><?= v2_ic('check-circle') ?>Valid la intrare</span></span>
+            </span>
             <?php elseif ($stackCls === 'is-dash'): ?>
             <span class="pt-art-bars"><?php foreach ([34, 52, 44, 70, 58, 86, 74] as $h): ?><i style="--h:<?= $h ?>%"></i><?php endforeach; ?></span>
             <?php elseif ($stackCls === 'is-growth'): ?>
