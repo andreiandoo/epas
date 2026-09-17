@@ -2,7 +2,8 @@
    request was lost. It now goes into the lead pipeline (proxy leads.create → core LeadsController::create, the same one
    /inregistrare-locatie uses): venue type becomes the category, role / number of activities / the message go into the
    notes, and the bo_lead_sid session links it to earlier visits of the partner pages. "Sent" shows only when core
-   accepted it; failures are said, with the email address as a way out. */
+   accepted it; failures are said, with the email address as a way out. The page is named in the notes from the form's
+   data-lead-source (/parteneri sets it; /pentru-locatii and /vinde-bilete keep "Pentru locații"). */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -83,7 +84,7 @@
 
     var typeOption = f.type.options[f.type.selectedIndex];
     var isOther = f.type.value === 'other';
-    var notes = ['Solicitare demo din pagina Pentru locații', 'Rol: ' + f.role.value, 'Activități: ' + f.count.value].join('\n');
+    var notes = ['Solicitare demo din pagina ' + (form.getAttribute('data-lead-source') || 'Pentru locații'), 'Rol: ' + f.role.value, 'Activități: ' + f.count.value].join('\n');
     if (f.message.value.trim()) notes += '\n\n' + f.message.value.trim();
     var payload = {
       session_token: sessionToken(),
