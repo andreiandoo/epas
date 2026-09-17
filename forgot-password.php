@@ -50,7 +50,6 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="af-hero" aria-labelledby="af-h">
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>    <div class="af-in">
       <div class="af-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="<?= $fpLogin ?>">Autentificare</a><span aria-hidden="true">/</span><span aria-current="page">Parolă uitată</span></nav>
         <p class="af-kicker"><?= $fpVenue ? 'Resetare parolă · organizator' : 'Resetare parolă · client' ?></p>
         <h1 class="af-h" id="af-h">Ai uitat parola?</h1>
         <p class="af-lead">Nu-ți face griji — îți trimitem un link sigur pe emailul contului. Are valabilitate limitată din motive de securitate.</p>

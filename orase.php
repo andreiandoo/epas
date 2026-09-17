@@ -153,13 +153,6 @@ $structuredData = [[
             'url' => SITE_URL . $city['url'],
         ], array_keys($cities), $cities),
     ],
-], [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Orașe', 'item' => $canonicalUrl],
-    ],
 ]];
 
 $ctArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
@@ -177,7 +170,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Orașe</span></nav>
         <p class="ct-kicker">Orașe · activități locale · experiențe</p>
         <h1 class="ct-h" id="ct-h">Alege orașul. Găsește ce ai de făcut.</h1>
         <p class="ct-lead">Explorează activități locale: escape rooms, muzee, parcuri, natură, ateliere, tururi și experiențe pentru copii, familie sau grupuri.</p>

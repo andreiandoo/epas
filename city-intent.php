@@ -361,11 +361,14 @@ if ($cards) {
         ],
     ];
 }
-$structuredData[] = [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => array_map(fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc['name'], 'item' => $bc['url']], $breadcrumbs, array_keys($breadcrumbs)),
-];
+// a trail only where there is a level between home and the page (/{city}/{intent}); global intents have none
+if ($city) {
+    $structuredData[] = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => array_map(fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc['name'], 'item' => $bc['url']], $breadcrumbs, array_keys($breadcrumbs)),
+    ];
+}
 
 $itArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 
@@ -381,6 +384,7 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="it-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="it-in">
       <div class="it-text">
+        <?php if ($city): ?>
         <nav class="crumbs" aria-label="Breadcrumb">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
@@ -391,6 +395,7 @@ include __DIR__ . '/includes/v2/header.php';
             <?php endif; ?>
           <?php endforeach; ?>
         </nav>
+        <?php endif; ?>
         <p class="it-kicker"><span class="it-icon" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span><?= $city ? 'Local · ' . v2_e($cityName) : 'Idei · toată țara' ?></p>
         <h1 class="it-h" id="it-h"><?= v2_e($h1) ?></h1>
         <?php if ($intro !== ''): ?><p class="it-lead"><?= v2_e($intro) ?></p><?php endif; ?>

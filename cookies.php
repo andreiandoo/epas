@@ -45,7 +45,6 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="cp-hero" aria-labelledby="cp-h">
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="cp-in">
-      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Cookies</span></nav>
       <p class="cp-kicker">Politică cookies</p>
       <h1 class="cp-h" id="cp-h">Cum folosim cookies pe bilete.online</h1>
       <p class="cp-lead">Folosim cookies pentru funcționarea platformei (coș, checkout, login) și, doar cu acordul tău, pentru analytics, personalizare și marketing. Poți schimba alegerea oricând din banner sau din butonul de mai jos.</p>

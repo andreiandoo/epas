@@ -10,8 +10,6 @@
 .ct-in{position:relative;z-index:1;display:grid;gap:var(--space-7);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(72px, 10vw, 140px)}
 @media (min-width:1024px){.ct-in{grid-template-columns:minmax(0,1fr) minmax(0,460px);align-items:center;column-gap:var(--space-8)}}
 @media (max-width:1023px){.ct-in{gap:0}}
-.ct-hero .crumbs,.ct-hero .crumbs a{color:var(--on-deep-muted)}
-.ct-hero .crumbs a:hover{color:#FFFFFF}
 .ct-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
 .ct-h{max-width:13ch;margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5}
 .ct-lead{max-width:56ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}

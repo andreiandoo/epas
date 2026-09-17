@@ -140,7 +140,6 @@ $pageTitleRaw = 'Experiențe cadou: calculatorul de cadouri — ' . SITE_NAME;
 $pageDescription = 'Spune-ne pentru cine e cadoul, bugetul și ce îi place: îți recomandăm experiențe de dăruit' . ($count ? ' dintre cele ' . v2_num($count, 'activitate', 'activități') . ' de pe bilete.online' : '') . ' și valoarea potrivită a cardului cadou.';
 $canonicalUrl = SITE_URL . '/experiente-cadou';
 $ogImage = v2_asset('img/cat-familie-copii.webp');
-$breadcrumbs = [['Acasă', '/'], ['Card cadou', '/card-cadou'], ['Experiențe cadou', '/experiente-cadou']];
 $structuredData = [[
     '@context' => 'https://schema.org',
     '@type' => 'WebApplication',
@@ -154,10 +153,6 @@ $structuredData = [[
     '@context' => 'https://schema.org',
     '@type' => 'FAQPage',
     'mainEntity' => array_map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $faqs),
-], [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => array_map(fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc[0], 'item' => SITE_URL . $bc[1]], $breadcrumbs, array_keys($breadcrumbs)),
 ]];
 
 $gfArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
@@ -184,12 +179,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="gf-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="gf-hero-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb">
-          <?php foreach ($breadcrumbs as $i => [$bcName, $bcHref]): ?>
-            <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
-            <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bcHref) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
-          <?php endforeach; ?>
-        </nav>
         <p class="gf-kicker"><span class="gf-kicker-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>Calculator de cadouri</p>
         <h1 class="gf-h" id="gf-h">Găsește experiența potrivită de dăruit.</h1>
         <p class="gf-lead">Spune-ne pentru cine e cadoul: îți arătăm experiențele care i se potrivesc și calculăm valoarea cardului cadou care le acoperă.</p>

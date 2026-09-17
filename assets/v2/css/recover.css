@@ -9,8 +9,6 @@
 .rc-line{position:absolute;z-index:0;left:-4%;bottom:-6px;width:108%;height:auto;aspect-ratio:3240 / 310;opacity:.22;pointer-events:none}
 .rc-in{position:relative;z-index:1;display:grid;gap:var(--space-7);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(72px, 10vw, 140px)}
 @media (min-width:1024px){.rc-in{grid-template-columns:minmax(0,1fr) minmax(0,520px);align-items:center;column-gap:var(--space-8)}}
-.rc-hero .crumbs,.rc-hero .crumbs a{color:var(--on-deep-muted)}
-.rc-hero .crumbs a:hover{color:#FFFFFF}
 .rc-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
 .rc-h{max-width:12ch;margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5}
 .rc-lead{max-width:52ch;margin:var(--space-4) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}

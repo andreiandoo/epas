@@ -6,9 +6,6 @@
 .ob-hero .deco-arches{right:-90px;left:auto;top:18%;width:320px;opacity:.12}
 @media (max-width:599px){.ob-hero .deco-arches{display:none}}
 .ob-hero-in{position:relative;z-index:1;max-width:880px;margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) 150px;text-align:center}
-.ob-hero .crumbs{justify-content:center}
-.ob-hero .crumbs,.ob-hero .crumbs a{color:var(--on-deep-muted)}
-.ob-hero .crumbs a:hover{color:#FFFFFF}
 .ob-kicker{margin:var(--space-5) 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#FFD66B}
 .ob-h{max-width:16ch;margin:0 auto;font-size:clamp(2.5rem, 6vw, 4.5rem);font-weight:700;line-height:1;letter-spacing:-.045em;color:#F7F7F5;text-wrap:balance}
 .ob-nw{white-space:nowrap} /* a hyphen is a break opportunity */

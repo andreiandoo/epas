@@ -104,14 +104,7 @@ if ($guides) {
         'itemListElement' => array_map(fn ($pos, $g) => ['@type' => 'ListItem', 'position' => $pos + 1, 'name' => $g['title'], 'url' => SITE_URL . $g['href']], array_keys($guides), $guides),
     ];
 }
-$structuredData = [$collection, [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
-    'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Ghiduri', 'item' => $canonicalUrl],
-    ],
-]];
+$structuredData = [$collection];
 
 $gdArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 $v2Styles = ['cities.css', 'guides.css'];
@@ -128,7 +121,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Ghiduri</span></nav>
         <p class="ct-kicker">Ghiduri · idei de ieșit · SEO editorial</p>
         <h1 class="ct-h" id="ct-h">Idei bune pentru când vrei să faci ceva.</h1>
         <p class="ct-lead">Ghiduri locale și tematice pentru activități: ce să faci în weekend, unde mergi cu copiii, ce alegi când plouă și ce experiențe merită în orașul tău.</p>

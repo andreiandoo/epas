@@ -56,7 +56,6 @@ include __DIR__ . '/includes/v2/header.php';
 
   <section class="co-head" aria-labelledby="ck-h">
     <div class="wrap">
-      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="/cos">Coș</a><span aria-hidden="true">/</span><span aria-current="page">Checkout</span></nav>
       <div class="co-head-row">
         <div>
           <p class="kicker">Pasul 2 · Checkout</p>

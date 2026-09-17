@@ -7,8 +7,6 @@
 @media (max-width:599px){.hw-hero .deco-arches{display:none}}
 .hw-in{position:relative;z-index:1;display:grid;gap:var(--space-8);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(64px, 9vw, 120px)}
 @media (min-width:1024px){.hw-in{grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);align-items:center;column-gap:var(--space-8)}}
-.hw-hero .crumbs,.hw-hero .crumbs a{color:var(--on-deep-muted)}
-.hw-hero .crumbs a:hover{color:#FFFFFF}
 .hw-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B}
 .hw-h{max-width:11ch;margin:0;font-size:clamp(3rem, 7vw, 6rem);font-weight:700;line-height:.98;letter-spacing:-.05em;color:#F7F7F5}
 .hw-lead{max-width:54ch;margin:var(--space-5) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}

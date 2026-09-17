@@ -52,7 +52,6 @@ include __DIR__ . '/includes/v2/header.php';
 
   <section class="co-head" id="co-head" aria-labelledby="co-h">
     <div class="wrap">
-      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Coș</span></nav>
       <div class="co-head-row">
         <div>
           <p class="kicker">Pasul 1 · Coș</p>

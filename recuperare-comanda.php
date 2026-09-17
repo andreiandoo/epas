@@ -60,7 +60,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="rc-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="rc-in">
       <div class="rc-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="/ajutor">Ajutor</a><span aria-hidden="true">/</span><span aria-current="page">Recuperare comandă</span></nav>
         <p class="rc-kicker">Recuperare comandă · bilete QR</p>
         <h1 class="rc-h" id="rc-h">Nu-ți găsești biletele?</h1>
         <p class="rc-lead">Introdu numărul comenzii și emailul folosit la cumpărare. Îți retrimitem biletele pe email și, dacă ești logat, poți atașa comanda la contul tău.</p>

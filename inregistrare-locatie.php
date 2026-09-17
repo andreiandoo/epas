@@ -59,7 +59,6 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="ob-hero" aria-labelledby="ob-h">
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="ob-hero-in">
-      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><a href="/devino-partener">Devino partener</a><span aria-hidden="true">/</span><span aria-current="page">Înregistrare locație</span></nav>
       <p class="ob-kicker">Onboarding · 5 minute</p>
       <h1 class="ob-h" id="ob-h">Hai <span class="ob-nw">să-ți</span> punem locația online.</h1>
       <p class="ob-lead">Spune-ne ce vinzi, cine ești și cum te contactăm. Vorbim cu tine în următoarea zi lucrătoare și te ghidăm prin restul.</p>

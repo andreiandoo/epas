@@ -7,8 +7,6 @@
 @media (max-width:599px){.fv-hero .deco-arches{display:none}}
 .fv-in{position:relative;z-index:1;display:grid;gap:var(--space-8);max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) clamp(64px, 9vw, 120px)}
 @media (min-width:1024px){.fv-in{grid-template-columns:minmax(0,1fr) minmax(0,.94fr);align-items:center;column-gap:var(--space-8)}}
-.fv-hero .crumbs,.fv-hero .crumbs a{color:var(--on-deep-muted)}
-.fv-hero .crumbs a:hover{color:#FFFFFF}
 .fv-kicker{margin:var(--space-3) 0;font-size:var(--text-label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FFD66B;text-wrap:balance}
 .fv-h{max-width:14ch;margin:0;font-size:clamp(2.5rem, 5.6vw, 4.75rem);font-weight:700;line-height:1;letter-spacing:-.045em;color:#F7F7F5;text-wrap:balance}
 .fv-lead{max-width:56ch;margin:var(--space-5) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--on-deep-muted)}

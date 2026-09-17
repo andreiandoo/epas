@@ -491,9 +491,20 @@ h1,h2,h3{text-wrap:balance}
 .cc-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:18px}
 
 /* =================== LISTING PAGES: breadcrumbs, filter chips, active filters, pager =================== */
-.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 var(--space-3);font-size:var(--text-small);color:var(--muted)}
-.crumbs a{color:var(--muted);text-decoration:none}
-.crumbs a:hover{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+/* Breadcrumbs only on deep pages (activity, attraction, venue, operator, category, city, region, city intent, guide),
+   and quietly: small, a light "›", only the way up (the page itself is the heading right below, kept for screen
+   readers); phones get just the level above, as a back link. */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;margin:0 0 var(--space-3);font-size:.8125rem;line-height:1.5;color:var(--muted)}
+.crumbs a{color:inherit;text-decoration:none;opacity:.85;transition:opacity var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
+.crumbs a:hover{opacity:1;color:var(--green);text-decoration:underline;text-underline-offset:3px}
+.crumbs > span[aria-hidden="true"]{font-size:0}
+.crumbs > span[aria-hidden="true"]::before{content:"›";font-size:.8125rem;opacity:.5}
+.crumbs [aria-current="page"]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.crumbs > span[aria-hidden="true"]:has(+ [aria-current="page"]){display:none}
+@media (max-width:599px){
+  .crumbs > a:not(:has(+ span + [aria-current="page"])),.crumbs > span[aria-hidden="true"]{display:none}
+  .crumbs > a::before{content:"‹";margin-right:5px;opacity:.6}
+}
 .fgroup{display:grid;gap:10px}
 .flabel{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .fchips{display:flex;flex-wrap:wrap;gap:6px}

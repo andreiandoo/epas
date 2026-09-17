@@ -4,7 +4,7 @@
  *
  * Top to bottom: hero with a dashboard mockup, who it's for, what they get (#ce-primesti), the SEO engine, the flow
  * from listing to check-in, modules in tabs (base.js [data-tabs]), the commercial model, the demo request (#demo), FAQ,
- * final CTA. JSON-LD: Service, FAQPage (from the visible questions), BreadcrumbList.
+ * final CTA. JSON-LD: Service, FAQPage (from the visible questions).
  *
  * The demo form posted to /api/contact-locatii.php, which doesn't exist (404): every demo request was lost.
  * for-venues.js now sends it into the real lead pipeline (proxy leads.create → core LeadsController::create, the same
@@ -104,14 +104,6 @@ $structuredData = [
         '@type' => 'FAQPage',
         'mainEntity' => array_map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]], $fvFaqs),
     ],
-    [
-        '@context' => 'https://schema.org',
-        '@type' => 'BreadcrumbList',
-        'itemListElement' => [
-            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-            ['@type' => 'ListItem', 'position' => 2, 'name' => 'Pentru locații', 'item' => $canonicalUrl],
-        ],
-    ],
 ];
 
 $v2Styles = ['for-venues.css'];
@@ -132,7 +124,6 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="fv-in">
       <div class="fv-copy">
-        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Pentru locații</span></nav>
         <p class="fv-kicker">Platformă pentru locații · SEO · checkout · QR</p>
         <h1 class="fv-h" id="fv-h">Transformă activitățile tale în bilete care se vând online.</h1>
         <p class="fv-lead">bilete.online ajută locațiile să fie descoperite organic, să vândă bilete rapid și să gestioneze accesul cu QR — fără să construiască de la zero o platformă de ticketing.</p>

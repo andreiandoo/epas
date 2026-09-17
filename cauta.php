@@ -179,13 +179,7 @@ $farDate = $dateF && $today->diff(new DateTimeImmutable($dateF, $tz))->days >= 1
 $pageTitle = $q !== '' ? $heading : 'Caută activități, experiențe și atracții';
 $pageDescription = 'Caută și filtrează activități pe bilete.online după zi, oraș, categorie, preț, interese și pentru cine. Rezervi online, intri cu bilet QR.';
 $canonicalUrl = SITE_URL . '/cauta';
-$structuredData = [[
-    '@context' => 'https://schema.org', '@type' => 'BreadcrumbList',
-    'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Căutare', 'item' => SITE_URL . '/cauta'],
-    ],
-]];
+$structuredData = [];
 $v2Styles = ['search.css'];
 $v2Scripts = ['search.js'];
 
@@ -195,7 +189,6 @@ include __DIR__ . '/includes/v2/header.php';
 <main id="main" class="page-main" tabindex="-1">
   <section class="sr-hero" aria-labelledby="sr-h">
     <div class="wrap">
-      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Acasă</a><span aria-hidden="true">/</span><span aria-current="page">Căutare</span></nav>
       <h1 class="sr-h" id="sr-h"><?= v2_e($heading) ?></h1>
       <p class="sr-count"><b><?= $total ?></b> <?= $total === 1 ? 'rezultat' : 'rezultate' ?><?= $dateF ? ' disponibile ' . v2_e($dayLabel($dateF)) : '' ?></p>
 
