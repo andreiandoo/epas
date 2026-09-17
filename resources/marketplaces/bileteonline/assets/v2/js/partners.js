@@ -8,8 +8,8 @@
    - the demos: booking in six steps, the operator panel's address bar, a ticket office you can use, the scanner's
      three answers (and a spell offline), the SEO address typing itself, the tracking flow, the ANAF documents
    - the calculator, the chapter nav, the ask that follows on phones
-   - large screens with motion allowed: GSAP + ScrollTrigger + Lenis, loaded only there; the hero, the booking and the
-     day at the venue are pinned scenes driven by the scroll; elsewhere the booking plays on its own
+   - motion allowed: GSAP + ScrollTrigger on every screen for effects that follow the scroll; large screens also get
+     Lenis and three pinned scenes (the hero, the booking, the day at the venue); elsewhere the booking plays on its own
    The demo form is for-venues.js. Everything is readable without JavaScript and without motion. */
 (function () {
   'use strict';
@@ -593,7 +593,10 @@
     });
   }
 
-  /* ---------- scroll scenes (large screens, motion allowed) ---------- */
+  /* ---------- scroll motion (motion allowed) ----------
+     Every screen: effects that follow the scroll without holding a section in place (the hero stage turning, the panel
+     standing up, the film opening, the 2% growing, the devices drifting, the day's sky). Large screens also pin the
+     hero, the booking and the day strip, and scroll smoothly with Lenis; phones and tablets keep native scrolling. */
   function loadAll(list) {
     return list.reduce(function (p, src) {
       return p.then(function () {
@@ -605,20 +608,103 @@
       });
     }, Promise.resolve());
   }
-  var motionStarted = false;
+  var LIBS = data.libs || []; // GSAP, ScrollTrigger, Lenis
+
+  // a day at the venue, for a progress 0 → 1: the sky turns to evening, the sun crosses, the card of the hour lights up
+  var day = $('o-zi'), dayTrack = $('pt-day-track'), clock = $('pt-day-time');
+  var dayCards = dayTrack ? [].slice.call(dayTrack.children) : [], dayNow = -1;
+  function paintDay(p, strip) {
+    var dusk = clamp((p - 0.45) / 0.5);
+    day.style.setProperty('--dusk', dusk.toFixed(3));
+    // on the strip the sun arcs over the section; down a list it travels with the reader, on the right
+    day.style.setProperty('--sun-x', (strip ? 12 + p * 76 : 84 - Math.sin(p * Math.PI) * 10).toFixed(2)); // in % of the sky
+    day.style.setProperty('--sun-y', (strip ? 40 - Math.sin(p * Math.PI) * 22 : 8 + p * 80).toFixed(2));
+    day.classList.toggle('is-dusk', dusk > 0.5);
+    var n = Math.min(dayCards.length - 1, Math.round(p * (dayCards.length - 1)));
+    if (n !== dayNow) {
+      if (dayCards[dayNow]) dayCards[dayNow].classList.remove('is-now');
+      dayNow = n;
+      dayCards[n].classList.add('is-now');
+      if (clock) clock.textContent = dayCards[n].getAttribute('data-time');
+    }
+  }
+  function resetDay() {
+    day.classList.remove('is-pinned', 'is-dusk');
+    ['--dusk', '--sun-x', '--sun-y'].forEach(function (k) { day.style.removeProperty(k); });
+    dayCards.forEach(function (c) { c.classList.remove('is-now'); });
+    dayNow = -1;
+    if (clock && dayCards[0]) clock.textContent = dayCards[0].getAttribute('data-time');
+  }
+
   function initMotion() {
     var gsap = window.gsap, ST = window.ScrollTrigger;
-    if (!gsap || !ST || !window.Lenis) return;
+    if (!gsap || !ST) return;
     gsap.registerPlugin(ST);
+    ST.config({ ignoreMobileResize: true }); // the phone's address bar coming and going must not re-measure everything
     var mm = gsap.matchMedia();
 
+    // every screen, sized to it
+    mm.add({ large: '(min-width: 1024px)', small: '(max-width: 1023px)' }, function (ctx) {
+      var large = ctx.conditions.large;
+
+      // phones and tablets: the stage turns to face the visitor and the tools spread out as the hero scrolls away
+      if (!large && scene && stage) {
+        gsap.timeline({
+          defaults: { ease: 'none' },
+          scrollTrigger: {
+            trigger: stage, start: 'top 90%', end: 'bottom 15%', scrub: 0.5,
+            onUpdate: function (self) { hero.classList.toggle('is-scrolled', self.progress > 0.02); }
+          }
+        })
+          .to(scene, { '--rx': '0deg', '--ry': '0deg', '--rz': '0deg', duration: 1 }, 0)
+          .to(stage, { scale: 1.06, duration: 1 }, 0)
+          .to('.pt-pos', { x: '-4%', y: '3%', duration: 1 }, 0)
+          .to('.pt-phone', { x: '4%', y: '2%', duration: 1 }, 0);
+      }
+      // the panel window lies back, then stands up as it arrives
+      var ui = document.querySelector('.pt-ui');
+      if (ui) {
+        gsap.fromTo(ui, { rotationX: large ? 14 : 10, scale: large ? 0.94 : 0.96, y: large ? 40 : 24 }, {
+          rotationX: 0, scale: 1, y: 0, ease: 'none',
+          scrollTrigger: { trigger: screen, start: 'top 95%', end: large ? 'top 35%' : 'top 45%', scrub: 0.6 }
+        });
+      }
+      // the devices drift a little against the scroll
+      ['.pt-till', '.pt-bigphone'].forEach(function (sel) {
+        var el = document.querySelector(sel), amp = large ? 50 : 24;
+        if (!el) return;
+        gsap.fromTo(el, { y: amp }, { y: -amp, ease: 'none', scrollTrigger: { trigger: el.closest('section'), start: 'top bottom', end: 'bottom top', scrub: true } });
+      });
+      // the film opens up as it arrives
+      var film = $('pt-video');
+      if (film) {
+        gsap.fromTo(film, { clipPath: large ? 'inset(9% 11% 9% 11% round 44px)' : 'inset(6% 7% 6% 7% round 36px)', scale: 0.97 }, {
+          clipPath: 'inset(0% 0% 0% 0% round 28px)', scale: 1, ease: 'none',
+          scrollTrigger: { trigger: film, start: 'top 95%', end: large ? 'top 35%' : 'top 50%', scrub: 0.6 }
+        });
+      }
+      // the 2% grows into place
+      var big = $('pt-big2');
+      if (big) {
+        gsap.fromTo(big, { scale: large ? 0.62 : 0.7, opacity: 0.25 }, { scale: 1, opacity: 1, ease: 'none', scrollTrigger: { trigger: '#bani', start: 'top 85%', end: large ? 'top 30%' : 'top 40%', scrub: 0.6 } });
+      }
+      return function () { hero.classList.remove('is-scrolled'); };
+    });
+
+    // large screens: smooth scrolling and the hero curtain
     mm.add('(min-width: 1024px)', function () {
-      var lenis = new Lenis({ autoRaf: false, lerp: 0.12 });
-      window.v2Lenis = lenis; // base.js pauses it while the mobile menu is open
-      lenis.on('scroll', ST.update);
-      var tick = function (t) { lenis.raf(t * 1000); };
-      gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
+      var alive = true, lenis = null, tick = null;
+      var startLenis = function () {
+        if (!alive || !window.Lenis) return;
+        lenis = new Lenis({ autoRaf: false, lerp: 0.12 });
+        window.v2Lenis = lenis; // base.js pauses it while the mobile menu is open
+        lenis.on('scroll', ST.update);
+        tick = function (t) { lenis.raf(t * 1000); };
+        gsap.ticker.add(tick);
+        gsap.ticker.lagSmoothing(0);
+      };
+      if (window.Lenis) startLenis();
+      else if (LIBS[2]) loadAll([LIBS[2]]).then(startLenis, function () {}); // a tablet turned to landscape
 
       // the curtain: the stage turns to face the visitor and grows, the copy steps back, the tools spread out
       var tl = gsap.timeline({
@@ -636,37 +722,11 @@
         .to('.pt-phone', { x: '6%', y: '2%', duration: 1 }, 0)
         .to('.pt-cue', { autoAlpha: 0, duration: 0.2 }, 0);
 
-      // the panel window lies back, then stands up as it arrives
-      var ui = document.querySelector('.pt-ui');
-      if (ui) {
-        gsap.fromTo(ui, { rotationX: 14, scale: 0.94, y: 40 }, {
-          rotationX: 0, scale: 1, y: 0, ease: 'none',
-          scrollTrigger: { trigger: screen, start: 'top 95%', end: 'top 35%', scrub: 0.6 }
-        });
-      }
-      // the devices drift a little against the scroll
-      ['.pt-till', '.pt-bigphone'].forEach(function (sel) {
-        var el = document.querySelector(sel);
-        if (!el) return;
-        gsap.fromTo(el, { y: 50 }, { y: -50, ease: 'none', scrollTrigger: { trigger: el.closest('section'), start: 'top bottom', end: 'bottom top', scrub: true } });
-      });
-      // the film opens up as it arrives
-      var film = $('pt-video');
-      if (film) {
-        gsap.fromTo(film, { clipPath: 'inset(9% 11% 9% 11% round 44px)', scale: 0.97 }, {
-          clipPath: 'inset(0% 0% 0% 0% round 28px)', scale: 1, ease: 'none',
-          scrollTrigger: { trigger: film, start: 'top 95%', end: 'top 35%', scrub: 0.6 }
-        });
-      }
-      // the 2% grows into place
-      var big = $('pt-big2');
-      if (big) {
-        gsap.fromTo(big, { scale: 0.62, opacity: 0.25 }, { scale: 1, opacity: 1, ease: 'none', scrollTrigger: { trigger: '#bani', start: 'top 85%', end: 'top 30%', scrub: 0.6 } });
-      }
-
       return function () {
-        gsap.ticker.remove(tick);
-        lenis.destroy();
+        alive = false;
+        if (tick) gsap.ticker.remove(tick);
+        gsap.ticker.lagSmoothing(500, 33);
+        if (lenis) lenis.destroy();
         window.v2Lenis = null;
         hero.classList.remove('is-scrolled');
       };
@@ -689,49 +749,42 @@
       }
 
       // a day at the venue: the strip slides from morning to evening, the sky follows
-      var day = $('o-zi'), track = $('pt-day-track');
-      if (day && track) {
+      if (day && dayTrack) {
         day.classList.add('is-pinned');
-        var cards = [].slice.call(track.children), clock = $('pt-day-time'), now = -1;
-        var distance = function () { return Math.max(0, track.scrollWidth - document.documentElement.clientWidth); };
-        var paint = function (p) {
-          var dusk = clamp((p - 0.45) / 0.5);
-          day.style.setProperty('--dusk', dusk.toFixed(3));
-          day.style.setProperty('--sun-x', (12 + p * 76).toFixed(2) + '%');
-          day.style.setProperty('--sun-y', (40 - Math.sin(p * Math.PI) * 22).toFixed(2) + '%');
-          day.classList.toggle('is-dusk', dusk > 0.5);
-          var n = Math.min(cards.length - 1, Math.round(p * (cards.length - 1)));
-          if (n !== now) {
-            if (cards[now]) cards[now].classList.remove('is-now');
-            now = n;
-            cards[n].classList.add('is-now');
-            clock.textContent = cards[n].getAttribute('data-time');
-          }
-        };
-        paint(0);
-        gsap.to(track, {
+        var distance = function () { return Math.max(0, dayTrack.scrollWidth - document.documentElement.clientWidth); };
+        paintDay(0, true);
+        gsap.to(dayTrack, {
           x: function () { return -distance(); }, ease: 'none',
           scrollTrigger: {
             trigger: day, start: 'top top', end: function () { return '+=' + Math.max(distance(), window.innerHeight * 0.8); },
             pin: true, scrub: 0.6, anticipatePin: 1, invalidateOnRefresh: true,
-            onUpdate: function (self) { paint(self.progress); }
+            onUpdate: function (self) { paintDay(self.progress, true); }
           }
         });
-        cleanups.push(function () {
-          day.classList.remove('is-pinned', 'is-dusk');
-          ['--dusk', '--sun-x', '--sun-y'].forEach(function (k) { day.style.removeProperty(k); });
-          cards.forEach(function (c) { c.classList.remove('is-now'); });
-        });
+        cleanups.push(resetDay);
       }
 
       return function () { cleanups.forEach(function (fn) { fn(); }); };
     });
+
+    // everywhere else the day is a list: the sky still turns to evening as you read down it
+    mm.add('(max-width: 1023px), (max-height: 759px)', function () {
+      if (!day || !dayTrack) return;
+      paintDay(0, false);
+      ST.create({ trigger: dayTrack, start: 'top 70%', end: 'bottom 55%', onUpdate: function (self) { paintDay(self.progress, false); } });
+      return resetDay;
+    });
   }
+
+  var motionStarted = false;
   function applyMotion() {
-    if (reduce || motionStarted || !desktopMQ.matches || !(data.libs || []).length) return;
+    if (reduce || motionStarted || LIBS.length < 2) return;
     motionStarted = true;
-    loadAll(data.libs).then(initMotion, function () { motionStarted = false; });
+    var large = desktopMQ.matches;
+    var go = function () { loadAll(large ? LIBS : LIBS.slice(0, 2)).then(initMotion, function () { motionStarted = false; }); };
+    // large screens set the pinned hero up at once; phones and tablets wait for the page to finish loading
+    if (large || document.readyState === 'complete') go();
+    else window.addEventListener('load', go, { once: true });
   }
   applyMotion();
-  desktopMQ.addEventListener('change', applyMotion);
 })();
