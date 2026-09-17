@@ -66,10 +66,10 @@ class OrganizerLeadResource extends Resource
 
     /**
      * Activity-type → tip code mapping used to generate personalized
-     * outbound URLs for /devino-partener. The keys are the EXACT codes
-     * accepted by the PERSO_ALIASES table in devino-partener.php, so
+     * outbound URLs for /parteneri. The keys are the EXACT codes
+     * accepted by V2_PARTNER_ALIASES (includes/v2/partner-profiles.php, shared by /parteneri and /devino-partener), so
      * a saved lead with category_slug='muzeu' yields
-     * https://bilete.online/devino-partener?tip=muzeu&loc=…
+     * https://bilete.online/parteneri?tip=muzeu&loc=…
      * and that page renders the muzeu-flavored copy on arrival.
      */
     public const CATEGORY_OPTIONS = [
@@ -99,7 +99,7 @@ class OrganizerLeadResource extends Resource
         if ($tip) $params['tip'] = $tip;
         if ($loc) $params['loc'] = $loc;
         if (empty($params)) return '';
-        return 'https://bilete.online/devino-partener?' . http_build_query($params);
+        return 'https://bilete.online/parteneri?' . http_build_query($params);
     }
 
     public static function getEloquentQuery(): Builder
@@ -171,7 +171,7 @@ class OrganizerLeadResource extends Resource
                             $set('category_name', self::CATEGORY_OPTIONS[$state] ?? null);
                         })
                         ->searchable()
-                        ->helperText('Determină „tip=…" din URL — pagina /devino-partener afișează copy specific categoriei.')
+                        ->helperText('Determină „tip=…" din URL — pagina /parteneri afișează copy specific categoriei.')
                         ->columnSpan(['md' => 6, 'sm' => 12]),
                     Forms\Components\TextInput::make('category_other')
                         ->label('Sau descriere alternativă (dacă nu se potrivește niciuna)')
@@ -297,7 +297,7 @@ HTML);
                     }),
 
                 Tables\Columns\TextColumn::make('landing_views')->label('LP')->numeric()->alignCenter()
-                    ->tooltip('Câte vizite a făcut pe /devino-partener'),
+                    ->tooltip('Câte vizite a făcut pe paginile pentru parteneri (/parteneri, /devino-partener)'),
                 Tables\Columns\TextColumn::make('onboarding_views')->label('OB')->numeric()->alignCenter()
                     ->tooltip('Câte vizite a făcut pe /inregistrare-locatie'),
                 Tables\Columns\TextColumn::make('assignedTo.name')->label('Asignat')->placeholder('—')->toggleable(),

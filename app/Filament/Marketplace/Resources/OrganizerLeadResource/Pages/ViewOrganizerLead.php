@@ -50,7 +50,7 @@ class ViewOrganizerLead extends ViewRecord
                 ->color('warning')
                 ->visible((bool) $campaignLink)
                 ->modalHeading('Link personalizat pentru acest lead')
-                ->modalDescription('Trimite linkul prin email/SMS. Pagina /devino-partener se personalizează automat în funcție de parametrii tip + loc.')
+                ->modalDescription('Trimite linkul prin email/SMS. Pagina /parteneri se personalizează automat în funcție de parametrii tip + loc.')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Închide')
                 ->form([
