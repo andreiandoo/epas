@@ -22,6 +22,7 @@ class MarketplacePartner extends Model
         'events:read' => 'Citire evenimente',
         'artists:read' => 'Citire artiști',
         'articles:write' => 'Trimitere articole',
+        'ads:stats' => 'Trimitere statistici reclame',
     ];
 
     protected $fillable = [
@@ -35,6 +36,7 @@ class MarketplacePartner extends Model
         'settings',
         'webhook_url',
         'outbound_secret',
+        'ads_api_url',
     ];
 
     protected $casts = [

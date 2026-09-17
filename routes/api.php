@@ -4531,4 +4531,8 @@ Route::prefix('partner/v1')->group(function () {
             ->where('source', '[a-z0-9_-]+')
             ->name('api.partner.articles.batch');
     });
+
+    Route::post('/ads/stats', [\App\Http\Controllers\Api\Partner\AdStatsController::class, 'store'])
+        ->middleware('partner.auth:ads:stats')
+        ->name('api.partner.ads.stats');
 });

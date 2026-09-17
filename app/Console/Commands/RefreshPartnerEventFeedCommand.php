@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplacePartner;
 use App\Models\MarketplacePartnerDelivery;
+use App\Services\Partners\PartnerAds;
 use App\Services\Partners\PartnerEventFeed;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +17,7 @@ class RefreshPartnerEventFeedCommand extends Command
 
     protected $description = 'Recompute the event feed media partners read and record what changed';
 
-    public function handle(PartnerEventFeed $feed): int
+    public function handle(PartnerEventFeed $feed, PartnerAds $ads): int
     {
         // The schedule may ship before the migration runs.
         if (!Schema::hasTable('marketplace_partners')
@@ -24,6 +25,7 @@ class RefreshPartnerEventFeedCommand extends Command
             || !Schema::hasTable('marketplace_partner_deliveries')) {
             return self::SUCCESS;
         }
+        $adsReady = Schema::hasTable('partner_ads');
 
         $clientIds = MarketplacePartner::where('status', 'active')
             ->distinct()
@@ -40,6 +42,13 @@ class RefreshPartnerEventFeedCommand extends Command
             }
 
             $stats = $feed->refresh($client);
+
+            // Ads for events that were cancelled, deleted or are over come off partner sites.
+            $pausedAds = $adsReady ? $ads->pauseForUnavailableEvents($client) : 0;
+            if ($pausedAds > 0) {
+                $this->info("{$client->name}: {$pausedAds} ads paused (event no longer available)");
+                Log::info('partners:refresh-event-feed paused ads', ['marketplace_client_id' => $client->id, 'ads' => $pausedAds]);
+            }
 
             $this->info(sprintf(
                 '%s: %d checked, %d new, %d changed, %d cancelled, %d removed, %d notifications queued',

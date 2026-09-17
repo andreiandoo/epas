@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\MarketplacePartnerDelivery;
+use App\Services\Partners\PartnerAds;
 use App\Services\Partners\PartnerRequestSender;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,15 +46,14 @@ class DeliverPartnerRequestJob implements ShouldQueue
                 'status' => MarketplacePartnerDelivery::STATUS_FAILED,
                 'error' => 'Not sent: the partner was deactivated or its address changed.',
             ])->save();
+            $this->finished($delivery);
 
             return;
         }
 
-        if ($sender->send($delivery)) {
-            return;
-        }
+        if ($sender->send($delivery) || $delivery->status !== MarketplacePartnerDelivery::STATUS_PENDING) {
+            $this->finished($delivery);
 
-        if ($delivery->status !== MarketplacePartnerDelivery::STATUS_PENDING) {
             return;
         }
 
@@ -65,6 +65,7 @@ class DeliverPartnerRequestJob implements ShouldQueue
         }
 
         $delivery->forceFill(['status' => MarketplacePartnerDelivery::STATUS_FAILED])->save();
+        $this->finished($delivery);
     }
 
     /**
@@ -80,6 +81,21 @@ class DeliverPartnerRequestJob implements ShouldQueue
                 'error' => Str::limit('Job failed: ' . ($exception?->getMessage() ?? 'unknown error'), 500),
                 'updated_at' => now(),
             ]);
+
+        $delivery = MarketplacePartnerDelivery::find($this->deliveryId);
+        if ($delivery) {
+            $this->finished($delivery);
+        }
+    }
+
+    /**
+     * Ad requests report their final outcome back on the ad.
+     */
+    private function finished(MarketplacePartnerDelivery $delivery): void
+    {
+        if (str_starts_with($delivery->type, 'ad.')) {
+            app(PartnerAds::class)->deliveryFinished($delivery);
+        }
     }
 
     /**
@@ -95,6 +111,11 @@ class DeliverPartnerRequestJob implements ShouldQueue
 
         if (str_starts_with($delivery->type, 'event.')) {
             return $partner->wantsEventWebhooks() && $delivery->url === $partner->webhook_url;
+        }
+
+        if (str_starts_with($delivery->type, 'ad.')) {
+            return !empty($partner->ads_api_url)
+                && str_starts_with($delivery->url, rtrim($partner->ads_api_url, '/') . '/ads/');
         }
 
         return true;

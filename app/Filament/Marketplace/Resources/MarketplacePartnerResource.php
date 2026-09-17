@@ -139,6 +139,25 @@ class MarketplacePartnerResource extends Resource
                         ),
                 ])->columns(2),
 
+            Section::make('Reclame')
+                ->description('Reclamele create în „Reclame parteneri” sunt publicate pe site-ul partenerului prin API-ul lui, semnate cu secretul de mai sus.')
+                ->schema([
+                    Forms\Components\TextInput::make('ads_api_url')
+                        ->label('Adresa API pentru reclame')
+                        ->url()
+                        ->rule('starts_with:https://')
+                        ->maxLength(2048)
+                        ->placeholder('https://www.maximumrock.ro/wp-json/maximumrock/v1')
+                        ->helperText('Fără /ads la final. Gol = partenerul nu primește reclame.'),
+
+                    Forms\Components\TextInput::make('settings.ads.header_prefix')
+                        ->label('Prefix antete semnătură')
+                        ->placeholder('X-Ambilet')
+                        ->regex('/^X-[A-Za-z0-9-]{1,30}$/')
+                        ->maxLength(32)
+                        ->helperText('Cum își numește partenerul antetele, ex. X-MR → X-MR-Timestamp și X-MR-Signature.'),
+                ])->columns(2),
+
             Section::make('Articole')
                 ->description('Articolele trimise de partener apar pe pagina artistului, cu link către site-ul partenerului.')
                 ->schema([
