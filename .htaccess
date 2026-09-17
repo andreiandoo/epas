@@ -61,6 +61,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^devino-partener/?$ devino-partener.php [L,QSA]
 
+# One sales page for operators (gathers /devino-partener, /pentru-locatii, /vinde-bilete)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^parteneri/?$ parteneri.php [L,QSA]
+
 # Self-service onboarding form linked from every CTA on /devino-partener.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
