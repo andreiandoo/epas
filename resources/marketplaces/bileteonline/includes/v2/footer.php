@@ -72,8 +72,8 @@ usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
       <h3 id="ftr-venue-h">Ai activități care pot fi rezervate online?</h3>
       <p>Listează locația, creează activități, vinde bilete, scanează QR și ajungi mai ușor la oamenii care caută experiențe ca ale tale.</p>
       <div class="ftr-cta">
-        <a class="btn btn-light" href="/pentru-locatii">Pentru locații</a>
-        <a class="btn btn-outline-light" href="/contact?motiv=locatie">Cere demo</a>
+        <a class="btn btn-light" href="/parteneri">Pentru locații</a>
+        <a class="btn btn-outline-light" href="/parteneri#demo">Cere demo</a>
       </div>
     </section>
   </div>
@@ -89,7 +89,7 @@ usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
     </div>
     <nav aria-label="Orașe"><h3>Explorează</h3><ul class="fl"><?php foreach ($v2FootCities as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/orase">Toate orașele</a></li></ul></nav>
     <nav aria-label="Activități"><h3>Activități</h3><ul class="fl"><?php foreach ($v2FootCats as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/categorii">Toate categoriile</a></li></ul></nav>
-    <nav aria-label="Despre"><h3>bilete.online</h3><ul class="fl"><li><a href="/cum-functioneaza">Cum funcționează</a></li><li><a href="/card-cadou">Card cadou</a></li><li><a href="/ghiduri">Ghiduri</a></li><li><a href="/pentru-locatii">Pentru locații</a></li><li><a href="/contact">Contact</a></li></ul></nav>
+    <nav aria-label="Despre"><h3>bilete.online</h3><ul class="fl"><li><a href="/cum-functioneaza">Cum funcționează</a></li><li><a href="/card-cadou">Card cadou</a></li><li><a href="/ghiduri">Ghiduri</a></li><li><a href="/parteneri">Pentru locații</a></li><li><a href="/contact">Contact</a></li></ul></nav>
     <nav aria-label="Ajutor"><h3>Ajutor</h3><ul class="fl"><li><a href="/ajutor">Centrul de ajutor</a></li><li><a href="/ajutor#intrebari">Întrebări frecvente</a></li><li><a href="/recuperare-comanda">Recuperează comanda</a></li><li><a href="/cont/bilete">Biletele mele</a></li><li><a href="/voucher">Verifică voucher</a></li><li><a href="/contact">Contact suport</a></li><li><a href="/cookies">Politica de cookies</a></li></ul></nav>
   </div>
   <div class="wrap ftr-bottom">
