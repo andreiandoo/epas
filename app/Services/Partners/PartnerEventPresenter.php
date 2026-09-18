@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Builds the partner-facing view of a marketplace event.
@@ -114,10 +115,16 @@ class PartnerEventPresenter
             $ticketTypes = $this->publicTicketTypes($parent->ticketTypes);
         }
 
+        $title = $event->getTranslation('title', $language);
+        $venueName = $venue?->getTranslation('name', $language);
+        $marketplaceCity = ($event->marketplaceCity ?? $parent?->marketplaceCity)?->getTranslation('name', $language);
+
         return [
             'id' => $event->id,
             'status' => $event->is_cancelled ? 'cancelled' : ($event->is_postponed ? 'postponed' : 'published'),
-            'title' => $event->getTranslation('title', $language),
+            'title' => $title,
+            // Same title without the city or venue an organizer typed into it.
+            'title_clean' => $this->cleanTitle($title, [$marketplaceCity, $venue?->city, $venueName]),
             'url' => $siteUrl ? $siteUrl . '/bilete/' . $event->slug : null,
             'starts_at' => $schedule['starts_at']->toIso8601String(),
             'ends_at' => $schedule['ends_at']?->toIso8601String(),
@@ -125,7 +132,7 @@ class PartnerEventPresenter
             'slots' => $schedule['slots'],
             'venue' => $venue ? [
                 'id' => $venue->id,
-                'name' => $venue->getTranslation('name', $language),
+                'name' => $venueName,
                 'city' => $venue->city,
                 'address' => $venue->address,
             ] : null,
@@ -152,6 +159,71 @@ class PartnerEventPresenter
                 'co_headliner' => (bool) ($artist->pivot->is_co_headliner ?? false),
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * Drops a city or venue an organizer put in the title, only where it is a
+     * separate part at the start or the end: "BRAȘOV: Metal Militia, TÂMPLĂRIE"
+     * becomes "Metal Militia". Diacritics and case are ignored. Returns the
+     * original title when what is left is too short to be a name.
+     *
+     * @param array<int, string|null> $extras city and venue names to drop
+     */
+    private function cleanTitle(?string $title, array $extras): ?string
+    {
+        $title = trim((string) $title);
+
+        if ($title === '') {
+            return null;
+        }
+
+        $clean = $title;
+        foreach ($extras as $extra) {
+            $extra = trim((string) $extra);
+            if (mb_strlen($extra) < 3) {
+                continue;
+            }
+
+            $needle = $this->looseNeedle($extra);
+            $clean = (string) preg_replace('/^\s*' . $needle . '\s*[:\-–—|,]+\s*/iu', '', $clean);
+            $clean = (string) preg_replace('/\s*[:\-–—|,]+\s*' . $needle . '\s*$/iu', '', $clean);
+        }
+
+        // A multibyte charlist would corrupt UTF-8, so trimming goes through a pattern.
+        $clean = (string) preg_replace('/\s+/u', ' ', $clean);
+        $clean = (string) preg_replace('/^[\s\-–—|,:;.]+|[\s\-–—|,:;.]+$/u', '', $clean);
+
+        return mb_strlen($clean) >= 3 ? $clean : $title;
+    }
+
+    /**
+     * A pattern that matches the text whatever its diacritics, case or spacing.
+     */
+    private function looseNeedle(string $text): string
+    {
+        // Both the comma-below and the legacy cedilla forms, common in imported data.
+        $variants = [
+            'a' => 'aăâ',
+            'i' => 'iî',
+            's' => 'sșş',
+            't' => 'tțţ',
+        ];
+
+        $pattern = '';
+        foreach (preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $character) {
+            if (preg_match('/\s/u', $character)) {
+                $pattern .= '\s+';
+
+                continue;
+            }
+
+            $folded = mb_strtolower(Str::ascii(mb_strtolower($character)));
+            $pattern .= isset($variants[$folded])
+                ? '[' . $variants[$folded] . mb_strtoupper($variants[$folded]) . ']'
+                : preg_quote($character, '/');
+        }
+
+        return $pattern;
     }
 
     /**

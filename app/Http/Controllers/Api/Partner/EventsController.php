@@ -7,6 +7,7 @@ use App\Models\MarketplacePartner;
 use App\Models\PartnerEventFeedItem;
 use App\Services\Partners\PartnerEventFeed;
 use App\Services\Partners\PartnerEventPresenter;
+use App\Services\Partners\PartnerFeedQueries;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -139,7 +140,7 @@ class EventsController extends PartnerController
         }
 
         if ($request->filled('genre')) {
-            $slugs = array_filter(explode(',', (string) $request->query('genre')));
+            $slugs = array_filter(array_map('trim', explode(',', (string) $request->query('genre'))));
             $query->whereExists(fn ($sub) => $sub->selectRaw('1')
                 ->from('event_event_genre')
                 ->join('event_genres', 'event_genres.id', '=', 'event_event_genre.event_genre_id')
@@ -200,11 +201,7 @@ class EventsController extends PartnerController
      */
     private function matchesEventOrParent($query, string $column): void
     {
-        $query->whereColumn($column, 'partner_event_feed.event_id')
-            ->orWhereIn($column, fn ($parents) => $parents->select('parent_id')
-                ->from('events')
-                ->whereColumn('events.id', 'partner_event_feed.event_id')
-                ->whereNotNull('parent_id'));
+        PartnerFeedQueries::eventOrParent($query, $column);
     }
 
     private function resource(PartnerEventFeedItem $row, MarketplacePartner $partner): array

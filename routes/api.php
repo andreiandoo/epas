@@ -4507,6 +4507,11 @@ Route::prefix('partner/v1')->group(function () {
             ->name('api.partner.events.show');
     });
 
+    Route::middleware('partner.auth:events:read')->group(function () {
+        Route::get('/genres', [\App\Http\Controllers\Api\Partner\GenresController::class, 'index'])
+            ->name('api.partner.genres');
+    });
+
     Route::middleware('partner.auth:artists:read')->group(function () {
         Route::get('/artists', [\App\Http\Controllers\Api\Partner\ArtistsController::class, 'index'])
             ->name('api.partner.artists.index');

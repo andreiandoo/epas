@@ -140,11 +140,13 @@ class PartnerEventFeed
 
         return [
             'venue',
+            'marketplaceCity',
             'marketplaceEventCategory',
             'eventGenres',
             'artists',
             'ticketTypes' => $ticketTypes,
             'parent.venue',
+            'parent.marketplaceCity',
             'parent.marketplaceEventCategory',
             'parent.eventGenres',
             'parent.artists',
