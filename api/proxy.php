@@ -1017,6 +1017,20 @@ switch ($action) {
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         $endpoint = '/artists/' . urlencode($slug) . '/events' . ($params ? '?' . http_build_query($params) : '');
         break;
+
+    // Media-partner articles about the artist ("În presă" on the artist page)
+    case 'artist.articles':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing artist slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = max(1, (int)$_GET['page']);
+        if (isset($_GET['per_page'])) $params['per_page'] = min(max(1, (int)$_GET['per_page']), 24);
+        $endpoint = '/artists/' . urlencode($slug) . '/articles' . ($params ? '?' . http_build_query($params) : '');
+        break;
     case "artist.toggle-favorite":
         $slug = $_GET["slug"] ?? "";
         if (!$slug) {
