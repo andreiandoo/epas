@@ -63,9 +63,18 @@
     var totalCents = function () { return variants.reduce(function (acc, v) { return acc + (state.qty[v.id] || 0) * (v.price_cents || 0); }, 0); };
     var rate = b.commission_rate || 0, mode = b.commission_mode || 'included';
     var feeCents = function () { return Math.round(totalCents() * rate / 100); };
+    // Loyalty points the booking earns, with the programme's real rule (from /checkout/features via cart.js, on the
+    // ticket value); nothing is shown when the marketplace runs no points programme.
+    var loyalty = function () {
+      return typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.getLoyaltyConfig === 'function' ? BileteOnlineCart.getLoyaltyConfig() : null;
+    };
     var pointsEstimate = function () {
-      var pv = b.point_value_cents || 1;
-      return Math.max(0, Math.floor((totalCents() * (b.earn_percentage || 0) / 100) / pv));
+      return loyalty() ? Math.max(0, BileteOnlineCart.estimatePoints(totalCents() / 100)) : 0;
+    };
+    var pointsWord = function (n) {
+      if (n === 1) return '1 punct';
+      var r = n % 100;
+      return new Intl.NumberFormat('ro-RO').format(n) + (n >= 20 && !(r >= 1 && r <= 19) ? ' de puncte' : ' puncte');
     };
     var participantsLabel = function () {
       var n = seatsUsed();
@@ -90,16 +99,18 @@
         if (out) out.textContent = state.qty[v.id] || 0;
       });
       el.sum.hidden = n === 0;
-      el.reward.hidden = n === 0;
+      var pts = pointsEstimate();
+      el.reward.hidden = n === 0 || pts <= 0;
+      if (el.points && el.points.parentNode) el.points.parentNode.hidden = pts <= 0;
       el.sub.textContent = lei(totalCents());
       var showFee = rate > 0 && mode === 'added_on_top';
       el.feeRow.hidden = !showFee;
       el.feeRate.textContent = String(rate).replace('.', ',');
       el.fee.textContent = lei(feeCents());
       el.total.textContent = lei(mode === 'added_on_top' ? totalCents() + feeCents() : totalCents());
-      el.points.textContent = '+' + pointsEstimate() + ' puncte';
-      el.rewardN.textContent = pointsEstimate();
-      el.rewardBig.textContent = '+' + pointsEstimate();
+      el.points.textContent = '+' + pointsWord(pts);
+      el.rewardN.textContent = new Intl.NumberFormat('ro-RO').format(pts);
+      el.rewardBig.textContent = '+' + new Intl.NumberFormat('ro-RO').format(pts);
       var ok = canSubmit();
       el.cart.disabled = !ok;
       el.checkout.disabled = !ok;
@@ -238,6 +249,11 @@
       }
       renderSummary();
     });
+
+    // the points rules come with /checkout/features: once here, the estimate follows them
+    if (typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.loadLoyaltyConfig === 'function') {
+      BileteOnlineCart.loadLoyaltyConfig().then(function () { renderSummary(); }, function () {});
+    }
 
     var submit = function (dest) {
       if (!canSubmit()) return;

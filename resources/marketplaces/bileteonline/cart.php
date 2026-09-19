@@ -7,7 +7,8 @@
  * timer-bar, countdown, totalItems, cart-loading, cartPageItems, emptyCart, promo-section, promoCode,
  * promoMessage, summary-section, taxesContainer, summaryItems, subtotal, platformCommissionRow,
  * platformCommissionLabel, platformCommissionAmount, processingFeeRow, processingFeeAmount, discountRow,
- * discountAmount, savingsRow, savingsText, savings, totalPrice, pointsEarned, checkoutBtn.
+ * discountAmount, savingsRow, savingsText, savings, totalPrice, pointsReward, pointsRule, pointsEarned, checkoutBtn.
+ * The points box shows only when the marketplace runs a points programme (rules from /checkout/features).
  * The script shows and hides them with a `hidden` class (base.css).
  * The head (title, steps, count) is for a cart with something in it: an inline script hides it before the first paint
  * when the saved cart is empty, and cart.js keeps it in step with the empty state afterwards.
@@ -142,9 +143,9 @@ include __DIR__ . '/includes/v2/header.php';
             <div id="discountRow" class="cs-line cs-disc hidden"><span>Reducere aplicată</span><strong id="discountAmount">-0,00 lei</strong></div>
             <div class="cs-line cs-total"><span>Total de plată</span><strong id="totalPrice">0,00 lei</strong></div>
             <div id="savingsRow" class="cs-save hidden"><?= v2_ic('check-circle') ?><span id="savingsText">Economisești:</span><strong id="savings">0,00 lei</strong></div>
-            <div class="cs-reward">
+            <div class="cs-reward hidden" id="pointsReward">
               <span class="cs-reward-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
-              <div><b>Vei câștiga</b><p>1 punct / 10 lei cheltuiți</p></div>
+              <div><b>Vei câștiga</b><p id="pointsRule">puncte la fiecare comandă</p></div>
               <p class="cs-pts"><span id="pointsEarned" class="points-animation">0</span><small>puncte</small></p>
             </div>
             <p class="cs-note">Taxa de procesare card se calculează la checkout, în funcție de metoda de plată.</p>

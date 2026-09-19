@@ -228,3 +228,5 @@
 .confetti-container{position:fixed;inset:0;z-index:100;overflow:hidden;pointer-events:none}
 .confetti{position:absolute;top:0;width:10px;height:10px;opacity:0;animation:confetti-fall 4s ease-out forwards}
 @keyframes confetti-fall{0%{opacity:1;transform:translateY(-100px) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+.ty-points[hidden]{display:none}
+.ty-points p a{color:#F2C04D;font-weight:700;text-underline-offset:3px}

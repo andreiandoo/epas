@@ -13,6 +13,8 @@
  * summary-items, summary-subtotal, platform-commission-row/label/amount, discount-row/label/amount,
  * insurance-row/-label/-amount, cultural-card-row, cultural-card-surcharge-label, cultural-card-amount,
  * processing-fee-row/label/amount, summary-total, savings-text, savings-amount, points-earned, payBtn, pay-btn-text,
+ * points-row/label/amount, points-box, points-use-row, use-points, use-points-title/sub, points-note, points-login,
+ * points-reward, points-rule (loyalty points: shown only when the marketplace runs automatic rewards),
  * login-modal, checkout-login-form, login-email, login-password, login-submit-btn, login-btn-text.
  * The script shows and hides them with a `hidden` class (base.css). Styles: cart.css (head, timer, layout,
  * skeletons, summary card, empty state, phone bar) + checkout.css.
@@ -270,14 +272,24 @@ include __DIR__ . '/includes/v2/header.php';
             <div class="cs-line cs-sub"><span>Subtotal (<span id="summary-items">0</span> <span data-items-word>bilete</span>)</span><strong id="summary-subtotal">0,00 lei</strong></div>
             <div id="platform-commission-row" class="cs-line hidden"><span id="platform-commission-label">Comision ticketing</span><strong id="platform-commission-amount">0,00 lei</strong></div>
             <div id="discount-row" class="cs-line cs-disc hidden"><span id="discount-label">Reducere</span><strong id="discount-amount">-0,00 lei</strong></div>
+            <div id="points-row" class="cs-line cs-disc hidden"><span id="points-row-label">Plătit cu puncte</span><strong id="points-row-amount">-0,00 lei</strong></div>
             <div id="insurance-row" class="cs-line cs-ins hidden"><span id="insurance-row-label">Protecție bilet</span><strong id="insurance-row-amount">+0,00 lei</strong></div>
             <div id="cultural-card-row" class="cs-line hidden"><span id="cultural-card-surcharge-label">Comision card cultural (4%)</span><strong id="cultural-card-amount">+0,00 lei</strong></div>
             <div id="processing-fee-row" class="cs-line hidden"><span id="processing-fee-label">Comision tranzacționare plată</span><strong id="processing-fee-amount">0,00 lei</strong></div>
             <div class="cs-line cs-total"><span>Total de plată</span><strong id="summary-total">0,00 lei</strong></div>
             <p id="savings-text" class="cs-save ck-save hidden"><?= v2_ic('check-circle') ?><span id="savings-amount">Economisești 0 lei!</span></p>
-            <div class="cs-reward">
+            <!-- loyalty points: pay with them (logged-in customer), shown only when the programme runs -->
+            <div id="points-box" class="cs-usepts hidden">
+              <div class="cs-usepts-row" id="points-use-row" hidden>
+                <input type="checkbox" id="use-points" class="ck-cb" aria-describedby="use-points-sub">
+                <label for="use-points"><b id="use-points-title">Folosește punctele</b><small id="use-points-sub"></small></label>
+              </div>
+              <p id="points-note" class="cs-usepts-note" hidden></p>
+              <button type="button" id="points-login" class="link-btn cs-usepts-login" hidden>Intră în cont</button>
+            </div>
+            <div class="cs-reward hidden" id="points-reward">
               <span class="cs-reward-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
-              <div><b>Vei câștiga</b><p>1 punct / 10 lei cheltuiți</p></div>
+              <div><b>Vei câștiga</b><p id="points-rule">puncte la fiecare comandă</p></div>
               <p class="cs-pts"><span id="points-earned">0 puncte</span></p>
             </div>
           </div>

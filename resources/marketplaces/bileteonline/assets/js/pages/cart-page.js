@@ -18,6 +18,10 @@ const CartPage = {
         this.setupTimer();
         this.loadExistingPromo();
         this.render();
+        // the points rules arrive with /checkout/features: show what the order earns once they are here
+        if (typeof BileteOnlineCart.loadLoyaltyConfig === 'function') {
+            BileteOnlineCart.loadLoyaltyConfig().then((cfg) => { if (cfg && BileteOnlineCart.getItems().length) this.updateSummary(); }, () => {});
+        }
 
         // Re-render when BileteOnlineCart re-validates the promo against new cart contents. The qty-change path
         // calls BileteOnlineCart.save() → saveCart() → revalidatePromoCode() asynchronously, so by the time
@@ -631,7 +635,11 @@ const CartPage = {
         // Cart page total = tickets + ticketing commission (− discount) ONLY. The payment transaction fee depends
         // on the chosen payment method, so it is applied & shown at checkout.
         const total = subtotalAfterDiscount;
-        const points = Math.floor(total / 10);
+        // Loyalty points the order would earn: on the ticket value after the promo code (not on the commission),
+        // with the programme's own rule; nothing shown when the marketplace runs no points programme
+        const points = typeof BileteOnlineCart.estimatePoints === 'function'
+            ? BileteOnlineCart.estimatePoints(Math.max(0, baseSubtotal - liveDiscount)) : 0;
+        const loyalty = typeof BileteOnlineCart.getLoyaltyConfig === 'function' ? BileteOnlineCart.getLoyaltyConfig() : null;
 
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
@@ -715,12 +723,20 @@ const CartPage = {
             document.getElementById('savingsRow').classList.add('hidden');
         }
 
-        // Points animation
-        const pointsEl = document.getElementById('pointsEarned');
-        pointsEl.textContent = points;
-        pointsEl.classList.remove('points-animation');
-        void pointsEl.offsetWidth; // Force reflow
-        pointsEl.classList.add('points-animation');
+        // Points the order earns (hidden without a points programme or when it earns nothing)
+        const rewardEl = document.getElementById('pointsReward');
+        if (rewardEl) rewardEl.classList.toggle('hidden', !loyalty || points <= 0);
+        if (loyalty && points > 0) {
+            const rule = document.getElementById('pointsRule');
+            if (rule) rule.textContent = (loyalty.earn_rate_label ? loyalty.earn_rate_label.charAt(0).toUpperCase() + loyalty.earn_rate_label.slice(1) + ', ' : '') + 'în cont după activitate';
+            const pointsEl = document.getElementById('pointsEarned');
+            if (pointsEl.textContent !== String(points)) {
+                pointsEl.textContent = new Intl.NumberFormat('ro-RO').format(points);
+                pointsEl.classList.remove('points-animation');
+                void pointsEl.offsetWidth; // Force reflow
+                pointsEl.classList.add('points-animation');
+            }
+        }
     },
 
     /**

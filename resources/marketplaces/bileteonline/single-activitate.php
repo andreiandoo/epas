@@ -204,11 +204,8 @@ $bookingBootstrap = [
     'today'   => $todayLocal->format('Y-m-d'),
     'max_date' => $todayLocal->modify('+' . (int) ($bookingWindow['max_advance_days'] ?? 60) . ' days')->format('Y-m-d'),
     'gallery' => $gallery,
-    // Loyalty estimate (display only — exact points computed at checkout from
-    // the marketplace gamification config). earn_percentage = % of subtotal
-    // value awarded; point_value_cents = value of 1 point in cents.
-    'earn_percentage'   => 5,
-    'point_value_cents' => 1,
+    // Loyalty points: activity.js estimates them with the programme's real rules (/checkout/features via cart.js)
+    // and shows nothing when the marketplace runs no points programme (this used to promise a fixed 5%).
 ];
 
 // Recommendation rails (only when ≥1 card each).
@@ -513,7 +510,7 @@ include __DIR__ . '/includes/v2/header.php';
             <div class="bk-line"><span>Bilete</span><strong id="bk-sub"></strong></div>
             <div class="bk-line" id="bk-fee-row" hidden><span>Comision platformă estimat (<span id="bk-fee-rate"></span>%)</span><strong id="bk-fee"></strong></div>
             <div class="bk-line bk-total"><span>Total estimat</span><strong id="bk-total"></strong></div>
-            <div class="bk-line bk-pts"><span>Puncte bonus estimate</span><strong id="bk-points"></strong></div>
+            <div class="bk-line bk-pts" hidden><span>Puncte bonus estimate</span><strong id="bk-points"></strong></div>
             <p class="bk-small">Taxele și punctele finale se calculează la checkout.</p>
           </div>
 
@@ -522,7 +519,7 @@ include __DIR__ . '/includes/v2/header.php';
 
           <!-- Points reward card -->
           <div class="bk-reward" id="bk-reward" hidden>
-            <div><b>Câștigi puncte</b><p>Primești <strong id="bk-reward-n">0</strong> puncte după confirmarea participării.</p></div>
+            <div><b>Câștigi puncte</b><p>Primești <strong id="bk-reward-n">0</strong> puncte după activitate. Le poți folosi la următoarea rezervare.</p></div>
             <span id="bk-reward-big">+0</span>
           </div>
 

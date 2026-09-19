@@ -300,9 +300,17 @@ const ThankYouPage = {
         this.renderPaymentMethod();
         this.renderThankYouMessage();
 
-        // Points are not part of the order response yet
+        // Loyalty points the order earns (credited after the activity; the order says how many)
         const pointsEl = document.getElementById('pointsEarned');
-        if (pointsEl) pointsEl.style.display = 'none';
+        const toEarn = Math.max(0, parseInt(order.points_to_earn, 10) || 0);
+        if (pointsEl) {
+            pointsEl.hidden = toEarn <= 0;
+            if (toEarn > 0) {
+                const word = toEarn === 1 ? '1 punct' : new Intl.NumberFormat('ro-RO').format(toEarn) + (toEarn % 100 >= 20 || toEarn % 100 === 0 ? ' de puncte' : ' puncte');
+                document.getElementById('earnedPoints').textContent = '+' + new Intl.NumberFormat('ro-RO').format(toEarn);
+                document.getElementById('pointsTitle').textContent = 'Câștigi ' + word + ' cu această comandă';
+            }
+        }
 
         // Download button
         const downloadBtn = document.getElementById('downloadBtn');
@@ -360,7 +368,7 @@ const ThankYouPage = {
         this.renderThankYouMessage();
 
         const pointsEl = document.getElementById('pointsEarned');
-        if (pointsEl) pointsEl.style.display = 'none';
+        if (pointsEl) pointsEl.hidden = true;
     },
 
     // ==================== BLOCKS ====================
@@ -465,6 +473,9 @@ const ThankYouPage = {
         }
         if (insuranceAmount > 0) rows += row('Taxa de retur', this.money(insuranceAmount));
         if (discount > 0) rows += row('Reducere', '-' + this.money(discount), 'is-disc');
+        const pointsDiscount = parseFloat(order.points_discount) || 0;
+        const pointsUsed = parseInt(order.points_used, 10) || 0;
+        if (pointsDiscount > 0) rows += row('Plătit cu ' + new Intl.NumberFormat('ro-RO').format(pointsUsed) + ' puncte', '-' + this.money(pointsDiscount), 'is-disc');
         rows += row(this.esc(totalLabel), this.money(total), 'is-total');
 
         document.getElementById('paymentSummary').innerHTML = '<p class="ty-sub-h">Sumar plată</p><div class="ty-lines">' + rows + '</div>';

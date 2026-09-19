@@ -47,13 +47,16 @@ const CheckoutPage = {
             // Tracking must never break checkout
         }
 
-        // Load checkout features (insurance, cultural card)
-        await this.loadCheckoutFeatures();
+        // Load checkout features (insurance, cultural card) and the loyalty points rules
+        await Promise.all([this.loadCheckoutFeatures(), BileteOnlineCart.loadLoyaltyConfig()]);
+        this.loyalty = BileteOnlineCart.getLoyaltyConfig();
+        await this.loadPointsBalance();
 
         this.setupTimer();
         this.setupPaymentOptions();
         this.setupTermsCheckbox();
         this.setupInsuranceCheckbox();
+        this.setupPoints();
         this.prefillBuyerInfo();
         this.renderBeneficiaries();
         this.renderSummary();
@@ -61,6 +64,124 @@ const CheckoutPage = {
         document.getElementById('checkout-loading').classList.add('hidden');
         document.getElementById('checkout-form').classList.remove('hidden');
         document.getElementById('summary-section').classList.remove('hidden');
+    },
+
+    // ==================== LOYALTY POINTS ====================
+    // Rules from /checkout/features (BileteOnlineCart mirrors core's MarketplaceLoyaltyService): a logged-in customer
+    // pays part of the tickets with points (up to the programme's % and per-order cap), on the email of the account.
+    // The discount comes off before the processing fee, exactly as the server does it.
+
+    loyalty: null,
+    pointsBalance: 0,
+    pointsEmail: '',
+    usePoints: false,
+
+    async loadPointsBalance() {
+        this.pointsBalance = 0;
+        this.pointsEmail = '';
+        if (!this.loyalty || typeof BileteOnlineAuth === 'undefined' || !BileteOnlineAuth.isCustomer()) return;
+        try {
+            // fresh balance every time (a cached one could offer points already spent in another tab)
+            const r = await BileteOnlineAPI.request('/customer/rewards', { method: 'GET', noCache: true });
+            const p = r && r.data && r.data.points;
+            this.pointsBalance = Math.max(0, Math.floor(Number(p && (p.balance != null ? p.balance : p.current_balance)) || 0));
+            const user = BileteOnlineAuth.getUser();
+            this.pointsEmail = (user && user.email ? String(user.email) : '').trim().toLowerCase();
+        } catch (e) {
+            this.pointsBalance = 0;
+        }
+    },
+
+    setupPoints() {
+        const box = document.getElementById('use-points');
+        if (box) box.addEventListener('change', () => { this.usePoints = box.checked; this.renderSummary(); });
+        const login = document.getElementById('points-login');
+        if (login) login.addEventListener('click', () => this.showLoginModal());
+        // the points belong to the account's email: re-check when the buyer's email changes
+        const email = document.getElementById('buyer-email');
+        if (email) email.addEventListener('input', () => { if (this.loyalty && this.pointsBalance) this.renderSummary(); });
+    },
+
+    pointsWord(n) {
+        n = Math.floor(n);
+        if (n === 1) return '1 punct';
+        const rem = n % 100;
+        return new Intl.NumberFormat('ro-RO').format(n) + (n >= 20 && !(rem >= 1 && rem <= 19) ? ' de puncte' : ' puncte');
+    },
+
+    /** How many points this order uses (0 when off), and what the box says. */
+    pointsState(ticketValue) {
+        const state = { show: false, usable: 0, used: 0, note: '', login: false, canUse: false };
+        const c = this.loyalty;
+        if (!c) return state;
+        const loggedIn = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.isCustomer();
+        if (!loggedIn) {
+            state.show = ticketValue > 0;
+            state.login = true;
+            state.note = 'Ai puncte bilete.online? Intră în cont ca să plătești o parte din bilete cu ele.';
+            return state;
+        }
+        const min = Math.floor(Number(c.min_redeem_points) || 0);
+        if (this.pointsBalance <= 0) return state;
+        state.show = ticketValue > 0;
+        if (this.pointsBalance < min) {
+            state.note = 'Ai ' + this.pointsWord(this.pointsBalance) + '. Le poți folosi de la ' + this.pointsWord(min) + '.';
+            return state;
+        }
+        const buyer = (document.getElementById('buyer-email')?.value || '').trim().toLowerCase();
+        if (this.pointsEmail && buyer && buyer !== this.pointsEmail) {
+            state.note = 'Punctele se pot folosi doar la comenzile făcute cu adresa de email a contului tău.';
+            return state;
+        }
+        state.usable = BileteOnlineCart.maxRedeemablePoints(ticketValue, this.pointsBalance);
+        if (state.usable <= 0) { state.show = false; return state; }
+        state.canUse = true;
+        state.used = this.usePoints ? state.usable : 0;
+        return state;
+    },
+
+    renderPoints(state, earnBase) {
+        const c = this.loyalty;
+        const box = document.getElementById('points-box');
+        const reward = document.getElementById('points-reward');
+        if (!box || !reward) return;
+
+        box.classList.toggle('hidden', !state.show);
+        const row = document.getElementById('points-use-row');
+        const input = document.getElementById('use-points');
+        row.hidden = !(state.canUse || (state.show && !state.login && state.note));
+        input.disabled = !state.canUse;
+        if (!state.canUse) this.usePoints = false;
+        input.checked = this.usePoints; // the box always says what the total uses
+        if (state.canUse) {
+            document.getElementById('use-points-title').textContent = 'Folosește ' + this.pointsWord(state.usable);
+            document.getElementById('use-points-sub').textContent = '−' + this.money(BileteOnlineCart.pointsValue(state.usable)) +
+                ' din bilete · ai ' + this.pointsWord(this.pointsBalance);
+        } else if (!state.login) {
+            document.getElementById('use-points-title').textContent = 'Folosește punctele';
+            document.getElementById('use-points-sub').textContent = 'ai ' + this.pointsWord(this.pointsBalance);
+        }
+        const note = document.getElementById('points-note');
+        note.hidden = !state.note;
+        note.textContent = state.note;
+        document.getElementById('points-login').hidden = !state.login;
+
+        const pointsRow = document.getElementById('points-row');
+        if (state.used > 0) {
+            pointsRow.classList.remove('hidden');
+            document.getElementById('points-row-label').textContent = 'Plătit cu ' + this.pointsWord(state.used);
+            document.getElementById('points-row-amount').textContent = '-' + this.money(BileteOnlineCart.pointsValue(state.used));
+        } else {
+            pointsRow.classList.add('hidden');
+        }
+
+        // what the order earns: on the ticket value paid in money, credited after the activity
+        const earned = c ? BileteOnlineCart.estimatePoints(earnBase) : 0;
+        reward.classList.toggle('hidden', !c || earned <= 0);
+        if (c && earned > 0) {
+            document.getElementById('points-rule').textContent = (c.earn_rate_label ? c.earn_rate_label.charAt(0).toUpperCase() + c.earn_rate_label.slice(1) + ', ' : '') + 'în cont după activitate';
+            document.getElementById('points-earned').textContent = this.pointsWord(earned);
+        }
     },
 
     // ==================== HELPERS ====================
@@ -496,6 +617,8 @@ const CheckoutPage = {
 
                 const user = BileteOnlineAuth.getUser();
                 if (user) this.fillBuyer(user);
+                await this.loadPointsBalance();
+                this.renderSummary();
 
                 const loginBtn = document.getElementById('guest-login-btn');
                 if (loginBtn) loginBtn.classList.add('hidden');
@@ -746,9 +869,14 @@ const CheckoutPage = {
         // Promo code discount
         const promoDiscount = BileteOnlineCart.getPromoDiscount();
 
-        // Total = base prices + commission + insurance - discount
+        // Loyalty points: capped on the ticket value after the promo code
+        const ticketValue = Math.max(0, baseSubtotal - promoDiscount);
+        const pointsState = this.pointsState(ticketValue);
+        const pointsDiscount = BileteOnlineCart.pointsValue(pointsState.used);
+
+        // Total = base prices + commission + insurance - discount - points
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const baseTotal = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount);
+        const baseTotal = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount - pointsDiscount);
 
         // Cultural card surcharge (applied on entire total including insurance)
         const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'card';
@@ -779,7 +907,6 @@ const CheckoutPage = {
         } catch (e) {}
 
         const total = baseTotal + culturalCardSurcharge + processingFee.amount;
-        const points = Math.floor(total / 10);
 
         this.totals = {
             subtotal: subtotalWithCommission,
@@ -788,6 +915,8 @@ const CheckoutPage = {
             insurance: insuranceAmount,
             culturalCardSurcharge,
             processingFee: processingFee.amount,
+            pointsUsed: pointsState.used,
+            pointsDiscount,
             total,
             savings,
         };
@@ -867,7 +996,7 @@ const CheckoutPage = {
         if (!this.submitting) {
             document.getElementById('pay-btn-text').textContent = `Plătește ${this.money(total)}`;
         }
-        document.getElementById('points-earned').textContent = `${points} ${points === 1 ? 'punct' : 'puncte'}`;
+        this.renderPoints(pointsState, Math.max(0, ticketValue - pointsDiscount));
 
         const savingsText = document.getElementById('savings-text');
         if (savings > 0) {
@@ -996,6 +1125,16 @@ const CheckoutPage = {
                 checkoutData.promo_code = promo.code;
             }
 
+            // Loyalty points to pay with; the server checks them again against the account and its balance
+            if (this.totals.pointsUsed > 0) {
+                checkoutData.points_to_use = this.totals.pointsUsed;
+            }
+            // A friend's invite link (?ref=, kept by base.js): a first order through it earns both of them points
+            try {
+                const ref = localStorage.getItem('bileteonline_referral_code');
+                if (ref) checkoutData.referral_code = String(ref).slice(0, 20);
+            } catch (e) {}
+
             if (this.insuranceSelected && this.totals.insurance > 0) {
                 checkoutData.ticket_insurance = true;
                 checkoutData.ticket_insurance_amount = this.totals.insurance;
@@ -1069,6 +1208,12 @@ const CheckoutPage = {
             }
         } catch (error) {
             console.error('Checkout error:', error);
+            // Points no longer valid (balance changed, other email…): drop them, show the fresh total
+            if (error && error.data && error.data.errors && error.data.errors.code === 'points_invalid') {
+                this.usePoints = false;
+                await this.loadPointsBalance();
+                this.renderSummary();
+            }
             this.notify('error', error.message || 'Eroare la procesare. Încearcă din nou.');
             this.submitting = false;
             payBtn.disabled = !document.getElementById('termsCheckbox').checked;

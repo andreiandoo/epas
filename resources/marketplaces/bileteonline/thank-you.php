@@ -7,7 +7,7 @@
  * states they belong to in data-show and thank-you.css hides the others. IDs used by the script: ty-title,
  * printingText, confetti, ticketsCarousel, ticketsCount, ticketsScroll, scrollIndicators, ticketsPrev, ticketsNext,
  * emailCardTitle, buyerEmail, orderDetails, orderStatus, eventInfo, ticketsSummary, paymentSummary,
- * paymentProcessorBadge, paymentProcessorBadgeText, cardNumber, pointsEarned, earnedPoints, newPoints,
+ * paymentProcessorBadge, paymentProcessorBadgeText, cardNumber, pointsEarned, pointsTitle, pointsText, earnedPoints,
  * thankYouMessage, thankYouMessageBody, downloadBtn, calendarBtn, shareFb, shareWa, backSection.
  */
 
@@ -147,11 +147,11 @@ include __DIR__ . '/includes/v2/header.php';
           </div>
         </div>
 
-        <div id="pointsEarned" class="ty-points">
+        <div id="pointsEarned" class="ty-points" hidden>
           <span class="ty-points-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
           <div>
-            <b>Ai câștigat puncte!</b>
-            <p>Sold nou: <span id="newPoints">0</span> puncte</p>
+            <b id="pointsTitle">Câștigi puncte cu această comandă</b>
+            <p id="pointsText">Intră în cont după activitate. Le vezi în <a href="/cont/puncte">Punctele mele</a>.</p>
           </div>
           <p class="ty-points-n"><span id="earnedPoints">+0</span><small>puncte</small></p>
         </div>

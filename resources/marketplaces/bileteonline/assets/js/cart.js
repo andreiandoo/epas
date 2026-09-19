@@ -819,23 +819,76 @@ const BileteOnlineCart = {
      * cart + checkout summary code can gate on truthiness.
      */
     async loadPaymentFeeConfig() {
-        if (this._paymentFeeFetched) return this._paymentFeeConfig;
-        this._paymentFeeFetched = true;
-        try {
-            if (typeof BileteOnlineAPI === 'undefined') return null;
-            // The proxy maps '/checkout/features' → action 'checkout.features'
-            // which forwards to the Laravel /marketplace-config/checkout/features
-            // endpoint. We use the short URL here so api.js picks the right
-            // action from getProxyAction().
-            const r = await BileteOnlineAPI.get('/checkout/features');
-            const fees = r?.data?.payment_fees || null;
-            if (fees && fees.providers && Object.keys(fees.providers).length > 0) {
-                this._paymentFeeConfig = fees;
-            }
-        } catch (e) {
-            // Silent — fee preview is a UX enhancement, not a blocker.
+        if (this._featuresPromise) {
+            await this._featuresPromise;
+            return this._paymentFeeConfig;
         }
+        this._paymentFeeFetched = true;
+        this._featuresPromise = (async () => {
+            try {
+                // The proxy maps '/checkout/features' → action 'checkout.features'
+                // which forwards to the Laravel /marketplace-config/checkout/features
+                // endpoint. We use the short URL here so api.js picks the right
+                // action from getProxyAction(). Pages without api.js (the activity
+                // page) ask the proxy directly.
+                let r;
+                if (typeof BileteOnlineAPI !== 'undefined') {
+                    r = await BileteOnlineAPI.get('/checkout/features');
+                } else {
+                    const res = await fetch((window.BILETEONLINE?.apiUrl || '/api/proxy.php') + '?action=checkout.features', { headers: { Accept: 'application/json' } });
+                    r = res.ok ? await res.json() : null;
+                }
+                const fees = r?.data?.payment_fees || null;
+                if (fees && fees.providers && Object.keys(fees.providers).length > 0) {
+                    this._paymentFeeConfig = fees;
+                }
+                // Points rules (null when the marketplace has no automatic rewards)
+                const loyalty = r?.data?.loyalty || null;
+                this._loyaltyConfig = loyalty && loyalty.enabled ? loyalty : null;
+            } catch (e) {
+                // Silent — fee preview is a UX enhancement, not a blocker.
+            }
+        })();
+        await this._featuresPromise;
         return this._paymentFeeConfig;
+    },
+
+    // ---- loyalty points (rules from /checkout/features; mirrors core's MarketplaceLoyaltyService) ----
+    _loyaltyConfig: null,
+
+    async loadLoyaltyConfig() {
+        await this.loadPaymentFeeConfig();
+        return this._loyaltyConfig;
+    },
+
+    getLoyaltyConfig() {
+        return this._loyaltyConfig;
+    },
+
+    /** Points earned on an amount (lei): earn_percentage% of it returned as points. 0 when the programme is off. */
+    estimatePoints(amountLei) {
+        const c = this._loyaltyConfig;
+        const value = c ? (Number(c.point_value) || 0.01) : 0;
+        if (!c || !value || !(amountLei > 0) || amountLei < (Number(c.min_order_for_earning) || 0)) return 0;
+        return Math.floor(Math.round(amountLei * (Number(c.earn_percentage) || 0) / 100 / value * 1e6) / 1e6);
+    },
+
+    /** Most points an order may use: max % of the ticket value, the per-order cap, the balance; 0 under the minimum. */
+    maxRedeemablePoints(ticketValue, balance) {
+        const c = this._loyaltyConfig;
+        const value = c ? (Number(c.point_value) || 0.01) : 0;
+        balance = Math.floor(Number(balance) || 0);
+        if (!c || !value || !(ticketValue > 0) || balance <= 0 || balance < (Number(c.min_redeem_points) || 0)) return 0;
+        const pct = Number(c.max_redeem_percentage) || 0;
+        let max = pct > 0 ? Math.floor(Math.round(ticketValue * pct / 100 / value * 1e6) / 1e6) : 0;
+        const cap = Math.floor(Number(c.max_redeem_points_per_order) || 0);
+        if (cap > 0) max = Math.min(max, cap);
+        return Math.max(0, Math.min(max, balance));
+    },
+
+    pointsValue(points) {
+        const c = this._loyaltyConfig;
+        return Math.round((Math.floor(points) || 0) * (c ? (Number(c.point_value) || 0.01) : 0.01) * 100) / 100;
     },
 
     getPaymentFeeConfig() {
