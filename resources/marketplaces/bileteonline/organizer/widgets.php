@@ -28,7 +28,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-widgets.css'];
 $v2Scripts = ['organizer.js', 'org-widgets.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config() . '<script>window.BO_WIDGETS=' . json_encode(['siteUrl' => rtrim(SITE_URL, '/')], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) . ';</script>';
+$v2HeadExtra = v2_account_client_config('organizer') . '<script>window.BO_WIDGETS=' . json_encode(['siteUrl' => rtrim(SITE_URL, '/')], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) . ';</script>';
 
 $owUpload = function (string $type, string $label, string $hint) {
     return '<div class="ow-up" data-up="' . $type . '"><span class="ow-f-l">' . $label . '</span>'

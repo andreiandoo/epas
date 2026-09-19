@@ -26,7 +26,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-service-orders.css'];
 $v2Scripts = ['organizer.js', 'org-service-orders.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $sqStat = function (string $key, string $label, string $icon) {
     return '<article class="sq-stat"><span class="sq-stat-ic">' . v2_ic($icon) . '</span><div><p class="sq-stat-k">' . $label . '</p><p class="sq-stat-v" id="sq-s-' . $key . '"><span class="org-skel sq-sk"></span></p></div></article>';

@@ -5,7 +5,7 @@
  * Replaces includes/organizer-sidebar.php, organizer-topbar.php and organizer-footer.php on the pages ported to v2. A
  * page includes v2/head.php, calls v2_org_start('<key>'), prints its content (it lands inside <main>), calls
  * v2_org_end() and then includes v2/foot.php (cookie consent and scripts). It loads organizer.css + organizer.js, the
- * legacy config / utils / api / auth scripts, and puts v2_account_client_config() in $v2HeadExtra.
+ * legacy config / utils / api / auth scripts, and puts v2_account_client_config('organizer') in $v2HeadExtra.
  *
  * Everything the previous organizer chrome had is here: the sections with their badges (activities in progress, open
  * support tickets, "nou" on extra services), the organizer card with logout, the activity search, "Activitate nouă",

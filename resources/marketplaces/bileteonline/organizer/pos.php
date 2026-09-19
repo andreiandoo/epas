@@ -26,7 +26,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-pos.css'];
 $v2Scripts = ['organizer.js', 'pos-printer.js', 'org-pos.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $poStat = function (string $key, string $label, string $tone = '') {
     return '<div class="po-x' . ($tone ? ' ' . $tone : '') . '"><p>' . $label . '</p><b id="po-x-' . $key . '">—</b></div>';

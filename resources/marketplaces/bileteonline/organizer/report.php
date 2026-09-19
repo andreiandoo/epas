@@ -33,7 +33,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-report.css'];
 $v2Scripts = ['organizer.js', 'org-report.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $orStat = function (string $key, string $label) {
     return '<article class="or-stat"><p class="or-stat-k">' . $label . '</p><p class="or-stat-v" id="or-s-' . $key . '"><span class="org-skel or-sk"></span></p><p class="or-stat-p" id="or-s-' . $key . '-p"></p></article>';

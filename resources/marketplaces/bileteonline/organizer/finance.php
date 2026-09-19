@@ -34,7 +34,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-finance.css'];
 $v2Scripts = ['organizer.js', 'org-finance.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $ofCard = function (string $key, string $cls, string $label, string $help, string $toggle) {
     return '<article class="of-card ' . $cls . '">'

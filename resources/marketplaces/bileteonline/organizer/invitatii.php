@@ -33,7 +33,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-invitations.css'];
 $v2Scripts = ['organizer.js', 'org-invitations.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $oiX = '<button class="oi-x" type="button" data-close aria-label="Închide">' . v2_ic('x') . '</button>';
 

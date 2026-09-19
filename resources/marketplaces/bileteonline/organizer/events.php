@@ -48,7 +48,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-events.css'];
 $v2Scripts = ['organizer.js', 'org-events.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 /** A form field: label, control, optional help, error slot. org-events.js links them with aria-describedby. */
 $oeField = function (string $id, string $label, string $control, array $o = []): string {

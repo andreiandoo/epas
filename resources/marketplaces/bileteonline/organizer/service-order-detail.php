@@ -33,7 +33,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-service-order-detail.css'];
 $v2Scripts = ['organizer.js', 'org-service-order-detail.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $sdFact = function (string $key, string $label) {
     return '<div class="sd-fact"><dt>' . $label . '</dt><dd id="sd-' . $key . '">—</dd></div>';

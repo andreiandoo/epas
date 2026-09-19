@@ -33,7 +33,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-participants.css'];
 $v2Scripts = ['organizer.js', 'org-participants.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('participants');
