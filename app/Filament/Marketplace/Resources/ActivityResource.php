@@ -362,6 +362,131 @@ class ActivityResource extends Resource
         ];
     }
 
+    /**
+     * Product model of the activities module: what is sold (access ticket,
+     * experience, package), where (location), how it is booked (all day or on
+     * time slots) and its limits. Admin-created products need no review;
+     * products sent by operators wait for approval here.
+     */
+    protected static function productTabSchema($marketplace): array
+    {
+        $isType = fn (string $type) => fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('product_type') === $type;
+
+        return [
+            SC\Section::make('Ce se vinde')
+                ->schema([
+                    Forms\Components\Select::make('product_type')
+                        ->label('Tip produs')
+                        ->options([
+                            'access' => 'Bilet de acces',
+                            'experience' => 'Serviciu / experiență',
+                            'package' => 'Pachet (acces + servicii)',
+                        ])
+                        ->default('experience')
+                        ->required()
+                        ->live(),
+                    Forms\Components\Select::make('access_kind')
+                        ->label('Acces pentru')
+                        ->options(['person' => 'Persoane', 'vehicle' => 'Vehicule (parcare)', 'camping' => 'Camping / noapte', 'other' => 'Altceva'])
+                        ->visible($isType('access')),
+                    Forms\Components\Select::make('service_type')
+                        ->label('Tip serviciu')
+                        ->options(['rental' => 'Închiriere', 'guided' => 'Tur / activitate ghidată', 'workshop' => 'Atelier / curs', 'other' => 'Altceva'])
+                        ->visible($isType('experience')),
+                    Forms\Components\Select::make('location_id')
+                        ->label('Locație')
+                        ->options(fn () => \App\Models\ActivityLocation::where('marketplace_client_id', $marketplace?->id)
+                            ->orderBy('id')->get()
+                            ->mapWithKeys(fn ($l) => [$l->id => ($l->name['ro'] ?? $l->name['en'] ?? $l->slug)])
+                            ->toArray())
+                        ->searchable()
+                        ->live()
+                        ->helperText('Unde se vinde. Experiențele pot exista și fără locație (ex: tur cu punct de întâlnire).'),
+                    Forms\Components\Select::make('display_category')
+                        ->label('Categorie de afișare pe pagina locației')
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                            $location = \App\Models\ActivityLocation::find($get('location_id'));
+                            return collect((array) ($location?->display_categories ?? []))
+                                ->filter(fn ($c) => !empty($c['id']))
+                                ->mapWithKeys(fn ($c) => [(string) $c['id'] => is_array($c['name'] ?? null) ? ($c['name']['ro'] ?? reset($c['name'])) : ($c['name'] ?? $c['id'])])
+                                ->toArray();
+                        })
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('location_id')),
+                    Forms\Components\TextInput::make('icon')
+                        ->label('Iconiță (emoji)')
+                        ->maxLength(16),
+                    Forms\Components\TextInput::make('unit_label.ro')
+                        ->label('Unitate de preț')
+                        ->placeholder('persoană / zi')
+                        ->maxLength(60),
+                    Forms\Components\Textarea::make('usage_terms.ro')
+                        ->label('Condiții de utilizare')
+                        ->rows(2)
+                        ->maxLength(1000)
+                        ->columnSpanFull(),
+                ])
+                ->columns(2),
+
+            SC\Section::make('Rezervare și capacitate')
+                ->schema([
+                    Forms\Components\Select::make('booking_mode')
+                        ->label('Se rezervă')
+                        ->options(['day' => 'Pe zi (valabil toată ziua)', 'slot' => 'Pe interval orar'])
+                        ->default('slot')
+                        ->required()
+                        ->live(),
+                    Forms\Components\Select::make('capacity_mode')
+                        ->label('Capacitatea înseamnă')
+                        ->options([
+                            'per_slot' => 'Locuri la fiecare oră de start (tururi, ateliere)',
+                            'concurrent' => 'Unități folosite în paralel (bărci, biciclete)',
+                        ])
+                        ->default('per_slot')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('booking_mode') === 'slot'),
+                    Forms\Components\TextInput::make('daily_capacity')
+                        ->label('Capacitate pe zi')
+                        ->numeric()->minValue(1)
+                        ->helperText('Gol = nelimitat. La biletele pe interval orar e o limită în plus pe zi.'),
+                    Forms\Components\Toggle::make('use_location_schedule')
+                        ->label('Programul locației (sezoane)')
+                        ->helperText('Orele și ultima intrare vin din sezoanele locației.')
+                        ->inline(false),
+                    Forms\Components\Select::make('access_requirement')
+                        ->label('Cere bilet de acces în coș')
+                        ->options(['none' => 'Nu', 'any' => 'Da, câte unul pe unitate', 'adult' => 'Da, câte un adult pe unitate'])
+                        ->default('none')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('product_type') !== 'access'),
+                    Forms\Components\Toggle::make('requires_vehicle_info')
+                        ->label('Cere numărul de înmatriculare')
+                        ->inline(false),
+                    Forms\Components\Toggle::make('pos_only')
+                        ->label('Doar la casă (ascuns online)')
+                        ->inline(false),
+                    Forms\Components\Select::make('issuing_company')
+                        ->label('Firma care emite')
+                        ->options(['primary' => 'Firma principală', 'secondary' => 'Firma secundară'])
+                        ->default('primary'),
+                ])
+                ->columns(2),
+
+            SC\Section::make('Aprobare')
+                ->description('Produsele trimise de operatori se publică după aprobare. Cele create aici nu au nevoie.')
+                ->schema([
+                    Forms\Components\Select::make('review_status')
+                        ->label('Stare')
+                        ->options(['draft' => 'Ciornă', 'pending' => 'Trimis spre aprobare', 'approved' => 'Aprobat', 'rejected' => 'Respins'])
+                        ->placeholder('Creat de admin (fără aprobare)')
+                        ->live(),
+                    Forms\Components\Textarea::make('rejection_reason')
+                        ->label('Motivul respingerii (îl vede operatorul)')
+                        ->rows(2)
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('review_status') === 'rejected'),
+                ])
+                ->columns(2)
+                ->collapsed(fn ($record) => $record?->review_status === null),
+        ];
+    }
+
     public static function form(Schema $schema): Schema
     {
         $marketplace = static::getMarketplaceClient();
@@ -543,6 +668,14 @@ class ActivityResource extends Resource
                                 // ====================================================
                                 // TAB 2: LOCAȚIE & CATEGORII
                                 // ====================================================
+                                // ====================================================
+                                // TAB: PRODUS (tip, locație, rezervare, capacitate)
+                                // ====================================================
+                                SC\Tabs\Tab::make('Produs')
+                                    ->key('produs')
+                                    ->icon('heroicon-o-ticket')
+                                    ->schema(static::productTabSchema($marketplace)),
+
                                 SC\Tabs\Tab::make('Locație')
                                     ->key('locatie')
                                     ->icon('heroicon-o-map-pin')
@@ -707,6 +840,15 @@ class ActivityResource extends Resource
                                                             ->label('Activ')
                                                             ->default(true)
                                                             ->inline(false),
+                                                        Forms\Components\TextInput::make('season_start')
+                                                            ->label('Sezon din (LL-ZZ)')
+                                                            ->placeholder('04-01')
+                                                            ->regex('/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/')
+                                                            ->helperText('Lună-zi. Gol = tot anul.'),
+                                                        Forms\Components\TextInput::make('season_end')
+                                                            ->label('Sezon până la (LL-ZZ)')
+                                                            ->placeholder('10-31')
+                                                            ->regex('/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/'),
                                                     ])
                                                     ->columns(4)
                                                     ->reorderable(false)
@@ -1524,6 +1666,8 @@ class ActivityResource extends Resource
     {
         return [
             RelationManagers\ActivityVariantsRelationManager::class,
+            RelationManagers\AddonsRelationManager::class,
+            RelationManagers\PackageItemsRelationManager::class,
             RelationManagers\BookingsRelationManager::class,
         ];
     }

@@ -126,6 +126,56 @@ class ActivityVariantsRelationManager extends RelationManager
                 ])
                 ->columns(1),
 
+            SC\Section::make('Tip, durată, grup')
+                ->description('Adult / copil, bilete pe mai multe zile, durate diferite (30 / 60 min), grupuri, unități (barcă, mașină).')
+                ->schema([
+                    Forms\Components\Select::make('price_type')
+                        ->label('Prețul este')
+                        ->options([
+                            'per_person' => 'pe persoană',
+                            'per_unit' => 'pe unitate (barcă, mașină, familie)',
+                        ])
+                        ->default('per_person')
+                        ->required(),
+                    Forms\Components\Toggle::make('is_child')
+                        ->label('Bilet de copil')
+                        ->helperText('Contează la regula „bilet de acces pentru adult”.'),
+                    Forms\Components\TextInput::make('persons_min')
+                        ->label('Persoane (minim)')
+                        ->numeric()->minValue(1)->maxValue(500),
+                    Forms\Components\TextInput::make('persons_max')
+                        ->label('Persoane (maxim)')
+                        ->numeric()->minValue(1)->maxValue(500)
+                        ->helperText('Câte persoane acoperă o unitate (ex: 4 într-o barcă).'),
+                    Forms\Components\TextInput::make('duration_minutes')
+                        ->label('Durată (minute)')
+                        ->numeric()->minValue(5)->maxValue(1440)
+                        ->helperText('Lasă gol pentru durata produsului. Ex: 30 sau 60 la închirieri.'),
+                    Forms\Components\TextInput::make('validity_days')
+                        ->label('Valabil (zile)')
+                        ->numeric()->default(1)->minValue(1)->maxValue(60)
+                        ->helperText('Bilete pe toată ziua: 2 = două zile la rând (abonament, camping).'),
+                    Forms\Components\TextInput::make('step_qty')
+                        ->label('Se cumpără câte')
+                        ->numeric()->minValue(1)->maxValue(100)
+                        ->helperText('Gol = oricâte. Pentru grupuri, după minimul pe comandă.'),
+                    Forms\Components\TextInput::make('companion_label')
+                        ->label('Bilet gratuit de însoțitor')
+                        ->maxLength(80)
+                        ->placeholder('ex: Ghid / însoțitor')
+                        ->helperText('Se emite automat când se cumpără cel puțin minimul pe comandă.'),
+                    Forms\Components\TextInput::make('pos_price_cents')
+                        ->label('Preț la casă')
+                        ->numeric()->minValue(0)->step(0.01)->suffix('lei')
+                        ->helperText('Gol = același ca online.')
+                        ->formatStateUsing(fn ($state) => $state !== null ? round($state / 100, 2) : null)
+                        ->dehydrateStateUsing(fn ($state) => $state !== null && $state !== '' ? (int) round(((float) $state) * 100) : null),
+                    Forms\Components\Toggle::make('pos_only')
+                        ->label('Doar la casă (ascuns online)'),
+                ])
+                ->columns(2)
+                ->collapsed(),
+
             SC\Section::make('Vârstă')
                 ->schema([
                     Forms\Components\TextInput::make('min_age')
