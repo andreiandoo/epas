@@ -87,6 +87,32 @@ class OrganizerLeadResource extends Resource
         'cultura'         => 'Cultură & artă',
     ];
 
+    /** meta.company (see LeadsController::companyFromAnaf) as a few lines: name, CUI, reg. com., office, VAT, status. */
+    protected static function companySummary(?array $company): HtmlString|string
+    {
+        if (empty($company['cui'])) {
+            return '—';
+        }
+        if (empty($company['verified'])) {
+            return new HtmlString('CUI <strong>' . e($company['cui']) . '</strong> · <span class="text-warning-600">neverificat la ANAF (nu a răspuns sau nu l-a găsit) — verifică manual</span>');
+        }
+        $flags = [];
+        if (!empty($company['deregistered'])) {
+            $flags[] = '<span class="text-danger-600 font-semibold">radiată</span>';
+        } elseif (!empty($company['inactive'])) {
+            $flags[] = '<span class="text-warning-600 font-semibold">inactivă fiscal</span>';
+        }
+        $lines = [
+            '<strong>' . e($company['name'] ?? '') . '</strong>',
+            'CUI ' . e(($company['vat_payer'] ?? false ? 'RO' : '') . $company['cui']) . (!empty($company['reg_com']) ? ' · ' . e($company['reg_com']) : ''),
+            e(trim(implode(', ', array_filter([$company['address'] ?? '', $company['city'] ?? '', $company['county'] ?? '', $company['zip'] ?? ''])), ', ')),
+            e(($company['vat_payer'] ?? false) ? 'Plătitor de TVA' : 'Neplătitor de TVA') . (!empty($company['legal_form']) ? ' · ' . e(mb_strtolower($company['legal_form'])) : '') . (!empty($company['caen']) ? ' · CAEN ' . e($company['caen']) : ''),
+            e($company['status'] ?? '') . ($flags ? ' · ' . implode(' · ', $flags) : ''),
+        ];
+
+        return new HtmlString(implode('<br>', array_filter($lines, fn ($line) => $line !== '')));
+    }
+
     /**
      * Build the public link a sales person should send to a lead. Used
      * both by the form preview (live) and by the View page (after save).
@@ -207,6 +233,28 @@ class OrganizerLeadResource extends Resource
                     Forms\Components\Textarea::make('notes')
                         ->label('Note interne')->rows(2)
                         ->columnSpan(12),
+                ]),
+
+            // What the public form collected beyond the columns: the company as ANAF has it (never typed by the
+            // visitor) and the needs they ticked. Read-only; hidden on leads that came without them.
+            SC\Section::make('Firmă (ANAF) și nevoi')
+                ->description('Din formularul /inregistrare-locatie: datele firmei sunt preluate de la ANAF după CUI, nevoile sunt bifate de lead.')
+                ->visible(fn (?OrganizerLead $record) => filled($record?->meta['company'] ?? null) || filled($record?->meta['needs'] ?? null))
+                ->columns(2)
+                ->schema([
+                    Forms\Components\Placeholder::make('meta_company')
+                        ->label('Firmă')
+                        ->content(fn (?OrganizerLead $record) => self::companySummary($record?->meta['company'] ?? null)),
+                    Forms\Components\Placeholder::make('meta_needs')
+                        ->label('De ce are nevoie')
+                        ->content(function (?OrganizerLead $record) {
+                            $needs = (array) ($record?->meta['needs'] ?? []);
+                            if (!$needs) {
+                                return '—';
+                            }
+                            $items = array_map(fn ($key) => '<li>' . e(OrganizerLead::NEEDS[$key] ?? $key) . '</li>', $needs);
+                            return new HtmlString('<ul class="list-disc ps-5 space-y-0.5">' . implode('', $items) . '</ul>');
+                        }),
                 ]),
 
             // Live preview of the campaign URL — updates as the rep fills

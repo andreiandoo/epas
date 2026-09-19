@@ -53,6 +53,25 @@ class OrganizerLead extends Model
         'organic'        => 'Organic search',
     ];
 
+    /**
+     * What the venue says it needs, ticked on /inregistrare-locatie (stored as keys in meta.needs). The keys are the
+     * contract with the form; a key the form sends that isn't here is dropped.
+     */
+    public const NEEDS = [
+        'online_sales' => 'Vânzare online de bilete',
+        'slots'        => 'Rezervări pe zile și sloturi orare',
+        'groups'       => 'Pachete de grup și prețuri pe vârste',
+        'pos'          => 'Vânzare la ghișeu (POS)',
+        'scanning'     => 'Scanare bilete la intrare',
+        'widget'       => 'Vânzare de pe site-ul propriu (widget)',
+        'visibility'   => 'Mai mulți clienți și vizibilitate (SEO)',
+        'tracking'     => 'Tracking pentru reclame',
+        'promo'        => 'Coduri promo și carduri cadou',
+        'invoicing'    => 'Facturi și documente ANAF',
+        'reports'      => 'Rapoarte și deconturi',
+        'migration'    => 'Mutare de pe altă platformă',
+    ];
+
     protected $fillable = [
         'marketplace_client_id',
         'session_token',

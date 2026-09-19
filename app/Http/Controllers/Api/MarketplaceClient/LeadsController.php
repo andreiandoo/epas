@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Marketplace\OrganizerLead;
 use App\Models\Marketplace\OrganizerLeadEvent;
+use App\Services\AnafService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,10 @@ class LeadsController extends BaseController
             'utm.utm_campaign'=> 'nullable|string|max:150',
             'utm.utm_content' => 'nullable|string|max:150',
             'utm.utm_term'    => 'nullable|string|max:150',
+            'cui'             => 'nullable|string|max:20',
+            'city_slug'       => 'nullable|string|max:120',
+            'needs'           => 'nullable|array|max:30',
+            'needs.*'         => 'string|max:40',
         ]);
 
         // Cheap rate-limit so a misbehaving client can't flood the
@@ -74,8 +79,25 @@ class LeadsController extends BaseController
 
         $utm = $validated['utm'] ?? [];
 
+        // The company is looked up here, not taken from the form: the page shows what ANAF says and the visitor
+        // can't type it, so the lead keeps ANAF's data only (or just the CUI, marked unverified, if ANAF didn't answer).
+        $meta = [
+            'ip'         => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 500),
+        ];
+        if (!empty($validated['cui'])) {
+            $meta['company'] = $this->companyFromAnaf($validated['cui']);
+        }
+        $needs = array_values(array_intersect(array_keys(OrganizerLead::NEEDS), (array) ($validated['needs'] ?? [])));
+        if ($needs) {
+            $meta['needs'] = $needs;
+        }
+        if (!empty($validated['city_slug'])) {
+            $meta['city_slug'] = $validated['city_slug'];
+        }
+
         try {
-            $lead = DB::transaction(function () use ($client, $validated, $utm, $request) {
+            $lead = DB::transaction(function () use ($client, $validated, $utm, $request, $meta) {
                 /** @var OrganizerLead $lead */
                 $lead = OrganizerLead::create([
                     'marketplace_client_id' => $client->id,
@@ -102,10 +124,7 @@ class LeadsController extends BaseController
                     'utm_content'     => $utm['utm_content']  ?? null,
                     'utm_term'        => $utm['utm_term']     ?? null,
                     'submitted_at'    => now(),
-                    'meta'            => [
-                        'ip'         => $request->ip(),
-                        'user_agent' => substr((string) $request->userAgent(), 0, 500),
-                    ],
+                    'meta'            => $meta,
                 ]);
 
                 // Promote all prior anonymous events for this session to
@@ -176,6 +195,45 @@ class LeadsController extends BaseController
             ]);
             return $this->error('Lead creation failed. Please try again.', 500);
         }
+    }
+
+    /**
+     * The company behind a CUI as ANAF has it (registered office, as the form shows it). Unverified when ANAF didn't
+     * find it or didn't answer: the CUI stays on the lead so the team can check it by hand.
+     */
+    protected function companyFromAnaf(string $cui): array
+    {
+        $digits = substr(preg_replace('/\D/', '', $cui), 0, 12);
+        $company = ['cui' => $digits, 'verified' => false];
+        if ($digits === '') {
+            return $company;
+        }
+
+        $raw = app(AnafService::class)->lookupByCui($digits)['raw_data'] ?? null;
+        if (!is_array($raw)) {
+            return $company;
+        }
+        $general = $raw['date_generale'] ?? [];
+        $office = $raw['adresa_sediu_social'] ?? [];
+        $status = (string) ($general['stare_inregistrare'] ?? '');
+
+        return [
+            'cui'          => (string) ($general['cui'] ?? $digits),
+            'verified'     => true,
+            'verified_at'  => now()->toIso8601String(),
+            'name'         => (string) ($general['denumire'] ?? ''),
+            'reg_com'      => (string) ($general['nrRegCom'] ?? ''),
+            'address'      => trim(preg_replace('/\s+/', ' ', ($office['sdenumire_Strada'] ?? '') . ' ' . ($office['snumar_Strada'] ?? '') . ' ' . ($office['sdetalii_Adresa'] ?? ''))),
+            'city'         => (string) ($office['sdenumire_Localitate'] ?? ''),
+            'county'       => (string) ($office['sdenumire_Judet'] ?? ''),
+            'zip'          => (string) ($office['scod_Postal'] ?? ''),
+            'vat_payer'    => !empty($raw['inregistrare_scop_Tva']['scpTVA']),
+            'status'       => $status,
+            'inactive'     => !empty($raw['stare_inactiv']['statusInactivi']),
+            'deregistered' => !empty($raw['stare_inactiv']['dataRadiere']) || stripos($status, 'RADI') !== false,
+            'legal_form'   => (string) ($general['forma_juridica'] ?? ''),
+            'caen'         => (string) ($general['cod_CAEN'] ?? ''),
+        ];
     }
 
     public function track(Request $request): JsonResponse

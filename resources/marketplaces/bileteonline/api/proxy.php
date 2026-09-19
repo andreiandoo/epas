@@ -3234,7 +3234,12 @@ switch ($action) {
                 'vat_payer' => !empty($tva['scpTVA']),
                 'status' => $dateGen['stare_inregistrare'] ?? '',
                 'phone' => $dateGen['telefon'] ?? '',
-                'fax' => $dateGen['fax'] ?? ''
+                'fax' => $dateGen['fax'] ?? '',
+                // venue signup (/inregistrare-locatie) shows these and refuses a struck-off company
+                'inactive' => !empty($company['stare_inactiv']['statusInactivi']),
+                'deregistered' => !empty($company['stare_inactiv']['dataRadiere']) || stripos((string) ($dateGen['stare_inregistrare'] ?? ''), 'RADI') !== false,
+                'legal_form' => $dateGen['forma_juridica'] ?? '',
+                'caen' => $dateGen['cod_CAEN'] ?? ''
             ]
         ];
 
