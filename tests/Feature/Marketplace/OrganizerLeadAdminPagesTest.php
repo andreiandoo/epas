@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Resources\OrganizerLeadResource\Pages\ViewOrganizer
 use App\Models\Marketplace\OrganizerLead;
 use App\Models\Marketplace\OrganizerLeadEvent;
 use App\Models\MarketplaceAdmin;
+use App\Models\MarketplaceOrganizer;
 use Filament\Facades\Filament;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,13 @@ class OrganizerLeadAdminPagesTest extends TestCase
         });
         Schema::create('users', function (Blueprint $t) {
             $t->id(); $t->string('name')->nullable(); $t->string('email')->nullable(); $t->timestamps();
+        });
+        Schema::create('marketplace_organizers', function (Blueprint $t) {
+            $t->id(); $t->unsignedBigInteger('marketplace_client_id')->nullable(); $t->string('email')->unique(); $t->string('slug')->nullable();
+            foreach (array_diff((new MarketplaceOrganizer())->getFillable(), ['marketplace_client_id', 'email', 'slug']) as $column) {
+                $t->text($column)->nullable();
+            }
+            $t->softDeletes(); $t->timestamps();
         });
         (require base_path('database/migrations/2026_06_04_122308_create_marketplace_organizer_leads_table.php'))->up();
         (require base_path('database/migrations/2026_06_04_122309_create_marketplace_organizer_lead_events_table.php'))->up();
@@ -78,6 +86,19 @@ class OrganizerLeadAdminPagesTest extends TestCase
             ->mountAction('copy_campaign_link')
             ->assertOk()
             ->assertSee('loc=Camera+13', false);
+    }
+
+    public function test_the_account_created_with_the_lead_is_shown_with_its_status(): void
+    {
+        $organizerId = DB::table('marketplace_organizers')->insertGetId(['marketplace_client_id' => 5, 'email' => 'ana@example.test', 'name' => 'Camera 13', 'slug' => 'camera-13', 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
+        $this->lead->forceFill(['meta' => array_merge($this->lead->meta, ['organizer_id' => $organizerId])])->save();
+
+        Livewire::test(ViewOrganizerLead::class, ['record' => $this->lead->getRouteKey()])
+            ->assertOk()
+            ->assertSee('Cont de operator')
+            ->assertSee('Camera 13 (#' . $organizerId . ')')
+            ->assertSee('în așteptarea aprobării')
+            ->assertSee('/marketplace/organizers/' . $organizerId . '/edit', false);
     }
 
     public function test_edit_page_renders(): void

@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Marketplace\OrganizerLead;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\AuthController as OrganizerAuthController;
 use App\Models\Marketplace\OrganizerLeadEvent;
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceOrganizer;
 use App\Services\AnafService;
+use App\Services\Marketplace\AccountPasswordSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -62,6 +67,9 @@ class LeadsController extends BaseController
             'city_slug'       => 'nullable|string|max:120',
             'needs'           => 'nullable|array|max:30',
             'needs.*'         => 'string|max:40',
+            // with a password the organizer account is created too (pending until the marketplace approves it)
+            'password'        => 'nullable|string|min:8|max:255',
+            'terms_accepted'  => 'nullable|boolean',
         ]);
 
         // Cheap rate-limit so a misbehaving client can't flood the
@@ -79,6 +87,25 @@ class LeadsController extends BaseController
 
         $utm = $validated['utm'] ?? [];
 
+        // The organizer account (when a password came): what would stop it is said now, before the lead is written,
+        // so the visitor fixes the form and sends it again. An email that is an organizer on another marketplace
+        // can't have one here (the email column is unique across marketplaces): the lead goes in without it.
+        $password = $validated['password'] ?? null;
+        $accountBlocked = null;
+        if ($password !== null) {
+            $email = strtolower(trim($validated['email']));
+            if (MarketplaceOrganizer::where('marketplace_client_id', $client->id)->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+                throw ValidationException::withMessages(['email' => 'Există deja un cont de operator cu acest email. Intră în cont cu el sau folosește altă adresă.']);
+            }
+            $conflicts = rescue(fn () => app(AccountPasswordSync::class)->conflictingAccounts($client->id, $email, $password, 'organizer'), []);
+            if ($conflicts) {
+                throw ValidationException::withMessages(['password' => AccountPasswordSync::conflictMessage($conflicts)]);
+            }
+            if (MarketplaceOrganizer::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+                $accountBlocked = 'email_in_use';
+            }
+        }
+
         // The company is looked up here, not taken from the form: the page shows what ANAF says and the visitor
         // can't type it, so the lead keeps ANAF's data only (or just the CUI, marked unverified, if ANAF didn't answer).
         $meta = [
@@ -94,6 +121,9 @@ class LeadsController extends BaseController
         }
         if (!empty($validated['city_slug'])) {
             $meta['city_slug'] = $validated['city_slug'];
+        }
+        if (!empty($validated['terms_accepted'])) {
+            $meta['terms_accepted_at'] = now()->toIso8601String();
         }
 
         try {
@@ -183,10 +213,18 @@ class LeadsController extends BaseController
                 return $lead;
             });
 
+            $account = null;
+            if ($password !== null) {
+                $account = $accountBlocked
+                    ? ['created' => false, 'reason' => $accountBlocked]
+                    : $this->createOrganizerAccount($client, $validated, $meta['company'] ?? null, $lead);
+            }
+
             return $this->success([
                 'lead_id'    => $lead->id,
                 'status'     => $lead->status,
                 'message'    => 'Lead created.',
+                'account'    => $account,
             ]);
         } catch (\Throwable $e) {
             Log::channel('marketplace')->error('Lead create failed', [
@@ -195,6 +233,78 @@ class LeadsController extends BaseController
             ]);
             return $this->error('Lead creation failed. Please try again.', 500);
         }
+    }
+
+    /**
+     * The organizer account for a venue that signed up with a password, through the organizer registration itself
+     * (Organizer\AuthController::register, unchanged): status pending until the marketplace approves it, contract,
+     * verification and welcome emails, admin notification, a token so the site signs the person in right away. The
+     * company comes from ANAF (what the lead keeps), never from the form. The lead is already saved: a refusal or an
+     * error here only means no account, logged, and the team follows the lead up as before.
+     *
+     * @return array{created: bool, reason?: string, token?: string, organizer?: array}
+     */
+    protected function createOrganizerAccount(MarketplaceClient $client, array $validated, ?array $company, OrganizerLead $lead): array
+    {
+        $website = $validated['website'] ?? null;
+        if ($website && !filter_var($website, FILTER_VALIDATE_URL)) {
+            $website = null;
+        }
+        $verified = !empty($company['verified']);
+        $fields = array_filter([
+            'email'                 => strtolower(trim($validated['email'])),
+            'password'              => $validated['password'],
+            'password_confirmation' => $validated['password'],
+            'name'                  => $validated['location_name'],
+            'contact_name'          => $validated['contact_name'],
+            'phone'                 => $validated['phone'] ?? null,
+            'website'               => $website,
+            'person_type'           => 'pj',
+            'organizer_type'        => 'venue',
+            'cui'                   => $company['cui'] ?? null,
+            'company_name'          => $verified ? ($company['name'] ?? null) : null,
+            'reg_com'               => $verified ? ($company['reg_com'] ?? null) : null,
+            'company_address'       => $verified ? ($company['address'] ?? null) : null,
+            'company_city'          => $verified ? ($company['city'] ?? null) : null,
+            'company_county'        => $verified ? ($company['county'] ?? null) : null,
+            'company_zip'           => $verified ? ($company['zip'] ?? null) : null,
+            'vat_payer'             => $verified ? (bool) ($company['vat_payer'] ?? false) : null,
+        ], fn ($value) => $value !== null && $value !== '');
+
+        $register = Request::create('/api/marketplace-client/organizer/register', 'POST', $fields);
+        $register->headers->set('Accept', 'application/json');
+        $register->attributes->set('marketplace_client', $client);
+        $context = ['marketplace_client_id' => $client->id, 'lead_id' => $lead->id];
+
+        try {
+            $response = app(OrganizerAuthController::class)->register($register);
+        } catch (ValidationException $e) {
+            Log::channel('marketplace')->warning('Lead account refused by the registration', $context + ['fields' => array_keys($e->errors())]);
+            return ['created' => false, 'reason' => 'refused'];
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->error('Lead account failed', $context + ['error' => $e->getMessage()]);
+            return ['created' => false, 'reason' => 'error'];
+        }
+
+        $data = $response->getData(true)['data'] ?? [];
+        if ($response->getStatusCode() !== 201 || empty($data['token']) || empty($data['organizer']['id'])) {
+            Log::channel('marketplace')->warning('Lead account refused by the registration', $context + ['status' => $response->getStatusCode(), 'message' => $response->getData(true)['message'] ?? null]);
+            return ['created' => false, 'reason' => 'refused'];
+        }
+
+        $organizerId = (int) $data['organizer']['id'];
+        rescue(fn () => MarketplaceOrganizer::whereKey($organizerId)->whereNull('city')->update(['city' => $validated['city']]));
+        $lead->forceFill(['meta' => array_merge($lead->meta ?? [], ['organizer_id' => $organizerId])])->save();
+        OrganizerLeadEvent::create([
+            'lead_id'               => $lead->id,
+            'marketplace_client_id' => $client->id,
+            'session_token'         => $lead->session_token,
+            'event_type'            => OrganizerLeadEvent::TYPE_ACCOUNT_CREATED,
+            'summary'               => "Cont de operator creat (#{$organizerId}), în așteptarea aprobării",
+            'payload'               => ['organizer_id' => $organizerId],
+        ]);
+
+        return ['created' => true, 'token' => $data['token'], 'organizer' => $data['organizer']];
     }
 
     /**

@@ -3,8 +3,9 @@
    organizer.verify-cui): the company data is shown read-only, never typed, and a struck-off company can't go on; when
    ANAF doesn't answer the request still goes, with the CUI for core to check again. The city is picked from the site's
    own list (#v2-data cities), searched without diacritics. The request goes to the lead pipeline (proxy leads.create →
-   core LeadsController::create); core's English errors are said in Romanian and the form goes back to the step that
-   holds the field. The page pings the funnel (leads.track page_view_onboarding) on the bo_lead_sid session shared with
+   core LeadsController::create), which with the password from step 2 also creates the organizer account (pending until
+   bilete.online approves it): the page keeps the session the way auth.js does and the thank-you screen leads into the
+   account. Core's English errors are said in Romanian and the form goes back to the step that holds the field. The page pings the funnel (leads.track page_view_onboarding) on the bo_lead_sid session shared with
    /devino-partener, and keeps the UTM captured in <head>. */
 (function () {
   'use strict';
@@ -21,14 +22,15 @@
   var steps = [].slice.call(form.querySelectorAll('.ob-step'));
   var dots = [].slice.call(document.querySelectorAll('.ob-dots li'));
   var LABELS = ['Activitate', 'Tu', 'Locație'];
-  var f = { other: $('ob-other'), name: $('ob-name'), email: $('ob-email'), phone: $('ob-phone'), venue: $('ob-venue'), cui: $('ob-cui'), city: $('ob-city'),
+  var f = { other: $('ob-other'), name: $('ob-name'), email: $('ob-email'), phone: $('ob-phone'), password: $('ob-password'), venue: $('ob-venue'), cui: $('ob-cui'), city: $('ob-city'),
     website: $('ob-website'), volume: $('ob-volume'), notes: $('ob-notes'), gdpr: $('ob-gdpr'), trap: $('ob-fax') };
   var error = $('ob-error'), submit = $('ob-submit'), SUBMIT_HTML = submit.innerHTML;
   var current = 1, busy = false;
   // core field → [message, field, step]
   var FIELD_ERRORS = {
     contact_name: ['Completează numele și prenumele.', 'name', 2], email: ['Adresa de email nu pare corectă. Verific-o și încearcă din nou.', 'email', 2],
-    phone: ['Numărul de telefon este prea lung.', 'phone', 2], location_name: ['Completează numele locației sau al organizației.', 'venue', 3],
+    phone: ['Numărul de telefon este prea lung.', 'phone', 2], password: ['Parola trebuie să aibă cel puțin 8 caractere.', 'password', 2],
+    location_name: ['Completează numele locației sau al organizației.', 'venue', 3],
     cui: ['CUI-ul nu pare corect. Verifică cifrele.', 'cui', 3], city: ['Alege orașul din listă.', 'city', 3], website: ['Adresa site-ului este prea lungă.', 'website', 3],
     notes: ['Mesajul este prea lung.', 'notes', 3], category_other: ['Descrierea activității este prea lungă.', 'other', 1]
   };
@@ -278,6 +280,7 @@
     if (n === 2) {
       if (f.name.value.trim().length < 2) { fail('Completează numele și prenumele.', [f.name]); return false; }
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.value.trim())) { fail('Adresa de email nu pare corectă. Verific-o și încearcă din nou.', [f.email]); return false; }
+      if (f.password.value.length < 8) { fail(f.password.value ? 'Parola trebuie să aibă cel puțin 8 caractere.' : 'Alege o parolă pentru contul tău de operator.', [f.password]); return false; }
     }
     if (n === 3) {
       if (f.venue.value.trim().length < 2) { fail('Completează numele locației sau al organizației.', [f.venue]); return false; }
@@ -286,7 +289,7 @@
       if (!cuiValid(d)) { fail('CUI-ul nu pare corect. Verifică cifrele.', [f.cui]); return false; }
       pickTyped();
       if (CITIES.length ? !city.slug : f.city.value.trim().length < 2) { fail(CITIES.length ? 'Alege orașul locației din listă.' : 'Completează orașul.', [f.city]); return false; }
-      if (!f.gdpr.checked) { fail('Bifează acordul pentru prelucrarea datelor.', [f.gdpr]); return false; }
+      if (!f.gdpr.checked) { fail('Bifează acordul pentru termeni și prelucrarea datelor.', [f.gdpr]); return false; }
     }
     return true;
   }
@@ -313,6 +316,15 @@
     r.addEventListener('change', function () { f.other.removeAttribute('aria-invalid'); error.hidden = true; });
   });
 
+  // ---------- password: show / hide ----------
+  var passBtn = $('ob-password-btn');
+  passBtn.addEventListener('click', function () {
+    var show = f.password.type === 'password';
+    f.password.type = show ? 'text' : 'password';
+    passBtn.textContent = show ? 'Ascunde' : 'Arată';
+    passBtn.setAttribute('aria-pressed', String(show));
+  });
+
   // ---------- funnel ----------
   function sessionToken() {
     var m = document.cookie.match(/(?:^|;\s*)bo_lead_sid=([^;]+)/);
@@ -334,10 +346,41 @@
   } catch (e) {}
 
   // ---------- send ----------
-  function done(email) {
-    var first = f.name.value.trim().split(/\s+/)[0];
+  // the organizer session, kept as auth.js setOrganizerSession keeps it (this page doesn't load auth.js)
+  function signIn(token, organizer) {
+    try {
+      localStorage.setItem('bileteonline_organizer_token', token);
+      localStorage.setItem('bileteonline_organizer_data', JSON.stringify(organizer || {}));
+      localStorage.setItem('bileteonline_user_type', 'organizer');
+      localStorage.removeItem('bileteonline_customer_token');
+      localStorage.removeItem('bileteonline_customer_data');
+      return true;
+    } catch (e) { return false; }
+  }
+  function sentence(parts) { // text with the email in bold, built without innerHTML
+    var p = $('ob-done-p');
+    p.textContent = '';
+    parts.forEach(function (x) {
+      if (x && x.strong) { var b = document.createElement('strong'); b.id = 'ob-done-email'; b.textContent = x.strong; p.appendChild(b); }
+      else p.appendChild(document.createTextNode(x));
+    });
+  }
+  // account: undefined when core didn't create one (older core, the honeypot), else core's {created, reason, token, organizer}
+  function done(email, account) {
+    var first = f.name.value.trim().split(/\s+/)[0], note = $('ob-done-note');
     $('ob-done-h').textContent = first ? 'Mulțumim, ' + first + '!' : 'Mulțumim!';
-    $('ob-done-email').textContent = email;
+    if (account && account.created && account.token) {
+      var signed = signIn(account.token, account.organizer);
+      $('ob-done-h').textContent = first ? 'Contul tău e gata, ' + first + '!' : 'Contul tău e gata!';
+      sentence(['Ți-am creat contul de operator pentru ', { strong: email }, '. Poți intra chiar acum să-l explorezi și să-ți pregătești locația. Tot ce adaugi rămâne privat până când un operator bilete.online îți aprobă cererea, în maximum 24 de ore.']);
+      note.textContent = signed ? 'Ți-am trimis și un email ca să confirmi adresa.' : 'Ți-am trimis și un email ca să confirmi adresa. Intră în cont cu emailul și parola alese.';
+      note.hidden = false;
+      $('ob-done-account').hidden = false;
+    } else if (account && account.created === false) {
+      sentence(['Cererea ta a ajuns la echipa bilete.online. Pentru ', { strong: email }, ' nu am putut crea contul automat, așa că ți-l activăm noi și îți scriem cu pașii următori. Dacă vrei ajutor, ne conectăm online oricând.']);
+    } else {
+      sentence(['Cererea ta a ajuns la echipa bilete.online. Îți scriem pe ', { strong: email }, ' cu pașii următori. Dacă vrei ajutor, ne conectăm online oricând și îi parcurgem împreună.']);
+    }
     form.hidden = true;
     $('ob-step-t').textContent = 'Trimis';
     $('ob-step-l').textContent = '';
@@ -368,6 +411,8 @@
       category_slug: cat ? cat.value : null,
       category_name: cat ? cat.getAttribute('data-name') : null,
       category_other: f.other.value.trim() || null,
+      password: f.password.value,
+      terms_accepted: true,
       volume_estimate: f.volume.value || null,
       needs: [].map.call(form.querySelectorAll('input[name="needs[]"]:checked'), function (c) { return c.value; }),
       notes: f.notes.value.trim() || null,
@@ -382,13 +427,24 @@
         return res.json().catch(function () { return {}; }).then(function (data) { return { status: res.status, ok: res.ok, data: data }; });
       }, function () { return { status: 0, ok: false, data: {} }; })
       .then(function (r) {
-        if (r.ok && r.data && r.data.success !== false) { done(payload.email); return; }
+        if (r.ok && r.data && r.data.success !== false) { done(payload.email, r.data.data ? r.data.data.account : undefined); return; }
         var errors = (r.data && r.data.errors) || {};
         var keys = Object.keys(errors).filter(function (k) { return FIELD_ERRORS[k]; });
         if (r.status === 422 && keys.length) {
           var first = FIELD_ERRORS[keys[0]];
+          // core's own Romanian answers for the account: an operator account with this email already, another account
+          // with another password
+          var said = String((errors[keys[0]] || [])[0] || '');
+          var own = /^Există deja/.test(said);
           if (first[2] !== current) go(first[2], false);
-          fail(first[0], keys.filter(function (k) { return FIELD_ERRORS[k][2] === first[2]; }).map(function (k) { return f[FIELD_ERRORS[k][1]]; }));
+          fail(own ? said : first[0], keys.filter(function (k) { return FIELD_ERRORS[k][2] === first[2]; }).map(function (k) { return f[FIELD_ERRORS[k][1]]; }));
+          if (own && keys[0] === 'email') {
+            var login = document.createElement('a');
+            login.href = '/autentificare?ca=venue';
+            login.textContent = 'Intră în cont';
+            error.appendChild(document.createTextNode(' '));
+            error.appendChild(login);
+          }
         }
         else if (r.status === 429) fail('Am primit prea multe cereri într-un timp scurt. Încearcă din nou mai târziu.', null, true);
         else if (r.status === 0) fail('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.', null, true);

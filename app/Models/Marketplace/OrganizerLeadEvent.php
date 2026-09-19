@@ -29,6 +29,7 @@ class OrganizerLeadEvent extends Model
     public const TYPE_CALL                 = 'call';
     public const TYPE_DEMO_SCHEDULED       = 'demo_scheduled';
     public const TYPE_ASSIGNED             = 'assigned';
+    public const TYPE_ACCOUNT_CREATED      = 'account_created';
 
     public const TYPES = [
         self::TYPE_PAGE_VIEW_LANDING    => 'Landing visit',
@@ -41,6 +42,7 @@ class OrganizerLeadEvent extends Model
         self::TYPE_CALL                 => 'Phone call',
         self::TYPE_DEMO_SCHEDULED       => 'Demo scheduled',
         self::TYPE_ASSIGNED             => 'Assigned',
+        self::TYPE_ACCOUNT_CREATED      => 'Organizer account created',
     ];
 
     protected $fillable = [

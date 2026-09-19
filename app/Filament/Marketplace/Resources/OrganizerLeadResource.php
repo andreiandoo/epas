@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\OrganizerLeadResource\Pages;
 use App\Models\Marketplace\OrganizerLead;
 use App\Models\Marketplace\OrganizerLeadEvent;
+use App\Models\MarketplaceOrganizer;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -86,6 +87,27 @@ class OrganizerLeadResource extends Resource
         'corporate'       => 'Corporate & grupuri',
         'cultura'         => 'Cultură & artă',
     ];
+
+    /** meta.organizer_id: the account created with the lead, its status and a link to approve it. */
+    protected static function accountSummary(int $organizerId): HtmlString|string
+    {
+        $organizer = $organizerId ? MarketplaceOrganizer::withTrashed()->find($organizerId) : null;
+        if (!$organizer) {
+            return $organizerId ? "#{$organizerId} (nu mai există)" : '—';
+        }
+        $status = match (true) {
+            $organizer->trashed() => '<span class="text-danger-600 font-semibold">șters</span>',
+            $organizer->isActive() => '<span class="text-success-600 font-semibold">aprobat</span>',
+            $organizer->isSuspended() => '<span class="text-danger-600 font-semibold">suspendat</span>',
+            default => '<span class="text-warning-600 font-semibold">în așteptarea aprobării</span>',
+        };
+        $url = $organizer->trashed() ? null : OrganizerResource::getUrl('edit', ['record' => $organizer]);
+
+        return new HtmlString(
+            ($url ? '<a href="' . e($url) . '" class="font-semibold text-primary-600 hover:underline">' . e($organizer->name) . ' (#' . $organizer->id . ')</a>' : e($organizer->name) . ' (#' . $organizer->id . ')')
+            . ' · ' . e($organizer->email) . ' · ' . $status
+        );
+    }
 
     /** meta.company (see LeadsController::companyFromAnaf) as a few lines: name, CUI, reg. com., office, VAT, status. */
     protected static function companySummary(?array $company): HtmlString|string
@@ -237,11 +259,16 @@ class OrganizerLeadResource extends Resource
 
             // What the public form collected beyond the columns: the company as ANAF has it (never typed by the
             // visitor) and the needs they ticked. Read-only; hidden on leads that came without them.
-            SC\Section::make('Firmă (ANAF) și nevoi')
-                ->description('Din formularul /inregistrare-locatie: datele firmei sunt preluate de la ANAF după CUI, nevoile sunt bifate de lead.')
-                ->visible(fn (?OrganizerLead $record) => filled($record?->meta['company'] ?? null) || filled($record?->meta['needs'] ?? null))
+            SC\Section::make('Firmă (ANAF), nevoi și cont')
+                ->description('Din formularul /inregistrare-locatie: datele firmei sunt preluate de la ANAF după CUI, nevoile sunt bifate de lead, iar contul de operator se creează la trimitere (în așteptare până îl aprobi).')
+                ->visible(fn (?OrganizerLead $record) => filled($record?->meta['company'] ?? null) || filled($record?->meta['needs'] ?? null) || filled($record?->meta['organizer_id'] ?? null))
                 ->columns(2)
                 ->schema([
+                    Forms\Components\Placeholder::make('meta_account')
+                        ->label('Cont de operator')
+                        ->columnSpanFull()
+                        ->visible(fn (?OrganizerLead $record) => filled($record?->meta['organizer_id'] ?? null))
+                        ->content(fn (?OrganizerLead $record) => self::accountSummary((int) ($record?->meta['organizer_id'] ?? 0))),
                     Forms\Components\Placeholder::make('meta_company')
                         ->label('Firmă')
                         ->content(fn (?OrganizerLead $record) => self::companySummary($record?->meta['company'] ?? null)),
