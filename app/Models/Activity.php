@@ -34,6 +34,8 @@ class Activity extends Model
         'description',
         'seo_body_title',
         'seo_body',
+        'unit_label',
+        'usage_terms',
     ];
 
     protected $fillable = [
@@ -112,7 +114,45 @@ class Activity extends Model
         'has_session_today',
         'has_session_tomorrow',
         'has_session_this_weekend',
+
+        // product model (activities module: locations, access / experience / package)
+        'location_id',
+        'product_type',
+        'access_kind',
+        'service_type',
+        'booking_mode',
+        'capacity_mode',
+        'daily_capacity',
+        'use_location_schedule',
+        'access_requirement',
+        'requires_vehicle_info',
+        'pos_only',
+        'issuing_company',
+        'display_category',
+        'unit_label',
+        'usage_terms',
+        'icon',
+        'review_status',
+        'submitted_at',
+        'reviewed_at',
+        'reviewed_by',
+        'rejection_reason',
     ];
+
+    public const TYPE_ACCESS     = 'access';
+    public const TYPE_EXPERIENCE = 'experience';
+    public const TYPE_PACKAGE    = 'package';
+    public const PRODUCT_TYPES   = [self::TYPE_ACCESS, self::TYPE_EXPERIENCE, self::TYPE_PACKAGE];
+
+    public const MODE_SLOT = 'slot';  // start times inside opening hours
+    public const MODE_DAY  = 'day';   // valid all day, capacity per day
+
+    public const CAPACITY_PER_SLOT   = 'per_slot';    // each start time has its own seats (tours)
+    public const CAPACITY_CONCURRENT = 'concurrent';  // shared pool of units over time (boats)
+
+    public const REQUIRES_NONE  = 'none';
+    public const REQUIRES_ANY   = 'any';    // an access ticket per unit bought
+    public const REQUIRES_ADULT = 'adult';  // an adult access ticket per unit bought
 
     protected $casts = [
         // geo (F2 — Nearby)
@@ -126,6 +166,8 @@ class Activity extends Model
         'description' => 'array',
         'seo_body_title' => 'array',
         'seo_body' => 'array',
+        'unit_label' => 'array',
+        'usage_terms' => 'array',
 
         // pure json
         'gallery' => 'array',
@@ -168,6 +210,14 @@ class Activity extends Model
 
         // datetime
         'next_session_at' => 'datetime',
+
+        // product model
+        'daily_capacity' => 'integer',
+        'use_location_schedule' => 'boolean',
+        'requires_vehicle_info' => 'boolean',
+        'pos_only' => 'boolean',
+        'submitted_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     // ============================================================
@@ -224,6 +274,37 @@ class Activity extends Model
     {
         return $this->hasMany(ActivityVariant::class)
             ->orderBy('sort_order');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(ActivityLocation::class, 'location_id');
+    }
+
+    public function addons(): HasMany
+    {
+        return $this->hasMany(ActivityAddon::class)->orderBy('sort_order');
+    }
+
+    /** Components of a package (product_type = package). */
+    public function packageItems(): HasMany
+    {
+        return $this->hasMany(ActivityPackageItem::class, 'package_activity_id')->orderBy('sort_order');
+    }
+
+    public function isAccess(): bool
+    {
+        return $this->product_type === self::TYPE_ACCESS;
+    }
+
+    public function isPackage(): bool
+    {
+        return $this->product_type === self::TYPE_PACKAGE;
+    }
+
+    public function isDayMode(): bool
+    {
+        return $this->booking_mode === self::MODE_DAY;
     }
 
     public function bookings(): HasMany

@@ -119,29 +119,13 @@ class ActivityBookingOrderObserver
     }
 
     /**
-     * Would restoring this (released) booking push its slot over capacity?
-     * Counts the other seat-holding bookings of the same activity, date and
-     * start time, the same way checkout does.
+     * Would restoring this (released) booking push its slot / day over
+     * capacity? Same counting as checkout (day tickets, per-slot seats,
+     * units in use at the same time).
      */
     protected function slotWouldOverflow(ActivityBooking $booking): bool
     {
-        $capacity = max(1, (int) ($booking->activity?->capacity_per_slot ?? 1));
-
-        $taken = (int) DB::table('activity_bookings')
-            ->where('activity_id', $booking->activity_id)
-            ->whereDate('booking_date', $booking->getRawOriginal('booking_date'))
-            ->where('slot_start_time', $booking->getRawOriginal('slot_start_time'))
-            ->where('id', '<>', $booking->id)
-            ->whereIn('status', ActivityBooking::CAPACITY_CONSUMING_STATUSES)
-            ->where(function ($q) {
-                $q->where('status', '<>', ActivityBooking::STATUS_PENDING_PAYMENT)
-                    ->orWhereNull('held_until')
-                    ->orWhere('held_until', '>=', now());
-            })
-            ->whereNull('deleted_at')
-            ->sum('participants_count');
-
-        return $taken + (int) $booking->participants_count > $capacity;
+        return app(\App\Services\Activities\ProductAvailability::class)->bookingOverflows($booking);
     }
 
     protected function syncToCancelledAfterCommit(Order $order): void

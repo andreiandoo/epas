@@ -21,6 +21,8 @@ class ActivitySchedule extends Model
         'close_time',
         'sort_order',
         'is_active',
+        'season_start',   // "MM-DD", null = all year
+        'season_end',
     ];
 
     protected $casts = [

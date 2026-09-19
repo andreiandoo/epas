@@ -45,7 +45,20 @@ class ActivityVariant extends Model
         'is_active',
         'is_refundable',
         'sort_order',
+        'duration_minutes',
+        'validity_days',
+        'price_type',
+        'persons_min',
+        'persons_max',
+        'is_child',
+        'pos_price_cents',
+        'pos_only',
+        'step_qty',
+        'companion_label',
     ];
+
+    public const PRICE_PER_PERSON = 'per_person';
+    public const PRICE_PER_UNIT   = 'per_unit';
 
     protected $casts = [
         'name' => 'array',
@@ -62,6 +75,14 @@ class ActivityVariant extends Model
         'is_active' => 'boolean',
         'is_refundable' => 'boolean',
         'sort_order' => 'integer',
+        'duration_minutes' => 'integer',
+        'validity_days' => 'integer',
+        'persons_min' => 'integer',
+        'persons_max' => 'integer',
+        'is_child' => 'boolean',
+        'pos_price_cents' => 'integer',
+        'pos_only' => 'boolean',
+        'step_qty' => 'integer',
     ];
 
     public function activity(): BelongsTo

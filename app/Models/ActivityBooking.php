@@ -43,16 +43,16 @@ class ActivityBooking extends Model
     ];
 
     /**
-     * Statuses that COUNT toward a slot's remaining capacity. Cancelled and
-     * no_show bookings free up their seat. SlotResolver filters by this list.
-     */
-    /**
      * Note the expired-hold sweep appends when it cancels a booking. The order
      * observer looks for it to tell a released hold (restored on a late
      * payment) from a booking cancelled by staff (left cancelled).
      */
     public const HOLD_EXPIRED_NOTE = 'Auto-cancelled: hold expired.';
 
+    /**
+     * Statuses that COUNT toward a slot's remaining capacity. Cancelled and
+     * no_show bookings free up their seat. SlotResolver filters by this list.
+     */
     public const CAPACITY_CONSUMING_STATUSES = [
         self::STATUS_PENDING_PAYMENT,
         self::STATUS_PAID,
@@ -78,6 +78,15 @@ class ActivityBooking extends Model
         'qr_payload',
         'held_until',
         'checked_in_at',
+        'variant_id',
+        'location_id',
+        'marketplace_organizer_id',
+        'package_booking_id',
+        'end_date',
+        'quantity',
+        'unit_price_cents',
+        'addons',
+        'meta',
     ];
 
     protected $casts = [
@@ -89,6 +98,11 @@ class ActivityBooking extends Model
         'commission_cents' => 'integer',
         'held_until' => 'datetime',
         'checked_in_at' => 'datetime',
+        'end_date' => 'date',
+        'quantity' => 'integer',
+        'unit_price_cents' => 'integer',
+        'addons' => 'array',
+        'meta' => 'array',
     ];
 
     // ============================================================
@@ -113,6 +127,33 @@ class ActivityBooking extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ActivityVariant::class, 'variant_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(ActivityLocation::class, 'location_id');
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    /** The package booking this component belongs to. */
+    public function packageBooking(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'package_booking_id');
+    }
+
+    /** Component bookings of a package booking. */
+    public function componentBookings(): HasMany
+    {
+        return $this->hasMany(self::class, 'package_booking_id');
     }
 
     public function tickets(): HasMany
