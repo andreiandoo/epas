@@ -43,8 +43,19 @@ $ptAttractions = (int) ($ptR['attractions']['data']['pagination']['total'] ?? 0)
 $ptCities = count($V2NAV['allCities'] ?? []);
 $ptCategories = array_values(array_filter($V2NAV['categories'] ?? [], fn ($c) => !empty($c['name'])));
 
-// Real results of the Tixello ecosystem bilete.online runs on (confirmed by the owner).
-$ptStats = [[4294, 'Evenimente & activități', ''], [96341, 'Clienți în bază', ''], [301310, 'Bilete vândute', ''], [4409557, 'Vânzări generate', ' €']];
+// Real results of the Tixello ecosystem bilete.online runs on: the live totals tixello.com shows (core /ecosystem-stats,
+// computed once a day), kept here 6 hours; the last confirmed figures stand in if the API doesn't answer.
+$ptEco = api_cached('v2_ecosystem_stats', fn () => api_get('/ecosystem-stats'), 21600);
+$ptEcoData = is_array($ptEco['data'] ?? null) ? $ptEco['data'] : [];
+$ptEcoValue = static fn (string $key, float $fallback): float => (float) ($ptEcoData[$key] ?? 0) > 0 ? (float) $ptEcoData[$key] : $fallback;
+$ptEvents = (int) $ptEcoValue('events', 4294);
+$ptCustomers = (int) $ptEcoValue('customers', 96341);
+$ptTickets = (int) $ptEcoValue('tickets_sold', 301310);
+$ptRevenue = (int) round($ptEcoValue('revenue_eur', 4409557));
+$ptStats = [[$ptEvents, 'Evenimente & activități', ''], [$ptCustomers, 'Clienți în bază', ''], [$ptTickets, 'Bilete vândute', ''], [$ptRevenue, 'Vânzări generate', ' €']];
+// "peste …" in the copy: rounded down, so it's never more than the truth
+$ptOverThousands = static fn (int $n): string => number_format((int) (floor($n / 1000) * 1000), 0, ',', '.');
+$ptOverMillions = static fn (int $n): string => rtrim(rtrim(number_format(floor($n / 100000) / 10, 1, ',', '.'), '0'), ',');
 
 $ptWho = [
     ['lock-simple', 'Escape rooms', 'Sloturi orare, capacitate per cameră, beneficiari diferiți, bilete de grup și check-in rapid.'],
@@ -113,7 +124,7 @@ $ptBenefits = [
     ['list', 'Gestiune avansată', 'Capacități, sloturi, variante de preț, disponibilitate, add-on-uri — controlezi fiecare detaliu al fiecărei activități.'],
     ['tag', 'Coduri de reducere', 'Creezi coduri promoționale și campanii de discount, cu reguli proprii, ca să-ți crești vânzările când vrei.'],
     ['users-three', 'Pachete de grup', 'Vinzi pachete pentru grupuri, familii, clase sau echipe corporate, cu prețuri și capacități dedicate.'],
-    ['target', 'Sistem de recomandare', 'Motorul propriu expune activitățile tale celor mai potriviți cumpărători din baza de peste 96.000 de clienți.'],
+    ['target', 'Sistem de recomandare', 'Motorul propriu expune activitățile tale celor mai potriviți cumpărători din baza de peste ' . $ptOverThousands($ptCustomers) . ' de clienți.'],
     ['lock-simple', 'Bilete sigure', 'Validare QR, verificare și protecție anti-fraudă — tehnologie testată în producție pe Tixello.'],
 ];
 $ptSmall = [
@@ -163,7 +174,7 @@ $ptDocs = [['receipt', 'Factură fiscală', 'serie BO · client'], ['file-text',
 $ptSteps = [
     ['user-circle', 'Îți faci contul', 'Te înregistrezi în câteva minute. Fără taxe de pornire, fără abonament, fără card la înscriere.', '≈ 5 minute'],
     ['plus', 'Adaugi activitățile', 'Oricâte, de orice tip. Setezi sloturi orare, zile, capacități, variante de preț și pachete de grup.', 'activități nelimitate'],
-    ['arrow-right', 'Mergi live', 'Publici și ești în piață, cu pagini gata de partajat și tracking conectat. Intri direct în baza de 96.000+ clienți.', 'go-live în max 1 zi'],
+    ['arrow-right', 'Mergi live', 'Publici și ești în piață, cu pagini gata de partajat și tracking conectat. Intri direct în baza de ' . $ptOverThousands($ptCustomers) . '+ clienți.', 'go-live în max 1 zi'],
     ['coins', 'Vinzi & încasezi', 'Online și local, în același sistem. bilete.online încasează de la client și îți face deconturi periodice sau la cerere.', 'prețul tău, întreg'],
 ];
 $ptOps = [
@@ -173,7 +184,7 @@ $ptOps = [
     ['Scanare', 'Validare rapidă la intrare, statusuri clare.'],
     ['Creștere', 'Rapoarte, recenzii, promoții, campanii.'],
 ];
-$ptTixello = [['Evenimente & activități', '4.294'], ['Clienți în bază', '96.341'], ['Bilete vândute', '301.310'], ['Vânzări generate', '4.409.557 €'], ['Scanare offline', 'Da, cu sync']];
+$ptTixello = [['Evenimente & activități', number_format($ptEvents, 0, ',', '.')], ['Clienți în bază', number_format($ptCustomers, 0, ',', '.')], ['Bilete vândute', number_format($ptTickets, 0, ',', '.')], ['Vânzări generate', number_format($ptRevenue, 0, ',', '.') . ' €'], ['Scanare offline', 'Da, cu sync']];
 $ptFaqGroups = [
     ['Bani & plăți', [
         ['Cât e comisionul și cine îl plătește?', 'Comisionul este de 2%* și este adăugat în prețul final, plătit de cumpărător. Tu îți stabilești prețul și îl primești integral la decont. *Cei 2% se aplică pentru vânzarea exclusivă prin bilete.online. Dacă vinzi biletele și în alte părți, comisionul este de 4%: 2% incluse în preț și 2% adăugate. Nu ai abonament lunar și nu plătești instalare.'],
@@ -1118,7 +1129,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div>
         <span class="pt-badge">Powered by Tixello</span>
         <h2 class="pt-tech-h" id="pt-tech-h">Infrastructură matură, testată la scară.</h2>
-        <p class="pt-sub is-dark">bilete.online rulează pe Tixello — sistemul de ticketing care a procesat deja peste 4,4 milioane EUR în vânzări și peste 301.000 de bilete. Primești tehnologie de producție, fără s-o construiești sau s-o întreții.</p>
+        <p class="pt-sub is-dark">bilete.online rulează pe Tixello — sistemul de ticketing care a procesat deja peste <?= $ptOverMillions($ptRevenue) ?> milioane EUR în vânzări și peste <?= $ptOverThousands($ptTickets) ?> de bilete. Primești tehnologie de producție, fără s-o construiești sau s-o întreții.</p>
         <a class="btn btn-light pt-mt" href="/inregistrare-locatie" data-signup data-track-cta="parteneri_tixello">Devino partener<?= v2_ic('arrow-right') ?></a>
       </div>
       <div class="pt-numbers">

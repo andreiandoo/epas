@@ -1568,6 +1568,9 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.tenants');
     Route::get('/checkout/features', [MarketplaceConfigController::class, 'checkoutFeatures'])
         ->name('api.marketplace-client.checkout.features');
+    // Tixello ecosystem totals (events, customers, tickets, sales) — the same numbers tixello.com shows
+    Route::get('/ecosystem-stats', [MarketplaceConfigController::class, 'ecosystemStats'])
+        ->name('api.marketplace-client.ecosystem-stats');
     Route::get('/tracking/scripts', [MarketplaceConfigController::class, 'trackingScripts'])
         ->name('api.marketplace-client.tracking.scripts');
     Route::get('/tracking/organizer/{organizerId}/scripts', [MarketplaceConfigController::class, 'organizerTrackingScripts'])

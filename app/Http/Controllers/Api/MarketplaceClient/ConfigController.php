@@ -165,6 +165,29 @@ class ConfigController extends BaseController
     }
 
     /**
+     * The Tixello ecosystem in numbers, for the partner pages of the marketplaces ("Rezultate reale în ecosistemul
+     * Tixello"). The same figures tixello.com shows: they come from the public summary (/v1/public/summary, cached
+     * 24 h), which needs a platform API key; this route serves them to marketplace clients with their own key.
+     */
+    public function ecosystemStats(Request $request): JsonResponse
+    {
+        $this->requireClient($request);
+
+        $summary = app(\App\Http\Controllers\Api\PublicDataController::class)->summary()->getData(true);
+        if (!is_array($summary) || isset($summary['error'])) {
+            return $this->error('Statisticile nu sunt disponibile acum.', 503);
+        }
+
+        return $this->success([
+            'events' => (int) ($summary['events']['total'] ?? 0),
+            'customers' => (int) ($summary['customers'] ?? 0),
+            'tickets_sold' => (int) ($summary['tickets_sold'] ?? 0),
+            'revenue_eur' => round((float) ($summary['revenue']['total_eur'] ?? 0), 2),
+            'cached_at' => $summary['cached_at'] ?? null,
+        ]);
+    }
+
+    /**
      * Expose the payment-processing-fee config so the cart + checkout
      * pages can show a "Taxa de procesare card" preview line BEFORE the
      * customer hits Plătește. Returns ONLY the metadata needed for
