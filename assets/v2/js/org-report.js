@@ -256,7 +256,7 @@
     list.forEach(function (t, i) {
       var rev = num(t.revenue), pct = totalRev > 0 ? rev / totalRev * 100 : 0, color = COLORS[i % COLORS.length], capq = num(t.capacity);
       totalSold += num(t.sold);
-      var type = el('div', { class: 'or-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || 'Bilet', t.is_invitation ? el('small', { text: 'titlu gratuit (invitație)' }) : t.is_entry_ticket ? el('small', { text: 'încasat de organizator' }) : null])]);
+      var type = el('div', { class: 'or-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || 'Bilet', t.is_invitation ? el('small', { text: 'titlu gratuit (invitație)' }) : t.is_entry_ticket ? el('small', { text: 'încasat de operator' }) : null])]);
       type.querySelector('i').style.setProperty('--c', color);
       var share = el('div', { class: 'or-share' }, [el('span', { 'aria-hidden': 'true' }, el('i')), el('b', { text: F.pct(pct, 0) })]);
       share.querySelector('i').style.width = pct.toFixed(2) + '%';

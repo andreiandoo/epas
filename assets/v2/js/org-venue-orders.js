@@ -264,7 +264,7 @@
           el('td', null, [el('b', { class: 've-mono', text: txt(l.order_number) || '—' }),
             el('small', { class: 've-sub', text: (l.order_source === 'pos' ? 'La casă' : 'Pe site') + (l.cashier_snapshot_regenerated ? ' · raport recalculat' : '') })]),
           el('td', { text: stamp(l.deleted_at) }),
-          el('td', null, [el('span', { text: txt(l.deleted_by_name) || '—' }), el('small', { class: 've-sub', text: l.deleted_by_type === 'team_member' ? 'Din echipă' : 'Organizator' })]),
+          el('td', null, [el('span', { text: txt(l.deleted_by_name) || '—' }), el('small', { class: 've-sub', text: l.deleted_by_type === 'team_member' ? 'Din echipă' : 'Operator' })]),
           el('td', null, [el('span', { text: txt(l.customer_name) || '—' }), el('small', { class: 've-sub', text: txt(l.customer_email) })]),
           el('td', { class: 've-r', text: F.num(F.toNum(l.tickets_count)) }),
           el('td', { class: 've-r' }, money(l.order_total, l.order_currency)),

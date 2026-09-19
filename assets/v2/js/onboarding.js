@@ -38,6 +38,7 @@
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 
   function chosen() { return form.querySelector('input[name="category_slug"]:checked'); }
+  function channel() { return form.querySelector('input[name="sells_elsewhere"]:checked'); }
   function clearInvalid() { Object.keys(f).forEach(function (k) { if (f[k]) f[k].removeAttribute('aria-invalid'); }); }
 
   function go(n, focus) {
@@ -289,6 +290,7 @@
       if (!cuiValid(d)) { fail('CUI-ul nu pare corect. Verifică cifrele.', [f.cui]); return false; }
       pickTyped();
       if (CITIES.length ? !city.slug : f.city.value.trim().length < 2) { fail(CITIES.length ? 'Alege orașul locației din listă.' : 'Completează orașul.', [f.city]); return false; }
+      if (!channel()) { fail('Spune-ne dacă vinzi bilete și prin alt canal: de asta depinde comisionul.', [form.querySelector('input[name="sells_elsewhere"]')]); return false; }
       if (!f.gdpr.checked) { fail('Bifează acordul pentru termeni și prelucrarea datelor.', [f.gdpr]); return false; }
     }
     return true;
@@ -413,6 +415,7 @@
       category_other: f.other.value.trim() || null,
       password: f.password.value,
       terms_accepted: true,
+      sells_elsewhere: channel() ? channel().value === '1' : null,
       volume_estimate: f.volume.value || null,
       needs: [].map.call(form.querySelectorAll('input[name="needs[]"]:checked'), function (c) { return c.value; }),
       notes: f.notes.value.trim() || null,

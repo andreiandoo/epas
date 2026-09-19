@@ -383,7 +383,7 @@
     $('ot-pass-h').textContent = mode === 'activate' ? 'Activează contul lui ' + name : 'Parolă nouă pentru ' + name;
     $('ot-pass-p').textContent = mode === 'activate'
       ? name + ' nu a acceptat încă invitația. Cu o parolă, contul devine activ acum și invitația nu mai e necesară.'
-      : 'Parola se schimbă imediat, pe bilete.online și în aplicația mobilă. Dacă aceeași adresă e în echipa altor organizatori, se schimbă și acolo.';
+      : 'Parola se schimbă imediat, pe bilete.online și în aplicația mobilă. Dacă aceeași adresă e în echipa altor operatori, se schimbă și acolo.';
     $('ot-pw2').value = '';
     resetEye('ot-pw2');
     fieldErr('ot-pw2', '');

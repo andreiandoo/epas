@@ -31,11 +31,13 @@ const V2_ORG_NAV = [
         ['dashboard', '/organizator/panou', 'Dashboard', 'squares-four', null],
         ['am-bookings', '/organizator/rezervari', 'Rezervări', 'calendar-blank', null],
         ['finance', '/organizator/sold', 'Sold', 'wallet', null],
-        ['documents', '/organizator/documente', 'Documente', 'file-text', null],
     ]],
     ['catalog', 'Locații și produse', [
         ['am-locations', '/organizator/locatii', 'Locațiile mele', 'map-pin', null],
         ['am-products', '/organizator/produse', 'Produse', 'ticket', null],
+    ]],
+    ['promo', 'Promovare', [
+        ['services', '/organizator/servicii', 'Servicii extra', 'lightning', 'nou'],
     ]],
     ['settings', 'Setări', [
         ['billing', '/organizator/facturare', 'Facturare', 'receipt', null],
@@ -56,13 +58,13 @@ function v2_org_start(string $active): void
 <?php readfile(__DIR__ . '/sprite.svg'); readfile(__DIR__ . '/sprite-org.svg'); ?>
 <a class="skip" href="#main">Sari la conținut</a>
 <div class="org" id="org">
-  <aside class="org-side" id="org-side" aria-label="Contul de organizator">
+  <aside class="org-side" id="org-side" aria-label="Contul de operator">
     <div class="org-side-top">
       <a class="org-brand" href="/" aria-label="bilete.online, pagina principală"><?= v2_brand('brand') ?></a>
       <button class="org-x" type="button" data-org-drawer="close"><?= v2_ic('x') ?><span class="sr">Închide meniul</span></button>
-      <span class="org-role">Organizator</span>
+      <span class="org-role">Operator</span>
     </div>
-    <nav class="org-nav" aria-label="Secțiuni organizator">
+    <nav class="org-nav" aria-label="Secțiunile contului">
       <?php foreach (V2_ORG_NAV as [$groupId, $groupLabel, $items]): ?>
       <div class="org-group">
         <?php if ($groupLabel !== ''): ?><p class="org-group-t" id="org-g-<?= v2_e($groupId) ?>"><?= v2_e($groupLabel) ?></p><?php endif; ?>
@@ -76,7 +78,7 @@ function v2_org_start(string $active): void
     </nav>
     <div class="org-me">
       <span class="org-avatar" data-org-initials aria-hidden="true">·</span>
-      <div class="org-me-t"><p class="org-me-name" data-org-name>Organizator</p><p class="org-me-plan" data-org-plan>—</p></div>
+      <div class="org-me-t"><p class="org-me-name" data-org-name>Operator</p><p class="org-me-plan" data-org-plan>—</p></div>
       <button class="org-logout" type="button" data-org-logout title="Deconectare"><?= v2_ic('sign-out') ?><span class="sr">Deconectare</span></button>
     </div>
   </aside>
@@ -85,18 +87,18 @@ function v2_org_start(string $active): void
   <div class="org-col">
     <header class="org-top" id="org-top">
       <button class="org-ib org-burger" type="button" id="org-burger" data-org-drawer="open" aria-controls="org-side" aria-expanded="false"><?= v2_ic('list') ?><span class="sr">Deschide meniul</span></button>
-      <a class="org-top-brand" href="/organizator/panou" aria-label="Panou organizator"><?= v2_brand('brand') ?></a>
+      <a class="org-top-brand" href="/organizator/panou" aria-label="Panoul operatorului"><?= v2_brand('brand') ?></a>
       <div class="org-search" id="org-search" role="search">
-        <label class="sr" for="org-q">Caută în activitățile tale</label>
+        <label class="sr" for="org-q">Caută în produsele și locațiile tale</label>
         <?= v2_ic('magnifying-glass', 'ic org-search-ic') ?>
-        <input id="org-q" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Caută activitățile tale…" role="combobox" aria-expanded="false" aria-controls="org-q-list" aria-autocomplete="list">
+        <input id="org-q" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Caută produse sau locații…" role="combobox" aria-expanded="false" aria-controls="org-q-list" aria-autocomplete="list">
         <div class="org-pop org-q-pop" id="org-q-pop" hidden>
-          <ul class="org-q-list" id="org-q-list" role="listbox" aria-label="Activitățile găsite"></ul>
+          <ul class="org-q-list" id="org-q-list" role="listbox" aria-label="Ce am găsit"></ul>
           <p class="org-q-msg" id="org-q-msg" role="status"></p>
         </div>
       </div>
       <div class="org-tools">
-        <button class="org-ib org-q-open" type="button" id="org-q-open" aria-controls="org-search" aria-expanded="false"><?= v2_ic('magnifying-glass') ?><span class="sr">Caută activități</span></button>
+        <button class="org-ib org-q-open" type="button" id="org-q-open" aria-controls="org-search" aria-expanded="false"><?= v2_ic('magnifying-glass') ?><span class="sr">Caută produse sau locații</span></button>
         <a class="btn btn-primary org-new" href="/organizator/produse?nou=1"><?= v2_ic('plus') ?><span>Produs nou</span></a>
         <div class="org-drop">
           <button class="org-ib" type="button" id="org-bell" aria-expanded="false" aria-controls="org-notif"><?= v2_ic('bell') ?><span class="org-dot" id="org-dot" hidden></span><span class="sr" id="org-bell-t">Notificări</span></button>
@@ -109,7 +111,7 @@ function v2_org_start(string $active): void
         <div class="org-drop">
           <button class="org-user" type="button" id="org-user" aria-expanded="false" aria-controls="org-usermenu"><span class="org-avatar is-sm" data-org-initials aria-hidden="true">·</span><?= v2_ic('caret-down') ?><span class="sr">Meniul contului</span></button>
           <div class="org-pop org-usermenu" id="org-usermenu" hidden>
-            <div class="org-pop-me"><p class="org-pop-name" data-org-name>Organizator</p><p class="org-pop-mail" data-org-email></p></div>
+            <div class="org-pop-me"><p class="org-pop-name" data-org-name>Operator</p><p class="org-pop-mail" data-org-email></p></div>
             <a class="org-mi" href="/organizator/setari"><?= v2_ic('gear-six') ?>Setări cont</a>
             <a class="org-mi" href="/organizator/help"><?= v2_ic('question') ?>Ajutor & suport</a>
             <button class="org-mi is-danger" type="button" data-org-logout><?= v2_ic('sign-out') ?><span>Deconectare</span></button>
@@ -131,7 +133,7 @@ function v2_org_end(): void
     ?>
     </main>
     <footer class="org-ftr">
-      <nav class="org-ftr-links" aria-label="Resurse pentru organizatori">
+      <nav class="org-ftr-links" aria-label="Resurse pentru operatori">
         <a href="/organizator/help"><?= v2_ic('file-text') ?>Documentație</a>
         <a href="/organizator/apidoc"><?= v2_ic('code') ?>API</a>
         <a href="/termeni"><?= v2_ic('file-text') ?>Termeni</a>

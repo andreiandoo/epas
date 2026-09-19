@@ -24,7 +24,7 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/nav.php';
 
 $pageTitleRaw = 'Invitație în echipă — ' . SITE_NAME;
-$pageDescription = 'Acceptă invitația în echipa unui organizator de pe bilete.online și alege-ți parola.';
+$pageDescription = 'Acceptă invitația în echipa unui operator de pe bilete.online și alege-ți parola.';
 $canonicalUrl = SITE_URL . '/organizator/accept-invite';
 $noindex = true;
 $skipPageCache = true; // the URL carries a one-time token
@@ -50,10 +50,10 @@ $v2HeadExtra = '<meta name="referrer" content="no-referrer">'
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 
 $aiAfter = [
-    'Intri în contul organizatorului, pe bilete.online',
+    'Intri în contul operatorului, pe bilete.online',
     'Faci check-in din aplicația mobilă, cu aceleași date',
     'Vezi activitățile la care ai primit acces',
-    'Accesul tău îl stabilește organizatorul',
+    'Accesul tău îl stabilește operatorul',
 ];
 $aiEye = '<button class="af-eye" type="button" data-toggle-pass aria-pressed="false" aria-label="Arată parola">arată</button>';
 
@@ -65,9 +65,9 @@ include __DIR__ . '/../includes/v2/header.php';
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="af-in">
       <div class="af-copy">
-        <p class="af-kicker">Invitație · echipa organizatorului</p>
+        <p class="af-kicker">Invitație · echipa operatorului</p>
         <h1 class="af-h" id="af-h">Bun venit în echipă!</h1>
-        <p class="af-lead" id="ai-lead">Un organizator de pe bilete.online te-a adăugat în echipa lui. Alege o parolă și contul devine activ pe loc.</p>
+        <p class="af-lead" id="ai-lead">Un operator de pe bilete.online te-a adăugat în echipa lui. Alege o parolă și contul devine activ pe loc.</p>
         <div class="af-tips">
           <b>După activare:</b>
           <ul>
@@ -98,14 +98,14 @@ include __DIR__ . '/../includes/v2/header.php';
           <p class="af-card-p" id="ai-form-p">Alege parola cu care vei intra în cont, pe site și în aplicația mobilă.</p>
           <div class="ai-org">
             <span class="ai-org-ic" aria-hidden="true"><?= v2_ic('users-three') ?></span>
-            <div><small>Organizator</small><b id="ai-org"></b><span id="ai-company" hidden></span></div>
+            <div><small>Operator</small><b id="ai-org"></b><span id="ai-company" hidden></span></div>
           </div>
           <dl class="ai-who">
             <div id="ai-name-row" hidden><dt>Nume</dt><dd id="ai-name"></dd></div>
             <div><dt>Email</dt><dd id="ai-email"></dd></div>
             <div><dt>Rol</dt><dd id="ai-role"></dd></div>
           </dl>
-          <div class="af-note" id="ai-existing" hidden><b>Ai deja o parolă pe bilete.online</b>Emailul tău face parte și din echipa altui organizator, așa că intri cu aceeași parolă. Nu trebuie să alegi alta.</div>
+          <div class="af-note" id="ai-existing" hidden><b>Ai deja o parolă pe bilete.online</b>Emailul tău face parte și din echipa altui operator, așa că intri cu aceeași parolă. Nu trebuie să alegi alta.</div>
           <p class="af-error" id="ai-error" role="alert" hidden></p>
           <form class="af-form" id="ai-form" novalidate>
             <!-- lets password managers save the password for the right account -->
@@ -130,7 +130,7 @@ include __DIR__ . '/../includes/v2/header.php';
             <div class="af-field">
               <label for="ai-phone">Telefon <small>(opțional)</small></label>
               <input id="ai-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="30" placeholder="07xx xxx xxx" aria-describedby="ai-phone-hint">
-              <span class="af-hint" id="ai-phone-hint">Îl vede organizatorul, ca să te poată contacta.</span>
+              <span class="af-hint" id="ai-phone-hint">Îl vede operatorul, ca să te poată contacta.</span>
             </div>
             <button class="btn btn-primary af-wide" id="ai-submit" type="submit">Activează contul</button>
           </form>
@@ -146,7 +146,7 @@ include __DIR__ . '/../includes/v2/header.php';
             <b>Check-in la intrare</b>
             <ul>
               <li><?= v2_ic('check') ?>Din aplicația mobilă de scanare, cu aceleași date de autentificare.</li>
-              <li><?= v2_ic('check') ?>Vezi activitățile și informațiile la care ți-a dat acces organizatorul.</li>
+              <li><?= v2_ic('check') ?>Vezi activitățile și informațiile la care ți-a dat acces operatorul.</li>
             </ul>
           </div>
           <div class="af-actions">
@@ -159,7 +159,7 @@ include __DIR__ . '/../includes/v2/header.php';
           <span class="af-badge is-bad" aria-hidden="true"><?= v2_ic('x') ?></span>
           <p class="af-card-k is-bad" id="ai-bad-k">Link invalid</p>
           <h2 class="af-card-h" id="ai-bad-h" tabindex="-1">Invitația nu mai e valabilă</h2>
-          <p class="af-card-p" id="ai-bad-p">Invitația a expirat, a fost deja folosită sau linkul e incomplet. Cere-i organizatorului să ți-o retrimită: o invitație e valabilă 7 zile.</p>
+          <p class="af-card-p" id="ai-bad-p">Invitația a expirat, a fost deja folosită sau linkul e incomplet. Cere-i operatorului să ți-o retrimită: o invitație e valabilă 7 zile.</p>
           <div class="af-actions">
             <button class="btn btn-primary" type="button" id="ai-retry" hidden>Încearcă din nou</button>
             <a class="btn btn-primary" id="ai-bad-login" href="/autentificare?ca=venue">Mergi la autentificare</a>

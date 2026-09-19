@@ -25,7 +25,7 @@ if (!preg_match('/^[A-Za-z0-9-]{8,64}$/', $sdUuid)) {
 }
 
 $pageTitleRaw = 'Comandă serviciu — ' . SITE_NAME;
-$pageDescription = 'Detaliile unei comenzi de servicii extra a unui organizator pe bilete.online.';
+$pageDescription = 'Detaliile unei comenzi de servicii extra a unui operator pe bilete.online.';
 $canonicalUrl = SITE_URL . ($sdUuid !== '' ? '/organizator/services/' . $sdUuid : '/organizator/servicii/comenzi');
 $noindex = true;
 $skipPageCache = true;

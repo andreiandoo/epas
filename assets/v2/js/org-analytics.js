@@ -688,7 +688,7 @@
       var sold = num(t.sold), rev = num(t.revenue), capq = t.capacity == null || t.capacity === '' ? -1 : num(t.capacity), color = COLORS[i % COLORS.length], tr = Math.round(num(t.trend));
       totalRev += rev;
       totalSold += sold;
-      var type = el('div', { class: 'oa-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || 'Bilet', t.is_invitation ? el('small', { text: 'titlu gratuit (invitație)' }) : t.is_entry_ticket ? el('small', { text: 'încasat de organizator' }) : null])]);
+      var type = el('div', { class: 'oa-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || 'Bilet', t.is_invitation ? el('small', { text: 'titlu gratuit (invitație)' }) : t.is_entry_ticket ? el('small', { text: 'încasat de operator' }) : null])]);
       type.querySelector('i').style.setProperty('--c', color);
       var soldCell = el('td', { class: 'is-num' }, [F.num(sold)]);
       if (capq > 0) {

@@ -1,8 +1,8 @@
-/* bilete.online v2: organizer area shell (/organizator/*). Guards the area (a signed-out visitor goes to the organizer
-   login and comes back after it), fills in the organizer card, the account menu and the "account pending" banner from
-   the session and /organizer/me, keeps the section badges (activities in progress, open support tickets), loads the
-   unread notifications (and refreshes them while the tab is visible), runs the activity search, the two menus and the
-   phone drawer. Exposes window.BO_ORG for the page scripts: ready (a promise, false while the visitor is sent to the
+/* bilete.online v2: operator area shell (/organizator/*). Guards the area (a signed-out visitor goes to the operator
+   login and comes back after it), fills in the operator card ("Operator · <location>"), the account menu and the
+   "account pending" banner from the session, /organizer/me and the operator's locations, keeps the open support tickets
+   badge, loads the unread notifications (and refreshes them while the tab is visible), runs the search over the
+   operator's products and locations, the two menus and the phone drawer. Exposes window.BO_ORG for the page scripts: ready (a promise, false while the visitor is sent to the
    login), api(), el() / icon() for building markup, the formatters and one toast. Text from the API is always written as
    text. Markup in includes/v2/organizer.php. */
 (function () {
@@ -153,20 +153,38 @@
   function setProfile(o) {
     if (!o || typeof o !== 'object') return;
     profile = o;
-    var name = String(o.public_name || o.name || o.company_name || o.contact_name || '').trim() || 'Organizator';
+    var name = String(o.public_name || o.name || o.company_name || o.contact_name || '').trim() || 'Operator';
     var words = name.split(/\s+/).map(function (w) { return w.replace(/[^\p{L}\p{N}]/gu, ''); }).filter(Boolean);
     var initials = (words.length > 1 ? words[0].charAt(0) + words[words.length - 1].charAt(0) : (words[0] || '').slice(0, 2)).toUpperCase() || '·';
     each('[data-org-initials]', function (n) { n.textContent = initials; });
     each('[data-org-name]', function (n) { n.textContent = name; });
     each('[data-org-email]', function (n) { n.textContent = o.email || ''; });
-    var plan = [o.organizer_type === 'leisure' ? 'Leisure venue' : 'Organizator'];
-    if (o.commission_rate != null && o.commission_rate !== '' && isFinite(parseFloat(o.commission_rate))) plan.push('comision ' + pct(o.commission_rate, 2));
-    each('[data-org-plan]', function (n) { n.textContent = plan.join(' · '); });
+    drawPlan();
     var pending = $('org-pending');
     if (pending) pending.hidden = !(o.status && o.status !== 'active');
     profileCbs.forEach(function (cb) { try { cb(o); } catch (e) {} });
   }
   function onProfile(cb) { profileCbs.push(cb); if (profile) { try { cb(profile); } catch (e) {} } }
+
+  /* ---------- the operator's locations and products (activities module) ---------- */
+  var amLoad = null;
+  /** {locations, products} of this operator, read once per page. */
+  function amCatalog() {
+    if (!amLoad) {
+      amLoad = Promise.all([
+        api('/organizer/activities-module/locations', { quiet: true }).then(function (r) { return (r && r.data && r.data.locations) || []; }, function () { return []; }),
+        api('/organizer/activities-module/products', { quiet: true }).then(function (r) { return (r && r.data && r.data.products) || []; }, function () { return []; }),
+      ]).then(function (res) { return { locations: res[0], products: res[1] }; });
+    }
+    return amLoad;
+  }
+  /** Under the name: "Operator · <location>" (the first one, "+N" for the others). */
+  var planLocs = null;
+  function drawPlan() {
+    var text = 'Operator';
+    if (planLocs && planLocs.length) text += ' · ' + (flat(planLocs[0].name) || 'locația ta') + (planLocs.length > 1 ? ' +' + (planLocs.length - 1) : '');
+    each('[data-org-plan]', function (n) { n.textContent = text; });
+  }
 
   /* ---------- badges ---------- */
   function setBadge(key, n) {
@@ -307,24 +325,23 @@
 
   /* ---------- activity search ---------- */
   var search = $('org-search'), q = $('org-q'), qPop = $('org-q-pop'), qList = $('org-q-list'), qMsg = $('org-q-msg'), qOpen = $('org-q-open'), top = $('org-top');
-  var MAX_PAGES = 6, PER_PAGE = 50;
-  var catalog = null, catalogLoad = null, catalogCut = false, results = [], active = -1, qTimer = 0;
-  var STATUS = { published: ['Publicată', 'is-ok'], draft: ['Draft', 'is-muted'], pending_review: ['În verificare', 'is-wait'], cancelled: ['Anulată', 'is-bad'], ended: ['Încheiată', 'is-muted'], past: ['Încheiată', 'is-muted'] };
+  var catalog = null, results = [], active = -1, qTimer = 0;
+  var KIND = { access: 'Bilet de acces', experience: 'Experiență', package: 'Pachet' };
+  var REVIEW = { draft: ['Ciornă', 'is-muted'], pending: ['În verificare', 'is-wait'], rejected: ['Respins', 'is-bad'] };
   function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  /** Locations and products as search rows: {kind, id, name, where, image, status}. */
   function loadCatalog() {
     if (catalog) return Promise.resolve(catalog);
-    if (catalogLoad) return catalogLoad;
-    var rows = [];
-    function page(n) { // the list is paginated: read the newest pages, not only the first
-      return api('/organizer/events?per_page=' + PER_PAGE + '&page=' + n, { quiet: true }).then(function (r) {
-        rows = rows.concat(Array.isArray(r && r.data) ? r.data : []);
-        var last = toNum(metaOf(r).last_page);
-        if (last > n && n < MAX_PAGES) return page(n + 1);
-        catalogCut = last > MAX_PAGES;
-      });
-    }
-    catalogLoad = page(1).then(function () { catalog = rows; catalogLoad = null; return rows; }, function (e) { catalogLoad = null; throw e; });
-    return catalogLoad;
+    return amCatalog().then(function (c) {
+      var locName = {};
+      c.locations.forEach(function (l) { locName[l.id] = flat(l.name); });
+      catalog = c.locations.map(function (l) {
+        return { kind: 'location', id: l.id, name: flat(l.name), where: 'Locație', image: l.cover_image && l.cover_image.url, st: l.review_status };
+      }).concat(c.products.map(function (p) {
+        return { kind: 'product', id: p.id, name: flat(p.title), where: [KIND[p.type] || 'Produs', locName[p.location_id]].filter(Boolean).join(' · '), image: p.image && p.image.url, st: p.review_status };
+      }));
+      return catalog;
+    });
   }
   function highlight(text, term) {
     var t = norm(term), flatText = '', map = [];
@@ -350,17 +367,15 @@
   }
   function openResult(i) {
     var x = results[i];
-    if (x && x.e.id != null) window.location.href = '/organizator/activities/' + encodeURIComponent(x.e.id);
+    if (x && x.e.id != null) window.location.href = (x.e.kind === 'location' ? '/organizator/locatii?id=' : '/organizator/produse?id=') + encodeURIComponent(x.e.id);
   }
   function renderResults(term) {
     qList.textContent = '';
     active = -1;
     q.removeAttribute('aria-activedescendant');
     results.forEach(function (x, i) {
-      var e = x.e, d = dateOf(e.starts_at || e.event_date);
-      var where = [flat(e.venue_name), flat(e.venue_city)].filter(Boolean).join(', ');
-      var sub = [d ? fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Fără dată', where].filter(Boolean).join(' · ');
-      var st = e.is_cancelled ? STATUS.cancelled : STATUS[e.status];
+      var e = x.e, sub = e.where;
+      var st = REVIEW[e.st];
       var thumb = el('span', { class: 'org-q-img', 'aria-hidden': 'true' });
       var letter = x.name.charAt(0) || '·';
       if (e.image) {
@@ -377,9 +392,7 @@
       li.addEventListener('click', function () { openResult(i); });
       qList.appendChild(li);
     });
-    qMsg.textContent = results.length
-      ? (catalogCut ? 'Caut în cele mai noi ' + nf.format(MAX_PAGES * PER_PAGE) + ' activități.' : '')
-      : 'Nicio activitate nu se potrivește cu „' + term + '”.';
+    qMsg.textContent = results.length ? '' : 'Niciun produs și nicio locație nu se potrivesc cu „' + term + '”.';
     setOpen(true);
   }
   function runSearch() {
@@ -390,7 +403,7 @@
       if (q.value.trim() !== term) return;
       var t = norm(term);
       results = rows.map(function (e) {
-        var name = flat(e.name || e.title), n = norm(name), place = norm(flat(e.venue_name) + ' ' + flat(e.venue_city));
+        var name = e.name, n = norm(name), place = norm(e.where);
         return { e: e, name: name, s: n.indexOf(t) === 0 ? 0 : n.indexOf(t) > -1 ? 1 : place.indexOf(t) > -1 ? 2 : -1 };
       }).filter(function (x) { return x.s >= 0 && x.name; }).sort(function (a, b) { return a.s - b.s; }).slice(0, 8);
       renderResults(term);
@@ -398,7 +411,7 @@
       if (q.value.trim() !== term) return;
       results = [];
       qList.textContent = '';
-      qMsg.textContent = 'Nu am putut încărca activitățile. Încearcă din nou.';
+      qMsg.textContent = 'Nu am putut încărca produsele. Încearcă din nou.';
       setOpen(true);
     });
   }
@@ -464,10 +477,7 @@
         else { localStorage.setItem('bileteonline_organizer_data', JSON.stringify(o)); setProfile(o); }
       } catch (e) { setProfile(o); }
     }, function () {});
-    api('/organizer/events?with_counts=1&per_page=1', { quiet: true }).then(function (r) {
-      var m = metaOf(r);
-      if (m.counts) setBadge('events', m.counts.ongoing);
-    }, function () {});
+    amCatalog().then(function (c) { planLocs = c.locations; drawPlan(); });
     api('/organizer/support/tickets?status=open&per_page=1', { quiet: true }).then(function (r) { // 403 for organizers outside the support beta: no badge
       setBadge('support', metaOf(r).total);
     }, function () {});

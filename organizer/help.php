@@ -1,6 +1,6 @@
 <?php
 /**
- * bilete.online — Organizator › Ajutor (v3).
+ * bilete.online — Operator › Ajutor (v3).
  * Route: /organizator/help
  *
  * Static help center: searchable FAQ accordion grouped in 3 sections plus a

@@ -15,7 +15,7 @@
   var ROLES = { admin: 'Administrator', manager: 'Manager', staff: 'Staff' };
   var STRENGTH = { 1: ['Slabă', 'bad'], 2: ['Medie', 'mid'], 3: ['Puternică', 'ok'], 4: ['Foarte puternică', 'ok'] };
   var BAD = {
-    invalid: ['Link invalid', 'Invitația nu mai e valabilă', 'Invitația a expirat, a fost deja folosită sau linkul e incomplet. Cere-i organizatorului să ți-o retrimită: o invitație e valabilă 7 zile.'],
+    invalid: ['Link invalid', 'Invitația nu mai e valabilă', 'Invitația a expirat, a fost deja folosită sau linkul e incomplet. Cere-i operatorului să ți-o retrimită: o invitație e valabilă 7 zile.'],
     busy: ['Prea multe încercări', 'Încearcă din nou peste un minut', 'Am primit prea multe verificări într-un timp scurt. Linkul nu s-a schimbat, îl poți folosi în continuare.'],
     error: ['Eroare de conexiune', 'Nu am putut verifica invitația', 'Verifică conexiunea la internet și încearcă din nou.'],
   };
@@ -87,7 +87,7 @@
       var org = txt(o.name) || txt(o.company_name), company = txt(o.company_name), name = txt(m.name), email = txt(m.email) || link.email, role = ROLES[m.role] || '';
       reuse = !!d.has_existing_password;
       invite = { org: org, email: email };
-      $('ai-org').textContent = org || 'Organizator bilete.online';
+      $('ai-org').textContent = org || 'Operator bilete.online';
       $('ai-company').textContent = company;
       $('ai-company').hidden = !company || company === org;
       $('ai-name').textContent = name;
@@ -95,7 +95,7 @@
       $('ai-email').textContent = email;
       $('ai-role').textContent = role || 'Membru al echipei';
       $('ai-username').value = email;
-      $('ai-lead').textContent = (org || 'Un organizator') + ' te-a adăugat în echipă' + (role ? ', cu rolul ' + role : '') + '. ' + (reuse ? 'Confirmă și contul devine activ pe loc.' : 'Alege o parolă și contul devine activ pe loc.');
+      $('ai-lead').textContent = (org || 'Un operator') + ' te-a adăugat în echipă' + (role ? ', cu rolul ' + role : '') + '. ' + (reuse ? 'Confirmă și contul devine activ pe loc.' : 'Alege o parolă și contul devine activ pe loc.');
       usePassword(!reuse);
       show('ai-form-view', focus ? 'ai-form-h' : null);
       status.textContent = 'Invitația e valabilă.';
@@ -177,7 +177,7 @@
       var d = r.data || {}, reused = !!d.reused_existing_password;
       forget();
       pass.value = pass2.value = '';
-      $('ai-done-org').textContent = txt(d.organizer_name) || invite.org || 'organizatorului';
+      $('ai-done-org').textContent = txt(d.organizer_name) || invite.org || 'operatorului';
       $('ai-done-email').textContent = invite.email;
       // core keeps the password this e-mail already has in another team, even when one was typed here
       $('ai-done-pass').textContent = !reused ? 'parola aleasă' : body.password ? 'parola pe care o aveai deja pe bilete.online, nu cea aleasă acum' : 'parola pe care o folosești deja pe bilete.online';

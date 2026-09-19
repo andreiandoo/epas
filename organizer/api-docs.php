@@ -1,6 +1,6 @@
 <?php
 /**
- * bilete.online — Organizator › Documentație API (v3).
+ * bilete.online — Operator › Documentație API (v3).
  * Route: /organizator/apidoc
  *
  * RESTful API reference: API key box (load/regenerate/copy), auth, rate limits,

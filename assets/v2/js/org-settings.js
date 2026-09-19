@@ -199,7 +199,7 @@
   function lockForms(on) {
     qsa('#os-profile-form .os-fs, #os-company-form .os-fs', root).forEach(function (f) { f.disabled = on; });
     ['os-profile-go', 'os-company-go', 'os-sc2-go', 'os-sc2-on'].forEach(function (id) { $(id).disabled = on; });
-    syncSc2();
+    if (!on && me) syncCompany();
   }
   function countDesc() { var n = $('os-desc').value.length; $('os-desc-n').textContent = F.num(n) + ' / 2.000'; }
   $('os-desc').addEventListener('input', countDesc);
@@ -267,7 +267,7 @@
     if (!me || isBusy(btn)) return;
     clearErrs(['os-name', 'os-phone', 'os-website'], 'os-profile-err');
     var name = val('os-name'), phone = val('os-phone'), website = normalizeUrl(val('os-website'));
-    need(st, 'os-name', name ? '' : 'Scrie numele organizatorului.');
+    need(st, 'os-name', name ? '' : 'Scrie numele operatorului.');
     need(st, 'os-phone', phone && (!/^[+\d][\d\s().\/-]*$/.test(phone) || phone.replace(/\D/g, '').length < 6) ? 'Scrie un număr de telefon valid, de exemplu 0722 123 456.' : '');
     need(st, 'os-website', website === null ? 'Scrie o adresă validă, de exemplu www.firma-ta.ro.' : '');
     if (st.bad) { $(st.bad).focus(); return; }
@@ -276,80 +276,123 @@
   });
 
   /* =================== COMPANY =================== */
+  // The companies come from ANAF, never typed: once saved they are read-only (a change goes through support). Without
+  // one yet, the CUI is checked at ANAF, the answer fills the fields and only then it can be saved. The second issuing
+  // company follows the same steps, and only while "Am o a doua societate emitentă" is ticked.
   var CUI = /^(RO)?\s*\d{2,10}$/i;
+  var SC1_FIELDS = [['os-cname', 'company_name'], ['os-creg', 'company_registration'], ['os-caddr', 'company_address'], ['os-ccity', 'company_city'], ['os-ccounty', 'company_county'], ['os-czip', 'company_zip']];
+  var SC2_FIELDS = [['os-s-name', 'secondary_company_name'], ['os-s-reg', 'secondary_company_registration'], ['os-s-addr', 'secondary_company_address'], ['os-s-city', 'secondary_company_city'], ['os-s-county', 'secondary_company_county'], ['os-s-zip', 'secondary_company_zip']];
+  var anaf1 = null, anaf2 = null; // the last ANAF answer for SC1 / SC2 (what gets saved)
+  function hasSc1() { return !!(me && F.flat(me.company_tax_id).trim() && F.flat(me.company_name).trim()); }
+  function hasSc2() { return !!(me && me.has_secondary_issuer && F.flat(me.secondary_company_tax_id).trim() && F.flat(me.secondary_company_name).trim()); }
   function fillCompany() {
+    anaf1 = anaf2 = null;
     setVal('os-cui', F.flat(me.company_tax_id));
-    setVal('os-cname', F.flat(me.company_name));
-    setVal('os-creg', F.flat(me.company_registration));
-    setVal('os-caddr', F.flat(me.company_address));
-    setVal('os-ccity', F.flat(me.company_city));
-    setVal('os-ccounty', F.flat(me.company_county));
-    setVal('os-czip', F.flat(me.company_zip));
+    SC1_FIELDS.forEach(function (p) { setVal(p[0], F.flat(me[p[1]])); });
     $('os-vat').textContent = me.vat_payer == null ? '—' : me.vat_payer ? 'Da' : 'Nu';
     $('os-sc2-on').checked = !!me.has_secondary_issuer;
-    [['os-s-name', 'secondary_company_name'], ['os-s-cui', 'secondary_company_tax_id'], ['os-s-reg', 'secondary_company_registration'], ['os-s-addr', 'secondary_company_address'], ['os-s-city', 'secondary_company_city'], ['os-s-county', 'secondary_company_county'], ['os-s-zip', 'secondary_company_zip']]
-      .forEach(function (p) { setVal(p[0], F.flat(me[p[1]])); });
+    setVal('os-s-cui', F.flat(me.secondary_company_tax_id));
+    SC2_FIELDS.forEach(function (p) { setVal(p[0], F.flat(me[p[1]])); });
+    syncCompany();
   }
-  function syncSc2() { $('os-sc2-fields').disabled = !me || !$('os-sc2-on').checked; }
+  function syncCompany() {
+    var locked = hasSc1();
+    $('os-cui').readOnly = locked;
+    $('os-anaf').hidden = locked;
+    $('os-company-lock').hidden = !locked;
+    $('os-company-how').hidden = locked;
+    $('os-company-act').hidden = locked;
+    $('os-company-go').disabled = locked || !anaf1;
+    syncSc2();
+  }
+  function syncSc2() {
+    var on = $('os-sc2-on').checked, locked = hasSc2();
+    $('os-sc2-fields').hidden = !on;
+    $('os-s-cui').readOnly = locked;
+    $('os-s-anaf').hidden = locked;
+    $('os-sc2-lock').hidden = !locked;
+    $('os-s-data').hidden = !(locked || anaf2);
+    // save: a new SC2 after its ANAF check, or turning a saved one off
+    var canSave = !!me && ((on && !locked && !!anaf2) || (!on && !!me.has_secondary_issuer));
+    $('os-sc2-act').hidden = !canSave;
+    $('os-sc2-go').disabled = !canSave;
+    $('os-sc2-go').querySelector('[data-label]').textContent = on ? 'Salvează SC2' : 'Oprește a doua societate';
+  }
   $('os-sc2-on').addEventListener('change', syncSc2);
-  $('os-anaf').addEventListener('click', function () {
-    var btn = this, cui = val('os-cui'), msg = $('os-anaf-msg');
-    if (isBusy(btn)) return;
-    fieldErr('os-cui', '');
-    if (!CUI.test(cui)) { fieldErr('os-cui', 'Scrie CUI-ul firmei, de exemplu RO12345678.'); $('os-cui').focus(); return; }
+  /** ANAF lookup for one CUI field; fills the read-only fields and resolves the company, or null after saying why. */
+  function checkAnaf(btn, cuiId, msgId, fields) {
+    var cui = val(cuiId), msg = $(msgId);
+    if (isBusy(btn)) return Promise.resolve(null);
+    fieldErr(cuiId, '');
+    if (!CUI.test(cui)) { fieldErr(cuiId, 'Scrie CUI-ul firmei, de exemplu RO12345678.'); $(cuiId).focus(); return Promise.resolve(null); }
     busyBtn(btn, true, 'Se verifică…');
     msg.className = 'os-help';
     msg.textContent = 'Căutăm firma în registrul ANAF…';
-    O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui }, quiet: true }).then(function (r) {
+    return O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui }, quiet: true }).then(function (r) {
       busyBtn(btn, false);
       var d = r && r.data;
       if (!d || !F.flat(d.company_name).trim()) { var e = new Error('anaf'); e.status = 404; throw e; }
-      setVal('os-cname', F.flat(d.company_name).trim());
-      if (F.flat(d.reg_com).trim()) setVal('os-creg', F.flat(d.reg_com).trim());
-      if (F.flat(d.address).trim()) setVal('os-caddr', tidyPlace(d.address).replace(/\s{2,}/g, ' '));
-      if (F.flat(d.city).trim()) setVal('os-ccity', tidyPlace(d.city));
-      if (F.flat(d.county).trim()) setVal('os-ccounty', tidyPlace(d.county));
-      if (F.flat(d.zip).trim()) setVal('os-czip', F.flat(d.zip).trim());
-      $('os-vat').textContent = (d.vat_payer ? 'Da' : 'Nu') + ', după ANAF';
+      if (d.deregistered || /RADI/i.test(F.flat(d.status))) {
+        msg.className = 'os-help is-bad';
+        msg.textContent = 'Firma cu acest CUI e radiată la ANAF. Folosește CUI-ul unei firme active.';
+        return null;
+      }
+      var co = {
+        cui: cui.toUpperCase().replace(/\s+/g, ''), name: F.flat(d.company_name).trim(), reg: F.flat(d.reg_com).trim(),
+        addr: tidyPlace(d.address).replace(/\s{2,}/g, ' '), city: tidyPlace(d.city), county: tidyPlace(d.county), zip: F.flat(d.zip).trim(), vat: !!d.vat_payer,
+      };
+      [co.name, co.reg, co.addr, co.city, co.county, co.zip].forEach(function (v, i) { setVal(fields[i][0], v); });
       msg.className = 'os-help is-ok';
-      msg.textContent = 'Am completat datele din ANAF' + (F.flat(d.status).trim() ? ' (' + tidyPlace(d.status) + ')' : '') + '. Verifică-le și salvează.';
+      msg.textContent = 'Am găsit firma în ANAF' + (F.flat(d.status).trim() ? ' (' + tidyPlace(d.status) + ')' : '') + '. Verifică datele și salvează.';
+      return co;
     }).catch(function (err) {
       busyBtn(btn, false);
       msg.className = 'os-help is-bad';
       msg.textContent = err && err.status === 404 ? 'Nu am găsit firma în ANAF. Verifică CUI-ul.'
         : err && (err.status === 502 || err.status === 503) ? 'Serviciul ANAF nu răspunde acum. Încearcă din nou în câteva minute.'
         : 'Nu am putut verifica acum. Încearcă din nou.';
+      return null;
+    });
+  }
+  $('os-anaf').addEventListener('click', function () {
+    checkAnaf(this, 'os-cui', 'os-anaf-msg', SC1_FIELDS).then(function (co) {
+      anaf1 = co;
+      if (co) $('os-vat').textContent = (co.vat ? 'Da' : 'Nu') + ', după ANAF';
+      syncCompany();
     });
   });
+  $('os-cui').addEventListener('input', function () { if (anaf1) { anaf1 = null; syncCompany(); } });
+  $('os-s-anaf').addEventListener('click', function () {
+    checkAnaf(this, 'os-s-cui', 'os-s-anaf-msg', SC2_FIELDS).then(function (co) { anaf2 = co; syncSc2(); });
+  });
+  $('os-s-cui').addEventListener('input', function () { if (anaf2) { anaf2 = null; syncSc2(); } });
   $('os-company-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var btn = $('os-company-go'), st = { bad: null };
-    if (!me || isBusy(btn)) return;
-    clearErrs(['os-cui', 'os-cname', 'os-caddr', 'os-ccity', 'os-ccounty'], 'os-company-err');
-    var cui = val('os-cui');
-    need(st, 'os-cui', !cui ? 'Scrie CUI-ul firmei.' : !CUI.test(cui) ? 'Scrie un CUI valid, de exemplu RO12345678.' : '');
-    need(st, 'os-cname', val('os-cname') ? '' : 'Scrie denumirea firmei.');
-    need(st, 'os-caddr', val('os-caddr') ? '' : 'Scrie adresa sediului.');
-    need(st, 'os-ccity', val('os-ccity') ? '' : 'Scrie localitatea.');
-    need(st, 'os-ccounty', val('os-ccounty') ? '' : 'Scrie județul.');
-    if (st.bad) { $(st.bad).focus(); return; }
-    saveProfile(btn, { company_name: val('os-cname'), company_tax_id: cui.toUpperCase().replace(/\s+/g, ''), company_registration: val('os-creg') || null, company_address: val('os-caddr'), company_city: val('os-ccity'), company_county: val('os-ccounty'), company_zip: val('os-czip') || null },
-      'os-company-err', 'Datele firmei au fost salvate.', { company_name: 'os-cname', company_tax_id: 'os-cui', company_registration: 'os-creg', company_address: 'os-caddr', company_city: 'os-ccity', company_county: 'os-ccounty', company_zip: 'os-czip' });
+    var btn = $('os-company-go');
+    if (!me || isBusy(btn) || hasSc1()) return;
+    clearErrs(['os-cui'], 'os-company-err');
+    if (!anaf1) { fieldErr('os-cui', 'Verifică întâi CUI-ul în ANAF.'); $('os-cui').focus(); return; }
+    var c = anaf1;
+    saveProfile(btn, { company_tax_id: c.cui, company_name: c.name, company_registration: c.reg || null, company_address: c.addr || null, company_city: c.city || null, company_county: c.county || null, company_zip: c.zip || null },
+      'os-company-err', 'Datele firmei au fost salvate.', { company_tax_id: 'os-cui' })
+      .then(function (ok) { if (ok) fillCompany(); });
   });
   $('os-sc2-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var btn = $('os-sc2-go'), on = $('os-sc2-on').checked, st = { bad: null };
+    var btn = $('os-sc2-go'), on = $('os-sc2-on').checked;
     if (!me || isBusy(btn)) return;
-    clearErrs(['os-s-name', 'os-s-cui'], 'os-sc2-err');
-    var cui = val('os-s-cui');
+    clearErrs(['os-s-cui'], 'os-sc2-err');
+    var body;
     if (on) {
-      need(st, 'os-s-name', val('os-s-name') ? '' : 'Scrie denumirea celei de-a doua firme.');
-      need(st, 'os-s-cui', !cui ? 'Scrie CUI-ul celei de-a doua firme.' : !CUI.test(cui) ? 'Scrie un CUI valid, de exemplu RO12345678.' : '');
+      if (hasSc2()) return;
+      if (!anaf2) { fieldErr('os-s-cui', 'Verifică întâi CUI-ul în ANAF.'); $('os-s-cui').focus(); return; }
+      var c = anaf2;
+      body = { has_secondary_issuer: true, secondary_company_tax_id: c.cui, secondary_company_name: c.name, secondary_company_registration: c.reg || null, secondary_company_address: c.addr || null, secondary_company_city: c.city || null, secondary_company_county: c.county || null, secondary_company_zip: c.zip || null };
+    } else {
+      body = { has_secondary_issuer: false };
     }
-    if (st.bad) { $(st.bad).focus(); return; }
-    saveProfile(btn, { has_secondary_issuer: on, secondary_company_name: val('os-s-name') || null, secondary_company_tax_id: cui ? cui.toUpperCase().replace(/\s+/g, '') : null, secondary_company_registration: val('os-s-reg') || null, secondary_company_address: val('os-s-addr') || null, secondary_company_city: val('os-s-city') || null, secondary_company_county: val('os-s-county') || null, secondary_company_zip: val('os-s-zip') || null },
-      'os-sc2-err', on ? 'Datele SC2 au fost salvate.' : 'A doua societate emitentă a fost oprită.', { secondary_company_name: 'os-s-name', secondary_company_tax_id: 'os-s-cui', secondary_company_registration: 'os-s-reg', secondary_company_address: 'os-s-addr', secondary_company_city: 'os-s-city', secondary_company_county: 'os-s-county', secondary_company_zip: 'os-s-zip' })
-      .then(function (ok) { if (ok && accounts) renderAccounts(); });
+    saveProfile(btn, body, 'os-sc2-err', on ? 'A doua societate a fost salvată.' : 'A doua societate emitentă a fost oprită.', { secondary_company_tax_id: 'os-s-cui' })
+      .then(function (ok) { if (ok) { fillCompany(); if (accounts) renderAccounts(); } });
   });
 
   /* =================== BANK ACCOUNTS =================== */
@@ -552,7 +595,7 @@
     terms.textContent = '';
     list.forEach(function (t) { t = F.flat(t).trim(); if (t) terms.appendChild(el('li', null, [icon('check-circle'), TERMS[t.replace(/\.$/, '')] || t])); });
     if (c.is_signed) setState('is-ok', 'check-circle', 'Contract semnat', c.signed_at ? 'Semnat electronic pe ' + stamp(c.signed_at) + '.' : 'Semnat electronic.');
-    else if (c.signature_required) setState('is-warm', 'signature', 'Contractul așteaptă semnătura ta', 'Semnează mai jos. Până atunci nu poți trimite activități spre aprobare și nu poți cere plăți.');
+    else if (c.signature_required) setState('is-warm', 'signature', 'Contractul așteaptă semnătura ta', 'Semnează mai jos. Până atunci nu poți cere plăți.');
     else if (c.has_contract) setState('', 'file-text', 'Contract generat', c.contract && c.contract.issued_at ? 'Emis pe ' + dayLabel(c.contract.issued_at) + '.' : '');
     else setState('', 'info', 'Contractul nu este generat încă', 'Se generează automat după ce încarci ambele documente de mai jos și îți verificăm datele.');
     $('os-contract-dl').hidden = !contractUrl();

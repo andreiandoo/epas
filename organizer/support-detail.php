@@ -1,6 +1,6 @@
 <?php
 /**
- * bilete.online — Organizator › Suport › Tichet (v3).
+ * bilete.online — Operator › Suport › Tichet (v3).
  * Route: /organizator/suport/{id}
  *
  * Single support ticket: header + meta, conversation thread, reply form with

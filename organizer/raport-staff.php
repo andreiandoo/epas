@@ -1,6 +1,6 @@
 <?php
 /**
- * bilete.online — Organizator › Raport staff (v3).
+ * bilete.online — Operator › Raport staff (v3).
  * Route: /organizator/raport-staff?event={id}
  *
  * Per-activity staff sales report: gross takings per staff member and per

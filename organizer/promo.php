@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
 $pageTitleRaw = 'Coduri promoționale — ' . SITE_NAME;
-$pageDescription = 'Codurile de reducere ale unui organizator pe bilete.online: creare, limite, perioade și utilizări.';
+$pageDescription = 'Codurile de reducere ale unui operator pe bilete.online: creare, limite, perioade și utilizări.';
 $canonicalUrl = SITE_URL . '/organizator/promo';
 $noindex = true;
 $skipPageCache = true;
