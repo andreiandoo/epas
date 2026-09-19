@@ -169,6 +169,15 @@
             $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
             $verifyUrl = method_exists($ticket, 'getVerifyUrl') ? $ticket->getVerifyUrl() : $ticketCode;
             $ticketSeries = $ticket->meta['ticket_series'] ?? null;
+            // Activity tickets (bilete.online) have no event: describe them from the booking.
+            if ($ticket->activity_booking_id && ($activityInfo = \App\Services\Activities\BookingDescriber::ticket($ticket))) {
+                $eventTitle = $activityInfo['name'];
+                $eventDate = $activityInfo['date_label'];
+                $eventTime = $activityInfo['start_time'] ? ($activityInfo['start_time'] . ($activityInfo['end_time'] ? ' – ' . $activityInfo['end_time'] : '')) : '';
+                $doorsOpen = '';
+                $venue = implode(', ', array_filter([$activityInfo['venue'] ?? '', $activityInfo['city'] ?? '']));
+                $ticketTypeName = $activityInfo['ticket_type'] . ($activityInfo['start_time'] ? '' : ' · ' . $activityInfo['time_label']);
+            }
         @endphp
 
         <div class="ticket">

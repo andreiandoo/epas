@@ -218,7 +218,7 @@ class AccountController extends BaseController
                 $refundReason = null;
             }
 
-            return [
+            $row = [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'reference' => $order->order_number,
@@ -277,6 +277,12 @@ class AccountController extends BaseController
                 'refund_reason' => $refundReason,
                 'created_at' => $order->created_at->toIso8601String(),
             ];
+
+            // Activity orders (bilete.online) have no event: describe them
+            // from their bookings and order lines.
+            return \App\Services\Activities\BookingDescriber::isActivityOrder($order)
+                ? $this->withActivityOrder($row, $order)
+                : $row;
         });
 
         // Inject aggregate stats into the response
@@ -494,7 +500,7 @@ class AccountController extends BaseController
         $insuranceAmount = (float) ($order->meta['insurance_amount'] ?? 0);
         $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount - $insuranceAmount);
 
-        return $this->success([
+        $detail = [
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -556,7 +562,27 @@ class AccountController extends BaseController
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ],
-        ]);
+        ];
+
+        // Activity orders (bilete.online): event, lines and ticket types come
+        // from the bookings.
+        if (\App\Services\Activities\BookingDescriber::isActivityOrder($order)) {
+            $detail['order'] = $this->withActivityOrder($detail['order'], $order);
+            $detail['order']['tickets'] = collect($detail['order']['tickets'])->map(function ($t) use ($order) {
+                $ticket = $order->tickets->firstWhere('id', $t['id']);
+                $info = $ticket ? \App\Services\Activities\BookingDescriber::ticket($ticket) : null;
+                return $info ? array_merge($t, [
+                    'type'       => $info['ticket_type'],
+                    'price'      => (float) $ticket->price,
+                    'product'    => $info['name'],
+                    'package'    => $info['package'],
+                    'date_label' => $info['date_label'],
+                    'time_label' => $info['time_label'],
+                ]) : $t;
+            })->values()->all();
+        }
+
+        return $this->success($detail);
     }
 
     /**
@@ -652,6 +678,11 @@ class AccountController extends BaseController
 
         if (!$ticket || !$order) {
             return $this->error('Ticket not found', 404);
+        }
+
+        // Activity ticket (bilete.online): no event, described from the booking.
+        if ($ticket->activity_booking_id) {
+            return $this->success(['ticket' => $this->activityTicketDetail($ticket, $order, $customer)]);
         }
 
         $event = $order->marketplaceEvent;
@@ -889,6 +920,9 @@ class AccountController extends BaseController
                             'is_upcoming' => !$isPast,
                         ],
                     ];
+                } elseif ($ticket->activity_booking_id) {
+                    // Activity ticket (bilete.online): same shape, described from the booking.
+                    return $this->activityTicketRow($ticket, $order, $customer);
                 }
 
                 return null;
@@ -1036,5 +1070,151 @@ class AccountController extends BaseController
             return $value['ro'] ?? $value['en'] ?? reset($value) ?: null;
         }
         return (string) $value;
+    }
+
+    /**
+     * An activity order row for /cont/comenzi: the first booking stands in
+     * for the event, order lines replace the per-ticket-type grouping, and the
+     * commission shown is the one added on top of the prices.
+     */
+    protected function withActivityOrder(array $row, Order $order): array
+    {
+        $lines = \App\Services\Activities\BookingDescriber::lines($order);
+        $first = $lines[0] ?? null;
+        $multi = count($lines) > 1 ? ' + ' . (count($lines) - 1) . ' alte' : '';
+        $upcoming = collect($lines)->contains(fn ($l) => ($l['end_date'] ?? $l['date']) >= now('Europe/Bucharest')->toDateString());
+
+        $row['kind'] = 'activity';
+        $row['event'] = $first ? [
+            'id'          => null,
+            'title'       => $first['title'] . $multi,
+            'name'        => $first['title'] . $multi,
+            'slug'        => null,
+            'date'        => $first['date'] ? \Carbon\Carbon::parse($first['date'] . ' ' . ($first['start_time'] ?? '00:00'), 'Europe/Bucharest')->toIso8601String() : null,
+            'date_label'  => $first['date_label'],
+            'time_label'  => $first['time_label'],
+            'venue'       => $first['location']['name'] ?? null,
+            'city'        => $first['location']['city'] ?? null,
+            'image'       => $first['image'],
+            'is_upcoming' => $upcoming,
+        ] : null;
+        $row['items'] = collect($lines)->map(fn ($l) => [
+            'name'                  => $l['title'] . ($l['variant'] ? ' — ' . $l['variant'] : ''),
+            'quantity'              => $l['quantity'],
+            'base_price'            => $l['quantity'] > 0 ? round($l['total'] / $l['quantity'], 2) : $l['total'],
+            'price'                 => $l['quantity'] > 0 ? round($l['total'] / $l['quantity'], 2) : $l['total'],
+            'total'                 => $l['total'],
+            'date_label'            => $l['date_label'],
+            'time_label'            => $l['time_label'],
+            'addons'                => $l['addons'],
+            'commission_per_ticket' => 0,
+            'is_refundable'         => false,
+        ])->values()->all();
+        $onTop = (float) ($order->meta['commission_added_on_top'] ?? 0);
+        $row['commission_amount'] = round($onTop, 2);
+        $row['commission_mode'] = $onTop > 0 ? 'on_top' : 'included';
+
+        return $row;
+    }
+
+    /**
+     * An activity ticket (access ticket, experience, package component) in the
+     * shape /cont/bilete reads for event tickets, plus date / time labels.
+     */
+    protected function activityTicketRow($ticket, Order $order, $customer): ?array
+    {
+        $info = \App\Services\Activities\BookingDescriber::ticket($ticket);
+        if (!$info) {
+            return null;
+        }
+        $multiDay = $info['end_date'] && $info['end_date'] !== $info['date'];
+        $start = $info['date']
+            ? \Carbon\Carbon::parse($info['date'] . ' ' . ($info['start_time'] ?? '00:00'), 'Europe/Bucharest')
+            : null;
+
+        return [
+            'id'            => $ticket->id,
+            'code'          => $ticket->barcode,
+            'type'          => $info['ticket_type'],
+            'status'        => $ticket->status,
+            'order_number'  => $order->order_number,
+            'checked_in'    => $ticket->checked_in_at !== null,
+            'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
+            'seat_label'    => null,
+            'seat'          => null,
+            'ticket_series' => null,
+            'kind'          => 'activity',
+            'event' => [
+                'id'                 => null,
+                'name'               => $info['name'],
+                'slug'               => $info['slug'],
+                'product_type'       => $info['type'],
+                'package'            => $info['package'],
+                'location_slug'      => $info['location_slug'],
+                'date'               => $start?->toIso8601String(),
+                'date_formatted'     => $start?->format('d M Y'),
+                'end_date'           => $multiDay ? \Carbon\Carbon::parse($info['end_date'], 'Europe/Bucharest')->toIso8601String() : null,
+                'end_date_formatted' => $multiDay ? \Carbon\Carbon::parse($info['end_date'])->format('d M Y') : null,
+                'date_label'         => $info['date_label'],
+                'time'               => $info['start_time'],
+                'end_time'           => $info['end_time'],
+                'time_label'         => $info['time_label'],
+                'doors_time'         => null,
+                'venue'              => $info['venue'],
+                'city'               => $info['city'],
+                'image'              => $info['image'],
+                'vehicle_plate'      => $info['vehicle_plate'],
+                'is_upcoming'        => $info['is_upcoming'],
+            ],
+        ];
+    }
+
+    /** Detail of an activity ticket for /cont/bilete (no event behind it). */
+    protected function activityTicketDetail($ticket, Order $order, MarketplaceCustomer $customer): array
+    {
+        $info = \App\Services\Activities\BookingDescriber::ticket($ticket) ?? [];
+        $siblings = $order->tickets()->orderBy('id')->pluck('id')->all();
+        $position = array_search($ticket->id, $siblings, true);
+
+        return [
+            'id'               => $ticket->id,
+            'code'             => $ticket->barcode,
+            'type'             => $info['ticket_type'] ?? 'Bilet',
+            'type_description' => $info['package'] ? 'Inclus în pachetul „' . $info['package'] . '”' : '',
+            'price'            => number_format((float) $ticket->price, 2, ',', '.') . ' ' . ($order->currency ?: 'RON'),
+            'status'           => $ticket->status,
+            'attendee_name'    => $ticket->attendee_name ?? $customer->full_name,
+            'attendee_email'   => $ticket->attendee_email ?? $customer->email,
+            'checked_in'       => $ticket->checked_in_at !== null,
+            'checked_in_at'    => $ticket->checked_in_at?->toIso8601String(),
+            'transferable'     => false,
+            'kind'             => 'activity',
+            'event' => [
+                'id'            => null,
+                'title'         => $info['name'] ?? 'Activitate',
+                'subtitle'      => '',
+                'slug'          => $info['slug'] ?? null,
+                'product_type'  => $info['type'] ?? null,
+                'location_slug' => $info['location_slug'] ?? null,
+                'date'          => $info['date_label'] ?? '',
+                'time'          => $info['time_label'] ?? '',
+                'venue'         => $info['venue'] ?? null,
+                'address'       => $info['address'] ?? '',
+                'city'          => $info['city'] ?? null,
+                'meeting_point' => $info['meeting_point'] ?? null,
+                'vehicle_plate' => $info['vehicle_plate'] ?? null,
+                'image'         => $info['image'] ?? null,
+                'is_upcoming'   => $info['is_upcoming'] ?? false,
+                'online'        => ['is_online' => false, 'provider_label' => '', 'lobby_opens_at' => null, 'is_joinable_now' => false, 'join_url' => null],
+            ],
+            'order' => [
+                'id'            => $order->id,
+                'number'        => $order->order_number,
+                'purchase_date' => $order->created_at->format('d M Y'),
+            ],
+            'ticket_index'  => ($position === false ? 1 : $position + 1) . ' din ' . count($siblings),
+            'qr_data'       => $ticket->barcode,
+            'ticket_series' => null,
+        ];
     }
 }

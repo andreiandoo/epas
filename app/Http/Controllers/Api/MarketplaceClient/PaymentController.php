@@ -565,6 +565,13 @@ class PaymentController extends BaseController
             return;
         }
 
+        // Activity orders (access tickets, experiences, packages) have their
+        // own e-mail: this one is built around events.
+        if (\App\Services\Activities\BookingDescriber::isActivityOrder($order)) {
+            app(\App\Services\Activities\ActivityOrderEmail::class)->send($order);
+            return;
+        }
+
         $marketplace = $order->marketplaceClient;
         $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType', 'tickets.ticketType', 'marketplaceEvent']);
 

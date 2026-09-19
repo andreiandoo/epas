@@ -1038,7 +1038,7 @@ class TicketVariableService
             $onlineLobbyNote = 'Link-ul de acces devine activ cu ' . $mins . ' min. înainte de start.';
         }
 
-        return [
+        $data = [
             'event' => [
                 'name' => $eventTitle,
                 'description' => $eventDescription,
@@ -1169,6 +1169,12 @@ class TicketVariableService
                 'disclaimer' => '',
             ],
         ];
+
+        // Activity tickets (bilete.online) have no event: fill name, venue,
+        // date and ticket type from the activity booking.
+        return $ticket->activity_booking_id
+            ? \App\Services\Activities\ActivityTicketData::apply($data, $ticket)
+            : $data;
     }
 
     /**

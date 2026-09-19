@@ -1831,6 +1831,19 @@ class CheckoutController extends BaseController
                 }
             }
 
+            // A free order is confirmed here, without a payment callback, so
+            // its confirmation e-mail goes out now.
+            if ($isFreeOrder) {
+                try {
+                    app(\App\Services\Activities\ActivityOrderEmail::class)->send($order->fresh());
+                } catch (\Throwable $e) {
+                    Log::channel('marketplace')->warning('Activity checkout: free order e-mail failed', [
+                        'order_id' => $order->id,
+                        'error'    => $e->getMessage(),
+                    ]);
+                }
+            }
+
             $primaryTitle = $primaryActivity
                 ? (is_array($primaryActivity->title)
                     ? ($primaryActivity->title['ro'] ?? $primaryActivity->title['en'] ?? array_values($primaryActivity->title)[0] ?? 'Activitate')
