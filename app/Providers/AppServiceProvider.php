@@ -48,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
+        // Marketplace admin: the menu entries a marketplace hid (Setări → Meniu) leave its sidebar and answer 403,
+        // for that marketplace only.
+        \App\Support\Marketplace\MarketplaceMenu::boot();
+
         // Register support-ticket polymorphic aliases (organizer/customer/
         // staff) without strict mode — using ::morphMap() instead of
         // ::enforceMorphMap() so other polymorphic relations in the app

@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Pages;
 
 use App\Models\TrackingIntegration;
+use App\Support\Marketplace\MarketplaceMenu;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -80,6 +81,8 @@ class Settings extends Page
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $marketplace->name ?? $marketplace->name ?? '',
+                // Meniu: the entries this marketplace hides from its admin
+                'hidden_navigation' => MarketplaceMenu::storedClasses($marketplace),
                 // Language is set in Core Admin (Tenant Edit page, not here)
                 // 'site_language' => $settings['site_language'] ?? 'en',
                 'logo' => $settings['branding']['logo'] ?? null,
@@ -1175,6 +1178,21 @@ class Settings extends Page
                                     ])->columns(2),
                             ]),
 
+                        SC\Tabs\Tab::make('Meniu')
+                            ->icon('heroicon-o-bars-3')
+                            ->schema([
+                                SC\Section::make('Ascunde din meniu')
+                                    ->description('Intrările bifate dispar din meniul acestui marketplace, pentru toți administratorii lui, iar paginile lor nu se mai deschid nici din link direct. Celelalte marketplace-uri nu sunt afectate. Panoul principal și pagina Setări rămân mereu vizibile. Ascunderea unei intrări ascunde și intrările de sub ea. Se aplică după ce salvezi.')
+                                    ->schema([
+                                        Forms\Components\CheckboxList::make('hidden_navigation')
+                                            ->hiddenLabel()
+                                            ->options(fn () => MarketplaceMenu::options(static::getMarketplaceClient()))
+                                            ->columns(2)
+                                            ->searchable()
+                                            ->bulkToggleable(),
+                                    ]),
+                            ]),
+
                         SC\Tabs\Tab::make('Domains')
                             ->icon('heroicon-o-globe-alt')
                             ->schema([
@@ -1296,6 +1314,9 @@ class Settings extends Page
             'secondary_color' => $data['secondary_color'],
         ];
         $settings['site_template'] = $data['site_template'];
+        if (array_key_exists('hidden_navigation', $data)) {
+            $settings[MarketplaceMenu::SETTINGS_KEY] = MarketplaceMenu::clean((array) ($data['hidden_navigation'] ?? []));
+        }
         $settings['invoice_preparer'] = $data['invoice_preparer'] ?? '';
         $settings['invoice_preparer_cnp'] = $data['invoice_preparer_cnp'] ?? '';
         $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';
