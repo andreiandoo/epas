@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * Sync ActivityBooking + their tickets to the parent Order's payment state.
  *
  * Activity bookings are inserted during checkout with status=pending_payment
- * and a 5-minute held_until window. Once the Order transitions to
+ * and held_until = the order's expires_at. Once the Order transitions to
  * paid/confirmed/completed (Netopia webhook → PaymentController, or
  * test/free auto-confirmation directly inside checkout), the bookings
  * linked to that order need to follow: status → paid, held_until → null
@@ -66,13 +66,44 @@ class ActivityBookingOrderObserver
                     return;
                 }
                 foreach ($bookings as $booking) {
-                    if (in_array($booking->status, [ActivityBooking::STATUS_PAID, ActivityBooking::STATUS_CONFIRMED, ActivityBooking::STATUS_CHECKED_IN], true)) {
+                    if (in_array($booking->status, [ActivityBooking::STATUS_PAID, ActivityBooking::STATUS_CONFIRMED, ActivityBooking::STATUS_CHECKED_IN, ActivityBooking::STATUS_NO_SHOW], true)) {
                         continue;
                     }
-                    $booking->update([
+
+                    $updates = [
                         'status'      => ActivityBooking::STATUS_PAID,
                         'held_until'  => null,
-                    ]);
+                    ];
+
+                    if ($booking->status === ActivityBooking::STATUS_CANCELLED) {
+                        // Only a booking the expired-hold sweep released comes
+                        // back (the payment landed after the hold ran out).
+                        // A booking cancelled by staff stays cancelled.
+                        if (! str_contains((string) $booking->notes, ActivityBooking::HOLD_EXPIRED_NOTE)) {
+                            Log::warning('[ActivityBookingOrderObserver] paid order has a booking cancelled by staff; left cancelled', [
+                                'order_id'   => $orderId,
+                                'booking_id' => $booking->id,
+                            ]);
+                            continue;
+                        }
+
+                        // The seats were free for others meanwhile: re-check.
+                        // The customer paid, so the booking is kept either
+                        // way; an overbooked one is flagged for the operator.
+                        $overbooked = $this->slotWouldOverflow($booking);
+                        $updates['notes'] = trim(($booking->notes ?? '') . "\n" . ($overbooked
+                            ? 'Overbooked: paid after the hold expired, the slot was already full.'
+                            : 'Restored: paid after the hold expired.'));
+                        if ($overbooked) {
+                            Log::error('[ActivityBookingOrderObserver] late payment overbooked an activity slot', [
+                                'order_id'    => $orderId,
+                                'booking_id'  => $booking->id,
+                                'activity_id' => $booking->activity_id,
+                            ]);
+                        }
+                    }
+
+                    $booking->update($updates);
 
                     Ticket::where('activity_booking_id', $booking->id)
                         ->where('status', 'pending')
@@ -85,6 +116,32 @@ class ActivityBookingOrderObserver
                 ]);
             }
         });
+    }
+
+    /**
+     * Would restoring this (released) booking push its slot over capacity?
+     * Counts the other seat-holding bookings of the same activity, date and
+     * start time, the same way checkout does.
+     */
+    protected function slotWouldOverflow(ActivityBooking $booking): bool
+    {
+        $capacity = max(1, (int) ($booking->activity?->capacity_per_slot ?? 1));
+
+        $taken = (int) DB::table('activity_bookings')
+            ->where('activity_id', $booking->activity_id)
+            ->whereDate('booking_date', $booking->getRawOriginal('booking_date'))
+            ->where('slot_start_time', $booking->getRawOriginal('slot_start_time'))
+            ->where('id', '<>', $booking->id)
+            ->whereIn('status', ActivityBooking::CAPACITY_CONSUMING_STATUSES)
+            ->where(function ($q) {
+                $q->where('status', '<>', ActivityBooking::STATUS_PENDING_PAYMENT)
+                    ->orWhereNull('held_until')
+                    ->orWhere('held_until', '>=', now());
+            })
+            ->whereNull('deleted_at')
+            ->sum('participants_count');
+
+        return $taken + (int) $booking->participants_count > $capacity;
     }
 
     protected function syncToCancelledAfterCommit(Order $order): void

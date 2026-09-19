@@ -423,4 +423,20 @@ class ActivityCheckInController extends BaseController
         $name = $organizer->contact_name ?: $organizer->name ?: ('Org #' . $organizer->id);
         return 'Activity/Organizer: ' . $name;
     }
+
+    /**
+     * The organizer behind the Sanctum token. Every organizer controller
+     * carries its own copy (BaseController has none); without this one each
+     * lookup / check-in / undo call died with "undefined method" (500).
+     */
+    protected function requireOrganizer(Request $request): MarketplaceOrganizer
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            abort(401, 'Unauthorized');
+        }
+
+        return $organizer;
+    }
 }

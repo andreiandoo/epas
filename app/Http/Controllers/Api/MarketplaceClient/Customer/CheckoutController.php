@@ -1608,6 +1608,14 @@ class CheckoutController extends BaseController
         array $validated,
         bool $isTestOrder
     ): JsonResponse {
+        // Same locale whitelist as checkout(); the variable there is not in
+        // this method's scope, and reading it here threw "Undefined variable"
+        // on every activity checkout.
+        $checkoutLocale = null;
+        if (!empty($validated['locale']) && in_array($validated['locale'], config('locales.available', []), true)) {
+            $checkoutLocale = $validated['locale'];
+        }
+
         // Validate slot availability + variant/activity state first; cheaper
         // to fail before opening a DB transaction.
         $validationErrors = $this->validateActivityCartItems($cartItems);
@@ -1680,6 +1688,18 @@ class CheckoutController extends BaseController
             $primaryActivity      = null;
             $primaryOrganizerId   = null;
             $organizerIds         = [];
+            // Seats already taken by earlier lines of THIS cart, per slot
+            // ("activity|date|start"). The booking-row lock below can't see
+            // them: they are only inserted after the loop.
+            $cartSlotUse          = [];
+
+            // Lock the cart's activity rows, in id order, for the rest of the
+            // transaction. Locking only the existing booking rows lets two
+            // checkouts pass together when a slot has no bookings yet (there
+            // is no row to lock); the fixed order keeps two carts from
+            // deadlocking on each other.
+            $cartActivityIds = collect($cartItems)->pluck('activity_id')->map(fn ($id) => (int) $id)->unique()->sort()->values();
+            Activity::whereIn('id', $cartActivityIds)->orderBy('id')->lockForUpdate()->get(['id']);
 
             foreach ($cartItems as $item) {
                 // organizer.marketplaceClient is eager-loaded because
@@ -1733,11 +1753,13 @@ class CheckoutController extends BaseController
                     ->pluck('participants_count')
                     ->sum();
 
+                $slotKey   = $activity->id . '|' . $item['booking_date'] . '|' . $item['slot_start_time'];
                 $capTotal  = max(1, (int) ($activity->capacity_per_slot ?? 1));
-                $remaining = max(0, $capTotal - (int) $consumed);
+                $remaining = max(0, $capTotal - (int) $consumed - ($cartSlotUse[$slotKey] ?? 0));
                 if ($slotConsumes > $remaining) {
                     throw new \Exception("Slotul nu mai are suficientă disponibilitate pentru această rezervare.");
                 }
+                $cartSlotUse[$slotKey] = ($cartSlotUse[$slotKey] ?? 0) + $slotConsumes;
 
                 // Line totals.
                 $unitPrice  = $variant->price; // float, RON
@@ -1918,11 +1940,13 @@ class CheckoutController extends BaseController
             $this->rememberReferral($client->id, $customer->id, $validated['referral_code'] ?? null);
 
             // Create bookings + order items + pending tickets.
-            // Bookings start in pending_payment with held_until = now+5min so
-            // the slot is reserved while the user is on the payment page.
-            // ActivityBookingOrderObserver flips them to paid + clears the
-            // hold when the order moves to paid/confirmed/completed.
-            $heldUntil    = $isAutoConfirmed ? null : now()->addMinutes(5);
+            // Bookings start in pending_payment and hold the slot for as long
+            // as the order can still be paid (its expires_at). A shorter hold
+            // released the seats while the customer was still on the payment
+            // page, so a late payment could land on a slot sold to someone
+            // else. ActivityBookingOrderObserver flips them to paid + clears
+            // the hold when the order moves to paid/confirmed/completed.
+            $heldUntil    = $isAutoConfirmed ? null : $order->expires_at;
             $startStatus  = $isAutoConfirmed ? ActivityBooking::STATUS_PAID : ActivityBooking::STATUS_PENDING_PAYMENT;
             $ticketStatus = $isAutoConfirmed ? 'valid' : 'pending';
             $ticketIndex  = 0;

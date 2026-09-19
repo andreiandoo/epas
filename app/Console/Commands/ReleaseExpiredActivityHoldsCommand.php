@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Log;
  * Release activity slot capacity held by abandoned checkouts.
  *
  * Background: when a customer reaches the activity checkout page, an
- * ActivityBooking row is created with status=pending_payment and a
- * short-lived held_until (default 5 minutes). That row consumes slot
+ * ActivityBooking row is created with status=pending_payment and
+ * held_until = the order's expires_at (15 minutes). That row consumes slot
  * capacity in SlotResolver until either:
  *   - the user finishes paying → status moves to paid (see Order observer)
  *   - the user abandons the flow → held_until expires → THIS command
@@ -82,7 +82,7 @@ class ReleaseExpiredActivityHoldsCommand extends Command
 
                     $fresh->update([
                         'status' => ActivityBooking::STATUS_CANCELLED,
-                        'notes' => trim(($fresh->notes ?? '') . "\nAuto-cancelled: hold expired."),
+                        'notes' => trim(($fresh->notes ?? '') . "\n" . ActivityBooking::HOLD_EXPIRED_NOTE),
                     ]);
 
                     $released++;

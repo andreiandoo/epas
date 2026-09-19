@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             RateLimiter::for('seating_hold', fn () => Limit::perMinute(config('seating.rate_limits.hold_per_minute')));
             RateLimiter::for('seating_release', fn () => Limit::perMinute(config('seating.rate_limits.release_per_minute')));
             RateLimiter::for('seating_confirm', fn () => Limit::perMinute(config('seating.rate_limits.confirm_per_minute')));
+
+            // Activities module (bilete.online): same group and prefix as
+            // routes/api.php; every route in the file is gated by
+            // marketplace.microservice:activities-module.
+            Route::middleware('api')->prefix('api')->group(base_path('routes/activities.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -58,6 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'venue.owner' => \App\Http\Middleware\EnsureVenueOwner::class,
             'extended.artist' => \App\Http\Middleware\RequireExtendedArtist::class,
             'partner.auth' => \App\Http\Middleware\PartnerApiAuth::class,
+            'marketplace.microservice' => \App\Http\Middleware\EnsureMarketplaceMicroservice::class,
         ]);
 
         // Add global middleware for API routes

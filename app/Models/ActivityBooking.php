@@ -46,6 +46,13 @@ class ActivityBooking extends Model
      * Statuses that COUNT toward a slot's remaining capacity. Cancelled and
      * no_show bookings free up their seat. SlotResolver filters by this list.
      */
+    /**
+     * Note the expired-hold sweep appends when it cancels a booking. The order
+     * observer looks for it to tell a released hold (restored on a late
+     * payment) from a booking cancelled by staff (left cancelled).
+     */
+    public const HOLD_EXPIRED_NOTE = 'Auto-cancelled: hold expired.';
+
     public const CAPACITY_CONSUMING_STATUSES = [
         self::STATUS_PENDING_PAYMENT,
         self::STATUS_PAID,
