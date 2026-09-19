@@ -60,8 +60,28 @@ class EditActivity extends EditRecord
      * left blank by the admin. Manual overrides survive — we only fill empties.
      * Runs before the form is persisted on edit.
      */
+    private ?string $reviewedAs = null;
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // Admin decision on a product an operator sent for approval:
+        // record it, publish on approval, tell the operator after saving.
+        $status = $data['review_status'] ?? null;
+        if ($status !== $this->getRecord()->review_status && in_array($status, ['approved', 'rejected'], true)) {
+            $data['reviewed_at'] = now();
+            $data['reviewed_by'] = auth()->id();
+            if ($status === 'approved') {
+                $data['is_published'] = true;
+            }
+            $this->reviewedAs = $status;
+        }
         return ActivityResource::autoFillSeo($data);
+    }
+
+    protected function afterSave(): void
+    {
+        if ($this->reviewedAs) {
+            \App\Services\Activities\ReviewNotifier::product($this->getRecord(), $this->reviewedAs);
+        }
     }
 }

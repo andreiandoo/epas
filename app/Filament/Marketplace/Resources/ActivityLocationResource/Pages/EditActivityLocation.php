@@ -26,7 +26,9 @@ class EditActivityLocation extends EditRecord
         return is_array($name) ? ($name['ro'] ?? reset($name) ?: 'Locație') : (string) $name;
     }
 
-    /** Record who approved / rejected, and when. */
+    private ?string $reviewedAs = null;
+
+    /** Record who approved / rejected, and when; approval publishes. */
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
@@ -34,7 +36,19 @@ class EditActivityLocation extends EditRecord
         if ($status !== $this->getRecord()->review_status && in_array($status, ['approved', 'rejected'], true)) {
             $data['reviewed_at'] = now();
             $data['reviewed_by'] = auth()->id();
+            if ($status === 'approved') {
+                $data['is_published'] = true;
+            }
+            $this->reviewedAs = $status;
         }
         return $data;
+    }
+
+    /** Tell the operator how the review went. */
+    protected function afterSave(): void
+    {
+        if ($this->reviewedAs) {
+            \App\Services\Activities\ReviewNotifier::location($this->getRecord(), $this->reviewedAs);
+        }
     }
 }

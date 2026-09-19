@@ -170,7 +170,12 @@ class ActivityOrderBuilder
                 'commission_cents'         => (int) round($line['commission'] * 100),
                 'currency'                 => $order->currency,
                 'addons'                   => $line['addons'] ?: null,
-                'meta'                     => $line['meta'] ?: null,
+                // The commission mode decides what the operator keeps
+                // (all of the total when the commission is added on top).
+                'meta'                     => $line['meta'] + [
+                    'commission_mode' => $line['commission_mode'],
+                    'commission_rate' => $line['commission_rate'],
+                ],
                 'status'                   => $bookingStatus,
                 'held_until'               => $heldUntil,
             ]);

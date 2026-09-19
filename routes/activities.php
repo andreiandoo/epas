@@ -3,6 +3,10 @@
 use App\Http\Controllers\Api\MarketplaceClient\Activities\LocationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\ModuleController;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\ProductsController;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\BookingsController as OrganizerBookings;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\LocationsController as OrganizerLocations;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\ProductsController as OrganizerProducts;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\UploadsController as OrganizerUploads;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,4 +49,37 @@ Route::prefix('marketplace-client')
             ->where('slug', '[a-z0-9-]+')->name('products.day');
         Route::get('/activities-module/products/{slug}/calendar', [ProductsController::class, 'calendar'])
             ->where('slug', '[a-z0-9-]+')->name('products.calendar');
+    });
+
+// Operator account: own locations, products, bookings (organizer token).
+Route::prefix('marketplace-client/organizer/activities-module')
+    ->middleware(['throttle:120,1', 'marketplace.auth', 'auth:sanctum', 'marketplace.microservice:activities-module'])
+    ->name('api.marketplace-client.organizer.activities-module.')
+    ->group(function () {
+        Route::get('/meta', [OrganizerLocations::class, 'meta'])->name('meta');
+
+        Route::get('/locations', [OrganizerLocations::class, 'index'])->name('locations.index');
+        Route::post('/locations', [OrganizerLocations::class, 'store'])->name('locations.store');
+        Route::get('/locations/{id}', [OrganizerLocations::class, 'show'])->whereNumber('id')->name('locations.show');
+        Route::put('/locations/{id}', [OrganizerLocations::class, 'update'])->whereNumber('id')->name('locations.update');
+        Route::post('/locations/{id}/submit', [OrganizerLocations::class, 'submit'])->whereNumber('id')->name('locations.submit');
+        Route::post('/locations/{id}/publish', [OrganizerLocations::class, 'publish'])->whereNumber('id')->name('locations.publish');
+        Route::delete('/locations/{id}', [OrganizerLocations::class, 'destroy'])->whereNumber('id')->name('locations.destroy');
+
+        Route::get('/products', [OrganizerProducts::class, 'index'])->name('products.index');
+        Route::post('/products', [OrganizerProducts::class, 'store'])->name('products.store');
+        Route::get('/products/{id}', [OrganizerProducts::class, 'show'])->whereNumber('id')->name('products.show');
+        Route::put('/products/{id}', [OrganizerProducts::class, 'update'])->whereNumber('id')->name('products.update');
+        Route::post('/products/{id}/submit', [OrganizerProducts::class, 'submit'])->whereNumber('id')->name('products.submit');
+        Route::post('/products/{id}/publish', [OrganizerProducts::class, 'publish'])->whereNumber('id')->name('products.publish');
+        Route::post('/products/{id}/duplicate', [OrganizerProducts::class, 'duplicate'])->whereNumber('id')->name('products.duplicate');
+        Route::delete('/products/{id}', [OrganizerProducts::class, 'destroy'])->whereNumber('id')->name('products.destroy');
+
+        Route::get('/bookings', [OrganizerBookings::class, 'index'])->name('bookings.index');
+        Route::get('/bookings/day', [OrganizerBookings::class, 'day'])->name('bookings.day');
+        Route::get('/bookings/export', [OrganizerBookings::class, 'export'])->name('bookings.export');
+        Route::post('/bookings/{id}/no-show', [OrganizerBookings::class, 'noShow'])->whereNumber('id')->name('bookings.no-show');
+        Route::get('/summary', [OrganizerBookings::class, 'summary'])->name('summary');
+
+        Route::post('/uploads', [OrganizerUploads::class, 'store'])->name('uploads.store');
     });

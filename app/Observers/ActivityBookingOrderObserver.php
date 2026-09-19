@@ -115,7 +115,57 @@ class ActivityBookingOrderObserver
                     'error'    => $e->getMessage(),
                 ]);
             }
+
+            $this->notifyOperators($orderId);
         });
+    }
+
+    /**
+     * One notification per operator in the order (a cart can hold several
+     * operators' products): what was booked, for when, and its value.
+     */
+    protected function notifyOperators(int $orderId): void
+    {
+        try {
+            $bookings = ActivityBooking::with(['activity.organizer', 'activity.location', 'variant'])
+                ->where('order_id', $orderId)
+                ->whereNull('package_booking_id')
+                ->whereIn('status', [ActivityBooking::STATUS_PAID, ActivityBooking::STATUS_CONFIRMED])
+                ->get();
+
+            foreach ($bookings->groupBy(fn ($b) => $b->activity?->marketplace_organizer_id) as $organizerId => $rows) {
+                $organizer = $rows->first()->activity?->organizer;
+                if (!$organizerId || !$organizer) {
+                    continue;
+                }
+                $first  = \App\Services\Activities\BookingDescriber::booking($rows->first());
+                $qty    = (int) $rows->sum('quantity');
+                $value  = number_format($rows->sum('total_cents') / 100, 2, ',', '.') . ' ' . ($rows->first()->currency ?: 'RON');
+                $title  = $rows->count() > 1
+                    ? "Rezervare nouă: {$rows->count()} produse"
+                    : "Rezervare nouă: {$qty} × {$first['title']}";
+
+                \App\Services\OrganizerNotificationService::notify(
+                    $organizer,
+                    \App\Models\MarketplaceNotification::TYPE_TICKET_SALE,
+                    $title,
+                    $value . ' · ' . $first['date_label'] . ($first['start_time'] ? ', ' . $first['start_time'] : ''),
+                    '/organizator/rezervari',
+                    $rows->first()->order,
+                    [
+                        'order_id'    => $orderId,
+                        'booking_ids' => $rows->pluck('id')->all(),
+                        'persons'     => $qty,
+                        'kind'        => 'activity',
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[ActivityBookingOrderObserver] operator notification failed', [
+                'order_id' => $orderId,
+                'error'    => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -51,6 +51,12 @@ class OrganizerNotificationService
             return null;
         }
 
+        // Activity orders notify each operator per booking
+        // (ActivityBookingOrderObserver), with the product and date.
+        if (\App\Services\Activities\BookingDescriber::isActivityOrder($order)) {
+            return null;
+        }
+
         // Order has `items()` (HasMany OrderItem), not `orderItems`. The
         // misnamed access returned null and threw \Error("sum() on null"),
         // which broke PaymentController right before it could mark the
