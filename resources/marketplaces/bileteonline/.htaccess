@@ -257,6 +257,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 
+# Activities module: the operator's locations, products and bookings
+RewriteRule ^organizator/locatii/?$ organizer/am-locations.php [L,QSA]
+RewriteRule ^organizator/produse/?$ organizer/am-products.php [L,QSA]
+RewriteRule ^organizator/rezervari/?$ organizer/am-bookings.php [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/raport-staff/?$ organizer/raport-staff.php [L,QSA]

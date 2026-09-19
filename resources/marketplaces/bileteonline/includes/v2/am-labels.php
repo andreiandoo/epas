@@ -134,3 +134,17 @@ function am_lei(?int $cents): string
     $v = ((int) $cents) / 100;
     return number_format($v, fmod($v, 1.0) ? 2 : 0, ',', '.') . ' lei';
 }
+
+/** The labels the operator screens need in JavaScript (#v2-data .am). */
+function am_client_labels(): array
+{
+    return [
+        'facilities' => AM_FACILITIES,
+        'lodging_facilities' => AM_LODGING_FACILITIES,
+        'lodging_types' => AM_LODGING_TYPES,
+        'link_platforms' => AM_LINK_PLATFORMS,
+        'days' => AM_DAYS,
+        'months' => AM_MONTHS,
+        'product_types' => AM_PRODUCT_TYPES,
+    ];
+}

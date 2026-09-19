@@ -191,10 +191,35 @@ const BileteOnlineAPI = {
     },
 
     /**
+     * /organizer/activities-module/{meta|summary|uploads|locations|products|bookings}[/{id}|/day|/export][/{verb}]
+     * → {action, id} for the proxy's organizer.am.* actions; null for any other path.
+     */
+    _amRoute(endpoint) {
+        const m = /^\/organizer\/activities-module\/(meta|summary|uploads|locations|products|bookings)(?:\/(\d+|day|export))?(?:\/(submit|publish|duplicate|no-show))?$/.exec(endpoint || '');
+        if (!m) return null;
+        const [, what, sub, verb] = m;
+        const id = sub && /^\d+$/.test(sub) ? sub : null;
+        const one = { locations: 'location', products: 'product', bookings: 'booking' }[what];
+        let action = null;
+        if (what === 'meta') action = 'organizer.am.meta';
+        else if (what === 'summary') action = 'organizer.am.summary';
+        else if (what === 'uploads') action = 'organizer.am.upload';
+        else if (what === 'bookings' && sub === 'day') action = 'organizer.am.bookings.day';
+        else if (what === 'bookings' && sub === 'export') action = 'organizer.am.bookings.export';
+        else if (id && verb) action = 'organizer.am.' + one + '.' + verb;
+        else if (id && what !== 'bookings') action = 'organizer.am.' + one;
+        else if (!sub && !verb) action = 'organizer.am.' + what;
+        return action ? { action, id } : null;
+    },
+
+    /**
      * Convert endpoint to proxy action
      */
     getProxyAction(endpoint, method) {
         method = (method || 'GET').toUpperCase();
+        // Activities module, the operator's locations, products and bookings (proxy: organizer.am.*)
+        const am = this._amRoute(endpoint);
+        if (am) return am.action;
         // Customer auth endpoints
         if (endpoint === '/customer/register') return 'customer.register';
         if (endpoint === '/customer/login') return 'customer.login';
@@ -664,6 +689,8 @@ const BileteOnlineAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        const am = this._amRoute(endpoint);
+        if (am) return am.id ? 'id=' + encodeURIComponent(am.id) : '';
         // Extract event ID + optional shift ID from leisure shifts CRUD
         const leisureShiftMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/shifts\/(\d+)/);
         if (leisureShiftMatch) {

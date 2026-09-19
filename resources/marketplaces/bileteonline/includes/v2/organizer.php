@@ -20,32 +20,22 @@
  */
 require_once __DIR__ . '/account.php'; // v2_account_client_config()
 
-/** [group id, group label, [[key, url, label, icon, badge]]]; badge: a data-org-badge key, 'nou', or null. */
+/**
+ * [group id, group label, [[key, url, label, icon, badge]]]; badge: a data-org-badge key, 'nou', or null.
+ * bilete.online sells no events: the operator works on locations, products (access tickets, experiences, packages) and
+ * their bookings. The event screens (activities, participants, sales, the leisure "Locație" section, POS, promo codes,
+ * widgets, extra services) stay reachable by address but are no longer in the menu.
+ */
 const V2_ORG_NAV = [
     ['main', '', [
         ['dashboard', '/organizator/panou', 'Dashboard', 'squares-four', null],
-        ['events', '/organizator/activities', 'Activități', 'calendar-blank', 'events'],
-        ['participants', '/organizator/participanti', 'Participanți', 'users-three', null],
-        ['sales', '/organizator/vanzari', 'Vânzări', 'shopping-cart-simple', null],
+        ['am-bookings', '/organizator/rezervari', 'Rezervări', 'calendar-blank', null],
         ['finance', '/organizator/sold', 'Sold', 'wallet', null],
         ['documents', '/organizator/documente', 'Documente', 'file-text', null],
     ]],
-    ['venue', 'Locație', [
-        ['venue-live', '/organizator/locatie/live', 'Dashboard live', 'lightning', 'nou'],
-        ['venue-participants', '/organizator/locatie/participanti', 'Participanți', 'users-three', null],
-        ['venue-orders', '/organizator/locatie/comenzi', 'Comenzi', 'receipt', null],
-        ['venue-sales', '/organizator/locatie/vanzari', 'Vânzări', 'chart-line-up', null],
-        ['venue-report', '/organizator/locatie/raport', 'Raport', 'file-text', null],
-        ['venue-payouts', '/organizator/locatie/deconturi', 'Deconturi', 'wallet', null],
-        ['venue-products', '/organizator/locatie/bilete', 'Bilete și servicii', 'ticket', null],
-        ['venue-settings', '/organizator/locatie/setari', 'Setări locație', 'gear-six', null],
-        ['venue-team', '/organizator/locatie/echipa', 'Echipă & program', 'user-plus', null],
-        ['pos', '/organizator/pos', 'Casă & POS', 'scan', null],
-    ]],
-    ['marketing', 'Marketing', [
-        ['services', '/organizator/servicii', 'Servicii extra', 'lightning', 'nou'],
-        ['promo', '/organizator/promo', 'Coduri promoționale', 'tag', null],
-        ['widgets', '/organizator/widget-uri', 'Widget-uri embed', 'code', null],
+    ['catalog', 'Locații și produse', [
+        ['am-locations', '/organizator/locatii', 'Locațiile mele', 'map-pin', null],
+        ['am-products', '/organizator/produse', 'Produse', 'ticket', null],
     ]],
     ['settings', 'Setări', [
         ['billing', '/organizator/facturare', 'Facturare', 'receipt', null],
@@ -107,7 +97,7 @@ function v2_org_start(string $active): void
       </div>
       <div class="org-tools">
         <button class="org-ib org-q-open" type="button" id="org-q-open" aria-controls="org-search" aria-expanded="false"><?= v2_ic('magnifying-glass') ?><span class="sr">Caută activități</span></button>
-        <a class="btn btn-primary org-new" href="/organizator/activities?action=create"><?= v2_ic('plus') ?><span>Activitate nouă</span></a>
+        <a class="btn btn-primary org-new" href="/organizator/produse?nou=1"><?= v2_ic('plus') ?><span>Produs nou</span></a>
         <div class="org-drop">
           <button class="org-ib" type="button" id="org-bell" aria-expanded="false" aria-controls="org-notif"><?= v2_ic('bell') ?><span class="org-dot" id="org-dot" hidden></span><span class="sr" id="org-bell-t">Notificări</span></button>
           <div class="org-pop org-notif" id="org-notif" hidden>
