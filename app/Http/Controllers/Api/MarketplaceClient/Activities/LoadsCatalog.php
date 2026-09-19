@@ -18,7 +18,7 @@ trait LoadsCatalog
     private function productRelations(): array
     {
         return [
-            'variants', 'schedules', 'scheduleExceptions', 'location', 'addons',
+            'variants', 'schedules', 'scheduleExceptions', 'location', 'addons', 'organizer.marketplaceClient',
             'packageItems.component.variants', 'packageItems.component.schedules',
             'packageItems.component.scheduleExceptions', 'packageItems.component.location',
             'packageItems.componentVariant',

@@ -115,6 +115,12 @@ class CatalogPresenter
             'age_min'               => $product->age_min,
             'age_max'               => $product->age_max,
             'location_id'           => $product->location_id,
+            // What the site shows as the service commission (added on top
+            // of the prices, or already inside them).
+            'commission'            => [
+                'rate' => $product->organizer ? (float) $product->organizer->getEffectiveCommissionRate() : 0.0,
+                'mode' => $product->organizer ? $product->organizer->getEffectiveCommissionMode() : 'included',
+            ],
             'variants'              => $product->variants
                 ->filter(fn ($v) => $v->is_active && !$v->pos_only)
                 ->sortBy('sort_order')
