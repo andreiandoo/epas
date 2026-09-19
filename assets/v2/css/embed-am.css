@@ -1,0 +1,27 @@
+/* bilete.online v2: the booking widget of a location on the operator's site (embed/locatie.php), in an iframe whose
+   height follows the content. Builds on base.css + location.css (the booking block). */
+.emb{background:transparent}
+.emb-in{padding:16px}
+.emb-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.emb-id{display:flex;align-items:center;gap:12px;min-width:0}
+.emb-img{flex:none;width:48px;height:48px;border-radius:12px;object-fit:cover}
+.emb-name{margin:0;font-weight:700;font-size:1.0625rem;line-height:1.25;overflow-wrap:anywhere}
+.emb-city{margin:0;color:var(--muted);font-size:.875rem}
+.emb-by{color:var(--muted);font-size:.8125rem;text-decoration:none}
+.emb-by b{color:var(--green)}
+.emb-by:hover{text-decoration:underline}
+.emb-empty{margin:16px 0 0;padding:var(--space-5);border-radius:var(--r-l);background:var(--surface);color:var(--muted)}
+.emb-safe{display:flex;gap:8px;align-items:flex-start;margin:0;color:var(--muted);font-size:.8125rem}
+.emb-safe .ic{flex:none;width:16px;height:16px;margin-top:2px}
+
+/* the booking block without the page around it */
+.emb .bkx-sec{padding:16px 0 0;background:none}
+.emb .bkx-head h2{font-size:1.375rem}
+@media (min-width:760px){.emb .bkx-grid{grid-template-columns:minmax(0,1fr) 300px;align-items:start}}
+@media (min-width:1024px){.emb .bkx-grid{grid-template-columns:minmax(0,1fr) 340px}}
+.emb .bkx-side{position:static}
+/* the frame is as tall as its content: a bar fixed to its bottom would sit under everything */
+.emb .bkx-bar{display:none !important}
+/* no cart inside the frame: the choice goes straight to the payment tab (the button stays for booking.js) */
+.emb #bkx-cart{display:none}
+.emb .bkx-err a{color:inherit}

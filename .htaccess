@@ -270,6 +270,7 @@ RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 RewriteRule ^organizator/locatii/?$ organizer/am-locations.php [L,QSA]
 RewriteRule ^organizator/produse/?$ organizer/am-products.php [L,QSA]
 RewriteRule ^organizator/rezervari/?$ organizer/am-bookings.php [L,QSA]
+RewriteRule ^organizator/raport/?$ organizer/am-report.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -484,6 +485,12 @@ RewriteRule ^embed/tixello-embed\.js$ embed/tixello-embed.js [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^embed/tixello-widget\.js$ embed/tixello-widget.js [L]
 
+# Booking widget of a location (activities module) for the operator's site; before the event rules below,
+# which would read "locatie" as an organizer slug
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^embed/locatie/([a-z0-9-]+)/?$ embed/locatie.php?slug=$1 [L,QSA]
+
 # Embed pages: /embed/{organizer-slug}/...
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -505,10 +512,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^embed/([a-z0-9-]+)/?$ embed/index.php?organizer=$1 [L,QSA]
 
-# Organizer widgets page
+# Organizer widgets page: the operator's booking widgets (activities module); the event widgets stay at /organizator/widgets
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/widget-uri/?$ organizer/widgets.php [L]
+RewriteRule ^organizator/widget-uri/?$ organizer/am-widgets.php [L]
 
 # Payment redirect for whitelabel sites
 RewriteCond %{REQUEST_FILENAME} !-f
