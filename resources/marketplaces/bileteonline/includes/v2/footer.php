@@ -87,8 +87,8 @@ usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
         <li><span><?= v2_ic('clock') ?>Luni - vineri, 09:00 - 18:00</span></li>
       </ul>
     </div>
-    <nav aria-label="Orașe"><h3>Explorează</h3><ul class="fl"><?php foreach ($v2FootCities as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/orase">Toate orașele</a></li></ul></nav>
-    <nav aria-label="Activități"><h3>Activități</h3><ul class="fl"><?php foreach ($v2FootCats as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/categorii">Toate categoriile</a></li></ul></nav>
+    <nav aria-label="Orașe"><h3>Explorează</h3><ul class="fl"><?php foreach ($v2FootCities as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/orase">Toate orașele</a></li><li><a href="/locatii">Locații cu bilete</a></li><li><a href="/atractii">Atracții</a></li></ul></nav>
+    <nav aria-label="Experiențe"><h3>Experiențe</h3><ul class="fl"><?php foreach ($v2FootCats as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?><li><a href="/experiente">Toate experiențele</a></li></ul></nav>
     <nav aria-label="Despre"><h3>bilete.online</h3><ul class="fl"><li><a href="/cum-functioneaza">Cum funcționează</a></li><li><a href="/card-cadou">Card cadou</a></li><li><a href="/ghiduri">Ghiduri</a></li><li><a href="/parteneri">Pentru locații</a></li><li><a href="/contact">Contact</a></li></ul></nav>
     <nav aria-label="Ajutor"><h3>Ajutor</h3><ul class="fl"><li><a href="/ajutor">Centrul de ajutor</a></li><li><a href="/ajutor#intrebari">Întrebări frecvente</a></li><li><a href="/recuperare-comanda">Recuperează comanda</a></li><li><a href="/cont/bilete">Biletele mele</a></li><li><a href="/voucher">Verifică voucher</a></li><li><a href="/contact">Contact suport</a></li><li><a href="/cookies">Politica de cookies</a></li></ul></nav>
   </div>

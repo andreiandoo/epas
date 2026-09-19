@@ -378,8 +378,25 @@ const ThankYouPage = {
         const event = this.order?.event;
         if (!eventInfo) return;
         if (!event) {
-            // Activity bookings come without an event block
-            eventInfo.classList.add('hidden');
+            // Activity bookings come without an event block; the order carries its first booking instead
+            const act = this.order?.activity;
+            if (!act) {
+                eventInfo.classList.add('hidden');
+                return;
+            }
+            const actPlace = [act.location?.name, act.location?.city].filter(Boolean).join(', ');
+            const actImg = act.image ? getStorageUrl(act.image) : '';
+            eventInfo.classList.remove('hidden');
+            eventInfo.innerHTML =
+                '<span class="ty-event-media" aria-hidden="true">' +
+                    '<span class="fb"><svg viewBox="1455 585 290 310" style="aspect-ratio:290 / 310"><use href="#drum-g"/></svg></span>' +
+                    (actImg ? '<img src="' + this.esc(actImg) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+                '</span>' +
+                '<div>' +
+                    '<h3>' + this.esc(act.title || 'Rezervare') + '</h3>' +
+                    (act.date_label ? '<p>' + this.icon('calendar-blank') + '<span>' + this.esc(act.date_label) + '</span></p>' : '') +
+                    (actPlace ? '<p>' + this.icon('map-pin') + '<span>' + this.esc(actPlace) + '</span></p>' : '') +
+                '</div>';
             return;
         }
 
@@ -415,7 +432,9 @@ const ThankYouPage = {
         let html = '<p class="ty-sub-h">' + this.esc(heading) + '</p>';
         html += order.items.map(item =>
             '<div class="ty-item">' +
-                '<span><b>' + this.esc(item.name) + '</b> <small>× ' + this.esc(item.quantity) + '</small></span>' +
+                '<span><b>' + this.esc(item.name) + '</b> <small>× ' + this.esc(item.quantity) + '</small>' +
+                    (item.date_label ? '<small class="ty-item-when">' + this.esc([item.date_label, item.time_label].filter(Boolean).join(', ')) + '</small>' : '') +
+                '</span>' +
                 '<strong>' + this.money(item.total) + '</strong>' +
             '</div>'
         ).join('');
@@ -718,10 +737,11 @@ const ThankYouPage = {
         const bars = Array.from({ length: 24 }, () => `<i style="height:${16 + Math.round(Math.random() * 20)}px"></i>`).join('');
 
         const event = this.order?.event;
-        const eventTitle = event?.name || event?.title || '';
-        const eventDate = event?.date ? BileteOnlineUtils.formatDate(event.date, 'medium') : '';
-        const eventTime = this.eventTime(event);
-        const place = [this.venueName(event), event?.city].filter(Boolean).join(', ');
+        const act = ticket.activity || null; // activities module: product, date and place of this ticket
+        const eventTitle = act ? [act.name, act.package ? '(' + act.package + ')' : ''].filter(Boolean).join(' ') : (event?.name || event?.title || '');
+        const eventDate = act ? (act.date_label || '') : (event?.date ? BileteOnlineUtils.formatDate(event.date, 'medium') : '');
+        const eventTime = act ? (act.time_label || '') : this.eventTime(event);
+        const place = act ? [act.venue, act.city].filter(Boolean).join(', ') : [this.venueName(event), event?.city].filter(Boolean).join(', ');
         const siteName = window.BILETEONLINE?.siteName || 'bilete.online';
         const seat = ticket.seat;
         const code = ticket.code || ticket.barcode || '';
@@ -742,10 +762,11 @@ const ThankYouPage = {
                 </header>
                 <div class="tk-body">
                     <div class="tk-info">
-                        ${eventTitle ? field('Eveniment', eventTitle) : ''}
+                        ${eventTitle ? field(act ? 'Activitate' : 'Eveniment', eventTitle) : ''}
                         ${eventDate || eventTime ? `<div class="tk-pair">${eventDate ? field('Data', eventDate) : ''}${eventTime ? field('Ora', eventTime) : ''}</div>` : ''}
                         ${place ? field('Locație', place) : ''}
                         ${seatFields ? `<div class="tk-pair">${seatFields}</div>` : ''}
+                        ${act && act.plate ? field('Mașina', act.plate) : ''}
                     </div>
                     <div class="tk-foot">
                         <div><small>Participant</small><b>${this.esc(attendee)}</b></div>

@@ -24,6 +24,14 @@ if ($slug === '') {
     return;
 }
 
+// Activities module: each experience has one page, /experienta/{slug} (access tickets and packages send the
+// visitor on to their location). Only when the module sells the product online; otherwise this page stays.
+$amProduct = api_cached("am_product_{$slug}", fn () => api_get('/activities-module/products/' . $slug), 60);
+if (!empty($amProduct['success']) && ($amProduct['data']['slug'] ?? '') === $slug && !empty($amProduct['data']['variants'])) {
+    header('Location: /experienta/' . rawurlencode($slug), true, 301);
+    exit;
+}
+
 $activityResp = api_cached("activity_detail_{$slug}", fn () => api_get('/activities/' . $slug), 60);
 if (! ($activityResp['success'] ?? false) || empty($activityResp['data']['activity'])) {
     http_response_code(404);

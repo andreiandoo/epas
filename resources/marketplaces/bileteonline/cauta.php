@@ -93,6 +93,14 @@ if ($dateF && ($resp['data']['applied_date'] ?? null) !== $dateF && $items) {
     $total = count($items);
     $pagination = ['current_page' => 1, 'last_page' => 1, 'total' => $total];
 }
+// Locations with online tickets that match the text or the city (activities module), shown above the experiences.
+$amLocs = [];
+if ($q !== '' || $cityF) {
+    $locParams = array_filter(['q' => $q, 'city' => $cityF, 'per_page' => 6]);
+    $locResp = api_cached('search_locs_' . md5(json_encode($locParams)), fn () => api_get('/activities-module/locations', $locParams), 300);
+    $amLocs = (!empty($locResp['success']) && is_array($locResp['data']['items'] ?? null)) ? array_values(array_filter($locResp['data']['items'], fn ($l) => !empty($l['slug']))) : [];
+}
+
 $cards = [];
 foreach ($items as $a) {
     if (is_array($a) && ($n = v2_activity($a))) {
@@ -180,7 +188,7 @@ $pageTitle = $q !== '' ? $heading : 'Caută activități, experiențe și atrac�
 $pageDescription = 'Caută și filtrează activități pe bilete.online după zi, oraș, categorie, preț, interese și pentru cine. Rezervi online, intri cu bilet QR.';
 $canonicalUrl = SITE_URL . '/cauta';
 $structuredData = [];
-$v2Styles = ['search.css'];
+$v2Styles = ['search.css', 'hub.css'];
 $v2Scripts = ['search.js'];
 
 include __DIR__ . '/includes/v2/head.php';
@@ -190,7 +198,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sr-hero" aria-labelledby="sr-h">
     <div class="wrap">
       <h1 class="sr-h" id="sr-h"><?= v2_e($heading) ?></h1>
-      <p class="sr-count"><b><?= $total ?></b> <?= $total === 1 ? 'rezultat' : 'rezultate' ?><?= $dateF ? ' disponibile ' . v2_e($dayLabel($dateF)) : '' ?></p>
+      <?php $shownTotal = $total + count($amLocs); ?>
+      <p class="sr-count"><b><?= $shownTotal ?></b> <?= $shownTotal === 1 ? 'rezultat' : 'rezultate' ?><?= $dateF ? ' disponibile ' . v2_e($dayLabel($dateF)) : '' ?></p>
 
       <form class="sr-search" action="/cauta" method="get" role="search">
         <?= v2_ic('magnifying-glass') ?>
@@ -306,6 +315,20 @@ include __DIR__ . '/includes/v2/header.php';
 
       <div class="sr-results">
         <h2 class="sr" id="sr-results-h">Rezultate</h2>
+        <?php if ($amLocs): ?>
+        <div class="sr-locs">
+          <p class="flabel">Locații cu bilete online</p>
+          <ul class="sr-locs-list">
+            <?php foreach ($amLocs as $li => $l): $lImg = v2_media_url($l['cover_image'] ?? null); ?>
+            <li><a class="sr-loc" href="/locatie/<?= v2_e($l['slug']) ?>">
+              <span class="sr-loc-media"><?= $lImg ? v2_photo([$lImg, 0, 0, '']) : v2_fallback(navFlatName($l['name'] ?? ''), $li) ?></span>
+              <span class="sr-loc-t"><b><?= v2_e(navFlatName($l['name'] ?? '')) ?></b><small><?= v2_e(trim(navFlatName($l['city']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · de la ' . v2_thousands((int) round($l['min_price_cents'] / 100)) . ' lei' : ''), ' ·')) ?></small></span>
+              <?= v2_ic('arrow-right') ?>
+            </a></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <?php endif; ?>
         <div class="sr-bar">
           <?php if ($active): ?>
           <ul class="sr-active" aria-label="Filtre active">
@@ -351,7 +374,7 @@ include __DIR__ . '/includes/v2/header.php';
 
         <?php else: ?>
         <div class="sr-empty">
-          <h2>Nu am găsit nimic pentru căutarea asta.</h2>
+          <h2><?= $amLocs ? 'Nicio experiență pentru căutarea asta.' : 'Nu am găsit nimic pentru căutarea asta.' ?></h2>
           <p><?= $dateF ? 'Încearcă altă zi, ' : 'Încearcă ' ?>alt oraș sau renunță la câteva filtre.</p>
           <div class="sr-empty-cta">
             <?php if ($activeCount): ?><a class="btn btn-light" href="<?= v2_e($clearAll) ?>">Șterge filtrele</a><?php endif; ?>

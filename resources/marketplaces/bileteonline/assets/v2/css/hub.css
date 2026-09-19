@@ -1,0 +1,22 @@
+/* bilete.online v2: listing hubs (/locatii, /experiente, /atractii and /{oras}/…). Hero, grid and empty state come
+   from category.css; chips and pager from base.css. */
+.hub-res{padding-top:var(--space-7)}
+.hub-filters{display:grid;gap:var(--space-4);margin-bottom:var(--space-6)}
+@media (min-width:1024px){.hub-filters{grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:var(--space-5) var(--space-7)}}
+.hub-filters .fchips{flex-wrap:nowrap;margin:-4px calc(-1 * var(--gutter));padding:4px var(--gutter);overflow-x:auto;scrollbar-width:none}
+.hub-filters .fchips::-webkit-scrollbar{display:none}
+@media (min-width:1024px){.hub-filters .fchips{flex-wrap:wrap;margin:0;padding:0;overflow:visible}}
+.hub-filters .fchip{flex:none}
+
+/* /cauta: locations that match the search, above the experiences */
+.sr-locs{display:grid;gap:10px;margin-bottom:var(--space-5)}
+.sr-locs-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:768px){.sr-locs-list{grid-template-columns:repeat(2, minmax(0,1fr))}}
+.sr-loc{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out)}
+.sr-loc:hover{border-color:var(--green)}
+.sr-loc-media{flex:none;width:56px;height:56px;overflow:hidden;border-radius:12px;background:var(--tint-green)}
+.sr-loc-media img,.sr-loc-media .fb{width:100%;height:100%;object-fit:cover}
+.sr-loc-t{flex:1;min-width:0}
+.sr-loc-t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-loc-t small{display:block;color:var(--muted)}
+.sr-loc > .ic{flex:none;width:18px;height:18px;color:var(--green)}

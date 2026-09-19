@@ -33,6 +33,35 @@ const AM_MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
 
 const AM_PRODUCT_TYPES = ['access' => 'Bilet de acces', 'experience' => 'Experiență', 'package' => 'Pachet'];
 
+// Attraction types with pages on the site (the homepage keeps the same list in V2_ATTRACTION_TYPES).
+const AM_ATTRACTION_TYPES = [
+    'castel-palat' => 'Castel & palat', 'muzeu' => 'Muzeu', 'monument' => 'Monument',
+    'biserica-manastire' => 'Biserică & mănăstire', 'parc-gradina' => 'Parc & grădină',
+    'piata-centru-vechi' => 'Piață & centru vechi', 'cladire-istorica' => 'Clădire istorică',
+    'punct-panoramic' => 'Punct panoramic', 'lac-natura' => 'Lac & natură', 'teatru-opera' => 'Teatru & operă',
+];
+
+/** City of a /{oras}/… hub from the rewrite (?city=): [slug, name], ['', ''] without one, null when unknown. */
+function am_hub_city(): ?array
+{
+    $slug = $_GET['city'] ?? '';
+    if ($slug === '' || $slug === null) {
+        return ['', ''];
+    }
+    if (!is_string($slug) || !preg_match('/^[a-z][a-z0-9-]{1,50}$/', $slug)) {
+        return null;
+    }
+    $city = navGetCityBySlug($slug);
+    $name = is_array($city) ? navFlatName($city['name'] ?? '') : '';
+    return $name !== '' ? [$slug, $name] : null;
+}
+
+/** ?pagina=N (1 when missing or invalid). */
+function am_hub_page(): int
+{
+    return max(1, min(500, (int) ($_GET['pagina'] ?? 1)));
+}
+
 /** "04-01" → "1 aprilie". */
 function am_month_day(?string $md): string
 {

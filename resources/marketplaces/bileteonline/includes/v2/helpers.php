@@ -126,7 +126,7 @@ function v2_activity(array $a): ?array
         'rating' => round((float) ($reviews['average'] ?? 0), 1),
         'reviews' => (int) ($reviews['count'] ?? 0),
         'image' => v2_media_url($a['cover_image_url'] ?? null),
-        'href' => $citySlug !== '' ? '/' . $citySlug . '/' . $slug : '/activitate/' . $slug,
+        'href' => '/experienta/' . $slug,
         'dates' => [],
     ];
 }
