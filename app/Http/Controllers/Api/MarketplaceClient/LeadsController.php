@@ -37,6 +37,10 @@ class LeadsController extends BaseController
     /** Cap a single session's lead spam: hard-block after N rows per IP per hour. */
     protected const MAX_LEADS_PER_IP_PER_HOUR = 8;
 
+    /** Commission of an operator account made from the venue signup: exclusive 2%, also sold elsewhere 4%, paid on top by the buyer. */
+    protected const OPERATOR_RATE_EXCLUSIVE = 2.0;
+    protected const OPERATOR_RATE_NON_EXCLUSIVE = 4.0;
+
     public function create(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
@@ -70,6 +74,8 @@ class LeadsController extends BaseController
             // with a password the organizer account is created too (pending until the marketplace approves it)
             'password'        => 'nullable|string|min:8|max:255',
             'terms_accepted'  => 'nullable|boolean',
+            // "Vinzi sau vei vinde bilete și prin alt canal?" → work mode and commission of the account
+            'sells_elsewhere' => 'nullable|boolean',
         ]);
 
         // Cheap rate-limit so a misbehaving client can't flood the
@@ -261,6 +267,7 @@ class LeadsController extends BaseController
             'website'               => $website,
             'person_type'           => 'pj',
             'organizer_type'        => 'venue',
+            'work_mode'             => isset($validated['sells_elsewhere']) ? ($validated['sells_elsewhere'] ? 'non_exclusive' : 'exclusive') : null,
             'cui'                   => $company['cui'] ?? null,
             'company_name'          => $verified ? ($company['name'] ?? null) : null,
             'reg_com'               => $verified ? ($company['reg_com'] ?? null) : null,
@@ -274,6 +281,13 @@ class LeadsController extends BaseController
         $register = Request::create('/api/marketplace-client/organizer/register', 'POST', $fields);
         $register->headers->set('Accept', 'application/json');
         $register->attributes->set('marketplace_client', $client);
+        if (isset($validated['sells_elsewhere'])) {
+            // set before the account exists, so the contract generated at sign-up already carries them
+            $register->attributes->set('operator_terms', [
+                'commission_rate'         => $validated['sells_elsewhere'] ? self::OPERATOR_RATE_NON_EXCLUSIVE : self::OPERATOR_RATE_EXCLUSIVE,
+                'default_commission_mode' => 'added_on_top',
+            ]);
+        }
         $context = ['marketplace_client_id' => $client->id, 'lead_id' => $lead->id];
 
         try {

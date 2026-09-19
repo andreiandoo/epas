@@ -142,6 +142,10 @@ class AuthController extends BaseController
             'guarantor_id_issued_date' => $validated['guarantor_id_issued_date'] ?? null,
 
             'status' => 'pending', // Requires approval
+
+            // Commercial terms decided by a trusted caller (the bilete.online venue signup sets them from the
+            // "other sales channels" answer); never read from the request body, so a sign-up form can't pick them.
+            ...array_intersect_key((array) $request->attributes->get('operator_terms', []), array_flip(['commission_rate', 'default_commission_mode'])),
         ]);
 
         // Generate API key for the organizer
