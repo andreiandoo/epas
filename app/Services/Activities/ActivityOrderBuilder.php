@@ -7,6 +7,7 @@ use App\Models\ActivityBooking;
 use App\Models\ActivityVariant;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
+use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
 use App\Models\Ticket;
 use Carbon\CarbonImmutable;
@@ -34,6 +35,22 @@ use Illuminate\Support\Str;
  */
 class ActivityOrderBuilder
 {
+    /** Selling at the operator's desk (POS): only their own products, POS-only ones and POS prices included. */
+    private ?MarketplaceOrganizer $desk = null;
+
+    public function atDesk(MarketplaceOrganizer $organizer): static
+    {
+        $this->desk = $organizer;
+        $this->availability->atDesk();
+        return $this;
+    }
+
+    /** What one unit costs here: the POS price at the desk when the variant has one. */
+    private function priceCents(ActivityVariant $variant): int
+    {
+        return $this->desk && $variant->pos_price_cents !== null ? (int) $variant->pos_price_cents : (int) $variant->price_cents;
+    }
+
     public function __construct(private ProductAvailability $availability)
     {
     }
@@ -101,7 +118,7 @@ class ActivityOrderBuilder
     public function persist(
         Order $order,
         array $staged,
-        MarketplaceCustomer $customer,
+        ?MarketplaceCustomer $customer,
         array $beneficiaries,
         bool $autoConfirmed,
         bool $isTestOrder,
@@ -156,7 +173,7 @@ class ActivityOrderBuilder
                 'variant_id'               => $variant->id,
                 'location_id'              => $line['location_id'],
                 'marketplace_organizer_id' => $line['organizer_id'],
-                'marketplace_customer_id'  => $customer->id,
+                'marketplace_customer_id'  => $customer?->id,
                 'order_id'                 => $order->id,
                 'booking_date'             => $line['booking_date'],
                 'end_date'                 => $line['end_date'],
@@ -190,7 +207,7 @@ class ActivityOrderBuilder
                 'ticket_type_id'             => null,
                 'marketplace_ticket_type_id' => null,
                 'performance_id'             => null,
-                'marketplace_customer_id'    => $customer->id,
+                'marketplace_customer_id'    => $customer?->id,
                 'locale'                     => $locale,
                 'status'                     => $ticketStatus,
             ];
@@ -203,7 +220,7 @@ class ActivityOrderBuilder
                         'variant_id'               => $component['variant']->id,
                         'location_id'              => $component['activity']->location_id,
                         'marketplace_organizer_id' => $component['activity']->marketplace_organizer_id,
-                        'marketplace_customer_id'  => $customer->id,
+                        'marketplace_customer_id'  => $customer?->id,
                         'order_id'                 => $order->id,
                         'package_booking_id'       => $booking->id,
                         'booking_date'             => $line['booking_date'],
@@ -266,13 +283,18 @@ class ActivityOrderBuilder
         if (!$activity || (int) $activity->marketplace_client_id !== (int) $client->id) {
             throw new ActivityCartException('Un produs din coș nu mai există.');
         }
+        if ($this->desk && (int) $activity->marketplace_organizer_id !== (int) $this->desk->id) {
+            throw new ActivityCartException('Un produs din coș nu aparține contului tău.');
+        }
         $title = self::ro($activity->title, 'Activitate');
         if (!$this->isSellable($activity)) {
-            throw new ActivityCartException("„{$title}” nu mai e disponibil online.");
+            throw new ActivityCartException($this->desk
+                ? "„{$title}” nu se poate vinde încă: așteaptă aprobarea."
+                : "„{$title}” nu mai e disponibil online.");
         }
 
         $variant = $activity->variants->firstWhere('id', (int) ($item['variant_id'] ?? 0));
-        if (!$variant || !$variant->is_active || $variant->pos_only) {
+        if (!$variant || !$variant->is_active || ($variant->pos_only && !$this->desk)) {
             throw new ActivityCartException("Varianta aleasă la „{$title}” nu mai e disponibilă.");
         }
         $variantName = self::ro($variant->name, 'Bilet');
@@ -340,7 +362,7 @@ class ActivityOrderBuilder
 
         [$line['addons'], $line['addons_total']] = $this->stageAddons($activity, $quantity, (array) ($item['addons'] ?? []), $title);
 
-        $line['unit_price'] = round(((int) $variant->price_cents) / 100, 2);
+        $line['unit_price'] = round($this->priceCents($variant) / 100, 2);
         $line['line_total'] = round($line['unit_price'] * $quantity + $line['addons_total'], 2);
 
         // Commission: variant override, else the operator's effective rate.
@@ -358,6 +380,12 @@ class ActivityOrderBuilder
 
     private function isSellable(Activity $activity): bool
     {
+        if ($this->desk) {
+            // at the desk: anything of theirs that passed review, published online or not
+            $location = $activity->location;
+            return ($activity->review_status === null || $activity->review_status === 'approved')
+                && (!$location || $location->review_status === 'approved');
+        }
         if (!$activity->is_published || $activity->pos_only) {
             return false;
         }
@@ -448,17 +476,21 @@ class ActivityOrderBuilder
         // Share of the package price per component (per package unit): the
         // operator's allocation, or split pro rata by the components' own
         // prices with the largest remainder, so the shares add up exactly.
-        $packageCents = (int) $packageVariant->price_cents;
+        $packageCents = $this->priceCents($packageVariant);
         $shares = [];
-        if ($items->every(fn ($i) => $i->allocated_price_cents !== null)) {
+        $explicit = $items->every(fn ($i) => $i->allocated_price_cents !== null);
+        if ($explicit && (int) $items->sum('allocated_price_cents') === $packageCents) {
             foreach ($items as $item) {
                 $shares[$item->id] = (int) $item->allocated_price_cents;
             }
         } else {
             $weights = [];
             foreach ($items as $item) {
+                // the operator's split, scaled when the price differs (POS price), else the components' own prices
                 $v = $item->componentVariant ?: $item->component?->variants->where('is_active', true)->sortBy('sort_order')->first();
-                $weights[$item->id] = max(0, (int) ($v?->price_cents ?? 0)) * max(1, (int) $item->quantity);
+                $weights[$item->id] = $explicit
+                    ? max(0, (int) $item->allocated_price_cents)
+                    : max(0, (int) ($v?->price_cents ?? 0)) * max(1, (int) $item->quantity);
             }
             if (array_sum($weights) <= 0) {
                 $weights = array_fill_keys(array_keys($weights), 1);   // free components: equal split

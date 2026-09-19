@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\BookingsCont
 use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\LocationsController as OrganizerLocations;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\ProductsController as OrganizerProducts;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\UploadsController as OrganizerUploads;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\PosController as OrganizerPos;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -82,4 +83,13 @@ Route::prefix('marketplace-client/organizer/activities-module')
         Route::get('/summary', [OrganizerBookings::class, 'summary'])->name('summary');
 
         Route::post('/uploads', [OrganizerUploads::class, 'store'])->name('uploads.store');
+
+        // The cash desk (POS) at a location: products with POS prices, what is left, cash sessions, sales
+        Route::get('/pos/catalog', [OrganizerPos::class, 'catalog'])->name('pos.catalog');
+        Route::get('/pos/day', [OrganizerPos::class, 'day'])->name('pos.day');
+        Route::get('/pos/session', [OrganizerPos::class, 'session'])->name('pos.session');
+        Route::post('/pos/session', [OrganizerPos::class, 'open'])->name('pos.open');
+        Route::post('/pos/session/{id}/close', [OrganizerPos::class, 'close'])->whereNumber('id')->name('pos.close');
+        Route::post('/pos/sale', [OrganizerPos::class, 'sale'])->name('pos.sale');
+        Route::get('/pos/sales', [OrganizerPos::class, 'sales'])->name('pos.sales');
     });

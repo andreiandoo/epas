@@ -107,6 +107,20 @@ class ProductAvailability
             : $closed;
     }
 
+    /** At the operator's desk (POS): no lead time before a start time or before the day's last entry. */
+    private bool $desk = false;
+
+    public function atDesk(): static
+    {
+        $this->desk = true;
+        return $this;
+    }
+
+    private function leadHours(Activity $activity): int
+    {
+        return $this->desk ? 0 : (int) ($activity->booking_lead_time_hours ?? 0);
+    }
+
     /** 'past', 'too_far' or null. */
     public function windowReason(Activity $activity, CarbonImmutable $date): ?string
     {
@@ -150,7 +164,7 @@ class ProductAvailability
         if (!$reason && $date->isToday() && !$hours['all_day']) {
             // Today: sellable until the last entry (or closing time), minus the lead time.
             $cutoff = $hours['last_entry'] ?? max(array_column($hours['intervals'], 1));
-            $limit  = $date->setTimeFromTimeString($cutoff)->subHours((int) ($activity->booking_lead_time_hours ?? 0));
+            $limit  = $date->setTimeFromTimeString($cutoff)->subHours($this->leadHours($activity));
             if (CarbonImmutable::now(self::TIMEZONE)->gt($limit)) {
                 $reason = 'too_late';
             }
@@ -190,7 +204,7 @@ class ProductAvailability
         $interval   = max(5, (int) ($activity->slot_interval_minutes ?: 60));
         $capacity   = max(1, (int) ($activity->capacity_per_slot ?: 1));
         $window     = $this->windowReason($activity, $date);
-        $leadCutoff = CarbonImmutable::now(self::TIMEZONE)->addHours((int) ($activity->booking_lead_time_hours ?? 0));
+        $leadCutoff = CarbonImmutable::now(self::TIMEZONE)->addHours($this->leadHours($activity));
         $lastEntry  = $hours['last_entry'] ? self::minutes($hours['last_entry']) : null;
         $dayLeft    = $this->dayCapLeft($activity, $date->toDateString());
         $bookings   = $this->bookingsOn($activity->id, $date->toDateString());

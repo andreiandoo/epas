@@ -41,6 +41,17 @@ class LeadsController extends BaseController
     protected const OPERATOR_RATE_EXCLUSIVE = 2.0;
     protected const OPERATOR_RATE_NON_EXCLUSIVE = 4.0;
 
+    /** The rest of an operator account's defaults (admin → the organizer's tabs). */
+    protected const OPERATOR_DEFAULTS = [
+        'default_commission_mode'  => 'added_on_top',
+        'fixed_commission_default' => 1.5,
+        'commission_use_floor'     => true,
+        'test_pos_enabled'         => false,
+        'invoice_due_days'         => 5,
+        'settings'                 => ['widget_enabled' => true],
+        'service_settings'         => ['featuring_enabled' => true, 'tracking_enabled' => true],
+    ];
+
     public function create(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
@@ -266,8 +277,8 @@ class LeadsController extends BaseController
             'phone'                 => $validated['phone'] ?? null,
             'website'               => $website,
             'person_type'           => 'pj',
-            'organizer_type'        => 'venue',
-            'work_mode'             => isset($validated['sells_elsewhere']) ? ($validated['sells_elsewhere'] ? 'non_exclusive' : 'exclusive') : null,
+            'organizer_type'        => 'leisure',
+            'work_mode'             => !empty($validated['sells_elsewhere']) ? 'non_exclusive' : 'exclusive',
             'cui'                   => $company['cui'] ?? null,
             'company_name'          => $verified ? ($company['name'] ?? null) : null,
             'reg_com'               => $verified ? ($company['reg_com'] ?? null) : null,
@@ -281,13 +292,11 @@ class LeadsController extends BaseController
         $register = Request::create('/api/marketplace-client/organizer/register', 'POST', $fields);
         $register->headers->set('Accept', 'application/json');
         $register->attributes->set('marketplace_client', $client);
-        if (isset($validated['sells_elsewhere'])) {
-            // set before the account exists, so the contract generated at sign-up already carries them
-            $register->attributes->set('operator_terms', [
-                'commission_rate'         => $validated['sells_elsewhere'] ? self::OPERATOR_RATE_NON_EXCLUSIVE : self::OPERATOR_RATE_EXCLUSIVE,
-                'default_commission_mode' => 'added_on_top',
-            ]);
-        }
+        // Set before the account exists, so the contract generated at sign-up already carries them. Without an answer
+        // (an older form) the exclusive rate applies; the admin can change any of it later.
+        $register->attributes->set('operator_terms', self::OPERATOR_DEFAULTS + [
+            'commission_rate' => !empty($validated['sells_elsewhere']) ? self::OPERATOR_RATE_NON_EXCLUSIVE : self::OPERATOR_RATE_EXCLUSIVE,
+        ]);
         $context = ['marketplace_client_id' => $client->id, 'lead_id' => $lead->id];
 
         try {
@@ -308,6 +317,18 @@ class LeadsController extends BaseController
 
         $organizerId = (int) $data['organizer']['id'];
         rescue(fn () => MarketplaceOrganizer::whereKey($organizerId)->whereNull('city')->update(['city' => $validated['city']]));
+        // A contract number and date even when the marketplace has no contract template (the generator sets them
+        // otherwise), in the generator's format: prefix + next number.
+        rescue(function () use ($organizerId, $client) {
+            $organizer = MarketplaceOrganizer::find($organizerId);
+            if ($organizer && !$organizer->contract_number_series) {
+                $prefix = $client->settings['contract_prefix'] ?? $client->slug ?? 'CTR';
+                $organizer->updateQuietly([
+                    'contract_number_series' => strtoupper($prefix) . $client->getNextContractNumber(),
+                    'contract_date'          => now()->toDateString(),
+                ]);
+            }
+        });
         $lead->forceFill(['meta' => array_merge($lead->meta ?? [], ['organizer_id' => $organizerId])])->save();
         OrganizerLeadEvent::create([
             'lead_id'               => $lead->id,

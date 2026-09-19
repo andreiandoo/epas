@@ -145,7 +145,10 @@ class AuthController extends BaseController
 
             // Commercial terms decided by a trusted caller (the bilete.online venue signup sets them from the
             // "other sales channels" answer); never read from the request body, so a sign-up form can't pick them.
-            ...array_intersect_key((array) $request->attributes->get('operator_terms', []), array_flip(['commission_rate', 'default_commission_mode'])),
+            ...array_intersect_key((array) $request->attributes->get('operator_terms', []), array_flip([
+                'commission_rate', 'default_commission_mode', 'fixed_commission_default', 'commission_use_floor',
+                'test_pos_enabled', 'invoice_due_days', 'settings', 'service_settings',
+            ])),
         ]);
 
         // Generate API key for the organizer
