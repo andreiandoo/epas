@@ -60,12 +60,14 @@ class ActivitiesController extends BaseController
 
         // Activities module: access tickets and packages are sold on their
         // location's page, POS-only products are not sold online and an
-        // operator's product waits for approval. Only for marketplaces with the
-        // module (older rows default to an approved-free 'experience').
+        // operator's product (and its location) waits for approval. Only for
+        // marketplaces with the module (older rows default to an approved-free
+        // 'experience' without a location).
         if ($client->hasMicroservice('activities-module')) {
             $query->where(fn ($q) => $q->whereNull('product_type')->orWhere('product_type', Activity::TYPE_EXPERIENCE))
                 ->where(fn ($q) => $q->whereNull('pos_only')->orWhere('pos_only', false))
-                ->where(fn ($q) => $q->whereNull('review_status')->orWhere('review_status', 'approved'));
+                ->where(fn ($q) => $q->whereNull('review_status')->orWhere('review_status', 'approved'))
+                ->where(fn ($q) => $q->whereNull('location_id')->orWhereHas('location', fn ($l) => $l->where('is_published', true)->where('review_status', 'approved')));
         }
 
         if ($citySlug = $request->query('city')) {
