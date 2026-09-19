@@ -37,6 +37,13 @@ class ActivityCheckInController extends BaseController
     ];
 
     /**
+     * A scanned ticket becomes 'used', like event tickets, so sales figures
+     * that count valid + used keep counting it. 'checked_in' is what earlier
+     * scans wrote; undo still recognises it.
+     */
+    private const CHECKED_TICKET_STATUSES = ['used', 'checked_in'];
+
+    /**
      * POST /organizer/activity-bookings/check-in/{code}
      */
     public function checkIn(Request $request, string $code): JsonResponse
@@ -48,17 +55,20 @@ class ActivityCheckInController extends BaseController
             return $this->error('Cod gol', 400);
         }
 
+        // ?force=1: staff admits a ticket outside its date on purpose.
+        $force = $request->boolean('force');
+
         // Try as booking confirmation_code FIRST — that's the natural QR
         // a customer presents. If it matches we check in everything.
         $booking = $this->resolveBookingByCode($normalized, $organizer);
         if ($booking) {
-            return $this->processBookingCheckIn($booking, $organizer);
+            return $this->processBookingCheckIn($booking, $organizer, $force);
         }
 
         // Fall back: per-ticket code/barcode.
         $ticket = $this->resolveTicketByCode($normalized, $organizer);
         if ($ticket) {
-            return $this->processTicketCheckIn($ticket, $organizer);
+            return $this->processTicketCheckIn($ticket, $organizer, $force);
         }
 
         return $this->error('Cod invalid sau rezervare necunoscută', 404);
@@ -78,12 +88,16 @@ class ActivityCheckInController extends BaseController
                 return $this->error('Rezervarea nu este validată', 400);
             }
             DB::transaction(function () use ($booking) {
-                $booking->update([
-                    'status'        => ActivityBooking::STATUS_PAID,
-                    'checked_in_at' => null,
-                ]);
-                Ticket::where('activity_booking_id', $booking->id)
-                    ->where('status', 'checked_in')
+                // A package booking undoes its components too.
+                $ids = array_merge([$booking->id], $booking->componentBookings()->pluck('id')->all());
+                ActivityBooking::whereIn('id', $ids)
+                    ->where('status', ActivityBooking::STATUS_CHECKED_IN)
+                    ->update([
+                        'status'        => ActivityBooking::STATUS_PAID,
+                        'checked_in_at' => null,
+                    ]);
+                Ticket::whereIn('activity_booking_id', $ids)
+                    ->whereIn('status', self::CHECKED_TICKET_STATUSES)
                     ->update([
                         'status'        => 'valid',
                         'checked_in_at' => null,
@@ -156,7 +170,7 @@ class ActivityCheckInController extends BaseController
     // INTERNALS
     // ============================================================
 
-    protected function processBookingCheckIn(ActivityBooking $booking, MarketplaceOrganizer $organizer): JsonResponse
+    protected function processBookingCheckIn(ActivityBooking $booking, MarketplaceOrganizer $organizer, bool $force = false): JsonResponse
     {
         if ($booking->status === ActivityBooking::STATUS_CANCELLED) {
             return $this->error('Rezervarea a fost anulată', 400);
@@ -180,17 +194,29 @@ class ActivityCheckInController extends BaseController
             ], $payload), 400);
         }
 
+        if (!$force && ($problem = $this->validityProblem($booking))) {
+            return response()->json(array_merge([
+                'success'    => false,
+                'message'    => $problem,
+                'wrong_date' => true,
+            ], $this->buildBookingPayload($booking)), 400);
+        }
+
         $checkedInBy = $this->checkInByLabel($organizer);
 
         DB::transaction(function () use ($booking, $checkedInBy) {
-            $booking->update([
+            // A package booking checks in its components (and their tickets) too.
+            $ids = array_merge([$booking->id], $booking->componentBookings()
+                ->whereIn('status', [ActivityBooking::STATUS_PAID, ActivityBooking::STATUS_CONFIRMED])
+                ->pluck('id')->all());
+            ActivityBooking::whereIn('id', $ids)->update([
                 'status'        => ActivityBooking::STATUS_CHECKED_IN,
                 'checked_in_at' => now(),
             ]);
-            Ticket::where('activity_booking_id', $booking->id)
+            Ticket::whereIn('activity_booking_id', $ids)
                 ->whereIn('status', ['valid', 'pending'])
                 ->update([
-                    'status'        => 'checked_in',
+                    'status'        => 'used',
                     'checked_in_at' => now(),
                     'checked_in_by' => $checkedInBy,
                 ]);
@@ -206,7 +232,7 @@ class ActivityCheckInController extends BaseController
         return $this->success($this->buildBookingPayload($booking), 'Rezervare validată');
     }
 
-    protected function processTicketCheckIn(Ticket $ticket, MarketplaceOrganizer $organizer): JsonResponse
+    protected function processTicketCheckIn(Ticket $ticket, MarketplaceOrganizer $organizer, bool $force = false): JsonResponse
     {
         if (in_array($ticket->status, ['cancelled', 'refunded'], true)) {
             return $this->error('Biletul a fost ' . $ticket->status, 400);
@@ -233,11 +259,19 @@ class ActivityCheckInController extends BaseController
             return $this->error('Rezervarea nu este într-un status valid pentru check-in (' . $booking->status . ')', 400);
         }
 
+        if (!$force && ($problem = $this->validityProblem($booking))) {
+            return response()->json(array_merge([
+                'success'    => false,
+                'message'    => $problem,
+                'wrong_date' => true,
+            ], $this->buildTicketPayload($ticket)), 400);
+        }
+
         $checkedInBy = $this->checkInByLabel($organizer);
 
         DB::transaction(function () use ($ticket, $booking, $checkedInBy) {
             $ticket->update([
-                'status'        => 'checked_in',
+                'status'        => 'used',
                 'checked_in_at' => now(),
                 'checked_in_by' => $checkedInBy,
             ]);
@@ -326,10 +360,22 @@ class ActivityCheckInController extends BaseController
                 'checked_in_at'      => $booking->checked_in_at?->toIso8601String(),
                 'total_cents'        => $booking->total_cents,
                 'currency'           => $booking->currency,
+                'end_date'           => $booking->end_date?->toDateString(),
+                'quantity'           => $booking->quantity,
+                'variant'            => $this->plain($booking->variant?->name),
+                'vehicle_plate'      => $booking->meta['vehicle_plate'] ?? null,
+                'addons'             => $booking->addons ?? [],
+                'components'         => $booking->componentBookings()->with(['activity', 'variant'])->get()->map(fn ($c) => [
+                    'title'    => $this->plain($c->activity?->title),
+                    'variant'  => $this->plain($c->variant?->name),
+                    'quantity' => $c->quantity,
+                    'slot_start_time' => $c->getRawOriginal('slot_start_time') ? substr($c->getRawOriginal('slot_start_time'), 0, 5) : null,
+                ])->values()->all(),
             ],
             'activity' => [
                 'id'    => $activity?->id,
                 'title' => $title,
+                'type'  => $activity?->product_type,
             ],
             'customer' => [
                 'name'  => $customerName,
@@ -338,10 +384,45 @@ class ActivityCheckInController extends BaseController
             'tickets_summary' => [
                 'total'      => Ticket::where('activity_booking_id', $booking->id)->count(),
                 'checked_in' => Ticket::where('activity_booking_id', $booking->id)
-                    ->where('status', 'checked_in')
+                    ->whereNotNull('checked_in_at')
                     ->count(),
             ],
         ];
+    }
+
+    /**
+     * Null when the ticket is valid today (Bucharest time), otherwise the
+     * reason for the gate: a ticket is valid on its date, or from its date to
+     * its end date for multi-day tickets.
+     */
+    protected function validityProblem(ActivityBooking $booking): ?string
+    {
+        $from = $booking->booking_date?->toDateString();
+        if (!$from) {
+            return null;
+        }
+        $to    = ($booking->end_date ?? $booking->booking_date)->toDateString();
+        $today = now('Europe/Bucharest')->toDateString();
+        $fmt   = fn (string $d) => \Carbon\Carbon::parse($d)->format('d.m.Y');
+
+        if ($today < $from) {
+            return $from === $to
+                ? 'Biletul e pentru ' . $fmt($from) . ', nu pentru azi.'
+                : 'Biletul e valabil între ' . $fmt($from) . ' și ' . $fmt($to) . '.';
+        }
+        if ($today > $to) {
+            return 'Biletul a fost valabil ' . ($from === $to ? 'pe ' . $fmt($to) : 'până pe ' . $fmt($to)) . '.';
+        }
+        return null;
+    }
+
+    /** Romanian text of a translatable value. */
+    protected function plain($value): ?string
+    {
+        if (is_array($value)) {
+            $value = $value['ro'] ?? $value['en'] ?? (array_values(array_filter($value))[0] ?? null);
+        }
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     protected function buildTicketPayload(Ticket $ticket): array
@@ -376,6 +457,8 @@ class ActivityCheckInController extends BaseController
                 'attendee_email' => $ticket->attendee_email,
                 'checked_in_at'  => $ticket->checked_in_at?->toIso8601String(),
                 'price'          => $ticket->price,
+                'companion'      => (bool) ($ticket->meta['companion'] ?? false),
+                'package'        => $ticket->meta['package'] ?? null,
             ],
             'booking' => $booking ? [
                 'id'                => $booking->id,
@@ -386,6 +469,9 @@ class ActivityCheckInController extends BaseController
                     ? substr($booking->slot_start_time, 0, 5)
                     : $booking->slot_start_time?->format('H:i'),
                 'participants_count' => $booking->participants_count,
+                'end_date'          => $booking->end_date?->toDateString(),
+                'variant'           => $this->plain($booking->variant?->name),
+                'vehicle_plate'     => $booking->meta['vehicle_plate'] ?? null,
             ] : null,
             'activity' => [
                 'id'    => $activity?->id,

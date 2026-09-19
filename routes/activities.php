@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\MarketplaceClient\Activities\LocationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\ModuleController;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\ProductsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,4 +28,21 @@ Route::prefix('marketplace-client')
     ->group(function () {
         Route::get('/activities-module/status', [ModuleController::class, 'status'])
             ->name('status');
+
+        // Public catalogue: locations and what they sell.
+        Route::get('/activities-module/locations', [LocationsController::class, 'index'])
+            ->name('locations.index');
+        Route::get('/activities-module/locations/{slug}', [LocationsController::class, 'show'])
+            ->where('slug', '[a-z0-9-]+')->name('locations.show');
+        Route::get('/activities-module/locations/{slug}/day', [LocationsController::class, 'day'])
+            ->where('slug', '[a-z0-9-]+')->name('locations.day');
+        Route::get('/activities-module/locations/{slug}/calendar', [LocationsController::class, 'calendar'])
+            ->where('slug', '[a-z0-9-]+')->name('locations.calendar');
+
+        Route::get('/activities-module/products/{slug}', [ProductsController::class, 'show'])
+            ->where('slug', '[a-z0-9-]+')->name('products.show');
+        Route::get('/activities-module/products/{slug}/day', [ProductsController::class, 'day'])
+            ->where('slug', '[a-z0-9-]+')->name('products.day');
+        Route::get('/activities-module/products/{slug}/calendar', [ProductsController::class, 'calendar'])
+            ->where('slug', '[a-z0-9-]+')->name('products.calendar');
     });
