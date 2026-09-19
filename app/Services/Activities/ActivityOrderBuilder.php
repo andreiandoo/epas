@@ -287,8 +287,9 @@ class ActivityOrderBuilder
 
         $meta = [];
         if ($activity->requires_vehicle_info) {
-            $plate = strtoupper(trim((string) ($item['meta']['vehicle_plate'] ?? $item['meta']['vehicle_info'] ?? '')));
-            if ($plate === '' || strlen($plate) > 20) {
+            $plate = mb_strtoupper(trim((string) ($item['meta']['vehicle_plate'] ?? $item['meta']['vehicle_info'] ?? '')));
+            // Several vehicles on one line are written together, separated by commas.
+            if ($plate === '' || mb_strlen($plate) > 80) {
                 throw new ActivityCartException("Completează numărul de înmatriculare pentru „{$title}”.");
             }
             $meta['vehicle_plate'] = $plate;

@@ -137,6 +137,7 @@ class CatalogPresenter
                     'type'         => $i->component?->product_type,
                     'booking_mode' => $i->component?->booking_mode,
                     'variant'      => $i->componentVariant ? $this->t($i->componentVariant->name) : null,
+                    'is_child'     => (bool) $i->componentVariant?->is_child,
                     'quantity'     => (int) $i->quantity,
                     'unit_price_cents' => $i->componentVariant?->price_cents,
                 ])->values()->all()
