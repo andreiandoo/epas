@@ -5,7 +5,9 @@
        today: 'Y-m-d', max_days: n, focus_product_id }
    Availability comes from the proxy (am.location.day / am.product.day and the .calendar actions); the choice goes to
    BileteOnlineCart.addBookingItem (assets/js/cart.js), then to /cos or /finalizare. The server checks everything again
-   at checkout; the rules here only spare the customer a refused order. */
+   at checkout; the rules here only spare the customer a refused order.
+   In the booking widget on the operator's site (embed/locatie.php, cfg.embed) the frame cannot reach this site's
+   storage, so the same lines go to /finalizare#bo-import=… in a new tab, where cart.js adds them. */
 (function () {
   'use strict';
 
@@ -120,7 +122,7 @@
   // Access tickets already in the cart for this location and date also count.
   function cartAccess() {
     var got = { any: 0, adult: 0 };
-    if (typeof BileteOnlineCart === 'undefined' || !cfg.location) return got;
+    if (cfg.embed || typeof BileteOnlineCart === 'undefined' || !cfg.location) return got;
     (BileteOnlineCart.getCart().items || []).forEach(function (it) {
       if (it.type !== 'activity' || !it.activity || it.activity.location_slug !== cfg.location.slug || it.booking_date !== state.date) return;
       if (it.activity.product_type === 'access') {
@@ -518,39 +520,51 @@
   function submit(dest) {
     var ls = lines();
     if (!ls.length || problems(ls).length) { renderSummary(); return; }
+    if (cfg.embed) { openCheckout(ls.map(item)); return; }
     if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addBookingItem !== 'function') {
       state.error = 'Coșul nu s-a încărcat. Reîncarcă pagina și încearcă din nou.';
       renderSummary();
       return;
     }
     var added = 0;
-    ls.forEach(function (l) {
-      var p = l.product, c = commissionOf(p);
-      var ok = BileteOnlineCart.addBookingItem({
-        product: {
-          id: p.id, slug: p.slug, title: p.title, image: p.image || (cfg.location && cfg.location.image) || null, product_type: p.type,
-          booking_mode: p.booking_mode, location_slug: cfg.location ? cfg.location.slug : null,
-          venue: cfg.location ? cfg.location.name : null, city: cfg.location ? cfg.location.city : null,
-          commission_rate: c.rate, commission_mode: c.mode
-        },
-        variant: {
-          id: l.variant.id, name: l.variant.name, price_cents: l.variant.price_cents, capacity_share: l.variant.capacity_share || 1,
-          is_child: !!l.variant.is_child, persons_counted: l.variant.price_type === 'per_unit' ? l.quantity * Math.max(1, l.variant.persons_max || 1) : l.quantity
-        },
-        date: state.date,
-        date_label: shortDate(state.date),
-        start_time: l.time,
-        end_time: l.end,
-        quantity: l.quantity,
-        addons: l.addons,
-        components: l.components.map(function (x) { return { item_id: x.item_id, slot_start_time: x.slot_start_time }; }),
-        component_labels: l.components.filter(function (x) { return x.slot_start_time; }).map(function (x) { return x.title + ', ' + hm(x.slot_start_time); }),
-        meta: l.plate ? { vehicle_plate: l.plate } : {}
-      });
-      if (ok) added++;
-    });
+    ls.forEach(function (l) { if (BileteOnlineCart.addBookingItem(item(l))) added++; });
     if (!added) { state.error = 'Nu am putut adăuga în coș. Încearcă din nou.'; renderSummary(); return; }
     window.location.href = dest === 'checkout' ? '/finalizare' : '/cos';
+  }
+  // A new tab on bilete.online with the lines in the address (cart.js adds them); a blocked pop-up leaves a link.
+  function openCheckout(items) {
+    var url = (cfg.site_url || '') + '/finalizare#bo-import=' + encodeURIComponent(JSON.stringify(items));
+    var w = null;
+    try { w = window.open(url, '_blank'); } catch (e) {}
+    if (w) return;
+    var box = $('bkx-err');
+    box.textContent = 'Browserul a blocat fila nouă. ';
+    box.appendChild(el('a', { href: url, target: '_blank', rel: 'noopener', text: 'Deschide plata pe bilete.online' }));
+    box.hidden = false;
+  }
+  function item(l) {
+    var p = l.product, c = commissionOf(p);
+    return {
+      product: {
+        id: p.id, slug: p.slug, title: p.title, image: p.image || (cfg.location && cfg.location.image) || null, product_type: p.type,
+        booking_mode: p.booking_mode, location_slug: cfg.location ? cfg.location.slug : null,
+        venue: cfg.location ? cfg.location.name : null, city: cfg.location ? cfg.location.city : null,
+        commission_rate: c.rate, commission_mode: c.mode
+      },
+      variant: {
+        id: l.variant.id, name: l.variant.name, price_cents: l.variant.price_cents, capacity_share: l.variant.capacity_share || 1,
+        is_child: !!l.variant.is_child, persons_counted: l.variant.price_type === 'per_unit' ? l.quantity * Math.max(1, l.variant.persons_max || 1) : l.quantity
+      },
+      date: state.date,
+      date_label: shortDate(state.date),
+      start_time: l.time,
+      end_time: l.end,
+      quantity: l.quantity,
+      addons: l.addons,
+      components: l.components.map(function (x) { return { item_id: x.item_id, slot_start_time: x.slot_start_time }; }),
+      component_labels: l.components.filter(function (x) { return x.slot_start_time; }).map(function (x) { return x.title + ', ' + hm(x.slot_start_time); }),
+      meta: l.plate ? { vehicle_plate: l.plate } : {}
+    };
   }
   elCart.addEventListener('click', function () { submit('cart'); });
   elGo.addEventListener('click', function () { submit('checkout'); });

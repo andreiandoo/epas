@@ -281,7 +281,10 @@ const BileteOnlineCart = {
         };
 
         const index = cart.items.findIndex(it => it.key === itemKey);
-        if (index >= 0) {
+        if (index >= 0 && o.replace) {
+            // Handed over again by the booking widget: the new choice stands.
+            cart.items[index] = line;
+        } else if (index >= 0) {
             // Same product, date, time and extras: one bigger line.
             const prev = cart.items[index];
             line.quantity = line.participants_count = (prev.participants_count || prev.quantity || 0) + qty;
@@ -298,8 +301,31 @@ const BileteOnlineCart = {
 
         this.saveCart(cart);
         this.startReservationTimer();
-        this.showNotification(`${p.title || v.name || 'Bilet'} adăugat în coș!`);
+        if (!o.quiet) this.showNotification(`${p.title || v.name || 'Bilet'} adăugat în coș!`);
         return cart;
+    },
+
+    /**
+     * Lines handed over by the booking widget on an operator's site (embed/locatie.php): the frame cannot reach this
+     * site's storage, so it opens /finalizare#bo-import=<JSON of addBookingItem arguments>. Runs once, before the
+     * page scripts read the cart; the address loses the hash so a reload adds nothing. A line already in the cart
+     * (same product, date, time, extras) is replaced, not doubled, when the customer comes back through the widget.
+     */
+    importFromHash() {
+        const m = /[#&]bo-import=([^&]+)/.exec(window.location.hash || '');
+        if (!m) return;
+        try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
+        let lines = [];
+        try { lines = JSON.parse(decodeURIComponent(m[1])); } catch (e) { return; }
+        if (!Array.isArray(lines) || !lines.length) return;
+        try {
+            if (this.getItemCount() > 0 && this.isReservationExpired()) this.clearCart();
+            lines.slice(0, 20).forEach(o => {
+                if (o && typeof o === 'object') this.addBookingItem(Object.assign({}, o, { replace: true, quiet: true }));
+            });
+        } catch (e) {
+            console.warn('[BileteOnlineCart.importFromHash]', e);
+        }
     },
 
     /**
@@ -1122,6 +1148,15 @@ const BileteOnlineCart = {
         return this.clearCart(options);
     }
 };
+
+BileteOnlineCart.importFromHash();
+// The widget handing over again to a tab already open on the same page only changes the hash: add, then redraw.
+window.addEventListener('hashchange', () => {
+    if (/[#&]bo-import=/.test(window.location.hash)) {
+        BileteOnlineCart.importFromHash();
+        window.location.reload();
+    }
+});
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
