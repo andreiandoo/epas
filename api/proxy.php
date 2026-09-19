@@ -1277,6 +1277,7 @@ switch ($action) {
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/customer/checkout';
+        $requiresAuth = true; // forward the customer's token when there is one: paying with loyalty points needs it
         break;
 
     case 'orders.pay':

@@ -118,3 +118,7 @@
 .pt-help{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:var(--space-3);font-weight:700;color:var(--action);text-decoration:none}
 .pt-help .ic{width:18px;height:18px;transition:transform var(--dur-micro) var(--ease-out)}
 .pt-help:hover .ic{transform:translateX(3px)}
+.pt-pending{margin:10px 0 0;padding:8px 12px;border-radius:12px;background:var(--tint-green);color:var(--green);font-size:.875rem;line-height:1.4}
+.pt-pending[hidden]{display:none}
+.pt-pending strong{font-variant-numeric:tabular-nums}
+.pt-row.is-solo{grid-template-columns:1fr}

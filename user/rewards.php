@@ -66,6 +66,7 @@ include __DIR__ . '/../includes/v2/header.php';
           <p class="acc-k" id="pt-wallet-k">Sold disponibil</p>
           <p class="pt-balance" id="pt-balance">0</p>
           <p class="pt-balance-sub">puncte bonus · aproximativ <strong id="pt-balance-lei">0 lei</strong></p>
+          <p class="pt-pending" id="pt-pending" hidden></p>
           <div class="pt-bar" id="pt-bar-hero" role="progressbar" aria-label="Progres către nivelul următor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
           <p class="pt-bar-note" id="pt-next-hero">Se încarcă nivelul…</p>
         </article>
@@ -87,9 +88,9 @@ include __DIR__ . '/../includes/v2/header.php';
             <a class="btn btn-primary" href="/categorii">Caută activități</a>
           </div>
           <ol class="pt-steps">
-            <li><span aria-hidden="true">1</span><h3>Cumperi</h3><p>La comenzile eligibile primești puncte bonus după confirmare.</p></li>
-            <li><span aria-hidden="true">2</span><h3>Strângi</h3><p>Punctele se adună în cont și apar în istoricul tranzacțiilor.</p></li>
-            <li><span aria-hidden="true">3</span><h3>Reduci</h3><p>La checkout alegi câte puncte vrei să aplici în comanda eligibilă.</p></li>
+            <li><span aria-hidden="true">1</span><h3>Cumperi</h3><p>Fiecare comandă plătită îți aduce puncte. Stau „în așteptare” până trece activitatea, apoi intră în cont.</p></li>
+            <li><span aria-hidden="true">2</span><h3>Strângi</h3><p>Primești puncte și de ziua ta și când un prieten invitat de tine cumpără prima activitate.</p></li>
+            <li><span aria-hidden="true">3</span><h3>Reduci</h3><p>La checkout, intrat în cont, bifezi „Folosește punctele” și plătești o parte din bilete cu ele.</p></li>
           </ol>
           <div class="pt-rate">
             <b>Conversie actuală</b>
@@ -97,7 +98,7 @@ include __DIR__ . '/../includes/v2/header.php';
           </div>
         </div>
 
-        <div class="acc-panel">
+        <div class="acc-panel" id="pt-level">
           <p class="acc-k">Nivel client</p>
           <h2 class="pt-tier" id="pt-tier">—</h2>
           <p class="pt-p" id="pt-tier-desc" hidden></p>
@@ -184,9 +185,10 @@ include __DIR__ . '/../includes/v2/header.php';
             <p class="acc-k">Reguli</p>
             <h2>Pe scurt</h2>
             <ul class="pt-rules">
-              <li><b>Câștigare:</b> la comenzi eligibile, după confirmare.</li>
+              <li id="pt-rule-earn"><b>Câștigare:</b> la comenzi eligibile, după confirmare.</li>
               <li><b>Folosire:</b> direct în checkout, în limita regulilor.</li>
-              <li><b>Afiliere:</b> puncte după prima comandă eligibilă a prietenului.</li>
+              <li id="pt-rule-bday" hidden></li>
+              <li id="pt-rule-ref"><b>Afiliere:</b> puncte după prima comandă eligibilă a prietenului.</li>
               <li id="pt-rule-exp"><b>Expirare:</b> punctele pot avea termen de valabilitate.</li>
             </ul>
             <a class="pt-help" href="/ajutor?categorie=bonus">Întrebări despre puncte<?= v2_ic('arrow-right') ?></a>

@@ -15,16 +15,17 @@
   var TYPE_TONE = { earned: 'is-ok', spent: 'is-bad', expired: 'is-muted', affiliate: 'is-wait' };
   var TYPE_TITLE = { earned: 'Puncte câștigate', spent: 'Puncte folosite', expired: 'Puncte expirate', affiliate: 'Afiliere' };
   var ACTIONS = {
-    order: 'Comandă', purchase: 'Comandă', refund: 'Retur', referral: 'Afiliere', referral_reward: 'Afiliere', signup: 'Bonus cont nou',
-    birthday: 'Bonus zi de naștere', badge_bonus: 'Bonus insignă', redemption: 'Folosite la o comandă', reward_redemption: 'Recompensă',
-    expiration: 'Expirare', manual_adjustment: 'Ajustare'
+    order: 'Comandă', purchase: 'Comandă', refund: 'Puncte returnate', referral: 'Afiliere', referral_reward: 'Afiliere', referred: 'Bonus de bun venit',
+    signup: 'Bonus cont nou', birthday: 'Bonus zi de naștere', badge_bonus: 'Bonus insignă', redemption: 'Folosite la o comandă',
+    checkout: 'Folosite la o comandă', reward_redemption: 'Recompensă', expiration: 'Expirare', manual_adjustment: 'Ajustare',
+    purchase_reversal: 'Retur comandă'
   };
   var SHARE_TEXT = 'Hei! Am descoperit bilete.online — bilete pentru escape rooms, muzee, ateliere și multe altele. Folosește linkul meu: ';
   var num = new Intl.NumberFormat('ro-RO');
   var whole = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
   var pct = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 });
   var config = null, earnRate = '', ladder = [], history = [], page = 0, lastPage = 1, historyBusy = false;
-  var points = { balance: 0, earned: 0, spent: 0 }, referral = { code: '', link: '' }, statusTimer = 0;
+  var points = { balance: 0, earned: 0, spent: 0, pending: 0 }, referral = { code: '', link: '' }, statusTimer = 0;
 
   // ---------- helpers ----------
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
@@ -69,6 +70,11 @@
     $('pt-s-earned').textContent = num.format(points.earned);
     $('pt-s-spent').textContent = num.format(points.spent);
     $('pt-s-spent-lei').textContent = toLei(points.spent);
+    var pending = $('pt-pending');
+    if (pending) {
+      pending.hidden = points.pending <= 0;
+      if (points.pending > 0) fill(pending, ['+ ', strong(plural(points.pending, 'punct', 'puncte')), ' în așteptare: intră în cont după activitățile rezervate.']);
+    }
     account.setBadges({ points: points.balance });
   }
   function buildLadder(tiers) {
@@ -89,9 +95,16 @@
     bar.setAttribute('aria-valuenow', String(value));
   }
   function renderTier() {
+    var level = $('pt-level');
+    if (level) {
+      level.hidden = !ladder.length;
+      if (level.parentNode) level.parentNode.classList.toggle('is-solo', !ladder.length);
+    }
+    var heroBar = $('pt-bar-hero');
+    if (heroBar) heroBar.hidden = !ladder.length;
     if (!ladder.length) {
       $('pt-tier').textContent = '—';
-      $('pt-next-hero').textContent = 'Nivelurile programului nu sunt disponibile acum.';
+      $('pt-next-hero').textContent = config && config.auto_rewards ? '' : 'Nivelurile programului nu sunt disponibile acum.';
       $('pt-next-tier').textContent = 'Nivelurile programului nu sunt disponibile acum.';
       return;
     }
@@ -130,13 +143,22 @@
       items.push(['Regulile programului nu sunt disponibile acum.']);
     } else {
       items.push([strong(num.format(perLei())), ' puncte = 1 leu reducere.']);
-      if (earnRate) items.push(['Câștigi ', strong(earnRate), ' la comenzile eligibile.']);
+      if (earnRate) items.push(['Câștigi ', strong(earnRate), ' la comenzile eligibile' + (config.auto_rewards && count(config.confirm_days) >= 0 ? ', în cont după activitate.' : '.')]);
+      if (count(config.birthday_bonus_points) > 0 && config.auto_rewards) items.push(['De ziua ta: ', strong(plural(config.birthday_bonus_points, 'punct', 'puncte')), ' (după prima comandă; completează data nașterii în setări).']);
       if (count(config.min_redeem_points) > 0) items.push(['Poți folosi punctele de la minimum ', strong(plural(config.min_redeem_points, 'punct', 'puncte')), '.']);
       if (amount(config.max_redeem_percentage) > 0) items.push(['Reducerea din puncte acoperă cel mult ', strong(pct.format(amount(config.max_redeem_percentage)) + '%'), ' din comandă.']);
       if (count(config.max_redeem_points_per_order) > 0) items.push(['Maximum ', strong(plural(config.max_redeem_points_per_order, 'punct', 'puncte')), ' pe comandă (≈ ' + toLei(config.max_redeem_points_per_order) + ').']);
       var days = count(config.points_expire_days);
       items.push(days ? ['Punctele expiră după ', strong(plural(days, 'zi', 'zile')), '.'] : ['Punctele nu expiră.']);
       fill(rule, [strong('Expirare:'), days ? ' punctele expiră după ' + plural(days, 'zi', 'zile') + '.' : ' punctele nu expiră.']);
+      if (config.auto_rewards) {
+        if (earnRate) fill($('pt-rule-earn'), [strong('Câștigare:'), ' ' + earnRate + ', în cont după activitate.']);
+        var bday = $('pt-rule-bday');
+        if (bday && count(config.birthday_bonus_points) > 0) {
+          fill(bday, [strong('Zi de naștere:'), ' ' + plural(config.birthday_bonus_points, 'punct', 'puncte') + ' în fiecare an, dacă ai cumpărat cel puțin o dată.']);
+          bday.hidden = false;
+        }
+      }
     }
     items.forEach(function (parts) { var li = el('li'); fill(li, parts); list.appendChild(li); });
   }
@@ -183,8 +205,14 @@
     var mine = count(rewards.referrer_reward), theirs = count(rewards.referred_reward), inPoints = !rewards.reward_type || rewards.reward_type === 'points';
     var unit = function (n) { return inPoints ? plural(n, 'punct', 'puncte') : whole.format(n) + ' lei'; };
     if (mine) {
-      $('pt-aff-reward').textContent = 'Primești ' + unit(mine) + ' pentru fiecare prieten care cumpără prima activitate eligibilă' + (theirs ? ', iar prietenul primește ' + unit(theirs) + ' la înregistrare.' : '.');
+      var minOrder = amount(rewards.min_purchase);
+      var from = minOrder > 0 ? ' de cel puțin ' + whole.format(minOrder) + ' lei' : '';
+      $('pt-aff-reward').textContent = 'Primești ' + unit(mine) + ' pentru fiecare prieten care își face cont prin linkul tău și cumpără prima activitate' + from +
+        (theirs ? ', iar prietenul primește ' + unit(theirs) + ' la aceeași comandă.' : '.') +
+        (rewards.automatic ? ' Punctele intră singure în cont după activitate.' : '');
       show('pt-aff-reward', true);
+      var refRule = $('pt-rule-ref');
+      if (refRule) fill(refRule, [strong('Afiliere:'), ' ' + unit(mine) + ' pentru tine' + (theirs ? ' și ' + unit(theirs) + ' pentru prieten' : '') + ', la prima lui comandă' + from + '.']);
     }
   }
   $('pt-copy').addEventListener('click', function () {
@@ -313,6 +341,7 @@
       points.earned = count(p.lifetime_earned != null ? p.lifetime_earned : p.total_earned);
       points.spent = count(p.lifetime_spent != null ? p.lifetime_spent : (p.spent != null ? p.spent : p.total_spent));
       earnRate = txt(p.earn_rate);
+      points.pending = count(p.pending);
     }
     buildLadder(config && config.tiers);
     renderPoints();
@@ -320,8 +349,10 @@
     renderRules();
     if (!p) $('pt-next-hero').textContent = 'Nu am putut încărca soldul punctelor. Reîncarcă pagina.';
     if (config) {
-      if (count(config.points_expire_days) > 0) loadExpiring();
-      else renderExpiring(0, 0, false);
+      if (count(config.points_expire_days) > 0) {
+        if (config.auto_rewards && p && p.expiring_soon != null) renderExpiring(count(p.expiring_soon), config.expiring_warning_days, true);
+        else loadExpiring();
+      } else renderExpiring(0, 0, false);
     }
   }, function () { guard(); });
 
