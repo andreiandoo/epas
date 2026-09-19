@@ -45,6 +45,18 @@ class GamificationConfigResource extends Resource
         return static::marketplaceHasMicroservice('gamification');
     }
 
+    /**
+     * The explanation of a field, as an info icon right after its label (tooltip on hover) instead of a line of text
+     * under the input.
+     */
+    protected static function info(string $text): SC\Icon
+    {
+        return SC\Icon::make('heroicon-o-information-circle')
+            ->tooltip($text)
+            ->color('gray')
+            ->extraAttributes(['style' => 'cursor:help']);
+    }
+
     public static function form(Schema $schema): Schema
     {
         $marketplace = static::getMarketplaceClient();
@@ -115,7 +127,7 @@ class GamificationConfigResource extends Resource
                             ->default(0.01)
                             ->live(onBlur: true)
                             ->required()
-                            ->helperText('How much is 1 point worth for redemption (e.g., 0.01 = 1 point = 0.01 RON)'),
+                            ->afterLabel(static::info('How much is 1 point worth for redemption (e.g., 0.01 = 1 point = 0.01 RON)')),
 
                         Forms\Components\Select::make('currency')
                             ->options([
@@ -135,26 +147,26 @@ class GamificationConfigResource extends Resource
                             ->suffix('%')
                             ->default(5.00)
                             ->live(onBlur: true)
-                            ->helperText('Procentul din valoarea biletelor dat înapoi în puncte. Ex.: 0,5 = la 100 lei, 50 de puncte (0,50 lei) când 1 punct = 0,01 lei.'),
+                            ->afterLabel(static::info('Procentul din valoarea biletelor dat înapoi în puncte. Ex.: 0,5 = la 100 lei, 50 de puncte (0,50 lei) când 1 punct = 0,01 lei.')),
 
                         Forms\Components\Toggle::make('earn_on_subtotal')
                             ->label('Earn on Subtotal')
                             ->default(true)
-                            ->helperText('Calculate points based on subtotal (vs total with fees)'),
+                            ->afterLabel(static::info('Calculate points based on subtotal (vs total with fees)')),
 
                         Forms\Components\TextInput::make('min_order_for_earning')
                             ->label('Minimum Order')
                             ->numeric()
                             ->step(0.01)
                             ->default(0)
-                            ->helperText('Minimum order value to earn points (e.g., 10.00)'),
+                            ->afterLabel(static::info('Minimum order value to earn points (e.g., 10.00)')),
 
                         Forms\Components\TextInput::make('points_confirm_days')
                             ->label('Zile până la creditare')
                             ->numeric()
                             ->minValue(0)
                             ->default(2)
-                            ->helperText('Punctele unei comenzi intră în cont la atâtea zile după activitate (până atunci sunt „în așteptare”; un retur le anulează).'),
+                            ->afterLabel(static::info('Punctele unei comenzi intră în cont la atâtea zile după activitate (până atunci sunt „în așteptare”; un retur le anulează).')),
                     ])->columns(3),
 
                 SC\Section::make('Redemption Settings')
@@ -173,13 +185,13 @@ class GamificationConfigResource extends Resource
                             ->live(onBlur: true)
                             ->suffix('%')
                             ->default(50.00)
-                            ->helperText('Maximum percentage of order that can be paid with points'),
+                            ->afterLabel(static::info('Maximum percentage of order that can be paid with points')),
 
                         Forms\Components\TextInput::make('max_redeem_points_per_order')
                             ->label('Max Points Per Order')
                             ->numeric()
                             ->nullable()
-                            ->helperText('Leave empty for no limit'),
+                            ->afterLabel(static::info('Leave empty for no limit')),
                     ])->columns(3),
 
                 SC\Section::make('Bonus Points')
@@ -194,33 +206,33 @@ class GamificationConfigResource extends Resource
                             ->label('Signup Bonus')
                             ->numeric()
                             ->default(50)
-                            ->helperText('Nu se acordă de recompensele automate (un cont nou nu primește puncte înainte să cumpere).'),
+                            ->afterLabel(static::info('Nu se acordă de recompensele automate (un cont nou nu primește puncte înainte să cumpere).')),
 
                         Forms\Components\TextInput::make('referral_bonus_points')
                             ->label('Referral Bonus (Referrer)')
                             ->numeric()
                             ->default(200)
-                            ->helperText('Points awarded to the person who refers'),
+                            ->afterLabel(static::info('Points awarded to the person who refers')),
 
                         Forms\Components\TextInput::make('referred_bonus_points')
                             ->label('Referral Bonus (Referred)')
                             ->numeric()
                             ->default(100)
-                            ->helperText('Points awarded to the new customer'),
+                            ->afterLabel(static::info('Points awarded to the new customer')),
 
                         Forms\Components\TextInput::make('referral_min_order')
                             ->label('Comandă minimă pentru invitație (lei)')
                             ->numeric()
                             ->step(0.01)
                             ->default(0)
-                            ->helperText('Bonusurile de invitație se acordă când prima comandă a prietenului, de cel puțin atât, e confirmată (în 30 de zile de la înscriere).'),
+                            ->afterLabel(static::info('Bonusurile de invitație se acordă când prima comandă a prietenului, de cel puțin atât, e confirmată (în 30 de zile de la înscriere).')),
 
                         Forms\Components\TextInput::make('referral_max_per_year')
                             ->label('Invitații răsplătite pe an')
                             ->numeric()
                             ->minValue(0)
                             ->default(10)
-                            ->helperText('Câți prieteni pot aduce bonus unui client într-un an. 0 = fără limită.'),
+                            ->afterLabel(static::info('Câți prieteni pot aduce bonus unui client într-un an. 0 = fără limită.')),
                     ])->columns(3),
 
                 SC\Section::make('Expiration Settings')
@@ -229,7 +241,7 @@ class GamificationConfigResource extends Resource
                             ->label('Points Expire After (days)')
                             ->numeric()
                             ->nullable()
-                            ->helperText('Leave empty if points never expire'),
+                            ->afterLabel(static::info('Leave empty if points never expire')),
 
                         Forms\Components\Toggle::make('expire_on_inactivity')
                             ->label('Expire on Inactivity')
@@ -282,7 +294,7 @@ class GamificationConfigResource extends Resource
                                     ->label('Points Multiplier')
                                     ->numeric()
                                     ->default(1.0)
-                                    ->helperText('e.g., 1.5 for 50% bonus'),
+                                    ->afterLabel(static::info('e.g., 1.5 for 50% bonus')),
                                 Forms\Components\TextInput::make('color')
                                     ->label('Badge Color')
                                     ->default('#6366f1'),
