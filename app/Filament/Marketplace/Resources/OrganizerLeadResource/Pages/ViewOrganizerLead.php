@@ -38,7 +38,7 @@ class ViewOrganizerLead extends ViewRecord
 
         $campaignLink = OrganizerLeadResource::buildCampaignLink(
             $lead->category_slug,
-            $lead->business_name ?: $lead->city
+            $lead->location_name ?: $lead->city
         );
 
         return [
@@ -59,13 +59,11 @@ class ViewOrganizerLead extends ViewRecord
                         ->default($campaignLink)
                         ->readOnly()
                         ->suffixAction(
-                            \Filament\Forms\Components\Actions\Action::make('copy')
+                            // copied in the browser, no round trip (Filament 4: form field actions are Filament\Actions\Action)
+                            Action::make('copy')
                                 ->icon('heroicon-o-clipboard')
                                 ->label('Copiază')
-                                ->action(fn () => null)
-                                ->extraAttributes([
-                                    'x-on:click' => 'navigator.clipboard.writeText("' . addslashes($campaignLink) . '"); $tooltip("Copiat!", { timeout: 1500 });',
-                                ])
+                                ->alpineClickHandler('navigator.clipboard.writeText(' . \Illuminate\Support\Js::from($campaignLink) . '); $tooltip(\'Copiat!\', { timeout: 1500 })')
                         ),
                 ]),
 
