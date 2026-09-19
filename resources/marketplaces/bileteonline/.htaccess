@@ -33,6 +33,12 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^atractie/([a-z0-9-]+)/?$ atractie.php?slug=$1 [L,QSA]
 
+# Experiences of the activities module — /experienta/{slug}. Access tickets and
+# packages have no page of their own: their slug redirects to the location.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^experienta/([a-z0-9-]+)/?$ experienta.php?slug=$1 [L,QSA]
+
 # Category & city single-segment URLs.
 # Both `/escape-rooms` (category) and `/bucuresti` (city) match `^[a-z][a-z0-9-]+$`.
 # category.php is the resolver — it queries the API; if the slug matches a

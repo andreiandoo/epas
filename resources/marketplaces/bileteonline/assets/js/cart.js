@@ -220,6 +220,89 @@ const BileteOnlineCart = {
     },
 
     /**
+     * Add a line from the activities-module booking (location or experience page): access ticket, experience or
+     * package, for one date; a time only for timed products. Carries addons (free allowance + paid ones), package
+     * component times and the vehicle plate. Shape read by CheckoutController (items[].type = 'activity').
+     * Returns null when nothing was saved.
+     */
+    addBookingItem(o) {
+        const p = o && o.product, v = o && o.variant;
+        const qty = parseInt(o && o.quantity, 10) || 0;
+        if (!p || !p.id || !v || !v.id || !o.date || qty < 1) {
+            console.warn('[BileteOnlineCart.addBookingItem] incomplete line; nothing saved', o);
+            return null;
+        }
+        const cart = this.getCart();
+        const addons = (o.addons || []).map(a => ({
+            id: a.id, name: a.name, qty: a.qty, included: a.included || 0, paid_qty: a.paid_qty || 0,
+            price: a.price || 0, total: a.total || 0
+        }));
+        const components = (o.components || []).map(c => ({ item_id: c.item_id, slot_start_time: c.slot_start_time || null }));
+        const plate = (o.meta && o.meta.vehicle_plate) ? String(o.meta.vehicle_plate) : '';
+        const itemKey = ['activity', p.id, v.id, o.date, o.start_time || 'day',
+            addons.map(a => a.id + 'x' + a.qty).join('.'),
+            components.map(c => c.item_id + '@' + (c.slot_start_time || '')).join('.'),
+            plate.replace(/[^A-Z0-9]/gi, '')].join('_');
+        const price = (v.price_cents || 0) / 100;
+        const hm = t => (t ? String(t).slice(0, 5) : '');
+        const line = {
+            key: itemKey,
+            type: 'activity',
+            v: 3,
+            activity_id: p.id,
+            variant_id: v.id,
+            booking_date: o.date,
+            slot_start_time: o.start_time || null,
+            slot_end_time: o.end_time || null,
+            participants_count: qty,
+            quantity: qty,
+            price: price,
+            addons: addons,
+            addons_total: Math.round(addons.reduce((acc, a) => acc + (a.total || 0), 0) * 100) / 100,
+            components: components,
+            component_labels: o.component_labels || [],
+            meta: plate ? { vehicle_plate: plate } : {},
+            labels: {
+                date: o.date_label || o.date,
+                time: o.start_time ? hm(o.start_time) + (o.end_time ? '–' + hm(o.end_time) : '') : (p.product_type === 'package' ? '' : 'Valabil toată ziua')
+            },
+            activity: {
+                id: p.id, slug: p.slug || null, title: p.title || '', image: p.image || null,
+                venue: p.venue || null, city: p.city || null, organizer_id: null,
+                product_type: p.product_type || null, booking_mode: p.booking_mode || null, location_slug: p.location_slug || null,
+                commission_rate: typeof p.commission_rate === 'number' ? p.commission_rate : null,
+                commission_mode: p.commission_mode || null
+            },
+            variant: {
+                id: v.id, name: v.name || 'Bilet', price: price, capacity_share: v.capacity_share || 1,
+                is_child: !!v.is_child, persons_counted: v.persons_counted || qty
+            },
+            addedAt: new Date().toISOString()
+        };
+
+        const index = cart.items.findIndex(it => it.key === itemKey);
+        if (index >= 0) {
+            // Same product, date, time and extras: one bigger line.
+            const prev = cart.items[index];
+            line.quantity = line.participants_count = (prev.participants_count || prev.quantity || 0) + qty;
+            line.variant.persons_counted = (prev.variant && prev.variant.persons_counted || 0) + line.variant.persons_counted;
+            line.addons = addons.map(a => {
+                const old = (prev.addons || []).find(x => x.id === a.id) || {};
+                return Object.assign({}, a, { qty: (old.qty || 0) + a.qty, included: (old.included || 0) + a.included, paid_qty: (old.paid_qty || 0) + a.paid_qty, total: (old.total || 0) + a.total });
+            });
+            line.addons_total = Math.round(line.addons.reduce((acc, a) => acc + (a.total || 0), 0) * 100) / 100;
+            cart.items[index] = line;
+        } else {
+            cart.items.push(line);
+        }
+
+        this.saveCart(cart);
+        this.startReservationTimer();
+        this.showNotification(`${p.title || v.name || 'Bilet'} adăugat în coș!`);
+        return cart;
+    },
+
+    /**
      * Update item quantity
      */
     updateQuantity(itemKey, quantity) {
@@ -318,7 +401,8 @@ const BileteOnlineCart = {
     getSubtotal() {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
-            return total + (this._unitPrice(item) * this._lineQuantity(item));
+            // activities-module lines also carry their paid addons
+            return total + (this._unitPrice(item) * this._lineQuantity(item)) + (item.type === 'activity' ? (item.addons_total || 0) : 0);
         }, 0);
     },
 
@@ -515,7 +599,8 @@ const BileteOnlineCart = {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
             const commission = this.calculateItemCommission(item);
-            return total + (commission.amount * this._lineQuantity(item));
+            const onAddons = item.type === 'activity' && item.addons_total ? item.addons_total * ((commission.rate || 0) / 100) : 0;
+            return total + (commission.amount * this._lineQuantity(item)) + onAddons;
         }, 0);
     },
 

@@ -5179,6 +5179,122 @@ switch ($action) {
         ]);
         exit;
 
+    // ================================================================
+    // Activities module: locations, access tickets, experiences, packages
+    // (core routes/activities.php, marketplace.microservice:activities-module).
+    //   am.*            public catalogue
+    //   organizer.am.*  the operator's own locations, products, bookings
+    // ================================================================
+    case 'am.locations':
+        $params = array_intersect_key($_GET, array_flip(['city', 'category', 'q', 'page', 'per_page', 'locale']));
+        $endpoint = '/activities-module/locations' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'am.location':
+    case 'am.location.day':
+    case 'am.location.calendar':
+    case 'am.product':
+    case 'am.product.day':
+    case 'am.product.calendar':
+        $slug = $_GET['slug'] ?? '';
+        if (!preg_match('/^[a-z0-9-]{1,191}$/', $slug)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing or invalid slug']);
+            exit;
+        }
+        $kind = str_starts_with($action, 'am.location') ? 'locations' : 'products';
+        $tail = str_ends_with($action, '.day') ? '/day' : (str_ends_with($action, '.calendar') ? '/calendar' : '');
+        $params = array_intersect_key($_GET, array_flip(['date', 'from', 'to', 'locale']));
+        $endpoint = '/activities-module/' . $kind . '/' . $slug . $tail . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'organizer.am.meta':
+        $endpoint = '/organizer/activities-module/meta';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.locations':
+    case 'organizer.am.products':
+        // GET list / POST create (JSON body)
+        $method = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
+        $what = $action === 'organizer.am.locations' ? 'locations' : 'products';
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/activities-module/' . $what;
+        } else {
+            $params = array_intersect_key($_GET, array_flip(['location_id', 'type']));
+            $endpoint = '/organizer/activities-module/' . $what . ($params ? '?' . http_build_query($params) : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.location':
+    case 'organizer.am.product':
+        // GET one / PUT update (JSON body) / DELETE
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing id']);
+            exit;
+        }
+        $method = in_array($_SERVER['REQUEST_METHOD'], ['PUT', 'DELETE'], true) ? $_SERVER['REQUEST_METHOD'] : 'GET';
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/activities-module/' . ($action === 'organizer.am.location' ? 'locations/' : 'products/') . $id;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.location.submit':
+    case 'organizer.am.location.publish':
+    case 'organizer.am.product.submit':
+    case 'organizer.am.product.publish':
+    case 'organizer.am.product.duplicate':
+    case 'organizer.am.booking.no-show':
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $map = [
+            'organizer.am.location.submit'   => 'locations/%d/submit',
+            'organizer.am.location.publish'  => 'locations/%d/publish',
+            'organizer.am.product.submit'    => 'products/%d/submit',
+            'organizer.am.product.publish'   => 'products/%d/publish',
+            'organizer.am.product.duplicate' => 'products/%d/duplicate',
+            'organizer.am.booking.no-show'   => 'bookings/%d/no-show',
+        ];
+        $endpoint = '/organizer/activities-module/' . sprintf($map[$action], $id);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.bookings':
+    case 'organizer.am.bookings.day':
+    case 'organizer.am.summary':
+        $params = array_intersect_key($_GET, array_flip(['from', 'to', 'date', 'location_id', 'product_id', 'status', 'q', 'page', 'per_page']));
+        $path = ['organizer.am.bookings' => 'bookings', 'organizer.am.bookings.day' => 'bookings/day', 'organizer.am.summary' => 'summary'][$action];
+        $endpoint = '/organizer/activities-module/' . $path . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.bookings.export':
+        $params = array_intersect_key($_GET, array_flip(['from', 'to', 'location_id', 'product_id']));
+        $endpoint = '/organizer/activities-module/bookings/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // CSV stream
+        break;
+
+    case 'organizer.am.upload':
+        // multipart: file + kind
+        $method = 'POST';
+        $endpoint = '/organizer/activities-module/uploads';
+        $requiresAuth = true;
+        $isFileUpload = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);

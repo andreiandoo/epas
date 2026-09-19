@@ -231,6 +231,15 @@ const CheckoutPage = {
     },
 
     itemName(item) {
+        if (item.type === 'activity' && item.v === 3) {
+            // activities module: variant, then time or "valabil toată ziua", then the extras
+            const parts = [item.variant?.name || 'Bilet'];
+            if (item.labels && item.labels.time) parts.push(item.labels.time);
+            (item.addons || []).forEach(a => parts.push(a.name + ' × ' + a.qty));
+            (item.component_labels || []).forEach(c => parts.push(c));
+            if (item.meta && item.meta.vehicle_plate) parts.push(item.meta.vehicle_plate);
+            return parts.join(' · ');
+        }
         return item.type === 'activity'
             ? (item.variant?.name || 'Rezervare')
             : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
@@ -776,8 +785,9 @@ const CheckoutPage = {
                 hasAddedOnTopCommission = true;
             }
 
-            const itemTotal = price * qty;
-            const commissionTotal = itemCommission * qty;
+            const addonsTotal = isActivity ? (item.addons_total || 0) : 0;
+            const itemTotal = price * qty + addonsTotal;
+            const commissionTotal = itemCommission * qty + (itemCommission && addonsTotal ? addonsTotal * ((commission.rate || 0) / 100) : 0);
 
             baseSubtotal += itemTotal;
             totalCommission += commissionTotal;

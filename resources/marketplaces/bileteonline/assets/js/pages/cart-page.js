@@ -284,7 +284,9 @@ const CartPage = {
         const v = item.variant || {};
         const quantity = item.participants_count || item.quantity || 1;
         const price = (typeof v.price === 'number' ? v.price : item.price) || 0;
-        const lineTotal = price * quantity;
+        const addonsTotal = item.addons_total || 0;
+        const lineTotal = price * quantity + addonsTotal;
+        const isV3 = item.v === 3;
 
         const imgSrc = a.image ? (typeof getStorageUrl === 'function' ? getStorageUrl(a.image) : a.image) : '';
         const title = a.title || 'Activitate';
@@ -292,28 +294,38 @@ const CartPage = {
         const slotStart = (item.slot_start_time || '').substring(0, 5);
         const slotEnd = (item.slot_end_time || '').substring(0, 5);
         const venueLine = [a.venue, a.city].filter(Boolean).join(' · ');
-        const href = a.slug ? '/activitate/' + encodeURIComponent(a.slug) : '';
+        // activities module: experiences have their page, access tickets and packages live on the location page
+        const href = isV3
+            ? (a.product_type === 'experience' && a.slug ? '/experienta/' + encodeURIComponent(a.slug) : (a.location_slug ? '/locatie/' + encodeURIComponent(a.location_slug) : ''))
+            : (a.slug ? '/activitate/' + encodeURIComponent(a.slug) : '');
 
         const formattedDate = this.formatDay(item.booking_date || '', 'long');
-        const slotLine = slotStart
-            ? `${formattedDate} · ${slotStart}${slotEnd ? '–' + slotEnd : ''}`
-            : formattedDate;
+        const timeLabel = isV3 ? (item.labels && item.labels.time) || '' : (slotStart ? slotStart + (slotEnd ? '–' + slotEnd : '') : '');
+        const slotLine = timeLabel ? `${formattedDate} · ${timeLabel}` : formattedDate;
+        const kicker = isV3 ? ({ access: 'Bilet de acces', experience: 'Experiență', package: 'Pachet' }[a.product_type] || 'Activitate') : 'Activitate';
+        const extras = [];
+        (item.addons || []).forEach(x => extras.push(x.name + ' × ' + x.qty + (x.total ? ' (' + this.money(x.total) + ')' : x.included ? ' (inclus)' : '')));
+        (item.component_labels || []).forEach(x => extras.push(x));
+        if (item.meta && item.meta.vehicle_plate) extras.push('Mașina: ' + item.meta.vehicle_plate);
+        // quantity is fixed on lines whose extras depend on it (addons, package times): change it on the product page
+        const fixedQty = isV3 && ((item.addons || []).length || (item.components || []).length);
 
         return '<article class="ci" data-item-key="' + this.esc(itemKey) + '" data-index="' + index + '">' +
             this.media(imgSrc, href, title) +
             '<div class="ci-head">' +
                 '<div class="ci-text">' +
-                    '<p class="ci-kicker">Activitate</p>' +
+                    '<p class="ci-kicker">' + this.esc(kicker) + '</p>' +
                     '<h3 class="ci-title">' + (href ? '<a href="' + href + '">' + this.esc(title) + '</a>' : this.esc(title)) + '</h3>' +
                     (slotLine ? '<p class="ci-meta">' + this.icon('calendar-blank') + '<span>' + this.esc(slotLine) + '</span></p>' : '') +
                     (venueLine ? '<p class="ci-meta">' + this.icon('map-pin') + '<span>' + this.esc(venueLine) + '</span></p>' : '') +
+                    (extras.length ? '<p class="ci-meta">' + this.icon('plus') + '<span>' + this.esc(extras.join(' · ')) + '</span></p>' : '') +
                 '</div>' +
                 '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge rezervarea: ' + this.esc(title) + '">' + this.icon('x') + '</button>' +
             '</div>' +
             '<div class="ci-bottom">' +
                 '<span class="ci-chip">' + this.icon('ticket') + this.esc(variantName) + '</span>' +
-                this.stepper(index, 'Participanți', 'Scade nr. participanți', 'Crește nr. participanți', quantity) +
-                '<div class="ci-price"><small>' + this.money(price) + ' × ' + quantity + '</small> <b>' + this.money(lineTotal) + '</b></div>' +
+                (fixedQty ? '<span class="ci-chip">' + quantity + ' ' + (quantity === 1 ? 'bucată' : 'bucăți') + '</span>' : this.stepper(index, 'Participanți', 'Scade nr. participanți', 'Crește nr. participanți', quantity)) +
+                '<div class="ci-price"><small>' + this.money(price) + ' × ' + quantity + (addonsTotal ? ' + suplimente' : '') + '</small> <b>' + this.money(lineTotal) + '</b></div>' +
             '</div>' +
         '</article>';
     },
@@ -573,8 +585,9 @@ const CartPage = {
                 hasAddedOnTopCommission = true;
             }
 
-            const lineTotal = price * quantity;
-            const commissionTotal = itemCommission * quantity;
+            const addonsTotal = isActivity ? (item.addons_total || 0) : 0;
+            const lineTotal = price * quantity + addonsTotal;
+            const commissionTotal = itemCommission * quantity + (itemCommission && addonsTotal ? addonsTotal * ((commission.rate || 0) / 100) : 0);
 
             baseSubtotal += lineTotal;
             totalCommission += commissionTotal;
