@@ -1,7 +1,10 @@
 /* bilete.online v2: venue signup, three steps. Each step is checked before moving on and says what's missing (the old
-   form greyed the button out and said nothing). The request goes to the lead pipeline (proxy leads.create → core
-   LeadsController::create); core's English errors are said in Romanian and the form goes back to the step that holds
-   the field. The page pings the funnel (leads.track page_view_onboarding) on the bo_lead_sid session shared with
+   form greyed the button out and said nothing). Step 3 asks for the company's CUI and checks it at ANAF (proxy
+   organizer.verify-cui): the company data is shown read-only, never typed, and a struck-off company can't go on; when
+   ANAF doesn't answer the request still goes, with the CUI for core to check again. The city is picked from the site's
+   own list (#v2-data cities), searched without diacritics. The request goes to the lead pipeline (proxy leads.create →
+   core LeadsController::create); core's English errors are said in Romanian and the form goes back to the step that
+   holds the field. The page pings the funnel (leads.track page_view_onboarding) on the bo_lead_sid session shared with
    /devino-partener, and keeps the UTM captured in <head>. */
 (function () {
   'use strict';
@@ -9,12 +12,16 @@
   var form = $('ob-form');
   if (!form) return;
 
-  var SUPPORT = '';
-  try { SUPPORT = JSON.parse($('v2-data').textContent).supportEmail || ''; } catch (e) {}
+  var SUPPORT = '', CITIES = [];
+  try {
+    var data = JSON.parse($('v2-data').textContent);
+    SUPPORT = data.supportEmail || '';
+    CITIES = Array.isArray(data.cities) ? data.cities : [];
+  } catch (e) {}
   var steps = [].slice.call(form.querySelectorAll('.ob-step'));
   var dots = [].slice.call(document.querySelectorAll('.ob-dots li'));
   var LABELS = ['Activitate', 'Tu', 'Locație'];
-  var f = { other: $('ob-other'), name: $('ob-name'), email: $('ob-email'), phone: $('ob-phone'), venue: $('ob-venue'), city: $('ob-city'),
+  var f = { other: $('ob-other'), name: $('ob-name'), email: $('ob-email'), phone: $('ob-phone'), venue: $('ob-venue'), cui: $('ob-cui'), city: $('ob-city'),
     website: $('ob-website'), volume: $('ob-volume'), notes: $('ob-notes'), gdpr: $('ob-gdpr'), trap: $('ob-fax') };
   var error = $('ob-error'), submit = $('ob-submit'), SUBMIT_HTML = submit.innerHTML;
   var current = 1, busy = false;
@@ -22,9 +29,11 @@
   var FIELD_ERRORS = {
     contact_name: ['Completează numele și prenumele.', 'name', 2], email: ['Adresa de email nu pare corectă. Verific-o și încearcă din nou.', 'email', 2],
     phone: ['Numărul de telefon este prea lung.', 'phone', 2], location_name: ['Completează numele locației sau al organizației.', 'venue', 3],
-    city: ['Completează orașul.', 'city', 3], website: ['Adresa site-ului este prea lungă.', 'website', 3], notes: ['Mesajul este prea lung.', 'notes', 3],
-    category_other: ['Descrierea activității este prea lungă.', 'other', 1]
+    cui: ['CUI-ul nu pare corect. Verifică cifrele.', 'cui', 3], city: ['Alege orașul din listă.', 'city', 3], website: ['Adresa site-ului este prea lungă.', 'website', 3],
+    notes: ['Mesajul este prea lung.', 'notes', 3], category_other: ['Descrierea activității este prea lungă.', 'other', 1]
   };
+  var fold = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); };
+  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 
   function chosen() { return form.querySelector('input[name="category_slug"]:checked'); }
   function clearInvalid() { Object.keys(f).forEach(function (k) { if (f[k]) f[k].removeAttribute('aria-invalid'); }); }
@@ -60,6 +69,210 @@
     else error.focus();
   }
 
+  // ---------- CUI → ANAF ----------
+  var cuiBtn = $('ob-cui-btn'), cuiMsg = $('ob-cui-msg'), company = $('ob-company');
+  var CUI_BTN_HTML = cuiBtn.innerHTML, CUI_HINT = cuiMsg.textContent;
+  // status: idle | checking | ok | notfound | deregistered | unavailable
+  var cui = { digits: '', status: 'idle', data: null, promise: null }, cuiTimer = 0;
+  function cuiDigits() { return f.cui.value.toUpperCase().replace(/\s+/g, '').replace(/^RO/, '').replace(/[.\-]/g, ''); }
+  // the Romanian CUI check digit (key 753217532)
+  function cuiValid(d) {
+    if (!/^\d{2,10}$/.test(d)) return false;
+    var body = d.slice(0, -1), key = '753217532', sum = 0;
+    while (body.length < 9) body = '0' + body;
+    for (var i = 0; i < 9; i++) sum += Number(body[i]) * Number(key[i]);
+    var check = sum * 10 % 11;
+    return (check === 10 ? 0 : check) === Number(d.slice(-1));
+  }
+  function cuiMessage(text, tone) {
+    cuiMsg.textContent = text;
+    cuiMsg.className = 'ob-hint' + (tone ? ' is-' + tone : '');
+  }
+  function paintCui() {
+    var s = cui.status;
+    company.hidden = s !== 'ok';
+    cuiBtn.disabled = s === 'checking' || s === 'ok';
+    cuiBtn.classList.toggle('is-ok', s === 'ok');
+    cuiBtn.innerHTML = s === 'checking' ? '<span class="ob-spin" aria-hidden="true"></span><span>Verificăm…</span>'
+      : s === 'ok' ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>Verificat</span>' : CUI_BTN_HTML;
+    if (s === 'idle') cuiMessage(CUI_HINT);
+    else if (s === 'checking') cuiMessage('Căutăm firma la ANAF…');
+    else if (s === 'ok') cuiMessage('');
+    else if (s === 'notfound') cuiMessage('Nu am găsit CUI-ul ăsta la ANAF. Verifică cifrele.', 'bad');
+    else if (s === 'deregistered') cuiMessage('Firma cu acest CUI e radiată la ANAF. Folosește CUI-ul firmei care operează locația.', 'bad');
+    else if (s === 'unavailable') cuiMessage('ANAF nu răspunde acum. Poți trimite cererea, verificăm noi CUI-ul.', 'warn');
+  }
+  function showCompany(d) {
+    var place = [d.address, d.city, d.county, d.zip].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(', ');
+    $('ob-co-name').textContent = d.company_name || '—';
+    $('ob-co-cui').textContent = (d.vat_payer ? 'RO' : '') + (d.cui || cui.digits);
+    $('ob-co-reg').textContent = d.reg_com || '—';
+    $('ob-co-address').textContent = place || '—';
+    $('ob-co-vat').textContent = d.vat_payer ? 'Plătitor de TVA' : 'Neplătitor de TVA';
+    // ANAF says "INREGISTRAT din data 29.08.2006"
+    var state = String(d.status || '').trim(), since = (state.match(/din data\s+(\S+)/i) || [])[1];
+    state = state.replace(/\s+din data.*$/i, '');
+    state = /^inregistrat/i.test(state) || !state ? 'Înregistrată' : state.charAt(0) + state.slice(1).toLowerCase();
+    $('ob-co-status').textContent = state + (since ? ' din ' + since : '') + (d.inactive ? ' · inactivă fiscal' : '');
+    $('ob-co-status').classList.toggle('is-warn', !!d.inactive);
+  }
+  // the venue city from the company's registered office, if the visitor hasn't picked one: "Sector 6 Mun. Bucureşti" → București
+  function cityFromCompany(d) {
+    if (city.slug || f.city.value.trim() || !CITIES.length) return;
+    var county = fold(d.county).replace(/^(municipiul|judetul)\s+/, '');
+    var names = fold(d.city).replace(/\bsector\s*\d+\b/g, ' ').replace(/\b(mun|municipiul|oras|or|com|comuna)\b\.?/g, ' ').split(/\bsat\b/);
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i].replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!name) continue;
+      var hits = CITIES.filter(function (c) { return fold(c[1]) === name; });
+      if (hits.length > 1) hits = hits.filter(function (c) { return fold(c[2]) === county; });
+      if (hits.length === 1) { pickCity(hits[0]); return; }
+    }
+  }
+  // asks ANAF once per CUI; `retry` (the button) asks again after ANAF didn't answer
+  function verifyCui(retry) {
+    var d = cuiDigits();
+    if (d === cui.digits && cui.status !== 'idle' && !(retry && cui.status === 'unavailable')) return cui.promise || Promise.resolve(cui.status);
+    cui = { digits: d, status: 'checking', data: null, promise: null };
+    paintCui();
+    var ctrl = window.AbortController ? new AbortController() : null, timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+    var mine = cui;
+    mine.promise = fetch('/api/proxy.php?action=organizer.verify-cui', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ cui: d }), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (res) { return res.json().catch(function () { return {}; }).then(function (body) { return { status: res.status, body: body }; }); })
+      .then(function (r) {
+        var co = r.body && r.body.data;
+        if (r.status === 200 && r.body.success && co) return (co.deregistered || /RADI/i.test(co.status || '')) ? ['deregistered', co] : ['ok', co];
+        if (r.status === 404 || r.status === 400) return ['notfound', null];
+        return ['unavailable', null];
+      }, function () { return ['unavailable', null]; })
+      .then(function (out) {
+        clearTimeout(timer);
+        if (cui !== mine) return mine.status; // the CUI changed meanwhile
+        cui.status = out[0];
+        cui.data = out[1];
+        if (cui.status === 'ok') { showCompany(cui.data); cityFromCompany(cui.data); f.cui.removeAttribute('aria-invalid'); }
+        paintCui();
+        return cui.status;
+      });
+    return mine.promise;
+  }
+  f.cui.addEventListener('input', function () {
+    clearTimeout(cuiTimer);
+    if (cuiDigits() !== cui.digits && cui.status !== 'idle') { cui = { digits: '', status: 'idle', data: null, promise: null }; paintCui(); }
+    if (cuiValid(cuiDigits())) cuiTimer = setTimeout(verifyCui, 450);
+  });
+  f.cui.addEventListener('blur', function () {
+    var d = cuiDigits();
+    if (!d || cui.status !== 'idle') return;
+    if (cuiValid(d)) { clearTimeout(cuiTimer); verifyCui(); } else cuiMessage('CUI-ul nu pare corect. Verifică cifrele.', 'bad');
+  });
+  f.cui.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    cuiBtn.click();
+  });
+  cuiBtn.addEventListener('click', function () {
+    var d = cuiDigits();
+    clearTimeout(cuiTimer);
+    if (!d) { cuiMessage('Scrie CUI-ul firmei, apoi verificăm.', 'bad'); f.cui.focus(); return; }
+    if (!cuiValid(d)) { cuiMessage('CUI-ul nu pare corect. Verifică cifrele.', 'bad'); f.cui.setAttribute('aria-invalid', 'true'); f.cui.focus(); return; }
+    verifyCui(true);
+  });
+
+  // ---------- city (from the site's list) ----------
+  var list = $('ob-city-list'), cityHint = $('ob-city-hint');
+  var city = { slug: '', name: '' }, options = [], active = -1;
+  if (!CITIES.length) { f.city.removeAttribute('role'); f.city.removeAttribute('aria-controls'); f.city.removeAttribute('aria-autocomplete'); f.city.removeAttribute('aria-expanded'); f.city.placeholder = 'ex. Cluj-Napoca'; cityHint.hidden = true; form.querySelector('.ob-combo').classList.add('is-plain'); }
+  function matches(term) {
+    var t = fold(term);
+    if (!t) return CITIES.slice(0, 8); // the list comes featured cities first
+    var starts = [], words = [], inside = [];
+    CITIES.forEach(function (c) {
+      var n = fold(c[1]);
+      if (n.indexOf(t) === 0) starts.push(c);
+      else if ((' ' + n.replace(/-/g, ' ')).indexOf(' ' + t) !== -1) words.push(c);
+      else if (n.indexOf(t) !== -1 || fold(c[2]).indexOf(t) === 0) inside.push(c);
+    });
+    return starts.concat(words, inside).slice(0, 60);
+  }
+  function highlight(name, term) {
+    var t = fold(term), n = fold(name), at = t ? n.indexOf(t) : -1;
+    if (at < 0) return esc(name);
+    return esc(name.slice(0, at)) + '<mark>' + esc(name.slice(at, at + t.length)) + '</mark>' + esc(name.slice(at + t.length));
+  }
+  function renderCities() {
+    var term = city.slug && f.city.value === city.name ? '' : f.city.value;
+    var found = matches(term);
+    list.innerHTML = found.length ? (term ? '' : '<div class="ob-combo-group" role="presentation">Orașe populare</div>') + found.map(function (c, i) {
+      return '<div class="ob-combo-opt" role="option" id="ob-city-' + i + '" data-slug="' + esc(c[0]) + '" aria-selected="' + (c[0] === city.slug) + '">' +
+        '<b>' + highlight(c[1], term) + '</b>' + (c[2] ? '<small>' + esc(c[2]) + '</small>' : '') + '</div>';
+    }).join('') : '<div class="ob-combo-empty">Nu avem „' + esc(term.trim()) + '” în listă. Alege orașul cel mai apropiat și spune-ne în mesaj.</div>';
+    options = [].slice.call(list.querySelectorAll('.ob-combo-opt'));
+    active = -1;
+    f.city.removeAttribute('aria-activedescendant');
+  }
+  function openCities() {
+    if (!CITIES.length) return;
+    renderCities();
+    list.hidden = false;
+    f.city.setAttribute('aria-expanded', 'true');
+  }
+  function closeCities() {
+    if (list.hidden) return;
+    list.hidden = true;
+    f.city.setAttribute('aria-expanded', 'false');
+    f.city.removeAttribute('aria-activedescendant');
+  }
+  function setActive(i) {
+    if (!options.length) return;
+    active = (i + options.length) % options.length;
+    options.forEach(function (o, k) { o.classList.toggle('is-active', k === active); });
+    f.city.setAttribute('aria-activedescendant', options[active].id);
+    options[active].scrollIntoView({ block: 'nearest' });
+  }
+  function pickCity(c) {
+    city = { slug: c[0], name: c[1] };
+    f.city.value = c[1];
+    f.city.removeAttribute('aria-invalid');
+    closeCities();
+  }
+  function pickBySlug(slug) {
+    for (var i = 0; i < CITIES.length; i++) if (CITIES[i][0] === slug) return pickCity(CITIES[i]);
+  }
+  // typed a name exactly (and it's the only city by that name): take it without the click
+  function pickTyped() {
+    if (city.slug || !CITIES.length) return;
+    var t = fold(f.city.value);
+    if (!t) return;
+    var hits = CITIES.filter(function (c) { return fold(c[1]) === t; });
+    if (hits.length === 1) pickCity(hits[0]);
+  }
+  if (CITIES.length) {
+    f.city.addEventListener('focus', openCities);
+    f.city.addEventListener('click', openCities);
+    f.city.addEventListener('input', function () {
+      if (city.slug && f.city.value !== city.name) city = { slug: '', name: '' };
+      openCities();
+    });
+    f.city.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) openCities(); setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (list.hidden) openCities(); setActive(active - 1); }
+      else if (e.key === 'Enter') {
+        if (!list.hidden && (active > -1 || options.length === 1)) { e.preventDefault(); pickBySlug(options[active > -1 ? active : 0].getAttribute('data-slug')); }
+        else if (!city.slug) { e.preventDefault(); pickTyped(); if (!city.slug) openCities(); }
+      }
+      else if (e.key === 'Escape' && !list.hidden) { e.preventDefault(); closeCities(); }
+      else if (e.key === 'Tab') { pickTyped(); closeCities(); }
+    });
+    f.city.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement !== f.city) { pickTyped(); closeCities(); } }, 120); });
+    list.addEventListener('pointerdown', function (e) {
+      var opt = e.target.closest('.ob-combo-opt');
+      e.preventDefault(); // keep the focus in the field
+      if (opt) pickBySlug(opt.getAttribute('data-slug'));
+    });
+  }
+
+  // ---------- steps ----------
   function stepIsValid(n) {
     if (n === 1 && !chosen() && f.other.value.trim().length < 2) { fail('Alege o categorie sau descrie pe scurt ce vinzi.', [f.other]); return false; }
     if (n === 2) {
@@ -67,11 +280,23 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.value.trim())) { fail('Adresa de email nu pare corectă. Verific-o și încearcă din nou.', [f.email]); return false; }
     }
     if (n === 3) {
-      var missing = [f.venue, f.city].filter(function (el) { return el.value.trim().length < 2; });
-      if (missing.length) { fail(missing[0] === f.venue ? 'Completează numele locației sau al organizației.' : 'Completează orașul.', missing); return false; }
+      if (f.venue.value.trim().length < 2) { fail('Completează numele locației sau al organizației.', [f.venue]); return false; }
+      var d = cuiDigits();
+      if (!d) { fail('Completează CUI-ul firmei. Datele ei le preluăm de la ANAF.', [f.cui]); return false; }
+      if (!cuiValid(d)) { fail('CUI-ul nu pare corect. Verifică cifrele.', [f.cui]); return false; }
+      pickTyped();
+      if (CITIES.length ? !city.slug : f.city.value.trim().length < 2) { fail(CITIES.length ? 'Alege orașul locației din listă.' : 'Completează orașul.', [f.city]); return false; }
       if (!f.gdpr.checked) { fail('Bifează acordul pentru prelucrarea datelor.', [f.gdpr]); return false; }
     }
     return true;
+  }
+  // the company must be known to ANAF (checked here if it wasn't yet); ANAF not answering doesn't stop the request
+  function companyIsValid() {
+    return verifyCui().then(function (status) {
+      if (status === 'ok' || status === 'unavailable') return true;
+      fail(status === 'deregistered' ? 'Firma cu acest CUI e radiată la ANAF. Folosește CUI-ul firmei care operează locația.' : 'Nu am găsit CUI-ul ăsta la ANAF. Verifică cifrele.', [f.cui]);
+      return false;
+    });
   }
 
   [].forEach.call(form.querySelectorAll('[data-next]'), function (b) {
@@ -121,15 +346,13 @@
     $('ob-done').hidden = false;
     $('ob-done-h').focus();
   }
+  function release() {
+    busy = false;
+    submit.disabled = false;
+    submit.innerHTML = SUBMIT_HTML;
+  }
 
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (busy) return;
-    if (current < 3) { if (stepIsValid(current)) go(current + 1, true); return; } // Enter in steps 1–2 moves on
-    error.hidden = true;
-    if (!stepIsValid(3)) return;
-    if (f.trap.value) { done(f.email.value.trim()); return; }
-
+  function send() {
     var cat = chosen(), website = f.website.value.trim();
     if (website && !/^[a-z][a-z0-9+.-]*:\/\//i.test(website)) website = 'https://' + website;
     var payload = {
@@ -138,21 +361,21 @@
       email: f.email.value.trim(),
       phone: f.phone.value.trim() || null,
       location_name: f.venue.value.trim(),
-      city: f.city.value.trim(),
+      cui: cuiDigits(),
+      city: (city.name || f.city.value).trim(),
+      city_slug: city.slug || null,
       website: website ? website.slice(0, 255) : null,
       category_slug: cat ? cat.value : null,
       category_name: cat ? cat.getAttribute('data-name') : null,
       category_other: f.other.value.trim() || null,
       volume_estimate: f.volume.value || null,
+      needs: [].map.call(form.querySelectorAll('input[name="needs[]"]:checked'), function (c) { return c.value; }),
       notes: f.notes.value.trim() || null,
       prefill_tip: prefillTip,
       prefill_loc: prefillLoc,
       referrer: document.referrer ? document.referrer.slice(0, 1000) : null,
       utm: UTM
     };
-
-    busy = true;
-    submit.disabled = true;
     submit.textContent = 'Se trimite…';
     fetch('/api/proxy.php?action=leads.create', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) })
       .then(function (res) {
@@ -171,10 +394,22 @@
         else if (r.status === 0) fail('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.', null, true);
         else fail('Trimiterea nu a reușit. Te rugăm să încerci din nou.', null, true);
       })
-      .then(function () {
-        busy = false;
-        submit.disabled = false;
-        submit.innerHTML = SUBMIT_HTML;
-      });
+      .then(release);
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) return;
+    if (current < 3) { if (stepIsValid(current)) go(current + 1, true); return; } // Enter in steps 1–2 moves on
+    error.hidden = true;
+    if (!stepIsValid(3)) return;
+    if (f.trap.value) { done(f.email.value.trim()); return; }
+    busy = true;
+    submit.disabled = true;
+    submit.textContent = 'Verificăm CUI-ul…';
+    companyIsValid().then(function (ok) {
+      if (ok) send();
+      else release();
+    });
   });
 })();
