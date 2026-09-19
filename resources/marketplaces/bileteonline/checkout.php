@@ -238,7 +238,7 @@ include __DIR__ . '/includes/v2/header.php';
           <div class="ck-sec-body ck-checks">
             <label class="ck-check">
               <input type="checkbox" id="termsCheckbox" class="ck-cb" required>
-              <span>Am citit și sunt de acord cu <a href="/termeni" target="_blank" rel="noopener">Termenii și condițiile</a>, <a href="/confidentialitate" target="_blank" rel="noopener">Politica de confidențialitate</a> și <a href="/retur" target="_blank" rel="noopener">Politica de returnare</a>.</span>
+              <span>Am citit și sunt de acord cu <a href="/termeni" target="_blank" rel="noopener">Termenii și condițiile</a>, <a href="/confidentialitate" target="_blank" rel="noopener">Politica de confidențialitate</a> și <a href="/termeni#anulare-rambursare" target="_blank" rel="noopener">Politica de returnare</a>.</span>
             </label>
             <label class="ck-check">
               <input type="checkbox" id="newsletterCheckbox" class="ck-cb">
