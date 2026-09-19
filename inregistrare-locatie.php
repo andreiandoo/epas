@@ -2,7 +2,9 @@
 /**
  * Venue signup: /inregistrare-locatie (v2 design). Three-step onboarding form for venues and organizers.
  *
- * Step 1 what they sell (category cards or a short description), step 2 who they are, step 3 the venue: its name, the
+ * Step 1 what they sell (category cards or a short description), step 2 who they are and the password of the organizer
+ * account that the request creates (pending until bilete.online approves it; the page signs them in and offers the
+ * way into the account on the thank-you screen), step 3 the venue: its name, the
  * company's CUI (checked at ANAF through proxy organizer.verify-cui; the company data is shown read-only, never typed,
  * and core looks it up again on submit), the city picked from our own list, what they need (ticked from what the
  * platform does) and a note. onboarding.js checks each step before moving on (saying what's missing instead of greying
@@ -59,7 +61,7 @@ $obNeeds = [
 ];
 
 $pageTitleRaw = 'Înregistrare locație — ' . SITE_NAME;
-$pageDescription = 'Începe în 5 minute. Lasă-ne câteva detalii: e rapid și simplu, iar dacă vrei ajutor, te ghidăm online.';
+$pageDescription = 'Începe în 5 minute. Lasă-ne câteva detalii și îți creăm pe loc contul de operator: e rapid și simplu, iar dacă vrei ajutor, te ghidăm online.';
 $canonicalUrl = SITE_URL . '/inregistrare-locatie';
 $noindex = true;
 $hideFromSitemap = true;
@@ -81,7 +83,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="ob-hero-in">
       <p class="ob-kicker">Onboarding · 5 minute</p>
       <h1 class="ob-h" id="ob-h">Hai <span class="ob-nw">să-ți</span> punem locația online.</h1>
-      <p class="ob-lead">Lasă-ne câteva detalii despre tine și locația ta. E rapid și simplu, poți face totul singur. Iar dacă vrei ajutor, ne conectăm online oricând și te ghidăm pas cu pas.</p>
+      <p class="ob-lead">Lasă-ne câteva detalii despre tine și locația ta și îți creăm pe loc contul de operator. E rapid și simplu, poți face totul singur. Iar dacă vrei ajutor, ne conectăm online oricând și te ghidăm pas cu pas.</p>
     </div>
   </section>
 
@@ -127,11 +129,19 @@ include __DIR__ . '/includes/v2/header.php';
           <!-- STEP 2 — who they are -->
           <fieldset class="ob-step" data-step="2" hidden>
             <legend class="ob-step-h" tabindex="-1">Cine ești?</legend>
-            <p class="ob-step-p">Datele tale de contact. Le folosim doar ca să te sunăm și să-ți răspundem.</p>
+            <p class="ob-step-p">Datele tale de contact și parola cu care intri în contul de operator. Contactul îl folosim doar ca să-ți răspundem.</p>
             <div class="ob-fields">
               <div class="ob-field is-wide"><label for="ob-name">Nume și prenume *</label><input id="ob-name" name="contact_name" type="text" autocomplete="name" maxlength="120" required></div>
               <div class="ob-field"><label for="ob-email">Email *</label><input id="ob-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="160" required></div>
               <div class="ob-field"><label for="ob-phone">Telefon</label><input id="ob-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="07xx xxx xxx"></div>
+              <div class="ob-field is-wide">
+                <label for="ob-password">Parola contului *</label>
+                <div class="ob-pass">
+                  <input id="ob-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="100" required aria-describedby="ob-password-hint">
+                  <button class="ob-pass-btn" id="ob-password-btn" type="button" aria-controls="ob-password" aria-pressed="false">Arată</button>
+                </div>
+                <p class="ob-hint" id="ob-password-hint">Minimum 8 caractere. Cu ea intri în contul tău de operator imediat după ce trimiți cererea.</p>
+              </div>
             </div>
             <div class="ob-nav">
               <button class="ob-back" type="button" data-prev><?= v2_ic('arrow-left') ?>Înapoi</button>
@@ -190,7 +200,7 @@ include __DIR__ . '/includes/v2/header.php';
                 </div>
               </fieldset>
               <div class="ob-field is-wide"><label for="ob-notes">Spune-ne ce e important (opțional)</label><textarea id="ob-notes" name="notes" rows="3" maxlength="800" placeholder="ex. avem sloturi la 30 min, vrem să integrăm cu casa de marcat existentă, etc."></textarea></div>
-              <label class="ob-check is-wide"><input id="ob-gdpr" name="gdpr" type="checkbox" required><span>Sunt de acord cu prelucrarea datelor în scopul contactării — datele sunt folosite doar pentru a-ți răspunde. Detalii în <a href="/confidentialitate" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span></label>
+              <label class="ob-check is-wide"><input id="ob-gdpr" name="gdpr" type="checkbox" required><span>Accept <a href="/termeni" target="_blank" rel="noopener">Termenii și condițiile</a> și sunt de acord cu prelucrarea datelor pentru crearea contului și pentru a primi răspuns — datele nu sunt folosite în alt scop. Detalii în <a href="/confidentialitate" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span></label>
             </div>
             <div class="ob-nav">
               <button class="ob-back" type="button" data-prev><?= v2_ic('arrow-left') ?>Înapoi</button>
@@ -202,8 +212,12 @@ include __DIR__ . '/includes/v2/header.php';
         <div class="ob-done" id="ob-done" hidden>
           <span class="ob-done-ic" aria-hidden="true"><?= v2_ic('check') ?></span>
           <h2 id="ob-done-h" tabindex="-1">Mulțumim!</h2>
-          <p>Cererea ta a ajuns la echipa bilete.online. Îți scriem pe <strong id="ob-done-email"></strong> cu pașii următori. Dacă vrei ajutor, ne conectăm online oricând și îi parcurgem împreună.</p>
-          <a class="btn btn-ghost" href="/parteneri"><?= v2_ic('arrow-left') ?>Înapoi la prezentare</a>
+          <p id="ob-done-p">Cererea ta a ajuns la echipa bilete.online. Îți scriem pe <strong id="ob-done-email"></strong> cu pașii următori. Dacă vrei ajutor, ne conectăm online oricând și îi parcurgem împreună.</p>
+          <p class="ob-done-note" id="ob-done-note" hidden></p>
+          <div class="ob-done-cta">
+            <a class="btn btn-primary" id="ob-done-account" href="/organizator/panou" hidden>Intră în contul tău<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-ghost" href="/parteneri"><?= v2_ic('arrow-left') ?>Înapoi la prezentare</a>
+          </div>
         </div>
       </div>
       <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2%* plătit de cumpărător</p>

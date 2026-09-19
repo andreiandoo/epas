@@ -170,4 +170,13 @@
 .ob-done h2:focus{outline:none}
 .ob-done p{max-width:46ch;margin:var(--space-3) auto 0;line-height:1.6;color:var(--muted)}
 .ob-done strong{color:var(--ink);overflow-wrap:anywhere}
-.ob-done .btn{margin-top:var(--space-6)}
+.ob-done-note{font-size:.9375rem}
+.ob-done-note[hidden]{display:none}
+.ob-done-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:var(--space-6)}
+@media (max-width:479px){.ob-done-cta .btn{flex:1 1 100%}}
+
+/* password with show / hide */
+.ob-pass{position:relative}
+.ob-pass input{padding-right:88px}
+.ob-pass-btn{position:absolute;top:50%;right:8px;min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--green);font:700 .875rem/1 var(--font);transform:translateY(-50%);cursor:pointer}
+.ob-pass-btn:hover{background:var(--tint-green)}
