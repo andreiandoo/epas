@@ -29,12 +29,16 @@ class RewardsController extends BaseController
         $customer = $this->requireCustomer($request);
         $client = $this->requireClient($request);
 
-        // Auto-sync points from orders if no points record exists
+        // Marketplaces with automatic rewards credit points from their orders as they happen (MarketplaceLoyaltyService);
+        // the others keep the old one-off sync from past orders, unchanged.
+        $loyalty = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
+        $auto = $loyalty->config($client);
+
         $customerPoints = CustomerPoints::where('marketplace_customer_id', $customer->id)
             ->where('marketplace_client_id', $client->id)
             ->first();
 
-        if (!$customerPoints) {
+        if (!$customerPoints && !$auto) {
             $customerPoints = $this->syncPointsFromOrders($customer, $client);
         }
 
@@ -90,8 +94,12 @@ class RewardsController extends BaseController
                 'value_in_currency' => round($pointsBalance * $pointsValue, 2),
                 'currency' => 'RON',
                 'name' => $pointsName,
-                'earn_rate' => $pointsPerCurrency . ' puncte / RON',
+                'earn_rate' => $auto ? $auto->earnRateLabel() : $pointsPerCurrency . ' puncte / RON',
                 'redeem_rate' => '100 puncte = ' . ($pointsValue * 100) . ' RON',
+                // automatic rewards only: points of paid orders waiting for the activity, and what expires within 30 days
+                'pending' => $auto ? $loyalty->pendingPoints($client->id, $customer->id) : 0,
+                'expiring_soon' => $auto && $customerPoints ? $loyalty->expiringSoon($customerPoints, 30) : 0,
+                'auto_rewards' => (bool) $auto,
             ],
             'level' => [
                 'current' => $level,
@@ -140,7 +148,24 @@ class RewardsController extends BaseController
                 ['name' => 'Platinum', 'min_level' => 16, 'max_level' => 99, 'threshold_points' => 5000, 'color' => '#E5E4E2', 'benefits' => ['50% bonus puncte', 'Meet & Greet exclusiv', 'Upgrades gratuite']],
             ];
 
+        // Automatic rewards: the real rules only — the tiers the marketplace configured (none by default; the fallback
+        // ladder above promises perks nothing delivers) and the earn rule in words.
+        $auto = app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->config($client);
+        if ($auto) {
+            // the admin form stores min_points; the pages read threshold_points
+            $tiers = array_values(array_map(
+                fn ($t) => is_array($t) ? $t + ['threshold_points' => isset($t['min_points']) ? (int) $t['min_points'] : null] : $t,
+                is_array($cfg->tiers ?? null) ? $cfg->tiers : []
+            ));
+        }
+
         return $this->success([
+            'auto_rewards'                 => (bool) $auto,
+            'earn_rate_label'              => $auto ? $auto->earnRateLabel() : null,
+            'earn_points_per_100_lei'      => $auto ? $auto->pointsPer100Lei() : null,
+            'referral_min_order'           => $auto ? (float) ($auto->referral_min_order ?? 0) : null,
+            'referral_max_per_year'        => $auto ? (int) ($auto->referral_max_per_year ?? 0) : null,
+            'confirm_days'                 => $auto ? (int) ($auto->points_confirm_days ?? 2) : null,
             'point_value_lei'              => $pointValueLei,
             'points_per_lei'               => $pointsPerLei,
             'currency'                     => $cfg->currency ?? 'RON',
@@ -179,11 +204,12 @@ class RewardsController extends BaseController
         $perPage = min((int) $request->input('per_page', 20), 50);
         $transactions = $query->paginate($perPage);
 
-        $formatted = collect($transactions->items())->map(function ($tx) {
+        // the API runs in English by default; the marketplaces are Romanian, so Romanian unless asked otherwise
+        $locale = (string) $request->input('locale', 'ro');
+        $formatted = collect($transactions->items())->map(function ($tx) use ($locale) {
             // Get translated description
             $description = $tx->description;
             if (is_array($description)) {
-                $locale = app()->getLocale();
                 $description = $description[$locale] ?? $description['ro'] ?? $description['en'] ?? '';
             }
 

@@ -863,6 +863,12 @@ class PaymentController extends BaseController
             $html .= '<tr><td style="padding:4px 0;color:#16a34a;">' . $discountLabel . '</td><td style="padding:4px 0;text-align:right;color:#16a34a;">' . $discountFormatted . '</td></tr>';
         }
 
+        // Loyalty points paid with
+        $pointsDiscount = (float) ($order->points_discount ?? 0);
+        if ($pointsDiscount > 0) {
+            $html .= '<tr><td style="padding:4px 0;color:#16a34a;">Plătit cu ' . (int) $order->points_used . ' puncte</td><td style="padding:4px 0;text-align:right;color:#16a34a;">-' . number_format($pointsDiscount, 2, ',', '.') . ' ' . $currency . '</td></tr>';
+        }
+
         // Total
         $html .= '<tr style="border-top:2px solid #1a1a2e;"><td style="padding:10px 0 6px;font-weight:700;font-size:16px;">Total plătit:</td><td style="padding:10px 0 6px;text-align:right;font-weight:700;font-size:16px;color:#1a1a2e;">' . $totalAmount . '</td></tr>';
         $html .= '</table>';

@@ -48,6 +48,9 @@ class Order extends Model
         'order_number',
         'subtotal',
         'discount_amount',
+        // loyalty points paid at checkout (funded by the marketplace, not the organizer — see MarketplaceLoyaltyService)
+        'points_used',
+        'points_discount',
         'commission_rate',
         'commission_amount',
         'total',
@@ -85,6 +88,8 @@ class Order extends Model
         'metadata' => 'array',
         'subtotal' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'points_used' => 'integer',
+        'points_discount' => 'decimal:2',
         'commission_rate' => 'decimal:2',
         'commission_amount' => 'decimal:2',
         'total' => 'decimal:2',

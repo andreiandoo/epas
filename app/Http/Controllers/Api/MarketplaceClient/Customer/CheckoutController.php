@@ -67,6 +67,10 @@ class CheckoutController extends BaseController
             // sau nu e in whitelist, Order.locale ramane NULL si pipeline-ul
             // foloseste 'ro' ca fallback (backward compat 100%).
             'locale' => 'nullable|string|max:8',
+            // Loyalty points to pay with (logged-in customer, same email) and the friend's referral code, if any.
+            // See MarketplaceLoyaltyService: points never touch discount_amount, the organizer is paid in full.
+            'points_to_use' => 'nullable|integer|min:0|max:10000000',
+            'referral_code' => 'nullable|string|max:20',
         ]);
 
         // B6: Captura locale-ului efectiv pentru order-urile create in acest flow.
@@ -1017,6 +1021,22 @@ class CheckoutController extends BaseController
             }
 
             // ============================================================
+            // Loyalty points paid at checkout. Taken off the customer total BEFORE the processing fee (the fee applies
+            // to what is charged). Capped on the ticket value after promo codes; funded by the marketplace, so they are
+            // stored in points_used / points_discount and never in discount_amount (the organizer's promo discount).
+            // ============================================================
+            $loyalty = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
+            $pointsQuote = ['points' => 0, 'discount' => 0.0, 'error' => null];
+            if (!$isTestOrder && (int) ($validated['points_to_use'] ?? 0) > 0) {
+                $pointsQuote = $loyalty->quote($client, $this->loyaltyCustomer(), (string) $validated['customer']['email'], max(0.0, (float) $netAmount), (int) $validated['points_to_use']);
+                if ($pointsQuote['error']) {
+                    DB::rollBack();
+                    return $this->error($pointsQuote['error'], 422, ['code' => 'points_invalid']);
+                }
+                $orderTotal = round($orderTotal - $pointsQuote['discount'], 2);
+            }
+
+            // ============================================================
             // F3 — Payment processing fee snapshot
             //
             // Per F1 spec, fee = floor(subtotal * percent / 100) + fixed_cents
@@ -1100,6 +1120,8 @@ class CheckoutController extends BaseController
                 'commission_rate' => $isTestOrder ? 0 : $avgCommissionRate,
                 'commission_amount' => $isTestOrder ? 0 : $totalCommission,
                 'total' => $isTestOrder ? 0 : $orderTotal,
+                'points_used' => $pointsQuote['points'],
+                'points_discount' => $pointsQuote['discount'],
                 // F3 — processing fee snapshot. Zero for marketplaces without
                 // payment_fees configured (kill switch active). Stays bit-identical
                 // to legacy behavior on Ambilet / Tics.
@@ -1119,6 +1141,7 @@ class CheckoutController extends BaseController
                 'meta' => array_merge([
                     'cart_id' => isset($cart) ? $cart->id : null,
                     'promo_code' => $promoCode,
+                    'loyalty_points' => $pointsQuote['points'] > 0 ? ['used' => $pointsQuote['points'], 'discount' => $pointsQuote['discount']] : null,
                     'beneficiaries' => $validated['beneficiaries'] ?? [],
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
@@ -1141,6 +1164,13 @@ class CheckoutController extends BaseController
                     'seated_items' => $seatedItemsMeta,
                 ], $isTestOrder ? ['is_test_order' => true] : []),
             ]);
+
+            // The points leave the balance with the order (locked: two tabs can't spend them twice). Given back by
+            // LoyaltyOrderObserver if the order is never paid or is refunded.
+            if ($pointsQuote['points'] > 0) {
+                $loyalty->spendForOrder($order, $pointsQuote['points']);
+            }
+            $this->rememberReferral($client->id, $customer->id, $validated['referral_code'] ?? null);
 
             // Create order items and pending tickets
             $ticketIndex = 0;
@@ -1509,6 +1539,8 @@ class CheckoutController extends BaseController
                 'subtotal' => (float) $order->subtotal,
                 'discount' => (float) $order->discount_amount,
                 'insurance' => (float) ($hasInsurance ? $insuranceAmount : 0),
+                'points_used' => (int) $order->points_used,
+                'points_discount' => (float) $order->points_discount,
                 'total' => (float) $order->total,
                 'currency' => $order->currency,
                 'expires_at' => $order->expires_at?->toIso8601String(),
@@ -1784,6 +1816,18 @@ class CheckoutController extends BaseController
             // covers the commission too — matches the cart/checkout summary
             // labels customers saw on /finalizare.
             $orderTotal     = $subtotal + $commissionAddedOnTop;
+
+            // Loyalty points paid at checkout (same rules as the event flow above), before the processing fee.
+            $loyalty     = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
+            $pointsQuote = ['points' => 0, 'discount' => 0.0, 'error' => null];
+            if (!$isTestOrder && (int) ($validated['points_to_use'] ?? 0) > 0) {
+                $pointsQuote = $loyalty->quote($client, $this->loyaltyCustomer(), (string) $validated['customer']['email'], max(0.0, (float) $subtotal), (int) $validated['points_to_use']);
+                if ($pointsQuote['error']) {
+                    DB::rollBack();
+                    return $this->error($pointsQuote['error'], 422, ['code' => 'points_invalid']);
+                }
+                $orderTotal = round($orderTotal - $pointsQuote['discount'], 2);
+            }
             $processingFee  = [
                 'fee_cents'        => 0,
                 'pass_to_customer' => false,
@@ -1825,6 +1869,8 @@ class CheckoutController extends BaseController
                 'commission_rate'          => 0, // commission tracked per-line in meta; aggregate not needed for activities v1
                 'commission_amount'        => $isTestOrder ? 0 : $totalCommission,
                 'total'                    => $isTestOrder ? 0 : $orderTotal,
+                'points_used'              => $pointsQuote['points'],
+                'points_discount'          => $pointsQuote['discount'],
                 'processing_fee_cents'     => $isTestOrder ? 0 : (int) ($processingFee['fee_cents'] ?? 0),
                 'processing_fee_passed'    => (bool) ($processingFee['pass_to_customer'] ?? false),
                 'processing_fee_provider'  => $processingFee['provider'] ?? null,
@@ -1844,6 +1890,7 @@ class CheckoutController extends BaseController
                     'user_agent'         => $request->userAgent(),
                     'payment_method'     => $isTestOrder ? 'test' : $request->input('payment_method', 'card'),
                     'order_type'         => 'activity',
+                    'loyalty_points'     => $pointsQuote['points'] > 0 ? ['used' => $pointsQuote['points'], 'discount' => $pointsQuote['discount']] : null,
                     'activity_ids'       => array_unique(array_map(fn ($b) => $b['activity']->id, $stagedBookings)),
                     'multi_organizer'    => $isMultiOrganizer,
                     'commission_details' => array_map(fn ($b) => [
@@ -1864,6 +1911,11 @@ class CheckoutController extends BaseController
                     'commission_added_on_top' => $commissionAddedOnTop,
                 ],
             ]);
+
+            if ($pointsQuote['points'] > 0) {
+                $loyalty->spendForOrder($order, $pointsQuote['points']);
+            }
+            $this->rememberReferral($client->id, $customer->id, $validated['referral_code'] ?? null);
 
             // Create bookings + order items + pending tickets.
             // Bookings start in pending_payment with held_until = now+5min so
@@ -2002,6 +2054,8 @@ class CheckoutController extends BaseController
                     'subtotal'     => (float) $order->subtotal,
                     'discount'     => 0.0,
                     'insurance'    => 0.0,
+                    'points_used'     => (int) $order->points_used,
+                    'points_discount' => (float) $order->points_discount,
                     'total'        => (float) $order->total,
                     'currency'     => $order->currency,
                     'expires_at'   => $order->expires_at?->toIso8601String(),
@@ -2025,6 +2079,39 @@ class CheckoutController extends BaseController
 
             return $this->error('Checkout failed: ' . $e->getMessage(), 400);
         }
+    }
+
+    /**
+     * The logged-in customer, when the request carries their token (the checkout itself works without an account).
+     */
+    protected function loyaltyCustomer(): ?MarketplaceCustomer
+    {
+        try {
+            $user = auth('sanctum')->user();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $user instanceof MarketplaceCustomer ? $user : null;
+    }
+
+    /**
+     * A friend's referral code that came with the checkout: linked after the transaction commits, so a problem with it
+     * can never break the order.
+     */
+    protected function rememberReferral(int $clientId, int $customerId, ?string $code): void
+    {
+        $code = trim((string) $code);
+        if ($code === '') {
+            return;
+        }
+        DB::afterCommit(function () use ($clientId, $customerId, $code) {
+            try {
+                app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->attachReferral($clientId, $customerId, $code, 'checkout');
+            } catch (\Throwable $e) {
+                Log::channel('marketplace')->warning('Referral from checkout not linked', ['customer_id' => $customerId, 'error' => $e->getMessage()]);
+            }
+        });
     }
 
     /**

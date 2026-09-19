@@ -37,6 +37,10 @@ class GamificationConfig extends Model
         'icon',
         'tiers',
         'is_active',
+        'auto_rewards_enabled',
+        'referral_min_order',
+        'referral_max_per_year',
+        'points_confirm_days',
     ];
 
     protected $casts = [
@@ -48,6 +52,10 @@ class GamificationConfig extends Model
         'expire_on_inactivity' => 'boolean',
         'tiers' => 'array',
         'is_active' => 'boolean',
+        'auto_rewards_enabled' => 'boolean',
+        'referral_min_order' => 'decimal:2',
+        'referral_max_per_year' => 'integer',
+        'points_confirm_days' => 'integer',
     ];
 
     // ==========================================
@@ -78,7 +86,10 @@ class GamificationConfig extends Model
     // ==========================================
 
     /**
-     * Calculate points earned from an order amount
+     * Points for an order amount given in CENTS (bani) — the tenant checkout's unit. With the usual 1 point = 0.01
+     * this gives the same result as pointsForLei() (earn_percentage = % of the order value returned in points).
+     * Marketplaces use pointsForLei(); the old marketplace sync read this field as "points per 100 lei", 100× less,
+     * which is why the same setting used to mean two different things.
      */
     public function calculateEarnedPoints(float $amount): int
     {
@@ -87,6 +98,58 @@ class GamificationConfig extends Model
         }
 
         return (int) floor($amount * $this->earn_percentage / 100);
+    }
+
+    /**
+     * Points earned for an amount in lei. earn_percentage is the share of that amount returned as points value:
+     * 0.5 with 1 point = 0.01 lei gives 50 points (0.50 lei) for 100 lei. Rounded down.
+     */
+    public function pointsForLei(float $amountLei): int
+    {
+        $pointValue = (float) ($this->point_value ?? 0.01);
+        if ($pointValue <= 0 || $amountLei <= 0 || $amountLei < (float) ($this->min_order_for_earning ?? 0)) {
+            return 0;
+        }
+
+        return (int) floor(round($amountLei * (float) $this->earn_percentage / 100 / $pointValue, 6));
+    }
+
+    /**
+     * Points earned for 100 lei, for the "X puncte la 100 lei" line customers see.
+     */
+    public function pointsPer100Lei(): int
+    {
+        $pointValue = (float) ($this->point_value ?? 0.01);
+
+        return $pointValue > 0 ? (int) floor(round(100 * (float) $this->earn_percentage / 100 / $pointValue, 6)) : 0;
+    }
+
+    /**
+     * Human rule for earning, in Romanian: "5 puncte la fiecare 10 lei" / "1 punct la fiecare 2 lei" /
+     * "50 de puncte la fiecare 100 de lei". Empty when nothing is earned.
+     */
+    public function earnRateLabel(): string
+    {
+        $per100 = $this->pointsPer100Lei();
+        if ($per100 <= 0) {
+            return '';
+        }
+        $ro = static function (int $n, string $one, string $many): string {
+            if ($n === 1) {
+                return '1 ' . $one;
+            }
+            $rem = $n % 100;
+            return $n . (($n >= 20 && !($rem >= 1 && $rem <= 19)) ? ' de ' : ' ') . $many;
+        };
+        // the smallest round amount that earns a whole number of points
+        foreach ([1, 2, 5, 10, 20, 50, 100] as $lei) {
+            $pts = $per100 * $lei / 100;
+            if ($pts >= 1 && abs($pts - round($pts)) < 1e-9) {
+                return $ro((int) round($pts), 'punct', 'puncte') . ' la fiecare ' . ($lei === 1 ? 'leu' : $ro($lei, 'leu', 'lei'));
+            }
+        }
+
+        return $ro($per100, 'punct', 'puncte') . ' la fiecare 100 de lei';
     }
 
     /**

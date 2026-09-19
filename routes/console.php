@@ -78,6 +78,13 @@ Schedule::command('orders:expire-pending')
     ->everyTwoMinutes()
     ->timezone('Europe/Bucharest');
 
+// Marketplace loyalty points: credit the points of orders whose activity has taken place, birthday bonuses, expiry.
+// Idempotent; does nothing for marketplaces without automatic rewards switched on.
+Schedule::command('loyalty:process')
+    ->hourlyAt(17)
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest');
+
 // Daily sweep for expired Ad Tracking service orders. Marks them
 // completed and tears down organizer pixel toggles no longer covered by
 // another active order. Idempotent and side-effect-free against orders

@@ -793,7 +793,15 @@ class OrdersController extends BaseController
         // Service fee calculation
         $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
         $insuranceAmount = (float) ($order->meta['insurance_amount'] ?? 0);
-        $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount - $insuranceAmount);
+        // loyalty points lowered the total too; add them back so they don't read as a smaller service fee
+        $pointsDiscount = (float) ($order->points_discount ?? 0);
+        $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount + $pointsDiscount - $insuranceAmount);
+        $loyalty = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
+        $pointsToEarn = 0;
+        if ($loyalty->config($order->marketplace_client_id)) {
+            $pending = \App\Models\Gamification\LoyaltyPendingEarning::where('order_id', $order->id)->first();
+            $pointsToEarn = $pending ? (int) $pending->points : $loyalty->config($order->marketplace_client_id)->pointsForLei($loyalty->earnBase($order));
+        }
 
         return $this->success([
             'order' => [
@@ -808,6 +816,9 @@ class OrdersController extends BaseController
                 'service_fee' => number_format($serviceFee, 2, '.', ''),
                 'insurance_amount' => number_format($insuranceAmount, 2, '.', ''),
                 'discount' => number_format($discount, 2, '.', ''),
+                'points_used' => (int) ($order->points_used ?? 0),
+                'points_discount' => number_format($pointsDiscount, 2, '.', ''),
+                'points_to_earn' => $pointsToEarn,
                 'total' => number_format((float) $order->total, 2, '.', ''),
                 'currency' => $order->currency ?? 'RON',
                 'event' => $eventData,

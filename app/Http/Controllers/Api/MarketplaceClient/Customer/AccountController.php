@@ -228,7 +228,10 @@ class AccountController extends BaseController
                 'currency' => $order->currency,
                 'tickets_count' => $order->tickets->count(),
                 'promo_discount' => (float) ($order->discount_amount ?? 0),
-                'discount' => (float) ($order->discount_amount ?? 0),
+                // promo code + loyalty points paid with (the page shows them in one "Discount / puncte" box)
+                'discount' => (float) ($order->discount_amount ?? 0) + (float) ($order->points_discount ?? 0),
+                'points_used' => (int) ($order->points_used ?? 0),
+                'points_discount' => (float) ($order->points_discount ?? 0),
                 'promo_code' => $order->meta['promo_code'] ?? $order->promo_code ?? null,
                 // Commission info - using EVENT's commission (marketplace -> organizer)
                 'commission_rate' => $eventCommissionRate,
@@ -486,7 +489,8 @@ class AccountController extends BaseController
 
         // Service fee: actual extra charges to customer (total - subtotal + discount)
         // Note: commission_amount is the platform commission deducted from organizer payouts, not a customer charge
-        $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
+        // promo code + loyalty points paid with: both lowered the total, so the service fee stays right
+        $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0) + (float) ($order->points_discount ?? 0);
         $insuranceAmount = (float) ($order->meta['insurance_amount'] ?? 0);
         $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount - $insuranceAmount);
 
@@ -503,6 +507,8 @@ class AccountController extends BaseController
                 'service_fee' => number_format($serviceFee, 2, '.', ''),
                 'insurance_amount' => number_format($insuranceAmount, 2, '.', ''),
                 'discount' => number_format($discount, 2, '.', ''),
+                'points_used' => (int) ($order->points_used ?? 0),
+                'points_discount' => number_format((float) ($order->points_discount ?? 0), 2, '.', ''),
                 'total' => number_format((float) $order->total, 2, '.', ''),
                 'currency' => $order->currency ?? 'RON',
                 'tickets_count' => $order->tickets->count(),

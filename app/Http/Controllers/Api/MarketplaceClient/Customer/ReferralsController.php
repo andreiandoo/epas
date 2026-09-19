@@ -403,6 +403,20 @@ class ReferralsController extends BaseController
             'min_purchase' => 0, // Minimum purchase for conversion
         ];
 
+        // Automatic rewards: the amounts and the minimum order come from the points programme the admin set, and
+        // points are credited on their own when the friend's first order is confirmed (nothing to claim).
+        $auto = app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->config($clientId);
+        if ($auto) {
+            return [
+                'referrer_reward' => (int) ($auto->referral_bonus_points ?? 0),
+                'referred_reward' => (int) ($auto->referred_bonus_points ?? 0),
+                'reward_type' => 'points',
+                'min_purchase' => (float) ($auto->referral_min_order ?? 0),
+                'max_per_year' => (int) ($auto->referral_max_per_year ?? 0),
+                'automatic' => true,
+            ];
+        }
+
         try {
             $clientRecord = DB::table('marketplace_clients')->where('id', $clientId)->first();
             $clientSettings = $clientRecord && $clientRecord->settings

@@ -54,6 +54,57 @@ class GamificationConfigResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
+                SC\Section::make('Recompense automate')
+                    ->description('Când e pornit, punctele funcționează singure: se câștigă la fiecare comandă plătită (creditate după activitate), de ziua de naștere și la invitații, se folosesc la checkout și expiră. Reducerea din puncte e plătită de marketplace, nu de organizator.')
+                    ->schema([
+                        Forms\Components\Toggle::make('auto_rewards_enabled')
+                            ->label('Pornește recompensele automate')
+                            ->default(false),
+
+                        Forms\Components\Placeholder::make('loyalty_rule_preview')
+                            ->label('Cum arată pentru client')
+                            ->content(function (callable $get) {
+                                $value = (float) ($get('point_value') ?: 0.01);
+                                $pct = (float) ($get('earn_percentage') ?: 0);
+                                $points = $value > 0 ? (int) floor(round(100 * $pct / 100 / $value, 6)) : 0;
+                                $redeem = (float) ($get('max_redeem_percentage') ?: 0);
+                                return new \Illuminate\Support\HtmlString(
+                                    'La o comandă de <b>100 lei</b> clientul câștigă <b>' . $points . ' puncte</b> (' . number_format($points * $value, 2, ',', '.') . ' lei), adică ' . rtrim(rtrim(number_format($pct, 2, ',', '.'), '0'), ',') . '% înapoi. '
+                                    . '1 punct = ' . number_format($value, 2, ',', '.') . ' lei. La plată poate folosi puncte pentru cel mult ' . rtrim(rtrim(number_format($redeem, 2, ',', '.'), '0'), ',') . '% din valoarea biletelor.'
+                                );
+                            }),
+
+                        Forms\Components\Placeholder::make('loyalty_report')
+                            ->label('Costul programului')
+                            ->visible(fn ($record) => $record !== null && $record->marketplace_client_id)
+                            ->content(function ($record) {
+                                if (!$record) {
+                                    return '';
+                                }
+                                $service = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
+                                $rows = [
+                                    'Luna aceasta' => $service->report($record, now()->startOfMonth(), now()),
+                                    'Luna trecută' => $service->report($record, now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()),
+                                ];
+                                $lei = fn ($v) => number_format((float) $v, 2, ',', '.') . ' lei';
+                                $html = '<table style="width:100%;font-size:13px;border-collapse:collapse"><thead><tr style="text-align:left">'
+                                    . '<th style="padding:4px 8px">Perioadă</th><th style="padding:4px 8px">Vânzări bilete</th><th style="padding:4px 8px">Comision</th>'
+                                    . '<th style="padding:4px 8px">Puncte folosite</th><th style="padding:4px 8px">Din comision</th><th style="padding:4px 8px">La 100 lei vânzări</th>'
+                                    . '<th style="padding:4px 8px">Puncte acordate</th><th style="padding:4px 8px">Expirate</th></tr></thead><tbody>';
+                                foreach ($rows as $label => $r) {
+                                    $hot = $r['cost_share'] > 25 ? 'color:#b91c1c;font-weight:700' : '';
+                                    $html .= '<tr><td style="padding:4px 8px">' . $label . '</td><td style="padding:4px 8px">' . $lei($r['sales_lei']) . '</td><td style="padding:4px 8px">' . $lei($r['commission_lei']) . '</td>'
+                                        . '<td style="padding:4px 8px">' . $lei($r['redeemed_lei']) . '</td><td style="padding:4px 8px;' . $hot . '">' . number_format($r['cost_share'], 1, ',', '.') . '%</td>'
+                                        . '<td style="padding:4px 8px">' . $lei($r['cost_per_100_lei']) . '</td><td style="padding:4px 8px">' . number_format($r['issued_points'], 0, ',', '.') . ' (' . $lei($r['issued_lei']) . ')</td>'
+                                        . '<td style="padding:4px 8px">' . number_format($r['expired_points'], 0, ',', '.') . '</td></tr>';
+                                }
+                                $now = $rows['Luna aceasta'];
+                                $html .= '</tbody></table><p style="margin-top:8px;font-size:13px">În conturi acum: <b>' . number_format($now['outstanding_points'], 0, ',', '.') . ' puncte</b> (' . $lei($now['outstanding_lei']) . ' de acoperit dacă se folosesc toate), plus <b>' . number_format($now['pending_points'], 0, ',', '.') . '</b> în așteptarea activității. Prag de alarmă: peste 25% din comision (0,50 lei la 100 lei vânzări).</p>';
+                                return new \Illuminate\Support\HtmlString($html);
+                            })
+                            ->columnSpanFull(),
+                    ])->columns(2),
+
                 SC\Section::make('Point Value Configuration')
                     ->description('Configure how points are valued and earned')
                     ->schema([
@@ -62,6 +113,7 @@ class GamificationConfigResource extends Resource
                             ->numeric()
                             ->step(0.01)
                             ->default(0.01)
+                            ->live(onBlur: true)
                             ->required()
                             ->helperText('How much is 1 point worth for redemption (e.g., 0.01 = 1 point = 0.01 RON)'),
 
@@ -78,9 +130,12 @@ class GamificationConfigResource extends Resource
                         Forms\Components\TextInput::make('earn_percentage')
                             ->label('Earn Percentage')
                             ->numeric()
+                            ->step(0.01)
+                            ->minValue(0)
                             ->suffix('%')
                             ->default(5.00)
-                            ->helperText('Percentage of order value converted to points'),
+                            ->live(onBlur: true)
+                            ->helperText('Procentul din valoarea biletelor dat înapoi în puncte. Ex.: 0,5 = la 100 lei, 50 de puncte (0,50 lei) când 1 punct = 0,01 lei.'),
 
                         Forms\Components\Toggle::make('earn_on_subtotal')
                             ->label('Earn on Subtotal')
@@ -93,6 +148,13 @@ class GamificationConfigResource extends Resource
                             ->step(0.01)
                             ->default(0)
                             ->helperText('Minimum order value to earn points (e.g., 10.00)'),
+
+                        Forms\Components\TextInput::make('points_confirm_days')
+                            ->label('Zile până la creditare')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(2)
+                            ->helperText('Punctele unei comenzi intră în cont la atâtea zile după activitate (până atunci sunt „în așteptare”; un retur le anulează).'),
                     ])->columns(3),
 
                 SC\Section::make('Redemption Settings')
@@ -107,6 +169,8 @@ class GamificationConfigResource extends Resource
                         Forms\Components\TextInput::make('max_redeem_percentage')
                             ->label('Max Redemption (%)')
                             ->numeric()
+                            ->step(0.01)
+                            ->live(onBlur: true)
                             ->suffix('%')
                             ->default(50.00)
                             ->helperText('Maximum percentage of order that can be paid with points'),
@@ -129,7 +193,8 @@ class GamificationConfigResource extends Resource
                         Forms\Components\TextInput::make('signup_bonus_points')
                             ->label('Signup Bonus')
                             ->numeric()
-                            ->default(50),
+                            ->default(50)
+                            ->helperText('Nu se acordă de recompensele automate (un cont nou nu primește puncte înainte să cumpere).'),
 
                         Forms\Components\TextInput::make('referral_bonus_points')
                             ->label('Referral Bonus (Referrer)')
@@ -142,7 +207,21 @@ class GamificationConfigResource extends Resource
                             ->numeric()
                             ->default(100)
                             ->helperText('Points awarded to the new customer'),
-                    ])->columns(4),
+
+                        Forms\Components\TextInput::make('referral_min_order')
+                            ->label('Comandă minimă pentru invitație (lei)')
+                            ->numeric()
+                            ->step(0.01)
+                            ->default(0)
+                            ->helperText('Bonusurile de invitație se acordă când prima comandă a prietenului, de cel puțin atât, e confirmată (în 30 de zile de la înscriere).'),
+
+                        Forms\Components\TextInput::make('referral_max_per_year')
+                            ->label('Invitații răsplătite pe an')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(10)
+                            ->helperText('Câți prieteni pot aduce bonus unui client într-un an. 0 = fără limită.'),
+                    ])->columns(3),
 
                 SC\Section::make('Expiration Settings')
                     ->schema([

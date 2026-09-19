@@ -158,6 +158,9 @@ class AppServiceProvider extends ServiceProvider
         // (docs/plans/shorts.md B1). Hooked here rather than on an event because
         // orders reach "paid" through several paths and only the model sees all.
         \App\Models\Order::observe(\App\Observers\ShortAttributionOrderObserver::class);
+        // Marketplace loyalty points follow the order (paid, never paid, refunded). Inert unless a marketplace switched
+        // automatic rewards on (see MarketplaceLoyaltyService).
+        \App\Models\Order::observe(\App\Observers\LoyaltyOrderObserver::class);
         // Pays an attendee when their UGC short is approved, and makes sure every
         // short with a poster gets an LQIP. On the model rather than on the panel
         // action, because a short reaches "published" through four different

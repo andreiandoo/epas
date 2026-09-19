@@ -157,6 +157,8 @@ class ConfigController extends BaseController
             'ticket_insurance' => $this->getTicketInsuranceSettings($client),
             'cultural_card' => $this->getCulturalCardSettings($client),
             'payment_fees'  => $this->getPaymentFeesSettings($client),
+            // points rules for the cart, checkout and activity pages; null when the marketplace has no automatic rewards
+            'loyalty'       => app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->publicSettings($client),
         ];
 
         return $this->success($features);

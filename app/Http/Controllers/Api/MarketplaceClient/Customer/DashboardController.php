@@ -148,6 +148,20 @@ class DashboardController extends BaseController
             return ['balance' => 0, 'lifetime_earned' => 0, 'spent' => 0, 'expiring_soon' => 0];
         }
 
+        // Marketplaces with automatic rewards: what really expires within 30 days (oldest points first), and the
+        // points of paid orders still waiting for their activity.
+        $loyalty = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
+        if ($loyalty->config($client)) {
+            return [
+                'balance'         => (int) $points->current_balance,
+                'lifetime_earned' => (int) $points->total_earned,
+                'spent'           => (int) $points->total_spent,
+                'expiring_soon'   => $loyalty->expiringSoon($points, 30),
+                'expiring_days'   => 30,
+                'pending'         => $loyalty->pendingPoints((int) $client->id, (int) $customer->id),
+            ];
+        }
+
         // Expiring soon — anything dropping out of validity within 30 days,
         // if the schema tracks it. Safe fallback to 0 when columns absent.
         $expiringSoon = 0;
