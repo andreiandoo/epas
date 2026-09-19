@@ -27,7 +27,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-venue.css'];
 $v2Scripts = ['organizer.js', 'org-venue-team.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $vtRoles = [
     'gate_scanner' => 'Scanare la poartă', 'sales_operator' => 'Vânzare', 'shift_manager' => 'Șef de tură',

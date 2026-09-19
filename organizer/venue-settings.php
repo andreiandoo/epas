@@ -29,7 +29,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-venue.css'];
 $v2Scripts = ['organizer.js', 'org-venue-settings.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 /** One issuing company's form. Field names follow the core contract. */
 $vxForm = function (string $key) {

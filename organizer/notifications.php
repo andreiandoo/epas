@@ -30,7 +30,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-notifications.css'];
 $v2Scripts = ['organizer.js', 'org-notifications.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $onStat = function (string $key, string $label, string $icon) {
     return '<article class="on-stat"><span class="on-stat-ic">' . v2_ic($icon) . '</span><div><p class="on-stat-k">' . $label . '</p><p class="on-stat-v" id="on-s-' . $key . '"><span class="org-skel on-sk"></span></p></div></article>';

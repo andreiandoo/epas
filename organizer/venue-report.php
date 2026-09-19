@@ -26,7 +26,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-venue.css'];
 $v2Scripts = ['organizer.js', 'org-venue-report.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $vrKpi = function (string $id, string $icon, string $label) {
     return '<article class="ve-kpi"><span class="ve-kpi-ic">' . v2_ic($icon) . '</span><div><b id="vr-' . $id . '">—</b><p>' . $label . '</p></div></article>';

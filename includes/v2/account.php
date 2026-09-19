@@ -24,13 +24,22 @@ const V2_ACCOUNT_NAV = [
 
 /**
  * The window.BILETEONLINE settings the legacy api.js / auth.js read; account pages put it in $v2HeadExtra.
- * It starts with the login guard: without a customer session (the keys auth.js keeps) the page is replaced by
- * /autentificare?redirect=<this page> before it paints, so a visitor never sees the account shell signed out.
+ * It starts with the login guard, so a visitor never sees the account shell signed out. $session says whose area it
+ * is: 'customer' (the /cont pages) needs a customer session and goes to /autentificare?redirect=<this page>;
+ * 'organizer' (the /organizator pages) needs an organizer session, or an admin's _admin_token handoff that auth.js
+ * turns into one, and goes to the venue login, which brings the organizer back to this page (auth.js keeps it for
+ * the tab). The organizer pages used to get the customer guard, so a signed-in organizer bounced between the login
+ * and the dashboard.
  */
-function v2_account_client_config(): string
+function v2_account_client_config(string $session = 'customer'): string
 {
-    return '<script>(function () { var ok = false; try { var type = localStorage.getItem(\'bileteonline_user_type\'); ok = !!localStorage.getItem(\'bileteonline_customer_token\') && (!type || type === \'customer\'); } catch (e) {} '
-        . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; location.replace(\'/autentificare?redirect=\' + encodeURIComponent(location.pathname + location.search + location.hash)); } })();</script>'
+    $guard = $session === 'organizer'
+        ? 'ok = /[?&]_admin_token=/.test(location.search) || (!!localStorage.getItem(\'bileteonline_organizer_token\') && localStorage.getItem(\'bileteonline_user_type\') === \'organizer\'); } catch (e) {} '
+            . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; try { sessionStorage.setItem(\'bileteonline_redirect_after_login\', location.href); } catch (e) {} location.replace(\'/autentificare?ca=venue\'); } })();</script>'
+        : 'var type = localStorage.getItem(\'bileteonline_user_type\'); ok = !!localStorage.getItem(\'bileteonline_customer_token\') && (!type || type === \'customer\'); } catch (e) {} '
+            . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; location.replace(\'/autentificare?redirect=\' + encodeURIComponent(location.pathname + location.search + location.hash)); } })();</script>';
+
+    return '<script>(function () { var ok = false; try { ' . $guard
         . '<script>window.BILETEONLINE = ' . json_encode([
         'siteName' => SITE_NAME,
         'siteUrl' => SITE_URL,

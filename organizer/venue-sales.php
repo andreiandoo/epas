@@ -27,7 +27,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-venue.css'];
 $v2Scripts = ['organizer.js', 'org-venue-sales.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $vsSplit = function (string $key) {
     return '<dl class="ve-split"><div><dt>' . v2_ic('globe-simple') . 'Online</dt><dd id="vs-' . $key . '-online">—</dd></div>'

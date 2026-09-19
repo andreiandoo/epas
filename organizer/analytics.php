@@ -40,7 +40,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-analytics.css'];
 $v2Scripts = ['organizer.js', 'org-analytics.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $oaStat = function (string $key, string $label, string $icon, string $extra = '') {
     return '<article class="oa-stat" id="oa-st-' . $key . '">'

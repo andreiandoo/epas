@@ -26,7 +26,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-venue.css'];
 $v2Scripts = ['organizer.js', 'org-venue-participants.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $vpStat = function (string $key, string $label, string $tone, string $hint = '') {
     return '<article class="ve-kpi' . ($tone ? ' ' . $tone : '') . '"><div><b id="vp-s-' . $key . '">—</b><p>' . $label . '</p>'

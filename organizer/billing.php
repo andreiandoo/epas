@@ -30,7 +30,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-billing.css'];
 $v2Scripts = ['organizer.js', 'org-billing.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $obSeg = function (string $group, array $items) {
     $out = '<div class="ob-seg" role="group" aria-label="Filtrează după status">';

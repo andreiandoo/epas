@@ -34,7 +34,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-promo.css'];
 $v2Scripts = ['organizer.js', 'org-promo.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $opStat = function (string $key, string $label, string $icon, string $note = '') {
     return '<article class="op-stat"><span class="op-stat-ic">' . v2_ic($icon) . '</span><div><p class="op-stat-k">' . $label . '</p>'

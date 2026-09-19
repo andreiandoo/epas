@@ -29,7 +29,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-venue.css'];
 $v2Scripts = ['organizer.js', 'org-venue-products.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $fld = function (string $id, string $label, string $input, string $hint = '', string $cls = '') {
     return '<span class="po-field' . ($cls ? ' ' . $cls : '') . '"><label for="' . $id . '">' . $label . '</label>' . $input

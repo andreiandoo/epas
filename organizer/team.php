@@ -31,7 +31,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-team.css'];
 $v2Scripts = ['organizer.js', 'org-team.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $otStat = function (string $key, string $label, string $icon) {
     return '<article class="ot-stat" id="ot-st-' . $key . '"><span class="ot-stat-ic">' . v2_ic($icon) . '</span><div><p class="ot-stat-k">' . $label . '</p><p class="ot-stat-v" id="ot-s-' . $key . '"><span class="org-skel ot-sk"></span></p></div></article>';

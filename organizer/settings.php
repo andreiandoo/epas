@@ -37,7 +37,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-settings.css'];
 $v2Scripts = ['organizer.js', 'org-settings.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $osTabs = ['profile' => 'Profil', 'company' => 'Companie', 'bank' => 'Conturi bancare', 'contract' => 'Contract', 'notifications' => 'Notificări', 'security' => 'Securitate', 'sharelinks' => 'Link-uri share'];
 

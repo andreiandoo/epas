@@ -37,7 +37,7 @@ $skipPageCache = true;
 $v2Styles = ['organizer.css', 'org-sales.css'];
 $v2Scripts = ['organizer.js', 'org-sales.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
-$v2HeadExtra = v2_account_client_config();
+$v2HeadExtra = v2_account_client_config('organizer');
 
 $osSortTh = function (string $key, string $label, string $cls = '') {
     return '<th scope="col"' . ($cls ? ' class="' . $cls . '"' : '') . ' data-sort="' . $key . '" aria-sort="none"><button class="os-th" type="button">' . $label . v2_ic('caret-down', 'ic os-arrow') . '</button></th>';
