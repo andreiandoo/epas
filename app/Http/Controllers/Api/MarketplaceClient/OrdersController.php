@@ -803,7 +803,7 @@ class OrdersController extends BaseController
             $pointsToEarn = $pending ? (int) $pending->points : $loyalty->config($order->marketplace_client_id)->pointsForLei($loyalty->earnBase($order));
         }
 
-        return $this->success([
+        $payload = [
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -870,7 +870,65 @@ class OrdersController extends BaseController
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ],
-        ]);
+        ];
+
+        // Activities module: the order's lines are bookings (product, option, date,
+        // time) and every ticket says what it is for; event orders are unchanged.
+        if (\App\Services\Activities\BookingDescriber::isActivityOrder($order)) {
+            $payload = $this->withActivityLines($payload, $order);
+        }
+
+        return $this->success($payload);
+    }
+
+    /**
+     * Activity order for the thank-you page: one item per booking and, on each
+     * ticket, the product, the date and the place (the event block stays null).
+     */
+    private function withActivityLines(array $payload, Order $order): array
+    {
+        $lines = \App\Services\Activities\BookingDescriber::lines($order);
+        $payload['order']['items'] = array_map(fn ($l) => [
+            'name'       => trim($l['title'] . ($l['variant'] !== '' ? ' — ' . $l['variant'] : '')),
+            'quantity'   => $l['quantity'],
+            'price'      => $l['quantity'] > 0 ? round($l['total'] / $l['quantity'], 2) : $l['total'],
+            'total'      => $l['total'],
+            'date_label' => $l['date_label'],
+            'time_label' => $l['time_label'],
+            'location'   => $l['location']['name'] ?? null,
+        ], $lines);
+
+        $tickets = Ticket::whereIn('id', collect($payload['order']['tickets'])->pluck('id'))
+            ->with(['activityBooking.activity.location.city', 'activityBooking.variant', 'activityBooking.packageBooking.activity'])
+            ->get()
+            ->keyBy('id');
+        $payload['order']['tickets'] = collect($payload['order']['tickets'])->map(function ($t) use ($tickets) {
+            $info = isset($tickets[$t['id']]) ? \App\Services\Activities\BookingDescriber::ticket($tickets[$t['id']]) : null;
+            if ($info) {
+                $t['type'] = $info['ticket_type'];
+                $t['price'] = (float) ($tickets[$t['id']]->price ?? $t['price']);
+                $t['activity'] = [
+                    'name'       => $info['name'],
+                    'package'    => $info['package'],
+                    'date_label' => $info['date_label'],
+                    'time_label' => $info['time_label'],
+                    'venue'      => $info['venue'],
+                    'city'       => $info['city'],
+                    'plate'      => $info['vehicle_plate'],
+                ];
+            }
+            return $t;
+        })->values()->all();
+
+        $first = $lines[0] ?? null;
+        $payload['order']['activity'] = $first ? [
+            'title'      => count($lines) > 1 ? $first['title'] . ' + încă ' . (count($lines) - 1) : $first['title'],
+            'date_label' => $first['date_label'],
+            'location'   => $first['location'],
+            'image'      => $first['image'],
+        ] : null;
+
+        return $payload;
     }
 
     /**
