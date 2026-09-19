@@ -610,7 +610,7 @@
   /* =================== START =================== */
   O.ready.then(function (ok) {
     if (!ok) return;
-    text('od-kicker', 'Panou organizator · ' + cap(F.date(new Date(), { month: 'long', year: 'numeric' })));
+    text('od-kicker', 'Panou operator · ' + cap(F.date(new Date(), { month: 'long', year: 'numeric' })));
     O.onProfile(function (o) {
       var who = String(o.contact_name || '').trim().split(/\s+/)[0] || String(o.representative_first_name || '').trim() || String(o.name || '').trim();
       text('od-name', who ? ', ' + who : '');

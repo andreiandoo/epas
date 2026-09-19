@@ -53,7 +53,7 @@ if (!$org) {
     <div class="wrap">
       <div class="op-empty">
         <span class="op-empty-ic"><?= v2_ic('clock') ?></span>
-        <h1 class="op-down-h" id="op-down-h">Datele organizatorului nu sunt disponibile momentan.</h1>
+        <h1 class="op-down-h" id="op-down-h">Datele operatorului nu sunt disponibile momentan.</h1>
         <p>Reîncearcă peste câteva minute.</p>
         <div class="op-down-cta"><a class="btn btn-primary" href="/operatori">Toți operatorii</a><a class="btn btn-ghost" href="/">Acasă</a></div>
       </div>
@@ -398,10 +398,10 @@ include __DIR__ . '/../includes/v2/header.php';
         </section>
 
         <section class="op-panel" id="op-panel-about" role="tabpanel" aria-labelledby="op-tab-about" hidden>
-          <h2>Despre organizator</h2>
+          <h2>Despre operator</h2>
           <p class="op-about"><?= v2_e($aboutText) ?></p>
           <?php if ($facts): ?>
-          <h3>Informații despre organizator</h3>
+          <h3>Informații despre operator</h3>
           <ul class="op-facts-grid">
             <?php foreach ($facts as [$factIcon, $factLabel, $factValue]): ?>
             <li class="op-fact"><span class="op-fact-ic"><?= v2_ic($factIcon) ?></span><span><small><?= v2_e($factLabel) ?></small><b><?= v2_e($factValue) ?></b></span></li>
@@ -413,7 +413,7 @@ include __DIR__ . '/../includes/v2/header.php';
 
       <aside class="op-side" aria-label="Despre operator">
         <div class="op-box">
-          <h3>Despre organizator</h3>
+          <h3>Despre operator</h3>
           <p class="op-box-text"><?= v2_e($aboutText) ?></p>
           <?php if (mb_strlen($about) > 280): ?><button class="op-more" type="button" data-open-tab="op-tab-about">Citește tot</button><?php endif; ?>
         </div>
@@ -441,7 +441,7 @@ include __DIR__ . '/../includes/v2/header.php';
 
         <div class="op-contact">
           <h3>Interesat de colaborare?</h3>
-          <p>Contactează organizatorul pentru activități private sau corporate.</p>
+          <p>Contactează operatorul pentru activități private sau corporate.</p>
           <button class="btn btn-light" type="button" data-contact aria-haspopup="dialog" aria-controls="op-contact"><?= v2_ic('envelope-simple') ?>Trimite mesaj</button>
           <?php if ($website !== ''): ?><a class="btn btn-outline-light" href="<?= v2_e($website) ?>" target="_blank" rel="noopener nofollow">Website<?= v2_ic('arrow-right') ?></a><?php endif; ?>
         </div>

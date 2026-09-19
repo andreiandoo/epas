@@ -23,8 +23,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Panou organizator — ' . SITE_NAME;
-$pageDescription = 'Panoul organizatorului pe bilete.online: vânzări, activități, participanți și comenzi recente.';
+$pageTitleRaw = 'Panou operator — ' . SITE_NAME;
+$pageDescription = 'Panoul operatorului pe bilete.online: vânzări, activități, participanți și comenzi recente.';
 $canonicalUrl = SITE_URL . '/organizator/panou';
 $noindex = true;
 $skipPageCache = true;
@@ -40,7 +40,7 @@ v2_org_start('dashboard');
 <div class="od" id="od">
   <section class="od-hero" aria-labelledby="od-h">
     <div class="od-hero-main">
-      <p class="od-kicker" id="od-kicker">Panou organizator</p>
+      <p class="od-kicker" id="od-kicker">Panou operator</p>
       <h1 class="od-h" id="od-h" tabindex="-1">Bun venit înapoi<span id="od-name"></span>!</h1>
       <p class="od-lead" id="od-week">Se încarcă datele…</p>
       <div class="od-cta">

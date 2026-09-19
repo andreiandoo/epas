@@ -29,7 +29,7 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
 $pageTitleRaw = 'Setări cont — ' . SITE_NAME;
-$pageDescription = 'Setările contului de organizator pe bilete.online: profil, companie, conturi bancare, contract, notificări, securitate și link-uri share.';
+$pageDescription = 'Setările contului de operator pe bilete.online: profil, companie, conturi bancare, contract, notificări, securitate și link-uri share.';
 $canonicalUrl = SITE_URL . '/organizator/setari';
 $noindex = true;
 $skipPageCache = true;
@@ -54,7 +54,6 @@ $osSum = function (string $id, string $tab, string $icon, string $label) {
         . '<span class="os-sum-t"><span class="os-sum-k">' . $label . '</span><b class="os-sum-v"><span class="org-skel os-sk"></span></b><small class="os-sum-p"></small></span></button>';
 };
 $osX = '<button class="os-x" type="button" data-close aria-label="Închide">' . v2_ic('x') . '</button>';
-$osCounties = ['Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brăila', 'Brașov', 'București', 'Buzău', 'Călărași', 'Caraș-Severin', 'Cluj', 'Constanța', 'Covasna', 'Dâmbovița', 'Dolj', 'Galați', 'Giurgiu', 'Gorj', 'Harghita', 'Hunedoara', 'Ialomița', 'Iași', 'Ilfov', 'Maramureș', 'Mehedinți', 'Mureș', 'Neamț', 'Olt', 'Prahova', 'Sălaj', 'Satu Mare', 'Sibiu', 'Suceava', 'Teleorman', 'Timiș', 'Tulcea', 'Vâlcea', 'Vaslui', 'Vrancea'];
 
 include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('settings');
@@ -92,11 +91,11 @@ v2_org_start('settings');
 
   <!-- ============ PROFILE ============ -->
   <section class="org-panel os-panel" id="os-p-profile" role="tabpanel" aria-labelledby="os-tab-profile">
-    <div class="org-panel-head"><div><p class="org-k">Profil</p><h2 class="org-panel-h">Profil organizator</h2><p class="org-panel-p">Numele și datele de contact apar pe pagina ta publică și pe biletele vândute.</p></div></div>
+    <div class="org-panel-head"><div><p class="org-k">Profil</p><h2 class="org-panel-h">Profil operator</h2><p class="org-panel-p">Numele și datele de contact apar pe pagina ta publică și pe biletele vândute.</p></div></div>
     <form class="os-form" id="os-profile-form" novalidate>
       <fieldset class="os-fs" disabled>
         <div class="os-grid">
-          <?= $osField('os-name', 'Nume organizator', 'type="text" maxlength="255" autocomplete="organization" required') ?>
+          <?= $osField('os-name', 'Nume operator', 'type="text" maxlength="255" autocomplete="organization" required') ?>
           <?= $osField('os-contact', 'Persoana de contact <small>(opțional)</small>', 'type="text" maxlength="255" autocomplete="name"') ?>
           <?= $osField('os-email', 'Email cont', 'type="email" readonly', 'Adresa cu care te autentifici și la care primești emailurile. Pentru s-o schimbi, <a href="/organizator/suport">scrie-ne</a>.') ?>
           <?= $osField('os-phone', 'Telefon <small>(opțional)</small>', 'type="tel" maxlength="50" autocomplete="tel" inputmode="tel"') ?>
@@ -123,7 +122,7 @@ v2_org_start('settings');
     <div class="org-panel-head"><div><p class="org-k">Companie</p><h2 class="org-panel-h">Datele companiei</h2><p class="org-panel-p">Apar pe contract, pe facturile de comision și pe deconturi.</p></div></div>
     <form class="os-form" id="os-company-form" novalidate>
       <fieldset class="os-fs" disabled>
-        <div class="os-block-head"><div><h3>Compania principală (SC1)</h3></div></div>
+        <div class="os-block-head"><div><h3>Compania principală (SC1)</h3><p class="os-p" id="os-company-lock" hidden>Datele firmei sunt cele din ANAF și nu se modifică din cont. Dacă s-a schimbat ceva, <a href="/organizator/suport">scrie-ne</a>.</p><p class="os-p" id="os-company-how" hidden>Scrie CUI-ul firmei și verifică-l în ANAF: datele se completează singure, apoi le salvezi.</p></div></div>
         <div class="os-grid">
           <label class="os-f">
             <span class="os-f-l">CUI / CIF</span>
@@ -131,46 +130,48 @@ v2_org_start('settings');
             <span class="os-help" id="os-anaf-msg" aria-live="polite"></span>
             <span class="os-err" id="os-cui-err" hidden></span>
           </label>
-          <?= $osField('os-cname', 'Denumirea firmei', 'type="text" maxlength="255" autocomplete="organization" required') ?>
-          <?= $osField('os-creg', 'Nr. Registrul Comerțului <small>(opțional)</small>', 'type="text" maxlength="100" autocomplete="off" spellcheck="false" placeholder="ex: J40/1234/2020"') ?>
+          <?= $osField('os-cname', 'Denumirea firmei', 'type="text" maxlength="255" autocomplete="organization" readonly') ?>
+          <?= $osField('os-creg', 'Nr. Registrul Comerțului', 'type="text" maxlength="100" autocomplete="off" spellcheck="false" readonly') ?>
           <div class="os-f">
             <span class="os-f-l">Plătitor de TVA</span>
             <p class="os-static" id="os-vat">—</p>
-            <span class="os-help">Se ia din ANAF; nu se schimbă din cont.</span>
           </div>
-          <?= $osField('os-caddr', 'Adresa sediului', 'type="text" maxlength="500" autocomplete="street-address" required', '', 'is-wide') ?>
-          <?= $osField('os-ccity', 'Localitatea', 'type="text" maxlength="100" autocomplete="address-level2" required') ?>
-          <label class="os-f">
-            <span class="os-f-l">Județul</span>
-            <input id="os-ccounty" type="text" maxlength="100" list="os-counties" autocomplete="address-level1" required aria-describedby="os-ccounty-err">
-            <span class="os-err" id="os-ccounty-err" hidden></span>
-          </label>
-          <?= $osField('os-czip', 'Cod poștal <small>(opțional)</small>', 'type="text" maxlength="20" autocomplete="postal-code" inputmode="numeric"') ?>
+          <?= $osField('os-caddr', 'Adresa sediului', 'type="text" maxlength="500" autocomplete="street-address" readonly', '', 'is-wide') ?>
+          <?= $osField('os-ccity', 'Localitatea', 'type="text" maxlength="100" autocomplete="address-level2" readonly') ?>
+          <?= $osField('os-ccounty', 'Județul', 'type="text" maxlength="100" autocomplete="address-level1" readonly') ?>
+          <?= $osField('os-czip', 'Cod poștal', 'type="text" maxlength="20" autocomplete="postal-code" readonly') ?>
         </div>
       </fieldset>
       <div class="os-form-err" id="os-company-err" role="alert" hidden></div>
-      <div class="os-act"><button class="btn btn-primary" type="submit" id="os-company-go" disabled><span data-label>Salvează datele firmei</span></button></div>
+      <div class="os-act" id="os-company-act"><button class="btn btn-primary" type="submit" id="os-company-go" disabled><span data-label>Salvează datele firmei</span></button></div>
     </form>
-    <datalist id="os-counties"><?php foreach ($osCounties as $osCounty): ?><option value="<?= $osCounty ?>"></option><?php endforeach; ?></datalist>
 
     <form class="os-block" id="os-sc2-form" novalidate>
       <div class="os-block-head">
         <div><h3>Compania secundară (SC2)</h3><p class="os-p">Biletele de acces pot fi emise pe SC1, iar serviciile conexe (parcare, închirieri, activități) pe SC2. Fiecare cont bancar se leagă de societatea lui, din „Conturi bancare”.</p></div>
         <label class="os-switch"><input type="checkbox" id="os-sc2-on" disabled><span>Am o a doua societate emitentă</span></label>
       </div>
-      <fieldset class="os-fs" id="os-sc2-fields" disabled>
+      <fieldset class="os-fs" id="os-sc2-fields" hidden>
+        <p class="os-p" id="os-sc2-lock" hidden>Datele celei de-a doua firme sunt cele din ANAF și nu se modifică din cont. Pentru o schimbare, <a href="/organizator/suport">scrie-ne</a>.</p>
         <div class="os-grid">
-          <?= $osField('os-s-name', 'Denumirea firmei', 'type="text" maxlength="255" autocomplete="off"') ?>
-          <?= $osField('os-s-cui', 'CUI / CIF', 'type="text" maxlength="50" autocomplete="off" spellcheck="false"') ?>
-          <?= $osField('os-s-reg', 'Nr. Registrul Comerțului <small>(opțional)</small>', 'type="text" maxlength="100" autocomplete="off" spellcheck="false"') ?>
-          <?= $osField('os-s-addr', 'Adresa sediului', 'type="text" maxlength="500" autocomplete="off"') ?>
-          <?= $osField('os-s-city', 'Localitatea', 'type="text" maxlength="100" autocomplete="off"') ?>
-          <label class="os-f"><span class="os-f-l">Județul</span><input id="os-s-county" type="text" maxlength="100" list="os-counties" autocomplete="off" aria-describedby="os-s-county-err"><span class="os-err" id="os-s-county-err" hidden></span></label>
-          <?= $osField('os-s-zip', 'Cod poștal <small>(opțional)</small>', 'type="text" maxlength="20" autocomplete="off" inputmode="numeric"') ?>
+          <label class="os-f">
+            <span class="os-f-l">CUI / CIF</span>
+            <span class="os-inline"><input id="os-s-cui" type="text" maxlength="50" autocomplete="off" spellcheck="false" aria-describedby="os-s-cui-err os-s-anaf-msg"><button class="btn btn-ghost os-sm" type="button" id="os-s-anaf"><span data-label>Verifică în ANAF</span></button></span>
+            <span class="os-help" id="os-s-anaf-msg" aria-live="polite"></span>
+            <span class="os-err" id="os-s-cui-err" hidden></span>
+          </label>
+        </div>
+        <div class="os-grid" id="os-s-data" hidden>
+          <?= $osField('os-s-name', 'Denumirea firmei', 'type="text" maxlength="255" autocomplete="off" readonly') ?>
+          <?= $osField('os-s-reg', 'Nr. Registrul Comerțului', 'type="text" maxlength="100" autocomplete="off" spellcheck="false" readonly') ?>
+          <?= $osField('os-s-addr', 'Adresa sediului', 'type="text" maxlength="500" autocomplete="off" readonly', '', 'is-wide') ?>
+          <?= $osField('os-s-city', 'Localitatea', 'type="text" maxlength="100" autocomplete="off" readonly') ?>
+          <?= $osField('os-s-county', 'Județul', 'type="text" maxlength="100" autocomplete="off" readonly') ?>
+          <?= $osField('os-s-zip', 'Cod poștal', 'type="text" maxlength="20" autocomplete="off" readonly') ?>
         </div>
       </fieldset>
       <div class="os-form-err" id="os-sc2-err" role="alert" hidden></div>
-      <div class="os-act"><button class="btn btn-primary" type="submit" id="os-sc2-go" disabled><span data-label>Salvează SC2</span></button></div>
+      <div class="os-act" id="os-sc2-act" hidden><button class="btn btn-primary" type="submit" id="os-sc2-go" disabled><span data-label>Salvează SC2</span></button></div>
     </form>
   </section>
 
@@ -201,7 +202,7 @@ v2_org_start('settings');
     </div>
 
     <form class="os-block is-warm os-sign" id="os-sign" novalidate hidden>
-      <div class="os-block-head"><div><h3>Semnează contractul</h3><p class="os-p">Semnătura electronică se aplică pe contract și primești imediat PDF-ul semnat. Până la semnare nu poți trimite activități spre aprobare și nu poți cere plăți.</p></div><a class="os-linkbtn" id="os-sign-read" href="#" target="_blank" rel="noopener" hidden><?= v2_ic('file-text') ?>Citește contractul</a></div>
+      <div class="os-block-head"><div><h3>Semnează contractul</h3><p class="os-p">Semnătura electronică se aplică pe contract și primești imediat PDF-ul semnat. Până la semnare nu poți cere plăți.</p></div><a class="os-linkbtn" id="os-sign-read" href="#" target="_blank" rel="noopener" hidden><?= v2_ic('file-text') ?>Citește contractul</a></div>
       <div class="os-pad-wrap" id="os-pad-wrap">
         <canvas class="os-pad" id="os-pad" role="img" aria-label="Zona pentru semnătură. Desenează cu mouse-ul sau cu degetul, sau scrie-ți numele mai jos."></canvas>
         <span class="os-pad-line" aria-hidden="true"></span>
@@ -246,7 +247,7 @@ v2_org_start('settings');
 
   <!-- ============ SECURITY ============ -->
   <section class="org-panel os-panel" id="os-p-security" role="tabpanel" aria-labelledby="os-tab-security" hidden>
-    <div class="org-panel-head"><div><p class="org-k">Securitate</p><h2 class="org-panel-h">Schimbă parola</h2><p class="org-panel-p">Parola contului de organizator. Membrii echipei au parolele lor, din <a href="/organizator/echipa">Echipă</a>.</p></div></div>
+    <div class="org-panel-head"><div><p class="org-k">Securitate</p><h2 class="org-panel-h">Schimbă parola</h2><p class="org-panel-p">Parola contului de operator. Membrii echipei au parolele lor, din <a href="/organizator/echipa">Echipă</a>.</p></div></div>
     <div class="os-sec">
       <form class="os-form" id="os-pass-form" novalidate>
         <?php foreach (['cur' => ['Parola curentă', 'current-password'], 'new' => ['Parola nouă', 'new-password'], 'conf' => ['Confirmă parola nouă', 'new-password']] as $osP => [$osPl, $osPa]): ?>

@@ -20,7 +20,7 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
 $pageTitleRaw = 'Widget-uri embed — ' . SITE_NAME;
-$pageDescription = 'Widget-uri și pachet whitelabel pentru organizatorii de pe bilete.online.';
+$pageDescription = 'Widget-uri și pachet whitelabel pentru operatorii de pe bilete.online.';
 $canonicalUrl = SITE_URL . '/organizator/widget-uri';
 $noindex = true;
 $skipPageCache = true;
@@ -76,7 +76,7 @@ v2_org_start('widgets');
           <span class="ow-color"><input type="color" id="ow-accent" value="#D4A843" aria-label="Alege culoarea"><input type="text" id="ow-accent-hex" value="#D4A843" maxlength="7" spellcheck="false" aria-describedby="ow-accent-help"></span>
           <span class="ow-help" id="ow-accent-help">Butoane, link-uri, accente</span>
         </div>
-        <?= $owUpload('logo', 'Logo organizator', 'PNG, SVG sau JPG · max 5MB') ?>
+        <?= $owUpload('logo', 'Logo operator', 'PNG, SVG sau JPG · max 5MB') ?>
         <?= $owUpload('hero', 'Imagine hero homepage', 'Recomandat: 1920×800px') ?>
         <?= $owUpload('background', 'Imagine de fundal (opțional)', 'Se aplică pe toate paginile') ?>
       </div>

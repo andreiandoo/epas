@@ -145,6 +145,15 @@ RewriteRule ^organizator/(inregistrare|register)/?$ /inregistrare-locatie [R=301
 RewriteRule ^organizator/landing/?$ /parteneri [R=301,L,QSA]
 RewriteRule ^organizator/forgot-password/?$ /parola-uitata?ca=venue [R=301,L,QSA]
 
+# Operators on bilete.online sell locations and products (activities module), never events: the event screens send
+# the operator to what replaced them (302, so they can come back if a marketplace ever needs them again).
+RewriteRule ^organizator/(activities|event|events)(/[0-9]+)?/?$ /organizator/produse [R=302,L]
+RewriteRule ^organizator/(participanti|participants|vanzari|sales)/?$ /organizator/rezervari [R=302,L]
+RewriteRule ^organizator/(documente|documents|promo|invitatii|analytics|reports|tickets|orders)/?$ /organizator/panou [R=302,L]
+RewriteRule ^organizator/(analytics|report)/[0-9]+/?$ /organizator/panou [R=302,L]
+RewriteRule ^organizator/locatie/[a-z-]+/?$ /organizator/locatii [R=302,L]
+RewriteRule ^organizator/leisure[a-z-]*/?$ /organizator/locatii [R=302,L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/accept-invite/?$ organizer/accept-invite.php [L,QSA]

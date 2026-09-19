@@ -1,6 +1,6 @@
 <?php
 /**
- * bilete.online — Organizator › Suport (v3).
+ * bilete.online — Operator › Suport (v3).
  * Route: /organizator/suport
  *
  * Support ticket list + multi-step "new ticket" modal (department → problem

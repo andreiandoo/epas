@@ -25,7 +25,7 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
 $pageTitleRaw = 'Invitații — ' . SITE_NAME;
-$pageDescription = 'Invitații PDF cu cod QR pentru activitățile unui organizator pe bilete.online.';
+$pageDescription = 'Invitații PDF cu cod QR pentru activitățile unui operator pe bilete.online.';
 $canonicalUrl = SITE_URL . '/organizator/invitatii';
 $noindex = true;
 $skipPageCache = true;

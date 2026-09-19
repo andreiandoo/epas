@@ -76,7 +76,7 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="af-in">
       <div class="af-copy">
-        <p class="af-kicker" id="vf-kicker">Verificare email · cont <?= $isOrganizer ? 'organizator' : 'client' ?></p>
+        <p class="af-kicker" id="vf-kicker">Verificare email · cont <?= $isOrganizer ? 'operator' : 'client' ?></p>
         <h1 class="af-h" id="af-h"><?= $vfNowrap($vfCopy[$vfState][0]) ?></h1>
         <p class="af-lead" id="vf-lead"><?= v2_e($vfCopy[$vfState][1]) ?></p>
         <ol class="af-steps">

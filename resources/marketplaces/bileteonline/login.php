@@ -25,7 +25,7 @@ require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
 $pageTitleRaw    = 'Autentificare și creare cont — ' . SITE_NAME;
-$pageDescription = 'Intră în contul tău bilete.online sau creează un cont nou pentru bilete, comenzi, puncte bonus și carduri cadou. Login separat pentru locații / organizatori.';
+$pageDescription = 'Intră în contul tău bilete.online sau creează un cont nou pentru bilete, comenzi, puncte bonus și carduri cadou. Login separat pentru operatori.';
 $canonicalUrl    = SITE_URL . '/autentificare';
 $noindex         = true;     // login pages must not be indexed
 $currentPage     = 'login';

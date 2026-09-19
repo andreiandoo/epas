@@ -184,6 +184,24 @@ include __DIR__ . '/includes/v2/header.php';
                 <p class="ob-hint" id="ob-city-hint">Nu găsești localitatea? Alege orașul cel mai apropiat și spune-ne în mesaj.</p>
               </div>
               <div class="ob-field"><label for="ob-website">Site web (opțional)</label><input id="ob-website" name="website" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="200" placeholder="https://…"></div>
+              <fieldset class="ob-needs is-wide" id="ob-channels">
+                <legend>Vinzi sau vei vinde bilete și prin alt canal? *</legend>
+                <p class="ob-hint">Alt site sau altă platformă de bilete, agenții, parteneri. De răspuns depinde comisionul, pe care îl plătește cumpărătorul, peste prețul biletului.</p>
+                <div class="ob-needs-grid">
+                  <label class="ob-need">
+                    <input type="radio" name="sells_elsewhere" value="0">
+                    <span class="ob-need-ic" aria-hidden="true"><?= v2_ic('check-circle') ?></span>
+                    <span class="ob-need-t"><b>Nu, doar prin bilete.online</b><small>Exclusiv · comision 2%</small></span>
+                    <span class="ob-need-check" aria-hidden="true"><?= v2_ic('check') ?></span>
+                  </label>
+                  <label class="ob-need">
+                    <input type="radio" name="sells_elsewhere" value="1">
+                    <span class="ob-need-ic" aria-hidden="true"><?= v2_ic('link') ?></span>
+                    <span class="ob-need-t"><b>Da, și prin alte canale</b><small>Neexclusiv · comision 4%</small></span>
+                    <span class="ob-need-check" aria-hidden="true"><?= v2_ic('check') ?></span>
+                  </label>
+                </div>
+              </fieldset>
               <div class="ob-field is-wide"><label for="ob-volume">Volum estimat de bilete / lună</label><select class="select" id="ob-volume" name="volume_estimate"><?php foreach ($obVolumes as $volValue => $volLabel): ?><option value="<?= v2_e($volValue) ?>"><?= v2_e($volLabel) ?></option><?php endforeach; ?></select></div>
               <fieldset class="ob-needs is-wide">
                 <legend>De ce ai nevoie? <span>(opțional)</span></legend>
@@ -220,7 +238,7 @@ include __DIR__ . '/includes/v2/header.php';
           </div>
         </div>
       </div>
-      <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2%* plătit de cumpărător</p>
+      <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2% plătit de cumpărător (4% dacă vinzi și prin alte canale)</p>
     </div>
   </section>
 </main>

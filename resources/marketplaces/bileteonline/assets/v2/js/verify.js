@@ -55,7 +55,7 @@
   }
 
   if (type === 'organizer') {
-    $('vf-kicker').textContent = 'Verificare email · cont organizator';
+    $('vf-kicker').textContent = 'Verificare email · cont operator';
     [].forEach.call(document.querySelectorAll('[data-vf-account]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'Mergi la panou'; });
     [].forEach.call(document.querySelectorAll('[data-vf-account-text]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'mergi la panou'; });
   }
