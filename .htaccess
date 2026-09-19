@@ -33,6 +33,12 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^atractie/([a-z0-9-]+)/?$ atractie.php?slug=$1 [L,QSA]
 
+# Experiences of the activities module — /experienta/{slug}. Access tickets and
+# packages have no page of their own: their slug redirects to the location.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^experienta/([a-z0-9-]+)/?$ experienta.php?slug=$1 [L,QSA]
+
 # Category & city single-segment URLs.
 # Both `/escape-rooms` (category) and `/bucuresti` (city) match `^[a-z][a-z0-9-]+$`.
 # category.php is the resolver — it queries the API; if the slug matches a
@@ -95,8 +101,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^operator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
-# Legacy: the old "Locații" listing now redirects to Operators
-RewriteRule ^locatii/?$ /operatori [R=301,L]
+# Locations with online tickets (activities module) — /locatii
+RewriteRule ^locatii/?$ hub-locatii.php [L,QSA]
+
+# Sitemap: hubs, locations and experiences (activities module)
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
 # Venue type pages (internal — still reachable, e.g. activity venue links)
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -247,6 +256,11 @@ RewriteRule ^organizator/locatie/bilete/?$ organizer/venue-products.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
+
+# Activities module: the operator's locations, products and bookings
+RewriteRule ^organizator/locatii/?$ organizer/am-locations.php [L,QSA]
+RewriteRule ^organizator/produse/?$ organizer/am-products.php [L,QSA]
+RewriteRule ^organizator/rezervari/?$ organizer/am-bookings.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -710,6 +724,18 @@ RewriteRule ^view/([A-Za-z0-9]{6,20})/?$ view.php?code=$1 [L,QSA]
 # ============================================
 RewriteCond %{REQUEST_URI} ^/api/ [NC]
 RewriteRule ^ - [L]
+
+# ============================================
+# HUBS (activities module): experiences, attractions, locations,
+# country-wide and per city — /experiente, /atractii, /{city}/experiente,
+# /{city}/atractii, /{city}/locatii (/locatii is above). Before the
+# 2-segment activity rule below; the page 404s when the city is unknown.
+# ============================================
+RewriteRule ^experiente/?$ hub-experiente.php [L,QSA]
+RewriteRule ^atractii/?$ hub-atractii.php [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z][a-z0-9-]{1,50})/(experiente|atractii|locatii)/?$ hub-$2.php?city=$1 [L,QSA]
 
 # ============================================
 # CITY × INTENT SEO PAGES

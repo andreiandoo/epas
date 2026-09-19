@@ -2,6 +2,8 @@
 /**
  * Single venue: /locatie/{slug} (v2 design).
  *
+ * Locations of the activities module render includes/v2/location-page.php instead (checked first).
+ *
  * Pure render: expects $_GET['slug']. Reads the venue from `GET /venues/{slug}` and 404s cleanly when the
  * slug doesn't match. Understands both the core API shape (city as plain text, cover_image, schedule,
  * coordinates, similar_venues) and the older one the page was first built on (city {name, slug},
@@ -22,6 +24,14 @@ $slug = $_GET['slug'] ?? '';
 if (!is_string($slug) || !preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     http_response_code(404);
     require __DIR__ . '/404.php';
+    exit;
+}
+
+// Locations sold through the activities module (access tickets, experiences, packages) have their own page.
+$amLocation = api_cached("am_location_{$slug}", fn () => api_get('/activities-module/locations/' . $slug), 60);
+if (!empty($amLocation['success']) && is_array($amLocation['data'] ?? null) && ($amLocation['data']['slug'] ?? '') === $slug) {
+    $location = $amLocation['data'];
+    require __DIR__ . '/includes/v2/location-page.php';
     exit;
 }
 

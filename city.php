@@ -119,6 +119,13 @@ $listings = api_cached_many([
         'params'   => ['city' => $slug, 'per_page' => 8],
         'ttl'      => 300,
     ],
+    // Locations with online tickets (activities module); empty where the module is off
+    'locations' => [
+        'key'      => "v2_city_locations_{$slug}",
+        'endpoint' => '/activities-module/locations',
+        'params'   => ['city' => $slug, 'per_page' => 8],
+        'ttl'      => 300,
+    ],
 ]);
 
 $eventsResp = $listings['events'] ?? ['data' => []];
@@ -167,6 +174,21 @@ $pagination = [
     'last_page'    => max((int) ($evPagination['last_page'] ?? 1), (int) ($actPagination['last_page'] ?? 1)),
     'total'        => (int) ($evPagination['total'] ?? count($events)) + (int) ($actPagination['total'] ?? count($activities)),
 ];
+
+// Locations with online tickets in this city (access tickets, experiences, packages). Section hidden when none.
+$cityLocations = [];
+foreach ((array) (($listings['locations']['success'] ?? false) ? ($listings['locations']['data']['items'] ?? []) : []) as $l) {
+    if (!is_array($l) || empty($l['slug']) || navFlatName($l['name'] ?? '') === '') {
+        continue;
+    }
+    $cityLocations[] = [
+        'href' => '/locatie/' . $l['slug'],
+        'name' => navFlatName($l['name']),
+        'image' => v2_media_url($l['cover_image'] ?? null),
+        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · de la ' . v2_thousands((int) round($l['min_price_cents'] / 100)) . ' lei' : ''), ' ·'),
+        'lodging' => !empty($l['has_lodging']),
+    ];
+}
 
 // Attractions in this city (points of interest). Section hidden when none.
 $atData = $listings['attractions']['data'] ?? [];
@@ -662,6 +684,38 @@ include __DIR__ . '/includes/v2/header.php';
       </aside>
     </div>
   </section>
+
+  <!-- ============================== LOCAȚII (bilete online la intrare) ============================== -->
+  <?php if ($cityLocations): ?>
+  <section class="sec attr" id="locatii" aria-labelledby="loc-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <h2 id="loc-h">Locații cu bilete online în <?= v2_e($cityName) ?></h2>
+          <p class="sec-sub">Îți iei biletul de intrare și experiențele de acolo dinainte, într-o singură comandă.</p>
+        </div>
+        <div class="sec-tools">
+          <a class="sec-link" href="/<?= v2_e($slug) ?>/locatii">Toate locațiile<?= v2_ic('arrow-right') ?></a>
+          <?php if (count($cityLocations) > 2): ?>
+          <div class="rail-btns" data-for="loc-rail">
+            <button class="rail-btn" type="button" data-dir="-1" aria-label="Locațiile anterioare"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" data-dir="1" aria-label="Locațiile următoare"><?= v2_ic('arrow-right') ?></button>
+          </div>
+          <?php endif; ?>
+        </div>
+      </div>
+      <ul class="rail" id="loc-rail">
+        <?php foreach ($cityLocations as $li => $lc): ?>
+        <li class="at"><a href="<?= v2_e($lc['href']) ?>">
+          <span class="at-media"><?= $lc['image'] ? v2_photo([$lc['image'], 0, 0, '']) : v2_fallback($lc['name'], $li) ?><?php if ($lc['lodging']): ?><span class="at-badge">Cazare</span><?php endif; ?></span>
+          <span class="at-name"><?= v2_e($lc['name']) ?><?= v2_ic('arrow-right') ?></span>
+          <?php if ($lc['meta'] !== ''): ?><span class="at-meta"><span><?= v2_e($lc['meta']) ?></span></span><?php endif; ?>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+  <?php endif; ?>
 
   <!-- ============================== ATRACȚII ============================== -->
   <?php if (!empty($cityAttractions)): ?>

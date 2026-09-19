@@ -67,10 +67,7 @@ $pricedFromCents = function ($c): string {
     if (!$c) return '';
     return number_format($c / 100, 0, ',', '.') . ' lei';
 };
-$cardUrl = function ($a) {
-    $cs = $a['city']['slug'] ?? '';
-    return $cs ? '/' . $cs . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? '');
-};
+$cardUrl = fn ($a) => '/experienta/' . ($a['slug'] ?? '');
 
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
 if ($atCityName && $atCitySlug) {

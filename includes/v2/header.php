@@ -13,6 +13,11 @@ $v2Ideas = [
     ['cloud-rain', 'Indoor când plouă', '/activitati-zile-ploioase'], ['coins', 'Sub 50 lei', '/activitati-sub-50-lei'],
     ['heart', 'Pentru cupluri', '/activitati-cuplu'], ['gift', 'Experiențe cadou', '/experiente-cadou'],
 ];
+// Under "Explorează": attractions are the places to see (points of interest); tickets are sold on /locatii.
+$v2AttrLinks = [
+    ['castle-turret', 'Castele și palate', '/atractii?tip=castel-palat'], ['buildings', 'Muzee', '/atractii?tip=muzeu'],
+    ['map-pin', 'Toate atracțiile', '/atractii'],
+];
 $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV) {
     return $V2NAV['cities'][$s] ?? null;
 }, ['brasov', 'sibiu', 'cluj-napoca', 'bucuresti', 'constanta', 'sinaia'])));
@@ -30,7 +35,8 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
     </a>
     <nav class="mnav" aria-label="Principal">
       <button class="mnav-btn" type="button" data-mega="explore" aria-expanded="false" aria-controls="mega-explore">Explorează<?= v2_ic('caret-down') ?></button>
-      <button class="mnav-btn" type="button" data-mega="activities" aria-expanded="false" aria-controls="mega-activities">Activități<?= v2_ic('caret-down') ?></button>
+      <a class="mnav-link" href="/locatii">Locații</a>
+      <button class="mnav-btn" type="button" data-mega="activities" aria-expanded="false" aria-controls="mega-activities">Experiențe<?= v2_ic('caret-down') ?></button>
       <button class="mnav-btn" type="button" data-mega="inspiration" aria-expanded="false" aria-controls="mega-inspiration">Inspirație<?= v2_ic('caret-down') ?></button>
       <a class="mnav-link" href="/card-cadou">Card cadou</a>
     </nav>
@@ -98,6 +104,12 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
           <li><a class="idea" href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li>
           <?php endforeach; ?>
         </ul>
+        <p class="mega-label">Atracții</p>
+        <ul class="ideas">
+          <?php foreach ($v2AttrLinks as [$icon, $text, $href]): ?>
+          <li><a class="idea" href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li>
+          <?php endforeach; ?>
+        </ul>
       </aside>
     </div>
   </div>
@@ -107,7 +119,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       <div class="ma-main">
         <div class="ma-top">
           <p class="mega-label">Toate categoriile, dintr-o privire</p>
-          <a class="mega-all" href="/categorii">Pagina categoriilor<?= v2_ic('arrow-right') ?></a>
+          <a class="mega-all" href="/experiente">Toate experiențele<?= v2_ic('arrow-right') ?></a>
         </div>
         <ul class="ma-dir">
           <?php foreach ($V2NAV['categories'] as $c):
@@ -192,10 +204,11 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
       <section class="mm-panel is-current" id="mm-root" aria-label="Meniu principal">
         <ul class="mm-main">
           <li style="--i:1"><button class="mm-row" type="button" data-mm-go="mm-explore"><span class="mm-ic"><?= v2_ic('map-trifold') ?></span><span class="mm-t"><b>Explorează</b><small><?= $v2MmCityTotal ? v2_num($v2MmCityTotal, 'oraș', 'orașe') . ' în ' . count($V2NAV['regions']) . ' regiuni' : 'Orașe și regiuni' ?></small></span><?= v2_ic('arrow-right') ?></button></li>
-          <li style="--i:2"><button class="mm-row" type="button" data-mm-go="mm-activities"><span class="mm-ic"><?= v2_ic('squares-four') ?></span><span class="mm-t"><b>Activități</b><small><?= v2_num(count($V2NAV['categories']), 'categorie', 'categorii') ?> de experiențe</small></span><?= v2_ic('arrow-right') ?></button></li>
+          <li style="--i:2"><a class="mm-row" href="/locatii"><span class="mm-ic"><?= v2_ic('ticket') ?></span><span class="mm-t"><b>Locații</b><small>Bilete de intrare, online</small></span><?= v2_ic('arrow-right') ?></a></li>
+          <li style="--i:2"><button class="mm-row" type="button" data-mm-go="mm-activities"><span class="mm-ic"><?= v2_ic('squares-four') ?></span><span class="mm-t"><b>Experiențe</b><small><?= v2_num(count($V2NAV['categories']), 'categorie', 'categorii') ?> de experiențe</small></span><?= v2_ic('arrow-right') ?></button></li>
           <li style="--i:3"><button class="mm-row" type="button" data-mm-go="mm-inspiration"><span class="mm-ic"><?= v2_ic('sun') ?></span><span class="mm-t"><b>Inspirație</b><small>Ghiduri și idei de weekend</small></span><?= v2_ic('arrow-right') ?></button></li>
           <li style="--i:4"><a class="mm-row" href="/card-cadou"><span class="mm-ic is-gold"><?= v2_ic('gift') ?></span><span class="mm-t"><b>Card cadou</b><small>Dăruiește o experiență</small></span><?= v2_ic('arrow-right') ?></a></li>
-          <li style="--i:5"><a class="mm-row" href="/operatori"><span class="mm-ic"><?= v2_ic('buildings') ?></span><span class="mm-t"><b>Operatori</b><small>Locațiile de pe bilete.online</small></span><?= v2_ic('arrow-right') ?></a></li>
+          <li style="--i:5"><a class="mm-row" href="/operatori"><span class="mm-ic"><?= v2_ic('buildings') ?></span><span class="mm-t"><b>Operatori</b><small>Firmele care vând pe bilete.online</small></span><?= v2_ic('arrow-right') ?></a></li>
         </ul>
 
         <div class="mm-block" style="--i:6">
@@ -250,10 +263,12 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
           <a class="mm-all" href="/<?= v2_e($r['slug']) ?>">Toate cele <?= v2_num($r['citiesCount'], 'oraș', 'orașe') ?> din <?= v2_e($r['name']) ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <?php endforeach; ?>
+        <p class="mm-k">Atracții</p>
+        <ul class="mm-chips"><?php foreach ($v2AttrLinks as [$icon, $text, $href]): ?><li><a href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li><?php endforeach; ?></ul>
       </section>
 
       <section class="mm-panel" id="mm-activities" aria-labelledby="mm-activities-h" hidden>
-        <div class="mm-phead"><button class="mm-back" type="button" data-mm-back><?= v2_ic('arrow-left') ?><span class="sr">Înapoi la meniu</span></button><h2 class="mm-ph" id="mm-activities-h">Activități</h2><a class="mm-plink" href="/categorii">Toate</a></div>
+        <div class="mm-phead"><button class="mm-back" type="button" data-mm-back><?= v2_ic('arrow-left') ?><span class="sr">Înapoi la meniu</span></button><h2 class="mm-ph" id="mm-activities-h">Experiențe</h2><a class="mm-plink" href="/experiente">Toate</a></div>
         <ul class="mm-cats">
           <?php foreach ($V2NAV['categories'] as $i => $c): ?>
           <li class="mm-cat">
