@@ -8,6 +8,7 @@
  * promoMessage, summary-section, taxesContainer, summaryItems, subtotal, platformCommissionRow,
  * platformCommissionLabel, platformCommissionAmount, processingFeeRow, processingFeeAmount, discountRow,
  * discountAmount, savingsRow, savingsText, savings, totalPrice, pointsReward, pointsRule, pointsEarned, checkoutBtn.
+ * How the points are earned is a tooltip on the info icon (pointsRule), not a line under the heading.
  * The points box shows only when the marketplace runs a points programme (rules from /checkout/features).
  * The script shows and hides them with a `hidden` class (base.css).
  * The head (title, steps, count) is for a cart with something in it: an inline script hides it before the first paint
@@ -27,6 +28,7 @@ $noindex         = true;
 $currentPage     = 'cart';
 
 $v2Styles = ['cart.css'];
+$v2FooterSwitch = true; // short footer once there are products in the cart (cart-page.js)
 $v2Scripts = ['cart.js'];
 $v2LegacyScripts = [
     'assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js',
@@ -145,7 +147,7 @@ include __DIR__ . '/includes/v2/header.php';
             <div id="savingsRow" class="cs-save hidden"><?= v2_ic('check-circle') ?><span id="savingsText">Economisești:</span><strong id="savings">0,00 lei</strong></div>
             <div class="cs-reward hidden" id="pointsReward">
               <span class="cs-reward-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
-              <div><b>Vei câștiga</b><p id="pointsRule">puncte la fiecare comandă</p></div>
+              <div class="cs-reward-t"><b>Vei câștiga</b><span class="cs-tip"><button class="cs-tip-btn" id="pointsRuleBtn" type="button" aria-describedby="pointsRule" aria-label="Cum se câștigă punctele"><?= v2_ic('info') ?></button><span class="cs-tip-box" id="pointsRule" role="tooltip">puncte la fiecare comandă</span></span></div>
               <p class="cs-pts"><span id="pointsEarned" class="points-animation">0</span><small>puncte</small></p>
             </div>
             <p class="cs-note">Taxa de procesare card se calculează la checkout, în funcție de metoda de plată.</p>

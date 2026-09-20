@@ -172,16 +172,17 @@
       var c = commissionOf(l.product);
       if (c.mode === 'added_on_top' && c.rate > 0) fee += Math.round(value * c.rate / 100);
     });
-    // Card processing fee when the marketplace passes it to the customer (same preview as the checkout page;
-    // the server computes it again on the order).
-    var card = { cents: 0 };
+    // The card processing fee isn't part of this total and isn't shown here: it depends on the payment method chosen
+    // in the checkout, which is where it is added (the cart page says the same). `card` only says whether this
+    // marketplace passes it to the customer, so the note can be shown.
+    var card = 0;
     if (sub > 0 && typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.computeProcessingFee === 'function') {
       try {
         var pf = BileteOnlineCart.computeProcessingFee((sub + fee) / 100);
-        card = { cents: Math.round((pf.amount || 0) * 100) };
+        card = Math.round((pf.amount || 0) * 100);
       } catch (e) {}
     }
-    return { sub: sub, fee: fee, card: card.cents, total: sub + fee + card.cents };
+    return { sub: sub, fee: fee, card: card, total: sub + fee };
   }
 
   /* ---------------- rendering ---------------- */
@@ -190,7 +191,7 @@
       elSum = $('bkx-sum'), elLines = $('bkx-lines'), elSub = $('bkx-sub'), elFeeRow = $('bkx-fee-row'), elFee = $('bkx-fee'),
       elFeeRate = $('bkx-fee-rate'), elTotal = $('bkx-total'), elErr = $('bkx-err'), elCart = $('bkx-cart'), elGo = $('bkx-go'),
       elBar = $('bkx-bar'), elBarTotal = $('bkx-bar-total'), elBarCount = $('bkx-bar-count'),
-      elCardRow = $('bkx-card-row'), elCard = $('bkx-card');
+      elCardNote = $('bkx-card-note');
 
   function renderDays() {
     elDays.textContent = '';
@@ -414,10 +415,7 @@
     elFeeRow.hidden = !t.fee;
     elFeeRate.textContent = rates.length ? String(rates[0].rate).replace('.', ',') : '';
     elFee.textContent = lei(t.fee);
-    if (elCardRow) {
-      elCardRow.hidden = !t.card;
-      elCard.textContent = lei(t.card);
-    }
+    if (elCardNote) elCardNote.hidden = !t.card;
     elTotal.textContent = lei(t.total);
     elBarTotal.textContent = lei(t.total);
     elBarCount.textContent = count === 1 ? '1 bilet' : count + ' bilete';

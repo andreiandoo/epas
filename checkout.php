@@ -14,7 +14,8 @@
  * insurance-row/-label/-amount, cultural-card-row, cultural-card-surcharge-label, cultural-card-amount,
  * processing-fee-row/label/amount, summary-total, savings-text, savings-amount, points-earned, payBtn, pay-btn-text,
  * points-row/label/amount, points-box, points-use-row, use-points, use-points-title/sub, points-note, points-login,
- * points-reward, points-rule (loyalty points: shown only when the marketplace runs automatic rewards),
+ * points-reward, points-rule (loyalty points: shown only when the marketplace runs automatic rewards, with how they
+ * are earned in a tooltip on the info icon),
  * login-modal, checkout-login-form, login-email, login-password, login-submit-btn, login-btn-text.
  * The script shows and hides them with a `hidden` class (base.css). Styles: cart.css (head, timer, layout,
  * skeletons, summary card, empty state, phone bar) + checkout.css.
@@ -33,6 +34,7 @@ $noindex         = true;
 $currentPage     = 'checkout';
 
 $v2Styles = ['cart.css', 'checkout.css'];
+$v2FooterCompact = true; // the checkout always has products in the cart: short footer
 $v2Scripts = ['checkout.js'];
 $v2LegacyScripts = [
     'assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js',
@@ -289,7 +291,7 @@ include __DIR__ . '/includes/v2/header.php';
             </div>
             <div class="cs-reward hidden" id="points-reward">
               <span class="cs-reward-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
-              <div><b>Vei câștiga</b><p id="points-rule">puncte la fiecare comandă</p></div>
+              <div class="cs-reward-t"><b>Vei câștiga</b><span class="cs-tip"><button class="cs-tip-btn" id="points-rule-btn" type="button" aria-describedby="points-rule" aria-label="Cum se câștigă punctele"><?= v2_ic('info') ?></button><span class="cs-tip-box" id="points-rule" role="tooltip">puncte la fiecare comandă</span></span></div>
               <p class="cs-pts"><span id="points-earned">0 puncte</span></p>
             </div>
           </div>
