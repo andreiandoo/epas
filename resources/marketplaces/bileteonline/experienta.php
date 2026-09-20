@@ -226,8 +226,8 @@ include __DIR__ . '/includes/v2/header.php';
           <ul class="bkx-lines" id="bkx-lines"></ul>
           <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub">0 lei</strong></div>
           <div class="bkx-row" id="bkx-fee-row" hidden><span>Comision ticketing (<span id="bkx-fee-rate"></span>%)</span><strong id="bkx-fee">0 lei</strong></div>
-          <div class="bkx-row" id="bkx-card-row" hidden><span>Comision tranzacționare plată</span><strong id="bkx-card">0 lei</strong></div>
           <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total">0 lei</strong></div>
+          <p class="bkx-small" id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă.</p>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
             <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continuă spre plată<?= v2_ic('arrow-right') ?></button>

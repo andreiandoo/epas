@@ -224,6 +224,13 @@ const CartPage = {
 
         loading.classList.add('hidden');
         const hadFocus = !!document.activeElement && container.contains(document.activeElement);
+        // With products in the cart the page wears the short footer (both are printed, see includes/v2/footer.php).
+        const miniFooter = document.querySelector('footer[data-ftr="mini"]');
+        const fullFooter = document.querySelector('footer[data-ftr="full"]');
+        if (miniFooter && fullFooter) {
+            miniFooter.hidden = items.length === 0;
+            fullFooter.hidden = items.length > 0;
+        }
 
         if (items.length === 0) {
             container.classList.add('hidden');

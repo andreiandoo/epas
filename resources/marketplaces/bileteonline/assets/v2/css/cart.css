@@ -175,6 +175,15 @@
 .cs-reward-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#FFE7AD;color:#8A5A00}
 .cs-reward-ic .ic{width:22px;height:22px}
 .cs-reward b{display:block;font-size:.9375rem}
+.cs-reward-t{display:flex;align-items:center;gap:4px}
+/* how the points are earned: a tooltip on the info icon, on hover and on keyboard focus */
+.cs-tip{position:relative;display:inline-flex}
+.cs-tip-btn{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);cursor:help}
+.cs-tip-btn:hover,.cs-tip-btn:focus-visible{background:#FFE7AD;color:#8A5A00}
+.cs-tip-btn .ic{width:17px;height:17px}
+.cs-tip-box{position:absolute;z-index:20;left:-8px;bottom:calc(100% + 6px);width:max-content;max-width:min(260px, 70vw);padding:10px 12px;border-radius:var(--r-m);background:var(--deep);color:#F7F7F5;font-size:.8125rem;font-weight:500;line-height:1.4;box-shadow:var(--shadow-pop);opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out), visibility 0s linear var(--dur-micro)}
+.cs-tip:hover .cs-tip-box,.cs-tip:focus-within .cs-tip-box{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+@media (prefers-reduced-motion:reduce){.cs-tip-box{transition:none}}
 .cs-reward p{margin:0;font-size:.8125rem;color:var(--muted)}
 .cs-reward .cs-pts{margin:0;text-align:right}
 .cs-pts span{display:block;font-size:1.75rem;font-weight:700;line-height:1;color:#8A5A00;font-variant-numeric:tabular-nums}

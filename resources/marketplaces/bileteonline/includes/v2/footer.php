@@ -9,11 +9,15 @@
  *   $v2ClientData     data for the page script, printed as JSON in #v2-data
  *   $v2FooterCompact  true for the one-line footer (login page, customer account): brand, the help and legal links,
  *                     cookie settings, the ANPC badges the law asks for and the copyright; nothing else
+ *   $v2FooterSwitch   true for the cart: both footers are printed and the page shows the short one as soon as there
+ *                     are products in the cart (cart-page.js switches [data-ftr]); with an empty cart, or without
+ *                     JavaScript, the full footer is the one on screen
  */
-if (!empty($v2FooterCompact)) {
+$v2FooterSwitch = !empty($v2FooterSwitch) && empty($v2FooterCompact);
+if (!empty($v2FooterCompact) || $v2FooterSwitch) {
     ?>
-<footer class="ftr-mini" aria-labelledby="ftr-h">
-  <h2 class="sr" id="ftr-h">Despre bilete.online</h2>
+<footer class="ftr-mini"<?= $v2FooterSwitch ? ' data-ftr="mini" hidden' : '' ?> aria-labelledby="<?= $v2FooterSwitch ? 'ftr-h-mini' : 'ftr-h' ?>">
+  <h2 class="sr" id="<?= $v2FooterSwitch ? 'ftr-h-mini' : 'ftr-h' ?>">Despre bilete.online</h2>
   <div class="wrap ftr-mini-in">
     <a class="ftr-mini-brand" href="/" aria-label="bilete.online, pagina principală"><?= v2_brand('brand') ?></a>
     <nav class="ftr-mini-links" aria-label="Ajutor și informații legale">
@@ -32,8 +36,10 @@ if (!empty($v2FooterCompact)) {
   </div>
 </footer>
 <?php
-    include __DIR__ . '/foot.php';
-    return;
+    if (!$v2FooterSwitch) {
+        include __DIR__ . '/foot.php';
+        return;
+    }
 }
 $v2FootCities = array_slice($V2NAV['citiesList'], 0, 8);
 $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
@@ -46,7 +52,7 @@ usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
     return strcmp($v2Fold($a), $v2Fold($b));
 });
 ?>
-<footer class="ftr" aria-labelledby="ftr-h">
+<footer class="ftr"<?= $v2FooterSwitch ? ' data-ftr="full"' : '' ?> aria-labelledby="ftr-h">
   <svg class="ftr-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true"><use href="#drum-g"/></svg>
   <h2 class="sr" id="ftr-h">Despre bilete.online</h2>
   <div class="wrap ftr-top">
