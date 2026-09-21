@@ -364,6 +364,178 @@ function mapBuildByPagination(): ?array
 }
 
 /**
+ * Per-landing counters and picks, one entry per /harta/{slug} page: the attractions of one type,
+ * or of one historical region. Without these every landing would print the same cities and the
+ * same 36 photos, which is the definition of a doorway page.
+ *
+ * Keys are the URL slugs from includes/v2/map-landings.php; the builder does not need to know the
+ * copy, only how to slice the dataset.
+ */
+function mapLandings(array $payload): array
+{
+    $f      = array_flip($payload['fields']);
+    $types  = $payload['types'];
+    $cities = $payload['cities'];
+    $zones  = $payload['zones'];
+
+    // URL slug => [kind, key]. Mirrors MAP_LANDINGS in includes/v2/map-landings.php.
+    $defs = [
+        'castele'              => ['type', 'castel-palat'],
+        'muzee'                => ['type', 'muzeu'],
+        'monumente'            => ['type', 'monument'],
+        'biserici-si-manastiri' => ['type', 'biserica-manastire'],
+        'parcuri-si-gradini'   => ['type', 'parc-gradina'],
+        'cladiri-istorice'     => ['type', 'cladire-istorica'],
+        'teatre-si-opere'      => ['type', 'teatru-opera'],
+        'lacuri-si-natura'     => ['type', 'lac-natura'],
+        'transilvania'         => ['region', 'Transilvania'],
+        'muntenia'             => ['region', 'Muntenia'],
+        'moldova'              => ['region', 'Moldova'],
+        'banat'                => ['region', 'Banat'],
+        'oltenia'              => ['region', 'Oltenia'],
+        'dobrogea'             => ['region', 'Dobrogea'],
+        'crisana'              => ['region', 'Crișana'],
+        'maramures'            => ['region', 'Maramureș'],
+    ];
+
+    $typeIndexBySlug = array_flip(array_column($types, 0));
+    $out = [];
+
+    foreach ($defs as $slug => [$kind, $key]) {
+        $keep = null;
+        if ($kind === 'type') {
+            $ti = $typeIndexBySlug[$key] ?? null;
+            if ($ti === null) {
+                continue;
+            }
+            $keep = fn ($p) => $p[$f['type']] === $ti;
+        } else {
+            $zoneIds = [];
+            foreach ($zones as $zi => $z) {
+                if (($z[1] ?? null) === $key) {
+                    $zoneIds[$zi] = true;
+                }
+            }
+            if (!$zoneIds) {
+                continue;
+            }
+            $keep = fn ($p) => isset($zoneIds[$p[$f['zone']]]);
+        }
+
+        $total    = 0;
+        $byCity   = [];
+        $byZone   = [];
+        $byType   = [];
+        $withPic  = [];
+        $noPic    = [];
+        foreach ($payload['points'] as $p) {
+            if (!$keep($p)) {
+                continue;
+            }
+            $total++;
+            if ($p[$f['city']] >= 0) {
+                $byCity[$p[$f['city']]] = ($byCity[$p[$f['city']]] ?? 0) + 1;
+            }
+            if ($p[$f['zone']] >= 0) {
+                $byZone[$p[$f['zone']]] = ($byZone[$p[$f['zone']]] ?? 0) + 1;
+            }
+            if ($p[$f['type']] >= 0) {
+                $byType[$p[$f['type']]] = ($byType[$p[$f['type']]] ?? 0) + 1;
+            }
+            if ($p[$f['img']]) {
+                $withPic[] = $p;
+            } elseif (count($noPic) < 400) {
+                $noPic[] = $p;
+            }
+        }
+        if ($total === 0) {
+            continue;
+        }
+
+        arsort($byCity);
+        arsort($byZone);
+        arsort($byType);
+
+        $cityRows = [];
+        foreach (array_slice($byCity, 0, 14, true) as $ci => $n) {
+            $cityRows[] = [$cities[$ci][0], $cities[$ci][1], $cities[$ci][2], $cities[$ci][3], $n];
+        }
+        $zoneRows = [];
+        foreach (array_slice($byZone, 0, 10, true) as $zi => $n) {
+            $zoneRows[] = [$zones[$zi][0], $zones[$zi][1], $n];
+        }
+        $typeRows = [];
+        foreach (array_slice($byType, 0, 10, true) as $ti2 => $n) {
+            $typeRows[] = [$types[$ti2][0], $types[$ti2][1], $types[$ti2][2], $n];
+        }
+
+        // Four types have no cover photo at all (parks, historic buildings, theatres, lakes), and
+        // an empty grid helps nobody -- those fall back to rows without a photo, which the page
+        // renders with the brand-line placeholder. The links are the point.
+        $pool = count($withPic) >= 12 ? $withPic : array_merge($withPic, $noPic);
+
+        // A type landing spreads its picks over as many cities as it can. A region landing spreads
+        // them over types instead: half of Transylvania is churches, so picking by city alone gave
+        // it almost the same 18 rows as the churches landing.
+        if ($kind === 'region') {
+            $buckets = [];
+            foreach ($pool as $p) {
+                $buckets[$p[$f['type']]][] = $p;
+            }
+            uasort($buckets, fn ($a, $b) => count($b) <=> count($a));
+            $ordered = [];
+            for ($round = 0; $round < 60; $round++) {
+                $any = false;
+                foreach ($buckets as $bucket) {
+                    if (isset($bucket[$round])) {
+                        $ordered[] = $bucket[$round];
+                        $any = true;
+                    }
+                }
+                if (!$any) {
+                    break;
+                }
+            }
+            $pool = $ordered;
+        }
+
+        $picks = [];
+        $seenCity = [];
+        foreach ([true, false] as $onePerCity) {
+            foreach ($pool as $p) {
+                if (count($picks) >= 18) {
+                    break 2;
+                }
+                if (isset($picks[$p[$f['slug']]])) {
+                    continue;
+                }
+                $ci = $p[$f['city']];
+                if ($onePerCity && $ci >= 0 && isset($seenCity[$ci])) {
+                    continue;
+                }
+                $seenCity[$ci] = true;
+                $t = $p[$f['type']] >= 0 ? $types[$p[$f['type']]] : null;
+                $c = $ci >= 0 ? $cities[$ci] : null;
+                $picks[$p[$f['slug']]] = [$p[$f['slug']], $p[$f['name']], $t ? $t[1] : '', $t ? $t[2] : '', $c ? $c[1] : '', $c ? $c[0] : '', $p[$f['img']]];
+            }
+        }
+
+        $out[$slug] = [
+            'kind'     => $kind,
+            'key'      => $key,
+            'total'    => $total,
+            'photos'   => count($withPic),
+            'cities'   => $cityRows,
+            'zones'    => $zoneRows,
+            'types'    => $typeRows,
+            'picks'    => array_values($picks),
+        ];
+    }
+
+    return $out;
+}
+
+/**
  * A few KB of counters and hand-picked rows derived from the full payload, so /harta can render
  * real server-side content (type cards, regions, cities, a grid of attractions) without parsing
  * the ~950 KB pin file on every request.
@@ -462,6 +634,7 @@ function mapSummary(array $payload): array
         'counties' => array_slice($countyRows, 0, 24),
         'cities'   => array_slice($cityRows, 0, 40),
         'picks'    => $picks,
+        'landings' => mapLandings($payload),
     ];
 }
 

@@ -10,7 +10,10 @@
  *   breadcrumbs [[name, url]]
  *   config      EPMap config (see assets/v2/js/map.js); `dialog` is forced off here
  *   summary     v2_map_summary() output
- *   sections    which blocks to print: any of 'types','regions','cities','picks' (default: all)
+ *   grids       [[id, h, rows [[emoji, name, count, href]], unit?, more? [text, href]]]
+ *   cities      rows [[slug, name, county, region, count]]  (defaults to the whole-country list)
+ *   picks       rows [[slug, name, type, emoji, city, citySlug, img]]
+ *   sections    which blocks to print: 'cities' and/or 'picks' (default: both)
  *   prose       [paragraph html]
  *   faq         [[question, answer]]
  */
@@ -19,12 +22,10 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/nav.php';
 
 $mpSummary  = $mapPage['summary'] ?? [];
-$mpSections = $mapPage['sections'] ?? ['types', 'regions', 'cities', 'picks'];
+$mpSections = $mapPage['sections'] ?? ['cities', 'picks'];
 $mpHas      = fn (string $s) => in_array($s, $mpSections, true);
-$mpTypes    = $mpSummary['types'] ?? [];
-$mpRegions  = $mpSummary['regions'] ?? [];
-$mpCities   = $mpSummary['cities'] ?? [];
-$mpPicks    = $mpSummary['picks'] ?? [];
+$mpCities   = $mapPage['cities'] ?? ($mpSummary['cities'] ?? []);
+$mpPicks    = $mapPage['picks'] ?? ($mpSummary['picks'] ?? []);
 $mpFaq      = $mapPage['faq'] ?? [];
 
 $v2Styles  = array_merge(['map.css', 'map-page.css'], $v2Styles ?? []);
@@ -66,53 +67,34 @@ include __DIR__ . '/header.php';
     </div>
   </section>
 
-  <?php if ($mpHas('types') && $mpTypes): ?>
-  <!-- ============================== TYPES ============================== -->
-  <section class="sec" aria-labelledby="mp-types-h">
+  <?php foreach ($mapPage['grids'] ?? [] as $grid): if (empty($grid['rows'])) continue; ?>
+  <!-- ============================== GRID: <?= v2_e($grid['id']) ?> ============================== -->
+  <section class="sec" aria-labelledby="mp-<?= v2_e($grid['id']) ?>-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="mp-types-h">Ce fel de locuri cauți</h2>
-        <a class="sec-link" href="/atractii">Toate atracțiile<?= v2_ic('arrow-right') ?></a>
+        <h2 id="mp-<?= v2_e($grid['id']) ?>-h"><?= v2_e($grid['h']) ?></h2>
+        <?php if (!empty($grid['more'])): ?><a class="sec-link" href="<?= v2_e($grid['more'][1]) ?>"><?= v2_e($grid['more'][0]) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
       <ul class="mp-grid">
-        <?php foreach ($mpTypes as [$tSlug, $tName, $tEmoji, $tCount]): ?>
+        <?php foreach ($grid['rows'] as [$gEmoji, $gName, $gCount, $gHref]): ?>
         <li>
-          <a class="mp-card" href="/atractii?tip=<?= v2_e($tSlug) ?>">
-            <span class="mp-card-emoji" aria-hidden="true"><?= v2_e($tEmoji ?: '📍') ?></span>
-            <span class="mp-card-t"><b><?= v2_e($tName) ?></b><span><?= v2_e(v2_thousands((int) $tCount)) ?> pe hartă</span></span>
+          <a class="mp-card" href="<?= v2_e($gHref) ?>">
+            <span class="mp-card-emoji" aria-hidden="true"><?= v2_e($gEmoji ?: '📍') ?></span>
+            <span class="mp-card-t"><b><?= v2_e($gName) ?></b><span><?= v2_e(v2_thousands((int) $gCount)) ?> <?= v2_e($grid['unit'] ?? 'pe hartă') ?></span></span>
           </a>
         </li>
         <?php endforeach; ?>
       </ul>
     </div>
   </section>
-  <?php endif; ?>
-
-  <?php if ($mpHas('regions') && $mpRegions): ?>
-  <!-- ============================== REGIONS ============================== -->
-  <section class="sec" aria-labelledby="mp-reg-h">
-    <div class="wrap">
-      <div class="sec-head"><h2 id="mp-reg-h">Pe regiuni istorice</h2></div>
-      <ul class="mp-grid">
-        <?php foreach ($mpRegions as [$rName, $rCount]): ?>
-        <li>
-          <a class="mp-card" href="/harta?zona=<?= v2_e(v2_zone_slug($rName)) ?>">
-            <span class="mp-card-emoji" aria-hidden="true">🗺️</span>
-            <span class="mp-card-t"><b><?= v2_e($rName) ?></b><span><?= v2_e(v2_thousands((int) $rCount)) ?> de atracții</span></span>
-          </a>
-        </li>
-        <?php endforeach; ?>
-      </ul>
-    </div>
-  </section>
-  <?php endif; ?>
+  <?php endforeach; ?>
 
   <?php if ($mpHas('cities') && $mpCities): ?>
   <!-- ============================== CITIES ============================== -->
   <section class="sec" aria-labelledby="mp-city-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="mp-city-h">Orașele cu cele mai multe atracții</h2>
+        <h2 id="mp-city-h"><?= v2_e($mapPage['citiesHeading'] ?? 'Orașele cu cele mai multe atracții') ?></h2>
         <a class="sec-link" href="/orase">Toate orașele<?= v2_ic('arrow-right') ?></a>
       </div>
       <ul class="mp-chips">
@@ -129,7 +111,7 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="mp-picks-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="mp-picks-h">Locuri de deschis pe hartă</h2>
+        <h2 id="mp-picks-h"><?= v2_e($mapPage['picksHeading'] ?? 'Locuri de deschis pe hartă') ?></h2>
         <a class="sec-link" href="/atractii">Vezi lista completă<?= v2_ic('arrow-right') ?></a>
       </div>
       <ul class="mp-picks">

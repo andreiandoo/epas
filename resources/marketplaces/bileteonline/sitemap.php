@@ -28,6 +28,13 @@ $urls = [
     ['/atractii', 'weekly', '0.7'],
     ['/harta', 'weekly', '0.7'],
 ];
+// The map landings: eight attraction types and eight historical regions, each with its own
+// counters, cities and picks (includes/v2/map-landings.php).
+require_once __DIR__ . '/includes/v2/map-landings.php';
+foreach (array_keys(MAP_LANDINGS) as $landingSlug) {
+    $urls[] = ['/harta/' . $landingSlug, 'weekly', '0.6'];
+}
+
 $cities = [];
 foreach ($collect('/activities-module/locations', 'locations') as $l) {
     if (!empty($l['slug'])) {
