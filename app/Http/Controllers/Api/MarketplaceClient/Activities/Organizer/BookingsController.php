@@ -377,8 +377,10 @@ class BookingsController extends BaseController
         $rows = Activity::query()
             ->where('marketplace_organizer_id', $organizer->id)
             ->selectRaw('COUNT(*) AS n')
-            ->selectRaw('SUM(CASE WHEN is_published = 1 AND (review_status IS NULL OR review_status = ?) THEN 1 ELSE 0 END) AS live', ['approved'])
+            // "on sale" is what a visitor can buy: published, approved and not kept for the desk only
+            ->selectRaw('SUM(CASE WHEN is_published = 1 AND pos_only = 0 AND (review_status IS NULL OR review_status = ?) THEN 1 ELSE 0 END) AS live', ['approved'])
             ->selectRaw('SUM(CASE WHEN review_status = ? THEN 1 ELSE 0 END) AS pending', ['pending'])
+            ->selectRaw('SUM(CASE WHEN pos_only = 1 THEN 1 ELSE 0 END) AS desk_only')
             ->selectRaw('COALESCE(SUM(views_count), 0) AS views')
             ->first();
 
@@ -386,6 +388,7 @@ class BookingsController extends BaseController
             'products' => (int) ($rows->n ?? 0),
             'live'     => (int) ($rows->live ?? 0),
             'pending'  => (int) ($rows->pending ?? 0),
+            'desk_only' => (int) ($rows->desk_only ?? 0),
             'views'    => (int) ($rows->views ?? 0),
         ];
     }
