@@ -230,14 +230,15 @@ class BookingsController extends BaseController
             ],
             // What the panel and the balance page need on top of the period: the whole history, the split between
             // the site and the desk (the desk commission is the one invoiced monthly), the tickets and the catalogue.
-            'all_time'   => $this->periodTotals($organizer, $request, null, null),
-            'by_source'  => [
+            // Each one is guarded: a figure that cannot be read must never cost the report its own numbers.
+            'all_time'   => rescue(fn () => $this->periodTotals($organizer, $request, null, null), null),
+            'by_source'  => rescue(fn () => [
                 'period'   => $this->sourceTotals($organizer, $request, $from, $to),
                 'all_time' => $this->sourceTotals($organizer, $request, null, null),
-            ],
-            'tickets'    => $this->ticketCounts($organizer, $request),
-            'catalogue'  => $this->catalogue($organizer),
-            'by_month'   => $this->byMonth($organizer, $request),
+            ], null),
+            'tickets'    => rescue(fn () => $this->ticketCounts($organizer, $request), null),
+            'catalogue'  => rescue(fn () => $this->catalogue($organizer), null),
+            'by_month'   => rescue(fn () => $this->byMonth($organizer, $request), null),
         ]);
     }
 
@@ -378,9 +379,10 @@ class BookingsController extends BaseController
             ->where('marketplace_organizer_id', $organizer->id)
             ->selectRaw('COUNT(*) AS n')
             // "on sale" is what a visitor can buy: published, approved and not kept for the desk only
-            ->selectRaw('SUM(CASE WHEN is_published = 1 AND pos_only = 0 AND (review_status IS NULL OR review_status = ?) THEN 1 ELSE 0 END) AS live', ['approved'])
+            // booleans are compared as booleans: PostgreSQL refuses `is_published = 1`
+            ->selectRaw('SUM(CASE WHEN is_published AND NOT pos_only AND (review_status IS NULL OR review_status = ?) THEN 1 ELSE 0 END) AS live', ['approved'])
             ->selectRaw('SUM(CASE WHEN review_status = ? THEN 1 ELSE 0 END) AS pending', ['pending'])
-            ->selectRaw('SUM(CASE WHEN pos_only = 1 THEN 1 ELSE 0 END) AS desk_only')
+            ->selectRaw('SUM(CASE WHEN pos_only THEN 1 ELSE 0 END) AS desk_only')
             ->selectRaw('COALESCE(SUM(views_count), 0) AS views')
             ->first();
 
