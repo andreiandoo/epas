@@ -25,6 +25,7 @@ $v2LocHow = [
 // Under "Explorează": attractions are the places to see (points of interest); tickets are sold on /locatii.
 $v2AttrLinks = [
     ['globe-simple', 'Harta atracțiilor', '/harta'],
+    ['list', 'Trasee turistice', '/trasee'],
     ['castle-turret', 'Castele și palate', '/atractii?tip=castel-palat'], ['buildings', 'Muzee', '/atractii?tip=muzeu'],
     ['map-pin', 'Toate atracțiile', '/atractii'],
 ];

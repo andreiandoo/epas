@@ -148,6 +148,40 @@
     return dataCache[url];
   }
 
+  /**
+   * Route mode builds the same structure loadData() returns, but out of the handful of stops the
+   * page already has. The rest of the module then works unchanged -- and a route page never
+   * downloads the 7k-pin dataset it would not use.
+   * A stop row is [slug, name, city, citySlug, county, type, emoji, lat, lng, img, legKm].
+   */
+  function datasetFromStops(stops) {
+    var f = { name: 0, slug: 1, type: 2, city: 3, zone: 4, lat_e5: 5, lng_e5: 6, flags: 7, img: 8 };
+    var types = [], typeIdx = {}, cities = [], cityIdx = {};
+    var rows = [], hay = [], lat = new Float64Array(stops.length), lng = new Float64Array(stops.length);
+
+    stops.forEach(function (st, i) {
+      var tName = st[5] || '', tKey = tName + '|' + (st[6] || '');
+      if (tName && typeIdx[tKey] === undefined) {
+        typeIdx[tKey] = types.length;
+        types.push(['t' + types.length, tName, st[6] || '', null, 0]);
+      }
+      var cKey = st[3] || st[2];
+      if (cKey && cityIdx[cKey] === undefined) {
+        cityIdx[cKey] = cities.length;
+        cities.push([st[3] || '', st[2] || '', st[4] || '', '', 0]);
+      }
+      var t = tName ? typeIdx[tKey] : -1, c = cKey ? cityIdx[cKey] : -1;
+      if (t >= 0) types[t][4]++;
+      if (c >= 0) cities[c][4]++;
+      rows.push([st[1], st[0], t, c, -1, Math.round(st[7] * 100000), Math.round(st[8] * 100000), st[9] ? 1 : 0, st[9] || '']);
+      hay.push(fold(st[1] + ' ' + (st[2] || '')));
+      lat[i] = st[7];
+      lng[i] = st[8];
+    });
+
+    return { f: f, rows: rows, types: types, cities: cities, zones: [], flags: { image: 1, featured: 2, activities: 4 }, hay: hay, lat: lat, lng: lng, legs: stops.map(function (st) { return st[10]; }) };
+  }
+
   /* ---------------------------------------------------------------- instance */
 
   function mount(container, cfg) {
@@ -164,6 +198,8 @@
     var me = null;                     // [lat, lng] from geolocation
     var opened = false, booting = false, lastFocus = null;
     var theme = cfg.theme || readTheme() || 'light';
+    var route = Array.isArray(cfg.routeStops) && cfg.routeStops.length ? cfg.routeStops : null;
+    var routeLine = null;
 
     var state = {
       q: '',
@@ -237,6 +273,8 @@
 
       /* The type row scrolls sideways. Touch has native momentum; with a mouse it needs help, so
          it gets drag-to-scroll, wheel-to-scroll and a pair of arrows that appear when it overflows. */
+      if (route) search.hidden = true;
+
       ui.chipbar = el('div', 'epm-chipbar');
       ui.prev = chipNav('arrow-left', 'Tipuri anterioare', -1);
       ui.chips = el('div', 'epm-chips');
@@ -246,7 +284,7 @@
       ui.chipbar.appendChild(ui.prev);
       ui.chipbar.appendChild(ui.chips);
       ui.chipbar.appendChild(ui.next);
-      bar.appendChild(ui.chipbar);
+      if (!route) bar.appendChild(ui.chipbar);
 
       ui.meta = el('p', 'epm-meta');
       ui.meta.setAttribute('aria-live', 'polite');
@@ -492,7 +530,8 @@
       if (markers[i]) return markers[i];
       var L = window.L, r = D.rows[i], f = D.f;
       var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
-      var pin = el('span', 'epm-pin' + ((r[f.flags] & D.flags.activities) ? ' has-ticket' : ''), t && t[2] ? t[2] : '•');
+      var label = route ? String(i + 1) : (t && t[2] ? t[2] : '•');
+      var pin = el('span', 'epm-pin' + (route ? ' is-step' : '') + ((r[f.flags] & D.flags.activities) ? ' has-ticket' : ''), label);
       pin.setAttribute('data-i', String(i));
       var m = L.marker([D.lat[i], D.lng[i]], {
         keyboard: false,
@@ -525,10 +564,25 @@
         var batch = new Array(visible.length);
         for (var i = 0; i < visible.length; i++) batch[i] = markerFor(visible[i]);
         cluster.addLayers(batch);
+        drawRouteLine();
         busy(false);
         syncView();
       });
     }
+    /* The dashed line is the route's order made visible; without it the numbers are just numbers. */
+    function drawRouteLine() {
+      if (!route || !map || routeLine) return;
+      var pts = [];
+      for (var i = 0; i < D.rows.length; i++) pts.push([D.lat[i], D.lng[i]]);
+      routeLine = window.L.polyline(pts, {
+        // an explicit SVG renderer: the map runs with preferCanvas, where a className and a CSS
+        // dash pattern would have nothing to attach to
+        renderer: window.L.svg(),
+        className: 'epm-route-line', color: '#1E5B48', weight: 3, opacity: .85, dashArray: '2 8', lineCap: 'round'
+      }).addTo(map);
+      map.fitBounds(pts, { padding: [60, 60], maxZoom: 15, animate: false });
+    }
+
     function busy(on) {
       ui.loading.hidden = !on;
       if (on) ui.loading.textContent = 'Se actualizează harta…';
@@ -571,6 +625,20 @@
       }).setView([RO.lat, RO.lng], RO.zoom);
       addTiles();
 
+      /* A route never clusters: six stops inside one valley would collapse into a single dot and
+         the numbered order, which is the whole point, would disappear. A layer group with the one
+         method drawMarkers() needs keeps the rest of the code identical. */
+      if (route) {
+        cluster = L.layerGroup();
+        cluster.addLayers = function (list) {
+          for (var i = 0; i < list.length; i++) cluster.addLayer(list[i]);
+        };
+        map.addLayer(cluster);
+        map.on('moveend', syncView);
+        map.on('click', function () { select(-1); });
+        return;
+      }
+
       cluster = L.markerClusterGroup({
         chunkedLoading: true,
         showCoverageOnHover: false,
@@ -608,6 +676,15 @@
 
     function syncView() {
       if (!map || !D) return;
+      if (route) {
+        // Stop 1 to stop N, always: a route's order is the whole point of it.
+        inView = D.rows.map(function (_, i) { return [i, me ? km(me[0], me[1], D.lat[i], D.lng[i]) : NaN]; });
+        listShown = inView.length;
+        renderList();
+        renderMeta();
+        pushUrl();
+        return;
+      }
       var b = map.getBounds(), c = map.getCenter();
       var origin = me || [c.lat, c.lng];
       var rows = [];
@@ -626,9 +703,11 @@
 
     function renderList() {
       ui.list.textContent = '';
-      ui.inview.textContent = inView.length
-        ? count(inView.length, 'atracție în zona afișată', 'atracții în zona afișată')
-        : 'Nicio atracție în zona afișată';
+      ui.inview.textContent = route
+        ? 'Opririle traseului, în ordine'
+        : (inView.length
+          ? count(inView.length, 'atracție în zona afișată', 'atracții în zona afișată')
+          : 'Nicio atracție în zona afișată');
 
       if (!inView.length) {
         var empty = el('li', 'epm-empty');
@@ -660,10 +739,15 @@
       var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
       var city = r[f.city] >= 0 ? D.cities[r[f.city]][1] : '';
       var li = el('li');
-      var b = el('button', 'epm-row');
+      var b = el('button', 'epm-row' + (route ? ' epm-row-step' : ''));
       b.type = 'button';
       b.dataset.i = String(i);
       if (i === selected) b.setAttribute('aria-current', 'true');
+      if (route) {
+        var num = el('span', 'epm-step', String(i + 1));
+        num.setAttribute('aria-hidden', 'true');
+        b.appendChild(num);
+      }
 
       var media = el('span', 'epm-row-media');
       if (r[f.img]) {
@@ -689,7 +773,10 @@
       if (t) bits.push(t[1]);
       if (city) bits.push(city);
       meta.appendChild(document.createTextNode(bits.join(' · ')));
-      if (isFinite(d)) {
+      if (route && i > 0 && D.legs && D.legs[i] > 0) {
+        meta.appendChild(document.createTextNode(' · '));
+        meta.appendChild(el('span', 'epm-row-dist', '+' + dist(D.legs[i])));
+      } else if (!route && isFinite(d)) {
         meta.appendChild(document.createTextNode(' · '));
         meta.appendChild(el('span', 'epm-row-dist', dist(d)));
       }
@@ -701,6 +788,10 @@
 
     function renderMeta() {
       ui.meta.textContent = '';
+      if (route) {
+        ui.meta.appendChild(el('span', '', count(D.rows.length, 'oprire', 'opriri') + (cfg.routeKm ? ' · ' + cfg.routeKm + ' km în linie dreaptă' : '')));
+        return;
+      }
       ui.meta.appendChild(el('span', '', count(visible.length, 'atracție pe hartă', 'atracții pe hartă')));
       if (visible.length !== D.rows.length) {
         var reset = el('button', 'link-btn', 'Șterge filtrele');
@@ -774,7 +865,7 @@
       var centre = pad > 8 ? map.unproject(map.project(ll, zoom).add([0, pad / 2]), zoom) : ll;
 
       var settle = function () {
-        if (cluster && m && cluster.hasLayer(m) && cluster.getVisibleParent(m) !== m) {
+        if (cluster && m && typeof cluster.getVisibleParent === 'function' && cluster.hasLayer(m) && cluster.getVisibleParent(m) !== m) {
           cluster.zoomToShowLayer(m, function () { setTimeout(paintSelection, 30); });
         } else {
           setTimeout(paintSelection, 30);
@@ -938,7 +1029,10 @@
       });
       ui.list.addEventListener('mouseleave', function () { hot(-1); });
 
-      ui.all.addEventListener('click', function () { fitVisible(); });
+      ui.all.addEventListener('click', function () {
+        if (route && routeLine) map.fitBounds(routeLine.getBounds(), { padding: [60, 60], maxZoom: 15, animate: !reduceMotion });
+        else fitVisible();
+      });
       ui.locate.addEventListener('click', locate);
       ui.theme.addEventListener('click', function () {
         theme = theme === 'dark' ? 'light' : 'dark';
@@ -1029,11 +1123,11 @@
       booting = true;
       buildShell();
       ui.loading.hidden = false;
-      return Promise.all([loadLibs(), loadData(cfg.dataUrl)])
+      return Promise.all([loadLibs(), route ? Promise.resolve(datasetFromStops(route)) : loadData(cfg.dataUrl)])
         .then(function (res) {
           D = res[1];
-          if (!state.types.length && state.preset === 'popular') state.types = presetTypes('popular');
-          buildChips();
+          if (!route && !state.types.length && state.preset === 'popular') state.types = presetTypes('popular');
+          if (!route) buildChips();
           var view = cfg.urlState ? readUrl() : null;
           buildMap();
           applyFilters();
