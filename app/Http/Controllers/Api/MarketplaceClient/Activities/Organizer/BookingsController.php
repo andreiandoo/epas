@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Activity;
 use App\Models\ActivityBooking;
 use App\Models\MarketplaceOrganizer;
+use App\Models\Ticket;
 use App\Services\Activities\BookingDescriber;
 use App\Services\Activities\ProductAvailability;
 use Carbon\CarbonImmutable;
@@ -227,7 +228,169 @@ class BookingsController extends BaseController
                 'today'   => (int) $upcoming->filter(fn ($b) => $b->booking_date->toDateString() === $today)->sum('quantity'),
                 'persons' => (int) $upcoming->sum('quantity'),
             ],
+            // What the panel and the balance page need on top of the period: the whole history, the split between
+            // the site and the desk (the desk commission is the one invoiced monthly), the tickets and the catalogue.
+            'all_time'   => $this->periodTotals($organizer, $request, null, null),
+            'by_source'  => [
+                'period'   => $this->sourceTotals($organizer, $request, $from, $to),
+                'all_time' => $this->sourceTotals($organizer, $request, null, null),
+            ],
+            'tickets'    => $this->ticketCounts($organizer, $request),
+            'catalogue'  => $this->catalogue($organizer),
+            'by_month'   => $this->byMonth($organizer, $request),
         ]);
+    }
+
+    /** Sold bookings of this operator, optionally bought between two dates. */
+    private function sold(MarketplaceOrganizer $organizer, Request $request, ?string $from, ?string $to): Builder
+    {
+        return $this->bookings($organizer, $request)
+            ->whereNull('activity_bookings.package_booking_id')
+            ->whereIn('activity_bookings.status', self::SOLD)
+            ->when($from && $to, fn ($q) => $q->whereHas(
+                'order',
+                fn ($o) => $o->whereRaw('DATE(COALESCE(paid_at, created_at)) BETWEEN ? AND ?', [$from, $to])
+            ));
+    }
+
+    /**
+     * Bookings, persons, value, commission and what the operator keeps. Read with one aggregate query, so "since the
+     * beginning" costs the same as a week; the commission mode is the account's (a booking of its own carries the
+     * same one).
+     */
+    private function periodTotals(MarketplaceOrganizer $organizer, Request $request, ?string $from, ?string $to): array
+    {
+        $row = $this->sold($organizer, $request, $from, $to)
+            ->selectRaw('COUNT(*) AS n, COALESCE(SUM(activity_bookings.quantity), 0) AS persons, COALESCE(SUM(activity_bookings.total_cents), 0) AS value, COALESCE(SUM(activity_bookings.commission_cents), 0) AS commission')
+            ->first();
+
+        $value = (int) ($row->value ?? 0);
+        $commission = (int) ($row->commission ?? 0);
+        $keeps = $organizer->getEffectiveCommissionMode() === 'added_on_top' ? $value : $value - $commission;
+
+        return [
+            'bookings'   => (int) ($row->n ?? 0),
+            'persons'    => (int) ($row->persons ?? 0),
+            'value'      => round($value / 100, 2),
+            'commission' => round($commission / 100, 2),
+            'net'        => round($keeps / 100, 2),
+        ];
+    }
+
+    /** The same numbers, split between what was sold on the site and what was sold at the desk. */
+    private function sourceTotals(MarketplaceOrganizer $organizer, Request $request, ?string $from, ?string $to): array
+    {
+        $rows = $this->sold($organizer, $request, $from, $to)
+            ->join('orders', 'orders.id', '=', 'activity_bookings.order_id')
+            ->selectRaw("CASE WHEN orders.source = 'pos' THEN 'pos' ELSE 'online' END AS src")
+            ->selectRaw('COUNT(*) AS n, COALESCE(SUM(activity_bookings.quantity), 0) AS persons, COALESCE(SUM(activity_bookings.total_cents), 0) AS value, COALESCE(SUM(activity_bookings.commission_cents), 0) AS commission')
+            ->groupBy('src')
+            ->get();
+
+        $onTop = $organizer->getEffectiveCommissionMode() === 'added_on_top';
+        $out = [];
+        foreach (['online', 'pos'] as $src) {
+            $row = $rows->firstWhere('src', $src);
+            $value = (int) ($row->value ?? 0);
+            $commission = (int) ($row->commission ?? 0);
+            $out[$src] = [
+                'bookings'   => (int) ($row->n ?? 0),
+                'persons'    => (int) ($row->persons ?? 0),
+                'value'      => round($value / 100, 2),
+                'commission' => round($commission / 100, 2),
+                'net'        => round(($onTop ? $value : $value - $commission) / 100, 2),
+            ];
+        }
+
+        return $out;
+    }
+
+    /** How many tickets this operator has out there, by state. */
+    private function ticketCounts(MarketplaceOrganizer $organizer, Request $request): array
+    {
+        $rows = Ticket::query()
+            ->whereIn('activity_booking_id', $this->sold($organizer, $request, null, null)->select('activity_bookings.id'))
+            ->selectRaw('status, COUNT(*) AS n')
+            ->groupBy('status')
+            ->pluck('n', 'status');
+
+        return [
+            'valid' => (int) ($rows['valid'] ?? 0),
+            'used'  => (int) ($rows['used'] ?? 0),
+            'total' => (int) $rows->sum(),
+        ];
+    }
+
+    /**
+     * The last thirteen months, split between the site and the desk: what the balance page needs to show what came in
+     * and what commission was charged (the desk's is the one invoiced). Grouped here rather than in SQL, so the same
+     * code runs on SQLite and PostgreSQL.
+     */
+    private function byMonth(MarketplaceOrganizer $organizer, Request $request): array
+    {
+        $since = CarbonImmutable::now(ProductAvailability::TIMEZONE)->startOfMonth()->subMonths(12)->toDateString();
+        $rows = $this->sold($organizer, $request, null, null)
+            ->join('orders', 'orders.id', '=', 'activity_bookings.order_id')
+            ->whereRaw('DATE(COALESCE(orders.paid_at, orders.created_at)) >= ?', [$since])
+            ->get([
+                'activity_bookings.total_cents',
+                'activity_bookings.commission_cents',
+                'orders.source',
+                'orders.paid_at',
+                'orders.created_at as order_created_at',
+            ]);
+
+        $onTop = $organizer->getEffectiveCommissionMode() === 'added_on_top';
+        $months = [];
+        foreach ($rows as $row) {
+            $when = $row->paid_at ?: $row->order_created_at;
+            $month = CarbonImmutable::parse($when)->timezone(ProductAvailability::TIMEZONE)->format('Y-m');
+            $src = ($row->source ?? '') === 'pos' ? 'pos' : 'online';
+            $months[$month] ??= [
+                'month' => $month,
+                'online' => ['value' => 0, 'commission' => 0],
+                'pos' => ['value' => 0, 'commission' => 0],
+            ];
+            $months[$month][$src]['value'] += (int) $row->total_cents;
+            $months[$month][$src]['commission'] += (int) $row->commission_cents;
+        }
+        krsort($months);
+
+        return array_values(array_map(function (array $m) use ($onTop) {
+            foreach (['online', 'pos'] as $src) {
+                $value = $m[$src]['value'];
+                $commission = $m[$src]['commission'];
+                $m[$src] = [
+                    'value'      => round($value / 100, 2),
+                    'commission' => round($commission / 100, 2),
+                    'net'        => round(($onTop ? $value : $value - $commission) / 100, 2),
+                ];
+            }
+
+            return $m;
+        }, $months));
+    }
+
+    /** The catalogue behind the numbers: how many products are on sale, waiting or still drafts, and their views. */
+    private function catalogue(MarketplaceOrganizer $organizer): array
+    {
+        $rows = Activity::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->selectRaw('COUNT(*) AS n')
+            // "on sale" is what a visitor can buy: published, approved and not kept for the desk only
+            ->selectRaw('SUM(CASE WHEN is_published = 1 AND pos_only = 0 AND (review_status IS NULL OR review_status = ?) THEN 1 ELSE 0 END) AS live', ['approved'])
+            ->selectRaw('SUM(CASE WHEN review_status = ? THEN 1 ELSE 0 END) AS pending', ['pending'])
+            ->selectRaw('SUM(CASE WHEN pos_only = 1 THEN 1 ELSE 0 END) AS desk_only')
+            ->selectRaw('COALESCE(SUM(views_count), 0) AS views')
+            ->first();
+
+        return [
+            'products' => (int) ($rows->n ?? 0),
+            'live'     => (int) ($rows->live ?? 0),
+            'pending'  => (int) ($rows->pending ?? 0),
+            'desk_only' => (int) ($rows->desk_only ?? 0),
+            'views'    => (int) ($rows->views ?? 0),
+        ];
     }
 
     // ------------------------------------------------------------------
@@ -235,11 +398,12 @@ class BookingsController extends BaseController
     /** Bookings of this operator's products (optionally one location / product). */
     private function bookings(MarketplaceOrganizer $organizer, Request $request): Builder
     {
+        // columns are qualified: the summary joins orders onto this query
         return ActivityBooking::query()
-            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where('activity_bookings.marketplace_client_id', $organizer->marketplace_client_id)
             ->whereHas('activity', fn ($q) => $q->where('marketplace_organizer_id', $organizer->id))
             ->when($request->query('location_id'), fn ($q, $id) => $q->whereHas('activity', fn ($a) => $a->where('location_id', (int) $id)))
-            ->when($request->query('product_id'), fn ($q, $id) => $q->where('activity_id', (int) $id));
+            ->when($request->query('product_id'), fn ($q, $id) => $q->where('activity_bookings.activity_id', (int) $id));
     }
 
     private function row(ActivityBooking $b): array

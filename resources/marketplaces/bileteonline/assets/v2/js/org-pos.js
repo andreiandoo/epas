@@ -704,7 +704,7 @@
     var b = this;
     b.disabled = true;
     msg('po-anaf-msg', 'Se caută la ANAF…', false);
-    O.api('/organizer/verify-cui', { method: 'POST', body: { cui: cui } }).then(function (r) {
+    O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui } }).then(function (r) {
       var d = (r && r.data) || {};
       var co = d.company || d;
       if (txt(co.name)) $('po-co-name').value = txt(co.name);

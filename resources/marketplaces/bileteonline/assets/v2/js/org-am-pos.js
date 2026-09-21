@@ -282,7 +282,6 @@
     $('pos-clear').hidden = !S.cart.length;
     $('pos-sub').textContent = lei(t.sub);
     $('pos-fee-row').hidden = !t.fee;
-    $('pos-fee-rate').textContent = String(t.rate).replace('.', ',');
     $('pos-fee').textContent = lei(t.fee);
     $('pos-total').textContent = lei(t.total);
     var can = S.cart.length > 0 && !!S.session && !S.busy;
@@ -306,20 +305,36 @@
       return it;
     });
     var email = $('pos-c-email').value.trim();
+    var company = companyFields();
+    // the invoice number is taken at the sale, so company details without the tick cannot be invoiced later
+    if (company && !$('pos-co-invoice').checked) {
+      err('Ai completat datele firmei. Bifează „Emite factură” sau șterge datele.');
+      $('pos-company').open = true;
+      return;
+    }
     var body = {
       location_id: S.loc, payment_method: method, items: items,
-      customer: { name: $('pos-c-name').value.trim() || null, email: email || null, phone: $('pos-c-phone').value.trim() || null },
+      customer: {
+        name: $('pos-c-name').value.trim() || null, email: email || null,
+        phone: $('pos-c-phone').value.trim() || null, notes: $('pos-c-notes').value.trim() || null,
+      },
       send_email: !!email && $('pos-c-send').checked,
     };
+    if (company) {
+      body.company = company;
+      body.generate_invoice = true;
+    }
     S.busy = true;
     err('');
     drawCart();
     A.api('/pos/sale', { method: 'POST', body: body }).then(function (r) {
       S.last = r.data.sale;
       S.cart = [];
-      ['pos-c-name', 'pos-c-email', 'pos-c-phone'].forEach(function (id) { $(id).value = ''; });
-      $('pos-c-send').checked = false;
-      $('pos-customer').open = false;
+      ['pos-c-name', 'pos-c-email', 'pos-c-phone', 'pos-c-notes', 'pos-co-cui', 'pos-co-name',
+        'pos-co-reg', 'pos-co-iban', 'pos-co-address', 'pos-co-contact'].forEach(function (id) { $(id).value = ''; });
+      $('pos-c-send').checked = $('pos-co-invoice').checked = false;
+      $('pos-customer').open = $('pos-company').open = false;
+      anafMsg('');
       showDone(S.last, method);
       refreshDay();
       loadSession();
@@ -334,7 +349,10 @@
 
   function showDone(sale, method) {
     $('pos-done-h').textContent = 'Bonul ' + sale.order_number;
-    $('pos-done-sum').textContent = 'Încasat ' + (method === 'cash' ? 'numerar' : 'cu cardul') + ': ' + F.money(sale.total) + (sale.commission ? ' (din care comision ' + F.money(sale.commission) + ')' : '') + '. ' + sale.tickets.length + (sale.tickets.length === 1 ? ' bilet.' : ' bilete.');
+    $('pos-done-sum').textContent = 'Încasat ' + (method === 'cash' ? 'numerar' : 'cu cardul') + ': ' + F.money(sale.total)
+      + (sale.commission ? ' (din care cost ticketing ' + F.money(sale.commission) + ')' : '') + '. '
+      + sale.tickets.length + (sale.tickets.length === 1 ? ' bilet.' : ' bilete.')
+      + (sale.invoice_number ? ' Factura ' + F.flat(sale.invoice_number) + (sale.company && sale.company.name ? ', pe ' + F.flat(sale.company.name) : '') + '.' : '');
     var ul = $('pos-done-tickets');
     ul.textContent = '';
     sale.tickets.forEach(function (t) {
@@ -344,6 +362,45 @@
     openModal('pos-done');
     if (window.PosPrinter && window.PosPrinter.getAutoPrintEnabled && window.PosPrinter.getAutoPrintEnabled()) printThermal();
   }
+
+  /* ---------- the company the invoice is made out to ---------- */
+  /** What the operator filled in, or null when the block is empty. */
+  function companyFields() {
+    var out = {}, any = false;
+    [['name', 'pos-co-name'], ['cui', 'pos-co-cui'], ['reg_no', 'pos-co-reg'],
+      ['address', 'pos-co-address'], ['iban', 'pos-co-iban'], ['contact_person', 'pos-co-contact']].forEach(function (f) {
+      var v = $(f[1]).value.trim();
+      out[f[0]] = v || null;
+      if (v) any = true;
+    });
+    return any ? out : null;
+  }
+  function anafMsg(text, bad) {
+    var n = $('pos-anaf-msg');
+    n.textContent = text;
+    n.hidden = !text;
+    n.classList.toggle('is-bad', !!bad);
+  }
+  $('pos-anaf').addEventListener('click', function () {
+    var btn = this, cui = $('pos-co-cui').value.trim();
+    if (!cui) { anafMsg('Scrie întâi CUI-ul firmei.', true); $('pos-co-cui').focus(); return; }
+    if (btn.disabled) return;
+    btn.disabled = true;
+    anafMsg('Se caută la ANAF…');
+    O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui } }).then(function (r) {
+      var d = (r && r.data) || {}, co = d.company || d;
+      var name = F.flat(co.name || co.denumire);
+      if (!name) { anafMsg('ANAF nu a găsit nicio firmă cu acest CUI.', true); return; }
+      $('pos-co-name').value = name;
+      if (!$('pos-co-address').value.trim()) $('pos-co-address').value = F.flat(co.address || co.adresa);
+      if (!$('pos-co-reg').value.trim()) $('pos-co-reg').value = F.flat(co.reg_no || co.registration_number || co.nrRegCom);
+      if (co.cui || co.vat_number) $('pos-co-cui').value = F.flat(co.cui || co.vat_number) || cui;
+      $('pos-co-invoice').checked = true;
+      anafMsg('Date completate din ANAF.');
+    }, function (e) {
+      anafMsg(A.errText(e, 'Nu am putut interoga ANAF. Completează manual.'), true);
+    }).then(function () { btn.disabled = false; });
+  });
 
   /* ---------- printing ---------- */
   function qr(text) {
@@ -364,6 +421,20 @@
     var sale = S.last, box = $('pos-print'), locName = (S.catalog && S.catalog.location && S.catalog.location.name) || '';
     if (!sale) return;
     box.textContent = '';
+    // a sale made out to a company starts with its own slip: the invoice number, the company and the total
+    if (sale.company) {
+      box.appendChild(el('section', { class: 'pos-tk is-bill' }, [
+        el('p', { class: 'pos-tk-k', text: 'bilete.online · ' + locName }),
+        el('h3', { text: sale.invoice_number ? 'Factura ' + F.flat(sale.invoice_number) : 'Bon ' + sale.order_number }),
+        el('p', { text: F.flat(sale.company.name) }),
+        sale.company.cui ? el('p', { text: 'CUI ' + F.flat(sale.company.cui) }) : null,
+        sale.company.reg_no ? el('p', { text: F.flat(sale.company.reg_no) }) : null,
+        sale.company.address ? el('p', { text: F.flat(sale.company.address) }) : null,
+        el('p', { class: 'pos-tk-code', text: F.money(sale.total) }),
+        sale.notes ? el('p', { class: 'pos-tk-k', text: F.flat(sale.notes) }) : null,
+        el('p', { class: 'pos-tk-k', text: sale.order_number }),
+      ]));
+    }
     sale.tickets.forEach(function (t) {
       box.appendChild(el('section', { class: 'pos-tk' }, [
         el('p', { class: 'pos-tk-k', text: 'bilete.online · ' + locName }),

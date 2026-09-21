@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Activities;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Activity;
 use App\Services\Activities\CatalogPresenter;
 use App\Services\Activities\ProductAvailability;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,9 @@ class ProductsController extends BaseController
         if (!$product) {
             return $this->error('Product not found', 404);
         }
+
+        // one more visitor on the product's page — the operator's panel counts these
+        rescue(fn () => Activity::whereKey($product->id)->increment('views_count'), null, false);
 
         $presenter = new CatalogPresenter($this->locale($request));
         $data = $presenter->product($product);

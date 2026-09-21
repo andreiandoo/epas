@@ -28,7 +28,8 @@
   function arr(v) { return Array.isArray(v) ? v : []; }
   function pick(a, fn) { for (var i = 0; i < a.length; i++) { if (fn(a[i])) return a[i]; } return null; }
   function tally(a, fn) { var n = 0; for (var i = 0; i < a.length; i++) { if (fn(a[i])) n += 1; } return n; }
-  function live(x) { return !!(x && x.is_published && x.review_status === 'approved'); }
+  // "on sale" means the same here as on the panel and in the catalogue: published, approved, and not kept for the desk
+  function live(x) { return !!(x && x.is_published && !x.pos_only && (!x.review_status || x.review_status === 'approved')); }
   function nameOf(x) { return F.flat(x && (x.name || x.title)) || ''; }
   function ymdBack(days) { var d = new Date(); d.setDate(d.getDate() - days); return F.ymd(d); }
 
