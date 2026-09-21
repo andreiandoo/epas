@@ -1,0 +1,128 @@
+/* bilete.online v2: the interactive attractions map (EPMap, assets/v2/js/map.js).
+   One shell, two hosts: inline on a page (.epm) and as a full-screen dialog (.epm-dialog).
+   Desktop is a two-pane split (list | map); below 1024px the map fills the screen and the
+   list becomes a bottom sheet with three snap positions. Leaflet's own CSS comes from the
+   CDN and is only overridden where it clashes with the v2 look. */
+
+/* ---------- shell ---------- */
+.epm{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;background:var(--surface);color:var(--ink);font-family:var(--font)}
+.epm *,.epm *::before,.epm *::after{box-sizing:border-box}
+.epm-dialog{position:fixed;inset:0;z-index:90;height:100dvh;border-radius:0}
+.epm-inline{height:min(78vh, 900px);overflow:hidden;border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--shadow-pop)}
+html.epm-locked,html.epm-locked body{overflow:hidden}
+
+/* ---------- top bar ---------- */
+.epm-bar{display:grid;gap:10px;padding:12px var(--space-4) 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+@media (min-width:1024px){.epm-bar{padding:14px var(--space-5) 12px}}
+.epm-bar-main{display:flex;align-items:center;gap:10px}
+.epm-title{flex:0 0 auto;margin:0;font-size:1.0625rem;font-weight:700;letter-spacing:-.02em;color:var(--green);white-space:nowrap}
+@media (max-width:719px){.epm-title{display:none}}
+.epm-search{position:relative;flex:1 1 auto;min-width:0}
+.epm-search .ic{position:absolute;left:14px;top:50%;width:18px;height:18px;translate:0 -50%;color:var(--muted);pointer-events:none}
+.epm-search input{width:100%;height:44px;padding:0 40px 0 40px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--bg);color:var(--ink);font:500 .9375rem/1 var(--font);appearance:none}
+.epm-search input::-webkit-search-cancel-button{display:none}
+.epm-search input::placeholder{color:var(--placeholder)}
+.epm-search input:focus-visible{outline:2px solid var(--action);outline-offset:1px;background:var(--surface)}
+.epm-search-clear{position:absolute;right:6px;top:50%;display:grid;place-items:center;width:32px;height:32px;translate:0 -50%;border:0;border-radius:50%;background:none;color:var(--muted);cursor:pointer}
+.epm-search-clear:hover{background:var(--surface-2);color:var(--ink)}
+.epm-search-clear[hidden]{display:none}
+
+.epm-tool{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .875rem/1 var(--font);white-space:nowrap;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),border-color var(--dur-micro) var(--ease-out)}
+.epm-tool:hover{border-color:var(--green);background:var(--tint-green)}
+.epm-tool .ic{width:18px;height:18px}
+.epm-tool.is-busy{opacity:.6;pointer-events:none}
+.epm-tool-icon{padding:0;width:44px;justify-content:center}
+@media (max-width:899px){.epm-tool-label{display:none}.epm-tool{padding:0;width:44px;justify-content:center}}
+
+/* ---------- type chips ---------- */
+.epm-chips{display:flex;gap:8px;margin:0;padding:2px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.epm-chips::-webkit-scrollbar{display:none}
+.epm-chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 13px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .8125rem/1 var(--font);white-space:nowrap;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),border-color var(--dur-micro) var(--ease-out),color var(--dur-micro) var(--ease-out)}
+.epm-chip:hover{border-color:var(--green)}
+.epm-chip b{font-weight:700;font-variant-numeric:tabular-nums;opacity:.55}
+.epm-chip[aria-pressed="true"]{border-color:var(--deep);background:var(--deep);color:var(--on-deep)}
+.epm-chip[aria-pressed="true"] b{opacity:.75}
+.epm-chip-emoji{font-size:.9375rem;line-height:1}
+.epm-chip-preset{border-style:dashed}
+.epm-chip-preset[aria-pressed="true"]{border-style:solid}
+.epm-chips-sep{flex:0 0 auto;align-self:center;width:1px;height:22px;background:var(--line)}
+
+.epm-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0;font-size:.8125rem;color:var(--muted)}
+.epm-meta b{color:var(--ink);font-variant-numeric:tabular-nums}
+.epm-meta .link-btn{padding:0;font-size:.8125rem}
+
+/* ---------- body ---------- */
+.epm-body{position:relative;display:grid;min-height:0}
+@media (min-width:1024px){.epm-body{grid-template-columns:minmax(320px,28%) minmax(0,1fr)}}
+
+/* ---------- list ---------- */
+.epm-side{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;border-right:1px solid var(--line);background:var(--surface)}
+.epm-side-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px var(--space-4);border-bottom:1px solid var(--line);font-size:.8125rem;color:var(--muted)}
+.epm-list{list-style:none;display:grid;align-content:start;gap:8px;margin:0;padding:10px;overflow:auto;overscroll-behavior:contain}
+.epm-row{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;width:100%;padding:8px;border:1px solid transparent;border-radius:var(--r-m);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.epm-row:hover,.epm-row.is-hot{border-color:var(--line);background:var(--bg)}
+.epm-row[aria-current="true"]{border-color:var(--deep);background:var(--tint-green)}
+.epm-row-media{position:relative;overflow:hidden;width:56px;height:56px;border-radius:12px;background:var(--surface-2)}
+.epm-row-media img{width:100%;height:100%;object-fit:cover}
+.epm-row-media span{display:grid;place-items:center;width:100%;height:100%;font-size:1.375rem;background:linear-gradient(140deg,var(--tint-green),var(--surface-2))}
+.epm-row-body{min-width:0}
+.epm-row-title{display:block;overflow:hidden;font-size:.9375rem;font-weight:700;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.epm-row-meta{display:block;margin-top:3px;overflow:hidden;font-size:.8125rem;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
+.epm-row-dist{font-variant-numeric:tabular-nums}
+.epm-more{margin:4px 10px 12px;width:calc(100% - 20px)}
+.epm-empty{padding:28px 18px;text-align:center;color:var(--muted)}
+.epm-empty b{display:block;margin-bottom:6px;color:var(--ink);font-size:1rem}
+
+/* ---------- map ---------- */
+.epm-map{position:relative;min-height:320px;background:var(--surface-2)}
+.epm-map .leaflet-container{width:100%;height:100%;background:#E4EEE6;font:inherit}
+.epm.is-dark .epm-map .leaflet-container{background:#0C1B16}
+.epm-map .leaflet-control-attribution{font-size:.6875rem}
+.epm-map .leaflet-bar a{color:var(--ink)}
+.epm-loading{position:absolute;inset:0;z-index:500;display:grid;place-items:center;background:rgba(255,255,255,.72);font-size:.875rem;font-weight:600;color:var(--green)}
+.epm-loading[hidden]{display:none}
+.epm.is-dark .epm-loading{background:rgba(12,27,22,.72);color:var(--on-deep)}
+
+/* pins: a white chip with the type emoji, so the marker carries meaning at a glance */
+.epm-pin-wrap{background:none;border:0}
+.epm-pin{position:relative;display:grid;place-items:center;width:30px;height:30px;border:2px solid var(--surface);border-radius:50%;background:var(--deep);color:#fff;font-size:15px;line-height:1;box-shadow:0 6px 14px -6px rgba(0,0,0,.6);cursor:pointer;transition:transform var(--dur-micro) var(--ease-out)}
+.epm-pin.has-ticket{background:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.25),0 6px 14px -6px rgba(0,0,0,.6)}
+.epm-pin:hover,.epm-pin.is-hot{transform:scale(1.15)}
+.epm-pin.is-on{background:var(--red-text);transform:scale(1.2)}
+.epm-cluster{display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--green);color:#fff;font:700 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;box-shadow:0 0 0 4px rgba(30,91,72,.22),0 10px 22px -12px rgba(0,0,0,.7)}
+.epm-cluster.s2{font-size:.875rem;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--deep)}
+.epm-cluster.s3{font-size:.9375rem;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--deep-2)}
+
+/* ---------- selected card ---------- */
+.epm-card{position:absolute;z-index:600;left:var(--space-4);bottom:var(--space-4);width:min(360px,calc(100% - var(--space-4) * 2));overflow:hidden;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop)}
+.epm-card[hidden]{display:none}
+/* anchored to the right edge of the map pane, so it never depends on the list column width */
+@media (min-width:1024px){.epm-card{left:auto;right:var(--space-5);bottom:var(--space-5)}}
+.epm-card-media{position:relative;display:block;height:132px;background:linear-gradient(140deg,var(--tint-green),var(--surface-2))}
+.epm-card-media img{width:100%;height:100%;object-fit:cover}
+.epm-card-media span{display:grid;place-items:center;height:100%;font-size:2.5rem}
+.epm-card-close{position:absolute;right:8px;top:8px;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.92);color:var(--ink);cursor:pointer;box-shadow:0 4px 12px -4px rgba(0,0,0,.4)}
+.epm-card-body{display:grid;gap:8px;padding:14px 16px 16px}
+.epm-card-kicker{margin:0;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green)}
+.epm-card-title{margin:0;font-size:1.125rem;font-weight:700;line-height:1.2;letter-spacing:-.02em}
+.epm-card-meta{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0;font-size:.8125rem;color:var(--muted)}
+.epm-card-meta .ic{width:14px;height:14px;margin-right:4px;vertical-align:-2px}
+.epm-card-actions{display:flex;gap:8px;margin-top:2px}
+.epm-card-actions .btn{flex:1 1 auto;justify-content:center}
+
+/* ---------- mobile: map full bleed, list as a bottom sheet ---------- */
+@media (max-width:1023px){
+  .epm-body{grid-template-rows:minmax(0,1fr)}
+  .epm-map{grid-area:1/1}
+  .epm-side{position:relative;z-index:650;grid-area:1/1;align-self:end;grid-template-rows:auto auto minmax(0,1fr);height:var(--epm-sheet,42dvh);max-height:88dvh;border:0;border-radius:var(--r-l) var(--r-l) 0 0;box-shadow:0 -18px 40px -24px rgba(14,72,55,.6);transition:height var(--dur-state) var(--ease-out)}
+  .epm-side::before{content:"";display:block;width:42px;height:4px;margin:8px auto 2px;border-radius:999px;background:var(--line)}
+  .epm-sheet-grab{position:absolute;inset:0 0 auto;height:44px;border:0;background:none;cursor:grab;touch-action:none}
+  .epm-sheet-grab span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .epm-card{bottom:calc(var(--epm-sheet,42dvh) + 12px);left:12px;right:12px;width:auto}
+  .epm-side[data-snap="peek"]{--epm-sheet:132px}
+  .epm-side[data-snap="half"]{--epm-sheet:46dvh}
+  .epm-side[data-snap="full"]{--epm-sheet:88dvh}
+}
+@media (prefers-reduced-motion:reduce){
+  .epm-side,.epm-pin{transition:none}
+}

@@ -281,6 +281,10 @@ class AttractionsController extends BaseController
                     (int) round($a->latitude * 100000),
                     (int) round($a->longitude * 100000),
                     $flags,
+                    // Full URL rather than a derived path: the covers happen
+                    // to be <slug>.<ext> today, but nothing enforces that, and
+                    // gzip collapses the shared prefix anyway.
+                    $this->img($a->cover_image_url) ?? '',
                 ];
 
                 if ($t >= 0) {
@@ -297,7 +301,7 @@ class AttractionsController extends BaseController
         return [
             'v'            => $signature,
             'generated_at' => now()->toIso8601String(),
-            'fields'       => ['name', 'slug', 'type', 'city', 'zone', 'lat_e5', 'lng_e5', 'flags'],
+            'fields'       => ['name', 'slug', 'type', 'city', 'zone', 'lat_e5', 'lng_e5', 'flags', 'img'],
             'flags'        => ['image' => 1, 'featured' => 2, 'activities' => 4],
             'type_fields'  => ['slug', 'name', 'emoji', 'color', 'count'],
             'city_fields'  => ['slug', 'name', 'county', 'region', 'count'],
