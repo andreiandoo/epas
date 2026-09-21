@@ -96,3 +96,40 @@ Object.freeze(BILETEONLINE_CONFIG.THEME);
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = BILETEONLINE_CONFIG;
 }
+
+/**
+ * An answer meant for one account must never be served to another.
+ *
+ * The CDN in front of the site caches /api/proxy.php by address alone, so two visitors asking the same question got
+ * the same answer — the second one reading the first one's account, and an operator seeing minutes-old data after a
+ * change. Every call that carries a token now gets a unique address, which no shared cache can match. The origin also
+ * marks these answers private (api/proxy.php); this is the belt to that pair of braces, and it costs one parameter.
+ */
+(function () {
+    if (typeof window === 'undefined' || !window.fetch || window.__boPrivateFetch) return;
+    window.__boPrivateFetch = true;
+    var nativeFetch = window.fetch.bind(window);
+
+    function carriesToken(input, init) {
+        var headers = (init && init.headers) || null;
+        if (!headers) return false;
+        try {
+            if (typeof Headers !== 'undefined' && headers instanceof Headers) return !!headers.get('Authorization');
+            if (Array.isArray(headers)) return headers.some(function (pair) { return String(pair[0]).toLowerCase() === 'authorization'; });
+            return Object.keys(headers).some(function (k) { return k.toLowerCase() === 'authorization'; });
+        } catch (e) {
+            return false;
+        }
+    }
+
+    window.fetch = function (input, init) {
+        try {
+            if (typeof input === 'string' && input.indexOf('/api/proxy.php') !== -1
+                && input.indexOf('_nc=') === -1 && carriesToken(input, init)) {
+                input += (input.indexOf('?') === -1 ? '?' : '&') + '_nc='
+                    + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+            }
+        } catch (e) {}
+        return nativeFetch(input, init);
+    };
+})();
