@@ -122,6 +122,11 @@
     });
   }
 
+  /** True when the attraction has something for sale on bilete.online. */
+  function bookable(i) {
+    return !!(D.rows[i][D.f.flags] & (D.flags.activities || 4));
+  }
+
   /** The shape EPMap's route mode and the itinerary rows both read. */
   function stopRow(i, legKm, legMin) {
     var f = D.f, r = D.rows[i];
@@ -130,7 +135,7 @@
     return [
       r[f.slug], r[f.name], c ? c[1] : '', c ? c[0] : '', c ? c[2] : '',
       t ? t[1] : '', t ? t[2] : '', r[f.lat_e5] / 1e5, r[f.lng_e5] / 1e5, r[f.img] || '',
-      legKm || 0, legMin || 0
+      legKm || 0, legMin || 0, r[f.flags]
     ];
   }
 
@@ -139,7 +144,7 @@
   var plan = null;
 
   function blankPlan() {
-    return { where: null, days: 2, from: '', interests: [], pace: 'normal', stops: [], locked: {}, removed: {}, custom: {} };
+    return { where: null, days: 2, from: '', interests: [], pace: 'normal', stops: [], locked: {}, removed: {}, custom: {}, token: '' };
   }
 
   function wantedTypes() {
@@ -313,7 +318,7 @@
   function encode() {
     var compact = {
       w: plan.where, d: plan.days, f: plan.from, i: plan.interests, p: plan.pace,
-      s: plan.stops, l: Object.keys(plan.locked), r: Object.keys(plan.removed), c: plan.custom
+      s: plan.stops, l: Object.keys(plan.locked), r: Object.keys(plan.removed), c: plan.custom, t: plan.token || ''
     };
     try {
       return btoa(unescape(encodeURIComponent(JSON.stringify(compact)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -325,7 +330,7 @@
       var o = JSON.parse(decodeURIComponent(escape(atob(b))));
       var p = blankPlan();
       p.where = o.w; p.days = o.d || 2; p.from = o.f || ''; p.interests = o.i || [];
-      p.pace = o.p || 'normal'; p.stops = o.s || []; p.custom = o.c || {};
+      p.pace = o.p || 'normal'; p.stops = o.s || []; p.custom = o.c || {}; p.token = o.t || '';
       (o.l || []).forEach(function (s) { p.locked[s] = 1; });
       (o.r || []).forEach(function (s) { p.removed[s] = 1; });
       return p.where ? p : null;
@@ -341,6 +346,156 @@
     var m = /[#&]p=([A-Za-z0-9_-]+)/.exec(location.hash);
     if (m) return decode(m[1]);
     try { return decode(localStorage.getItem(STORE) || ''); } catch (e) { return null; }
+  }
+
+  /* ---------------------------------------------------------------- calendar */
+
+  function icsTime(dayIndex, minutes) {
+    var base = plan.from ? new Date(plan.from + 'T00:00:00') : new Date();
+    base.setHours(0, 0, 0, 0);
+    base.setDate(base.getDate() + dayIndex);
+    base.setMinutes(minutes);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return base.getFullYear() + p(base.getMonth() + 1) + p(base.getDate()) + 'T' +
+      p(base.getHours()) + p(base.getMinutes()) + '00';
+  }
+  function icsEscape(v) {
+    return String(v || '').replace(/([,;\\])/g, '\\$1').replace(/\r?\n/g, '\\n');
+  }
+
+  /** The plan as a calendar file: one event per stop, in local time, with the place and the link. */
+  function downloadIcs() {
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//bilete.online//Planificator//RO', 'CALSCALE:GREGORIAN'];
+    var stamp = icsTime(0, 0);
+    for (var d = 0; d < plan.days; d++) {
+      dayView(d).rows.forEach(function (r) {
+        lines.push(
+          'BEGIN:VEVENT',
+          'UID:' + r.slug + '-d' + d + '@bilete.online',
+          'DTSTAMP:' + stamp,
+          'DTSTART:' + icsTime(d, r.start),
+          'DTEND:' + icsTime(d, r.start + r.dur),
+          'SUMMARY:' + icsEscape(r.row[1]),
+          'LOCATION:' + icsEscape([r.row[2], r.row[4]].filter(Boolean).join(', ')),
+          'GEO:' + r.lat + ';' + r.lng,
+          'URL:https://bilete.online/atractie/' + r.slug,
+          'DESCRIPTION:' + icsEscape((r.row[5] ? r.row[5] + '. ' : '') + 'Durata e o estimare. https://bilete.online/atractie/' + r.slug),
+          'END:VEVENT'
+        );
+      });
+    }
+    lines.push('END:VCALENDAR');
+
+    var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    var a = el('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plan-' + fold(plan.where.label).replace(/[^a-z0-9]+/g, '-') + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  /* ---------------------------------------------------------------- the account */
+
+  function token() {
+    try { return localStorage.getItem('bileteonline_customer_token') || ''; } catch (e) { return ''; }
+  }
+  function api(action, options) {
+    var t = token();
+    if (!t) return Promise.reject(new Error('anonim'));
+    options = options || {};
+    return fetch('/api/proxy.php?action=' + action + (options.query || ''), {
+      method: options.method || 'GET',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      credentials: 'same-origin'
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok || j.success === false) throw new Error(j.message || ('HTTP ' + r.status));
+        return j.data || j;
+      });
+    });
+  }
+
+  function savePlan(b) {
+    var label = b.querySelector('span');
+    var totals = plan.stops.reduce(function (n, day) { return n + day.length; }, 0);
+    label.textContent = 'Se salvează…';
+    api('customer.plan.save', {
+      method: 'POST',
+      body: {
+        token: plan.token || null,
+        title: 'Plan ' + plan.where.label + ' · ' + plan.days + (plan.days === 1 ? ' zi' : ' zile'),
+        place: plan.where.label,
+        days: plan.days,
+        stops: totals,
+        starts_on: plan.from || null,
+        payload: { v: 1, code: encode() }
+      }
+    }).then(function (d) {
+      plan.token = (d.plan || {}).token || plan.token;
+      save();
+      b.classList.add('is-done');
+      label.textContent = 'Salvat în cont';
+      setTimeout(function () { b.classList.remove('is-done'); label.textContent = 'Salvează în cont'; }, 2500);
+    }).catch(function (err) {
+      label.textContent = err.message === 'anonim' ? 'Intră în cont' : 'N-a mers';
+      setTimeout(function () { label.textContent = 'Salvează în cont'; }, 2500);
+      if (err.message === 'anonim') window.location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.hash);
+    });
+  }
+
+  /** The plans kept on the account: load one back, or drop it. */
+  function openSaved(b) {
+    var panel = document.getElementById('pl-saved');
+    if (panel) { panel.remove(); return; }
+    panel = el('div', 'pl-saved');
+    panel.id = 'pl-saved';
+    panel.appendChild(el('p', 'pl-saved-h', 'Se încarcă…'));
+    b.parentNode.parentNode.appendChild(panel);
+
+    api('customer.plans').then(function (d) {
+      panel.textContent = '';
+      var rows = (d.plans || []);
+      panel.appendChild(el('p', 'pl-saved-h', rows.length ? 'Planurile tale' : 'N-ai niciun plan salvat încă.'));
+      if (!rows.length) return;
+      var ul = el('ul', 'pl-saved-list');
+      rows.forEach(function (row) {
+        var li = el('li');
+        var open = el('button', 'pl-saved-open');
+        open.type = 'button';
+        open.appendChild(el('b', '', row.title));
+        open.appendChild(el('small', '', (row.stops || 0) + ' opriri · actualizat ' + String(row.updated_at || '').slice(0, 10)));
+        open.addEventListener('click', function () {
+          api('customer.plan', { query: '&token=' + encodeURIComponent(row.token) }).then(function (r) {
+            var code = ((r.plan || {}).payload || {}).code;
+            var loaded = code && decode(code);
+            if (!loaded) return;
+            plan = loaded;
+            plan.token = row.token;
+            activeDay = 0;
+            panel.remove();
+            render();
+          });
+        });
+        li.appendChild(open);
+        var del = el('button', 'pl-ib pl-ib-del');
+        del.type = 'button';
+        del.title = 'Șterge planul';
+        del.appendChild(icon('x'));
+        del.appendChild(el('span', 'sr', 'Șterge planul'));
+        del.addEventListener('click', function () {
+          api('customer.plan.delete', { method: 'DELETE', query: '&token=' + encodeURIComponent(row.token) })
+            .then(function () { li.remove(); });
+        });
+        li.appendChild(del);
+        ul.appendChild(li);
+      });
+      panel.appendChild(ul);
+    }).catch(function (err) {
+      panel.textContent = '';
+      panel.appendChild(el('p', 'pl-saved-h', err.message === 'anonim' ? 'Intră în cont ca să-ți vezi planurile.' : 'Nu am putut încărca planurile.'));
+    });
   }
 
   /* ---------------------------------------------------------------- rendering */
@@ -377,6 +532,19 @@
     meta.appendChild(el('span', '', totals.stops + (totals.stops === 1 ? ' oprire' : ' opriri')));
     meta.appendChild(el('span', '', nf(totals.km) + ' km'));
     meta.appendChild(el('span', '', (CFG.paces[plan.pace] || ['Normal'])[0]));
+
+    // Only worth a line when there is actually something to book on the way.
+    var sellable = 0;
+    plan.stops.forEach(function (day) {
+      day.forEach(function (slug) {
+        var i = bySlug[slug];
+        if (i !== undefined && bookable(i)) sellable++;
+      });
+    });
+    if (sellable) {
+      var tick = el('span', 'pl-bar-sell', sellable + (sellable === 1 ? ' oprire cu bilete' : ' opriri cu bilete'));
+      meta.appendChild(tick);
+    }
     left.appendChild(meta);
     ui.bar.appendChild(left);
 
@@ -395,7 +563,10 @@
       if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done);
       else done();
     }, 'pl-btn'));
+    acts.appendChild(btn('calendar-blank', 'Calendar (.ics)', function () { downloadIcs(); }, 'pl-btn'));
     acts.appendChild(btn('printer', 'Tipărește', function () { window.print(); }, 'pl-btn'));
+    acts.appendChild(btn('user-circle', 'Salvează în cont', savePlan, 'pl-btn'));
+    if (token()) acts.appendChild(btn('list', 'Planurile mele', openSaved, 'pl-btn'));
     acts.appendChild(btn('gear-six', 'Schimbă', function () {
       root.hidden = true;
       startBox.hidden = false;
@@ -502,6 +673,12 @@
     text.appendChild(title);
     var meta = el('p', 'pl-stop-meta');
     meta.appendChild(document.createTextNode([r.row[5], r.row[2]].filter(Boolean).join(' · ')));
+    if (bookable(r.i)) {
+      var tag = el('span', 'pl-sell');
+      tag.appendChild(icon('ticket'));
+      tag.appendChild(document.createTextNode('are bilete'));
+      meta.appendChild(tag);
+    }
     text.appendChild(meta);
 
     var durWrap = el('label', 'pl-dur');

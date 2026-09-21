@@ -1337,6 +1337,33 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Saved itineraries from the trip planner (/plan). The planner works without an account;
+    // these are only for the plans somebody chose to keep.
+    case 'customer.plans':
+        $method = 'GET';
+        $endpoint = '/customer/trip-plans';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.plan':
+        $method = 'GET';
+        $endpoint = '/customer/trip-plans/' . rawurlencode((string) ($_GET['token'] ?? ''));
+        $requiresAuth = true;
+        break;
+
+    case 'customer.plan.save':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/trip-plans';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.plan.delete':
+        $method = 'DELETE';
+        $endpoint = '/customer/trip-plans/' . rawurlencode((string) ($_GET['token'] ?? ''));
+        $requiresAuth = true;
+        break;
+
     case 'customer.profile':
         $method = 'PUT';
         $body = file_get_contents('php://input');

@@ -2491,6 +2491,20 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->whereNumber('ticket')
             ->middleware('throttle:30,1')
             ->name('api.marketplace-client.customer.support.reply');
+        // Saved itineraries from the bilete.online trip planner. The planner itself needs no
+        // server -- a plan lives in its URL -- so these only serve the ones kept on an account.
+        Route::get('/trip-plans', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TripPlansController::class, 'index'])
+            ->name('api.marketplace-client.customer.trip-plans.index');
+        Route::post('/trip-plans', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TripPlansController::class, 'store'])
+            ->middleware('throttle:60,1')
+            ->name('api.marketplace-client.customer.trip-plans.store');
+        Route::get('/trip-plans/{token}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TripPlansController::class, 'show'])
+            ->where('token', '[a-z0-9]{8,32}')
+            ->name('api.marketplace-client.customer.trip-plans.show');
+        Route::delete('/trip-plans/{token}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TripPlansController::class, 'destroy'])
+            ->where('token', '[a-z0-9]{8,32}')
+            ->name('api.marketplace-client.customer.trip-plans.destroy');
+
         Route::put('/profile', [CustomerAuthController::class, 'updateProfile'])
             ->name('api.marketplace-client.customer.profile.update');
         Route::put('/password', [CustomerAuthController::class, 'updatePassword'])

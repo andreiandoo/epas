@@ -60,6 +60,19 @@
 .pl-btn.is-done{border-color:var(--action);background:var(--tint-green);color:var(--action)}
 .pl-btn .ic{width:16px;height:16px;color:var(--green)}
 
+.pl-bar-sell{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:var(--r-pill);background:var(--tint-green);font-weight:700;color:var(--action)}
+.pl-sell{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 7px;border-radius:var(--r-pill);background:var(--tint-green);font-size:.6875rem;font-weight:700;color:var(--action)}
+.pl-sell .ic{width:11px;height:11px}
+
+.pl-saved{flex-basis:100%;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+.pl-saved-h{margin:0;font-size:.875rem;font-weight:700;color:var(--green)}
+.pl-saved-list{list-style:none;display:grid;gap:6px;margin:10px 0 0;padding:0}
+.pl-saved-list li{display:flex;align-items:center;gap:8px}
+.pl-saved-open{display:grid;gap:1px;flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.pl-saved-open:hover{border-color:var(--green);background:var(--tint-green)}
+.pl-saved-open b{font-size:.875rem}
+.pl-saved-open small{font-size:.75rem;color:var(--muted)}
+
 .pl-cols{display:grid;gap:var(--space-5)}
 @media (min-width:1100px){.pl-cols{grid-template-columns:minmax(0,1fr) minmax(360px,42%);align-items:start}}
 .pl-map-col{display:grid;gap:10px}
