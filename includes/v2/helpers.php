@@ -35,6 +35,18 @@ function v2_thousands(int $n): string
     return number_format($n, 0, ',', '.');
 }
 
+/** Minutes as "45 min" / "2 h" / "2 h 13 min". */
+function v2_hm(int $minutes): string
+{
+    if ($minutes <= 0) {
+        return '';
+    }
+    $h = intdiv($minutes, 60);
+    $m = $minutes % 60;
+
+    return $h > 0 ? $h . ' h' . ($m ? ' ' . $m . ' min' : '') : $m . ' min';
+}
+
 function v2_asset(string $path): string
 {
     return asset('assets/v2/' . ltrim($path, '/'));

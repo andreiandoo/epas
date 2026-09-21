@@ -81,7 +81,27 @@
       Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
     return 12742 * Math.asin(Math.min(1, Math.sqrt(x)));
   }
+  function hm(min) {
+    min = Math.round(min || 0);
+    var h = Math.floor(min / 60), m = min % 60;
+    return h ? (h + ' h' + (m ? ' ' + m + ' min' : '')) : (m + ' min');
+  }
   function dist(d) { return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(d < 10 ? 1 : 0).replace('.', ',') + ' km'; }
+
+  /* Google's encoded polyline, precision 5 — how OSRM hands back the driving line. */
+  function decodePolyline(str) {
+    var index = 0, lat = 0, lng = 0, out = [], shift, result, byte;
+    while (index < str.length) {
+      shift = 0; result = 0;
+      do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      out.push([lat / 1e5, lng / 1e5]);
+    }
+    return out;
+  }
 
   function loadCss(href) {
     var link = document.createElement('link');
@@ -179,7 +199,7 @@
       lng[i] = st[8];
     });
 
-    return { f: f, rows: rows, types: types, cities: cities, zones: [], flags: { image: 1, featured: 2, activities: 4 }, hay: hay, lat: lat, lng: lng, legs: stops.map(function (st) { return st[10]; }) };
+    return { f: f, rows: rows, types: types, cities: cities, zones: [], flags: { image: 1, featured: 2, activities: 4 }, hay: hay, lat: lat, lng: lng, legs: stops.map(function (st) { return st[10]; }), mins: stops.map(function (st) { return st[11] || 0; }) };
   }
 
   /* ---------------------------------------------------------------- instance */
@@ -569,18 +589,34 @@
         syncView();
       });
     }
-    /* The dashed line is the route's order made visible; without it the numbers are just numbers. */
+    /**
+     * The line is the route's order made visible; without it the numbers are just numbers.
+     * With cfg.routeGeometry it is the actual driving line from the routing service, drawn solid;
+     * without it, the straight hops between stops, drawn dashed so nobody reads them as a road.
+     */
     function drawRouteLine() {
       if (!route || !map || routeLine) return;
-      var pts = [];
-      for (var i = 0; i < D.rows.length; i++) pts.push([D.lat[i], D.lng[i]]);
-      routeLine = window.L.polyline(pts, {
+      var stops = [];
+      for (var i = 0; i < D.rows.length; i++) stops.push([D.lat[i], D.lng[i]]);
+
+      var road = null;
+      if (cfg.routeGeometry) {
+        try { road = decodePolyline(cfg.routeGeometry); } catch (e) { road = null; }
+        if (road && road.length < 2) road = null;
+      }
+      routeLine = window.L.polyline(road || stops, {
         // an explicit SVG renderer: the map runs with preferCanvas, where a className and a CSS
         // dash pattern would have nothing to attach to
         renderer: window.L.svg(),
-        className: 'epm-route-line', color: '#1E5B48', weight: 3, opacity: .85, dashArray: '2 8', lineCap: 'round'
+        className: 'epm-route-line' + (road ? ' is-road' : ''),
+        color: '#1E5B48',
+        weight: road ? 4 : 3,
+        opacity: road ? .8 : .85,
+        dashArray: road ? null : '2 8',
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(map);
-      map.fitBounds(pts, { padding: [60, 60], maxZoom: 15, animate: false });
+      map.fitBounds(stops, { padding: [60, 60], maxZoom: 15, animate: false });
     }
 
     function busy(on) {
@@ -775,7 +811,9 @@
       meta.appendChild(document.createTextNode(bits.join(' · ')));
       if (route && i > 0 && D.legs && D.legs[i] > 0) {
         meta.appendChild(document.createTextNode(' · '));
-        meta.appendChild(el('span', 'epm-row-dist', '+' + dist(D.legs[i])));
+        var legTxt = '+' + dist(D.legs[i]);
+        if (D.mins && D.mins[i] > 0) legTxt += ', ' + hm(D.mins[i]);
+        meta.appendChild(el('span', 'epm-row-dist', legTxt));
       } else if (!route && isFinite(d)) {
         meta.appendChild(document.createTextNode(' · '));
         meta.appendChild(el('span', 'epm-row-dist', dist(d)));
@@ -789,7 +827,10 @@
     function renderMeta() {
       ui.meta.textContent = '';
       if (route) {
-        ui.meta.appendChild(el('span', '', count(D.rows.length, 'oprire', 'opriri') + (cfg.routeKm ? ' · ' + cfg.routeKm + ' km în linie dreaptă' : '')));
+        var bits = count(D.rows.length, 'oprire', 'opriri');
+        if (cfg.routeKm) bits += ' · ' + nf(cfg.routeKm) + ' km' + (cfg.routeRoad ? ' pe șosea' : ' în linie dreaptă');
+        if (cfg.routeMin) bits += ' · ' + hm(cfg.routeMin) + ' de mers';
+        ui.meta.appendChild(el('span', '', bits));
         return;
       }
       ui.meta.appendChild(el('span', '', count(visible.length, 'atracție pe hartă', 'atracții pe hartă')));
