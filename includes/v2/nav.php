@@ -53,6 +53,8 @@ $v2NavR = api_cached_many([
     'allCities1' => ['key' => 'v2_cities_all_1', 'endpoint' => '/locations/cities', 'params' => ['per_page' => 200, 'page' => 1, 'sort' => 'name'], 'ttl' => 21600],
     'allCities2' => ['key' => 'v2_cities_all_2', 'endpoint' => '/locations/cities', 'params' => ['per_page' => 200, 'page' => 2, 'sort' => 'name'], 'ttl' => 21600],
     'blog' => ['key' => 'v2_blog', 'endpoint' => '/blog-articles', 'params' => ['per_page' => 6, 'status' => 'published'], 'ttl' => 900],
+    // the published locations (activities module): the header menu groups them by city, /locatii lists them all
+    'locations' => ['key' => 'v2_am_locations_nav', 'endpoint' => '/activities-module/locations', 'params' => ['per_page' => 50], 'ttl' => 1800],
 ]);
 $v2NavData = function (string $k) use ($v2NavR): array {
     return !empty($v2NavR[$k]['success']) && is_array($v2NavR[$k]['data'] ?? null) ? $v2NavR[$k]['data'] : [];
@@ -139,6 +141,50 @@ foreach (['allCities1', 'allCities2'] as $v2Page) {
         ];
     }
 }
+
+// ------------------------------------------------------------------ locations (activities module), by city
+// What the "Locații" menu shows: the cities that have published locations, each with its locations (picture, what
+// you can book there, price from). Empty while nothing is published — the header then keeps the plain link.
+$V2NAV['locations'] = ['total' => 0, 'cities' => []];
+$v2LocCities = [];
+foreach ((array) ($v2NavData('locations')['items'] ?? []) as $l) {
+    if (!is_array($l) || empty($l['slug']) || empty($l['name'])) {
+        continue;
+    }
+    $citySlug = (string) ($l['city']['slug'] ?? '');
+    $cityName = navFlatName($l['city']['name'] ?? '');
+    if ($citySlug === '' || $cityName === '') {
+        continue;
+    }
+    $counts = is_array($l['counts'] ?? null) ? $l['counts'] : [];
+    $offer = array_filter([
+        !empty($counts['access']) ? v2_num((int) $counts['access'], 'bilet', 'bilete') : '',
+        !empty($counts['experience']) ? v2_exp((int) $counts['experience']) : '',
+        !empty($counts['package']) ? v2_num((int) $counts['package'], 'pachet', 'pachete') : '',
+    ]);
+    $v2LocCities[$citySlug]['name'] = $cityName;
+    $v2LocCities[$citySlug]['slug'] = $citySlug;
+    $v2LocCities[$citySlug]['items'][] = [
+        'name' => navFlatName($l['name']),
+        'href' => '/locatie/' . $l['slug'],
+        'photo' => v2_media_url($l['cover_image'] ?? null),
+        'category' => navFlatName($l['category']['name'] ?? ''),
+        'offer' => $offer ? implode(' · ', $offer) : '',
+        'price' => !empty($l['min_price_cents']) ? (int) round($l['min_price_cents'] / 100) : null,
+        'lodging' => !empty($l['has_lodging']),
+    ];
+}
+foreach ($v2LocCities as $citySlug => $city) {
+    $v2LocCities[$citySlug]['count'] = count($city['items']);
+}
+// most locations first, then alphabetically, so the first tab is the city with the most to see
+uasort($v2LocCities, function ($a, $b) {
+    return $b['count'] <=> $a['count'] ?: strcoll($a['name'], $b['name']);
+});
+$V2NAV['locations'] = [
+    'total' => array_sum(array_column($v2LocCities, 'count')),
+    'cities' => array_values($v2LocCities),
+];
 
 $v2RegionsRaw = $v2NavData('regions');
 $v2RegionsRaw = isset($v2RegionsRaw['regions']) ? $v2RegionsRaw['regions'] : $v2RegionsRaw;
