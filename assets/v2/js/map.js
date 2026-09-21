@@ -172,7 +172,9 @@
    * Route mode builds the same structure loadData() returns, but out of the handful of stops the
    * page already has. The rest of the module then works unchanged -- and a route page never
    * downloads the 7k-pin dataset it would not use.
-   * A stop row is [slug, name, city, citySlug, county, type, emoji, lat, lng, img, legKm].
+   * A stop row is [slug, name, city, citySlug, county, type, emoji, lat, lng, img, legKm, legMin,
+   * flags?] -- the last one optional, so a host that has the catalogue flags (the planner) can keep
+   * the "has tickets" marking on its pins.
    */
   function datasetFromStops(stops) {
     var f = { name: 0, slug: 1, type: 2, city: 3, zone: 4, lat_e5: 5, lng_e5: 6, flags: 7, img: 8 };
@@ -193,7 +195,8 @@
       var t = tName ? typeIdx[tKey] : -1, c = cKey ? cityIdx[cKey] : -1;
       if (t >= 0) types[t][4]++;
       if (c >= 0) cities[c][4]++;
-      rows.push([st[1], st[0], t, c, -1, Math.round(st[7] * 100000), Math.round(st[8] * 100000), st[9] ? 1 : 0, st[9] || '']);
+      var fl = st[12] !== undefined ? st[12] : (st[9] ? 1 : 0);
+      rows.push([st[1], st[0], t, c, -1, Math.round(st[7] * 100000), Math.round(st[8] * 100000), fl, st[9] || '']);
       hay.push(fold(st[1] + ' ' + (st[2] || '')));
       lat[i] = st[7];
       lng[i] = st[8];
