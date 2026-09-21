@@ -13,6 +13,15 @@ $v2Ideas = [
     ['cloud-rain', 'Indoor când plouă', '/activitati-zile-ploioase'], ['coins', 'Sub 50 lei', '/activitati-sub-50-lei'],
     ['heart', 'Pentru cupluri', '/activitati-cuplu'], ['gift', 'Experiențe cadou', '/experiente-cadou'],
 ];
+// "Locații": the cities with published locations (v2/nav.php). With none, the header keeps the plain link.
+$v2Loc = $V2NAV['locations'] ?? ['total' => 0, 'cities' => []];
+// What you buy at a location, in the order the location page shows it.
+$v2LocHow = [
+    ['ticket', 'Bilet de intrare', 'Intri cu el direct, fără coadă la casă.'],
+    ['star', 'Experiențe la fața locului', 'Tururi, ateliere, închirieri — le adaugi la același bilet.'],
+    ['gift', 'Pachete', 'Intrarea și experiențele într-un singur preț.'],
+];
+
 // Under "Explorează": attractions are the places to see (points of interest); tickets are sold on /locatii.
 $v2AttrLinks = [
     ['castle-turret', 'Castele și palate', '/atractii?tip=castel-palat'], ['buildings', 'Muzee', '/atractii?tip=muzeu'],
@@ -35,7 +44,11 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
     </a>
     <nav class="mnav" aria-label="Principal">
       <button class="mnav-btn" type="button" data-mega="explore" aria-expanded="false" aria-controls="mega-explore">Explorează<?= v2_ic('caret-down') ?></button>
+      <?php if ($v2Loc['cities']): ?>
+      <button class="mnav-btn" type="button" data-mega="locations" aria-expanded="false" aria-controls="mega-locations">Locații<?= v2_ic('caret-down') ?></button>
+      <?php else: ?>
       <a class="mnav-link" href="/locatii">Locații</a>
+      <?php endif; ?>
       <button class="mnav-btn" type="button" data-mega="activities" aria-expanded="false" aria-controls="mega-activities">Experiențe<?= v2_ic('caret-down') ?></button>
       <button class="mnav-btn" type="button" data-mega="inspiration" aria-expanded="false" aria-controls="mega-inspiration">Inspirație<?= v2_ic('caret-down') ?></button>
       <a class="mnav-link" href="/card-cadou">Card cadou</a>
@@ -113,6 +126,62 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       </aside>
     </div>
   </div>
+
+  <?php if ($v2Loc['cities']): ?>
+  <div class="mega mega-loc" id="mega-locations" data-lenis-prevent hidden>
+    <div class="mega-in">
+      <div>
+        <p class="mega-label">Orașe cu locații</p>
+        <div class="mega-tabs" role="tablist" aria-orientation="vertical" aria-label="Orașe cu locații" data-tabs data-hover>
+          <?php foreach ($v2Loc['cities'] as $i => $c): ?>
+          <button class="mega-tab" type="button" role="tab" id="mlt-<?= $i ?>" aria-controls="ml-<?= $i ?>" aria-selected="<?= $i === 0 ? 'true' : 'false' ?>" tabindex="<?= $i === 0 ? 0 : -1 ?>"><span><?= v2_e($c['name']) ?></span><small><?= v2_num($c['count'], 'locație', 'locații') ?></small></button>
+          <?php endforeach; ?>
+        </div>
+        <a class="mega-all" href="/locatii">Toate locațiile<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <div>
+        <?php foreach ($v2Loc['cities'] as $i => $c): ?>
+        <div class="mega-panel" id="ml-<?= $i ?>" role="tabpanel" aria-labelledby="mlt-<?= $i ?>"<?= $i ? ' hidden' : '' ?>>
+          <p class="mega-h">Locații în <?= v2_e($c['name']) ?></p>
+          <ul class="mloc-list">
+            <?php foreach (array_slice($c['items'], 0, 6) as $li => $l): ?>
+            <li><a class="mloc" href="<?= v2_e($l['href']) ?>">
+              <span class="mloc-media"><?= $l['photo'] ? v2_photo([$l['photo'], 0, 0, '']) : v2_fallback($l['name'], $li) ?></span>
+              <span class="mloc-t">
+                <?php if ($l['category']): ?><small class="mloc-k"><?= v2_e($l['category']) ?></small><?php endif; ?>
+                <b><?= v2_e($l['name']) ?></b>
+                <small class="mloc-m"><?= v2_e($l['offer'] ?: 'Bilete online la intrare') ?><?= $l['lodging'] ? ' · cazare' : '' ?></small>
+              </span>
+              <?php if ($l['price']): ?><span class="mloc-p">de la <b><?= v2_e(number_format($l['price'], 0, ',', '.')) ?> lei</b></span><?php endif; ?>
+            </a></li>
+            <?php endforeach; ?>
+          </ul>
+          <p class="mega-label">Tot ce poți face în <?= v2_e($c['name']) ?></p>
+          <ul class="mega-links two">
+            <li><a href="/<?= v2_e($c['slug']) ?>/experiente">Experiențe în <?= v2_e($c['name']) ?></a></li>
+            <li><a href="/<?= v2_e($c['slug']) ?>/atractii">Atracții în <?= v2_e($c['name']) ?></a></li>
+            <li><a href="/<?= v2_e($c['slug']) ?>">Ghidul orașului <?= v2_e($c['name']) ?></a></li>
+            <li><a href="/<?= v2_e($c['slug']) ?>/locatii"><?= $c['count'] > 6 ? 'Toate cele ' . v2_num($c['count'], 'locație', 'locații') : 'Toate locațiile' ?> din <?= v2_e($c['name']) ?></a></li>
+          </ul>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <aside class="mega-aside" aria-label="Cum funcționează o locație">
+        <p class="mega-label">Ce iei online</p>
+        <ul class="mloc-how">
+          <?php foreach ($v2LocHow as [$icon, $title, $text]): ?>
+          <li><?= v2_ic($icon) ?><span><b><?= v2_e($title) ?></b><small><?= v2_e($text) ?></small></span></li>
+          <?php endforeach; ?>
+        </ul>
+        <a class="mloc-op" href="/parteneri">
+          <span class="mloc-op-k">Ai o locație?</span>
+          <span class="mloc-op-t">Vinde bilete de intrare online, cu comision 2% plătit de cumpărător.</span>
+          <span class="mloc-op-cta">Vezi cum funcționează<?= v2_ic('arrow-right') ?></span>
+        </a>
+      </aside>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <div class="mega mega-act" id="mega-activities" data-lenis-prevent hidden>
     <div class="mega-in">
@@ -204,7 +273,7 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
       <section class="mm-panel is-current" id="mm-root" aria-label="Meniu principal">
         <ul class="mm-main">
           <li style="--i:1"><button class="mm-row" type="button" data-mm-go="mm-explore"><span class="mm-ic"><?= v2_ic('map-trifold') ?></span><span class="mm-t"><b>Explorează</b><small><?= $v2MmCityTotal ? v2_num($v2MmCityTotal, 'oraș', 'orașe') . ' în ' . count($V2NAV['regions']) . ' regiuni' : 'Orașe și regiuni' ?></small></span><?= v2_ic('arrow-right') ?></button></li>
-          <li style="--i:2"><a class="mm-row" href="/locatii"><span class="mm-ic"><?= v2_ic('ticket') ?></span><span class="mm-t"><b>Locații</b><small>Bilete de intrare, online</small></span><?= v2_ic('arrow-right') ?></a></li>
+          <li style="--i:2"><?php if ($v2Loc['cities']): ?><button class="mm-row" type="button" data-mm-go="mm-locations"><span class="mm-ic"><?= v2_ic('ticket') ?></span><span class="mm-t"><b>Locații</b><small>Bilete de intrare, online</small></span><?= v2_ic('arrow-right') ?></a></button><?php else: ?><a class="mm-row" href="/locatii"><span class="mm-ic"><?= v2_ic('ticket') ?></span><span class="mm-t"><b>Locații</b><small>Bilete de intrare, online</small></span><?= v2_ic('arrow-right') ?></a></a><?php endif; ?></li>
           <li style="--i:2"><button class="mm-row" type="button" data-mm-go="mm-activities"><span class="mm-ic"><?= v2_ic('squares-four') ?></span><span class="mm-t"><b>Experiențe</b><small><?= v2_num(count($V2NAV['categories']), 'categorie', 'categorii') ?> de experiențe</small></span><?= v2_ic('arrow-right') ?></button></li>
           <li style="--i:3"><button class="mm-row" type="button" data-mm-go="mm-inspiration"><span class="mm-ic"><?= v2_ic('sun') ?></span><span class="mm-t"><b>Inspirație</b><small>Ghiduri și idei de weekend</small></span><?= v2_ic('arrow-right') ?></button></li>
           <li style="--i:4"><a class="mm-row" href="/card-cadou"><span class="mm-ic is-gold"><?= v2_ic('gift') ?></span><span class="mm-t"><b>Card cadou</b><small>Dăruiește o experiență</small></span><?= v2_ic('arrow-right') ?></a></li>
@@ -266,6 +335,27 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
         <p class="mm-k">Atracții</p>
         <ul class="mm-chips"><?php foreach ($v2AttrLinks as [$icon, $text, $href]): ?><li><a href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li><?php endforeach; ?></ul>
       </section>
+
+      <?php if ($v2Loc['cities']): ?>
+      <section class="mm-panel" id="mm-locations" aria-labelledby="mm-locations-h" hidden>
+        <div class="mm-phead"><button class="mm-back" type="button" data-mm-back><?= v2_ic('arrow-left') ?><span class="sr">Înapoi la meniu</span></button><h2 class="mm-ph" id="mm-locations-h">Locații</h2><a class="mm-plink" href="/locatii">Toate locațiile</a></div>
+        <div class="mm-tabs" role="tablist" aria-label="Orașe cu locații" data-tabs>
+          <?php foreach ($v2Loc['cities'] as $i => $c): ?><button class="mm-tab" type="button" role="tab" id="mmlt-<?= $i ?>" aria-controls="mml-<?= $i ?>" aria-selected="<?= $i ? 'false' : 'true' ?>" tabindex="<?= $i ? -1 : 0 ?>"><?= v2_e($c['name']) ?><small><?= (int) $c['count'] ?></small></button><?php endforeach; ?>
+        </div>
+        <?php foreach ($v2Loc['cities'] as $i => $c): ?>
+        <div class="mm-region" id="mml-<?= $i ?>" role="tabpanel" aria-labelledby="mmlt-<?= $i ?>"<?= $i ? ' hidden' : '' ?>>
+          <ul class="mm-tiles">
+            <?php foreach (array_slice($c['items'], 0, 4) as $li => $l): ?>
+            <li><a class="mm-tile" href="<?= v2_e($l['href']) ?>"><?= $l['photo'] ? v2_photo([$l['photo'], 0, 0, '']) : v2_fallback($l['name'], $li) ?><span><b><?= v2_e($l['name']) ?></b><small><?= v2_e($l['offer'] ?: 'Bilete online') ?></small></span></a></li>
+            <?php endforeach; ?>
+          </ul>
+          <a class="mm-all" href="/<?= v2_e($c['slug']) ?>/locatii">Locațiile din <?= v2_e($c['name']) ?><?= v2_ic('arrow-right') ?></a>
+        </div>
+        <?php endforeach; ?>
+        <p class="mm-k">Ce iei online</p>
+        <ul class="mm-chips"><?php foreach ($v2LocHow as [$icon, $title, $text]): ?><li><a href="/locatii"><?= v2_ic($icon) ?><?= v2_e($title) ?></a></li><?php endforeach; ?></ul>
+      </section>
+      <?php endif; ?>
 
       <section class="mm-panel" id="mm-activities" aria-labelledby="mm-activities-h" hidden>
         <div class="mm-phead"><button class="mm-back" type="button" data-mm-back><?= v2_ic('arrow-left') ?><span class="sr">Înapoi la meniu</span></button><h2 class="mm-ph" id="mm-activities-h">Experiențe</h2><a class="mm-plink" href="/experiente">Toate</a></div>
