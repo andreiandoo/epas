@@ -62,6 +62,8 @@ $v2ClientData = [
         'durations' => PLAN_DURATIONS,
         'paces'     => PLAN_PACES,
         'interests' => PLAN_INTERESTS,
+        'company'   => PLAN_COMPANY,
+        'bookables' => $summary['bookables'] ?? [],
         'travel'    => PLAN_TRAVEL,
         'cities'    => array_map(fn ($c) => [$c[0], $c[1], $c[4]], $summary['cities'] ?? []),
         'regions'   => array_map(fn ($r) => [$r[0], $r[1]], $regions),
@@ -108,9 +110,18 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
       </nav>
       <h1 id="pl-h">Hai să mergem <em>undeva</em></h1>
-      <p class="pl-lead">Spune unde ajungi și pe câte zile. Îți fac itinerariul din cele <?= v2_e(v2_thousands((int) $summary['total'])) ?> de atracții de pe hartă, pe zile și în ordinea în care se leagă pe drum — apoi îl muți cum vrei.</p>
+      <p class="pl-lead">Spune unde ajungi și pe câte zile. Îți fac itinerariul din cele <?= v2_e(v2_thousands((int) $summary['total'])) ?> de atracții de pe hartă și din experiențele și locațiile care se pot rezerva — pe zile, în ordinea în care se leagă pe drum, cu kilometrii pe șosea. Apoi îl muți cum vrei.</p>
 
       <form class="pl-form" id="pl-form" novalidate>
+        <div class="pl-field pl-field-where">
+          <label for="pl-from-place">De unde pleci?</label>
+          <div class="pl-auto">
+            <input id="pl-from-place" type="text" autocomplete="off" placeholder="Orașul din care pornești" required aria-describedby="pl-from-hint">
+            <ul class="pl-sugg" id="pl-sugg-from" role="listbox" hidden></ul>
+          </div>
+          <p class="pl-hint" id="pl-from-hint">Obligatoriu — de aici se măsoară drumul.</p>
+        </div>
+
         <div class="pl-field pl-field-where">
           <label for="pl-where">Unde mergi?</label>
           <div class="pl-auto">
@@ -133,6 +144,25 @@ include __DIR__ . '/includes/v2/header.php';
           <label for="pl-from">Din ce zi? <span class="pl-opt">(opțional)</span></label>
           <input id="pl-from" type="date">
         </div>
+
+        <div class="pl-field pl-field-where">
+          <label for="pl-back">Unde te întorci? <span class="pl-opt">(opțional)</span></label>
+          <div class="pl-auto">
+            <input id="pl-back" type="text" autocomplete="off" placeholder="Lasă gol ca să te întorci de unde ai plecat">
+            <ul class="pl-sugg" id="pl-sugg-back" role="listbox" hidden></ul>
+          </div>
+          <p class="pl-hint">Ultima zi se închide aici.</p>
+        </div>
+
+        <fieldset class="pl-field pl-field-wide">
+          <legend>Cu cine mergi?</legend>
+          <div class="pl-chips" id="pl-company">
+            <?php foreach (PLAN_COMPANY as $key => [$label, $emoji, $budget, $weights]): ?>
+            <button class="pl-chip" type="button" data-company="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= v2_e($emoji) ?></span><?= v2_e($label) ?></button>
+            <?php endforeach; ?>
+          </div>
+          <p class="pl-hint">Înclină recomandările spre ce li se potrivește. E o ponderare pe tipuri de locuri, nu o etichetă pusă fiecărui obiectiv.</p>
+        </fieldset>
 
         <fieldset class="pl-field pl-field-wide">
           <legend>Ce te interesează?</legend>
