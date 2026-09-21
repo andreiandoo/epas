@@ -24,7 +24,7 @@ require_once __DIR__ . '/account.php'; // v2_account_client_config()
  * [group id, group label, [[key, url, label, icon, badge]]]; badge: a data-org-badge key, 'nou', or null.
  * bilete.online sells no events: the operator works on locations, products (access tickets, experiences, packages) and
  * their bookings. The event screens (activities, participants, sales, the leisure "Locație" section, promo codes) stay
- * reachable by address but are no longer in the menu; the report and the widgets have operator versions.
+ * reachable by address but are no longer in the menu; the desk, the report and the widgets have operator versions.
  */
 const V2_ORG_NAV = [
     ['main', '', [
@@ -36,6 +36,7 @@ const V2_ORG_NAV = [
     ['catalog', 'Locații și produse', [
         ['am-locations', '/organizator/locatii', 'Locațiile mele', 'map-pin', null],
         ['am-products', '/organizator/produse', 'Produse', 'ticket', null],
+        ['am-pos', '/organizator/pos', 'Casă & POS', 'scan', null],
     ]],
     ['promo', 'Promovare', [
         ['am-widgets', '/organizator/widget-uri', 'Widget-uri embed', 'code', null],

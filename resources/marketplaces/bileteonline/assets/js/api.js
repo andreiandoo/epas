@@ -195,6 +195,9 @@ const BileteOnlineAPI = {
      * → {action, id} for the proxy's organizer.am.* actions; null for any other path.
      */
     _amRoute(endpoint) {
+        // the cash desk: /pos/catalog|day|session|sale|sales and /pos/session/{id}/close
+        const pos = /^\/organizer\/activities-module\/pos\/(catalog|day|session|sale|sales)(?:\/(\d+)\/close)?$/.exec(endpoint || '');
+        if (pos) return pos[2] ? { action: 'organizer.am.pos.close', id: pos[2] } : { action: 'organizer.am.pos.' + pos[1], id: null };
         const m = /^\/organizer\/activities-module\/(meta|summary|uploads|locations|products|bookings)(?:\/(\d+|day|export))?(?:\/(submit|publish|duplicate|no-show))?$/.exec(endpoint || '');
         if (!m) return null;
         const [, what, sub, verb] = m;

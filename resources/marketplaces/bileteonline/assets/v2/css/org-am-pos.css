@@ -1,0 +1,82 @@
+/* bilete.online v2: the operator's cash desk (/organizator/pos). Builds on org-venue.css + org-am.css. */
+.pos{padding-bottom:0}
+.pos-session{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:14px 18px;border:1px solid #F1DDA8;border-radius:18px;background:#FFFBF2}
+.pos-session.is-open{border-color:#CDE6D8;background:var(--tint-green)}
+.pos-session-t{display:grid;gap:2px;min-width:0}
+.pos-session-t span{color:var(--muted);font-size:.9375rem}
+.pos-session-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+.pos-session-tools .po-field{width:180px}
+
+.pos-grid{display:grid;gap:var(--space-5);grid-template-columns:minmax(0,1fr)}
+@media (min-width:1100px){.pos-grid{grid-template-columns:minmax(0,1fr) 380px;align-items:start}}
+.pos-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-bottom:12px}
+.pos-head .org-panel-h{margin:0}
+.pos-hours{margin:0;color:var(--muted);font-size:.9375rem}
+.pos-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pos-list{display:grid;gap:10px;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr))}
+.pos-p{display:grid;gap:10px;align-content:start;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.pos-p.is-off{opacity:.6}
+.pos-p-head{display:flex;gap:10px;align-items:flex-start}
+.pos-p-head b{display:block;font-size:1rem;line-height:1.25}
+.pos-p-head small{display:block;margin-top:2px;color:var(--green);font-size:.8125rem;font-weight:600}
+.pos-p-head small.is-low{color:var(--red-text)}
+.pos-p-head small.is-off{color:var(--muted)}
+.pos-p-ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--tint-green);font-size:1.25rem}
+.pos-vars{display:grid;gap:6px}
+.pos-v{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:600 .9375rem/1.2 var(--font);text-align:left;cursor:pointer}
+.pos-v:hover:not(:disabled){border-color:var(--green);background:var(--tint-green)}
+.pos-v:active:not(:disabled){transform:scale(.99)}
+.pos-v:disabled{cursor:not-allowed;color:var(--muted)}
+.pos-v b{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.pos-cart{min-width:0}
+@media (min-width:1100px){.pos-cart{position:sticky;top:84px}}
+.pos-cart-in{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:0 24px 50px -40px rgba(14,72,55,.5)}
+.pos-lines{display:grid;gap:8px;max-height:46vh;overflow-y:auto}
+.pos-line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px 10px;padding:10px;border-radius:12px;background:#FBFBF9}
+.pos-line-t{min-width:0}
+.pos-line-t b{display:block;overflow-wrap:anywhere;font-size:.9375rem}
+.pos-line-t small{display:block;color:var(--muted);font-size:.8125rem}
+.pos-line-sum{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos-line-x{grid-column:1 / -1}
+.pos-line-x .po-input{min-height:40px}
+.pos-qty{display:inline-flex;align-items:center;gap:6px}
+.pos-qty output{min-width:24px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.pos-totals{display:grid;gap:4px;margin:0}
+.pos-totals > div{display:flex;justify-content:space-between;gap:12px;font-size:.9375rem}
+.pos-totals dt{color:var(--muted)}
+.pos-totals dd{margin:0;font-variant-numeric:tabular-nums}
+.pos-totals .pos-total{margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:1.25rem;font-weight:700}
+.pos-totals .pos-total dt{color:var(--ink)}
+.pos-customer summary{cursor:pointer;color:var(--green);font-weight:700;font-size:.9375rem}
+.pos-customer[open] summary{margin-bottom:10px}
+.pos-err{margin:0;padding:10px 12px;border-radius:12px;background:#FDEDEC;color:var(--red-text);font-weight:600;font-size:.9375rem}
+.pos-pay{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:8px}
+.pos-pay .btn{min-height:56px;justify-content:center;font-size:1.0625rem}
+
+.pos-chips{display:grid;grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));gap:8px}
+.pos-chip{display:grid;gap:2px;padding:10px 6px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;text-align:center;cursor:pointer}
+.pos-chip:hover{border-color:var(--green);background:var(--tint-green)}
+.pos-chip b{font-size:1.0625rem;font-variant-numeric:tabular-nums}
+.pos-chip small{color:var(--muted);font-size:.75rem}
+.pos-done-sum{margin:0;font-weight:600}
+.pos-tickets{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pos-tickets li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:8px 10px;border-radius:10px;background:#FBFBF9}
+.pos-tickets li span{grid-column:1;color:var(--muted);font-size:.875rem}
+.pos-tickets li code{grid-column:2;grid-row:1 / span 2;align-self:center;font-weight:700}
+.pos-sales{margin-top:var(--space-2)}
+
+/* printing from the browser: only the tickets, 80 mm wide */
+.pos-print{display:none}
+@media print{
+  body *{visibility:hidden}
+  .pos-print,.pos-print *{visibility:visible}
+  .pos-print{display:block;position:absolute;left:0;top:0;width:76mm;color:#000;font:12px/1.35 Arial, sans-serif}
+  .pos-tk{padding:4mm 0;border-bottom:1px dashed #000;page-break-inside:avoid;text-align:center}
+  .pos-tk h3{margin:1mm 0;font-size:15px}
+  .pos-tk p{margin:.8mm 0}
+  .pos-tk svg{display:block;width:34mm;height:34mm;margin:2mm auto}
+  .pos-tk-k{font-size:10px}
+  .pos-tk-code{font-weight:700;letter-spacing:.08em}
+  @page{margin:2mm}
+}
