@@ -35,7 +35,7 @@ foreach (MAP_ROUTES as $slug => $r) {
             break;
         }
     }
-    $routeCards[] = [$slug, $r['title'], $r['lead'], $r['emoji'], $r['pace'], $d['count'], $d['km'], $img];
+    $routeCards[] = [$slug, $r['title'], $r['lead'], $r['emoji'], $r['pace'], $d['count'], $d['km'], $img, (int) ($d['road']['min'] ?? 0)];
     $stopsTotal += $d['count'];
     $kmTotal += $d['km'];
 }
@@ -112,7 +112,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="mp-prose">
         <h2 id="rx-about-h" class="sr">Despre trasee</h2>
         <p>Un traseu e o listă de opriri în ordinea în care se leagă pe drum. Fiecare oprire e o atracție reală din catalog, cu pagina ei, iar harta arată punctele numerotate și unite printr-o linie, ca să vezi dintr-o privire cum se desfășoară drumul.</p>
-        <p>Distanțele sunt măsurate în linie dreaptă între opriri — pe șosea ies mai mari, mai ales în zonele de munte. Butonul de navigare trimite tot traseul în Google Maps, cu opririle ca puncte intermediare, deci kilometrajul real și timpul îl vezi acolo.</p>
+        <p>Kilometrii și timpii sunt calculați pe drumurile reale, cu datele OpenStreetMap, nu în linie dreaptă — deci sunt cifrele pe care le vei vedea și la bord. Nu includ opririle, traficul și ocolirile. Butonul de navigare trimite tot traseul în Google Maps, cu opririle ca puncte intermediare.</p>
         <p>Traseele sunt sugestii, nu programe. Le poți parcurge invers, le poți rupe în două zile sau poți lua doar ce îți iese în drum. Dacă vrei să pornești de la un loc anume și să vezi ce e în jurul lui, harta întreagă e pe <a href="/harta">/harta</a>.</p>
       </div>
       <div class="mp-faq">

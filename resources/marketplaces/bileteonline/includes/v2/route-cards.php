@@ -6,7 +6,7 @@
 $rcCards = $routeCards ?? ($routePage['others'] ?? []);
 ?>
 <ul class="rc-grid">
-  <?php foreach ($rcCards as [$cSlug, $cTitle, $cLead, $cEmoji, $cPace, $cCount, $cKm, $cImg]): ?>
+  <?php foreach ($rcCards as $rcRow): [$cSlug, $cTitle, $cLead, $cEmoji, $cPace, $cCount, $cKm, $cImg] = $rcRow; $cMin = (int) ($rcRow[8] ?? 0); ?>
   <li>
     <a class="rc" href="/trasee/<?= v2_e($cSlug) ?>">
       <span class="rc-media">
@@ -19,7 +19,7 @@ $rcCards = $routeCards ?? ($routePage['others'] ?? []);
         <span class="rc-meta">
           <span><?= v2_ic('map-pin') ?><?= (int) $cCount ?> opriri</span>
           <span><?= v2_ic('arrow-right') ?><?= v2_e(v2_thousands((int) $cKm)) ?> km</span>
-          <span><?= v2_ic('clock') ?><?= v2_e($cPace) ?></span>
+          <span><?= v2_ic('clock') ?><?= $cMin > 0 ? v2_e(v2_hm($cMin)) : v2_e($cPace) ?></span>
         </span>
       </span>
     </a>

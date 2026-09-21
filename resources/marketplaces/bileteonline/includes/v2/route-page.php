@@ -49,7 +49,8 @@ include __DIR__ . '/header.php';
       </div>
       <ul class="mph-stats">
         <li><b><?= count($rpStops) ?></b> opriri</li>
-        <li><b><?= v2_e(v2_thousands((int) $routePage['km'])) ?></b> km</li>
+        <li><b><?= v2_e(v2_thousands((int) $routePage['km'])) ?></b> km<?= !empty($routePage['road']) ? ' pe șosea' : ' în linie dreaptă' ?></li>
+        <?php if (!empty($routePage['drive'])): ?><li><b><?= v2_e($routePage['drive']) ?></b> de condus</li><?php endif; ?>
         <li><b><?= v2_e($routePage['pace']) ?></b></li>
       </ul>
     </div>
@@ -61,7 +62,7 @@ include __DIR__ . '/header.php';
       <div class="mp-frame">
         <div data-epm-root data-epm-config="<?= v2_e(json_encode($routePage['config'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
       </div>
-      <p class="rp-note">Distanța e măsurată în linie dreaptă între opriri, nu pe șosea. <a href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Deschide tot traseul în Google Maps<?= v2_ic('arrow-right') ?></a></p>
+      <p class="rp-note"><?php if (!empty($routePage['road'])): ?>Distanțele și timpii sunt calculați pe drumurile reale (OpenStreetMap), fără opriri și fără trafic.<?php else: ?>Pentru acest traseu distanța e măsurată în linie dreaptă între opriri, nu pe șosea.<?php endif; ?> <a href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Deschide tot traseul în Google Maps<?= v2_ic('arrow-right') ?></a></p>
     </div>
   </section>
 
@@ -73,7 +74,7 @@ include __DIR__ . '/header.php';
         <a class="sec-link" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Navighează<?= v2_ic('arrow-right') ?></a>
       </div>
       <ol class="rp-stops">
-        <?php foreach ($rpStops as $i => [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sEmoji, $sLat, $sLng, $sImg, $sLeg]): ?>
+        <?php foreach ($rpStops as $i => $stop): [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sEmoji, $sLat, $sLng, $sImg, $sLeg] = $stop; $sMin = $stop[11] ?? 0; ?>
         <li class="rp-stop">
           <span class="rp-num" aria-hidden="true"><?= $i + 1 ?></span>
           <a class="rp-card" href="/atractie/<?= v2_e($sSlug) ?>">
@@ -83,7 +84,7 @@ include __DIR__ . '/header.php';
               <span class="rp-title"><?= v2_e($sName) ?></span>
               <span class="rp-meta">
                 <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
-                <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_e(str_replace('.', ',', (string) $sLeg)) ?> km de la oprirea anterioară</span><?php endif; ?>
+                <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= v2_e(str_replace('.', ',', (string) $sLeg)) ?> km<?php if (!empty($sMin)): ?> · <?= v2_e(v2_hm((int) $sMin)) ?><?php endif; ?> de la oprirea anterioară</span><?php endif; ?>
               </span>
             </span>
           </a>

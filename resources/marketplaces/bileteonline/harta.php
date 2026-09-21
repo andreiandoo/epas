@@ -181,7 +181,7 @@ foreach (MAP_ROUTES as $rSlug => $r) {
             break;
         }
     }
-    $routeCards[] = [$rSlug, $r['title'], $r['lead'], $r['emoji'], $r['pace'], $rd['count'], $rd['km'], $rImg];
+    $routeCards[] = [$rSlug, $r['title'], $r['lead'], $r['emoji'], $r['pace'], $rd['count'], $rd['km'], $rImg, (int) ($rd['road']['min'] ?? 0)];
 }
 if (!$landing) {
     shuffle($routeCards);

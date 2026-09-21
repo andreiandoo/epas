@@ -118,6 +118,8 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
 .epm-pin.is-step{width:28px;height:28px;font:800 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;background:var(--green)}
 .epm-pin.is-step.is-on{background:var(--red-text)}
 .epm-route-line{pointer-events:none}
+/* solid = the real driving line; dashed = straight hops, when routing was unavailable */
+.epm-route-line.is-road{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .epm-row-step{grid-template-columns:28px 56px minmax(0,1fr)}
 .epm-step{display:grid;place-items:center;align-self:center;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font:800 .75rem/1 var(--font);font-variant-numeric:tabular-nums}
 .epm-row[aria-current="true"] .epm-step{background:var(--red-text)}

@@ -371,8 +371,75 @@ function mapBuildByPagination(): ?array
  * A stop the dataset does not have is a typo in the route file, so the build stops rather than
  * shipping a route with a hole in it.
  */
+/**
+ * Road distances and the real driving line for one route, from the FOSSGIS OSRM instance.
+ *
+ * One request per route at build time -- never at page render -- so the service sees a dozen calls
+ * when the routes change and nothing in between. Returns null when routing is unavailable, and the
+ * caller falls back to straight-line distances and says so on the page.
+ */
+function mapRoadRoute(array $coords): ?array
+{
+    $pairs = [];
+    foreach ($coords as [$lat, $lng]) {
+        $pairs[] = $lng . ',' . $lat;   // OSRM takes lng,lat
+    }
+    $url = 'https://routing.openstreetmap.de/routed-car/route/v1/driving/' . implode(';', $pairs)
+        . '?overview=simplified&geometries=polyline&annotations=false&steps=false';
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT        => 45,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_USERAGENT      => 'bilete.online route builder (' . SUPPORT_EMAIL . ')',
+    ]);
+    $body = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
+    curl_close($ch);
+
+    if ($code !== 200) {
+        fwrite(STDERR, '  ! routing: HTTP ' . $code . ' ' . $err . "
+");
+
+        return null;
+    }
+    $d = json_decode((string) $body, true);
+    $r = $d['routes'][0] ?? null;
+    if (($d['code'] ?? '') !== 'Ok' || !is_array($r) || count($r['legs'] ?? []) !== count($coords) - 1) {
+        fwrite(STDERR, "  ! routing: unusable answer
+");
+
+        return null;
+    }
+
+    $legs = [[0.0, 0]];   // the first stop has nothing before it
+    foreach ($r['legs'] as $l) {
+        $legs[] = [round($l['distance'] / 1000, 1), (int) round($l['duration'] / 60)];
+    }
+
+    return [
+        'km'       => (int) round($r['distance'] / 1000),
+        'min'      => (int) round($r['duration'] / 60),
+        'legs'     => $legs,
+        'geometry' => (string) $r['geometry'],
+    ];
+}
+
 function mapRoutes(array $payload): array
 {
+    // Reuse the road data already computed for an unchanged route, so a summary rebuild does not
+    // call the routing service again.
+    $prev = [];
+    $prevFile = BILETEONLINE_ROOT . '/assets/v2/data/atractii.summary.json';
+    if (is_file($prevFile)) {
+        $old = json_decode((string) file_get_contents($prevFile), true);
+        $prev = is_array($old['routes'] ?? null) ? $old['routes'] : [];
+    }
+
     $routesFile = BILETEONLINE_ROOT . '/includes/v2/map-routes.php';
     if (!is_file($routesFile)) {
         return [];
@@ -439,10 +506,37 @@ function mapRoutes(array $payload): array
             ];
         }
 
+        $coords = array_map(fn ($st) => [$st[7], $st[8]], $stops);
+        $roadKey = substr(sha1(json_encode($coords)), 0, 12);
+        $road = null;
+        if (($prev[$slug]['road_key'] ?? null) === $roadKey && isset($prev[$slug]['road'])) {
+            $road = $prev[$slug]['road'];
+        } elseif (count($coords) > 1) {
+            fwrite(STDOUT, '  routing ' . $slug . ' ... ');
+            $road = mapRoadRoute($coords);
+            fwrite(STDOUT, $road ? $road['km'] . " km
+" : "straight line
+");
+            sleep(1);   // one request per route, spaced out; the service is a community one
+        }
+        if ($road) {
+            foreach ($stops as $i => $st) {
+                $stops[$i][10] = $road['legs'][$i][0] ?? 0;
+                $stops[$i][11] = $road['legs'][$i][1] ?? 0;
+            }
+        } else {
+            foreach ($stops as $i => $st) {
+                $stops[$i][11] = 0;
+            }
+        }
+
         $out[$slug] = [
             'stops'    => $stops,
             'count'    => count($stops),
-            'km'       => (int) round($total),
+            'road'     => $road,
+            'road_key' => $roadKey,
+            'km'       => $road ? $road['km'] : (int) round($total),
+            'straight' => (int) round($total),
             'photos'   => count(array_filter($stops, fn ($s) => $s[9] !== '')),
             'counties' => array_values(array_unique(array_filter(array_column($stops, 4)))),
             'bounds'   => [round(min($lats), 5), round(min($lngs), 5), round(max($lats), 5), round(max($lngs), 5)],

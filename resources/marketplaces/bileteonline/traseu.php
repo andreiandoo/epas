@@ -25,6 +25,10 @@ if (!$route || !$rData) {
 }
 
 $stops = $rData['stops'];
+$road = $rData['road'] ?? null;          // real driving distance and time, or null when routing failed
+$roadKm = $road ? (int) $road['km'] : (int) $rData['km'];
+$roadMin = $road ? (int) $road['min'] : 0;
+$driveTxt = v2_hm($roadMin);
 $counties = $rData['counties'];
 $cover = '';
 foreach ($stops as $s) {
@@ -63,7 +67,9 @@ $routePage = [
     'lead'  => $route['lead'],
     'emoji' => $route['emoji'],
     'pace'  => $route['pace'],
-    'km'    => $rData['km'],
+    'km'    => $roadKm,
+    'road'  => (bool) $road,
+    'drive' => $driveTxt,
     'stops' => $stops,
     'others' => $others,
     'breadcrumbs' => [['Acasă', '/'], ['Hartă', '/harta'], ['Trasee', '/trasee'], [$route['title'], '/trasee/' . $slug]],
@@ -73,27 +79,36 @@ $routePage = [
         'fixed'      => true,
         'title'      => $route['title'],
         'base'       => '/atractie/',
-        'routeKm'    => $rData['km'],
+        'routeKm'    => $roadKm,
+        'routeMin'   => $roadMin,
+        'routeRoad'  => (bool) $road,
+        'routeGeometry' => $road['geometry'] ?? '',
         // Route mode builds its dataset from these, so no pin file is downloaded here.
         'routeStops' => $stops,
     ],
     'prose' => [
         '<p>' . v2_e($route['intro']) . '</p>',
         '<p>Traseul are <strong>' . count($stops) . ' opriri</strong>' . ($where !== '' ? ', ' . v2_e($where) : '')
-            . ', iar între prima și ultima sunt <strong>' . v2_e(v2_thousands((int) $rData['km'])) . ' km în linie dreaptă</strong> — pe șosea, mai mult. '
+            . ($road
+                ? ', iar de la prima la ultima sunt <strong>' . v2_e(v2_thousands($roadKm)) . ' km pe șosea</strong>'
+                    . ($driveTxt !== '' ? ', adică <strong>' . v2_e($driveTxt) . '</strong> de condus fără opriri' : '') . '. '
+                : ', iar între prima și ultima sunt <strong>' . v2_e(v2_thousands($roadKm)) . ' km în linie dreaptă</strong>. ')
             . 'Numerele de pe hartă și din listă sunt aceeași ordine; apasă pe o oprire ca să o vezi pe hartă sau deschide pagina ei pentru descriere și adresă.</p>',
         '<p>Traseul e o sugestie, nu un program: îl poți parcurge în sens invers, îl poți tăia în două zile sau poți lua doar opririle care îți ies în drum. Toate punctele sunt și pe <a href="/harta">harta atracțiilor</a>, împreună cu ce se mai află în jurul lor.</p>',
     ],
     'faq' => [
-        ['Cât durează traseul?', 'Depinde cât stai la fiecare oprire. Am notat ' . $route['pace'] . ' ca reper, pentru un ritm în care apuci să intri, nu doar să treci pe lângă.'],
-        ['Distanța e pe șosea?', 'Nu. Cei ' . v2_thousands((int) $rData['km']) . ' km sunt măsurați în linie dreaptă între opriri, ca reper de mărime. Pentru kilometrajul real, deschide traseul în Google Maps cu butonul de mai sus.'],
+        ['Cât durează traseul?', ($driveTxt !== '' ? 'Doar condusul înseamnă ' . $driveTxt . '. ' : '') . 'Cu opririle, depinde cât stai la fiecare. Am notat ' . $route['pace'] . ' ca reper, pentru un ritm în care apuci să intri, nu doar să treci pe lângă.'],
+        $road
+            ? ['Distanța e pe șosea?', 'Da. Cei ' . v2_thousands($roadKm) . ' km și ' . ($driveTxt !== '' ? 'cele ' . $driveTxt : 'timpul de mers') . ' sunt calculați pe drumurile reale, nu în linie dreaptă, cu datele OpenStreetMap. Nu includ opririle, traficul și ocolirile.']
+            : ['Distanța e pe șosea?', 'Nu. Pentru acest traseu nu am putut calcula drumul, așa că cei ' . v2_thousands($roadKm) . ' km sunt măsurați în linie dreaptă. Pentru kilometrajul real, deschide traseul în Google Maps cu butonul de mai sus.'],
         ['Se plătește la fiecare oprire?', 'Nu. O parte dintre opriri sunt obiective cu acces liber; unde se vinde bilet, apare pe pagina obiectivului. Programul îl stabilește fiecare administrator.'],
         ['Pot schimba ordinea?', 'Da. Ordinea de aici e cea care scurtează drumul, dar traseul merge la fel de bine invers sau rupt în bucăți.'],
     ],
 ];
 
 $pageTitleRaw    = $route['title'] . ' — traseu cu ' . count($stops) . ' opriri | bilete.online';
-$pageDescription = $route['lead'] . ' Traseu cu ' . count($stops) . ' opriri și ' . v2_thousands((int) $rData['km']) . ' km, cu hartă și navigare.';
+$pageDescription = $route['lead'] . ' Traseu cu ' . count($stops) . ' opriri și ' . v2_thousands($roadKm) . ' km pe șosea'
+    . ($driveTxt !== '' ? ' (' . $driveTxt . ' de condus)' : '') . ', cu hartă și navigare.';
 $canonicalUrl    = SITE_URL . '/trasee/' . $slug;
 $ogImage         = $cover ?: (SITE_URL . '/assets/images/og-default.jpg');
 
