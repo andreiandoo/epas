@@ -59,7 +59,7 @@
     return nf(n) + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
   }
   function fold(s) {
-    return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }
   function debounce(fn, ms) {
     var t;
@@ -363,9 +363,11 @@
         for (var ci = 0; ci < D.cities.length; ci++) if (D.cities[ci][0] === state.city) { cityIdx = ci; break; }
       }
       if (state.zone) {
-        var wantZone = fold(state.zone);
+        /* Accepts a county or a region, by name or by slug: "Caras-Severin", "caras-severin". */
+        var slugify = function (v) { return fold(v).replace(/\s+/g, '-'); };
+        var wantZone = slugify(state.zone);
         for (var zi = 0; zi < D.zones.length; zi++) {
-          if (fold(D.zones[zi][0]) === wantZone || fold(D.zones[zi][1] || '') === wantZone) { zoneIdx = zi; break; }
+          if (slugify(D.zones[zi][0]) === wantZone || slugify(D.zones[zi][1] || '') === wantZone) { zoneIdx = zi; break; }
         }
       }
 
@@ -694,6 +696,8 @@
       var p = new URLSearchParams(window.location.search);
       if (state.types.length && !isPreset('all')) p.set('tip', state.types.join(',')); else p.delete('tip');
       if (state.q.trim()) p.set('q', state.q.trim()); else p.delete('q');
+      if (state.zone) p.set('zona', state.zone); else p.delete('zona');
+      if (state.city) p.set('oras', state.city); else p.delete('oras');
       if (cfg.dialog) p.set('harta', '1');
       var c = map.getCenter();
       var hash = '#' + map.getZoom() + '/' + c.lat.toFixed(4) + '/' + c.lng.toFixed(4);
@@ -710,6 +714,10 @@
       }
       var q = p.get('q');
       if (q) { state.q = q; ui.input.value = q; ui.clear.hidden = false; }
+      /* A region or city in the URL wins over the host config: /harta?zona=transilvania is a link
+         a page prints, the config is only the default. */
+      if (p.get('zona')) state.zone = p.get('zona');
+      if (p.get('oras')) state.city = p.get('oras');
 
       var m = /^#(\d{1,2})\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(window.location.hash);
       return m ? { zoom: +m[1], lat: +m[2], lng: +m[3] } : null;
