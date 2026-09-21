@@ -5287,6 +5287,47 @@ switch ($action) {
         $rawResponse = true; // CSV stream
         break;
 
+    // The cash desk (POS) of a location
+    case 'organizer.am.pos.catalog':
+    case 'organizer.am.pos.day':
+    case 'organizer.am.pos.sales':
+        $params = array_intersect_key($_GET, array_flip(['location_id', 'date', 'session_id']));
+        $path = ['organizer.am.pos.catalog' => 'pos/catalog', 'organizer.am.pos.day' => 'pos/day', 'organizer.am.pos.sales' => 'pos/sales'][$action];
+        $endpoint = '/organizer/activities-module/' . $path . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.pos.session':
+        // GET the open session (?location_id=) / POST open one (JSON body)
+        $method = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/activities-module/pos/session';
+        } else {
+            $params = array_intersect_key($_GET, array_flip(['location_id']));
+            $endpoint = '/organizer/activities-module/pos/session' . ($params ? '?' . http_build_query($params) : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.am.pos.close':
+    case 'organizer.am.pos.sale':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        if ($action === 'organizer.am.pos.close') {
+            $id = (int) ($_GET['id'] ?? 0);
+            if ($id <= 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing id']);
+                exit;
+            }
+            $endpoint = '/organizer/activities-module/pos/session/' . $id . '/close';
+        } else {
+            $endpoint = '/organizer/activities-module/pos/sale';
+        }
+        $requiresAuth = true;
+        break;
+
     case 'organizer.am.upload':
         // multipart: file + kind
         $method = 'POST';

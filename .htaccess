@@ -223,7 +223,7 @@ RewriteRule ^organizator/vanzari/?$ organizer/sales.php [L]
 # On-site sale at the venue (POS + cash register)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/pos/?$ organizer/pos.php [L]
+RewriteRule ^organizator/pos/?$ organizer/am-pos.php [L,QSA]
 
 # Venue section (a venue's own screens; the POS lives at /organizator/pos)
 RewriteCond %{REQUEST_FILENAME} !-f
