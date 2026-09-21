@@ -364,6 +364,124 @@ function mapBuildByPagination(): ?array
 }
 
 /**
+ * Everything on the marketplace that can actually be booked — the experiences and the leisure
+ * locations — resolved into the same shape the planner uses for a stop, so a plan can mix "go and
+ * look at this" with "and here is a thing you can buy a ticket for".
+ *
+ * The catalogue is thin here on purpose: this reads whatever exists, and writes an empty list when
+ * nothing does. Coordinates are the weak point — the activities list carries none, so the builder
+ * asks each activity's detail for its venue, and falls back to the centre of its city, flagged as
+ * approximate so the planner and the page can say so.
+ *
+ * Row: [kind, slug, title, city, citySlug, county, lat, lng, approx, priceCents, minutes, img, category]
+ */
+function mapBookables(array $payload): array
+{
+    $f = array_flip($payload['fields']);
+
+    // City centres, averaged from the attractions we already have, for the rows without a venue.
+    $sums = [];
+    foreach ($payload['points'] as $p) {
+        $ci = $p[$f['city']];
+        if ($ci < 0) {
+            continue;
+        }
+        $slug = $payload['cities'][$ci][0];
+        $sums[$slug] = $sums[$slug] ?? [0, 0, 0, $payload['cities'][$ci][2] ?? null];
+        $sums[$slug][0] += $p[$f['lat_e5']] / 100000;
+        $sums[$slug][1] += $p[$f['lng_e5']] / 100000;
+        $sums[$slug][2]++;
+    }
+    $centre = [];
+    foreach ($sums as $slug => $s) {
+        $centre[$slug] = [round($s[0] / $s[2], 5), round($s[1] / $s[2], 5), $s[3]];
+    }
+
+    $out = [];
+
+    // ---- experiences
+    $page = 1;
+    do {
+        $resp = mapFetch('/activities', ['per_page' => 50, 'page' => $page], 30);
+        $items = $resp['data']['items'] ?? [];
+        foreach ($items as $a) {
+            $slug = (string) ($a['slug'] ?? '');
+            if ($slug === '') {
+                continue;
+            }
+            $citySlug = (string) (($a['city'] ?? [])['slug'] ?? '');
+            $cityName = (string) (($a['city'] ?? [])['name'] ?? '');
+
+            // The list has no coordinates; the detail carries the venue's.
+            $lat = null;
+            $lng = null;
+            $detail = mapFetch('/activities/' . rawurlencode($slug), [], 20, 2);
+            $venue = $detail['data']['activity']['venue'] ?? ($detail['data']['venue'] ?? null);
+            if (is_array($venue) && is_numeric($venue['lat'] ?? null) && is_numeric($venue['lng'] ?? null)) {
+                $lat = round((float) $venue['lat'], 5);
+                $lng = round((float) $venue['lng'], 5);
+            }
+            $approx = 0;
+            if ($lat === null && isset($centre[$citySlug])) {
+                [$lat, $lng] = $centre[$citySlug];
+                $approx = 1;
+            }
+            if ($lat === null) {
+                continue;   // nowhere to put it on a map, so it cannot be a stop
+            }
+
+            $out[] = [
+                'activity', $slug, (string) ($a['title'] ?? $slug), $cityName, $citySlug,
+                $centre[$citySlug][2] ?? '', $lat, $lng, $approx,
+                (int) ($a['cheapest_price_cents'] ?? 0), (int) ($a['duration_minutes'] ?? 0),
+                (string) ($a['cover_image_url'] ?? ''), (string) (($a['category'] ?? [])['name'] ?? ''),
+            ];
+        }
+        $last = (int) ($resp['data']['pagination']['last_page'] ?? 1);
+        $page++;
+    } while ($page <= $last && $page <= 10);
+
+    // ---- leisure locations
+    $page = 1;
+    do {
+        $resp = mapFetch('/activities-module/locations', ['per_page' => 50, 'page' => $page], 30);
+        $items = $resp['data']['items'] ?? [];
+        foreach ($items as $l) {
+            $slug = (string) ($l['slug'] ?? '');
+            if ($slug === '') {
+                continue;
+            }
+            $citySlug = (string) (($l['city'] ?? [])['slug'] ?? '');
+            $cityName = (string) (($l['city'] ?? [])['name'] ?? '');
+            $lat = is_numeric($l['latitude'] ?? null) ? round((float) $l['latitude'], 5) : null;
+            $lng = is_numeric($l['longitude'] ?? null) ? round((float) $l['longitude'], 5) : null;
+            $approx = 0;
+            if ($lat === null && isset($centre[$citySlug])) {
+                [$lat, $lng] = $centre[$citySlug];
+                $approx = 1;
+            }
+            if ($lat === null) {
+                continue;
+            }
+            $counts = $l['counts'] ?? [];
+            $out[] = [
+                'location', $slug, (string) ($l['name'] ?? $slug), $cityName, $citySlug,
+                $centre[$citySlug][2] ?? '', $lat, $lng, $approx,
+                (int) ($l['min_price_cents'] ?? 0),
+                90,   // a leisure location is a visit, not a timed activity
+                (string) ($l['cover_image'] ?? ''),
+                (string) (($l['category'] ?? [])['name'] ?? ''),
+                array_sum(array_map('intval', is_array($counts) ? $counts : [])),
+            ];
+        }
+        $last = (int) ($resp['data']['pagination']['last_page'] ?? 1);
+        $page++;
+    } while ($page <= $last && $page <= 10);
+
+    return $out;
+}
+
+/**
  * The editorial routes of includes/v2/map-routes.php, resolved against the dataset: every stop
  * gets its real name, city, type and coordinates, and the route gets the straight-line distance
  * between its stops and the box that contains them.
@@ -819,6 +937,7 @@ function mapSummary(array $payload): array
         'picks'    => $picks,
         'landings' => mapLandings($payload),
         'routes'   => mapRoutes($payload),
+        'bookables' => mapBookables($payload),
     ];
 }
 
