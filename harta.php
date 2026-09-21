@@ -56,10 +56,10 @@ $genitive = $type !== '' ? (AM_ATTRACTION_TYPES_GEN[$type] ?? mb_strtolower($typ
 $heading = 'Harta ' . $genitive;
 
 $mapPage = [
-    'kicker' => 'Hartă interactivă',
+    // no kicker: the H1 already says it is a map, and the band has to stay short
     'h1'     => $heading,
     'h1em'   => $where,
-    'lead'   => 'Castele, muzee, mănăstiri, monumente, parcuri și puncte panoramice — toate pe aceeași hartă. Alege tipurile care te interesează, caută un loc anume sau vezi ce e lângă tine.',
+    'lead'   => 'Alege tipurile care te interesează, caută un loc anume sau vezi ce e lângă tine. Treci cu mouse-ul peste un punct ca să-l vezi, apasă ca să deschizi atracția.',
     'stats'  => array_values(array_filter([
         [v2_thousands($total), ' atracții'],
         [(string) count($summary['types'] ?? []), ' tipuri'],

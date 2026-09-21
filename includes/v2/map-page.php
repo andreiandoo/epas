@@ -37,6 +37,7 @@ include __DIR__ . '/header.php';
   <!-- ============================== HERO ============================== -->
   <section class="mph" aria-labelledby="mph-h">
     <div class="wrap mph-in">
+      <div class="mph-copy">
       <nav class="crumbs" aria-label="Breadcrumb">
         <?php foreach ($mapPage['breadcrumbs'] as $i => [$bcName, $bcUrl]): ?>
           <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
@@ -46,6 +47,7 @@ include __DIR__ . '/header.php';
       <?php if (!empty($mapPage['kicker'])): ?><p class="kicker"><?= v2_e($mapPage['kicker']) ?></p><?php endif; ?>
       <h1 id="mph-h"><?= v2_e($mapPage['h1']) ?><?php if (!empty($mapPage['h1em'])): ?> <em><?= v2_e($mapPage['h1em']) ?></em><?php endif; ?></h1>
       <?php if (!empty($mapPage['lead'])): ?><p class="mph-lead"><?= v2_e($mapPage['lead']) ?></p><?php endif; ?>
+      </div>
       <?php if (!empty($mapPage['stats'])): ?>
       <ul class="mph-stats"><?php foreach ($mapPage['stats'] as [$statNum, $statLabel]): ?><li><b><?= v2_e($statNum) ?></b><?= v2_e($statLabel) ?></li><?php endforeach; ?></ul>
       <?php endif; ?>
