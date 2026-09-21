@@ -40,6 +40,51 @@ function v2_asset(string $path): string
     return asset('assets/v2/' . ltrim($path, '/'));
 }
 
+/**
+ * The pin dataset behind the interactive map, as written by
+ * bin/build-map-data.php: ['url', 'v', 'total', 'types', 'cities', 'generated_at'].
+ *
+ * Returns null when the dataset has not been built yet, which is the signal
+ * for callers to hide the map entry points instead of shipping a button that
+ * opens an empty map.
+ */
+function v2_map_data(): ?array
+{
+    static $cached = false;
+    static $value = null;
+
+    if ($cached) {
+        return $value;
+    }
+    $cached = true;
+
+    $metaFile = BILETEONLINE_ROOT . '/data/map/atractii.meta.json';
+    $dataFile = BILETEONLINE_ROOT . '/data/map/atractii.json';
+    if (!is_file($metaFile) || !is_file($dataFile)) {
+        return $value;
+    }
+
+    $meta = json_decode((string) file_get_contents($metaFile), true);
+    if (!is_array($meta) || (int) ($meta['total'] ?? 0) < 1) {
+        return $value;
+    }
+
+    $version = (string) ($meta['v'] ?? filemtime($dataFile));
+    $value = [
+        // ?v=<content hash>: the file name stays stable, the URL changes
+        // whenever the data does, and data/map/.htaccess can mark it immutable.
+        'url'          => '/data/map/atractii.json?v=' . rawurlencode($version),
+        'v'            => $version,
+        'total'        => (int) $meta['total'],
+        'types'        => (int) ($meta['types'] ?? 0),
+        'cities'       => (int) ($meta['cities'] ?? 0),
+        'bytes'        => (int) ($meta['bytes'] ?? 0),
+        'generated_at' => (string) ($meta['generated_at'] ?? ''),
+    ];
+
+    return $value;
+}
+
 /** API media paths come either absolute or relative to the core storage. */
 function v2_media_url($path): ?string
 {

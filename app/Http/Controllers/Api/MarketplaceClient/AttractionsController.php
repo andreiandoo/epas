@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Attraction;
+use App\Models\AttractionType;
+use App\Models\MarketplaceCity;
+use App\Models\MarketplaceCounty;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
  * F4 — Public marketplace API for Attractions (points of interest).
  *
  *   GET /attractions                — list (filter by city / type)
+ *   GET /attractions/map            — every geo-located attraction as a packed pin
  *   GET /attractions/{slug}         — single attraction detail + activities
  *
  * Scoped by marketplace client (resolved from the API key by marketplace.auth).
@@ -28,7 +33,8 @@ class AttractionsController extends BaseController
         $query = Attraction::query()
             ->where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
-            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name']);
+            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name'])
+            ->withCount(['activities' => fn ($q) => $q->where('activities.is_published', true)]);
 
         if ($citySlug = $request->query('city')) {
             $query->whereHas('city', fn ($q) => $q->where('slug', $citySlug));
@@ -132,6 +138,176 @@ class AttractionsController extends BaseController
                 ])->values()->all(),
             ]),
         ]);
+    }
+
+    /**
+     * Every geo-located, visible attraction of the marketplace in one packed
+     * response, for the interactive map. The paginated list above caps
+     * per_page at 50, which would mean ~146 round-trips for a 7k-pin map.
+     *
+     * The payload is columnar on purpose (arrays, not objects, coordinates as
+     * integers x1e5): it is a few hundred KB for 7k pins instead of a few MB
+     * of GeoJSON. `fields` and `flags` document the row layout so the client
+     * never hard-codes offsets.
+     *
+     * Cached per client+locale; the key carries a signature of the data
+     * (row count + newest updated_at), so an import or an edit in the admin
+     * invalidates it on the next request instead of waiting out the TTL.
+     */
+    public function map(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $locale = $request->query('locale', 'ro');
+
+        $base = fn () => Attraction::query()
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude');
+
+        $signature = substr(sha1((string) $base()->count() . '|' . (string) $base()->max('updated_at')), 0, 12);
+
+        $payload = Cache::remember(
+            "mpc:{$client->id}:attractions-map:{$locale}:{$signature}",
+            now()->addHours(24),
+            fn () => $this->buildMapPayload($client->id, $locale, $signature)
+        );
+
+        return $this->success($payload);
+    }
+
+    private function buildMapPayload(int $clientId, string $locale, string $signature): array
+    {
+        // Type and city lookups first, so the pin rows can reference them by
+        // index instead of repeating the names 7k times.
+        $typeIdx = [];
+        $types   = [];
+        foreach (AttractionType::query()
+            ->where('marketplace_client_id', $clientId)
+            ->orderBy('sort_order')->orderBy('id')
+            ->get(['id', 'slug', 'name', 'icon_emoji', 'color']) as $i => $t) {
+            $typeIdx[$t->id] = $i;
+            $types[] = [$t->slug, $this->translate($t->name, $locale), $t->icon_emoji, $t->color, 0];
+        }
+
+        $cityIds = Attraction::query()
+            ->where('marketplace_client_id', $clientId)
+            ->where('is_visible', true)
+            ->whereNotNull('marketplace_city_id')
+            ->distinct()
+            ->pluck('marketplace_city_id');
+
+        $cityIdx = [];
+        $cities  = [];
+        foreach (MarketplaceCity::query()
+            ->whereIn('id', $cityIds)
+            ->with(['county:id,name', 'region:id,name'])
+            ->orderBy('id')
+            ->get(['id', 'slug', 'name', 'county_id', 'region_id']) as $i => $c) {
+            $cityIdx[$c->id] = $i;
+            $cities[] = [
+                $c->slug,
+                $this->translate($c->name, $locale),
+                $c->county ? $this->translate($c->county->name, $locale) : null,
+                $c->region ? $this->translate($c->region->name, $locale) : null,
+                0,
+            ];
+        }
+
+        // Counties carry the region, and an attraction can have a county even
+        // when it has no city, so zone (county+region) is its own lookup
+        // instead of being read off the city. Region filters would otherwise
+        // miss every attraction that is not tied to a city.
+        $zoneIdx = [];
+        $zones   = [];
+        foreach (MarketplaceCounty::query()
+            ->where('marketplace_client_id', $clientId)
+            ->with('region:id,name')
+            ->orderBy('id')
+            ->get(['id', 'name', 'region_id']) as $i => $co) {
+            $zoneIdx[$co->id] = $i;
+            $zones[] = [
+                $this->translate($co->name, $locale),
+                $co->region ? $this->translate($co->region->name, $locale) : null,
+                0,
+            ];
+        }
+
+        // city id => county id, so an attraction with no county of its own
+        // still lands in the right zone through its city.
+        $cityCounty = MarketplaceCity::query()
+            ->whereIn('id', $cityIds)
+            ->whereNotNull('county_id')
+            ->pluck('county_id', 'id')
+            ->all();
+
+        // Streamed in id order, lean columns only — 7k rows never sit in
+        // memory as fully hydrated models with relations.
+        $points = [];
+        Attraction::query()
+            ->where('marketplace_client_id', $clientId)
+            ->where('is_visible', true)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            // select() before withCount(): the reverse order would reset the
+            // column list and drop the count subquery.
+            ->select(['id', 'slug', 'name', 'cover_image_url', 'latitude', 'longitude', 'is_featured', 'attraction_type_id', 'marketplace_city_id', 'marketplace_county_id'])
+            ->withCount(['activities' => fn ($q) => $q->where('activities.is_published', true)])
+            ->orderBy('id')
+            ->lazy(1000)
+            ->each(function (Attraction $a) use (&$points, &$types, &$cities, &$zones, $typeIdx, $cityIdx, $zoneIdx, $cityCounty, $locale) {
+                $t = $typeIdx[$a->attraction_type_id] ?? -1;
+                $c = $cityIdx[$a->marketplace_city_id] ?? -1;
+                $countyId = $a->marketplace_county_id ?: ($cityCounty[$a->marketplace_city_id] ?? null);
+                $z = $countyId !== null ? ($zoneIdx[$countyId] ?? -1) : -1;
+
+                $flags = 0;
+                if ($a->cover_image_url) {
+                    $flags |= 1;
+                }
+                if ($a->is_featured) {
+                    $flags |= 2;
+                }
+                if ((int) ($a->activities_count ?? 0) > 0) {
+                    $flags |= 4;
+                }
+
+                $points[] = [
+                    $this->translate($a->name, $locale),
+                    $a->slug,
+                    $t,
+                    $c,
+                    $z,
+                    (int) round($a->latitude * 100000),
+                    (int) round($a->longitude * 100000),
+                    $flags,
+                ];
+
+                if ($t >= 0) {
+                    $types[$t][4]++;
+                }
+                if ($c >= 0) {
+                    $cities[$c][4]++;
+                }
+                if ($z >= 0) {
+                    $zones[$z][2]++;
+                }
+            });
+
+        return [
+            'v'            => $signature,
+            'generated_at' => now()->toIso8601String(),
+            'fields'       => ['name', 'slug', 'type', 'city', 'zone', 'lat_e5', 'lng_e5', 'flags'],
+            'flags'        => ['image' => 1, 'featured' => 2, 'activities' => 4],
+            'type_fields'  => ['slug', 'name', 'emoji', 'color', 'count'],
+            'city_fields'  => ['slug', 'name', 'county', 'region', 'count'],
+            'zone_fields'  => ['county', 'region', 'count'],
+            'types'        => $types,
+            'cities'       => $cities,
+            'zones'        => $zones,
+            'points'       => $points,
+            'total'        => count($points),
+        ];
     }
 
     private function cardPayload(Attraction $a, string $locale): array

@@ -1666,6 +1666,11 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     // marketplaces that never seeded any, so this is a no-op there.
     Route::get('/attractions', [\App\Http\Controllers\Api\MarketplaceClient\AttractionsController::class, 'index'])
         ->name('api.marketplace-client.attractions.index');
+    // Every visible attraction as a lean map pin, in one packed response (the
+    // list above caps per_page at 50, so a 7k-pin map would need ~146 calls).
+    // Registered before /{slug} so "map" is not read as a slug.
+    Route::get('/attractions/map', [\App\Http\Controllers\Api\MarketplaceClient\AttractionsController::class, 'map'])
+        ->name('api.marketplace-client.attractions.map');
     Route::get('/attractions/{slug}', [\App\Http\Controllers\Api\MarketplaceClient\AttractionsController::class, 'show'])
         ->where('slug', '[a-z0-9-]+')
         ->name('api.marketplace-client.attractions.show');
