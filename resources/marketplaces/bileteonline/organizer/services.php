@@ -3,10 +3,17 @@
  * Organizer extra services: /organizator/servicii (services.php), v2 design.
  *
  * Inside the v2 organizer shell. Every visible section of the old page, restyled: the payment success / cancelled
- * banners, "Comenzile mele", the service cards (activity promotion, ad tracking), the services list with the type
- * filter and the missing pixel alert, the three-step order window (activity, configuration, payment) and the
- * placement preview. org-services.js talks to /organizer/services/* through the proxy; card payment goes to the
- * payment page core returns.
+ * banners, "Comenzile mele", the service cards (activity promotion, LOCATION promotion, ad tracking), the services
+ * list with the type filter and the missing pixel alert, the order window (what it applies to, configuration,
+ * payment) and the placement preview. org-services.js talks to /organizer/services/* and, for the operator's own
+ * locations, to /organizer/activities-module/locations through the proxy; card payment goes to the payment page core
+ * returns.
+ *
+ * bilete.online sells more than single activities, so two things differ from the shared core flow (both guarded in
+ * core by the activities-module microservice, so Ambilet is untouched):
+ * - ad tracking is an ACCOUNT-level service: one order covers every location, experience and product the operator
+ *   sells, so the window has no activity step;
+ * - "Promovare locatie" promotes a whole location (its page and its products) on the same four placements.
  *
  * Kept hidden, as on the old page: the "Email Marketing" and "Creare Campanii Ads" cards (their order flow exists in
  * core but was never shown to organizers); their orders still appear in the list and the type filter.
@@ -39,8 +46,8 @@ $v2HeadExtra = v2_account_client_config('organizer');
 $oxLocations = [
     ['home_hero', 'Prima pagină - Hero', 'Vizibilitate maximă, banner principal'],
     ['home_recommendations', 'Prima pagină - Recomandări', 'Secțiunea de recomandări'],
-    ['category', 'Pagina categorie activitate', 'Audiență targetată pe categorie'],
-    ['city', 'Pagina oraș activitate', 'Audiență locală din orașul tău'],
+    ['category', 'Pagina categoriei', 'Audiență targetată pe categorie'],
+    ['city', 'Pagina orașului', 'Audiență locală din orașul tău'],
 ];
 $oxPlatforms = [
     ['facebook', 'Facebook Pixel', 'Track conversii și retargeting', 'Facebook Pixel ID', '1234567890123456'],
@@ -64,7 +71,7 @@ v2_org_start('services');
   </div>
 
   <header class="ox-head">
-    <div><p class="org-k">Marketing</p><h1 class="ox-h">Servicii extra</h1><p class="ox-lead">Promovează-ți activitățile și crește vânzările.</p></div>
+    <div><p class="org-k">Marketing</p><h1 class="ox-h">Servicii extra</h1><p class="ox-lead">Promovează-ți locațiile și activitățile și urmărește-ți campaniile de reclame.</p></div>
     <a class="btn btn-ghost" href="/organizator/servicii/comenzi"><?= v2_ic('receipt') ?>Comenzile mele</a>
   </header>
 
@@ -77,11 +84,19 @@ v2_org_start('services');
       <p class="ox-price">De la <b id="ox-price-feat">—</b> / zi</p>
       <button class="btn btn-primary" type="button" data-open="featuring"><?= v2_ic('plus') ?>Cumpără promovare</button>
     </article>
+    <article class="ox-card is-loc">
+      <span class="ox-card-ic"><?= v2_ic('map-trifold') ?></span>
+      <h2 class="ox-card-h">Promovare locație</h2>
+      <p>Scoate în față o locație întreagă — pagina ei și toate produsele pe care le vinzi acolo — nu doar o singură activitate.</p>
+      <ul class="ox-tags"><li>Hero prima pagină</li><li>Recomandări</li><li>Categorie</li><li>Oraș</li></ul>
+      <p class="ox-price">De la <b id="ox-price-loc">—</b> / zi</p>
+      <button class="btn btn-primary" type="button" data-open="location_featuring"><?= v2_ic('plus') ?>Cumpără promovare</button>
+    </article>
     <article class="ox-card is-track">
       <span class="ox-card-ic"><?= v2_ic('chart-line-up') ?></span>
       <h2 class="ox-card-h">Tracking campanii ads</h2>
-      <p>Conectează campaniile tale Facebook, Google sau TikTok pentru a urmări conversiile și ROI-ul.</p>
-      <ul class="ox-tags"><li>Facebook Ads</li><li>Google Ads</li><li>TikTok Ads</li></ul>
+      <p>Conectezi Facebook, Google sau TikTok o singură dată și urmărești conversiile pentru tot ce vinzi pe <?= htmlspecialchars(SITE_NAME) ?>: locații, experiențe și produse. Nu se cumpără pe activitate.</p>
+      <ul class="ox-tags"><li>Facebook Ads</li><li>Google Ads</li><li>TikTok Ads</li><li>Tot contul</li></ul>
       <p class="ox-price">De la <b id="ox-price-track">—</b> / lună</p>
       <button class="btn btn-primary" type="button" data-open="tracking"><?= v2_ic('plus') ?>Activează tracking</button>
     </article>
@@ -90,10 +105,10 @@ v2_org_start('services');
   <section class="org-panel" aria-labelledby="ox-list-h">
     <div class="org-panel-head">
       <div><h2 class="org-panel-h" id="ox-list-h">Servicii active</h2><p class="org-panel-p" id="ox-list-p"></p></div>
-      <span class="ox-select"><select id="ox-filter" aria-label="Filtrează după serviciu"><option value="">Toate</option><option value="featuring">Promovare</option><option value="email">Email marketing</option><option value="tracking">Ad tracking</option><option value="campaign">Campanii ads</option></select><?= v2_ic('caret-down') ?></span>
+      <span class="ox-select"><select id="ox-filter" aria-label="Filtrează după serviciu"><option value="">Toate</option><option value="featuring">Promovare activitate</option><option value="location_featuring">Promovare locație</option><option value="email">Email marketing</option><option value="tracking">Ad tracking</option><option value="campaign">Campanii ads</option></select><?= v2_ic('caret-down') ?></span>
     </div>
     <div class="ox-table-wrap"><table class="ox-table">
-      <thead><tr><th scope="col">Serviciu</th><th scope="col">Activitate</th><th scope="col">Detalii</th><th scope="col">Perioadă</th><th scope="col">Status</th><th scope="col" class="ox-right">Acțiuni</th></tr></thead>
+      <thead><tr><th scope="col">Serviciu</th><th scope="col">Se aplică la</th><th scope="col">Detalii</th><th scope="col">Perioadă</th><th scope="col">Status</th><th scope="col" class="ox-right">Acțiuni</th></tr></thead>
       <tbody id="ox-rows"><tr><td colspan="6" class="ox-state">Se încarcă…</td></tr></tbody>
     </table></div>
   </section>
@@ -101,16 +116,17 @@ v2_org_start('services');
   <dialog class="ox-dialog" id="ox-d" aria-labelledby="ox-d-h">
     <form class="ox-d-inner" id="ox-form" novalidate>
       <div class="ox-d-head"><h2 class="ox-d-h" id="ox-d-h">Configurează serviciul</h2><button class="ox-x" type="button" data-close aria-label="Închide"><?= v2_ic('x') ?></button></div>
-      <ol class="ox-steps"><li data-step="1"><b>1</b>Selectează activitatea</li><li data-step="2"><b>2</b>Configurează</li><li data-step="3"><b>3</b>Plată</li></ol>
+      <ol class="ox-steps"><li data-step="1"><b>1</b><span data-step-label>Selectează activitatea</span></li><li data-step="2"><b>2</b><span data-step-label>Configurează</span></li><li data-step="3"><b>3</b><span data-step-label>Plată</span></li></ol>
 
       <div class="ox-step" id="ox-step-1">
-        <div class="ox-f"><label class="ox-f-l" for="ox-event">Activitatea</label><span class="ox-select"><select id="ox-event"><option value="">Alege o activitate…</option></select><?= v2_ic('caret-down') ?></span><span class="ox-err" id="ox-event-err" hidden></span></div>
+        <div class="ox-f" id="ox-pick-event"><label class="ox-f-l" for="ox-event">Activitatea</label><span class="ox-select"><select id="ox-event"><option value="">Alege o activitate…</option></select><?= v2_ic('caret-down') ?></span><span class="ox-err" id="ox-event-err" hidden></span></div>
+        <div class="ox-f" id="ox-pick-place" hidden><label class="ox-f-l" for="ox-place">Locația</label><span class="ox-select"><select id="ox-place"><option value="">Alege o locație…</option></select><?= v2_ic('caret-down') ?></span><span class="ox-help">Promovarea acoperă pagina locației și produsele pe care le vinzi acolo.</span><span class="ox-err" id="ox-place-err" hidden></span></div>
         <div class="ox-ev" id="ox-ev" hidden><span class="ox-ev-img" id="ox-ev-img"></span><div><b id="ox-ev-name"></b><small id="ox-ev-date"></small><small id="ox-ev-venue"></small></div></div>
       </div>
 
       <div class="ox-step" id="ox-step-2" hidden>
         <fieldset class="ox-fs" id="ox-feat" hidden>
-          <legend>Unde vrei să apară activitatea?</legend>
+          <legend id="ox-feat-legend">Unde vrei să apară activitatea?</legend>
           <div class="ox-opts">
             <?php foreach ($oxLocations as [$oxKey, $oxLabel, $oxDesc]): ?>
             <div class="ox-opt">
@@ -128,6 +144,7 @@ v2_org_start('services');
         </fieldset>
         <fieldset class="ox-fs" id="ox-track" hidden>
           <legend>Platforme de tracking</legend>
+          <p class="ox-note">Tracking-ul se activează pentru <b>tot contul tău</b>: toate locațiile, experiențele și produsele pe care le vinzi pe <?= htmlspecialchars(SITE_NAME) ?>. Nu trebuie să alegi o activitate.</p>
           <p class="ox-help">Bifează platformele dorite. Pixel ID-ul poate fi completat acum (opțional) sau mai târziu din contul tău.</p>
           <div class="ox-plats">
             <?php foreach ($oxPlatforms as [$oxKey, $oxLabel, $oxDesc, $oxIdLabel, $oxPh]): ?>

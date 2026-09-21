@@ -1,6 +1,8 @@
 /* bilete.online v2: organizer account settings (/organizator/setari#tab). Seven tabs on base.js [data-tabs], the open tab
-   kept in the address. Profile, companies and guarantor from /organizer/me; bank accounts; the contract with the
-   electronic signature and the two documents; notification types; the password; share links with the activity picker.
+   kept in the address. Profile, companies and guarantor from /organizer/me; bank accounts; the contract (read it in a
+   window before signing, electronic signature, the two documents); notification types; the password; share links with
+   the activity picker. The contract terms are bilete.online's own model, written in the page: only the numbers
+   (commission, work mode, invoice due days) come from /organizer/contract.
    Every part loads on its own and a failing part never blocks the others; forms stay locked until their data is in, so
    a save can't overwrite what the account already has. Runs inside the organizer shell (window.BO_ORG); text from the
    API is always written as text. */
@@ -18,12 +20,6 @@
   var ID_TYPES = { ci: 'Carte de identitate', passport: 'Pașaport' };
   var WORK = { exclusive: ['Exclusiv', 'Vinzi bilete doar prin bilete.online.'], non_exclusive: ['Neexclusiv', 'Vinzi bilete și pe alte platforme.'] };
   var MODE = { included: ['Inclus în preț', 'Comisionul este cuprins în prețul afișat al biletului.'], added_on_top: ['Adăugat peste preț', 'Clientul plătește comisionul peste prețul biletului.'], on_top: ['Adăugat peste preț', 'Clientul plătește comisionul peste prețul biletului.'] };
-  var TERMS = {
-    'Comisionul se aplica doar biletelor vandute': 'Comisionul se aplică doar biletelor vândute.',
-    'Plata comisionului se face automat la procesarea platilor': 'Plata comisionului se face automat, la procesarea plăților.',
-    'Nu exista costuri fixe sau abonamente lunare': 'Nu există costuri fixe sau abonamente lunare.',
-    'Decontarea se face in maxim 7 zile lucratoare dupa eveniment': 'Decontarea se face în maximum 7 zile lucrătoare după eveniment.',
-  };
   var NTYPES = { 'Vanzari bilete': 'Vânzări bilete', 'Cereri rambursare': 'Cereri de rambursare', 'Comenzi servicii': 'Comenzi de servicii', 'Cereri plată': 'Cereri de plată' };
   var NTYPES_FALLBACK = ['Vânzări bilete', 'Cereri de rambursare', 'Documente generate', 'Comenzi de servicii', 'Servicii pornite și finalizate', 'Facturi și rezultate servicii', 'Cereri de plată', 'Plăți aprobate, în procesare, plătite sau respinse'];
   var DOC_KEY = { id_card: 'id_card', cui_document: 'cui' };
@@ -586,19 +582,22 @@
   function renderContract() {
     var c = contract, w = WORK[c.work_mode] || [F.flat(c.work_mode) || '—', ''], m = MODE[c.commission_mode] || [F.flat(c.commission_mode) || '—', ''];
     $('os-k-comm').textContent = c.commission_rate != null && c.commission_rate !== '' ? F.pct(c.commission_rate, 2) : '—';
-    $('os-k-comm-p').textContent = 'din valoarea biletelor vândute, conform contractului';
+    $('os-k-comm-p').textContent = c.commission_mode === 'included' ? 'inclus în prețul afișat, conform contractului' : 'adăugat peste prețul tău, conform contractului';
     $('os-k-work').textContent = w[0];
     $('os-k-work-p').textContent = w[1];
     $('os-k-mode').textContent = m[0];
     $('os-k-mode-p').textContent = m[1];
-    var terms = $('os-terms'), list = Array.isArray(c.terms) && c.terms.length ? c.terms : Object.keys(TERMS);
-    terms.textContent = '';
-    list.forEach(function (t) { t = F.flat(t).trim(); if (t) terms.appendChild(el('li', null, [icon('check-circle'), TERMS[t.replace(/\.$/, '')] || t])); });
+    // The contract terms are bilete.online's own commercial model (no payouts, commission on top, the POS commission
+    // invoiced once a month): the wording lives in the page, only the operator's real numbers come from the API.
+    var due = Math.round(F.toNum(c.invoice_due_days));
+    $('os-term-due').textContent = due > 0 ? F.count(due, 'zi calendaristică', 'zile calendaristice') : '5 zile calendaristice';
+    $('os-term-comm').textContent = c.commission_rate != null && c.commission_rate !== '' ? F.pct(c.commission_rate, 2) : '—';
+    $('os-term-work').textContent = c.work_mode === 'exclusive' ? 'exclusiv' : c.work_mode === 'non_exclusive' ? 'neexclusiv' : '—';
     if (c.is_signed) setState('is-ok', 'check-circle', 'Contract semnat', c.signed_at ? 'Semnat electronic pe ' + stamp(c.signed_at) + '.' : 'Semnat electronic.');
     else if (c.signature_required) setState('is-warm', 'signature', 'Contractul așteaptă semnătura ta', 'Semnează mai jos. Până atunci nu poți cere plăți.');
     else if (c.has_contract) setState('', 'file-text', 'Contract generat', c.contract && c.contract.issued_at ? 'Emis pe ' + dayLabel(c.contract.issued_at) + '.' : '');
     else setState('', 'info', 'Contractul nu este generat încă', 'Se generează automat după ce încarci ambele documente de mai jos și îți verificăm datele.');
-    $('os-contract-dl').hidden = !contractUrl();
+    $('os-contract-dl').hidden = $('os-contract-view').hidden = !contractUrl();
     var sign = $('os-sign'), read = $('os-sign-read');
     sign.hidden = !(c.signature_required && !c.is_signed);
     read.hidden = !contractUrl();
@@ -612,6 +611,34 @@
     var url = contractUrl();
     if (url) { window.open(url, '_blank', 'noopener'); return; }
     O.flash('Contractul nu este disponibil acum. Scrie-ne și ți-l trimitem.', true);
+  });
+
+  /* ----- read the contract before signing it ----- */
+  // The PDF is shown in a frame on a wide screen; on a phone, where browsers can't reliably render a PDF inside a
+  // frame, the window offers the two links that do work there. Signing itself is untouched, and stays below.
+  function openContract(from) {
+    var url = contractUrl();
+    if (!url) { O.flash('Contractul nu este disponibil acum. Scrie-ne și ți-l trimitem.', true); return; }
+    var small = !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+    $('os-ct-open').href = url;
+    $('os-ct-dl').href = url;
+    $('os-ct-view').hidden = small;
+    $('os-ct-note').hidden = small;
+    $('os-ct-fallback').hidden = !small;
+    $('os-ct-frame').src = small ? 'about:blank' : url;
+    $('os-contract-d-p').textContent = contract && contract.is_signed
+      ? 'Varianta semnată, așa cum a fost înregistrată.'
+      : 'Citește-l înainte să-l semnezi.';
+    openDialog($('os-contract-d'), from);
+    $('os-contract-d').querySelector('.os-x').focus();
+  }
+  $('os-contract-view').addEventListener('click', function () { openContract(this); });
+  $('os-contract-d').addEventListener('close', function () { $('os-ct-frame').src = 'about:blank'; });
+
+  $('os-sign-read').addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button > 0) return; // let ctrl/middle click open a tab
+    e.preventDefault();
+    openContract(this);
   });
 
   /* ----- signature ----- */

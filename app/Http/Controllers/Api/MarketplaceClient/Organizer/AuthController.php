@@ -906,7 +906,7 @@ class AuthController extends BaseController
             ->latest('issued_at')
             ->first();
 
-        return $this->success([
+        $payload = [
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
             'work_mode' => $organizer->work_mode,
@@ -931,7 +931,20 @@ class AuthController extends BaseController
             // Signing state — drives the onboarding signature step + the gate.
             'is_signed' => $organizer->hasSignedContract(),
             'signed_at' => $organizer->contract_signed_at?->toIso8601String(),
-        ]);
+        ];
+
+        // bilete.online (activities module) only: that marketplace does not do
+        // payouts — the commission on POS takings is invoiced once a month, so
+        // the operator's account page shows the due date of that invoice. Added
+        // behind the microservice so every other marketplace (Ambilet) keeps a
+        // byte-for-byte identical response.
+        $marketplace = $organizer->marketplaceClient;
+        if ($marketplace && $marketplace->hasMicroservice('activities-module')) {
+            $payload['invoice_due_days'] = (int) ($organizer->invoice_due_days
+                ?? ($marketplace->settings['invoice_due_days'] ?? 5));
+        }
+
+        return $this->success($payload);
     }
 
     /**

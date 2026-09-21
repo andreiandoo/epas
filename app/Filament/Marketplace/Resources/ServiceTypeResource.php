@@ -154,7 +154,9 @@ class ServiceTypeResource extends Resource
                             ->step(0.01),
                     ])
                     ->columns(4)
-                    ->visible(fn ($record) => $record?->code === 'featuring'),
+                    // location_featuring (bilete.online only) uses the very same
+                    // per-placement daily rates, so it reuses this section.
+                    ->visible(fn ($record) => in_array($record?->code, ['featuring', ServiceType::CODE_LOCATION_FEATURING], true)),
 
                 // Email Marketing Pricing
                 Section::make('Email Marketing Pricing')
@@ -286,7 +288,7 @@ class ServiceTypeResource extends Resource
                     ->getStateUsing(function (ServiceType $record): string {
                         $pricing = $record->pricing;
                         return match ($record->code) {
-                            'featuring' => sprintf(
+                            'featuring', ServiceType::CODE_LOCATION_FEATURING => sprintf(
                                 'Hero: %d RON/zi, Rec: %d RON/zi, Cat: %d RON/zi, Oras: %d RON/zi',
                                 $pricing['home_hero'] ?? ($pricing['home'] ?? 0),
                                 $pricing['home_recommendations'] ?? ($pricing['genre'] ?? 0),
@@ -334,6 +336,8 @@ class ServiceTypeResource extends Resource
                     ->label('Service Type')
                     ->options([
                         'featuring' => 'Featuring',
+                        // bilete.online only (activities module).
+                        ServiceType::CODE_LOCATION_FEATURING => 'Promovare locatie',
                         'email' => 'Email Marketing',
                         'tracking' => 'Ad Tracking',
                         'campaign' => 'Campaign Creation',

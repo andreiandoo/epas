@@ -30,6 +30,14 @@ class ServiceOrderController extends BaseController
             $pricing[$code] = $type->pricing;
         }
 
+        // bilete.online (activities module): the extra "promote a whole
+        // location" service. getOrCreateLocationFeaturing() returns null for
+        // every other marketplace, so their payload is byte-for-byte unchanged.
+        $locationFeaturing = ServiceType::getOrCreateLocationFeaturing($organizer->marketplace_client_id);
+        if ($locationFeaturing) {
+            $pricing[$locationFeaturing->code] = $locationFeaturing->pricing;
+        }
+
         return $this->success(['pricing' => $pricing]);
     }
 
@@ -40,6 +48,12 @@ class ServiceOrderController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
         $types = ServiceType::getOrCreateForMarketplace($organizer->marketplace_client_id);
+
+        // bilete.online (activities module) only - null everywhere else.
+        $locationFeaturing = ServiceType::getOrCreateLocationFeaturing($organizer->marketplace_client_id);
+        if ($locationFeaturing) {
+            $types[] = $locationFeaturing;
+        }
 
         $formatted = [];
         foreach ($types as $type) {
@@ -143,36 +157,79 @@ class ServiceOrderController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $validator = Validator::make($request->all(), [
-            'service_type' => 'required|in:featuring,email,tracking,campaign',
-            'event_id' => 'required|integer',
+        // bilete.online (activities module) only. Two shapes no other
+        // marketplace can reach, because $module is false for them and every
+        // branch below hangs off it:
+        //   - ad tracking is bought for the WHOLE account (it flips the
+        //     organizer's tracking gate, not one event's), so no event is picked;
+        //   - a whole LOCATION can be promoted instead of a single activity.
+        // With $module false the rules and the lookups are exactly the originals.
+        $module = $this->hasActivitiesModule($organizer->marketplace_client_id);
+        $requestedType = (string) $request->input('service_type');
+        $accountLevel = $module && $requestedType === ServiceOrder::TYPE_TRACKING;
+        $locationLevel = $module && $requestedType === ServiceOrder::TYPE_LOCATION_FEATURING;
+
+        $rules = [
+            'service_type' => 'required|in:featuring,email,tracking,campaign' . ($module ? ',' . ServiceOrder::TYPE_LOCATION_FEATURING : ''),
+            'event_id' => $accountLevel || $locationLevel ? 'nullable|integer' : 'required|integer',
             'payment_method' => 'nullable|in:card,transfer',
             'config' => 'required|array',
-        ]);
+        ];
+        if ($locationLevel) {
+            $rules['location_id'] = 'required|integer';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return $this->error('Validation failed', 422, $validator->errors()->toArray());
         }
 
         // Verify event belongs to organizer
-        $event = Event::where('id', $request->event_id)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
+        $event = null;
+        if (!$accountLevel && !$locationLevel) {
+            $event = Event::where('id', $request->event_id)
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->first();
 
-        if (!$event) {
-            return $this->error('Event not found', 404);
+            if (!$event) {
+                return $this->error('Event not found', 404);
+            }
+        }
+
+        // bilete.online: the promoted location must be one of this operator's own.
+        $location = null;
+        if ($locationLevel) {
+            $location = \App\Models\ActivityLocation::where('id', (int) $request->input('location_id'))
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->first();
+
+            if (!$location) {
+                return $this->error('Locatia nu a fost gasita', 404);
+            }
         }
 
         // Get pricing
         $types = ServiceType::getOrCreateForMarketplace($organizer->marketplace_client_id);
-        $serviceType = $types[$request->service_type] ?? null;
+        $serviceType = $types[$requestedType] ?? null;
+
+        if (!$serviceType && $locationLevel) {
+            $serviceType = ServiceType::getOrCreateLocationFeaturing($organizer->marketplace_client_id);
+        }
 
         if (!$serviceType || !$serviceType->is_active) {
             return $this->error('Service type not available', 400);
         }
 
+        $config = (array) $request->config;
+        if ($location) {
+            $config['location_id'] = $location->id;
+            $config['location_name'] = $this->getLocationName($location);
+        }
+
         // Calculate price (no TVA for extra services)
-        $subtotal = $this->calculatePrice($request->service_type, $request->config, $serviceType->pricing);
+        $subtotal = $this->calculatePrice($requestedType, $config, $serviceType->pricing);
         $tax = 0;
         $total = $subtotal;
 
@@ -180,17 +237,17 @@ class ServiceOrderController extends BaseController
             $order = ServiceOrder::create([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
                 'marketplace_organizer_id' => $organizer->id,
-                'marketplace_event_id' => $event->id,
-                'service_type' => $request->service_type,
-                'config' => $request->config,
+                'marketplace_event_id' => $event?->id,
+                'service_type' => $requestedType,
+                'config' => $config,
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'total' => $total,
                 'currency' => 'RON',
                 'payment_method' => $request->payment_method,
                 'status' => ServiceOrder::STATUS_PENDING_PAYMENT,
-                'service_start_date' => $request->config['start_date'] ?? null,
-                'service_end_date' => $request->config['end_date'] ?? null,
+                'service_start_date' => $config['start_date'] ?? null,
+                'service_end_date' => $config['end_date'] ?? null,
             ]);
 
             // Notify marketplace admin (if configured)
@@ -202,13 +259,17 @@ class ServiceOrderController extends BaseController
                         $eventTitle = is_array($event->title)
                             ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: '')
                             : ($event->title ?? '');
+                    } elseif ($location) {
+                        $eventTitle = $config['location_name'] ?? '';
+                    } elseif ($accountLevel) {
+                        $eventTitle = 'Tot contul operatorului';
                     }
                     (new \App\Services\MarketplaceEmailService($marketplace))->sendAdminNotification(
                         slug: 'admin_new_service_order',
                         settingKey: 'service_orders_email',
                         variables: [
                             'service_order_number' => $order->order_number ?? $order->uuid ?? $order->id,
-                            'service_type' => $request->service_type,
+                            'service_type' => $requestedType,
                             'organizer_name' => $organizer->company_name ?? $organizer->name ?? '',
                             'event_name' => $eventTitle,
                             'total_amount' => number_format((float) $total, 2) . ' RON',
@@ -368,6 +429,11 @@ class ServiceOrderController extends BaseController
                 }
                 return $total;
 
+            case ServiceOrder::TYPE_LOCATION_FEATURING:
+                // bilete.online: the same per-placement daily rates, applied to a
+                // location instead of an event.
+                return $this->calculatePrice(ServiceOrder::TYPE_FEATURING, $config, $pricing);
+
             case ServiceOrder::TYPE_EMAIL:
                 $audienceType = $config['audience_type'] ?? 'own';
                 $pricePerEmail = $audienceType === 'own'
@@ -445,7 +511,53 @@ class ServiceOrderController extends BaseController
             $row['missing_pixel_platforms'] = $missing;
         }
 
+        // bilete.online (activities module) only: say what the service applies
+        // to when it isn't an event - a promoted location, or the whole operator
+        // account for ad tracking. Gated on the module so no other marketplace
+        // ever sees an extra key in this payload.
+        if ($this->hasActivitiesModule($order->marketplace_client_id)) {
+            if ($order->service_type === ServiceOrder::TYPE_LOCATION_FEATURING) {
+                $row['scope'] = 'location';
+                $row['location_id'] = $order->config['location_id'] ?? null;
+                $row['location_name'] = (string) ($order->config['location_name'] ?? '');
+            } elseif ($order->service_type === ServiceOrder::TYPE_TRACKING && !$order->marketplace_event_id) {
+                $row['scope'] = 'account';
+            }
+        }
+
         return $row;
+    }
+
+    /**
+     * True when this marketplace runs the bilete.online activities module.
+     * Every branch this controller adds for bilete.online hangs off it, so a
+     * marketplace without the microservice (Ambilet) keeps the original code
+     * path and byte-identical responses. Cached per request.
+     */
+    protected function hasActivitiesModule(?int $marketplaceClientId): bool
+    {
+        static $cache = [];
+
+        if (!$marketplaceClientId) {
+            return false;
+        }
+
+        if (!array_key_exists($marketplaceClientId, $cache)) {
+            $cache[$marketplaceClientId] = (bool) \App\Models\MarketplaceClient::find($marketplaceClientId)
+                ?->hasMicroservice('activities-module');
+        }
+
+        return $cache[$marketplaceClientId];
+    }
+
+    /** Romanian name of an activities-module location (bilete.online). */
+    protected function getLocationName(\App\Models\ActivityLocation $location): string
+    {
+        $name = $location->getTranslation('name', 'ro')
+            ?: $location->getTranslation('name', 'en')
+            ?: $location->getTranslation('name');
+
+        return is_string($name) ? $name : '';
     }
 
     protected function getEventTitle(?Event $event): string
@@ -473,7 +585,7 @@ class ServiceOrderController extends BaseController
         ];
 
         return match ($order->service_type) {
-            'featuring' => implode(', ', array_map(
+            'featuring', ServiceOrder::TYPE_LOCATION_FEATURING => implode(', ', array_map(
                 fn ($loc) => $locationLabels[$loc] ?? $loc,
                 $config['locations'] ?? []
             )) ?: '-',

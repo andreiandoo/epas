@@ -45,17 +45,50 @@ class ActivityLocationResource extends Resource
 
     protected static ?string $maxContentWidth = 'full';
 
+    /**
+     * The same keys the operator sees in their own editor (OrganizerCatalog::FACILITIES, labels in the site's
+     * includes/v2/am-labels.php). An operator can also write their own, stored as "custom:<label>" — those have no
+     * checkbox here, are listed read-only in the form and are kept on save (see EditActivityLocation).
+     */
     public const FACILITIES = [
-        'parking' => 'Parcare', 'toilets' => 'Toalete', 'restaurant' => 'Restaurant / bufet', 'accessible' => 'Acces persoane cu dizabilități',
-        'playground' => 'Loc de joacă', 'wifi' => 'Wi-Fi', 'pets' => 'Animale acceptate', 'lodging' => 'Cazare',
-        'camping' => 'Camping', 'rentals' => 'Închirieri', 'guide' => 'Ghid', 'shop' => 'Magazin suveniruri', 'card' => 'Plată cu cardul',
+        'parking' => 'Parcare', 'free_parking' => 'Parcare gratuită', 'bus_parking' => 'Parcare autocare',
+        'bike_parking' => 'Parcare biciclete', 'ev_charging' => 'Încărcare mașini electrice',
+        'accessible' => 'Acces persoane cu dizabilități', 'stroller' => 'Acces cărucior de copil',
+        'card' => 'Plată cu cardul', 'atm' => 'Bancomat', 'shop' => 'Magazin', 'rentals' => 'Închirieri',
+        'guide' => 'Ghid', 'audio_guide' => 'Audioghid', 'lockers' => 'Seif / dulapuri',
+        'luggage' => 'Depozit bagaje', 'wifi' => 'Wi-Fi', 'first_aid' => 'Prim ajutor',
+        'restaurant' => 'Restaurant', 'bar' => 'Bar / cafenea', 'terrace' => 'Terasă', 'picnic' => 'Zonă de picnic',
+        'bbq' => 'Grătare', 'gazebo' => 'Foișoare', 'drinking_water' => 'Apă potabilă',
+        'toilets' => 'Toalete', 'changing_rooms' => 'Vestiare', 'showers' => 'Dușuri',
+        'baby_change' => 'Masă de înfășat', 'playground' => 'Loc de joacă', 'smoking_area' => 'Zonă de fumat',
+        'pets' => 'Animale acceptate',
+        'beach' => 'Plajă', 'pool' => 'Piscină', 'sauna' => 'Saună', 'boat_ramp' => 'Rampă de barcă',
+        'fishing' => 'Pescuit',
+        'lodging' => 'Cazare', 'camping' => 'Camping',
     ];
 
     public const LODGING_FACILITIES = [
         'wifi' => 'Wi-Fi', 'parking' => 'Parcare', 'breakfast' => 'Mic dejun', 'restaurant' => 'Restaurant', 'kitchen' => 'Bucătărie',
         'ac' => 'Aer condiționat', 'heating' => 'Încălzire', 'private_bathroom' => 'Baie proprie', 'tv' => 'TV', 'pets' => 'Animale acceptate',
-        'pool' => 'Piscină', 'spa' => 'Spa / saună', 'terrace' => 'Terasă', 'bbq' => 'Grătar', 'playground' => 'Loc de joacă', 'accessible' => 'Acces persoane cu dizabilități',
+        'pool' => 'Piscină', 'spa' => 'Spa / saună', 'terrace' => 'Terasă', 'bbq' => 'Grătar', 'playground' => 'Loc de joacă',
+        'accessible' => 'Acces persoane cu dizabilități', 'fridge' => 'Frigider', 'kettle' => 'Fierbător', 'safe' => 'Seif',
+        'towels' => 'Prosoape', 'washing_machine' => 'Mașină de spălat', 'balcony' => 'Balcon', 'garden' => 'Grădină',
+        'sauna' => 'Saună', 'fireplace' => 'Șemineu', 'crib' => 'Pătuț copil', 'ev_charging' => 'Încărcare mașini electrice',
+        'non_smoking' => 'Nefumători',
     ];
+
+    /** The operator's own facilities ("custom:<label>") of a record, as labels. */
+    public static function customFacilities($record, string $key = 'facilities'): array
+    {
+        $values = $key === 'facilities'
+            ? (array) ($record->facilities ?? [])
+            : (array) (($record->lodging ?? [])['facilities'] ?? []);
+
+        return array_values(array_map(
+            fn ($f) => trim(substr((string) $f, strlen(\App\Services\Activities\OrganizerCatalog::CUSTOM_FACILITY))),
+            array_filter($values, fn ($f) => is_string($f) && str_starts_with($f, \App\Services\Activities\OrganizerCatalog::CUSTOM_FACILITY))
+        ));
+    }
 
     public static function canAccess(): bool
     {
@@ -116,7 +149,7 @@ class ActivityLocationResource extends Resource
                                 Forms\Components\TextInput::make('subtitle.ro')->label('Subtitlu')->maxLength(190),
                                 Forms\Components\Textarea::make('short_description.ro')->label('Descriere scurtă')->rows(2)->maxLength(280),
                                 Forms\Components\RichEditor::make('description.ro')->label('Descriere')->columnSpanFull(),
-                                Forms\Components\Textarea::make('rules.ro')->label('Reguli pentru vizitatori')->rows(3)->columnSpanFull(),
+                                Forms\Components\RichEditor::make('rules.ro')->label('Reguli pentru vizitatori')->columnSpanFull(),
                             ])->columns(2),
                             SC\Section::make('Operator și taxonomie')->schema([
                                 Forms\Components\Select::make('marketplace_organizer_id')
@@ -152,6 +185,13 @@ class ActivityLocationResource extends Resource
                             ])->columns(2),
                             SC\Section::make('Facilități')->schema([
                                 Forms\Components\CheckboxList::make('facilities')->label(false)->options(self::FACILITIES)->columns(3),
+                                Forms\Components\Placeholder::make('custom_facilities')
+                                    ->label('Adăugate de operator')
+                                    ->content(fn ($record) => $record && self::customFacilities($record)
+                                        ? implode(' · ', self::customFacilities($record))
+                                        : '—')
+                                    ->helperText('Le scrie operatorul din contul lui. Rămân salvate și dacă modifici bifele de mai sus.')
+                                    ->visible(fn ($record) => $record && self::customFacilities($record)),
                             ]),
                         ]),
 
@@ -217,9 +257,15 @@ class ActivityLocationResource extends Resource
                                             Forms\Components\TextInput::make('lodging.phone')->label('Telefon rezervări')->tel()->maxLength(40),
                                             Forms\Components\TextInput::make('lodging.email')->label('E-mail rezervări')->email()->maxLength(255)->columnSpan(2),
                                         ]),
-                                        Forms\Components\Textarea::make('lodging.description.ro')->label('Descriere')->rows(3),
-                                        Forms\Components\Textarea::make('lodging.policies.ro')->label('Politici (anulare, copii, animale)')->rows(2),
+                                        Forms\Components\RichEditor::make('lodging.description.ro')->label('Descriere'),
+                                        Forms\Components\RichEditor::make('lodging.policies.ro')->label('Politici (anulare, copii, animale)'),
                                         Forms\Components\CheckboxList::make('lodging.facilities')->label('Facilități')->options(self::LODGING_FACILITIES)->columns(4),
+                                        Forms\Components\Placeholder::make('custom_lodging_facilities')
+                                            ->label('Adăugate de operator')
+                                            ->content(fn ($record) => $record && self::customFacilities($record, 'lodging')
+                                                ? implode(' · ', self::customFacilities($record, 'lodging'))
+                                                : '—')
+                                            ->visible(fn ($record) => $record && self::customFacilities($record, 'lodging')),
                                         Forms\Components\Repeater::make('lodging.rooms')->label('Tipuri de camere')->schema([
                                             Forms\Components\TextInput::make('name.ro')->label('Nume')->required()->maxLength(80)->placeholder('Cameră dublă'),
                                             Forms\Components\TextInput::make('capacity')->label('Persoane')->numeric()->minValue(1)->maxValue(50),

@@ -193,7 +193,11 @@
 .os-fig p:empty{display:none}
 .os-terms{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .os-terms li{display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.os-terms li > span{min-width:0}
+.os-terms li b{font-weight:700;color:var(--ink)}
 .os-terms .ic{flex:none;width:18px;height:18px;margin-top:3px;color:var(--action)}
+.os-cta-row{display:flex;flex-wrap:wrap;gap:10px}
+@media (max-width:599px){.os-cta-row{width:100%}.os-cta-row .btn{flex:1 1 auto}}
 .os-pad-wrap{position:relative;min-width:0;border:1.5px dashed #C9B071;border-radius:18px;background:#FFFFFF}
 .os-pad{display:block;width:100%;height:190px;border-radius:17px;touch-action:none;cursor:crosshair}
 .os-pad-line{position:absolute;left:28px;right:28px;bottom:44px;border-top:1px solid #DAD6C8;pointer-events:none}
@@ -238,10 +242,19 @@
 .os-rules li.is-ok .ic{color:var(--action)}
 .os-rules small{color:inherit;opacity:.8}
 
+/* ----- contract preview ----- */
+.os-ct-view{height:min(62dvh, 620px);min-height:320px;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#F2F3EF}
+.os-ct-frame{display:block;width:100%;height:100%;border:0}
+.os-ct-fallback{display:flex;align-items:flex-start;gap:12px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#FBFBF9}
+.os-ct-ic{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;background:rgba(27,127,78,.1);color:var(--action)}
+.os-ct-ic .ic{width:20px;height:20px}
+
 /* =================== DIALOGS =================== */
 .os-dialog{width:min(520px, calc(100vw - 32px));max-height:calc(100dvh - 32px);margin:auto;padding:0;overflow:auto;border:0;border-radius:28px;background:var(--surface);color:var(--ink);box-shadow:0 30px 80px rgba(14,31,24,.28)}
 .os-dialog.is-small{width:min(440px, calc(100vw - 32px))}
 .os-dialog.is-wide{width:min(640px, calc(100vw - 32px))}
+.os-dialog.is-doc{width:min(920px, calc(100vw - 24px))}
+.os-dialog.is-doc .os-d-act{justify-content:flex-start}
 .os-dialog::backdrop{background:rgba(14,31,24,.5);backdrop-filter:blur(3px)}
 .os-d-inner{display:grid;gap:16px;padding:24px}
 @media (max-width:519px){.os-d-inner{padding:20px 16px}}

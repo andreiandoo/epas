@@ -99,7 +99,8 @@ class ServiceOrderResource extends Resource
                                     'city'                 => 'Pagina oras' . ($eventCity ? ": {$eventCity}" : ' (orasul evenimentului)'),
                                 ];
                                 return match ($record->service_type) {
-                                    'featuring' => implode(', ', array_map(
+                                    // location_featuring: bilete.online only, same placement list.
+                                    'featuring', 'location_featuring' => implode(', ', array_map(
                                         fn ($loc) => $locationLabels[$loc] ?? $loc,
                                         $config['locations'] ?? []
                                     )) ?: '-',
@@ -342,6 +343,7 @@ class ServiceOrderResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'featuring' => 'primary',
+                        'location_featuring' => 'primary',
                         'email' => 'success',
                         'tracking' => 'info',
                         'campaign' => 'warning',
@@ -349,6 +351,7 @@ class ServiceOrderResource extends Resource
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'featuring' => 'Featuring',
+                        'location_featuring' => 'Promovare locatie',
                         'email' => 'Email',
                         'tracking' => 'Tracking',
                         'campaign' => 'Campaign',
@@ -429,6 +432,8 @@ class ServiceOrderResource extends Resource
                     ->label('Service Type')
                     ->options([
                         'featuring' => 'Featuring',
+                        // bilete.online only (activities module).
+                        'location_featuring' => 'Promovare locatie',
                         'email' => 'Email Marketing',
                         'tracking' => 'Ad Tracking',
                         'campaign' => 'Campaign Creation',

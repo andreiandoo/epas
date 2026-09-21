@@ -24,15 +24,33 @@ use Mews\Purifier\Facades\Purifier;
  */
 class OrganizerCatalog
 {
+    /**
+     * What a location can offer. The first thirteen are the original list and
+     * never change value; the rest were added for the leisure venues (2026-09).
+     * On top of these an operator may add their own, stored as
+     * "custom:<label>" — see self::CUSTOM_FACILITY.
+     */
     public const FACILITIES = [
         'parking', 'toilets', 'restaurant', 'accessible', 'playground', 'wifi', 'pets',
         'lodging', 'camping', 'rentals', 'guide', 'shop', 'card',
+        'free_parking', 'bus_parking', 'bike_parking', 'ev_charging', 'atm', 'lockers',
+        'changing_rooms', 'showers', 'terrace', 'bar', 'picnic', 'bbq', 'gazebo',
+        'drinking_water', 'first_aid', 'boat_ramp', 'beach', 'pool', 'sauna',
+        'audio_guide', 'stroller', 'baby_change', 'smoking_area', 'luggage', 'fishing',
     ];
 
     public const LODGING_FACILITIES = [
         'wifi', 'parking', 'breakfast', 'restaurant', 'kitchen', 'ac', 'heating', 'private_bathroom',
         'tv', 'pets', 'pool', 'spa', 'terrace', 'bbq', 'playground', 'accessible',
+        'fridge', 'kettle', 'safe', 'towels', 'washing_machine', 'balcony', 'garden',
+        'sauna', 'fireplace', 'crib', 'ev_charging', 'non_smoking',
     ];
+
+    /** Prefix of a facility the operator wrote themselves: "custom:Rampă de barcă". */
+    public const CUSTOM_FACILITY = 'custom:';
+
+    /** At most this many facilities on a location (or on its lodging). */
+    private const FACILITY_MAX = 40;
 
     public const LODGING_TYPES = ['pensiune', 'hotel', 'cabana', 'vila', 'apartamente', 'camping', 'glamping', 'altele'];
 
@@ -48,6 +66,40 @@ class OrganizerCatalog
     {
     }
 
+    /** One of the known keys, or the operator's own "custom:<label>". */
+    private static function facilityRule(array $known): string
+    {
+        return 'regex:/^(?:' . implode('|', $known) . '|' . preg_quote(self::CUSTOM_FACILITY, '/') . '[^\x00-\x1F]{1,40})$/u';
+    }
+
+    /**
+     * Known keys kept as they are, the operator's own ones trimmed to
+     * "custom:<label>"; anything else dropped. Order is the one that came in,
+     * duplicates removed.
+     */
+    private function facilities($in, array $known): array
+    {
+        $out = [];
+        foreach ((array) $in as $value) {
+            $value = is_string($value) ? trim($value) : '';
+            if ($value === '') {
+                continue;
+            }
+            if (str_starts_with($value, self::CUSTOM_FACILITY)) {
+                $label = trim(preg_replace('/\s+/u', ' ', substr($value, strlen(self::CUSTOM_FACILITY))));
+                if ($label === '') {
+                    continue;
+                }
+                $value = self::CUSTOM_FACILITY . mb_substr($label, 0, 40);
+            } elseif (!in_array($value, $known, true)) {
+                continue;
+            }
+            $out[$value] = true;
+        }
+
+        return array_slice(array_keys($out), 0, self::FACILITY_MAX);
+    }
+
     // ================================================================
     // Locations
     // ================================================================
@@ -59,7 +111,7 @@ class OrganizerCatalog
             'subtitle'           => 'nullable|string|max:190',
             'short_description'  => 'nullable|string|max:280',
             'description'        => 'nullable|string|max:20000',
-            'rules'              => 'nullable|string|max:3000',
+            'rules'              => 'nullable|string|max:6000',
             'city_id'            => 'nullable|integer',
             'category_id'        => 'nullable|integer',
             'address'            => 'nullable|string|max:255',
@@ -72,8 +124,8 @@ class OrganizerCatalog
             'cover_image'        => 'nullable|string|max:255',
             'gallery'            => 'nullable|array|max:20',
             'gallery.*'          => 'string|max:255',
-            'facilities'         => 'nullable|array',
-            'facilities.*'       => 'in:' . implode(',', self::FACILITIES),
+            'facilities'         => 'nullable|array|max:' . self::FACILITY_MAX,
+            'facilities.*'       => ['string', self::facilityRule(self::FACILITIES)],
             'seasons'            => 'nullable|array|max:12',
             'seasons.*.name'     => 'required|string|max:60',
             'seasons.*.start'    => ['required', self::MD],
@@ -97,12 +149,12 @@ class OrganizerCatalog
             'lodging.check_in'   => ['nullable', self::HM],
             'lodging.check_out'  => ['nullable', self::HM],
             'lodging.price_from' => 'nullable|numeric|min:0|max:100000',
-            'lodging.description' => 'nullable|string|max:3000',
-            'lodging.policies'   => 'nullable|string|max:2000',
+            'lodging.description' => 'nullable|string|max:6000',
+            'lodging.policies'   => 'nullable|string|max:4000',
             'lodging.phone'      => 'nullable|string|max:40',
             'lodging.email'      => 'nullable|email|max:255',
-            'lodging.facilities' => 'nullable|array',
-            'lodging.facilities.*' => 'in:' . implode(',', self::LODGING_FACILITIES),
+            'lodging.facilities' => 'nullable|array|max:' . self::FACILITY_MAX,
+            'lodging.facilities.*' => ['string', self::facilityRule(self::LODGING_FACILITIES)],
             'lodging.gallery'    => 'nullable|array|max:20',
             'lodging.gallery.*'  => 'string|max:255',
             'lodging.rooms'      => 'nullable|array|max:30',
@@ -156,7 +208,7 @@ class OrganizerCatalog
             'subtitle'          => $this->tr($location->subtitle, $data['subtitle'] ?? null),
             'short_description' => $this->tr($location->short_description, $data['short_description'] ?? null),
             'description'       => $this->tr($location->description, $this->html($data['description'] ?? null)),
-            'rules'             => $this->tr($location->rules, $data['rules'] ?? null),
+            'rules'             => $this->tr($location->rules, $this->html($data['rules'] ?? null)),
             'marketplace_city_id'     => $this->cityId($data['city_id'] ?? null),
             'marketplace_category_id' => $this->categoryId($data['category_id'] ?? null),
             'address'           => $data['address'] ?? null,
@@ -168,7 +220,7 @@ class OrganizerCatalog
             'website_url'       => $data['website_url'] ?? null,
             'cover_image_url'   => $this->path($data['cover_image'] ?? null, [$location->cover_image_url]),
             'gallery'           => $this->paths($data['gallery'] ?? [], (array) ($location->gallery ?? [])),
-            'facilities'        => array_values(array_unique((array) ($data['facilities'] ?? []))),
+            'facilities'        => $this->facilities($data['facilities'] ?? [], self::FACILITIES),
             'seasons'           => array_values(array_map(fn ($s) => [
                 'name'       => $s['name'],
                 'start'      => $s['start'],
@@ -213,11 +265,11 @@ class OrganizerCatalog
             'check_in'       => $in['check_in'] ?? null,
             'check_out'      => $in['check_out'] ?? null,
             'price_from'     => isset($in['price_from']) ? (float) $in['price_from'] : null,
-            'description'    => isset($in['description']) ? ['ro' => $in['description']] : null,
-            'policies'       => isset($in['policies']) ? ['ro' => $in['policies']] : null,
+            'description'    => isset($in['description']) ? ['ro' => $this->html($in['description'])] : null,
+            'policies'       => isset($in['policies']) ? ['ro' => $this->html($in['policies'])] : null,
             'phone'          => $in['phone'] ?? null,
             'email'          => $in['email'] ?? null,
-            'facilities'     => array_values(array_unique((array) ($in['facilities'] ?? []))),
+            'facilities'     => $this->facilities($in['facilities'] ?? [], self::LODGING_FACILITIES),
             'gallery'        => $this->paths($in['gallery'] ?? [], (array) ($current['gallery'] ?? [])),
             'rooms'          => array_values(array_map(fn ($r) => [
                 'name'        => ['ro' => $r['name']],

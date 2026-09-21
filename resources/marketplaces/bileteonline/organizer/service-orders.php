@@ -57,7 +57,7 @@ v2_org_start('services');
     <div class="sq-filters">
       <label class="sq-search"><?= v2_ic('magnifying-glass') ?><input id="sq-q" type="search" autocomplete="off" placeholder="Caută după număr comandă sau activitate…" aria-label="Caută comenzi" aria-controls="sq-rows"></label>
       <span class="sq-select"><select id="sq-status" aria-label="Status"><option value="">Toate statusurile</option><option value="pending_payment">Așteaptă plata</option><option value="processing">În procesare</option><option value="active">Activ</option><option value="completed">Finalizat</option><option value="cancelled">Anulat</option></select><?= v2_ic('caret-down') ?></span>
-      <span class="sq-select"><select id="sq-type" aria-label="Tip serviciu"><option value="">Toate tipurile</option><option value="featuring">Promovare</option><option value="email">Email marketing</option><option value="tracking">Ad tracking</option><option value="campaign">Creare campanie</option></select><?= v2_ic('caret-down') ?></span>
+      <span class="sq-select"><select id="sq-type" aria-label="Tip serviciu"><option value="">Toate tipurile</option><option value="featuring">Promovare activitate</option><option value="location_featuring">Promovare locație</option><option value="email">Email marketing</option><option value="tracking">Ad tracking</option><option value="campaign">Creare campanie</option></select><?= v2_ic('caret-down') ?></span>
     </div>
     <div class="sq-table-wrap"><table class="sq-table">
       <thead><tr><th scope="col">Comandă</th><th scope="col">Tip serviciu</th><th scope="col">Activitate</th><th scope="col">Perioadă</th><th scope="col" class="sq-right">Total</th><th scope="col">Status</th><th scope="col" class="sq-right">Data</th></tr></thead>

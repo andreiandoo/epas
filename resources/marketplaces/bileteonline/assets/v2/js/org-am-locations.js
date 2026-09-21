@@ -11,8 +11,13 @@
   var DAYS = Object.keys(L.days || { mon: 'luni', tue: 'marți', wed: 'miercuri', thu: 'joi', fri: 'vineri', sat: 'sâmbătă', sun: 'duminică' });
   var MONTHS = L.months || [];
   var meta = null, locations = [], cur = null, dirty = false, busy = false;
+  // Where the location is, as the editor asks for it: the country and the county narrow the
+  // city list. Only the city is saved (city_id); the other two are read back from it.
+  var geo = { country: 'RO', county: null };
+  var richBoxes = [];
 
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function byName(a, b) { try { return String(a).localeCompare(String(b), 'ro'); } catch (e) { return a < b ? -1 : 1; } }
   function params() { return new URLSearchParams(window.location.search); }
   function go(url, replace) {
     if (replace) history.replaceState(null, '', url); else history.pushState(null, '', url);
@@ -46,9 +51,37 @@
     $('am-loc-list').hidden = true;
     $('am-loc-failed').hidden = false;
   }
+  function cityOf(id) {
+    var list = (meta && meta.cities) || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
   function cityName(id) {
-    var c = (meta.cities || []).filter(function (x) { return x.id === id; })[0];
+    var c = cityOf(id);
     return c ? c.name : '';
+  }
+  /** The countries the marketplace has cities in; România first, and always there. */
+  function countryOpts() {
+    var list = (meta && meta.countries) || [];
+    if (!list.length) list = [{ code: 'RO', name: 'România' }];
+    return list.map(function (c) { return [c.code, c.name]; });
+  }
+  /** The counties of one country, as the cities know them. */
+  function countyOpts(country) {
+    var seen = {}, out = [];
+    ((meta && meta.cities) || []).forEach(function (c) {
+      if ((c.country || 'RO') !== country || !c.county || seen[c.county]) return;
+      seen[c.county] = 1;
+      out.push(c.county);
+    });
+    return out.sort(byName).map(function (n) { return [n, n]; });
+  }
+  /** The cities of one country, kept to one county when there is one. */
+  function cityOpts(country, county) {
+    return ((meta && meta.cities) || [])
+      .filter(function (c) { return (c.country || 'RO') === country && (!county || c.county === county); })
+      .sort(function (a, b) { return byName(a.name, b.name); })
+      .map(function (c) { return [c.id, c.name + (!county && c.county ? ' · ' + c.county : '')]; });
   }
   function drawList() {
     var box = $('am-loc-list');
@@ -82,7 +115,7 @@
     if (l.is_published && (!l.review_status || l.review_status === 'approved')) {
       tools.appendChild(el('a', { class: 've-icon-btn', href: l.public_path, target: '_blank', rel: 'noopener', 'aria-label': 'Vezi pe site' }, [O.icon('arrow-right')]));
     }
-    return el('article', { class: 've-prod' + (l.is_published ? '' : ' is-off') }, [media, t, el('span'), tools]);
+    return el('article', { class: 've-prod' + (l.is_published ? '' : ' is-off') + (l.review_status === 'pending' ? ' am-waiting' : '') + (l.review_status === 'rejected' ? ' am-rejected' : '') }, [media, t, el('span'), tools]);
   }
 
   /* =================== editor =================== */
@@ -186,18 +219,26 @@
     var l = cur, box = $('am-loc-edit');
     var mark = function () { dirty = true; };
     box.textContent = '';
+    richBoxes = [];
 
-    var cityOpts = [[null, 'Alege orașul']].concat((meta.cities || []).map(function (c) { return [c.id, c.name]; }));
     var catOpts = [[null, 'Alege categoria']].concat((meta.categories || []).filter(function (c) { return !c.parent_id; }).map(function (c) { return [c.id, c.name]; }));
+    var countries = countryOpts();
+    var city0 = cityOf(l.city_id);
+    geo.country = (city0 && city0.country) || (countries[0] && countries[0][0]) || 'RO';
+    geo.county = (city0 && city0.county) || null;
 
     // ----- head -----
     var title = el('h1', { class: 've-h', text: l.id ? (l.name || 'Locație') : 'Locație nouă' });
     var tags = el('span', { class: 've-prod-tags' }, l.id ? A.statusTags(l) : []);
-    var hint = el('p', { class: 've-lead', text: l.id ? A.statusHint(l) : 'Se salvează ca ciornă. Când e gata, o trimiți spre aprobare; după aprobare apare pe site.' });
     box.appendChild(el('header', { class: 've-head' }, [el('div', null, [
       el('a', { class: 'am-back', href: '/organizator/locatii' }, [O.icon('arrow-left'), el('span', { text: 'Toate locațiile' })]),
-      title, tags, hint,
+      title, tags,
     ])]));
+
+    // ----- where this is in the approval -----
+    box.appendChild(l.id
+      ? A.statusPanel(l, 'locația')
+      : A.statusPanel({ review_status: 'draft', is_published: false }, 'locația'));
 
     // ----- jump list -----
     var SECS = [['am-l-about', 'Despre'], ['am-l-where', 'Adresă'], ['am-l-photos', 'Poze'], ['am-l-hours', 'Program'],
@@ -205,25 +246,58 @@
     box.appendChild(el('nav', { class: 'am-jump', 'aria-label': 'Secțiunile locației' }, SECS.map(function (s) { return el('a', { href: '#' + s[0], text: s[1] }); })));
 
     // ----- about -----
+    // Country → county → city: each list is the one below it, so the operator never types a place name.
+    var cityCombo = A.combo(l, 'city_id', cityOpts(geo.country, geo.county), {
+      num: true, ph: 'Scrie primele litere…',
+      on: function (id) {
+        var c = cityOf(id);
+        if (c && c.county && c.county !== geo.county) { geo.county = c.county; countyCombo.setValue(geo.county); }
+        mark();
+      },
+    });
+    var countyCombo = A.combo(geo, 'county', countyOpts(geo.country), {
+      ph: 'Scrie primele litere…', empty: 'Toate județele',
+      on: function () { cityCombo.setOptions(cityOpts(geo.country, geo.county)); mark(); },
+    });
+    var countryCombo = A.combo(geo, 'country', countries, {
+      ph: 'Scrie primele litere…',
+      on: function () {
+        geo.county = null;
+        countyCombo.setValue(null);
+        countyCombo.setOptions(countyOpts(geo.country));
+        cityCombo.setOptions(cityOpts(geo.country, null));
+        countyField.hidden = !countyOpts(geo.country).length;
+        mark();
+      },
+    });
+    var countyField = A.field('Județul', countyCombo, { hint: 'Alege întâi județul: lista de orașe rămâne doar cu ale lui.' });
+    countyField.hidden = !countyOpts(geo.country).length;
+    var descRich = A.rich(l, 'description', { label: 'Descrierea locației', max: 20000, min: 220, ph: 'Ce vede și ce face vizitatorul aici…', on: mark });
+    richBoxes.push([descRich, 'Descrierea']);
     box.appendChild(A.section('am-l-about', 'Despre locație', 'Ce apare sus pe pagina locației și în căutări.', [A.form([
       A.field('Numele *', A.input(l, 'name', { max: 190, ph: 'Lacul Sfânta Ana', on: mark }), { wide: true }),
       A.field('Subtitlu', A.input(l, 'subtitle', { max: 190, ph: 'Singurul lac vulcanic din România', on: mark }), { wide: true }),
-      A.field('Orașul *', A.select(l, 'city_id', cityOpts, { num: true, on: mark }), { hint: 'Orașul sau stațiunea în care apare locația.' }),
+      A.field('Țara', countryCombo),
+      countyField,
+      A.field('Orașul *', cityCombo, { hint: 'Orașul sau stațiunea sub care apare locația pe site.' }),
       A.field('Categoria', A.select(l, 'category_id', catOpts, { num: true, on: mark })),
       A.field('Pe scurt *', A.textarea(l, 'short_description', { max: 280, rows: 2, ph: 'O frază despre ce găsește vizitatorul aici.', on: mark }), { wide: true, hint: 'Cel mult 280 de caractere. Apare pe carduri și în căutări.' }),
-      A.field('Descrierea', A.textarea(l, 'description', { max: 20000, rows: 8, on: mark }), { wide: true, hint: 'Paragrafele separate de un rând liber rămân paragrafe.' }),
+      A.field('Descrierea', descRich, { wide: true, hint: 'Scrii ca într-un document: îngroșat, cursiv, liste și linkuri.' }),
     ])]));
 
     // ----- where -----
-    box.appendChild(A.section('am-l-where', 'Adresă și contact', 'Adresa sau punctul pe hartă sunt obligatorii: pagina arată harta și drumul.', [A.form([
-      A.field('Adresa', A.input(l, 'address', { max: 255, ph: 'Comuna Bixad, județul Covasna', on: mark }), { wide: true }),
-      A.field('Latitudine', A.input(l, 'latitude', { type: 'number', step: '0.0000001', min: -90, maxv: 90, ph: '46.1261', on: mark })),
-      A.field('Longitudine', A.input(l, 'longitude', { type: 'number', step: '0.0000001', min: -180, maxv: 180, ph: '25.8876', on: mark }), { hint: 'Din Google Maps: click dreapta pe punct, apoi pe coordonate.' }),
+    // Latitude and longitude stay in the record (the map on the public page uses them), but the
+    // operator never types them: we set the point from the address.
+    var coords = (l.latitude != null && l.longitude != null)
+      ? el('p', { class: 've-note' }, [O.icon('map-pin'), document.createTextNode(' Punctul de pe hartă e pus: ' + l.latitude + ', ' + l.longitude + '. Îl mutăm noi dacă adresa se schimbă.')])
+      : el('p', { class: 've-note', text: 'Punctul de pe hartă îl punem noi, după adresă. Dacă ai un link Google Maps, lasă-l mai jos.' });
+    box.appendChild(A.section('am-l-where', 'Adresă și contact', 'Adresa apare pe pagina locației, sub hartă, și în indicațiile de drum.', [A.form([
+      A.field('Adresa *', A.input(l, 'address', { max: 255, ph: 'Str. Lacului 1, Bixad', on: mark }), { wide: true, hint: 'Strada și numărul. Orașul și județul se aleg sus, la „Despre locație”.' }),
       A.field('Link Google Maps', A.input(l, 'google_maps_url', { type: 'url', max: 500, ph: 'https://maps.app.goo.gl/…', on: mark }), { wide: true }),
       A.field('Telefon', A.input(l, 'phone', { type: 'tel', max: 40, on: mark })),
       A.field('Email', A.input(l, 'email', { type: 'email', max: 255, on: mark })),
       A.field('Site', A.input(l, 'website_url', { type: 'url', max: 500, ph: 'https://', on: mark }), { wide: true }),
-    ])]));
+    ]), coords]));
 
     // ----- photos -----
     box.appendChild(A.section('am-l-photos', 'Poze', 'Poza principală e obligatorie. Recomandat 1600 × 1200, peisaj.', [
@@ -258,10 +332,15 @@
         A.field('Răspunsul', A.textarea(f, 'a', { max: 2000, rows: 2, on: mark }), { cls: 've-row-wide' }),
       ];
     }, function () { return { q: null, a: null }; }, { addLabel: 'Adaugă o întrebare', rowCls: 'am-row-block', limit: 30, removeLabel: 'Șterge întrebarea', on: mark });
-    box.appendChild(A.section('am-l-info', 'Facilități, reguli, întrebări', null, [
+    var rulesRich = A.rich(l, 'rules', { label: 'Reguli de vizitare', max: 6000, min: 140, ph: 'Înotul este interzis. Câinii se țin în lesă.', on: mark });
+    richBoxes.push([rulesRich, 'Reguli de vizitare']);
+    box.appendChild(A.section('am-l-info', 'Facilități, reguli, întrebări', 'Bifează ce găsește vizitatorul la tine. Ce nu e în listă adaugi singur, jos.', [
       el('p', { class: 've-sec-k', text: 'Facilități' }),
-      A.checkset(l, 'facilities', L.facilities || {}),
-      A.form([A.field('Reguli de vizitare', A.textarea(l, 'rules', { max: 3000, rows: 3, ph: 'Înotul este interzis. Câinii se țin în lesă.', on: mark }), { wide: true })]),
+      A.checkset(l, 'facilities', L.facilities || {}, {
+        groups: L.facility_groups || null, custom: L.custom_facility || 'custom:', on: mark,
+        customLabel: 'Facilitățile tale', customHint: 'Adaugă o facilitate care nu e în listă',
+      }),
+      A.form([A.field('Reguli de vizitare', rulesRich, { wide: true })]),
       el('p', { class: 've-sec-k', text: 'Întrebări frecvente' }),
       faqs.box, el('div', { class: 've-sec-tools' }, [faqs.addBtn]),
     ]));
@@ -283,6 +362,9 @@
       lgBody.hidden = !lg.enabled;
       if (!lg.enabled) return;
       var typeOpts = [[null, 'Alege tipul']].concat(Object.keys(L.lodging_types || {}).map(function (k) { return [k, L.lodging_types[k]]; }));
+      var lgDesc = A.rich(lg, 'description', { label: 'Descrierea cazării', max: 6000, min: 140, ph: 'Câteva rânduri despre camere, mic dejun, priveliște…', on: mark });
+      var lgPol = A.rich(lg, 'policies', { label: 'Reguli și politici', max: 4000, min: 120, ph: 'Anulare, animale, fumat…', on: mark });
+      richBoxes.push([lgDesc, 'Descrierea cazării'], [lgPol, 'Reguli și politici']);
       var rooms = A.rows(lg.rooms, function (r) {
         return [
           A.field('Camera', A.input(r, 'name', { max: 80, ph: 'Cameră dublă', on: mark })),
@@ -310,11 +392,14 @@
           A.field('Preț de la (lei/noapte)', A.input(lg, 'price_from', { type: 'number', min: 0, step: '1', on: mark })),
           A.field('Telefon rezervări', A.input(lg, 'phone', { type: 'tel', max: 40, on: mark })),
           A.field('Email rezervări', A.input(lg, 'email', { type: 'email', max: 255, on: mark }), { wide: true }),
-          A.field('Descrierea cazării', A.textarea(lg, 'description', { max: 3000, rows: 3, on: mark }), { wide: true }),
-          A.field('Reguli și politici', A.textarea(lg, 'policies', { max: 2000, rows: 2, ph: 'Anulare, animale, fumat…', on: mark }), { wide: true }),
+          A.field('Descrierea cazării', lgDesc, { wide: true }),
+          A.field('Reguli și politici', lgPol, { wide: true }),
         ]),
         el('p', { class: 've-sec-k', text: 'Dotări' }),
-        A.checkset(lg, 'facilities', L.lodging_facilities || {}),
+        A.checkset(lg, 'facilities', L.lodging_facilities || {}, {
+          custom: L.custom_facility || 'custom:', on: mark,
+          customLabel: 'Dotările tale', customHint: 'Adaugă o dotare care nu e în listă',
+        }),
         el('p', { class: 've-sec-k', text: 'Camere' }),
         rooms.box, el('div', { class: 've-sec-tools' }, [rooms.addBtn]),
         el('p', { class: 've-sec-k', text: 'Unde se rezervă cazarea' }),
@@ -348,6 +433,7 @@
           O.flash((r && r.message) || 'Trimisă spre aprobare.');
           cur = normalize(r.data.location);
           drawEditor();
+          showSent();
         }, function (err) { O.flash(A.errText(err, 'Nu am putut trimite locația.'), true); });
       });
     });
@@ -368,6 +454,16 @@
       }, function (err) { O.flash(A.errText(err, 'Nu am putut șterge locația.'), true); });
     });
     box.appendChild(el('div', { class: 'am-bar' }, [el('div', { class: 'am-bar-in' }, [del, el('span', { class: 'am-bar-gap' }), view, pub, submit, save])]));
+  }
+
+  /** After "Trimite spre aprobare": bring the new state under the operator's eyes and say it out loud. */
+  function showSent() {
+    var panel = $('am-loc-edit').querySelector('.am-state');
+    if (!panel) return;
+    panel.classList.add('is-fresh');
+    try { panel.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { panel.scrollIntoView(); }
+    if (panel.focus) { panel.setAttribute('tabindex', '-1'); panel.focus(); }
+    setTimeout(function () { panel.classList.remove('is-fresh'); }, 2600);
   }
 
   function payload(l) {
@@ -407,6 +503,14 @@
   function doSave() {
     if (busy) return Promise.resolve(false);
     if (!cur.name) { O.flash('Scrie numele locației.', true); return Promise.resolve(false); }
+    for (var i = 0; i < richBoxes.length; i++) {
+      var b = richBoxes[i][0];
+      if (document.contains(b) && b.richOver()) {
+        O.flash('„' + richBoxes[i][1] + '” e prea lungă: taie din text (cel mult ' + b.richMax + ' de caractere cu tot cu formatare).', true);
+        b.scrollIntoView({ block: 'center' });
+        return Promise.resolve(false);
+      }
+    }
     busy = true;
     root.classList.add('is-busy');
     var isNew = !cur.id;

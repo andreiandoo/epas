@@ -78,6 +78,9 @@ class ServiceOrder extends Model
     public const TYPE_TRACKING = 'tracking';
     public const TYPE_CAMPAIGN = 'campaign';
     public const TYPE_EXTENDED_ARTIST = 'extended_artist';
+    // bilete.online only (activities module): a whole location is promoted,
+    // not one event. Never produced for any other marketplace.
+    public const TYPE_LOCATION_FEATURING = 'location_featuring';
 
     // Tixello collects 50% of every extra-service total; the other 50% stays with the marketplace operator.
     public const TIXELLO_SHARE = 0.5;
@@ -126,6 +129,7 @@ class ServiceOrder extends Model
     {
         return match ($this->service_type) {
             self::TYPE_FEATURING => 'Promovare Eveniment',
+            self::TYPE_LOCATION_FEATURING => 'Promovare locație',
             self::TYPE_EMAIL => 'Email Marketing',
             self::TYPE_TRACKING => 'Ad Tracking',
             self::TYPE_CAMPAIGN => 'Creare Campanie',

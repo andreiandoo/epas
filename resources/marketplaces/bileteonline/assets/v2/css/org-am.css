@@ -1,7 +1,7 @@
 /* bilete.online v2: the operator's activities-module screens (/organizator/locatii, /produse, /rezervari). Builds on
    org-venue.css (forms, rows, product list, dialogs) and organizer.css (panels, tags, empty states). */
 
-.am{padding-bottom:96px}
+.am{--am-ctl:46px;padding-bottom:96px}
 .am.is-busy{cursor:progress}
 .am.is-busy .am-bar .btn{pointer-events:none;opacity:.6}
 .am-hint{color:var(--muted);white-space:normal!important}
@@ -11,6 +11,125 @@
 .am-stack{display:grid;gap:14px}
 .am-sec{display:grid;gap:14px;scroll-margin-top:136px}
 .am-sec > .org-panel-head{margin-bottom:0}
+/* The editor stacks a header, the state panel, the jump list, the sections and the save bar;
+   without this they touch, because .org-panel brings its own border but no margin. */
+.am-ed{display:grid;gap:var(--space-5);min-width:0}
+@media (min-width:900px){.am-ed{gap:28px}}
+
+/* ---------- one height for every control ----------
+   A .po-field is a grid: when a neighbour in the same form row was taller (a hint under it, a
+   label on two lines) the field stretched and took the control with it, so inputs came out 40,
+   46, 55 or 61 px tall. Pin the rows to the top instead. And a <select> was inline, so the line
+   box added a descender under it and the caret - centred on the wrapper - sat below the middle
+   of the select. */
+.am .po-field{align-content:start}
+.am .po-select > select{display:block}
+.am:not(.pos) .po-input,
+.am:not(.pos) .po-select select,
+.am:not(.pos) .ve-row .po-input,
+.am:not(.pos) .ve-row .po-select select,
+.am:not(.pos) .am-week .po-input{min-height:var(--am-ctl);height:var(--am-ctl)}
+.am:not(.pos) .ve-row .ve-icon-btn,
+.am:not(.pos) .ve-sec-tools .ve-icon-btn{width:var(--am-ctl);height:var(--am-ctl)}
+
+/* ---------- searchable list (country, county, city) ---------- */
+.am .po-combo{position:relative;display:block;min-width:0;max-width:100%}
+.am .po-combo .po-input{padding-right:46px;text-overflow:ellipsis;cursor:text}
+.po-combo-btn{position:absolute;top:50%;right:6px;display:grid;place-items:center;width:34px;height:34px;margin-top:-17px;padding:0;border:0;border-radius:10px;background:none;color:var(--muted);cursor:pointer}
+.po-combo-btn:hover{color:var(--green)}
+.po-combo-btn .ic{width:18px;height:18px;transition:transform .14s ease}
+.po-combo.is-open .po-combo-btn .ic{transform:rotate(180deg)}
+.po-combo-list{position:absolute;z-index:40;top:calc(100% + 4px);left:0;right:0;max-height:264px;margin:0;padding:6px;overflow-y:auto;overscroll-behavior:contain;list-style:none;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 22px 44px -26px rgba(0,0,0,.45)}
+.po-combo-opt{padding:9px 12px;border-radius:10px;font-size:.9375rem;font-weight:600;line-height:1.3;cursor:pointer}
+.po-combo-opt[aria-selected="true"]{color:var(--action)}
+.po-combo-opt.is-active{background:var(--tint-green);color:var(--action-hover)}
+.po-combo-none{padding:10px 12px;color:var(--muted);font-size:.875rem;line-height:1.4}
+
+/* ---------- what you write is what shows ---------- */
+.po-rich{display:grid;min-width:0;border:1.5px solid var(--line);border-radius:14px;background:var(--surface)}
+.po-rich:focus-within{border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.18)}
+.po-rich-bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid var(--line);background:#FBFBF9;border-radius:12px 12px 0 0}
+.po-rich-b{min-width:36px;height:36px;padding:0 10px;border:1px solid transparent;border-radius:10px;background:none;color:var(--ink);font:700 .9375rem/1 var(--font);cursor:pointer}
+.po-rich-b:hover{border-color:var(--line);background:var(--surface)}
+.po-rich-b:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.po-rich-b[aria-pressed="true"]{border-color:var(--action);background:var(--tint-green);color:var(--action-hover)}
+.po-rich-b i{font-style:italic}
+.po-rich-ed{min-height:150px;padding:12px 14px;font:500 .9375rem/1.55 var(--font);color:var(--ink);overflow-wrap:anywhere}
+.po-rich-ed:focus{outline:none}
+.po-rich-ed[data-empty="1"]::before{content:attr(data-ph);color:var(--muted);pointer-events:none}
+.po-rich-ed > :first-child{margin-top:0}
+.po-rich-ed > :last-child{margin-bottom:0}
+.po-rich-ed p{margin:0 0 .7em}
+.po-rich-ed ul,.po-rich-ed ol{margin:0 0 .7em;padding-left:1.4em}
+.po-rich-ed li{margin:0 0 .25em}
+.po-rich-ed h3,.po-rich-ed h4{margin:1em 0 .4em;font-size:1.0625rem;font-weight:700;color:var(--green)}
+.po-rich-ed a{color:var(--action);text-decoration:underline;text-underline-offset:2px}
+.po-rich-foot{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:8px 14px;color:var(--muted);font-size:.75rem}
+.po-rich-foot small{color:inherit;line-height:1.4}
+.po-rich-count{font-variant-numeric:tabular-nums;white-space:nowrap}
+.po-rich-foot.is-over{color:var(--red-text);font-weight:700}
+
+/* ---------- facilities: groups, and the operator's own ---------- */
+.ve-checkset{display:grid;gap:14px}
+.ve-checkgroup{display:grid;gap:8px}
+.am-chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.am-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 4px 4px 14px;border:1px solid #CDE6D8;border-radius:999px;background:var(--tint-green);color:var(--action-hover);font-size:.875rem;font-weight:700}
+.am-chip .ve-icon-btn{width:28px;height:28px;border:0;background:none;color:inherit}
+.am-chip .ve-icon-btn .ic{width:14px;height:14px}
+.am-chip-add{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.am-chip-add .po-field{flex:1 1 240px;max-width:360px}
+
+/* ---------- pictures: drag them over, change them on the picture ---------- */
+.am-drop.is-over{outline:2px dashed var(--action);outline-offset:4px;border-radius:16px}
+.am-shot{position:relative;flex:none;width:220px;max-width:100%;aspect-ratio:4 / 3;overflow:hidden;border:1.5px solid var(--line);border-radius:16px;background:#FBFBF9}
+.am-shot.is-empty{border-style:dashed}
+.am-shot-img{width:100%;height:100%;object-fit:cover}
+.am-shot-empty{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;padding:10px;color:var(--muted);text-align:center}
+.am-shot-empty .ic{width:24px;height:24px}
+.am-shot-empty b{font-size:.875rem;color:var(--ink)}
+.am-shot-empty small{font-size:.75rem}
+.am-shot-tools{position:absolute;inset:0;display:grid;place-content:center;gap:8px;padding:10px;background:rgba(11,30,22,.58);opacity:0;pointer-events:none;transition:opacity .14s ease}
+.am-shot:hover .am-shot-tools,.am-shot:focus-within .am-shot-tools{opacity:1;pointer-events:auto}
+@media (hover:none){.am-shot-tools{opacity:1;pointer-events:auto;background:rgba(11,30,22,.42)}}
+.org-main .am-shot-btn{min-height:36px;padding:0 14px;font-size:.8125rem}
+.org-main .am-shot-btn .ic{width:16px;height:16px}
+.am-gal-zone{display:grid;place-items:center;gap:4px;padding:16px;border:1.5px dashed var(--line);border-radius:16px;background:#FBFBF9;color:var(--muted);text-align:center}
+.am-gal-zone .ic{width:24px;height:24px}
+.am-gal-zone b{font-size:.875rem;color:var(--ink)}
+.am-gal-zone small{font-size:.75rem}
+.am-gal-item .ve-icon-btn{opacity:0;transition:opacity .14s ease}
+.am-gal-item:hover .ve-icon-btn,.am-gal-item:focus-within .ve-icon-btn{opacity:1}
+@media (hover:none){.am-gal-item .ve-icon-btn{opacity:1}}
+
+/* ---------- where the location is in the approval ---------- */
+.am-state{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;padding:16px 18px;border:1.5px solid var(--line);border-radius:20px;background:var(--surface)}
+.am-state:focus{outline:none}
+.am-state-ic{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:13px;background:#F0F0EC;color:var(--ink)}
+.am-state-ic .ic{width:22px;height:22px}
+.am-state-t{display:grid;gap:6px;min-width:0}
+.am-state-t b{font-size:1.0625rem;line-height:1.3}
+.am-state-t p{margin:0;color:var(--muted);font-size:.9375rem;line-height:1.5}
+.am-state-when{font-variant-numeric:tabular-nums}
+.am-state-why{color:var(--ink)!important}
+.am-state-more summary{cursor:pointer;color:var(--action);font-size:.875rem;font-weight:700}
+.am-state-more[open] summary{margin-bottom:6px}
+.am-state.is-wait{border-color:#F1DDA8;background:#FFFBF2}
+.am-state.is-wait .am-state-ic{background:#FFF3D6;color:#6E4A00}
+.am-state.is-bad{border-color:#F3C9C6;background:#FDF6F5}
+.am-state.is-bad .am-state-ic{background:#FCE9E8;color:var(--red-text)}
+.am-state.is-ok{border-color:#CDE6D8;background:var(--tint-green)}
+.am-state.is-ok .am-state-ic{background:#FFF;color:var(--action)}
+.am-state.is-draft .am-state-ic{background:#E9ECE9;color:#454A47}
+@media (prefers-reduced-motion: no-preference){
+  .am-state.is-fresh{animation:am-state-in 2.4s ease-out}
+  @keyframes am-state-in{0%,60%{box-shadow:0 0 0 4px rgba(27,127,78,.28)}100%{box-shadow:0 0 0 0 rgba(27,127,78,0)}}
+}
+.ve-prod.am-waiting{border-left:4px solid #E0B94D}
+.ve-prod.am-rejected{border-left:4px solid var(--red-text)}
+@media (max-width:599px){
+  .am-state{grid-template-columns:minmax(0,1fr)}
+  .am-shot{width:100%}
+}
 
 /* jump list of the editor sections */
 .am-jump{position:sticky;top:68px;z-index:5;display:flex;gap:6px;margin:0 calc(-1 * var(--space-2));padding:8px var(--space-2);overflow-x:auto;scrollbar-width:none;background:rgba(247,247,245,.94);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
@@ -32,10 +151,9 @@
 .ve-row.am-row-block{grid-template-columns:minmax(0,1fr) auto;align-items:start}
 .ve-row.am-row-block > .po-field,.ve-row.am-row-block > .am-season{grid-column:1}
 .ve-row.am-row-block > .ve-icon-btn{grid-column:2;grid-row:1}
-.am-season{display:grid;gap:10px;min-width:0}
+.am-season{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
 .am-md{display:grid;grid-template-columns:80px minmax(0,1fr);gap:6px}
 .am-week{display:grid;grid-template-columns:minmax(110px, auto) minmax(0,1fr) minmax(0,1fr);gap:6px 8px;align-items:center;max-width:520px}
-.am-week .po-input{min-height:40px}
 .am-week .po-input:disabled{opacity:.45}
 .am-week-d{font-weight:600}
 
@@ -111,3 +229,16 @@
 .wg-sub{margin:24px 0 4px;font-size:1rem}
 .wg-frame{border:1px dashed #D3D3CC;border-radius:18px;background:var(--bg);overflow:hidden}
 .wg-frame iframe{display:block;width:100%;height:720px;border:0}
+/* ---------- the editor on a phone ----------
+   Kept at the end so it wins over the wider rules above. Three columns of "day - opens - closes"
+   do not fit: a time input will not go under ~110px, so the day takes its own line and the two
+   hours share the one below. Without this the season block pushed the whole page sideways. */
+@media (max-width:599px){
+  .am-week{grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:none}
+  .am-week-d{grid-column:1 / -1}
+  .am-week .po-input{padding:0 8px}
+  .am-md{grid-template-columns:minmax(0,84px) minmax(0,1fr)}
+  .am-season .ve-form,.am-season .am-week,.am-season .po-field{min-width:0}
+  /* The "copy Monday over the week" button is a long sentence; let it wrap instead of pushing. */
+  .am-season .ve-sec-tools .btn{white-space:normal;padding:8px 14px;line-height:1.3;text-align:center}
+}

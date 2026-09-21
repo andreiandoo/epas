@@ -32,7 +32,7 @@ $lcGallery  = array_values(array_filter(array_map('v2_media_url', (array) ($loca
 $lcContact  = is_array($location['contact'] ?? null) ? $location['contact'] : [];
 $lcSeasons  = array_values(array_filter((array) ($location['seasons'] ?? []), 'is_array'));
 $lcClosed   = array_slice(array_values((array) ($location['closed_dates'] ?? [])), 0, 8);
-$lcFacilities = array_values(array_filter(array_map(fn ($f) => AM_FACILITIES[$f] ?? null, (array) ($location['facilities'] ?? []))));
+$lcFacilities = am_facility_labels($location['facilities'] ?? []); // the operator's own entries (custom:…) come through too
 $lcLodging  = is_array($location['lodging'] ?? null) ? $location['lodging'] : null;
 $lcFaqs     = array_values(array_filter((array) ($location['faqs'] ?? []), fn ($f) => is_array($f) && trim((string) ($f['q'] ?? '')) !== '' && trim((string) ($f['a'] ?? '')) !== ''));
 $lcNearby   = array_values(array_filter((array) ($location['nearby_attractions'] ?? []), fn ($a) => is_array($a) && !empty($a['slug'])));
@@ -95,7 +95,7 @@ if ($lcLodging) {
         'checkinTime' => $lcLodging['check_in'] ?? null,
         'checkoutTime' => $lcLodging['check_out'] ?? null,
         'amenityFeature' => array_values(array_map(fn ($f) => ['@type' => 'LocationFeatureSpecification', 'name' => $f, 'value' => true],
-            array_filter(array_map(fn ($f) => AM_LODGING_FACILITIES[$f] ?? null, (array) ($lcLodging['facilities'] ?? []))))) ?: null,
+            am_facility_labels($lcLodging['facilities'] ?? [], AM_LODGING_FACILITIES))) ?: null,
     ]);
 }
 if ($lcFaqs) {
@@ -357,7 +357,7 @@ include __DIR__ . '/header.php';
           <?php if (!empty($lcLodging['policies'])): ?><div class="lcp-body lcp-policies"><?= am_rich($lcLodging['policies']) ?></div><?php endif; ?>
         </div>
         <div class="lcp-card">
-          <?php $lgFac = array_values(array_filter(array_map(fn ($f) => AM_LODGING_FACILITIES[$f] ?? null, (array) ($lcLodging['facilities'] ?? [])))); ?>
+          <?php $lgFac = am_facility_labels($lcLodging['facilities'] ?? [], AM_LODGING_FACILITIES); ?>
           <?php if ($lgFac): ?>
             <h3>Dotări</h3>
             <ul class="lcp-chips"><?php foreach ($lgFac as $f): ?><li><?= v2_e($f) ?></li><?php endforeach; ?></ul>

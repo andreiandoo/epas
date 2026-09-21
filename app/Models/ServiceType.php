@@ -17,6 +17,9 @@ class ServiceType extends Model
 
     public const CODE_EXTENDED_ARTIST = 'extended_artist';
 
+    /** bilete.online only — see getOrCreateLocationFeaturing(). */
+    public const CODE_LOCATION_FEATURING = 'location_featuring';
+
     protected $fillable = [
         'marketplace_client_id',
         'code',
@@ -107,6 +110,40 @@ class ServiceType extends Model
         }
 
         return $types;
+    }
+
+    /**
+     * bilete.online only (activities module): promoting a whole LOCATION — its
+     * page and every product sold there — instead of one single activity.
+     *
+     * Guarded on purpose: a marketplace without the `activities-module`
+     * microservice (Ambilet and every other one) never gets this row, so its
+     * service catalogue, its pricing payload and its admin screens are exactly
+     * what they were before. Returns null for those marketplaces.
+     */
+    public static function getOrCreateLocationFeaturing(int $marketplaceClientId): ?self
+    {
+        $client = MarketplaceClient::find($marketplaceClientId);
+
+        if (!$client || !$client->hasMicroservice('activities-module')) {
+            return null;
+        }
+
+        return self::firstOrCreate(
+            [
+                'marketplace_client_id' => $marketplaceClientId,
+                'code' => self::CODE_LOCATION_FEATURING,
+            ],
+            [
+                'name' => 'Promovare locatie',
+                'description' => 'Promoveaza o locatie intreaga (pagina ei si produsele vandute acolo) pe paginile principale ale platformei',
+                // Same per-placement daily rates as activity promotion until the
+                // marketplace admin edits them in Servicii -> tipuri de servicii.
+                'pricing' => self::getDefaultPricing()['featuring'],
+                'is_active' => true,
+                'audience' => self::AUDIENCE_ORGANIZER,
+            ]
+        );
     }
 
     /**
