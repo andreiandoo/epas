@@ -1,0 +1,15 @@
+# Pin datasets for the interactive map. The URL always carries ?v=<hash>
+# (see v2_map_data()), so the bytes behind a given URL never change and the
+# browser never has to revalidate. Apache compresses application/json via the
+# brotli/deflate filters set in the site .htaccess.
+<IfModule mod_headers.c>
+    <FilesMatch "\.json$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType application/json "access plus 1 year"
+</IfModule>
