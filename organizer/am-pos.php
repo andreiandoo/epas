@@ -71,7 +71,7 @@ v2_org_start('am-pos');
         <div class="pos-lines" id="pos-lines"><p class="ve-sub">Alege produsele din stânga.</p></div>
         <dl class="pos-totals" id="pos-totals" hidden>
           <div><dt>Subtotal</dt><dd id="pos-sub">0 lei</dd></div>
-          <div id="pos-fee-row" hidden><dt>Comision bilete.online (<span id="pos-fee-rate"></span>%)</dt><dd id="pos-fee">0 lei</dd></div>
+          <div id="pos-fee-row" hidden><dt>Cost ticketing</dt><dd id="pos-fee">0 lei</dd></div>
           <div class="pos-total"><dt>De încasat</dt><dd id="pos-total">0 lei</dd></div>
         </dl>
         <details class="pos-customer" id="pos-customer">
@@ -80,7 +80,26 @@ v2_org_start('am-pos');
             <span class="po-field is-wide"><label for="pos-c-name">Nume</label><input class="po-input" id="pos-c-name" maxlength="160" autocomplete="off"></span>
             <span class="po-field"><label for="pos-c-email">Email</label><input class="po-input" id="pos-c-email" type="email" maxlength="190" autocomplete="off"></span>
             <span class="po-field"><label for="pos-c-phone">Telefon</label><input class="po-input" id="pos-c-phone" type="tel" maxlength="40" autocomplete="off"></span>
+            <span class="po-field is-wide"><label for="pos-c-notes">Mențiuni</label><textarea class="po-input" id="pos-c-notes" rows="2" maxlength="500"></textarea></span>
             <label class="po-check is-wide"><input type="checkbox" id="pos-c-send"><span>Trimite biletele pe email</span></label>
+          </div>
+        </details>
+
+        <details class="pos-customer" id="pos-company">
+          <summary>Factură pe firmă (opțional)</summary>
+          <div class="ve-form">
+            <div class="pos-cui is-wide">
+              <span class="po-field"><label for="pos-co-cui">CUI / CIF</label><input class="po-input" id="pos-co-cui" maxlength="30" placeholder="RO12345678" autocomplete="off"></span>
+              <button class="btn btn-ghost" type="button" id="pos-anaf"><?= v2_ic('magnifying-glass') ?><span data-label>Caută la ANAF</span></button>
+            </div>
+            <p class="pos-hint is-wide" id="pos-anaf-msg" role="status" hidden></p>
+            <span class="po-field is-wide"><label for="pos-co-name">Denumire firmă</label><input class="po-input" id="pos-co-name" maxlength="200" autocomplete="off"></span>
+            <span class="po-field"><label for="pos-co-reg">Nr. registrul comerțului</label><input class="po-input" id="pos-co-reg" maxlength="60" autocomplete="off"></span>
+            <span class="po-field"><label for="pos-co-iban">IBAN</label><input class="po-input" id="pos-co-iban" maxlength="34" autocomplete="off"></span>
+            <span class="po-field is-wide"><label for="pos-co-address">Sediu</label><input class="po-input" id="pos-co-address" maxlength="255" autocomplete="off"></span>
+            <span class="po-field is-wide"><label for="pos-co-contact">Persoană de contact</label><input class="po-input" id="pos-co-contact" maxlength="120" autocomplete="off"></span>
+            <label class="po-check is-wide"><input type="checkbox" id="pos-co-invoice"><span>Emite factură pentru această vânzare</span></label>
+            <p class="pos-hint is-wide">Numărul de factură se ia la finalizarea vânzării, deci bifează acum: mai târziu nu se mai poate emite pe bonul acesta.</p>
           </div>
         </details>
         <p class="pos-err" id="pos-err" role="alert" hidden></p>

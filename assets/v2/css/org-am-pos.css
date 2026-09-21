@@ -80,3 +80,11 @@
   .pos-tk-code{font-weight:700;letter-spacing:.08em}
   @page{margin:2mm}
 }
+
+/* the company an invoice is made out to */
+.pos-cui{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.pos-cui .po-field{flex:1 1 160px}
+.pos-cui .btn{white-space:nowrap}
+.pos-hint{margin:0;color:var(--muted);font-size:.8125rem}
+.pos-hint.is-bad{color:var(--red-text);font-weight:600}
+.pos-hint[hidden]{display:none}
