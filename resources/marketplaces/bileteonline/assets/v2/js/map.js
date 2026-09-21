@@ -830,7 +830,7 @@
       go.target = '_blank';
       go.rel = 'noopener';
       actions.appendChild(go);
-      var nav = el('a', 'btn btn-light', 'Navighează');
+      var nav = el('a', 'btn btn-light', 'Google Maps');
       nav.href = 'https://www.google.com/maps/dir/?api=1&destination=' + D.lat[i] + ',' + D.lng[i];
       nav.target = '_blank';
       nav.rel = 'noopener';
