@@ -171,8 +171,24 @@ class PosController extends BaseController
             'customer.name'      => 'nullable|string|max:160',
             'customer.email'     => 'nullable|email|max:190',
             'customer.phone'     => 'nullable|string|max:40',
+            'customer.notes'     => 'nullable|string|max:500',
+            // Buying as a company: the invoice is made out to these (ANAF fills them in on the desk screen).
+            'company.name'           => 'nullable|string|max:200',
+            'company.cui'            => 'nullable|string|max:30',
+            'company.reg_no'         => 'nullable|string|max:60',
+            'company.address'        => 'nullable|string|max:255',
+            'company.iban'           => 'nullable|string|max:34',
+            'company.contact_person' => 'nullable|string|max:120',
+            'generate_invoice'   => 'nullable|boolean',
             'send_email'         => 'nullable|boolean',
         ]);
+
+        // The invoice number is reserved at the sale and nowhere else, so company details without the tick would
+        // leave an order nobody can invoice afterwards.
+        $company = array_filter((array) ($data['company'] ?? []), fn ($v) => $v !== null && trim((string) $v) !== '');
+        if ($company && empty($data['generate_invoice'])) {
+            return $this->error('Ai completat datele firmei, dar nu ai bifat „Emite factură". Bifează sau șterge datele firmei.', 422);
+        }
         $location = $this->deskLocation($organizer, $data['location_id']);
         if (!$location) {
             return $this->error('Locația nu există', 404);
@@ -248,12 +264,17 @@ class PosController extends BaseController
                         'organizer_id'    => $l['organizer_id'],
                     ], $staged['lines']),
                     'commission_added_on_top' => $staged['commission_on_top'],
-                ],
+                    'notes'                   => trim((string) ($data['customer']['notes'] ?? '')) ?: null,
+                ] + ($company ? ['company_billing' => $company, 'invoice_requested' => true] : []),
             ]);
 
             $count = array_sum(array_map(fn ($l) => (int) $l['quantity'], $staged['lines']));
             $beneficiaries = $name !== '' ? array_fill(0, max(1, $count), ['name' => $name, 'email' => $email ?: null]) : [];
             $builder->persist($order, $staged, $customer, $beneficiaries, true, false, null);
+
+            if ($company) {
+                $this->reserveInvoice($order, $organizer, $staged['lines']);
+            }
 
             DB::commit();
         } catch (ActivityCartException $e) {
@@ -274,6 +295,31 @@ class PosController extends BaseController
         }
 
         return $this->success(['sale' => $this->saleRow($order->fresh(), true)], 'Vânzarea a fost înregistrată.', 201);
+    }
+
+    /**
+     * Take the next invoice number for a desk sale made out to a company. Which of the operator's companies issues it
+     * follows the products sold: the second one only when everything sold belongs to it. A failure here never undoes
+     * the sale — the invoice can still be issued by hand.
+     */
+    private function reserveInvoice(Order $order, MarketplaceOrganizer $organizer, array $lines): void
+    {
+        try {
+            $issuers = array_map(fn ($l) => $l['activity']->issuing_company ?: 'primary', $lines);
+            $onlySecondary = $issuers && !in_array('primary', $issuers, true) && $organizer->has_secondary_issuer;
+            $issuer = $onlySecondary ? 'secondary' : 'primary';
+
+            $meta = is_array($order->meta) ? $order->meta : [];
+            $meta['invoice_number'] = $organizer->reserveNextInvoiceNumber($issuer);
+            $meta['invoice_company'] = $issuer;
+            $meta['invoice_issued_at'] = CarbonImmutable::now()->toIso8601String();
+            $order->meta = $meta;
+            $order->save();
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->warning('Activities POS invoice number failed', [
+                'order_id' => $order->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** GET organizer/activities-module/pos/sales?session_id= | location_id=&date= */
@@ -406,6 +452,10 @@ class PosController extends BaseController
             'commission'     => (float) ($order->meta['commission_added_on_top'] ?? 0),
             'total'          => (float) $order->total,
             'customer'       => ['name' => $order->customer_name, 'email' => $order->customer_email],
+            // a sale made out to a company: the desk prints these on the receipt and shows the invoice number
+            'company'        => is_array($order->meta['company_billing'] ?? null) ? $order->meta['company_billing'] : null,
+            'invoice_number' => $order->meta['invoice_number'] ?? null,
+            'notes'          => $order->meta['notes'] ?? null,
             'lines'          => array_map(fn ($l) => [
                 'title' => $l['title'], 'variant' => $l['variant'], 'quantity' => $l['quantity'],
                 'date_label' => $l['date_label'], 'time_label' => $l['time_label'], 'total' => $l['total'],
