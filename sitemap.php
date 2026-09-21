@@ -38,6 +38,7 @@ foreach (array_keys(MAP_LANDINGS) as $landingSlug) {
 // The editorial routes (includes/v2/map-routes.php).
 require_once __DIR__ . '/includes/v2/map-routes.php';
 $urls[] = ['/trasee', 'weekly', '0.7'];
+$urls[] = ['/plan', 'monthly', '0.6'];
 foreach (array_keys(MAP_ROUTES) as $routeSlug) {
     $urls[] = ['/trasee/' . $routeSlug, 'monthly', '0.6'];
 }

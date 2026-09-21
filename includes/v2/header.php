@@ -26,6 +26,7 @@ $v2LocHow = [
 $v2AttrLinks = [
     ['globe-simple', 'Harta atracțiilor', '/harta'],
     ['list', 'Trasee turistice', '/trasee'],
+    ['calendar-blank', 'Planificator de călătorie', '/plan'],
     ['castle-turret', 'Castele și palate', '/atractii?tip=castel-palat'], ['buildings', 'Muzee', '/atractii?tip=muzeu'],
     ['map-pin', 'Toate atracțiile', '/atractii'],
 ];

@@ -764,6 +764,9 @@ RewriteRule ^harta/([a-z][a-z0-9-]{1,50})/?$ harta.php?landing=$1 [L,QSA]
 # ============================================
 RewriteRule ^trasee/?$ trasee.php [L,QSA]
 RewriteRule ^trasee/([a-z][a-z0-9-]{1,80})/?$ traseu.php?slug=$1 [L,QSA]
+
+# The trip planner. Everything it does happens in the browser; the page is just the shell.
+RewriteRule ^plan/?$ plan.php [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([a-z][a-z0-9-]{1,50})/(experiente|atractii|locatii)/?$ hub-$2.php?city=$1 [L,QSA]

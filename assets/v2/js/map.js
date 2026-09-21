@@ -1161,6 +1161,8 @@
 
     function boot() {
       if (D || booting) return Promise.resolve(D);
+      // Nothing to show yet: an empty map waiting for setRoute(), not a broken one.
+      if (!route && !cfg.dataUrl) return Promise.resolve(null);
       booting = true;
       buildShell();
       ui.loading.hidden = false;
@@ -1219,6 +1221,22 @@
       close: close,
       boot: boot,
       setTypes: function (list) { state.types = list || []; if (D) refresh(true); },
+      /* The planner rebuilds its day as a new route: same engine, new stops. */
+      setRoute: function (stops, geometry) {
+        route = (stops && stops.length) ? stops : null;
+        cfg.routeStops = route;
+        cfg.routeGeometry = geometry || '';
+        // Mounted empty and given its stops later (the planner): boot now that there is something
+        // to draw, rather than silently doing nothing until the second call.
+        if (!D) { boot(); return; }
+        D = datasetFromStops(route || []);
+        markers = [];
+        selected = -1;
+        ui.card.hidden = true;
+        if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+        applyFilters();
+        drawMarkers();
+      },
       isOpen: function () { return opened; }
     };
 
