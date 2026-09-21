@@ -34,7 +34,7 @@ $ogImage = SITE_URL . '/assets/v2/img/hero-1440.webp';
 
 $slFaq = [
     ['Cât durează până încep să vând?', 'După ce ne trimiți datele locației, îți pregătim contul, activitățile și tipurile de bilete. Publicarea depinde de cât de repede primim programul, prețurile și pozele. De obicei vorbim de zile, nu de luni.'],
-    ['Ce costă?', 'Comisionul este de 2%, adăugat la prețul biletului și plătit de cumpărător, pentru vânzarea exclusivă prin bilete.online. Dacă vinzi biletele și în alte părți, comisionul este de 4%: 2% incluse în preț și 2% adăugate. Nu ai abonament lunar și nu plătești instalare.'],
+    ['Ce costă?', 'Comisionul este de 2%, adăugat peste prețul biletului, fără să se scadă din el, pentru vânzarea exclusivă prin bilete.online. Dacă vinzi biletele și în alte părți, comisionul este de 4%: 2% incluse în preț și 2% adăugate. Nu ai abonament lunar și nu plătești instalare.'],
     ['Pot vinde și la ghișeu, nu doar online?', 'Da. POS-ul emite bilete pe loc, ține coșul, încasează cash sau card, tipărește bonul și îți dă desfășurătorul casei și închiderea de casă la final de tură. Vânzările online și cele de la ghișeu ajung în același raport.'],
     ['Ce hardware îmi trebuie?', 'Un telefon sau o tabletă pentru scanare și, dacă vrei bon tipărit, o imprimantă termică de 58 sau 80 mm. Bonul se tipărește direct din browser, fără drivere speciale. POS-ul ține loc de casă în aplicație.'],
     ['Cum scanăm biletele la intrare?', 'Cu aplicația de scanare, instalată pe telefon sau tabletă. Scanează cu camera, iar dacă un cod nu se citește, îl poți tasta. Îți arată pe loc dacă biletul e valid, dacă a mai fost scanat sau dacă nu e recunoscut, cu vibrație și sunet.'],
@@ -87,7 +87,7 @@ include __DIR__ . '/includes/v2/header.php';
           <a class="btn btn-outline-light" href="#panou">Vezi panoul de operator<?= v2_ic('arrow-right') ?></a>
         </div>
         <ul class="sl-facts">
-          <li><?= v2_ic('percent') ?><span><b>Comision 2%</b>plătit de cumpărător</span></li>
+          <li><?= v2_ic('percent') ?><span><b>Comision 2%</b>fără să-ți atingă prețul</span></li>
           <li><?= v2_ic('wallet') ?><span><b>Fără abonament</b>și fără cost de instalare</span></li>
           <li><?= v2_ic('scan') ?><span><b>Online + la fața locului</b>în același cont</span></li>
         </ul>
@@ -403,7 +403,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap sl-split">
       <div class="sl-split-copy">
         <p class="sl-kicker is-light"><?= v2_ic('percent') ?>Costuri</p>
-        <h2 id="sl-money-h">Comision 2%, plătit de cumpărător</h2>
+        <h2 id="sl-money-h">Comision 2%. Prețul tău rămâne al tău.</h2>
         <p class="sl-sub is-light">Fără abonament lunar, fără cost de instalare și fără taxă pentru fiecare bilet emis la ghișeu. Comisionul este de 2% dacă vinzi exclusiv prin bilete.online și de 4% dacă vinzi biletele și în alte părți: 2% incluse în preț și 2% adăugate.</p>
         <ul class="sl-checks is-light">
           <li><?= v2_ic('check-circle') ?>Vezi soldul disponibil și ceri plata când vrei</li>
@@ -423,7 +423,7 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
         <dl class="sl-calc-out">
           <div><dt>Încasezi din bilete</dt><dd id="sl-out-rev">18.000 lei</dd></div>
-          <div><dt>Comision 2%, plătit de cumpărător</dt><dd id="sl-out-fee">360 lei</dd></div>
+          <div><dt>Comision 2%, adăugat peste preț</dt><dd id="sl-out-fee">360 lei</dd></div>
           <div class="is-total"><dt>Rămâne la tine</dt><dd id="sl-out-net">18.000 lei</dd></div>
         </dl>
         <p class="sl-calc-note">Comisionul se adaugă la prețul biletului, deci prețul tău rămâne întreg. Cumpărătorul plătește <span id="sl-out-buyer">45,90 lei</span> pe bilet.</p>
@@ -441,7 +441,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($slAttractions): ?><li><b><?= v2_thousands($slAttractions) ?></b><span>atracții în catalog</span></li><?php endif; ?>
         <?php if ($slCities): ?><li><b><?= $slCities ?></b><span>orașe cu pagini proprii</span></li><?php endif; ?>
         <?php if ($slCategories): ?><li><b><?= $slCategories ?></b><span>categorii de experiențe</span></li><?php endif; ?>
-        <li><b>2%</b><span>comision, plătit de cumpărător</span></li>
+        <li><b>2%</b><span>comision, fără să-ți atingă prețul</span></li>
       </ul>
       <ul class="sl-reach-list">
         <?php foreach ([

@@ -5,9 +5,10 @@
  * - video: one film (YouTube). The page shows its poster and loads the player only when someone presses play.
  * - quotes: short testimonials. The one marked 'pull' => true is the large quote before the finale; the rest form the wall.
  *
- * 'demo' => true marks a stand-in used while the real material is prepared. Stand-ins are shown ONLY in preview
- * (/parteneri?preview=1), with a "Demo" tag, never to visitors: a made-up testimonial on a live sales page would mislead
- * operators. To publish, replace the text (or the YouTube id) with the real one and set 'demo' => false.
+ * 'demo' => true marks a stand-in written by us while the real material is prepared. Stand-in quotes are shown to
+ * everyone with an "Exemplu" tag and a line above the wall that says they are examples (the owner's call), so nobody
+ * takes them for a real customer. The film is the exception: a stand-in film would only confuse, so it shows only in
+ * preview (/parteneri?preview=1). To publish for real, replace the text (or the YouTube id) and set 'demo' => false.
  */
 
 function v2_partner_testimonials(): array
@@ -39,7 +40,7 @@ function v2_partner_testimonials(): array
             ],
             [
                 'demo' => true,
-                'quote' => 'Comisionul îl plătește cumpărătorul, deci prețul nostru a rămas întreg. Asta a fost decizia pentru noi, restul a venit ca bonus.',
+                'quote' => 'Comisionul nu ne-a atins prețul: cât afișăm, atât încasăm. Asta a fost decizia pentru noi, restul a venit ca bonus.',
                 'name' => 'Ioana P.', 'role' => 'Manager', 'venue' => 'Parc de aventură', 'city' => 'Brașov',
                 'result' => 'Prețul întreg, la fiecare bilet',
             ],

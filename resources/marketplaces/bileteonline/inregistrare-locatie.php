@@ -186,7 +186,7 @@ include __DIR__ . '/includes/v2/header.php';
               <div class="ob-field"><label for="ob-website">Site web (opțional)</label><input id="ob-website" name="website" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="200" placeholder="https://…"></div>
               <fieldset class="ob-needs is-wide" id="ob-channels">
                 <legend>Vinzi sau vei vinde bilete și prin alt canal? *</legend>
-                <p class="ob-hint">Alt site sau altă platformă de bilete, agenții, parteneri. De răspuns depinde comisionul, pe care îl plătește cumpărătorul, peste prețul biletului.</p>
+                <p class="ob-hint">Alt site sau altă platformă de bilete, agenții, parteneri. De răspuns depinde comisionul, care se adaugă peste prețul biletului, fără să se scadă din el.</p>
                 <div class="ob-needs-grid">
                   <label class="ob-need">
                     <input type="radio" name="sells_elsewhere" value="0">
@@ -238,7 +238,7 @@ include __DIR__ . '/includes/v2/header.php';
           </div>
         </div>
       </div>
-      <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2% plătit de cumpărător (4% dacă vinzi și prin alte canale)</p>
+      <p class="ob-note">Fără cost de pornire · Activități nelimitate · Comision 2% care nu-ți atinge prețul (4% dacă vinzi și prin alte canale)</p>
     </div>
   </section>
 </main>
