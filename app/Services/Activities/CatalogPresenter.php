@@ -118,8 +118,10 @@ class CatalogPresenter
             // What the site shows as the service commission (added on top
             // of the prices, or already inside them).
             'commission'            => [
-                'rate' => $product->organizer ? (float) $product->organizer->getEffectiveCommissionRate() : 0.0,
-                'mode' => $product->organizer ? $product->organizer->getEffectiveCommissionMode() : 'included',
+                'rate'  => $product->organizer ? (float) $product->organizer->getEffectiveCommissionRate() : 0.0,
+                'mode'  => $product->organizer ? $product->organizer->getEffectiveCommissionMode() : 'included',
+                // never less than this per unit sold, so the page shows the same total as the checkout charges
+                'floor' => ActivityCommission::floor($product->organizer),
             ],
             'variants'              => $product->variants
                 ->filter(fn ($v) => $v->is_active && !$v->pos_only)

@@ -365,15 +365,16 @@ class ActivityOrderBuilder
         $line['unit_price'] = round($this->priceCents($variant) / 100, 2);
         $line['line_total'] = round($line['unit_price'] * $quantity + $line['addons_total'], 2);
 
-        // Commission: variant override, else the operator's effective rate.
-        // The mode (included / added on top) is the operator's.
+        // Commission: variant override, else the operator's effective rate, never under the operator's minimum per
+        // unit (ActivityCommission). The mode (included / added on top) is the operator's.
         $organizer = $activity->organizer;
         $rate = $variant->commission_rate !== null
             ? (float) $variant->commission_rate
             : ($organizer ? (float) $organizer->getEffectiveCommissionRate() : 0.0);
-        $line['commission_rate'] = $rate;
-        $line['commission_mode'] = $organizer ? $organizer->getEffectiveCommissionMode() : 'included';
-        $line['commission']      = round($line['line_total'] * $rate / 100, 2);
+        $line['commission_rate']  = $rate;
+        $line['commission_mode']  = $organizer ? $organizer->getEffectiveCommissionMode() : 'included';
+        $line['commission_floor'] = ActivityCommission::floor($organizer);
+        $line['commission']       = ActivityCommission::forLine($line['line_total'], $rate, $line['commission_floor'], $quantity);
 
         return $line;
     }

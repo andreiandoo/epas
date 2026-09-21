@@ -13,6 +13,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Services\Activities\ActivityCartException;
+use App\Services\Activities\ActivityCommission;
 use App\Services\Activities\ActivityOrderBuilder;
 use App\Services\Activities\ActivityOrderEmail;
 use App\Services\Activities\BookingDescriber;
@@ -49,7 +50,11 @@ class PosController extends BaseController
 
         return $this->success([
             'location' => ['id' => $location->id, 'name' => OrganizerCatalogPresenter::ro($location->name), 'approved' => $location->review_status === ActivityLocation::REVIEW_APPROVED],
-            'commission' => ['rate' => (float) $organizer->getEffectiveCommissionRate(), 'mode' => $organizer->getEffectiveCommissionMode()],
+            'commission' => [
+                'rate'  => (float) $organizer->getEffectiveCommissionRate(),
+                'mode'  => $organizer->getEffectiveCommissionMode(),
+                'floor' => ActivityCommission::floor($organizer),
+            ],
             'products' => $this->deskProducts($organizer, $location)->map(fn ($p) => $this->deskProduct($p))->values(),
         ]);
     }

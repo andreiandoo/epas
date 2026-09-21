@@ -594,7 +594,11 @@ const CartPage = {
 
             const addonsTotal = isActivity ? (item.addons_total || 0) : 0;
             const lineTotal = price * quantity + addonsTotal;
-            const commissionTotal = itemCommission * quantity + (itemCommission && addonsTotal ? addonsTotal * ((commission.rate || 0) / 100) : 0);
+            // activities: one rule for the whole line (percentage, never under the minimum per ticket), the same the
+            // server applies, so the cart total is what the checkout charges
+            const commissionTotal = isActivity
+                ? (itemCommission ? BileteOnlineCart.activityLineCommission(item) : 0)
+                : itemCommission * quantity;
 
             baseSubtotal += lineTotal;
             totalCommission += commissionTotal;

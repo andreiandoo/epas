@@ -271,7 +271,8 @@ const BileteOnlineCart = {
                 venue: p.venue || null, city: p.city || null, organizer_id: null,
                 product_type: p.product_type || null, booking_mode: p.booking_mode || null, location_slug: p.location_slug || null,
                 commission_rate: typeof p.commission_rate === 'number' ? p.commission_rate : null,
-                commission_mode: p.commission_mode || null
+                commission_mode: p.commission_mode || null,
+                commission_floor: typeof p.commission_floor === 'number' ? p.commission_floor : 0
             },
             variant: {
                 id: v.id, name: v.name || 'Bilet', price: price, capacity_share: v.capacity_share || 1,
@@ -554,6 +555,8 @@ const BileteOnlineCart = {
                 ? item.activity.commission_rate
                 : 5;
             const fallbackMode = item.activity?.commission_mode || 'included';
+            // bilete.online charges at least this much per ticket (sent by the API as activity.commission_floor)
+            const floor = typeof item.activity?.commission_floor === 'number' ? item.activity.commission_floor : 0;
             if (c && c.type) {
                 let amount = 0;
                 switch (c.type) {
@@ -562,19 +565,21 @@ const BileteOnlineCart = {
                     case 'both':       amount = (basePrice * ((c.rate || 0) / 100)) + (c.fixed || 0); break;
                 }
                 return {
-                    amount: amount,
+                    amount: Math.max(amount, floor),
                     rate:   c.rate || 0,
                     fixed:  c.fixed || 0,
                     mode:   c.mode || fallbackMode,
                     type:   c.type,
+                    floor:  floor,
                 };
             }
             return {
-                amount: basePrice * (fallbackRate / 100),
+                amount: Math.max(basePrice * (fallbackRate / 100), floor),
                 rate:   fallbackRate,
                 fixed:  0,
                 mode:   fallbackMode,
                 type:   'percentage',
+                floor:  floor,
             };
         }
 
@@ -618,15 +623,30 @@ const BileteOnlineCart = {
     },
 
     /**
+     * The commission of one activity line: the operator's percentage of the line (tickets + extras), never below the
+     * minimum bilete.online charges per ticket (activity.commission_floor, sent by the API). Same rule as the server's
+     * ActivityCommission, so what the cart shows is what the checkout charges.
+     */
+    activityLineCommission(item) {
+        const rate = this.calculateItemCommission(item).rate || 0;
+        const qty = item.quantity || item.participants_count || 0;
+        const base = (this._unitPrice(item) * qty) + (item.addons_total || 0);
+        const percent = Math.round(base * (rate / 100) * 100) / 100;
+        const floor = typeof item.activity?.commission_floor === 'number' ? item.activity.commission_floor : 0;
+        if (floor <= 0) return percent;
+        return Math.max(percent, Math.round(floor * Math.max(1, qty) * 100) / 100);
+    },
+
+    /**
      * Calculate total commission for all items in cart
      * @returns {number} Total commission amount
      */
     getTotalCommission() {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
+            if (item.type === 'activity') return total + this.activityLineCommission(item);
             const commission = this.calculateItemCommission(item);
-            const onAddons = item.type === 'activity' && item.addons_total ? item.addons_total * ((commission.rate || 0) / 100) : 0;
-            return total + (commission.amount * this._lineQuantity(item)) + onAddons;
+            return total + (commission.amount * this._lineQuantity(item));
         }, 0);
     },
 
@@ -644,7 +664,9 @@ const BileteOnlineCart = {
                 basePrice: this._unitPrice(item),
                 commission: commission,
                 quantity: this._lineQuantity(item),
-                totalCommission: commission.amount * this._lineQuantity(item)
+                totalCommission: item.type === 'activity'
+                    ? this.activityLineCommission(item)
+                    : commission.amount * this._lineQuantity(item)
             };
         });
     },
