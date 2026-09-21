@@ -30,8 +30,14 @@
   var POPULAR_EXCLUDE = ['biserica-manastire'];
   var LIST_PAGE = 40;
   var THEME_KEY = 'bo_map_theme';
+  /* Close enough that the streets around the pin are readable — centring at country zoom tells
+     you nothing about where the place actually is. */
+  var FOCUS_ZOOM = 15;
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* A mouse can hover, so a pin can preview on hover and navigate on click. A finger cannot, so
+     there the first tap has to be the preview. */
+  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var libs = null;
 
   /* ---------------------------------------------------------------- utils */
@@ -228,10 +234,18 @@
       }
       bar.appendChild(main);
 
+      /* The type row scrolls sideways. Touch has native momentum; with a mouse it needs help, so
+         it gets drag-to-scroll, wheel-to-scroll and a pair of arrows that appear when it overflows. */
+      ui.chipbar = el('div', 'epm-chipbar');
+      ui.prev = chipNav('arrow-left', 'Tipuri anterioare', -1);
       ui.chips = el('div', 'epm-chips');
       ui.chips.setAttribute('role', 'group');
       ui.chips.setAttribute('aria-label', 'Tip de atracție');
-      bar.appendChild(ui.chips);
+      ui.next = chipNav('arrow-right', 'Tipuri următoare', 1);
+      ui.chipbar.appendChild(ui.prev);
+      ui.chipbar.appendChild(ui.chips);
+      ui.chipbar.appendChild(ui.next);
+      bar.appendChild(ui.chipbar);
 
       ui.meta = el('p', 'epm-meta');
       ui.meta.setAttribute('aria-live', 'polite');
@@ -269,6 +283,72 @@
 
       container.appendChild(body);
       wire();
+    }
+
+    function chipNav(ic, label, dir) {
+      var b = el('button', 'epm-chipnav');
+      b.type = 'button';
+      b.hidden = true;
+      b.appendChild(icon(ic));
+      b.appendChild(el('span', 'sr', label));
+      b.addEventListener('click', function () {
+        ui.chips.scrollBy({ left: dir * Math.round(ui.chips.clientWidth * 0.8), behavior: reduceMotion ? 'auto' : 'smooth' });
+      });
+      return b;
+    }
+
+    /* Drag with the mouse, scroll with the wheel, and keep the arrows in sync. A drag must not
+       land as a click on the chip underneath, hence the capture-phase guard. */
+    function wireChips() {
+      var box = ui.chips, down = null, moved = false;
+
+      function arrows() {
+        var over = box.scrollWidth - box.clientWidth > 4;
+        ui.prev.hidden = !over || box.scrollLeft <= 2;
+        ui.next.hidden = !over || box.scrollLeft >= box.scrollWidth - box.clientWidth - 2;
+        ui.chipbar.classList.toggle('is-over', over);
+      }
+      box.addEventListener('scroll', arrows, { passive: true });
+      window.addEventListener('resize', arrows);
+      ui.syncChipNav = arrows;
+
+      box.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'touch' || e.button !== 0) return;
+        down = { x: e.clientX, left: box.scrollLeft, id: e.pointerId };
+        moved = false;
+      });
+      box.addEventListener('pointermove', function (e) {
+        if (!down || e.pointerId !== down.id) return;
+        var dx = e.clientX - down.x;
+        if (!moved && Math.abs(dx) > 3) {
+          moved = true;
+          box.classList.add('is-dragging');
+          try { box.setPointerCapture(down.id); } catch (err) {}
+        }
+        if (moved) box.scrollLeft = down.left - dx;
+      });
+      ['pointerup', 'pointercancel'].forEach(function (t) {
+        box.addEventListener(t, function (e) {
+          if (down) {
+            try { box.releasePointerCapture(down.id); } catch (err) {}
+          }
+          down = null;
+          box.classList.remove('is-dragging');
+        });
+      });
+      box.addEventListener('click', function (e) {
+        if (!moved) return;
+        moved = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+
+      box.addEventListener('wheel', function (e) {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        if (box.scrollWidth - box.clientWidth <= 4) return;
+        e.preventDefault();
+        box.scrollLeft += e.deltaY;
+      }, { passive: false });
     }
 
     function tool(ic, label) {
@@ -334,6 +414,7 @@
         if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'Cu poză'));
       }
       paintChips();
+      if (ui.syncChipNav) ui.syncChipNav();
     }
     function flagChip(key, ic, label) {
       var b = el('button', 'epm-chip');
@@ -402,10 +483,21 @@
         icon: L.divIcon({ className: 'epm-pin-wrap', html: pin.outerHTML, iconSize: [30, 30], iconAnchor: [15, 15] })
       });
       m.epIndex = i;
-      m.on('click', function () { select(i, true); });
+      /* Hover previews exactly what a click would open, so the card is the preview. The click
+         itself then goes straight to the attraction, in a new tab, because the map is where you
+         compare places and losing it to a navigation is the wrong trade. */
+      if (canHover) {
+        m.on('mouseover', function () { hot(i); select(i); });
+        m.on('mouseout', function () { hot(-1); });
+        m.on('click', function () { window.open(href(i), '_blank', 'noopener'); });
+      } else {
+        m.on('click', function () { select(i); });
+      }
       markers[i] = m;
       return m;
     }
+
+    function href(i) { return (cfg.base || '/atractie/') + D.rows[i][D.f.slug]; }
 
     function drawMarkers() {
       if (!cluster) return;
@@ -611,17 +703,73 @@
 
     /* ---------- selection ---------- */
 
-    function select(i, pan) {
-      selected = i;
+    function paintSelection() {
       [].forEach.call(ui.list.querySelectorAll('.epm-row'), function (b) {
-        b.toggleAttribute('aria-current', Number(b.dataset.i) === i);
+        b.toggleAttribute('aria-current', Number(b.dataset.i) === selected);
       });
       [].forEach.call(ui.canvas.querySelectorAll('.epm-pin'), function (p) {
-        p.classList.toggle('is-on', Number(p.getAttribute('data-i')) === i);
+        p.classList.toggle('is-on', Number(p.getAttribute('data-i')) === selected);
       });
+    }
+
+    function select(i) {
+      selected = i;
+      paintSelection();
       if (i < 0) { ui.card.hidden = true; return; }
       renderCard(i);
-      if (pan === true && map) map.panTo([D.lat[i], D.lng[i]], { animate: !reduceMotion });
+    }
+
+    /**
+     * From the list to the map: centring alone is not enough — at country zoom the pin is still
+     * inside a cluster, so nothing lights up and you cannot tell which dot you picked. Zoom in
+     * first, then, if the marker is still clustered, let markercluster open it, and only then
+     * paint the highlight (the pin element does not exist until the cluster expands).
+     */
+    function sheetLayout() { return window.matchMedia('(max-width:1023px)').matches; }
+
+    /** How many pixels of the map the bottom sheet covers right now (0 on the two-pane layout). */
+    function sheetPad() {
+      if (!sheetLayout()) return 0;
+      var body = ui.canvas.getBoundingClientRect();
+      var side = ui.side.getBoundingClientRect();
+
+      return Math.max(0, Math.round(body.bottom - side.top));
+    }
+
+    function focus(i) {
+      select(i);
+      if (!map) return;
+      // On the sheet layout the list covers the bottom half of the map, so drop it to its smallest
+      // position first -- otherwise the pin we are flying to lands behind it.
+      var wasSheet = sheetLayout() && ui.side.getAttribute('data-snap') !== 'peek';
+      if (wasSheet) ui.side.setAttribute('data-snap', 'peek');
+      setTimeout(function () { flyTo(i); }, wasSheet && !reduceMotion ? 260 : 0);
+    }
+
+    function flyTo(i) {
+      var L = window.L;
+      var ll = L.latLng(D.lat[i], D.lng[i]);
+      var m = markers[i];
+      var zoom = Math.max(map.getZoom(), FOCUS_ZOOM);
+
+      // Centre what is left of the map, not the map, so the pin sits in the visible band.
+      var pad = sheetPad();
+      var centre = pad > 8 ? map.unproject(map.project(ll, zoom).add([0, pad / 2]), zoom) : ll;
+
+      var settle = function () {
+        if (cluster && m && cluster.hasLayer(m) && cluster.getVisibleParent(m) !== m) {
+          cluster.zoomToShowLayer(m, function () { setTimeout(paintSelection, 30); });
+        } else {
+          setTimeout(paintSelection, 30);
+        }
+      };
+      var still = map.getZoom() === zoom && map.getCenter().distanceTo(centre) < 1;
+      if (still) {
+        settle();
+      } else {
+        map.once('moveend', settle);
+        map.setView(centre, zoom, { animate: !reduceMotion });
+      }
     }
 
     function renderCard(i) {
@@ -629,11 +777,13 @@
       var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
       var city = r[f.city] >= 0 ? D.cities[r[f.city]][1] : '';
       var zone = r[f.zone] >= 0 ? D.zones[r[f.zone]] : null;
-      var href = (cfg.base || '/atractie/') + r[f.slug];
+      var url = href(i);
 
       ui.card.textContent = '';
       var media = el('a', 'epm-card-media');
-      media.href = href;
+      media.href = url;
+      media.target = '_blank';
+      media.rel = 'noopener';
       if (r[f.img]) {
         var img = el('img');
         img.src = r[f.img];
@@ -676,7 +826,9 @@
 
       var actions = el('div', 'epm-card-actions');
       var go = el('a', 'btn btn-primary', 'Vezi atracția');
-      go.href = href;
+      go.href = url;
+      go.target = '_blank';
+      go.rel = 'noopener';
       actions.appendChild(go);
       var nav = el('a', 'btn btn-light', 'Navighează');
       nav.href = 'https://www.google.com/maps/dir/?api=1&destination=' + D.lat[i] + ',' + D.lng[i];
@@ -758,7 +910,7 @@
 
       ui.list.addEventListener('click', function (e) {
         var b = e.target.closest('.epm-row');
-        if (b) select(Number(b.dataset.i), true);
+        if (b) focus(Number(b.dataset.i));
       });
       ui.list.addEventListener('mouseover', function (e) {
         var b = e.target.closest('.epm-row');
@@ -781,6 +933,7 @@
         if (e.key === 'Tab' && cfg.dialog && opened) trapTab(e);
       });
 
+      wireChips();
       sheet();
     }
 

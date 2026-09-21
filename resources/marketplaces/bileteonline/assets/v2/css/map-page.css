@@ -3,19 +3,26 @@
    map band, and the server-rendered sections (types, regions, cities, picks, FAQ) that give the
    page something to index. Shared pieces (.sec, .sec-head, .wrap, .kicker, .btn) come from base.css. */
 
-/* ---------- hero ---------- */
-.mph{position:relative;padding:calc(var(--hdr-h) + clamp(28px,5vw,64px)) 0 clamp(24px,4vw,40px);overflow:clip;background:linear-gradient(170deg,var(--tint-green),var(--bg) 70%)}
-.mph-in{display:grid;gap:var(--space-4);max-width:56rem}
-.mph h1{margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:var(--green)}
+/* ---------- hero ----------
+   The map is the page, so the header above it stays a band, not a landing hero: one line of
+   breadcrumbs, a heading two steps down from --text-display, the lead beside it on wide screens
+   and the counters on the right. */
+.mph{position:relative;padding:calc(var(--hdr-h) + 14px) 0 14px;overflow:clip;background:linear-gradient(170deg,var(--tint-green),var(--bg) 78%)}
+.mph-in{display:grid;gap:8px var(--space-6)}
+@media (min-width:1024px){.mph-in{grid-template-columns:minmax(0,1fr) auto;align-items:center}}
+.mph-copy{display:grid;gap:4px;min-width:0}
+.mph .crumbs{margin:0}
+.mph h1{margin:0;font-size:clamp(1.5rem,2.4vw,2rem);font-weight:700;line-height:1.1;letter-spacing:-.035em;color:var(--green)}
 .mph h1 em{font-style:normal;color:var(--red-text)}
-.mph-lead{margin:0;max-width:52ch;font-size:var(--text-lead);color:var(--muted)}
-.mph-stats{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:var(--space-2) 0 0;padding:0}
-.mph-stats li{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);font-size:.875rem;font-weight:600}
+.mph-lead{margin:0;max-width:78ch;font-size:.9375rem;line-height:1.45;color:var(--muted)}
+@media (max-width:719px){.mph-lead{display:none}}
+.mph-stats{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0}
+.mph-stats li{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);font-size:.8125rem;font-weight:600;white-space:nowrap}
 .mph-stats b{font-variant-numeric:tabular-nums;color:var(--green)}
 
 /* ---------- the map band ---------- */
 .mp-band{padding-bottom:clamp(40px,6vw,72px);background:linear-gradient(to bottom,var(--bg) 0 50%,transparent 50%)}
-.mp-frame{overflow:hidden;border-radius:var(--r-l);box-shadow:var(--shadow-pop)}
+.mp-frame{margin-top:14px;overflow:hidden;border-radius:var(--r-l);box-shadow:var(--shadow-pop)}
 /* map.css sizes .epm-inline; on the destination page it earns more room */
 .mp-frame .epm-inline{height:min(82vh,940px);border:0;border-radius:0;box-shadow:none}
 .mp-noscript{padding:var(--space-5);border:1px dashed var(--line);border-radius:var(--r-l);background:var(--surface);color:var(--muted);text-align:center}
