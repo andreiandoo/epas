@@ -751,10 +751,12 @@ RewriteRule ^experiente/?$ hub-experiente.php [L,QSA]
 RewriteRule ^atractii/?$ hub-atractii.php [L,QSA]
 
 # ============================================
-# MAP — /harta, the interactive map of every attraction. Query only
-# (?tip=, ?zona=, ?oras=); the per-type and per-region landings come later.
+# MAP — /harta, the interactive map of every attraction, plus its landings:
+# /harta/{castele|muzee|…|transilvania|…}, defined in includes/v2/map-landings.php.
+# An unknown slug 404s in the page, so no catch-all is needed here.
 # ============================================
 RewriteRule ^harta/?$ harta.php [L,QSA]
+RewriteRule ^harta/([a-z][a-z0-9-]{1,50})/?$ harta.php?landing=$1 [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([a-z][a-z0-9-]{1,50})/(experiente|atractii|locatii)/?$ hub-$2.php?city=$1 [L,QSA]

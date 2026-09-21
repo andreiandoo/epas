@@ -171,7 +171,8 @@
       types: (cfg.types && cfg.types.length) ? cfg.types.slice() : [],
       preset: cfg.preset || 'popular',
       city: cfg.city || '',
-      zone: cfg.zone || '',
+      zone: cfg.zone || '',          // a county (or, for old links, a region) by name or slug
+      region: cfg.region || '',      // a whole historical region, which spans several counties
       photo: false,
       ticket: false
     };
@@ -439,16 +440,32 @@
         wantTypes = {};
         state.types.forEach(function (s) { wantTypes[s] = 1; });
       }
-      var cityIdx = -1, zoneIdx = -1;
+      var cityIdx = -1;
       if (state.city) {
         for (var ci = 0; ci < D.cities.length; ci++) if (D.cities[ci][0] === state.city) { cityIdx = ci; break; }
       }
-      if (state.zone) {
-        /* Accepts a county or a region, by name or by slug: "Caras-Severin", "caras-severin". */
-        var slugify = function (v) { return fold(v).replace(/\s+/g, '-'); };
+
+      /* A region spans several counties, so the zone filter is a set, not one index. A county name
+         can also equal a region name (Maramureș), so an explicit region wins over the guess. */
+      var slugify = function (v) { return fold(v || '').replace(/\s+/g, '-'); };
+      var zoneSet = null;
+      if (state.region) {
+        zoneSet = {};
+        var wantRegion = slugify(state.region);
+        for (var ri = 0; ri < D.zones.length; ri++) {
+          if (slugify(D.zones[ri][1]) === wantRegion) zoneSet[ri] = 1;
+        }
+      } else if (state.zone) {
         var wantZone = slugify(state.zone);
+        zoneSet = {};
         for (var zi = 0; zi < D.zones.length; zi++) {
-          if (slugify(D.zones[zi][0]) === wantZone || slugify(D.zones[zi][1] || '') === wantZone) { zoneIdx = zi; break; }
+          if (slugify(D.zones[zi][0]) === wantZone) zoneSet[zi] = 1;
+        }
+        // Nothing by county: an older ?zona= link that meant a region.
+        if (!Object.keys(zoneSet).length) {
+          for (var zj = 0; zj < D.zones.length; zj++) {
+            if (slugify(D.zones[zj][1]) === wantZone) zoneSet[zj] = 1;
+          }
         }
       }
 
@@ -460,7 +477,7 @@
           if (t < 0 || !wantTypes[D.types[t][0]]) continue;
         }
         if (cityIdx >= 0 && r[f.city] !== cityIdx) continue;
-        if (zoneIdx >= 0 && r[f.zone] !== zoneIdx) continue;
+        if (zoneSet && !zoneSet[r[f.zone]]) continue;
         if (state.photo && !(r[f.flags] & D.flags.image)) continue;
         if (state.ticket && !(r[f.flags] & D.flags.activities)) continue;
         if (q && D.hay[i].indexOf(q) === -1) continue;
@@ -846,10 +863,13 @@
     var pushUrl = debounce(function () {
       if (!cfg.urlState || !map) return;
       var p = new URLSearchParams(window.location.search);
-      if (state.types.length && !isPreset('all')) p.set('tip', state.types.join(',')); else p.delete('tip');
+      if (!cfg.fixed && state.types.length && !isPreset('all')) p.set('tip', state.types.join(',')); else p.delete('tip');
       if (state.q.trim()) p.set('q', state.q.trim()); else p.delete('q');
-      if (state.zone) p.set('zona', state.zone); else p.delete('zona');
-      if (state.city) p.set('oras', state.city); else p.delete('oras');
+      // A landing already says in its path what it shows; repeating it as a query is noise.
+      if (!cfg.fixed) {
+        if (state.zone) p.set('zona', state.zone); else p.delete('zona');
+        if (state.city) p.set('oras', state.city); else p.delete('oras');
+      }
       if (cfg.dialog) p.set('harta', '1');
       var c = map.getCenter();
       var hash = '#' + map.getZoom() + '/' + c.lat.toFixed(4) + '/' + c.lng.toFixed(4);
@@ -868,8 +888,8 @@
       if (q) { state.q = q; ui.input.value = q; ui.clear.hidden = false; }
       /* A region or city in the URL wins over the host config: /harta?zona=transilvania is a link
          a page prints, the config is only the default. */
-      if (p.get('zona')) state.zone = p.get('zona');
-      if (p.get('oras')) state.city = p.get('oras');
+      if (!cfg.fixed && p.get('zona')) state.zone = p.get('zona');
+      if (!cfg.fixed && p.get('oras')) state.city = p.get('oras');
 
       var m = /^#(\d{1,2})\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(window.location.hash);
       return m ? { zoom: +m[1], lat: +m[2], lng: +m[3] } : null;
@@ -1019,7 +1039,7 @@
           applyFilters();
           paintChips();
           if (view) map.setView([view.lat, view.lng], view.zoom);
-          else if (state.city || state.zone || state.q) fitVisible();
+          else if (state.city || state.zone || state.region || state.q) fitVisible();
           drawMarkers();
           ui.loading.hidden = true;
           booting = false;
