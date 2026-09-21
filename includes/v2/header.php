@@ -175,7 +175,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
         </ul>
         <a class="mloc-op" href="/parteneri">
           <span class="mloc-op-k">Ai o locație?</span>
-          <span class="mloc-op-t">Vinde bilete de intrare online, cu comision 2% plătit de cumpărător.</span>
+          <span class="mloc-op-t">Vinde bilete de intrare online, cu comision 2% care nu-ți atinge prețul.</span>
           <span class="mloc-op-cta">Vezi cum funcționează<?= v2_ic('arrow-right') ?></span>
         </a>
       </aside>

@@ -80,6 +80,30 @@ if ($citySlug !== '' && empty($seen[$citySlug])) {
 
 $total = (int) ($pag['total'] ?? count($items));
 $typeName = $type !== '' ? AM_ATTRACTION_TYPES[$type] : '';
+
+// Interactive map over the list. The pin dataset is static (bin/build-map-data.php); when it has
+// not been built the helper returns null and no map button is printed at all. The page's own Tip
+// and city filters carry into the map, where Tip becomes multi-select.
+$mapData = v2_map_data();
+$hubMap = null;
+if ($mapData) {
+    $hubMap = [
+        'heading' => 'Harta atracțiilor din România',
+        'note'    => v2_thousands($mapData['total']) . ' de atracții pe hartă. Alege ce vrei să vezi din filtrul Tip și apasă pe un punct.',
+        'cta'     => 'Deschide harta',
+        'config'  => [
+            'dataUrl'  => $mapData['url'],
+            'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
+            'dialog'   => true,
+            'urlState' => true,
+            'preset'   => 'popular',
+            'types'    => $type !== '' ? [$type] : [],
+            'city'     => $citySlug,
+            'title'    => 'Atracții' . ($cityName !== '' ? ' în ' . $cityName : ' din România'),
+            'base'     => '/atractie/',
+        ],
+    ];
+}
 $hub = [
     'kicker' => $typeName !== '' ? $typeName : 'Locuri de văzut',
     'title' => 'Atracții',
@@ -88,6 +112,7 @@ $hub = [
     'stats' => array_values(array_filter([$total ? v2_num($total, 'atracție', 'atracții') : ''])),
     'image' => $items[0]['image'] ?? null,
     'breadcrumbs' => $breadcrumbs,
+    'map' => $hubMap,
     'filters' => [['Tip', $typeChips], ['Oraș', $cityChips]],
     'items' => $items,
     'heading' => 'Atracții' . ($typeName !== '' ? ': ' . $typeName : '') . ($cityName !== '' ? ' în ' . $cityName : ''),

@@ -322,6 +322,7 @@ function mapBuildByPagination(): ?array
                 (int) round(((float) $lat) * 100000),
                 (int) round(((float) $lng) * 100000),
                 $flags,
+                (string) ($a['cover_image_url'] ?? ''),
             ];
 
             if ($t >= 0) {
@@ -345,7 +346,7 @@ function mapBuildByPagination(): ?array
     return [
         'v'            => substr(sha1(count($points) . '|' . $total), 0, 12),
         'generated_at' => date('c'),
-        'fields'       => ['name', 'slug', 'type', 'city', 'zone', 'lat_e5', 'lng_e5', 'flags'],
+        'fields'       => ['name', 'slug', 'type', 'city', 'zone', 'lat_e5', 'lng_e5', 'flags', 'img'],
         'flags'        => ['image' => 1, 'featured' => 2, 'activities' => 4],
         'type_fields'  => ['slug', 'name', 'emoji', 'color', 'count'],
         'city_fields'  => ['slug', 'name', 'county', 'region', 'count'],

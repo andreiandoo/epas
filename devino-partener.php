@@ -81,7 +81,7 @@ $dpSteps = [
 ];
 $dpTixello = [['Evenimente & activități', '4.294'], ['Clienți în bază', '96.341'], ['Bilete vândute', '301.310'], ['Vânzări generate', '4.409.557 €'], ['Scanare offline', 'Da, cu sync']];
 $dpFaqs = [
-    ['Cât e comisionul și cine îl plătește?', 'Comisionul este de 2%* și este adăugat în prețul final, plătit de cumpărător. Tu îți stabilești prețul și îl primești integral la decont. *Cei 2% se aplică pentru vânzarea exclusivă prin bilete.online.'],
+    ['Cât e comisionul?', 'Comisionul este de 2%*, fără să se scadă din prețul tău: se adaugă peste el, în prețul final. Tu îți stabilești prețul și îl primești integral la decont. *Cei 2% se aplică pentru vânzarea exclusivă prin bilete.online.'],
     ['Cum și când primesc banii?', 'bilete.online încasează plata de la client și îți face deconturi periodice — sau la cerere, ori de câte ori vrei să-ți fie decontați banii.'],
     ['Pot vinde activități cu sloturi și pe zile?', 'Da. Clientul alege ziua din calendar, slotul orar, numărul de participanți și opțiunile. Tu controlezi capacitatea fiecărui slot și faci booking în detaliu.'],
     ['Ce metode de plată sunt acceptate?', 'Card bancar (Visa, Mastercard, Maestro), Apple Pay și Google Pay, procesate securizat prin Stripe, plus Card Cultural (Edenred, Sodexo, Up România) acolo unde este acceptat.'],
@@ -97,8 +97,8 @@ if (count($dpMarquee) > 0 && count($dpMarquee) < 6) {
     $dpMarquee = array_merge($dpMarquee, $dpMarquee);
 }
 
-$pageTitleRaw = 'Vinde bilete la activități pe ' . SITE_NAME . ' — comision 2%* plătit de client';
-$pageDescription = 'Platforma de ticketing pentru activități: booking cu sloturi și calendar, analytics avansat, tracking 100% cu Facebook CAPI, deconturi periodice, app mobilă cu scanare offline. Comision 2%* plătit de cumpărător. Construit pe Tixello.';
+$pageTitleRaw = 'Vinde bilete la activități pe ' . SITE_NAME . ' — comision 2%*, fără să-ți atingă prețul';
+$pageDescription = 'Platforma de ticketing pentru activități: booking cu sloturi și calendar, analytics avansat, tracking 100% cu Facebook CAPI, deconturi periodice, app mobilă cu scanare offline. Comision 2%*, fără să-ți atingă prețul. Construit pe Tixello.';
 $canonicalUrl = SITE_URL . '/devino-partener';
 $noindex = true; // /parteneri is the page to find; this one stays for old links and personalised campaigns
 $structuredData = [
@@ -106,10 +106,10 @@ $structuredData = [
         '@context' => 'https://schema.org',
         '@type' => 'Service',
         'name' => 'bilete.online — Ticketing & booking pentru activități',
-        'description' => 'Platformă de ticketing pentru locații și organizatori de activități. Comision 2% plătit de cumpărător. Booking cu sloturi orare, analytics avansat, scanare offline, deconturi periodice.',
+        'description' => 'Platformă de ticketing pentru locații și organizatori de activități. Comision 2%, fără să-ți atingă prețul. Booking cu sloturi orare, analytics avansat, scanare offline, deconturi periodice.',
         'provider' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL],
         'areaServed' => ['@type' => 'Country', 'name' => 'Romania'],
-        'offers' => ['@type' => 'Offer', 'priceCurrency' => 'RON', 'price' => '0', 'description' => '0 lei cost de pornire. Comision 2%* plătit de cumpărător la fiecare bilet vândut.'],
+        'offers' => ['@type' => 'Offer', 'priceCurrency' => 'RON', 'price' => '0', 'description' => '0 lei cost de pornire. Comision 2%* la fiecare bilet vândut, fără să-ți atingă prețul.'],
     ],
     [
         '@context' => 'https://schema.org',
@@ -137,7 +137,7 @@ include __DIR__ . '/includes/v2/header.php';
         <p class="dp-hello" id="dp-hello" hidden></p>
         <p class="dp-chip"><span class="dp-dot" aria-hidden="true"></span><span id="dp-chip-t">Ticketing &amp; booking pentru activități</span></p>
         <h1 class="dp-h" id="dp-h"><span id="dp-h1a">Vinzi bilete</span> <span id="dp-h1b" class="is-soft">la activitățile tale.</span> <span class="dp-h-line"><span id="dp-h1c" class="dp-mark">Prețul tău rămâne al tău.</span></span></h1>
-        <p class="dp-lead" id="dp-sub">Booking pe sloturi orare și calendar, analytics avansat, tracking 100% care îți reduce costul reclamelor, și o aplicație mobilă cu scanare offline. Comisionul de <?= $dpAccent ?> e plătit de cumpărător — tu îți păstrezi prețul stabilit.</p>
+        <p class="dp-lead" id="dp-sub">Booking pe sloturi orare și calendar, analytics avansat, tracking 100% care îți reduce costul reclamelor, și o aplicație mobilă cu scanare offline. Comisionul de <?= $dpAccent ?> nu-ți atinge prețul — tu îți păstrezi prețul stabilit.</p>
         <div class="dp-cta">
           <a class="btn btn-light" href="/inregistrare-locatie" data-signup data-track-cta="hero_primary"><span id="dp-cta-t">Pune-ți activitățile la vânzare</span><?= v2_ic('arrow-right') ?></a>
           <a class="btn btn-outline-light" href="#cum" data-track-cta="hero_secondary">Vezi cum funcționează</a>
@@ -158,7 +158,7 @@ include __DIR__ . '/includes/v2/header.php';
             <small>Activitatea ta</small>
             <p>Slot orar.<br>Zi din calendar.</p>
             <div class="dp-ticket-stats">
-              <div><b class="is-accent">2%*</b><span>plătit de client</span></div>
+              <div><b class="is-accent">2%*</b><span>fără să-ți atingă prețul</span></div>
               <div><b>−60%</b><span>cost reclame</span></div>
               <div><b class="is-yellow">∞</b><span>activități</span></div>
             </div>
@@ -341,7 +341,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap dp-two">
       <div>
         <p class="dp-dark-k">Diferența care schimbă tot</p>
-        <h2 id="dp-bani-h" class="dp-bani-h">Comision <span class="dp-hl">2%*</span>. <span class="dp-nl">Plătit de cumpărător.</span></h2>
+        <h2 id="dp-bani-h" class="dp-bani-h">Comision <span class="dp-hl">2%*</span>. <span class="dp-nl">Prețul tău rămâne al tău.</span></h2>
         <p class="dp-dark-p">Comisionul de 2%* este adăugat transparent în prețul final și achitat de client. Tu îți stabilești prețul și îl primești <strong class="dp-yellow">integral</strong> la decont — fără să scazi nimic din marja ta.</p>
         <ul class="dp-list is-dark">
           <li><?= v2_ic('check') ?>Tu setezi prețul — tu primești prețul stabilit</li>
@@ -362,7 +362,7 @@ include __DIR__ . '/includes/v2/header.php';
           <div class="dp-compare-top"><span>bilete.online (2%* pe client)</span><span class="is-green">100%</span></div>
           <div class="dp-bar is-thick"><i style="width:100%"></i></div>
           <p class="dp-compare-get">Primești: <strong class="is-green">100 lei</strong></p>
-          <p class="dp-compare-note">Comisionul și costul cardului sunt incluse în prețul plătit de client. Tu primești prețul tău, întreg.</p>
+          <p class="dp-compare-note">Comisionul și costul cardului sunt incluse în prețul final. Tu primești prețul tău, întreg.</p>
         </div>
         <p class="dp-compare-foot">La volum, diferența devine uriașă.</p>
       </div>
@@ -510,7 +510,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="dp-final">
         <span class="dp-final-badge">Devino partener</span>
         <h2>Pune-ți activitățile la vânzare <span class="dp-nl">și păstrează prețul tău întreg.</span></h2>
-        <p>Fără costuri de pornire. Activități nelimitate. Onboarding în 5 minute, go-live azi. Comision 2%* plătit de client.</p>
+        <p>Fără costuri de pornire. Activități nelimitate. Onboarding în 5 minute, go-live azi. Comision 2%*, fără să-ți atingă prețul.</p>
         <div class="dp-final-cta">
           <a class="btn dp-btn-white" href="/inregistrare-locatie" data-signup data-track-cta="final_primary">Vreau să-mi vând activitățile<?= v2_ic('arrow-right') ?></a>
           <a class="btn btn-outline-light" href="mailto:contact@bilete.online?subject=%C3%8Entrebare%20parteneriat%20bilete.online" data-track-cta="email_contact">Trimite-ne un email</a>

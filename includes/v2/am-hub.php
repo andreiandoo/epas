@@ -10,18 +10,25 @@
  *   heading   screen-reader title of the results
  *   page, last, pageUrl (fn int → href)
  *   empty     [title, text, [cta text, href] | null]
- * Top to bottom: hero, filters, results grid, pager.
+ *   map       optional EPMap config (see assets/v2/js/map.js): adds a "Vezi pe hartă" button that
+ *             opens the full-screen map over the list. Absent = no map on this hub.
+ * Top to bottom: hero, map button, filters, results grid, pager.
  */
 
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/nav.php';
+
+$hubMap = $hub['map'] ?? null;
 
 $hubArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 $hubItems = $hub['items'] ?? [];
 $hubPage = max(1, (int) ($hub['page'] ?? 1));
 $hubLast = max(1, (int) ($hub['last'] ?? 1));
 
-$v2Styles = array_merge(['category.css', 'hub.css'], $v2Styles ?? []);
+$v2Styles = array_merge(['category.css', 'hub.css'], $hubMap ? ['map.css'] : [], $v2Styles ?? []);
+if ($hubMap) {
+    $v2Scripts = array_merge($v2Scripts ?? [], ['map.js']);
+}
 $v2HeadExtra = !empty($hub['image']) ? '<link rel="preload" as="image" href="' . v2_e($hub['image']) . '" fetchpriority="high">' : '';
 $v2HeaderOverlay = true;
 
@@ -64,6 +71,16 @@ include __DIR__ . '/header.php';
   <!-- ============================== FILTERS + RESULTS ============================== -->
   <section class="kres hub-res" aria-labelledby="hub-res-h">
     <div class="wrap">
+      <?php if ($hubMap): ?>
+      <div class="hub-maprow">
+        <div class="hub-maprow-text">
+          <p class="hub-maprow-h"><?= v2_e($hubMap['heading'] ?? 'Vezi totul pe hartă') ?></p>
+          <p class="hub-maprow-p"><?= v2_e($hubMap['note'] ?? '') ?></p>
+        </div>
+        <button class="btn btn-primary hub-maprow-btn" type="button" data-epm-open aria-haspopup="dialog"><?= v2_ic('map-pin') ?><?= v2_e($hubMap['cta'] ?? 'Deschide harta') ?></button>
+      </div>
+      <?php endif; ?>
+
       <?php if (!empty($hub['filters'])): ?>
       <div class="hub-filters">
         <?php foreach ($hub['filters'] as [$flabel, $chips]): if (!$chips) continue; ?>
@@ -121,4 +138,7 @@ include __DIR__ . '/header.php';
     </div>
   </section>
 </main>
+<?php if ($hubMap): ?>
+<div data-epm-root data-epm-config="<?= v2_e(json_encode($hubMap['config'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>" hidden></div>
+<?php endif; ?>
 <?php include __DIR__ . '/footer.php'; ?>

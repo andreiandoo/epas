@@ -8,6 +8,13 @@
 @media (min-width:1024px){.hub-filters .fchips{flex-wrap:wrap;margin:0;padding:0;overflow:visible}}
 .hub-filters .fchip{flex:none}
 
+/* "Vezi pe hartă" band above the filters (hubs that pass $hub['map']) */
+.hub-maprow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-5);padding:var(--space-4) var(--space-5);border:1px solid var(--line);border-radius:var(--r-l);background:linear-gradient(120deg,var(--tint-green),var(--surface) 62%)}
+.hub-maprow-text{min-width:0;flex:1 1 320px}
+.hub-maprow-h{margin:0;font-size:1.0625rem;font-weight:700;letter-spacing:-.02em;color:var(--green)}
+.hub-maprow-p{margin:4px 0 0;font-size:.875rem;color:var(--muted)}
+.hub-maprow-btn{flex:none}
+
 /* /cauta: locations that match the search, above the experiences */
 .sr-locs{display:grid;gap:10px;margin-bottom:var(--space-5)}
 .sr-locs-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}

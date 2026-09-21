@@ -13,7 +13,9 @@
  * (#fiscal), how to start (#cum), the Tixello engine (#tehnologie), FAQ (#intrebari), one large partner quote, and the
  * finale: self-service signup or a demo request (#demo, same lead pipeline as /pentru-locatii through for-venues.js).
  *
- * The stories come from includes/v2/partner-testimonials.php. Stand-ins marked 'demo' show only in preview (?preview=1,
+ * The stories come from includes/v2/partner-testimonials.php. The quotes are shown to everyone; the ones marked
+ * 'demo' are stand-ins written by us and carry an "Exemplu" tag plus a line that says so, until the first venues tell
+ * their own story. The film is different: a stand-in film would only confuse, so it waits for the real one (?preview=1,
  * which also skips the page cache) with a "Demo" tag, never to visitors; with nothing real to show, the stories
  * sections and their chapter link are left out.
  *
@@ -67,7 +69,7 @@ $ptWho = [
 ];
 // the pain, then what the platform does about it (the fix repeats claims made further down the page)
 $ptProblems = [
-    ['coins', 'Comisioane din marja ta', 'Plătești tu, la fiecare bilet. La volum, e o gaură reală în buget.', '2%* plătit de cumpărător', 'Îți stabilești prețul și îl primești integral la decont.'],
+    ['coins', 'Comisioane din marja ta', 'Plătești tu, la fiecare bilet. La volum, e o gaură reală în buget.', '2%*, fără să-ți atingă prețul', 'Îți stabilești prețul și îl primești integral la decont.'],
     ['calendar-blank', 'Booking inflexibil', 'Activitățile au sloturi, zile, capacități. Majoritatea platformelor nu le suportă.', 'Sloturi, zile și capacitate', 'Clientul alege ziua, ora, participanții și opțiunile.'],
     ['x', 'Tracking pierdut', 'Ad blockerele și iOS blochează datele de conversie — plătești mai mult pe reclame.', '100% evenimente urmărite', 'Conversii trimise server-side: reclame până la 60% mai ieftine.'],
 ];
@@ -187,7 +189,7 @@ $ptOps = [
 $ptTixello = [['Evenimente & activități', number_format($ptEvents, 0, ',', '.')], ['Clienți în bază', number_format($ptCustomers, 0, ',', '.')], ['Bilete vândute', number_format($ptTickets, 0, ',', '.')], ['Vânzări generate', number_format($ptRevenue, 0, ',', '.') . ' €'], ['Scanare offline', 'Da, cu sync']];
 $ptFaqGroups = [
     ['Bani & plăți', [
-        ['Cât e comisionul și cine îl plătește?', 'Comisionul este de 2%* și este adăugat în prețul final, plătit de cumpărător. Tu îți stabilești prețul și îl primești integral la decont. *Cei 2% se aplică pentru vânzarea exclusivă prin bilete.online. Dacă vinzi biletele și în alte părți, comisionul este de 4%: 2% incluse în preț și 2% adăugate. Nu ai abonament lunar și nu plătești instalare.'],
+        ['Cât e comisionul?', 'Comisionul este de 2%*, fără să se scadă din prețul tău: se adaugă peste el, în prețul final. Tu îți stabilești prețul și îl primești integral la decont. *Cei 2% se aplică pentru vânzarea exclusivă prin bilete.online. Dacă vinzi biletele și în alte părți, comisionul este de 4%: 2% incluse în preț și 2% adăugate. Nu ai abonament lunar și nu plătești instalare.'],
         ['Cum și când primesc banii?', 'bilete.online încasează plata de la client și îți face deconturi periodice — sau la cerere, ori de câte ori vrei să-ți fie decontați banii. În panou vezi soldul disponibil, ce e în procesare și cât ai încasat până acum, pe fiecare activitate, iar documentele și facturile rămân în cont.'],
         ['Ce metode de plată sunt acceptate?', 'Card bancar (Visa, Mastercard, Maestro), Apple Pay și Google Pay, procesate securizat prin Stripe, plus Card Cultural (Edenred, Sodexo, Up România) acolo unde este acceptat.'],
         ['Cum îmi reduce costul reclamelor?', 'Platforma se integrează cu toți pixelii de tracking și cu Facebook CAPI, trimițând 100% din evenimentele de conversie fără să fie blocate de ad blockere sau de iOS. Rezultatul: costul reclamelor pe Facebook, Instagram, TikTok și Google scade cu până la 60%.'],
@@ -212,12 +214,11 @@ $ptFaqGroups = [
 $ptFaqs = array_merge(...array_map(fn ($g) => $g[1], $ptFaqGroups));
 $ptRoles = ['Proprietar', 'Manager locație', 'Marketing', 'Operațiuni / ghișeu', 'Altul'];
 $ptCounts = ['1 activitate', '2-5 activități', '6-15 activități', '15+ activități'];
-// partner stories: real ones for everyone, stand-ins ('demo') only in preview
+// partner stories: the quotes are shown to everyone, the stand-ins tagged as examples; the film only when it's real
 $ptPreview = !empty($_GET['preview']);
 $ptStories = v2_partner_testimonials();
-$ptShown = static fn (array $item): bool => empty($item['demo']) || $ptPreview;
-$ptVideo = $ptShown($ptStories['video'] ?? ['demo' => true]) && preg_match('/^[A-Za-z0-9_-]{11}$/', (string) ($ptStories['video']['youtube'] ?? '')) ? $ptStories['video'] : null;
-$ptQuotes = array_values(array_filter($ptStories['quotes'] ?? [], $ptShown));
+$ptVideo = (empty($ptStories['video']['demo']) || $ptPreview) && preg_match('/^[A-Za-z0-9_-]{11}$/', (string) ($ptStories['video']['youtube'] ?? '')) ? $ptStories['video'] : null;
+$ptQuotes = array_values(array_filter($ptStories['quotes'] ?? [], fn ($q) => !empty($q['quote'])));
 $ptWall = array_values(array_filter($ptQuotes, fn ($q) => empty($q['pull'])));
 $ptPull = array_values(array_filter($ptQuotes, fn ($q) => !empty($q['pull'])))[0] ?? null;
 $ptWallMoves = count($ptWall) >= 5; // fewer quotes sit still in a grid
@@ -225,7 +226,9 @@ $ptInitials = static function (string $name): string {
     $parts = preg_split('/\s+/u', trim($name)) ?: [];
     return mb_strtoupper(implode('', array_map(fn ($w) => mb_substr($w, 0, 1), array_slice($parts, 0, 2))));
 };
-$ptDemoTag = static fn (array $item): string => !empty($item['demo']) ? '<span class="pt-demo-tag">Demo</span>' : '';
+$ptDemoTag = static fn (array $item): string => !empty($item['demo']) ? '<span class="pt-demo-tag">Exemplu</span>' : '';
+// said once, above the wall, when any of the quotes on screen is a stand-in
+$ptDemoNote = array_filter($ptQuotes, fn ($q) => !empty($q['demo'])) ? 'Poveștile de mai jos sunt exemple scrise de noi, ca să vezi cum arată secțiunea. Le înlocuim cu poveștile reale, pe măsură ce primele locații ajung aici.' : '';
 
 $ptChapters = [['pentru-cine', 'Pentru cine'], ['booking', 'Booking'], ['o-zi', 'Operațiuni'], ['ce-primesti', 'Ce primești'], ['vizibilitate', 'Vizibilitate'], ['bani', 'Bani'], ['cum', 'Cum începi'], ['intrebari', 'Întrebări']];
 if ($ptVideo || $ptWall) {
@@ -273,8 +276,8 @@ $ptHead = static function (string $id, string $kicker, string $title, string $le
         . ($lead !== '' ? '<p class="pt-sub">' . $lead . '</p>' : '') . '</div>';
 };
 
-$pageTitleRaw = 'Parteneri ' . SITE_NAME . ' — vinde bilete la activitățile tale, comision 2%* plătit de client';
-$pageDescription = 'Tot ce primește o locație pe bilete.online: booking pe sloturi, panou de operator, ghișeu cu bon, aplicație de scanare offline, SEO, analytics și tracking, deconturi și documente fiscale. Comision 2%* plătit de cumpărător, fără abonament.';
+$pageTitleRaw = 'Parteneri ' . SITE_NAME . ' — vinde bilete la activitățile tale, comision 2%*, fără să-ți atingă prețul';
+$pageDescription = 'Tot ce primește o locație pe bilete.online: booking pe sloturi, panou de operator, ghișeu cu bon, aplicație de scanare offline, SEO, analytics și tracking, deconturi și documente fiscale. Comision 2%*, fără să-ți atingă prețul și fără abonament.';
 $canonicalUrl = SITE_URL . '/parteneri';
 $ogImage = SITE_URL . '/assets/v2/img/hero-1440.webp';
 $structuredData = [
@@ -283,11 +286,11 @@ $structuredData = [
         '@type' => 'Service',
         'name' => 'bilete.online pentru parteneri — ticketing & booking pentru activități',
         'serviceType' => 'Platformă de vânzare bilete online și la fața locului pentru activități și locații',
-        'description' => 'Booking pe sloturi orare, panou de operator, POS pentru ghișeu, aplicație de scanare offline, pagini SEO, analytics și tracking server-side, deconturi periodice și documente fiscale. Comision 2% plătit de cumpărător.',
+        'description' => 'Booking pe sloturi orare, panou de operator, POS pentru ghișeu, aplicație de scanare offline, pagini SEO, analytics și tracking server-side, deconturi periodice și documente fiscale. Comision 2%, fără să-ți atingă prețul.',
         'provider' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL . '/'],
         'areaServed' => ['@type' => 'Country', 'name' => 'România'],
         'audience' => ['@type' => 'BusinessAudience', 'audienceType' => 'Locații de agrement, muzee, escape rooms, parcuri, ateliere, operatori de tururi și experiențe'],
-        'offers' => ['@type' => 'Offer', 'priceCurrency' => 'RON', 'price' => '0', 'description' => '0 lei cost de pornire. Comision 2%* plătit de cumpărător la fiecare bilet vândut.'],
+        'offers' => ['@type' => 'Offer', 'priceCurrency' => 'RON', 'price' => '0', 'description' => '0 lei cost de pornire. Comision 2%* la fiecare bilet vândut, fără să-ți atingă prețul.'],
     ],
     [
         '@context' => 'https://schema.org',
@@ -328,7 +331,7 @@ include __DIR__ . '/includes/v2/header.php';
           <span class="pt-line is-soft" style="--d:220ms"><span class="pt-line-in" id="pt-h1b">la activitățile tale.</span></span>
           <span class="pt-line is-mark" style="--d:320ms"><span class="pt-line-in"><span id="pt-h1c">Prețul tău rămâne al tău.</span></span></span>
         </h1>
-        <p class="pt-lead pt-rv" id="pt-sub" style="--d:460ms">Booking pe sloturi orare și calendar, panou de operator, ghișeu cu bon, aplicație de scanare offline, analytics și tracking care îți reduce costul reclamelor. Comisionul de <?= $ptAccent ?> e plătit de cumpărător — tu îți păstrezi prețul stabilit.</p>
+        <p class="pt-lead pt-rv" id="pt-sub" style="--d:460ms">Booking pe sloturi orare și calendar, panou de operator, ghișeu cu bon, aplicație de scanare offline, analytics și tracking care îți reduce costul reclamelor. Comisionul de <?= $ptAccent ?> nu-ți atinge prețul — tu îți păstrezi prețul stabilit.</p>
         <div class="pt-cta pt-rv" style="--d:560ms">
           <a class="btn btn-light pt-go" href="/inregistrare-locatie" data-signup data-track-cta="parteneri_hero_signup"><span id="pt-cta-t">Începe gratuit</span><?= v2_ic('arrow-right') ?></a>
           <a class="btn btn-outline-light" href="#demo" data-track-cta="parteneri_hero_demo"><?= v2_ic('calendar-blank') ?>Cere un demo</a>
@@ -784,6 +787,8 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <?= $ptHead('pt-stories-h', 'Povești de la parteneri', 'Nu ne crede pe cuvânt. <span class="pt-nl">Ascultă-i pe ei.</span>', 'Locații care vând deja prin bilete.online, despre cum arată ziua lor acum: la intrare, la ghișeu și în rapoarte.', 'is-dark is-center') ?>
 
+      <?php if ($ptDemoNote): ?><p class="pt-demo-note"><?= v2_ic('info') ?><?= v2_e($ptDemoNote) ?></p><?php endif; ?>
+
       <?php if ($ptVideo): ?>
       <div class="pt-feature<?= empty($ptVideo['quote']) ? ' is-solo' : '' ?>">
         <div class="pt-video" id="pt-video" data-yt="<?= v2_e($ptVideo['youtube']) ?>" data-title="<?= v2_e($ptVideo['title']) ?>">
@@ -949,7 +954,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if ($ptAttractions): ?><li><b><?= v2_thousands($ptAttractions) ?></b><span>atracții în catalog</span></li><?php endif; ?>
           <?php if ($ptCities): ?><li><b><?= $ptCities ?></b><span>orașe cu pagini proprii</span></li><?php endif; ?>
           <?php if ($ptCategories): ?><li><b><?= count($ptCategories) ?></b><span>categorii de experiențe</span></li><?php endif; ?>
-          <li><b>2%</b><span>comision, plătit de cumpărător</span></li>
+          <li><b>2%</b><span>comision, fără să-ți atingă prețul</span></li>
         </ul>
         <ul class="pt-reach-list" data-reveal>
           <?php foreach ($ptReach as [$icon, $title, $text]): ?>
@@ -1006,7 +1011,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="pt-money-top">
         <div>
           <p class="pt-k is-dark">Diferența care schimbă tot</p>
-          <h2 id="pt-money-h" class="pt-money-h">Comision <span class="pt-big2" id="pt-big2">2%*</span><span class="pt-nl">Plătit de cumpărător.</span></h2>
+          <h2 id="pt-money-h" class="pt-money-h">Comision <span class="pt-big2" id="pt-big2">2%*</span><span class="pt-nl">Prețul tău rămâne al tău.</span></h2>
         </div>
         <div>
           <p class="pt-sub is-dark">Comisionul de 2%* este adăugat transparent în prețul final și achitat de client. Tu îți stabilești prețul și îl primești <strong class="pt-yellow">integral</strong> la decont — fără să scazi nimic din marja ta. Dacă vinzi biletele și în alte părți, comisionul este de 4%: 2% incluse în preț și 2% adăugate.</p>
@@ -1035,7 +1040,7 @@ include __DIR__ . '/includes/v2/header.php';
             <div class="pt-compare-top"><span>bilete.online (2%* pe client)</span><span class="is-green">100%</span></div>
             <div class="pt-meter"><i style="--w:100%"></i></div>
             <p class="pt-compare-get">Primești: <strong class="is-green">100 lei</strong></p>
-            <p class="pt-compare-note">Comisionul și costul cardului sunt incluse în prețul plătit de client. Tu primești prețul tău, întreg.</p>
+            <p class="pt-compare-note">Comisionul și costul cardului sunt incluse în prețul final. Tu primești prețul tău, întreg.</p>
           </div>
           <p class="pt-compare-foot">La volum, diferența devine uriașă.</p>
         </div>
@@ -1052,7 +1057,7 @@ include __DIR__ . '/includes/v2/header.php';
           </div>
           <dl class="pt-calc-out">
             <div><dt>Încasezi din bilete</dt><dd id="pt-out-rev">18.000 lei</dd></div>
-            <div><dt>Comision 2%, plătit de cumpărător</dt><dd id="pt-out-fee">360 lei</dd></div>
+            <div><dt>Comision 2%, adăugat peste preț</dt><dd id="pt-out-fee">360 lei</dd></div>
             <div class="is-total"><dt>Rămâne la tine</dt><dd id="pt-out-net">18.000 lei</dd></div>
             <div class="is-vs"><dt>Pe o platformă clasică (−9,5%) ar rămâne</dt><dd id="pt-out-classic">16.290 lei</dd></div>
           </dl>
@@ -1185,7 +1190,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="pt-final-head">
         <span class="pt-badge">Devino partener</span>
         <h2 id="pt-final-h">Pune-ți activitățile la vânzare <span class="pt-nl">și păstrează prețul tău întreg.</span></h2>
-        <p>Fără costuri de pornire. Activități nelimitate. Onboarding în 5 minute, go-live azi. Comision 2%* plătit de client.</p>
+        <p>Fără costuri de pornire. Activități nelimitate. Onboarding în 5 minute, go-live azi. Comision 2%*, fără să-ți atingă prețul.</p>
       </div>
 
       <div class="pt-final-grid">
