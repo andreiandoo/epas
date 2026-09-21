@@ -39,6 +39,8 @@ class TicketResource extends Resource
         // fall back to ticketType.event for tickets created before orders had
         // marketplace_client_id denormalised.
         $query = parent::getEloquentQuery()
+            // the two title columns read either side, so load both in one go
+            ->with(['ticketType.event', 'activityBooking.activity', 'activityBooking.variant'])
             ->where(function ($q) use ($marketplace) {
                 $q->whereHas('order', function ($q2) use ($marketplace) {
                     $q2->where('marketplace_client_id', $marketplace?->id);
@@ -53,6 +55,47 @@ class TicketResource extends Resource
         }
 
         return $query;
+    }
+
+    /** The event a ticket belongs to, or the activity product when it is an activities-module booking. */
+    protected static function subjectTitle($record): string
+    {
+        $event = $record->ticketType?->event?->title;
+        if (is_string($event) && $event !== '') {
+            return $event;
+        }
+        $activity = $record->activityBooking?->activity;
+
+        return $activity
+            ? \App\Services\Activities\ActivityOrderBuilder::ro($activity->title, '—')
+            : (is_array($event) ? \App\Services\Activities\ActivityOrderBuilder::ro($event, '—') : '—');
+    }
+
+    /** Under the title: the visit date of an activity ticket (an event carries its own date elsewhere). */
+    protected static function subjectPlace($record): ?string
+    {
+        $booking = $record->activityBooking;
+        if (!$booking) {
+            return null;
+        }
+        $day = $booking->booking_date?->format('d.m.Y');
+        $time = $booking->getRawOriginal('slot_start_time');
+
+        return trim(($day ?: '') . ($time ? ', ' . substr((string) $time, 0, 5) : '')) ?: null;
+    }
+
+    /** The ticket type, or the variant of an activity booking. */
+    protected static function variantTitle($record): string
+    {
+        $name = $record->ticketType?->name;
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+        $variant = $record->activityBooking?->variant;
+
+        return $variant
+            ? \App\Services\Activities\ActivityOrderBuilder::ro($variant->name, '—')
+            : (is_array($name) ? \App\Services\Activities\ActivityOrderBuilder::ro($name, '—') : '—');
     }
 
     public static function table(Table $table): Table
@@ -72,13 +115,18 @@ class TicketResource extends Resource
                     ->copyable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('ticketType.event.title')
-                    ->label('Eveniment')
+                    // A ticket of the activities module (bilete.online) has no event and no ticket type: it belongs to
+                    // an activity booking, so these two columns read the product and the variant instead of staying empty.
+                    ->label('Eveniment / produs')
+                    ->state(fn ($record) => static::subjectTitle($record))
+                    ->description(fn ($record) => static::subjectPlace($record))
                     ->searchable()
                     ->sortable()
                     ->limit(30)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('ticketType.name')
-                    ->label('Tip Bilet')
+                    ->label('Tip bilet / variantă')
+                    ->state(fn ($record) => static::variantTitle($record))
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('order.id')

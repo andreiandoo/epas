@@ -5614,6 +5614,10 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     } else {
         header('Cache-Control: no-store');
     }
+} elseif ($requiresAuth) {
+    // An answer built for one account: never store it anywhere shared, and never match it to another token.
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    header('Vary: Authorization');
 } else {
     header('Cache-Control: no-store');
 }

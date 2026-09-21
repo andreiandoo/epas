@@ -10,6 +10,7 @@ use App\Models\ActivityLocation;
 use App\Models\ActivityPackageItem;
 use App\Models\ActivitySchedule;
 use App\Models\ActivityVariant;
+use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
@@ -29,7 +30,8 @@ use Illuminate\Support\Str;
  *   php artisan bilete:demo-seed --organizer=622 --location=1
  *   php artisan bilete:demo-seed --remove
  *
- * Everything it writes is listed in storage/app/bilete-demo-seed.json and also carries a `demo_seed` marker, so
+ * Everything it writes is listed in the local disk's bilete-demo-seed.json (storage/app/private/) and also carries a
+ * `demo_seed` marker, so
  * --remove takes it all back out (and puts the location's own fields back as they were). It refuses to run unless the
  * operator's marketplace has the activities module active, so Ambilet can never be touched.
  */
@@ -102,7 +104,7 @@ class DemoOperatorSeedCommand extends Command
         // out loyalty points or ring the operator's bell forty times. The bookings and tickets are written paid here.
         Order::withoutEvents(function () use (&$man, $client, $organizer, $location) {
             DB::transaction(function () use (&$man, $client, $organizer, $location) {
-                $this->fillLocation($location);
+                $this->fillLocation($location, $this->category($client->id, $location));
                 $products = $this->products($client->id, $organizer->id, $location, $man);
                 $customers = $this->customers($client->id, $man);
                 $this->orders($client, $organizer, $location, $products, $customers, $man);
@@ -127,12 +129,36 @@ class DemoOperatorSeedCommand extends Command
     {
         return [
             'subtitle', 'short_description', 'description', 'address', 'latitude', 'longitude', 'google_maps_url',
+            'marketplace_category_id',
             'phone', 'email', 'website_url', 'facilities', 'rules', 'seasons', 'closed_dates', 'max_advance_days',
             'display_categories', 'lodging', 'faqs', 'seo', 'review_status', 'is_published',
         ];
     }
 
-    private function fillLocation(ActivityLocation $location): void
+    /**
+     * A category for the location and its products: the one the location already has, else the marketplace's own
+     * category that fits a leisure venue, else the first one. Null when the marketplace has no categories.
+     */
+    private function category(int $clientId, ActivityLocation $location): ?int
+    {
+        if ($location->marketplace_category_id) {
+            return (int) $location->marketplace_category_id;
+        }
+        $categories = rescue(fn () => MarketplaceCategory::where('marketplace_client_id', $clientId)->whereNull('parent_id')
+            ->orderBy('sort_order')->get(['id', 'slug', 'name']), collect(), false);
+        foreach (['atractii', 'agrement', 'natura', 'experiente', 'activitati', 'outdoor'] as $wanted) {
+            foreach ($categories as $category) {
+                $name = strtolower($this->ro($category->name) . ' ' . (string) $category->slug);
+                if (str_contains($name, $wanted)) {
+                    return (int) $category->id;
+                }
+            }
+        }
+
+        return $categories->first()?->id ? (int) $categories->first()->id : null;
+    }
+
+    private function fillLocation(ActivityLocation $location, ?int $categoryId): void
     {
         $hours = array_fill_keys(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], ['open' => '09:00', 'close' => '19:00']);
         $winter = array_fill_keys(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], ['open' => '10:00', 'close' => '17:00']);
@@ -173,6 +199,7 @@ class DemoOperatorSeedCommand extends Command
                 ['q' => 'Ce fac dacă plouă?', 'a' => 'Biletele rămân valabile; plimbările cu barca se suspendă doar pe vreme severă, iar atunci le reprogramăm.'],
             ],
             'seo' => ['demo_seed' => true],
+            'marketplace_category_id' => $categoryId ?: $location->marketplace_category_id,
             'review_status' => 'approved',
             'is_published' => true,
         ])->save();
@@ -190,6 +217,7 @@ class DemoOperatorSeedCommand extends Command
             'marketplace_organizer_id' => $organizerId,
             'location_id' => $location->id,
             'marketplace_city_id' => $location->marketplace_city_id,
+            'marketplace_category_id' => $location->marketplace_category_id,
             'is_published' => true,
             'review_status' => 'approved',
             'reviewed_at' => now(),
