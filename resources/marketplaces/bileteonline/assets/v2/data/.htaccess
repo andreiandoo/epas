@@ -1,4 +1,4 @@
-# Pin datasets for the interactive map. The URL always carries ?v=<hash>
+# Pin datasets for the interactive map (built by bin/build-map-data.php). The URL always carries ?v=<hash>
 # (see v2_map_data()), so the bytes behind a given URL never change and the
 # browser never has to revalidate. Apache compresses application/json via the
 # brotli/deflate filters set in the site .htaccess.

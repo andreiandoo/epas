@@ -4,8 +4,10 @@
  *
  *   php bin/build-map-data.php [--force] [--paginate]
  *
- * Writes data/map/atractii.json (the payload the browser downloads once) and
- * data/map/atractii.meta.json (version + counters, read by v2_map_data()).
+ * Writes assets/v2/data/atractii.json (the payload the browser downloads once) and
+ * assets/v2/data/atractii.meta.json (version + counters, read by v2_map_data()).
+ * It lives under assets/ because the deploy webhook preserves data/ -- that folder holds
+ * runtime state and is never overwritten, so a dataset there would never reach the server.
  *
  * Preferred source is the core endpoint GET /attractions/map, which returns
  * every geo-located attraction in one packed response. --paginate forces the
@@ -29,7 +31,7 @@ $argvFlags  = array_slice($argv, 1);
 $forceWrite = in_array('--force', $argvFlags, true);
 $paginate   = in_array('--paginate', $argvFlags, true);
 
-$outDir   = BILETEONLINE_ROOT . '/data/map';
+$outDir   = BILETEONLINE_ROOT . '/assets/v2/data';
 $outFile  = $outDir . '/atractii.json';
 $metaFile = $outDir . '/atractii.meta.json';
 

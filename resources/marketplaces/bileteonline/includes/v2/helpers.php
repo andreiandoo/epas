@@ -58,8 +58,8 @@ function v2_map_data(): ?array
     }
     $cached = true;
 
-    $metaFile = BILETEONLINE_ROOT . '/data/map/atractii.meta.json';
-    $dataFile = BILETEONLINE_ROOT . '/data/map/atractii.json';
+    $metaFile = BILETEONLINE_ROOT . '/assets/v2/data/atractii.meta.json';
+    $dataFile = BILETEONLINE_ROOT . '/assets/v2/data/atractii.json';
     if (!is_file($metaFile) || !is_file($dataFile)) {
         return $value;
     }
@@ -72,8 +72,8 @@ function v2_map_data(): ?array
     $version = (string) ($meta['v'] ?? filemtime($dataFile));
     $value = [
         // ?v=<content hash>: the file name stays stable, the URL changes
-        // whenever the data does, and data/map/.htaccess can mark it immutable.
-        'url'          => '/data/map/atractii.json?v=' . rawurlencode($version),
+        // whenever the data does, and assets/v2/data/.htaccess marks it immutable.
+        'url'          => '/assets/v2/data/atractii.json?v=' . rawurlencode($version),
         'v'            => $version,
         'total'        => (int) $meta['total'],
         'types'        => (int) ($meta['types'] ?? 0),
