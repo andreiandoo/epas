@@ -26,6 +26,7 @@ $urls = [
     ['/locatii', 'daily', '0.8'],
     ['/experiente', 'daily', '0.8'],
     ['/atractii', 'weekly', '0.7'],
+    ['/harta', 'weekly', '0.7'],
 ];
 $cities = [];
 foreach ($collect('/activities-module/locations', 'locations') as $l) {

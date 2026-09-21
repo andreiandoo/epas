@@ -85,6 +85,47 @@ function v2_map_data(): ?array
     return $value;
 }
 
+/**
+ * "Caraș-Severin" -> "caras-severin". The form the map's ?zona= expects, and the same folding
+ * map.js does in the browser, so a link printed here matches a zone there.
+ */
+function v2_zone_slug(string $name): string
+{
+    $s = strtr($name, [
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+        'Ă' => 'a', 'Â' => 'a', 'Î' => 'i', 'Ș' => 's', 'Ş' => 's', 'Ț' => 't', 'Ţ' => 't',
+    ]);
+
+    return trim(mb_strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $s)), '-');
+}
+
+/**
+ * The small derived summary next to the pin dataset: counters per type, region, county and city
+ * plus a handful of picks. /harta renders its server-side content from this so the page never has
+ * to parse the ~950 KB pin file. Keys: v, total, types, regions, counties, cities, picks.
+ */
+function v2_map_summary(): ?array
+{
+    static $cached = false;
+    static $value = null;
+
+    if ($cached) {
+        return $value;
+    }
+    $cached = true;
+
+    $file = BILETEONLINE_ROOT . '/assets/v2/data/atractii.summary.json';
+    if (!is_file($file)) {
+        return $value;
+    }
+    $data = json_decode((string) file_get_contents($file), true);
+    if (is_array($data) && !empty($data['types'])) {
+        $value = $data;
+    }
+
+    return $value;
+}
+
 /** API media paths come either absolute or relative to the core storage. */
 function v2_media_url($path): ?string
 {

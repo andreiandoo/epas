@@ -81,6 +81,16 @@ const AM_ATTRACTION_TYPES = [
     'punct-panoramic' => 'Punct panoramic', 'lac-natura' => 'Lac & natură', 'teatru-opera' => 'Teatru & operă',
 ];
 
+// Genitive plural of each type, for headings like "Harta castelelor din România". Romanian does not
+// derive this from the singular label, so it is spelled out.
+const AM_ATTRACTION_TYPES_GEN = [
+    'castel-palat' => 'castelelor și palatelor', 'muzeu' => 'muzeelor', 'monument' => 'monumentelor',
+    'biserica-manastire' => 'bisericilor și mănăstirilor', 'parc-gradina' => 'parcurilor și grădinilor',
+    'piata-centru-vechi' => 'piețelor și centrelor vechi', 'cladire-istorica' => 'clădirilor istorice',
+    'punct-panoramic' => 'punctelor panoramice', 'lac-natura' => 'lacurilor și locurilor din natură',
+    'teatru-opera' => 'teatrelor și operelor',
+];
+
 /** City of a /{oras}/… hub from the rewrite (?city=): [slug, name], ['', ''] without one, null when unknown. */
 function am_hub_city(): ?array
 {

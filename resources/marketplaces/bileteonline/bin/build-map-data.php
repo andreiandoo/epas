@@ -2,7 +2,7 @@
 /**
  * Builds the static pin dataset behind the interactive attractions map.
  *
- *   php bin/build-map-data.php [--force] [--paginate]
+ *   php bin/build-map-data.php [--force] [--paginate] [--summary-only]
  *
  * Writes assets/v2/data/atractii.json (the payload the browser downloads once) and
  * assets/v2/data/atractii.meta.json (version + counters, read by v2_map_data()).
@@ -30,9 +30,11 @@ require_once __DIR__ . '/../includes/config.php';
 $argvFlags  = array_slice($argv, 1);
 $forceWrite = in_array('--force', $argvFlags, true);
 $paginate   = in_array('--paginate', $argvFlags, true);
+$summaryOnly = in_array('--summary-only', $argvFlags, true);
 
 $outDir   = BILETEONLINE_ROOT . '/assets/v2/data';
 $outFile  = $outDir . '/atractii.json';
+$sumFile  = $outDir . '/atractii.summary.json';
 $metaFile = $outDir . '/atractii.meta.json';
 
 if (!is_dir($outDir) && !@mkdir($outDir, 0755, true) && !is_dir($outDir)) {
@@ -293,7 +295,7 @@ function mapBuildByPagination(): ?array
                 // here -- it only lists a few hundred of the cities the
                 // attractions reference. The core map endpoint reads the
                 // county off the attraction itself and covers all of them.
-                [, $county, $region] = $cities[$c];
+                [, , $county, $region] = $cities[$c];
                 if ($county) {
                     $zk = $county . '|' . (string) $region;
                     if (!isset($zoneIdx[$zk])) {
@@ -361,9 +363,126 @@ function mapBuildByPagination(): ?array
     ];
 }
 
+/**
+ * A few KB of counters and hand-picked rows derived from the full payload, so /harta can render
+ * real server-side content (type cards, regions, cities, a grid of attractions) without parsing
+ * the ~950 KB pin file on every request.
+ */
+function mapSummary(array $payload): array
+{
+    $f        = array_flip($payload['fields']);
+    $types    = $payload['types'];
+    $cities   = $payload['cities'];
+    $zones    = $payload['zones'];
+    $imageBit = (int) ($payload['flags']['image'] ?? 1);
+    $actBit   = (int) ($payload['flags']['activities'] ?? 4);
+
+    $regions = [];
+    foreach ($zones as $z) {
+        if (!$z[1]) {
+            continue;
+        }
+        $regions[$z[1]] = ($regions[$z[1]] ?? 0) + (int) $z[2];
+    }
+    arsort($regions);
+
+    $countyRows = [];
+    foreach ($zones as $z) {
+        if ((int) $z[2] > 0) {
+            $countyRows[] = [$z[0], $z[1], (int) $z[2]];
+        }
+    }
+    usort($countyRows, fn ($a, $b) => $b[2] <=> $a[2]);
+
+    $cityRows = [];
+    foreach ($cities as $c) {
+        if ((int) $c[4] > 0) {
+            $cityRows[] = [$c[0], $c[1], $c[2], $c[3], (int) $c[4]];
+        }
+    }
+    usort($cityRows, fn ($a, $b) => $b[4] <=> $a[4]);
+
+    $typeRows = [];
+    foreach ($types as $t) {
+        if ((int) $t[4] > 0) {
+            $typeRows[] = [$t[0], $t[1], $t[2], (int) $t[4]];
+        }
+    }
+    usort($typeRows, fn ($a, $b) => $b[3] <=> $a[3]);
+
+    // Picks for the grid: only attractions that have a photo (a photo means somebody curated the
+    // row), bookable ones first, taken round-robin per type so one type cannot fill the grid.
+    $typeSlugs = array_column($types, 0);
+    $byType    = [];
+    foreach ($payload['points'] as $p) {
+        if (!($p[$f['flags']] & $imageBit)) {
+            continue;
+        }
+        $byType[$p[$f['type']]][] = $p;
+    }
+    foreach ($byType as &$bucket) {
+        usort($bucket, fn ($a, $b) => ($b[$f['flags']] & $actBit) <=> ($a[$f['flags']] & $actBit));
+    }
+    unset($bucket);
+
+    $order = [];
+    foreach ($typeRows as $t) {
+        $i = array_search($t[0], $typeSlugs, true);
+        if ($i !== false) {
+            $order[] = $i;
+        }
+    }
+
+    $picks = [];
+    for ($round = 0; count($picks) < 36 && $round < 40; $round++) {
+        $added = false;
+        foreach ($order as $ti) {
+            if (!isset($byType[$ti][$round])) {
+                continue;
+            }
+            $p = $byType[$ti][$round];
+            $t = $p[$f['type']] >= 0 ? $types[$p[$f['type']]] : null;
+            $c = $p[$f['city']] >= 0 ? $cities[$p[$f['city']]] : null;
+            $picks[] = [$p[$f['slug']], $p[$f['name']], $t ? $t[1] : '', $t ? $t[2] : '', $c ? $c[1] : '', $c ? $c[0] : '', $p[$f['img']]];
+            $added = true;
+            if (count($picks) >= 36) {
+                break;
+            }
+        }
+        if (!$added) {
+            break;
+        }
+    }
+
+    return [
+        'v'        => $payload['v'] ?? '',
+        'total'    => count($payload['points']),
+        'types'    => $typeRows,
+        'regions'  => array_map(fn ($n, $c) => [$n, $c], array_keys($regions), array_values($regions)),
+        'counties' => array_slice($countyRows, 0, 24),
+        'cities'   => array_slice($cityRows, 0, 40),
+        'picks'    => $picks,
+    ];
+}
+
 // ---------------------------------------------------------------- build
 
 fwrite(STDOUT, 'Source: ' . API_BASE_URL . ' (' . API_ENV . ")\n");
+
+// --summary-only rebuilds just the derived summary from the dataset already on disk, for when the
+// picks or the counters change but the pins did not (the full build costs ~146 throttled requests).
+if ($summaryOnly) {
+    $existing = is_file($outFile) ? json_decode((string) file_get_contents($outFile), true) : null;
+    if (!is_array($existing['points'] ?? null)) {
+        fwrite(STDERR, "No dataset at {$outFile} to summarise
+");
+        exit(1);
+    }
+    file_put_contents($sumFile, json_encode(mapSummary($existing), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    fwrite(STDOUT, 'Wrote ' . $sumFile . ' (' . number_format(filesize($sumFile) / 1024, 1) . " KB)
+");
+    exit(0);
+}
 
 $payload = null;
 $source  = 'paginate';
@@ -418,6 +537,7 @@ if (file_put_contents($outFile, $json) === false) {
     exit(1);
 }
 file_put_contents($metaFile, json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n");
+file_put_contents($sumFile, json_encode(mapSummary($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
 fwrite(STDOUT, sprintf(
     "Wrote %s\n  %d pins, %d types, %d cities, %s, v=%s\n",
