@@ -5,9 +5,10 @@
  * Inside the v2 organizer shell. Seven tabs, each with its own address (#profile, #company, #bank, #contract,
  * #notifications, #security, #sharelinks; other pages link to #bank, #company and #contract): the organizer profile and
  * the guarantor details captured at sign-up; the main company (with the ANAF check) and a second issuing company; bank
- * accounts (add, primary, issuing company, delete); the contract (commission, work mode, terms, download, the electronic
- * signature, the ID and CUI documents); which notifications arrive and where; the password; share links for sponsors and
- * partners (create, copy, open, refresh, switch off, delete). A summary on top says what is still missing.
+ * accounts (add, primary, issuing company, delete); the contract (commission, work mode, terms, read it in a window
+ * before signing, download, the electronic signature, the ID and CUI documents); which notifications arrive and where;
+ * the password; share links for sponsors and partners (create, copy, open, refresh, switch off, delete). A summary on
+ * top says what is still missing.
  * org-settings.js reads /organizer/me, /organizer/bank-accounts, /organizer/contract, /organizer/share-links,
  * /organizer/notifications/types and /organizer/events through the proxy.
  *
@@ -18,6 +19,10 @@
  *   preference: the tab says what really arrives and where;
  * - the contact e-mail and the VAT payer answer looked editable but core ignores both; the VAT answer was read from a
  *   field core doesn't send;
+ * - there was no way to READ the contract before signing it: "Vezi contractul" opens the PDF in a window (a frame on a
+ *   wide screen, the two links that work on a phone below it), and only then comes the signature;
+ * - the contract terms came from core as Ambilet's model ("decontarea in 7 zile lucratoare"), which bilete.online does
+ *   not do: the wording is written here and only the numbers (commission, work mode, invoice due days) come from core;
  * - the CNP was shown in full: it stays masked until asked for;
  * - errors came as browser alerts, some in English ("Current password is incorrect"); deleting used confirm().
  */
@@ -188,7 +193,10 @@ v2_org_start('settings');
   <section class="org-panel os-panel" id="os-p-contract" role="tabpanel" aria-labelledby="os-tab-contract" hidden>
     <div class="org-panel-head">
       <div><p class="org-k">Contract</p><h2 class="org-panel-h">Contractul cu <?= htmlspecialchars(SITE_NAME) ?></h2><p class="org-panel-p" id="os-contract-p">Se generează automat din datele firmei tale și din condițiile comerciale agreate.</p></div>
-      <button class="btn btn-ghost os-sm" type="button" id="os-contract-dl" hidden><?= v2_ic('file-text') ?><span data-label>Descarcă contractul</span></button>
+      <div class="os-cta-row">
+        <button class="btn btn-primary os-sm" type="button" id="os-contract-view" hidden><?= v2_ic('eye') ?><span data-label>Vezi contractul</span></button>
+        <button class="btn btn-ghost os-sm" type="button" id="os-contract-dl" hidden><?= v2_ic('download-simple') ?><span data-label>Descarcă contractul</span></button>
+      </div>
     </div>
     <div class="os-callout" id="os-contract-state"><span class="org-skel os-sk"></span></div>
     <dl class="os-figs">
@@ -198,7 +206,11 @@ v2_org_start('settings');
     </dl>
     <div class="os-block">
       <h3>Condiții contractuale</h3>
-      <ul class="os-terms" id="os-terms"></ul>
+      <ul class="os-terms" id="os-terms">
+        <li><?= v2_ic('check-circle') ?><span><b><?= htmlspecialchars(SITE_NAME) ?> nu face decontări.</b> Comisionul se adaugă peste prețul tău, iar banii din vânzările online ajung direct în contul tău, prin split payment la checkout.</span></li>
+        <li><?= v2_ic('check-circle') ?><span><b>Comisionul de la POS îți vine pe factură, o dată pe lună.</b> Pentru încasările la casă — cash sau card — îți emitem o singură factură lunară, cu valoarea comisioanelor. Termenul de scadență este de <b id="os-term-due">5 zile calendaristice</b>.</span></li>
+        <li><?= v2_ic('check-circle') ?><span><b>Plătești comision doar la ce vinzi.</b> Cota ta: <b id="os-term-comm">—</b>. Mod de lucru: <b id="os-term-work">—</b>. Fără costuri fixe și fără abonament lunar.</span></li>
+      </ul>
     </div>
 
     <form class="os-block is-warm os-sign" id="os-sign" novalidate hidden>
@@ -334,6 +346,28 @@ v2_org_start('settings');
       <div class="os-form-err" id="os-share-err" role="alert" hidden></div>
       <div class="os-d-act"><button class="btn btn-ghost" type="button" data-close>Anulează</button><button class="btn btn-primary" type="submit" id="os-share-go"><span data-label>Generează linkul</span></button></div>
     </form>
+  </dialog>
+
+  <dialog class="os-dialog is-doc" id="os-contract-d" aria-labelledby="os-contract-d-h">
+    <div class="os-d-inner">
+      <div class="os-d-head">
+        <div><h2 class="os-d-h" id="os-contract-d-h">Contractul tău</h2><p class="os-d-p" id="os-contract-d-p">Citește-l înainte să-l semnezi.</p></div>
+        <?= $osX ?>
+      </div>
+      <div class="os-ct-view" id="os-ct-view" hidden>
+        <iframe class="os-ct-frame" id="os-ct-frame" title="Contractul cu <?= htmlspecialchars(SITE_NAME) ?>" src="about:blank"></iframe>
+      </div>
+      <div class="os-ct-fallback" id="os-ct-fallback" hidden>
+        <span class="os-ct-ic"><?= v2_ic('file-text') ?></span>
+        <p class="os-p">Contractul este un fișier PDF. Pe telefon se citește cel mai bine deschis într-o filă nouă sau descărcat.</p>
+      </div>
+      <p class="os-help" id="os-ct-note" hidden>Dacă documentul nu se vede aici, deschide-l într-o filă nouă.</p>
+      <div class="os-d-act">
+        <a class="btn btn-ghost os-sm" id="os-ct-open" href="#" target="_blank" rel="noopener"><?= v2_ic('arrow-up-right') ?>Deschide în filă nouă</a>
+        <a class="btn btn-ghost os-sm" id="os-ct-dl" href="#" download target="_blank" rel="noopener"><?= v2_ic('download-simple') ?>Descarcă PDF</a>
+        <button class="btn btn-primary os-sm" type="button" data-close>Închide</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog class="os-dialog is-small" id="os-del-d" aria-labelledby="os-del-h" aria-describedby="os-del-p">

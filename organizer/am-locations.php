@@ -54,7 +54,7 @@ v2_org_start('am-locations');
   </div>
 
   <div id="am-loc-list" aria-live="polite"><p class="ve-state">Se încarcă…</p></div>
-  <div id="am-loc-edit" hidden></div>
+  <div class="am-ed" id="am-loc-edit" hidden></div>
 </div>
 <?php
 v2_org_end();

@@ -116,6 +116,7 @@ function v2_org_start(string $active): void
           <div class="org-pop org-usermenu" id="org-usermenu" hidden>
             <div class="org-pop-me"><p class="org-pop-name" data-org-name>Operator</p><p class="org-pop-mail" data-org-email></p></div>
             <a class="org-mi" href="/organizator/setari"><?= v2_ic('gear-six') ?>Setări cont</a>
+            <a class="org-mi" href="/organizator/panou?ghid=1"><?= v2_ic('play') ?>Ghid rapid</a>
             <a class="org-mi" href="/organizator/help"><?= v2_ic('question') ?>Ajutor & suport</a>
             <button class="org-mi is-danger" type="button" data-org-logout><?= v2_ic('sign-out') ?><span>Deconectare</span></button>
           </div>

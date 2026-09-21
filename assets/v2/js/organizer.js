@@ -469,21 +469,41 @@
     var a = auth();
     try { setProfile(a.getOrganizerData && a.getOrganizerData()); } catch (e) {}
     window.addEventListener('bileteonline:auth:update', function (e) { if (e.detail && e.detail.type === 'organizer') setProfile(e.detail.user); });
-    api('/organizer/me').then(function (r) {
-      var d = r && r.data, o = d && (d.organizer || d);
-      if (!o || typeof o !== 'object' || !(o.id || o.email || o.name)) return;
-      try {
-        if (a.updateOrganizerData) a.updateOrganizerData(o); // dispatches bileteonline:auth:update, which fills the page in
-        else { localStorage.setItem('bileteonline_organizer_data', JSON.stringify(o)); setProfile(o); }
-      } catch (e) { setProfile(o); }
-    }, function () {});
+    // The account is painted from what the browser remembers, then from the API. Coming back to the tab reads it
+    // again, so a change made meanwhile in the admin (status, commission, contract) shows up without a reload.
+    var profileAt = 0;
+    /** quiet: a refresh must not end the session on a hiccup; the first read still does, as before. */
+    function loadProfile(quiet) {
+      profileAt = Date.now();
+      return api('/organizer/me', quiet ? { quiet: true } : undefined).then(function (r) {
+        var d = r && r.data, o = d && (d.organizer || d);
+        if (!o || typeof o !== 'object' || !(o.id || o.email || o.name)) return;
+        try {
+          if (a.updateOrganizerData) a.updateOrganizerData(o); // dispatches bileteonline:auth:update, which fills the page in
+          else { localStorage.setItem('bileteonline_organizer_data', JSON.stringify(o)); setProfile(o); }
+        } catch (e) { setProfile(o); }
+      }, function () {});
+    }
+    function refreshAccount() {
+      if (document.hidden || Date.now() - profileAt < 30000) return;
+      loadProfile(true);
+      amLoad = null;
+      amCatalog().then(function (c) { planLocs = c.locations; drawPlan(); });
+    }
+    loadProfile(false);
     amCatalog().then(function (c) { planLocs = c.locations; drawPlan(); });
+    window.addEventListener('focus', refreshAccount);
+    window.addEventListener('pageshow', function (e) { if (e.persisted) refreshAccount(); });
     api('/organizer/support/tickets?status=open&per_page=1', { quiet: true }).then(function (r) { // 403 for organizers outside the support beta: no badge
       setBadge('support', metaOf(r).total);
     }, function () {});
     loadNotifications();
     setInterval(function () { if (!document.hidden) loadNotifications(); }, 60000);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - notif.at > 60000) loadNotifications(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) return;
+      if (Date.now() - notif.at > 60000) loadNotifications();
+      refreshAccount();
+    });
   } else {
     document.documentElement.classList.add('org-redirecting');
   }

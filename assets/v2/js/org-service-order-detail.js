@@ -53,7 +53,13 @@
     $('sd-number').textContent = number;
     tag($('sd-status'), STATUS[o.status] ? [txt(o.status_label) || STATUS[o.status][0], STATUS[o.status][1]] : [txt(o.status_label) || txt(o.status) || '—', 'is-muted']);
 
-    set('sd-event', txt(o.event && o.event.name) || txt(o.event_name));
+    // what the service applies to: one activity, a whole location, or the account (ad tracking on bilete.online)
+    var cfg = o.config || {};
+    var appliesLabel = 'Activitate', applies = txt(o.event && o.event.name) || txt(o.event_name);
+    if (o.type === 'location_featuring') { appliesLabel = 'Locația'; applies = txt(cfg.location_name) || applies; }
+    else if (o.type === 'tracking' && !applies) { appliesLabel = 'Se aplică la'; applies = 'Tot contul tău'; }
+    if ($('sd-event-l')) $('sd-event-l').textContent = appliesLabel;
+    set('sd-event', applies);
     set('sd-details', txt(o.details));
     set('sd-created', stamp(o.created_at));
     var start = day(o.service_start_date), end = day(o.service_end_date);

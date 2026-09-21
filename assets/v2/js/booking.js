@@ -88,7 +88,14 @@
     return (by[v.id] || by[String(v.id)] || av.slots || []);
   };
   var dayBookable = function (p) { var av = state.day[p.id]; return !!(av && av.bookable); };
-  var commissionOf = function (p) { return p.commission || { rate: 0, mode: 'included' }; };
+  // rate in percent, floor in lei per ticket (the minimum bilete.online charges); the server applies the same rule
+  var commissionOf = function (p) { return p.commission || { rate: 0, mode: 'included', floor: 0 }; };
+  var feeOf = function (c, valueCents, quantity) {
+    if (c.mode !== 'added_on_top') return 0;
+    var fee = c.rate > 0 ? Math.round(valueCents * c.rate / 100) : 0;
+    var floor = Math.round((c.floor || 0) * 100) * Math.max(1, quantity);
+    return Math.max(fee, floor);
+  };
 
   /* ---------------- selection → cart lines ---------------- */
   function lines() {
@@ -169,8 +176,7 @@
     ls.forEach(function (l) {
       var value = l.variant.price_cents * l.quantity + Math.round(l.addonsTotal * 100);
       sub += value;
-      var c = commissionOf(l.product);
-      if (c.mode === 'added_on_top' && c.rate > 0) fee += Math.round(value * c.rate / 100);
+      fee += feeOf(commissionOf(l.product), value, l.quantity);
     });
     // The card processing fee isn't part of this total and isn't shown here: it depends on the payment method chosen
     // in the checkout, which is where it is added (the cart page says the same). `card` only says whether this
@@ -189,7 +195,7 @@
   var elDays = $('bkx-days'), elCal = $('bkx-cal'), elCalGrid = $('bkx-cal-grid'), elCalTitle = $('bkx-cal-title'),
       elCalToggle = $('bkx-cal-toggle'), elHours = $('bkx-hours'), elTabs = $('bkx-tabs'), elList = $('bkx-list'),
       elSum = $('bkx-sum'), elLines = $('bkx-lines'), elSub = $('bkx-sub'), elFeeRow = $('bkx-fee-row'), elFee = $('bkx-fee'),
-      elFeeRate = $('bkx-fee-rate'), elTotal = $('bkx-total'), elErr = $('bkx-err'), elCart = $('bkx-cart'), elGo = $('bkx-go'),
+      elFeeLabel = $('bkx-fee-label'), elTotal = $('bkx-total'), elErr = $('bkx-err'), elCart = $('bkx-cart'), elGo = $('bkx-go'),
       elBar = $('bkx-bar'), elBarTotal = $('bkx-bar-total'), elBarCount = $('bkx-bar-count'),
       elCardNote = $('bkx-card-note');
 
@@ -410,10 +416,18 @@
         el('b', { text: lei(l.variant.price_cents * l.quantity + Math.round(l.addonsTotal * 100)) })
       ]));
     });
-    var rates = ls.map(function (l) { return commissionOf(l.product); }).filter(function (c) { return c.mode === 'added_on_top' && c.rate > 0; });
+    // the label says the rate, and the minimum per ticket when a line is small enough for it to apply
+    var cs = ls.map(function (l) { return commissionOf(l.product); }).filter(function (c) { return c.mode === 'added_on_top'; });
+    var rate = cs.length && cs[0].rate > 0 ? String(cs[0].rate).replace('.', ',') + '%' : '';
+    var floored = ls.some(function (l) {
+      var c = commissionOf(l.product), value = l.variant.price_cents * l.quantity + Math.round(l.addonsTotal * 100);
+      return c.mode === 'added_on_top' && Math.round((c.floor || 0) * 100) * Math.max(1, l.quantity) > Math.round(value * c.rate / 100);
+    });
+    var floorLine = floored && cs.length ? 'minim ' + lei(Math.round(cs[0].floor * 100)) + ' pe bilet' : '';
+    var bits = [rate, floorLine].filter(Boolean).join(', ');
     elSub.textContent = lei(t.sub);
     elFeeRow.hidden = !t.fee;
-    elFeeRate.textContent = rates.length ? String(rates[0].rate).replace('.', ',') : '';
+    if (elFeeLabel) elFeeLabel.textContent = 'Comision ticketing' + (bits ? ' (' + bits + ')' : '');
     elFee.textContent = lei(t.fee);
     if (elCardNote) elCardNote.hidden = !t.card;
     elTotal.textContent = lei(t.total);
@@ -547,7 +561,7 @@
         id: p.id, slug: p.slug, title: p.title, image: p.image || (cfg.location && cfg.location.image) || null, product_type: p.type,
         booking_mode: p.booking_mode, location_slug: cfg.location ? cfg.location.slug : null,
         venue: cfg.location ? cfg.location.name : null, city: cfg.location ? cfg.location.city : null,
-        commission_rate: c.rate, commission_mode: c.mode
+        commission_rate: c.rate, commission_mode: c.mode, commission_floor: c.floor || 0
       },
       variant: {
         id: l.variant.id, name: l.variant.name, price_cents: l.variant.price_cents, capacity_share: l.variant.capacity_share || 1,

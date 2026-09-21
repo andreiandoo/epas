@@ -5,10 +5,43 @@
  * page and the operator editors all read them from here.
  */
 
+/**
+ * What a location can offer. The keys are the ones the core accepts
+ * (OrganizerCatalog::FACILITIES) and never change value. On top of them an
+ * operator may add their own, stored as "custom:<label>" — am_facility_label()
+ * reads both.
+ */
 const AM_FACILITIES = [
-    'parking' => 'Parcare', 'toilets' => 'Toalete', 'restaurant' => 'Restaurant', 'accessible' => 'Acces persoane cu dizabilități',
-    'playground' => 'Loc de joacă', 'wifi' => 'Wi-Fi', 'pets' => 'Animale acceptate', 'lodging' => 'Cazare',
-    'camping' => 'Camping', 'rentals' => 'Închirieri', 'guide' => 'Ghid', 'shop' => 'Magazin', 'card' => 'Plată cu cardul',
+    // access and parking
+    'parking' => 'Parcare', 'free_parking' => 'Parcare gratuită', 'bus_parking' => 'Parcare autocare',
+    'bike_parking' => 'Parcare biciclete', 'ev_charging' => 'Încărcare mașini electrice',
+    'accessible' => 'Acces persoane cu dizabilități', 'stroller' => 'Acces cărucior de copil',
+    // services
+    'card' => 'Plată cu cardul', 'atm' => 'Bancomat', 'shop' => 'Magazin', 'rentals' => 'Închirieri',
+    'guide' => 'Ghid', 'audio_guide' => 'Audioghid', 'lockers' => 'Seif / dulapuri',
+    'luggage' => 'Depozit bagaje', 'wifi' => 'Wi-Fi', 'first_aid' => 'Prim ajutor',
+    // food and rest
+    'restaurant' => 'Restaurant', 'bar' => 'Bar / cafenea', 'terrace' => 'Terasă', 'picnic' => 'Zonă de picnic',
+    'bbq' => 'Grătare', 'gazebo' => 'Foișoare', 'drinking_water' => 'Apă potabilă',
+    // for the visitors
+    'toilets' => 'Toalete', 'changing_rooms' => 'Vestiare', 'showers' => 'Dușuri',
+    'baby_change' => 'Masă de înfășat', 'playground' => 'Loc de joacă', 'smoking_area' => 'Zonă de fumat',
+    'pets' => 'Animale acceptate',
+    // water and nature
+    'beach' => 'Plajă', 'pool' => 'Piscină', 'sauna' => 'Saună', 'boat_ramp' => 'Rampă de barcă',
+    'fishing' => 'Pescuit',
+    // sleeping on site
+    'lodging' => 'Cazare', 'camping' => 'Camping',
+];
+
+/** The same keys, in the groups the operator's editor shows them in. */
+const AM_FACILITY_GROUPS = [
+    'Acces și parcare' => ['parking', 'free_parking', 'bus_parking', 'bike_parking', 'ev_charging', 'accessible', 'stroller'],
+    'Servicii' => ['card', 'atm', 'shop', 'rentals', 'guide', 'audio_guide', 'lockers', 'luggage', 'wifi', 'first_aid'],
+    'Mâncare și odihnă' => ['restaurant', 'bar', 'terrace', 'picnic', 'bbq', 'gazebo', 'drinking_water'],
+    'Pentru vizitatori' => ['toilets', 'changing_rooms', 'showers', 'baby_change', 'playground', 'smoking_area', 'pets'],
+    'Apă și natură' => ['beach', 'pool', 'sauna', 'boat_ramp', 'fishing'],
+    'Dormit pe loc' => ['lodging', 'camping'],
 ];
 
 const AM_LODGING_FACILITIES = [
@@ -16,7 +49,14 @@ const AM_LODGING_FACILITIES = [
     'ac' => 'Aer condiționat', 'heating' => 'Încălzire', 'private_bathroom' => 'Baie proprie', 'tv' => 'TV',
     'pets' => 'Animale acceptate', 'pool' => 'Piscină', 'spa' => 'Spa', 'terrace' => 'Terasă', 'bbq' => 'Grătar',
     'playground' => 'Loc de joacă', 'accessible' => 'Acces persoane cu dizabilități',
+    'fridge' => 'Frigider', 'kettle' => 'Fierbător', 'safe' => 'Seif', 'towels' => 'Prosoape',
+    'washing_machine' => 'Mașină de spălat', 'balcony' => 'Balcon', 'garden' => 'Grădină', 'sauna' => 'Saună',
+    'fireplace' => 'Șemineu', 'crib' => 'Pătuț pentru bebeluși', 'ev_charging' => 'Încărcare mașini electrice',
+    'non_smoking' => 'Nefumători',
 ];
+
+/** A facility the operator wrote themselves is stored with this prefix. */
+const AM_CUSTOM_FACILITY = 'custom:';
 
 const AM_LODGING_TYPES = [
     'pensiune' => 'Pensiune', 'hotel' => 'Hotel', 'cabana' => 'Cabană', 'vila' => 'Vilă', 'apartamente' => 'Apartamente',
@@ -128,6 +168,30 @@ function am_rich(?string $html): string
     return preg_replace('#<a\s#i', '<a rel="nofollow noopener" target="_blank" ', $html);
 }
 
+/**
+ * A facility as the visitor reads it: "parking" → "Parcare",
+ * "custom:Rampă de barcă" → "Rampă de barcă", anything unknown → null.
+ * $map is AM_FACILITIES for a location, AM_LODGING_FACILITIES for a lodging.
+ */
+function am_facility_label(?string $key, ?array $map = null): ?string
+{
+    $key = trim((string) $key);
+    if ($key === '') {
+        return null;
+    }
+    if (str_starts_with($key, AM_CUSTOM_FACILITY)) {
+        $label = trim(substr($key, strlen(AM_CUSTOM_FACILITY)));
+        return $label !== '' ? $label : null;
+    }
+    return ($map ?? AM_FACILITIES)[$key] ?? null;
+}
+
+/** The labels of a location's (or a lodging's) facilities, unknown ones dropped. */
+function am_facility_labels($keys, ?array $map = null): array
+{
+    return array_values(array_filter(array_map(fn ($k) => am_facility_label(is_string($k) ? $k : null, $map), (array) $keys)));
+}
+
 /** Money from cents: 4100 → "41 lei", 4150 → "41,50 lei". */
 function am_lei(?int $cents): string
 {
@@ -140,6 +204,8 @@ function am_client_labels(): array
 {
     return [
         'facilities' => AM_FACILITIES,
+        'facility_groups' => AM_FACILITY_GROUPS,
+        'custom_facility' => AM_CUSTOM_FACILITY,
         'lodging_facilities' => AM_LODGING_FACILITIES,
         'lodging_types' => AM_LODGING_TYPES,
         'link_platforms' => AM_LINK_PLATFORMS,

@@ -36,7 +36,7 @@ $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.
 $v2HeadExtra = v2_account_client_config('organizer');
 
 $sdFact = function (string $key, string $label) {
-    return '<div class="sd-fact"><dt>' . $label . '</dt><dd id="sd-' . $key . '">—</dd></div>';
+    return '<div class="sd-fact"><dt id="sd-' . $key . '-l">' . $label . '</dt><dd id="sd-' . $key . '">—</dd></div>';
 };
 $sdCount = function (string $key, string $label, string $tone) {
     return '<div class="sd-count is-' . $tone . '"><b id="sd-n-' . $key . '">0</b><span>' . $label . '</span></div>';

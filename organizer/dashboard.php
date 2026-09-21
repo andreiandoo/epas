@@ -15,6 +15,11 @@
  * "12/-1" and one without a quota was measured against an invented 100; "Creează prima activitate" opened the list
  * (?new=1 does nothing there) instead of the new-activity form; the next activity had no link to itself; Chart.js came
  * unpinned from a CDN (the chart is drawn in SVG now, with keyboard access).
+ *
+ * Above all of that, for the operator who has just finished signing up: the "Ghid rapid" bar and "Pașii tăi de
+ * pornire", the seven-point start checklist whose ticks are read from the API (org-steps.js) and which goes away for
+ * good once every point is done; the button replays the guided tour of the panel (org-tour.js), which also runs by
+ * itself the first time an operator lands here.
  */
 
 require_once __DIR__ . '/../includes/config.php';
@@ -29,8 +34,8 @@ $canonicalUrl = SITE_URL . '/organizator/panou';
 $noindex = true;
 $skipPageCache = true;
 
-$v2Styles = ['organizer.css', 'org-dashboard.css'];
-$v2Scripts = ['organizer.js', 'org-dashboard.js'];
+$v2Styles = ['organizer.css', 'org-dashboard.css', 'org-steps.css', 'org-tour.css'];
+$v2Scripts = ['organizer.js', 'org-dashboard.js', 'org-tour.js', 'org-steps.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config('organizer');
 
@@ -38,6 +43,26 @@ include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('dashboard');
 ?>
 <div class="od" id="od">
+  <div class="ob-bar">
+    <span class="ob-bar-ic"><?= v2_ic('question') ?></span>
+    <p class="ob-bar-t">Ghidul panoului: ce face fiecare pagină și pașii până la prima ta vânzare.</p>
+    <button class="btn btn-ghost" type="button" id="ob-guide"><?= v2_ic('play') ?>Ghid rapid</button>
+  </div>
+
+  <section class="org-panel ob" id="ob" aria-labelledby="ob-h" hidden>
+    <div class="org-panel-head">
+      <div>
+        <p class="org-k">Pornire</p>
+        <h2 class="org-panel-h" id="ob-h">Pașii tăi de pornire</h2>
+        <p class="org-panel-p" id="ob-sub">Verificăm unde ai ajuns…</p>
+      </div>
+      <p class="ob-count" id="ob-count" hidden></p>
+    </div>
+    <div class="ob-track" id="ob-track" aria-hidden="true" hidden><i id="ob-fill"></i></div>
+    <ol class="ob-list" id="ob-list"></ol>
+    <p class="sr" id="ob-live" aria-live="polite"></p>
+  </section>
+
   <section class="od-hero" aria-labelledby="od-h">
     <div class="od-hero-main">
       <p class="od-kicker" id="od-kicker">Panou operator</p>

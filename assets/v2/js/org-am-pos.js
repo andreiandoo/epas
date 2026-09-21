@@ -231,8 +231,12 @@
   function totals() {
     var sub = 0;
     S.cart.forEach(function (l) { sub += lineTotal(l); });
-    var c = (S.catalog && S.catalog.commission) || { rate: 0, mode: 'included' };
-    var fee = c.mode === 'added_on_top' && c.rate > 0 ? S.cart.reduce(function (a, l) { return a + Math.round(lineTotal(l) * c.rate / 100); }, 0) : 0;
+    // as online: the percentage, never under the minimum per ticket (the server applies the same rule)
+    var c = (S.catalog && S.catalog.commission) || { rate: 0, mode: 'included', floor: 0 };
+    var floorCents = Math.round((c.floor || 0) * 100);
+    var fee = c.mode === 'added_on_top' ? S.cart.reduce(function (a, l) {
+      return a + Math.max(c.rate > 0 ? Math.round(lineTotal(l) * c.rate / 100) : 0, floorCents * Math.max(1, l.qty));
+    }, 0) : 0;
     return { sub: sub, fee: fee, rate: c.rate, total: sub + fee };
   }
   function drawCart() {

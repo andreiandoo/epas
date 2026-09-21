@@ -18,10 +18,11 @@
 .ox-x{display:grid;place-items:center;flex:none;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.05);color:inherit;cursor:pointer}
 .ox-x .ic{width:18px;height:18px}
 .ox-cards{display:grid;gap:14px}
-@media (min-width:900px){.ox-cards{grid-template-columns:repeat(2, minmax(0,1fr))}}
+@media (min-width:900px){.ox-cards{grid-template-columns:repeat(auto-fit, minmax(270px, 1fr))}}
 .ox-card{display:grid;align-content:start;gap:10px;min-width:0;padding:22px;border:1px solid var(--line);border-radius:24px;background:var(--surface)}
 .ox-card-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--tint-green);color:var(--action)}
 .ox-card.is-track .ox-card-ic{background:#E7EEF9;color:#2D6CCD}
+.ox-card.is-loc .ox-card-ic{background:#F7EEE1;color:#8A5A20}
 .ox-card-ic .ic{width:24px;height:24px}
 .ox-card-h{margin:4px 0 0;font-size:1.25rem;font-weight:700;letter-spacing:-.02em}
 .ox-card p{margin:0;line-height:1.5;color:var(--muted)}
