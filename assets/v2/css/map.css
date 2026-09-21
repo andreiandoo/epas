@@ -7,6 +7,9 @@
 /* ---------- shell ---------- */
 .epm{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;background:var(--surface);color:var(--ink);font-family:var(--font)}
 .epm *,.epm *::before,.epm *::after{box-sizing:border-box}
+/* A class selector beats the browser's [hidden]{display:none}, so a closed dialog would stay a
+   full-screen white sheet over the page. This line has to sit next to .epm forever. */
+.epm[hidden]{display:none}
 .epm-dialog{position:fixed;inset:0;z-index:90;height:100dvh;border-radius:0}
 .epm-inline{height:min(78vh, 900px);overflow:hidden;border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--shadow-pop)}
 html.epm-locked,html.epm-locked body{overflow:hidden}
