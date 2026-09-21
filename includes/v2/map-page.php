@@ -28,7 +28,7 @@ $mpCities   = $mapPage['cities'] ?? ($mpSummary['cities'] ?? []);
 $mpPicks    = $mapPage['picks'] ?? ($mpSummary['picks'] ?? []);
 $mpFaq      = $mapPage['faq'] ?? [];
 
-$v2Styles  = array_merge(['map.css', 'map-page.css'], $v2Styles ?? []);
+$v2Styles  = array_merge(['map.css', 'map-page.css'], !empty($mapPage['routeCards']) ? ['routes.css'] : [], $v2Styles ?? []);
 $v2Scripts = array_merge($v2Scripts ?? [], ['map.js']);
 
 include __DIR__ . '/head.php';
@@ -127,6 +127,19 @@ include __DIR__ . '/header.php';
         </li>
         <?php endforeach; ?>
       </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <?php if (!empty($mapPage['routeCards'])): ?>
+  <!-- ============================== ROUTES ============================== -->
+  <section class="sec" aria-labelledby="mp-routes-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="mp-routes-h"><?= v2_e($mapPage['routesHeading'] ?? 'Trasee gata făcute') ?></h2>
+        <a class="sec-link" href="/trasee">Toate traseele<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <?php $routeCards = $mapPage['routeCards']; require __DIR__ . '/route-cards.php'; ?>
     </div>
   </section>
   <?php endif; ?>

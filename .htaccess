@@ -757,6 +757,13 @@ RewriteRule ^atractii/?$ hub-atractii.php [L,QSA]
 # ============================================
 RewriteRule ^harta/?$ harta.php [L,QSA]
 RewriteRule ^harta/([a-z][a-z0-9-]{1,50})/?$ harta.php?landing=$1 [L,QSA]
+
+# ============================================
+# ROUTES — /trasee and /trasee/{slug}: the editorial itineraries defined in
+# includes/v2/map-routes.php. An unknown slug 404s in the page.
+# ============================================
+RewriteRule ^trasee/?$ trasee.php [L,QSA]
+RewriteRule ^trasee/([a-z][a-z0-9-]{1,80})/?$ traseu.php?slug=$1 [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([a-z][a-z0-9-]{1,50})/(experiente|atractii|locatii)/?$ hub-$2.php?city=$1 [L,QSA]

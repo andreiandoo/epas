@@ -35,6 +35,13 @@ foreach (array_keys(MAP_LANDINGS) as $landingSlug) {
     $urls[] = ['/harta/' . $landingSlug, 'weekly', '0.6'];
 }
 
+// The editorial routes (includes/v2/map-routes.php).
+require_once __DIR__ . '/includes/v2/map-routes.php';
+$urls[] = ['/trasee', 'weekly', '0.7'];
+foreach (array_keys(MAP_ROUTES) as $routeSlug) {
+    $urls[] = ['/trasee/' . $routeSlug, 'monthly', '0.6'];
+}
+
 $cities = [];
 foreach ($collect('/activities-module/locations', 'locations') as $l) {
     if (!empty($l['slug'])) {

@@ -19,6 +19,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/am-labels.php';
 require_once __DIR__ . '/includes/v2/map-landings.php';
+require_once __DIR__ . '/includes/v2/map-routes.php';
 
 $mapData = v2_map_data();
 $summary = v2_map_summary();
@@ -144,6 +145,49 @@ if ($landing && $landing['kind'] === 'type') {
     $grids[] = ['id' => 'zones', 'h' => 'Pe regiuni istorice', 'rows' => $rows, 'unit' => 'de atracții'];
 }
 
+// ------------------------------------------------------------------ routes worth showing here
+// A landing shows routes that touch its own subject; /harta shows a rotating few.
+$routeCards = [];
+foreach (MAP_ROUTES as $rSlug => $r) {
+    $rd = $summary['routes'][$rSlug] ?? null;
+    if (!$rd) {
+        continue;
+    }
+    if ($landing) {
+        $hit = false;
+        if ($landing['kind'] === 'region') {
+            foreach ($lData['zones'] ?? [] as [$cName, , ]) {
+                if (in_array($cName, $rd['counties'], true)) {
+                    $hit = true;
+                    break;
+                }
+            }
+        } else {
+            foreach ($rd['stops'] as $st) {
+                if ($st[5] === $typeName) {
+                    $hit = true;
+                    break;
+                }
+            }
+        }
+        if (!$hit) {
+            continue;
+        }
+    }
+    $rImg = '';
+    foreach ($rd['stops'] as $st) {
+        if ($st[9] !== '') {
+            $rImg = $st[9];
+            break;
+        }
+    }
+    $routeCards[] = [$rSlug, $r['title'], $r['lead'], $r['emoji'], $r['pace'], $rd['count'], $rd['km'], $rImg];
+}
+if (!$landing) {
+    shuffle($routeCards);
+}
+$routeCards = array_slice($routeCards, 0, 3);
+
 // ------------------------------------------------------------------ editorial
 $churches = (int) (array_column($summary['types'] ?? [], 3, 0)['biserica-manastire'] ?? 0);
 $topCity = $lData['cities'][0] ?? ($summary['cities'][0] ?? null);
@@ -207,6 +251,8 @@ $mapPage = [
     'picks'   => $lData['picks'] ?? null,
     'citiesHeading' => $landing ? 'Orașele cu cele mai multe' : 'Orașele cu cele mai multe atracții',
     'picksHeading'  => $landing ? 'Câteva dintre ele' : 'Locuri de deschis pe hartă',
+    'routeCards'    => $routeCards,
+    'routesHeading' => $landing ? 'Trasee care trec pe aici' : 'Trasee gata făcute',
     'config'  => [
         'dataUrl'  => $mapData['url'],
         'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',

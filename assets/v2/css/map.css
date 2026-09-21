@@ -114,6 +114,14 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
 .epm-pin.has-ticket{background:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.25),0 6px 14px -6px rgba(0,0,0,.6)}
 .epm-pin:hover,.epm-pin.is-hot{transform:scale(1.15)}
 .epm-pin.is-on{background:var(--red-text);transform:scale(1.2)}
+/* route mode: the pins are numbered stops on a dashed line, so the order reads at a glance */
+.epm-pin.is-step{width:28px;height:28px;font:800 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;background:var(--green)}
+.epm-pin.is-step.is-on{background:var(--red-text)}
+.epm-route-line{pointer-events:none}
+.epm-row-step{grid-template-columns:28px 56px minmax(0,1fr)}
+.epm-step{display:grid;place-items:center;align-self:center;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font:800 .75rem/1 var(--font);font-variant-numeric:tabular-nums}
+.epm-row[aria-current="true"] .epm-step{background:var(--red-text)}
+
 .epm-cluster{display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--green);color:#fff;font:700 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;box-shadow:0 0 0 4px rgba(30,91,72,.22),0 10px 22px -12px rgba(0,0,0,.7)}
 .epm-cluster.s2{font-size:.875rem;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--deep)}
 .epm-cluster.s3{font-size:.9375rem;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--deep-2)}

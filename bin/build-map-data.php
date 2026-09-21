@@ -364,6 +364,95 @@ function mapBuildByPagination(): ?array
 }
 
 /**
+ * The editorial routes of includes/v2/map-routes.php, resolved against the dataset: every stop
+ * gets its real name, city, type and coordinates, and the route gets the straight-line distance
+ * between its stops and the box that contains them.
+ *
+ * A stop the dataset does not have is a typo in the route file, so the build stops rather than
+ * shipping a route with a hole in it.
+ */
+function mapRoutes(array $payload): array
+{
+    $routesFile = BILETEONLINE_ROOT . '/includes/v2/map-routes.php';
+    if (!is_file($routesFile)) {
+        return [];
+    }
+    require_once $routesFile;
+
+    $f      = array_flip($payload['fields']);
+    $types  = $payload['types'];
+    $cities = $payload['cities'];
+    $zones  = $payload['zones'];
+
+    $bySlug = [];
+    foreach ($payload['points'] as $p) {
+        $bySlug[$p[$f['slug']]] = $p;
+    }
+
+    $km = function (float $aLat, float $aLng, float $bLat, float $bLng): float {
+        $r = M_PI / 180;
+        $dLat = ($bLat - $aLat) * $r;
+        $dLng = ($bLng - $aLng) * $r;
+        $x = sin($dLat / 2) ** 2 + cos($aLat * $r) * cos($bLat * $r) * sin($dLng / 2) ** 2;
+
+        return 12742 * asin(min(1, sqrt($x)));
+    };
+
+    $out = [];
+    foreach (MAP_ROUTES as $slug => $route) {
+        $stops = [];
+        $prev = null;
+        $total = 0.0;
+        $lats = [];
+        $lngs = [];
+
+        foreach ($route['stops'] as $i => $stopSlug) {
+            if (!isset($bySlug[$stopSlug])) {
+                fwrite(STDERR, "Route {$slug}: no attraction with slug {$stopSlug}\n");
+                exit(1);
+            }
+            $p = $bySlug[$stopSlug];
+            $lat = $p[$f['lat_e5']] / 100000;
+            $lng = $p[$f['lng_e5']] / 100000;
+            $t = $p[$f['type']] >= 0 ? $types[$p[$f['type']]] : null;
+            $c = $p[$f['city']] >= 0 ? $cities[$p[$f['city']]] : null;
+            $z = $p[$f['zone']] >= 0 ? $zones[$p[$f['zone']]] : null;
+
+            $leg = $prev === null ? 0.0 : $km($prev[0], $prev[1], $lat, $lng);
+            $total += $leg;
+            $prev = [$lat, $lng];
+            $lats[] = $lat;
+            $lngs[] = $lng;
+
+            $stops[] = [
+                $stopSlug,
+                $p[$f['name']],
+                $c ? $c[1] : '',
+                $c ? $c[0] : '',
+                $z ? $z[0] : '',
+                $t ? $t[1] : '',
+                $t ? $t[2] : '',
+                round($lat, 5),
+                round($lng, 5),
+                $p[$f['img']],
+                round($leg, 1),
+            ];
+        }
+
+        $out[$slug] = [
+            'stops'    => $stops,
+            'count'    => count($stops),
+            'km'       => (int) round($total),
+            'photos'   => count(array_filter($stops, fn ($s) => $s[9] !== '')),
+            'counties' => array_values(array_unique(array_filter(array_column($stops, 4)))),
+            'bounds'   => [round(min($lats), 5), round(min($lngs), 5), round(max($lats), 5), round(max($lngs), 5)],
+        ];
+    }
+
+    return $out;
+}
+
+/**
  * Per-landing counters and picks, one entry per /harta/{slug} page: the attractions of one type,
  * or of one historical region. Without these every landing would print the same cities and the
  * same 36 photos, which is the definition of a doorway page.
@@ -635,6 +724,7 @@ function mapSummary(array $payload): array
         'cities'   => array_slice($cityRows, 0, 40),
         'picks'    => $picks,
         'landings' => mapLandings($payload),
+        'routes'   => mapRoutes($payload),
     ];
 }
 
