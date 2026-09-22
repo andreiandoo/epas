@@ -48,11 +48,13 @@
 .pl-quick-h{margin:0;font-size:.875rem;font-weight:600;color:var(--muted)}
 
 /* ---------- the plan ---------- */
-.pl-plan{padding:clamp(28px,4vw,48px) 0 clamp(40px,6vw,72px)}
+/* the band starts under the sticky header, and scrolling to the plan stops short of it, so the title is readable */
+.pl-plan{padding:0 0 clamp(40px,6vw,72px);scroll-margin-top:var(--hdr-h)}
 .pl-plan[hidden]{display:none}
 /* The plan opens under the fixed header, so the bar starts below it and lines its content up with
    the days underneath rather than sitting in a box of its own. */
-.pl-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-5);padding:calc(var(--hdr-h) + 14px) 0 14px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,var(--tint-green),var(--surface) 65%)}
+.pl-bar{margin-bottom:var(--space-5);padding:calc(var(--hdr-h) + 14px) 0 14px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,var(--tint-green),var(--surface) 65%)}
+.pl-bar-in{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4)}
 .pl-bar-h{margin:0;font-size:1.375rem;font-weight:700;letter-spacing:-.025em;color:var(--green)}
 .pl-bar-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin:4px 0 0;font-size:.875rem;color:var(--muted)}
 .pl-bar-meta span{position:relative}
@@ -115,6 +117,14 @@
 .pl-day.is-active .pl-day-show .ic{color:var(--on-deep)}
 
 .pl-stops{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+/* the gap between two stops: a + appears there, so it is clear that something of yours can go in between */
+.pl-ins{display:flex;justify-content:center;align-items:center;height:14px;margin:-12px 0}
+.pl-ins-btn{display:grid;place-items:center;width:28px;height:28px;border:1px dashed var(--line);border-radius:50%;background:var(--surface);color:var(--muted);opacity:0;transform:scale(.8);transition:opacity var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out),border-color var(--dur-micro) var(--ease-out),color var(--dur-micro) var(--ease-out);cursor:pointer}
+.pl-ins:hover .pl-ins-btn,.pl-ins-btn:focus-visible{opacity:1;transform:scale(1);border-style:solid;border-color:var(--green);color:var(--green)}
+.pl-ins-btn:hover{background:var(--tint-green)}
+.pl-ins-btn .ic{width:15px;height:15px}
+@media (hover:none){.pl-ins-btn{opacity:.5;transform:none}}
+body.pl-dragging .pl-ins{visibility:hidden}
 .pl-stop{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;scroll-margin-top:calc(var(--hdr-h) + 16px)}
 /* The number is the handle: hovered or focused it turns into a grip, and it is a real button so the
    keyboard can pick the stop up. touch-action keeps a finger on it from scrolling the page. */
@@ -206,7 +216,7 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 
 /* ---------- print: the plan, nothing else ---------- */
 @media print{
-  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-drop,.pl-ghost,.pl-menu,.sec,.cc,.cc-dialog{display:none !important}
+  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-drop,.pl-ghost,.pl-menu,.pl-ins,.sec,.cc,.cc-dialog{display:none !important}
   .pl-plan{padding:0}
   .pl-bar{padding:0 0 12px}
   .pl-grip .ic{display:none}

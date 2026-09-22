@@ -807,6 +807,9 @@
 
   function renderBar() {
     ui.bar.textContent = '';
+    // the band runs the width of the page; its contents keep the page's own column
+    var bar = el('div', 'wrap pl-bar-in');
+    ui.bar.appendChild(bar);
     var left = el('div', 'pl-bar-main');
     left.appendChild(el('h2', 'pl-bar-h', (plan.origin ? plan.origin.label + ' → ' : '') + plan.where.label));
 
@@ -827,7 +830,7 @@
     meta.appendChild(el('span', '', (CFG.paces[plan.pace] || ['Normal'])[0]));
     if (totals.cost > 0) meta.appendChild(el('span', 'pl-bar-sell', 'de la ' + lei(totals.cost) + ' bilete'));
     left.appendChild(meta);
-    ui.bar.appendChild(left);
+    bar.appendChild(left);
 
     var acts = el('div', 'pl-bar-acts');
     acts.appendChild(btn('arrow-right', 'Regenerează', function () { generate(); render(); }));
@@ -850,7 +853,7 @@
       startBox.hidden = false;
       startBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
-    ui.bar.appendChild(acts);
+    bar.appendChild(acts);
   }
 
   function renderDays() {
@@ -940,11 +943,13 @@
     view.rows.forEach(function (r) {
       if (r.role === 'stop') {
         if (!r.e.own) n++;                       // your own stops take time, not a number on the map
+        ol.appendChild(insertSlot(d, r.pos));    // the gap above this stop can take a new one
         ol.appendChild(stopItem(d, r, n));
       } else {
         ol.appendChild(edgeItem(r));
       }
     });
+    if (stops.length) ol.appendChild(insertSlot(d, stops.length));
     if (composer && composer.day === d) {
       var at = ol.querySelector('.pl-stop[data-pos="' + composer.pos + '"]');
       ol.insertBefore(composerItem(), at || null);
@@ -1444,6 +1449,23 @@
   /* ---------- a stop of your own: the little form that makes one ---------- */
 
   var composer = null;
+
+  /**
+   * The gap between two stops: hovering it, or reaching it with the keyboard, offers a + that puts a stop of your own
+   * exactly there. It gets out of the way while something is being dragged, where the drop line already says enough.
+   */
+  function insertSlot(d, pos) {
+    var li = el('li', 'pl-ins');
+    li.dataset.pos = String(pos);
+    var b = el('button', 'pl-ins-btn');
+    b.type = 'button';
+    b.title = 'Adaugă o oprire aici';
+    b.appendChild(icon('plus'));
+    b.appendChild(el('span', 'sr', 'Adaugă o oprire aici, între opriri'));
+    b.addEventListener('click', function () { openComposer(d, pos); });
+    li.appendChild(b);
+    return li;
+  }
 
   function openComposer(d, pos) {
     var first = PRESETS[0] || ['Pauză', '🕑', 30];
