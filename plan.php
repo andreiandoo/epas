@@ -206,8 +206,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="pl-plan" id="pl-plan" hidden aria-labelledby="pl-plan-h">
     <h2 class="sr" id="pl-plan-h">Planul tău</h2>
     <p class="sr" id="pl-live" role="status" aria-live="polite"></p>
+    <header class="pl-bar" id="pl-bar"></header>
     <div class="wrap">
-      <header class="pl-bar" id="pl-bar"></header>
       <div class="pl-cols">
         <div class="pl-days" id="pl-days-list"></div>
         <aside class="pl-map-col">
