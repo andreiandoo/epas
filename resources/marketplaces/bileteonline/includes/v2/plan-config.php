@@ -112,6 +112,9 @@ const PLAN_PARTY = [
  * loads it before the traveller asks for it, and says out loud that a booking pays us a commission
  * without costing them more. `link` is the plain list, for when the iframe does not come up.
  */
+/** What "at most per night" offers, in lei for the whole booking of that night. */
+const PLAN_NIGHT_BUDGETS = [200, 300, 400, 500, 700, 1000, 1500];
+
 const PLAN_STAY22 = [
     'embed'      => 'https://www.stay22.com/embed/gm',
     'link'       => 'https://www.stay22.com/allez/booking',

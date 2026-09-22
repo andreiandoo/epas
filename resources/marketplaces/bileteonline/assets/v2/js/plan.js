@@ -667,7 +667,8 @@
       i: i, city: c.slug, name: c.name, county: c.county, lat: c.lat, lng: c.lng,
       kA: kA, kB: kB, toName: an.b ? an.b.name : '', hasFrom: !!an.a,
       far: kA > 60 || kB > 60, chosen: !!ov.city, skip: !!ov.skip,
-      rooms: clampInt(ov.rooms, 1, PARTY.rooms_max || 8, defaultRooms())
+      rooms: clampInt(ov.rooms, 1, PARTY.rooms_max || 8, defaultRooms()),
+      maxprice: clampInt(ov.maxprice, 0, 100000, 0)
     };
   }
   /** Writes only what the traveller actually decided; a key put back to its default disappears. */
@@ -731,6 +732,7 @@
     ];
     if (p.children > 0) q.push('children=' + p.children);
     q.push('rooms=' + n.rooms);
+    if (n.maxprice > 0) q.push('maxprice=' + n.maxprice);
     q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
     q.push('maincolor=' + encodeURIComponent(STAY.maincolor || '1E5B48'));
     q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
@@ -751,6 +753,7 @@
     ];
     if (p.children > 0) q.push('children=' + p.children);
     q.push('rooms=' + n.rooms);
+    if (n.maxprice > 0) q.push('maxprice=' + n.maxprice);
     q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
     return (STAY.link || 'https://www.stay22.com/allez/booking') + '?' + q.join('&');
   }
@@ -780,6 +783,7 @@
         }
       }
       if (ov.rooms && ov.rooms !== defaultRooms()) o.r = ov.rooms;
+      if (ov.maxprice > 0) o.p = ov.maxprice;
       if (Object.keys(o).length) { out[i] = o; any = true; }
     }
     return any ? out : null;
@@ -799,6 +803,7 @@
         o.county = v.u ? String(v.u) : '';
       }
       if (v.r) o.rooms = clampInt(v.r, 1, PARTY.rooms_max || 8, defaultRooms());
+      if (v.p) o.maxprice = clampInt(v.p, 0, 100000, 0);
       if (Object.keys(o).length) out[i] = o;
     });
     return out;
@@ -2180,6 +2185,29 @@
       });
       rl.appendChild(sel);
       wrap.appendChild(rl);
+
+      // How much the night may cost at most — Stay22 filters on it, so an empty choice means "show me everything".
+      var bl = el('label', 'pl-night-rooms');
+      bl.appendChild(el('span', '', 'Maxim pe noapte'));
+      var bsel = el('select');
+      var b0 = el('option', '', 'fără limită');
+      b0.value = '0';
+      if (!n.maxprice) b0.selected = true;
+      bsel.appendChild(b0);
+      var budgets = CFG.budgets && CFG.budgets.length ? CFG.budgets : [200, 300, 500, 700, 1000];
+      if (n.maxprice > 0 && budgets.indexOf(n.maxprice) === -1) budgets = budgets.concat([n.maxprice]);
+      budgets.slice().sort(function (a, b) { return a - b; }).forEach(function (v) {
+        var o = el('option', '', nf(v) + ' lei');
+        o.value = String(v);
+        if (v === n.maxprice) o.selected = true;
+        bsel.appendChild(o);
+      });
+      bsel.addEventListener('change', function () {
+        setNight(i, { maxprice: clampInt(bsel.value, 0, 100000, 0) });
+        afterNight(i);
+      });
+      bl.appendChild(bsel);
+      wrap.appendChild(bl);
     }
     return wrap;
   }
@@ -2297,7 +2325,8 @@
 
     var box = el('div', 'pl-stay');
     box.appendChild(el('p', 'pl-stay-h', 'Cazare în ' + n.name));
-    box.appendChild(el('p', 'pl-stay-sub', nightRange(i) + ' · ' + partyLine(n.rooms)));
+    box.appendChild(el('p', 'pl-stay-sub', nightRange(i) + ' · ' + partyLine(n.rooms)
+      + (n.maxprice > 0 ? ' · maxim ' + nf(n.maxprice) + ' lei' : '')));
 
     var frame = el('div', 'pl-stay-frame');
     var skel = el('div', 'pl-stay-skel');

@@ -65,6 +65,7 @@ $v2ClientData = [
         'company'   => PLAN_COMPANY,
         'bookables' => $summary['bookables'] ?? [],
         'travel'    => PLAN_TRAVEL,
+        'budgets'   => PLAN_NIGHT_BUDGETS,
         'stops'     => PLAN_STOP_PRESETS,
         'minutes'   => PLAN_STOP_MINUTES,
         'cities'    => array_map(fn ($c) => [$c[0], $c[1], $c[4]], $summary['cities'] ?? []),
