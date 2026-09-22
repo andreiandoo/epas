@@ -230,6 +230,7 @@
     var selected = -1;
     var me = null;                     // [lat, lng] from geolocation
     var opened = false, booting = false, lastFocus = null;
+    var onChange = null;
     var theme = cfg.theme || readTheme() || 'light';
     var route = Array.isArray(cfg.routeStops) && cfg.routeStops.length ? cfg.routeStops : null;
     var routeLine = null;
@@ -317,7 +318,7 @@
       ui.chipbar.appendChild(ui.prev);
       ui.chipbar.appendChild(ui.chips);
       ui.chipbar.appendChild(ui.next);
-      if (!route) bar.appendChild(ui.chipbar);
+      if (!route && cfg.chips !== false) bar.appendChild(ui.chipbar);
 
       ui.meta = el('p', 'epm-meta');
       ui.meta.setAttribute('aria-live', 'polite');
@@ -448,17 +449,18 @@
     }
 
     function buildChips() {
+      var flagsOnly = cfg.chips === 'flags';
       ui.chips.textContent = '';
-      ['popular', 'all'].forEach(function (p) {
+      if (!flagsOnly) ['popular', 'all'].forEach(function (p) {
         var b = el('button', 'epm-chip epm-chip-preset');
         b.type = 'button';
         b.dataset.preset = p;
         b.textContent = p === 'popular' ? 'Populare' : 'Toate';
         ui.chips.appendChild(b);
       });
-      ui.chips.appendChild(el('span', 'epm-chips-sep'));
+      if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
 
-      D.types.forEach(function (t) {
+      if (!flagsOnly) D.types.forEach(function (t) {
         if (!t[4]) return;                                    // no pins of this type, no chip
         var b = el('button', 'epm-chip');
         b.type = 'button';
@@ -481,7 +483,7 @@
         if (fl & D.flags.activities) anyTicket = true;
       }
       if (anyPhoto || anyTicket) {
-        ui.chips.appendChild(el('span', 'epm-chips-sep'));
+        if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
         if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', 'Cu bilete'));
         if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'Cu poză'));
       }
@@ -497,6 +499,7 @@
       return b;
     }
     function paintChips() {
+      if (!ui.chips || cfg.chips === false) return;
       [].forEach.call(ui.chips.children, function (b) {
         if (b.dataset.preset) b.setAttribute('aria-pressed', String(isPreset(b.dataset.preset)));
         else if (b.dataset.type) b.setAttribute('aria-pressed', String(state.types.indexOf(b.dataset.type) !== -1));
@@ -838,6 +841,9 @@
     }
 
     function renderMeta() {
+      if (onChange) {
+        try { onChange(api.getState()); } catch (e) {}
+      }
       ui.meta.textContent = '';
       if (route) {
         var bits = count(D.rows.length, 'oprire', 'opriri');
@@ -1182,8 +1188,8 @@
       return Promise.all([loadLibs(), route ? Promise.resolve(datasetFromStops(route)) : loadData(cfg.dataUrl)])
         .then(function (res) {
           D = res[1];
-          if (!route && !state.types.length && state.preset === 'popular') state.types = presetTypes('popular');
-          if (!route) buildChips();
+              if (!route && !state.types.length && state.preset === 'popular') state.types = presetTypes('popular');
+          if (!route && cfg.chips !== false) buildChips();
           var view = cfg.urlState ? readUrl() : null;
           buildMap();
           applyFilters();
@@ -1234,6 +1240,29 @@
       close: close,
       boot: boot,
       setTypes: function (list) { state.types = list || []; if (D) refresh(true); },
+      /**
+       * Filter the map from outside it. /harta owns its own filter rail, so the map takes the
+       * instruction rather than duplicating the controls.
+       */
+      setFilter: function (patch, fit) {
+        patch = patch || {};
+        if (patch.types !== undefined) state.types = patch.types || [];
+        if (patch.preset !== undefined) state.types = presetTypes(patch.preset);
+        if (patch.region !== undefined) state.region = patch.region || '';
+        if (patch.zone !== undefined) state.zone = patch.zone || '';
+        if (patch.city !== undefined) state.city = patch.city || '';
+        if (patch.q !== undefined) { state.q = patch.q || ''; if (ui.input) ui.input.value = state.q; }
+        if (D) refresh(fit !== false);
+      },
+      /** What the map is showing right now, for a host that draws its own controls. */
+      getState: function () {
+        return {
+          types: state.types.slice(), region: state.region, zone: state.zone, city: state.city,
+          q: state.q, visible: visible.length, total: D ? D.rows.length : 0,
+          typeList: D ? D.types.map(function (t) { return [t[0], t[1], t[2], t[4]]; }) : []
+        };
+      },
+      onChange: function (fn) { onChange = fn; },
       /* The planner rebuilds its day as a new route: same engine, new stops. */
       setRoute: function (stops, geometry) {
         route = (stops && stops.length) ? stops : null;

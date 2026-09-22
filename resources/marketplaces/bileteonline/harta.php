@@ -53,7 +53,7 @@ if (!$landing) {
     $type = $landing['key'];
 }
 // A region landing filters by region, not by the county that happens to share its name.
-// (the grid loops below use $zRegion, so this one is never shadowed)
+// (the panel loops below use $zRegion, so this one is never shadowed)
 $region = ($landing && $landing['kind'] === 'region') ? $landing['key'] : '';
 
 $typeName = $type !== '' ? (AM_ATTRACTION_TYPES[$type] ?? '') : '';
@@ -88,62 +88,74 @@ $genitive = $type !== '' ? (AM_ATTRACTION_TYPES_GEN[$type] ?? mb_strtolower($typ
 $heading = $landing ? $landing['h1'] : 'Harta ' . $genitive;
 $headingEm = $landing ? $landing['em'] : $where;
 
-// ------------------------------------------------------------------ grids under the map
-$grids = [];
+// ------------------------------------------------------------------ the explorer panels
+// Types, regions, counties and cities used to be four stacked sections under the map. They are
+// now four panels docked to its top: same links, same counts, but a click filters the map in
+// place instead of loading another page. A landing narrows the data it shows, never the axes —
+// from a castle map you can still jump to a region, a county or a city.
+$exTypeRows = [];
+$exTypeSrc = ($landing && $landing['kind'] === 'region') ? ($lData['types'] ?? []) : ($summary['types'] ?? []);
+foreach ($exTypeSrc as [$tSlug, $tName, $tEmoji, $tCount]) {
+    $ls = v2_map_landing_for_type($tSlug);
+    $exTypeRows[] = [$tSlug, $tEmoji, $tName, $tCount, $ls !== '' ? '/harta/' . $ls : '/atractii?tip=' . rawurlencode($tSlug)];
+}
+
+// On a type landing the regional split is the split of *that* type, not of the whole catalogue.
+$exRegionRows = [];
 if ($landing && $landing['kind'] === 'type') {
-    // One type, so the useful second axis is where in the country it is.
     $byRegion = [];
-    foreach ($lData['zones'] ?? [] as [$county, $zRegion, $n]) {
+    foreach ($lData['zones'] ?? [] as [$zCounty, $zRegion, $zn]) {
         if ($zRegion) {
-            $byRegion[$zRegion] = ($byRegion[$zRegion] ?? 0) + (int) $n;
+            $byRegion[$zRegion] = ($byRegion[$zRegion] ?? 0) + (int) $zn;
         }
     }
     arsort($byRegion);
-    $rows = [];
     foreach ($byRegion as $rName => $rCount) {
-        $rows[] = ['🗺️', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
-    }
-    if ($rows) {
-        $grids[] = ['id' => 'zones', 'h' => 'În ce regiuni se găsesc', 'rows' => $rows];
-    }
-    $rows = [];
-    foreach ($lData['zones'] ?? [] as [$county, $zRegion, $n]) {
-        $rows[] = ['📍', $county, $n, '/harta?zona=' . rawurlencode(v2_zone_slug($county))];
-    }
-    if ($rows) {
-        $grids[] = ['id' => 'counties', 'h' => 'Județele cu cele mai multe', 'rows' => $rows];
-    }
-} elseif ($landing) {
-    // One region, so the useful second axis is what kind of places it holds.
-    $rows = [];
-    foreach ($lData['types'] ?? [] as [$tSlug, $tName, $tEmoji, $tCount]) {
-        $ls = v2_map_landing_for_type($tSlug);
-        $rows[] = [$tEmoji, $tName, $tCount, $ls !== '' ? '/harta/' . $ls : '/atractii?tip=' . rawurlencode($tSlug)];
-    }
-    if ($rows) {
-        $grids[] = ['id' => 'types', 'h' => 'Ce fel de locuri sunt aici', 'rows' => $rows, 'unit' => 'în regiune'];
-    }
-    $rows = [];
-    foreach ($lData['zones'] ?? [] as [$county, $zRegion, $n]) {
-        $rows[] = ['📍', $county, $n, '/harta?zona=' . rawurlencode(v2_zone_slug($county))];
-    }
-    if ($rows) {
-        $grids[] = ['id' => 'counties', 'h' => 'Pe județe', 'rows' => $rows];
+        $exRegionRows[] = [$rName, '🗺️', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
     }
 } else {
-    $rows = [];
-    foreach ($summary['types'] ?? [] as [$tSlug, $tName, $tEmoji, $tCount]) {
-        $ls = v2_map_landing_for_type($tSlug);
-        $rows[] = [$tEmoji, $tName, $tCount, $ls !== '' ? '/harta/' . $ls : '/atractii?tip=' . rawurlencode($tSlug)];
-    }
-    $grids[] = ['id' => 'types', 'h' => 'Ce fel de locuri cauți', 'rows' => $rows, 'more' => ['Toate atracțiile', '/atractii']];
-
-    $rows = [];
     foreach ($summary['regions'] ?? [] as [$rName, $rCount]) {
-        $rows[] = ['🗺️', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
+        $exRegionRows[] = [$rName, '🗺️', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
     }
-    $grids[] = ['id' => 'zones', 'h' => 'Pe regiuni istorice', 'rows' => $rows, 'unit' => 'de atracții'];
 }
+
+$exCountyRows = [];
+foreach (($lData['zones'] ?? $summary['counties'] ?? []) as [$cyName, $cyRegion, $cyCount]) {
+    $exCountyRows[] = [$cyName, '📍', $cyName, $cyCount, '/harta?zona=' . rawurlencode(v2_zone_slug($cyName))];
+}
+
+$exCityRows = [];
+foreach (($lData['cities'] ?? $summary['cities'] ?? []) as [$ctSlug, $ctName, $ctCounty, $ctRegion, $ctCount]) {
+    $exCityRows[] = [$ctSlug, '', $ctName, $ctCount, '/' . $ctSlug . '/atractii'];
+}
+
+$explorer = [
+    [
+        'id' => 'tipuri', 'icon' => 'squares-four', 'kind' => 'type',
+        'label' => 'Tipuri de locuri', 'sub' => v2_num(count($exTypeRows), 'categorie', 'categorii'),
+        'unit' => $landing && $landing['kind'] === 'region' ? 'în regiune' : 'locuri',
+        'note' => 'Alege câte tipuri vrei deodată. Fără nicio bifă, harta le arată pe toate.',
+        'presets' => !$landing, 'rows' => $exTypeRows,
+    ],
+    [
+        'id' => 'regiuni', 'icon' => 'globe-simple', 'kind' => 'region',
+        'label' => 'Regiuni istorice', 'sub' => v2_num(count($exRegionRows), 'regiune', 'regiuni'),
+        'unit' => 'de atracții',
+        'note' => 'Cele opt regiuni istorice ale țării. Una singură, ca să vezi clar ce e acolo.',
+        'rows' => $exRegionRows,
+    ],
+    [
+        'id' => 'judete', 'icon' => 'map-pin', 'kind' => 'zone',
+        'label' => 'Județe', 'sub' => v2_num(count($exCountyRows), 'județ', 'județe'),
+        'search' => 'Caută un județ', 'rows' => $exCountyRows,
+    ],
+    [
+        'id' => 'orase', 'icon' => 'buildings', 'kind' => 'city',
+        'label' => 'Orașe', 'sub' => v2_num(count($exCityRows), 'oraș', 'orașe'),
+        'search' => 'Caută un oraș', 'rows' => $exCityRows,
+        'more' => ['Toate orașele cu atracții', '/orase'],
+    ],
+];
 
 // ------------------------------------------------------------------ routes worth showing here
 // A landing shows routes that touch its own subject; /harta shows a rotating few.
@@ -211,21 +223,21 @@ if ($landing) {
 } else {
     $prose = [
         '<p>Harta adună toate cele ' . v2_e(v2_thousands($total)) . ' de atracții pe care le urmărim în România: castele și palate, muzee, biserici și mănăstiri, monumente, clădiri istorice, parcuri și grădini, lacuri, puncte panoramice, teatre și piețe vechi. Fiecare punct duce la pagina locului, cu descriere, adresă și ce poate fi făcut în apropiere.</p>',
-        '<p>Harta pornește pe selecția <strong>Populare</strong>, care lasă deoparte cele ' . v2_e(v2_thousands($churches)) . ' de biserici și mănăstiri — sunt peste jumătate din total și ar acoperi restul. Le poți aprinde oricând din filtrul de tipuri, împreună cu orice altă combinație.</p>',
-        '<p>Căutarea funcționează fără diacritice și caută și după oraș, iar butonul <strong>Lângă mine</strong> centrează harta pe poziția ta și ordonează lista după distanță. Orice filtrare ajunge în adresa paginii, deci un link copiat de aici deschide exact ce vedeai. Pentru liste clasice, cu paginare și text, rămâne <a href="/atractii">pagina de atracții</a>.</p>',
+        '<p>Harta pornește pe selecția <strong>Populare</strong>, care lasă deoparte cele ' . v2_e(v2_thousands($churches)) . ' de biserici și mănăstiri — sunt peste jumătate din total și ar acoperi restul. Le poți aprinde oricând din panoul <strong>Tipuri de locuri</strong>, de deasupra hărții, împreună cu orice altă combinație.</p>',
+        '<p>Cele patru butoane de deasupra hărții — tipuri, regiuni istorice, județe, orașe — deschid câte un panou care filtrează harta pe loc, fără să încarce altă pagină. Căutarea funcționează fără diacritice și caută și după oraș, iar butonul <strong>Lângă mine</strong> centrează harta pe poziția ta și ordonează lista după distanță. Orice filtrare ajunge în adresa paginii, deci un link copiat de aici deschide exact ce vedeai. Pentru liste clasice, cu paginare și text, rămâne <a href="/atractii">pagina de atracții</a>.</p>',
     ];
 }
 
 $sharedFaq = [
     ['Pot cumpăra bilet direct de pe hartă?', 'Acolo unde locul are bilete sau experiențe de vânzare, punctul e marcat distinct, iar pagina atracției are butonul de rezervare. Restul atracțiilor sunt puncte de vizitat, fără bilet.'],
-    ['Merge pe telefon?', 'Da. Pe telefon harta ocupă tot ecranul, iar lista rezultatelor urcă de jos și poate fi trasă în trei poziții, ca să vezi cât vrei din hartă și cât din listă.'],
+    ['Merge pe telefon?', 'Da. Pe telefon harta ocupă tot ecranul, iar lista rezultatelor urcă de jos și poate fi trasă în trei poziții, ca să vezi cât vrei din hartă și cât din listă. Filtrele stau deasupra hărții și se deschid pe rând.'],
 ];
 $faq = $landing
     ? array_merge($landing['faq'], $sharedFaq)
     : array_merge([
         ['De unde vin punctele de pe hartă?', 'Din catalogul de atracții al bilete.online: ' . v2_thousands($total) . ' de locuri din toată țara, fiecare cu coordonate verificate și cu pagină proprie pe site.'],
-        ['Pot vedea doar castelele, sau doar muzeele?', 'Da. Filtrul de tip e cu selecție multiplă: apasă pe un tip ca să vezi numai acel tip, apoi adaugă altele. Numărul de lângă fiecare tip arată câte locuri conține.'],
-        ['De ce nu apar bisericile de la început?', 'Sunt peste jumătate din toate atracțiile și ar acoperi restul hărții. Selecția Populare le ascunde implicit; apasă pe „Biserică & mănăstire” ca să le aduci înapoi.'],
+        ['Pot vedea doar castelele, sau doar muzeele?', 'Da. Deschide panoul „Tipuri de locuri” de deasupra hărții și apasă pe cel care te interesează; poți bifa oricâte deodată, iar numărul de lângă fiecare arată câte locuri conține. Fără nicio bifă, harta le arată pe toate.'],
+        ['De ce nu apar bisericile de la început?', 'Sunt peste jumătate din toate atracțiile și ar acoperi restul hărții. Selecția Populare le ascunde implicit; deschide „Tipuri de locuri” și apasă pe „Biserică & mănăstire” ca să le aduci înapoi.'],
     ], $sharedFaq);
 
 // ------------------------------------------------------------------ page
@@ -246,10 +258,15 @@ $mapPage = [
     ])),
     'breadcrumbs' => $breadcrumbs,
     'summary' => $summary,
-    'grids'   => $grids,
-    'cities'  => $lData['cities'] ?? null,
-    'picks'   => $lData['picks'] ?? null,
-    'citiesHeading' => $landing ? 'Orașele cu cele mai multe' : 'Orașele cu cele mai multe atracții',
+    'total'    => $total,
+    'explorer' => $explorer,
+    'picks'    => $lData['picks'] ?? null,
+    'ideasKicker'  => 'Idei de plecare',
+    'ideasHeading' => $landing ? 'De unde ai începe?' : 'Nu știi de unde să începi?',
+    'ideasLead'    => $landing
+        ? 'Harta le arată pe toate deodată. Astea sunt drumurile care trec pe aici și locurile pe care le-am deschide noi primele.'
+        : 'Harta arată toată țara deodată, ceea ce e mult. Astea sunt drumurile deja făcute și locurile pe care le-am deschide noi primele.',
+    'ideasCta'      => ['Fă-ți propriul plan de călătorie', '/plan'],
     'picksHeading'  => $landing ? 'Câteva dintre ele' : 'Locuri de deschis pe hartă',
     'routeCards'    => $routeCards,
     'routesHeading' => $landing ? 'Trasee care trec pe aici' : 'Trasee gata făcute',
@@ -258,6 +275,8 @@ $mapPage = [
         'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
         'urlState' => true,
         'preset'   => 'popular',
+        // the explorer above the map owns types and presets; the bar keeps the flag toggles
+        'chips'    => 'flags',
         'types'    => $type !== '' ? [$type] : [],
         'zone'     => $zone,
         'region'   => $region,

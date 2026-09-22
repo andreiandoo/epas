@@ -50,3 +50,6 @@ nul
 # One-shot backfill CSVs — sensitive per-organizer data, never checked in
 /cui-cu-probleme.csv
 /*-backfill.csv
+
+# bilete.online runtime caches (page cache, API cache, generated thumbnails)
+resources/marketplaces/bileteonline/cache/
