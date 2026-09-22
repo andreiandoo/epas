@@ -33,6 +33,12 @@ $canonicalUrl    = SITE_URL . '/finalizare';
 $noindex         = true;
 $currentPage     = 'checkout';
 
+// Who takes the card payment (Netopia, Stripe, …) — the section and its logo say the real one.
+$ckPay = v2_payment_provider();
+$ckPayKey = $ckPay['provider'] ?? '';
+$ckPayLabel = $ckPay['label'] ?? '';
+$ckPayLogo = v2_payment_logo($ckPay) ?? '';
+
 $v2Styles = ['cart.css', 'checkout.css'];
 $v2FooterCompact = true; // the checkout always has products in the cart: short footer
 $v2Scripts = ['checkout.js'];
@@ -185,14 +191,18 @@ include __DIR__ . '/includes/v2/header.php';
             <span class="ck-num" aria-hidden="true"></span>
             <div>
               <h2 id="ck-s-pay">Metodă de plată</h2>
-              <p>Plățile cu cardul sunt procesate securizat prin Stripe. 3D Secure, PCI DSS Level 1.</p>
+              <p>Plățile cu cardul sunt procesate securizat<?= $ckPayLabel !== '' ? ' prin ' . v2_e($ckPayLabel) : '' ?>. 3D Secure, PCI DSS Level 1.</p>
             </div>
           </header>
           <div class="ck-sec-body ck-pay" role="radiogroup" aria-labelledby="ck-s-pay">
             <label class="payment-option selected">
               <input type="radio" name="payment" value="card" class="sr" checked>
               <span class="payment-radio" aria-hidden="true"></span>
-              <span class="ck-pay-logo is-stripe" aria-hidden="true">STRIPE</span>
+              <?php if ($ckPayLogo !== ''): ?>
+              <img class="ck-pay-logo is-img" src="<?= v2_e($ckPayLogo) ?>" alt="<?= v2_e($ckPayLabel) ?>" width="418" height="75" loading="lazy" decoding="async">
+              <?php else: ?>
+              <span class="ck-pay-logo is-<?= v2_e($ckPayKey ?: 'card') ?>" aria-hidden="true"><?= v2_e($ckPayLabel !== '' ? mb_strtoupper(mb_substr($ckPayLabel, 0, 7)) : 'CARD') ?></span>
+              <?php endif; ?>
               <span class="ck-pay-text"><b>Card bancar</b><small>Visa, Mastercard, Maestro, Apple Pay, Google Pay</small></span>
               <span class="ck-pay-brands" aria-hidden="true"><i>Visa</i><i>Mastercard</i></span>
             </label>

@@ -101,6 +101,7 @@ html.ck-lock{overflow:hidden}
 .payment-option.selected .payment-radio::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--action)}
 .ck-pay-logo{display:grid;place-items:center;width:56px;height:34px;border-radius:8px;color:#FFFFFF;font-size:.625rem;font-weight:700;letter-spacing:.08em}
 .ck-pay-logo.is-stripe{background:linear-gradient(90deg, #635BFF, #4F46E5)}
+.ck-pay-logo.is-img{width:auto;height:26px;border-radius:0;background:none;object-fit:contain}
 .ck-pay-logo.is-cultural{background:linear-gradient(90deg, #F2A900, #E43A33)}
 .ck-pay-logo .ic{width:20px;height:20px}
 .ck-pay-text{min-width:0}

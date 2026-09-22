@@ -627,6 +627,11 @@ body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
 @media (min-width:1024px){.ftr-bottom > .ftr-trust{justify-items:end}}
 .ftr-trust-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
 .ftr-paywrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.ftr-psp{display:inline-flex;align-items:center;opacity:.9;transition:opacity var(--dur-micro) var(--ease-out)}
+.ftr-psp:hover{opacity:1}
+.ftr-psp img{display:block;width:auto;height:22px}
+/* the processor's logo is dark blue: on the dark footer it sits on its own white plate */
+.ftr .ftr-psp{padding:6px 12px;border-radius:10px;background:#FFFFFF}
 .pay-badges{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
 .pay-badges li{display:grid;place-items:center;min-width:48px;height:30px;padding:0 10px;border-radius:7px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.75rem;font-weight:700;letter-spacing:.02em}
 .ftr-cc{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 14px;border:1px solid rgba(247,247,245,.28);border-radius:10px;background:transparent;color:#F7F7F5;font:600 .8125rem/1 var(--font);cursor:pointer}
