@@ -947,6 +947,72 @@ fwrite(STDOUT, 'Source: ' . API_BASE_URL . ' (' . API_ENV . ")\n");
 
 // --summary-only rebuilds just the derived summary from the dataset already on disk, for when the
 // picks or the counters change but the pins did not (the full build costs ~146 throttled requests).
+/**
+ * Refuse a summary that quietly lost something the last one had.
+ *
+ * The point-count guard below only watches pins. It cannot see a run where the attractions came
+ * through but the road-routing host and /activities did not: the twelve routes silently fell back
+ * to straight lines and the eight bookables vanished, and the file was written anyway. Everything
+ * the summary carries is now counted and compared with what is already on disk.
+ */
+function mapSummaryShape(array $sum): array
+{
+    $roads = 0;
+    foreach (($sum['routes'] ?? []) as $r) {
+        if (!empty($r['road']['km'])) {
+            $roads++;
+        }
+    }
+
+    return [
+        'tipuri'       => count($sum['types'] ?? []),
+        'regiuni'      => count($sum['regions'] ?? []),
+        'judete'       => count($sum['counties'] ?? []),
+        'orase'        => count($sum['cities'] ?? []),
+        'picks'        => count($sum['picks'] ?? []),
+        'landings'     => count($sum['landings'] ?? []),
+        'trasee'       => count($sum['routes'] ?? []),
+        'drum real'    => $roads,
+        'bookables'    => count($sum['bookables'] ?? []),
+    ];
+}
+
+/** Write the summary, or explain what would have been lost and stop. */
+function mapWriteSummary(string $file, array $sum, bool $force): bool
+{
+    $now = mapSummaryShape($sum);
+    $before = is_file($file)
+        ? mapSummaryShape((array) json_decode((string) file_get_contents($file), true))
+        : [];
+
+    $lost = [];
+    foreach ($now as $k => $n) {
+        $was = (int) ($before[$k] ?? 0);
+        if ($was > 0 && $n < $was * 0.8) {
+            $lost[] = sprintf('%s %d -> %d', $k, $was, $n);
+        }
+    }
+    if ($lost && !$force) {
+        fwrite(STDERR, "Refusing to write the summary, it lost data the previous one had:
+");
+        foreach ($lost as $line) {
+            fwrite(STDERR, '  ' . $line . "
+");
+        }
+        fwrite(STDERR, "Usually a failed upstream (routing, /activities). Fix it, or pass --force.
+");
+
+        return false;
+    }
+    if ($lost) {
+        fwrite(STDERR, '--force: writing anyway, despite ' . implode(', ', $lost) . "
+");
+    }
+    file_put_contents($file, json_encode($sum, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+    return true;
+}
+
 if ($summaryOnly) {
     $existing = is_file($outFile) ? json_decode((string) file_get_contents($outFile), true) : null;
     if (!is_array($existing['points'] ?? null)) {
@@ -954,7 +1020,9 @@ if ($summaryOnly) {
 ");
         exit(1);
     }
-    file_put_contents($sumFile, json_encode(mapSummary($existing), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    if (!mapWriteSummary($sumFile, mapSummary($existing), $forceWrite)) {
+        exit(1);
+    }
     fwrite(STDOUT, 'Wrote ' . $sumFile . ' (' . number_format(filesize($sumFile) / 1024, 1) . " KB)
 ");
     exit(0);
@@ -1013,7 +1081,11 @@ if (file_put_contents($outFile, $json) === false) {
     exit(1);
 }
 file_put_contents($metaFile, json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n");
-file_put_contents($sumFile, json_encode(mapSummary($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+if (!mapWriteSummary($sumFile, mapSummary($payload), $forceWrite)) {
+    fwrite(STDERR, "The pin dataset was written; the summary was not.
+");
+    exit(1);
+}
 
 fwrite(STDOUT, sprintf(
     "Wrote %s\n  %d pins, %d types, %d cities, %s, v=%s\n",
