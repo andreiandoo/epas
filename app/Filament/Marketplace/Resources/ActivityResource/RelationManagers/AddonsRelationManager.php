@@ -46,10 +46,14 @@ class AddonsRelationManager extends RelationManager
                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100)),
             Forms\Components\TextInput::make('included_qty')
                 ->label('Incluse gratuit / unitate')
+                ->helperText('Câte primește clientul fără să plateasca, la fiecare bilet.')
                 ->numeric()->default(0)->minValue(0)->maxValue(50),
             Forms\Components\TextInput::make('max_per_unit')
                 ->label('Plătite, maxim / unitate')
-                ->numeric()->default(5)->minValue(0)->maxValue(50),
+                // The customer's ceiling is the sum of the two, and the site now prints it next to
+                // the stepper; 0 here means "nothing to buy beyond what is already included".
+                ->helperText('Câte mai poate cumpăra peste cele incluse. Total maxim pe bilet = incluse + acest număr.')
+                ->numeric()->default(0)->minValue(0)->maxValue(50),
             Forms\Components\TextInput::make('sort_order')
                 ->label('Ordine')
                 ->numeric()->default(0),

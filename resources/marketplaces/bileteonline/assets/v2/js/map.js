@@ -567,7 +567,13 @@
       var L = window.L, r = D.rows[i], f = D.f;
       var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
       var label = route ? String(i + 1) : (t && t[2] ? t[2] : '•');
-      var pin = el('span', 'epm-pin' + (route ? ' is-step' : '') + ((r[f.flags] & D.flags.activities) ? ' has-ticket' : ''), label);
+      /* The type also colours the pin: a map where every dot is the same green tells you where
+         things are but not what they are, and the emoji alone is unreadable at pin size. The
+         colours are defined in map.css and repeated on the type tiles in the /harta explorer,
+         which is what makes them a legend rather than decoration. */
+      var pin = el('span', 'epm-pin' + (route ? ' is-step' : '')
+        + (t && t[0] ? ' epm-t-' + t[0] : '')
+        + ((r[f.flags] & D.flags.activities) ? ' has-ticket' : ''), label);
       pin.setAttribute('data-i', String(i));
       var m = L.marker([D.lat[i], D.lng[i]], {
         keyboard: false,

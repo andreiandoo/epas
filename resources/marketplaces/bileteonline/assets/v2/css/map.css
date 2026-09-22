@@ -111,7 +111,24 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
 /* pins: a white chip with the type emoji, so the marker carries meaning at a glance */
 .epm-pin-wrap{background:none;border:0}
 .epm-pin{position:relative;display:grid;place-items:center;width:30px;height:30px;border:2px solid var(--surface);border-radius:50%;background:var(--deep);color:#fff;font-size:15px;line-height:1;box-shadow:0 6px 14px -6px rgba(0,0,0,.6);cursor:pointer;transition:transform var(--dur-micro) var(--ease-out)}
-.epm-pin.has-ticket{background:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.25),0 6px 14px -6px rgba(0,0,0,.6)}
+/* ---------- pin colours by type ----------
+   Ten types on one map: the emoji is too small to read at pin size, so the colour carries the
+   distinction and the emoji confirms it. Hues are picked to stay apart on the pale CARTO basemap
+   and to keep a white ring legible. The same variables paint the type tiles in the /harta
+   explorer (map-page.css), which is where the legend lives. */
+.epm-pin.epm-t-biserica-manastire{background:#5B6B86}
+.epm-pin.epm-t-monument{background:#6B6257}
+.epm-pin.epm-t-muzeu{background:#1F6FB8}
+.epm-pin.epm-t-cladire-istorica{background:#A85A2B}
+.epm-pin.epm-t-parc-gradina{background:#2E8B45}
+.epm-pin.epm-t-teatru-opera{background:#B03060}
+.epm-pin.epm-t-castel-palat{background:#7A4199}
+.epm-pin.epm-t-lac-natura{background:#0F8FA8}
+.epm-pin.epm-t-punct-panoramic{background:#C07A12}
+.epm-pin.epm-t-piata-centru-vechi{background:#0E7C6B}
+/* A place with tickets keeps its type colour and gains a gold ring: the two facts are
+   independent, and overwriting the colour threw one of them away. */
+.epm-pin.has-ticket{box-shadow:0 0 0 3px rgba(242,169,0,.6),0 6px 14px -6px rgba(0,0,0,.6)}
 .epm-pin:hover,.epm-pin.is-hot{transform:scale(1.15)}
 .epm-pin.is-on{background:var(--red-text);transform:scale(1.2)}
 /* route mode: the pins are numbered stops on a dashed line, so the order reads at a glance */

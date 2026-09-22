@@ -212,22 +212,22 @@
     var prev = document.querySelector('[data-mpr-prev]');
     var next = document.querySelector('[data-mpr-next]');
 
-    var step = function () {
-      var card = rail.firstElementChild;
-      return card ? card.getBoundingClientRect().width + 16 : 260;
+    // Press and drag, wheel, or the arrows. Without this a mouse has nothing to grab and the
+    // thirty-six cards past the right edge may as well not be there.
+    if (window.EPHDrag) {
+      window.EPHDrag(rail, {
+        onSync: function (st) {
+          if (arrows) arrows.hidden = !st.over;
+          if (prev) prev.disabled = st.atStart;
+          if (next) next.disabled = st.atEnd;
+        }
+      });
+    }
+    var nudge = function (dir) {
+      if (rail.epScrollBy) rail.epScrollBy(dir);
+      else rail.scrollBy({ left: dir * Math.round(rail.clientWidth * 0.8), behavior: 'smooth' });
     };
-    if (prev) prev.addEventListener('click', function () { rail.scrollBy({ left: -step() * 2, behavior: 'smooth' }); });
-    if (next) next.addEventListener('click', function () { rail.scrollBy({ left: step() * 2, behavior: 'smooth' }); });
-
-    var sync = function () {
-      var over = rail.scrollWidth - rail.clientWidth > 8;
-      if (arrows) arrows.hidden = !over;
-      if (!over) return;
-      if (prev) prev.disabled = rail.scrollLeft < 8;
-      if (next) next.disabled = rail.scrollLeft > rail.scrollWidth - rail.clientWidth - 8;
-    };
-    rail.addEventListener('scroll', sync, { passive: true });
-    window.addEventListener('resize', sync);
-    sync();
+    if (prev) prev.addEventListener('click', function () { nudge(-1); });
+    if (next) next.addEventListener('click', function () { nudge(1); });
   }
 })();

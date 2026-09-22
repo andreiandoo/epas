@@ -47,7 +47,7 @@ $mpBase = [
 ];
 
 $v2Styles  = array_merge(['map.css', 'map-page.css'], !empty($mapPage['routeCards']) ? ['routes.css'] : [], $v2Styles ?? []);
-$v2Scripts = array_merge($v2Scripts ?? [], ['map.js', 'map-explorer.js']);
+$v2Scripts = array_merge($v2Scripts ?? [], ['hdrag.js', 'map.js', 'map-explorer.js']);
 
 include __DIR__ . '/head.php';
 include __DIR__ . '/header.php';
@@ -200,7 +200,13 @@ include __DIR__ . '/header.php';
       <?php endif; ?>
 
       <?php if (!empty($mapPage['ideasCta'])): ?>
-      <p class="mpd-cta"><a class="btn btn-online" href="<?= v2_e($mapPage['ideasCta'][1]) ?>"><?= v2_e($mapPage['ideasCta'][0]) ?><?= v2_ic('arrow-right') ?></a></p>
+      <div class="mpd-cta">
+        <div class="mpd-cta-t">
+          <b><?= v2_e($mapPage['ideasCtaTitle'] ?? 'Sau fă-ți unul al tău') ?></b>
+          <span><?= v2_e($mapPage['ideasCtaLead'] ?? 'Spui de unde pleci, câte zile ai și ce te interesează. Îți facem programul pe zile, cu distanțele pe șosea și cu orele de plecare.') ?></span>
+        </div>
+        <a class="btn btn-light" href="<?= v2_e($mapPage['ideasCta'][1]) ?>"><?= v2_e($mapPage['ideasCta'][0]) ?><?= v2_ic('arrow-right') ?></a>
+      </div>
       <?php endif; ?>
     </div>
   </section>

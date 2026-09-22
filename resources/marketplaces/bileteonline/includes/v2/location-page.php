@@ -127,7 +127,7 @@ $lcHasDay = (bool) array_filter($lcProducts, fn ($p) => ($p['booking_mode'] ?? '
 $lcHasSlot = (bool) array_filter($lcProducts, fn ($p) => ($p['booking_mode'] ?? '') === 'slot');
 $lcTz = new DateTimeZone('Europe/Bucharest');
 $v2Styles = ['attraction.css', 'location.css'];
-$v2Scripts = ['attraction.js', 'booking.js'];
+$v2Scripts = ['hdrag.js', 'attraction.js', 'booking.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/cart.js'];
 $v2HeaderOverlay = true;
 $v2HeadExtra = $heroImage ? '<link rel="preload" as="image" href="' . v2_e($heroImage) . '" fetchpriority="high">' : '';
