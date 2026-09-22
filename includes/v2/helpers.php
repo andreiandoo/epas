@@ -166,6 +166,26 @@ function v2_duration(int $minutes): string
     return $minutes . ' min';
 }
 
+/**
+ * A catalogue image at the size it is actually shown.
+ *
+ * The covers come off the core storage at upload size — often over a megabyte for a card 300px
+ * wide — so every card goes through /api/img.php, which resizes once and caches. Anything that is
+ * not a core storage URL is returned untouched.
+ */
+function v2_thumb(?string $url, int $w = 480, int $h = 0): string
+{
+    if (!is_string($url) || $url === '') {
+        return '';
+    }
+    $storage = rtrim(STORAGE_URL, '/') . '/';
+    if (strncmp($url, $storage, strlen($storage)) !== 0) {
+        return $url;
+    }
+
+    return '/api/img.php?u=' . rawurlencode($url) . '&w=' . $w . ($h > 0 ? '&h=' . $h : '');
+}
+
 /** <img> from a [src, width, height, alt] tuple; dimensions only when known. */
 function v2_photo(?array $photo, string $extra = ''): string
 {

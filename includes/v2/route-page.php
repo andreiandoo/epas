@@ -78,7 +78,7 @@ include __DIR__ . '/header.php';
         <li class="rp-stop">
           <span class="rp-num" aria-hidden="true"><?= $i + 1 ?></span>
           <a class="rp-card" href="/atractie/<?= v2_e($sSlug) ?>">
-            <span class="rp-media"><?php if ($sImg): ?><img src="<?= v2_e($sImg) ?>" alt="" width="200" height="150" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($sName, $i) ?><?php endif; ?></span>
+            <span class="rp-media"><?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 320, 240)) ?>" alt="" width="200" height="150" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($sName, $i) ?><?php endif; ?></span>
             <span class="rp-body">
               <?php if ($sType): ?><span class="rp-kicker"><span aria-hidden="true"><?= v2_e($sEmoji) ?></span> <?= v2_e($sType) ?></span><?php endif; ?>
               <span class="rp-title"><?= v2_e($sName) ?></span>

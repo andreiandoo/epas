@@ -119,7 +119,7 @@ include __DIR__ . '/header.php';
         <li>
           <a class="mp-pick" href="/atractie/<?= v2_e($pSlug) ?>">
             <span class="mp-pick-media">
-              <?php if ($pImg): ?><img src="<?= v2_e($pImg) ?>" alt="" width="320" height="240" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($pName) ?><?php endif; ?>
+              <?php if ($pImg): ?><img src="<?= v2_e(v2_thumb($pImg, 480, 360)) ?>" alt="" width="320" height="240" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($pName) ?><?php endif; ?>
               <?php if ($pType): ?><span class="mp-pick-tag"><span aria-hidden="true"><?= v2_e($pEmoji) ?></span><?= v2_e($pType) ?></span><?php endif; ?>
             </span>
             <span class="mp-pick-b"><b><?= v2_e($pName) ?></b><?php if ($pCity): ?><span><?= v2_ic('map-pin') ?><?= v2_e($pCity) ?></span><?php endif; ?></span>

@@ -4,6 +4,8 @@
 
 /* ---------- cards ---------- */
 .rc-grid{list-style:none;display:grid;gap:18px;margin:0;padding:0;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.rc-grid > li{content-visibility:auto;contain-intrinsic-size:auto 420px}
+.rp-stops > li{content-visibility:auto;contain-intrinsic-size:auto 140px}
 .rc{display:grid;grid-template-rows:auto 1fr;height:100%;overflow:hidden;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out),box-shadow var(--dur-micro) var(--ease-out)}
 .rc:hover{border-color:var(--green);transform:translateY(-3px);box-shadow:0 18px 40px -26px rgba(14,72,55,.5)}
 .rc-media{position:relative;aspect-ratio:16/10;overflow:hidden;background:var(--surface-2)}
