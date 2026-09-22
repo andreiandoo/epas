@@ -146,3 +146,28 @@
 .lcp-faq details{padding:14px 0;border-top:1px solid var(--line)}
 .lcp-faq summary{font-weight:700;cursor:pointer}
 .lcp-faq p{margin:8px 0 0;color:var(--muted)}
+
+/* ---------- the booking widget on a phone ----------
+   The variant row is name / price / stepper. The stepper is 120px of fixed width and the price
+   never wraps, so on a 390px screen the name had nothing left and ran out of its own box. Give
+   the name the full width and put the price and the stepper on a line of their own. */
+@media (max-width:560px){
+  .bkx-p{padding:16px;gap:12px}
+  .bkx-p-ic{width:38px;height:38px;font-size:1.1875rem}
+  .bkx-p-t h3{font-size:1.0625rem;line-height:1.3}
+  .bkx-p-t p{font-size:.875rem}
+  .bkx-v{grid-template-columns:minmax(0,1fr) auto;row-gap:10px;column-gap:10px}
+  .bkx-v-t{grid-column:1 / -1;min-width:0}
+  .bkx-v-t b{overflow-wrap:anywhere}
+  .bkx-v-price{align-self:center;justify-self:start}
+  .bkx-step{justify-self:end;grid-template-columns:38px 32px 38px}
+  .bkx-addon .bkx-v-t{grid-column:auto}
+  .bkx-chips{grid-template-columns:repeat(auto-fill,minmax(68px,1fr))}
+  .bkx-sum{padding:16px}
+  .bkx-lines li{flex-wrap:wrap;gap:2px 12px}
+  .bkx-lines li > span{min-width:0;overflow-wrap:anywhere}
+  .bkx-head h2{font-size:1.375rem}
+}
+.bkx-v-t{min-width:0}
+.bkx-v-t b{overflow-wrap:break-word}
+.bkx-lines li > span{min-width:0;overflow-wrap:anywhere}

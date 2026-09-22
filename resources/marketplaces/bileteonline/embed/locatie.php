@@ -167,13 +167,12 @@ $clientData = ['booking' => [
           <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub">0 lei</strong></div>
           <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label">Comision ticketing</span><strong id="bkx-fee">0 lei</strong></div>
           <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total">0 lei</strong></div>
-          <p class="bkx-small" id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă.</p>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
             <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continuă spre plată<?= v2_ic('arrow-right') ?></button>
             <button class="btn btn-ghost" type="button" id="bkx-cart" disabled hidden>Adaugă în coș</button>
           </div>
-          <p class="bkx-small">Plata se face pe bilete.online, într-o filă nouă. Biletele ajung pe email imediat după plată.</p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă. </span>Plata se face pe bilete.online, într-o filă nouă. Biletele ajung pe email imediat după plată.</p>
         </div>
         <p class="emb-safe"><?= v2_ic('lock-simple') ?><span>Plată securizată cu cardul. Operator: <?= v2_e(navFlatName($orgData['name'] ?? '') ?: $lcName) ?></span></p>
       </aside>

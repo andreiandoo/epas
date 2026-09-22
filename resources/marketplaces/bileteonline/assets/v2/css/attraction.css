@@ -122,3 +122,80 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
     .th .deco-arches,.tnear .topo{animation:ty-drift linear both;animation-timeline:view();animation-range:cover}
   }
 }
+
+/* =================== COMPACT HERO ===================
+   Most pages in the catalogue are not features: an attraction often has one short paragraph and
+   no photograph at all, and an experience wants the visitor at the booking form, not at a poster.
+   The compact hero keeps the deep-green identity and the same slots, but drops the tall 4:5 arch
+   for a 16:10 frame, shrinks the heading a step and tightens the padding — about 420px instead of
+   750px, so what matters is above the fold. Where there is no photograph, the frame holds the map
+   instead: for a monument, where it is IS the content. */
+.th.is-compact .deco-arches{display:none}
+.th.is-compact .th-line{opacity:.2}
+.th.is-compact .th-in{padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) var(--space-6);gap:var(--space-6)}
+@media (min-width:1024px){
+  .th.is-compact .th-in{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);column-gap:var(--space-7);padding-bottom:var(--space-7)}
+}
+.th.is-compact .th-kicker{margin-top:var(--space-2)}
+.th.is-compact .th-h{font-size:clamp(1.875rem,3.4vw,3rem)}
+.th.is-compact .th-sub{margin-top:var(--space-3);max-width:58ch;font-size:1.0625rem;line-height:1.5}
+.th.is-compact .th-chips{margin-top:var(--space-4)}
+.th.is-compact .th-chips li{padding:7px 13px;font-size:.875rem}
+.th.is-compact .th-cta{margin-top:var(--space-5)}
+.th.is-compact .th-media{max-width:none;justify-self:stretch}
+.th.is-compact .th-media::before{display:none}
+.th.is-compact .th-arch{aspect-ratio:16/10;border-radius:var(--r-l)}
+.th.is-compact .th-arch::after{background:linear-gradient(0deg,rgba(6,34,26,.5) 0%,rgba(6,34,26,0) 45%)}
+.th.is-compact .th-gal{left:14px;bottom:14px;padding:8px 14px;font-size:.875rem}
+.th.is-compact .th-arch-name{padding:20px;font-size:clamp(1.5rem,3vw,2.25rem)}
+@media (max-width:1023px){.th.is-compact .th-media{max-width:min(620px,100%);justify-self:start}}
+
+/* the facts line: what we actually know about the place, next to the heading */
+.th-facts{list-style:none;display:grid;gap:8px;margin:var(--space-5) 0 0;padding:0}
+.th-facts li{display:flex;align-items:flex-start;gap:10px;font-size:.9375rem;line-height:1.45;color:var(--on-deep-muted)}
+.th-facts b{display:block;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9FE0BF}
+.th-facts span{display:block;color:#F7F7F5}
+.th-facts .ic{flex:none;width:17px;height:17px;margin-top:3px;color:#9FE0BF}
+@media (min-width:560px){.th-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px}}
+
+/* the map, standing in for a photograph the catalogue does not have */
+.th-map{position:relative;overflow:hidden;overflow:clip;border-radius:var(--r-l);background:var(--deep-2);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.th-map iframe{display:block;width:100%;aspect-ratio:16/10;border:0;filter:saturate(.92)}
+.th-map-link{display:flex;align-items:center;gap:10px;padding:13px 18px;background:rgba(6,34,26,.9);color:#F7F7F5;font-size:.9375rem;font-weight:700;text-decoration:none}
+.th-map-link .ic{width:17px;height:17px;color:#9FE0BF}
+.th-map-link .ic:last-child{margin-left:auto;color:#F7F7F5;transition:transform var(--dur-micro) var(--ease-out)}
+.th-map-link:hover .ic:last-child{transform:translateX(3px)}
+
+/* the about block when it is only a gallery, and the one-line stand-in for an empty activity list */
+.tabout.is-slim{padding-block:clamp(36px,5vw,56px)}
+.tabout-grid.is-single{grid-template-columns:minmax(0,1fr)}
+.tnone{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;padding:16px 20px;border:1px dashed var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--muted);font-size:.9375rem}
+.tnone > .ic{flex:none;width:18px;height:18px;color:var(--green)}
+.tnone a{display:inline-flex;align-items:center;gap:6px;color:var(--green);font-weight:700;text-decoration:none}
+.tnone a:hover{text-decoration:underline}
+.tnone a .ic{width:15px;height:15px}
+
+/* =================== PHONES ===================
+   On a phone the page title has to be the biggest thing on the screen: section headings were
+   coming out larger than the H1, which reads as a page that starts twice. Everything else here
+   is the same idea — give the long strings room to wrap and take the decoration out of the way. */
+@media (max-width:719px){
+  .th.is-compact .th-in{padding-top:calc(var(--hdr-h) + 18px);padding-bottom:28px;gap:22px}
+  .th.is-compact .th-h{font-size:1.75rem}
+  .th.is-compact .th-sub{font-size:1rem}
+  .th.is-compact .th-cta{display:grid;gap:8px}
+  .th.is-compact .th-cta .btn{width:100%;justify-content:center}
+  .th.is-compact .th-facts{gap:10px}
+  .th .deco-arches{display:none}
+  .th-facts li{font-size:.875rem}
+  .tabout h2,.tnear h2,.tact .sec-head h2,.texp h2{font-size:1.375rem;line-height:1.15}
+  .tabout-body{margin-top:var(--space-4);font-size:1rem}
+  .tnear-grid{gap:32px}
+  .trow{grid-template-columns:64px minmax(0,1fr);gap:12px;padding:8px 12px 8px 8px}
+  .trow-media{width:64px;height:54px;border-radius:32px 32px 8px 8px / 26px 26px 8px 8px}
+  .trow > .ic{display:none}
+  .trow-text b{font-size:.9375rem;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2}
+  .texp{min-height:300px}
+  .texp-in{padding-block:44px}
+  .tnone{font-size:.875rem}
+}

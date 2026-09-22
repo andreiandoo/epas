@@ -43,12 +43,16 @@ class ProductsController extends BaseController
                 ->get()
                 ->filter(fn ($p) => CatalogPresenter::onSale($p))
                 ->map(fn ($p) => [
-                    'id'              => $p->id,
-                    'slug'            => $p->slug,
-                    'type'            => $p->product_type,
-                    'title'           => $presenter->t($p->title),
-                    'image'           => CatalogPresenter::url($p->cover_image_url),
-                    'min_price_cents' => $p->variants->filter(fn ($v) => $v->is_active && !$v->pos_only)->min('price_cents'),
+                    'id'               => $p->id,
+                    'slug'             => $p->slug,
+                    'type'             => $p->product_type,
+                    'title'            => $presenter->t($p->title),
+                    // the marketplace card has room for a line of its own; without it every card
+                    // is just a title and a price, and long titles are all the page has to show
+                    'subtitle'         => $presenter->t($p->subtitle),
+                    'duration_minutes' => $p->duration_minutes,
+                    'image'            => CatalogPresenter::url($p->cover_image_url),
+                    'min_price_cents'  => $p->variants->filter(fn ($v) => $v->is_active && !$v->pos_only)->min('price_cents'),
                 ])
                 ->values()
             : [];
