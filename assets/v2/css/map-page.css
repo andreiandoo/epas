@@ -1,7 +1,7 @@
-/* bilete.online v2: /harta — the standalone map destination (includes/v2/map-page.php).
-   The map itself is styled by map.css; this file is the page around it: hero, the full-bleed
-   map band, and the server-rendered sections (types, regions, cities, picks, FAQ) that give the
-   page something to index. Shared pieces (.sec, .sec-head, .wrap, .kicker, .btn) come from base.css. */
+/* bilete.online v2: /harta — the map destination (includes/v2/map-page.php).
+   The map itself is styled by map.css. This file is the page around it: the hero band, the map
+   shell with the explorer docked to its top, the dark ideas band and the closing text.
+   Shared pieces (.sec, .wrap, .kicker, .btn, .pt-*) come from base.css and partners.css. */
 
 /* ---------- hero ----------
    The map is the page, so the header above it stays a band, not a landing hero: one line of
@@ -19,42 +19,159 @@
 .mph-stats{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0}
 .mph-stats li{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);font-size:.8125rem;font-weight:600;white-space:nowrap}
 .mph-stats b{font-variant-numeric:tabular-nums;color:var(--green)}
+@media (max-width:719px){.mph-stats li:nth-child(n+3){display:none}}
 
-/* ---------- the map band ---------- */
+/* ---------- the map shell ----------
+   One card holds the explorer and the map, because the explorer *is* the map's controls. */
 .mp-band{padding-bottom:clamp(40px,6vw,72px);background:linear-gradient(to bottom,var(--bg) 0 50%,transparent 50%)}
-.mp-frame{margin-top:14px;overflow:hidden;border-radius:var(--r-l);box-shadow:var(--shadow-pop)}
+.mp-shell{margin-top:14px;overflow:hidden;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop)}
+.mp-frame{position:relative}
 /* map.css sizes .epm-inline; on the destination page it earns more room */
-.mp-frame .epm-inline{height:min(82vh,940px);border:0;border-radius:0;box-shadow:none}
-.mp-noscript{padding:var(--space-5);border:1px dashed var(--line);border-radius:var(--r-l);background:var(--surface);color:var(--muted);text-align:center}
+.mp-frame .epm-inline{height:min(78vh,900px);border:0;border-radius:0;box-shadow:none}
+.mp-noscript{margin-top:14px;padding:var(--space-5);border:1px dashed var(--line);border-radius:var(--r-l);background:var(--surface);color:var(--muted);text-align:center}
 
-/* ---------- cards shared by types / regions ---------- */
-.mp-grid{list-style:none;display:grid;gap:12px;margin:0;padding:0;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
-.mp-card{display:flex;align-items:center;gap:12px;height:100%;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
-.mp-card:hover{border-color:var(--green);transform:translateY(-2px)}
-.mp-card-emoji{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--tint-green);font-size:1.375rem;line-height:1}
-.mp-card-t{min-width:0}
-.mp-card-t b{display:block;font-size:.9375rem;font-weight:700;line-height:1.2}
-.mp-card-t span{display:block;margin-top:2px;font-size:.8125rem;color:var(--muted);font-variant-numeric:tabular-nums}
+/* ---------- explorer: the bar ---------- */
+.mpx{position:relative;z-index:2;border-bottom:1px solid var(--line);background:var(--surface)}
+.mpx-bar{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.mpx-tabs{display:flex;gap:8px;min-width:0;flex:1 1 auto;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.mpx-tabs::-webkit-scrollbar{display:none}
+.mpx-tab{display:inline-flex;align-items:center;gap:10px;flex:none;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--dur-micro) var(--ease-out),background-color var(--dur-micro) var(--ease-out)}
+.mpx-tab:hover{border-color:#BFD9CB;background:var(--tint-green)}
+.mpx-tab.is-open{border-color:var(--green);background:var(--tint-green)}
+.mpx-tab.is-active .mpx-tab-ic{background:var(--green);color:#fff}
+.mpx-tab-ic{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:11px;background:var(--tint-green);color:var(--green);transition:background-color var(--dur-micro) var(--ease-out),color var(--dur-micro) var(--ease-out)}
+.mpx-tab-ic .ic{width:18px;height:18px}
+.mpx-tab-t{display:grid;min-width:0}
+.mpx-tab-t b{font-size:.875rem;font-weight:700;line-height:1.2;white-space:nowrap}
+.mpx-tab-t span{overflow:hidden;font-size:.75rem;line-height:1.3;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
+.mpx-tab.is-active .mpx-tab-t span{color:var(--green);font-weight:600}
+.mpx-tab-chev{flex:none;width:16px;height:16px;color:var(--muted);transition:transform var(--dur-micro) var(--ease-out)}
+.mpx-tab.is-open .mpx-tab-chev{transform:rotate(180deg)}
 
-/* ---------- cities ---------- */
+.mpx-state{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto;padding-left:10px}
+.mpx-count{margin:0;font-size:.8125rem;line-height:1.25;color:var(--muted);white-space:nowrap}
+.mpx-count b{display:block;font-size:1.0625rem;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums}
+.mpx-reset{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--muted);font:600 .8125rem/1 var(--font);cursor:pointer}
+.mpx-reset:hover{border-color:var(--red-text);color:var(--red-text)}
+.mpx-reset .ic{width:13px;height:13px}
+@media (max-width:1023px){
+  .mpx-bar{flex-wrap:wrap}
+  .mpx-state{order:-1;width:100%;margin:0;padding:0}
+  .mpx-count b{display:inline;margin-right:4px;font-size:.9375rem}
+  .mpx-reset{margin-left:auto}
+  .mpx-tabs{margin-inline:-12px;padding-inline:12px}
+}
+
+/* ---------- explorer: the panels ---------- */
+.mpx-panel{max-height:min(46vh,420px);overflow:auto;padding:16px 16px 18px;border-top:1px solid var(--line);background:linear-gradient(to bottom,var(--tint-green),var(--surface) 120px);overscroll-behavior:contain}
+.mpx-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:14px}
+.mpx-note{margin:0;max-width:52ch;font-size:.8125rem;line-height:1.45;color:var(--muted)}
+.mpx-top-end{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:auto}
+.mpx-presets{display:inline-flex;gap:6px}
+.mpx-preset{padding:7px 13px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--green);font:700 .75rem/1 var(--font);cursor:pointer}
+.mpx-preset:hover{border-color:var(--green);background:var(--tint-green)}
+.mpx-find{display:inline-flex;align-items:center;gap:7px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface)}
+.mpx-find .ic{flex:none;width:15px;height:15px;color:var(--muted)}
+.mpx-find input{width:180px;padding:8px 0;border:0;background:none;font:inherit;font-size:.8125rem;color:var(--ink);outline:none}
+.mpx-find:focus-within{border-color:var(--green)}
+
+.mpx-tiles{list-style:none;display:grid;gap:8px;margin:0;padding:0;grid-template-columns:repeat(auto-fill,minmax(196px,1fr))}
+.mpx-tile{position:relative;display:flex;align-items:center;gap:11px;height:100%;padding:10px 34px 10px 11px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),box-shadow var(--dur-micro) var(--ease-out)}
+.mpx-tile:hover{border-color:#BFD9CB;box-shadow:0 12px 26px -20px rgba(14,72,55,.55)}
+.mpx-tile.is-on{border-color:var(--green);background:var(--tint-green);box-shadow:inset 0 0 0 1px var(--green)}
+.mpx-tile-ic{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;background:var(--surface-2);font-size:1.25rem;line-height:1}
+.mpx-tile.is-on .mpx-tile-ic{background:#fff}
+.mpx-tile-t{min-width:0}
+.mpx-tile-t b{display:block;overflow:hidden;font-size:.875rem;font-weight:700;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.mpx-tile-t span{display:block;margin-top:1px;font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.mpx-tile-on{position:absolute;right:10px;top:50%;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;opacity:0;transform:translateY(-50%) scale(.6);transition:opacity var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
+.mpx-tile-on .ic{width:12px;height:12px}
+.mpx-tile.is-on .mpx-tile-on{opacity:1;transform:translateY(-50%) scale(1)}
+
+.mpx-pills{list-style:none;display:flex;flex-wrap:wrap;gap:7px;margin:0;padding:0}
+.mpx-pill{display:inline-flex;align-items:baseline;gap:6px;padding:8px 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font-size:.8438rem;font-weight:600;text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),background-color var(--dur-micro) var(--ease-out)}
+.mpx-pill:hover{border-color:#BFD9CB;background:var(--tint-green)}
+.mpx-pill.is-on{border-color:var(--green);background:var(--green);color:#fff}
+.mpx-pill b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+.mpx-pill.is-on b{color:rgba(255,255,255,.75)}
+.mpx-empty{margin:14px 0 0;font-size:.875rem;color:var(--muted)}
+.mpx-more{margin:14px 0 0}
+.mpx-more a{display:inline-flex;align-items:center;gap:6px;color:var(--green);font-size:.875rem;font-weight:700;text-decoration:none}
+.mpx-more a:hover{text-decoration:underline}
+.mpx-more .ic{width:15px;height:15px}
+
+/* ---------- cities chips (still used by the planner) ---------- */
 .mp-chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0}
 .mp-chip{display:inline-flex;align-items:baseline;gap:6px;padding:9px 15px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:600;text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),background-color var(--dur-micro) var(--ease-out)}
 .mp-chip:hover{border-color:var(--green);background:var(--tint-green)}
 .mp-chip b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
 
-/* ---------- picks ---------- */
-.mp-picks{list-style:none;display:grid;gap:16px;margin:0;padding:0;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
-/* Skip the layout and paint of cards that are off screen: thirty-six of them with images makes
-   every scroll frame do work nobody can see. The intrinsic size keeps the scrollbar honest. */
-.mp-picks > li,.mp-grid > li{content-visibility:auto;contain-intrinsic-size:auto 300px}
-.mp-pick{display:grid;height:100%;overflow:hidden;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
+/* ---------- the /parteneri section language, borrowed ----------
+   /harta only needs the head of a section, not the whole of partners.css, so the five rules that
+   matter live here with the same values: the deep-green band, the eyebrow, the oversized heading
+   and the lead under it. */
+.pt-sec{position:relative;padding-block:clamp(64px,8vw,112px)}
+.pt-dark{background:#072A20;color:#F7F7F5}
+.pt-dark :focus-visible{outline-color:var(--online)}
+.pt-head{max-width:760px;margin-bottom:clamp(32px,4.5vw,56px)}
+.pt-k{display:flex;align-items:center;gap:8px;margin:0 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--action)}
+.pt-k .ic{width:18px;height:18px}
+.pt-dark .pt-k{color:#9FE0BF}
+.pt-head h2{margin:0;font-size:clamp(2rem,4.2vw,3.5rem);font-weight:700;line-height:1.03;letter-spacing:-.045em;color:var(--green)}
+.pt-dark .pt-head h2{color:#F7F7F5}
+.pt-sub{max-width:60ch;margin:var(--space-5) 0 0;font-size:var(--text-lead);line-height:1.55;color:var(--muted)}
+.pt-dark .pt-sub{color:var(--on-deep-muted)}
+
+/* ---------- the dark ideas band ---------- */
+.mpd{overflow:clip}
+.mpd .pt-head{margin-bottom:clamp(28px,3.5vw,44px)}
+.mpd-block + .mpd-block{margin-top:clamp(40px,5vw,64px)}
+.mpd-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:var(--space-5)}
+.mpd-h h3{margin:0;font-size:1.375rem;font-weight:700;letter-spacing:-.025em;color:#F7F7F5}
+.mpd-h-end{display:flex;align-items:center;gap:14px;margin-left:auto}
+.mpd-link{display:inline-flex;align-items:center;gap:6px;color:#9FE0BF;font-size:.875rem;font-weight:700;text-decoration:none;white-space:nowrap}
+.mpd-link:hover{color:#FFD66B}
+.mpd-link .ic{width:15px;height:15px}
+.mpd-arrows{display:none;gap:6px}
+@media (min-width:1024px){.mpd-arrows{display:inline-flex}}
+.mpd-arrow{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(247,247,245,.2);border-radius:50%;background:rgba(247,247,245,.06);color:#F7F7F5;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),opacity var(--dur-micro) var(--ease-out)}
+.mpd-arrow:hover{background:rgba(247,247,245,.16)}
+.mpd-arrow:disabled{opacity:.3;cursor:default}
+.mpd-arrow .ic{width:16px;height:16px}
+.mpd-cta{display:flex;justify-content:center;margin:clamp(40px,5vw,64px) 0 0}
+
+/* the route cards, on dark */
+.mpd .rc{border-color:rgba(247,247,245,.16);background:rgba(247,247,245,.05);color:#F7F7F5}
+.mpd .rc:hover{border-color:#9FE0BF;box-shadow:0 26px 54px -34px rgba(0,0,0,.8)}
+.mpd .rc-media{background:rgba(0,0,0,.3)}
+.mpd .rc-title{color:#F7F7F5}
+.mpd .rc-lead{color:var(--on-deep-muted)}
+.mpd .rc-meta{color:rgba(247,247,245,.86)}
+.mpd .rc-meta .ic{color:#9FE0BF}
+
+/* ---------- the picks rail ----------
+   Thirty-six links, one row tall: everything stays in the page (and in the index) without
+   thirty-six cards' worth of scrolling. */
+.mpr{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:16px;margin:0 calc(var(--space-4) * -1);padding:0 var(--space-4) 6px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:var(--space-4);overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:rgba(247,247,245,.3) transparent}
+.mpr::-webkit-scrollbar{height:6px}
+.mpr::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(247,247,245,.28)}
+.mpr > li{scroll-snap-align:start;content-visibility:auto;contain-intrinsic-size:auto 250px}
+@media (min-width:768px){.mpr{grid-auto-columns:minmax(240px,1fr)}}
+
+.mp-pick{display:grid;grid-template-rows:auto 1fr;height:100%;overflow:hidden;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
 .mp-pick:hover{border-color:var(--green);transform:translateY(-2px)}
 .mp-pick-media{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--surface-2)}
 .mp-pick-media img{width:100%;height:100%;object-fit:cover}
-.mp-pick-tag{position:absolute;left:10px;top:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r-pill);background:rgba(255,255,255,.94);font-size:.75rem;font-weight:700;box-shadow:0 4px 12px -6px rgba(0,0,0,.5)}
-.mp-pick-b{display:grid;gap:3px;padding:12px 14px 14px}
+.mp-pick-tag{position:absolute;left:10px;top:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r-pill);background:rgba(255,255,255,.94);color:var(--ink);font-size:.75rem;font-weight:700;box-shadow:0 4px 12px -6px rgba(0,0,0,.5)}
+.mp-pick-b{display:grid;align-content:start;gap:3px;padding:12px 14px 14px}
 .mp-pick-b b{font-size:.9375rem;font-weight:700;line-height:1.25}
-.mp-pick-b span{font-size:.8125rem;color:var(--muted)}
+.mp-pick-b span{display:flex;align-items:center;gap:5px;font-size:.8125rem;color:var(--muted)}
+.mp-pick-b .ic{width:13px;height:13px;flex:none}
+/* on the dark band the cards are the light objects */
+.mpd .mp-pick{border-color:rgba(247,247,245,.14);background:rgba(247,247,245,.05);color:#F7F7F5}
+.mpd .mp-pick:hover{border-color:#9FE0BF}
+.mpd .mp-pick-b span{color:var(--on-deep-muted)}
+.mpd .mp-pick-b .ic{color:#9FE0BF}
 
 /* ---------- editorial + faq ---------- */
 .mp-text{display:grid;gap:var(--space-5);grid-template-columns:minmax(0,1fr)}
