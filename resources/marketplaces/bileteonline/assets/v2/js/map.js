@@ -57,6 +57,16 @@
     s.appendChild(u);
     return s;
   }
+  /**
+   * Catalogue covers are served at upload size — a 56px row does not need a megabyte. /api/img.php
+   * resizes and caches; it passes anything that is not ours straight back, so this is safe to call
+   * on any absolute URL.
+   */
+  function thumb(url, w, h) {
+    if (!url || url.indexOf('http') !== 0) return url || '';
+    return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
+  }
+
   function nf(n) { return new Intl.NumberFormat('ro-RO').format(n); }
   /* Romanian counting, same rule as v2_num() in PHP. */
   function count(n, one, many) {
@@ -791,7 +801,7 @@
       var media = el('span', 'epm-row-media');
       if (r[f.img]) {
         var img = el('img');
-        img.src = r[f.img];
+        img.src = thumb(r[f.img], 160, 160);
         img.alt = '';
         img.loading = 'lazy';
         img.decoding = 'async';
@@ -938,7 +948,7 @@
       media.rel = 'noopener';
       if (r[f.img]) {
         var img = el('img');
-        img.src = r[f.img];
+        img.src = thumb(r[f.img], 480, 280);
         img.alt = '';
         img.loading = 'lazy';
         img.decoding = 'async';

@@ -10,7 +10,7 @@ $rcCards = $routeCards ?? ($routePage['others'] ?? []);
   <li>
     <a class="rc" href="/trasee/<?= v2_e($cSlug) ?>">
       <span class="rc-media">
-        <?php if ($cImg): ?><img src="<?= v2_e($cImg) ?>" alt="" width="480" height="300" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($cTitle) ?><?php endif; ?>
+        <?php if ($cImg): ?><img src="<?= v2_e(v2_thumb($cImg, 640, 400)) ?>" alt="" width="480" height="300" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($cTitle) ?><?php endif; ?>
         <span class="rc-emoji" aria-hidden="true"><?= v2_e($cEmoji) ?></span>
       </span>
       <span class="rc-body">
