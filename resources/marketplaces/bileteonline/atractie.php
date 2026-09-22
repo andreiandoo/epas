@@ -43,13 +43,15 @@ $atType       = $attraction['type']['name'] ?? '';
 $atTypeIcon   = $attraction['type']['icon'] ?? '';
 $atCity       = $attraction['city'] ?? null;
 $atCitySlug   = $atCity['slug'] ?? '';
-// A locality the import created so the attraction would have a place has no city page of its own
-// (is_visible = false → /locations/cities/{slug} answers 404). Name it, but do not link to it.
-// `has_page` is absent on older API responses, in which case the previous behaviour stands.
-$atCityPage   = $atCitySlug !== '' && ($atCity['has_page'] ?? true) ? $atCitySlug : '';
-// Even without a city page the locality has an attractions list — this attraction is in it — so
-// the trail still leads somewhere real.
-$atCityCrumb  = $atCityPage !== '' ? '/' . $atCityPage : ($atCitySlug !== '' ? '/' . $atCitySlug . '/atractii' : '');
+/* Two thirds of the localities that hold attractions are not marketplace cities, so /{slug}
+   answers 404 for them — the import creates them invisible precisely so that every attraction has
+   a place. `has_page` says which ones do have a city page; when it is absent (an older API) we
+   assume none, because /{slug}/atractii always exists for a locality that holds this attraction
+   and a link that works beats a link that promises more. The section is never hidden: only its
+   target and its wording change. */
+$atCityHasPage = $atCitySlug !== '' && ($atCity['has_page'] ?? false);
+$atCityPage    = $atCityHasPage ? '/' . $atCitySlug : ($atCitySlug !== '' ? '/' . $atCitySlug . '/atractii' : '');
+$atCityThings  = $atCityHasPage ? 'activitățile' : 'atracțiile';
 $atCityName   = $atCity['name'] ?? '';
 $atCounty     = $attraction['county'] ?? '';
 $atCover      = v2_media_url($attraction['cover_image_url'] ?? null) ?? '';
@@ -111,7 +113,7 @@ $cardUrl = fn ($a) => '/experienta/' . ($a['slug'] ?? '');
 
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
 if ($atCityName) {
-    $breadcrumbs[] = ['name' => $atCityName, 'url' => $atCityCrumb !== '' ? SITE_URL . $atCityCrumb : null];
+    $breadcrumbs[] = ['name' => $atCityName, 'url' => $atCityPage !== '' ? SITE_URL . $atCityPage : null];
 }
 $breadcrumbs[] = ['name' => $atName, 'url' => SITE_URL . '/atractie/' . $slug];
 
@@ -206,7 +208,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if (!empty($atActivities)): ?>
             <a class="btn btn-light" href="#activitati">Vezi ce poți face aici<?= v2_ic('arrow-right') ?></a>
           <?php elseif ($atCityPage): ?>
-            <a class="btn btn-light" href="/<?= v2_e($atCityPage) ?>">Activități în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>"><?= $atCityHasPage ? 'Activități' : 'Atracții' ?> în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php if ($atCitySlug !== ''): ?>
             <a class="btn btn-outline-light" href="/harta?oras=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>Vezi zona pe hartă</a>
@@ -271,7 +273,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="sec-head">
         <div><p class="kicker">Tururi și experiențe</p><h2 id="tact-h">Activități la <?= v2_e($atName) ?></h2></div>
-        <?php if ($atCityPage): ?><a class="sec-link" href="/<?= v2_e($atCityPage) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($atCityPage): ?><a class="sec-link" href="<?= v2_e($atCityPage) ?>">Toate <?= v2_e($atCityThings) ?> din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
 
       <?php if (!empty($atActivities)): ?>
@@ -290,7 +292,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
       </ul>
       <?php else: ?>
-      <p class="tnone"><?= v2_ic('info') ?>Nu sunt încă activități cu bilete chiar la <?= v2_e($atName) ?>.<?php if ($atCityPage): ?> <a href="/<?= v2_e($atCityPage) ?>">Vezi ce se poate face în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
+      <p class="tnone"><?= v2_ic('info') ?>Nu sunt încă activități cu bilete chiar la <?= v2_e($atName) ?>.<?php if ($atCityPage): ?> <a href="<?= v2_e($atCityPage) ?>">Vezi ce mai e în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
       <?php endif; ?>
     </div>
   </section>
@@ -302,7 +304,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap texp-in">
       <p class="kicker">Explorează</p>
       <h2 id="texp-h"><?= v2_e($atCityName) ?></h2>
-      <a class="btn btn-light" href="/<?= v2_e($atCityPage) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+      <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>">Toate <?= v2_e($atCityThings) ?> din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
     </div>
   </section>
   <?php endif; ?>
