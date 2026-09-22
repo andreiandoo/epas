@@ -9,6 +9,40 @@ function v2_e($s): string
     return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Who takes the card payment for this marketplace: ['provider' => 'netopia', 'label' => 'NETOPIA Payments'], read from
+ * the checkout features (cached five minutes) and null while nothing answers. The checkout and the footer name the
+ * processor and show its logo from this, instead of assuming one.
+ */
+function v2_payment_provider(): ?array
+{
+    static $found;
+    if ($found !== null) {
+        return $found ?: null;
+    }
+    $found = false;
+    if (function_exists('api_cached')) {
+        $response = api_cached('checkout_features', fn () => api_get('/checkout/features'), 300);
+        $payment = $response['data']['payment'] ?? null;
+        if (is_array($payment) && !empty($payment['provider'])) {
+            $found = ['provider' => (string) $payment['provider'], 'label' => (string) ($payment['label'] ?? '')];
+        }
+    }
+
+    return $found ?: null;
+}
+
+/** The processor's own logo, when we carry it: a file under assets/images. */
+function v2_payment_logo(?array $provider, string $shape = 'h'): ?string
+{
+    $key = $provider['provider'] ?? '';
+    if ($key !== 'netopia') {
+        return null;
+    }
+
+    return asset('assets/images/netopia-' . ($shape === 'v' ? 'v' : 'h') . '.svg');
+}
+
 function v2_ic(string $name, string $cls = 'ic'): string
 {
     return '<svg class="' . $cls . '" aria-hidden="true"><use href="#i-' . $name . '"/></svg>';

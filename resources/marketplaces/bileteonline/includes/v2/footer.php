@@ -29,6 +29,10 @@ if (!empty($v2FooterCompact) || $v2FooterSwitch) {
       <button type="button" data-cc-action="open">Setări cookies</button>
     </nav>
     <div class="ftr-mini-anpc">
+      <?php $ftrMiniPay = v2_payment_provider(); $ftrMiniLogo = v2_payment_logo($ftrMiniPay); ?>
+      <?php if ($ftrMiniLogo): ?>
+      <a class="ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Plăți procesate de <?= v2_e($ftrMiniPay['label']) ?>"><img src="<?= v2_e($ftrMiniLogo) ?>" alt="<?= v2_e($ftrMiniPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async"></a>
+      <?php endif; ?>
       <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
       <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
     </div>
@@ -107,6 +111,12 @@ usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
     <div class="ftr-trust">
       <div class="ftr-trust-row">
         <div class="ftr-paywrap"><span>Plătești cu:</span><ul class="pay-badges" aria-label="Metode de plată"><li>VISA</li><li>Mastercard</li><li>Google Pay</li><li>Apple Pay</li></ul></div>
+        <?php $ftrPay = v2_payment_provider(); $ftrPayLogo = v2_payment_logo($ftrPay); ?>
+        <?php if ($ftrPayLogo): ?>
+        <a class="ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Plăți procesate de <?= v2_e($ftrPay['label']) ?>">
+          <img src="<?= v2_e($ftrPayLogo) ?>" alt="<?= v2_e($ftrPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async">
+        </a>
+        <?php endif; ?>
         <button class="ftr-cc" type="button" data-cc-action="open"><?= v2_ic('gear-six') ?>Setări cookies</button>
       </div>
       <div class="ftr-anpc">

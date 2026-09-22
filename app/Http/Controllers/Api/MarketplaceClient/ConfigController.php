@@ -157,6 +157,8 @@ class ConfigController extends BaseController
             'ticket_insurance' => $this->getTicketInsuranceSettings($client),
             'cultural_card' => $this->getCulturalCardSettings($client),
             'payment_fees'  => $this->getPaymentFeesSettings($client),
+            // who actually takes the card payment, so the checkout can name it and show its logo
+            'payment'       => $this->getPaymentProcessor($client),
             // points rules for the cart, checkout and activity pages; null when the marketplace has no automatic rewards
             'loyalty'       => app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->publicSettings($client),
         ];
@@ -185,6 +187,36 @@ class ConfigController extends BaseController
             'revenue_eur' => round((float) ($summary['revenue']['total_eur'] ?? 0), 2),
             'cached_at' => $summary['cached_at'] ?? null,
         ]);
+    }
+
+    /**
+     * The card processor this marketplace pays with: the default payment microservice, reduced to a key the front-end
+     * knows (netopia / stripe / euplatesc / payu) and a name to print. Null when none is set up.
+     */
+    protected function getPaymentProcessor($client): ?array
+    {
+        $method = rescue(fn () => $client->getDefaultPaymentMethod(), null, false);
+        if (!$method) {
+            return null;
+        }
+        $key = match ($method->slug) {
+            'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
+            'stripe', 'stripe-payments', 'payment-stripe' => 'stripe',
+            'euplatesc', 'payment-euplatesc' => 'euplatesc',
+            'payu', 'payment-payu' => 'payu',
+            default => $method->slug,
+        };
+        $names = [
+            'netopia'   => 'NETOPIA Payments',
+            'stripe'    => 'Stripe',
+            'euplatesc' => 'EuPlătesc',
+            'payu'      => 'PayU',
+        ];
+
+        return [
+            'provider' => $key,
+            'label'    => $names[$key] ?? ($method->name ?: ucfirst($key)),
+        ];
     }
 
     /**
