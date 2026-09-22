@@ -43,6 +43,13 @@ $atType       = $attraction['type']['name'] ?? '';
 $atTypeIcon   = $attraction['type']['icon'] ?? '';
 $atCity       = $attraction['city'] ?? null;
 $atCitySlug   = $atCity['slug'] ?? '';
+// A locality the import created so the attraction would have a place has no city page of its own
+// (is_visible = false → /locations/cities/{slug} answers 404). Name it, but do not link to it.
+// `has_page` is absent on older API responses, in which case the previous behaviour stands.
+$atCityPage   = $atCitySlug !== '' && ($atCity['has_page'] ?? true) ? $atCitySlug : '';
+// Even without a city page the locality has an attractions list — this attraction is in it — so
+// the trail still leads somewhere real.
+$atCityCrumb  = $atCityPage !== '' ? '/' . $atCityPage : ($atCitySlug !== '' ? '/' . $atCitySlug . '/atractii' : '');
 $atCityName   = $atCity['name'] ?? '';
 $atCounty     = $attraction['county'] ?? '';
 $atCover      = v2_media_url($attraction['cover_image_url'] ?? null) ?? '';
@@ -103,8 +110,8 @@ $pricedFromCents = function ($c): string {
 $cardUrl = fn ($a) => '/experienta/' . ($a['slug'] ?? '');
 
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
-if ($atCityName && $atCitySlug) {
-    $breadcrumbs[] = ['name' => $atCityName, 'url' => SITE_URL . '/' . $atCitySlug];
+if ($atCityName) {
+    $breadcrumbs[] = ['name' => $atCityName, 'url' => $atCityCrumb !== '' ? SITE_URL . $atCityCrumb : null];
 }
 $breadcrumbs[] = ['name' => $atName, 'url' => SITE_URL . '/atractie/' . $slug];
 
@@ -128,12 +135,15 @@ $structuredData = [[
 ], [
     '@context' => 'https://schema.org',
     '@type' => 'BreadcrumbList',
-    'itemListElement' => array_map(fn ($bc, $i) => [
-        '@type' => 'ListItem',
-        'position' => $i + 1,
-        'name' => $bc['name'],
-        'item' => $bc['url'],
-    ], $breadcrumbs, array_keys($breadcrumbs)),
+    'itemListElement' => (function () use ($breadcrumbs) {
+        $steps = array_values(array_filter($breadcrumbs, fn ($bc) => !empty($bc['url'])));
+        return array_map(fn ($bc, $i) => [
+            '@type' => 'ListItem',
+            'position' => $i + 1,
+            'name' => $bc['name'],
+            'item' => $bc['url'],
+        ], $steps, array_keys($steps));
+    })(),
 ]];
 
 $attrArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
@@ -171,7 +181,7 @@ include __DIR__ . '/includes/v2/header.php';
         <nav class="crumbs" aria-label="Breadcrumb">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
-            <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
+            <?php if ($i < count($breadcrumbs) - 1 && !empty($bc['url'])): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php elseif ($i < count($breadcrumbs) - 1): ?><span><?= v2_e($bc['name']) ?></span><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
         <p class="th-kicker"><?= v2_e($kicker) ?></p>
@@ -195,8 +205,8 @@ include __DIR__ . '/includes/v2/header.php';
         <div class="th-cta">
           <?php if (!empty($atActivities)): ?>
             <a class="btn btn-light" href="#activitati">Vezi ce poți face aici<?= v2_ic('arrow-right') ?></a>
-          <?php elseif ($atCitySlug): ?>
-            <a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Activități în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+          <?php elseif ($atCityPage): ?>
+            <a class="btn btn-light" href="/<?= v2_e($atCityPage) ?>">Activități în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php if ($atCitySlug !== ''): ?>
             <a class="btn btn-outline-light" href="/harta?oras=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>Vezi zona pe hartă</a>
@@ -261,7 +271,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="sec-head">
         <div><p class="kicker">Tururi și experiențe</p><h2 id="tact-h">Activități la <?= v2_e($atName) ?></h2></div>
-        <?php if ($atCitySlug): ?><a class="sec-link" href="/<?= v2_e($atCitySlug) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($atCityPage): ?><a class="sec-link" href="/<?= v2_e($atCityPage) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
 
       <?php if (!empty($atActivities)): ?>
@@ -280,19 +290,19 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
       </ul>
       <?php else: ?>
-      <p class="tnone"><?= v2_ic('info') ?>Nu sunt încă activități cu bilete chiar la <?= v2_e($atName) ?>.<?php if ($atCitySlug): ?> <a href="/<?= v2_e($atCitySlug) ?>">Vezi ce se poate face în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
+      <p class="tnone"><?= v2_ic('info') ?>Nu sunt încă activități cu bilete chiar la <?= v2_e($atName) ?>.<?php if ($atCityPage): ?> <a href="/<?= v2_e($atCityPage) ?>">Vezi ce se poate face în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
       <?php endif; ?>
     </div>
   </section>
 
   <!-- ===================== EXPLORE CITY CTA ===================== -->
-  <?php if ($atCitySlug && $atCover): ?>
+  <?php if ($atCityPage && $atCover): ?>
   <section class="texp" aria-labelledby="texp-h">
     <img src="<?= v2_e($atCover) ?>" alt="<?= v2_e($atCityName) ?>" loading="lazy" decoding="async">
     <div class="wrap texp-in">
       <p class="kicker">Explorează</p>
       <h2 id="texp-h"><?= v2_e($atCityName) ?></h2>
-      <a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+      <a class="btn btn-light" href="/<?= v2_e($atCityPage) ?>">Toate activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
     </div>
   </section>
   <?php endif; ?>
