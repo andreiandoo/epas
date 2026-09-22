@@ -33,6 +33,14 @@
 .pl-stepper input{text-align:center;max-width:90px}
 .pl-step-btn{flex:none;width:44px;height:48px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);font:700 1.25rem/1 var(--font);cursor:pointer}
 .pl-step-btn:hover{border-color:var(--green);background:var(--tint-green)}
+/* who travels: the same stepper, twice, in one column beside the days */
+.pl-party{display:flex;flex-wrap:wrap;gap:10px}
+.pl-party-one{display:grid;gap:4px;flex:1 1 8rem;min-width:0}
+.pl-party-one label{font-size:.75rem;font-weight:600;color:var(--muted)}
+.pl-party .pl-stepper{gap:4px}
+.pl-party .pl-stepper input{max-width:56px}
+.pl-party .pl-step-btn{width:38px;height:44px}
+.pl-party input[type="number"]{height:44px}
 
 .pl-chips{display:flex;flex-wrap:wrap;gap:8px}
 .pl-chip{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .875rem/1.2 var(--font);cursor:pointer;transition:border-color var(--dur-micro) var(--ease-out),background-color var(--dur-micro) var(--ease-out),color var(--dur-micro) var(--ease-out)}
@@ -101,7 +109,73 @@
   .pl-map-frame .epm-card{left:var(--space-4);right:auto}
 }
 
+
+/* Traseu / Cazare: two panes in one grid cell, so the map keeps its size while it is out of sight
+   and Leaflet has nothing to recover from when it comes back. visibility also takes the hidden
+   pane out of the tab order and out of the accessibility tree. */
+.pl-map-tabs{display:none;gap:6px;padding:4px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface)}
+@media (min-width:1100px){.pl-map-tabs{display:inline-flex;justify-self:start}}
+.pl-map-tab{height:34px;padding:0 16px;border:0;border-radius:var(--r-pill);background:none;color:var(--muted);font:700 .8125rem/1 var(--font);cursor:pointer}
+.pl-map-tab:hover{color:var(--green)}
+.pl-map-tab.is-on{background:var(--deep);color:var(--on-deep)}
+.pl-panes{display:grid;min-width:0}
+.pl-pane{grid-area:1/1;display:grid;gap:10px;align-content:start;min-width:0}
+.pl-pane.is-off{visibility:hidden;pointer-events:none}
+
+/* the accommodation pane: nothing from Stay22 until it is asked for */
+.pl-stay{display:grid;gap:10px}
+.pl-stay-h{margin:0;font:700 1rem/1.3 var(--font);color:var(--green)}
+.pl-stay-sub{margin:0;font-size:.8125rem;color:var(--muted)}
+.pl-stay-frame{position:relative;overflow:hidden;height:min(62vh,620px);border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface-2)}
+.pl-stay-frame iframe{width:100%;height:100%;border:0;display:block}
+.pl-stay-skel{position:absolute;inset:0;display:grid;place-items:center;gap:8px;align-content:center;padding:16px;text-align:center;background:linear-gradient(120deg,var(--tint-green),var(--surface-2));color:var(--muted);font-size:.8125rem}
+.pl-stay-skel[hidden]{display:none}
+.pl-stay-spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:pl-spin 900ms linear infinite}
+@keyframes pl-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pl-stay-spin{animation-duration:3s}}
+.pl-stay-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.pl-stay-out{display:inline-flex;align-items:center;gap:6px;font-size:.8125rem;font-weight:700;color:var(--action)}
+.pl-stay-note{margin:0;font-size:.75rem;color:var(--placeholder)}
+.pl-stay-empty{margin:0;padding:14px;border:1px dashed var(--line);border-radius:var(--r-m);font-size:.875rem;color:var(--muted)}
+
+/* on a phone the accommodation view is a sheet, not a tab: the map column is far below the night */
+.pl-sheet{position:fixed;z-index:70;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--bg)}
+.pl-sheet[hidden]{display:none}
+.pl-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px var(--space-4);border-bottom:1px solid var(--line);background:var(--surface)}
+.pl-sheet-head .pl-stay-h{font-size:.9375rem}
+.pl-sheet-body{overflow:auto;padding:var(--space-4);-webkit-overflow-scrolling:touch}
+.pl-sheet-body .pl-stay-frame{height:calc(100vh - 230px);min-height:320px}
+.pl-sheet-x{flex:none;display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--ink);cursor:pointer}
+.pl-sheet-x:hover{border-color:var(--green);background:var(--tint-green)}
+.pl-sheet-x .ic{width:16px;height:16px}
+html.pl-sheet-open,html.pl-sheet-open body{overflow:hidden}
+
 .pl-days{display:grid;gap:var(--space-5)}
+/* a night carries the same weight as a day: same card, quieter colours, because it is a suggestion */
+.pl-night{display:grid;gap:10px;padding:14px 18px;border:1px solid var(--line);border-radius:var(--r-l);background:linear-gradient(140deg,var(--tint-green),var(--surface) 70%);scroll-margin-top:calc(var(--hdr-h) + 16px)}
+.pl-night:focus-visible{outline:2px solid var(--action);outline-offset:3px}
+.pl-night.is-skipped{background:var(--surface);border-style:dashed}
+.pl-night-h{display:flex;align-items:center;gap:8px;margin:0;font:700 1rem/1.3 var(--font);letter-spacing:-.015em;color:var(--green)}
+.pl-night-h .pl-night-em{font-size:1.125rem}
+.pl-night-p{margin:0;font-size:.875rem;line-height:1.5;color:var(--ink)}
+.pl-night-p b{color:var(--green)}
+.pl-night.is-far .pl-night-p{color:var(--muted)}
+.pl-night-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pl-night-acts .pl-day-act{height:36px}
+.pl-night-acts .pl-day-act.is-primary{border-color:var(--deep);background:var(--deep);color:var(--on-deep)}
+.pl-night-acts .pl-day-act.is-primary .ic{color:var(--on-deep)}
+.pl-night-rooms{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:.75rem;font-weight:600;color:var(--muted)}
+.pl-night-rooms select{height:32px;padding:0 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:600 .75rem/1 var(--font)}
+.pl-night-pick{position:relative;display:grid;gap:6px}
+.pl-night-pick[hidden]{display:none}
+.pl-night-pick input{width:100%;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:500 .875rem/1 var(--font)}
+.pl-night-pick input:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.pl-night-hits{list-style:none;position:absolute;z-index:6;left:0;right:0;top:calc(100% + 4px);margin:0;padding:6px;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);box-shadow:var(--shadow-pop)}
+.pl-night-hits[hidden]{display:none}
+
+/* the band: the nights, in one line, jumping to the first one still undecided */
+.pl-bar-nights{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0;padding:0;border:0;background:none;color:var(--green);font:700 .8125rem/1.3 var(--font);text-align:left;cursor:pointer}
+.pl-bar-nights:hover{text-decoration:underline}
 .pl-day{padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);transition:border-color var(--dur-micro) var(--ease-out)}
 .pl-day.is-active{border-color:var(--green);box-shadow:0 0 0 3px rgba(30,91,72,.08)}
 .pl-day-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
@@ -216,7 +290,9 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 
 /* ---------- print: the plan, nothing else ---------- */
 @media print{
-  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-drop,.pl-ghost,.pl-menu,.pl-ins,.sec,.cc,.cc-dialog{display:none !important}
+  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-drop,.pl-ghost,.pl-menu,.pl-ins,.sec,.cc,.cc-dialog,.pl-night-acts,.pl-night-pick,.pl-sheet,.pl-bar-nights{display:none !important}
+  /* the nights print where they sit, between the days, with the town and nothing to click */
+  .pl-night{break-inside:avoid;background:none;border-color:#999}
   .pl-plan{padding:0}
   .pl-bar{padding:0 0 12px}
   .pl-grip .ic{display:none}
