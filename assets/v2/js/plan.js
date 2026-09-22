@@ -35,6 +35,8 @@
   var FILL_TO = 0.85;                                   // leave the last sixth of the day free
   var RADIUS_CITY = [45, 60, 75, 90, 100, 110, 120];    // km around a city, by number of days
   var CRLF = String.fromCharCode(13, 10);
+  var PRESETS = CFG.stops || [];                        // your own stops, ready made: label, emoji, minutes
+  var MINUTES = CFG.minutes || [15, 30, 45, 60, 90, 120, 180, 240];
   var COMBINING = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
 
   /* ---------------------------------------------------------------- utils */
@@ -52,6 +54,23 @@
     s.setAttribute('aria-hidden', 'true');
     u.setAttribute('href', '#i-' + name);
     s.appendChild(u);
+    return s;
+  }
+  /* Three shapes the shared sprite does not carry, drawn on the same 256 grid as the rest. */
+  var GLYPH = {
+    trash: 'M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z',
+    grip: 'M108,60A16,16,0,1,1,92,44,16,16,0,0,1,108,60Zm56-16a16,16,0,1,0,16,16A16,16,0,0,0,164,44ZM92,112a16,16,0,1,0,16,16A16,16,0,0,0,92,112Zm72,0a16,16,0,1,0,16,16A16,16,0,0,0,164,112ZM92,180a16,16,0,1,0,16,16A16,16,0,0,0,92,180Zm72,0a16,16,0,1,0,16,16A16,16,0,0,0,164,180Z',
+    dots: 'M128,96a16,16,0,1,0-16-16A16,16,0,0,0,128,96Zm0,16a16,16,0,1,0,16,16A16,16,0,0,0,128,112Zm0,64a16,16,0,1,0,16,16A16,16,0,0,0,128,176Z'
+  };
+  function glyph(name, cls) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    s.setAttribute('class', cls || 'ic');
+    s.setAttribute('viewBox', '0 0 256 256');
+    s.setAttribute('aria-hidden', 'true');
+    p.setAttribute('fill', 'currentColor');
+    p.setAttribute('d', GLYPH[name]);
+    s.appendChild(p);
     return s;
   }
   function fold(s) { return (s || '').normalize('NFD').replace(COMBINING, '').toLowerCase(); }
@@ -151,7 +170,45 @@
    * One uniform stop, whatever it is underneath. 'b:' marks something bookable (an experience or a
    * leisure location) so the rest of the planner never has to care which catalogue it came from.
    */
+  /* -------- stops of your own --------
+   *
+   * A stop the traveller writes themselves — a meal, a coffee, a break, a hotel check-in — lives in
+   * plan.extra under an id that starts with 'x:', so entry() can tell it from a catalogue slug and
+   * the rest of the planner never has to care. Three ways to place it:
+   *
+   *   at:'prev'  it borrows the place of whatever it follows: time in the day, no driving;
+   *   at:'none'  no place at all: time in the day, nothing on the map, nothing on the road;
+   *   at:'fix'   a real point picked from the catalogue, with lat/lng — this one does move the road.
+   *
+   * Only 'fix' is a waypoint. The other two are skipped by the router, by the map and by the leg
+   * arithmetic, and keep nothing but their minutes.
+   */
+  var OWNSEQ = 0;
+  function isOwn(id) { return typeof id === 'string' && id.indexOf('x:') === 0; }
+  function ownId() {
+    var id;
+    do { OWNSEQ++; id = 'x:' + Date.now().toString(36) + OWNSEQ.toString(36); } while (plan.extra[id]);
+    return id;
+  }
+  function ownEntry(id) {
+    var x = plan && plan.extra ? plan.extra[id] : null;
+    if (!x) return null;
+    var fixed = x.at === 'fix' && typeof x.lat === 'number' && typeof x.lng === 'number';
+    return {
+      id: id, kind: 'own', slug: id, name: x.name || 'Oprire', city: '', citySlug: '', county: '',
+      lat: fixed ? x.lat : null, lng: fixed ? x.lng : null, approx: false, price: 0,
+      dur: x.minutes || 30, img: '', type: '', emoji: x.emoji || '🕑', typeSlug: '',
+      bookable: false, href: '', own: true, at: x.at || 'none', place: x.place || ''
+    };
+  }
+  function ownMeta(e) {
+    if (e.at === 'fix') return 'Oprirea ta · ' + (e.place || 'alt loc');
+    if (e.at === 'prev') return 'Oprirea ta · la oprirea dinainte';
+    return 'Oprirea ta · fără loc anume';
+  }
+
   function entry(id) {
+    if (isOwn(id)) return ownEntry(id);
     if (id.indexOf('b:') === 0) {
       var b = BOOK[id.slice(2)];
       if (!b) return null;
@@ -191,7 +248,7 @@
     return {
       origin: null, where: null, back: null, days: 2, from: '',
       interests: [], company: [], pace: 'normal',
-      stops: [], locked: {}, removed: {}, custom: {}, token: ''
+      stops: [], locked: {}, removed: {}, custom: {}, extra: {}, token: ''
     };
   }
 
@@ -282,15 +339,42 @@
     return out;
   }
 
+  /** Your own stops, dropped back behind the stop each one was following. */
+  function putBack(list, own) {
+    if (!own.length) return list;
+    var out = list.slice();
+    own.forEach(function (o) {
+      var at = o.after ? out.length : 0;      // the stop it followed is gone: it waits at the end
+      if (o.after) {
+        for (var i = 0; i < out.length; i++) {
+          if (out[i].id === o.after) { at = i + 1; break; }
+        }
+      }
+      while (at < out.length && isOwn(out[at].id)) at++;       // keep two of them in the order given
+      out.splice(at, 0, { id: o.id, lat: null, lng: null, type: '', dur: o.dur, score: 99 });
+    });
+    return out;
+  }
+
   function generate() {
     var budget = dayBudget() * FILL_TO;
     var pool = candidates();
     var used = {};
     var days = [];
 
+    var mine = [];    // per day: the stops you wrote yourself, and what each of them followed
+
     for (var d = 0; d < plan.days; d++) {
-      var keep = [];
+      var keep = [], own = [], behind = null;
       (plan.stops[d] || []).forEach(function (id) {
+        if (isOwn(id)) {
+          // Never thrown away by a regeneration, and it comes back behind whatever it was following
+          // — whether or not that stop survived the shuffle.
+          var x = entry(id);
+          if (x) own.push({ id: id, after: behind, dur: x.dur });
+          return;
+        }
+        behind = id;
         if (!plan.locked[id] || used[id]) return;
         var e = entry(id);
         if (!e) return;
@@ -298,6 +382,7 @@
         keep.push({ id: id, lat: e.lat, lng: e.lng, type: e.typeSlug || '', dur: e.dur, score: 99 });
       });
       days.push(keep);
+      mine.push(own);
     }
     pool = pool.filter(function (c) { return !used[c.id]; });
 
@@ -307,6 +392,7 @@
     for (var day = 0; day < plan.days; day++) {
       var list = days[day];
       var spent = 0;
+      mine[day].forEach(function (o) { spent += o.dur; });     // your own stops eat into the day too
       list.forEach(function (s, n) {
         var from = n ? [list[n - 1].lat, list[n - 1].lng] : (day === 0 ? anchor : null);
         spent += s.dur + (from ? estMin(km(from[0], from[1], s.lat, s.lng)) : 0);
@@ -341,7 +427,7 @@
         spent += pickNeed;
       }
 
-      days[day] = orderDay(list);
+      days[day] = putBack(orderDay(list), mine[day]);
       pool = pool.filter(function (c) { return !used[c.id]; });
     }
 
@@ -359,9 +445,22 @@
     if (dayIndex === 0 && plan.origin) {
       pts.push({ role: 'origin', name: plan.origin.label, lat: plan.origin.lat, lng: plan.origin.lng });
     }
-    (plan.stops[dayIndex] || []).forEach(function (id) {
+    var last = pts.length ? pts[0] : null;      // the last point that is really on the road
+    (plan.stops[dayIndex] || []).forEach(function (id, pos) {
       var e = entry(id);
-      if (e) pts.push({ role: 'stop', entry: e, lat: e.lat, lng: e.lng });
+      if (!e) return;
+      if (e.own && e.lat === null) {
+        // Time, not a waypoint: 'prev' borrows the place it follows so the calendar still has a
+        // location, 'none' has none at all. Neither adds a leg and neither goes to the router.
+        var borrow = e.at === 'prev' ? last : null;
+        pts.push({
+          role: 'stop', entry: e, pos: pos, off: true,
+          lat: borrow ? borrow.lat : null, lng: borrow ? borrow.lng : null
+        });
+        return;
+      }
+      pts.push({ role: 'stop', entry: e, pos: pos, lat: e.lat, lng: e.lng });
+      last = pts[pts.length - 1];
     });
     if (dayIndex === plan.days - 1) {
       var end = plan.back || plan.origin;
@@ -369,8 +468,12 @@
     }
     return pts;
   }
+  /** Only what is driven: a stop without a place of its own is time, not a waypoint. */
+  function roadPoints(dayIndex) {
+    return dayPoints(dayIndex).filter(function (p) { return !p.off && typeof p.lat === 'number'; });
+  }
   function dayKey(dayIndex) {
-    return dayPoints(dayIndex).map(function (p) { return p.lat.toFixed(5) + ',' + p.lng.toFixed(5); }).join(';');
+    return roadPoints(dayIndex).map(function (p) { return p.lat.toFixed(5) + ',' + p.lng.toFixed(5); }).join(';');
   }
 
   /** Ask the server for the real road, once per distinct day. */
@@ -385,9 +488,7 @@
           .then(function (r) { return r.json(); })
           .then(function (j) {
             roadCache[key] = (j && j.ok) ? j : 'failed';
-            renderBar();
-            renderDays();
-            syncMap();
+            refresh();
           })
           .catch(function () { roadCache[key] = 'failed'; });
       })();
@@ -406,22 +507,27 @@
     var pts = dayPoints(dayIndex);
     var r = road(dayIndex);
     var rows = [], t = DAY_START, totalKm = 0, visit = 0, travel = 0, cost = 0;
+    var prev = null, leg = -1;      // the last point on the road, and its index in the routed legs
 
     for (var n = 0; n < pts.length; n++) {
       var p = pts[n];
       var legKm = 0, legMin = 0;
-      if (n > 0) {
-        if (r && r.legs && r.legs[n]) {
-          legKm = r.legs[n][0];
-          legMin = r.legs[n][1];
-        } else {
-          var raw = km(pts[n - 1].lat, pts[n - 1].lng, p.lat, p.lng);
-          legKm = estKm(raw);
-          legMin = estMin(raw);
+      if (!p.off) {
+        leg++;
+        if (leg > 0 && prev) {
+          if (r && r.legs && r.legs[leg]) {
+            legKm = r.legs[leg][0];
+            legMin = r.legs[leg][1];
+          } else {
+            var raw = km(prev.lat, prev.lng, p.lat, p.lng);
+            legKm = estKm(raw);
+            legMin = estMin(raw);
+          }
+          totalKm += legKm;
+          travel += legMin;
+          t += legMin;
         }
-        totalKm += legKm;
-        travel += legMin;
-        t += legMin;
+        prev = p;
       }
       if (p.role !== 'stop') {
         rows.push({ role: p.role, name: p.name, lat: p.lat, lng: p.lng, start: t, dur: 0, legKm: legKm, legMin: legMin });
@@ -429,7 +535,10 @@
       }
       var e = p.entry;
       var dur = plan.custom[e.id] || e.dur;
-      rows.push({ role: 'stop', e: e, id: e.id, lat: e.lat, lng: e.lng, start: t, dur: dur, legKm: legKm, legMin: legMin });
+      rows.push({
+        role: 'stop', e: e, id: e.id, pos: p.pos, off: !!p.off,
+        lat: p.lat, lng: p.lng, start: t, dur: dur, legKm: legKm, legMin: legMin
+      });
       visit += dur;
       cost += e.price || 0;
       t += dur;
@@ -445,6 +554,8 @@
       i: plan.interests, g: plan.company, p: plan.pace, s: plan.stops,
       l: Object.keys(plan.locked), r: Object.keys(plan.removed), c: plan.custom, t: plan.token || ''
     };
+    // Only when there is something to say: a plan without stops of your own stays as short as it was.
+    if (plan.extra && Object.keys(plan.extra).length) compact.x = plan.extra;
     try {
       return btoa(unescape(encodeURIComponent(JSON.stringify(compact)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     } catch (e) { return ''; }
@@ -456,8 +567,13 @@
       p.origin = o.o || null; p.where = o.w; p.back = o.b || null;
       p.days = o.d || 2; p.from = o.f || ''; p.interests = o.i || []; p.company = o.g || [];
       p.pace = o.p || 'normal'; p.stops = o.s || []; p.custom = o.c || {}; p.token = o.t || '';
+      // Links and saved plans made before stops of your own existed simply have none of them.
+      p.extra = (o.x && typeof o.x === 'object') ? o.x : {};
       (o.l || []).forEach(function (s) { p.locked[s] = 1; });
       (o.r || []).forEach(function (s) { p.removed[s] = 1; });
+      p.stops = p.stops.map(function (day) {
+        return (day || []).filter(function (id) { return !isOwn(id) || p.extra[id]; });
+      });
       return p.where ? p : null;
     } catch (e) { return null; }
   }
@@ -496,19 +612,24 @@
     for (var d = 0; d < plan.days; d++) {
       dayView(d).rows.forEach(function (r) {
         if (r.role !== 'stop') return;
+        var e = r.e;
+        var where = [e.city, e.county].filter(Boolean).join(', ');
         lines.push(
           'BEGIN:VEVENT',
           'UID:' + r.id.replace(':', '-') + '-d' + d + '@bilete.online',
           'DTSTAMP:' + stamp,
           'DTSTART:' + icsTime(d, r.start),
           'DTEND:' + icsTime(d, r.start + r.dur),
-          'SUMMARY:' + icsEscape(r.e.name),
-          'LOCATION:' + icsEscape([r.e.city, r.e.county].filter(Boolean).join(', ')),
-          'GEO:' + r.lat + ';' + r.lng,
-          'URL:https://bilete.online' + r.e.href,
-          'DESCRIPTION:' + icsEscape((r.e.type ? r.e.type + '. ' : '') + 'Durata e o estimare. https://bilete.online' + r.e.href),
-          'END:VEVENT'
+          'SUMMARY:' + icsEscape(e.own && e.emoji ? e.emoji + ' ' + e.name : e.name)
         );
+        // A stop of your own may have no place at all: it keeps its hour and loses the geography.
+        if (where) lines.push('LOCATION:' + icsEscape(where));
+        if (typeof r.lat === 'number' && typeof r.lng === 'number') lines.push('GEO:' + r.lat + ';' + r.lng);
+        if (e.href) lines.push('URL:https://bilete.online' + e.href);
+        lines.push('DESCRIPTION:' + icsEscape(e.own
+          ? ownMeta(e) + '. Durata e cea pusă de tine.'
+          : (e.type ? e.type + '. ' : '') + 'Durata e o estimare. https://bilete.online' + e.href));
+        lines.push('END:VEVENT');
       });
     }
     lines.push('END:VCALENDAR');
@@ -520,6 +641,23 @@
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  /**
+   * The day handed to Google Maps: departure, what is driven, arrival. Stops of your own that are
+   * pure time have no coordinates and no business in a driving link, so they are left out; their
+   * minutes stay in the plan on this page.
+   */
+  function gmapsUrl(dayIndex) {
+    var pts = roadPoints(dayIndex);
+    if (pts.length < 2) return '';
+    var ll = function (p) { return p.lat + ',' + p.lng; };
+    var mid = pts.slice(1, -1);
+    if (mid.length > 8) mid = mid.slice(0, 8);      // the URL API takes nine waypoints, no more
+    return 'https://www.google.com/maps/dir/?api=1&travelmode=driving' +
+      '&origin=' + encodeURIComponent(ll(pts[0])) +
+      '&destination=' + encodeURIComponent(ll(pts[pts.length - 1])) +
+      (mid.length ? '&waypoints=' + encodeURIComponent(mid.map(ll).join('|')) : '');
   }
 
   /* ---------------------------------------------------------------- the account */
@@ -624,11 +762,31 @@
   var ui = {
     bar: document.getElementById('pl-bar'),
     list: document.getElementById('pl-days-list'),
-    note: document.getElementById('pl-map-note')
+    note: document.getElementById('pl-map-note'),
+    live: document.getElementById('pl-live')
   };
   var activeDay = 0;
+  var focusId = null;        // whose handle to put the focus back on after the next render
+
+  /** Says out loud what just moved, for whoever is not looking at the screen. */
+  function announce(msg) { if (ui.live) ui.live.textContent = msg; }
+
+  /**
+   * A road answer arriving is the one redraw nobody asked for, so it waits while a menu or the
+   * little form is open rather than pulling them out from under the reader.
+   */
+  var stale = false;
+  function refresh() {
+    if (menu || composer) { stale = true; return; }
+    stale = false;
+    renderBar();
+    renderDays();
+    syncMap();
+  }
 
   function render() {
+    composer = null;          // a fresh plan never opens with half a form on the screen
+    stale = false;
     startBox.hidden = true;
     root.hidden = false;
     renderBar();
@@ -696,8 +854,35 @@
   }
 
   function renderDays() {
+    // Rendering throws the old nodes away, so a stop held with the keyboard has to be handed back
+    // its handle — and so does one whose handle simply had the focus when the router answered.
+    var held = document.activeElement;
+    var heldId = held && held.classList && held.classList.contains('pl-grip') && held.closest('.pl-stop')
+      ? held.closest('.pl-stop').dataset.id : null;
+
     ui.list.textContent = '';
     for (var d = 0; d < plan.days; d++) ui.list.appendChild(dayCard(d));
+
+    var want = grab ? grab.id : (focusId || heldId);
+    focusId = null;
+    if (want) {
+      var li = ui.list.querySelector('.pl-stop[data-id="' + want + '"]');
+      if (li) {
+        if (grab) li.classList.add('is-grabbed');
+        var g = li.querySelector('.pl-grip');
+        if (g) g.focus();
+        li.scrollIntoView({ block: 'nearest' });
+      } else if (grab) {
+        grab = null;
+      }
+    }
+    if (composer && composer.focus) {
+      composer.focus = false;
+      var f = ui.list.querySelector('.pl-new input');
+      if (f) { f.focus(); f.select(); }
+      var nb = ui.list.querySelector('.pl-new');
+      if (nb) nb.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   function dayCard(d) {
@@ -707,7 +892,7 @@
     box.dataset.day = String(d);
 
     var head = el('header', 'pl-day-head');
-    var hl = el('div');
+    var hl = el('div', 'pl-day-headings');
     hl.appendChild(el('h3', 'pl-day-h', dateLabel(plan.from, d)));
     var sub = el('p', 'pl-day-sub');
     sub.textContent = stops.length
@@ -716,26 +901,54 @@
         clock(DAY_START) + '–' + clock(view.end) + ' · ' + hm(view.travel) + ' pe drum'
       : 'Zi liberă — adaugă ceva sau regenerează.';
     hl.appendChild(sub);
+    if (d === 0 && stops.length > 1) {
+      hl.appendChild(el('p', 'pl-day-tip',
+        'Trage de bulina din stânga ca să muți o oprire, în zi sau în altă zi. Cu tastatura: Enter pe bulină, apoi săgețile.'));
+    }
     head.appendChild(hl);
 
-    var show = el('button', 'pl-day-show');
+    var acts = el('div', 'pl-day-acts');
+    var show = el('button', 'pl-day-act pl-day-show');
     show.type = 'button';
     show.appendChild(icon('map-pin'));
     show.appendChild(el('span', '', d === activeDay ? 'Pe hartă' : 'Vezi pe hartă'));
     show.addEventListener('click', function () { activeDay = d; renderDays(); syncMap(); });
-    head.appendChild(show);
+    acts.appendChild(show);
+
+    var mk = el('button', 'pl-day-act');
+    mk.type = 'button';
+    mk.appendChild(icon('plus'));
+    mk.appendChild(el('span', '', 'Oprire de-a ta'));
+    mk.addEventListener('click', function () { openComposer(d, (plan.stops[d] || []).length); });
+    acts.appendChild(mk);
+
+    var gm = gmapsUrl(d);
+    if (gm) {
+      var ga = el('a', 'pl-day-act');
+      ga.href = gm;
+      ga.target = '_blank';
+      ga.rel = 'noopener';
+      ga.appendChild(icon('map-pin'));
+      ga.appendChild(el('span', '', 'Google Maps'));
+      acts.appendChild(ga);
+    }
+    head.appendChild(acts);
     box.appendChild(head);
 
     var ol = el('ol', 'pl-stops');
     var n = 0;
     view.rows.forEach(function (r) {
       if (r.role === 'stop') {
-        ol.appendChild(stopItem(d, n, r, stops.length));
-        n++;
+        if (!r.e.own) n++;                       // your own stops take time, not a number on the map
+        ol.appendChild(stopItem(d, r, n));
       } else {
         ol.appendChild(edgeItem(r));
       }
     });
+    if (composer && composer.day === d) {
+      var at = ol.querySelector('.pl-stop[data-pos="' + composer.pos + '"]');
+      ol.insertBefore(composerItem(), at || null);
+    }
     box.appendChild(ol);
 
     var foot = el('div', 'pl-day-foot');
@@ -765,27 +978,39 @@
     return li;
   }
 
-  function stopItem(d, n, r, total) {
+  function stopItem(d, r, n) {
     var e = r.e;
-    var li = el('li', 'pl-stop');
-    var num = el('span', 'pl-stop-num', String(n + 1));
-    num.setAttribute('aria-hidden', 'true');
-    li.appendChild(num);
+    var li = el('li', 'pl-stop' + (e.own ? ' is-own' : ''));
+    li.dataset.day = String(d);
+    li.dataset.pos = String(r.pos);
+    li.dataset.id = e.id;
+    li.appendChild(gripFor(d, r, n));
 
     var card = el('div', 'pl-stop-card' + (plan.locked[e.id] ? ' is-locked' : '') + (e.bookable ? ' is-sell' : ''));
 
+    // One row across the top of the card: the drive on the left, what you can do to the stop on the
+    // right. The bin sits in the corner without having to be lifted out of the flow.
+    var top = el('div', 'pl-stop-top');
     if (r.legKm > 0 || r.legMin > 0) {
       var leg = el('p', 'pl-leg');
       leg.appendChild(icon('arrow-right'));
       leg.appendChild(document.createTextNode(km1(r.legKm) + ' km · ' + hm(r.legMin) + ' de mers'));
-      card.appendChild(leg);
+      top.appendChild(leg);
+    } else if (r.off) {
+      top.appendChild(el('p', 'pl-leg pl-leg-off', 'fără drum în plus'));
+    } else {
+      top.appendChild(el('span', 'pl-leg-none'));
     }
+    top.appendChild(toolsFor(d, r));
+    card.appendChild(top);
 
     var body = el('div', 'pl-stop-body');
-    var media = el('a', 'pl-stop-media');
-    media.href = e.href;
-    media.target = '_blank';
-    media.rel = 'noopener';
+    var media = el(e.href ? 'a' : 'div', 'pl-stop-media');
+    if (e.href) {
+      media.href = e.href;
+      media.target = '_blank';
+      media.rel = 'noopener';
+    }
     if (e.img) {
       var img = el('img');
       img.src = thumb(e.img, 240, 240);
@@ -802,14 +1027,19 @@
 
     var text = el('div', 'pl-stop-text');
     text.appendChild(el('p', 'pl-stop-time', clock(r.start) + '–' + clock(r.start + r.dur)));
-    var title = el('a', 'pl-stop-title', e.name);
-    title.href = e.href;
-    title.target = '_blank';
-    title.rel = 'noopener';
+    var title;
+    if (e.href) {
+      title = el('a', 'pl-stop-title', e.name);
+      title.href = e.href;
+      title.target = '_blank';
+      title.rel = 'noopener';
+    } else {
+      title = el('p', 'pl-stop-title', e.name);
+    }
     text.appendChild(title);
 
     var meta = el('p', 'pl-stop-meta');
-    meta.appendChild(document.createTextNode([e.type, e.city].filter(Boolean).join(' · ')));
+    meta.appendChild(document.createTextNode(e.own ? ownMeta(e) : [e.type, e.city].filter(Boolean).join(' · ')));
     if (e.approx) meta.appendChild(el('span', 'pl-approx', 'poziție aproximativă'));
     if (e.bookable || e.price > 0) {
       var tag = el('span', 'pl-sell');
@@ -822,7 +1052,7 @@
     var durWrap = el('label', 'pl-dur');
     durWrap.appendChild(el('span', 'sr', 'Cât stai la ' + e.name));
     var sel = el('select');
-    var opts = [20, 30, 45, 60, 90, 120, 180, 240];
+    var opts = MINUTES.slice();
     if (opts.indexOf(r.dur) === -1) opts.push(r.dur);
     opts.sort(function (a, b) { return a - b; }).forEach(function (m) {
       var o = el('option', '', hm(m));
@@ -831,81 +1061,163 @@
       sel.appendChild(o);
     });
     sel.addEventListener('change', function () {
-      plan.custom[e.id] = parseInt(sel.value, 10);
+      var m = parseInt(sel.value, 10) || 30;
+      if (e.own && plan.extra[e.id]) plan.extra[e.id].minutes = m;
+      else plan.custom[e.id] = m;
       plan.locked[e.id] = 1;
-      renderDays();
-      save();
+      after();
     });
     durWrap.appendChild(sel);
-    durWrap.appendChild(el('small', '', 'estimat'));
+    durWrap.appendChild(el('small', '', e.own ? 'cât zici tu' : 'estimat'));
     text.appendChild(durWrap);
     body.appendChild(text);
     card.appendChild(body);
-
-    var acts = el('div', 'pl-stop-acts');
-    acts.appendChild(iconBtn('arrow-left', 'Mai devreme', n === 0, function () { move(d, n, -1); }, 'up'));
-    acts.appendChild(iconBtn('arrow-right', 'Mai târziu', n === total - 1, function () { move(d, n, 1); }, 'down'));
-    if (plan.days > 1) {
-      var mv = el('select', 'pl-move');
-      mv.setAttribute('aria-label', 'Mută în altă zi');
-      var h = el('option', '', 'Mută în…');
-      h.value = '';
-      mv.appendChild(h);
-      for (var k = 0; k < plan.days; k++) {
-        if (k === d) continue;
-        var o3 = el('option', '', 'Ziua ' + (k + 1));
-        o3.value = String(k);
-        mv.appendChild(o3);
-      }
-      mv.addEventListener('change', function () {
-        if (mv.value !== '') moveToDay(d, n, parseInt(mv.value, 10));
-      });
-      acts.appendChild(mv);
-    }
-    acts.appendChild(iconBtn('x', 'Scoate din plan', false, function () { remove(d, n); }, 'del'));
-    card.appendChild(acts);
 
     li.appendChild(card);
     return li;
   }
 
-  function iconBtn(ic, label, disabled, fn, cls) {
-    var b = el('button', 'pl-ib pl-ib-' + cls);
+  /** The number is the handle: drag it, or take the stop with Enter and move it with the arrows. */
+  function gripFor(d, r, n) {
+    var e = r.e;
+    var b = el('button', 'pl-grip');
     b.type = 'button';
-    b.disabled = !!disabled;
-    b.title = label;
-    b.appendChild(icon(ic));
-    b.appendChild(el('span', 'sr', label));
-    b.addEventListener('click', fn);
+    b.title = 'Trage ca să muți oprirea';
+    var face = el('span', 'pl-grip-n', e.own ? (e.emoji || '🕑') : String(n));
+    face.setAttribute('aria-hidden', 'true');
+    b.appendChild(face);
+    b.appendChild(glyph('grip', 'ic pl-grip-ic'));
+    b.appendChild(el('span', 'sr', 'Mută ' + e.name + '. Trage cu mausul, sau apasă Enter și folosește săgețile.'));
+    b.addEventListener('pointerdown', function (ev) { dragStart(ev, stopLi(b)); });
+    b.addEventListener('keydown', function (ev) { gripKey(ev, stopLi(b)); });
     return b;
   }
+  function stopLi(node) { return node.closest('.pl-stop'); }
+
+  /** Top right of the card: everything you can do to the stop that is not its duration. */
+  function toolsFor(d, r) {
+    var e = r.e;
+    var box = el('div', 'pl-stop-tools');
+
+    var more = el('button', 'pl-ic-btn pl-more');
+    more.type = 'button';
+    more.title = 'Mai multe';
+    more.setAttribute('aria-haspopup', 'true');
+    more.setAttribute('aria-expanded', 'false');
+    more.appendChild(glyph('dots'));
+    more.appendChild(el('span', 'sr', 'Mai multe pentru ' + e.name));
+    more.addEventListener('click', function (ev) { ev.stopPropagation(); toggleMenu(more, d, r); });
+    box.appendChild(more);
+
+    var del = el('button', 'pl-ic-btn pl-del');
+    del.type = 'button';
+    del.title = 'Scoate din plan';
+    del.appendChild(glyph('trash'));
+    del.appendChild(el('span', 'sr', 'Scoate ' + e.name + ' din plan'));
+    del.addEventListener('click', function () { remove(d, r.pos); });
+    box.appendChild(del);
+    return box;
+  }
+
+  var menu = null;
+  function closeMenu() {
+    if (!menu) return;
+    menu.btn.setAttribute('aria-expanded', 'false');
+    if (menu.box.parentNode) menu.box.parentNode.removeChild(menu.box);
+    menu = null;
+    if (stale) refresh();
+  }
+  function toggleMenu(btn, d, r) {
+    var same = menu && menu.btn === btn;
+    closeMenu();
+    if (same) return;
+    var box = el('div', 'pl-menu');
+    var add = el('button', 'pl-menu-i', 'Adaugă o oprire după');
+    add.type = 'button';
+    add.addEventListener('click', function () { closeMenu(); openComposer(d, r.pos + 1); });
+    box.appendChild(add);
+    // an own stop can be renamed later: it is the user's own words, not a catalogue name
+    if (r.e.own && plan.extra[r.e.id]) {
+      var ren = el('button', 'pl-menu-i', 'Redenumește');
+      ren.type = 'button';
+      ren.addEventListener('click', function () {
+        closeMenu();
+        var now = plan.extra[r.e.id].name || '';
+        var next = window.prompt('Cum se numește oprirea?', now);
+        if (next === null) return;
+        next = next.replace(/\s+/g, ' ').trim().slice(0, 60);
+        if (!next || next === now) return;
+        plan.extra[r.e.id].name = next;
+        focusId = r.e.id;
+        announce('Oprirea se numește acum ' + next + '.');
+        after();
+      });
+      box.appendChild(ren);
+    }
+    for (var k = 0; k < plan.days; k++) {
+      (function (k) {
+        if (k === d) return;
+        var b = el('button', 'pl-menu-i', 'Mută în ziua ' + (k + 1));
+        b.type = 'button';
+        b.addEventListener('click', function () {
+          closeMenu();
+          if (!relocate(d, r.pos, k, (plan.stops[k] || []).length)) return;
+          focusId = r.e.id;
+          announce(r.e.name + ' a trecut în ziua ' + (k + 1) + '.');
+          after();
+        });
+        box.appendChild(b);
+      })(k);
+    }
+    btn.setAttribute('aria-expanded', 'true');
+    btn.closest('.pl-stop-card').appendChild(box);
+    menu = { btn: btn, box: box };
+    var first = box.querySelector('button');
+    if (first) first.focus();
+  }
+  document.addEventListener('click', function (ev) {
+    if (menu && !menu.box.contains(ev.target) && ev.target !== menu.btn) closeMenu();
+  });
 
   /* ---------- editing: every change locks what it touched ---------- */
 
   function lockDay(d) { (plan.stops[d] || []).forEach(function (s) { plan.locked[s] = 1; }); }
-  function after() { renderBar(); renderDays(); syncMap(); save(); fetchRoads(); }
+  /** Definitions nothing points at any more have no business travelling in the link. */
+  function tidy() {
+    var seen = {};
+    (plan.stops || []).forEach(function (day) { (day || []).forEach(function (id) { seen[id] = 1; }); });
+    Object.keys(plan.extra).forEach(function (id) { if (!seen[id]) delete plan.extra[id]; });
+  }
+  function after() { stale = false; closeMenu(); tidy(); renderBar(); renderDays(); syncMap(); save(); fetchRoads(); }
 
-  function move(d, n, dir) {
-    var list = plan.stops[d], to = n + dir;
-    if (to < 0 || to >= list.length) return;
-    var x = list[n];
-    list[n] = list[to];
-    list[to] = x;
-    lockDay(d);
-    after();
-  }
-  function moveToDay(from, n, to) {
-    var id = plan.stops[from].splice(n, 1)[0];
-    plan.stops[to].push(id);
+  /**
+   * One move for all of them — the arrows are gone, so dragging, the ⋮ menu and the keyboard all
+   * come through here. `toPos` is where the stop should land in the day as it looks right now.
+   */
+  function relocate(fromDay, fromPos, toDay, toPos) {
+    if (!plan.stops[fromDay] || !plan.stops[toDay]) return false;
+    if (fromDay === toDay && (toPos === fromPos || toPos === fromPos + 1)) return false;
+    var id = plan.stops[fromDay].splice(fromPos, 1)[0];
+    if (id === undefined) return false;
+    if (fromDay === toDay && toPos > fromPos) toPos--;
+    toPos = Math.max(0, Math.min(plan.stops[toDay].length, toPos));
+    plan.stops[toDay].splice(toPos, 0, id);
     plan.locked[id] = 1;
-    lockDay(to);
-    activeDay = to;
-    after();
+    lockDay(fromDay);
+    lockDay(toDay);
+    if (fromDay !== toDay) activeDay = toDay;
+    return true;
   }
-  function remove(d, n) {
-    var id = plan.stops[d].splice(n, 1)[0];
-    plan.removed[id] = 1;
+  function remove(d, pos) {
+    var id = plan.stops[d].splice(pos, 1)[0];
+    if (id === undefined) return;
+    var e = entry(id);
+    if (isOwn(id)) delete plan.extra[id];
+    else plan.removed[id] = 1;
     delete plan.locked[id];
+    delete plan.custom[id];
+    if (grab && grab.id === id) grab = null;
+    announce((e ? e.name : 'Oprirea') + ' nu mai e în plan.');
     after();
   }
   function add(d, id) {
@@ -918,6 +1230,415 @@
     plan.locked[id] = 1;
     activeDay = d;
     after();
+  }
+  /** A stop of your own, dropped in at `pos`. It is locked from the start: regenerating spares it. */
+  function addOwn(d, pos, def) {
+    var id = ownId();
+    plan.extra[id] = def;
+    plan.locked[id] = 1;
+    pos = Math.max(0, Math.min((plan.stops[d] || []).length, pos));
+    plan.stops[d].splice(pos, 0, id);
+    activeDay = d;
+    focusId = id;
+    announce('Am adăugat ' + def.name + ' în ziua ' + (d + 1) + '.');
+    after();
+  }
+
+  /* ---------- moving a stop: the same three steps by hand, by finger and by keyboard ---------- */
+
+  var drag = null;      // a drag in progress
+  var grab = null;      // a stop picked up with the keyboard
+  var mark = null;      // the line that shows where it would land
+  var ghost = null;     // the little label that follows the pointer
+  var scroller = null;  // the timer that scrolls the page near the edges
+  var scrollBy = 0;
+
+  function stopName(id) { var e = entry(id); return e ? e.name : 'Oprirea'; }
+  function dayStops(d) { return plan.stops[d] || []; }
+
+  function showMark(t) {
+    if (!mark) {
+      mark = el('div', 'pl-drop');
+      mark.setAttribute('aria-hidden', 'true');
+    }
+    if (!mark.parentNode) document.body.appendChild(mark);
+    var items = t.items, box, top;
+    if (t.at < items.length) {
+      box = items[t.at].getBoundingClientRect();
+      top = box.top - 6;
+    } else if (items.length) {
+      box = items[items.length - 1].getBoundingClientRect();
+      top = box.bottom + 3;
+    } else {
+      box = t.list.getBoundingClientRect();
+      top = box.top;
+    }
+    mark.style.top = Math.round(top) + 'px';
+    mark.style.left = Math.round(box.left) + 'px';
+    mark.style.width = Math.round(box.width) + 'px';
+  }
+  function hideMark() { if (mark && mark.parentNode) mark.parentNode.removeChild(mark); }
+
+  /** Which day's list the pointer is over, and how far down it. */
+  function dropAt(x, y) {
+    var lists = ui.list.querySelectorAll('.pl-stops');
+    var best = null, bestGap = Infinity;
+    for (var i = 0; i < lists.length; i++) {
+      var b = lists[i].getBoundingClientRect();
+      var gap = (y < b.top ? b.top - y : (y > b.bottom ? y - b.bottom : 0)) +
+        (x < b.left ? b.left - x : (x > b.right ? x - b.right : 0));
+      if (gap < bestGap) { bestGap = gap; best = lists[i]; }
+    }
+    if (!best || bestGap > 160) return null;
+    var items = best.querySelectorAll('.pl-stop');
+    var at = 0;
+    for (var k = 0; k < items.length; k++) {
+      var r = items[k].getBoundingClientRect();
+      if (y > r.top + r.height / 2) at = k + 1;
+    }
+    var day = parseInt(best.parentNode.dataset.day, 10);
+    var pos = at < items.length
+      ? parseInt(items[at].dataset.pos, 10)
+      : (items.length ? parseInt(items[items.length - 1].dataset.pos, 10) + 1 : 0);
+    return { day: day, list: best, items: items, at: at, pos: pos };
+  }
+
+  function edgeScroll(y) {
+    var edge = 96;
+    var top = (window.innerHeight || 0);
+    scrollBy = y < edge ? -Math.ceil((edge - y) / 5) : (y > top - edge ? Math.ceil((y - (top - edge)) / 5) : 0);
+    if (scrollBy && !scroller) {
+      scroller = setInterval(function () {
+        if (!drag) return;
+        window.scrollBy(0, scrollBy);
+        drag.target = dropAt(drag.x, drag.y);
+        if (drag.target) showMark(drag.target); else hideMark();
+      }, 16);
+    }
+    if (!scrollBy && scroller) { clearInterval(scroller); scroller = null; }
+  }
+
+  function dragStart(ev, item) {
+    if (!item || (ev.button !== undefined && ev.button > 0)) return;
+    ev.preventDefault();      // no text selection behind the drag, and no stray focus on the handle
+    closeMenu();
+    drag = {
+      item: item, day: +item.dataset.day, pos: +item.dataset.pos, id: item.dataset.id,
+      x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, moved: false, target: null
+    };
+  }
+  function dragMove(ev) {
+    if (!drag) return;
+    drag.x = ev.clientX;
+    drag.y = ev.clientY;
+    if (!drag.moved) {
+      if (Math.abs(drag.x - drag.x0) + Math.abs(drag.y - drag.y0) < 6) return;
+      drag.moved = true;
+      drag.item.classList.add('is-dragging');
+      document.body.classList.add('pl-dragging');
+      var e = entry(drag.id);
+      ghost = el('div', 'pl-ghost');
+      var em = el('span', '', e && e.emoji ? e.emoji : '📍');
+      em.setAttribute('aria-hidden', 'true');
+      ghost.appendChild(em);
+      ghost.appendChild(el('span', '', e ? e.name : ''));
+      document.body.appendChild(ghost);
+    }
+    ghost.style.left = drag.x + 'px';
+    ghost.style.top = drag.y + 'px';
+    drag.target = dropAt(drag.x, drag.y);
+    if (drag.target) showMark(drag.target); else hideMark();
+    edgeScroll(drag.y);
+  }
+  function dragEnd(cancel) {
+    if (!drag) return;
+    var d = drag;
+    drag = null;
+    if (scroller) { clearInterval(scroller); scroller = null; }
+    hideMark();
+    if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    ghost = null;
+    d.item.classList.remove('is-dragging');
+    document.body.classList.remove('pl-dragging');
+    if (cancel || !d.moved || !d.target) return;
+    if (!relocate(d.day, d.pos, d.target.day, d.target.pos)) return;
+    focusId = d.id;
+    announce(stopName(d.id) + ' a ajuns în ziua ' + (d.target.day + 1) + '.');
+    after();
+  }
+  window.addEventListener('pointermove', dragMove);
+  window.addEventListener('pointerup', function () { dragEnd(false); });
+  window.addEventListener('pointercancel', function () { dragEnd(true); });
+
+  /* ---------- the same, from the keyboard ---------- */
+
+  function grabbed(item) {
+    grab = { id: item.dataset.id, day: +item.dataset.day, pos: +item.dataset.pos };
+    grab.day0 = grab.day;
+    grab.pos0 = grab.pos;
+    item.classList.add('is-grabbed');
+    announce('Ai luat ' + stopName(grab.id) +
+      '. Săgeți sus și jos ca s-o muți în zi, stânga și dreapta ca s-o treci în altă zi, Enter ca s-o lași acolo, Escape ca să renunți.');
+  }
+  function grabSay() {
+    announce(stopName(grab.id) + ': poziția ' + (grab.pos + 1) + ' din ' + dayStops(grab.day).length +
+      ', ziua ' + (grab.day + 1) + '.');
+  }
+  function grabStep(dir) {
+    var to = grab.pos + dir;
+    if (to < 0 || to >= dayStops(grab.day).length) { announce('Nu mai e loc în direcția asta.'); return; }
+    if (!relocate(grab.day, grab.pos, grab.day, dir > 0 ? to + 1 : to)) return;
+    grab.pos = to;
+    after();
+    grabSay();
+  }
+  function grabDay(dir) {
+    var to = grab.day + dir;
+    if (to < 0 || to >= plan.days) { announce('Nu mai e nicio zi în direcția asta.'); return; }
+    if (!relocate(grab.day, grab.pos, to, dayStops(to).length)) return;
+    grab.day = to;
+    grab.pos = dayStops(to).length - 1;
+    after();
+    grabSay();
+  }
+  function grabDrop() {
+    var was = grab;
+    grab = null;
+    focusId = was.id;
+    announce(stopName(was.id) + ' rămâne pe poziția ' + (was.pos + 1) + ' din ziua ' + (was.day + 1) + '.');
+    after();
+  }
+  function grabCancel() {
+    var was = grab;
+    grab = null;
+    focusId = was.id;
+    var id = plan.stops[was.day].splice(was.pos, 1)[0];
+    if (id !== undefined) {
+      plan.stops[was.day0].splice(Math.min(was.pos0, plan.stops[was.day0].length), 0, id);
+      activeDay = was.day0;
+    }
+    announce('Am anulat mutarea. ' + stopName(was.id) + ' e unde era.');
+    after();
+  }
+  function gripKey(ev, item) {
+    var k = ev.key;
+    if (k === ' ' || k === 'Spacebar' || k === 'Enter') {
+      ev.preventDefault();
+      if (!grab) grabbed(item);
+      else if (grab.id === item.dataset.id) grabDrop();
+      return;
+    }
+    if (!grab || grab.id !== item.dataset.id) return;
+    if (k === 'ArrowUp') { ev.preventDefault(); grabStep(-1); }
+    else if (k === 'ArrowDown') { ev.preventDefault(); grabStep(1); }
+    else if (k === 'ArrowLeft') { ev.preventDefault(); grabDay(-1); }
+    else if (k === 'ArrowRight') { ev.preventDefault(); grabDay(1); }
+    else if (k === 'Escape') { ev.preventDefault(); grabCancel(); }
+  }
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    if (drag) { dragEnd(true); return; }
+    if (menu) { var b = menu.btn; closeMenu(); b.focus(); }
+  });
+
+  /* ---------- a stop of your own: the little form that makes one ---------- */
+
+  var composer = null;
+
+  function openComposer(d, pos) {
+    var first = PRESETS[0] || ['Pauză', '🕑', 30];
+    composer = {
+      day: d, pos: pos, name: first[0], emoji: first[1], minutes: first[2],
+      at: 'prev', place: '', lat: null, lng: null, focus: true
+    };
+    after();
+  }
+  function closeComposer() {
+    composer = null;
+    after();
+  }
+
+  function composerItem() {
+    var c = composer;
+    var li = el('li', 'pl-new');
+    var box = el('div', 'pl-new-in');
+    box.appendChild(el('p', 'pl-new-h', 'O oprire de-a ta'));
+
+    var name = el('input');
+    var dur = el('select');
+    var pick = el('div', 'pl-new-pick');
+    var find = el('input');
+    var msg = el('p', 'pl-new-msg');
+    msg.hidden = true;
+
+    var presets = el('div', 'pl-new-presets');
+    PRESETS.forEach(function (p) {
+      var b = el('button', 'pl-chip pl-chip-sm');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', c.name === p[0] ? 'true' : 'false');
+      var em = el('span', '', p[1]);
+      em.setAttribute('aria-hidden', 'true');
+      b.appendChild(em);
+      b.appendChild(document.createTextNode(p[0]));
+      b.addEventListener('click', function () {
+        c.name = p[0];
+        c.emoji = p[1];
+        c.minutes = p[2];
+        name.value = p[0];
+        dur.value = String(p[2]);
+        [].forEach.call(presets.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      });
+      presets.appendChild(b);
+    });
+    box.appendChild(presets);
+
+    var row = el('div', 'pl-new-row');
+    var nameLab = el('label', 'pl-new-f');
+    nameLab.appendChild(el('span', '', 'Ce faci?'));
+    name.type = 'text';
+    name.value = c.name;
+    name.maxLength = 60;
+    name.placeholder = 'Masă, cafea, o plimbare…';
+    name.addEventListener('input', function () { c.name = name.value; });
+    nameLab.appendChild(name);
+    row.appendChild(nameLab);
+
+    var durLab = el('label', 'pl-new-f pl-new-f-dur');
+    durLab.appendChild(el('span', '', 'Cât ține?'));
+    MINUTES.forEach(function (m) {
+      var o = el('option', '', hm(m));
+      o.value = String(m);
+      if (m === c.minutes) o.selected = true;
+      dur.appendChild(o);
+    });
+    dur.addEventListener('change', function () { c.minutes = parseInt(dur.value, 10) || 30; });
+    durLab.appendChild(dur);
+    row.appendChild(durLab);
+    box.appendChild(row);
+
+    var fs = el('fieldset', 'pl-new-where');
+    fs.appendChild(el('legend', '', 'Unde o pun?'));
+    var group = 'pl-at-' + Math.random().toString(36).slice(2, 8);
+    [
+      ['prev', 'La oprirea dinainte', 'Nu adaugă drum, doar timp.'],
+      ['none', 'Fără loc anume', 'Timp în zi, fără punct pe hartă.'],
+      ['fix', 'Alt loc', 'Alegi un loc din catalog și drumul se recalculează.']
+    ].forEach(function (o) {
+      var lab = el('label', 'pl-radio');
+      var rd = el('input');
+      rd.type = 'radio';
+      rd.name = group;
+      rd.value = o[0];
+      rd.checked = c.at === o[0];
+      rd.addEventListener('change', function () {
+        if (!rd.checked) return;
+        c.at = o[0];
+        pick.hidden = o[0] !== 'fix';
+        if (o[0] === 'fix') find.focus();
+      });
+      lab.appendChild(rd);
+      var t = el('span', 'pl-radio-t');
+      t.appendChild(el('b', '', o[1]));
+      t.appendChild(el('small', '', o[2]));
+      lab.appendChild(t);
+      fs.appendChild(lab);
+    });
+    box.appendChild(fs);
+
+    pick.hidden = c.at !== 'fix';
+    find.type = 'search';
+    find.autocomplete = 'off';
+    find.placeholder = 'Caută locul…';
+    find.setAttribute('aria-label', 'Caută locul opririi');
+    find.value = c.query || c.place || '';
+    var hits = el('ul', 'pl-add-list');
+    hits.hidden = true;
+    find.addEventListener('input', debounce(function () {
+      c.query = find.value;
+      c.lat = null;
+      c.lng = null;
+      c.place = '';
+      hits.textContent = '';
+      var found = searchCatalogue(find.value, 6);
+      found.forEach(function (h) {
+        var row2 = el('li');
+        var b = el('button', 'pl-add-hit');
+        b.type = 'button';
+        b.appendChild(el('b', '', h.name));
+        b.appendChild(el('small', '', (h.book ? 'se rezervă · ' : '') + (h.city || '')));
+        b.addEventListener('click', function () {
+          var e = entry(h.id);
+          if (!e) return;
+          c.lat = e.lat;
+          c.lng = e.lng;
+          c.place = e.name;
+          c.query = e.name;
+          find.value = e.name;
+          hits.hidden = true;
+          msg.hidden = true;
+        });
+        row2.appendChild(b);
+        hits.appendChild(row2);
+      });
+      hits.hidden = !found.length;
+    }, 140));
+    pick.appendChild(find);
+    pick.appendChild(hits);
+    box.appendChild(pick);
+    box.appendChild(msg);
+
+    var acts = el('div', 'pl-new-acts');
+    var ok = el('button', 'btn btn-primary pl-new-ok', 'Adaugă oprirea');
+    ok.type = 'button';
+    ok.addEventListener('click', function () {
+      if (c.at === 'fix' && typeof c.lat !== 'number') {
+        msg.textContent = 'Alege întâi locul din listă.';
+        msg.hidden = false;
+        find.focus();
+        return;
+      }
+      var def = {
+        name: (c.name || '').trim() || 'Oprire',
+        minutes: c.minutes || 30,
+        emoji: c.emoji || '🕑',
+        at: c.at,
+        lat: c.at === 'fix' ? c.lat : null,
+        lng: c.at === 'fix' ? c.lng : null,
+        place: c.at === 'fix' ? c.place : ''
+      };
+      var day = c.day, at = c.pos;
+      composer = null;
+      addOwn(day, at, def);
+    });
+    var no = el('button', 'pl-btn pl-new-no', 'Renunță');
+    no.type = 'button';
+    no.addEventListener('click', function () { closeComposer(); });
+    acts.appendChild(ok);
+    acts.appendChild(no);
+    box.appendChild(acts);
+
+    li.appendChild(box);
+    return li;
+  }
+
+  /** Both catalogues at once: what can be booked first, then the attractions. */
+  function searchCatalogue(q, limit) {
+    var out = [];
+    q = fold((q || '').trim());
+    if (q.length < 2) return out;
+    (CFG.bookables || []).forEach(function (b) {
+      if (out.length < Math.min(4, limit) && fold(b[2]).indexOf(q) !== -1) {
+        out.push({ id: 'b:' + b[1], name: b[2], city: b[3], book: true });
+      }
+    });
+    var f = D.f;
+    for (var i = 0; i < D.rows.length && out.length < limit; i++) {
+      var name = D.rows[i][f.name];
+      if (fold(name).indexOf(q) === -1) continue;
+      var c = D.rows[i][f.city] >= 0 ? D.cities[D.rows[i][f.city]][1] : '';
+      out.push({ id: D.rows[i][f.slug], name: name, city: c, book: false });
+    }
+    return out;
   }
 
   /** Search both catalogues and drop the result straight into this day. */
@@ -932,27 +1653,15 @@
     list.hidden = true;
 
     var search = function () {
-      var q = fold(inp.value.trim());
       list.textContent = '';
-      if (q.length < 2) { list.hidden = true; return; }
-      var hits = [];
-      (CFG.bookables || []).forEach(function (b) {
-        if (hits.length < 4 && fold(b[2]).indexOf(q) !== -1) hits.push(['b:' + b[1], b[2], b[3], true]);
-      });
-      var f = D.f;
-      for (var i = 0; i < D.rows.length && hits.length < 8; i++) {
-        var name = D.rows[i][f.name];
-        if (fold(name).indexOf(q) === -1) continue;
-        var c = D.rows[i][f.city] >= 0 ? D.cities[D.rows[i][f.city]][1] : '';
-        hits.push([D.rows[i][f.slug], name, c, false]);
-      }
+      var hits = searchCatalogue(inp.value, 8);
       hits.forEach(function (h) {
         var li = el('li');
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
-        b.appendChild(el('b', '', h[1]));
-        b.appendChild(el('small', '', (h[3] ? 'se rezervă · ' : '') + (h[2] || '')));
-        b.addEventListener('click', function () { inp.value = ''; list.hidden = true; add(d, h[0]); });
+        b.appendChild(el('b', '', h.name));
+        b.appendChild(el('small', '', (h.book ? 'se rezervă · ' : '') + (h.city || '')));
+        b.addEventListener('click', function () { inp.value = ''; list.hidden = true; add(d, h.id); });
         li.appendChild(b);
         list.appendChild(li);
       });
@@ -972,8 +1681,16 @@
     if (!inst) return;
     var view = dayView(activeDay);
     var r = road(activeDay);
-    var rows = view.rows.filter(function (x) { return x.role === 'stop'; })
-      .map(function (x) { return mapRow(x.e, x.legKm, x.legMin); });
+    // Only real places get a pin. A stop of your own is time: whatever driving it carried is folded
+    // into the next pin, so the kilometres on the map still add up.
+    var rows = [], carry = { km: 0, min: 0 };
+    view.rows.forEach(function (x) {
+      if (x.role !== 'stop') return;
+      if (x.e.own) { carry.km += x.legKm; carry.min += x.legMin; return; }
+      rows.push(mapRow(x.e, x.legKm + carry.km, x.legMin + carry.min));
+      carry.km = 0;
+      carry.min = 0;
+    });
     inst.setRoute(rows, r ? r.geometry : '');
     if (ui.note) {
       ui.note.textContent = rows.length
@@ -981,7 +1698,9 @@
           nf(view.km) + ' km ' + (view.routed
             ? 'pe șosea, cu drumul desenat pe hartă.'
             : (view.pending ? '— se calculează drumul…' : '(estimat; drumul nu a putut fi calculat).'))
-        : 'Ziua ' + (activeDay + 1) + ' e goală.';
+        : (view.rows.some(function (x) { return x.role === 'stop'; })
+          ? 'Ziua ' + (activeDay + 1) + ': doar opriri de-ale tale — pe hartă ajung locurile din catalog.'
+          : 'Ziua ' + (activeDay + 1) + ' e goală.');
     }
   }
 
@@ -1180,6 +1899,14 @@
     root.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
+  /** Whatever the catalogue no longer knows about is dropped, so positions stay honest. */
+  function prune() {
+    plan.stops = (plan.stops || []).map(function (day) {
+      return (day || []).filter(function (id) { return !!entry(id); });
+    });
+    while (plan.stops.length < plan.days) plan.stops.push([]);
+  }
+
   /* ---------------------------------------------------------------- boot */
 
   loadData().then(function () {
@@ -1187,6 +1914,7 @@
     var saved = restore();
     if (saved && saved.stops && saved.stops.length) {
       plan = saved;
+      prune();
       activeDay = 0;
       render();
     }
