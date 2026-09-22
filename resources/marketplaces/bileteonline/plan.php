@@ -65,6 +65,8 @@ $v2ClientData = [
         'company'   => PLAN_COMPANY,
         'bookables' => $summary['bookables'] ?? [],
         'travel'    => PLAN_TRAVEL,
+        'stops'     => PLAN_STOP_PRESETS,
+        'minutes'   => PLAN_STOP_MINUTES,
         'cities'    => array_map(fn ($c) => [$c[0], $c[1], $c[4]], $summary['cities'] ?? []),
         'regions'   => array_map(fn ($r) => [$r[0], $r[1]], $regions),
         'total'     => (int) $summary['total'],
@@ -203,6 +205,7 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ============================== PLAN (built in the browser) ============================== -->
   <section class="pl-plan" id="pl-plan" hidden aria-labelledby="pl-plan-h">
     <h2 class="sr" id="pl-plan-h">Planul tău</h2>
+    <p class="sr" id="pl-live" role="status" aria-live="polite"></p>
     <div class="wrap">
       <header class="pl-bar" id="pl-bar"></header>
       <div class="pl-cols">
@@ -241,10 +244,11 @@ include __DIR__ . '/includes/v2/header.php';
         <h2 id="pl-about-h" class="sr">Despre planificator</h2>
         <p>Planificatorul nu inventează locuri: ia atracțiile reale din catalog, le filtrează după ce te interesează, le grupează pe zile astfel încât fiecare zi să stea într-o zonă, și le pune în ordinea care scurtează drumul. Nu scrie nimic un model de limbaj — de-aia nu-ți va spune niciodată despre un loc ceva ce nu e în catalog.</p>
         <p>Timpii de vizitare sunt <strong>estimări pe tip de obiectiv</strong>: un castel 90 de minute, un muzeu 75, o biserică 30. Catalogul nu are încă programul de vizitare al fiecărui loc, așa că verifică orele înainte de drum. Timpii de mers sunt calculați din distanța în linie dreaptă, corectată pentru drumurile reale.</p>
-        <p>Planul rămâne al tău: mută opriri între zile, scoate ce nu-ți place, adaugă altceva. Ce ai schimbat nu se pierde când regenerez restul. Link-ul din bara de adrese conține tot planul, deci îl poți trimite cuiva sau salva la favorite.</p>
+        <p>Planul rămâne al tău: trage opririle unde vrei, în zi sau în altă zi, scoate ce nu-ți place, adaugă altceva. Poți pune și opriri de-ale tale între cele propuse — o masă, o cafea, o pauză, cazarea — fie la oprirea dinainte, fie fără loc anume, fie în alt loc ales de tine; ziua se recalculează în jurul lor. Ce ai schimbat nu se pierde când regenerez restul. Link-ul din bara de adrese conține tot planul, deci îl poți trimite cuiva sau salva la favorite.</p>
       </div>
       <div class="mp-faq">
         <details open><summary>De unde știți cât stau la fiecare loc?</summary><p>Nu știm — sunt estimări pe tip de obiectiv, afișate ca atare. Le poți schimba pentru fiecare oprire în parte.</p></details>
+        <details><summary>Pot adăuga o pauză sau o masă?</summary><p>Da, oriunde în zi: butonul <em>Oprire de-a ta</em> din capul zilei o pune la final, iar din meniul <em>⋮</em> al unei opriri o pui imediat după ea. Alegi cât ține și dacă rămâne la oprirea dinainte, fără loc anume, sau în alt loc — iar drumul și orele se recalculează.</p></details>
         <details><summary>Pot cumpăra biletele de aici?</summary><p>Deocamdată nu direct din plan. Unde locul vinde bilete prin bilete.online, pagina lui are butonul de rezervare, iar oprirea din plan duce acolo.</p></details>
         <details><summary>Se salvează planul?</summary><p>Da, în browserul tău și în adresa paginii. Dacă golești datele browserului, link-ul rămâne valabil.</p></details>
         <details><summary>Merge fără internet?</summary><p>Nu, dar poți tipări planul sau îl poți deschide în Google Maps zi cu zi, ca să-l ai offline acolo.</p></details>

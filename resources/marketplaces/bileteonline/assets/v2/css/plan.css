@@ -50,7 +50,9 @@
 /* ---------- the plan ---------- */
 .pl-plan{padding:clamp(28px,4vw,48px) 0 clamp(40px,6vw,72px)}
 .pl-plan[hidden]{display:none}
-.pl-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-5);padding:16px 20px;border:1px solid var(--line);border-radius:var(--r-l);background:linear-gradient(120deg,var(--tint-green),var(--surface) 65%)}
+/* The plan opens under the fixed header, so the bar starts below it and lines its content up with
+   the days underneath rather than sitting in a box of its own. */
+.pl-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-5);padding:calc(var(--hdr-h) + 14px) 0 14px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,var(--tint-green),var(--surface) 65%)}
 .pl-bar-h{margin:0;font-size:1.375rem;font-weight:700;letter-spacing:-.025em;color:var(--green)}
 .pl-bar-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin:4px 0 0;font-size:.875rem;color:var(--muted)}
 .pl-bar-meta span{position:relative}
@@ -101,18 +103,38 @@
 .pl-day{padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);transition:border-color var(--dur-micro) var(--ease-out)}
 .pl-day.is-active{border-color:var(--green);box-shadow:0 0 0 3px rgba(30,91,72,.08)}
 .pl-day-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+.pl-day-headings{min-width:0}
 .pl-day-h{margin:0;font-size:1.125rem;font-weight:700;letter-spacing:-.02em;color:var(--green);text-transform:capitalize}
 .pl-day-sub{margin:3px 0 0;font-size:.8125rem;color:var(--muted)}
-.pl-day-show{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .8125rem/1 var(--font);cursor:pointer}
-.pl-day-show:hover{border-color:var(--green);background:var(--tint-green)}
-.pl-day-show .ic{width:14px;height:14px;color:var(--green)}
+.pl-day-tip{margin:6px 0 0;font-size:.75rem;color:var(--placeholder)}
+.pl-day-acts{display:flex;flex-wrap:wrap;gap:6px}
+.pl-day-act{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .8125rem/1 var(--font);text-decoration:none;cursor:pointer}
+.pl-day-act:hover{border-color:var(--green);background:var(--tint-green)}
+.pl-day-act .ic{width:14px;height:14px;color:var(--green)}
 .pl-day.is-active .pl-day-show{border-color:var(--deep);background:var(--deep);color:var(--on-deep)}
 .pl-day.is-active .pl-day-show .ic{color:var(--on-deep)}
 
 .pl-stops{list-style:none;display:grid;gap:10px;margin:0;padding:0}
-.pl-stop{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start}
-.pl-stop-num{display:grid;place-items:center;width:30px;height:30px;margin-top:6px;border-radius:50%;background:var(--green);color:#fff;font:800 .8125rem/1 var(--font);font-variant-numeric:tabular-nums}
-.pl-stop-card{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg)}
+.pl-stop{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;scroll-margin-top:calc(var(--hdr-h) + 16px)}
+/* The number is the handle: hovered or focused it turns into a grip, and it is a real button so the
+   keyboard can pick the stop up. touch-action keeps a finger on it from scrolling the page. */
+.pl-grip{position:relative;display:grid;place-items:center;width:30px;height:30px;margin-top:6px;padding:0;border:0;border-radius:50%;background:var(--green);color:#fff;font:800 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.pl-grip .pl-grip-n,.pl-grip .ic{transition:opacity var(--dur-micro) var(--ease-out)}
+.pl-grip .ic{position:absolute;width:16px;height:16px;opacity:0}
+.pl-grip:hover .pl-grip-n,.pl-grip:focus-visible .pl-grip-n{opacity:0}
+.pl-grip:hover .ic,.pl-grip:focus-visible .ic{opacity:1}
+.pl-grip:focus-visible{outline:2px solid var(--action);outline-offset:2px}
+.pl-stop.is-own .pl-grip{border:1px dashed var(--green);background:var(--surface);color:var(--green);font-size:.875rem}
+.pl-stop.is-dragging{opacity:.4}
+.pl-stop.is-grabbed .pl-grip{cursor:grabbing;box-shadow:0 0 0 3px rgba(43,182,115,.35)}
+.pl-stop.is-grabbed .pl-stop-card{border-color:var(--action)}
+.pl-drop{position:fixed;z-index:60;height:3px;border-radius:3px;background:var(--action);box-shadow:0 0 0 3px rgba(43,182,115,.18);pointer-events:none}
+.pl-ghost{position:fixed;z-index:61;display:flex;align-items:center;gap:6px;max-width:16rem;padding:6px 11px;border-radius:var(--r-pill);background:var(--deep);color:var(--on-deep);font:700 .8125rem/1.1 var(--font);white-space:nowrap;overflow:hidden;pointer-events:none;transform:translate(-40%,-160%);box-shadow:var(--shadow-pop)}
+body.pl-dragging{-webkit-user-select:none;user-select:none}
+body.pl-dragging .pl-stop-card{cursor:grabbing}
+.pl-stop-card{position:relative;display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg)}
+.pl-stop-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px}
+.pl-leg-off{font-weight:600;color:var(--placeholder)}
 .pl-stop-card.is-locked{border-left:3px solid var(--action)}
 .pl-leg{display:flex;align-items:center;gap:6px;margin:0;font-size:.75rem;font-weight:600;color:var(--muted)}
 .pl-leg .ic{width:13px;height:13px;color:var(--green)}
@@ -129,15 +151,50 @@
 .pl-dur select{height:30px;padding:0 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:600 .75rem/1 var(--font)}
 .pl-dur small{font-size:.6875rem;color:var(--placeholder)}
 
-.pl-stop-acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+/* the corner of the card: everything you can do to a stop except how long you stay */
+.pl-stop-tools{flex:none;display:flex;align-items:center;gap:2px;margin:-3px -3px -3px 0}
+.pl-ic-btn{display:grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid transparent;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
+.pl-ic-btn:hover{border-color:var(--line);background:var(--surface);color:var(--ink)}
+.pl-ic-btn:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.pl-ic-btn .ic{width:15px;height:15px}
+.pl-del:hover{border-color:var(--red-text);background:#fdeceb;color:var(--red-text)}
+.pl-menu{position:absolute;z-index:12;top:36px;right:8px;min-width:11rem;display:grid;gap:2px;padding:6px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);box-shadow:var(--shadow-pop)}
+.pl-menu-i{padding:8px 10px;border:0;border-radius:8px;background:none;color:inherit;font:600 .8125rem/1.2 var(--font);text-align:left;cursor:pointer}
+.pl-menu-i:hover{background:var(--tint-green)}
+.pl-menu-i:focus-visible{outline:2px solid var(--action);outline-offset:-2px}
+
+/* the small form that makes a stop of your own */
+.pl-new{list-style:none}
+.pl-new-in{display:grid;gap:10px;padding:12px;border:1px dashed var(--green);border-radius:var(--r-m);background:var(--tint-green)}
+.pl-new-h{margin:0;font:700 .875rem/1 var(--font);color:var(--green)}
+.pl-new-presets{display:flex;flex-wrap:wrap;gap:6px}
+.pl-chip-sm{gap:5px;padding:7px 11px;font-size:.8125rem}
+.pl-new-row{display:flex;flex-wrap:wrap;gap:10px}
+.pl-new-f{display:grid;flex:1 1 12rem;gap:4px;min-width:0;font-size:.75rem;font-weight:700;color:var(--green)}
+.pl-new-f-dur{flex:0 0 9rem}
+.pl-new-f input,.pl-new-f select,.pl-new-pick input{width:100%;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:500 .875rem/1 var(--font)}
+.pl-new-f input:focus-visible,.pl-new-f select:focus-visible,.pl-new-pick input:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.pl-new-where{display:grid;gap:6px;margin:0;padding:0;border:0}
+.pl-new-where legend{padding:0;font-size:.75rem;font-weight:700;color:var(--green)}
+.pl-radio{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
+.pl-radio:hover{border-color:var(--green)}
+.pl-radio input{margin-top:2px;accent-color:var(--green)}
+.pl-radio-t{display:grid;gap:1px;min-width:0}
+.pl-radio-t b{font-size:.8125rem}
+.pl-radio-t small{font-size:.75rem;color:var(--muted)}
+.pl-new-pick{position:relative}
+.pl-new-pick[hidden]{display:none}
+.pl-new-msg{margin:0;font-size:.8125rem;font-weight:600;color:var(--red-text)}
+.pl-new-msg[hidden]{display:none}
+.pl-new-acts{display:flex;flex-wrap:wrap;gap:8px}
+.pl-new-ok{height:38px;padding:0 16px}
+.pl-new-no{height:38px}
+
+/* the saved-plans panel still uses the plain icon button */
 .pl-ib{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer}
-.pl-ib:hover:not(:disabled){border-color:var(--green);background:var(--tint-green)}
-.pl-ib:disabled{opacity:.35;cursor:default}
+.pl-ib:hover{border-color:var(--green);background:var(--tint-green)}
 .pl-ib .ic{width:14px;height:14px}
-.pl-ib-up .ic{rotate:90deg}
-.pl-ib-down .ic{rotate:-90deg}
 .pl-ib-del:hover{border-color:var(--red-text);background:#fdeceb;color:var(--red-text)}
-.pl-move{min-width:112px;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:600 .75rem/1 var(--font)}
 
 .pl-day-foot{display:grid;gap:10px;margin-top:12px}
 .pl-free{margin:0;padding:8px 12px;border-radius:10px;background:var(--tint-green);font-size:.8125rem;font-weight:600;color:var(--green)}
@@ -149,8 +206,11 @@
 
 /* ---------- print: the plan, nothing else ---------- */
 @media print{
-  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-acts,.pl-day-show,.sec,.cc,.cc-dialog{display:none !important}
+  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-drop,.pl-ghost,.pl-menu,.sec,.cc,.cc-dialog{display:none !important}
   .pl-plan{padding:0}
+  .pl-bar{padding:0 0 12px}
+  .pl-grip .ic{display:none}
+  .pl-stop-top{min-height:0}
   .pl-cols{grid-template-columns:minmax(0,1fr)}
   .pl-day{break-inside:avoid;border-color:#999}
   .pl-stop-card{background:none;border-color:#ccc}

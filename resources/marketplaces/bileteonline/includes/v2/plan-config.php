@@ -67,5 +67,24 @@ const PLAN_COMPANY = [
     ]],
 ];
 
+/**
+ * Stops the traveller adds themselves, offered as one tap: label, emoji, minutes.
+ *
+ * These are not places and the catalogue knows nothing about them — they are the meal, the coffee
+ * and the breath between two visits, and they exist so that a day reads like a day. The name is
+ * only a starting point: anything can be typed over it.
+ */
+const PLAN_STOP_PRESETS = [
+    ['Masă', '🍽️', 60],
+    ['Cafea', '☕', 30],
+    ['Pauză', '😌', 20],
+    ['Timp liber', '🚶', 60],
+    ['Cumpărături', '🛍️', 45],
+    ['Cazare', '🏨', 30],
+];
+
+/** The durations offered for any stop, yours or ours. */
+const PLAN_STOP_MINUTES = [10, 15, 20, 30, 45, 60, 90, 120, 180, 240];
+
 /** Average road speed used to turn a straight-line hop into a travel estimate, and the detour factor. */
 const PLAN_TRAVEL = ['kmh' => 55, 'detour' => 1.35, 'min_leg' => 5];
