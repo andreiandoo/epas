@@ -13,11 +13,22 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/am-labels.php';
 
+/* am_hub_city() resolves the slug through /locations/cities/{slug}, which only answers for
+   cities marked visible. Plenty of localities hold attractions without being a marketplace city —
+   Alba Iulia and Sighișoara as much as a village the import created — and for those the page was
+   a 404 even though the attractions exist. Fall back to the slug, and take the display name from
+   the attractions themselves; a slug with no attractions is still a 404, further down. */
 $hubCity = am_hub_city();
+$cityUnlisted = false;
 if ($hubCity === null) {
-    http_response_code(404);
-    require __DIR__ . '/404.php';
-    exit;
+    $raw = (string) ($_GET['city'] ?? '');
+    if (!preg_match('/^[a-z][a-z0-9-]{1,50}$/', $raw)) {
+        http_response_code(404);
+        require __DIR__ . '/404.php';
+        exit;
+    }
+    $hubCity = [$raw, ''];
+    $cityUnlisted = true;
 }
 [$citySlug, $cityName] = $hubCity;
 $page = am_hub_page();
@@ -37,6 +48,9 @@ foreach ($rows as $row) {
     if (!$a) {
         continue;
     }
+    if ($cityUnlisted && $cityName === '' && ($row['city']['slug'] ?? '') === $citySlug) {
+        $cityName = navFlatName($row['city']['name'] ?? '');
+    }
     $n = (int) ($row['activities_count'] ?? 0);
     $items[] = [
         'href' => $a['href'],
@@ -47,6 +61,13 @@ foreach ($rows as $row) {
         'price' => null,
         'badges' => $n > 0 ? [v2_num($n, 'activitate', 'activități')] : [],
     ];
+}
+
+// A slug nothing is filed under is not a city page.
+if ($cityUnlisted && ($cityName === '' || !$items)) {
+    http_response_code(404);
+    require __DIR__ . '/404.php';
+    exit;
 }
 
 // A page past the last one is not a list.

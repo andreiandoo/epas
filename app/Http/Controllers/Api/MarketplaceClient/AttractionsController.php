@@ -33,7 +33,7 @@ class AttractionsController extends BaseController
         $query = Attraction::query()
             ->where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
-            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name'])
+            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name,is_visible'])
             ->withCount(['activities' => fn ($q) => $q->where('activities.is_published', true)]);
 
         if ($citySlug = $request->query('city')) {
@@ -75,7 +75,7 @@ class AttractionsController extends BaseController
             ->where('is_visible', true)
             ->with([
                 'type:id,slug,name,icon_emoji',
-                'city:id,slug,name',
+                'city:id,slug,name,is_visible',
                 'county:id,name',
                 'activities' => fn ($q) => $q->where('is_published', true)->orderBy('activity_attraction.sort_order'),
                 'activities.city:id,slug,name',
@@ -97,7 +97,7 @@ class AttractionsController extends BaseController
             ->where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
             ->where('id', '!=', $attraction->id)
-            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name'])
+            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name,is_visible'])
             ->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id');
 
         $cityAttractions = $cityId
@@ -333,6 +333,9 @@ class AttractionsController extends BaseController
             'city' => $a->city ? [
                 'slug' => $a->city->slug,
                 'name' => $this->translate($a->city->name, $locale),
+                // false for the localities the import created so that every attraction has a
+                // place: they are real, but they have no city page to link to.
+                'has_page' => (bool) $a->city->is_visible,
             ] : null,
         ];
     }

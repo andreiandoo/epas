@@ -274,6 +274,7 @@ class ImportBileteAttractionsCommand extends Command
         // Create cities above threshold.
         $created = 0;
         $countyMiss = 0;
+        $samples = [];
         $eligible = array_filter($groups, fn ($g) => $g['count'] >= $threshold);
         uasort($eligible, fn ($a, $b) => $b['count'] <=> $a['count']);
         $this->info(count($eligible) . ' localities meet the threshold (out of ' . count($groups) . ' missing).');
@@ -301,34 +302,53 @@ class ImportBileteAttractionsCommand extends Command
                 $this->cityMap[$this->norm($g['name'])] = $city->id;
                 $this->cityMap[Str::slug($g['name'])] = $city->id;
                 $this->cityMap[$this->cityKey($g['name'])] = $city->id;
+            } else {
+                // A dry run has to answer "what would I gain", so pretend the city exists (a
+                // negative id nothing will ever write) and let the relink count below run.
+                $pretend = -($created + 1);
+                $this->cityMap[$this->norm($g['name'])] = $pretend;
+                $this->cityMap[Str::slug($g['name'])] = $pretend;
+                $this->cityMap[$this->cityKey($g['name'])] = $pretend;
             }
             $created++;
+            if ($dry && $created <= 5) {
+                $samples[] = sprintf('%s (%s)%s', $g['name'], $g['judet'] ?: 'fără județ',
+                    $lat !== null ? sprintf(' %.4f, %.4f', $lat, $lng) : ' fără coordonate');
+            }
         }
 
         // Relink null-city attractions (now that new cities exist).
         $recovered = 0;
         $stillNull = 0;
-        if (! $dry) {
-            Attraction::where('marketplace_client_id', $clientId)
-                ->whereNull('marketplace_city_id')
-                ->select('id', 'slug')
-                ->chunkById(500, function ($chunk) use (&$recovered, &$stillNull, $slugToOras) {
-                    foreach ($chunk as $att) {
-                        $oras = $slugToOras[$att->slug] ?? '';
-                        $cid = $oras !== '' ? $this->resolveCity($oras) : null;
-                        if ($cid) {
+        Attraction::where('marketplace_client_id', $clientId)
+            ->whereNull('marketplace_city_id')
+            ->select('id', 'slug')
+            ->chunkById(500, function ($chunk) use (&$recovered, &$stillNull, $slugToOras, $dry) {
+                foreach ($chunk as $att) {
+                    $oras = $slugToOras[$att->slug] ?? '';
+                    $cid = $oras !== '' ? $this->resolveCity($oras) : null;
+                    if ($cid) {
+                        if (! $dry) {
                             $att->forceFill(['marketplace_city_id' => $cid])->save();
-                            $recovered++;
-                        } else {
-                            $stillNull++;
                         }
+                        $recovered++;
+                    } else {
+                        $stillNull++;
                     }
-                });
-        }
+                }
+            });
 
         $this->newLine();
         $this->info(($dry ? '[dry-run] would create ' : 'Created ') . $created . ' cities (is_visible=false)'
-            . ($dry ? '.' : "; relinked {$recovered} attractions; {$stillNull} still null."));
+            . ($dry ? "; would relink {$recovered} attractions; {$stillNull} would stay null."
+                    : "; relinked {$recovered} attractions; {$stillNull} still null."));
+        foreach ($samples as $sample) {
+            $this->line('    e.g. ' . $sample);
+        }
+        if ($created > 0) {
+            $this->line('  The new cities are not visible, so they have no city page: /atractie/{slug} names');
+            $this->line('  the locality without linking to it (the API sends city.has_page).');
+        }
         if ($countyMiss > 0) {
             $this->warn($countyMiss . ' created cities had a judet not matched to a county (county_id = null).');
         }
