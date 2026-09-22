@@ -266,7 +266,7 @@ $mapPage = [
     'ideasLead'    => $landing
         ? 'Harta le arată pe toate deodată. Astea sunt drumurile care trec pe aici și locurile pe care le-am deschide noi primele.'
         : 'Harta arată toată țara deodată, ceea ce e mult. Astea sunt drumurile deja făcute și locurile pe care le-am deschide noi primele.',
-    'ideasCta'      => ['Fă-ți propriul plan de călătorie', '/plan'],
+    'ideasCta'      => ['Începe planul', '/plan'],
     'picksHeading'  => $landing ? 'Câteva dintre ele' : 'Locuri de deschis pe hartă',
     'routeCards'    => $routeCards,
     'routesHeading' => $landing ? 'Trasee care trec pe aici' : 'Trasee gata făcute',

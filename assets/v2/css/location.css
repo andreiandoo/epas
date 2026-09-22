@@ -171,3 +171,20 @@
 .bkx-v-t{min-width:0}
 .bkx-v-t b{overflow-wrap:break-word}
 .bkx-lines li > span{min-width:0;overflow-wrap:anywhere}
+
+/* ---------- grabbable date strip, add-on lines, and the section a problem points at ---------- */
+.bkx-days.is-scrollable{cursor:grab}
+.bkx-days.is-dragging{cursor:grabbing;scroll-snap-type:none;scroll-behavior:auto;user-select:none}
+.bkx-days.is-dragging button{pointer-events:none}
+
+/* an add-on is its own line in the summary, indented under the ticket it belongs to */
+.bkx-line-sub{padding-left:14px;font-size:.8125rem;color:var(--muted)}
+.bkx-line-sub b{font-weight:600;color:var(--muted)}
+
+/* "ai nevoie și de un bilet de acces" is only useful if it also shows you where */
+.bkx-err-go{margin-left:8px;padding:0;border:0;background:none;color:var(--red-text);font:700 .875rem/1 var(--font);text-decoration:underline;cursor:pointer}
+.bkx-err-go:hover{text-decoration:none}
+.bkx-p.is-wanted,.bkx-times.is-wanted,.bkx-plate.is-wanted{position:relative;outline:2px solid var(--action);outline-offset:3px;border-radius:var(--r-m);animation:bkx-want 1.6s var(--ease-out) 2}
+@keyframes bkx-want{0%,100%{outline-color:var(--action)}50%{outline-color:rgba(27,127,78,.25)}}
+@media (prefers-reduced-motion: reduce){.bkx-p.is-wanted,.bkx-times.is-wanted,.bkx-plate.is-wanted{animation:none}}
+.bkx-times.is-wanted{outline-offset:2px}

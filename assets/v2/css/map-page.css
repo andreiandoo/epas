@@ -138,7 +138,14 @@
 .mpd-arrow:hover{background:rgba(247,247,245,.16)}
 .mpd-arrow:disabled{opacity:.3;cursor:default}
 .mpd-arrow .ic{width:16px;height:16px}
-.mpd-cta{display:flex;justify-content:center;margin:clamp(40px,5vw,64px) 0 0}
+/* The planner is the other way to use this page, so it gets a panel and a sentence rather than a
+   lone button floating in the dark. */
+.mpd-cta{display:grid;gap:18px;align-items:center;margin:clamp(40px,5vw,64px) 0 0;padding:clamp(22px,3vw,32px);border:1px solid rgba(247,247,245,.18);border-radius:var(--r-l);background:rgba(247,247,245,.05)}
+@media (min-width:860px){.mpd-cta{grid-template-columns:minmax(0,1fr) auto;gap:32px}}
+.mpd-cta-t b{display:block;font-size:1.25rem;font-weight:700;letter-spacing:-.02em;color:#F7F7F5}
+.mpd-cta-t span{display:block;margin-top:6px;max-width:62ch;font-size:.9375rem;line-height:1.55;color:var(--on-deep-muted)}
+.mpd-cta .btn{white-space:nowrap}
+@media (max-width:859px){.mpd-cta .btn{width:100%}}
 
 /* the route cards, on dark */
 .mpd .rc{border-color:rgba(247,247,245,.16);background:rgba(247,247,245,.05);color:#F7F7F5}
@@ -152,7 +159,10 @@
 /* ---------- the picks rail ----------
    Thirty-six links, one row tall: everything stays in the page (and in the index) without
    thirty-six cards' worth of scrolling. */
-.mpr{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:16px;margin:0 calc(var(--space-4) * -1);padding:0 var(--space-4) 6px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:var(--space-4);overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:rgba(247,247,245,.3) transparent}
+.mpr{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:16px;margin:0 calc(var(--space-4) * -1);padding:0 var(--space-4) 6px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-left:var(--space-4);overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:rgba(247,247,245,.3) transparent}
+.mpr.is-scrollable{cursor:grab}
+.mpr.is-dragging{cursor:grabbing;scroll-snap-type:none;scroll-behavior:auto;user-select:none}
+.mpr.is-dragging a{pointer-events:none}
 .mpr::-webkit-scrollbar{height:6px}
 .mpr::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(247,247,245,.28)}
 .mpr > li{scroll-snap-align:start;content-visibility:auto;contain-intrinsic-size:auto 250px}
@@ -186,3 +196,19 @@
 .mp-faq summary::after{content:"+";float:right;color:var(--green);font-weight:700}
 .mp-faq details[open] summary::after{content:"–"}
 .mp-faq p{margin:10px 0 0;color:var(--muted)}
+
+/* ---------- the type panel is the map's legend ----------
+   The pins are coloured by type (map.css). The tiles repeat those colours, so the panel people
+   open to filter is also the key to what they are looking at. */
+.mpx-tile[data-mpx-set="type"] .mpx-tile-ic{position:relative;color:#fff;background:var(--pin,var(--surface-2))}
+.mpx-tile[data-mpx-set="type"].is-on .mpx-tile-ic{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pin,var(--green))}
+.mpx-tile[data-mpx-key="biserica-manastire"]{--pin:#5B6B86}
+.mpx-tile[data-mpx-key="monument"]{--pin:#6B6257}
+.mpx-tile[data-mpx-key="muzeu"]{--pin:#1F6FB8}
+.mpx-tile[data-mpx-key="cladire-istorica"]{--pin:#A85A2B}
+.mpx-tile[data-mpx-key="parc-gradina"]{--pin:#2E8B45}
+.mpx-tile[data-mpx-key="teatru-opera"]{--pin:#B03060}
+.mpx-tile[data-mpx-key="castel-palat"]{--pin:#7A4199}
+.mpx-tile[data-mpx-key="lac-natura"]{--pin:#0F8FA8}
+.mpx-tile[data-mpx-key="punct-panoramic"]{--pin:#C07A12}
+.mpx-tile[data-mpx-key="piata-centru-vechi"]{--pin:#0E7C6B}

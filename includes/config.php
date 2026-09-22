@@ -43,7 +43,7 @@ define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
 // CARTO basemaps key for the maps (Leaflet tiles). A browser key: it travels in every tile URL and CARTO limits it
 // to the domains set in the CARTO dashboard; maps fall back to OpenStreetMap tiles when CARTO refuses it.
-define('CARTO_API_KEY', 'cb1_3o5q_1_79bfadb203e47fb67e6ab943');
+define('CARTO_API_KEY', 'cb1_3t8y_1_9291a785a6802ef03f29b5e1');
 
 // Shared secret for /api/cache-bust.php — verifies the POST is coming
 // from Tixello admin (which has the matching BILETEONLINE_CACHE_BUST_TOKEN

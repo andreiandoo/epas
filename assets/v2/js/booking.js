@@ -12,6 +12,7 @@
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var data = {};
   try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
   var cfg = data.booking;
@@ -66,7 +67,8 @@
     day: {},            // product id → availability from /day
     hours: null,
     loading: false,
-    calendar: {},       // Y-m-d → {status, min_price_cents}
+    calendar: {},       // Y-m-d → {status, min_price_cents} — the location's, when we ask it
+    pcal: {},           // the focused product's own calendar, which is what a product page shows
     calOpen: false,
     calMonth: parse(today).getMonth(),
     calYear: parse(today).getFullYear(),
@@ -141,20 +143,23 @@
     return got;
   }
 
+  /* Each problem says where it is solved, so the sidebar can point at the section instead of
+     describing it and leaving the visitor to find it. `at` is a token resolved in renderList. */
   function problems(ls) {
     var errs = [];
+    var add = function (msg, at) { errs.push({ msg: msg, at: at || '' }); };
     var access = cartAccess();
     var needs = { any: 0, adult: 0 };
     var titleNeeds = { any: null, adult: null };
     ls.forEach(function (l) {
       var p = l.product, v = l.variant, q = l.quantity;
       var min = Math.max(1, v.min_per_order || 1), max = v.max_per_order || 0, step = v.step_qty || 1;
-      if (q < min) errs.push('La „' + p.title + '” se cumpără minim ' + min + '.');
-      if (max && q > max) errs.push('La „' + p.title + '” poți lua cel mult ' + max + '.');
-      if (step > 1 && (q - min) % step) errs.push('La „' + p.title + '” se cumpără câte ' + step + '.');
-      if (p.booking_mode === 'slot' && p.type !== 'package' && !l.time) errs.push('Alege ora pentru „' + p.title + ' — ' + v.name + '”.');
-      if (p.requires_vehicle_info && !l.plate) errs.push('Scrie numărul de înmatriculare la „' + p.title + '”.');
-      l.components.forEach(function (c) { if (c.booking_mode === 'slot' && !c.slot_start_time) errs.push('Alege ora pentru „' + c.title + '” din pachet.'); });
+      if (q < min) add('La „' + p.title + '” se cumpără minim ' + min + '.', 'p:' + p.id);
+      if (max && q > max) add('La „' + p.title + '” poți lua cel mult ' + max + '.', 'p:' + p.id);
+      if (step > 1 && (q - min) % step) add('La „' + p.title + '” se cumpără câte ' + step + '.', 'p:' + p.id);
+      if (p.booking_mode === 'slot' && p.type !== 'package' && !l.time) add('Alege ora pentru „' + p.title + ' — ' + v.name + '”.', 'time:' + key(p, v));
+      if (p.requires_vehicle_info && !l.plate) add('Scrie numărul de înmatriculare la „' + p.title + '”.', 'plate:' + key(p, v));
+      l.components.forEach(function (c) { if (c.booking_mode === 'slot' && !c.slot_start_time) add('Alege ora pentru „' + c.title + '” din pachet.', 'p:' + p.id); });
       var persons = v.price_type === 'per_unit' ? q * Math.max(1, v.persons_max || 1) : q;
       if (p.type === 'access') { access.any += persons; if (!v.is_child) access.adult += persons; }
       if (p.type === 'package') (p.components || []).forEach(function (c) {
@@ -166,8 +171,8 @@
         titleNeeds[p.access_requirement] = p.title;
       }
     });
-    if (needs.adult > access.adult) errs.push('Pentru „' + titleNeeds.adult + '” ai nevoie și de câte un bilet de acces pentru adult în aceeași zi.');
-    if (needs.any > access.any) errs.push('Pentru „' + titleNeeds.any + '” ai nevoie și de bilete de acces în aceeași zi.');
+    if (needs.adult > access.adult) add('Pentru „' + titleNeeds.adult + '” ai nevoie și de câte un bilet de acces pentru adult în aceeași zi.', 'access');
+    if (needs.any > access.any) add('Pentru „' + titleNeeds.any + '” ai nevoie și de bilete de acces în aceeași zi.', 'access');
     return errs;
   }
 
@@ -204,7 +209,7 @@
     for (var i = 0; i < 14; i++) {
       var d = addDays(today, i);
       if (d > lastDay) break;
-      var c = state.calendar[d] || {};
+      var c = dayInfo(d);
       var closed = c.status === 'closed' || c.status === 'full';
       var btn = el('button', {
         type: 'button', class: 'bkx-day' + (closed ? ' is-closed' : '') + (c.status === 'limited' ? ' is-limited' : ''),
@@ -226,7 +231,7 @@
     var offset = (first.getDay() + 6) % 7;
     for (var i = 0; i < 42; i++) {
       var dt = new Date(state.calYear, state.calMonth, 1 - offset + i);
-      var v = iso(dt), c = state.calendar[v] || {};
+      var v = iso(dt), c = dayInfo(v);
       var inRange = v >= today && v <= lastDay;
       var open = inRange && c.status !== 'closed' && c.status !== 'full';
       var btn = el('button', {
@@ -299,7 +304,7 @@
         p.type === 'experience' && cfg.mode === 'location' && p.slug ? el('a', { class: 'bkx-more', href: '/experienta/' + p.slug, text: 'Detalii despre experiență' }) : null
       ])
     ]);
-    var row = el('article', { class: 'bkx-p' + (off ? ' is-off' : ''), 'data-product': p.id }, [head, availabilityNote(p)]);
+    var row = el('article', { class: 'bkx-p' + (off ? ' is-off' : ''), 'data-product': p.id, 'data-type': p.type }, [head, availabilityNote(p)]);
 
     if (p.type === 'package' && (p.components || []).length) {
       row.appendChild(el('ul', { class: 'bkx-incl' }, p.components.map(function (c) {
@@ -330,7 +335,7 @@
       if (q > 0 && (p.addons || []).length) row.appendChild(addonList(p, v, k, q));
       if (q > 0 && p.requires_vehicle_info) {
         var id = 'bkx-plate-' + p.id + '-' + v.id;
-        row.appendChild(el('div', { class: 'bkx-plate' }, [
+        row.appendChild(el('div', { class: 'bkx-plate', 'data-at': 'plate:' + k }, [
           el('label', { for: id, text: 'Număr de înmatriculare' + (q > 1 ? ' (toate, separate prin virgulă)' : '') }),
           el('input', { id: id, type: 'text', maxlength: '80', autocomplete: 'off', value: state.plate[k] || '', placeholder: 'ex: HV 12 ABC', on: { input: function (e) { state.plate[k] = e.target.value.toUpperCase(); renderSummary(); } } })
         ]));
@@ -357,7 +362,7 @@
 
   function timeChips(p, v, k) {
     var slots = slotsFor(p, v);
-    return el('div', { class: 'bkx-times' }, [
+    return el('div', { class: 'bkx-times', 'data-at': 'time:' + k }, [
       el('p', { class: 'bkx-label', text: 'Ora de start' + (v.duration_minutes ? ' (' + v.name + ')' : '') }),
       slots.length ? el('div', { class: 'bkx-chips', role: 'group', 'aria-label': 'Ore pentru ' + v.name }, slots.map(function (s) {
         var left = s.capacity_remaining || 0;
@@ -369,13 +374,36 @@
     ]);
   }
 
+  /* How many of an add-on a booking may take. The operator sets two numbers: how many come free
+     with each unit (`included_qty`) and how many *paid* ones may be added on top (`max_per_unit`),
+     and the server validates the sum. Two things were confusing about that:
+       - a free add-on (0 lei) with four included still offered four more "paid" ones at 0 lei,
+         which is not something anyone meant to sell;
+       - the ceiling was never written down, so a stepper that stopped at two looked arbitrary.
+     So: a priced add-on keeps included + paid, a free one stops at what is included, and the
+     note always says the limit. */
+  function addonCap(a, q) {
+    var inc = a.included_qty || 0, paid = a.max_per_unit || 0;
+    if (!a.price_cents && inc > 0) return inc * q;     // nothing to buy beyond what comes with it
+    return (inc + paid) * q;
+  }
+
+  function addonNote(a, q, cap) {
+    var bits = [];
+    if (a.included_qty) bits.push(a.included_qty + (a.included_qty === 1 ? ' inclusă' : ' incluse') + ' la fiecare');
+    if (a.price_cents) bits.push((a.included_qty ? 'apoi ' : '') + lei(a.price_cents) + ' bucata');
+    else if (!a.included_qty) bits.push('gratuit');
+    if (cap) bits.push('maximum ' + cap + (q > 1 ? ' la ' + q : ''));
+    return bits.join(' · ');
+  }
+
   function addonList(p, v, k, q) {
     return el('div', { class: 'bkx-addons' }, [el('p', { class: 'bkx-label', text: 'Suplimente' })].concat((p.addons || []).map(function (a) {
       var ak = k + ':' + a.id, n = state.addons[ak] || 0;
-      var cap = ((a.included_qty || 0) + (a.max_per_unit || 0)) * q;
-      var note = a.included_qty ? a.included_qty + ' incluse / bucată' + (a.price_cents ? ', apoi ' + lei(a.price_cents) : '') : (a.price_cents ? lei(a.price_cents) : 'gratuit');
+      var cap = addonCap(a, q);
+      if (n > cap) { state.addons[ak] = n = cap; }      // the quantity went down under a chosen add-on
       return el('div', { class: 'bkx-v bkx-addon' }, [
-        el('div', { class: 'bkx-v-t' }, [el('b', { text: a.name }), el('small', { text: note })]),
+        el('div', { class: 'bkx-v-t' }, [el('b', { text: a.name }), el('small', { text: addonNote(a, q, cap) })]),
         stepper(a.name, n, function () { state.addons[ak] = Math.max(0, n - 1); render(); }, function () { state.addons[ak] = Math.min(cap, n + 1); render(); }, n >= cap)
       ]);
     })));
@@ -413,8 +441,16 @@
     ls.forEach(function (l) {
       elLines.appendChild(el('li', null, [
         el('span', { text: l.quantity + ' × ' + l.product.title + (l.product.variants.length > 1 || l.product.type === 'package' ? ' — ' + l.variant.name : '') + (l.time ? ', ' + hm(l.time) : '') }),
-        el('b', { text: lei(l.variant.price_cents * l.quantity + Math.round(l.addonsTotal * 100)) })
+        el('b', { text: lei(l.variant.price_cents * l.quantity) })
       ]));
+      /* Every add-on gets its own line. Folding them into the ticket's price made the subtotal
+         move for no visible reason, which is the one thing a summary must never do. */
+      l.addons.forEach(function (a) {
+        elLines.appendChild(el('li', { class: 'bkx-line-sub' }, [
+          el('span', { text: a.qty + ' × ' + a.name + (a.included ? (a.paid_qty ? ' (' + a.included + ' incluse)' : ' (incluse)') : '') }),
+          el('b', { text: a.total > 0 ? lei(Math.round(a.total * 100)) : 'inclus' })
+        ]));
+      });
     });
     elSub.textContent = lei(t.sub);
     elFeeRow.hidden = !t.fee;
@@ -424,12 +460,43 @@
     elTotal.textContent = lei(t.total);
     elBarTotal.textContent = lei(t.total);
     elBarCount.textContent = count === 1 ? '1 bilet' : count + ' bilete';
-    var msg = state.error || errs[0] || '';
-    elErr.textContent = msg;
+    var first = errs[0] || null;
+    var msg = state.error || (first ? first.msg : '');
+    elErr.textContent = '';
+    if (msg) {
+      elErr.appendChild(document.createTextNode(msg));
+      // The message names a section; make it the way there rather than a description of it.
+      if (!state.error && first && first.at && wanted(first.at)) {
+        elErr.appendChild(el('button', { type: 'button', class: 'bkx-err-go', text: 'Arată-mi',
+          on: { click: function () { showWanted(first.at, true); } } }));
+      }
+    }
     elErr.hidden = !msg;
+    showWanted(state.error ? '' : (first ? first.at : ''), false);
     var ok = ls.length > 0 && !errs.length && !state.loading;
     elCart.disabled = !ok;
     elGo.disabled = !ok;
+  }
+
+  /** The element a problem token points at, or null when it is not on screen. */
+  function wanted(at) {
+    if (!at) return null;
+    if (at === 'access') return elList.querySelector('[data-type="access"]');
+    if (at.indexOf('p:') === 0) return elList.querySelector('[data-product="' + at.slice(2) + '"]');
+    return elList.querySelector('[data-at="' + at + '"]');
+  }
+
+  /** Outline the section that has to be dealt with, and optionally scroll to it. */
+  function showWanted(at, scroll) {
+    [].forEach.call(elList.querySelectorAll('.is-wanted'), function (n) { n.classList.remove('is-wanted'); });
+    if (!at) return;
+    var targets = at === 'access'
+      ? [].slice.call(elList.querySelectorAll('[data-type="access"]'))
+      : [wanted(at)].filter(Boolean);
+    targets.forEach(function (n) { n.classList.add('is-wanted'); });
+    if (scroll && targets[0]) {
+      targets[0].scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    }
   }
 
   function render() {
@@ -481,15 +548,30 @@
   function loadCalendar(from) {
     var to = addDays(from, 45);
     if (to > lastDay) to = lastDay;
-    var req = viaLocation
-      ? api('am.location.calendar', { slug: cfg.location.slug, from: from, to: to })
-      : api('am.product.calendar', { slug: cfg.product_slug, from: from, to: to });
-    return req.then(function (d) {
-      (d.days || []).forEach(function (x) { state.calendar[x.date] = x; });
-    }, function () {});
+    var jobs = [];
+    if (viaLocation) {
+      jobs.push(api('am.location.calendar', { slug: cfg.location.slug, from: from, to: to })
+        .then(function (d) { (d.days || []).forEach(function (x) { state.calendar[x.date] = x; }); }, function () {}));
+    }
+    /* An experience page must price the experience. Asking the location gives the cheapest thing
+       sold there — the parking, at 25 lei — under every date of a page whose own prices start at
+       40, so the product's own calendar is fetched too and wins wherever it has an answer. */
+    if (cfg.product_slug && (!viaLocation || cfg.mode === 'product')) {
+      jobs.push(api('am.product.calendar', { slug: cfg.product_slug, from: from, to: to })
+        .then(function (d) { (d.days || []).forEach(function (x) { state.pcal[x.date] = x; }); }, function () {}));
+    }
+    return Promise.all(jobs);
+  }
+
+  /** What the day strip and the calendar show for a date: the focused product first. */
+  function dayInfo(d) {
+    return state.pcal[d] || state.calendar[d] || {};
   }
 
   /* ---------------- events ---------------- */
+  // Two weeks of dates in a strip a mouse cannot grab: press and drag, or wheel sideways.
+  if (window.EPHDrag) window.EPHDrag(elDays);
+
   elDays.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-date]');
     if (b) loadDay(b.getAttribute('data-date'));
@@ -508,7 +590,7 @@
   $('bkx-cal-next').addEventListener('click', function () {
     if (state.calMonth === 11) { state.calMonth = 0; state.calYear++; } else state.calMonth++;
     var first = iso(new Date(state.calYear, state.calMonth, 1));
-    if (!state.calendar[first] && first <= lastDay) loadCalendar(first < today ? today : first).then(renderCalendar);
+    if (!state.calendar[first] && !state.pcal[first] && first <= lastDay) loadCalendar(first < today ? today : first).then(renderCalendar);
     renderCalendar();
   });
   elCalGrid.addEventListener('click', function (e) {
@@ -588,8 +670,8 @@
     var first = null;
     for (var i = 0; i <= 45 && !first; i++) {
       var d = addDays(today, i);
-      var c = state.calendar[d];
-      if (c && c.status !== 'closed' && c.status !== 'full') first = d;
+      var c = dayInfo(d);
+      if (c.status && c.status !== 'closed' && c.status !== 'full') first = d;
     }
     loadDay(first || today);
   });

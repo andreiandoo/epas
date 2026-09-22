@@ -464,7 +464,8 @@
           A.field('Maxim plătite / bilet', A.input(a, 'max_per_unit', { type: 'number', min: 0, maxv: 50, ph: '1', on: mark })),
         ];
       }, function () { return { id: null, name: null, price: 0, included_qty: 0, max_per_unit: 1, is_active: true }; }, { addLabel: 'Adaugă un supliment', limit: 20, removeLabel: 'Șterge suplimentul', on: mark });
-      box.appendChild(A.section('am-p-addons', 'Suplimente', 'Opționale, alese de client la fiecare bilet: poze, echipament, o oră în plus. „Incluse” sunt gratuite la fiecare bilet.', [ad.box, el('div', { class: 've-sec-tools' }, [ad.addBtn])]));
+      box.appendChild(A.section('am-p-addons', 'Suplimente', 'Opționale, alese de client la fiecare bilet: poze, echipament, o oră în plus. La fiecare bilet clientul poate lua în total '
+        + 'incluse + maxim plătite, iar pagina îi scrie limita. Pune 0 la „maxim plătite” dacă nu vrei să se cumpere peste ce e deja inclus.', [ad.box, el('div', { class: 've-sec-tools' }, [ad.addBtn])]));
     }
 
     // ----- details -----
