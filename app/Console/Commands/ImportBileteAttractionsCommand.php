@@ -30,6 +30,7 @@ use Illuminate\Support\Str;
  *   php artisan import:bilete-attractions --no-images
  *   php artisan import:bilete-attractions --offset=0 --limit=500
  *   php artisan import:bilete-attractions --force-images
+ *   php artisan import:bilete-attractions --report        (reads only: coverage + what is unlinked)
  */
 class ImportBileteAttractionsCommand extends Command
 {
@@ -45,6 +46,7 @@ class ImportBileteAttractionsCommand extends Command
         {--create-cities : Create marketplace_cities for genuinely-missing localities that have at least --min-attractions, then relink (is_visible=false)}
         {--min-attractions=4 : Threshold for --create-cities}
         {--backfill-counties : Only pass: fill marketplace_county_id from the linked city county, falling back to the CSV judet column}
+        {--report : Only pass: what the CSV covers, what landed, and what is still unlinked (reads only)}
         {--dry-run : Parse + map but write nothing}';
 
     protected $description = 'Import attractions from CSV (maps types + cities, downloads cover images).';
@@ -69,6 +71,10 @@ class ImportBileteAttractionsCommand extends Command
         if (! is_file($file)) {
             $this->error("CSV not found: {$file}");
             return self::FAILURE;
+        }
+
+        if ($this->option('report')) {
+            return $this->report($file, $clientId);
         }
 
         if ($this->option('backfill-counties')) {
@@ -412,6 +418,153 @@ class ImportBileteAttractionsCommand extends Command
         return $this->countyMap[$this->cityKey($judet)]
             ?? $this->countyMap[$this->norm($judet)]
             ?? null;
+    }
+
+    /**
+     * The county seats, so the report can say which of them the source file never mentions.
+     * Fifteen of them were missing from the first CSV — Brașov, Sibiu, Iași, Constanța among
+     * them — which is not something a per-row importer can notice on its own.
+     */
+    private const COUNTY_SEATS = [
+        'alba' => 'Alba Iulia', 'arad' => 'Arad', 'arges' => 'Pitești', 'bacau' => 'Bacău',
+        'bihor' => 'Oradea', 'bistritanasaud' => 'Bistrița', 'botosani' => 'Botoșani',
+        'brasov' => 'Brașov', 'braila' => 'Brăila', 'buzau' => 'Buzău', 'carasseverin' => 'Reșița',
+        'calarasi' => 'Călărași', 'cluj' => 'Cluj-Napoca', 'constanta' => 'Constanța',
+        'covasna' => 'Sfântu Gheorghe', 'dambovita' => 'Târgoviște', 'dolj' => 'Craiova',
+        'galati' => 'Galați', 'giurgiu' => 'Giurgiu', 'gorj' => 'Târgu Jiu',
+        'harghita' => 'Miercurea Ciuc', 'hunedoara' => 'Deva', 'ialomita' => 'Slobozia',
+        'iasi' => 'Iași', 'ilfov' => 'Buftea', 'maramures' => 'Baia Mare',
+        'mehedinti' => 'Drobeta-Turnu Severin', 'mures' => 'Târgu Mureș', 'neamt' => 'Piatra Neamț',
+        'olt' => 'Slatina', 'prahova' => 'Ploiești', 'satumare' => 'Satu Mare', 'salaj' => 'Zalău',
+        'sibiu' => 'Sibiu', 'suceava' => 'Suceava', 'teleorman' => 'Alexandria', 'timis' => 'Timișoara',
+        'tulcea' => 'Tulcea', 'vaslui' => 'Vaslui', 'valcea' => 'Râmnicu Vâlcea', 'vrancea' => 'Focșani',
+        'bucuresti' => 'București',
+    ];
+
+    /**
+     * --report: what the CSV covers, what landed, and what is still unlinked. Reads only; run it
+     * before and after an import, and again whenever a new source file arrives.
+     */
+    private function report(string $file, int $clientId): int
+    {
+        $this->preloadLookups($clientId);
+
+        // ---------------------------------------------------------------- the source file
+        $fh = fopen($file, 'r');
+        $header = fgetcsv($fh, 0, ',', '"', '');
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $col = array_flip(array_map(fn ($h) => trim((string) $h), $header));
+
+        $rows = 0;
+        $byCounty = [];        // county key => rows
+        $byLocality = [];      // locality key => ['name','judet','count']
+        $seatRows = [];        // county-seat key => rows
+        $noCoords = 0;
+        $noImage = 0;
+        while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+            $rows++;
+            $oras  = trim((string) ($row[$col['oras']] ?? ''));
+            $judet = trim((string) ($row[$col['judet']] ?? ''));
+            $jk = $this->cityKey($judet);
+            if ($jk !== '') {
+                $byCounty[$jk] = ($byCounty[$jk] ?? 0) + 1;
+            }
+            $ok = $this->cityKey($oras);
+            if ($ok !== '') {
+                $seatRows[$ok] = ($seatRows[$ok] ?? 0) + 1;
+                if ($this->resolveCity($oras) === null) {
+                    $byLocality[$ok] ??= ['name' => $oras, 'judet' => $judet, 'count' => 0];
+                    $byLocality[$ok]['count']++;
+                }
+            }
+            $lat = $row[$col['latitudine']] ?? '';
+            $lng = $row[$col['longitudine']] ?? '';
+            if (!is_numeric($lat) || !is_numeric($lng)) {
+                $noCoords++;
+            }
+            if (trim((string) ($row[$col['imagine_principala']] ?? '')) === '') {
+                $noImage++;
+            }
+        }
+        fclose($fh);
+
+        $this->line('');
+        $this->info('=== Fișierul sursă ===  ' . basename($file));
+        $this->line(sprintf('  %-34s %s', 'rânduri', number_format($rows, 0, ',', '.')));
+        $this->line(sprintf('  %-34s %d din 42', 'județe acoperite', count($byCounty)));
+        $this->line(sprintf('  %-34s %d', 'localități distincte', count($seatRows)));
+        $this->line(sprintf('  %-34s %s', 'fără coordonate', $noCoords));
+        $this->line(sprintf('  %-34s %s', 'fără poză', number_format($noImage, 0, ',', '.')));
+
+        // ---------------------------------------------------------------- county seats
+        $missingSeats = [];
+        foreach (self::COUNTY_SEATS as $ck => $seat) {
+            if (($seatRows[$this->cityKey($seat)] ?? 0) === 0) {
+                $missingSeats[] = [$seat, $byCounty[$ck] ?? 0];
+            }
+        }
+        usort($missingSeats, fn ($a, $b) => $b[1] <=> $a[1]);
+        $this->line('');
+        $this->info('=== Reședințe de județ fără nicio atracție în fișier: ' . count($missingSeats) . ' din 42 ===');
+        if ($missingSeats) {
+            $this->line('  (județul are atracții, dar niciuna chiar în orașul de reședință)');
+            foreach ($missingSeats as [$seat, $n]) {
+                $this->line(sprintf('  %-26s %5d în județ', $seat, $n));
+            }
+        }
+
+        // ---------------------------------------------------------------- what landed
+        $q = fn () => Attraction::where('marketplace_client_id', $clientId);
+        $total = $q()->count();
+        $noCity = $q()->whereNull('marketplace_city_id')->count();
+        $noCounty = $q()->whereNull('marketplace_county_id')->count();
+        $noType = $q()->whereNull('attraction_type_id')->count();
+        $noGeo = $q()->where(fn ($w) => $w->whereNull('latitude')->orWhereNull('longitude'))->count();
+        $noCover = $q()->where(fn ($w) => $w->whereNull('cover_image_url')->orWhere('cover_image_url', ''))->count();
+        $pc = fn (int $n) => $total ? sprintf('%5.1f%%', 100 * $n / $total) : '    —';
+
+        $this->line('');
+        $this->info('=== În baza de date (client #' . $clientId . ') ===');
+        $this->line(sprintf('  %-34s %s', 'atracții', number_format($total, 0, ',', '.')));
+        $this->line(sprintf('  %-34s %6s  %s', 'fără oraș', number_format($noCity, 0, ',', '.'), $pc($noCity)));
+        $this->line(sprintf('  %-34s %6s  %s', 'fără județ', number_format($noCounty, 0, ',', '.'), $pc($noCounty)));
+        $this->line(sprintf('  %-34s %6s  %s', 'fără tip', number_format($noType, 0, ',', '.'), $pc($noType)));
+        $this->line(sprintf('  %-34s %6s  %s', 'fără coordonate', number_format($noGeo, 0, ',', '.'), $pc($noGeo)));
+        $this->line(sprintf('  %-34s %6s  %s', 'fără poză de copertă', number_format($noCover, 0, ',', '.'), $pc($noCover)));
+        if ($total !== $rows) {
+            $this->warn('  Atenție: ' . number_format(abs($total - $rows), 0, ',', '.') . ' ' .
+                ($total < $rows ? 'rânduri din fișier nu au ajuns în baza de date.' : 'atracții în plus față de fișier (alt import?).'));
+        }
+
+        // ---------------------------------------------------------------- localities with no city row
+        uasort($byLocality, fn ($a, $b) => $b['count'] <=> $a['count']);
+        $buckets = [];
+        foreach ($byLocality as $g) {
+            $b = $g['count'] >= 10 ? '10+' : ($g['count'] >= 4 ? '4–9' : ($g['count'] >= 2 ? '2–3' : '1'));
+            $buckets[$b] = ($buckets[$b] ?? 0) + 1;
+        }
+        $stranded = array_sum(array_column($byLocality, 'count'));
+        $this->line('');
+        $this->info('=== Localități din fișier care nu există în marketplace_cities: ' . count($byLocality) . ' ===');
+        $this->line('  ' . number_format($stranded, 0, ',', '.') . ' atracții rămân fără oraș din cauza lor.');
+        foreach (['10+', '4–9', '2–3', '1'] as $b) {
+            if (!empty($buckets[$b])) {
+                $this->line(sprintf('  %-12s %5d localități', $b . ' atracții', $buckets[$b]));
+            }
+        }
+        $top = array_slice($byLocality, 0, 15, true);
+        if ($top) {
+            $this->line('  cele mai mari:');
+            foreach ($top as $g) {
+                $this->line(sprintf('    %-30s %4d   (%s)', mb_substr($g['name'], 0, 30), $g['count'], $g['judet'] ?: '?'));
+            }
+        }
+        $this->line('');
+        $this->line('  Ca să le legi pe toate, cu orașe invizibile create din fișier:');
+        $this->line('    php artisan import:bilete-attractions --create-cities --min-attractions=1 --dry-run');
+        $this->line('');
+
+        return self::SUCCESS;
     }
 
     private function uniqueCitySlug(string $name, string $judet): string
