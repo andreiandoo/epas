@@ -461,6 +461,14 @@ class ImportBileteAttractionsCommand extends Command
         'bucuresti' => 'București',
     ];
 
+    /** Pad to a column width in characters, not bytes: 'Călărași' is 8 letters and 11 bytes. */
+    private function pad(string $s, int $width): string
+    {
+        $len = mb_strlen($s, 'UTF-8');
+
+        return $len >= $width ? $s : $s . str_repeat(' ', $width - $len);
+    }
+
     /**
      * --report: what the CSV covers, what landed, and what is still unlinked. Reads only; run it
      * before and after an import, and again whenever a new source file arrives.
@@ -510,11 +518,11 @@ class ImportBileteAttractionsCommand extends Command
 
         $this->line('');
         $this->info('=== Fișierul sursă ===  ' . basename($file));
-        $this->line(sprintf('  %-34s %s', 'rânduri', number_format($rows, 0, ',', '.')));
-        $this->line(sprintf('  %-34s %d din 42', 'județe acoperite', count($byCounty)));
-        $this->line(sprintf('  %-34s %d', 'localități distincte', count($seatRows)));
-        $this->line(sprintf('  %-34s %s', 'fără coordonate', $noCoords));
-        $this->line(sprintf('  %-34s %s', 'fără poză', number_format($noImage, 0, ',', '.')));
+        $this->line('  ' . $this->pad('rânduri', 30) . number_format($rows, 0, ',', '.'));
+        $this->line('  ' . $this->pad('județe acoperite', 30) . count($byCounty) . ' din 42');
+        $this->line('  ' . $this->pad('localități distincte', 30) . number_format(count($seatRows), 0, ',', '.'));
+        $this->line('  ' . $this->pad('fără coordonate', 30) . $noCoords);
+        $this->line('  ' . $this->pad('fără poză', 30) . number_format($noImage, 0, ',', '.'));
 
         // ---------------------------------------------------------------- county seats
         $missingSeats = [];
@@ -529,7 +537,7 @@ class ImportBileteAttractionsCommand extends Command
         if ($missingSeats) {
             $this->line('  (județul are atracții, dar niciuna chiar în orașul de reședință)');
             foreach ($missingSeats as [$seat, $n]) {
-                $this->line(sprintf('  %-26s %5d în județ', $seat, $n));
+                $this->line('  ' . $this->pad($seat, 24) . str_pad((string) $n, 5, ' ', STR_PAD_LEFT) . ' în județ');
             }
         }
 
@@ -545,12 +553,12 @@ class ImportBileteAttractionsCommand extends Command
 
         $this->line('');
         $this->info('=== În baza de date (client #' . $clientId . ') ===');
-        $this->line(sprintf('  %-34s %s', 'atracții', number_format($total, 0, ',', '.')));
-        $this->line(sprintf('  %-34s %6s  %s', 'fără oraș', number_format($noCity, 0, ',', '.'), $pc($noCity)));
-        $this->line(sprintf('  %-34s %6s  %s', 'fără județ', number_format($noCounty, 0, ',', '.'), $pc($noCounty)));
-        $this->line(sprintf('  %-34s %6s  %s', 'fără tip', number_format($noType, 0, ',', '.'), $pc($noType)));
-        $this->line(sprintf('  %-34s %6s  %s', 'fără coordonate', number_format($noGeo, 0, ',', '.'), $pc($noGeo)));
-        $this->line(sprintf('  %-34s %6s  %s', 'fără poză de copertă', number_format($noCover, 0, ',', '.'), $pc($noCover)));
+        $num = fn (int $n) => str_pad(number_format($n, 0, ',', '.'), 6, ' ', STR_PAD_LEFT);
+        $this->line('  ' . $this->pad('atracții', 30) . $num($total));
+        foreach ([['fără oraș', $noCity], ['fără județ', $noCounty], ['fără tip', $noType],
+            ['fără coordonate', $noGeo], ['fără poză de copertă', $noCover]] as [$label, $n]) {
+            $this->line('  ' . $this->pad($label, 30) . $num($n) . '  ' . $pc($n));
+        }
         if ($total !== $rows) {
             $this->warn('  Atenție: ' . number_format(abs($total - $rows), 0, ',', '.') . ' ' .
                 ($total < $rows ? 'rânduri din fișier nu au ajuns în baza de date.' : 'atracții în plus față de fișier (alt import?).'));
@@ -569,14 +577,14 @@ class ImportBileteAttractionsCommand extends Command
         $this->line('  ' . number_format($stranded, 0, ',', '.') . ' atracții rămân fără oraș din cauza lor.');
         foreach (['10+', '4–9', '2–3', '1'] as $b) {
             if (!empty($buckets[$b])) {
-                $this->line(sprintf('  %-12s %5d localități', $b . ' atracții', $buckets[$b]));
+                $this->line('  ' . $this->pad($b . ' atracții', 14) . str_pad((string) $buckets[$b], 5, ' ', STR_PAD_LEFT) . ' localități');
             }
         }
         $top = array_slice($byLocality, 0, 15, true);
         if ($top) {
             $this->line('  cele mai mari:');
             foreach ($top as $g) {
-                $this->line(sprintf('    %-30s %4d   (%s)', mb_substr($g['name'], 0, 30), $g['count'], $g['judet'] ?: '?'));
+                $this->line('    ' . $this->pad(mb_substr($g['name'], 0, 30), 32) . str_pad((string) $g['count'], 4, ' ', STR_PAD_LEFT) . '   (' . ($g['judet'] ?: '?') . ')');
             }
         }
         $this->line('');
