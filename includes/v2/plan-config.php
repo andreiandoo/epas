@@ -88,3 +88,37 @@ const PLAN_STOP_MINUTES = [10, 15, 20, 30, 45, 60, 90, 120, 180, 240];
 
 /** Average road speed used to turn a straight-line hop into a travel estimate, and the detour factor. */
 const PLAN_TRAVEL = ['kmh' => 55, 'detour' => 1.35, 'min_leg' => 5];
+
+/**
+ * Who travels, as the start form asks it and as the accommodation search is told.
+ *
+ * Two adults is the honest default for a trip built on a map; children are counted separately
+ * because that is what the booking engines ask for. `per_room` is only how many rooms we propose
+ * for a party of that size — the traveller changes it on the night itself.
+ */
+const PLAN_PARTY = [
+    'adults'       => 2,
+    'children'     => 0,
+    'adults_max'   => 12,
+    'children_max' => 10,
+    'rooms_max'    => 8,
+    'per_room'     => 2,
+];
+
+/**
+ * Stay22: everything about the accommodation embed that is not a date, a place or a party.
+ *
+ * Same affiliate account as the rest of the platform. The embed is third-party, so /plan never
+ * loads it before the traveller asks for it, and says out loud that a booking pays us a commission
+ * without costing them more. `link` is the plain list, for when the iframe does not come up.
+ */
+const PLAN_STAY22 = [
+    'embed'      => 'https://www.stay22.com/embed/gm',
+    'link'       => 'https://www.stay22.com/allez/booking',
+    'aid'        => '68f75671f26bfb6f2a73d0b9',
+    'currency'   => 'RON',
+    'maincolor'  => '1E5B48',
+    'markertype' => 'circle',
+    'zoom'       => 12,
+    'note'       => 'Cazările vin de la Stay22, care compară Booking, Airbnb și altele. Dacă rezervi, primim un comision — prețul tău nu crește.',
+];

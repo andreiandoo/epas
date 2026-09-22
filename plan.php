@@ -70,6 +70,8 @@ $v2ClientData = [
         'cities'    => array_map(fn ($c) => [$c[0], $c[1], $c[4]], $summary['cities'] ?? []),
         'regions'   => array_map(fn ($r) => [$r[0], $r[1]], $regions),
         'total'     => (int) $summary['total'],
+        'party'     => PLAN_PARTY,
+        'stay22'    => PLAN_STAY22,
     ],
 ];
 
@@ -142,6 +144,29 @@ include __DIR__ . '/includes/v2/header.php';
           </div>
         </div>
 
+        <fieldset class="pl-field pl-field-party">
+          <legend>Câți sunteți?</legend>
+          <div class="pl-party">
+            <div class="pl-party-one">
+              <label for="pl-adults">Adulți</label>
+              <div class="pl-stepper">
+                <button class="pl-step-btn" type="button" data-party="adults" data-step="-1" aria-label="Un adult mai puțin">−</button>
+                <input id="pl-adults" type="number" min="1" max="<?= (int) PLAN_PARTY['adults_max'] ?>" value="<?= (int) PLAN_PARTY['adults'] ?>" inputmode="numeric">
+                <button class="pl-step-btn" type="button" data-party="adults" data-step="1" aria-label="Un adult în plus">+</button>
+              </div>
+            </div>
+            <div class="pl-party-one">
+              <label for="pl-children">Copii</label>
+              <div class="pl-stepper">
+                <button class="pl-step-btn" type="button" data-party="children" data-step="-1" aria-label="Un copil mai puțin">−</button>
+                <input id="pl-children" type="number" min="0" max="<?= (int) PLAN_PARTY['children_max'] ?>" value="<?= (int) PLAN_PARTY['children'] ?>" inputmode="numeric">
+                <button class="pl-step-btn" type="button" data-party="children" data-step="1" aria-label="Un copil în plus">+</button>
+              </div>
+            </div>
+          </div>
+          <p class="pl-hint">De atâția ține cont căutarea de cazare, pentru nopțile dintre zile.</p>
+        </fieldset>
+
         <div class="pl-field">
           <label for="pl-from">Din ce zi? <span class="pl-opt">(opțional)</span></label>
           <input id="pl-from" type="date">
@@ -211,17 +236,28 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="pl-cols">
         <div class="pl-days" id="pl-days-list"></div>
         <aside class="pl-map-col">
-          <div class="mp-frame pl-map-frame">
-            <div data-epm-root data-epm-config="<?= v2_e(json_encode([
-                'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
-                'urlState' => false,
-                'fixed'    => true,
-                'title'    => 'Planul tău',
-                'base'     => '/atractie/',
-                'routeStops' => [],
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
+          <!-- Two views of the same column. The map is never unmounted: the pane that is not on
+               keeps its size and simply steps out of sight, so Leaflet comes back the way it was. -->
+          <div class="pl-map-tabs" id="pl-map-tabs" role="tablist" aria-label="Ce vezi în dreapta">
+            <button class="pl-map-tab is-on" type="button" role="tab" id="pl-tab-route" aria-controls="pl-pane-route" aria-selected="true">Traseu</button>
+            <button class="pl-map-tab" type="button" role="tab" id="pl-tab-stay" aria-controls="pl-pane-stay" aria-selected="false">Cazare</button>
           </div>
-          <p class="rp-note" id="pl-map-note"></p>
+          <div class="pl-panes">
+            <div class="pl-pane" id="pl-pane-route" role="tabpanel" aria-labelledby="pl-tab-route">
+              <div class="mp-frame pl-map-frame">
+                <div data-epm-root data-epm-config="<?= v2_e(json_encode([
+                    'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
+                    'urlState' => false,
+                    'fixed'    => true,
+                    'title'    => 'Planul tău',
+                    'base'     => '/atractie/',
+                    'routeStops' => [],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
+              </div>
+              <p class="rp-note" id="pl-map-note"></p>
+            </div>
+            <div class="pl-pane is-off" id="pl-pane-stay" role="tabpanel" aria-labelledby="pl-tab-stay"></div>
+          </div>
         </aside>
       </div>
     </div>
@@ -249,6 +285,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="mp-faq">
         <details open><summary>De unde știți cât stau la fiecare loc?</summary><p>Nu știm — sunt estimări pe tip de obiectiv, afișate ca atare. Le poți schimba pentru fiecare oprire în parte.</p></details>
         <details><summary>Pot adăuga o pauză sau o masă?</summary><p>Da, oriunde în zi: butonul <em>Oprire de-a ta</em> din capul zilei o pune la final, iar din meniul <em>⋮</em> al unei opriri o pui imediat după ea. Alegi cât ține și dacă rămâne la oprirea dinainte, fără loc anume, sau în alt loc — iar drumul și orele se recalculează.</p></details>
+        <details><summary>Cum e cu cazarea?</summary><p>Între zile îți propun un oraș în care să dormi, ales ca să scurteze și seara, și dimineața următoare — îl poți schimba sau îl poți scoate. Lista de cazări vine de la Stay22, care compară Booking, Airbnb și altele, și se încarcă abia când o ceri. Dacă rezervi, primim un comision — prețul tău nu crește. Pentru ultima noapte nu-ți propun nimic: în ziua aia te întorci acasă.</p></details>
         <details><summary>Pot cumpăra biletele de aici?</summary><p>Deocamdată nu direct din plan. Unde locul vinde bilete prin bilete.online, pagina lui are butonul de rezervare, iar oprirea din plan duce acolo.</p></details>
         <details><summary>Se salvează planul?</summary><p>Da, în browserul tău și în adresa paginii. Dacă golești datele browserului, link-ul rămâne valabil.</p></details>
         <details><summary>Merge fără internet?</summary><p>Nu, dar poți tipări planul sau îl poți deschide în Google Maps zi cu zi, ca să-l ai offline acolo.</p></details>

@@ -37,6 +37,9 @@
   var CRLF = String.fromCharCode(13, 10);
   var PRESETS = CFG.stops || [];                        // your own stops, ready made: label, emoji, minutes
   var MINUTES = CFG.minutes || [15, 30, 45, 60, 90, 120, 180, 240];
+  var PARTY = CFG.party || {};                          // how many travel, and how many fit in a room
+  var STAY = CFG.stay22 || {};                          // the accommodation embed, minus dates and places
+  var WIDE = '(min-width: 1100px)';                     // where the map column becomes a column
   var COMBINING = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
 
   /* ---------------------------------------------------------------- utils */
@@ -129,6 +132,8 @@
   var D = null;
   var bySlug = {};
   var cityCentre = {};
+  var cityCount = {};   // how much of the catalogue a city holds — a proxy for "a town you can sleep in"
+  var cityCounty = {};
   var regionOf = {};
   var BOOK = {};      // slug -> bookable row
 
@@ -158,7 +163,9 @@
       }
       Object.keys(sums).forEach(function (s) {
         cityCentre[s] = [sums[s][0] / sums[s][2], sums[s][1] / sums[s][2]];
+        cityCount[s] = sums[s][2];
       });
+      D.cities.forEach(function (c) { if (c && c[0]) cityCounty[c[0]] = c[2] || ''; });
 
       // [kind, slug, title, city, citySlug, county, lat, lng, approx, priceCents, minutes, img, category]
       (CFG.bookables || []).forEach(function (b) { BOOK[b[1]] = b; });
@@ -247,8 +254,8 @@
   function blankPlan() {
     return {
       origin: null, where: null, back: null, days: 2, from: '',
-      interests: [], company: [], pace: 'normal',
-      stops: [], locked: {}, removed: {}, custom: {}, extra: {}, token: ''
+      interests: [], company: [], pace: 'normal', party: partyDefault(),
+      stops: [], locked: {}, removed: {}, custom: {}, extra: {}, nights: {}, token: ''
     };
   }
 
@@ -546,7 +553,256 @@
     return { rows: rows, km: totalKm, visit: visit, travel: travel, end: t, cost: cost, routed: !!r, pending: roadPending(dayIndex) };
   }
 
+  /* ---------------------------------------------------------------- the nights
+   *
+   * A plan of n days has n-1 nights: on the last day you drive home, so nothing is offered for it.
+   * A night is not a stop — it sits between two day cards and carries its own suggestion: the town
+   * that keeps the evening short without making tomorrow morning long.
+   *
+   * The town is computed, never stored, unless the traveller picks another one or says they are not
+   * sleeping there; only that difference rides in the link. Everything else — the dates, how many of
+   * you there are, how many rooms — falls out of the plan itself.
+   */
+
+  function partyDefault() {
+    return { adults: PARTY.adults || 2, children: PARTY.children || 0 };
+  }
+  function clampInt(v, lo, hi, dflt) {
+    v = parseInt(v, 10);
+    if (isNaN(v)) return dflt;
+    return Math.max(lo, Math.min(hi, v));
+  }
+  function party() {
+    var p = (plan && plan.party) || {};
+    return {
+      adults: clampInt(p.adults, 1, PARTY.adults_max || 12, PARTY.adults || 2),
+      children: clampInt(p.children, 0, PARTY.children_max || 10, PARTY.children || 0)
+    };
+  }
+  /** Two adults to a room, children with them: a starting point, not a rule. */
+  function defaultRooms() {
+    return Math.max(1, Math.min(PARTY.rooms_max || 8, Math.ceil(party().adults / (PARTY.per_room || 2))));
+  }
+  function partyLine(rooms) {
+    var p = party();
+    var out = p.adults + (p.adults === 1 ? ' adult' : ' adulți');
+    if (p.children > 0) out += ' · ' + p.children + (p.children === 1 ? ' copil' : ' copii');
+    return out + ' · ' + rooms + (rooms === 1 ? ' cameră' : ' camere');
+  }
+  function nightCount() { return Math.max(0, plan.days - 1); }
+
+  /** The last place of a day that is really on the map, and the first one of the next. */
+  function lastPlaced(d) {
+    var ids = plan.stops[d] || [];
+    for (var k = ids.length - 1; k >= 0; k--) {
+      var e = entry(ids[k]);
+      if (e && typeof e.lat === 'number') return { lat: e.lat, lng: e.lng, name: e.name };
+    }
+    return null;
+  }
+  function firstPlaced(d) {
+    var ids = plan.stops[d] || [];
+    for (var k = 0; k < ids.length; k++) {
+      var e = entry(ids[k]);
+      if (e && typeof e.lat === 'number') return { lat: e.lat, lng: e.lng, name: e.name };
+    }
+    return null;
+  }
+  function nightAnchors(i) {
+    var a = lastPlaced(i), b = firstPlaced(i + 1);
+    var centre = a || b || (plan.where ? { lat: plan.where.lat, lng: plan.where.lng, name: plan.where.label } : null);
+    return { a: a, b: b, centre: centre };
+  }
+
+  /**
+   * The town we suggest: a short drive tonight, a shorter one tomorrow morning, and big enough to
+   * have somewhere to sleep. Tomorrow weighs a little more than tonight — an hour before breakfast
+   * costs more than an hour after dinner. How much of the catalogue a town holds is the only thing
+   * we know about it, so it stands in for "there are beds here"; the traveller can name another.
+   */
+  function nightBest(i) {
+    if (!D || !plan.where) return null;
+    var an = nightAnchors(i);
+    var from = an.a || an.centre;
+    if (!from) return null;
+    // First the driving: from tonight's last stop to the town, and from the town to tomorrow's first stop (the
+    // morning weighs a little more, because that is the drive you make before coffee).
+    var towns = [], bestDrive = Infinity;
+    for (var k = 0; k < D.cities.length; k++) {
+      var c = D.cities[k];
+      if (!c || !c[0] || !cityCentre[c[0]]) continue;
+      var lat = cityCentre[c[0]][0], lng = cityCentre[c[0]][1];
+      var drive = km(from.lat, from.lng, lat, lng);
+      if (an.b) drive += 1.35 * km(lat, lng, an.b.lat, an.b.lng);
+      towns.push({ slug: c[0], name: c[1], county: c[2] || '', lat: lat, lng: lng, drive: drive, size: cityCount[c[0]] || 0 });
+      if (drive < bestDrive) bestDrive = drive;
+    }
+    if (!towns.length) return null;
+    // Then, among the towns that cost about the same to reach, the one you are most likely to find a bed in. The
+    // catalogue counts attractions, not hotels, but a village with three of them is rarely where you sleep.
+    var cut = bestDrive + 18, best = null;
+    for (var j = 0; j < towns.length; j++) {
+      var t = towns[j];
+      if (t.drive > cut) continue;
+      if (!best || t.size > best.size || (t.size === best.size && t.drive < best.drive)) best = t;
+    }
+    return best;
+  }
+
+  /**
+   * A night as it stands: the computed suggestion, with whatever the traveller said on top of it.
+   * Null when the catalogue has no town to offer at all.
+   */
+  function nightOf(i) {
+    if (i < 0 || i >= nightCount()) return null;
+    var ov = (plan.nights && plan.nights[i]) || {};
+    var c = (ov.city && typeof ov.lat === 'number')
+      ? { slug: ov.city, name: ov.name || ov.city, county: ov.county || '', lat: ov.lat, lng: ov.lng }
+      : nightBest(i);
+    if (!c) return null;
+    var an = nightAnchors(i);
+    var kA = an.a ? estKm(km(an.a.lat, an.a.lng, c.lat, c.lng)) : -1;
+    var kB = an.b ? estKm(km(c.lat, c.lng, an.b.lat, an.b.lng)) : -1;
+    return {
+      i: i, city: c.slug, name: c.name, county: c.county, lat: c.lat, lng: c.lng,
+      kA: kA, kB: kB, toName: an.b ? an.b.name : '', hasFrom: !!an.a,
+      far: kA > 60 || kB > 60, chosen: !!ov.city, skip: !!ov.skip,
+      rooms: clampInt(ov.rooms, 1, PARTY.rooms_max || 8, defaultRooms())
+    };
+  }
+  /** Writes only what the traveller actually decided; a key put back to its default disappears. */
+  function setNight(i, patch) {
+    if (!plan.nights) plan.nights = {};
+    var cur = plan.nights[i] || {};
+    Object.keys(patch).forEach(function (k) {
+      var v = patch[k];
+      if (v === null || v === false || v === undefined || v === '') delete cur[k];
+      else cur[k] = v;
+    });
+    if (Object.keys(cur).length) plan.nights[i] = cur;
+    else delete plan.nights[i];
+  }
+
+  /** The plan's start date shifted by so many days, or null when no date was given. */
+  function dateOffset(offset) {
+    if (!plan.from) return null;
+    var d = new Date(plan.from + 'T12:00:00');
+    if (isNaN(d)) return null;
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+  function isoOffset(offset) {
+    var d = dateOffset(offset);
+    if (!d) {
+      d = new Date();
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + offset);
+    }
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function nightTitle(i) {
+    var d = dateOffset(i);
+    return d
+      ? 'Noaptea de ' + d.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'short' })
+      : 'Noaptea dintre ziua ' + (i + 1) + ' și ziua ' + (i + 2);
+  }
+
+  /**
+   * The Stay22 map for one night. Everything fixed about it — the affiliate id, our green, the
+   * currency — comes from PLAN_STAY22 in includes/v2/plan-config.php, so nothing about the account
+   * lives in this file. Built only when asked: the embed is third party and never loads on its own.
+   */
+  function stayAddress(n) {
+    return n.name + (n.county ? ', ' + n.county : '') + ', România';
+  }
+  function stayUrl(i) {
+    var n = nightOf(i);
+    if (!n) return '';
+    var p = party();
+    var q = [
+      'aid=' + encodeURIComponent(STAY.aid || ''),
+      'lat=' + (+n.lat).toFixed(5),
+      'lng=' + (+n.lng).toFixed(5),
+      'address=' + encodeURIComponent(stayAddress(n)),
+      'checkin=' + isoOffset(i),
+      'checkout=' + isoOffset(i + 1),
+      'adults=' + p.adults
+    ];
+    if (p.children > 0) q.push('children=' + p.children);
+    q.push('rooms=' + n.rooms);
+    q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
+    q.push('maincolor=' + encodeURIComponent(STAY.maincolor || '1E5B48'));
+    q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
+    q.push('zoom=' + (STAY.zoom || 12));
+    return (STAY.embed || 'https://www.stay22.com/embed/gm') + '?' + q.join('&');
+  }
+  /** The same night as a plain page on Stay22, for when the iframe does not come up. */
+  function stayLink(i) {
+    var n = nightOf(i);
+    if (!n) return '';
+    var p = party();
+    var q = [
+      'aid=' + encodeURIComponent(STAY.aid || ''),
+      'address=' + encodeURIComponent(stayAddress(n)),
+      'checkin=' + isoOffset(i),
+      'checkout=' + isoOffset(i + 1),
+      'adults=' + p.adults
+    ];
+    if (p.children > 0) q.push('children=' + p.children);
+    q.push('rooms=' + n.rooms);
+    q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
+    return (STAY.link || 'https://www.stay22.com/allez/booking') + '?' + q.join('&');
+  }
+
   /* ---------------------------------------------------------------- storage + url */
+
+  /**
+   * The nights in the link: only what the traveller decided differently from what we computed, so a
+   * plan nobody argued with carries nothing at all. k = not sleeping here, c/a/g/m/u = another town,
+   * r = another number of rooms.
+   */
+  function nightsCompact() {
+    var out = {}, any = false;
+    for (var i = 0; i < nightCount(); i++) {
+      var ov = (plan.nights || {})[i];
+      if (!ov) continue;
+      var o = {};
+      if (ov.skip) o.k = 1;
+      if (ov.city && typeof ov.lat === 'number') {
+        var def = nightBest(i);
+        if (!def || def.slug !== ov.city) {
+          o.c = ov.city;
+          o.a = ov.lat;
+          o.g = ov.lng;
+          o.m = ov.name || ov.city;
+          if (ov.county) o.u = ov.county;
+        }
+      }
+      if (ov.rooms && ov.rooms !== defaultRooms()) o.r = ov.rooms;
+      if (Object.keys(o).length) { out[i] = o; any = true; }
+    }
+    return any ? out : null;
+  }
+  function nightsExpand(raw) {
+    var out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    Object.keys(raw).forEach(function (k) {
+      var v = raw[k] || {}, o = {}, i = parseInt(k, 10);
+      if (isNaN(i) || i < 0) return;
+      if (v.k) o.skip = true;
+      if (v.c && typeof v.a === 'number' && typeof v.g === 'number') {
+        o.city = String(v.c);
+        o.lat = v.a;
+        o.lng = v.g;
+        o.name = String(v.m || v.c);
+        o.county = v.u ? String(v.u) : '';
+      }
+      if (v.r) o.rooms = clampInt(v.r, 1, PARTY.rooms_max || 8, defaultRooms());
+      if (Object.keys(o).length) out[i] = o;
+    });
+    return out;
+  }
 
   function encode() {
     var compact = {
@@ -556,6 +812,10 @@
     };
     // Only when there is something to say: a plan without stops of your own stays as short as it was.
     if (plan.extra && Object.keys(plan.extra).length) compact.x = plan.extra;
+    var pty = party(), dft = partyDefault();
+    if (pty.adults !== dft.adults || pty.children !== dft.children) compact.y = [pty.adults, pty.children];
+    var nts = nightsCompact();
+    if (nts) compact.n = nts;
     try {
       return btoa(unescape(encodeURIComponent(JSON.stringify(compact)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     } catch (e) { return ''; }
@@ -569,6 +829,12 @@
       p.pace = o.p || 'normal'; p.stops = o.s || []; p.custom = o.c || {}; p.token = o.t || '';
       // Links and saved plans made before stops of your own existed simply have none of them.
       p.extra = (o.x && typeof o.x === 'object') ? o.x : {};
+      // Same for the nights and for who travels: an older link says nothing, so it gets the defaults.
+      p.party = {
+        adults: clampInt(o.y && o.y[0], 1, PARTY.adults_max || 12, PARTY.adults || 2),
+        children: clampInt(o.y && o.y[1], 0, PARTY.children_max || 10, PARTY.children || 0)
+      };
+      p.nights = nightsExpand(o.n);
       (o.l || []).forEach(function (s) { p.locked[s] = 1; });
       (o.r || []).forEach(function (s) { p.removed[s] = 1; });
       p.stops = p.stops.map(function (day) {
@@ -599,6 +865,15 @@
     var p = function (n) { return (n < 10 ? '0' : '') + n; };
     return base.getFullYear() + p(base.getMonth() + 1) + p(base.getDate()) + 'T' +
       p(base.getHours()) + p(base.getMinutes()) + '00';
+  }
+  /** A date with no hour behind it: what an all-day entry wants. */
+  function icsDate(dayIndex) {
+    var base = plan.from ? new Date(plan.from + 'T00:00:00') : new Date();
+    if (isNaN(base)) base = new Date();
+    base.setHours(0, 0, 0, 0);
+    base.setDate(base.getDate() + dayIndex);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return base.getFullYear() + p(base.getMonth() + 1) + p(base.getDate());
   }
   function icsEscape(v) {
     var B = String.fromCharCode(92);
@@ -631,6 +906,24 @@
           : (e.type ? e.type + '. ' : '') + 'Durata e o estimare. https://bilete.online' + e.href));
         lines.push('END:VEVENT');
       });
+    }
+    // One all-day entry per night, with the town — the last day has none: you drive home.
+    for (var nd = 0; nd < nightCount(); nd++) {
+      var nt = nightOf(nd);
+      if (!nt || nt.skip) continue;
+      lines.push(
+        'BEGIN:VEVENT',
+        'UID:noapte-' + nd + '-' + nt.city + '@bilete.online',
+        'DTSTAMP:' + stamp,
+        'DTSTART;VALUE=DATE:' + icsDate(nd),
+        'DTEND;VALUE=DATE:' + icsDate(nd + 1),
+        'SUMMARY:' + icsEscape('🌙 Cazare în ' + nt.name),
+        'LOCATION:' + icsEscape([nt.name, nt.county].filter(Boolean).join(', ')),
+        'GEO:' + (+nt.lat).toFixed(5) + ';' + (+nt.lng).toFixed(5),
+        'DESCRIPTION:' + icsEscape('Noaptea propusă de planificator: ' + partyLine(nt.rooms) +
+          '. Lista de cazări se deschide din plan, pe https://bilete.online/plan'),
+        'END:VEVENT'
+      );
     }
     lines.push('END:VCALENDAR');
 
@@ -763,9 +1056,16 @@
     bar: document.getElementById('pl-bar'),
     list: document.getElementById('pl-days-list'),
     note: document.getElementById('pl-map-note'),
-    live: document.getElementById('pl-live')
+    live: document.getElementById('pl-live'),
+    tabRoute: document.getElementById('pl-tab-route'),
+    tabStay: document.getElementById('pl-tab-stay'),
+    paneRoute: document.getElementById('pl-pane-route'),
+    paneStay: document.getElementById('pl-pane-stay')
   };
   var activeDay = 0;
+  var mapTab = 'route';      // which of the two views the map column is showing
+  var stayNight = -1;        // the night the accommodation view is on, -1 for none yet
+  var sheet = null;          // the full-height sheet, on a phone
   var focusId = null;        // whose handle to put the focus back on after the next render
 
   /** Says out loud what just moved, for whoever is not looking at the screen. */
@@ -782,6 +1082,7 @@
     renderBar();
     renderDays();
     syncMap();
+    syncStay();
   }
 
   function render() {
@@ -789,9 +1090,14 @@
     stale = false;
     startBox.hidden = true;
     root.hidden = false;
+    closeSheet();
+    stayNight = -1;
+    if (ui.paneStay) { ui.paneStay.textContent = ''; ui.paneStay.dataset.stayUrl = ''; }
+    showTab('route');          // a fresh plan opens on its own map, not on somebody else's night
     renderBar();
     renderDays();
     syncMap();
+    syncStay();
     save();
     fetchRoads();
   }
@@ -830,6 +1136,29 @@
     meta.appendChild(el('span', '', (CFG.paces[plan.pace] || ['Normal'])[0]));
     if (totals.cost > 0) meta.appendChild(el('span', 'pl-bar-sell', 'de la ' + lei(totals.cost) + ' bilete'));
     left.appendChild(meta);
+
+    // One line for the nights, and a way into the first one nobody has looked at yet.
+    if (nightCount() > 0) {
+      var towns = [], seenTown = {}, slept = 0;
+      for (var ni = 0; ni < nightCount(); ni++) {
+        var nn = nightOf(ni);
+        if (!nn || nn.skip) continue;
+        slept++;
+        if (seenTown[nn.name]) continue;
+        seenTown[nn.name] = 1;
+        towns.push(nn.name);
+      }
+      var nb = el('button', 'pl-bar-nights');
+      nb.type = 'button';
+      var nem = el('span', '', '🌙');
+      nem.setAttribute('aria-hidden', 'true');
+      nb.appendChild(nem);
+      nb.appendChild(document.createTextNode(slept
+        ? slept + (slept === 1 ? ' noapte' : ' nopți') + ' · ' + towns.join(', ')
+        : 'Nicio noapte pe traseu'));
+      nb.addEventListener('click', jumpToNight);
+      left.appendChild(nb);
+    }
     bar.appendChild(left);
 
     var acts = el('div', 'pl-bar-acts');
@@ -864,7 +1193,11 @@
       ? held.closest('.pl-stop').dataset.id : null;
 
     ui.list.textContent = '';
-    for (var d = 0; d < plan.days; d++) ui.list.appendChild(dayCard(d));
+    for (var d = 0; d < plan.days; d++) {
+      ui.list.appendChild(dayCard(d));
+      // No night after the last day: that is the day you drive home.
+      if (d < plan.days - 1) ui.list.appendChild(nightCard(d));
+    }
 
     var want = grab ? grab.id : (focusId || heldId);
     focusId = null;
@@ -1192,8 +1525,12 @@
     var seen = {};
     (plan.stops || []).forEach(function (day) { (day || []).forEach(function (id) { seen[id] = 1; }); });
     Object.keys(plan.extra).forEach(function (id) { if (!seen[id]) delete plan.extra[id]; });
+    if (!plan.nights) plan.nights = {};
+    Object.keys(plan.nights).forEach(function (k) {
+      if (+k >= nightCount()) delete plan.nights[k];
+    });
   }
-  function after() { stale = false; closeMenu(); tidy(); renderBar(); renderDays(); syncMap(); save(); fetchRoads(); }
+  function after() { stale = false; closeMenu(); tidy(); renderBar(); renderDays(); syncMap(); syncStay(); save(); fetchRoads(); }
 
   /**
    * One move for all of them — the arrows are gone, so dragging, the ⋮ menu and the keyboard all
@@ -1443,6 +1780,7 @@
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
     if (drag) { dragEnd(true); return; }
+    if (sheet) { closeSheet(); return; }
     if (menu) { var b = menu.btn; closeMenu(); b.focus(); }
   });
 
@@ -1696,6 +2034,350 @@
     return wrap;
   }
 
+  /* ---------------------------------------------------------------- nights on the page
+   *
+   * A night card sits between two days and carries three decisions: see what there is, sleep
+   * somewhere else, or do not sleep on the road at all. The list of places to sleep is Stay22's,
+   * in an iframe built only when somebody asks for it — on a wide screen in the map column, beside
+   * our own map, and on a phone as a sheet over the plan.
+   */
+
+  function setCls(node, name, on) { if (node) node.classList[on ? 'add' : 'remove'](name); }
+  function wide() { return !!(window.matchMedia && window.matchMedia(WIDE).matches); }
+
+  function nightBtn(ic, label, fn, cls) {
+    var b = el('button', 'pl-day-act' + (cls ? ' ' + cls : ''));
+    b.type = 'button';
+    b.appendChild(icon(ic));
+    b.appendChild(el('span', '', label));
+    b.addEventListener('click', function () { fn(b); });
+    return b;
+  }
+  /** Rendering throws the card away, so the night that was just changed gets its focus back. */
+  function afterNight(i) {
+    after();
+    var card = ui.list.querySelector('.pl-night[data-night="' + i + '"]');
+    if (card) card.focus();
+  }
+  function jumpToNight() {
+    var want = -1;
+    for (var i = 0; i < nightCount(); i++) {
+      if (!(plan.nights || {})[i]) { want = i; break; }     // nobody has said anything about this one
+    }
+    if (want < 0) want = 0;
+    var card = ui.list.querySelector('.pl-night[data-night="' + want + '"]');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.focus({ preventScroll: true });
+  }
+
+  function nightCard(i) {
+    var n = nightOf(i);
+    var box = el('section', 'pl-night');
+    box.dataset.night = String(i);
+    box.tabIndex = -1;
+
+    var h = el('h3', 'pl-night-h');
+    var em = el('span', 'pl-night-em', '🌙');
+    em.setAttribute('aria-hidden', 'true');
+    h.appendChild(em);
+    h.appendChild(document.createTextNode(nightTitle(i)));
+    box.appendChild(h);
+
+    if (n && n.skip) {
+      setCls(box, 'is-skipped', true);
+      box.appendChild(el('p', 'pl-night-p', 'Ai spus că nu dormi pe traseu în noaptea asta.'));
+      var undo = el('div', 'pl-night-acts');
+      undo.appendChild(nightBtn('plus', 'Pun cazarea la loc', function () {
+        setNight(i, { skip: false });
+        announce('Noaptea a revenit în plan.');
+        afterNight(i);
+      }));
+      box.appendChild(undo);
+      return box;
+    }
+
+    if (!n) {
+      box.appendChild(el('p', 'pl-night-p',
+        'Nu am în catalog un oraș pe care să ți-l propun pentru noaptea asta. Alege tu unul.'));
+    } else {
+      setCls(box, 'is-far', n.far);
+      box.appendChild(nightLine(n));
+    }
+    var pick = nightPicker(i);
+    box.appendChild(nightActs(i, n, pick));
+    box.appendChild(pick);
+    return box;
+  }
+
+  /** What we can honestly say about the town: the two drives it sits between, and nothing else. */
+  function nightLine(n) {
+    var p = el('p', 'pl-night-p');
+    var town = el('b', '', n.name);
+    if (n.far) {
+      p.appendChild(document.createTextNode('Prin zonă nu e niciun oraș din catalog aproape. Cel mai apropiat e '));
+      p.appendChild(town);
+      if (n.hasFrom) p.appendChild(document.createTextNode(', la ' + km1(n.kA) + ' km de ultima oprire'));
+      if (n.toName) {
+        p.appendChild(document.createTextNode((n.hasFrom ? ' și la ' : ', la ') + km1(n.kB) +
+          ' km de ' + n.toName + ', unde pornești mâine.'));
+      } else {
+        p.appendChild(document.createTextNode('.'));
+      }
+      p.appendChild(document.createTextNode(' Dacă știi ceva mai aproape, alege altă localitate.'));
+      return p;
+    }
+    p.appendChild(document.createTextNode('Îți propun să dormi în '));
+    p.appendChild(town);
+    if (n.hasFrom && n.toName) {
+      p.appendChild(document.createTextNode(' — ultima oprire e la ' + km1(n.kA) +
+        ' km, iar mâine pornești spre ' + n.toName + ', la ' + km1(n.kB) + ' km.'));
+    } else if (n.hasFrom) {
+      p.appendChild(document.createTextNode(' — ultima oprire e la ' + km1(n.kA) + ' km.'));
+    } else if (n.toName) {
+      p.appendChild(document.createTextNode(' — mâine pornești spre ' + n.toName + ', la ' + km1(n.kB) + ' km.'));
+    } else {
+      p.appendChild(document.createTextNode('.'));
+    }
+    return p;
+  }
+
+  function nightActs(i, n, pick) {
+    var wrap = el('div', 'pl-night-acts');
+    if (n) wrap.appendChild(nightBtn('buildings', 'Vezi cazări', function () { openStay(i); }, 'is-primary'));
+
+    var other = nightBtn('magnifying-glass', n ? 'Altă localitate' : 'Alege localitatea', function (b) {
+      var show = pick.hidden;
+      pick.hidden = !show;
+      b.setAttribute('aria-expanded', String(show));
+      if (show) {
+        var f = pick.querySelector('input');
+        if (f) f.focus();
+      }
+    });
+    other.setAttribute('aria-expanded', 'false');
+    wrap.appendChild(other);
+
+    wrap.appendChild(nightBtn('x', 'Nu dorm aici', function () {
+      setNight(i, { skip: true });
+      announce('Am scos noaptea din plan.');
+      afterNight(i);
+    }));
+
+    if (n) {
+      var rl = el('label', 'pl-night-rooms');
+      rl.appendChild(el('span', '', 'Camere'));
+      var sel = el('select');
+      for (var r = 1; r <= (PARTY.rooms_max || 8); r++) {
+        var o = el('option', '', String(r));
+        o.value = String(r);
+        if (r === n.rooms) o.selected = true;
+        sel.appendChild(o);
+      }
+      sel.addEventListener('change', function () {
+        setNight(i, { rooms: clampInt(sel.value, 1, PARTY.rooms_max || 8, defaultRooms()) });
+        afterNight(i);
+      });
+      rl.appendChild(sel);
+      wrap.appendChild(rl);
+    }
+    return wrap;
+  }
+
+  /** The same city list the start form searches, so "another town" means the same thing twice. */
+  function nightCityHits(q, limit) {
+    if (!D) return [];
+    if (!ALL_PLACES) ALL_PLACES = places();
+    q = fold((q || '').trim());
+    if (q.length < 2) return [];
+    var pool = ALL_PLACES.filter(function (x) { return x.kind === 'city'; });
+    return pool.filter(function (x) { return fold(x.label).indexOf(q) === 0; })
+      .concat(pool.filter(function (x) { return fold(x.label).indexOf(q) > 0; }))
+      .slice(0, limit || 7);
+  }
+
+  function nightPicker(i) {
+    var wrap = el('div', 'pl-night-pick');
+    wrap.hidden = true;
+    var inp = el('input');
+    inp.type = 'search';
+    inp.autocomplete = 'off';
+    inp.placeholder = 'Caută orașul în care dormi…';
+    inp.setAttribute('aria-label', 'Caută orașul în care dormi');
+    var hits = el('ul', 'pl-night-hits');
+    hits.hidden = true;
+    inp.addEventListener('input', debounce(function () {
+      hits.textContent = '';
+      var found = nightCityHits(inp.value, 7);
+      found.forEach(function (pl) {
+        var li = el('li');
+        var b = el('button', 'pl-add-hit');
+        b.type = 'button';
+        b.appendChild(el('b', '', pl.label));
+        b.appendChild(el('small', '', pl.hint + ' · ' + nf(pl.count) + ' atracții'));
+        b.addEventListener('click', function () {
+          var r = resolvePlace(pl);
+          if (!r) return;
+          setNight(i, {
+            city: pl.key, lat: r.lat, lng: r.lng, name: pl.label,
+            county: cityCounty[pl.key] || '', skip: false
+          });
+          announce('Noaptea se mută în ' + pl.label + '.');
+          afterNight(i);
+        });
+        li.appendChild(b);
+        hits.appendChild(li);
+      });
+      hits.hidden = !found.length;
+    }, 140));
+    wrap.appendChild(inp);
+    wrap.appendChild(hits);
+    return wrap;
+  }
+
+  /* ---------- the accommodation view ---------- */
+
+  function firstOpenNight() {
+    for (var i = 0; i < nightCount(); i++) {
+      var n = nightOf(i);
+      if (n && !n.skip) return i;
+    }
+    return -1;
+  }
+  function showTab(name) {
+    if (!ui.paneStay) return;
+    if (name === 'stay' && (stayNight < 0 || stayNight >= nightCount())) stayNight = firstOpenNight();
+    mapTab = name;
+    setCls(ui.tabRoute, 'is-on', name === 'route');
+    setCls(ui.tabStay, 'is-on', name === 'stay');
+    if (ui.tabRoute) ui.tabRoute.setAttribute('aria-selected', String(name === 'route'));
+    if (ui.tabStay) ui.tabStay.setAttribute('aria-selected', String(name === 'stay'));
+    // Not unmounted, only out of sight: the map keeps its size, so Leaflet has nothing to recover.
+    setCls(ui.paneRoute, 'is-off', name !== 'route');
+    setCls(ui.paneStay, 'is-off', name !== 'stay');
+    syncStay();
+  }
+  function syncStay() {
+    if (ui.paneStay && mapTab === 'stay') stayInto(ui.paneStay, stayNight);
+    if (sheet) stayInto(sheet.body, sheet.night);
+  }
+  function openStay(i) {
+    stayNight = i;
+    var n = nightOf(i);
+    if (wide()) {
+      showTab('stay');
+      var col = document.querySelector('.pl-map-col');
+      if (col && col.scrollIntoView) col.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      announce(n ? 'Am deschis cazările din ' + n.name + ' în coloana din dreapta.' : 'Am deschis cazările.');
+    } else {
+      openSheet(i);
+    }
+  }
+
+  /**
+   * Builds the embed for one night, and only then. The same night twice in a row is left alone, so
+   * a redraw does not reload the iframe under the reader; anything that changes the URL — the town,
+   * the dates, who travels, the rooms — does rebuild it.
+   */
+  function stayInto(host, i) {
+    var n = i >= 0 ? nightOf(i) : null;
+    if (!n || n.skip) {
+      if (host.dataset.stayUrl === '-') return;
+      host.textContent = '';
+      host.dataset.stayUrl = '-';
+      host.appendChild(el('p', 'pl-stay-empty', nightCount()
+        ? 'Alege o noapte din plan și îți deschid aici cazările din orașul ei.'
+        : 'Planul are o singură zi, deci nicio noapte pe drum: te întorci în aceeași zi.'));
+      return;
+    }
+    var url = stayUrl(i);
+    if (host.dataset.stayUrl === url) return;
+    host.textContent = '';
+    host.dataset.stayUrl = url;
+
+    var box = el('div', 'pl-stay');
+    box.appendChild(el('p', 'pl-stay-h', 'Cazare în ' + n.name));
+    box.appendChild(el('p', 'pl-stay-sub', nightRange(i) + ' · ' + partyLine(n.rooms)));
+
+    var frame = el('div', 'pl-stay-frame');
+    var skel = el('div', 'pl-stay-skel');
+    var spin = el('span', 'pl-stay-spin');
+    spin.setAttribute('aria-hidden', 'true');
+    skel.appendChild(spin);
+    skel.appendChild(el('span', '', 'Se încarcă lista de cazări…'));
+    var fr = el('iframe');
+    fr.title = 'Cazări în ' + n.name + ', pe Stay22';
+    fr.loading = 'lazy';
+    fr.referrerPolicy = 'origin';
+    fr.setAttribute('allowtransparency', 'true');
+    var arrived = false;
+    fr.addEventListener('load', function () { arrived = true; skel.hidden = true; });
+    setTimeout(function () {
+      if (arrived || !skel.parentNode) return;
+      skel.textContent = '';
+      skel.appendChild(el('span', '', 'Lista nu a pornit. Deschide-o pe Stay22, din link-ul de mai jos.'));
+    }, 12000);
+    fr.src = url;
+    frame.appendChild(fr);
+    frame.appendChild(skel);
+    box.appendChild(frame);
+
+    var foot = el('div', 'pl-stay-foot');
+    var out = el('a', 'pl-stay-out');
+    out.href = stayLink(i);
+    out.target = '_blank';
+    out.rel = 'noopener nofollow sponsored';
+    out.appendChild(document.createTextNode('Deschide lista pe Stay22'));
+    out.appendChild(icon('arrow-right'));
+    foot.appendChild(out);
+    box.appendChild(foot);
+
+    box.appendChild(el('p', 'pl-stay-note', STAY.note ||
+      'Cazările vin de la Stay22. Dacă rezervi, primim un comision — prețul tău nu crește.'));
+    host.appendChild(box);
+  }
+  function nightRange(i) {
+    var a = dateOffset(i), b = dateOffset(i + 1);
+    if (!a || !b) return 'o noapte';
+    var f = { day: 'numeric', month: 'short' };
+    return a.toLocaleDateString('ro-RO', f) + ' → ' + b.toLocaleDateString('ro-RO', f);
+  }
+
+  /* ---------- on a phone: a sheet over the plan, not a column beside it ---------- */
+
+  function openSheet(i) {
+    closeSheet();
+    var back = document.activeElement;
+    var box = el('div', 'pl-sheet');
+    var head = el('div', 'pl-sheet-head');
+    head.appendChild(el('p', 'pl-stay-h', 'Cazare · ' + nightTitle(i)));
+    var x = el('button', 'pl-sheet-x');
+    x.type = 'button';
+    x.appendChild(icon('x'));
+    x.appendChild(el('span', 'sr', 'Închide cazările'));
+    x.addEventListener('click', function () { closeSheet(); });
+    head.appendChild(x);
+    var body = el('div', 'pl-sheet-body');
+    box.appendChild(head);
+    box.appendChild(body);
+    document.body.appendChild(box);
+    document.documentElement.classList.add('pl-sheet-open');
+    sheet = { box: box, body: body, night: i, back: back };
+    stayInto(body, i);
+    x.focus();
+  }
+  function closeSheet() {
+    if (!sheet) return;
+    var was = sheet;
+    sheet = null;
+    document.documentElement.classList.remove('pl-sheet-open');
+    if (was.box.parentNode) was.box.parentNode.removeChild(was.box);
+    if (was.back && was.back.focus) was.back.focus();
+  }
+
+  if (ui.tabRoute) ui.tabRoute.addEventListener('click', function () { showTab('route'); });
+  if (ui.tabStay) ui.tabStay.addEventListener('click', function () { showTab('stay'); });
+
   /* ---------------------------------------------------------------- the map */
 
   function syncMap() {
@@ -1834,6 +2516,11 @@
       .map(function (b) { return b.dataset.company; });
     var pace = document.querySelector('#pl-pace [aria-pressed="true"]');
     plan.pace = pace ? pace.dataset.pace : 'normal';
+    var ad = document.getElementById('pl-adults'), ch = document.getElementById('pl-children');
+    plan.party = {
+      adults: clampInt(ad ? ad.value : null, 1, PARTY.adults_max || 12, PARTY.adults || 2),
+      children: clampInt(ch ? ch.value : null, 0, PARTY.children_max || 10, PARTY.children || 0)
+    };
     plan.stops = [];
     for (var i = 0; i < plan.days; i++) plan.stops.push([]);
   }
@@ -1870,6 +2557,14 @@
     b.addEventListener('click', function () {
       var inp = document.getElementById('pl-days');
       inp.value = Math.max(1, Math.min(7, (parseInt(inp.value, 10) || 2) + parseInt(b.dataset.days, 10)));
+    });
+  });
+  [].forEach.call(document.querySelectorAll('[data-party]'), function (b) {
+    b.addEventListener('click', function () {
+      var inp = document.getElementById('pl-' + b.dataset.party);
+      if (!inp) return;
+      var lo = parseInt(inp.min, 10) || 0, hi = parseInt(inp.max, 10) || 12;
+      inp.value = String(clampInt((parseInt(inp.value, 10) || lo) + (parseInt(b.dataset.step, 10) || 0), lo, hi, lo));
     });
   });
   [].forEach.call(document.querySelectorAll('[data-start-city]'), function (b) {
@@ -1921,12 +2616,25 @@
     root.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
+  /** A plan that came back from a link or from storage shows its party in the form again. */
+  function fillParty() {
+    var p = party();
+    var ad = document.getElementById('pl-adults'), ch = document.getElementById('pl-children');
+    if (ad) ad.value = String(p.adults);
+    if (ch) ch.value = String(p.children);
+  }
+
   /** Whatever the catalogue no longer knows about is dropped, so positions stay honest. */
   function prune() {
     plan.stops = (plan.stops || []).map(function (day) {
       return (day || []).filter(function (id) { return !!entry(id); });
     });
     while (plan.stops.length < plan.days) plan.stops.push([]);
+    if (!plan.party) plan.party = partyDefault();
+    if (!plan.nights) plan.nights = {};
+    Object.keys(plan.nights).forEach(function (k) {
+      if (+k >= nightCount()) delete plan.nights[k];
+    });
   }
 
   /* ---------------------------------------------------------------- boot */
@@ -1937,6 +2645,7 @@
     if (saved && saved.stops && saved.stops.length) {
       plan = saved;
       prune();
+      fillParty();
       activeDay = 0;
       render();
     }
