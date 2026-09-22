@@ -1082,7 +1082,7 @@
    */
   var stale = false;
   function refresh() {
-    if (menu || composer) { stale = true; return; }
+    if (menu || composer || swap) { stale = true; return; }
     stale = false;
     renderBar();
     renderDays();
@@ -1092,6 +1092,7 @@
 
   function render() {
     composer = null;          // a fresh plan never opens with half a form on the screen
+    swap = null;              // nor with somebody else's list of stand-ins
     stale = false;
     startBox.hidden = true;
     root.hidden = false;
@@ -1224,6 +1225,15 @@
       var nb = ui.list.querySelector('.pl-new');
       if (nb) nb.scrollIntoView({ block: 'nearest' });
     }
+    if (swap && swap.focus) {
+      swap.focus = false;
+      var sp = ui.list.querySelector('.pl-swap');
+      if (sp) {
+        var sf = sp.querySelector('.pl-swap-hit') || sp.querySelector('input');
+        if (sf) sf.focus();
+        sp.scrollIntoView({ block: 'nearest' });
+      }
+    }
   }
 
   function dayCard(d) {
@@ -1283,6 +1293,8 @@
         if (!r.e.own) n++;                       // your own stops take time, not a number on the map
         ol.appendChild(insertSlot(d, r.pos));    // the gap above this stop can take a new one
         ol.appendChild(stopItem(d, r, n));
+        // what could take this stop's place opens right under it, so it is never in doubt which one goes
+        if (swap && swap.day === d && swap.pos === r.pos && swap.id === r.e.id) ol.appendChild(swapItem());
       } else {
         ol.appendChild(edgeItem(r));
       }
@@ -1329,7 +1341,8 @@
     li.dataset.id = e.id;
     li.appendChild(gripFor(d, r, n));
 
-    var card = el('div', 'pl-stop-card' + (plan.locked[e.id] ? ' is-locked' : '') + (e.bookable ? ' is-sell' : ''));
+    var card = el('div', 'pl-stop-card' + (plan.locked[e.id] ? ' is-locked' : '') + (e.bookable ? ' is-sell' : '') +
+      (swap && swap.day === d && swap.pos === r.pos ? ' is-swapping' : ''));
 
     // One row across the top of the card: the drive on the left, what you can do to the stop on the
     // right. The bin sits in the corner without having to be lifted out of the flow.
@@ -1475,6 +1488,14 @@
     closeMenu();
     if (same) return;
     var box = el('div', 'pl-menu');
+    // A place out of the catalogue can be traded for another one nearby. A stop of your own is
+    // not swapped but renamed: those are your words, and the catalogue has no opinion on them.
+    if (!r.e.own) {
+      var swb = el('button', 'pl-menu-i', 'Înlocuiește');
+      swb.type = 'button';
+      swb.addEventListener('click', function () { closeMenu(); openSwap(d, r.pos); });
+      box.appendChild(swb);
+    }
     var add = el('button', 'pl-menu-i', 'Adaugă o oprire după');
     add.type = 'button';
     add.addEventListener('click', function () { closeMenu(); openComposer(d, r.pos + 1); });
@@ -1535,7 +1556,7 @@
       if (+k >= nightCount()) delete plan.nights[k];
     });
   }
-  function after() { stale = false; closeMenu(); tidy(); renderBar(); renderDays(); syncMap(); syncStay(); save(); fetchRoads(); }
+  function after() { stale = false; closeMenu(); if (swap && !swapOk()) swap = null; tidy(); renderBar(); renderDays(); syncMap(); syncStay(); save(); fetchRoads(); }
 
   /**
    * One move for all of them — the arrows are gone, so dragging, the ⋮ menu and the keyboard all
@@ -1786,7 +1807,8 @@
     if (ev.key !== 'Escape') return;
     if (drag) { dragEnd(true); return; }
     if (sheet) { closeSheet(); return; }
-    if (menu) { var b = menu.btn; closeMenu(); b.focus(); }
+    if (menu) { var b = menu.btn; closeMenu(); b.focus(); return; }
+    if (swap && !grab) closeSwap();
   });
 
   /* ---------- a stop of your own: the little form that makes one ---------- */
@@ -1812,6 +1834,7 @@
 
   function openComposer(d, pos) {
     var first = PRESETS[0] || ['Pauză', '🕑', 30];
+    swap = null;              // one panel at a time inside a day
     composer = {
       day: d, pos: pos, name: first[0], emoji: first[1], minutes: first[2],
       at: 'prev', place: '', lat: null, lng: null, focus: true
@@ -2037,6 +2060,267 @@
     wrap.appendChild(inp);
     wrap.appendChild(list);
     return wrap;
+  }
+
+  /* ---------- swapping a stop for another place nearby ----------
+   *
+   * The generator chose this stop; the traveller should not have to argue with the catalogue to
+   * change it. «Înlocuiește» opens, under the stop itself, a ready-made short list of places that
+   * could stand in for it. Which places get on the list is judged the same way the whole plan was:
+   * how close they are to the stop that is going, then the interests that were declared and the
+   * company that is travelling — so a family with children is not handed another monastery. What
+   * the plan already holds is never offered twice; what was thrown out earlier may come back, and
+   * says so. The order on screen is the map's — nearest first — because that is what a swap asks.
+   *
+   * Nothing here costs the page anything at load: it is the dataset already in memory, measured.
+   */
+
+  var swap = null;                                  // { day, pos, id, query, focus } while open
+  var SWAP = CFG.swap || {};
+  function swapCount() { return Math.max(3, Math.min(12, SWAP.count || 8)); }
+  function swapKmPoint() { return SWAP.km_per_point || 7; }
+
+  /** Whether the stop the open panel is about is still where the panel thinks it is. */
+  function swapOk() {
+    return !!(swap && plan.stops[swap.day] && plan.stops[swap.day][swap.pos] === swap.id);
+  }
+  /** Every catalogue stop the plan holds, on any day: none of them is an alternative to itself. */
+  function inPlan() {
+    var seen = {};
+    (plan.stops || []).forEach(function (day) {
+      (day || []).forEach(function (id) { if (!isOwn(id)) seen[id] = 1; });
+    });
+    return seen;
+  }
+
+  /**
+   * What could take this stop's place, inside `reach` kilometres of it. `want` is the interest
+   * filter, exactly the one the generator applied when it built the plan — pass null to drop it.
+   * Distance is the spine of the score — an alternative is only one if the day still holds together
+   * around it — and the plan's own weights sit on top: the company you keep, a photo to recognise
+   * the place by, a ticket you can actually buy. Something you removed earlier is allowed back, one
+   * step down the list.
+   */
+  function swapSuggestions(id, reach, want) {
+    var from = entry(id);
+    if (!from || typeof from.lat !== 'number') return [];
+    var have = inPlan(), per = swapKmPoint();
+    var f = D.f, out = [];
+
+    for (var i = 0; i < D.rows.length; i++) {
+      var r = D.rows[i], slug = r[f.slug];
+      if (have[slug]) continue;
+      var tSlug = r[f.type] >= 0 ? D.types[r[f.type]][0] : '';
+      if (want && !want[tSlug]) continue;
+      var lat = r[f.lat_e5] / 1e5, lng = r[f.lng_e5] / 1e5;
+      var d = km(from.lat, from.lng, lat, lng);
+      if (d > reach) continue;
+      var flags = r[f.flags], s = 0;
+      if (flags & D.flags.image) s += 1.5;
+      if (flags & (D.flags.activities || 4)) s += 4;
+      s += companyWeight(tSlug);      // who travels tilts the types, it never rules one out
+      if (plan.removed[slug]) s -= 1.5;
+      s -= d / per;
+      out.push({ id: slug, d: d, score: s });
+    }
+
+    (CFG.bookables || []).forEach(function (b) {
+      var bid = 'b:' + b[1];
+      if (have[bid]) return;
+      var bd = km(from.lat, from.lng, b[6], b[7]);
+      if (bd > reach) return;
+      out.push({ id: bid, d: bd, score: 5 - bd / per - (plan.removed[bid] ? 1.5 : 0) });
+    });
+
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out.slice(0, swapCount());
+  }
+
+  /**
+   * The list as it is read: the weights choose which places are worth offering, the map decides the
+   * order they are read in. Two ways out of an empty circle rather than an empty panel — widen it
+   * once, and only then let go of the interest filter, saying so when that happens. The distance is
+   * printed on every row either way, so nothing about the reach has to be taken on trust.
+   */
+  function swapList(id) {
+    var near = SWAP.near_km || 60, far = SWAP.far_km || 120, want = wantedTypes();
+    var rows = swapSuggestions(id, near, want), loose = false;
+    if (!rows.length) rows = swapSuggestions(id, far, want);
+    if (!rows.length && want) {
+      loose = true;
+      rows = swapSuggestions(id, near, null);
+      if (!rows.length) rows = swapSuggestions(id, far, null);
+    }
+    rows.sort(function (a, b) { return a.d - b.d; });
+    return { rows: rows, loose: loose };
+  }
+
+  function openSwap(d, pos) {
+    var id = (plan.stops[d] || [])[pos];
+    if (!id || isOwn(id)) return;
+    composer = null;
+    swap = { day: d, pos: pos, id: id, query: '', focus: true };
+    activeDay = d;
+    announce('Caut ce ar putea lua locul lui ' + stopName(id) + '.');
+    after();
+  }
+  function closeSwap(quiet) {
+    if (!swap) return;
+    var id = swap.id;
+    swap = null;
+    focusId = id;
+    if (!quiet) announce('Am renunțat. ' + stopName(id) + ' rămâne în plan, neschimbată.');
+    after();
+  }
+
+  /**
+   * The swap itself: the new place lands on the position the old one held, the day keeps its order,
+   * and both decisions are written down — the newcomer is locked so a regeneration leaves it alone,
+   * the one that went is marked removed so it does not walk back in on its own.
+   */
+  function applySwap(newId) {
+    if (!swap || !swapOk()) { closeSwap(true); return; }
+    var d = swap.day, oldId = swap.id, oldName = stopName(oldId);
+    var ne = entry(newId);
+    if (!ne || newId === oldId) { closeSwap(true); return; }
+
+    // The search reaches the whole catalogue, so it can land on something the plan already holds
+    // somewhere else. It moves here rather than appearing twice.
+    for (var k = 0; k < plan.stops.length; k++) {
+      var at = plan.stops[k].indexOf(newId);
+      if (at !== -1) plan.stops[k].splice(at, 1);
+    }
+    var pos = plan.stops[d].indexOf(oldId);
+    if (pos === -1) { closeSwap(true); return; }
+    plan.stops[d].splice(pos, 1, newId);
+
+    plan.removed[oldId] = 1;
+    delete plan.locked[oldId];
+    delete plan.custom[oldId];
+    delete plan.removed[newId];
+    plan.locked[newId] = 1;
+    if (grab && grab.id === oldId) grab = null;
+    activeDay = d;
+    swap = null;
+    focusId = newId;
+    announce(ne.name + ' ia locul lui ' + oldName + ', pe aceeași poziție în ziua ' + (d + 1) +
+      '. Am recalculat orele și kilometrii.');
+    after();
+  }
+
+  /** One place on the list: its photo, what it is, how far it is and how long it takes. */
+  function swapOption(c) {
+    var li = el('li');
+    var e = entry(c.id);
+    if (!e) return li;
+    var b = el('button', 'pl-swap-hit');
+    b.type = 'button';
+
+    var media = el('span', 'pl-swap-media');
+    if (e.img) {
+      var img = el('img');
+      img.src = thumb(e.img, 120, 120);
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      media.appendChild(img);
+    } else {
+      var ph = el('span', '', e.emoji || '📍');
+      ph.setAttribute('aria-hidden', 'true');
+      media.appendChild(ph);
+    }
+    b.appendChild(media);
+
+    var text = el('span', 'pl-swap-text');
+    text.appendChild(el('b', '', e.name));
+    text.appendChild(el('span', 'pl-swap-meta', [e.type, e.city].filter(Boolean).join(' · ')));
+
+    var line = el('span', 'pl-swap-line');
+    var away = estKm(c.d);      // corrected for real roads, like every other distance on the page
+    line.appendChild(el('span', 'pl-swap-km', away < 0.1 ? 'la câțiva pași' : 'la ' + km1(away) + ' km'));
+    line.appendChild(el('span', 'pl-swap-dur', hm(e.dur)));
+    if (e.bookable || e.price > 0) {
+      var tag = el('span', 'pl-sell');
+      tag.appendChild(icon('ticket'));
+      tag.appendChild(document.createTextNode(e.price > 0 ? 'de la ' + lei(e.price) : 'are bilete'));
+      line.appendChild(tag);
+    }
+    if (plan.removed[c.id]) line.appendChild(el('span', 'pl-swap-back', 'ai scos-o mai devreme'));
+    text.appendChild(line);
+    b.appendChild(text);
+
+    b.addEventListener('click', function () { applySwap(c.id); });
+    li.appendChild(b);
+    return li;
+  }
+
+  /** The panel, in the day, under the stop it is about — a sibling of the form that makes a stop. */
+  function swapItem() {
+    var s = swap;
+    var e = entry(s.id);
+    var li = el('li', 'pl-swap');
+    var box = el('div', 'pl-swap-in');
+    li.appendChild(box);
+    if (!e) return li;
+
+    box.appendChild(el('p', 'pl-swap-h', 'În locul lui ' + e.name));
+    var bits = [e.type || 'Oprire'];
+    if (e.city) bits.push(e.city);
+    box.appendChild(el('p', 'pl-swap-sub', bits.join(' · ') + ' · ' + hm(plan.custom[s.id] || e.dur) +
+      ' în plan. Alege din apropiere, sau caută tu altceva.'));
+
+    var res = swapList(s.id);
+    if (res.loose) {
+      box.appendChild(el('p', 'pl-swap-loose',
+        'Prin apropiere nu e nimic din ce ai bifat că te interesează, așa că îți arăt ce mai este pe-acolo.'));
+    }
+    if (res.rows.length) {
+      var ul = el('ul', 'pl-swap-list');
+      res.rows.forEach(function (c) { ul.appendChild(swapOption(c)); });
+      box.appendChild(ul);
+    } else {
+      box.appendChild(el('p', 'pl-swap-empty',
+        'Nu am în catalog niciun alt loc prin apropierea ei. Caută tu mai jos — merge oriunde în țară.'));
+    }
+
+    var find = el('div', 'pl-swap-find');
+    var inp = el('input');
+    inp.type = 'search';
+    inp.autocomplete = 'off';
+    inp.placeholder = 'Sau caută altceva: o atracție, o experiență, o locație…';
+    inp.setAttribute('aria-label', 'Caută altceva în locul opririi ' + e.name);
+    inp.value = s.query || '';
+    var hits = el('ul', 'pl-swap-hits');
+    hits.hidden = true;
+    inp.addEventListener('input', debounce(function () {
+      s.query = inp.value;
+      hits.textContent = '';
+      var have = inPlan();
+      var found = searchCatalogue(inp.value, 8).filter(function (h) { return h.id !== s.id; });
+      found.forEach(function (h) {
+        var row = el('li');
+        var hb = el('button', 'pl-add-hit');
+        hb.type = 'button';
+        hb.appendChild(el('b', '', h.name));
+        hb.appendChild(el('small', '', (h.book ? 'se rezervă · ' : '') + (h.city || '') +
+          (have[h.id] ? ' · e deja în plan, se mută aici' : '')));
+        hb.addEventListener('click', function () { applySwap(h.id); });
+        row.appendChild(hb);
+        hits.appendChild(row);
+      });
+      hits.hidden = !found.length;
+    }, 140));
+    find.appendChild(inp);
+    find.appendChild(hits);
+    box.appendChild(find);
+
+    var acts = el('div', 'pl-swap-acts');
+    var no = el('button', 'pl-btn pl-swap-no', 'Renunță');
+    no.type = 'button';
+    no.addEventListener('click', function () { closeSwap(); });
+    acts.appendChild(no);
+    box.appendChild(acts);
+    return li;
   }
 
   /* ---------------------------------------------------------------- nights on the page

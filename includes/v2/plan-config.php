@@ -86,6 +86,26 @@ const PLAN_STOP_PRESETS = [
 /** The durations offered for any stop, yours or ours. */
 const PLAN_STOP_MINUTES = [10, 15, 20, 30, 45, 60, 90, 120, 180, 240];
 
+/**
+ * «Înlocuiește»: how the ready-made list of stand-ins for a stop is built.
+ *
+ * `count` is how many places are offered at once, `near_km` how far around the stop that is going we
+ * look for them, and `far_km` how far we are willing to widen the circle when the first one comes back
+ * empty. Inside that circle the declared interests filter exactly as they do when the whole plan is
+ * generated, and the company weights above tilt what is left; only if nothing of the right kind is
+ * anywhere near does the panel let go of the filter, and it says so when it does. `km_per_point` is
+ * the exchange rate between distance and fit: every this many kilometres cost an alternative one point
+ * of score, so a place the company leans towards can beat a closer one it does not — but never by
+ * much, because a swap that moves the day across the county is not a swap. The order on screen is by
+ * distance; the score only decides who makes the list.
+ */
+const PLAN_SWAP = [
+    'count'        => 8,
+    'near_km'      => 60,
+    'far_km'       => 120,
+    'km_per_point' => 7,
+];
+
 /** Average road speed used to turn a straight-line hop into a travel estimate, and the detour factor. */
 const PLAN_TRAVEL = ['kmh' => 55, 'detour' => 1.35, 'min_leg' => 5];
 
