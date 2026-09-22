@@ -88,6 +88,60 @@ if ($xpRequires !== 'none' && $xpLocSlug !== '') {
 }
 
 $durationText = $xpDurations ? implode(' / ', array_map(fn ($m) => $m >= 60 && $m % 60 === 0 ? ($m / 60) . ' h' : $m . ' min', $xpDurations)) : '';
+
+/* ------------------------------------------------------------------ what this page actually has
+ * An experience is usually two sentences, a duration and a price. The old layout gave that a
+ * full-height poster hero and a section heading over one line of text; the visitor scrolled past
+ * a lot of air to reach the only thing that matters, which is the date picker. Measure the text,
+ * set the lead accordingly, and collect the scattered facts into one list the page can lay out. */
+// Measure what the block will actually print: half the catalogue has no description at all and
+// falls back to the one-line short description, which is exactly the case that needs a lead.
+$xpDescChars = mb_strlen(trim(preg_replace('/\s+/u', ' ', strip_tags($xpDescHtml !== '' ? $xpDescHtml : ($xpShort !== '' ? $xpShort : $xpTitle)))));
+$xpLeadBig   = $xpDescChars > 0 && $xpDescChars < 320;   // short enough to be set as a lead, not as body copy
+
+$xpWhere = trim($xpCityName . (!empty($xpLocation['city']['county']) ? ', ' . $xpLocation['city']['county'] : ''), ', ');
+
+// The facts that used to be a bulleted list in a side card, as tiles that fill the width.
+$xpFacts = [];
+if ($durationText !== '') {
+    $xpFacts[] = ['clock', 'Durată', $durationText];
+}
+if (($product['booking_mode'] ?? '') === 'slot') {
+    $xpFacts[] = ['calendar-blank', 'Rezervare', 'Pe ore, cu locuri limitate'];
+} else {
+    $xpFacts[] = ['calendar-blank', 'Rezervare', 'Pe zi, alegi data'];
+}
+if ($xpLanguages) {
+    $xpFacts[] = ['globe-simple', 'Limbi', implode(', ', $xpLanguages)];
+}
+if ($xpAgeMin || $xpAgeMax) {
+    $xpFacts[] = ['users-three', 'Vârstă', $xpAgeMin && $xpAgeMax ? $xpAgeMin . '–' . $xpAgeMax . ' ani' : ($xpAgeMin ? 'de la ' . $xpAgeMin . ' ani' : 'până la ' . $xpAgeMax . ' ani')];
+}
+if ($xpRequires !== 'none') {
+    $xpFacts[] = ['ticket', 'Acces', $xpRequires === 'adult' ? 'Cere și un bilet de acces pentru adult, în aceeași zi' : 'Cere și un bilet de acces în aceeași zi'];
+}
+if ($xpCancel !== '') {
+    $xpFacts[] = ['check-circle', 'Anulare', $xpCancel];
+}
+if ($xpWhere !== '') {
+    $xpFacts[] = ['map-pin', 'Oraș', $xpWhere];
+}
+
+// How much else is sold here, counted from what came back rather than from the location's own
+// counters: those are zero on plenty of locations that clearly do sell things.
+$xpLocCounts = [];
+$xpByType = [];
+foreach ($xpSiblings as $s) {
+    $xpByType[$s['type'] ?? 'access'] = ($xpByType[$s['type'] ?? 'access'] ?? 0) + 1;
+}
+$xpByType['experience'] = ($xpByType['experience'] ?? 0) + 1;   // this page counts too
+foreach (['experience' => ['experiență', 'experiențe'], 'access' => ['bilet de acces', 'bilete de acces'], 'package' => ['pachet', 'pachete']] as $ck => [$one, $many]) {
+    $cv = (int) ($xpByType[$ck] ?? 0);
+    if ($cv > 0) {
+        $xpLocCounts[] = [(string) $cv, $cv === 1 ? $one : $many];
+    }
+}
+
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/'], ['name' => 'Experiențe', 'url' => SITE_URL . '/experiente']];
 if ($xpLocName !== '' && $xpLocSlug !== '') {
     $breadcrumbs[] = ['name' => $xpLocName, 'url' => SITE_URL . '/locatie/' . $xpLocSlug];
@@ -129,7 +183,7 @@ $shape = fn ($p) => [
     'variants' => $p['variants'] ?? [], 'addons' => $p['addons'] ?? [], 'components' => $p['components'] ?? [],
 ];
 
-$v2Styles = ['attraction.css', 'location.css'];
+$v2Styles = ['attraction.css', 'location.css', 'experience.css'];
 $v2Scripts = ['attraction.js', 'booking.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/cart.js'];
 $v2HeaderOverlay = true;
@@ -155,7 +209,7 @@ include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
   <!-- ===================== HERO ===================== -->
-  <section class="th" aria-labelledby="th-h">
+  <section class="th is-compact" aria-labelledby="th-h">
     <?= $xpArches ?>
     <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="th-in">
@@ -171,7 +225,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($xpSubtitle !== '' || $xpShort !== ''): ?><p class="th-sub"><?= v2_e($xpSubtitle !== '' ? $xpSubtitle : $xpShort) ?></p><?php endif; ?>
         <ul class="th-chips">
           <?php if ($durationText !== ''): ?><li><?= v2_ic('clock') ?><?= v2_e($durationText) ?></li><?php endif; ?>
-          <li><?= v2_ic('ticket') ?>de la <?= v2_e(am_lei($xpMinPrice)) ?></li>
+          <li class="is-price"><?= v2_ic('ticket') ?>de la <b><?= v2_e(am_lei($xpMinPrice)) ?></b></li>
           <?php if ($xpLanguages): ?><li><?= v2_ic('globe-simple') ?><?= v2_e(implode(', ', $xpLanguages)) ?></li><?php endif; ?>
         </ul>
         <div class="th-cta">
@@ -183,7 +237,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="th-media">
         <?php if ($lightbox): ?>
         <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Deschide galeria: <?= v2_e($xpTitle) ?>">
-          <img src="<?= v2_e($heroImage) ?>" alt="<?= v2_e($xpTitle) ?>" fetchpriority="high" decoding="async">
+          <img src="<?= v2_e(v2_thumb($heroImage, 960, 600)) ?>" alt="<?= v2_e($xpTitle) ?>" fetchpriority="high" decoding="async">
           <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>Vezi galeria (<?= count($lightbox) ?>)</span><?php endif; ?>
         </button>
         <?php else: ?>
@@ -227,13 +281,12 @@ include __DIR__ . '/includes/v2/header.php';
           <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub">0 lei</strong></div>
           <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label">Comision ticketing</span><strong id="bkx-fee">0 lei</strong></div>
           <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total">0 lei</strong></div>
-          <p class="bkx-small" id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă.</p>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
             <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continuă spre plată<?= v2_ic('arrow-right') ?></button>
             <button class="btn btn-ghost" type="button" id="bkx-cart" disabled><?= v2_ic('shopping-cart-simple') ?>Adaugă în coș</button>
           </div>
-          <p class="bkx-small">Biletul ajunge pe email imediat după plată. Îl arăți de pe telefon.</p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă. </span>Biletul ajunge pe email imediat după plată. Îl arăți de pe telefon.</p>
         </div>
         <div class="lcp-card">
           <h3>Bine de știut</h3>
@@ -252,67 +305,129 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
 
   <!-- ===================== DETAILS ===================== -->
-  <section class="lcp-sec" id="detalii" aria-labelledby="xp-about-h">
-    <div class="wrap lcp-grid">
-      <div>
+  <section class="xpd" id="detalii" aria-labelledby="xp-about-h">
+    <div class="wrap">
+      <div class="xpd-head">
         <p class="kicker">Despre</p>
         <h2 id="xp-about-h">Ce te așteaptă</h2>
-        <div class="lcp-body"><?= $xpDescHtml !== '' ? $xpDescHtml : '<p>' . v2_e($xpShort !== '' ? $xpShort : $xpTitle) . '</p>' ?></div>
-        <?php if ($xpTerms !== ''): ?><div class="lcp-body lcp-policies"><?= am_rich($xpTerms) ?></div><?php endif; ?>
-        <?php if (count($lightbox) > 1): ?>
-          <ul class="tthumbs">
-            <?php foreach (array_slice($lightbox, 1, 6) as $gi => $g): ?>
-            <li><button type="button" data-gallery="<?= $gi + 1 ?>" aria-haspopup="dialog" aria-controls="lb"><img src="<?= v2_e($g) ?>" alt="<?= v2_e($xpTitle) ?>" loading="lazy" decoding="async"></button></li>
-            <?php endforeach; ?>
-          </ul>
-        <?php endif; ?>
       </div>
-      <div class="lcp-card">
+      <div class="xpd-body<?= $xpLeadBig ? ' is-lead' : '' ?>"><?= $xpDescHtml !== '' ? $xpDescHtml : '<p>' . v2_e($xpShort !== '' ? $xpShort : $xpTitle) . '</p>' ?></div>
+
+      <?php if ($xpFacts): ?>
+      <ul class="xpd-tiles">
+        <?php foreach ($xpFacts as [$fIcon, $fLabel, $fValue]): ?>
+        <li><span class="xpd-tile-ic"><?= v2_ic($fIcon) ?></span><span class="xpd-tile-t"><b><?= v2_e($fLabel) ?></b><span><?= v2_e($fValue) ?></span></span></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
+
+      <?php if ($xpIncluded || $xpExcluded || $xpNeeds): ?>
+      <div class="xpd-two">
         <?php if ($xpIncluded): ?>
-          <h3>Inclus</h3>
-          <ul class="lcp-facts"><?php foreach ($xpIncluded as $x): ?><li><?= v2_ic('check') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
+        <div class="xpd-col is-in">
+          <h3><?= v2_ic('check-circle') ?>Inclus în preț</h3>
+          <ul><?php foreach ($xpIncluded as $x): ?><li><?= v2_ic('check') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
+        </div>
         <?php endif; ?>
         <?php if ($xpExcluded): ?>
-          <h3>Nu este inclus</h3>
-          <ul class="lcp-facts"><?php foreach ($xpExcluded as $x): ?><li><?= v2_ic('x') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
+        <div class="xpd-col is-out">
+          <h3><?= v2_ic('x') ?>Nu este inclus</h3>
+          <ul><?php foreach ($xpExcluded as $x): ?><li><?= v2_ic('x') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
+        </div>
         <?php endif; ?>
-        <h3>Detalii</h3>
-        <ul class="lcp-facts">
-          <?php if ($durationText !== ''): ?><li><?= v2_ic('clock') ?><span>Durată: <?= v2_e($durationText) ?></span></li><?php endif; ?>
-          <?php if ($xpMeeting !== ''): ?><li><?= v2_ic('map-pin') ?><span>Punct de întâlnire: <?= v2_e($xpMeeting) ?></span></li><?php endif; ?>
-          <?php if ($xpLanguages): ?><li><?= v2_ic('globe-simple') ?><span>Limbi: <?= v2_e(implode(', ', $xpLanguages)) ?></span></li><?php endif; ?>
-          <?php if ($xpAgeMin || $xpAgeMax): ?><li><?= v2_ic('users-three') ?><span>Vârstă: <?= v2_e($xpAgeMin && $xpAgeMax ? $xpAgeMin . '–' . $xpAgeMax . ' ani' : ($xpAgeMin ? 'de la ' . $xpAgeMin . ' ani' : 'până la ' . $xpAgeMax . ' ani')) ?></span></li><?php endif; ?>
-          <?php if ($xpRequires !== 'none'): ?><li><?= v2_ic('ticket') ?><span><?= $xpRequires === 'adult' ? 'Necesită un bilet de acces pentru adult în aceeași zi.' : 'Necesită un bilet de acces în aceeași zi.' ?></span></li><?php endif; ?>
-          <?php foreach ($xpNeeds as $x): ?><li><?= v2_ic('info') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?>
-        </ul>
+        <?php if ($xpNeeds): ?>
+        <div class="xpd-col is-need">
+          <h3><?= v2_ic('info') ?>Ce să ai la tine</h3>
+          <ul><?php foreach ($xpNeeds as $x): ?><li><?= v2_ic('check') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
+        </div>
+        <?php endif; ?>
       </div>
+      <?php endif; ?>
+
+      <?php if ($xpTerms !== ''): ?>
+      <details class="xpd-terms"><summary><?= v2_ic('file-text') ?>Condiții de folosire<?= v2_ic('caret-down') ?></summary><div class="lcp-body"><?= am_rich($xpTerms) ?></div></details>
+      <?php endif; ?>
+
+      <?php if (count($lightbox) > 1): ?>
+      <ul class="tthumbs xpd-thumbs">
+        <?php foreach (array_slice($lightbox, 1, 6) as $gi => $g): ?>
+        <li><button type="button" data-gallery="<?= $gi + 1 ?>" aria-haspopup="dialog" aria-controls="lb"><img src="<?= v2_e(v2_thumb($g, 480, 360)) ?>" alt="<?= v2_e($xpTitle) ?>" loading="lazy" decoding="async"></button></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
     </div>
   </section>
 
   <!-- ===================== LOCATION ===================== -->
   <?php if ($xpLocSlug !== ''): ?>
-  <section class="sec tabout" id="locatie" aria-labelledby="xp-loc-h">
-    <div class="wrap tabout-grid">
-      <div>
-        <p class="kicker">Unde</p>
-        <h2 id="xp-loc-h"><?= v2_e($xpLocName) ?></h2>
-        <?php if (!empty($xpLocation['short_description'])): ?><div class="tabout-body"><p><?= v2_e($xpLocation['short_description']) ?></p></div><?php endif; ?>
-        <p><a class="btn btn-ghost" href="/locatie/<?= v2_e($xpLocSlug) ?>">Tot ce găsești la <?= v2_e($xpLocName) ?><?= v2_ic('arrow-right') ?></a></p>
-        <?php if ($xpSiblings): ?>
-        <ul class="lcp-near" aria-label="Tot la <?= v2_e($xpLocName) ?>">
-          <?php foreach ($xpSiblings as $s): $sImg = v2_media_url($s['image'] ?? null); $isXp = ($s['type'] ?? '') === 'experience'; ?>
-          <li><a href="<?= $isXp ? '/experienta/' . v2_e($s['slug']) : '/locatie/' . v2_e($xpLocSlug) . '#bilete' ?>">
-            <?php if ($sImg): ?><img src="<?= v2_e($sImg) ?>" alt="" loading="lazy" decoding="async"><?php else: ?><span class="lcp-near-ph" aria-hidden="true"></span><?php endif; ?>
-            <span><b><?= v2_e(navFlatName($s['title'] ?? '')) ?></b><small><?= v2_e((AM_PRODUCT_TYPES[$s['type'] ?? ''] ?? '') . (!empty($s['min_price_cents']) ? ' · de la ' . am_lei((int) $s['min_price_cents']) : '')) ?></small></span>
-          </a></li>
+  <section class="xpl" id="locatie" aria-labelledby="xp-loc-h">
+    <div class="wrap">
+      <div class="xpl-card">
+        <div class="xpl-copy">
+          <p class="kicker">Unde are loc</p>
+          <h2 id="xp-loc-h"><?= v2_e($xpLocName) ?></h2>
+          <?php if ($xpWhere !== ''): ?><p class="xpl-where"><?= v2_ic('map-pin') ?><?= v2_e($xpWhere) ?></p><?php endif; ?>
+          <?php if (!empty($xpLocation['short_description'])): ?><p class="xpl-desc"><?= v2_e($xpLocation['short_description']) ?></p><?php endif; ?>
+          <?php if ($xpMeeting !== ''): ?><p class="xpl-meet"><?= v2_ic('target') ?><span><b>Punct de întâlnire</b><?= v2_e($xpMeeting) ?></span></p><?php endif; ?>
+          <?php if ($xpLocCounts): ?>
+          <ul class="xpl-counts">
+            <?php foreach ($xpLocCounts as [$cN, $cLabel]): ?><li><b><?= v2_e($cN) ?></b><?= v2_e($cLabel) ?></li><?php endforeach; ?>
+          </ul>
+          <?php endif; ?>
+          <div class="xpl-cta">
+            <a class="btn btn-primary" href="/locatie/<?= v2_e($xpLocSlug) ?>">Tot ce găsești la <?= v2_e($xpLocName) ?><?= v2_ic('arrow-right') ?></a>
+            <?php if ($mapsUrl): ?><a class="btn btn-ghost" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Maps</a><?php endif; ?>
+          </div>
+        </div>
+        <div class="xpl-media">
+          <?php if ($xpLocCover !== ''): ?>
+          <div class="xpl-shot"><img src="<?= v2_e(v2_thumb($xpLocCover, 960, 540)) ?>" alt="<?= v2_e($xpLocName) ?>" loading="lazy" decoding="async"></div>
+          <?php endif; ?>
+          <?php if ($mapsUrl): ?>
+          <div class="xpl-map">
+            <iframe title="Hartă <?= v2_e($xpLocName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($xpLat . ',' . $xpLng) ?>&z=14&output=embed"></iframe>
+          </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <?php if ($xpSiblings): ?>
+      <div class="xpl-more">
+        <div class="xpl-more-h">
+          <h3>Se mai cumpără aici</h3>
+          <a class="mpd-link xpl-all" href="/locatie/<?= v2_e($xpLocSlug) ?>#bilete">Toate biletele locației<?= v2_ic('arrow-right') ?></a>
+        </div>
+        <ul class="xpl-grid">
+          <?php foreach ($xpSiblings as $si => $s): ?>
+          <?php
+            $sImg   = v2_media_url($s['image'] ?? null);
+            $isXp   = ($s['type'] ?? '') === 'experience';
+            $sType  = AM_PRODUCT_TYPES[$s['type'] ?? ''] ?? 'Bilet';
+            $sHref  = $isXp && !empty($s['slug']) ? '/experienta/' . $s['slug'] : '/locatie/' . $xpLocSlug . '#bilete';
+            $sLine  = trim((string) ($s['subtitle'] ?? ''));
+            $sMin   = (int) ($s['duration_minutes'] ?? 0);
+            if ($sLine === '' && $sMin > 0) {
+                $sLine = $sMin >= 60 && $sMin % 60 === 0 ? ($sMin / 60) . ' h' : $sMin . ' min';
+            }
+          ?>
+          <li>
+            <a class="xpl-item" href="<?= v2_e($sHref) ?>">
+              <span class="xpl-item-media<?= $sImg ? '' : ' is-empty' ?>">
+                <?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 480, 300)) ?>" alt="" loading="lazy" decoding="async"><?php else: ?><span class="xpl-item-ph" aria-hidden="true"><?= v2_e(AM_PRODUCT_EMOJI[$s['type'] ?? ''] ?? '🎟️') ?></span><?php endif; ?>
+                <span class="xpl-item-type"><?= v2_e($sType) ?></span>
+              </span>
+              <span class="xpl-item-b">
+                <b><?= v2_e(navFlatName($s['title'] ?? '')) ?></b>
+                <?php if ($sLine !== ''): ?><small><?= v2_e($sLine) ?></small><?php endif; ?>
+                <span class="xpl-item-foot">
+                  <?php if (!empty($s['min_price_cents'])): ?><span class="xpl-item-price">de la <b><?= v2_e(am_lei((int) $s['min_price_cents'])) ?></b></span><?php endif; ?>
+                  <span class="xp-go"><?= v2_ic('arrow-right') ?></span>
+                </span>
+              </span>
+            </a>
+          </li>
           <?php endforeach; ?>
         </ul>
-        <?php endif; ?>
-      </div>
-      <?php if ($mapsUrl): ?>
-      <div class="tmap">
-        <iframe title="Hartă <?= v2_e($xpLocName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($xpLat . ',' . $xpLng) ?>&z=14&output=embed"></iframe>
-        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
       </div>
       <?php endif; ?>
     </div>

@@ -416,18 +416,9 @@
         el('b', { text: lei(l.variant.price_cents * l.quantity + Math.round(l.addonsTotal * 100)) })
       ]));
     });
-    // the label says the rate, and the minimum per ticket when a line is small enough for it to apply
-    var cs = ls.map(function (l) { return commissionOf(l.product); }).filter(function (c) { return c.mode === 'added_on_top'; });
-    var rate = cs.length && cs[0].rate > 0 ? String(cs[0].rate).replace('.', ',') + '%' : '';
-    var floored = ls.some(function (l) {
-      var c = commissionOf(l.product), value = l.variant.price_cents * l.quantity + Math.round(l.addonsTotal * 100);
-      return c.mode === 'added_on_top' && Math.round((c.floor || 0) * 100) * Math.max(1, l.quantity) > Math.round(value * c.rate / 100);
-    });
-    var floorLine = floored && cs.length ? 'minim ' + lei(Math.round(cs[0].floor * 100)) + ' pe bilet' : '';
-    var bits = [rate, floorLine].filter(Boolean).join(', ');
     elSub.textContent = lei(t.sub);
     elFeeRow.hidden = !t.fee;
-    if (elFeeLabel) elFeeLabel.textContent = 'Comision ticketing' + (bits ? ' (' + bits + ')' : '');
+    if (elFeeLabel) elFeeLabel.textContent = 'Comision ticketing';
     elFee.textContent = lei(t.fee);
     if (elCardNote) elCardNote.hidden = !t.card;
     elTotal.textContent = lei(t.total);

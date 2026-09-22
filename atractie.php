@@ -57,6 +57,39 @@ $countyAttractions = is_array($attraction['county_attractions'] ?? null) ? array
 // Lightbox images: cover first (if present), then the gallery.
 $lightbox = array_values(array_filter(array_merge($atCover ? [$atCover] : [], $atGallery)));
 
+$mapsUrl = ($atLat && $atLng) ? 'https://www.google.com/maps/search/?api=1&query=' . urlencode($atLat . ',' . $atLng) : '';
+
+/* ------------------------------------------------------------------ how much this page has to say
+ * Most of the catalogue is a name, a point on the map and a sentence the importer wrote. A page
+ * like that used to look exactly like a page with a history, a gallery and tickets: the same
+ * full-height hero, the same tall portrait frame, the same "Despre" heading over one line of
+ * generated text. Grade it instead, and give the thin ones a hero built for what they are —
+ * a locator entry, where the map is the content and the photograph is the thing that is missing. */
+$atDescText   = trim((string) $atDesc);
+// The importer writes "Monument în Pojorâta, Suceava" into the subtitle: the kicker already says it.
+$atBoilerSub  = $atSubtitle !== '' && $atSubtitle === trim($atType . ' în ' . $atCityName . ($atCounty !== '' ? ', ' . $atCounty : ''));
+// ...and a description that admits it is a placeholder. Do not frame it as an article.
+$atBoilerDesc = $atDescText !== '' && mb_strpos($atDescText, 'orientare rapidă') !== false;
+$atRealDesc   = $atBoilerDesc ? '' : $atDescText;
+$atLead       = $atBoilerSub ? '' : $atSubtitle;
+
+$atRichness = (mb_strlen($atRealDesc) >= 600 ? 2 : (mb_strlen($atRealDesc) >= 220 ? 1 : 0))
+    + (count($lightbox) >= 3 ? 2 : (count($lightbox) >= 1 ? 1 : 0))
+    + ($atActivities ? 2 : 0);
+$atCompact = $atRichness < 4;
+
+// In the compact hero the lead is whatever real prose exists; the "Despre" section then only
+// earns its heading when there is more than the hero already showed.
+$atHeroLead = $atLead;
+if ($atCompact && $atHeroLead === '' && $atRealDesc !== '' && mb_strlen($atRealDesc) <= 320) {
+    $atHeroLead = $atRealDesc;   // short enough to be the whole story; no section repeats it
+}
+$atShowAbout = $atRealDesc !== '' && $atHeroLead !== $atRealDesc;
+// With no photograph, the map takes the frame: for a monument, where it is IS the content.
+$atHeroMap   = $atCompact && !$lightbox && $mapsUrl !== '';
+$atShowMapSection = $mapsUrl !== '' && !$atHeroMap;
+$atCoords = ($atLat && $atLng) ? number_format((float) $atLat, 4, ',', '') . ', ' . number_format((float) $atLng, 4, ',', '') : '';
+
 $durationLabel = function (int $m): string {
     if ($m <= 0) return '';
     if ($m < 60) return $m . ' min';
@@ -103,7 +136,6 @@ $structuredData = [[
     ], $breadcrumbs, array_keys($breadcrumbs)),
 ]];
 
-$mapsUrl = ($atLat && $atLng) ? 'https://www.google.com/maps/search/?api=1&query=' . urlencode($atLat . ',' . $atLng) : '';
 $attrArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 
 // Row for the "other attractions" columns.
@@ -131,7 +163,7 @@ include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
   <!-- ===================== HERO ===================== -->
-  <section class="th" aria-labelledby="th-h">
+  <section class="th<?= $atCompact ? ' is-compact' : '' ?>" aria-labelledby="th-h">
     <?= $attrArches ?>
     <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="th-in">
@@ -144,18 +176,30 @@ include __DIR__ . '/includes/v2/header.php';
         </nav>
         <p class="th-kicker"><?= v2_e($kicker) ?></p>
         <h1 class="th-h" id="th-h"><?= v2_e($atName) ?></h1>
-        <?php if ($atSubtitle): ?><p class="th-sub"><?= v2_e($atSubtitle) ?></p><?php endif; ?>
-        <?php if ($atType || $atAddress): ?>
+        <?php if ($atHeroLead !== ''): ?><p class="th-sub"><?= v2_e($atHeroLead) ?></p><?php endif; ?>
+
+        <?php if ($atCompact): ?>
+        <ul class="th-facts">
+          <?php if ($atType !== ''): ?><li><?= v2_ic('tag') ?><span><b>Tip</b><span><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span> <?php endif; ?><?= v2_e($atType) ?></span></span></li><?php endif; ?>
+          <?php if ($atCityName !== '' || $atCounty !== ''): ?><li><?= v2_ic('buildings') ?><span><b>Unde</b><span><?= v2_e(trim($atCityName . ($atCounty !== '' ? ', județul ' . $atCounty : ''), ', ')) ?></span></span></li><?php endif; ?>
+          <?php if ($atAddress !== ''): ?><li><?= v2_ic('map-pin') ?><span><b>Adresă</b><span><?= v2_e($atAddress) ?></span></span></li><?php endif; ?>
+          <?php if ($atCoords !== ''): ?><li><?= v2_ic('target') ?><span><b>Coordonate</b><span><?= v2_e($atCoords) ?></span></span></li><?php endif; ?>
+        </ul>
+        <?php elseif ($atType || $atAddress): ?>
         <ul class="th-chips">
           <?php if ($atType): ?><li><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span><?php endif; ?><?= v2_e($atType) ?></li><?php endif; ?>
           <?php if ($atAddress): ?><li><?= v2_ic('map-pin') ?><?= v2_e($atAddress) ?></li><?php endif; ?>
         </ul>
         <?php endif; ?>
+
         <div class="th-cta">
           <?php if (!empty($atActivities)): ?>
             <a class="btn btn-light" href="#activitati">Vezi ce poți face aici<?= v2_ic('arrow-right') ?></a>
           <?php elseif ($atCitySlug): ?>
             <a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Activități în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+          <?php endif; ?>
+          <?php if ($atCitySlug !== ''): ?>
+            <a class="btn btn-outline-light" href="/harta?oras=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>Vezi zona pe hartă</a>
           <?php endif; ?>
           <?php if ($mapsUrl): ?>
             <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Maps</a>
@@ -166,9 +210,14 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="th-media">
         <?php if ($lightbox): ?>
         <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Deschide galeria: <?= v2_e($atName) ?>">
-          <img src="<?= v2_e($lightbox[0]) ?>" alt="<?= v2_e($atName) ?>" fetchpriority="high" decoding="async">
+          <img src="<?= v2_e($atCompact ? v2_thumb($lightbox[0], 960, 600) : $lightbox[0]) ?>" alt="<?= v2_e($atName) ?>" fetchpriority="high" decoding="async">
           <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>Vezi galeria (<?= count($lightbox) ?>)</span><?php endif; ?>
         </button>
+        <?php elseif ($atHeroMap): ?>
+        <div class="th-map">
+          <iframe title="Hartă <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=14&output=embed"></iframe>
+          <a class="th-map-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
+        </div>
         <?php else: ?>
         <div class="th-arch is-empty"><?= v2_fallback($atName) ?><?php if ($atCityName !== '' || $atType !== ''): ?><span class="th-arch-name" aria-hidden="true"><?php if ($atCityName !== '' && $atType !== ''): ?><small><?= v2_e($atType) ?></small><?php endif; ?><?= v2_e($atCityName !== '' ? $atCityName : $atType) ?></span><?php endif; ?></div>
         <?php endif; ?>
@@ -178,14 +227,14 @@ include __DIR__ . '/includes/v2/header.php';
   <div id="hdr-sentinel" aria-hidden="true"></div>
 
   <!-- ===================== ABOUT + MAP ===================== -->
-  <?php if ($atDesc || count($lightbox) > 1 || $mapsUrl): ?>
-  <section class="sec tabout" aria-labelledby="<?= $atDesc ? 'tabout-h' : 'th-h' ?>">
-    <div class="wrap tabout-grid">
+  <?php if ($atShowAbout || count($lightbox) > 1 || $atShowMapSection): ?>
+  <section class="sec tabout<?= $atShowAbout ? '' : ' is-slim' ?>" aria-labelledby="<?= $atShowAbout ? 'tabout-h' : 'th-h' ?>">
+    <div class="wrap tabout-grid<?= $atShowMapSection ? '' : ' is-single' ?>">
       <div>
-        <?php if ($atDesc): ?>
+        <?php if ($atShowAbout): ?>
           <p class="kicker">Despre</p>
           <h2 id="tabout-h">Despre <?= v2_e($atName) ?></h2>
-          <div class="tabout-body"><?= nl2br(v2_e($atDesc)) ?></div>
+          <div class="tabout-body"><?= nl2br(v2_e($atRealDesc)) ?></div>
         <?php endif; ?>
 
         <?php if (count($lightbox) > 1): ?>
@@ -197,7 +246,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endif; ?>
       </div>
 
-      <?php if ($mapsUrl): ?>
+      <?php if ($atShowMapSection): ?>
       <div class="tmap">
         <iframe title="Hartă <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=15&output=embed"></iframe>
         <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
@@ -231,12 +280,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
       </ul>
       <?php else: ?>
-      <div class="tempty">
-        <h3>Momentan nu există activități direct asociate.</h3>
-        <p>Descoperă experiențe și evenimente disponibile în <?= v2_e($atCityName ?: 'zonă') ?>.</p>
-        <?php if ($atCitySlug): ?><a class="btn btn-light" href="/<?= v2_e($atCitySlug) ?>">Vezi activitățile din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
-        <svg class="tempty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
-      </div>
+      <p class="tnone"><?= v2_ic('info') ?>Nu sunt încă activități cu bilete chiar la <?= v2_e($atName) ?>.<?php if ($atCitySlug): ?> <a href="/<?= v2_e($atCitySlug) ?>">Vezi ce se poate face în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
       <?php endif; ?>
     </div>
   </section>

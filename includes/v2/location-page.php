@@ -231,13 +231,12 @@ include __DIR__ . '/header.php';
           <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub">0 lei</strong></div>
           <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label">Comision ticketing</span><strong id="bkx-fee">0 lei</strong></div>
           <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total">0 lei</strong></div>
-          <p class="bkx-small" id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă.</p>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
             <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continuă spre plată<?= v2_ic('arrow-right') ?></button>
             <button class="btn btn-ghost" type="button" id="bkx-cart" disabled><?= v2_ic('shopping-cart-simple') ?>Adaugă în coș</button>
           </div>
-          <p class="bkx-small">Biletele ajung pe email imediat după plată. Le arăți de pe telefon la intrare.</p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă. </span>Biletele ajung pe email imediat după plată. Le arăți de pe telefon la intrare.</p>
         </div>
         <div class="lcp-card">
           <h3>Bine de știut</h3>
