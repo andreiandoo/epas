@@ -267,10 +267,18 @@ function v2_activity(array $a): ?array
     $cat = is_array($a['category'] ?? null) ? $a['category'] : [];
     $reviews = is_array($a['reviews'] ?? null) ? $a['reviews'] : [];
     $citySlug = (string) ($city['slug'] ?? '');
+    // The place the experience is run at (activities module). "Inchiriere barca cu vasle" says nothing on its
+    // own in a list; "la Parcul Bucov, in Ploiesti" is the half that matters. Absent before the API knows it.
+    $loc = is_array($a['location'] ?? null) ? $a['location'] : [];
+    $locCity = is_array($loc['city'] ?? null) ? $loc['city'] : [];
     return [
         'slug' => $slug,
         'title' => $title,
         'city' => navFlatName($city['name'] ?? ''),
+        'citySlug' => $citySlug,
+        'loc' => navFlatName($loc['name'] ?? ''),
+        'locSlug' => (string) ($loc['slug'] ?? ''),
+        'locCity' => navFlatName($locCity['name'] ?? '') ?: navFlatName($city['name'] ?? ''),
         'cat' => (string) ($cat['slug'] ?? ''),
         'catName' => navFlatName($cat['name'] ?? ''),
         'price' => (int) round(((int) ($a['cheapest_price_cents'] ?? 0)) / 100),

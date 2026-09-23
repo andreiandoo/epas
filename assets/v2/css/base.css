@@ -98,11 +98,24 @@ h1,h2,h3{text-wrap:balance}
 .hdr.is-solid .acct-ini,.hdr.menu-open .acct-ini,.hdr.mega-open .acct-ini{background:var(--green);color:#FFFFFF}
 .icon-btn.is-user > .ic{display:none}
 .lang{display:none}
+/* Under 1024 the row is brand + the four round buttons, and at 375 they needed 377px of a 343px line: the
+   hamburger's right edge sat off-screen. The gap and the wordmark give back what is missing; below 360 only
+   the symbol stays, because there is no line left to give. */
+@media (max-width:1023px){
+  .hdr-in{gap:var(--space-3)}
+  .brand .w{height:16px}
+}
+@media (max-width:359px){
+  .brand .w{display:none}
+}
 @media (min-width:1024px){
   .menu-btn{display:none}
   .lang{display:inline-flex}
   .hdr.is-solid .hdr-search{display:flex}
   .hdr.is-solid .hdr-tools{margin-left:0}
+  /* six top-level entries: the row is tightened from here up so the search and the tools keep their place */
+  .hdr-in{gap:var(--space-4)}
+  .hdr-search{min-width:0}
 }
 
 
@@ -165,9 +178,18 @@ h1,h2,h3{text-wrap:balance}
 .hdr.mega-open::before{opacity:0}
 .hdr.mega-open :focus-visible{outline-color:var(--action)}
 .hdr.mega-open .icon-btn:hover{background:var(--surface-2)}
+/* six top-level entries have to share the row with the search and the tools, so the pills are tighter on desktop */
+@media (min-width:1024px){
+  .mnav{gap:0}
+  .mnav-btn,.mnav-link{padding:0 10px}
+  .mnav-btn{gap:5px}
+  .mnav-btn .ic{width:12px;height:12px}
+}
+/* the laptop band has no room for the search: it is hidden there and the pills get tighter still */
 @media (min-width:1024px) and (max-width:1279px){
   .hdr.is-solid .hdr-search{display:none}
   .hdr.is-solid .hdr-tools{margin-left:auto}
+  .mnav-btn,.mnav-link{padding:0 8px;font-size:.875rem}
 }
 
 .mega{position:absolute;left:0;right:0;top:100%;max-height:calc(100dvh - var(--hdr-h));overflow:auto;background:var(--bg);color:var(--ink);box-shadow:inset 0 1px 0 var(--line), 0 40px 80px -40px rgba(14,72,55,.45);animation:mega-in var(--dur-state) var(--ease-out)}
@@ -211,6 +233,30 @@ h1,h2,h3{text-wrap:balance}
 .idea{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px;color:var(--ink);font-size:.9375rem;font-weight:500;text-decoration:none}
 .idea:hover{background:var(--surface-2)}
 .idea .ic{width:20px;height:20px;color:var(--green)}
+/* plan: the three travel tools side by side, with the planner sold in the aside */
+.mega-plan .mega-in{grid-template-columns:minmax(0,1fr) 320px}
+.mp-tools{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:var(--space-4)}
+.mp-tool{display:grid;grid-template-columns:48px minmax(0,1fr) 18px;align-items:start;gap:14px;height:100%;padding:var(--space-4);border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out)}
+.mp-tool:hover{border-color:var(--green);transform:translateY(-2px)}
+.mp-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:50% 50% 12px 12px / 42% 42% 12px 12px;background:var(--tint-green);color:var(--green)}
+.mp-ic .ic{width:24px;height:24px}
+.mp-t{display:grid;gap:4px;min-width:0}
+.mp-t b{font-size:1.0625rem;line-height:1.2;letter-spacing:-.01em;transition:color var(--dur-micro) var(--ease-out)}
+.mp-tool:hover .mp-t b{color:var(--action)}
+.mp-t small{font-size:.8125rem;line-height:1.45;color:var(--muted)}
+.mp-tool > .ic{width:18px;height:18px;margin-top:15px;color:var(--green);transition:transform var(--dur-micro) var(--ease-out)}
+.mp-tool:hover > .ic{transform:translateX(3px)}
+.mp-aside{display:grid;align-content:start;gap:var(--space-3)}
+.mp-pitch-h{margin:0;font-size:1.25rem;font-weight:700;line-height:1.2;letter-spacing:-.025em;color:var(--green)}
+.mp-pitch{margin:0;font-size:.9375rem;line-height:1.5;color:var(--muted)}
+.mp-cta{justify-content:center;min-height:48px;margin-top:var(--space-2);font-size:.9375rem}
+/* under 1360px three columns squeeze the sentence into a ribbon, so the tools become full-width rows instead */
+@media (max-width:1359px){
+  .mp-tools{grid-template-columns:minmax(0,1fr);gap:var(--space-3)}
+  .mp-tool{align-items:center;padding:var(--space-3) var(--space-4)}
+  .mp-tool > .ic{margin-top:0}
+}
+@media (max-width:1199px){.mega-plan .mega-in{grid-template-columns:minmax(0,1fr) 270px;gap:var(--space-5)}.mp-pitch{font-size:.875rem}}
 /* locations: the cities that have them, each location with what you can book there, and how a location works */
 .mega-loc .mega-in{grid-template-columns:230px minmax(0,1fr) 300px}
 .mloc-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:6px var(--space-5)}
@@ -444,7 +490,7 @@ h1,h2,h3{text-wrap:balance}
 .fl{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .fl a{color:#DCE7E2;font-size:.9375rem;text-decoration:none}
 .fl a:hover{color:#FFFFFF;text-decoration:underline;text-underline-offset:3px}
-.ftr-bottom{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:var(--space-4) var(--space-7);margin-top:var(--space-8);padding-top:var(--space-5);border-top:1px solid rgba(247,247,245,.14);font-size:.8125rem;color:#CFDDD7}
+.ftr-bottom{margin-top:var(--space-8);font-size:.8125rem;color:#CFDDD7}
 .ftr-bottom p{margin:0}
 .credits{max-width:70ch}
 .credits summary{cursor:pointer;color:#DCE7E2}
@@ -471,24 +517,9 @@ h1,h2,h3{text-wrap:balance}
 .ftr-cta{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--space-5)}
 .btn-outline-light{border:1.5px solid rgba(247,247,245,.35);background:transparent;color:#F7F7F5}
 .btn-outline-light:hover{border-color:#F7F7F5}
-.ftr-bottom p a{color:inherit;text-decoration:underline;text-underline-offset:3px}
-.ftr-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px}
-.ftr .ftr-pay{display:inline-flex;align-items:center;gap:8px}
-.ftr-pay .ic{width:18px;height:18px;color:#9FE0BF}
-.ftr-up{display:inline-flex;align-items:center;gap:6px;color:#DCE7E2;font-weight:600;text-decoration:none}
-.ftr-up:hover{color:#FFFFFF;text-decoration:underline;text-underline-offset:3px}
-.ftr-up .ic{width:16px;height:16px;transform:rotate(-90deg)}
-
-
 
 /* =================== PORT: days section =================== */
 .days-empty a{color:var(--green);font-weight:700}
-
-/* =================== PORT: footer legal row =================== */
-.ftr-bottom > div{display:grid;gap:10px}
-.ftr-legal{display:flex;flex-wrap:wrap;gap:6px 18px}
-.ftr-legal a,.ftr-legal button{padding:0;border:0;background:none;color:#DCE7E2;font:inherit;font-size:.8125rem;text-decoration:none;cursor:pointer}
-.ftr-legal a:hover,.ftr-legal button:hover{color:#FFFFFF;text-decoration:underline;text-underline-offset:3px}
 
 /* =================== PORT: cookie consent =================== */
 .cc{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:12px}
@@ -622,26 +653,39 @@ body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
 .ftr-nl-go .ic{width:20px;height:20px}
 .ftr-nl-go[aria-busy="true"]{opacity:.7;cursor:progress}
 @media (max-width:479px){.ftr .ftr-nl-form input{padding:0 10px;font-size:.9375rem}.ftr-nl-city{padding-left:4px}.ftr-nl-city .ic{display:none}}
-/* footer bottom: payment methods, cookie settings, ANPC */
-.ftr-bottom > .ftr-trust{display:grid;gap:14px;justify-items:start}
-@media (min-width:1024px){.ftr-bottom > .ftr-trust{justify-items:end}}
-.ftr-trust-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
-.ftr-paywrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
-.ftr-psp{display:inline-flex;align-items:center;opacity:.9;transition:opacity var(--dur-micro) var(--ease-out)}
-.ftr-psp:hover{opacity:1}
-.ftr-psp img{display:block;width:auto;height:22px}
-/* the processor's logo is dark blue: on the dark footer it sits on its own white plate */
-.ftr .ftr-psp{padding:6px 12px;border-radius:10px;background:#FFFFFF}
+/* footer close: a trust band (who takes the payment, where a complaint goes), then the legal line */
+.ftr-trust{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:var(--space-5) var(--space-7);padding-top:var(--space-5);border-top:1px solid rgba(247,247,245,.14)}
+.ftr-trust-col{min-width:0}
+.ftr-trust-k{margin:0 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9FE0BF}
+.ftr-pay{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+/* the processor's and the two ANPC logos are printed art: each one gets the same white plate so they read as one set */
+.ftr-plate{display:inline-flex;flex:none;align-items:center;justify-content:center;height:48px;padding:0 14px;border-radius:12px;background:#FFFFFF;transition:box-shadow var(--dur-micro) var(--ease-out)}
+.ftr-plate:hover{box-shadow:0 0 0 2px rgba(159,224,191,.55)}
+.ftr-plate img{display:block;width:auto}
+.ftr-psp img{height:24px}
+.ftr-anpc{display:flex;gap:10px;max-width:100%}
+.ftr-anpc .ftr-plate{padding:0 12px}
+.ftr-anpc img{width:clamp(104px, 30vw, 136px);height:auto}
 .pay-badges{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
-.pay-badges li{display:grid;place-items:center;min-width:48px;height:30px;padding:0 10px;border-radius:7px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.75rem;font-weight:700;letter-spacing:.02em}
-.ftr-cc{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 14px;border:1px solid rgba(247,247,245,.28);border-radius:10px;background:transparent;color:#F7F7F5;font:600 .8125rem/1 var(--font);cursor:pointer}
-.ftr-cc:hover{border-color:rgba(247,247,245,.6)}
-.ftr-cc:focus-visible{outline:2px solid var(--online);outline-offset:2px}
-.ftr-cc .ic{width:17px;height:17px}
-.ftr-anpc{display:flex;flex-wrap:wrap;gap:10px}
-.ftr-anpc a{display:block;border-radius:8px}
-.ftr-anpc a:focus-visible{outline:2px solid var(--online);outline-offset:2px}
-.ftr-anpc img{display:block;width:200px;height:auto}
+.pay-badges li{display:grid;place-items:center;min-width:52px;height:32px;padding:0 10px;border-radius:8px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.75rem;font-weight:700;letter-spacing:.02em}
+.ftr-legal-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3) var(--space-5);margin-top:var(--space-5);padding:var(--space-4) 0 var(--space-6);border-top:1px solid rgba(247,247,245,.14)}
+.ftr-copy{flex:1 1 320px;min-width:0;max-width:64ch;line-height:1.55}
+.ftr-copy a{color:#DCE7E2;text-decoration:underline;text-underline-offset:3px}
+.ftr-copy a:hover{color:#FFFFFF}
+.ftr-legal{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px}
+.ftr-legal a,.ftr-legal button{padding:2px 0;border:0;background:none;color:#DCE7E2;font:inherit;font-size:.8125rem;text-decoration:none;cursor:pointer}
+.ftr-legal a:hover,.ftr-legal button:hover{color:#FFFFFF;text-decoration:underline;text-underline-offset:3px}
+.ftr-up{display:grid;flex:none;place-items:center;width:42px;height:42px;margin-left:auto;border:1px solid rgba(247,247,245,.24);border-radius:50%;background:rgba(247,247,245,.06);color:#F7F7F5;text-decoration:none;transition:background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out)}
+.ftr-up:hover{border-color:rgba(247,247,245,.55);background:rgba(247,247,245,.16)}
+.ftr-up:focus-visible{outline:2px solid var(--online);outline-offset:3px}
+.ftr-up .ic{width:18px;height:18px;transform:rotate(-90deg)}
+@media (max-width:767px){
+  .ftr-trust{gap:var(--space-5)}
+  .ftr-legal-row{display:grid;justify-items:start;gap:var(--space-4);padding-bottom:var(--space-7)}
+  .ftr-copy{max-width:none}
+  .ftr-legal{gap:8px 16px}
+  .ftr-up{margin-left:0}
+}
 
 /* compact footer ($v2FooterCompact): one line on large screens, a few short rows on phones */
 .ftr-mini{margin-top:auto;border-top:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:.8125rem}
@@ -653,9 +697,11 @@ body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
 .ftr-mini-links{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px}
 .ftr-mini-links a,.ftr-mini-links button{padding:4px 0;border:0;background:none;color:var(--muted);font:500 .8125rem/1.2 var(--font);text-decoration:none;cursor:pointer}
 .ftr-mini-links a:hover,.ftr-mini-links button:hover{color:var(--green);text-decoration:underline;text-underline-offset:3px}
-.ftr-mini-anpc{display:flex;gap:8px;margin-left:auto}
-.ftr-mini-anpc a{display:block;border-radius:6px}
-.ftr-mini-anpc img{display:block;width:auto;height:26px}
+.ftr-mini-anpc{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:auto}
+.ftr-mini .ftr-plate{height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px}
+.ftr-mini .ftr-plate:hover{border-color:var(--green);box-shadow:none}
+.ftr-mini-anpc .ftr-plate img{width:auto;height:24px}
+.ftr-mini .ftr-psp img{height:18px}
 .ftr-mini-copy{margin:0;white-space:nowrap}
 .ftr-mini-copy a{color:inherit;text-underline-offset:3px}
 @media (max-width:899px){
@@ -778,6 +824,10 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 .mm-links a{display:block;padding:11px 0;border-bottom:1px solid rgba(247,247,245,.1);color:#F7F7F5;text-decoration:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .mm-all{display:inline-flex;align-items:center;gap:8px;margin-top:20px;color:#9FE0BF;font-weight:700;text-decoration:none}
 .mm-all .ic{width:18px;height:18px}
+
+/* plan */
+#mm-plan .mm-t b{font-size:1.0625rem}
+.mm-note{margin:0;color:#CFDDD7;font-size:.9375rem;line-height:1.5}
 
 /* activities */
 .mm-cats{list-style:none;margin:0;padding:0;display:grid;gap:8px}

@@ -31,10 +31,10 @@ if (!empty($v2FooterCompact) || $v2FooterSwitch) {
     <div class="ftr-mini-anpc">
       <?php $ftrMiniPay = v2_payment_provider(); $ftrMiniLogo = v2_payment_logo($ftrMiniPay); ?>
       <?php if ($ftrMiniLogo): ?>
-      <a class="ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Plăți procesate de <?= v2_e($ftrMiniPay['label']) ?>"><img src="<?= v2_e($ftrMiniLogo) ?>" alt="<?= v2_e($ftrMiniPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async"></a>
+      <a class="ftr-plate ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Plăți procesate de <?= v2_e($ftrMiniPay['label']) ?>"><img src="<?= v2_e($ftrMiniLogo) ?>" alt="<?= v2_e($ftrMiniPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async"></a>
       <?php endif; ?>
-      <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
-      <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+      <a class="ftr-plate" href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+      <a class="ftr-plate" href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
     </div>
     <p class="ftr-mini-copy">© <?= date('Y') ?> bilete.online · operat de <a href="https://tixello.ro" rel="noopener">Tixello</a></p>
   </div>
@@ -103,26 +103,37 @@ usort($v2FootCityNames, function ($a, $b) use ($v2Fold) {
     <nav aria-label="Ajutor"><h3>Ajutor</h3><ul class="fl"><li><a href="/ajutor">Centrul de ajutor</a></li><li><a href="/ajutor#intrebari">Întrebări frecvente</a></li><li><a href="/recuperare-comanda">Recuperează comanda</a></li><li><a href="/cont/bilete">Biletele mele</a></li><li><a href="/voucher">Verifică voucher</a></li><li><a href="/contact">Contact suport</a></li><li><a href="/cookies">Politica de cookies</a></li></ul></nav>
   </div>
   <div class="wrap ftr-bottom">
-    <div>
-      <p>© <?= date('Y') ?> bilete.online. Toate drepturile rezervate. Platformă operată tehnologic de <a href="https://tixello.ro" rel="noopener">Tixello</a> (SC TIXELLO SRL).</p>
-      <div class="ftr-legal"><a href="/termeni">Termeni</a><a href="/confidentialitate">Confidențialitate</a><a href="/cookies">Cookies</a><a href="/contact">Contact</a></div>
-      <div class="ftr-meta"><a class="ftr-up" href="#">Înapoi sus<?= v2_ic('arrow-right') ?></a></div>
-    </div>
     <div class="ftr-trust">
-      <div class="ftr-trust-row">
-        <div class="ftr-paywrap"><span>Plătești cu:</span><ul class="pay-badges" aria-label="Metode de plată"><li>VISA</li><li>Mastercard</li><li>Google Pay</li><li>Apple Pay</li></ul></div>
-        <?php $ftrPay = v2_payment_provider(); $ftrPayLogo = v2_payment_logo($ftrPay); ?>
-        <?php if ($ftrPayLogo): ?>
-        <a class="ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Plăți procesate de <?= v2_e($ftrPay['label']) ?>">
-          <img src="<?= v2_e($ftrPayLogo) ?>" alt="<?= v2_e($ftrPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async">
-        </a>
-        <?php endif; ?>
-        <button class="ftr-cc" type="button" data-cc-action="open"><?= v2_ic('gear-six') ?>Setări cookies</button>
-      </div>
-      <div class="ftr-anpc">
-        <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
-        <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
-      </div>
+      <section class="ftr-trust-col" aria-label="Plăți">
+        <p class="ftr-trust-k">Plăți securizate prin</p>
+        <div class="ftr-pay">
+          <?php $ftrPay = v2_payment_provider(); $ftrPayLogo = v2_payment_logo($ftrPay); ?>
+          <?php if ($ftrPayLogo): ?>
+          <a class="ftr-plate ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Plăți procesate de <?= v2_e($ftrPay['label']) ?>">
+            <img src="<?= v2_e($ftrPayLogo) ?>" alt="<?= v2_e($ftrPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async">
+          </a>
+          <?php endif; ?>
+          <ul class="pay-badges" aria-label="Metode de plată acceptate"><li>VISA</li><li>Mastercard</li><li>Google Pay</li><li>Apple Pay</li></ul>
+        </div>
+      </section>
+      <section class="ftr-trust-col" aria-label="Protecția consumatorului">
+        <p class="ftr-trust-k">Protecția consumatorului</p>
+        <div class="ftr-anpc">
+          <a class="ftr-plate" href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+          <a class="ftr-plate" href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+        </div>
+      </section>
+    </div>
+    <div class="ftr-legal-row">
+      <p class="ftr-copy">© <?= date('Y') ?> bilete.online. Toate drepturile rezervate. Platformă operată tehnologic de <a href="https://tixello.ro" rel="noopener">Tixello</a> (SC TIXELLO SRL).</p>
+      <nav class="ftr-legal" aria-label="Informații legale">
+        <a href="/termeni">Termeni</a>
+        <a href="/confidentialitate">Confidențialitate</a>
+        <a href="/cookies">Cookies</a>
+        <a href="/contact">Contact</a>
+        <button type="button" data-cc-action="open">Setări cookies</button>
+      </nav>
+      <a class="ftr-up" href="#" title="Înapoi sus"><?= v2_ic('arrow-right') ?><span class="sr">Înapoi sus</span></a>
     </div>
   </div>
 </footer>
