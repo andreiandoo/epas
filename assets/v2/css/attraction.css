@@ -199,3 +199,8 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
   .texp-in{padding-block:44px}
   .tnone{font-size:.875rem}
 }
+
+/* the photographer's line, for photos that are not ours */
+.th-credit{margin:8px 2px 0;font-size:.75rem;line-height:1.4;color:var(--on-deep-muted)}
+.th-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.th-credit a:hover{color:#F7F7F5}
