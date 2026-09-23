@@ -3,7 +3,14 @@
  * Build an import CSV for the towns the catalogue is missing, from Wikidata's copy of the
  * Lista Monumentelor Istorice.
  *
- *   php bin/fetch-wikidata-monuments.php [--city=brasov] [--limit=N] [--out=path]
+ *   php bin/fetch-wikidata-monuments.php [--city=brasov] [--append] [--limit=N] [--out=path]
+ *
+ * Wikidata's box service is slow — a single town can take minutes, and fifteen in one process is
+ * a long bet on nothing timing out. Run them one at a time and let the file grow:
+ *
+ *   for c in brasov sibiu iasi constanta arad suceava galati braila botosani  *            bacau buzau calarasi tulcea giurgiu vaslui; do
+ *     php bin/fetch-wikidata-monuments.php --city=$c --append
+ *   done
  *
  * Why this exists: `atractii_romania_final_import.csv` covers all 42 counties but has **no row at
  * all** for fifteen county seats — Brașov, Sibiu, Iași, Constanța among them — while their
@@ -78,6 +85,7 @@ foreach (array_slice($argv, 1) as $arg) {
     }
 }
 $onlyCity = isset($flags['city']) ? (string) $flags['city'] : '';
+$append   = isset($flags['append']);
 $limit    = isset($flags['limit']) ? max(1, (int) $flags['limit']) : 0;
 $outFile  = isset($flags['out']) ? (string) $flags['out']
     : dirname(__DIR__) . '/csvs/atractii_orase_lipsa.csv';
@@ -243,6 +251,26 @@ $rows    = [];
 $seen    = [];
 $slugs   = [];
 $tooLong = 0;
+
+/* Appending to a file written by an earlier town: read back what is in it, so the dedupe and the
+   slug uniqueness hold across runs and not just within one. */
+$appending = $append && is_file($outFile) && filesize($outFile) > 8;
+if ($appending) {
+    $fh = fopen($outFile, 'r');
+    $hdr = fgetcsv($fh, 0, ',', '"', '');
+    $hdr[0] = preg_replace('/^ï»¿/', '', (string) $hdr[0]);
+    $c = array_flip(array_map('trim', $hdr));
+    $had = 0;
+    while (($r = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+        $slugs[$r[$c['slug']] ?? ''] = true;
+        $seen[fold((string) ($r[$c['nume']] ?? '')) . '|' . round((float) ($r[$c['latitudine']] ?? 0), 4)
+            . '|' . round((float) ($r[$c['longitudine']] ?? 0), 4)] = true;
+        $had++;
+    }
+    fclose($fh);
+    fwrite(STDOUT, "appending to {$had} rows already in the file
+");
+}
 
 foreach ($towns as $key => [$town, $county, $prefix, $w, $s0, $e, $n0]) {
     fwrite(STDOUT, sprintf('%-12s ', $town));
@@ -412,11 +440,13 @@ foreach (array_chunk($withImg, 40) as $i => $chunk) {
 }
 
 // ------------------------------------------------------------------ 3. the CSV
-$out = fopen($outFile, 'w');
-fwrite($out, "\xEF\xBB\xBF");
-fputcsv($out, ['nume', 'nume_en', 'slug', 'subtitlu', 'descriere', 'oras', 'judet', 'tip', 'adresa',
-    'latitudine', 'longitudine', 'meta_title', 'meta_description', 'cuvinte_cheie',
-    'imagine_principala', 'galerie_foto', 'imagine_credit', 'cod_lmi'], ',', '"', '');
+$out = fopen($outFile, $appending ? 'a' : 'w');
+if (!$appending) {
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['nume', 'nume_en', 'slug', 'subtitlu', 'descriere', 'oras', 'judet', 'tip', 'adresa',
+        'latitudine', 'longitudine', 'meta_title', 'meta_description', 'cuvinte_cheie',
+        'imagine_principala', 'galerie_foto', 'imagine_credit', 'cod_lmi'], ',', '"', '');
+}
 
 $types = [];
 $photos = 0;
