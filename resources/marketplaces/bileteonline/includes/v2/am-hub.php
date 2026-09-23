@@ -50,7 +50,7 @@ include __DIR__ . '/header.php';
   <!-- ============================== HERO ============================== -->
   <section class="kh<?= $hubTight ? ' kh-tight' : '' ?>" aria-labelledby="kh-h">
     <?= $hubArches ?>
-    <svg class="kh-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <?php if (!$hubTight): ?><svg class="kh-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg><?php endif; ?>
     <div class="kh-in">
       <div class="kh-copy">
         <nav class="crumbs" aria-label="Breadcrumb">
