@@ -147,6 +147,57 @@ function fold(string $s): string
     return strtr($s, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
 }
 
+/**
+ * The longest slug in the original import file is exactly 120 characters, and the column is
+ * varchar(191); a few LMI entries have names long enough to blow past both. Cut at a word
+ * boundary, and when the cut actually removed something, tie the LMI code in so that two
+ * different stretches of the same city wall cannot collapse onto one slug.
+ */
+/**
+ * "Piața Sfatului 11, municipiul Brașov" -> ["Piața Sfatului 11", "Brașov"].
+ *
+ * The LMI writes the locality with its rank attached, sometimes twice and separated by a
+ * semicolon ("sat Hărman; comuna Hărman"), so every such token is stripped and the last one wins.
+ * Ensemble entries carry a boundary description instead of an address — "Delimitare: NE - Șirul
+ * Beethoven; NV - versantul sudic al dealului Warthe..." runs to 255 characters — which is not an
+ * address and must not become one.
+ */
+function splitAddress(string $raw): array
+{
+    $raw = trim($raw);
+    if ($raw === '' || mb_strlen($raw) > 120 || preg_match('/^delimitare/ui', $raw)) {
+        return ['', ''];
+    }
+    $parts = preg_split('/[,;]/u', $raw) ?: [];
+    $street = [];
+    $where  = '';
+    foreach ($parts as $part) {
+        $part = trim($part);
+        if ($part === '') {
+            continue;
+        }
+        if (preg_match('/^(municipiul|orașul|orasul|oraș|oras|comuna|satul|sat)\s+(.+)$/ui', $part, $m)) {
+            $where = trim($m[2]);
+            continue;
+        }
+        $street[] = $part;
+    }
+
+    return [trim(implode(', ', $street), " ,"), $where];
+}
+
+function shortSlug(string $name, string $city, string $lmi): string
+{
+    $base = slugify($name);
+    if (strlen($base) > 100) {
+        $base = substr($base, 0, 100);
+        $cut  = strrpos($base, '-');
+        $base = substr($base, 0, $cut !== false ? $cut : 100) . '-' . substr(sha1($lmi), 0, 6);
+    }
+
+    return trim($base . '-' . $city, '-');
+}
+
 function slugify(string $s): string
 {
     $s = strtr(mb_strtolower(trim($s), 'UTF-8'), [
@@ -188,13 +239,15 @@ function mapType(array $classes, string $lmi): string
 
 // ------------------------------------------------------------------ 1. the monuments
 $towns = $onlyCity !== '' ? [$onlyCity => TOWNS[$onlyCity]] : TOWNS;
-$rows  = [];
-$seen  = [];
+$rows    = [];
+$seen    = [];
+$slugs   = [];
+$tooLong = 0;
 
 foreach ($towns as $key => [$town, $county, $prefix, $w, $s0, $e, $n0]) {
     fwrite(STDOUT, sprintf('%-12s ', $town));
     $query = <<<SPARQL
-SELECT ?m ?nume ?lmi ?lat ?lng ?img ?descriere (GROUP_CONCAT(DISTINCT ?tipLabel; separator=" | ") AS ?tipuri) WHERE {
+SELECT ?m ?nume ?lmi ?lat ?lng ?img ?adresa ?descriere (GROUP_CONCAT(DISTINCT ?tipLabel; separator=" | ") AS ?tipuri) WHERE {
   SERVICE wikibase:box {
     ?m wdt:P625 ?coord .
     bd:serviceParam wikibase:cornerSouthWest "Point({$w} {$s0})"^^geo:wktLiteral ;
@@ -206,10 +259,11 @@ SELECT ?m ?nume ?lmi ?lat ?lng ?img ?descriere (GROUP_CONCAT(DISTINCT ?tipLabel;
   ?m rdfs:label ?nume . FILTER(lang(?nume) = "ro")
   ?m p:P625/psv:P625 [ wikibase:geoLatitude ?lat ; wikibase:geoLongitude ?lng ] .
   OPTIONAL { ?m wdt:P18 ?img }
+  OPTIONAL { ?m wdt:P6375 ?adresa }
   OPTIONAL { ?m schema:description ?descriere . FILTER(lang(?descriere) = "ro") }
   OPTIONAL { ?m wdt:P31 ?tip . ?tip rdfs:label ?tipLabel . FILTER(lang(?tipLabel) = "ro") }
 }
-GROUP BY ?m ?nume ?lmi ?lat ?lng ?img ?descriere
+GROUP BY ?m ?nume ?lmi ?lat ?lng ?img ?adresa ?descriere
 SPARQL;
 
     $found = sparql($query);
@@ -228,18 +282,56 @@ SPARQL;
         if ($name === '' || !is_numeric($lat) || !is_numeric($lng)) {
             continue;
         }
+        /* Some LMI entries are inventories rather than names — "Latura sud-vestică: Bastionul
+           Țesătorilor - azi secție a Muzeului Județean, Poarta Schei, ..." runs to 245 characters
+           and describes half the city wall. Nothing on the site can show that as a title, and the
+           longest real name in the existing catalogue is 114. */
+        if (mb_strlen($name) > 120) {
+            $tooLong++;
+            continue;
+        }
+        /* The LMI address reads "Piața Sfatului 11, municipiul Brașov" — the street half is the
+           only thing that tells eight monuments all called "Casă" apart, and the locality half
+           says which village a box that overlaps its neighbours actually caught. */
+        [$street, $where] = splitAddress($get('adresa'));
+        if ($where !== '' && fold($where) !== fold($town)) {
+            $place = $where;          // a neighbouring commune the box reached into
+            $placeKey = slugify($where);
+        } else {
+            $place = $town;
+            $placeKey = $key;
+        }
+        if ($street !== '' && mb_strlen($name) <= 24) {
+            $name .= ', ' . $street;  // "Casă" on its own is not a page anyone can use
+        }
+        if (mb_strlen($name) > 120) {   // checked again: the address may have pushed it over
+            $tooLong++;
+            continue;
+        }
+
         // One LMI code can carry several sub-entries at the same point; keep the first.
-        $dedupe = fold($name) . '|' . round((float) $lat, 5) . '|' . round((float) $lng, 5);
+        // Four decimals is about eleven metres, which is what "the same place" means here.
+        $dedupe = fold($name) . '|' . round((float) $lat, 4) . '|' . round((float) $lng, 4);
         if (isset($seen[$dedupe])) {
             continue;
         }
         $seen[$dedupe] = true;
 
+        /* Two monuments can share a name without sharing a place — Brașov has eight houses the
+           LMI calls "Casă". The importer upserts on the slug, so a repeat would quietly merge
+           them; the LMI code is unique, so it settles the tie. */
+        $slug = shortSlug($name, $placeKey, $lmi);
+        if (isset($slugs[$slug])) {
+            $slug .= '-' . substr(sha1($lmi), 0, 6);
+        }
+        $slugs[$slug] = true;
+
         $rows[] = [
             'nume'      => $name,
-            'slug'      => slugify($name) . '-' . $key,
-            'oras'      => $town,
+            'slug'      => $slug,
+            'oras'      => $place,
             'judet'     => $county,
+            'adresa'    => $street,
             'tip'       => mapType(array_filter(explode(' | ', $get('tipuri'))), $lmi),
             'lat'       => $lat,
             'lng'       => $lng,
@@ -258,6 +350,12 @@ SPARQL;
         break;
     }
     usleep(500000);   // WDQS asks for restraint, and this is a one-off
+}
+
+if ($tooLong > 0) {
+    fwrite(STDOUT, "
+" . $tooLong . " entries skipped: the LMI name is a description, not a title
+");
 }
 
 if (!$rows) {
@@ -342,7 +440,7 @@ foreach ($rows as $r) {
         $r['oras'],
         $r['judet'],
         $r['tip'],
-        '',
+        $r['adresa'],
         $r['lat'],
         $r['lng'],
         '',

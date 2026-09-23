@@ -124,7 +124,7 @@ class ImportBileteAttractionsCommand extends Command
         $get = fn (array $row, string $k) => isset($col[$k]) ? trim((string) ($row[$col[$k]] ?? '')) : '';
 
         $stats = ['read' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0,
-            'img_ok' => 0, 'img_fail' => 0, 'img_skip' => 0, 'city_miss' => 0, 'type_new' => 0];
+            'img_ok' => 0, 'img_fail' => 0, 'img_skip' => 0, 'too_long' => 0, 'city_miss' => 0, 'type_new' => 0];
         $rowIndex = 0;
 
         while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
@@ -176,6 +176,16 @@ class ImportBileteAttractionsCommand extends Command
             ];
 
             if ($dry) {
+                /* A dry run that only counts rows is not a rehearsal. `slug` is varchar(191) and
+                   `address` varchar(255): a generated file can exceed either, and the first the
+                   real run says about it is a mid-import SQL error with half the rows already in. */
+                if (strlen($slug) > 191) {
+                    $stats['too_long']++;
+                    $this->warn('slug ' . strlen($slug) . ' chars (max 191): ' . mb_substr($slug, 0, 60) . '…');
+                } elseif (($addr = $get($row, 'adresa')) !== '' && strlen($addr) > 255) {
+                    $stats['too_long']++;
+                    $this->warn('address ' . strlen($addr) . ' chars (max 255) at ' . $slug);
+                }
                 $stats[Attraction::where('marketplace_client_id', $clientId)->where('slug', $slug)->exists() ? 'updated' : 'created']++;
             } else {
                 $existing = Attraction::where('marketplace_client_id', $clientId)->where('slug', $slug)->first();
