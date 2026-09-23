@@ -20,6 +20,10 @@ use Illuminate\Support\Str;
  * CSV columns: nume, nume_en, slug, subtitlu, descriere, oras, judet, tip,
  *   adresa, latitudine, longitudine, meta_title, meta_description,
  *   cuvinte_cheie, imagine_principala, galerie_foto
+ *   imagine_credit (optional, JSON: author/license/license_url/source) — required for photos
+ *     that are not ours, e.g. the Wikimedia Commons ones that bin/fetch-wikidata-monuments.php
+ *     brings in; stored on attractions.cover_image_credit and printed under the photo.
+ *   cod_lmi (optional) — carried for traceability, not stored
  *
  * Idempotent: upserts on (marketplace_client_id, slug). Re-running refreshes
  * the text fields; the cover image is only (re)downloaded when missing, or with
@@ -189,7 +193,14 @@ class ImportBileteAttractionsCommand extends Command
                     if ($imgUrl !== '' && ($forceImg || empty($attraction->cover_image_url))) {
                         $path = $this->downloadImage($imgUrl, $slug, $clientId);
                         if ($path) {
-                            $attraction->forceFill(['cover_image_url' => $path])->save();
+                            /* Photos from Wikimedia Commons are CC BY-SA: free to publish, but
+                               only beside the photographer's name and the licence. The credit
+                               travels with the photo, so it is written in the same breath. */
+                            $credit = json_decode($get($row, 'imagine_credit'), true);
+                            $attraction->forceFill(array_filter([
+                                'cover_image_url'    => $path,
+                                'cover_image_credit' => is_array($credit) && $credit ? $credit : null,
+                            ]))->save();
                             $stats['img_ok']++;
                         } else {
                             $stats['img_fail']++;

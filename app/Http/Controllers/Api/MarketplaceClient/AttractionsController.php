@@ -330,6 +330,8 @@ class AttractionsController extends BaseController
                 'name' => $this->translate($a->type->name, $locale),
                 'icon' => $a->type->icon_emoji,
             ] : null,
+            // Who took the cover photo and under what licence, when it is not ours to give away.
+            'cover_credit' => $a->cover_image_credit ?: null,
             'city' => $a->city ? [
                 'slug' => $a->city->slug,
                 'name' => $this->translate($a->city->name, $locale),

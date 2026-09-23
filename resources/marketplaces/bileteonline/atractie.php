@@ -55,6 +55,9 @@ $atCityThings  = $atCityHasPage ? 'activitățile' : 'atracțiile';
 $atCityName   = $atCity['name'] ?? '';
 $atCounty     = $attraction['county'] ?? '';
 $atCover      = v2_media_url($attraction['cover_image_url'] ?? null) ?? '';
+/* CC BY-SA lets us publish the photo only next to the photographer's name, the licence and a way
+   back to the original. Null for our own photos, which is most of them. */
+$atCredit     = is_array($attraction['cover_credit'] ?? null) ? $attraction['cover_credit'] : null;
 $atGallery    = array_values(array_filter(array_map('v2_media_url', (array) ($attraction['gallery'] ?? []))));
 $atAddress    = $attraction['address'] ?? '';
 $atLat        = $attraction['latitude'] ?? null;
@@ -225,6 +228,9 @@ include __DIR__ . '/includes/v2/header.php';
           <img src="<?= v2_e($atCompact ? v2_thumb($lightbox[0], 960, 600) : $lightbox[0]) ?>" alt="<?= v2_e($atName) ?>" fetchpriority="high" decoding="async">
           <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>Vezi galeria (<?= count($lightbox) ?>)</span><?php endif; ?>
         </button>
+        <?php if ($atCredit): ?>
+        <p class="th-credit">Foto: <?= v2_e($atCredit['author'] ?? 'necunoscut') ?><?php if (!empty($atCredit['license'])): ?> · <?php if (!empty($atCredit['license_url'])): ?><a href="<?= v2_e($atCredit['license_url']) ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($atCredit['license']) ?></a><?php else: ?><?= v2_e($atCredit['license']) ?><?php endif; ?><?php endif; ?><?php if (!empty($atCredit['source'])): ?> · <a href="<?= v2_e($atCredit['source']) ?>" target="_blank" rel="noopener nofollow">sursa</a><?php endif; ?></p>
+        <?php endif; ?>
         <?php elseif ($atHeroMap): ?>
         <div class="th-map">
           <iframe title="Hartă <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=14&output=embed"></iframe>
