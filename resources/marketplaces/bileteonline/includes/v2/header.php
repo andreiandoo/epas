@@ -69,7 +69,6 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       <?php endif; ?>
       <button class="mnav-btn" type="button" data-mega="activities" aria-expanded="false" aria-controls="mega-activities">Experiențe<?= v2_ic('caret-down') ?></button>
       <button class="mnav-btn" type="button" data-mega="inspiration" aria-expanded="false" aria-controls="mega-inspiration">Inspirație<?= v2_ic('caret-down') ?></button>
-      <a class="mnav-link" href="/card-cadou">Card cadou</a>
     </nav>
     <form class="hdr-search" role="search" action="/cauta" method="get">
       <?= v2_ic('magnifying-glass') ?>

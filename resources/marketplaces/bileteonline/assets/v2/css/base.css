@@ -190,16 +190,16 @@ h1,h2,h3{text-wrap:balance}
 .hdr.mega-open :focus-visible{outline-color:var(--action)}
 .hdr.mega-open .icon-btn:hover{background:var(--surface-2)}
 /* six top-level entries have to share the row with the search and the tools, so the pills are tighter on desktop */
+/* five entries, so the row can breathe again */
 @media (min-width:1024px){
-  .mnav{gap:0}
-  .mnav-btn,.mnav-link{padding:0 10px}
-  .mnav-btn{gap:5px}
-  .mnav-btn .ic{width:12px;height:12px}
+  .mnav{gap:6px}
+  .mnav-btn,.mnav-link{padding:0 16px}
 }
 /* the laptop band has no room for the field: the button to /cauta takes its place and the pills get tighter still */
 @media (min-width:1024px) and (max-width:1279px){
   .hdr-slink{display:inline-flex}
-  .mnav-btn,.mnav-link{padding:0 8px;font-size:.875rem}
+  .mnav{gap:2px}
+  .mnav-btn,.mnav-link{padding:0 12px}
 }
 
 .mega{position:absolute;left:0;right:0;top:100%;max-height:calc(100dvh - var(--hdr-h));overflow:auto;background:var(--bg);color:var(--ink);box-shadow:inset 0 1px 0 var(--line), 0 40px 80px -40px rgba(14,72,55,.45);animation:mega-in var(--dur-state) var(--ease-out)}
