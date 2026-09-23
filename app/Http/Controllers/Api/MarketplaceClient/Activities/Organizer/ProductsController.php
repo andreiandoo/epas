@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Activity;
+use App\Models\MarketplaceCategory;
 use App\Services\Activities\OrganizerCatalog;
 use App\Services\Activities\OrganizerCatalogPresenter;
 use Illuminate\Http\JsonResponse;
@@ -97,6 +98,10 @@ class ProductsController extends BaseController
             'titlul'              => empty($product->title['ro'] ?? null),
             'un bilet activ'      => $product->variants->where('is_active', true)->isEmpty(),
             'o poză'              => !$product->cover_image_url && !$product->location?->cover_image_url,
+            // Without one the product is missing from every category page and from the filters — it exists but
+            // nobody browsing can reach it. Only asked for where the marketplace has categories at all.
+            'categoria'           => !$product->marketplace_category_id
+                && MarketplaceCategory::where('marketplace_client_id', $product->marketplace_client_id)->whereNull('parent_id')->exists(),
             'conținutul pachetului' => $product->isPackage() && $product->packageItems->isEmpty(),
             'programul'           => !$product->isPackage() && !$product->isDayMode() && !$product->use_location_schedule && $product->schedules->isEmpty(),
         ]));

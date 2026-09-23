@@ -178,6 +178,7 @@
     return {
       id: null, product_type: type, location_id: locId || null, access_kind: type === 'access' ? 'person' : null, service_type: type === 'experience' ? 'rental' : null,
       title: null, subtitle: null, short_description: null, description: null, icon: null, display_category: null,
+      category_id: null, subcategory_id: null,
       booking_mode: type === 'experience' ? 'slot' : 'day', capacity_mode: 'per_slot', capacity_per_slot: 10, daily_capacity: null,
       duration_minutes: type === 'experience' ? 60 : null, slot_interval_minutes: type === 'experience' ? 60 : null,
       booking_lead_time_hours: 0, booking_max_advance_days: null, use_location_schedule: true,
@@ -298,11 +299,34 @@
       catBox.textContent = '';
       var lc = locById(p.location_id), cats = (lc && lc.display_categories) || [];
       if (!cats.length) { p.display_category = null; return; }
-      catBox.appendChild(A.field('Categoria pe pagina locației', A.select(p, 'display_category', [[null, 'Fără categorie']].concat(cats.map(function (c) { return [c.id, c.name]; })), { on: mark })));
+      catBox.appendChild(A.field('Categoria pe pagina locației', A.select(p, 'display_category', [[null, 'Fără categorie']].concat(cats.map(function (c) { return [c.id, c.name]; })), { on: mark }),
+        { hint: 'Gruparea ta, folosită doar în lista de bilete de pe pagina locației.' }));
+    }
+    /* Where bilete.online files the product: the category pages, the city pages and the filters all read it, and
+       it is the one thing that decides whether anyone browsing the site ever runs into the product. Not taken
+       from the location on purpose — a boat rental at a museum is not a museum. */
+    var mcatBox = el('span');
+    function drawMcats() {
+      mcatBox.textContent = '';
+      var all = (meta && meta.categories) || [];
+      var parents = all.filter(function (c) { return !c.parent_id; });
+      if (!parents.length) { p.category_id = null; p.subcategory_id = null; return; }
+      mcatBox.appendChild(A.field('Categoria pe bilete.online', A.select(p, 'category_id',
+        [[null, 'Alege categoria']].concat(parents.map(function (c) { return [c.id, c.name]; })),
+        { num: true, on: function () { p.subcategory_id = null; mark(); drawMcats(); } }),
+        { hint: 'Unde apare produsul în listele și filtrele site-ului. Obligatorie când îl trimiți spre aprobare.' }));
+      var subs = p.category_id ? all.filter(function (c) { return String(c.parent_id) === String(p.category_id); }) : [];
+      if (!subs.length) {
+        p.subcategory_id = null;
+        return;
+      }
+      mcatBox.appendChild(A.field('Subcategoria', A.select(p, 'subcategory_id',
+        [[null, 'Fără subcategorie']].concat(subs.map(function (c) { return [c.id, c.name]; })), { num: true, on: mark })));
     }
     box.appendChild(A.section('am-p-main', 'Produsul', null, [A.form([
       A.field('Titlul *', A.input(p, 'title', { max: 190, ph: type === 'access' ? 'Acces rezervație' : (type === 'experience' ? 'Închiriere barcă cu vâsle' : 'Familie 2+2 cu barcă'), on: mark }), { wide: true }),
       A.field('Locația' + (type === 'experience' ? '' : ' *'), A.select(p, 'location_id', locOpts, { num: true, on: function () { mark(); drawCats(); drawWhen(); } })),
+      mcatBox,
       catBox,
       type === 'access' ? A.field('Ce fel de acces', A.select(p, 'access_kind', [['person', 'Persoane'], ['vehicle', 'Vehicul (parcare)'], ['camping', 'Camping'], ['other', 'Altceva']], { keep: true, on: mark })) : null,
       type === 'experience' ? A.field('Ce fel de experiență', A.select(p, 'service_type', [['rental', 'Închiriere'], ['guided', 'Tur ghidat'], ['workshop', 'Atelier'], ['other', 'Altceva']], { keep: true, on: mark })) : null,
@@ -311,6 +335,7 @@
       A.field('Pe scurt', A.textarea(p, 'short_description', { max: 280, rows: 2, ph: 'Barcă pentru 4 persoane. Vestele sunt incluse.', on: mark }), { wide: true, hint: 'Apare sub titlu, în lista de bilete a locației.' }),
       A.field('Descrierea', A.textarea(p, 'description', { max: 20000, rows: 5, on: mark }), { wide: true }),
     ])]));
+    drawMcats();
     drawCats();
 
     // ----- tickets -----
@@ -552,7 +577,7 @@
 
   function payload(p) {
     var keys = ['product_type', 'location_id', 'access_kind', 'service_type', 'title', 'subtitle', 'short_description', 'description', 'icon',
-      'display_category', 'booking_mode', 'capacity_mode', 'capacity_per_slot', 'daily_capacity', 'duration_minutes', 'slot_interval_minutes',
+      'category_id', 'subcategory_id', 'display_category', 'booking_mode', 'capacity_mode', 'capacity_per_slot', 'daily_capacity', 'duration_minutes', 'slot_interval_minutes',
       'booking_lead_time_hours', 'booking_max_advance_days', 'use_location_schedule', 'access_requirement', 'requires_vehicle_info', 'pos_only',
       'issuing_company', 'unit_label', 'usage_terms', 'meeting_point', 'languages', 'included_items', 'not_included', 'requirements',
       'cancellation_policy', 'age_min', 'age_max'];
