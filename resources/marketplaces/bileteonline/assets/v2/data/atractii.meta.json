@@ -1,9 +1,9 @@
 {
-    "v": "544ceeda179f",
-    "total": 7275,
+    "v": "6b455c9759e8",
+    "total": 7983,
     "types": 10,
-    "cities": 2651,
-    "bytes": 1025357,
-    "generated_at": "2026-09-22T15:22:23+02:00",
+    "cities": 2666,
+    "bytes": 1153270,
+    "generated_at": "2026-09-23T11:12:50+02:00",
     "source": "map-endpoint"
 }
