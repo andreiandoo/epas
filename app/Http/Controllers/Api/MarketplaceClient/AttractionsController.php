@@ -47,8 +47,19 @@ class AttractionsController extends BaseController
                 $query->where('is_featured', true);
             }
         }
+        // Free text over the name, so the list page can offer a search box. Name is translatable JSONB and
+        // ro is the primary locale on the marketplaces that have attractions.
+        if (($search = trim((string) $request->query('search', ''))) !== '') {
+            $query->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%']);
+        }
 
-        $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id');
+        // 'default' keeps the curated order (featured, then sort_order). The others let the list page
+        // offer a sort control; unknown values fall back to the curated order.
+        match ((string) $request->query('sort', '')) {
+            'name'     => $query->orderByRaw("LOWER(name->>'ro') ASC")->orderBy('id'),
+            'activities' => $query->orderByDesc('activities_count')->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id'),
+            default    => $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id'),
+        };
 
         $perPage = max(1, min(50, (int) $request->query('per_page', 24)));
         $paginator = $query->paginate($perPage);

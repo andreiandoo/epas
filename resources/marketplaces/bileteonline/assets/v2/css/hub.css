@@ -27,3 +27,120 @@
 .sr-loc-t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sr-loc-t small{display:block;color:var(--muted)}
 .sr-loc > .ic{flex:none;width:18px;height:18px;color:var(--green)}
+
+/* =================== SHORT HERO (listing pages) ===================
+   The list is what people came for, so the hero is one slim band: crumbs, heading, one line of lead and the
+   counters. No picture, no arch. */
+.kh-tight .kh-in{grid-template-columns:minmax(0,1fr);gap:0;padding:calc(var(--hdr-h) + var(--space-4)) var(--gutter) var(--space-5)}
+@media (min-width:1024px){.kh-tight .kh-in{grid-template-columns:minmax(0,1fr);padding-bottom:var(--space-5)}}
+.kh-tight .deco-arches{top:auto;bottom:-46%;width:250px;opacity:.12}
+.kh-tight .kh-line{opacity:.2}
+.kh-tight .kh-kicker{margin:var(--space-3) 0 6px;padding:0;border:0;border-radius:0;font-size:var(--text-label);letter-spacing:.1em;color:#9FE0BF}
+.kh-tight .kh-h{font-size:clamp(1.875rem, 3.4vw, 2.75rem);line-height:1.08;letter-spacing:-.035em}
+.kh-tight .kh-h em{display:inline;color:var(--online)}
+.kh-tight .kh-lead{margin-top:10px;max-width:74ch;font-size:1rem;line-height:1.45;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.kh-tight .kh-stats{margin-top:var(--space-4)}
+.kh-tight .kh-stats li{padding:6px 12px;font-size:.875rem}
+@media (min-width:1024px){
+  .kh-tight .kh-lead{-webkit-line-clamp:1}
+  /* Heading and counters share a line: the number belongs to the title, not to a row of its own. Every part is
+     placed by hand, so a hero that leaves out the lead or the counters still lands where it should. */
+  .kh-tight .kh-copy{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;column-gap:var(--space-6)}
+  .kh-tight .crumbs{grid-area:1 / 1 / 2 / 3}
+  .kh-tight .kh-kicker{grid-area:2 / 1 / 3 / 3}
+  .kh-tight .kh-h{grid-area:3 / 1 / 4 / 2}
+  .kh-tight .kh-stats{grid-area:3 / 2 / 4 / 3;margin-top:0;justify-self:end}
+  .kh-tight .kh-lead{grid-area:4 / 1 / 5 / 3}
+}
+.hub-res{padding-top:var(--space-6)}
+
+/* =================== FILTER BAR ===================
+   Plain GET: every control is a form field and every state has its own URL. hub-filter.js turns the long lists
+   into searchable dropdowns and applies a change without the button, but nothing here depends on it. */
+.hf{margin:0 0 var(--space-6);padding:var(--space-4) var(--space-5) var(--space-3);border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+.hf-bar{display:flex;align-items:center;gap:10px}
+.hf-q{position:relative;display:flex;flex:1;align-items:center;gap:10px;min-width:0;height:48px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--bg);transition:border-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-micro) var(--ease-out)}
+.hf-q:focus-within{border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.18)}
+.hf-q > .ic{flex:none;width:19px;height:19px;color:var(--muted)}
+.hf-q input{flex:1;min-width:0;border:0;padding:0;background:transparent;color:var(--ink);font:500 1rem/1 var(--font)}
+.hf-q input::placeholder{color:var(--placeholder);opacity:1}
+.hf-q input:focus-visible{outline:none}
+.hf-q input::-webkit-search-cancel-button{display:none}
+.hf-q-x{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;color:var(--muted);background:var(--surface-2)}
+.hf-q-x:hover{color:var(--ink)}
+.hf-q-x .ic{width:14px;height:14px}
+.hf-toggle{display:inline-flex;align-items:center;gap:8px;flex:none;height:48px;padding:0 16px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:700 .9375rem/1 var(--font);cursor:pointer}
+.hf-toggle:hover{border-color:var(--green);color:var(--green)}
+.hf-toggle .ic{width:17px;height:17px}
+.hf-n{display:grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--action);color:#FFFFFF;font-size:.75rem}
+@media (min-width:768px){.hf-toggle{display:none}}
+
+.hf-fields{display:grid;gap:var(--space-4) var(--space-5);margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--line)}
+/* below 768 the fields fold behind the "Filtre" button; with JS off they are simply always open */
+@media (max-width:767px){.js .hf:not(.is-open) .hf-fields{display:none}}
+.hf-field{display:grid;gap:6px;margin:0;min-width:0}
+.hf-field > label{font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hf-ctl{position:relative;display:flex;align-items:center;min-width:0}
+.hf-ctl > .ic{position:absolute;right:14px;width:14px;height:14px;color:var(--muted);pointer-events:none}
+.hf-ctl select,.hf-ctl input{width:100%;min-width:0;height:48px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:600 .9375rem/1 var(--font)}
+.hf-ctl select{appearance:none;-webkit-appearance:none;padding-right:38px;cursor:pointer}
+.hf-ctl select:hover{border-color:#C6CBC4}
+.hf-ctl select:focus-visible,.hf-ctl input:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.hf-acts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4);margin:0}
+.hf-acts .hf-go{min-height:48px;width:100%}
+@media (min-width:768px){.hf-acts .hf-go{width:auto}}
+.js .hf-acts .hf-go{display:none}
+@media (max-width:767px){.js .hf-acts .hf-go{display:inline-flex}}
+.hf-reset{color:var(--muted);font-size:.875rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.hf-reset:hover{color:var(--green)}
+
+.hf-chips{display:grid;gap:8px;margin-top:var(--space-2);padding-top:var(--space-4);border-top:1px solid var(--line)}
+@media (min-width:768px){.hf-chips{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--space-4)}}
+.hf-chips-l{margin:0;font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hf-chips .fchips{flex-wrap:nowrap;margin:-4px calc(-1 * var(--space-5));padding:4px var(--space-5);overflow-x:auto;scrollbar-width:none}
+.hf-chips .fchips::-webkit-scrollbar{display:none}
+@media (min-width:1024px){.hf-chips .fchips{flex-wrap:wrap;margin:0;padding:0;overflow:visible}}
+.hf-chips .fchip{flex:none}
+
+.hf-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px var(--space-5);margin-top:var(--space-1);padding-top:var(--space-3);border-top:1px solid var(--line)}
+.hf-count{margin:0;font-size:.875rem;font-weight:600;color:var(--ink)}
+.hf-active{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:0}
+.hf-active a{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 10px;border-radius:999px;background:var(--tint-green);color:var(--green);font-size:.8125rem;font-weight:600;text-decoration:none}
+.hf-active a:hover{background:#D6EBE0}
+.hf-active .ic{width:13px;height:13px}
+.hf-active-all a{background:transparent;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.hf-active-all a:hover{background:transparent;color:var(--green)}
+
+/* From 768 up the search box and the fields share one row: two bands of controls on top of a list is the kind of
+   filter people scroll past. .hf becomes the grid and its two wrappers step out of the way. */
+@media (min-width:768px){
+  .hf{display:grid;grid-template-columns:repeat(auto-fit, minmax(176px, 1fr));align-items:end;gap:var(--space-4)}
+  .hf-bar,.hf-fields{display:contents}
+  .hf-q{grid-column:span 2}
+  .hf-chips,.hf-foot{grid-column:1 / -1}
+}
+
+/* the searchable dropdown hub-filter.js puts over a <select> with many options */
+.hf-find{position:relative;display:block}
+.hf-find-in{width:100%;height:48px;padding:0 38px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:600 .9375rem/1 var(--font);cursor:text}
+.hf-find-in::placeholder{color:var(--placeholder);opacity:1;font-weight:500}
+.hf-find-in:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.hf-find.is-open .hf-find-in{border-color:var(--action)}
+.hf-find > .ic{position:absolute;right:14px;top:17px;width:14px;height:14px;color:var(--muted);pointer-events:none}
+.hf-find-list{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 4px);max-height:290px;overflow-y:auto;list-style:none;margin:0;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 24px 48px -24px rgba(14,72,55,.45)}
+.hf-find-list[hidden]{display:none}
+.hf-find-opt{padding:9px 12px;border-radius:8px;font-size:.9375rem;cursor:pointer}
+.hf-find-opt.is-group{padding:10px 12px 4px;color:var(--muted);font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:default}
+.hf-find-opt.is-active{background:var(--tint-green);color:var(--green);font-weight:700}
+.hf-find-opt[aria-selected="true"]{font-weight:700}
+.hf-find-none{padding:12px;color:var(--muted);font-size:.875rem}
+
+/* =================== CARD: where it happens ===================
+   "Închiriere barcă cu vâsle" means nothing on its own, so the place runs directly under the title and the two
+   read as one sentence: "Închiriere barcă cu vâsle / la Lacul Sfânta Ana, în Băile Tușnad". The category, which
+   on a location's product is the location's own and says little, moves down into the meta line. */
+.xp-where{display:flex;align-items:flex-start;gap:6px;min-width:0;margin-top:-2px;font-size:.875rem;line-height:1.3;color:var(--muted)}
+.xp-where .ic{flex:none;width:15px;height:15px;margin-top:1px;color:var(--action)}
+.xp-where > span{min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.xp-where b{font-weight:700;color:var(--green)}

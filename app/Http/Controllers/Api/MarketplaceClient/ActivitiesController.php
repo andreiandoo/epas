@@ -64,6 +64,10 @@ class ActivitiesController extends BaseController
         // marketplaces with the module (older rows default to an approved-free
         // 'experience' without a location).
         if ($client->hasMicroservice('activities-module')) {
+            // The location an experience is run at: the card says "X la <locație>, în <oraș>", which is the
+            // only way "Închiriere barcă cu vâsle" means anything in a list. Loaded (and emitted) only for
+            // marketplaces with the module, so nothing changes for the others.
+            $query->with(['location:id,name,slug,marketplace_city_id', 'location.city:id,name,slug']);
             $query->where(fn ($q) => $q->whereNull('product_type')->orWhere('product_type', Activity::TYPE_EXPERIENCE))
                 ->where(fn ($q) => $q->whereNull('pos_only')->orWhere('pos_only', false))
                 ->where(fn ($q) => $q->whereNull('review_status')->orWhere('review_status', 'approved'))
@@ -321,6 +325,16 @@ class ActivitiesController extends BaseController
                 'id'   => $activity->category->id,
                 'slug' => $activity->category->slug,
                 'name' => $this->translate($activity->category->name, $locale),
+            ] : null,
+            // Only present when the relation was eager-loaded (activities module); absent, not null, elsewhere.
+            'location' => $activity->relationLoaded('location') && $activity->location ? [
+                'id'   => $activity->location->id,
+                'slug' => $activity->location->slug,
+                'name' => $this->translate($activity->location->name, $locale),
+                'city' => $activity->location->relationLoaded('city') && $activity->location->city ? [
+                    'slug' => $activity->location->city->slug,
+                    'name' => $this->translate($activity->location->city->name, $locale),
+                ] : null,
             ] : null,
             'organizer' => $activity->organizer ? array_merge([
                 'id'              => $activity->organizer->id,

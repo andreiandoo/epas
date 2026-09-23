@@ -87,6 +87,7 @@ if ($citySlug !== '' && !isset($cities[$citySlug])) {
 
 $total = (int) ($pag['total'] ?? count($items));
 $hub = [
+    'tight' => true,
     'kicker' => 'Bilete online la intrare',
     'title' => 'Locații',
     'titleEm' => $cityName !== '' ? 'în ' . $cityName : 'cu bilete online',
