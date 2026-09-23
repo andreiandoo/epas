@@ -113,7 +113,15 @@ class ActivitiesController extends BaseController
         if ($search = trim((string) $request->query('search', ''))) {
             // Title is JSONB translatable; search the RO key with LIKE since it's
             // the primary locale on bilete.online. Loose match for partial words.
-            $query->whereRaw("LOWER(title->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%']);
+            // Diacritics are optional when people type: "barca" has to find "Închiriere barcă cu vâsle".
+            // Postgres folds them in the comparison; anything else (the SQLite used in tests) matches plainly.
+            $needle = '%' . mb_strtolower($search) . '%';
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $folded = strtr($needle, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
+                $query->whereRaw("translate(lower(title->>'ro'), 'ăâîșşțţ', 'aaisstt') LIKE ?", [$folded]);
+            } else {
+                $query->whereRaw("LOWER(title->>'ro') LIKE ?", [$needle]);
+            }
         }
 
         if ($maxPriceRon = (int) $request->query('max_price_ron', 0)) {

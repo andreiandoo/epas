@@ -9,6 +9,7 @@ use App\Models\MarketplaceCounty;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -50,7 +51,15 @@ class AttractionsController extends BaseController
         // Free text over the name, so the list page can offer a search box. Name is translatable JSONB and
         // ro is the primary locale on the marketplaces that have attractions.
         if (($search = trim((string) $request->query('search', ''))) !== '') {
-            $query->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%']);
+            // Diacritics are optional when people type: "barca" has to find "Închiriere barcă cu vâsle".
+            // Postgres folds them in the comparison; anything else (the SQLite used in tests) matches plainly.
+            $needle = '%' . mb_strtolower($search) . '%';
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $folded = strtr($needle, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
+                $query->whereRaw("translate(lower(name->>'ro'), 'ăâîșşțţ', 'aaisstt') LIKE ?", [$folded]);
+            } else {
+                $query->whereRaw("LOWER(name->>'ro') LIKE ?", [$needle]);
+            }
         }
 
         // 'default' keeps the curated order (featured, then sort_order). The others let the list page
