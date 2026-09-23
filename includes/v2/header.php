@@ -36,11 +36,12 @@ $v2PlanTools = [
 ];
 
 // Under "Explorează": attractions are the places to see (points of interest); tickets are sold on /locatii.
+// The planner, the map and the routes used to sit here too; they have their own "Planifică" entry now.
 $v2AttrLinks = [
-    ['globe-simple', 'Harta atracțiilor', '/harta'],
-    ['list', 'Trasee turistice', '/trasee'],
-    ['calendar-blank', 'Planificator de călătorie', '/plan'],
-    ['castle-turret', 'Castele și palate', '/atractii?tip=castel-palat'], ['buildings', 'Muzee', '/atractii?tip=muzeu'],
+    ['castle-turret', 'Castele și palate', '/atractii?tip=castel-palat'],
+    ['buildings', 'Muzee', '/atractii?tip=muzeu'],
+    ['heart', 'Biserici și mănăstiri', '/atractii?tip=biserica-manastire'],
+    ['sun', 'Parcuri și grădini', '/atractii?tip=parc-gradina'],
     ['map-pin', 'Toate atracțiile', '/atractii'],
 ];
 $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV) {
@@ -86,6 +87,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       </div>
       <a class="icon-btn" href="/cos" aria-label="Coșul de cumpărături"><?= v2_ic('shopping-cart-simple') ?><span class="hdr-badge" data-cart-count hidden></span></a>
       <a class="icon-btn" href="/cont" aria-label="Contul meu" data-account><?= v2_ic('user-circle') ?><span class="acct-ini" hidden></span></a>
+      <a class="icon-btn hdr-slink" href="/cauta" aria-label="Caută pe bilete.online"><?= v2_ic('magnifying-glass') ?></a>
       <button class="icon-btn mm-sbtn" type="button" data-mm-search aria-controls="menu" aria-label="Caută pe bilete.online"><?= v2_ic('magnifying-glass') ?></button>
       <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Deschide meniul"><?= v2_ic('list') ?></button>
     </div>

@@ -68,7 +68,6 @@ $hfCount = count($hfActive);
     <?php endforeach; ?>
     <p class="hf-acts">
       <button class="btn btn-primary hf-go" type="submit">Arată rezultatele</button>
-      <?php if (!empty($hf['reset'])): ?><a class="hf-reset" href="<?= v2_e($hf['reset']) ?>">Șterge filtrele</a><?php endif; ?>
     </p>
   </div>
 
