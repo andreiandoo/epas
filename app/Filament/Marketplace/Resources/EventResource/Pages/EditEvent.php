@@ -149,6 +149,15 @@ class EditEvent extends EditRecord
 
         $actions = [];
 
+        // Contextual manual: a browser event opens the drawer rendered by
+        // MarketplacePanelProvider. No Livewire round-trip, so unsaved form
+        // changes stay untouched.
+        $actions[] = Actions\Action::make('page_manual')
+            ->label('Manual pagină')
+            ->icon('heroicon-o-book-open')
+            ->color('gray')
+            ->alpineClickHandler("window.dispatchEvent(new CustomEvent('ep-manual:open'))");
+
         if ($hasInvitations) {
             $actions[] = Actions\Action::make('invitations')
                 ->label('Create Invitations')

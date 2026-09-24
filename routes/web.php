@@ -518,6 +518,11 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->where('eventId', '[0-9]+')
         ->name('marketplace.events.edit-presence.leave');
 
+    // Contextual page manual ("Manual pagină" drawer): rendered markdown chapters from resources/manual
+    Route::get('/manual-content/{page}', [\App\Http\Controllers\Marketplace\ManualController::class, 'show'])
+        ->where('page', '[a-z0-9-]+')
+        ->name('marketplace.manual.content');
+
     // Live-chat sound notifier poll (unclaimed chats + incoming messages)
     Route::get('/chat/poll', [\App\Http\Controllers\Marketplace\ChatPollController::class, 'poll'])
         ->name('marketplace.chat.poll');

@@ -27,6 +27,18 @@ class CreateEvent extends CreateRecord
         }
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            // Opens the page manual drawer (see EditEvent::getHeaderActions).
+            \Filament\Actions\Action::make('page_manual')
+                ->label('Manual pagină')
+                ->icon('heroicon-o-book-open')
+                ->color('gray')
+                ->alpineClickHandler("window.dispatchEvent(new CustomEvent('ep-manual:open'))"),
+        ];
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $marketplace = static::getMarketplaceClient();

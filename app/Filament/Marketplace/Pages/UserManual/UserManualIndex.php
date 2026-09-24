@@ -62,7 +62,7 @@ class UserManualIndex extends Page
                 'class' => EventsManual::class,
                 'icon' => 'heroicon-o-calendar',
                 'title' => ['ro' => 'Evenimente', 'en' => 'Events'],
-                'description' => ['ro' => 'Creare, editare, bilete, program, categorii', 'en' => 'Create, edit, tickets, schedule, categories'],
+                'description' => ['ro' => 'Pagina evenimentului: fiecare câmp explicat, plus scenarii', 'en' => 'Event page: every field explained, plus scenarios'],
             ],
             [
                 'class' => VenuesManual::class,

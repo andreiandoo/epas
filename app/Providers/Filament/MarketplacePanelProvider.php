@@ -1163,6 +1163,16 @@ class MarketplacePanelProvider extends PanelProvider
                 document.addEventListener('livewire:navigated', start);
             })();
             </script>
-            HTML);
+            HTML)
+
+            // Contextual page manual drawer, opened by the "Manual pagină" header action.
+            ->renderHook(
+                'panels::body.end',
+                fn (): string => view('filament.marketplace.manual.drawer', ['page' => 'event-edit'])->render(),
+                scopes: [
+                    \App\Filament\Marketplace\Resources\EventResource\Pages\EditEvent::class,
+                    \App\Filament\Marketplace\Resources\EventResource\Pages\CreateEvent::class,
+                ],
+            );
     }
 }
