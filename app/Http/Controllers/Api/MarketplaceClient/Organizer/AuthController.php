@@ -66,7 +66,7 @@ class AuthController extends BaseController
             'guarantor_city' => 'nullable|string|max:100',
             'guarantor_id_type' => 'nullable|in:ci,bi',
             'guarantor_id_series' => 'nullable|string|max:2',
-            'guarantor_id_number' => 'nullable|string|max:6',
+            'guarantor_id_number' => 'nullable|string|max:7',
             'guarantor_id_issued_by' => 'nullable|string|max:100',
             'guarantor_id_issued_date' => 'nullable|date',
 

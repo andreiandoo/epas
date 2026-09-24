@@ -200,7 +200,7 @@ class MarketplaceOrganizerResource extends Resource
 
                         Forms\Components\TextInput::make('guarantor_id_number')
                             ->label('ID Number')
-                            ->maxLength(6),
+                            ->maxLength(7),
 
                         Forms\Components\TextInput::make('guarantor_id_issued_by')
                             ->label('Issued By')

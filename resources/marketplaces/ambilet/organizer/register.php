@@ -322,7 +322,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                                     </div>
                                     <div>
                                         <label class="label">Număr *</label>
-                                        <input type="text" name="id_number" id="guarantor-id-number" required class="input" placeholder="123456" maxlength="6">
+                                        <input type="text" name="id_number" id="guarantor-id-number" required class="input" placeholder="123456" maxlength="7">
                                     </div>
                                 </div>
                             </div>
