@@ -22,6 +22,9 @@ class ManualCoverageCommand extends Command
 
     private const GROUP_PATTERN = '/\b(Tabs\\\\Tab|Section|Fieldset)::make\(/';
 
+    /** Section / tab labels found in the form, keyed by PageManual::groupKey(). */
+    private array $formGroups = [];
+
     public function handle(): int
     {
         $page = (string) $this->argument('page');
@@ -38,7 +41,11 @@ class ManualCoverageCommand extends Command
         // "grup|câmp" explained by the chapters; a chapter without `covers` counts for any group.
         $documented = [];
         $documentedNames = [];
+        $coversUsed = [];
         foreach ($manual['chapters'] as $chapter) {
+            foreach ($chapter['covers'] as $cover) {
+                $coversUsed[PageManual::groupKey($cover)] = $cover . " ({$chapter['id']})";
+            }
             $groups = $chapter['covers'] === [] ? ['*'] : array_map([PageManual::class, 'groupKey'], $chapter['covers']);
             foreach ($chapter['fields'] as $field) {
                 $documentedNames[$field] = true;
@@ -82,6 +89,14 @@ class ManualCoverageCommand extends Command
                 $mark = $field['ok'] ? '<info>OK</info>' : '<fg=red>lipsă</>';
                 $this->line("  {$mark}  {$field['field']} ({$field['type']}, linia {$field['line']})");
             }
+        }
+
+        // A `covers` entry that matches no section in the form is usually a typo
+        // or a diacritic mismatch, and it silently drops that chapter's coverage.
+        $unknownCovers = array_diff_key($coversUsed, $this->formGroups);
+        if ($unknownCovers !== []) {
+            $this->newLine();
+            $this->error('Secțiuni din „covers” care nu există în formular: ' . implode(', ', $unknownCovers));
         }
 
         $stale = array_keys(array_diff_key($documentedNames, $formNames));
@@ -129,6 +144,7 @@ class ManualCoverageCommand extends Command
                 if (preg_match(self::GROUP_PATTERN, $line)
                     && (preg_match('/\$t\(\'([^\']+)\'/', $line, $label) || preg_match('/::make\(\'([^\']+)\'/', $line, $label))) {
                     $group = $label[1];
+                    $this->formGroups[PageManual::groupKey($group)] = true;
                 }
 
                 if (! preg_match_all(self::FIELD_PATTERN, $line, $matches, PREG_SET_ORDER)) {
