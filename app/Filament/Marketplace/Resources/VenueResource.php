@@ -916,7 +916,17 @@ class VenueResource extends Resource
                     ->label('Partener')
                     ->boolean()
                     ->toggleable(),
+                // Owner = venues.tenant_id → tenants.owner_id set (see "Proprietar locație" on edit)
+                Tables\Columns\IconColumn::make('has_owner')
+                    ->label('Owner')
+                    ->state(fn ($record) => (bool) $record->tenant?->owner_id)
+                    ->boolean()
+                    ->tooltip(fn ($record) => $record->tenant?->owner
+                        ? $record->tenant->owner->name . ' · ' . $record->tenant->owner->email
+                        : null)
+                    ->toggleable(),
             ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('tenant.owner'))
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_partner')
                     ->label('Partener')
@@ -932,7 +942,31 @@ class VenueResource extends Resource
             ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
             ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label('Filtre')->icon('heroicon-o-funnel')->button())
             ->actions([])
-            ->bulkActions([]);
+            ->bulkActions([
+                \Filament\Actions\BulkAction::make('make_partner')
+                    ->label('Setează ca partener')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Setează locațiile selectate ca partener')
+                    ->modalDescription('Toate locațiile selectate vor fi marcate ca partenere.')
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (\Illuminate\Support\Collection $records) use ($marketplace) {
+                        foreach ($records as $venue) {
+                            $venue->forceFill(['is_partner' => true])->save();
+                            if ($marketplace) {
+                                $venue->marketplaceClients()->syncWithoutDetaching([
+                                    $marketplace->id => ['is_partner' => true],
+                                ]);
+                            }
+                        }
+
+                        Notification::make()
+                            ->title($records->count() . ' locații setate ca partener')
+                            ->success()
+                            ->send();
+                    }),
+            ]);
     }
 
     public static function getPages(): array
