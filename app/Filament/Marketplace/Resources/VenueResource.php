@@ -919,14 +919,18 @@ class VenueResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_partner')
-                    ->label('Doar parteneri'),
+                    ->label('Partener')
+                    ->placeholder('Toate')
+                    ->trueLabel('Doar partenere')
+                    ->falseLabel('Doar ne-partenere'),
                 Tables\Filters\SelectFilter::make('venueCategories')
                     ->label('Categorie')
                     ->relationship('venueCategories', 'name')
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->icon . ' ' . ($record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en')))
                     ->preload()
                     ->multiple(),
-            ])
+            ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
+            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label('Filtre')->icon('heroicon-o-funnel')->button())
             ->actions([])
             ->bulkActions([]);
     }
