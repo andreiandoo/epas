@@ -7,13 +7,14 @@ use App\Services\Marketplace\SalesBreakdownService;
 /**
  * Sursele unei comenzi.
  *
- * ATENTIE: „POS" NU are o singura definitie in acest sistem, si asta e
- * intentionat. Sunt doua liste, cu roluri diferite:
+ * ATENTIE: „POS" are doua liste, cu roluri diferite (azi au acelasi
+ * continut, dar raman separate):
  *
- *   1. DECONTARE / PAYOUT  → SalesBreakdownService::POS_SOURCES = ['pos_app','pos']
- *      `venue_owner_pos` e lasat deoparte deliberat, ca sa nu se schimbe
- *      retroactiv calculul de payout deja facut pentru el. Orice cifra care
- *      intra intr-o compensare trebuie sa foloseasca ASTA.
+ *   1. DECONTARE / PAYOUT  → SalesBreakdownService::POS_SOURCES = ['pos_app','pos','venue_owner_pos']
+ *      Din 2026-09-25 contine si `venue_owner_pos`: locatia vinde la intrare
+ *      in numele organizatorului, deci se deconteaza exact ca POS-ul lui
+ *      (comisionul pe factura POS). Orice cifra care intra intr-o
+ *      compensare trebuie sa foloseasca ASTA.
  *
  *   2. RAPORTARE / afisaj  → self::POS_REPORTING = ['pos_app','venue_owner_pos','pos']
  *      Folosita de BillingBreakdown si SalesBreakdown, unde intereseaza

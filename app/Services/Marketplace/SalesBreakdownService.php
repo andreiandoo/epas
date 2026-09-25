@@ -36,13 +36,18 @@ class SalesBreakdownService
      *
      * - 'pos_app'          → Tixello mobile POS/scanner app
      * - 'pos'              → leisure POS (LeisureController — Sf. Ana etc.)
+     * - 'venue_owner_pos'  → door sales made by the venue owner on behalf of
+     *                        the organizer (the venue staffs the entrance
+     *                        instead of the organizer). Settled exactly like
+     *                        the organizer's own POS: kept out of the online
+     *                        decont, commission on the POS invoice. Added
+     *                        2026-09-25, when no such order existed yet on
+     *                        prod, so no past payout changes.
      *
      * Kept as a single list so the online/POS split stays consistent between
-     * the Vânzări card and the payout builds. ('venue_owner_pos' is treated as
-     * POS elsewhere in the app but historically was NOT excluded here; left out
-     * to avoid retroactively changing existing payout math for it.)
+     * the Vânzări card and the payout builds.
      */
-    public const POS_SOURCES = ['pos_app', 'pos'];
+    public const POS_SOURCES = ['pos_app', 'pos', 'venue_owner_pos'];
 
     /**
      * Order statuses that count as "money in" for accounting/payout purposes.
