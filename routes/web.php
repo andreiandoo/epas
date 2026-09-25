@@ -750,6 +750,21 @@ Route::get('/api/app-version', function () {
     ]);
 });
 
+// AmBilet NEXT (ambilet-app2, /android-nou-2) version check. Separate
+// channel: its versions (2.2.0-dev.N) are not comparable with the
+// tixello-app ones served by /api/app-version. `apk_url` is the direct
+// file, used by the in-app "Actualizează acum" background download.
+Route::get('/api/app-version-next', function () {
+    $path = public_path('downloads/ambilet-android-nou-2.apk');
+    return response()->json([
+        'latest_version' => config('app.next_app_version', '2.2.0'),
+        'download_url' => 'https://ambilet.ro/android-nou-2',
+        'apk_url' => url('/download-android-nou-2'),
+        'size_bytes' => file_exists($path) ? filesize($path) : null,
+        'force_update' => false,
+    ])->header('Cache-Control', 'no-store');
+});
+
 // Sfana app version check
 Route::get('/api/app-version-sfana', function () {
     return response()->json([
