@@ -50,7 +50,10 @@ class VenueOwnerSettlementService
 
         $sources = $withTest ? ['venue_owner_pos', 'pos_test'] : ['venue_owner_pos'];
 
-        $orders = Order::with(['tickets' => fn ($q) => $q->whereIn('status', ['valid', 'used'])])
+        $orders = Order::with([
+                'tickets' => fn ($q) => $q->whereIn('status', ['valid', 'used']),
+                'tickets.ticketType:id,name,meta',
+            ])
             ->whereIn('event_id', $ids)
             ->where('marketplace_client_id', $marketplaceClientId)
             ->whereIn('source', $sources)
@@ -65,11 +68,15 @@ class VenueOwnerSettlementService
             if (!$tenantId || ($venueTenantId && $tenantId !== $venueTenantId)) {
                 continue;
             }
-            $count = $order->tickets->count();
-            if ($count === 0) {
+            if ($order->tickets->isEmpty()) {
                 continue;
             }
-            $amount = (float) $order->tickets->sum('price');
+            // Test POS tickets never count as money to hand over, even when
+            // the order was stored as venue_owner_pos (legacy "Test POS"
+            // types without meta.is_test, sold before the name check).
+            [$testTickets, $realTickets] = $order->source === 'pos_test'
+                ? [$order->tickets, collect()]
+                : $order->tickets->partition(fn ($t) => (bool) $t->ticketType?->isTestPos());
             $eventId = (int) $order->event_id;
 
             if (!isset($byEvent[$eventId][$tenantId])) {
@@ -86,13 +93,15 @@ class VenueOwnerSettlementService
                 ];
             }
             $row = &$byEvent[$eventId][$tenantId];
-            if ($order->source === 'pos_test') {
-                $row['test_tickets'] += $count;
-                $row['test_total'] += $amount;
-            } else {
+            if ($testTickets->isNotEmpty()) {
+                $row['test_tickets'] += $testTickets->count();
+                $row['test_total'] += (float) $testTickets->sum('price');
+            }
+            if ($realTickets->isNotEmpty()) {
+                $amount = (float) $realTickets->sum('price');
                 $method = ($meta['payment_method'] ?? 'cash') === 'cash' ? 'cash' : 'card';
                 $row['orders']++;
-                $row['tickets'] += $count;
+                $row['tickets'] += $realTickets->count();
                 $row[$method] += $amount;
                 $row['total'] += $amount;
             }

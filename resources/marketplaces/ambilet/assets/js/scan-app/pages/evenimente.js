@@ -109,7 +109,6 @@
       '<div class="scanapp-venue-detail__stats">' +
         '<div><b>' + (st.tickets_sold || 0) + '</b><span>vândute</span></div>' +
         '<div><b>' + (st.checked_in_count || 0) + '</b><span>check-in</span></div>' +
-        '<div><b>' + money(st.revenue || 0) + '</b><span>încasări totale</span></div>' +
       '</div>' +
       handoverHtml(ev.handover, organizerName(ev), false) +
       '<div class="scanapp-venue-detail__actions">' +

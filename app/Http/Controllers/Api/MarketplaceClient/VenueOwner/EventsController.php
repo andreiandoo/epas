@@ -270,7 +270,7 @@ class EventsController extends BaseController
                     'unlimited' => $quota !== null && $quota < 0,
                     // Test POS type: the apps show the TEST badge and keep it
                     // out of mixed carts; the server stores it as pos_test.
-                    'meta' => (($tt->meta['is_test'] ?? false) === true) ? ['is_test' => true] : null,
+                    'meta' => $tt->isTestPos() ? ['is_test' => true] : null,
                 ];
             })->values()->toArray();
         }

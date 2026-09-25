@@ -110,10 +110,12 @@ class OrdersController extends BaseController
         // Decided server-side from the ticket types, never from the client
         // `source`, and mixed test + real carts are refused (same rule the
         // app enforces when adding to cart).
+        // isTestPos(): meta.is_test OR the legacy "Test POS" name (older
+        // events carry the type without the meta flag).
         $cartTypes = TicketType::where('event_id', $event->id)
             ->whereIn('id', collect($request->tickets)->pluck('ticket_type_id'))
-            ->get(['id', 'meta']);
-        $testFlags = $cartTypes->map(fn ($tt) => ($tt->meta['is_test'] ?? false) === true)->unique();
+            ->get(['id', 'name', 'meta']);
+        $testFlags = $cartTypes->map(fn ($tt) => $tt->isTestPos())->unique();
         if ($testFlags->count() > 1) {
             return $this->error('Biletele Test POS nu pot fi vândute în aceeași comandă cu bilete reale', 400);
         }
