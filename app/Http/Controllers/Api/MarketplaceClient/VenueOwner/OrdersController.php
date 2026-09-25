@@ -28,9 +28,10 @@ use Illuminate\Support\Str;
  * Scoping invariants:
  *  - The event MUST be hosted at a venue owned by this tenant AND partnered
  *    with the current marketplace. Enforced before any DB writes.
- *  - The order is always tagged source='venue_owner_pos' + meta.sold_by
- *    "Venue: {tenant}" so the organizer's existing sales-breakdown surfaces
- *    venue-owner revenue as a distinct row in `by_user`.
+ *  - The order is tagged source='venue_owner_pos' (or 'pos_test' for a
+ *    Test POS cart) + meta.sold_by "Venue: {tenant}" so the organizer's
+ *    existing sales-breakdown surfaces venue-owner revenue as a distinct
+ *    row in `by_user`.
  *
  * For order-level operations (generate-claim-url, pos-complete, send-tickets,
  * sales-breakdown) we delegate to MarketplaceOrdersController after a venue
@@ -92,12 +93,32 @@ class OrdersController extends BaseController
                 ?? $client->tenants()->first()?->id;
         }
         if (!$organizerTenantId) {
+            // Organizer POS uses the same last resort, so venue-owner sales
+            // land on the same tenant as the organizer's own POS sales.
+            $organizerTenantId = Tenant::first()?->id;
+        }
+        if (!$organizerTenantId) {
             return $this->error('Organizer tenant not configured for this event', 400);
         }
 
         if (!$client->canSellForTenant($organizerTenantId)) {
             return $this->error('Not authorized to sell tickets for this event', 403);
         }
+
+        // Test POS cart (every ticket type flagged meta.is_test) → source
+        // 'pos_test', which every revenue / decont report already excludes.
+        // Decided server-side from the ticket types, never from the client
+        // `source`, and mixed test + real carts are refused (same rule the
+        // app enforces when adding to cart).
+        $cartTypes = TicketType::where('event_id', $event->id)
+            ->whereIn('id', collect($request->tickets)->pluck('ticket_type_id'))
+            ->get(['id', 'meta']);
+        $testFlags = $cartTypes->map(fn ($tt) => ($tt->meta['is_test'] ?? false) === true)->unique();
+        if ($testFlags->count() > 1) {
+            return $this->error('Biletele Test POS nu pot fi vândute în aceeași comandă cu bilete reale', 400);
+        }
+        $isTestCart = $testFlags->first() === true;
+        $orderSource = $isTestCart ? 'pos_test' : 'venue_owner_pos';
 
         // Placeholder customer (matches organizer SalesScreen behavior). The
         // operator can later attach a real email via the send-tickets flow.
@@ -193,6 +214,7 @@ class OrdersController extends BaseController
                 'sold_by' => $soldByLabel,
                 'venue_owner_user_id' => $user->id,
                 'venue_owner_tenant_id' => $tenant->id,
+                'venue_owner_pos' => true,
                 'payment_method' => in_array($payment, ['cash', 'card', 'tap'], true) ? $payment : 'cash',
             ];
 
@@ -208,7 +230,7 @@ class OrdersController extends BaseController
                 'commission_amount' => $commissionAmount,
                 'total' => $total,
                 'currency' => 'RON',
-                'source' => 'venue_owner_pos',
+                'source' => $orderSource,
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $event->marketplace_organizer_id,
                 'customer_email' => $customer->email,
