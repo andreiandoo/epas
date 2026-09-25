@@ -123,12 +123,13 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const overCap = rawPct !== null && rawPct > 100;
         const ciPct = sold > 0 ? Math.round(ci / sold * 100) : null;
 
-        // Prefer sales-breakdown total when the endpoint returns it;
-        // otherwise fall back to stats.revenue (quota_sold × price
-        // summed on the backend — same source /venue/utilizare uses).
-        const revenue = (salesBreakdown && salesBreakdown.total_revenue)
-            || stats.revenue
-            || 0;
+        // stats.revenue = tickets actually sold (valid/used on a paid order,
+        // test sales excluded) — same source /venue/utilizare uses. The
+        // sales-breakdown online + pos sum is only a fallback.
+        const sbRevenue = salesBreakdown
+            ? Number((salesBreakdown.online && salesBreakdown.online.revenue) || 0) + Number((salesBreakdown.pos && salesBreakdown.pos.revenue) || 0)
+            : 0;
+        const revenue = Number(stats.revenue) || sbRevenue || 0;
         const avgPrice = sold > 0 && revenue > 0 ? revenue / sold : 0;
 
         const wins = [];
@@ -361,7 +362,8 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                             const ttSold = tt.sold || 0;
                             const ttCap = tt.quota_total > 0 ? tt.quota_total : 0;
                             const ttPct = ttCap > 0 ? Math.round(ttSold / ttCap * 100) : null;
-                            const ttPrice = (tt.price_cents || 0) / 100;
+                            // API sends `price` (lei); price_cents only as a fallback.
+                            const ttPrice = Number(tt.price ?? ((tt.price_cents || 0) / 100)) || 0;
                             const ttCi = tt.checked_in || 0;
                             return `<tr class="border-b border-slate-100 hover:bg-slate-50">
                                 <td class="py-2 px-3 font-semibold">${escapeHtml(tt.name || '—')}</td>
@@ -378,7 +380,14 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </section>`;
     }
 
-    // Sales breakdown (if available)
+    // Sales breakdown (if available). The endpoint returns { online, pos };
+    // map it to the channel rows this block renders.
+    if (salesBreakdown && !salesBreakdown.by_channel && (salesBreakdown.online || salesBreakdown.pos)) {
+        salesBreakdown.by_channel = [
+            Object.assign({ source: 'Online' }, salesBreakdown.online || {}),
+            Object.assign({ source: 'La intrare (POS)' }, salesBreakdown.pos || {}),
+        ].filter(ch => Number(ch.tickets || 0) > 0);
+    }
     if (salesBreakdown && salesBreakdown.by_channel && salesBreakdown.by_channel.length) {
         html += `<section class="p-6 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <h2 class="text-lg font-bold text-slate-900 mb-4">Distribuție vânzări pe canale</h2>

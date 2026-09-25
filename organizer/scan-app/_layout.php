@@ -74,6 +74,9 @@ $tabs = [
   <script>
     (function () {
       if (typeof AmbiletAuth === 'undefined') return;
+      // Venue owners are logged in through the ambilet_venue_token cookie
+      // (see scan-app/auth.js); organizers through AmbiletAuth.
+      if (/(?:^|; )ambilet_venue_token=[^;]+/.test(document.cookie)) return;
       if (!AmbiletAuth.isLoggedIn || !AmbiletAuth.isLoggedIn()) {
         var rt = encodeURIComponent(location.pathname + location.search);
         location.replace('/organizator/login?redirect=' + rt);
