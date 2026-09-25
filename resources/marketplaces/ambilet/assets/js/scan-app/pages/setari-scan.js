@@ -48,7 +48,10 @@
     var tm = ScanAuth.getTeamMember();
     var org = ScanAuth.getOrganizer();
     var displayName, displayRole;
-    if (tm) {
+    if (ScanAuth.isVenueOwner && ScanAuth.isVenueOwner()) {
+      displayName = (org && (org.public_name || org.name)) || 'Locație';
+      displayRole = 'Locație';
+    } else if (tm) {
       displayName = tm.name || tm.email || 'Membru echipă';
       displayRole = (tm.role || 'staff').replace(/^./, function (c) { return c.toUpperCase(); });
     } else {

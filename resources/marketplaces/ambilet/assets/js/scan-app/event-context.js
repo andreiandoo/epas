@@ -29,8 +29,11 @@
 (function () {
   'use strict';
 
-  var SELECTED_EVENT_KEY = 'scanapp_selected_event_id_v1';
-  var SWR_CACHE_KEY      = 'scanapp_eventctx_swr_v1';
+  // Venue app (/venue/scan) keeps its own keys so a device used for both
+  // an organizer and a venue account never shows one's events in the other.
+  var KEY_SUFFIX = (window.SCAN_APP && window.SCAN_APP.venue) ? '_venue' : '';
+  var SELECTED_EVENT_KEY = 'scanapp_selected_event_id_v1' + KEY_SUFFIX;
+  var SWR_CACHE_KEY      = 'scanapp_eventctx_swr_v1' + KEY_SUFFIX;
   var SWR_MAX_AGE_MS     = 24 * 60 * 60 * 1000; // 24h — beyond this drop the cache as too stale to trust
 
   var emitter = new EventTarget();
@@ -101,8 +104,18 @@
     if (Array.isArray(c.allTicketTypes))   state.allTicketTypes   = c.allTicketTypes;
     if (c.eventCommission)                 state.eventCommission  = c.eventCommission;
     if (c.eventStats)                      state.eventStats       = c.eventStats;
-    if (c.selectedEventId && state.events.length) {
-      state.selectedEvent = state.events.find(function (e) { return Number(e.id) === Number(c.selectedEventId); }) || null;
+    // The persisted selection wins over the snapshot's: another page (e.g.
+    // the venue app's Evenimente list) may have picked a different event
+    // right before navigating here. Stats / ticket types in the snapshot then
+    // belong to the old event, so drop them until refreshAll() reloads.
+    var wantId = loadPersistedSelectedEventId() || c.selectedEventId;
+    if (wantId && Number(wantId) !== Number(c.selectedEventId)) {
+      state.eventStats = null;
+      state.ticketTypes = [];
+      state.allTicketTypes = [];
+    }
+    if (wantId && state.events.length) {
+      state.selectedEvent = state.events.find(function (e) { return Number(e.id) === Number(wantId); }) || null;
     }
     return !!state.selectedEvent;
   }

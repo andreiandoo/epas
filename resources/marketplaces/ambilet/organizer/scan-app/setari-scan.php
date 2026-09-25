@@ -24,7 +24,7 @@ require __DIR__ . '/_layout.php';
     </div>
     <div class="scanapp-divider-line"></div>
     <div class="scanapp-info-row">
-      <span class="scanapp-info-row__label">Organizator</span>
+      <span class="scanapp-info-row__label"><?= $scanVenue ? 'Locație' : 'Organizator' ?></span>
       <span class="scanapp-info-row__value" id="scanapp-account-org">—</span>
     </div>
   </div>
@@ -114,7 +114,7 @@ require __DIR__ . '/_layout.php';
   <!-- Logout -->
   <button type="button" class="scanapp-logout-btn" id="scanapp-logout-btn">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-    Deconectare
+    <?= $scanVenue ? 'Înapoi la panoul locației' : 'Deconectare' ?>
   </button>
 
   <p style="margin-top: 14px; text-align: center; color: var(--scanapp-text-quaternary); font-size: 11px;">

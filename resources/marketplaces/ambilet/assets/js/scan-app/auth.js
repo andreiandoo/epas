@@ -41,14 +41,15 @@
     try { return !!AmbiletAuth.isLoggedIn(); } catch (e) { return false; }
   }
 
-  // Venue owners log in on the site with the multi-account login, which keeps
-  // their token in the `ambilet_venue_token` cookie (not in localStorage like
-  // organizers). They use the scan app when the venue account is the active
-  // one, or when there is no organizer session at all.
+  // Venue owners get their own copy of the app at /venue/scan/* (the layout
+  // sets SCAN_APP.venue). Their token lives in the `ambilet_venue_token`
+  // cookie written by the site's multi-account login, not in localStorage
+  // like organizers. /organizator/scan/* is always the organizer app.
+  function isVenueApp() {
+    return !!(window.SCAN_APP && window.SCAN_APP.venue);
+  }
   function venueSession() {
-    var token = cookie('ambilet_venue_token');
-    if (!token) return false;
-    return cookie('ambilet_active_role') === 'venue-owner' || !organizerLoggedIn();
+    return isVenueApp() && !!cookie('ambilet_venue_token');
   }
 
   function venueAccountName() {
@@ -71,7 +72,7 @@
 
   var ScanAuth = {
     isLoggedIn: function () {
-      return venueSession() || organizerLoggedIn();
+      return isVenueApp() ? venueSession() : organizerLoggedIn();
     },
 
     getOrganizer: function () {

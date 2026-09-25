@@ -22,7 +22,8 @@
   function authGuard() {
     if (typeof ScanAuth === 'undefined' || !ScanAuth.isLoggedIn()) {
       var rt = encodeURIComponent(location.pathname + location.search);
-      location.replace('/organizator/login?redirect=' + rt);
+      var venue = window.SCAN_APP && window.SCAN_APP.venue;
+      location.replace((venue ? '/autentificare' : '/organizator/login') + '?redirect=' + rt);
       return false;
     }
     return true;

@@ -664,6 +664,39 @@ RewriteRule ^organizator/scan/icon\.php$ organizer/scan-app/icon.php [L,QSA]
 # SCAN APP ROUTES END
 # ============================================
 
+# ============================================
+# VENUE SCAN APP ROUTES (added 2026-09-25)
+# Same pages as /organizator/scan, venue-owner flavour (?venue=1): tabs
+# Evenimente / Scanare / Vanzare / Setari like the Android venue app.
+# ============================================
+RewriteRule ^venue/scan/?$ /venue/scan/evenimente [R=302,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/scan/evenimente/?$ organizer/scan-app/evenimente.php?venue=1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/scan/scanare/?$ organizer/scan-app/scanare.php?venue=1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/scan/vanzare/?$ organizer/scan-app/vanzare.php?venue=1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/scan/setari/?$ organizer/scan-app/setari-scan.php?venue=1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^venue/scan/guest-list/?$ organizer/scan-app/guest-list.php?venue=1 [L,QSA]
+
+RewriteRule ^venue/scan/manifest\.webmanifest$ organizer/scan-app/manifest.php?venue=1 [L,QSA]
+RewriteRule ^venue/scan/sw\.js$ organizer/scan-app/sw.php [L]
+RewriteRule ^venue/scan/icon\.php$ organizer/scan-app/icon.php [L,QSA]
+# ============================================
+# VENUE SCAN APP ROUTES END
+# ============================================
+
 # Payment redirect for whitelabel sites
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

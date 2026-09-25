@@ -1894,3 +1894,44 @@ button.scanapp-stat-pill { cursor: pointer; font-family: inherit; }
 @media (min-width: 768px) {
   .scanapp-main { padding-left: 24px; padding-right: 24px; }
 }
+
+/* ── Venue app (/venue/scan) ─────────────────────────────────────────────
+   "De predat către {organizator}" bar + Evenimente list, same content as
+   the Android venue-owner screens. */
+.scanapp-handover {
+  margin: 8px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--scanapp-green-border);
+  background: var(--scanapp-green-light);
+}
+.scanapp-handover--inline { margin: 10px 0 0; }
+.scanapp-handover__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.scanapp-handover__label { font-size: 12px; font-weight: 600; color: var(--scanapp-text-secondary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scanapp-handover__total { font-size: 17px; font-weight: 800; color: var(--scanapp-green); white-space: nowrap; }
+.scanapp-handover__split { margin-top: 2px; font-size: 12px; color: var(--scanapp-text-secondary); }
+.scanapp-handover__test { margin-top: 2px; font-size: 12px; color: var(--scanapp-amber); }
+
+.scanapp-venue-head { margin-bottom: 12px; }
+.scanapp-venue-head__title { font-size: 18px; font-weight: 700; color: var(--scanapp-text); }
+.scanapp-venue-head__sub { font-size: 13px; color: var(--scanapp-text-tertiary); margin-top: 2px; }
+
+.scanapp-venue-seg { display: flex; gap: 6px; padding: 4px; border-radius: 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); margin-bottom: 14px; }
+.scanapp-venue-seg__btn { flex: 1; padding: 9px 0; border: 0; border-radius: 9px; background: transparent; color: var(--scanapp-text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; }
+.scanapp-venue-seg__btn--active { background: var(--scanapp-purple-light); color: var(--scanapp-text); }
+
+.scanapp-venue-event { display: block; width: 100%; text-align: left; padding: 14px; margin-bottom: 10px; border-radius: 14px; border: 1px solid var(--scanapp-border-light); background: var(--scanapp-surface); color: var(--scanapp-text); cursor: pointer; font: inherit; }
+.scanapp-venue-event:active { background: var(--scanapp-surface-hover); }
+.scanapp-venue-event__title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.scanapp-venue-event__badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--scanapp-amber-light); color: var(--scanapp-amber); }
+.scanapp-venue-event__badge--red { background: var(--scanapp-red-light); color: var(--scanapp-red); }
+.scanapp-venue-event__meta { font-size: 12px; font-weight: 600; color: var(--scanapp-purple); margin-top: 4px; }
+.scanapp-venue-event__org { font-size: 12px; color: var(--scanapp-text-tertiary); margin-top: 4px; }
+.scanapp-venue-event__stats { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; color: var(--scanapp-text-secondary); }
+.scanapp-venue-event__stats b { color: var(--scanapp-text); }
+
+.scanapp-venue-detail__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.scanapp-venue-detail__stats > div { padding: 10px 6px; border-radius: 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); text-align: center; }
+.scanapp-venue-detail__stats b { display: block; font-size: 15px; color: var(--scanapp-text); }
+.scanapp-venue-detail__stats span { font-size: 11px; color: var(--scanapp-text-tertiary); }
+.scanapp-venue-detail__actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
