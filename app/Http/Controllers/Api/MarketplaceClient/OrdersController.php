@@ -1341,6 +1341,9 @@ class OrdersController extends BaseController
             ->where('event_id', $eventId)
             ->where('marketplace_client_id', $client->id)
             ->whereIn('status', ['confirmed', 'completed'])
+            // Test POS sales are smoke tests, not revenue: without this they
+            // fell into the "online" bucket (pos_test isn't a POS source below).
+            ->where(fn ($q) => $q->whereNull('source')->orWhere('source', '!=', 'pos_test'))
             ->get()
             // Only include orders that have at least one valid ticket
             ->filter(fn($o) => $o->tickets->isNotEmpty());
