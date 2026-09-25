@@ -61,8 +61,9 @@ class VenueOwnerUsageService
             'artists',
         ])
             ->whereIn('venue_id', $filteredVenueIds)
-            ->get()
-            ->map(fn ($event) => $this->decorateEvent($event));
+            ->get();
+        $sales = VenueEventSales::forEvents($allEvents->pluck('id'));
+        $allEvents = $allEvents->map(fn ($event) => $this->decorateEvent($event, $sales->get($event->id)));
 
         $events = $statusFilter !== 'all'
             ? $allEvents->where('computed_status', $statusFilter)
@@ -93,12 +94,15 @@ class VenueOwnerUsageService
      * days_until, public_url, artist_names. Mirrors the Filament page so both
      * consumers see identical numbers.
      */
-    private function decorateEvent(Event $event): Event
+    private function decorateEvent(Event $event, ?object $sales = null): Event
     {
-        $sold     = (int) $event->ticketTypes->sum('quota_sold');
+        // Sold + revenue come from the tickets actually sold (VenueEventSales).
+        // quota_sold × price_cents stayed at 0 for events sold online by
+        // another organizer (checkout doesn't move quota_sold on uncapped
+        // ticket types), so the Venit column was empty for them.
+        $sold     = $sales ? (int) $sales->tickets_sold : 0;
         $capacity = (int) $event->ticketTypes->sum('quota_total');
-        $revenue  = $event->ticketTypes
-            ->sum(fn ($tt) => ($tt->quota_sold ?? 0) * ($tt->price_cents ?? 0) / 100);
+        $revenue  = $sales ? (float) $sales->revenue : 0.0;
 
         $event->ticket_stats = [
             'sold'      => $sold,

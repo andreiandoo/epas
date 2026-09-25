@@ -31,7 +31,37 @@
     }
   }
 
+  function cookie(name) {
+    var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  function organizerLoggedIn() {
+    if (typeof AmbiletAuth === 'undefined' || !AmbiletAuth.isLoggedIn) return false;
+    try { return !!AmbiletAuth.isLoggedIn(); } catch (e) { return false; }
+  }
+
+  // Venue owners log in on the site with the multi-account login, which keeps
+  // their token in the `ambilet_venue_token` cookie (not in localStorage like
+  // organizers). They use the scan app when the venue account is the active
+  // one, or when there is no organizer session at all.
+  function venueSession() {
+    var token = cookie('ambilet_venue_token');
+    if (!token) return false;
+    return cookie('ambilet_active_role') === 'venue-owner' || !organizerLoggedIn();
+  }
+
+  function venueAccountName() {
+    try {
+      var rec = JSON.parse(localStorage.getItem('ambilet_accounts') || '{}');
+      var acc = rec && rec.accounts && rec.accounts['venue-owner'];
+      if (acc && acc.name) return acc.name;
+    } catch (e) { /* ignore */ }
+    return 'Locație';
+  }
+
   function rawUserType() {
+    if (venueSession()) return 'venue_owner';
     try {
       return localStorage.getItem('ambilet_user_type') || 'organizer';
     } catch (e) {
@@ -41,15 +71,21 @@
 
   var ScanAuth = {
     isLoggedIn: function () {
-      if (typeof AmbiletAuth === 'undefined' || !AmbiletAuth.isLoggedIn) return false;
-      try { return !!AmbiletAuth.isLoggedIn(); } catch (e) { return false; }
+      return venueSession() || organizerLoggedIn();
     },
 
     getOrganizer: function () {
+      if (venueSession()) return { name: venueAccountName(), public_name: venueAccountName() };
       return rawOrganizerData();
     },
 
+    // Bearer token for the scan proxy: the venue cookie in venue mode.
+    getVenueToken: function () {
+      return venueSession() ? cookie('ambilet_venue_token') : null;
+    },
+
     getTeamMember: function () {
+      if (venueSession()) return null;
       var d = rawOrganizerData();
       return d && d.team_member ? d.team_member : null;
     },
@@ -61,6 +97,10 @@
     },
 
     isAdmin: function () {
+      // Venue owners get the full dashboard (role 'owner') but not the
+      // organizer admin tools (gates, team) — there is no venue-owner API
+      // for those.
+      if (venueSession()) return false;
       var role = ScanAuth.getUserRole();
       return role === 'owner' || role === 'admin';
     },
@@ -92,6 +132,10 @@
     },
 
     logout: function () {
+      if (venueSession()) {
+        location.replace('/venue/panou');
+        return;
+      }
       if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.logoutOrganizer) {
         try { AmbiletAuth.logoutOrganizer(); return; } catch (e) { /* fall through */ }
       }

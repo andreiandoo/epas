@@ -1383,6 +1383,13 @@ class OrdersController extends BaseController
                     'revenue' => $ticketRevenue($userOrders),
                 ])->values(),
             ],
+            // Door takings held by venue owners, owed to the organizer (one
+            // row per venue; a venue owner only sees its own row).
+            'venue_collections' => app(\App\Services\Marketplace\VenueOwnerSettlementService::class)->forEvent(
+                $eventId,
+                (int) $client->id,
+                $request->attributes->get('venue_owner_tenant')?->id
+            ),
         ]);
     }
 

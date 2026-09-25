@@ -387,6 +387,34 @@ class OrdersController extends BaseController
     }
 
     /**
+     * What this venue owner collected at the door for the event (cash + card)
+     * and owes the event's organizer. Shown in the mobile app next to the
+     * shift summary.
+     */
+    public function settlement(Request $request, int $event): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $tenant = $request->attributes->get('venue_owner_tenant');
+        $eventModel = $request->attributes->get('venue_owner_event');
+        if (!$tenant instanceof Tenant || !$eventModel instanceof Event) {
+            return $this->error('Venue owner context not resolved', 500);
+        }
+
+        $row = app(\App\Services\Marketplace\VenueOwnerSettlementService::class)
+            ->forEvent((int) $eventModel->id, (int) $client->id, (int) $tenant->id)[0] ?? null;
+
+        return $this->success([
+            'event_id' => (int) $eventModel->id,
+            'organizer_name' => $eventModel->marketplaceOrganizer?->name,
+            'orders' => $row['orders'] ?? 0,
+            'tickets' => $row['tickets'] ?? 0,
+            'cash' => $row['cash'] ?? 0.0,
+            'card' => $row['card'] ?? 0.0,
+            'total' => $row['total'] ?? 0.0,
+        ]);
+    }
+
+    /**
      * Make sure the order belongs to an event at this venue. Returns a
      * JsonResponse with an error or null when scope is valid.
      */

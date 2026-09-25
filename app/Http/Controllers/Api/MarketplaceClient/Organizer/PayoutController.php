@@ -323,6 +323,11 @@ class PayoutController extends BaseController
                     // Diagnostic: was this event's imported revenue settled via
                     // Tixello (kept in net) or in the old system (excluded)?
                     'is_settled_legacy' => $settledInTixello,
+                    // Door sales made by the venue owner (venue_owner_pos):
+                    // the venue holds this money and must hand it over to
+                    // the organizer. One row per venue.
+                    'venue_collections' => app(\App\Services\Marketplace\VenueOwnerSettlementService::class)
+                        ->forEvent((int) $event->id, (int) $organizer->marketplace_client_id),
                     'tickets_sold' => \App\Models\Ticket::whereIn('order_id', $completedOrders->pluck('id'))
                         ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
                         ->count(),

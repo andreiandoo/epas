@@ -461,6 +461,7 @@ function renderEvents() {
                         <div class="flex flex-wrap items-center gap-2 mt-1">
                             <span class="text-xs font-bold text-muted">${e.tickets_sold || 0} bilete vândute</span>
                         </div>
+                        ${(e.venue_collections || []).map(v => `<p class="mt-1 text-xs text-amber-700"><strong>De încasat de la ${String(v.venue_name || 'locație').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}: ${fmt(v.total || 0)}</strong> (numerar ${fmt(v.cash || 0)}, card POS ${fmt(v.card || 0)}) · ${v.tickets || 0} bilete vândute la intrare de locație</p>`).join('')}
                     </div>
                     <div class="flex-shrink-0 text-right">
                         <p class="text-xs text-muted">Disponibil de retras</p>

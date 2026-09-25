@@ -271,7 +271,11 @@
     var ev = EventContext.getState().selectedEvent;
     if (!ev) { ScanApp.toast('Selectează un eveniment.', 'warning'); return; }
     ScanApp.toast('Pornesc exportul…', 'success');
-    ScanAPI.get('/organizer/events/' + ev.id + '/participants/export').then(function (resp) {
+    // Venue owners have no GET export; their endpoint returns a signed link.
+    var req = ScanAuth.isVenueOwner()
+      ? ScanAPI.post('/venue-owner/events/' + ev.id + '/export', { destination: 'download' })
+      : ScanAPI.get('/organizer/events/' + ev.id + '/participants/export');
+    req.then(function (resp) {
       var url = (resp && resp.data && (resp.data.url || resp.data.download_url)) || null;
       if (url) {
         window.open(url, '_blank', 'noopener');

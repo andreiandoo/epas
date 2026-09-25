@@ -54,13 +54,14 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                             </div>
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wider" style="color:#bbf7d0;">Aplicația AmBilet · Android</p>
+                                <p class="text-xs font-semibold uppercase tracking-wider" style="color:#bbf7d0;">Aplicația AmBilet · Android și iPhone</p>
                                 <h2 class="mt-1 font-extrabold text-white" style="font-size:22px; line-height:1.25;">Scanează biletele și vinde la intrare direct din telefon</h2>
                                 <ol class="mt-3 text-sm" style="color:rgba(255,255,255,0.88); padding-left:18px; list-style:decimal; line-height:1.7;">
                                     <li>Deschide <strong class="text-white">ambilet.ro/android</strong> de pe telefonul Android și descarcă aplicația (fișier APK).</li>
                                     <li>Deschide fișierul descărcat. Dacă telefonul îți cere, permite instalarea din această sursă, apoi apasă Instalează.</li>
                                     <li>Intră în aplicație cu același email și aceeași parolă ca în acest panou.</li>
                                 </ol>
+                                <p class="mt-3 text-sm" style="color:rgba(255,255,255,0.88); line-height:1.6;"><strong class="text-white">Ai iPhone?</strong> Deschide <strong class="text-white">Aplicația Scan</strong> din Safari, cu contul în care ești logat acum, apoi atinge Distribuie → „Adaugă pe ecranul de start”. Scanezi și vinzi la intrare la fel ca din aplicația de Android.</p>
                             </div>
                         </div>
                         <div class="flex flex-col items-start gap-2">
@@ -68,7 +69,11 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                 Descarcă aplicația (APK)
                             </a>
-                            <p class="text-xs" style="color:rgba(255,255,255,0.75);">Doar Android · nu este încă în Google Play</p>
+                            <a href="/organizator/scan/panou" class="inline-flex items-center gap-2 font-bold rounded-xl transition-all hover:-translate-y-0.5" style="background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.45); padding:14px 22px; font-size:15px;">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.74 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.7.71 2.87.69 1.18-.02 1.93-1.08 2.66-2.14.84-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.5zM14.18 6.13c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.64-1.05 1.67-.92 2.66.97.08 1.96-.49 2.56-1.21z"/></svg>
+                                Aplicația Scan (iPhone)
+                            </a>
+                            <p class="text-xs" style="color:rgba(255,255,255,0.75);">APK pentru Android · Aplicația Scan din browser pentru iPhone</p>
                         </div>
                     </div>
                 </div>
@@ -243,17 +248,25 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }
     } catch (e) { console.error('venues failed', e); }
 
+    // ── Hero: revenue so far, over ALL events (past included) ──
+    // Written every time — it used to be set only when there were upcoming
+    // events, and summed only those, so "până acum" stayed at "—".
+    try {
+        const all = await AmbiletVenueAPI.events({ scope: 'all' });
+        const evs = (all && all.data && Array.isArray(all.data.events)) ? all.data.events : [];
+        const totalRevenue = evs.reduce((sum, e) => sum + Number((e.stats && e.stats.revenue) ?? e.revenue ?? 0), 0);
+        document.getElementById('hero-revenue').textContent = fmtMoney(totalRevenue) + ' RON';
+    } catch (e) {
+        console.error('hero revenue failed', e);
+        document.getElementById('hero-revenue').textContent = '0 RON';
+    }
+
     // ── Upcoming events (rich cards) ──────────────────────────
     try {
         const events = await AmbiletVenueAPI.events({ scope: 'upcoming' });
         const list = document.getElementById('upcoming-list');
         const items = (events && events.data && Array.isArray(events.data.events)) ? events.data.events : [];
         if (items.length) {
-            let totalRevenue = 0;
-            items.forEach(e => totalRevenue += Number((e.stats && e.stats.revenue) || 0));
-            const displayRevenue = fmtMoney(totalRevenue);
-            document.getElementById('hero-revenue').textContent = displayRevenue + ' RON';
-
             list.innerHTML = items.slice(0, 6).map(ev => {
                 const title = ev.title || ev.name || '—';
                 const dm = dayMonth(ev.start_date);

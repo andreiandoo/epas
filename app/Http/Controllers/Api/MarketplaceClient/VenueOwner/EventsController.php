@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use App\Services\VenueOwner\VenueEventSales;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -89,13 +90,7 @@ class EventsController extends BaseController
         $data = $this->formatEvent($eventModel, $stats, includeTickets: true);
 
         // Per-ticket-type breakdown
-        $ticketTypeStats = Ticket::where('event_id', $eventModel->id)
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
-            ->selectRaw('ticket_type_id, count(*) as sold, count(checked_in_at) as checked_in')
-            ->groupBy('ticket_type_id')
-            ->get()
-            ->keyBy('ticket_type_id');
+        $ticketTypeStats = VenueEventSales::perTicketType((int) $eventModel->id);
 
         $data['ticket_types'] = collect($data['ticket_types'] ?? [])->map(function ($tt) use ($ticketTypeStats) {
             $row = $ticketTypeStats->get((int) $tt['id']);
@@ -116,24 +111,17 @@ class EventsController extends BaseController
             return collect();
         }
 
-        // Match admin's definition of "valid" tickets: status valid/used on a paid/confirmed/completed order
-        $ticketStats = Ticket::whereIn('event_id', $eventIds)
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
-            ->selectRaw('event_id, count(*) as tickets_sold, count(checked_in_at) as checked_in_count')
-            ->groupBy('event_id')
-            ->get()
-            ->keyBy('event_id');
+        // Sold tickets + revenue from the tickets actually sold (valid/used
+        // on a paid order, test sales excluded) — same numbers as
+        // VenueOwnerUsageService, so /venue/utilizare and /venue/eveniment
+        // agree. quota_sold was not usable for revenue: marketplace checkout
+        // leaves it at 0 on uncapped ticket types.
+        $ticketStats = VenueEventSales::forEvents($eventIds);
 
         // quota_total = -1 means unlimited — exclude from stock_total.
-        // Revenue is quota_sold × price_cents summed over all ticket types
-        // on the event, matching how the tenant /tenant/venue-usage page
-        // (via VenueOwnerUsageService) computes it — so numbers match
-        // one-to-one across the shell's usage and single-event pages.
         $stockStats = TicketType::whereIn('event_id', $eventIds)
             ->selectRaw('event_id,
-                SUM(CASE WHEN quota_total >= 0 THEN quota_total ELSE 0 END) as stock_total,
-                SUM(quota_sold * price_cents / 100.0) as revenue')
+                SUM(CASE WHEN quota_total >= 0 THEN quota_total ELSE 0 END) as stock_total')
             ->groupBy('event_id')
             ->get()
             ->keyBy('event_id');
@@ -145,7 +133,7 @@ class EventsController extends BaseController
                 'tickets_sold' => $t ? (int) $t->tickets_sold : 0,
                 'checked_in_count' => $t ? (int) $t->checked_in_count : 0,
                 'stock_total' => $s ? (int) $s->stock_total : 0,
-                'revenue' => $s ? round((float) $s->revenue, 2) : 0.0,
+                'revenue' => $t ? $t->revenue : 0.0,
             ]];
         });
     }
@@ -242,6 +230,7 @@ class EventsController extends BaseController
                     'id' => (int) $tt->id, // SalesScreen / EventContext expect numeric id
                     'name' => $tt->name,
                     'price' => $price,
+                    'price_cents' => (int) round($price * 100),
                     'currency' => $tt->currency ?? 'RON',
                     'description' => $tt->description ?? null,
                     'status' => $tt->status,
@@ -254,6 +243,9 @@ class EventsController extends BaseController
                     // Critical for SalesScreen: only entry tickets render in POS.
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? true),
                     'unlimited' => $quota !== null && $quota < 0,
+                    // Test POS type: the apps show the TEST badge and keep it
+                    // out of mixed carts; the server stores it as pos_test.
+                    'meta' => (($tt->meta['is_test'] ?? false) === true) ? ['is_test' => true] : null,
                 ];
             })->values()->toArray();
         }

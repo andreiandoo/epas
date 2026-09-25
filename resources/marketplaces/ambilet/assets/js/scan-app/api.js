@@ -19,7 +19,23 @@
     return BASE + '?path=' + encodeURIComponent(path);
   }
 
+  function isVenueOwner() {
+    return typeof ScanAuth !== 'undefined' && ScanAuth.isVenueOwner && ScanAuth.isVenueOwner();
+  }
+
+  // Venue owners call the organizer-shaped paths; the backend mirrors them
+  // under /venue-owner/ (same rules as the mobile app's client.js).
+  function rewritePath(path) {
+    if (!path || !isVenueOwner()) return path;
+    if (path.indexOf('/venue-owner/') === 0) return path;
+    if (path.indexOf('/organizer/') === 0) return '/venue-owner/' + path.slice('/organizer/'.length);
+    if (path === '/orders' || path.indexOf('/orders/') === 0 || path.indexOf('/orders?') === 0) return '/venue-owner' + path;
+    if (/^\/events\/\d+\/sales-breakdown(\?|$)/.test(path)) return '/venue-owner' + path;
+    return path;
+  }
+
   function getToken() {
+    if (isVenueOwner()) return ScanAuth.getVenueToken();
     if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) {
       try { return AmbiletAuth.getToken(); } catch (e) {}
     }
@@ -33,6 +49,7 @@
     };
     var token = getToken();
     if (token) headers['Authorization'] = 'Bearer ' + token;
+    path = rewritePath(path);
 
     var init = { method: method, headers: headers, credentials: 'same-origin' };
     if (body !== undefined && body !== null && method !== 'GET' && method !== 'DELETE') {

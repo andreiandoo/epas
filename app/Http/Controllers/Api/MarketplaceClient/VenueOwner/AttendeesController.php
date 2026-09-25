@@ -66,10 +66,23 @@ class AttendeesController extends BaseController
             $data['is_invitation'] = false;
             $data['has_notes'] = (bool) $notesMap->get($t->id, false);
             return $data;
+        }, function (Event $eventModel) {
+            // Headline stats for the organizer-style dashboards (mobile
+            // EventContext + scan PWA read meta.stats).
+            $s = \App\Services\VenueOwner\VenueEventSales::forEvents([$eventModel->id])->get((int) $eventModel->id);
+            $total = $s ? $s->tickets_sold : 0;
+            $checked = $s ? $s->checked_in_count : 0;
+            return ['stats' => [
+                'total' => $total,
+                'checked_in' => $checked,
+                'not_checked_in' => $total - $checked,
+                'check_in_rate' => $total > 0 ? round($checked / $total * 100, 1) : 0,
+                'revenue' => $s ? $s->revenue : 0.0,
+            ]];
         });
     }
 
-    protected function listTickets(Request $request, int $event, int $maxPerPage, callable $formatRow): JsonResponse
+    protected function listTickets(Request $request, int $event, int $maxPerPage, callable $formatRow, ?callable $extraMeta = null): JsonResponse
     {
         /** @var Event|null $eventModel */
         $eventModel = $request->attributes->get('venue_owner_event');
@@ -146,7 +159,7 @@ class AttendeesController extends BaseController
                 'last_page' => $paginator->lastPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
-            ],
+            ] + ($extraMeta ? $extraMeta($eventModel) : []),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate')
           ->header('Pragma', 'no-cache');
     }

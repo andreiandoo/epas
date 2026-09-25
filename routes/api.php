@@ -3086,6 +3086,10 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         Route::get('/events/{event}/sales-breakdown', [VenueOwnerOrdersController::class, 'salesBreakdown'])
             ->whereNumber('event')
             ->name('api.marketplace-client.venue-owner.events.sales-breakdown');
+        // Door takings this venue owes the event organizer (cash + card).
+        Route::get('/events/{event}/settlement', [VenueOwnerOrdersController::class, 'settlement'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.venue-owner.events.settlement');
 
         // Seating embed-token (same as organizer; venue owner can scan +
         // sell from the same canvas-based widget).
