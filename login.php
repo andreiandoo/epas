@@ -44,8 +44,8 @@ require_once __DIR__ . '/includes/auth-branding.php';
 
             <div class="p-8 mb-8 bg-white border rounded-2xl border-border" id="loginCardForm" style="display:none;">
                 <div class="mb-8 text-center" id="loginHeader">
-                    <h2 class="text-2xl font-bold text-secondary">Conectează-te</h2>
-                    <p class="mt-2 text-muted">Introdu datele tale pentru a accesa contul de client</p>
+                    <h2 class="text-2xl font-bold text-secondary" id="loginTitle">Conectează-te</h2>
+                    <p class="mt-2 text-muted" id="loginSubtitle">Introdu datele tale pentru a accesa contul de client</p>
                 </div>
 
                 <form id="login-form" class="space-y-6">
@@ -131,6 +131,17 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 </div>
             </a>
+
+            <!-- Venue CTA: opens the same form in venue mode (login.js). -->
+            <div id="venueCta" role="button" tabindex="0" class="flex items-center gap-3 p-4 mb-6 transition-all cursor-pointer rounded-xl" style="background:linear-gradient(135deg, #052e16 0%, #166534 55%, #16a34a 100%);">
+                <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-white/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-white">Ești locație?</p>
+                    <p class="text-xs text-white/70">Click aici pentru autentificare →</p>
+                </div>
+            </div>
         </div>
     </div>
 
