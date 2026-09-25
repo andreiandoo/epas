@@ -3060,7 +3060,9 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
             ->name('api.marketplace-client.venue-owner.events.check-in.undo');
 
         // Per-event participants (mirrors organizer's listing endpoint).
-        Route::get('/events/{event}/participants', [VenueOwnerAttendeesController::class, 'index'])
+        // Hit only by the organizer screens through the mobile path-rewriter,
+        // so it returns organizer-style rows (ticket_type as a plain string).
+        Route::get('/events/{event}/participants', [VenueOwnerAttendeesController::class, 'participants'])
             ->whereNumber('event')
             ->name('api.marketplace-client.venue-owner.events.participants');
 

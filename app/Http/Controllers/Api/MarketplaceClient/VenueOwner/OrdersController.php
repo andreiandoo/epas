@@ -77,11 +77,19 @@ class OrdersController extends BaseController
 
         // Tenant of the order is the organizer's tenant (so the sale lands in
         // the organizer's books). The venue owner is recorded only via meta.
+        // Same fallback chain as MarketplaceOrdersController::create: most
+        // marketplace-organizer events carry no tenant_id, so without the
+        // client-tenant fallback the venue owner could not sell at all
+        // ("Organizer tenant not configured for this event").
         $organizerTenantId = $event->tenant_id;
         if (!$organizerTenantId && $event->marketplace_organizer_id) {
             $organizerTenantId = Event::where('marketplace_organizer_id', $event->marketplace_organizer_id)
                 ->whereNotNull('tenant_id')
                 ->value('tenant_id');
+        }
+        if (!$organizerTenantId) {
+            $organizerTenantId = $client->activeTenants()->first()?->id
+                ?? $client->tenants()->first()?->id;
         }
         if (!$organizerTenantId) {
             return $this->error('Organizer tenant not configured for this event', 400);

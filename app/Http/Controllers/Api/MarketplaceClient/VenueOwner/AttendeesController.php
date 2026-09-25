@@ -26,6 +26,51 @@ class AttendeesController extends BaseController
      */
     public function index(Request $request, int $event): JsonResponse
     {
+        return $this->listTickets($request, $event, 100, function (Ticket $t, $notesMap) {
+            $data = $this->formatTicket($t, null, includeEvent: false);
+            $data['has_notes'] = (bool) $notesMap->get($t->id, false);
+            return $data;
+        });
+    }
+
+    /**
+     * Same listing as index(), but each row uses the organizer participants
+     * shape. The mobile app reuses the organizer screens for venue owners
+     * (TicketListScreen, GuestListModal, offline cache) through the path
+     * rewriter, and those render ticket_type as text. The {id, name} object
+     * from formatTicket() crashed them ("Objects are not valid as a React
+     * child"). Rows stay a flat array + meta, like index(), so the existing
+     * pagination loops keep working.
+     */
+    public function participants(Request $request, int $event): JsonResponse
+    {
+        return $this->listTickets($request, $event, 200, function (Ticket $t, $notesMap) {
+            $data = $this->formatTicket($t, null, includeEvent: false);
+            $order = $t->order;
+            $customerName = $data['customer']['full_name'] ?? null;
+
+            $data['ticket_id'] = $data['id'];
+            $data['ticket_type'] = $t->ticketType?->name ?? 'Standard';
+            $data['ticket_type_id'] = $t->ticketType?->id;
+            $data['name'] = $customerName ?: ($t->attendee_name ?: 'Anonim');
+            $data['email'] = '';
+            $data['phone'] = $data['customer']['phone'] ?? '';
+            $data['ticket_code'] = $t->barcode;
+            $data['control_code'] = $t->code;
+            $data['seat_label'] = $t->seat_label ?? null;
+            $data['checked_in'] = $t->checked_in_at !== null;
+            $data['order_id'] = $order?->id;
+            $data['order_number'] = $order?->order_number;
+            $data['order_date'] = ($order?->created_at ?? $t->created_at)?->toIso8601String();
+            $data['order'] = null;
+            $data['is_invitation'] = false;
+            $data['has_notes'] = (bool) $notesMap->get($t->id, false);
+            return $data;
+        });
+    }
+
+    protected function listTickets(Request $request, int $event, int $maxPerPage, callable $formatRow): JsonResponse
+    {
         /** @var Event|null $eventModel */
         $eventModel = $request->attributes->get('venue_owner_event');
         if (!$eventModel instanceof Event) {
@@ -40,7 +85,7 @@ class AttendeesController extends BaseController
         $tenant = $request->attributes->get('venue_owner_tenant');
 
         $search = trim((string) $request->query('search', ''));
-        $perPage = min(100, max(5, (int) $request->query('per_page', 25)));
+        $perPage = min($maxPerPage, max(5, (int) $request->query('per_page', 25)));
 
         $query = Ticket::query()
             ->where('event_id', $eventModel->id)
@@ -91,11 +136,7 @@ class AttendeesController extends BaseController
             ? $this->buildHasNotesMap($tenant->id, $tickets)
             : collect();
 
-        $items = $tickets->map(function (Ticket $t) use ($notesMap) {
-            $data = $this->formatTicket($t, null, includeEvent: false);
-            $data['has_notes'] = (bool) $notesMap->get($t->id, false);
-            return $data;
-        })->values()->toArray();
+        $items = $tickets->map(fn (Ticket $t) => $formatRow($t, $notesMap))->values()->toArray();
 
         return response()->json([
             'success' => true,
