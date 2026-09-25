@@ -11,11 +11,78 @@
 // original AmbiletAuth.login() flow so no user is ever stranded on
 // the login page while backend catches up.
 
+// ── Venue login mode ─────────────────────────────────────────────
+// "Ești locație?" opens the same form in venue mode: the multi-login runs
+// as usual, but the venue account is opened directly (no account picker)
+// and the user lands in /venue/panou (or the /venue/... page that sent
+// them here, e.g. the scan app at /venue/scan).
+let loginMode = 'customer';
+
+function setLoginMode(mode) {
+    loginMode = mode;
+    const venue = mode === 'venue-owner';
+    const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    show('customerCta', venue);
+    show('venueCta', !venue);
+    show('loginCard', true);
+    show('loginCardForm', true);
+    show('signupLink', !venue);
+    const title = document.getElementById('loginTitle');
+    const sub = document.getElementById('loginSubtitle');
+    if (title) title.textContent = venue ? 'Autentificare locație' : 'Conectează-te';
+    if (sub) sub.textContent = venue
+        ? 'Introdu datele contului locației tale'
+        : 'Introdu datele tale pentru a accesa contul de client';
+    if (venue) { const em = document.getElementById('email'); if (em) em.focus(); }
+}
+
+(function initVenueCta() {
+    const cta = document.getElementById('venueCta');
+    if (cta) {
+        cta.addEventListener('click', () => setLoginMode('venue-owner'));
+        cta.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setLoginMode('venue-owner'); } });
+    }
+    const customer = document.getElementById('customerCta');
+    if (customer) customer.addEventListener('click', () => setLoginMode('customer'));
+    const requested = AmbiletUtils.getUrlParam('redirect') || '';
+    if (requested.startsWith('/venue')) setLoginMode('venue-owner');
+})();
+
+async function submitVenueLogin(email, password) {
+    let result = null;
+    try { result = await AmbiletMultiAuth.login(email, password); } catch (err) { /* handled below */ }
+    const roles = (result && result.success && result.data && Array.isArray(result.data.roles)) ? result.data.roles : [];
+    if (!roles.length) {
+        AmbiletNotifications.error((result && result.message) || 'Email sau parolă incorectă');
+        return;
+    }
+    const venue = roles.find((r) => r.type === 'venue-owner');
+    if (!venue) {
+        AmbiletNotifications.error('Acest email nu are un cont de locație. Folosește autentificarea de client sau de organizator.');
+        return;
+    }
+    if (venue.requires_2fa) {
+        window.location.href = '/verificare-2fa?challenge=' + encodeURIComponent(venue.challenge || '');
+        return;
+    }
+    // Keep every account the email has (header switcher), venue active.
+    const active = AmbiletMultiAuth.persistAllRoles(roles, 'venue-owner') || venue;
+    await activateRoleSession(active);
+    AmbiletNotifications.success('Conectare reușită!');
+    setTimeout(() => window.location.href = redirectForRole('venue-owner'), 500);
+}
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const remember = document.getElementById('remember').checked;
+
+    if (loginMode === 'venue-owner') {
+        try { await submitVenueLogin(email, password); }
+        catch (error) { AmbiletNotifications.error('Eroare la conectare. Incearca din nou.'); }
+        return;
+    }
 
     try {
         // ── Try unified multi-realm login first ────────────────
@@ -147,7 +214,7 @@ function escapeHtml(value) {
 function showRolePicker(roles, primary, email) {
     injectRolePickerStyles();
 
-    ['customerCta', 'loginHeader', 'signupLink', 'organizerCta', 'login-form'].forEach((id) => {
+    ['customerCta', 'loginHeader', 'signupLink', 'organizerCta', 'venueCta', 'login-form'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
