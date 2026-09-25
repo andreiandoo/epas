@@ -303,6 +303,7 @@ body.scanapp-body {
   display: flex;
   flex-direction: column;
 }
+.scanapp-section--spaced { gap: 12px; }
 
 /* ── Tab bar (bottom nav — 5 tabs) ────────────────────────────────────── */
 .scanapp-tabbar {

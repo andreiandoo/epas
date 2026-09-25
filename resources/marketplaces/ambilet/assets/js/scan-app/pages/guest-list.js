@@ -25,6 +25,10 @@
     dom.list        = $('scanapp-guest-list');
   }
 
+  // Venue app (/venue/scan/guest-list): every valid ticket of the event, like
+  // the Android venue event details. Organizer app: invitations only.
+  var VENUE = !!(window.SCAN_APP && window.SCAN_APP.venue);
+
   var participants = [];
   var filter = 'all';
   var query = '';
@@ -37,16 +41,13 @@
       return;
     }
     loading = true;
-    dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Se încarcă lista de invitați…</p></div>';
-    ScanAPI.get('/organizer/events/' + ev.id + '/participants', { per_page: 500 })
-      .then(function (resp) {
-        var data = (resp && resp.data) || resp || {};
-        var all = data.participants || data.items || data.data || (Array.isArray(data) ? data : []);
-        if (!Array.isArray(all)) all = [];
-        // Filter to invitation tickets ONLY (per spec — this page is the
-        // 'Listă invitați', not the full participants list). An entry counts
-        // as an invitation if any of the common signals is set.
-        participants = all.filter(isInvitation);
+    dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">' +
+      (VENUE ? 'Se încarcă participanții…' : 'Se încarcă lista de invitați…') + '</p></div>';
+    fetchAll(ev.id)
+      .then(function (all) {
+        // Organizer: invitation tickets ONLY (this page is the 'Listă
+        // invitați'). Venue: all participants.
+        participants = VENUE ? all : all.filter(isInvitation);
         renderStats();
         render();
       })
@@ -55,6 +56,28 @@
         dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Nu am putut încărca lista. Reîncearcă mai târziu.</p></div>';
       })
       .finally(function () { loading = false; });
+  }
+
+  function rowsOf(resp) {
+    var data = (resp && resp.data) || resp || {};
+    var rows = Array.isArray(data) ? data : (data.participants || data.items || data.data || []);
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  // Walks every page (the venue endpoint returns 200 rows per page with
+  // meta.last_page; the organizer one returns everything in one page).
+  function fetchAll(eventId) {
+    var all = [];
+    function page(n) {
+      return ScanAPI.get('/organizer/events/' + eventId + '/participants', { per_page: VENUE ? 200 : 500, page: n })
+        .then(function (resp) {
+          all = all.concat(rowsOf(resp));
+          var meta = (resp && resp.meta) || {};
+          if (meta.last_page && n < meta.last_page && n < 50) return page(n + 1);
+          return all;
+        });
+    }
+    return page(1);
   }
 
   function renderStats() {
@@ -91,6 +114,9 @@
   function emailOf(p) {
     return (p.customer && p.customer.email) || p.customer_email || p.email || '';
   }
+  function phoneOf(p) {
+    return (p.customer && p.customer.phone) || p.phone || '';
+  }
   function ticketCodeOf(p) {
     return p.ticket_code || p.code || (p.ticket && (p.ticket.code || p.ticket.barcode)) || '';
   }
@@ -111,6 +137,7 @@
     return list.filter(function (p) {
       return nameOf(p).toLowerCase().indexOf(q) !== -1
           || emailOf(p).toLowerCase().indexOf(q) !== -1
+          || phoneOf(p).toLowerCase().indexOf(q) !== -1
           || ticketCodeOf(p).toLowerCase().indexOf(q) !== -1;
     });
   }
@@ -119,8 +146,8 @@
     var list = applySearch(applyFilter(participants));
     if (!list.length) {
       var empty = participants.length === 0
-        ? 'Nu există invitații pentru acest eveniment.'
-        : 'Nicio invitație nu se potrivește căutării.';
+        ? (VENUE ? 'Nu există încă bilete vândute la acest eveniment.' : 'Nu există invitații pentru acest eveniment.')
+        : (VENUE ? 'Niciun participant nu se potrivește.' : 'Nicio invitație nu se potrivește căutării.');
       dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">' + empty + '</p></div>';
       return;
     }
@@ -132,8 +159,8 @@
       var name = nameOf(p);
       var sub = [ticketTypeNameOf(p), emailOf(p), ticketCodeOf(p)].filter(Boolean).join(' · ');
       var inChip = isCheckedIn(p)
-        ? '<span style="font-size:11px; padding:3px 8px; border-radius:8px; background:rgba(16,185,129,0.15); color:var(--scanapp-success);">✓ intrat</span>'
-        : '<span style="font-size:11px; padding:3px 8px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--scanapp-text-ter);">neintrat</span>';
+        ? '<span style="font-size:11px; padding:3px 8px; border-radius:8px; background:rgba(16,185,129,0.15); color:var(--scanapp-green);">✓ intrat</span>'
+        : '<span style="font-size:11px; padding:3px 8px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--scanapp-text-tertiary);">neintrat</span>';
       return '<div class="scanapp-sheet__row" data-code="' + escapeHtml(ticketCodeOf(p)) + '" style="padding:10px 12px; background:var(--scanapp-surface); border:1px solid var(--scanapp-border); border-radius:12px; margin-bottom:8px;">' +
                '<div class="scanapp-sheet__row-body">' +
                  '<div class="scanapp-sheet__row-name">' + escapeHtml(name) + '</div>' +
