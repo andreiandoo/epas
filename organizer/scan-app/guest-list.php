@@ -3,10 +3,15 @@ $scanPage      = 'panou';
 $scanPageTitle = 'Listă invitați';
 require __DIR__ . '/_layout.php';
 ?>
-<section class="scanapp-section">
+<section class="scanapp-section scanapp-section--spaced">
   <div class="scanapp-card">
+<?php if ($scanVenue): ?>
+    <div class="scanapp-card__title">Participanți</div>
+    <p class="scanapp-card__text">Toate biletele valide la evenimentul selectat. Caută după nume, telefon sau cod bilet.</p>
+<?php else: ?>
     <div class="scanapp-card__title">Listă invitați</div>
     <p class="scanapp-card__text">Caută și gestionează participanții. Mirror al modalului GuestList din aplicația mobilă.</p>
+<?php endif; ?>
   </div>
 
   <div class="scanapp-stats-grid" style="grid-template-columns: 1fr 1fr 1fr;">
@@ -32,7 +37,7 @@ require __DIR__ . '/_layout.php';
   </div>
 
   <!-- Search -->
-  <input type="search" class="scanapp-input" id="scanapp-guest-search" placeholder="Caută după nume, email sau cod bilet…" style="text-transform: none; letter-spacing: 0;">
+  <input type="search" class="scanapp-input" id="scanapp-guest-search" placeholder="<?= $scanVenue ? 'Caută după nume, telefon sau cod bilet…' : 'Caută după nume, email sau cod bilet…' ?>" style="text-transform: none; letter-spacing: 0;">
 
   <!-- List -->
   <div id="scanapp-guest-list">
@@ -41,7 +46,7 @@ require __DIR__ . '/_layout.php';
     </div>
   </div>
 
-  <div style="margin-top: 14px;">
+  <div>
     <a class="scanapp-btn scanapp-btn--block" href="<?= $scanVenue ? '/venue/scan/evenimente' : '/organizator/scan/panou' ?>">‹ Înapoi la <?= $scanVenue ? 'evenimente' : 'panou' ?></a>
   </div>
 </section>

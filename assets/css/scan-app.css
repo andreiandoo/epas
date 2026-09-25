@@ -303,6 +303,7 @@ body.scanapp-body {
   display: flex;
   flex-direction: column;
 }
+.scanapp-section--spaced { gap: 12px; }
 
 /* ── Tab bar (bottom nav — 5 tabs) ────────────────────────────────────── */
 .scanapp-tabbar {
@@ -1930,7 +1931,7 @@ button.scanapp-stat-pill { cursor: pointer; font-family: inherit; }
 .scanapp-venue-event__stats { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; color: var(--scanapp-text-secondary); }
 .scanapp-venue-event__stats b { color: var(--scanapp-text); }
 
-.scanapp-venue-detail__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.scanapp-venue-detail__stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 14px; }
 .scanapp-venue-detail__stats > div { padding: 10px 6px; border-radius: 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); text-align: center; }
 .scanapp-venue-detail__stats b { display: block; font-size: 15px; color: var(--scanapp-text); }
 .scanapp-venue-detail__stats span { font-size: 11px; color: var(--scanapp-text-tertiary); }
