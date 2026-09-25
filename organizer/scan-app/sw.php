@@ -29,7 +29,9 @@ header('Content-Type: application/javascript; charset=utf-8');
 // Service workers MUST NOT be cached for long — clients re-fetch SW on each
 // page load and a stale SW would block updates from being seen.
 header('Cache-Control: max-age=0, no-cache, no-store, must-revalidate');
-header('Service-Worker-Allowed: /organizator/scan/');
+// Same worker serves the organizer app (/organizator/scan/) and the venue
+// app (/venue/scan/); each registers it from its own path.
+header('Service-Worker-Allowed: ' . (strpos($_SERVER['REQUEST_URI'] ?? '', '/venue/scan') === 0 ? '/venue/scan/' : '/organizator/scan/'));
 ?>
 /* eslint-disable */
 const CACHE_VERSION = 'scanapp-v2-<?= date('YmdHi') ?>';
@@ -67,10 +69,10 @@ function isScanAssetPath(url) {
       || /\/api\/scan-bundle\.php/.test(url);
 }
 function isScanShellPath(url) {
-  return /\/organizator\/scan(\/|$|\?)/.test(url);
+  return /\/(organizator|venue)\/scan(\/|$|\?)/.test(url);
 }
 function isIconRequest(url) {
-  return /\/organizator\/scan\/icon\.php/.test(url) || /\/organizator\/scan\/manifest\.webmanifest/.test(url);
+  return /\/(organizator|venue)\/scan\/icon\.php/.test(url) || /\/(organizator|venue)\/scan\/manifest\.webmanifest/.test(url);
 }
 
 self.addEventListener('fetch', (event) => {

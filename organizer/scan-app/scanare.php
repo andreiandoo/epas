@@ -10,7 +10,7 @@ require __DIR__ . '/_layout.php';
     <div class="scanapp-card__title">Eveniment trecut</div>
     <p class="scanapp-card__text">Acest eveniment s-a încheiat. Check-in-ul nu mai este disponibil, dar poți vizualiza rapoartele.</p>
     <div style="margin-top: 14px;">
-      <a class="scanapp-btn scanapp-btn--primary scanapp-btn--block" href="/organizator/scan/rapoarte">Vezi rapoarte</a>
+      <a class="scanapp-btn scanapp-btn--primary scanapp-btn--block" href="<?= $scanVenue ? '/venue/scan/evenimente' : '/organizator/scan/rapoarte' ?>"><?= $scanVenue ? 'Alege alt eveniment' : 'Vezi rapoarte' ?></a>
     </div>
   </div>
 

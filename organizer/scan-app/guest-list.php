@@ -42,7 +42,7 @@ require __DIR__ . '/_layout.php';
   </div>
 
   <div style="margin-top: 14px;">
-    <a class="scanapp-btn scanapp-btn--block" href="/organizator/scan/panou">‹ Înapoi la panou</a>
+    <a class="scanapp-btn scanapp-btn--block" href="<?= $scanVenue ? '/venue/scan/evenimente' : '/organizator/scan/panou' ?>">‹ Înapoi la <?= $scanVenue ? 'evenimente' : 'panou' ?></a>
   </div>
 </section>
 

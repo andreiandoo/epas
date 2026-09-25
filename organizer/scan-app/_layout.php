@@ -23,7 +23,20 @@ require_once dirname(__DIR__, 2) . '/includes/config.php';
 $scanPage      = $scanPage      ?? 'panou';
 $scanPageTitle = $scanPageTitle ?? 'Aplicație Scan';
 
-$tabs = [
+// Two apps share these pages:
+//   /organizator/scan/*  → organizer app
+//   /venue/scan/*        → venue-owner app (.htaccess adds ?venue=1). Same
+//                          tabs as the Android app for venues: Evenimente,
+//                          Scanare, Vânzare, Setări.
+$scanVenue = ($_GET['venue'] ?? '') === '1';
+$scanBase  = $scanVenue ? '/venue/scan' : '/organizator/scan';
+
+$tabs = $scanVenue ? [
+    'evenimente'   => ['label' => 'Evenimente', 'href' => '/venue/scan/evenimente'],
+    'scanare'      => ['label' => 'Scanare',    'href' => '/venue/scan/scanare'],
+    'vanzare'      => ['label' => 'Vânzare',    'href' => '/venue/scan/vanzare'],
+    'setari-scan'  => ['label' => 'Setări',     'href' => '/venue/scan/setari'],
+] : [
     'panou'        => ['label' => 'Panou',    'href' => '/organizator/scan/panou'],
     'scanare'      => ['label' => 'Scanare',  'href' => '/organizator/scan/scanare'],
     'vanzare'      => ['label' => 'Vânzare',  'href' => '/organizator/scan/vanzare'],
@@ -46,7 +59,7 @@ $tabs = [
     <link rel="dns-prefetch" href="https://core.tixello.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
-    <link rel="manifest" href="/organizator/scan/manifest.webmanifest">
+    <link rel="manifest" href="<?= $scanBase ?>/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/organizator/scan/icon.php?size=180">
     <link rel="icon" type="image/png" sizes="192x192" href="/organizator/scan/icon.php?size=192">
 
@@ -65,7 +78,9 @@ $tabs = [
         apiEnv: <?= json_encode(API_ENV) ?>,
         coreUrl: <?= json_encode(CORE_URL) ?>,
         storageUrl: <?= json_encode(STORAGE_URL) ?>,
-        version: '0.3.0'
+        version: '0.3.0',
+        venue: <?= $scanVenue ? 'true' : 'false' ?>,
+        base: <?= json_encode($scanBase) ?>
       };
     </script>
 </head>
@@ -73,11 +88,19 @@ $tabs = [
 
   <script>
     (function () {
+      var hasVenue = /(?:^|; )ambilet_venue_token=[^;]+/.test(document.cookie);
+      var rt = encodeURIComponent(location.pathname + location.search);
+      if (window.SCAN_APP && window.SCAN_APP.venue) {
+        // Venue app: logged in through the ambilet_venue_token cookie.
+        if (!hasVenue) location.replace('/autentificare?redirect=' + rt);
+        return;
+      }
       if (typeof AmbiletAuth === 'undefined') return;
-      // Venue owners are logged in through the ambilet_venue_token cookie
-      // (see scan-app/auth.js); organizers through AmbiletAuth.
-      if (/(?:^|; )ambilet_venue_token=[^;]+/.test(document.cookie)) return;
-      if (!AmbiletAuth.isLoggedIn || !AmbiletAuth.isLoggedIn()) {
+      var orgIn = AmbiletAuth.isLoggedIn && AmbiletAuth.isLoggedIn();
+      // A venue owner (no organizer session) landing on the organizer app
+      // is sent to the venue app instead.
+      if (!orgIn && hasVenue) { location.replace('/venue/scan/evenimente'); return; }
+      if (!orgIn) {
         var rt = encodeURIComponent(location.pathname + location.search);
         location.replace('/organizator/login?redirect=' + rt);
       }
@@ -86,7 +109,7 @@ $tabs = [
 
   <header class="scanapp-topbar">
     <div class="scanapp-topbar__inner">
-      <a class="scanapp-topbar__left" href="/organizator/scan/panou" aria-label="Aplicație Scan">
+      <a class="scanapp-topbar__left" href="<?= $scanVenue ? '/venue/scan/evenimente' : '/organizator/scan/panou' ?>" aria-label="Aplicație Scan">
         <img src="/assets/images/ambilet-logo.webp" alt="" class="scanapp-topbar__logo">
       </a>
       <div class="scanapp-topbar__right">
@@ -142,6 +165,12 @@ $tabs = [
       <div class="scanapp-event-selector__meta" id="scanapp-es-meta">—</div>
     </div>
   </div>
+  <?php endif; ?>
+  <?php if ($scanVenue && in_array($scanPage, ['scanare', 'vanzare'], true)): ?>
+  <!-- Venue app: what the venue collected at the door and owes the organizer
+       (filled by assets/js/scan-app/venue.js). Always visible on Scanare /
+       Vânzare, like on Android. -->
+  <div class="scanapp-handover" id="scanapp-handover" hidden></div>
   <?php endif; ?>
 
   <main class="scanapp-main">

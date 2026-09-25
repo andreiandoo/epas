@@ -9,7 +9,12 @@
        aria-current="<?= $isActive ? 'page' : 'false' ?>">
       <span class="scanapp-tabbar__icon">
 <?php switch ($key):
-    case 'panou': ?>
+    case 'evenimente': ?>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <path d="M16 2v4M8 2v4M3 10h18"></path>
+        </svg>
+<?php break; case 'panou': ?>
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="7" height="7"></rect>
           <rect x="14" y="3" width="7" height="7"></rect>
@@ -50,7 +55,7 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         setTimeout(function () {
-          navigator.serviceWorker.register('/organizator/scan/sw.js', { scope: '/organizator/scan/' })
+          navigator.serviceWorker.register('<?= $scanBase ?>/sw.js', { scope: '<?= $scanBase ?>/' })
             .catch(function (err) { console.warn('[scan-app] SW registration failed:', err); });
         }, 2000);
       });
@@ -77,6 +82,10 @@
   <script src="/assets/js/scan-app/event-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/event-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/scanner.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/scanner.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app.js') ?>" defer></script>
+<?php endif; ?>
+<?php if ($scanVenue):
+    $venueJs = dirname(__DIR__, 2) . '/assets/js/scan-app/venue.js'; ?>
+  <script src="/assets/js/scan-app/venue.js?v=<?= is_file($venueJs) ? filemtime($venueJs) : 1 ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($scanPageScript)):
     $scanPageScriptPath = dirname(__DIR__, 2) . '/assets/js/scan-app/pages/' . basename($scanPageScript);
