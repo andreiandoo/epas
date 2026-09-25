@@ -401,17 +401,12 @@ class OrdersController extends BaseController
         }
 
         $row = app(\App\Services\Marketplace\VenueOwnerSettlementService::class)
-            ->forEvent((int) $eventModel->id, (int) $client->id, (int) $tenant->id)[0] ?? null;
+            ->forEvent((int) $eventModel->id, (int) $client->id, (int) $tenant->id, true)[0] ?? null;
 
         return $this->success([
             'event_id' => (int) $eventModel->id,
             'organizer_name' => $eventModel->marketplaceOrganizer?->name,
-            'orders' => $row['orders'] ?? 0,
-            'tickets' => $row['tickets'] ?? 0,
-            'cash' => $row['cash'] ?? 0.0,
-            'card' => $row['card'] ?? 0.0,
-            'total' => $row['total'] ?? 0.0,
-        ]);
+        ] + EventsController::handoverPayload($row));
     }
 
     /**

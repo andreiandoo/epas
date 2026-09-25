@@ -58,8 +58,17 @@ class EventsController extends BaseController
 
         $stats = $this->aggregateStats($events->pluck('id'));
 
+        // What this venue collected at the door per event and owes the
+        // organizer — shown on each card of the mobile Evenimente list.
+        $handover = app(\App\Services\Marketplace\VenueOwnerSettlementService::class)
+            ->forEvents($events->pluck('id'), (int) $client->id, (int) $tenant->id, true);
+
         return $this->success([
-            'events' => $events->map(fn ($e) => $this->formatEvent($e, $stats))->values()->toArray(),
+            'events' => $events->map(function ($e) use ($stats, $handover) {
+                $data = $this->formatEvent($e, $stats);
+                $data['handover'] = $this->handoverPayload($handover[(int) $e->id][0] ?? null);
+                return $data;
+            })->values()->toArray(),
         ]);
     }
 
@@ -100,6 +109,22 @@ class EventsController extends BaseController
         })->values()->toArray();
 
         return $this->success(['event' => $data]);
+    }
+
+    /**
+     * Door takings owed to the organizer, as the mobile app reads them.
+     */
+    public static function handoverPayload(?array $row): array
+    {
+        return [
+            'orders' => $row['orders'] ?? 0,
+            'tickets' => $row['tickets'] ?? 0,
+            'cash' => $row['cash'] ?? 0.0,
+            'card' => $row['card'] ?? 0.0,
+            'total' => $row['total'] ?? 0.0,
+            'test_tickets' => $row['test_tickets'] ?? 0,
+            'test_total' => $row['test_total'] ?? 0.0,
+        ];
     }
 
     /**
