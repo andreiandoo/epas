@@ -59,6 +59,10 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
 
 $bookIcon = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.25v13M12 6.25C10.83 5.48 9.25 5 7.5 5S4.17 5.48 3 6.25v13C4.17 18.48 5.75 18 7.5 18s3.33.48 4.5 1.25m0-13C13.17 5.48 14.75 5 16.5 5s3.33.48 4.5 1.25v13C19.83 18.48 18.25 18 16.5 18s-3.33.48-4.5 1.25"/></svg>';
 
+// The operator whose page the visitor came from (cookie set on experience / location pages): their ad pixels stay
+// loaded through the purchase (ad tracking service). Safe here: this page is never page-cached.
+$trackingFromCookie = true;
+
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>

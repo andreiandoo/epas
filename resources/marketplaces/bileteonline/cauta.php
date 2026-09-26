@@ -15,6 +15,7 @@ require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/promoted.php';
 
 // ---- Input ----
 $slugParam = function (string $key): string {
@@ -322,7 +323,7 @@ include __DIR__ . '/includes/v2/header.php';
             <?php foreach ($amLocs as $li => $l): $lImg = v2_media_url($l['cover_image'] ?? null); ?>
             <li><a class="sr-loc" href="/locatie/<?= v2_e($l['slug']) ?>">
               <span class="sr-loc-media"><?= $lImg ? v2_photo([$lImg, 0, 0, '']) : v2_fallback(navFlatName($l['name'] ?? ''), $li) ?></span>
-              <span class="sr-loc-t"><b><?= v2_e(navFlatName($l['name'] ?? '')) ?></b><small><?= v2_e(trim(navFlatName($l['city']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · de la ' . v2_thousands((int) round($l['min_price_cents'] / 100)) . ' lei' : ''), ' ·')) ?></small></span>
+              <span class="sr-loc-t"><b><?= v2_e(navFlatName($l['name'] ?? '')) ?></b><small><?= !empty($l['is_promoted']) ? '<em class="sr-loc-promo">Promovat</em> · ' : '' ?><?= v2_e(trim(navFlatName($l['city']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · de la ' . v2_thousands((int) round($l['min_price_cents'] / 100)) . ' lei' : ''), ' ·')) ?></small></span>
               <?= v2_ic('arrow-right') ?>
             </a></li>
             <?php endforeach; ?>
@@ -346,7 +347,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php foreach ($cards as $i => $a): ?>
           <li class="xp">
             <a href="<?= v2_e($a['href']) ?>">
-              <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?></span>
+              <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?><?= $a['promoted'] ? v2_promoted_tag() : '' ?></span>
               <span class="xp-body">
                 <span class="xp-cat"><?= v2_e($a['catName']) ?></span>
                 <span class="xp-title" title="<?= v2_e($a['title']) ?>"><?= v2_e($a['title']) ?></span>

@@ -34,6 +34,12 @@ const ThankYouPage = {
      * (SendFacebookCapiPurchaseJob uses the same id).
      */
     fireTrackPurchase() {
+        // The operator's ad pixels (ad tracking service): assets/v2/js/ad-conversions.js, once per order.
+        try {
+            if (window.BO_AdConversions) BO_AdConversions.purchase(this.order);
+        } catch (e) {
+            // tracking must never break the thank-you page
+        }
         try {
             if (!window.EPASTracking || typeof EPASTracking.trackPurchase !== 'function') return;
             const order = this.order || {};

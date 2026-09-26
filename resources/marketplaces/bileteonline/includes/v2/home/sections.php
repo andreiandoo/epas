@@ -103,6 +103,64 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
   </div>
 </section>
 
+<?php if (!empty($V2['heroPromo']['items'])): $hpv = $V2['heroPromo']; ?>
+<!-- Promoted hero: a proposal shown only with ?preview=1, under the real hero (which stays the live one). -->
+<section class="hpv" id="hpv" aria-labelledby="hpv-h" aria-roledescription="carusel">
+  <p class="hpv-ribbon" role="note"><b>Previzualizare</b><span>Varianta propusă pentru „Hero prima pagină” promovat. Hero-ul de mai sus rămâne cel live; secțiunea asta apare doar cu <code>?preview=1</code>.<?= $hpv['sample'] ? ' Nimic nu e încă plătit pentru hero, așa că exemplul folosește activități reale de pe site.' : '' ?></span></p>
+  <div class="hpv-stage">
+    <?php foreach ($hpv['items'] as $n => $a): ?>
+    <article class="hpv-slide<?= $n === 0 ? ' is-on' : '' ?>" id="hpv-s<?= $n ?>" aria-roledescription="slide" aria-label="<?= ($n + 1) . ' din ' . count($hpv['items']) ?>"<?= $n === 0 ? '' : ' aria-hidden="true"' ?>>
+      <?php if ($a['image']): ?><img class="hpv-img" src="<?= v2_e($a['image']) ?>" alt="" <?= $n === 0 ? 'decoding="async"' : 'loading="lazy" decoding="async"' ?>><?php else: ?><span class="hpv-img"><?= v2_fallback($a['title'], $n) ?></span><?php endif; ?>
+      <span class="hpv-shade" aria-hidden="true"></span>
+      <div class="hpv-copy">
+        <span class="promo-tag is-inline">Promovat</span>
+        <p class="hpv-kicker"><?= v2_e(trim($a['cat'] . ($a['place'] ? ' · ' . $a['place'] : ''), ' ·')) ?></p>
+        <h2 class="hpv-h"<?= $n === 0 ? ' id="hpv-h"' : '' ?>><?= v2_e($a['title']) ?></h2>
+        <?php if ($a['subtitle']): ?><p class="hpv-sub"><?= v2_e($a['subtitle']) ?></p><?php endif; ?>
+        <div class="hpv-cta">
+          <a class="btn btn-primary" href="<?= v2_e($a['href']) ?>"<?= $n === 0 ? '' : ' tabindex="-1"' ?>><?= $a['kind'] === 'location' ? 'Vezi locația' : 'Vezi experiența' ?><?= v2_ic('arrow-right') ?></a>
+          <?php if ($a['price']): ?><span class="hpv-price">de la <b><?= v2_thousands($a['price']) ?> lei</b></span><?php endif; ?>
+        </div>
+      </div>
+    </article>
+    <?php endforeach; ?>
+    <?php if (count($hpv['items']) > 1): ?>
+    <div class="hpv-dots" role="group" aria-label="Alege promovarea">
+      <?php foreach ($hpv['items'] as $n => $a): ?>
+      <button class="hpv-dot" type="button" data-slide="<?= $n ?>" aria-controls="hpv-s<?= $n ?>" aria-pressed="<?= $n === 0 ? 'true' : 'false' ?>">
+        <span class="hpv-dot-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $n) ?></span>
+        <span class="hpv-dot-t"><?= v2_e($a['title']) ?></span>
+      </button>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+  </div>
+  <script>(function () {
+    var root = document.getElementById('hpv'), dots = root.querySelectorAll('.hpv-dot'), slides = root.querySelectorAll('.hpv-slide'), at = 0, timer = null;
+    if (slides.length < 2) return;
+    var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function show(i) {
+      at = (i + slides.length) % slides.length;
+      [].forEach.call(slides, function (s, k) {
+        var on = k === at;
+        s.classList.toggle('is-on', on);
+        if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true');
+        var a = s.querySelector('a');
+        if (a) { if (on) a.removeAttribute('tabindex'); else a.setAttribute('tabindex', '-1'); }
+      });
+      [].forEach.call(dots, function (d, k) { d.setAttribute('aria-pressed', k === at ? 'true' : 'false'); });
+    }
+    function play() { if (!still && !timer) timer = setInterval(function () { show(at + 1); }, 7000); }
+    function stop() { clearInterval(timer); timer = null; }
+    [].forEach.call(dots, function (d) { d.addEventListener('click', function () { stop(); show(Number(d.getAttribute('data-slide'))); }); });
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('focusin', stop);
+    root.addEventListener('mouseleave', play);
+    play();
+  })();</script>
+</section>
+<?php endif; ?>
+
 <main id="main" tabindex="-1">
   <div id="hdr-sentinel" aria-hidden="true"></div>
 
@@ -131,6 +189,13 @@ $hv2Chips = [['familii', 'Familii'], ['prieteni', 'Prieteni'], ['cupluri', 'Cupl
     </div>
   </section>
   <?php endif; ?>
+
+  <?php v2_promoted_section($V2['promoRec'], [
+      'id' => 'promo-home',
+      'kicker' => 'Promovat',
+      'title' => 'Recomandate pentru tine',
+      'intro' => 'Locuri și experiențe puse în față de operatorii lor în perioada asta.',
+  ]); ?>
 
   <?php if ($V2['activities']): ?>
   <section class="sec days" id="experiente" aria-labelledby="days-h">

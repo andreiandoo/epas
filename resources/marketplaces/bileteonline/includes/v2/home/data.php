@@ -10,6 +10,8 @@
  * Requires v2/nav.php. Sets $V2 = $V2NAV plus the homepage keys.
  */
 
+require_once dirname(__DIR__) . '/promoted.php';
+
 const V2_ATTRACTION_TYPES = [
     'castel-palat' => 'Castel & palat', 'muzeu' => 'Muzeu', 'monument' => 'Monument',
     'biserica-manastire' => 'Biserică & mănăstire', 'parc-gradina' => 'Parc & grădină',
@@ -61,6 +63,15 @@ $v2Jobs = [
     'museum' => ['key' => 'v2_attraction_muzeul_satului', 'endpoint' => '/attractions/muzeul-national-al-satului-dimitrie-gusti-bucuresti', 'params' => [], 'ttl' => 86400],
     'activities' => ['key' => 'v2_activities', 'endpoint' => '/activities', 'params' => ['per_page' => 12], 'ttl' => 300],
 ];
+// Paid placements: "Recomandate pentru tine" is live; the promoted hero is only drawn under the real hero with
+// ?preview=1 (a variant to look at, not sold yet).
+$v2HeroPreview = !empty($_GET['preview']);
+$v2Jobs['promoRec'] = v2_promoted_job('home_recommendations');
+if ($v2HeroPreview) {
+    $v2Jobs['promoHero'] = v2_promoted_job('home_hero');
+    // Real locations to show the preview with while nothing is bought for the hero.
+    $v2Jobs['previewLocs'] = ['key' => 'v2_preview_locations', 'endpoint' => '/activities-module/locations', 'params' => ['per_page' => 24], 'ttl' => 600];
+}
 for ($p = 1; $p <= 3; $p++) {
     $v2Jobs['castles' . $p] = ['key' => 'v2_castles_' . $p, 'endpoint' => '/attractions', 'params' => ['type' => 'castel-palat', 'per_page' => 50, 'page' => $p], 'ttl' => 86400];
 }
@@ -227,6 +238,48 @@ if ($v2Acts) {
     }
 }
 $V2['activities'] = $v2Acts;
+
+// ------------------------------------------------------------------ paid placements
+$V2['promoRec'] = v2_promoted_items($v2R['promoRec'] ?? null);
+// Promoted hero preview (?preview=1 only). With nothing bought for the hero yet, the preview shows how it would
+// look with real items from the site (other promotions, then the listed experiences) and says so.
+$V2['heroPromo'] = null;
+if ($v2HeroPreview) {
+    $items = v2_promoted_items($v2R['promoHero'] ?? null);
+    $sample = false;
+    if (!$items) {
+        $sample = true;
+        $items = $V2['promoRec'];
+        // then real locations with a cover photo, then experiences with a photo
+        foreach ((array) ($v2Data('previewLocs')['items'] ?? []) as $l) {
+            if (count($items) >= 3) {
+                break;
+            }
+            if (is_array($l) && !empty($l['slug']) && !empty($l['cover_image'])) {
+                $n = v2_promoted_card([
+                    'kind' => 'location', 'title' => $l['name'] ?? '', 'href' => '/locatie/' . $l['slug'], 'image' => $l['cover_image'],
+                    'category' => $l['category'] ?? null, 'city' => $l['city'] ?? null, 'subtitle' => $l['subtitle'] ?? $l['short_description'] ?? '',
+                    'price_from_cents' => $l['min_price_cents'] ?? null,
+                ]);
+                if ($n) {
+                    $items[] = $n;
+                }
+            }
+        }
+        foreach ($v2Acts as $a) {
+            if (count($items) >= 3) {
+                break;
+            }
+            if ($a['image']) {
+                $items[] = ['kind' => 'product', 'title' => $a['title'], 'href' => $a['href'], 'image' => $a['image'],
+                    'cat' => $a['catName'] ?: 'Experiență', 'place' => $a['loc'] ? $a['loc'] . ($a['locCity'] ? ', ' . $a['locCity'] : '') : $a['city'],
+                    'city' => $a['city'], 'subtitle' => '', 'price' => $a['price'], 'dur' => $a['dur']];
+            }
+        }
+    }
+    $V2['heroPromo'] = ['items' => array_slice($items, 0, 3), 'sample' => $sample];
+}
+
 $V2['days'] = [];
 $v2WeekendDays = [];
 for ($i = 0; $i < 10; $i++) {

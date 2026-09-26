@@ -324,7 +324,21 @@ class ConfigController extends BaseController
             }
         }
 
-        return $this->success($this->buildScriptResponse($merged, $client));
+        $data = $this->buildScriptResponse($merged, $client);
+
+        // bilete.online (activities module) only: where the thank-you page sends the Purchase conversion of an
+        // operator who bought ad tracking. Other marketplaces keep the exact same payload.
+        if ($client->hasMicroservice('activities-module')) {
+            $ads = $organizerRows->get('google_ads');
+            $label = trim((string) (($ads?->settings ?? [])['conversion_label'] ?? ''));
+            $data['conversions'] = [
+                'meta'       => $organizerRows->has('meta') && $organizerRows->get('meta')->getProviderId() ? (string) $organizerRows->get('meta')->getProviderId() : null,
+                'tiktok'     => $organizerRows->has('tiktok') && $organizerRows->get('tiktok')->getProviderId() ? (string) $organizerRows->get('tiktok')->getProviderId() : null,
+                'google_ads' => $ads && $ads->getProviderId() && $label !== '' ? $ads->getProviderId() . '/' . $label : null,
+            ];
+        }
+
+        return $this->success($data);
     }
 
     /**

@@ -50,6 +50,8 @@ class CatalogPresenter
         $products = $location->products->filter(fn ($p) => self::onSale($p))->sortBy('id')->values();
 
         return $this->locationCard($location) + [
+            // The operator: the site loads their ad pixels on the page (ad tracking service).
+            'organizer_id'       => $location->marketplace_organizer_id,
             'description'        => $this->t($location->description),
             'rules'              => $this->t($location->rules),
             'address'            => $location->address,
@@ -115,6 +117,7 @@ class CatalogPresenter
             'age_min'               => $product->age_min,
             'age_max'               => $product->age_max,
             'location_id'           => $product->location_id,
+            'organizer_id'          => $product->marketplace_organizer_id,
             // What the site shows as the service commission (added on top
             // of the prices, or already inside them).
             'commission'            => [

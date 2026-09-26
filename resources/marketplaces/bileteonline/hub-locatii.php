@@ -60,7 +60,7 @@ foreach ($rows as $l) {
             $offer ? ['ticket', implode(' · ', $offer)] : null,
         ])),
         'price' => !empty($l['min_price_cents']) ? (int) round($l['min_price_cents'] / 100) : null,
-        'badges' => !empty($l['has_lodging']) ? ['Cazare'] : [],
+        'badges' => array_values(array_filter([!empty($l['is_promoted']) ? 'Promovat' : null, !empty($l['has_lodging']) ? 'Cazare' : null])),
     ];
 }
 

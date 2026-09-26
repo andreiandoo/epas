@@ -48,6 +48,10 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
 $emptyCities = array_slice($V2NAV['citiesList'] ?? [], 0, 6);
 $emptyCats = array_slice($V2NAV['categories'] ?? [], 0, 6);
 
+// The operator whose page the visitor came from (cookie set on experience / location pages): their ad pixels stay
+// loaded through the purchase (ad tracking service). Safe here: this page is never page-cached.
+$trackingFromCookie = true;
+
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>

@@ -14,7 +14,8 @@ class DeactivateExpiredFeaturing extends Command
 
     public function handle(): int
     {
-        $expired = ServiceOrder::where('service_type', ServiceOrder::TYPE_FEATURING)
+        // location_featuring exists only on bilete.online (activities module).
+        $expired = ServiceOrder::whereIn('service_type', [ServiceOrder::TYPE_FEATURING, ServiceOrder::TYPE_LOCATION_FEATURING])
             ->where('status', ServiceOrder::STATUS_ACTIVE)
             ->where('service_end_date', '<', now()->startOfDay())
             ->get();

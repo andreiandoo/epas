@@ -129,6 +129,22 @@ class ActivitiesController extends BaseController
         }
 
         $sort = $request->query('sort', 'recent');
+
+        // Paid promotions (activities module only): products promoted on the placement that matches this listing
+        // (its city page, its category page, or any placement for an unfiltered list) go first in the default
+        // order and carry flags.is_promoted. Other marketplaces never enter this branch.
+        $promotedIds = null;
+        if ($client->hasMicroservice('activities-module')) {
+            $placements = array_values(array_filter([
+                $request->query('city') ? 'city' : null,
+                $request->query('category') ? 'category' : null,
+            ])) ?: \App\Services\Activities\PromotionResolver::PLACEMENTS;
+            $promotedIds = array_map('intval', app(\App\Services\Activities\PromotionResolver::class)->productIds($client->id, $placements));
+            if ($promotedIds && !in_array($sort, ['cheapest', 'soon'], true)) {
+                $query->orderByRaw('CASE WHEN activities.id IN (' . implode(',', $promotedIds) . ') THEN 0 ELSE 1 END');
+            }
+        }
+
         match ($sort) {
             'cheapest' => $query->orderByRaw('cheapest_price_cents IS NULL ASC')->orderBy('cheapest_price_cents', 'asc'),
             'soon'     => $query->orderByRaw('next_session_at IS NULL ASC')->orderBy('next_session_at', 'asc'),
@@ -173,7 +189,13 @@ class ActivitiesController extends BaseController
         }
 
         return $this->success([
-            'items' => $paginator->getCollection()->map(fn ($a) => $this->summarisePayload($a, $locale))->values(),
+            'items' => $paginator->getCollection()->map(function ($a) use ($locale, $promotedIds) {
+                $row = $this->summarisePayload($a, $locale);
+                if ($promotedIds !== null) {
+                    $row['flags']['is_promoted'] = in_array((int) $a->id, $promotedIds, true);
+                }
+                return $row;
+            })->values(),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page'     => $paginator->perPage(),

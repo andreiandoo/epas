@@ -294,6 +294,7 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 $v2ClientData = ['booking' => $bookingBootstrap];
 
+$v2HeadExtra .= v2_track_organizer($organizer['id'] ?? null);
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>

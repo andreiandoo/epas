@@ -10,6 +10,7 @@ use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceCity;
 use App\Services\Activities\CatalogPresenter;
 use App\Services\Activities\ProductAvailability;
+use App\Services\Activities\PromotionResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -53,10 +54,21 @@ class LocationsController extends BaseController
             $query->whereIn('id', $ids->all() ?: [0]);
         }
 
+        // Paid promotions: locations promoted on the placement matching this list (city page, category page, or
+        // any placement when unfiltered) come first and carry is_promoted.
+        $placements = array_values(array_filter([
+            $request->query('city') ? 'city' : null,
+            $request->query('category') ? 'category' : null,
+        ])) ?: PromotionResolver::PLACEMENTS;
+        $promotedIds = array_map('intval', app(PromotionResolver::class)->locationIds($client->id, $placements));
+        if ($promotedIds) {
+            $query->orderByRaw('CASE WHEN activity_locations.id IN (' . implode(',', $promotedIds) . ') THEN 0 ELSE 1 END');
+        }
+
         $page = $query->orderBy('id')->paginate($perPage);
 
         return $this->success([
-            'items'      => collect($page->items())->map(fn ($l) => $presenter->locationCard($l))->values(),
+            'items'      => collect($page->items())->map(fn ($l) => $presenter->locationCard($l) + ['is_promoted' => in_array((int) $l->id, $promotedIds, true)])->values(),
             'pagination' => [
                 'current_page' => $page->currentPage(),
                 'last_page'    => $page->lastPage(),

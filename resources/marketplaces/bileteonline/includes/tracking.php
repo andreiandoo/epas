@@ -26,7 +26,10 @@ $trackingBodyScripts = '';
 // Ensure api.php is loaded (provides api_cached, api_get)
 require_once __DIR__ . '/api.php';
 
-$organizerTrackingId = $organizerTrackingId ?? ($_COOKIE['bileteonline_active_organizer'] ?? null);
+// The cookie is read only where a page asks for it ($trackingFromCookie: cart, checkout - never page-cached). Any
+// other page is cached for every visitor, so reading a visitor's cookie there would put one operator's pixels in
+// the HTML everybody gets. Experience, location and activity pages set $organizerTrackingId themselves.
+$organizerTrackingId = $organizerTrackingId ?? (!empty($trackingFromCookie) ? ($_COOKIE['bileteonline_active_organizer'] ?? null) : null);
 $organizerTrackingId = is_numeric($organizerTrackingId) ? (int) $organizerTrackingId : null;
 
 try {
@@ -55,6 +58,8 @@ try {
     if (!empty($trackingData['body_scripts'])) {
         $trackingBodyScripts = $trackingData['body_scripts'];
     }
+    // Where the thank-you page sends the operator's purchase conversion (core adds it for bilete.online only).
+    $trackingConversions = is_array($trackingData['conversions'] ?? null) ? $trackingData['conversions'] : [];
 } catch (Exception $e) {
     // Silently fail - tracking should never break the page
     error_log('Tracking scripts load error: ' . $e->getMessage());

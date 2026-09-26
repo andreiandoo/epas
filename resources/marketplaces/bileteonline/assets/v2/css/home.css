@@ -497,3 +497,43 @@
     .wp:nth-child(5){animation-range:entry 0% cover 62%}
   }
 }
+
+/* =================== HERO PROMOVAT (preview only, ?preview=1) =================== */
+/* a proposal for the paid "Hero prima pagină" slot, drawn under the live hero */
+.hpv{position:relative;background:var(--deep-2);color:var(--on-deep)}
+.hpv-ribbon{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:0;padding:12px var(--gutter);background:var(--yellow);color:var(--ink);font-size:var(--text-small);line-height:1.45}
+.hpv-ribbon b{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:var(--text-label)}
+.hpv-ribbon code{padding:1px 6px;border-radius:6px;background:rgba(33,33,33,.1);font-size:.8125rem}
+.hpv-stage{position:relative;min-height:clamp(520px, 78vh, 760px);overflow:hidden}
+.hpv-slide{position:absolute;inset:0;visibility:hidden;opacity:0;transition:opacity 700ms var(--ease-out), visibility 0s linear 700ms}
+.hpv-slide.is-on{visibility:visible;opacity:1;transition:opacity 700ms var(--ease-out)}
+.hpv-img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
+.hpv-img > *{width:100%;height:100%}
+.hpv-slide.is-on .hpv-img{animation:hpv-drift 9s var(--ease-out) both}
+@keyframes hpv-drift{from{transform:scale(1.06)}to{transform:scale(1)}}
+.hpv-shade{position:absolute;inset:0;background:linear-gradient(90deg, rgba(11,61,47,.92) 0%, rgba(11,61,47,.72) 38%, rgba(11,61,47,.12) 75%), linear-gradient(0deg, rgba(11,61,47,.7) 0%, rgba(11,61,47,0) 45%)}
+.hpv-copy{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:var(--space-3);box-sizing:border-box;max-width:var(--container);min-height:clamp(520px, 78vh, 760px);margin:0 auto;padding:var(--space-8) var(--gutter) calc(var(--space-8) + 96px)}
+.promo-tag.is-inline{position:static;background:var(--online);color:var(--deep-2)}
+.hpv-kicker{margin:0;font-size:var(--text-small);font-weight:700;letter-spacing:.04em;color:var(--on-deep-muted)}
+.hpv-h{margin:0;max-width:16ch;font-size:var(--text-display);font-weight:700;line-height:1;letter-spacing:-.045em;color:var(--on-deep)}
+.hpv-sub{margin:0;max-width:52ch;font-size:var(--text-lead);line-height:1.45;color:var(--on-deep-muted)}
+.hpv-cta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4) var(--space-5);margin-top:var(--space-3)}
+.hpv-price{font-size:var(--text-small);color:var(--on-deep-muted)}
+.hpv-price b{font-size:1.5rem;font-weight:700;color:var(--on-deep)}
+.hpv-dots{position:absolute;z-index:2;left:var(--gutter);right:var(--gutter);bottom:var(--space-5);display:flex;gap:var(--space-3);overflow-x:auto;scrollbar-width:none}
+.hpv-dots::-webkit-scrollbar{display:none}
+.hpv-dot{flex:0 0 auto;display:flex;align-items:center;gap:10px;min-width:0;max-width:280px;padding:6px 14px 6px 6px;border:1.5px solid rgba(247,247,245,.28);border-radius:var(--r-pill);background:rgba(11,61,47,.55);color:var(--on-deep);font:inherit;font-size:var(--text-small);font-weight:600;text-align:left;cursor:pointer;backdrop-filter:blur(6px);transition:border-color var(--dur-micro) var(--ease-out), background var(--dur-micro) var(--ease-out)}
+.hpv-dot:hover{border-color:rgba(247,247,245,.6)}
+.hpv-dot[aria-pressed="true"]{border-color:var(--online);background:rgba(11,61,47,.85)}
+.hpv-dot-media{position:relative;flex:0 0 auto;width:40px;height:40px;overflow:hidden;border-radius:999px;background:var(--deep)}
+.hpv-dot-media img,.hpv-dot-media > *{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hpv-dot-t{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+@media (min-width:1024px){
+  .hpv-copy{padding-bottom:var(--space-9)}
+  .hpv-dots{left:auto;right:var(--gutter);bottom:var(--space-7);flex-direction:column;align-items:stretch;width:300px}
+  .hpv-dot{max-width:none}
+}
+@media (prefers-reduced-motion: reduce){
+  .hpv-slide,.hpv-slide.is-on{transition:none}
+  .hpv-slide.is-on .hpv-img{animation:none}
+}

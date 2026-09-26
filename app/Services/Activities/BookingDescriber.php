@@ -48,6 +48,7 @@ class BookingDescriber
         return [
             'booking_id'        => $b->id,
             'confirmation_code' => $b->confirmation_code,
+            'product_id'        => $activity?->id,
             'type'              => $activity?->product_type,
             'title'             => ActivityOrderBuilder::ro($activity?->title, 'Activitate'),
             'variant'           => ActivityOrderBuilder::ro($b->variant?->name, ''),

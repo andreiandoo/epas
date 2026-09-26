@@ -888,7 +888,10 @@ class OrdersController extends BaseController
     private function withActivityLines(array $payload, Order $order): array
     {
         $lines = \App\Services\Activities\BookingDescriber::lines($order);
+        // The operator whose ad pixels get the Purchase event on the thank-you page (ad tracking service).
+        $payload['order']['organizer_id'] = $order->marketplace_organizer_id;
         $payload['order']['items'] = array_map(fn ($l) => [
+            'product_id' => $l['product_id'] ?? null,
             'name'       => trim($l['title'] . ($l['variant'] !== '' ? ' — ' . $l['variant'] : '')),
             'quantity'   => $l['quantity'],
             'price'      => $l['quantity'] > 0 ? round($l['total'] / $l['quantity'], 2) : $l['total'],

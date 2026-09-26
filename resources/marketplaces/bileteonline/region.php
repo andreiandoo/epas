@@ -36,6 +36,7 @@ if (!is_array($regionResp) || empty($regionResp['success']) || !is_array($region
 }
 
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/promoted.php';
 
 $rgFold = fn (string $s): string => trim(preg_replace('/[^a-z0-9]+/', '-', mb_strtolower(strtr($s, [
     'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
@@ -77,7 +78,7 @@ foreach ($rgPages as $rgPage) {
         }
     }
 }
-usort($activities, fn ($a, $b) => [(int) $b['featured'], $a['title']] <=> [(int) $a['featured'], $b['title']]);
+usort($activities, fn ($a, $b) => [(int) $b['promoted'], (int) $b['featured'], $a['title']] <=> [(int) $a['promoted'], (int) $a['featured'], $b['title']]);
 
 // ------------------------------------------------------------------ cities
 $navRegion = null;
@@ -280,7 +281,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php foreach (array_slice($activities, 0, 8) as $i => $a): ?>
         <li class="xp">
           <a href="<?= v2_e($a['href']) ?>">
-            <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?></span>
+            <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?><?= !empty($a['promoted']) ? v2_promoted_tag() : '' ?></span>
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($a['catName']) ?></span>
               <span class="xp-title"><?= v2_e($a['title']) ?></span>

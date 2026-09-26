@@ -288,7 +288,25 @@ function v2_activity(array $a): ?array
         'image' => v2_media_url($a['cover_image_url'] ?? null),
         'href' => '/experienta/' . $slug,
         'dates' => [],
+        // A paid promotion running now for this listing (flags.is_promoted from core): listed first, labelled "Promovat".
+        'promoted' => !empty($a['flags']['is_promoted']),
     ];
+}
+
+/**
+ * Ad tracking of the operator whose experience / location / activity the page shows: sets $organizerTrackingId
+ * (read by includes/tracking.php from v2/head.php, so their pixels load on this page) and returns the snippet that
+ * remembers the operator for a day, so cart and checkout ($trackingFromCookie) keep their pixels until the purchase.
+ * The page HTML is specific to that operator, so it is safe to cache.
+ */
+function v2_track_organizer($organizerId): string
+{
+    $id = is_numeric($organizerId) ? (int) $organizerId : 0;
+    if ($id <= 0) {
+        return '';
+    }
+    $GLOBALS['organizerTrackingId'] = $id;
+    return '<script>try{document.cookie="bileteonline_active_organizer=' . $id . ';path=/;max-age=86400;samesite=Lax"+(location.protocol==="https:"?";secure":"")}catch(e){}</script>';
 }
 
 /** Shape of an attraction from /attractions or /attractions/{slug}. */

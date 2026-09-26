@@ -97,6 +97,15 @@ class ServiceOrder extends Model
                 $order->order_number = self::generateOrderNumber($order->marketplace_client_id);
             }
         });
+
+        // bilete.online promotions (product or location) are read from these orders: drop the cached list as soon
+        // as one changes so a paid promotion shows up, or a cancelled one goes away, without waiting for the TTL.
+        static::saved(function ($order) {
+            if ($order->service_type === self::TYPE_LOCATION_FEATURING
+                || ($order->service_type === self::TYPE_FEATURING && !empty($order->config['activity_id']))) {
+                \App\Services\Activities\PromotionResolver::forget($order->marketplace_client_id);
+            }
+        });
     }
 
     /**

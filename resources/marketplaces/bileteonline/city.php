@@ -36,6 +36,7 @@ if (!$cityData) {
 
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/promoted.php';
 
 // ============================================================
 // City data extraction
@@ -85,13 +86,9 @@ $catNameOf = function (string $catSlug) use ($V2NAV): string {
     return $V2NAV['categoryBySlug'][$catSlug]['name'] ?? ucwords(str_replace('-', ' ', $catSlug));
 };
 
-// Events, activities and attractions are INDEPENDENT upstream calls, so they run CONCURRENTLY
-// (curl_multi via api_cached_many): one round-trip of wall-time on a cold cache.
-$evParams = ['city' => $slug, 'page' => $pageNum, 'per_page' => 18, 'time_scope' => 'upcoming'];
-if ($categoryFilter) $evParams['category'] = $categoryFilter;
-if ($searchQuery !== '') $evParams['search'] = $searchQuery;
-if ($maxPrice !== null) $evParams['max_price'] = $maxPrice;
-if ($sort !== 'recommended') $evParams['sort'] = $sort;
+// Activities, attractions, locations and the paid "Populare în …" block are INDEPENDENT upstream calls, so they run
+// CONCURRENTLY (curl_multi via api_cached_many): one round-trip of wall-time on a cold cache. bilete.online has no
+// events.
 
 $actParams = ['city' => $slug, 'page' => $pageNum, 'per_page' => 24];
 if ($categoryFilter) $actParams['category'] = $categoryFilter;
@@ -101,12 +98,6 @@ if ($sort === 'price_asc') $actParams['sort'] = 'cheapest';
 
 $cacheSuffix = ($categoryFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
 $listings = api_cached_many([
-    'events' => [
-        'key'      => "city_events_{$slug}_{$cacheSuffix}",
-        'endpoint' => '/events',
-        'params'   => $evParams,
-        'ttl'      => 300,
-    ],
     'activities' => [
         'key'      => "city_activities_{$slug}_{$cacheSuffix}",
         'endpoint' => '/activities',
@@ -126,19 +117,16 @@ $listings = api_cached_many([
         'params'   => ['city' => $slug, 'per_page' => 8],
         'ttl'      => 300,
     ],
+    'promoted' => v2_promoted_job('city', ['city' => $slug]),
 ]);
-
-$eventsResp = $listings['events'] ?? ['data' => []];
-$events = $eventsResp['data'] ?? [];
-$evPagination = $eventsResp['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => is_array($events) ? count($events) : 0];
-if (!is_array($events)) $events = [];
+$promoted = v2_promoted_items($listings['promoted'] ?? null);
 
 $actResp = $listings['activities'] ?? ['data' => []];
 $activities = $actResp['data']['items'] ?? [];
 if (!is_array($activities)) $activities = [];
 $actPagination = $actResp['data']['pagination'] ?? ['last_page' => 1, 'total' => count($activities)];
 
-// Unified card list — activities first (primary content), then events.
+// Activity cards, in the API order (paid promotions for this city first).
 $cards = [];
 foreach ($activities as $a) {
     if (!is_array($a) || !($n = v2_activity($a))) {
@@ -152,27 +140,14 @@ foreach ($activities as $a) {
         'price_cents' => isset($a['cheapest_price_cents']) ? (int) $a['cheapest_price_cents'] : null,
         'url'         => $n['href'],
         'cta'         => 'Vezi activitatea',
-    ];
-}
-foreach ($events as $ev) {
-    if (!is_array($ev) || empty($ev['slug'])) {
-        continue;
-    }
-    $cards[] = [
-        'title'       => navEventTitle($ev),
-        'cat'         => navEventCategoryLabel($ev),
-        'image'       => v2_media_url($ev['cover_image_url'] ?? $ev['image_url'] ?? null),
-        'dur'         => '',
-        'price_cents' => isset($ev['cheapest_price_cents']) ? (int) $ev['cheapest_price_cents'] : null,
-        'url'         => '/bilete/' . $ev['slug'],
-        'cta'         => 'Vezi bilete',
+        'promoted'    => !empty($a['flags']['is_promoted']),
     ];
 }
 
 $pagination = [
     'current_page' => $pageNum,
-    'last_page'    => max((int) ($evPagination['last_page'] ?? 1), (int) ($actPagination['last_page'] ?? 1)),
-    'total'        => (int) ($evPagination['total'] ?? count($events)) + (int) ($actPagination['total'] ?? count($activities)),
+    'last_page'    => max(1, (int) ($actPagination['last_page'] ?? 1)),
+    'total'        => (int) ($actPagination['total'] ?? count($activities)),
 ];
 
 // Locations with online tickets in this city (access tickets, experiences, packages). Section hidden when none.
@@ -187,6 +162,7 @@ foreach ((array) (($listings['locations']['success'] ?? false) ? ($listings['loc
         'image' => v2_media_url($l['cover_image'] ?? null),
         'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · de la ' . v2_thousands((int) round($l['min_price_cents'] / 100)) . ' lei' : ''), ' ·'),
         'lodging' => !empty($l['has_lodging']),
+        'promoted' => !empty($l['is_promoted']),
     ];
 }
 
@@ -500,7 +476,15 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ============================== GETYOURGUIDE (promoted: cities without own listings) ============================== -->
   <?php if ($gygPromote) { $renderGygSection(); } ?>
 
-  <!-- ============================== ACTIVITIES + EVENTS ============================== -->
+  <!-- ============================== PROMOVATE (paid city placement) ============================== -->
+  <?php v2_promoted_section($promoted, [
+      'id' => 'promo-city',
+      'kicker' => 'Promovat',
+      'title' => 'Populare în ' . $cityName,
+      'intro' => 'Locuri și experiențe din ' . $cityName . ' puse în față de operatorii lor în perioada asta.',
+  ]); ?>
+
+  <!-- ============================== ACTIVITIES ============================== -->
   <section class="cl" id="activitati" aria-labelledby="cl-h">
     <div class="wrap cl-head">
       <h2 id="cl-h">Top activități în <?= v2_e($cityName) ?></h2>
@@ -613,7 +597,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php foreach ($cards as $i => $card): ?>
         <li class="xp">
           <a href="<?= v2_e($card['url']) ?>">
-            <span class="xp-media"><?= $card['image'] ? v2_photo([$card['image'], 0, 0, '']) : v2_fallback($card['title'], $i) ?></span>
+            <span class="xp-media"><?= $card['image'] ? v2_photo([$card['image'], 0, 0, '']) : v2_fallback($card['title'], $i) ?><?= $card['promoted'] ? v2_promoted_tag() : '' ?></span>
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($card['cat']) ?></span>
               <span class="xp-title"><?= v2_e($card['title']) ?></span>
@@ -707,7 +691,7 @@ include __DIR__ . '/includes/v2/header.php';
       <ul class="rail" id="loc-rail">
         <?php foreach ($cityLocations as $li => $lc): ?>
         <li class="at"><a href="<?= v2_e($lc['href']) ?>">
-          <span class="at-media"><?= $lc['image'] ? v2_photo([$lc['image'], 0, 0, '']) : v2_fallback($lc['name'], $li) ?><?php if ($lc['lodging']): ?><span class="at-badge">Cazare</span><?php endif; ?></span>
+          <span class="at-media"><?= $lc['image'] ? v2_photo([$lc['image'], 0, 0, '']) : v2_fallback($lc['name'], $li) ?><?php if ($lc['promoted']): ?><?= v2_promoted_tag() ?><?php endif; ?><?php if ($lc['lodging']): ?><span class="at-badge">Cazare</span><?php endif; ?></span>
           <span class="at-name"><?= v2_e($lc['name']) ?><?= v2_ic('arrow-right') ?></span>
           <?php if ($lc['meta'] !== ''): ?><span class="at-meta"><span><?= v2_e($lc['meta']) ?></span></span><?php endif; ?>
         </a></li>

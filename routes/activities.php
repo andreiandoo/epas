@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\MarketplaceClient\Activities\LocationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\ModuleController;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\ProductsController;
+use App\Http\Controllers\Api\MarketplaceClient\Activities\PromotedController;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\BookingsController as OrganizerBookings;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\LocationsController as OrganizerLocations;
 use App\Http\Controllers\Api\MarketplaceClient\Activities\Organizer\ProductsController as OrganizerProducts;
@@ -43,6 +44,10 @@ Route::prefix('marketplace-client')
             ->where('slug', '[a-z0-9-]+')->name('locations.day');
         Route::get('/activities-module/locations/{slug}/calendar', [LocationsController::class, 'calendar'])
             ->where('slug', '[a-z0-9-]+')->name('locations.calendar');
+
+        // Paid placements (service orders "featuring" / "location_featuring").
+        Route::get('/activities-module/promoted', [PromotedController::class, 'index'])
+            ->name('promoted');
 
         Route::get('/activities-module/products/{slug}', [ProductsController::class, 'show'])
             ->where('slug', '[a-z0-9-]+')->name('products.show');

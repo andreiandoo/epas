@@ -168,15 +168,26 @@ class ServiceOrderController extends BaseController
         $requestedType = (string) $request->input('service_type');
         $accountLevel = $module && $requestedType === ServiceOrder::TYPE_TRACKING;
         $locationLevel = $module && $requestedType === ServiceOrder::TYPE_LOCATION_FEATURING;
+        // bilete.online has no events: "Promovare activitate" promotes one of the operator's products.
+        $productLevel = $module && $requestedType === ServiceOrder::TYPE_FEATURING;
 
         $rules = [
             'service_type' => 'required|in:featuring,email,tracking,campaign' . ($module ? ',' . ServiceOrder::TYPE_LOCATION_FEATURING : ''),
-            'event_id' => $accountLevel || $locationLevel ? 'nullable|integer' : 'required|integer',
+            'event_id' => $accountLevel || $locationLevel || $productLevel ? 'nullable|integer' : 'required|integer',
             'payment_method' => 'nullable|in:card,transfer',
             'config' => 'required|array',
         ];
         if ($locationLevel) {
             $rules['location_id'] = 'required|integer';
+        }
+        if ($productLevel) {
+            $rules['activity_id'] = 'required|integer';
+        }
+        if ($locationLevel || $productLevel) {
+            $rules['config.locations'] = 'required|array|min:1';
+            $rules['config.locations.*'] = 'in:' . implode(',', \App\Services\Activities\PromotionResolver::PLACEMENTS);
+            $rules['config.start_date'] = 'required|date';
+            $rules['config.end_date'] = 'required|date|after:config.start_date';
         }
 
         $validator = Validator::make($request->all(), $rules);
@@ -187,7 +198,7 @@ class ServiceOrderController extends BaseController
 
         // Verify event belongs to organizer
         $event = null;
-        if (!$accountLevel && !$locationLevel) {
+        if (!$accountLevel && !$locationLevel && !$productLevel) {
             $event = Event::where('id', $request->event_id)
                 ->where('marketplace_organizer_id', $organizer->id)
                 ->first();
@@ -210,6 +221,36 @@ class ServiceOrderController extends BaseController
             }
         }
 
+        // bilete.online: the promoted product must be the operator's own and on sale online.
+        $product = null;
+        if ($productLevel) {
+            $product = \App\Models\Activity::where('id', (int) $request->input('activity_id'))
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->with('location')
+                ->first();
+
+            if (!$product || !\App\Services\Activities\CatalogPresenter::onSale($product)) {
+                return $this->error('Activitatea nu a fost gasita', 404);
+            }
+        }
+
+        // bilete.online: each placement holds a limited number of promotions at a time.
+        if ($locationLevel || $productLevel) {
+            $cfgIn = (array) $request->input('config');
+            $full = (new \App\Services\Activities\PromotionResolver())->fullPlacements(
+                $organizer->marketplace_client_id,
+                (array) ($cfgIn['locations'] ?? []),
+                substr((string) $cfgIn['start_date'], 0, 10),
+                substr((string) $cfgIn['end_date'], 0, 10),
+                $product,
+                $location,
+            );
+            if ($full) {
+                return $this->error('Unele plasamente sunt ocupate in perioada aleasa', 409, ['full_placements' => $full]);
+            }
+        }
+
         // Get pricing
         $types = ServiceType::getOrCreateForMarketplace($organizer->marketplace_client_id);
         $serviceType = $types[$requestedType] ?? null;
@@ -226,6 +267,10 @@ class ServiceOrderController extends BaseController
         if ($location) {
             $config['location_id'] = $location->id;
             $config['location_name'] = $this->getLocationName($location);
+        }
+        if ($product) {
+            $config['activity_id'] = $product->id;
+            $config['activity_name'] = $this->getProductName($product);
         }
 
         // Calculate price (no TVA for extra services)
@@ -259,6 +304,8 @@ class ServiceOrderController extends BaseController
                         $eventTitle = is_array($event->title)
                             ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: '')
                             : ($event->title ?? '');
+                    } elseif ($product) {
+                        $eventTitle = $config['activity_name'] ?? '';
                     } elseif ($location) {
                         $eventTitle = $config['location_name'] ?? '';
                     } elseif ($accountLevel) {
@@ -520,6 +567,10 @@ class ServiceOrderController extends BaseController
                 $row['scope'] = 'location';
                 $row['location_id'] = $order->config['location_id'] ?? null;
                 $row['location_name'] = (string) ($order->config['location_name'] ?? '');
+            } elseif ($order->service_type === ServiceOrder::TYPE_FEATURING && !empty($order->config['activity_id'])) {
+                $row['scope'] = 'activity';
+                $row['activity_id'] = $order->config['activity_id'];
+                $row['activity_name'] = (string) ($order->config['activity_name'] ?? '');
             } elseif ($order->service_type === ServiceOrder::TYPE_TRACKING && !$order->marketplace_event_id) {
                 $row['scope'] = 'account';
             }
@@ -558,6 +609,17 @@ class ServiceOrderController extends BaseController
             ?: $location->getTranslation('name');
 
         return is_string($name) ? $name : '';
+    }
+
+    /** Romanian title of an activities-module product (bilete.online). */
+    protected function getProductName(\App\Models\Activity $product): string
+    {
+        $title = $product->title;
+        if (is_array($title)) {
+            $title = $title['ro'] ?? $title['en'] ?? (array_values(array_filter($title))[0] ?? '');
+        }
+
+        return is_string($title) ? $title : '';
     }
 
     protected function getEventTitle(?Event $event): string
@@ -648,7 +710,7 @@ class ServiceOrderController extends BaseController
 
                 $row = $integrations->get($provider);
                 $pixelId = $row?->getProviderId() ?? '';
-                $tracking[] = [
+                $entry = [
                     'platform' => $platform,
                     'provider' => $provider,
                     'id_field' => $defaults['id_field'],
@@ -656,6 +718,11 @@ class ServiceOrderController extends BaseController
                     'enabled' => (bool) ($row?->enabled ?? false),
                     'has_pixel' => $pixelId !== '',
                 ];
+                // bilete.online only: the Google Ads conversion label, so the page can pre-fill it.
+                if ($provider === 'google_ads' && $this->hasActivitiesModule($order->marketplace_client_id)) {
+                    $entry['conversion_label'] = (string) (($row?->settings ?? [])['conversion_label'] ?? '');
+                }
+                $tracking[] = $entry;
             }
             $detailed['tracking_setup'] = $tracking;
         }
@@ -961,10 +1028,13 @@ class ServiceOrderController extends BaseController
             'pixel_ids.facebook' => 'nullable|string|max:50',
             'pixel_ids.google' => 'nullable|string|max:50',
             'pixel_ids.tiktok' => 'nullable|string|max:50',
+            // bilete.online: the Google Ads conversion label ("AW-123/<label>") the Purchase is sent to.
+            'pixel_ids.google_label' => 'nullable|string|max:64',
         ]);
         if ($validator->fails()) {
             return $this->error('Validation failed', 422, $validator->errors()->toArray());
         }
+        $withLabel = $this->hasActivitiesModule($order->marketplace_client_id) && $request->has('pixel_ids.google_label');
 
         $orderPlatforms = $order->config['platforms'] ?? [];
         $input = $request->input('pixel_ids', []);
@@ -989,6 +1059,9 @@ class ServiceOrderController extends BaseController
 
             $settings = is_array($row->settings) ? $row->settings : [];
             $settings[$defaults['id_field']] = $pixelId;
+            if ($withLabel && $provider === 'google_ads') {
+                $settings['conversion_label'] = trim((string) $request->input('pixel_ids.google_label', ''));
+            }
             $settings['toggle_enabled'] = true; // service is paid, toggle stays ON
             $settings['inject_at'] = $settings['inject_at'] ?? 'head';
             $settings['page_scope'] = $settings['page_scope'] ?? 'public';
