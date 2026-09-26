@@ -618,7 +618,7 @@
   }
   // A new tab on bilete.online with the lines in the address (cart.js adds them); a blocked pop-up leaves a link.
   function openCheckout(items) {
-    var url = (cfg.site_url || '') + '/finalizare#bo-import=' + encodeURIComponent(JSON.stringify(items));
+    var url = (cfg.site_url || '') + '/finalizare#bo-import=' + encodeURIComponent(JSON.stringify(items)) + (cfg.return_token ? '&bo-return=' + encodeURIComponent(cfg.return_token) : '');
     var w = null;
     try { w = window.open(url, '_blank'); } catch (e) {}
     if (w) return;

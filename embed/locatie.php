@@ -17,6 +17,7 @@ require_once dirname(__DIR__) . '/includes/api.php';
 require_once dirname(__DIR__) . '/includes/nav-helpers.php';
 require_once dirname(__DIR__) . '/includes/v2/helpers.php';
 require_once dirname(__DIR__) . '/includes/v2/am-labels.php';
+require_once dirname(__DIR__) . '/includes/embed-return.php';
 
 function emb_stop(int $code, string $title, string $text): void
 {
@@ -108,6 +109,8 @@ $clientData = ['booking' => [
     'today' => (new DateTimeImmutable('now', $lcTz))->format('Y-m-d'),
     'max_days' => max(1, (int) ($location['max_advance_days'] ?? 0) ?: 90),
     'focus_product_id' => null,
+    // "Înapoi la <site>" on the thank-you page: a signed address of the operator's page framing the widget
+    'return_token' => bo_return_token($ancestors),
 ]];
 ?><!DOCTYPE html>
 <html lang="ro">

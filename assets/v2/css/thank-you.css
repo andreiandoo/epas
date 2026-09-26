@@ -231,3 +231,10 @@
 @keyframes confetti-fall{0%{opacity:1;transform:translateY(-100px) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
 .ty-points[hidden]{display:none}
 .ty-points p a{color:#F2C04D;font-weight:700;text-underline-offset:3px}
+
+/* bought through an operator's booking widget: the way back to their site */
+.ty-return{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 14px;margin:22px auto 0;padding:8px 8px 8px 18px;border:1px solid rgba(247,247,245,.22);border-radius:999px;background:rgba(247,247,245,.08);color:var(--on-deep-muted);font-size:.9375rem}
+.ty-return[hidden]{display:none}
+.ty-return b{color:#F7F7F5}
+.ty-return .btn{min-height:44px}
+@media (max-width:560px){.ty-return{padding:12px;border-radius:20px}.ty-return .btn{width:100%}}
