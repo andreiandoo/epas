@@ -706,11 +706,13 @@
     msg('po-anaf-msg', 'Se caută la ANAF…', false);
     O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui } }).then(function (r) {
       var d = (r && r.data) || {};
-      var co = d.company || d;
-      if (txt(co.name)) $('po-co-name').value = txt(co.name);
-      if (txt(co.registration_number || co.reg_no)) $('po-co-reg').value = txt(co.registration_number || co.reg_no);
-      if (txt(co.address)) $('po-co-address').value = txt(co.address);
-      msg('po-anaf-msg', txt(co.name) ? 'Date completate din ANAF.' : 'ANAF nu a returnat date pentru acest CUI.', !txt(co.name));
+      // The proxy answers with company_name / reg_com / full_address (the shape the settings page reads).
+      var co = d.company || d, name = txt(co.company_name || co.name);
+      var address = txt(co.full_address) || [txt(co.address), txt(co.city), txt(co.county)].filter(Boolean).join(', ');
+      if (name) $('po-co-name').value = name;
+      if (txt(co.reg_com || co.registration_number || co.reg_no)) $('po-co-reg').value = txt(co.reg_com || co.registration_number || co.reg_no);
+      if (address) $('po-co-address').value = address;
+      msg('po-anaf-msg', !name ? 'ANAF nu a returnat date pentru acest CUI.' : co.deregistered ? 'Firma apare radiată la ANAF. Verifică datele înainte de a emite factura.' : 'Date completate din ANAF.', !name || !!co.deregistered);
     }, function (err) {
       msg('po-anaf-msg', (err && err.message) || 'Nu am putut interoga ANAF.', true);
     }).then(function () { b.disabled = false; });

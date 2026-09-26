@@ -3254,6 +3254,8 @@ switch ($action) {
                     $adresa['snumar_Strada'] ?? '',
                     $adresa['sdetalii_Adresa'] ?? ''
                 )),
+                // the whole registered address as ANAF writes it ("JUD. ..., MUN. ..., STR. ..., NR. ...")
+                'full_address' => $dateGen['adresa'] ?? '',
                 'city' => $adresa['sdenumire_Localitate'] ?? '',
                 'county' => $adresa['sdenumire_Judet'] ?? '',
                 'zip' => $adresa['scod_Postal'] ?? '',

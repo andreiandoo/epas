@@ -7,6 +7,35 @@
 .pos-session-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
 .pos-session-tools .po-field{width:180px}
 
+/* Compact top (title, location, cash desk bar): the products start higher. On wide screens the header and the cash
+   desk bar share one row. */
+.pos{gap:var(--space-3)}
+.pos > .ve-head{align-items:center;gap:8px 16px}
+.pos .ve-eyebrow{font-size:.6875rem;gap:6px}
+.pos .ve-eyebrow .ic{width:14px;height:14px}
+.pos .ve-h{margin-top:2px;font-size:clamp(1.375rem, 1.9vw, 1.75rem);letter-spacing:-.03em}
+.pos .am-filters{align-items:center;gap:8px}
+.pos .am-filters .po-field{display:flex;align-items:center;gap:8px;flex:0 1 auto}
+.pos .am-filters .po-field > label{white-space:nowrap}
+.pos .am-filters .po-select select,.pos .am-filters .btn{min-height:40px}
+.pos .am-filters .po-select select{min-width:180px;border-radius:12px}
+.pos-session{gap:8px 16px;padding:8px 8px 8px 14px;border-radius:14px}
+.pos-session-t{gap:0}
+.pos-session-t b{font-size:.9375rem}
+.pos-session-t span{font-size:.8125rem}
+.pos-session-tools{align-items:center;gap:8px}
+.pos-session-tools .po-field{display:flex;align-items:center;gap:8px;width:auto}
+.pos-session-tools .po-field > label{white-space:nowrap;font-size:.75rem}
+.pos-session-tools .po-input{width:110px;min-height:40px;border-radius:12px}
+.pos-session-tools .btn{min-height:40px;padding:0 16px}
+.pos-head{margin-bottom:8px}
+@media (min-width:1100px){
+  .pos{grid-template-columns:auto minmax(0,1fr);column-gap:var(--space-5)}
+  .pos > *{grid-column:1 / -1}
+  .pos > .ve-head{grid-column:1;grid-row:1}
+  .pos > .pos-session{grid-column:2;grid-row:1;align-self:center}
+}
+
 .pos-grid{display:grid;gap:var(--space-5);grid-template-columns:minmax(0,1fr)}
 @media (min-width:1100px){.pos-grid{grid-template-columns:minmax(0,1fr) 380px;align-items:start}}
 .pos-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-bottom:12px}
@@ -21,7 +50,8 @@
 .pos-p-head small{display:block;margin-top:2px;color:var(--green);font-size:.8125rem;font-weight:600}
 .pos-p-head small.is-low{color:var(--red-text)}
 .pos-p-head small.is-off{color:var(--muted)}
-.pos-p-ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--tint-green);font-size:1.25rem}
+.pos-p-ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--tint-green);color:var(--action)}
+.pos-p-ic .ic{width:22px;height:22px}
 .pos-vars{display:grid;gap:6px}
 .pos-v{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:600 .9375rem/1.2 var(--font);text-align:left;cursor:pointer}
 .pos-v:hover:not(:disabled){border-color:var(--green);background:var(--tint-green)}
