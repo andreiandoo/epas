@@ -62,6 +62,7 @@ v2_org_start('am-widgets');
         <button class="btn btn-primary" type="submit" id="wg-dom-go"><?= v2_ic('plus') ?>Adaugă</button>
       </form>
       <p class="wg-err" id="wg-dom-err" role="alert" hidden></p>
+      <p class="wg-status" id="wg-dom-status" role="status" aria-live="polite" hidden></p>
     </section>
 
     <section class="org-panel" aria-labelledby="wg-what-h">
