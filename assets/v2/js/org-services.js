@@ -24,8 +24,8 @@
   var PEEK = {
     home_hero: ['Prima pagină — Hero Banner', 'apare ca banner principal pe prima pagină, vizibilă imediat la accesarea site-ului. Poziția cu cea mai mare vizibilitate.'],
     home_recommendations: ['Prima pagină — Secțiunea Recomandări', 'apare prima în secțiunea „Recomandate pentru tine” de pe prima pagină, vizibilă pentru toți vizitatorii site-ului.'],
-    category: ['Pagina categoriei', 'apare recomandată la începutul paginii de categorie. Ajunge la publicul care caută exact acel tip de activitate.'],
-    city: ['Pagina orașului', 'apare în secțiunea „Populare în [oraș]” pe pagina dedicată orașului. Ajunge la oamenii care caută ce se poate face în zona lor.'],
+    category: ['Pagina categoriei', 'apare în secțiunea „Promovate în [categorie]” de la începutul paginii categoriei și prima în lista ei, cu eticheta „Promovat”. Ajunge la publicul care caută exact acel tip de activitate.'],
+    city: ['Pagina orașului', 'apare în secțiunea „Populare în [oraș]” pe pagina orașului și prima în lista lui, cu eticheta „Promovat”. Ajunge la oamenii care caută ce se poate face în zona lor.'],
   };
   var PLACE_DEFAULT = { home_hero: 120, home_recommendations: 80, category: 60, city: 40 };
   var pricing = { featuring: PLACE_DEFAULT, location_featuring: PLACE_DEFAULT, tracking: { per_platform_monthly: 49, discounts: { 1: 0, 3: 0.1, 6: 0.15, 12: 0.25 } } };
@@ -69,20 +69,31 @@
         if (p.tracking && typeof p.tracking === 'object') pricing.tracking = p.tracking.pricing || p.tracking;
       }
     }, function () {}).then(prices);
-    // The operator's own locations (activities module). Quiet: a marketplace or an account without the module simply
-    // has nothing to promote, and the window says so.
+    // The operator's own locations and products (activities module; bilete.online has no events). Quiet: an account
+    // without them simply has nothing to promote, and the window says so. A product is promotable when it is sold
+    // online: published, approved, not POS-only, at a published location.
+    var locNames = {};
     O.api('/organizer/activities-module/locations', { quiet: true }).then(function (r) {
       var d = (r && r.data) || {}, list = Array.isArray(d.locations) ? d.locations : Array.isArray(d) ? d : [];
       var sel = $('ox-place');
+      list.forEach(function (l) { if (l && l.id != null) locNames[l.id] = l; });
       places = list.filter(function (l) { return l && l.id != null && l.is_published; });
       if (!places.length) sel.appendChild(el('option', { value: '', disabled: true, text: 'Nu ai încă o locație publicată' }));
       places.forEach(function (l) { sel.appendChild(el('option', { value: String(l.id), text: txt(l.name) || 'Locația #' + l.id })); });
-    }, function () {});
-    O.api('/organizer/events?per_page=50', { quiet: true }).then(function (r) {
-      var sel = $('ox-event'), list = Array.isArray(r && r.data) ? r.data : [];
-      events = list.filter(function (e) { var end = naiveDay(e.ends_at || e.starts_at); return e && e.id != null && !e.is_cancelled && !e.is_past && e.is_editable !== false && (!end || end >= F.ymd()); });
-      if (!events.length) sel.appendChild(el('option', { value: '', disabled: true, text: 'Momentan nu ai activități în derulare pentru care să faci promovare' }));
-      events.forEach(function (e) { sel.appendChild(el('option', { value: String(e.id), text: txt(e.name || e.title) || 'Activitatea #' + e.id })); });
+    }, function () {}).then(function () {
+      return O.api('/organizer/activities-module/products', { quiet: true });
+    }).then(function (r) {
+      var d = (r && r.data) || {}, list = Array.isArray(d.products) ? d.products : [];
+      var sel = $('ox-event');
+      events = list.filter(function (p) {
+        var loc = p && p.location_id != null ? locNames[p.location_id] : null;
+        return p && p.id != null && p.is_published && !p.pos_only && (!p.review_status || p.review_status === 'approved') && (!loc || loc.is_published);
+      }).map(function (p) {
+        var loc = p.location_id != null ? locNames[p.location_id] : null;
+        return { id: p.id, name: txt(p.title) || 'Activitatea #' + p.id, image: p.image && p.image.url, place: loc ? txt(loc.name) : '', price: F.toNum(p.min_price), type: p.type };
+      });
+      if (!events.length) sel.appendChild(el('option', { value: '', disabled: true, text: 'Nu ai încă o activitate publicată pe care s-o promovăm' }));
+      events.forEach(function (e) { sel.appendChild(el('option', { value: String(e.id), text: e.place ? e.name + ' — ' + e.place : e.name })); });
     }, function () {});
     loadOrders();
   });
@@ -121,7 +132,7 @@
         first.push(el('br'), el('a', { class: 'ox-alert', href: '/organizator/services/' + id, title: 'Completează Pixel ID' }, [icon('warning-circle'), 'Necesită Pixel ID' + (missing ? ': ' + missing : '')]));
       }
       var start = day(s.service_start_date), end = day(s.service_end_date);
-      var applies = s.scope === 'account' ? 'Tot contul' : txt(s.location_name) || txt(s.event_name) || '—';
+      var applies = s.scope === 'account' ? 'Tot contul' : txt(s.location_name) || txt(s.activity_name) || txt(s.event_name) || '—';
       body.appendChild(el('tr', null, [
         el('td', null, first),
         el('td', { text: applies }),
@@ -188,19 +199,19 @@
   /** Name shown for whatever the order applies to - an activity, a location, or the whole account. */
   function subjectName() {
     var e = eventOf(), l = placeOf();
-    return scope() === 'account' ? 'Tot contul tău' : scope() === 'location' ? (l ? txt(l.name) : '') : (e ? txt(e.name || e.title) : '');
+    return scope() === 'account' ? 'Tot contul tău' : scope() === 'location' ? (l ? txt(l.name) : '') : (e ? e.name : '');
   }
   $('ox-event').addEventListener('change', function () {
     var e = eventOf();
     showErr('ox-event-err', '');
     $('ox-ev').hidden = !e;
     if (!e) return;
-    var box = $('ox-ev-img'), src = imgUrl(e.image || e.poster_url);
+    var box = $('ox-ev-img'), src = imgUrl(e.image);
     box.textContent = '';
     if (src) box.appendChild(el('img', { src: src, alt: '' }));
-    $('ox-ev-name').textContent = txt(e.name || e.title);
-    $('ox-ev-date').textContent = day(e.starts_at || e.date);
-    $('ox-ev-venue').textContent = txt(e.venue_name) || txt(e.venue && e.venue.name) || txt(e.venue_city);
+    $('ox-ev-name').textContent = e.name;
+    $('ox-ev-date').textContent = e.price > 0 ? 'de la ' + F.money(e.price) : '';
+    $('ox-ev-venue').textContent = e.place;
   });
   $('ox-place').addEventListener('change', function () {
     var l = placeOf();
@@ -236,22 +247,22 @@
     if (isPlacement()) {
       var start = $('ox-start').value, end = $('ox-end').value;
       if (!checked('ox-loc').length) { showErr('ox-loc-err', 'Alege cel puțin un loc de afișare.'); root.querySelector('input[name="ox-loc"]').focus(); return false; }
-      var msg = !start || !end ? 'Alege perioada de promovare.' : start < F.ymd() ? 'Data de început nu poate fi în trecut.' : end <= start ? 'Data de sfârșit trebuie să fie după data de început.' : '';
+      var msg = !start || !end ? 'Alege perioada de promovare.' : start < F.ymd() ? 'Data de început nu poate fi în trecut.' : end < start ? 'Data de sfârșit nu poate fi înainte de data de început.' : '';
       showErr('ox-dates-err', msg);
       if (msg) { (!start ? $('ox-start') : $('ox-end')).focus(); return false; }
     }
     if (type === 'tracking' && !checked('ox-plat').length) { showErr('ox-plat-err', 'Alege cel puțin o platformă.'); root.querySelector('input[name="ox-plat"]').focus(); return false; }
     return true;
   }
+  /** Both dates included: 1-3 October is 3 days, the same count core charges (start 00:00, end 23:59). */
   function days() {
     var s = new Date($('ox-start').value + 'T00:00:00Z'), e = new Date($('ox-end').value + 'T00:00:00Z');
-    return Math.max(Math.round((e - s) / 86400000), 1);
+    return Math.max(Math.round((e - s) / 86400000) + 1, 1);
   }
   function summary() {
     var e = eventOf(), s = scope();
     var rows = [[s === 'account' ? 'Se aplică la' : s === 'location' ? 'Locație' : 'Activitate', subjectName()]], total = 0;
-    var cat = s === 'event' && e && (txt(e.category_name) || txt(e.category && (e.category.name || e.category)));
-    if (cat) rows.push(['Categorie', cat]);
+    if (s === 'event' && e && e.place) rows.push(['Locație', e.place]);
     if (isPlacement()) {
       var n = days();
       checked('ox-loc').forEach(function (k) { var p = locPrice(k) * n; total += p; rows.push([LOCS[k] + ' (' + F.count(n, 'zi', 'zile') + ')', F.money(p)]); });
@@ -298,13 +309,12 @@
     // Ad tracking is bought for the whole account, so it carries no activity; a location promotion carries the
     // location instead. Core accepts both only for bilete.online (activities module).
     var body = { service_type: type, payment_method: method };
-    if (s === 'event') body.event_id = Number(e.id);
+    if (s === 'event') body.activity_id = Number(e.id);
     if (s === 'location') body.location_id = Number(l.id);
     if (isPlacement()) {
-      var st = $('ox-start').value, en = $('ox-end').value, startAt, endAt;
-      if (st === F.ymd()) { var now = new Date(), hm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'); startAt = st + 'T' + hm; endAt = en + 'T' + hm; }
-      else { startAt = st + 'T07:00'; endAt = en + 'T00:00'; }
-      body.config = { locations: checked('ox-loc'), start_date: startAt, end_date: endAt };
+      // Whole days, both included: the promotion shows from the first day to the end of the last one.
+      var st = $('ox-start').value, en = $('ox-end').value;
+      body.config = { locations: checked('ox-loc'), start_date: st + 'T00:00', end_date: en + 'T23:59' };
     } else {
       var plats = checked('ox-plat'), ids = {};
       plats.forEach(function (p) { var v = $('ox-pixel-' + p).value.trim(); if (v) ids[p] = v; });
@@ -346,6 +356,7 @@
       var s = err && err.status, m = String((err && err.message) || '');
       var text = err && err.pay ? (/payment method|configuration/i.test(m) || s === 400 ? 'Comanda a fost salvată, dar plata cu cardul nu e disponibilă acum. O găsești în „Comenzile mele”; alege transfer bancar sau încearcă mai târziu.' : 'Comanda a fost salvată, dar nu am putut deschide plata. O găsești în „Comenzile mele” și o poți plăti de acolo.')
         : s === -2 ? 'Nu am primit adresa de plată. Comanda o găsești în „Comenzile mele”.'
+        : s === 409 ? fullText(err)
         : s === 404 ? (scope() === 'location' ? 'Locația nu mai există sau nu îți aparține.' : 'Activitatea nu mai există sau nu îți aparține.')
         : s === 400 ? 'Serviciul nu e disponibil momentan.'
         : s === 422 ? 'Unele date nu sunt acceptate. Verifică-le și încearcă din nou.'
@@ -354,15 +365,22 @@
     });
   });
 
+  /** Placements already holding as many promotions as they show at once, for some day of the chosen period. */
+  function fullText(err) {
+    var e = (err && (err.errors || (err.data && err.data.errors))) || {}, list = Array.isArray(e.full_placements) ? e.full_placements : [];
+    var names = list.map(function (k) { return LOCS[k] || txt(k); }).filter(Boolean);
+    return (names.length ? 'Ocupat în perioada aleasă: ' + names.join(', ') + '.' : 'Unele locuri de afișare sunt ocupate în perioada aleasă.') + ' Alege alte date sau alt loc de afișare.';
+  }
+
   /* =================== PLACEMENT PREVIEW =================== */
   qsa('[data-peek]').forEach(function (b) { b.addEventListener('click', function () { peek(b.getAttribute('data-peek'), b); }); });
   function peek(k, from) {
     var info = PEEK[k], e = eventOf(), l = placeOf(), loc = scope() === 'location';
     var subject = loc ? 'Locația ta' : 'Activitatea ta';
-    var name = subjectName() || subject, src = loc ? (l ? imgUrl(l.cover_image) : '') : (e ? imgUrl(e.image || e.poster_url) : '');
+    var name = subjectName() || subject, src = loc ? (l ? imgUrl(l.cover_image) : '') : (e ? imgUrl(e.image) : '');
     var meta = loc
       ? (l ? [txt(l.address), F.count(F.toNum(l.products_count), 'produs', 'produse')].filter(Boolean).join(' · ') : 'Adresa și produsele locației')
-      : (e ? [day(e.starts_at || e.date), txt(e.venue_name) || txt(e.venue_city)].filter(Boolean).join(' · ') : 'Data și locația activității');
+      : (e ? [e.place, e.price > 0 ? 'de la ' + F.money(e.price) : ''].filter(Boolean).join(' · ') : 'Locația și prețul activității');
     $('ox-peek-h').textContent = info[0];
     $('ox-peek-p').textContent = subject + ' ' + info[1];
     var box = $('ox-mock'), hot = el('div', { class: 'ox-mock-hot' + (k === 'home_hero' ? ' is-banner' : '') }, [src ? el('img', { src: src, alt: '' }) : null, el('span', { class: 'ox-mock-badge', text: '★ Promovat · ' + subject.toLowerCase() }), el('b', { text: name }), el('small', { text: meta })]);

@@ -58,6 +58,7 @@ if (!is_array($apiData) || empty($apiData['success']) || !isset($apiData['data']
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/promoted.php';
 
 $data = $apiData['data'];
 $intent = is_array($data['intent'] ?? null) ? $data['intent'] : [];
@@ -187,11 +188,12 @@ if ($itRule && $pageNum === 1) {
                 'dur' => $n['dur'],
                 'minutes' => (int) ($a['duration_minutes'] ?? 0),
                 'featured' => !empty($a['flags']['is_featured']),
+                'promoted' => $n['promoted'],
                 'cta' => 'Vezi activitatea',
             ];
         }
     }
-    usort($actCards, fn ($a, $b) => [(int) $b['featured'], $a['title']] <=> [(int) $a['featured'], $b['title']]);
+    usort($actCards, fn ($a, $b) => [(int) $b['promoted'], (int) $b['featured'], $a['title']] <=> [(int) $a['promoted'], (int) $a['featured'], $b['title']]);
 }
 $actTotal = count($actCards);
 $total = $actTotal + $eventTotal;
@@ -245,6 +247,7 @@ foreach ($events as $ev) {
         'dur' => '',
         'minutes' => 0,
         'featured' => false,
+        'promoted' => false,
         'cta' => 'Vezi bilete',
     ];
 }
@@ -280,7 +283,7 @@ if (!$cards) {
             $pool[] = $n;
         }
     }
-    usort($pool, fn ($a, $b) => [(int) $b['featured'], $a['title']] <=> [(int) $a['featured'], $b['title']]);
+    usort($pool, fn ($a, $b) => [(int) $b['promoted'], (int) $b['featured'], $a['title']] <=> [(int) $a['promoted'], (int) $a['featured'], $b['title']]);
     $inCity = $city ? array_values(array_filter($pool, fn ($a) => $a['citySlug'] === $citySlugSafe)) : [];
     $altCards = array_slice($inCity ?: $pool, 0, 4);
     $altWhere = $inCity ? 'în ' . $cityName : 'pe bilete.online';
@@ -315,7 +318,7 @@ $renderCard = function (array $c, int $i, bool $data) use ($priceHtml): void {
     ?>
         <li class="xp"<?php if ($data): ?> data-city="<?= v2_e($c['citySlug'] !== '' ? $c['citySlug'] : $c['city']) ?>" data-order="<?= $i ?>" data-price="<?= $c['cents'] === null ? '' : (int) $c['cents'] ?>" data-dur="<?= (int) $c['minutes'] ?>"<?php endif; ?>>
           <a href="<?= v2_e($c['href']) ?>">
-            <span class="xp-media"><?= $c['image'] ? v2_photo([$c['image'], 0, 0, '']) : v2_fallback($c['title'], $i) ?></span>
+            <span class="xp-media"><?= $c['image'] ? v2_photo([$c['image'], 0, 0, '']) : v2_fallback($c['title'], $i) ?><?= !empty($c['promoted']) ? v2_promoted_tag() : '' ?></span>
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($c['category']) ?></span>
               <span class="xp-title"><?= v2_e($c['title']) ?></span>

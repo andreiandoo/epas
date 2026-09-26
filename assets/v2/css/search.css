@@ -137,3 +137,6 @@ html:not(.js) .sr-filter-toggle{display:none}
 .sr-empty .fchip{border-color:rgba(247,247,245,.25);background:transparent;color:#F7F7F5}
 .sr-empty .fchip:hover{border-color:#F7F7F5;color:#FFFFFF}
 .sr-empty-line{display:block;justify-self:stretch;width:100%;height:auto;aspect-ratio:3240 / 310;margin-top:var(--space-3)}
+
+/* paid promotion in the locations strip */
+.sr-loc-promo{font-style:normal;font-weight:700;color:var(--action)}

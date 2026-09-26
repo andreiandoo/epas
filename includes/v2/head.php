@@ -106,10 +106,16 @@ if (!empty($trackingHeadScripts)): ?>
     ['scroll','click','touchstart','mousemove','keydown'].forEach(function(e){
         window.addEventListener(e,go,{once:true,passive:true});
     });
+<?php if (!empty($trackingEager)): /* thank-you page: the purchase conversion needs the pixels now */ ?>
+    go();
+<?php endif; ?>
     if('requestIdleCallback' in window){requestIdleCallback(function(){setTimeout(go,7000)});}
     else{setTimeout(go,10000);}
 })();
 </script>
+<?php endif; ?>
+<?php if (!empty($trackingEager) && !empty($trackingConversions['google_ads']) && is_string($trackingConversions['google_ads'])): ?>
+<script>window.BO_ADS=<?= json_encode(['google_ads' => $trackingConversions['google_ads']], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
 <?php endif; ?>
 <script>
 setTimeout(function(){

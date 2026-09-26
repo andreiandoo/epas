@@ -57,13 +57,20 @@
     var cfg = o.config || {};
     var appliesLabel = 'Activitate', applies = txt(o.event && o.event.name) || txt(o.event_name);
     if (o.type === 'location_featuring') { appliesLabel = 'Locația'; applies = txt(cfg.location_name) || applies; }
+    else if (o.type === 'featuring' && txt(o.activity_name || cfg.activity_name)) { applies = txt(o.activity_name || cfg.activity_name); }
     else if (o.type === 'tracking' && !applies) { appliesLabel = 'Se aplică la'; applies = 'Tot contul tău'; }
     if ($('sd-event-l')) $('sd-event-l').textContent = appliesLabel;
     set('sd-event', applies);
     set('sd-details', txt(o.details));
     set('sd-created', stamp(o.created_at));
     var start = day(o.service_start_date), end = day(o.service_end_date);
-    set('sd-period', start && end ? start + ' - ' + end : start ? 'Din ' + start : '');
+    var period = start && end ? start + ' - ' + end : start ? 'Din ' + start : '';
+    // A paid promotion runs only between its dates: say where it stands today.
+    if (period && o.status === 'active' && (o.type === 'featuring' || o.type === 'location_featuring')) {
+      var today = F.ymd(), s0 = String(o.service_start_date || '').slice(0, 10), e0 = String(o.service_end_date || '').slice(0, 10);
+      period += s0 && today < s0 ? ' · programată' : e0 && today > e0 ? ' · încheiată' : ' · afișată acum';
+    }
+    set('sd-period', period);
 
     set('sd-subtotal', money(o.subtotal, cur));
     set('sd-tax', money(o.tax, cur));
@@ -132,6 +139,19 @@
         ]),
         input,
       ]));
+      // Google Ads counts a purchase only against a conversion action: its label comes from Google Ads
+      // (Obiective → Conversii → "Etichetă de conversie"). Sent only when core returns the field.
+      if (platform === 'google' && t.conversion_label !== undefined) {
+        var lid = 'sd-px-google-label', label = el('input', { class: 'sd-input', type: 'text', id: lid, maxlength: 64, autocomplete: 'off', spellcheck: 'false', placeholder: 'ex. AbC-D_efGhIjKlMn', 'data-tracking-label': 'google' });
+        label.value = txt(t.conversion_label);
+        listEl.appendChild(el('div', { class: 'sd-px-row' }, [
+          el('div', null, [
+            el('label', { for: lid, text: 'Google Ads: etichetă de conversie' }),
+            el('span', { class: 'org-tag ' + (label.value ? 'is-ok' : 'is-wait') }, [O.icon(label.value ? 'check-circle' : 'warning-circle'), label.value ? 'Achizițiile se raportează' : 'Fără ea, achizițiile nu apar în Google Ads']),
+          ]),
+          label,
+        ]));
+      }
     });
   }
 
@@ -145,6 +165,8 @@
       if (v.length > MAX_PIXEL && !tooLong) tooLong = i;
       ids[i.getAttribute('data-tracking-pixel')] = v;
     });
+    var gl = document.querySelector('[data-tracking-label="google"]');
+    if (gl) ids.google_label = gl.value.trim();
     if (tooLong) {
       tooLong.setAttribute('aria-invalid', 'true');
       tooLong.focus();

@@ -43,9 +43,11 @@ $v2Scripts = ['organizer.js', 'org-services.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config('organizer');
 
+// "Prima pagină - Hero" is not sold while the promoted hero is only a preview on the homepage (?preview=1): a paid
+// hero slot would show nowhere. Add ['home_hero', 'Prima pagină - Hero', 'Vizibilitate maximă, banner principal']
+// back here and 'Hero prima pagină' to the two tag lists when the promoted hero goes live.
 $oxLocations = [
-    ['home_hero', 'Prima pagină - Hero', 'Vizibilitate maximă, banner principal'],
-    ['home_recommendations', 'Prima pagină - Recomandări', 'Secțiunea de recomandări'],
+    ['home_recommendations', 'Prima pagină - Recomandări', 'Secțiunea „Recomandate pentru tine”'],
     ['category', 'Pagina categoriei', 'Audiență targetată pe categorie'],
     ['city', 'Pagina orașului', 'Audiență locală din orașul tău'],
 ];
@@ -79,8 +81,8 @@ v2_org_start('services');
     <article class="ox-card is-feat">
       <span class="ox-card-ic"><?= v2_ic('lightning') ?></span>
       <h2 class="ox-card-h">Promovare activitate</h2>
-      <p>Afișează activitatea ta pe prima pagină, în secțiunea de recomandări, pe pagina categoriei sau a orașului activității.</p>
-      <ul class="ox-tags"><li>Hero prima pagină</li><li>Recomandări</li><li>Categorie</li><li>Oraș</li></ul>
+      <p>Afișează activitatea ta în recomandările de pe prima pagină, pe pagina categoriei sau a orașului ei, înaintea celorlalte.</p>
+      <ul class="ox-tags"><li>Recomandări prima pagină</li><li>Categorie</li><li>Oraș</li></ul>
       <p class="ox-price">De la <b id="ox-price-feat">—</b> / zi</p>
       <button class="btn btn-primary" type="button" data-open="featuring"><?= v2_ic('plus') ?>Cumpără promovare</button>
     </article>
@@ -88,7 +90,7 @@ v2_org_start('services');
       <span class="ox-card-ic"><?= v2_ic('map-trifold') ?></span>
       <h2 class="ox-card-h">Promovare locație</h2>
       <p>Scoate în față o locație întreagă — pagina ei și toate produsele pe care le vinzi acolo — nu doar o singură activitate.</p>
-      <ul class="ox-tags"><li>Hero prima pagină</li><li>Recomandări</li><li>Categorie</li><li>Oraș</li></ul>
+      <ul class="ox-tags"><li>Recomandări prima pagină</li><li>Categorie</li><li>Oraș</li></ul>
       <p class="ox-price">De la <b id="ox-price-loc">—</b> / zi</p>
       <button class="btn btn-primary" type="button" data-open="location_featuring"><?= v2_ic('plus') ?>Cumpără promovare</button>
     </article>

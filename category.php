@@ -39,6 +39,7 @@ $category = $category['category'] ?? $category;
 
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/promoted.php';
 
 // ============================================================
 // Category data extraction — name/description come pre-translated
@@ -81,39 +82,31 @@ $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $pr
 $sortLabels = ['price_asc' => 'Preț crescător', 'price_desc' => 'Preț descrescător', 'name_asc' => 'Alfabetic', 'date_asc' => 'Data evenimentului'];
 $sort = (isset($_GET['sort']) && is_string($_GET['sort']) && isset($sortLabels[$_GET['sort']])) ? $_GET['sort'] : 'recommended';
 
-// Events and activities are independent upstream calls, fetched concurrently (curl_multi).
-// /activities filters by the exact category slug (parent OR subcategory), so pass the
-// resolved category's real slug so subcategory pages match too.
+// bilete.online has no events: the page lists the activities of the category, plus the paid "Promovate în …"
+// block (fetched concurrently, curl_multi). /activities filters by the exact category slug (parent OR subcategory),
+// so pass the resolved category's real slug so subcategory pages match too.
 $activityCatSlug = $category['slug'] ?? $slug;
-$evParams = ['category' => $slug, 'page' => $pageNum, 'per_page' => 24, 'time_scope' => 'upcoming'];
 $actParams = ['category' => $activityCatSlug, 'page' => $pageNum, 'per_page' => 24];
-if ($cityFilter) { $evParams['city'] = $cityFilter; $actParams['city'] = $cityFilter; }
-if ($searchQuery !== '') { $evParams['search'] = $searchQuery; $actParams['search'] = $searchQuery; }
-if ($maxPrice !== null) { $evParams['max_price'] = $maxPrice; $actParams['max_price_ron'] = $maxPrice; }
-// Don't send `recommended` — let the API use its default (date_asc for upcoming)
-if ($sort !== 'recommended') $evParams['sort'] = $sort;
+if ($cityFilter) { $actParams['city'] = $cityFilter; }
+if ($searchQuery !== '') { $actParams['search'] = $searchQuery; }
+if ($maxPrice !== null) { $actParams['max_price_ron'] = $maxPrice; }
 if ($sort === 'price_asc') $actParams['sort'] = 'cheapest';
 
 $cacheSuffix = ($cityFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
 $listings = api_cached_many([
-    'events'     => ['key' => "v2_category_events_{$slug}_{$cacheSuffix}", 'endpoint' => '/events', 'params' => $evParams, 'ttl' => 300],
     'activities' => ['key' => "v2_category_activities_{$activityCatSlug}_{$cacheSuffix}", 'endpoint' => '/activities', 'params' => $actParams, 'ttl' => 300],
+    'promoted'   => v2_promoted_job('category', ['category' => $activityCatSlug]),
 ]);
-
-$events = $listings['events']['data'] ?? [];
-if (!is_array($events)) $events = [];
-$evPagination = $listings['events']['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => count($events)];
+$promoted = v2_promoted_items($listings['promoted'] ?? null);
 
 $activities = $listings['activities']['data']['items'] ?? [];
 if (!is_array($activities)) $activities = [];
 $actPagination = $listings['activities']['data']['pagination'] ?? ['last_page' => 1, 'total' => count($activities)];
 
-// Combined pagination: both sources paginate independently; surface the deeper
-// page count and the summed total (used for the hero activities stat).
 $pagination = [
     'current_page' => $pageNum,
-    'last_page'    => max((int) ($evPagination['last_page'] ?? 1), (int) ($actPagination['last_page'] ?? 1)),
-    'total'        => (int) ($evPagination['total'] ?? count($events)) + (int) ($actPagination['total'] ?? count($activities)),
+    'last_page'    => max(1, (int) ($actPagination['last_page'] ?? 1)),
+    'total'        => (int) ($actPagination['total'] ?? count($activities)),
 ];
 
 // Featured cities: hero stat, city links, city filter label.
@@ -155,13 +148,14 @@ $breadcrumbs[] = ['name' => $catName, 'url' => $canonicalUrl];
 
 // JSON-LD: CollectionPage + ItemList + FAQPage + BreadcrumbList
 $itemListElements = [];
-foreach (array_slice($events, 0, 10) as $i => $ev) {
-    $evTitle = is_array($ev['title'] ?? null) ? ($ev['title']['ro'] ?? reset($ev['title'])) : ($ev['title'] ?? '');
+foreach (array_slice($activities, 0, 10) as $a) {
+    $aTitle = is_array($a) ? navFlatName($a['title'] ?? '') : '';
+    if ($aTitle === '' || empty($a['slug'])) continue;
     $itemListElements[] = [
         '@type' => 'ListItem',
-        'position' => $i + 1,
-        'name' => $evTitle,
-        'url' => SITE_URL . '/bilete/' . ($ev['slug'] ?? ''),
+        'position' => count($itemListElements) + 1,
+        'name' => $aTitle,
+        'url' => SITE_URL . '/experienta/' . $a['slug'],
     ];
 }
 $structuredData = [];
@@ -251,7 +245,9 @@ foreach ($activities as $ix => $a) {
     if (!empty($flags['is_indoor']))        $features[] = 'indoor';
     if (!empty($flags['is_outdoor']))       $features[] = 'outdoor';
     $rev = is_array($a['reviews'] ?? null) ? $a['reviews'] : null;
-    $badges = !empty($flags['is_featured']) ? ['Recomandat'] : [];
+    // Paid promotion first (always labelled), then the editorial pick.
+    $promotedA = !empty($flags['is_promoted']);
+    $badges = array_values(array_filter([$promotedA ? 'Promovat' : null, !empty($flags['is_featured']) ? 'Recomandat' : null]));
     $catLabel = navFlatName($a['category']['name'] ?? '') ?: $catName;
     $place = navFlatName($a['city']['name'] ?? '') ?: $heroLocation;
     $description = mb_substr(trim(strip_tags((string) navFlatName($a['short_description'] ?? ''))), 0, 160);
@@ -273,6 +269,7 @@ foreach ($activities as $ix => $a) {
         'interests'     => array_values(array_filter(array_map(fn ($i) => $i['slug'] ?? '', (array) ($a['interests'] ?? [])))),
         'travelerTypes' => array_values(array_filter(array_map(fn ($t) => $t['slug'] ?? '', (array) ($a['traveler_types'] ?? [])))),
         'badges'        => $badges,
+        'promoted'      => $promotedA,
         'text'          => mb_strtolower(implode(' ', [$title, $catLabel, $place, $description, implode(' ', $badges)])),
         '_city'         => $citySlugA,
         '_lat'          => isset($a['venue']['lat']) ? (float) $a['venue']['lat'] : (isset($a['latitude']) ? (float) $a['latitude'] : null),
@@ -280,7 +277,7 @@ foreach ($activities as $ix => $a) {
     ];
 }
 // Same order the browser applies for "Recomandate", so nothing moves when category.js starts.
-usort($acts, fn ($x, $y) => [$y['rating'], $y['reviews']] <=> [$x['rating'], $x['reviews']]);
+usort($acts, fn ($x, $y) => [(int) $y['promoted'], $y['rating'], $y['reviews']] <=> [(int) $x['promoted'], $x['rating'], $x['reviews']]);
 
 // Map pins: normalize real lat/lng into x/y% (bbox); golden-angle scatter when
 // coords are missing so the map preview stays evenly populated.
@@ -521,6 +518,13 @@ include __DIR__ . '/includes/v2/header.php';
     </div>
   </section>
   <div id="hdr-sentinel" aria-hidden="true"></div>
+
+  <?php v2_promoted_section($promoted, [
+      'id' => 'promo-cat',
+      'kicker' => 'Promovat',
+      'title' => 'Promovate în ' . $catLower,
+      'intro' => 'Locuri și experiențe din ' . $catLower . ' puse în față de operatorii lor în perioada asta.',
+  ]); ?>
 
   <!-- ============================== FILTER BAR ============================== -->
   <div class="kbar" id="k-bar">

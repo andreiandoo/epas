@@ -204,6 +204,7 @@ $v2ClientData = [
 
 $xpArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 
+$v2HeadExtra .= v2_track_organizer($product['organizer_id'] ?? null);
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>

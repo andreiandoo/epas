@@ -109,7 +109,7 @@ foreach ($rows as $row) {
             $a['catName'] !== '' ? ['tag', $a['catName']] : null,
         ])),
         'price' => $a['price'] ?: null,
-        'badges' => [],
+        'badges' => $a['promoted'] ? ['Promovat'] : [],
     ];
 }
 

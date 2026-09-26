@@ -68,7 +68,7 @@
     else if (sortBy === 'duration') {
       var o = { short: 1, medium: 2, long: 3 };
       l.sort(function (a, b) { return (o[a.duration] || 4) - (o[b.duration] || 4); });
-    } else l.sort(function (a, b) { return (b.rating - a.rating) || (b.reviews - a.reviews); });
+    } else l.sort(function (a, b) { return ((b.promoted ? 1 : 0) - (a.promoted ? 1 : 0)) || (b.rating - a.rating) || (b.reviews - a.reviews); }); // paid promotions first, as the server orders them
     return l;
   }
   function activeCount() {

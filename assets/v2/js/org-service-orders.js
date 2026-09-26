@@ -14,6 +14,8 @@
   var all = null, page = 1;
 
   function txt(v) { return F.flat(v).trim(); }
+  /** What the order applies to: a location, an activity (bilete.online has no events) or the whole account. */
+  function applies(o) { return o.scope === 'account' ? 'Tot contul' : txt(o.location_name) || txt(o.activity_name) || txt(o.event_name); }
   function norm(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function day(v) { var d = F.dateOf(v); return d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
   function stamp(v) { var d = F.dateOf(v); return d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'; }
@@ -47,7 +49,7 @@
   function shown() {
     var q = norm($('sq-q').value.trim()), st = $('sq-status').value, ty = $('sq-type').value;
     return all.filter(function (o) {
-      return (!q || norm(txt(o.order_number) + ' ' + txt(o.event_name)).indexOf(q) > -1) && (!st || o.status === st) && (!ty || o.type === ty);
+      return (!q || norm(txt(o.order_number) + ' ' + applies(o)).indexOf(q) > -1) && (!st || o.status === st) && (!ty || o.type === ty);
     });
   }
   function draw() {
@@ -63,7 +65,7 @@
       body.appendChild(el('tr', null, [
         el('td', null, el('div', { class: 'sq-num' }, [href ? el('a', { href: href, text: txt(o.order_number) || 'Comandă' }) : el('b', { text: txt(o.order_number) || 'Comandă' }), el('small', { class: paid ? 'is-paid' : '', text: paid ? 'Plătit' : 'Neplătit' })])),
         el('td', null, el('span', { class: 'org-tag', text: TYPES[o.type] || txt(o.type_label) || txt(o.type) || '—' })),
-        el('td', { text: txt(o.event_name) || '—' }),
+        el('td', { text: applies(o) || '—' }),
         el('td', { class: 'sq-muted', text: start && end ? start + ' - ' + end : '—' }),
         el('td', { class: 'sq-right sq-amount', text: money(o.total, txt(o.currency)) }),
         el('td', null, el('span', { class: 'org-tag ' + st[1], text: st[0] })),

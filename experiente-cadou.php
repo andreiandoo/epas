@@ -22,6 +22,7 @@ require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/promoted.php';
 
 // ------------------------------------------------------------------ every published activity (same cache as the region page)
 $gfFirst = api_cached_many(['p1' => ['key' => 'v2_all_activities_p1', 'endpoint' => '/activities', 'params' => ['per_page' => 50, 'page' => 1], 'ttl' => 300]]);
@@ -62,6 +63,7 @@ foreach ($gfPages as $gfPage) {
             'kid' => !empty($flags['is_kid_friendly']),
             'accessible' => !empty($flags['is_accessible']),
             'featured' => !empty($flags['is_featured']),
+            'promoted' => $n['promoted'],
             'interests' => array_values(array_filter(array_map(fn ($i) => is_array($i) ? (string) ($i['slug'] ?? '') : '', (array) ($a['interests'] ?? [])))),
             'travelers' => array_values(array_filter(array_map(fn ($t) => is_array($t) ? (string) ($t['slug'] ?? '') : '', (array) ($a['traveler_types'] ?? [])))),
         ];
@@ -76,7 +78,7 @@ $count = count($items);
 // Ticket variants (price, places each covers, order limits, ages) turn "price × people" into what a group would
 // really pay. The list has none, so the details of the first 40 activities are read in parallel, cached for an hour;
 // any other activity falls back to its lowest price per person.
-usort($items, fn ($a, $b) => [(int) $b['featured'], $a['title']] <=> [(int) $a['featured'], $b['title']]);
+usort($items, fn ($a, $b) => [(int) $b['promoted'], (int) $b['featured'], $a['title']] <=> [(int) $a['promoted'], (int) $a['featured'], $b['title']]);
 $gfDetailJobs = [];
 foreach (array_slice($items, 0, 40) as $it) {
     $gfDetailJobs[$it['slug']] = ['key' => 'v2_gift_variants_' . $it['slug'], 'endpoint' => '/activities/' . rawurlencode($it['slug']), 'params' => [], 'ttl' => 3600];
@@ -283,7 +285,7 @@ include __DIR__ . '/includes/v2/header.php';
         <ol class="gf-list" id="gf-list" aria-labelledby="gf-res-h">
           <?php foreach ($items as $i => $it): ?>
           <li class="gf-item" data-slug="<?= v2_e($it['slug']) ?>">
-            <a class="gf-media" href="<?= v2_e($it['href']) ?>" tabindex="-1" aria-hidden="true"><?= $it['image'] ? v2_photo([$it['image'], 0, 0, '']) : v2_fallback($it['title'], $i) ?></a>
+            <a class="gf-media" href="<?= v2_e($it['href']) ?>" tabindex="-1" aria-hidden="true"><?= $it['image'] ? v2_photo([$it['image'], 0, 0, '']) : v2_fallback($it['title'], $i) ?><?= !empty($it['promoted']) ? v2_promoted_tag() : '' ?></a>
             <div class="gf-body">
               <p class="gf-match" data-match hidden></p>
               <p class="gf-cat"><?= v2_e(implode(' · ', array_filter([$it['catName'], $it['city']]))) ?></p>

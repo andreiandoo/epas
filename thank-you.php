@@ -43,7 +43,24 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
     'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 
-$downloadIcon = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>';
+// Ad tracking service: the pixels of the operator who sold this order load right away (not on first interaction),
+// and ad-conversions.js sends them the purchase once thank-you.js shows the order as paid. Only the operator id is
+// cached, never the order.
+$tyOrg = null;
+if ($orderRef !== '' && preg_match('/^[A-Za-z0-9-]{1,64}$/', $orderRef)) {
+    $tyOrg = api_cached('ty_org_' . $orderRef, function () use ($orderRef) {
+        $r = api_get('/orders/' . rawurlencode($orderRef));
+        if (empty($r['success'])) {
+            return ['success' => false];
+        }
+        return ['success' => true, 'organizer_id' => (int) ($r['data']['order']['organizer_id'] ?? 0)];
+    }, 86400);
+}
+$organizerTrackingId = !empty($tyOrg['organizer_id']) ? (int) $tyOrg['organizer_id'] : null;
+$trackingEager = true;
+$v2Scripts = ['ad-conversions.js'];
+
+$downloadIcon ='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>';
 
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';

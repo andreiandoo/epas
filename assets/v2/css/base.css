@@ -878,3 +878,13 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
   .mm-sheet,.mm-scrim,.mm-panel,.mm [style*="--i"],.mm-sub,.mm-sub-in,.menu-btn .ic{transition:none!important}
   .mm-panel.is-in > *,.mm-region,.mm-suggest{animation:none!important}
 }
+
+/* =================== PROMOVAT (paid placements, includes/v2/promoted.php) =================== */
+/* a paid position always carries the pill; the section reuses the .xp cards on a .rail */
+.promo-tag{position:absolute;top:12px;left:12px;z-index:1;display:inline-flex;align-items:center;padding:4px 10px;border-radius:var(--r-pill);background:rgba(11,61,47,.9);color:var(--on-deep);font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.4;pointer-events:none}
+.sec.promo{padding-block:clamp(48px, 6vw, 88px);background:linear-gradient(180deg, var(--tint-green) 0%, var(--bg) 100%)}
+.promo-head{max-width:62ch}
+.promo-head .kicker{margin-bottom:var(--space-2)}
+.promo-intro{margin:var(--space-3) 0 0;color:var(--muted);font-size:var(--text-body);line-height:1.5}
+.promo-rail .xp{scroll-snap-align:start}
+.promo-rail .xp a{height:100%}
