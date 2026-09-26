@@ -242,3 +242,10 @@
   /* The "copy Monday over the week" button is a long sentence; let it wrap instead of pushing. */
   .am-season .ve-sec-tools .btn{white-space:normal;padding:8px 14px;line-height:1.3;text-align:center}
 }
+/* saving the list of allowed sites: what is happening */
+.wg-status{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--tint-green);color:var(--green);font-weight:600;font-size:.9375rem}
+.wg-status[hidden]{display:none}
+.wg-status.is-busy::before{content:"";flex:none;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:wg-spin .8s linear infinite}
+#wg-dom-go[aria-busy="true"]{opacity:.7;cursor:progress}
+@keyframes wg-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.wg-status.is-busy::before{animation:none}}

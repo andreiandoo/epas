@@ -33,18 +33,44 @@
       ul.appendChild(el('li', { class: 'wg-dom' }, [O.icon('globe-simple'), el('span', { text: d }), rm]));
     });
   }
+  /** What is happening while the list is saved (it can take a few seconds), and what happens after. */
+  function status(text, busy) {
+    var s = $('wg-dom-status');
+    s.textContent = text || '';
+    s.hidden = !text;
+    s.classList.toggle('is-busy', !!busy);
+  }
+  /**
+   * The widget page keeps the allowed sites for a while; ask it once for fresh data (?nocache=1 refreshes its cache),
+   * so a site just added can show the widget right away instead of minutes later.
+   */
+  function refreshWidget() {
+    var l = locations[0];
+    if (!l || !window.fetch) return Promise.resolve();
+    return fetch('/embed/locatie/' + encodeURIComponent(l.slug) + '?nocache=1', { credentials: 'omit', cache: 'no-store' }).then(function () {}, function () {});
+  }
   function update(list, btn, ok) {
     if (btn.disabled) return Promise.resolve(false);
     btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    status('Se salvează lista de site-uri…', true);
+    var slow = setTimeout(function () { status('Încă se salvează… durează uneori câteva secunde, nu închide pagina.', true); }, 3000);
     return save(list).then(function () {
+      clearTimeout(slow);
       domains = list;
       drawDomains();
-      O.flash(ok);
-      return true;
+      status('Se actualizează widget-ul…', true);
+      return refreshWidget().then(function () {
+        status('');
+        O.flash(ok);
+        return true;
+      });
     }, function (e) {
+      clearTimeout(slow);
+      status('');
       if (!(e && e.status === 401)) O.flash('Nu am putut salva lista de site-uri. Încearcă din nou.', true);
       return false;
-    }).then(function (r) { btn.disabled = false; return r; });
+    }).then(function (r) { btn.disabled = false; btn.removeAttribute('aria-busy'); return r; });
   }
   function clean(v) {
     v = String(v || '').trim().toLowerCase().replace(/\/+$/, '');
