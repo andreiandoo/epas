@@ -222,3 +222,16 @@ html.org-lock,html.org-lock body{overflow:hidden}
 .org-empty b{font-size:1.25rem;letter-spacing:-.02em;color:var(--ink)}
 .org-empty p{max-width:46ch;margin:0;color:var(--muted);text-wrap:pretty}
 .org-main .org-empty .btn{margin-top:12px}
+
+/* =================== MODAL SCROLLBARS (overlay, organizer.js) =================== */
+/* In every modal of the operator account the native scrollbar is hidden (it took width and shifted the content);
+   organizer.js draws a thin thumb over the content instead, shown only while scrolling or dragging it. */
+dialog,dialog *,.ve-modal,.ve-modal *,.op-modal,.op-modal *{scrollbar-width:none}
+dialog::-webkit-scrollbar,dialog *::-webkit-scrollbar,.ve-modal::-webkit-scrollbar,.ve-modal *::-webkit-scrollbar,.op-modal::-webkit-scrollbar,.op-modal *::-webkit-scrollbar{width:0;height:0;display:none}
+.ovs-thumb{position:fixed;z-index:2147483000;box-sizing:border-box;border:2px solid transparent;border-radius:999px;background:rgba(33,33,33,.42);background-clip:padding-box;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);opacity:0;pointer-events:none;touch-action:none;transition:opacity 280ms cubic-bezier(.22,1,.36,1), background-color 160ms ease}
+.ovs-thumb.is-y{width:10px}
+.ovs-thumb.is-x{height:10px}
+.ovs-thumb.is-on{opacity:1;pointer-events:auto;cursor:grab}
+.ovs-thumb.is-on:hover,.ovs-thumb.is-drag{background-color:rgba(33,33,33,.62)}
+.ovs-thumb.is-drag{cursor:grabbing}
+@media (prefers-reduced-motion: reduce){.ovs-thumb{transition:none}}

@@ -175,11 +175,15 @@
     }
     return ['', ''];
   }
+  /** The product's icon from the sprite the page printed (includes/v2/product-icons.php); an old emoji or anything unknown shows none. */
+  var ICON_KEYS = {};
+  ((A.L && A.L.product_icons) || []).forEach(function (x) { ICON_KEYS[x[0]] = true; });
+  function productIcon(key) { return typeof key === 'string' && ICON_KEYS[key] ? O.icon('pi-' + key) : null; }
   function productCard(p) {
     var av = availabilityText(p), off = S.day[p.id] && !S.day[p.id].bookable;
     var card = el('article', { class: 'pos-p' + (off ? ' is-off' : '') }, [
       el('div', { class: 'pos-p-head' }, [
-        p.icon ? el('span', { class: 'pos-p-ic', 'aria-hidden': 'true', text: p.icon }) : null,
+        productIcon(p.icon) ? el('span', { class: 'pos-p-ic', 'aria-hidden': 'true' }, [productIcon(p.icon)]) : null,
         el('div', null, [el('b', { text: p.title }), av[0] ? el('small', { class: av[1], text: av[0] }) : null]),
       ]),
     ]);
@@ -388,12 +392,16 @@
     btn.disabled = true;
     anafMsg('Se caută la ANAF…');
     O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui } }).then(function (r) {
+      // The proxy answers with company_name / reg_com / full_address (the same shape the venue signup reads).
       var d = (r && r.data) || {}, co = d.company || d;
-      var name = F.flat(co.name || co.denumire);
+      var name = F.flat(co.company_name || co.name || co.denumire);
       if (!name) { anafMsg('ANAF nu a găsit nicio firmă cu acest CUI.', true); return; }
       $('pos-co-name').value = name;
-      if (!$('pos-co-address').value.trim()) $('pos-co-address').value = F.flat(co.address || co.adresa);
-      if (!$('pos-co-reg').value.trim()) $('pos-co-reg').value = F.flat(co.reg_no || co.registration_number || co.nrRegCom);
+      var street = F.flat(co.address).trim(), place = [F.flat(co.city), F.flat(co.county)].filter(Boolean).join(', ');
+      var address = F.flat(co.full_address || co.adresa).trim() || [street, place].filter(Boolean).join(', ');
+      if (!$('pos-co-address').value.trim()) $('pos-co-address').value = address;
+      if (!$('pos-co-reg').value.trim()) $('pos-co-reg').value = F.flat(co.reg_com || co.reg_no || co.registration_number || co.nrRegCom);
+      if (co.deregistered) { $('pos-co-invoice').checked = false; anafMsg('Firma apare radiată la ANAF. Verifică datele înainte de a emite factura.', true); $('pos-co-cui').value = F.flat(co.cui) || cui; return; }
       if (co.cui || co.vat_number) $('pos-co-cui').value = F.flat(co.cui || co.vat_number) || cui;
       $('pos-co-invoice').checked = true;
       anafMsg('Date completate din ANAF.');

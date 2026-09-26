@@ -515,3 +515,112 @@
     safeHref: safeHref, img: img, metaOf: metaOf,
   };
 })();
+
+/* Modal scrollbars: an overlay thumb over the content (the native scrollbar is hidden in modals by organizer.css), shown
+   while the modal content scrolls, then fading; it can be dragged. Works for every modal of the operator account
+   (<dialog>, .ve-modal, .op-modal), whichever element inside it scrolls, vertically or horizontally. The thumb lives
+   inside the modal, so a <dialog> in the top layer shows it too. */
+(function () {
+  'use strict';
+  var ROOTS = 'dialog, .ve-modal, .op-modal';
+  var HIDE_MS = 900, MIN = 28, PAD = 3;
+  var state = typeof WeakMap === 'function' ? new WeakMap() : null;
+  if (!state || !document.addEventListener) return;
+
+  function scrollsY(n) { return n.scrollHeight - n.clientHeight > 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowY); }
+  function scrollsX(n) { return n.scrollWidth - n.clientWidth > 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowX); }
+
+  function thumbFor(box, axis, root) {
+    var s = state.get(box);
+    if (!s) { s = {}; state.set(box, s); }
+    if (!s[axis] || !root.contains(s[axis])) {
+      var t = document.createElement('div');
+      t.className = 'ovs-thumb is-' + axis;
+      t.setAttribute('aria-hidden', 'true');
+      root.appendChild(t);
+      s[axis] = t;
+      drag(t, box, axis);
+    }
+    return s[axis];
+  }
+
+  /** Place the thumb over the visible part of the box. A transformed modal becomes the containing block of fixed
+   *  children, so the thumb's own origin is measured first and subtracted. */
+  function place(t, box, axis) {
+    var r = box.getBoundingClientRect();
+    t.style.left = '0px'; t.style.top = '0px';
+    var o = t.getBoundingClientRect();
+    if (axis === 'y') {
+      var h = Math.max(MIN, (box.clientHeight / box.scrollHeight) * (r.height - PAD * 2));
+      var max = box.scrollHeight - box.clientHeight, y = r.top + PAD + (max > 0 ? box.scrollTop / max : 0) * (r.height - PAD * 2 - h);
+      t.style.height = h + 'px';
+      t.style.top = (y - o.top) + 'px';
+      t.style.left = (r.right - 12 - o.left) + 'px';
+    } else {
+      var w = Math.max(MIN, (box.clientWidth / box.scrollWidth) * (r.width - PAD * 2));
+      var maxX = box.scrollWidth - box.clientWidth, x = r.left + PAD + (maxX > 0 ? box.scrollLeft / maxX : 0) * (r.width - PAD * 2 - w);
+      t.style.width = w + 'px';
+      t.style.left = (x - o.left) + 'px';
+      t.style.top = (r.bottom - 12 - o.top) + 'px';
+    }
+  }
+
+  function show(box, root) {
+    var s = state.get(box) || {};
+    ['y', 'x'].forEach(function (axis) {
+      var can = axis === 'y' ? scrollsY(box) : scrollsX(box);
+      if (!can) { if (s[axis]) s[axis].classList.remove('is-on'); return; }
+      var t = thumbFor(box, axis, root);
+      place(t, box, axis);
+      t.classList.add('is-on');
+    });
+    s = state.get(box);
+    if (!s) return;
+    clearTimeout(s.timer);
+    s.timer = setTimeout(function () { hide(box); }, HIDE_MS);
+  }
+  function hide(box) {
+    var s = state.get(box);
+    if (!s || s.dragging) return;
+    ['y', 'x'].forEach(function (axis) { if (s[axis]) s[axis].classList.remove('is-on'); });
+  }
+
+  function drag(t, box, axis) {
+    t.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      var s = state.get(box), start = axis === 'y' ? e.clientY : e.clientX, from = axis === 'y' ? box.scrollTop : box.scrollLeft;
+      var r = box.getBoundingClientRect(), track = (axis === 'y' ? r.height : r.width) - PAD * 2;
+      var size = axis === 'y' ? t.offsetHeight : t.offsetWidth, max = axis === 'y' ? box.scrollHeight - box.clientHeight : box.scrollWidth - box.clientWidth;
+      var ratio = track - size > 0 ? max / (track - size) : 0;
+      s.dragging = true;
+      t.classList.add('is-drag');
+      try { t.setPointerCapture(e.pointerId); } catch (err) {}
+      function move(ev) {
+        var d = ((axis === 'y' ? ev.clientY : ev.clientX) - start) * ratio;
+        if (axis === 'y') box.scrollTop = from + d; else box.scrollLeft = from + d;
+      }
+      function up() {
+        s.dragging = false;
+        t.classList.remove('is-drag');
+        t.removeEventListener('pointermove', move);
+        t.removeEventListener('pointerup', up);
+        t.removeEventListener('pointercancel', up);
+        clearTimeout(s.timer);
+        s.timer = setTimeout(function () { hide(box); }, HIDE_MS);
+      }
+      t.addEventListener('pointermove', move);
+      t.addEventListener('pointerup', up);
+      t.addEventListener('pointercancel', up);
+    });
+  }
+
+  // One listener for every scroll in the page (scroll doesn't bubble, so capture).
+  document.addEventListener('scroll', function (e) {
+    var box = e.target;
+    if (!box || box.nodeType !== 1 || !box.closest) return;
+    var root = box.closest(ROOTS);
+    if (!root) return;
+    show(box, root);
+  }, true);
+})();
