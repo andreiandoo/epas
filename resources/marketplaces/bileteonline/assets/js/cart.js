@@ -315,6 +315,13 @@ const BileteOnlineCart = {
     importFromHash() {
         const m = /[#&]bo-import=([^&]+)/.exec(window.location.hash || '');
         if (!m) return;
+        // "Înapoi la <site>" after payment: the widget's signed return address, kept for this tab only (the payment
+        // page sends the customer back here, to /multumim, in the same tab). The thank-you page checks it on the server.
+        const r = /[#&]bo-return=([A-Za-z0-9_.%-]+)/.exec(window.location.hash || '');
+        try {
+            if (r) sessionStorage.setItem('bo_return', decodeURIComponent(r[1]));
+            else sessionStorage.removeItem('bo_return');
+        } catch (e) {}
         try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
         let lines = [];
         try { lines = JSON.parse(decodeURIComponent(m[1])); } catch (e) { return; }

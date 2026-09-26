@@ -91,6 +91,8 @@ include __DIR__ . '/includes/v2/header.php';
       <p class="ty-kicker" data-show="failed notfound">Pasul 3 · Confirmare</p>
       <h1 class="ty-h" id="ty-title">Biletele tale sunt gata.</h1>
       <p id="printingText" class="ty-lead" role="status">Plata a fost procesată. Biletele se printează acum...</p>
+      <?php /* bought through an operator's booking widget: the way back to their site (thank-you.js, api/embed-return.php) */ ?>
+      <p class="ty-return" id="ty-return" hidden><span>Ai cumpărat de pe <b data-return-name></b>.</span><a class="btn btn-primary" data-return-link href="#"><?= v2_ic('arrow-left') ?><span>Înapoi la <span data-return-name></span></span></a></p>
     </div>
     <svg class="ty-line" viewBox="0 590 3240 310" aria-hidden="true"><use href="#drum-g"/></svg>
   </section>

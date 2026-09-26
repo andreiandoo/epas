@@ -12,6 +12,7 @@ const ThankYouPage = {
     pendingChecks: 0,
 
     async init() {
+        this.loadReturn();
         await this.loadOrderData();
     },
 
@@ -137,9 +138,46 @@ const ThankYouPage = {
     },
 
     /** Buttons that replace the "back home" link on the failed and not-found pages. */
+    /**
+     * Bought through an operator's booking widget: cart.js kept the widget's signed return address for this tab;
+     * once api/embed-return.php confirms it, the page offers "Înapoi la <site>" under the title and as the first
+     * button at the bottom.
+     */
+    async loadReturn() {
+        let token = null;
+        try { token = sessionStorage.getItem('bo_return'); } catch (e) {}
+        if (!token) return;
+        try {
+            const res = await fetch('/api/embed-return.php?t=' + encodeURIComponent(token), { credentials: 'same-origin' });
+            const data = await res.json();
+            if (!data || !data.ok || !/^https?:\/\//.test(data.url || '')) return;
+            this.returnTo = { href: data.url, label: 'Înapoi la ' + (data.name || 'site'), name: data.name || 'site' };
+        } catch (e) {
+            return;
+        }
+        const box = document.getElementById('ty-return');
+        if (box) {
+            box.querySelectorAll('[data-return-name]').forEach((n) => { n.textContent = this.returnTo.name; });
+            box.querySelector('[data-return-link]').href = this.returnTo.href;
+            box.hidden = false;
+        }
+        const backSection = document.getElementById('backSection');
+        if (backSection && !backSection.querySelector('[data-return-back]')) {
+            backSection.querySelectorAll('.btn-primary').forEach((b) => { b.classList.replace('btn-primary', 'btn-ghost'); });
+            const a = document.createElement('a');
+            a.className = 'btn btn-primary';
+            a.href = this.returnTo.href;
+            a.setAttribute('data-return-back', '');
+            a.innerHTML = this.icon('arrow-left') + this.esc(this.returnTo.label);
+            backSection.insertBefore(a, backSection.firstChild);
+        }
+    },
+
     renderBack(links) {
         const backSection = document.getElementById('backSection');
         if (!backSection) return;
+        // The way back to the operator's site stays first (see loadReturn).
+        if (this.returnTo) links = [{ href: this.returnTo.href, label: this.returnTo.label, primary: true, icon: 'arrow-left', back: true }].concat(links.map((l) => Object.assign({}, l, { primary: false })));
         backSection.innerHTML = links.map((link) =>
             '<a href="' + this.esc(link.href) + '" class="btn ' + (link.primary ? 'btn-primary' : 'btn-ghost') + '">' +
                 (link.icon ? this.icon(link.icon) : '') + this.esc(link.label) +
