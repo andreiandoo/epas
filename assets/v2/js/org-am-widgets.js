@@ -115,10 +115,11 @@
     if (!l) return;
     var src = SITE + '/embed/locatie/' + encodeURIComponent(l.slug) + (p ? '?produs=' + p.id : '');
     var name = F.flat(p ? p.title : l.name) || 'bilete.online';
+    // Embed code v2: the iframe plus embed/bo-widget.js, which sizes it and keeps the whole purchase on the operator's
+    // site (checkout in the widget, back to this page after paying). Pages with the v1 code keep working as before.
     $('wg-code').value =
       '<iframe src="' + src + '" title="Bilete ' + attr(name) + '" loading="lazy" style="display:block;width:100%;height:720px;border:0"></iframe>\n' +
-      '<script>window.addEventListener("message",function(e){if(e.origin!=="' + SITE + '"||!e.data||e.data.type!=="bo-embed-height")return;' +
-      'document.querySelectorAll("iframe").forEach(function(f){if(f.contentWindow===e.source)f.style.height=e.data.height+"px";});});</' + 'script>';
+      '<script src="' + SITE + '/embed/bo-widget.js" async></' + 'script>';
     var page = SITE + ((p && p.public_path) || l.public_path || ('/locatie/' + l.slug)) + '#bilete';
     $('wg-link').value = '<a href="' + page + '" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;border-radius:999px;background:#1E5B48;color:#fff;font:600 16px/1.2 system-ui,sans-serif;text-decoration:none">Cumpără bilete</a>';
     var fr = $('wg-preview');

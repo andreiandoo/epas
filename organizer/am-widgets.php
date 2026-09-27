@@ -3,7 +3,7 @@
  * The operator's booking widgets: /organizator/widget-uri (activities module), v2 design.
  *
  * The booking of a location (or of one of its products) on the operator's own site, in an iframe served by
- * embed/locatie.php; payment happens on bilete.online. Here: whether widgets are on for the account (the admin's
+ * embed/locatie.php; with embed code v2 (embed/bo-widget.js) the checkout runs in the widget too. Here: whether widgets are on for the account (the admin's
  * "Activează widget-uri embed"), the sites allowed to show them (settings.embed_domains, saved through
  * /organizer/widget-settings), the pick of location and product, the code to paste (iframe + a line that fits its
  * height), a plain "Cumpără bilete" button for sites that cannot embed, and a live preview.
@@ -37,7 +37,7 @@ v2_org_start('am-widgets');
     <div>
       <p class="ve-eyebrow"><?= v2_ic('code') ?>Promovare</p>
       <h1 class="ve-h">Widget-uri embed</h1>
-      <p class="ve-lead">Rezervarea locației tale, direct pe site-ul tău. Vizitatorii aleg ziua și biletele acolo, iar plata se face pe bilete.online.</p>
+      <p class="ve-lead">Rezervarea locației tale, direct pe site-ul tău. Vizitatorii aleg ziua și biletele, completează datele și plătesc fără să plece de pe site-ul tău.</p>
     </div>
   </header>
 
@@ -80,7 +80,10 @@ v2_org_start('am-widgets');
     <section class="org-panel" aria-labelledby="wg-code-h" id="wg-code-box">
       <div class="org-panel-head"><div>
         <h2 class="org-panel-h" id="wg-code-h">3. Codul pentru site</h2>
-        <p class="org-panel-p">Lipește codul în pagina site-ului, acolo unde vrei să apară rezervarea. Înălțimea se potrivește singură.</p>
+        <p class="org-panel-p">Lipește codul în pagina site-ului, acolo unde vrei să apară rezervarea. Înălțimea se potrivește singură. Clientul completează datele și plătește direct în widget, pe site-ul tău: îl părăsește doar pentru pagina de card a procesatorului de plăți și revine apoi tot pe pagina ta, unde vede confirmarea și biletele.</p>
+        <p class="org-panel-p">Ai pus o versiune mai veche a codului? Înlocuiește-o cu aceasta: cu cea veche, plata se deschide într-o filă nouă pe bilete.online.</p>
+        <p class="org-panel-p">Dacă site-ul tău are o politică de securitate (Content-Security-Policy), permite în ea <code>frame-src <?= v2_e(rtrim(SITE_URL, '/')) ?></code>, <code>script-src <?= v2_e(rtrim(SITE_URL, '/')) ?></code> și, pentru plată, <code>form-action https://secure.mobilpay.ro https://secure.netopia-payments.com</code>, altfel browserul blochează widget-ul sau pasul de plată.</p>
+        <p class="org-panel-p">Pentru pixelul tău: după o plată reușită, pagina primește evenimentul <code>bileteonline:purchase</code>, iar Meta Pixel și Google tag de pe pagină înregistrează automat achiziția.</p>
       </div></div>
       <label class="sr" for="wg-code">Codul widget-ului</label>
       <textarea class="po-input wg-code" id="wg-code" rows="7" readonly spellcheck="false"></textarea>

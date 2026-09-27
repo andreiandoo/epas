@@ -491,6 +491,13 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^embed/locatie/([a-z0-9-]+)/?$ embed/locatie.php?slug=$1 [L,QSA]
 
+# Checkout inside that widget (embed code v2, embed/bo-widget.js on the operator's page): the checkout, the
+# confirmation and the return from the payment processor; before the event rules below, which would read them as
+# organizer slugs
+RewriteRule ^embed/finalizare/?$ embed/finalizare.php [L,QSA]
+RewriteRule ^embed/confirmare/?$ embed/confirmare.php [L,QSA]
+RewriteRule ^embed/retur/?$ embed/retur.php [L,QSA]
+
 # Embed pages: /embed/{organizer-slug}/...
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

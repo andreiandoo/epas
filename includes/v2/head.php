@@ -145,5 +145,7 @@ foreach ($v2Ld as $ld) {
     echo '<script type="application/ld+json">' . json_encode($ld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . "</script>\n";
 }
 ?>
+<?php if (empty($ckEmbed)): /* not inside the checkout embedded on an operator's site */ ?>
 <script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js" data-gyg-partner-id="HF2XYCH"></script>
+<?php endif; ?>
 </head>

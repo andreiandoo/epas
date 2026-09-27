@@ -111,6 +111,10 @@ $clientData = ['booking' => [
     'focus_product_id' => null,
     // "Înapoi la <site>" on the thank-you page: a signed address of the operator's page framing the widget
     'return_token' => bo_return_token($ancestors),
+    // Checkout inside the widget (embed code v2): the operator's allowed sites, and the same list signed for the
+    // embedded checkout, confirmation and return pages (includes/embed-return.php)
+    'embed_origins' => array_values(array_slice($ancestors, 1)),
+    'embed_allow' => count($ancestors) > 1 ? bo_embed_allow_token($slug, array_slice($ancestors, 1)) : null,
 ]];
 ?><!DOCTYPE html>
 <html lang="ro">
@@ -175,7 +179,7 @@ $clientData = ['booking' => [
             <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continuă spre plată<?= v2_ic('arrow-right') ?></button>
             <button class="btn btn-ghost" type="button" id="bkx-cart" disabled hidden>Adaugă în coș</button>
           </div>
-          <p class="bkx-small"><span id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă. </span>Plata se face pe bilete.online, într-o filă nouă. Biletele ajung pe email imediat după plată.</p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă. </span><span id="bkx-pay-note">Plata se face pe bilete.online, într-o filă nouă. Biletele ajung pe email imediat după plată.</span></p>
         </div>
         <p class="emb-safe"><?= v2_ic('lock-simple') ?><span>Plată securizată cu cardul. Operator: <?= v2_e(navFlatName($orgData['name'] ?? '') ?: $lcName) ?></span></p>
       </aside>

@@ -70,6 +70,74 @@ function bo_return_token(array $allowedOrigins): ?string
     return $payload . '.' . bo_return_b64(hash_hmac('sha256', $payload, bo_return_key(), true));
 }
 
+// ----------------------------------------------------------------------------------------------------------------
+// Checkout inside the widget (embed code v2, embed/bo-widget.js): the customer stays on the operator's site and
+// leaves it only for the card page of the payment processor, which comes back to embed/retur.php and from there to
+// the operator's page. The "allow token" is signed by the widget page with the operator's allowed sites; the embedded
+// checkout and confirmation pages take their frame-ancestors from it, and embed/retur.php only sends the customer to
+// an address on one of those sites.
+// ----------------------------------------------------------------------------------------------------------------
+
+const BO_ALLOW_TTL = 172800;
+
+/** scheme://host[:port] of an http(s) address, lower case; null for anything else. */
+function bo_origin_of(string $url): ?string
+{
+    $p = parse_url($url);
+    if (!$p || empty($p['host']) || !in_array(strtolower($p['scheme'] ?? ''), ['http', 'https'], true)) {
+        return null;
+    }
+    return strtolower($p['scheme'] . '://' . $p['host']) . (!empty($p['port']) ? ':' . (int) $p['port'] : '');
+}
+
+/** Signed list of the sites allowed to frame the checkout of this location's widget ($origins without bilete.online). */
+function bo_embed_allow_token(string $slug, array $origins): string
+{
+    $origins = array_values(array_unique(array_filter(array_map('strval', $origins))));
+    $payload = bo_return_b64(json_encode(['s' => $slug, 'o' => $origins, 't' => time()], JSON_UNESCAPED_SLASHES));
+    return $payload . '.' . bo_return_b64(hash_hmac('sha256', 'allow|' . $payload, bo_return_key(), true));
+}
+
+/** ['slug' => …, 'origins' => [...]] for a genuine allow token younger than two days; null otherwise. */
+function bo_embed_allow_verify(string $token): ?array
+{
+    if (strlen($token) > 4000 || !preg_match('/^([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/', $token, $m)) {
+        return null;
+    }
+    $expected = bo_return_b64(hash_hmac('sha256', 'allow|' . $m[1], bo_return_key(), true));
+    if (!hash_equals($expected, $m[2])) {
+        return null;
+    }
+    $d = json_decode(bo_return_unb64($m[1]), true);
+    if (!is_array($d) || empty($d['s']) || !is_array($d['o'] ?? null) || time() - (int) ($d['t'] ?? 0) > BO_ALLOW_TTL) {
+        return null;
+    }
+    return ['slug' => (string) $d['s'], 'origins' => array_values(array_filter($d['o'], 'is_string'))];
+}
+
+/** The Content-Security-Policy frame-ancestors value for an embedded page: bilete.online plus the allowed sites. */
+function bo_embed_frame_ancestors(?array $allow): string
+{
+    $list = [rtrim(SITE_URL, '/')];
+    foreach (($allow['origins'] ?? []) as $o) {
+        if (preg_match('#^https?://(\*\.)?[a-z0-9.-]+(:\d+)?$#', $o)) {
+            $list[] = $o;
+        }
+    }
+    return implode(' ', array_unique($list));
+}
+
+/** $url when it is an http(s) address on one of the allowed sites (no fragment); null otherwise. */
+function bo_embed_return_url(string $url, array $allow): ?string
+{
+    $origin = bo_origin_of($url);
+    if (!$origin || strlen($url) > 1000 || !bo_return_allowed($origin, $allow['origins'] ?? [])) {
+        return null;
+    }
+    $url = preg_replace('/#.*$/', '', $url);
+    return preg_match('#^https?://[^\s<>"]+$#', $url) ? $url : null;
+}
+
 /** ['url' => …, 'name' => host without www.] for a genuine, unexpired token; null otherwise. */
 function bo_return_verify(string $token): ?array
 {

@@ -59,12 +59,41 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
 
 $bookIcon = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.25v13M12 6.25C10.83 5.48 9.25 5 7.5 5S4.17 5.48 3 6.25v13C4.17 18.48 5.75 18 7.5 18s3.33.48 4.5 1.25m0-13C13.17 5.48 14.75 5 16.5 5s3.33.48 4.5 1.25v13C19.83 18.48 18.25 18 16.5 18s-3.33.48-4.5 1.25"/></svg>';
 
-// The operator whose page the visitor came from (cookie set on experience / location pages): their ad pixels stay
-// loaded through the purchase (ad tracking service). Safe here: this page is never page-cached.
-$trackingFromCookie = true;
+// Checkout inside the booking widget on an operator's site (embed/finalizare.php sets $ckEmbed): no site header or
+// footer, no pixels, guest only, links open in a new tab; checkout-page.js reads window.BO_EMBED.
+$ckEmbed = $ckEmbed ?? null;
+if ($ckEmbed) {
+    $trackingHeadScripts = '';
+    $v2Styles[] = 'embed-ck.css';
+    $v2HeadExtra .= '<base target="_blank"><script>window.BO_EMBED = ' . json_encode([
+        'return' => $ckEmbed['return'],
+        'cancel' => $ckEmbed['cancel'],
+        'confirm' => $ckEmbed['confirm'],
+        'page' => $ckEmbed['page'],
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>';
+} else {
+    // The operator whose page the visitor came from (cookie set on experience / location pages): their ad pixels stay
+    // loaded through the purchase (ad tracking service). Safe here: this page is never page-cached.
+    $trackingFromCookie = true;
+}
 
 include __DIR__ . '/includes/v2/head.php';
-include __DIR__ . '/includes/v2/header.php';
+if ($ckEmbed) {
+    require_once __DIR__ . '/includes/v2/legal.php';
+    echo '<body class="emb-ck">';
+    readfile(__DIR__ . '/includes/v2/sprite.svg');
+    ?>
+<header class="eck-head">
+  <a class="eck-back" href="#" data-emb-back target="_self"><?= v2_ic('arrow-left') ?>Înapoi la bilete</a>
+  <p class="eck-by"><?= v2_ic('lock-simple') ?><span>Plată securizată prin <b><?= v2_e(SITE_NAME) ?></b> · vânzător <?= v2_e(V2_LEGAL_COMPANY['name']) ?>, CUI <?= v2_e(V2_LEGAL_COMPANY['cui']) ?></span></p>
+</header>
+<?php if (!empty($ckEmbed['cancelled'])): ?>
+<p class="eck-note" role="status"><?= v2_ic('info') ?><span>Plata a fost anulată, nu s-a încasat nimic. Poți încerca din nou mai jos.</span></p>
+<?php endif; ?>
+<?php
+} else {
+    include __DIR__ . '/includes/v2/header.php';
+}
 ?>
 <main id="main" class="page-main" tabindex="-1">
 
@@ -268,8 +297,12 @@ include __DIR__ . '/includes/v2/header.php';
         <div class="co-empty-art" aria-hidden="true"><?= v2_fallback('cos', 1) ?><?= v2_ic('ticket') ?></div>
         <h2 tabindex="-1">Coșul tău e gol</h2>
         <p>Nu ai bilete în coș. Descoperă activitățile și evenimentele disponibile.</p>
+        <?php if ($ckEmbed): ?>
+        <a class="btn btn-primary" href="#" data-emb-back target="_self"><?= v2_ic('arrow-left') ?>Înapoi la bilete</a>
+        <?php else: ?>
         <a class="btn btn-primary" href="/categorii">Explorează activități<?= v2_ic('arrow-right') ?></a>
         <p class="co-empty-small">Ai plătit deja? <a href="/cont/bilete">Vezi biletele tale</a> sau <a href="/recuperare-comanda">recuperează comanda</a>.</p>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -355,4 +388,26 @@ include __DIR__ . '/includes/v2/header.php';
   </div>
 </div>
 
+<?php if ($ckEmbed): ?>
+<script>
+(function () {
+  // the operator's page sizes the frame to the content (embed/bo-widget.js)
+  if (window.parent === window) return;
+  var last = 0, main = document.getElementById('main');
+  function post() {
+    // the bottom of the content, not the document (that is never shorter than the frame, so it could not shrink)
+    var h = Math.ceil(main.getBoundingClientRect().bottom + window.pageYOffset + 24);
+    if (h && h !== last) { last = h; window.parent.postMessage({ type: 'bo-embed-height', height: h }, '*'); }
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(post).observe(main);
+  window.addEventListener('load', post);
+  setInterval(post, 1500);
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-emb-back]')) { e.preventDefault(); history.back(); }
+  });
+})();
+</script>
+<?php include __DIR__ . '/includes/v2/foot.php'; ?>
+<?php else: ?>
 <?php include __DIR__ . '/includes/v2/footer.php'; ?>
+<?php endif; ?>
