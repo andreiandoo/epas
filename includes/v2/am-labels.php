@@ -72,8 +72,8 @@ const AM_DAYS = ['mon' => 'luni', 'tue' => 'marți', 'wed' => 'miercuri', 'thu' 
 const AM_MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
 
 const AM_PRODUCT_TYPES = ['access' => 'Bilet de acces', 'experience' => 'Experiență', 'package' => 'Pachet'];
-// A card without a photograph still needs a face; the catalogue has plenty of those.
-const AM_PRODUCT_EMOJI = ['access' => '🎟️', 'experience' => '🎯', 'package' => '🎁'];
+// A card without a photograph still needs a face: the product's icon, or its type's (product-icons.php).
+require_once __DIR__ . '/product-icons.php';
 
 // Attraction types with pages on the site (the homepage keeps the same list in V2_ATTRACTION_TYPES).
 const AM_ATTRACTION_TYPES = [
@@ -224,5 +224,7 @@ function am_client_labels(): array
         'days' => AM_DAYS,
         'months' => AM_MONTHS,
         'product_types' => AM_PRODUCT_TYPES,
+        'product_icons' => am_product_icon_list(),
+        'product_type_icons' => AM_PRODUCT_TYPE_ICONS,
     ];
 }

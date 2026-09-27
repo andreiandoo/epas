@@ -655,8 +655,8 @@
     draw();
     return box;
   }
-  /** Several pictures in obj[key] ([{path, url}]). The whole box takes drops. */
-  function gallery(obj, key, kind, limit) {
+  /** Several pictures in obj[key] ([{path, url}]). The whole box takes drops. on() runs after each change. */
+  function gallery(obj, key, kind, limit, on) {
     if (!Array.isArray(obj[key])) obj[key] = [];
     limit = limit || 20;
     var box = el('div', { class: 'am-gal am-drop' });
@@ -673,7 +673,7 @@
       box.classList.add('is-busy');
       files.reduce(function (p, f) {
         return p.then(function () {
-          return upload(f, kind).then(function (img) { obj[key].push(img); draw(); }, function (err) { O.flash(errText(err, 'O poză nu s-a încărcat.'), true); });
+          return upload(f, kind).then(function (img) { obj[key].push(img); draw(); if (on) on(); }, function (err) { O.flash(errText(err, 'O poză nu s-a încărcat.'), true); });
         });
       }, Promise.resolve()).then(function () { box.classList.remove('is-busy'); file.value = ''; });
     }
@@ -684,7 +684,7 @@
         var src = imgUrl(img);
         if (src) li.appendChild(el('img', { src: src, alt: '' }));
         var rm = button('x', null, 've-icon-btn', { 'aria-label': 'Scoate poza ' + (i + 1) });
-        rm.addEventListener('click', function () { obj[key].splice(i, 1); draw(); });
+        rm.addEventListener('click', function () { obj[key].splice(i, 1); draw(); if (on) on(); });
         li.appendChild(rm);
         list.appendChild(li);
       });

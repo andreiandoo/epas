@@ -47,6 +47,17 @@
     (kids || []).forEach(function (c) { if (c !== null && c !== undefined && c !== false) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
     return n;
   }
+  /** A product's icon (a key from includes/v2/product-icons.php, whose sprite the page printed), or null. */
+  function productIcon(key) {
+    if (typeof key !== 'string' || !/^[a-z]{1,16}$/.test(key) || !document.getElementById('i-pi-' + key)) return null;
+    var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), u = document.createElementNS(NS, 'use');
+    s.setAttribute('class', 'ic');
+    s.setAttribute('aria-hidden', 'true');
+    s.setAttribute('focusable', 'false');
+    u.setAttribute('href', '#i-pi-' + key);
+    s.appendChild(u);
+    return s;
+  }
   function api(action, params) {
     var q = Object.keys(params).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
     return fetch('/api/proxy.php?action=' + action + '&' + q, { headers: { Accept: 'application/json' } })
@@ -296,7 +307,7 @@
     if (p.type === 'experience' && p.access_requirement === 'any') badges.push('Necesită bilet de acces');
 
     var head = el('div', { class: 'bkx-p-head' }, [
-      p.icon ? el('span', { class: 'bkx-p-ic', 'aria-hidden': 'true', text: p.icon }) : null,
+      productIcon(p.icon) ? el('span', { class: 'bkx-p-ic', 'aria-hidden': 'true' }, [productIcon(p.icon)]) : null,
       el('div', { class: 'bkx-p-t' }, [
         el('h3', { text: p.title }),
         p.short_description ? el('p', { text: p.short_description }) : null,

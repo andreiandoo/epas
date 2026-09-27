@@ -44,7 +44,8 @@
 .bkx-p{display:grid;gap:var(--space-3);padding:var(--space-5);border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface)}
 .bkx-p.is-off{opacity:.72}
 .bkx-p-head{display:flex;gap:var(--space-3);align-items:flex-start}
-.bkx-p-ic{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--tint-green);font-size:1.375rem}
+.bkx-p-ic{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--tint-green);color:var(--action)}
+.bkx-p-ic .ic{width:24px;height:24px}
 .bkx-p-t h3{margin:0;font-size:1.1875rem;letter-spacing:-.01em}
 .bkx-p-t p{margin:4px 0 0;color:var(--muted)}
 .bkx-badges{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
@@ -153,7 +154,8 @@
    the name the full width and put the price and the stepper on a line of their own. */
 @media (max-width:560px){
   .bkx-p{padding:16px;gap:12px}
-  .bkx-p-ic{width:38px;height:38px;font-size:1.1875rem}
+  .bkx-p-ic{width:38px;height:38px}
+  .bkx-p-ic .ic{width:21px;height:21px}
   .bkx-p-t h3{font-size:1.0625rem;line-height:1.3}
   .bkx-p-t p{font-size:.875rem}
   .bkx-v{grid-template-columns:minmax(0,1fr) auto;row-gap:10px;column-gap:10px}

@@ -88,7 +88,7 @@ $heading = $only ? (navFlatName($only[0]['title'] ?? '') ?: $lcName) : 'Bilete È
 
 $bookingProducts = array_map(fn ($p) => [
     'id' => $p['id'], 'slug' => $p['slug'] ?? null, 'type' => $p['type'] ?? 'access', 'title' => navFlatName($p['title'] ?? ''),
-    'subtitle' => $p['subtitle'] ?? null, 'short_description' => $p['short_description'] ?? null, 'icon' => $p['icon'] ?? null,
+    'subtitle' => $p['subtitle'] ?? null, 'short_description' => $p['short_description'] ?? null, 'icon' => am_product_icon($p['icon'] ?? null),
     'image' => v2_media_url($p['image'] ?? null), 'booking_mode' => $p['booking_mode'] ?? 'day', 'capacity_mode' => $p['capacity_mode'] ?? null,
     'duration_minutes' => $p['duration_minutes'] ?? 0, 'unit_label' => $p['unit_label'] ?? null, 'usage_terms' => $p['usage_terms'] ?? null,
     'display_category' => $p['display_category'] ?? null, 'access_requirement' => $p['access_requirement'] ?? 'none',
@@ -133,6 +133,7 @@ $clientData = ['booking' => [
 </head>
 <body class="emb">
 <?php readfile(dirname(__DIR__) . '/includes/v2/sprite.svg'); ?>
+<?= am_product_icon_sprite(array_column($bookingProducts, 'icon')) ?>
 <div class="emb-in" id="emb">
   <header class="emb-head">
     <div class="emb-id">

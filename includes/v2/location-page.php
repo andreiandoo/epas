@@ -114,7 +114,7 @@ $structuredData[] = [
 // What booking.js needs of each product (descriptions stay on the server).
 $bookingProducts = array_map(fn ($p) => [
     'id' => $p['id'], 'slug' => $p['slug'] ?? null, 'type' => $p['type'] ?? 'access', 'title' => navFlatName($p['title'] ?? ''),
-    'subtitle' => $p['subtitle'] ?? null, 'short_description' => $p['short_description'] ?? null, 'icon' => $p['icon'] ?? null,
+    'subtitle' => $p['subtitle'] ?? null, 'short_description' => $p['short_description'] ?? null, 'icon' => am_product_icon($p['icon'] ?? null),
     'image' => v2_media_url($p['image'] ?? null), 'booking_mode' => $p['booking_mode'] ?? 'day', 'capacity_mode' => $p['capacity_mode'] ?? null,
     'duration_minutes' => $p['duration_minutes'] ?? 0, 'unit_label' => $p['unit_label'] ?? null, 'usage_terms' => $p['usage_terms'] ?? null,
     'display_category' => $p['display_category'] ?? null, 'access_requirement' => $p['access_requirement'] ?? 'none',
@@ -153,6 +153,7 @@ include __DIR__ . '/head.php';
 include __DIR__ . '/header.php';
 ?>
 <main id="main" tabindex="-1">
+<?= am_product_icon_sprite(array_column($bookingProducts, 'icon')) ?>
   <!-- ===================== HERO ===================== -->
   <section class="th" aria-labelledby="th-h">
     <?= $lcArches ?>
