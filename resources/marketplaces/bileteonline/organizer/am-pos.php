@@ -33,6 +33,7 @@ $v2ClientData = ['am' => am_client_labels()];
 
 include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('am-pos');
+echo am_product_icon_sprite();
 ?>
 <div class="ve am pos" id="am-pos">
   <header class="ve-head">

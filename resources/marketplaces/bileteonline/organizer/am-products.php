@@ -5,8 +5,9 @@
  * What a location sells, in three kinds: access tickets (entry for the whole day or several days, parking, camping,
  * adult / child / group tickets), experiences (rentals, tours, workshops, with start times or for the whole day,
  * per person or per boat / group) and packages (access tickets and experiences together, at one price). A list with
- * filters and an editor on the same page (?id=N edits, ?nou=1 starts one, ?locatie=N filters or preselects). A new
- * product is a draft; the first publication waits for bilete.online's approval, later edits go live at once.
+ * filters and, on the same page, a step-by-step editor (?id=N edits, ?nou=1 starts one, ?locatie=N filters or
+ * preselects). A new product is a draft; the first publication waits for bilete.online's approval, later edits go live
+ * at once. Product icons are SVG (includes/v2/product-icons.php): the whole set is printed here for the editor.
  *
  * org-am-products.js reads .../meta, .../locations and .../products, saves with POST/PUT .../products, asks for
  * approval (.../submit), shows or hides (.../publish), copies (.../duplicate) and deletes a product never sold.
@@ -25,7 +26,7 @@ $canonicalUrl = SITE_URL . '/organizator/produse';
 $noindex = true;
 $skipPageCache = true;
 
-$v2Styles = ['organizer.css', 'org-venue.css', 'org-am.css'];
+$v2Styles = ['organizer.css', 'org-venue.css', 'org-am.css', 'org-am-wizard.css'];
 $v2Scripts = ['organizer.js', 'org-am.js', 'org-am-products.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config('organizer');
@@ -33,6 +34,7 @@ $v2ClientData = ['am' => am_client_labels()];
 
 include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('am-products');
+echo am_product_icon_sprite();
 ?>
 <div class="ve am" id="am-prod">
   <header class="ve-head" id="am-prod-head">

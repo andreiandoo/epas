@@ -174,7 +174,7 @@ $structuredData = [array_filter([
 
 $shape = fn ($p) => [
     'id' => $p['id'], 'slug' => $p['slug'] ?? null, 'type' => $p['type'] ?? 'access', 'title' => navFlatName($p['title'] ?? ''),
-    'subtitle' => $p['subtitle'] ?? null, 'short_description' => $p['short_description'] ?? null, 'icon' => $p['icon'] ?? null,
+    'subtitle' => $p['subtitle'] ?? null, 'short_description' => $p['short_description'] ?? null, 'icon' => am_product_icon($p['icon'] ?? null),
     'image' => v2_media_url($p['image'] ?? null), 'booking_mode' => $p['booking_mode'] ?? 'day', 'capacity_mode' => $p['capacity_mode'] ?? null,
     'duration_minutes' => $p['duration_minutes'] ?? 0, 'unit_label' => $p['unit_label'] ?? null, 'usage_terms' => $p['usage_terms'] ?? null,
     'display_category' => $p['display_category'] ?? null, 'access_requirement' => $p['access_requirement'] ?? 'none',
@@ -209,6 +209,7 @@ include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
+<?= am_product_icon_sprite(array_map(fn ($x) => $x['icon'] ?? null, array_merge([$product], $xpSiblings))) ?>
   <!-- ===================== HERO ===================== -->
   <section class="th is-compact" aria-labelledby="th-h">
     <?= $xpArches ?>
@@ -414,7 +415,7 @@ include __DIR__ . '/includes/v2/header.php';
           <li>
             <a class="xpl-item" href="<?= v2_e($sHref) ?>">
               <span class="xpl-item-media<?= $sImg ? '' : ' is-empty' ?>">
-                <?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 480, 300)) ?>" alt="" loading="lazy" decoding="async"><?php else: ?><span class="xpl-item-ph" aria-hidden="true"><?= v2_e(AM_PRODUCT_EMOJI[$s['type'] ?? ''] ?? '🎟️') ?></span><?php endif; ?>
+                <?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 480, 300)) ?>" alt="" loading="lazy" decoding="async"><?php else: ?><span class="xpl-item-ph" aria-hidden="true"><?= am_product_icon_svg(am_product_icon_or_type($s['icon'] ?? null, $s['type'] ?? null)) ?></span><?php endif; ?>
                 <span class="xpl-item-type"><?= v2_e($sType) ?></span>
               </span>
               <span class="xpl-item-b">
