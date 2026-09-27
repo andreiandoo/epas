@@ -405,6 +405,13 @@ if ($ckEmbed) {
   document.addEventListener('click', function (e) {
     if (e.target.closest('[data-emb-back]')) { e.preventDefault(); history.back(); }
   });
+  // "Sumar checkout" stays in view while the operator's page scrolls (bo-widget.js sends where the frame is)
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (e.source !== window.parent || !d || d.type !== 'bo-embed-viewport') return;
+    var stick = Math.max(0, Math.round((Number(d.offset) || 16) - (Number(d.top) || 0)));
+    document.body.style.setProperty('--eck-stick', stick + 'px');
+  });
 })();
 </script>
 <?php include __DIR__ . '/includes/v2/foot.php'; ?>

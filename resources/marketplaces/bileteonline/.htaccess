@@ -849,6 +849,21 @@ Options -Indexes
 </IfModule>
 
 # =========================================================================
+# The booking widget script on operators' sites (embed/bo-widget.js) is loaded without a version in its URL, from
+# code they pasted once: a short cache, so a fix reaches their visitors within minutes (overrides the year below).
+# =========================================================================
+<FilesMatch "^bo-widget\.js$">
+    <IfModule mod_expires.c>
+        ExpiresActive On
+        ExpiresByType application/javascript "access plus 5 minutes"
+        ExpiresByType text/javascript "access plus 5 minutes"
+    </IfModule>
+    <IfModule mod_headers.c>
+        Header set Cache-Control "public, max-age=300"
+    </IfModule>
+</FilesMatch>
+
+# =========================================================================
 # Cache static assets — far-future expires for assets that change via URL
 # busting (filemtime ?v= or hash). Browsers won't re-request these until
 # the URL changes, which kicks in automatically after any edit.
