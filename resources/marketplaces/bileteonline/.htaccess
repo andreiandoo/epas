@@ -646,6 +646,7 @@ RewriteRule ^despre/?$ about.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^contact/?$ contact.php [L]
+RewriteRule ^status/?$ status.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -25,6 +25,14 @@ if (!$route || !$rData) {
 }
 
 $stops = $rData['stops'];
+// The data file carries each stop's type as a name and an emoji; the map shows the type's SVG icon instead.
+$typeSlugByName = [];
+foreach ($summary['types'] ?? [] as $t) {
+    $typeSlugByName[(string) ($t[1] ?? '')] = (string) ($t[0] ?? '');
+}
+foreach ($stops as $si => $s) {
+    $stops[$si][6] = am_place_icon($typeSlugByName[(string) ($s[5] ?? '')] ?? null);
+}
 $road = $rData['road'] ?? null;          // real driving distance and time, or null when routing failed
 $roadKm = $road ? (int) $road['km'] : (int) $rData['km'];
 $roadMin = $road ? (int) $road['min'] : 0;

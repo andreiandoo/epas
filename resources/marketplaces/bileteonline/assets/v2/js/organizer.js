@@ -159,7 +159,6 @@
     each('[data-org-initials]', function (n) { n.textContent = initials; });
     each('[data-org-name]', function (n) { n.textContent = name; });
     each('[data-org-email]', function (n) { n.textContent = o.email || ''; });
-    drawPlan();
     var pending = $('org-pending');
     if (pending) pending.hidden = !(o.status && o.status !== 'active');
     profileCbs.forEach(function (cb) { try { cb(o); } catch (e) {} });
@@ -177,13 +176,6 @@
       ]).then(function (res) { return { locations: res[0], products: res[1] }; });
     }
     return amLoad;
-  }
-  /** Under the name: "Operator · <location>" (the first one, "+N" for the others). */
-  var planLocs = null;
-  function drawPlan() {
-    var text = 'Operator';
-    if (planLocs && planLocs.length) text += ' · ' + (flat(planLocs[0].name) || 'locația ta') + (planLocs.length > 1 ? ' +' + (planLocs.length - 1) : '');
-    each('[data-org-plan]', function (n) { n.textContent = text; });
   }
 
   /* ---------- badges ---------- */
@@ -277,6 +269,33 @@
   bindPop('org-user', 'org-usermenu');
   document.addEventListener('click', function (e) {
     if (openPop && !openPop.pop.contains(e.target) && !openPop.btn.contains(e.target)) setPop(openPop.btn, openPop.pop, false);
+  });
+
+  /* ---------- folding the sidebar (desktop) ----------
+     Icons only, for more room. The operator's choice is kept in this browser; a page can fold it for itself without
+     changing that choice (the product editor does: fold(true) when it opens, fold() to go back to the choice). */
+  var FOLD_KEY = 'bo_org_fold', foldTemp = document.documentElement.classList.contains('org-wz-boot');
+  function storedFold() { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch (e) { return false; } }
+  function setFold(on, temp) {
+    root.classList.toggle('is-folded', !!on);
+    foldTemp = !!temp;
+    each('[data-org-fold]', function (b) {
+      var t = on ? 'Extinde meniul' : 'Restrânge meniul';
+      b.setAttribute('aria-expanded', on ? 'false' : 'true');
+      b.title = t;
+      var sr = b.querySelector('.sr');
+      if (sr) sr.textContent = t;
+    });
+    if (!temp) { try { localStorage.setItem(FOLD_KEY, on ? '1' : '0'); } catch (e) {} }
+  }
+  function fold(on) {
+    if (on === undefined) { document.documentElement.classList.remove('org-wz-boot'); setFold(storedFold(), false); }
+    else setFold(on, true);
+  }
+  setFold(root.classList.contains('is-folded'), true); // the buttons' labels; nothing is stored
+  foldTemp = document.documentElement.classList.contains('org-wz-boot');
+  each('[data-org-fold]', function (b) {
+    b.addEventListener('click', function () { setFold(!root.classList.contains('is-folded'), foldTemp); });
   });
 
   /* ---------- drawer (phones, tablets) ---------- */
@@ -488,10 +507,8 @@
       if (document.hidden || Date.now() - profileAt < 30000) return;
       loadProfile(true);
       amLoad = null;
-      amCatalog().then(function (c) { planLocs = c.locations; drawPlan(); });
     }
     loadProfile(false);
-    amCatalog().then(function (c) { planLocs = c.locations; drawPlan(); });
     window.addEventListener('focus', refreshAccount);
     window.addEventListener('pageshow', function (e) { if (e.persisted) refreshAccount(); });
     api('/organizer/support/tickets?status=open&per_page=1', { quiet: true }).then(function (r) { // 403 for organizers outside the support beta: no badge
@@ -509,7 +526,7 @@
   }
 
   window.BO_ORG = {
-    ready: ready, api: api, el: el, icon: icon, flash: flash, onProfile: onProfile, setBadge: setBadge,
+    ready: ready, api: api, el: el, icon: icon, flash: flash, fold: fold, onProfile: onProfile, setBadge: setBadge,
     profile: function () { return profile; }, refreshNotifications: loadNotifications,
     fmt: { toNum: toNum, num: num, money: money, pct: pct, count: count, flat: flat, dateOf: dateOf, date: fmtDate, ymd: ymd, ago: ago },
     safeHref: safeHref, img: img, metaOf: metaOf,

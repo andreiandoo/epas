@@ -32,12 +32,12 @@ const PLAN_PACES = [
 
 /** Interest presets: a label and the attraction types behind it. */
 const PLAN_INTERESTS = [
-    'istorie'   => ['Istorie și cetăți', '🏰', ['castel-palat', 'monument', 'cladire-istorica']],
-    'muzee'     => ['Muzee', '🏛️', ['muzeu']],
-    'credinta'  => ['Biserici și mănăstiri', '⛪', ['biserica-manastire']],
-    'natura'    => ['Natură și priveliști', '🏞️', ['lac-natura', 'punct-panoramic', 'parc-gradina']],
-    'orase'     => ['Orașe și centre vechi', '🏙️', ['piata-centru-vechi', 'cladire-istorica']],
-    'cultura'   => ['Teatru și spectacole', '🎭', ['teatru-opera']],
+    'istorie'   => ['Istorie și cetăți', 'castle', ['castel-palat', 'monument', 'cladire-istorica']],
+    'muzee'     => ['Muzee', 'museum', ['muzeu']],
+    'credinta'  => ['Biserici și mănăstiri', 'church', ['biserica-manastire']],
+    'natura'    => ['Natură și priveliști', 'mountains', ['lac-natura', 'punct-panoramic', 'parc-gradina']],
+    'orase'     => ['Orașe și centre vechi', 'city', ['piata-centru-vechi', 'cladire-istorica']],
+    'cultura'   => ['Teatru și spectacole', 'theatre', ['teatru-opera']],
 ];
 
 /**
@@ -49,38 +49,38 @@ const PLAN_INTERESTS = [
  * day, because a day with small children is shorter than a day without them.
  */
 const PLAN_COMPANY = [
-    'prieteni' => ['Cu prietenii', '🧑‍🤝‍🧑', 1.0, [
+    'prieteni' => ['Cu prietenii', 'group', 1.0, [
         'lac-natura' => 1.5, 'punct-panoramic' => 1.5, 'piata-centru-vechi' => 1.5,
         'teatru-opera' => 1.0, 'cladire-istorica' => 0.5, 'biserica-manastire' => -1.0,
     ]],
-    'familie' => ['Cu familia', '👨‍👩‍👧', 0.9, [
+    'familie' => ['Cu familia', 'heart', 0.9, [
         'parc-gradina' => 2.0, 'muzeu' => 1.5, 'castel-palat' => 1.5,
         'lac-natura' => 1.0, 'monument' => -0.5,
     ]],
-    'copii' => ['Cu copii', '🧒', 0.75, [
+    'copii' => ['Cu copii', 'baby', 0.75, [
         'parc-gradina' => 2.5, 'muzeu' => 1.5, 'lac-natura' => 1.5, 'castel-palat' => 1.0,
         'monument' => -1.5, 'biserica-manastire' => -2.0, 'cladire-istorica' => -1.0,
     ]],
-    'cuplu' => ['Cu persoana iubită', '💞', 1.0, [
+    'cuplu' => ['Cu persoana iubită', 'heart', 1.0, [
         'punct-panoramic' => 2.0, 'castel-palat' => 1.5, 'parc-gradina' => 1.5,
         'lac-natura' => 1.5, 'piata-centru-vechi' => 1.0, 'teatru-opera' => 1.0,
     ]],
 ];
 
 /**
- * Stops the traveller adds themselves, offered as one tap: label, emoji, minutes.
+ * Stops the traveller adds themselves, offered as one tap: label, icon key (product-icons.php), minutes.
  *
  * These are not places and the catalogue knows nothing about them — they are the meal, the coffee
  * and the breath between two visits, and they exist so that a day reads like a day. The name is
  * only a starting point: anything can be typed over it.
  */
 const PLAN_STOP_PRESETS = [
-    ['Masă', '🍽️', 60],
-    ['Cafea', '☕', 30],
-    ['Pauză', '😌', 20],
-    ['Timp liber', '🚶', 60],
-    ['Cumpărături', '🛍️', 45],
-    ['Cazare', '🏨', 30],
+    ['Masă', 'fork', 60],
+    ['Cafea', 'coffee', 30],
+    ['Pauză', 'armchair', 20],
+    ['Timp liber', 'walk', 60],
+    ['Cumpărături', 'shopping', 45],
+    ['Cazare', 'bed', 30],
 ];
 
 /** The durations offered for any stop, yours or ours. */

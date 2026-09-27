@@ -20,6 +20,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/plan-config.php';
 require_once __DIR__ . '/includes/v2/map-routes.php';
+require_once __DIR__ . '/includes/v2/product-icons.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
 $mapData = v2_map_data();
@@ -187,7 +188,7 @@ include __DIR__ . '/includes/v2/header.php';
           <legend>Cu cine mergi?</legend>
           <div class="pl-chips" id="pl-company">
             <?php foreach (PLAN_COMPANY as $key => [$label, $emoji, $budget, $weights]): ?>
-            <button class="pl-chip" type="button" data-company="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= v2_e($emoji) ?></span><?= v2_e($label) ?></button>
+            <button class="pl-chip" type="button" data-company="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= am_product_icon_svg($emoji, 'ic-em') ?></span><?= v2_e($label) ?></button>
             <?php endforeach; ?>
           </div>
           <p class="pl-hint">Înclină recomandările spre ce li se potrivește. E o ponderare pe tipuri de locuri, nu o etichetă pusă fiecărui obiectiv.</p>
@@ -197,7 +198,7 @@ include __DIR__ . '/includes/v2/header.php';
           <legend>Ce te interesează?</legend>
           <div class="pl-chips" id="pl-interests">
             <?php foreach (PLAN_INTERESTS as $key => [$label, $emoji, $types]): ?>
-            <button class="pl-chip" type="button" data-interest="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= v2_e($emoji) ?></span><?= v2_e($label) ?></button>
+            <button class="pl-chip" type="button" data-interest="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= am_product_icon_svg($emoji, 'ic-em') ?></span><?= v2_e($label) ?></button>
             <?php endforeach; ?>
           </div>
           <p class="pl-hint">Lasă-le nebifate și iau de toate.</p>

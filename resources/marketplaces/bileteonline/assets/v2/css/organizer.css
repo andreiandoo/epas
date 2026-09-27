@@ -181,6 +181,8 @@ html.org-lock,html.org-lock body{overflow:hidden}
 .org-ftr-links a:hover{color:#F7F7F5}
 .org-ftr-links .ic{width:16px;height:16px;color:#7FD1A6}
 .org-ftr-status{display:inline-flex;align-items:center;gap:8px;margin:0;padding:6px 12px;border-radius:999px;background:rgba(43,182,115,.16);color:#BFEBD3;font-size:.75rem;font-weight:700}
+.org-ftr-status{text-decoration:none}
+.org-ftr-status:hover{background:rgba(43,182,115,.28);color:#F7F7F5}
 .org-ftr-status span{width:7px;height:7px;border-radius:50%;background:var(--online);animation:org-pulse 2.4s var(--ease-out) infinite}
 @keyframes org-pulse{0%{box-shadow:0 0 0 0 rgba(43,182,115,.6)}70%,100%{box-shadow:0 0 0 7px rgba(43,182,115,0)}}
 @media (prefers-reduced-motion:reduce){.org-ftr-status span{animation:none}}
@@ -235,3 +237,28 @@ dialog::-webkit-scrollbar,dialog *::-webkit-scrollbar,.ve-modal::-webkit-scrollb
 .ovs-thumb.is-on:hover,.ovs-thumb.is-drag{background-color:rgba(33,33,33,.62)}
 .ovs-thumb.is-drag{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){.ovs-thumb{transition:none}}
+
+/* =================== FOLDED SIDEBAR (desktop) ===================
+   Icons only, 80px wide; the label stays for screen readers and shows as the link's title on hover. Chosen with the button next to the role
+   pill (kept in this browser), or folded by a page for itself (the product editor). Phones keep the drawer. */
+.org-fold{display:none}
+.org-side .org-link-t{white-space:nowrap}
+@media (min-width:1024px){
+  .org{transition:grid-template-columns var(--dur-state) var(--ease-out)}
+  .org-fold{display:grid;place-items:center;width:34px;height:34px;flex:none;margin-left:auto;padding:0;border:1px solid rgba(247,247,245,.18);border-radius:10px;background:rgba(247,247,245,.06);color:#F7F7F5;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out)}
+  .org-fold:hover{background:rgba(247,247,245,.16)}
+  .org-fold .ic{width:18px;height:18px;transform:rotate(90deg);transition:transform var(--dur-state) var(--ease-out)}
+  .org.is-folded{grid-template-columns:80px minmax(0,1fr)}
+  .org.is-folded .org-side-top{flex-direction:column;align-items:center;padding:16px 8px 12px}
+  .org.is-folded .org-brand .brand .w,.org.is-folded .org-role,.org.is-folded .org-group-t,.org.is-folded .org-me-t,.org.is-folded .org-logout{display:none}
+  .org.is-folded .org-fold{margin:0}
+  .org.is-folded .org-fold .ic{transform:rotate(-90deg)}
+  .org.is-folded .org-nav{padding:4px 10px 16px;scrollbar-width:none}
+  .org.is-folded .org-link-t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .org.is-folded .org-group + .org-group{margin-top:8px;padding-top:8px}
+  .org.is-folded .org-link{position:relative;justify-content:center;padding:0}
+  .org.is-folded .org-badge{position:absolute;top:4px;right:6px;min-width:18px;height:16px;padding:0 4px;font-size:.625rem}
+  .org.is-folded .org-me{justify-content:center;margin:0 10px 12px;padding:8px}
+  .org.is-folded .am-bar,.org.is-folded .wz-bar{left:80px}
+}
+@media (min-width:1024px) and (prefers-reduced-motion:reduce){.org,.org-fold .ic{transition:none}}

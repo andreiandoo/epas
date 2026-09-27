@@ -185,3 +185,6 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
 @media (prefers-reduced-motion:reduce){
   .epm-side,.epm-pin{transition:none}
 }
+
+/* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
+.ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}

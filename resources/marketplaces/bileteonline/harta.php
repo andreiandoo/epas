@@ -97,7 +97,7 @@ $exTypeRows = [];
 $exTypeSrc = ($landing && $landing['kind'] === 'region') ? ($lData['types'] ?? []) : ($summary['types'] ?? []);
 foreach ($exTypeSrc as [$tSlug, $tName, $tEmoji, $tCount]) {
     $ls = v2_map_landing_for_type($tSlug);
-    $exTypeRows[] = [$tSlug, $tEmoji, $tName, $tCount, $ls !== '' ? '/harta/' . $ls : '/atractii?tip=' . rawurlencode($tSlug)];
+    $exTypeRows[] = [$tSlug, am_place_icon($tSlug), $tName, $tCount, $ls !== '' ? '/harta/' . $ls : '/atractii?tip=' . rawurlencode($tSlug)];
 }
 
 // On a type landing the regional split is the split of *that* type, not of the whole catalogue.
@@ -111,17 +111,17 @@ if ($landing && $landing['kind'] === 'type') {
     }
     arsort($byRegion);
     foreach ($byRegion as $rName => $rCount) {
-        $exRegionRows[] = [$rName, '🗺️', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
+        $exRegionRows[] = [$rName, 'map', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
     }
 } else {
     foreach ($summary['regions'] ?? [] as [$rName, $rCount]) {
-        $exRegionRows[] = [$rName, '🗺️', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
+        $exRegionRows[] = [$rName, 'map', $rName, $rCount, '/harta/' . (v2_map_landing_for_region($rName) ?: v2_zone_slug($rName))];
     }
 }
 
 $exCountyRows = [];
 foreach (($lData['zones'] ?? $summary['counties'] ?? []) as [$cyName, $cyRegion, $cyCount]) {
-    $exCountyRows[] = [$cyName, '📍', $cyName, $cyCount, '/harta?zona=' . rawurlencode(v2_zone_slug($cyName))];
+    $exCountyRows[] = [$cyName, 'pin', $cyName, $cyCount, '/harta?zona=' . rawurlencode(v2_zone_slug($cyName))];
 }
 
 $exCityRows = [];

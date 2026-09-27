@@ -61,11 +61,18 @@ function v2_org_start(string $active): void
 <?php readfile(__DIR__ . '/sprite.svg'); readfile(__DIR__ . '/sprite-org.svg'); ?>
 <a class="skip" href="#main">Sari la conținut</a>
 <div class="org" id="org">
+<script>(function () { // folded sidebar before the first paint: the operator's choice, or folded on the product editor
+  var o = document.getElementById('org'), f = false;
+  try { f = localStorage.getItem('bo_org_fold') === '1'; } catch (e) {}
+  if (location.pathname.indexOf('/organizator/produse') === 0 && /[?&](nou|id)=/.test(location.search)) { f = true; document.documentElement.classList.add('org-wz-boot'); }
+  if (f) o.classList.add('is-folded');
+})();</script>
   <aside class="org-side" id="org-side" aria-label="Contul de operator">
     <div class="org-side-top">
       <a class="org-brand" href="/" aria-label="bilete.online, pagina principală"><?= v2_brand('brand') ?></a>
       <button class="org-x" type="button" data-org-drawer="close"><?= v2_ic('x') ?><span class="sr">Închide meniul</span></button>
       <span class="org-role">Operator</span>
+      <button class="org-fold" type="button" data-org-fold aria-expanded="true" aria-controls="org-side" title="Restrânge meniul"><?= v2_ic('caret-down') ?><span class="sr">Restrânge meniul</span></button>
     </div>
     <nav class="org-nav" aria-label="Secțiunile contului">
       <?php foreach (V2_ORG_NAV as [$groupId, $groupLabel, $items]): ?>
@@ -73,7 +80,7 @@ function v2_org_start(string $active): void
         <?php if ($groupLabel !== ''): ?><p class="org-group-t" id="org-g-<?= v2_e($groupId) ?>"><?= v2_e($groupLabel) ?></p><?php endif; ?>
         <ul class="org-links"<?= $groupLabel !== '' ? ' aria-labelledby="org-g-' . v2_e($groupId) . '"' : '' ?>>
           <?php foreach ($items as [$key, $url, $label, $icon, $badge]): ?>
-          <li><a class="org-link" href="<?= v2_e($url) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= v2_ic($icon) ?><span class="org-link-t"><?= v2_e($label) ?></span><?php if ($badge === 'nou'): ?><span class="org-badge is-new">nou</span><?php elseif ($badge): ?><span class="org-badge<?= $badge === 'support' ? ' is-warn' : '' ?>" data-org-badge="<?= v2_e($badge) ?>" data-sr="<?= v2_e(V2_ORG_BADGE_SR[$badge] ?? '') ?>" hidden></span><?php endif; ?></a></li>
+          <li><a class="org-link" href="<?= v2_e($url) ?>" title="<?= v2_e($label) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= v2_ic($icon) ?><span class="org-link-t"><?= v2_e($label) ?></span><?php if ($badge === 'nou'): ?><span class="org-badge is-new">nou</span><?php elseif ($badge): ?><span class="org-badge<?= $badge === 'support' ? ' is-warn' : '' ?>" data-org-badge="<?= v2_e($badge) ?>" data-sr="<?= v2_e(V2_ORG_BADGE_SR[$badge] ?? '') ?>" hidden></span><?php endif; ?></a></li>
           <?php endforeach; ?>
         </ul>
       </div>
@@ -81,7 +88,7 @@ function v2_org_start(string $active): void
     </nav>
     <div class="org-me">
       <span class="org-avatar" data-org-initials aria-hidden="true">·</span>
-      <div class="org-me-t"><p class="org-me-name" data-org-name>Operator</p><p class="org-me-plan" data-org-plan>—</p></div>
+      <div class="org-me-t"><p class="org-me-name" data-org-name>Operator</p></div>
       <button class="org-logout" type="button" data-org-logout title="Deconectare"><?= v2_ic('sign-out') ?><span class="sr">Deconectare</span></button>
     </div>
   </aside>
@@ -143,7 +150,7 @@ function v2_org_end(): void
         <a href="/termeni"><?= v2_ic('file-text') ?>Termeni</a>
         <a href="/organizator/suport"><?= v2_ic('question') ?>Suport</a>
       </nav>
-      <p class="org-ftr-status"><span aria-hidden="true"></span>Toate sistemele funcționale</p>
+      <a class="org-ftr-status" href="/status" title="Starea serviciilor în timp real și în ultimele 90 de zile"><span aria-hidden="true"></span>Toate sistemele funcționale</a>
       <p class="org-ftr-copy">© <?= date('Y') ?> bilete.online · operat de <a href="https://tixello.ro" target="_blank" rel="noopener">Tixello</a></p>
     </footer>
   </div>

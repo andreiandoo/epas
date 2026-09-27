@@ -133,6 +133,8 @@ $structuredData = [[
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/v2/product-icons.php';
+echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'palette', 'walk']);
 ?>
 
 <main x-data="locationsPage(<?= htmlspecialchars(json_encode([
@@ -179,7 +181,7 @@ include __DIR__ . '/includes/header.php';
                         <h2 class="mt-3 font-display text-3xl font-bold leading-none">O locație poate avea mai multe activități.</h2>
                         <div class="mt-7 rounded-3xl bg-paper-2 border border-ink/10 p-5">
                             <div class="flex items-center gap-3">
-                                <span class="grid place-items-center w-12 h-12 rounded-2xl bg-vermilion text-paper">📍</span>
+                                <span class="grid place-items-center w-12 h-12 rounded-2xl bg-vermilion text-paper"><?= am_product_icon_svg('pin', 'w-6 h-6') ?></span>
                                 <div>
                                     <p class="font-display text-2xl font-bold"><?= htmlspecialchars($locations[0]['name'] ?? 'Mystery Rooms') ?></p>
                                     <p class="text-sm text-ink-soft"><?= htmlspecialchars($locations[0]['typeLabel'] ?? 'Operator') ?> · <?= htmlspecialchars($locations[0]['city'] ?? '') ?></p>
@@ -246,7 +248,7 @@ include __DIR__ . '/includes/header.php';
                                 <img x-show="location.image" :src="location.image" :alt="'Imagine pentru ' + location.name" class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500" loading="lazy" onerror="this.style.display='none'">
                                 <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
                                 <div class="absolute inset-0 grid place-items-center" x-show="!location.image">
-                                    <span class="text-6xl opacity-30">📍</span>
+                                    <span class="opacity-30"><?= am_product_icon_svg('pin', 'w-16 h-16') ?></span>
                                 </div>
                                 <span class="absolute left-4 top-4 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold" x-text="location.typeLabel"></span>
                                 <span class="absolute right-4 top-4 rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold" x-text="location.rating"></span>
@@ -334,15 +336,15 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="mt-10 grid md:grid-cols-3 gap-5">
             <?php $types = [
-                ['🕵️', 'Escape rooms',  'Sloturi orare, camere, dificultate, jucători, check-in.'],
-                ['🖼️', 'Muzee',          'Program, expoziții, tururi, bilete adult/copil, acces.'],
-                ['🌲', 'Natură',         'Reguli, echipament, tururi, ghid, nivel, sezon.'],
-                ['🎡', 'Parcuri',        'Acces pe zi, atracții, pachete, vârste, facilități.'],
-                ['🎨', 'Ateliere',       'Locuri limitate, materiale, vârstă, durată.'],
-                ['🚶', 'Tururi',         'Punct de întâlnire, limbă, durată, ghid, traseu.'],
+                ['key', 'Escape rooms',  'Sloturi orare, camere, dificultate, jucători, check-in.'],
+                ['museum', 'Muzee',          'Program, expoziții, tururi, bilete adult/copil, acces.'],
+                ['evergreen', 'Natură',         'Reguli, echipament, tururi, ghid, nivel, sezon.'],
+                ['balloon', 'Parcuri',        'Acces pe zi, atracții, pachete, vârste, facilități.'],
+                ['palette', 'Ateliere',       'Locuri limitate, materiale, vârstă, durată.'],
+                ['walk', 'Tururi',         'Punct de întâlnire, limbă, durată, ghid, traseu.'],
             ]; foreach ($types as $t): ?>
                 <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6">
-                    <p class="text-3xl"><?= $t[0] ?></p>
+                    <p aria-hidden="true"><?= am_product_icon_svg($t[0], 'w-9 h-9') ?></p>
                     <h3 class="mt-3 font-display text-3xl font-bold"><?= htmlspecialchars($t[1]) ?></h3>
                     <p class="mt-2 text-paper/60"><?= htmlspecialchars($t[2]) ?></p>
                 </article>

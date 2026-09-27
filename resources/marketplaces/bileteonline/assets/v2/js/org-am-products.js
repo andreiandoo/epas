@@ -1579,6 +1579,7 @@
     box.hidden = false;
     box.innerHTML = shell();
     document.body.classList.add('wz-on');
+    if (O.fold) O.fold(true); // more room for the editor; the operator's own choice comes back with the list
     W = { p: p, step: step, visited: {}, returnTo: null, tried: {}, dirty: false, rev: 0, saving: false, saveErr: null, serverErr: null, savedAt: null, allIcons: false, openMore: {}, armDelete: false };
     W.visited[step] = true;
     if (allVisited) { ALL_STEPS.forEach(function (s) { W.visited[s.id] = true; }); W.visited.unde_loc = true; }
@@ -1591,6 +1592,7 @@
     if (!W) return;
     W = null;
     document.body.classList.remove('wz-on');
+    if (O.fold) O.fold();
     $('am-prod-edit').textContent = '';
   }
   function startNew(pre) {

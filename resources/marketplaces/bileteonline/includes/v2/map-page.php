@@ -120,7 +120,7 @@ include __DIR__ . '/header.php';
                 <a class="<?= $pxTiles ? 'mpx-tile' : 'mpx-pill' ?>" href="<?= v2_e($rHref) ?>"
                    data-mpx-set="<?= v2_e($px['kind']) ?>" data-mpx-key="<?= v2_e($rKey) ?>" data-mpx-label="<?= v2_e($rName) ?>" aria-pressed="false">
                   <?php if ($pxTiles): ?>
-                  <span class="mpx-tile-ic" aria-hidden="true"><?= v2_e($rEmoji ?: '📍') ?></span>
+                  <span class="mpx-tile-ic" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($rEmoji) ?? 'pin', 'ic-em') ?></span>
                   <span class="mpx-tile-t"><b><?= v2_e($rName) ?></b><span><?= v2_e(v2_thousands((int) $rCount)) ?> <?= v2_e($px['unit'] ?? 'locuri') ?></span></span>
                   <span class="mpx-tile-on" aria-hidden="true"><?= v2_ic('check') ?></span>
                   <?php else: ?>
@@ -184,12 +184,13 @@ include __DIR__ . '/header.php';
           </div>
         </div>
         <ul class="mpr" data-mpr>
+          <?php $mpTypeSlug = []; foreach ($mpSummary['types'] ?? [] as $mt) { $mpTypeSlug[(string) ($mt[1] ?? '')] = (string) ($mt[0] ?? ''); } ?>
           <?php foreach ($mpPicks as [$pSlug, $pName, $pType, $pEmoji, $pCity, $pCitySlug, $pImg]): ?>
           <li>
             <a class="mp-pick" href="/atractie/<?= v2_e($pSlug) ?>">
               <span class="mp-pick-media">
                 <?php if ($pImg): ?><img src="<?= v2_e(v2_thumb($pImg, 320, 240)) ?>" alt="" width="320" height="240" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($pName) ?><?php endif; ?>
-                <?php if ($pType): ?><span class="mp-pick-tag"><span aria-hidden="true"><?= v2_e($pEmoji) ?></span><?= v2_e($pType) ?></span><?php endif; ?>
+                <?php if ($pType): ?><span class="mp-pick-tag"><span aria-hidden="true"><?= am_product_icon_svg(am_place_icon($mpTypeSlug[(string) $pType] ?? null), 'ic-em') ?></span><?= v2_e($pType) ?></span><?php endif; ?>
               </span>
               <span class="mp-pick-b"><b><?= v2_e($pName) ?></b><?php if ($pCity): ?><span><?= v2_ic('map-pin') ?><?= v2_e($pCity) ?></span><?php endif; ?></span>
             </a>

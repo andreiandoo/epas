@@ -44,3 +44,6 @@
 
 /* ---------- index intro ---------- */
 .rx-lead{max-width:62ch;margin:0;font-size:var(--text-lead);color:var(--muted)}
+
+/* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
+.ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}

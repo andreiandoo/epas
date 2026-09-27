@@ -648,7 +648,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                                     <a :href="item.href" class="flex gap-3 p-2.5 transition border group rounded-2xl border-ink/10 bg-paper-2 hover:border-ink hover:bg-paper">
                                         <span class="grid w-16 h-16 overflow-hidden shrink-0 rounded-xl bg-ink place-items-center">
                                             <img x-show="item.image" :src="item.image" :alt="item.title" class="object-cover w-full h-full" loading="lazy">
-                                            <span x-show="!item.image" class="text-2xl opacity-40">🎫</span>
+                                            <span x-show="!item.image" class="opacity-40"><svg class="w-7 h-7" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z"/></svg></span>
                                         </span>
                                         <span class="flex-1 min-w-0">
                                             <span class="block text-lg font-bold leading-tight font-display line-clamp-2 group-hover:text-vermilion" x-text="item.title"></span>

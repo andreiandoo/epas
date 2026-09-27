@@ -227,4 +227,7 @@ return [
         'stream_webhook_secret' => env('BUNNY_STREAM_WEBHOOK_SECRET'),
     ],
 
+    // Marketplace sites whose home page services:check-status fetches every 5 minutes (public status pages).
+    'status_sites' => array_filter(array_map('trim', explode(',', (string) env('STATUS_SITES', 'bilete.online')))),
+
 ];
