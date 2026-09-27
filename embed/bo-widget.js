@@ -86,6 +86,7 @@
     if (d.type === 'bo-embed-height') {
       var h = Number(d.height);
       if (h > 0) f.style.height = Math.min(Math.max(h, 200), 20000) + 'px';
+      queue();
     } else if (d.type === 'bo-embed-ready') {
       hello(f);
     } else if (d.type === 'bo-embed-top') {
@@ -114,9 +115,29 @@
       }
     }
     frames().forEach(function (f) {
-      f.addEventListener('load', function () { hello(f); });
+      f.addEventListener('load', function () { hello(f); viewport(); });
       hello(f);
     });
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+    viewport();
+  }
+
+  // Where each widget sits in the window, so a part of it can stay in view while this page scrolls (the checkout's
+  // summary): the frame is as tall as its content and never scrolls itself. data-offset on the script: the height of
+  // a fixed header on this page, in px (default 16).
+  var OFFSET = Math.max(0, parseInt(script && script.getAttribute('data-offset'), 10) || 16), ticking = false;
+  function viewport() {
+    ticking = false;
+    frames().forEach(function (f) {
+      var r = f.getBoundingClientRect();
+      try { f.contentWindow.postMessage({ type: 'bo-embed-viewport', top: r.top, height: window.innerHeight, offset: OFFSET }, SITE); } catch (e) {}
+    });
+  }
+  function queue() {
+    if (ticking) return;
+    ticking = true;
+    (window.requestAnimationFrame || setTimeout)(viewport);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

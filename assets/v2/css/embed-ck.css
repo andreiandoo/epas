@@ -13,13 +13,18 @@ body.emb-ck{background:transparent}
 
 /* the page without the site around it */
 .emb-ck .wrap{padding-inline:16px}
-.emb-ck .co-head{padding-block:16px 4px;background:none}
+.emb-ck #main.page-main{padding:0}
+.emb-ck .co-head{padding:16px 4px;background:none}
 .emb-ck .co-h{font-size:clamp(1.5rem, 3.4vw, 2.125rem)}
 .emb-ck .co-lead{font-size:.9375rem}
 .emb-ck .co-head-row{gap:10px}
 .emb-ck .ck-back{display:none}
 .emb-ck .co-lay{gap:var(--space-5);padding-block:12px 24px}
+/* "Sumar checkout" follows the scroll of the operator's page: the frame is as tall as its content and never
+   scrolls itself, so bo-widget.js tells it how far the page has scrolled past its top (--eck-stick) */
+.emb-ck{--eck-stick:0px}
 .emb-ck .co-side{position:static}
+@media (min-width:1024px){.emb-ck .co-side{position:sticky;top:var(--eck-stick)}}
 /* fixed to the bottom of a frame as tall as its content, the phone bar would sit under everything */
 .emb-ck .co-mbar{display:none !important}
 /* guest only: a frame on another site has no bilete.online login (and no loyalty points) */
