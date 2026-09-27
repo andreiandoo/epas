@@ -50,6 +50,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
 ?>
 <body<?= !empty($v2BodyClass) ? ' class="' . v2_e($v2BodyClass) . '"' : '' ?>>
 <?php readfile(__DIR__ . '/sprite.svg'); ?>
+<?php if (!empty($v2PlaceIcons) || in_array('map.js', $v2Scripts ?? [], true) || in_array('plan.js', $v2Scripts ?? [], true)) { require_once __DIR__ . '/product-icons.php'; echo am_product_icon_sprite(AM_PLACE_ICON_KEYS); } ?>
 
 <a class="skip" href="#main">Sari la conținut</a>
 

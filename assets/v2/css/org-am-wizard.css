@@ -8,7 +8,8 @@
 .wz .ic{width:20px;height:20px;flex:none}
 .wz :focus-visible{outline:2.5px solid var(--action);outline-offset:2px}
 body.wz-on .org-flash{bottom:calc(92px + env(safe-area-inset-bottom, 0px))}
-body.wz-on .org-ftr{padding-bottom:96px}
+/* the editor has its own bar at the bottom: no footer under it (html.org-wz-boot hides it before the script runs) */
+body.wz-on .org-ftr,html.org-wz-boot .org-ftr{display:none}
 
 /* ---------- layout ---------- */
 .wz-app{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;align-items:start}

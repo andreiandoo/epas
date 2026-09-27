@@ -334,3 +334,6 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
   .pl-stop-card{background:none;border-color:#ccc}
   .pl-bar{background:none;border-color:#999}
 }
+
+/* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
+.ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}

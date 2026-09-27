@@ -44,7 +44,7 @@ include __DIR__ . '/header.php';
             <?php if ($i < count($routePage['breadcrumbs']) - 1): ?><a href="<?= v2_e($bcUrl) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <h1 id="mph-h"><span class="rp-emoji" aria-hidden="true"><?= v2_e($routePage['emoji']) ?></span><?= v2_e($routePage['title']) ?></h1>
+        <h1 id="mph-h"><span class="rp-emoji" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($routePage['emoji']) ?? 'map', 'ic-em') ?></span><?= v2_e($routePage['title']) ?></h1>
         <p class="mph-lead"><?= v2_e($routePage['lead']) ?></p>
       </div>
       <ul class="mph-stats">

@@ -212,3 +212,6 @@
 .mpx-tile[data-mpx-key="lac-natura"]{--pin:#0F8FA8}
 .mpx-tile[data-mpx-key="punct-panoramic"]{--pin:#C07A12}
 .mpx-tile[data-mpx-key="piata-centru-vechi"]{--pin:#0E7C6B}
+
+/* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
+.ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}

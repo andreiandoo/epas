@@ -18,10 +18,12 @@
  *   stops     attraction slugs, in the order they are meant to be visited
  */
 
+require_once __DIR__ . '/product-icons.php'; // 'emoji' below is an icon key of that file
+
 const MAP_ROUTES = [
     'drumul-castelelor-din-transilvania' => [
         'title' => 'Drumul castelelor din Transilvania',
-        'emoji' => '🏰',
+        'emoji' => 'castle',
         'pace'  => '2 zile',
         'lead'  => 'De la curtea Bánffy de lângă Cluj până la cetatea de pe stânca Devei, prin reședințele nobiliare de pe Mureș.',
         'intro' => 'Traseul leagă castelele și curțile nobiliare din inima Transilvaniei, majoritatea ridicate de familii maghiare între secolele XVI și XIX. Se coboară dinspre Cluj spre valea Mureșului și se termină la Deva, unde cetatea medievală stă pe un con vulcanic deasupra orașului. Unele reședințe sunt restaurate și primesc vizitatori, altele se văd deocamdată doar din curte.',
@@ -36,7 +38,7 @@ const MAP_ROUTES = [
     ],
     'manastirile-din-bucovina' => [
         'title' => 'Mănăstirile din Bucovina',
-        'emoji' => '⛪',
+        'emoji' => 'church',
         'pace'  => '2 zile',
         'lead'  => 'Voroneț, Humor, Moldovița, Sucevița și încă trei mănăstiri, în ordinea în care se leagă pe drum.',
         'intro' => 'Cel mai cunoscut circuit religios din România: mănăstirile de secol XV-XVI din nordul Moldovei, câteva dintre ele pictate pe exterior. Traseul pornește din apropierea Sucevei, urcă spre Rădăuți și Putna, trece munții spre Moldovița și coboară prin Humor la Voroneț. Distanțele sunt mici, dar drumurile de munte între Sucevița și Moldovița cer timp.',
@@ -52,7 +54,7 @@ const MAP_ROUTES = [
     ],
     'cetatile-si-bisericile-fortificate-sasesti' => [
         'title' => 'Cetățile și bisericile fortificate săsești',
-        'emoji' => '🗿',
+        'emoji' => 'columns',
         'pace'  => '2 zile',
         'lead'  => 'Prejmer, Viscri, Biertan și satele fortificate dintre Brașov și Alba.',
         'intro' => 'Satele săsești și-au fortificat bisericile ca să aibă unde se retrage în fața invaziilor: ziduri groase, turnuri de apărare și cămări de provizii în incintă. Traseul traversează sudul Transilvaniei de la est la vest, prin unele dintre cele mai bine păstrate astfel de ansambluri. Multe sunt în sate mici, cu drumuri secundare între ele.',
@@ -68,7 +70,7 @@ const MAP_ROUTES = [
     ],
     'valea-prahovei-intr-o-zi' => [
         'title' => 'Valea Prahovei într-o zi',
-        'emoji' => '🏔️',
+        'emoji' => 'mountains',
         'pace'  => 'o zi',
         'lead'  => 'Mănăstirea Sinaia, castelele regale și o cascadă, toate la câțiva kilometri unul de altul.',
         'intro' => 'Cel mai scurt traseu de pe listă și singurul care se face comod într-o zi, fără să schimbi baza. Totul e înșirat pe câțiva kilometri de-a lungul văii, între Sinaia și Bușteni, iar de la mănăstire până la Peleș se merge pe jos prin parc.',
@@ -83,7 +85,7 @@ const MAP_ROUTES = [
     ],
     'salinele-romaniei' => [
         'title' => 'Salinele României',
-        'emoji' => '⛏️',
+        'emoji' => 'hammer',
         'pace'  => 'de bifat pe rând',
         'lead'  => 'Patru mine de sare deschise vizitatorilor, din Bucovina până în Oltenia.',
         'intro' => 'Spre deosebire de celelalte trasee, acesta nu se parcurge dintr-o bucată: salinele sunt la sute de kilometri una de alta, în patru colțuri de țară. E o listă de bifat pe rând, când ajungi prin zonă — utilă mai ales vara și în zilele ploioase, pentru că în subteran temperatura e aceeași tot anul.',
@@ -97,7 +99,7 @@ const MAP_ROUTES = [
     ],
     'dobrogea-antica' => [
         'title' => 'Dobrogea antică',
-        'emoji' => '🏛️',
+        'emoji' => 'museum',
         'pace'  => '2 zile',
         'lead'  => 'Cetăți grecești și romane, de la Dunăre până la mare, cele mai vechi urme construite din țară.',
         'intro' => 'Dobrogea a fost graniță a Imperiului Roman, iar de-a lungul Dunării și pe malul mării au rămas cetăți, castre și bazilici. Traseul coboară dinspre nord, din zona Măcin–Isaccea, trece prin Deltă la Halmyris, ajunge la Histria pe malul lagunei și se închide în interior, la complexul rupestru de la Murfatlar.',
@@ -112,7 +114,7 @@ const MAP_ROUTES = [
     ],
     'bisericile-de-lemn-din-tara-chioarului' => [
         'title' => 'Bisericile de lemn din Țara Chioarului',
-        'emoji' => '🪵',
+        'emoji' => 'evergreen',
         'pace'  => 'o zi',
         'lead'  => 'Șase biserici de lemn din satele de deal ale Maramureșului, toate la câțiva kilometri una de alta.',
         'intro' => 'Țara Chioarului, în sudul Maramureșului, a păstrat un grup compact de biserici de lemn din secolele XVII-XVIII, cu turle înalte și pridvor sculptat. Sunt în sate mici, la distanțe scurte, ceea ce face zona mai ușor de parcurs într-o zi decât Maramureșul istoric din nord.',
@@ -127,7 +129,7 @@ const MAP_ROUTES = [
     ],
     'bucurestiul-in-palate' => [
         'title' => 'Bucureștiul în palate',
-        'emoji' => '🏛️',
+        'emoji' => 'museum',
         'pace'  => 'o după-amiază, pe jos',
         'lead'  => 'De la Ateneu până la Bursă, o plimbare prin palatele Căii Victoriei și ale centrului vechi.',
         'intro' => 'Aproape tot traseul se face pe jos, pe un singur ax: Calea Victoriei și străzile din jurul ei, unde s-au construit, între 1880 și 1940, cele mai multe dintre palatele orașului — bănci, cluburi, instituții și reședințe boierești. Cele mai multe se văd din stradă; câteva au program de vizitare.',
@@ -143,7 +145,7 @@ const MAP_ROUTES = [
     ],
     'oradea-in-stil-secession' => [
         'title' => 'Oradea în stil secession',
-        'emoji' => '🎨',
+        'emoji' => 'palette',
         'pace'  => 'o zi, pe jos',
         'lead'  => 'Casele și palatele Art Nouveau din centrul Oradiei, plus ansamblul baroc al episcopiei.',
         'intro' => 'La începutul secolului XX, Oradea s-a reconstruit în stilul secession vienez și maghiar, iar clădirile au rămas grupate pe câteva străzi din centru. Traseul le ia pe rând și se termină la ansamblul baroc al episcopiei romano-catolice, din cealaltă parte a orașului.',
@@ -160,7 +162,7 @@ const MAP_ROUTES = [
     ],
     'timisoara-imperiala' => [
         'title' => 'Timișoara imperială',
-        'emoji' => '🏙️',
+        'emoji' => 'city',
         'pace'  => 'o zi, pe jos',
         'lead'  => 'Cetatea, piețele baroce și cartierul Fabric, de la bastion până la biserica din Fabric.',
         'intro' => 'Timișoara a fost reconstruită de austrieci ca oraș-cetate în secolul XVIII, iar planul acela se vede și azi: bastionul, piețele baroce din interiorul fostelor ziduri și cartierele de manufacturi din jur. Traseul începe la Bastionul Theresia, traversează centrul și se încheie în Fabric, cartierul industrial care și-a păstrat arhitectura.',
@@ -176,7 +178,7 @@ const MAP_ROUTES = [
     ],
     'manastirile-valcii' => [
         'title' => 'Mănăstirile Vâlcii',
-        'emoji' => '⛪',
+        'emoji' => 'church',
         'pace'  => '2 zile',
         'lead'  => 'De la Cozia, pe Olt, până la Horezu și Mănăstirea Dintr-un Lemn, prin dealurile subcarpatice.',
         'intro' => 'Vâlcea are cea mai densă rețea de mănăstiri din Oltenia, multe ctitorite de domnitori sau de boieri în secolele XIV-XVIII. Traseul coboară pe valea Oltului de la Cornet și Cozia, urcă spre schiturile de munte și se încheie în dealuri, la Horezu și la mănăstirea ridicată, spune tradiția, dintr-un singur stejar.',
@@ -192,7 +194,7 @@ const MAP_ROUTES = [
     ],
     'tara-hategului' => [
         'title' => 'Țara Hațegului',
-        'emoji' => '🪨',
+        'emoji' => 'mountains',
         'pace'  => 'o zi',
         'lead'  => 'Bisericile medievale de piatră din depresiunea Hațegului, cele mai vechi din Transilvania.',
         'intro' => 'Depresiunea Hațegului păstrează un grup de biserici de piatră din secolele XIII-XIV, ridicate de cnezii români locali — printre cele mai vechi lăcașuri de zid rămase în picioare din Transilvania. Sunt în sate aflate la câțiva kilometri unul de altul, sub munții Retezat.',

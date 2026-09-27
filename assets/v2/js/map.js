@@ -48,6 +48,19 @@
     if (text !== undefined && text !== null) n.textContent = text;
     return n;
   }
+  /* Place icons (includes/v2/product-icons.php, printed by the header as #i-pi-<key>): an attraction type's by its
+     slug, the rest by key. An emoji saved by an older version of the page is read as the key it stood for. */
+  var TYPE_ICON = { 'castel-palat': 'castle', 'muzeu': 'museum', 'monument': 'columns', 'biserica-manastire': 'church', 'parc-gradina': 'park',
+    'piata-centru-vechi': 'city', 'cladire-istorica': 'house', 'punct-panoramic': 'binoculars', 'lac-natura': 'waves', 'teatru-opera': 'theatre' };
+  var OLD_EMOJI = { '\uD83C\uDF7D\uFE0F': 'fork', '\uD83C\uDF7D': 'fork', '\u2615': 'coffee', '\uD83D\uDE0C': 'armchair', '\uD83D\uDEB6': 'walk',
+    '\uD83D\uDECD\uFE0F': 'shopping', '\uD83D\uDECD': 'shopping', '\uD83C\uDFE8': 'bed', '\uD83D\uDD51': 'clock', '\uD83C\uDF9F\uFE0F': 'ticket',
+    '\u2728': 'sparkle', '\uD83D\uDCCD': 'pin' };
+  function placeKey(k, fallback) {
+    if (k && OLD_EMOJI[k]) k = OLD_EMOJI[k];
+    return typeof k === 'string' && /^[a-z]{1,16}$/.test(k) && document.getElementById('i-pi-' + k) ? k : (fallback || 'pin');
+  }
+  function placeIcon(k, fallback, cls) { return icon('pi-' + placeKey(k, fallback), cls || 'ic-em'); }
+  function typeIcon(t, cls) { return placeIcon(t ? (TYPE_ICON[t[0]] || t[2]) : null, 'pin', cls); }
   function icon(name, cls) {
     var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     var u = document.createElementNS('http://www.w3.org/2000/svg', 'use');
@@ -465,11 +478,10 @@
         var b = el('button', 'epm-chip');
         b.type = 'button';
         b.dataset.type = t[0];
-        if (t[2]) {
-          var e = el('span', 'epm-chip-emoji', t[2]);
-          e.setAttribute('aria-hidden', 'true');
-          b.appendChild(e);
-        }
+        var e = el('span', 'epm-chip-emoji');
+        e.appendChild(typeIcon(t));
+        e.setAttribute('aria-hidden', 'true');
+        b.appendChild(e);
         b.appendChild(document.createTextNode(t[1]));
         b.appendChild(el('b', '', nf(t[4])));
         ui.chips.appendChild(b);
@@ -566,7 +578,7 @@
       if (markers[i]) return markers[i];
       var L = window.L, r = D.rows[i], f = D.f;
       var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
-      var label = route ? String(i + 1) : (t && t[2] ? t[2] : '•');
+      var label = route ? String(i + 1) : null;
       /* The type also colours the pin: a map where every dot is the same green tells you where
          things are but not what they are, and the emoji alone is unreadable at pin size. The
          colours are defined in map.css and repeated on the type tiles in the /harta explorer,
@@ -574,6 +586,7 @@
       var pin = el('span', 'epm-pin' + (route ? ' is-step' : '')
         + (t && t[0] ? ' epm-t-' + t[0] : '')
         + ((r[f.flags] & D.flags.activities) ? ' has-ticket' : ''), label);
+      if (!route) pin.appendChild(typeIcon(t));
       pin.setAttribute('data-i', String(i));
       var m = L.marker([D.lat[i], D.lng[i]], {
         keyboard: false,
@@ -818,7 +831,8 @@
         img.height = 56;
         media.appendChild(img);
       } else {
-        var ph = el('span', '', t && t[2] ? t[2] : '📍');
+        var ph = el('span', '');
+        ph.appendChild(typeIcon(t));
         ph.setAttribute('aria-hidden', 'true');
         media.appendChild(ph);
       }
@@ -966,7 +980,8 @@
         img.decoding = 'async';
         media.appendChild(img);
       } else {
-        var ph = el('span', '', t && t[2] ? t[2] : '📍');
+        var ph = el('span', '');
+        ph.appendChild(typeIcon(t));
         ph.setAttribute('aria-hidden', 'true');
         media.appendChild(ph);
       }

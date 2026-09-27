@@ -35,7 +35,7 @@
   var FILL_TO = 0.85;                                   // leave the last sixth of the day free
   var RADIUS_CITY = [45, 60, 75, 90, 100, 110, 120];    // km around a city, by number of days
   var CRLF = String.fromCharCode(13, 10);
-  var PRESETS = CFG.stops || [];                        // your own stops, ready made: label, emoji, minutes
+  var PRESETS = CFG.stops || [];                        // your own stops, ready made: label, icon key, minutes
   var MINUTES = CFG.minutes || [15, 30, 45, 60, 90, 120, 180, 240];
   var PARTY = CFG.party || {};                          // how many travel, and how many fit in a room
   var STAY = CFG.stay22 || {};                          // the accommodation embed, minus dates and places
@@ -59,6 +59,18 @@
     s.appendChild(u);
     return s;
   }
+  /* Place icons (includes/v2/product-icons.php, printed by the header as #i-pi-<key>): an attraction type's by its
+     slug, the rest by key. An emoji saved by an older version of the page is read as the key it stood for. */
+  var TYPE_ICON = { 'castel-palat': 'castle', 'muzeu': 'museum', 'monument': 'columns', 'biserica-manastire': 'church', 'parc-gradina': 'park',
+    'piata-centru-vechi': 'city', 'cladire-istorica': 'house', 'punct-panoramic': 'binoculars', 'lac-natura': 'waves', 'teatru-opera': 'theatre' };
+  var OLD_EMOJI = { '\uD83C\uDF7D\uFE0F': 'fork', '\uD83C\uDF7D': 'fork', '\u2615': 'coffee', '\uD83D\uDE0C': 'armchair', '\uD83D\uDEB6': 'walk',
+    '\uD83D\uDECD\uFE0F': 'shopping', '\uD83D\uDECD': 'shopping', '\uD83C\uDFE8': 'bed', '\uD83D\uDD51': 'clock', '\uD83C\uDF9F\uFE0F': 'ticket',
+    '\u2728': 'sparkle', '\uD83D\uDCCD': 'pin' };
+  function placeKey(k, fallback) {
+    if (k && OLD_EMOJI[k]) k = OLD_EMOJI[k];
+    return typeof k === 'string' && /^[a-z]{1,16}$/.test(k) && document.getElementById('i-pi-' + k) ? k : (fallback || 'pin');
+  }
+  function placeIcon(k, fallback, cls) { return icon('pi-' + placeKey(k, fallback), cls || 'ic-em'); }
   /* Three shapes the shared sprite does not carry, drawn on the same 256 grid as the rest. */
   var GLYPH = {
     trash: 'M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z',
@@ -204,7 +216,7 @@
     return {
       id: id, kind: 'own', slug: id, name: x.name || 'Oprire', city: '', citySlug: '', county: '',
       lat: fixed ? x.lat : null, lng: fixed ? x.lng : null, approx: false, price: 0,
-      dur: x.minutes || 30, img: '', type: '', emoji: x.emoji || '🕑', typeSlug: '',
+      dur: x.minutes || 30, img: '', type: '', emoji: placeKey(x.emoji, 'clock'), typeSlug: '',
       bookable: false, href: '', own: true, at: x.at || 'none', place: x.place || ''
     };
   }
@@ -223,7 +235,7 @@
         id: id, kind: b[0], slug: b[1], name: b[2], city: b[3], citySlug: b[4], county: b[5],
         lat: b[6], lng: b[7], approx: !!b[8], price: b[9] || 0, dur: b[10] || 90,
         img: b[11] || '', type: b[12] || (b[0] === 'location' ? 'Locație' : 'Experiență'),
-        emoji: b[0] === 'location' ? '🎟️' : '✨', bookable: true, typeSlug: '',
+        emoji: b[0] === 'location' ? 'ticket' : 'sparkle', bookable: true, typeSlug: '',
         href: (b[0] === 'location' ? '/locatie/' : '/experienta/') + b[1]
       };
     }
@@ -236,7 +248,7 @@
       id: id, kind: 'attraction', slug: id, name: r[f.name], city: c ? c[1] : '', citySlug: c ? c[0] : '',
       county: c ? c[2] : '', lat: r[f.lat_e5] / 1e5, lng: r[f.lng_e5] / 1e5, approx: false,
       price: 0, dur: duration(t ? t[0] : ''), img: r[f.img] || '', type: t ? t[1] : '',
-      emoji: t ? t[2] : '📍', typeSlug: t ? t[0] : '',
+      emoji: t ? (TYPE_ICON[t[0]] || 'pin') : 'pin', typeSlug: t ? t[0] : '',
       bookable: !!(r[f.flags] & (D.flags.activities || 4)), href: '/atractie/' + id
     };
   }
@@ -900,7 +912,7 @@
           'DTSTAMP:' + stamp,
           'DTSTART:' + icsTime(d, r.start),
           'DTEND:' + icsTime(d, r.start + r.dur),
-          'SUMMARY:' + icsEscape(e.own && e.emoji ? e.emoji + ' ' + e.name : e.name)
+          'SUMMARY:' + icsEscape(e.name)
         );
         // A stop of your own may have no place at all: it keeps its hour and loses the geography.
         if (where) lines.push('LOCATION:' + icsEscape(where));
@@ -922,7 +934,7 @@
         'DTSTAMP:' + stamp,
         'DTSTART;VALUE=DATE:' + icsDate(nd),
         'DTEND;VALUE=DATE:' + icsDate(nd + 1),
-        'SUMMARY:' + icsEscape('🌙 Cazare în ' + nt.name),
+        'SUMMARY:' + icsEscape('Cazare în ' + nt.name),
         'LOCATION:' + icsEscape([nt.name, nt.county].filter(Boolean).join(', ')),
         'GEO:' + (+nt.lat).toFixed(5) + ';' + (+nt.lng).toFixed(5),
         'DESCRIPTION:' + icsEscape('Noaptea propusă de planificator: ' + partyLine(nt.rooms) +
@@ -1156,7 +1168,8 @@
       }
       var nb = el('button', 'pl-bar-nights');
       nb.type = 'button';
-      var nem = el('span', '', '🌙');
+      var nem = el('span', '');
+      nem.appendChild(placeIcon('moon'));
       nem.setAttribute('aria-hidden', 'true');
       nb.appendChild(nem);
       nb.appendChild(document.createTextNode(slept
@@ -1375,7 +1388,8 @@
       img.decoding = 'async';
       media.appendChild(img);
     } else {
-      var ph = el('span', '', e.emoji || '📍');
+      var ph = el('span', '');
+      ph.appendChild(placeIcon(e.emoji));
       ph.setAttribute('aria-hidden', 'true');
       media.appendChild(ph);
     }
@@ -1439,7 +1453,8 @@
     var b = el('button', 'pl-grip');
     b.type = 'button';
     b.title = 'Trage ca să muți oprirea';
-    var face = el('span', 'pl-grip-n', e.own ? (e.emoji || '🕑') : String(n));
+    var face = el('span', 'pl-grip-n', e.own ? null : String(n));
+    if (e.own) face.appendChild(placeIcon(e.emoji, 'clock'));
     face.setAttribute('aria-hidden', 'true');
     b.appendChild(face);
     b.appendChild(glyph('grip', 'ic pl-grip-ic'));
@@ -1706,7 +1721,8 @@
       document.body.classList.add('pl-dragging');
       var e = entry(drag.id);
       ghost = el('div', 'pl-ghost');
-      var em = el('span', '', e && e.emoji ? e.emoji : '📍');
+      var em = el('span', '');
+      em.appendChild(placeIcon(e && e.emoji));
       em.setAttribute('aria-hidden', 'true');
       ghost.appendChild(em);
       ghost.appendChild(el('span', '', e ? e.name : ''));
@@ -1833,7 +1849,7 @@
   }
 
   function openComposer(d, pos) {
-    var first = PRESETS[0] || ['Pauză', '🕑', 30];
+    var first = PRESETS[0] || ['Pauză', 'clock', 30];
     swap = null;              // one panel at a time inside a day
     composer = {
       day: d, pos: pos, name: first[0], emoji: first[1], minutes: first[2],
@@ -1864,7 +1880,8 @@
       var b = el('button', 'pl-chip pl-chip-sm');
       b.type = 'button';
       b.setAttribute('aria-pressed', c.name === p[0] ? 'true' : 'false');
-      var em = el('span', '', p[1]);
+      var em = el('span', '');
+      em.appendChild(placeIcon(p[1], 'clock'));
       em.setAttribute('aria-hidden', 'true');
       b.appendChild(em);
       b.appendChild(document.createTextNode(p[0]));
@@ -1988,7 +2005,7 @@
       var def = {
         name: (c.name || '').trim() || 'Oprire',
         minutes: c.minutes || 30,
-        emoji: c.emoji || '🕑',
+        emoji: placeKey(c.emoji, 'clock'),
         at: c.at,
         lat: c.at === 'fix' ? c.lat : null,
         lng: c.at === 'fix' ? c.lng : null,
@@ -2225,7 +2242,8 @@
       img.decoding = 'async';
       media.appendChild(img);
     } else {
-      var ph = el('span', '', e.emoji || '📍');
+      var ph = el('span', '');
+      ph.appendChild(placeIcon(e.emoji));
       ph.setAttribute('aria-hidden', 'true');
       media.appendChild(ph);
     }
@@ -2367,7 +2385,8 @@
     box.tabIndex = -1;
 
     var h = el('h3', 'pl-night-h');
-    var em = el('span', 'pl-night-em', '🌙');
+    var em = el('span', 'pl-night-em');
+    em.appendChild(placeIcon('moon'));
     em.setAttribute('aria-hidden', 'true');
     h.appendChild(em);
     h.appendChild(document.createTextNode(nightTitle(i)));

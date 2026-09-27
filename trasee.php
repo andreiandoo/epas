@@ -77,6 +77,7 @@ $structuredData = [[
 ]];
 
 include __DIR__ . '/includes/v2/head.php';
+$v2PlaceIcons = true; // the route cards' icons (product-icons.php), printed by the header
 include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
