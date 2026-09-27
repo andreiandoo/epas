@@ -616,8 +616,51 @@
     if (!added) { state.error = 'Nu am putut adăuga în coș. Încearcă din nou.'; renderSummary(); return; }
     window.location.href = dest === 'checkout' ? '/finalizare' : '/cos';
   }
+  /* Checkout inside the widget (embed code v2, embed/bo-widget.js on the operator's page). The page tells the frame
+     its address ({type: 'bo-embed-hello'}); when it comes from one of the operator's allowed sites, "Continuă spre
+     plată" opens the checkout in this same frame (/embed/finalizare) instead of a new tab on bilete.online, and the
+     customer comes back to that page after paying. Without the script (embed code v1) nothing changes. */
+  var parentHref = null;
+  function allowedOrigin(o) {
+    return (cfg.embed_origins || []).some(function (a) {
+      if (a === o) return true;
+      var m = /^(https?):\/\/\*\.(.+)$/.exec(a);
+      return !!m && o.indexOf(m[1] + '://') === 0 && o.slice(-(m[2].length + 1)) === '.' + m[2];
+    });
+  }
+  function canStore() {
+    try { localStorage.setItem('bo_probe', '1'); localStorage.removeItem('bo_probe'); return true; } catch (e) { return false; }
+  }
+  if (cfg.embed && cfg.embed_allow && window.parent !== window) {
+    window.addEventListener('message', function (e) {
+      var d = e.data;
+      if (e.source !== window.parent || !d || d.type !== 'bo-embed-hello' || !allowedOrigin(e.origin)) return;
+      var href = String(d.href || '');
+      if (href !== e.origin && href.indexOf(e.origin + '/') !== 0) return;
+      parentHref = href;
+      var note = document.getElementById('bkx-pay-note');
+      if (note) note.textContent = 'Plătești aici, securizat, cu cardul. Biletele ajung pe email imediat după plată.';
+    });
+    try { window.parent.postMessage({ type: 'bo-embed-ready' }, '*'); } catch (e) {}
+  }
+  function checkoutHere(items) {
+    if (!parentHref || !canStore() || typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addBookingItem !== 'function') return false;
+    try {
+      // the checkout shows exactly what was picked in the widget
+      if (typeof BileteOnlineCart.clear === 'function') BileteOnlineCart.clear({ skipRelease: true });
+      var added = 0;
+      items.forEach(function (o) { if (BileteOnlineCart.addBookingItem(Object.assign({}, o, { replace: true, quiet: true }))) added++; });
+      if (!added) return false;
+    } catch (e) {
+      return false;
+    }
+    try { window.parent.postMessage({ type: 'bo-embed-top' }, '*'); } catch (e) {}
+    window.location.href = '/embed/finalizare?a=' + encodeURIComponent(cfg.embed_allow) + '&u=' + encodeURIComponent(parentHref);
+    return true;
+  }
   // A new tab on bilete.online with the lines in the address (cart.js adds them); a blocked pop-up leaves a link.
   function openCheckout(items) {
+    if (checkoutHere(items)) return;
     var url = (cfg.site_url || '') + '/finalizare#bo-import=' + encodeURIComponent(JSON.stringify(items)) + (cfg.return_token ? '&bo-return=' + encodeURIComponent(cfg.return_token) : '');
     var w = null;
     try { w = window.open(url, '_blank'); } catch (e) {}

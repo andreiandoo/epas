@@ -471,9 +471,10 @@ const CheckoutPage = {
             BileteOnlineCart.clear();
             localStorage.removeItem('cart_end_time');
             this.notify('warning', 'Timpul de rezervare a expirat. Biletele au fost eliberate.');
-            // Redirect to cart page after short delay
+            // Redirect to cart page after short delay (inside the widget: back to the widget, not the site's cart)
             setTimeout(() => {
-                window.location.href = '/cos';
+                if (window.BO_EMBED) history.back();
+                else window.location.href = '/cos';
             }, 2000);
         } else if (remaining < 60000) {
             if (timerBar) {
@@ -1089,6 +1090,54 @@ const CheckoutPage = {
         return beneficiaries;
     },
 
+    /**
+     * Checkout inside the booking widget: asks the operator's page (embed/bo-widget.js, same site as BO_EMBED.page) to
+     * go to the card page. If nothing happens within a few seconds (a page without the script), the customer gets a
+     * button that opens the card page over the whole window - a click may do that from inside a frame.
+     */
+    payFromParent(data) {
+        const emb = window.BO_EMBED;
+        let target = '*';
+        try { target = new URL(emb.page).origin; } catch (e) {}
+        const msg = { type: 'bo-embed-pay', url: data.payment_url, method: data.method || 'GET', fields: data.form_data || null };
+        try { window.parent.postMessage(msg, target); } catch (e) {}
+        const payBtn = document.getElementById('payBtn');
+        const payBtnText = document.getElementById('pay-btn-text');
+        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Se deschide pagina de plată...';
+        let manual = false;
+        const offerButton = () => {
+            if (manual || document.visibilityState === 'hidden') return;
+            manual = true;
+            payBtn.disabled = false;
+            payBtnText.textContent = 'Deschide pagina de plată';
+            payBtn.onclick = (e) => {
+                e.preventDefault();
+                const form = document.createElement('form');
+                form.method = msg.method === 'POST' && msg.fields ? 'POST' : 'GET';
+                form.action = msg.url;
+                form.target = '_top';
+                if (form.method === 'POST') {
+                    for (const [k, v] of Object.entries(msg.fields)) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = k;
+                        input.value = v;
+                        form.appendChild(input);
+                    }
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    window.open(msg.url, '_top');
+                }
+            };
+        };
+        // the operator's page says its security policy blocked the way to the card page (bo-widget.js)
+        window.addEventListener('message', (e) => {
+            if (e.source === window.parent && e.data && e.data.type === 'bo-embed-pay-blocked') offerButton();
+        });
+        setTimeout(offerButton, 5000);
+    },
+
     async submit() {
         if (this.submitting) return;
         if (!this.validateForm()) return;
@@ -1175,7 +1224,12 @@ const CheckoutPage = {
                 throw new Error('Nu s-a putut crea comanda');
             }
 
-            const thankYouUrl = window.location.origin + '/multumim?order=' + encodeURIComponent(order.order_number);
+            // Inside the booking widget on an operator's site (embed/finalizare.php): the processor comes back through
+            // /embed/retur to the operator's page, and a free order goes straight to the confirmation in the widget.
+            const emb = window.BO_EMBED || null;
+            const thankYouUrl = emb
+                ? emb.return + encodeURIComponent(order.order_number)
+                : window.location.origin + '/multumim?order=' + encodeURIComponent(order.order_number);
 
             // Step 2: Check if payment is required
             if (response.data.payment_required && order.total > 0) {
@@ -1184,8 +1238,15 @@ const CheckoutPage = {
                 const payResponse = await BileteOnlineAPI.post(`/orders/${order.id}/pay`, {
                     return_url: thankYouUrl,
                     // Back to this page if the customer cancels at the processor (/checkout has no route here)
-                    cancel_url: window.location.origin + '/finalizare'
+                    cancel_url: emb ? emb.cancel : window.location.origin + '/finalizare'
                 });
+
+                if (emb && payResponse.success && payResponse.data.payment_url) {
+                    // The card page cannot open inside a frame: the operator's page goes there itself (bo-widget.js).
+                    // The cart stays until the confirmation, so a cancelled payment comes back to a full checkout.
+                    this.payFromParent(payResponse.data);
+                    return;
+                }
 
                 if (payResponse.success && payResponse.data.payment_url) {
                     BileteOnlineCart.clear({ skipRelease: true });
@@ -1218,7 +1279,7 @@ const CheckoutPage = {
                 // No payment required (free tickets or zero total)
                 BileteOnlineCart.clear({ skipRelease: true });
                 localStorage.removeItem('cart_end_time');
-                window.location.href = thankYouUrl;
+                window.location.href = emb ? emb.confirm + encodeURIComponent(order.order_number) : thankYouUrl;
             }
         } catch (error) {
             console.error('Checkout error:', error);
