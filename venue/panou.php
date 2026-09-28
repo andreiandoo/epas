@@ -19,64 +19,41 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
         <?php require_once dirname(__DIR__) . '/includes/venue-topbar.php'; ?>
 
         <main class="flex-1 p-4 lg:p-8 space-y-6">
-            <!-- Hero -->
-            <section class="relative overflow-hidden rounded-3xl shadow-xl" style="background:linear-gradient(135deg, #0f172a 0%, #1e40af 50%, #3b82f6 100%);">
-                <!-- Decorative blobs -->
-                <div class="absolute top-0 right-0 w-96 h-96 rounded-full opacity-20" style="background:radial-gradient(circle, #60a5fa 0%, transparent 70%); transform:translate(30%, -30%);"></div>
-                <div class="absolute bottom-0 left-1/2 w-80 h-80 rounded-full opacity-15" style="background:radial-gradient(circle, #a855f7 0%, transparent 70%); transform:translate(-50%, 50%);"></div>
-                <div class="absolute inset-0 opacity-10" style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'><path fill=\'%23ffffff\' d=\'M0 0h40v1H0zM0 39h40v1H0zM0 0h1v40H0zM39 0h1v40h-1z\'/></svg>');"></div>
-
-                <div class="relative p-8 lg:p-10">
-                    <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div class="max-w-2xl">
-                            <div class="inline-flex items-center gap-2 px-3 py-1 mb-4 text-xs font-semibold text-white rounded-full backdrop-blur" style="background:rgba(255,255,255,0.12);">
+            <!-- Hero + app (compact). No revenue here: the venue owner must not see what
+                 other organizers earned from the events hosted at their venues. -->
+            <section class="relative overflow-hidden rounded-2xl shadow-lg" style="background:linear-gradient(135deg, #0f172a 0%, #1e40af 60%, #3b82f6 100%);">
+                <div class="absolute top-0 right-0 w-72 h-72 rounded-full opacity-20" style="background:radial-gradient(circle, #60a5fa 0%, transparent 70%); transform:translate(30%, -40%);"></div>
+                <div class="relative flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 lg:px-6">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-xl lg:text-2xl font-extrabold text-white leading-tight">Bun venit înapoi</h1>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold text-white rounded-full" style="background:rgba(255,255,255,0.12);">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                 Panou live
-                            </div>
-                            <h1 class="text-3xl lg:text-4xl font-extrabold text-white leading-tight">Bun venit înapoi</h1>
-                            <p id="hero-tagline" class="mt-3 text-base text-white/70 max-w-lg">Gestionează evenimentele găzduite la locațiile tale și urmărește performanța în timp real.</p>
+                            </span>
                         </div>
-                        <div id="hero-highlight" class="text-right">
-                            <p class="text-xs uppercase tracking-wider text-white/60 mb-1">Venit total până acum</p>
-                            <p id="hero-revenue" class="text-3xl lg:text-4xl font-black text-white">—</p>
-                        </div>
+                        <p id="hero-tagline" class="mt-1 text-sm text-white/70">Gestionează evenimentele găzduite la locațiile tale și urmărește performanța în timp real.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a href="/android" class="inline-flex items-center gap-1.5 text-sm font-bold rounded-lg shadow transition-all hover:-translate-y-0.5" style="background:#ffffff; color:#1e3a8a; padding:8px 14px;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Aplicația Android (APK)
+                        </a>
+                        <a href="/venue/scan/evenimente" class="inline-flex items-center gap-1.5 text-sm font-bold rounded-lg transition-all hover:-translate-y-0.5" style="background:rgba(255,255,255,0.12); color:#ffffff; border:1px solid rgba(255,255,255,0.4); padding:8px 14px;">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.74 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.7.71 2.87.69 1.18-.02 1.93-1.08 2.66-2.14.84-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.5zM14.18 6.13c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.64-1.05 1.67-.92 2.66.97.08 1.96-.49 2.56-1.21z"/></svg>
+                            Aplicația Scan (iPhone)
+                        </a>
                     </div>
                 </div>
-            </section>
-
-            <!-- Android app -->
-            <section class="relative overflow-hidden rounded-2xl shadow-xl" style="background:linear-gradient(135deg, #052e16 0%, #166534 55%, #16a34a 100%);">
-                <div class="absolute top-0 right-0 w-80 h-80 rounded-full opacity-20" style="background:radial-gradient(circle, #86efac 0%, transparent 70%); transform:translate(30%, -40%);"></div>
-                <div class="relative p-5 lg:p-8">
-                    <div class="flex items-center justify-between gap-6 flex-wrap">
-                        <div class="flex items-start gap-4" style="max-width:680px;">
-                            <div class="flex items-center justify-center w-11 h-11 rounded-xl" style="background:rgba(255,255,255,0.15); flex-shrink:0;">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wider" style="color:#bbf7d0;">Aplicația AmBilet · Android și iPhone</p>
-                                <h2 class="mt-1 font-extrabold text-white" style="font-size:22px; line-height:1.25;">Scanează biletele și vinde la intrare direct din telefon</h2>
-                                <ol class="mt-3 text-sm" style="color:rgba(255,255,255,0.88); padding-left:18px; list-style:decimal; line-height:1.7;">
-                                    <li>Deschide <strong class="text-white">ambilet.ro/android</strong> de pe telefonul Android și descarcă aplicația (fișier APK).</li>
-                                    <li>Deschide fișierul descărcat. Dacă telefonul îți cere, permite instalarea din această sursă, apoi apasă Instalează.</li>
-                                    <li>Intră în aplicație cu același email și aceeași parolă ca în acest panou.</li>
-                                </ol>
-                                <p class="mt-3 text-sm" style="color:rgba(255,255,255,0.88); line-height:1.6;"><strong class="text-white">Ai iPhone?</strong> Deschide <strong class="text-white">Aplicația Scan</strong> din Safari, cu contul în care ești logat acum, apoi atinge Distribuie → „Adaugă pe ecranul de start”. Scanezi și vinzi la intrare la fel ca din aplicația de Android.</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-start gap-2">
-                            <a href="/android" class="inline-flex items-center gap-2 font-bold rounded-xl shadow-lg transition-all hover:-translate-y-0.5" style="background:#ffffff; color:#14532d; padding:14px 22px; font-size:15px;">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                Descarcă aplicația (APK)
-                            </a>
-                            <a href="/venue/scan/evenimente" class="inline-flex items-center gap-2 font-bold rounded-xl transition-all hover:-translate-y-0.5" style="background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid rgba(255,255,255,0.45); padding:14px 22px; font-size:15px;">
-                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.74 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.7.71 2.87.69 1.18-.02 1.93-1.08 2.66-2.14.84-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.5zM14.18 6.13c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.64-1.05 1.67-.92 2.66.97.08 1.96-.49 2.56-1.21z"/></svg>
-                                Aplicația Scan (iPhone)
-                            </a>
-                            <p class="text-xs" style="color:rgba(255,255,255,0.75);">APK pentru Android · Aplicația Scan din browser pentru iPhone</p>
-                        </div>
-                    </div>
-                </div>
+                <details class="relative border-t px-5 py-2 lg:px-6 text-sm" style="border-color:rgba(255,255,255,0.12); color:rgba(255,255,255,0.85);">
+                    <summary class="cursor-pointer select-none font-semibold text-white/90">Scanează biletele și vinde la intrare direct din telefon · cum instalez aplicația?</summary>
+                    <ol class="mt-2 mb-1" style="padding-left:18px; list-style:decimal; line-height:1.7;">
+                        <li>Deschide <strong class="text-white">ambilet.ro/android</strong> de pe telefonul Android și descarcă aplicația (fișier APK).</li>
+                        <li>Deschide fișierul descărcat. Dacă telefonul îți cere, permite instalarea din această sursă, apoi apasă Instalează.</li>
+                        <li>Intră în aplicație cu același email și aceeași parolă ca în acest panou.</li>
+                    </ol>
+                    <p class="mb-1" style="line-height:1.6;"><strong class="text-white">Ai iPhone?</strong> Deschide <strong class="text-white">Aplicația Scan</strong> din Safari, cu contul în care ești logat acum, apoi atinge Distribuie → „Adaugă pe ecranul de start”. Scanezi și vinzi la intrare la fel ca din aplicația de Android.</p>
+                </details>
             </section>
 
             <!-- KPI cards -->
@@ -247,19 +224,6 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 `Ai ${venueList.length} ${venueList.length === 1 ? 'locație' : 'locații'} · ${totalUpcoming} ${totalUpcoming === 1 ? 'eveniment' : 'evenimente'} programate · ${fmtInt(totalSold)} bilete emise.`;
         }
     } catch (e) { console.error('venues failed', e); }
-
-    // ── Hero: revenue so far, over ALL events (past included) ──
-    // Written every time — it used to be set only when there were upcoming
-    // events, and summed only those, so "până acum" stayed at "—".
-    try {
-        const all = await AmbiletVenueAPI.events({ scope: 'all' });
-        const evs = (all && all.data && Array.isArray(all.data.events)) ? all.data.events : [];
-        const totalRevenue = evs.reduce((sum, e) => sum + Number((e.stats && e.stats.revenue) ?? e.revenue ?? 0), 0);
-        document.getElementById('hero-revenue').textContent = fmtMoney(totalRevenue) + ' RON';
-    } catch (e) {
-        console.error('hero revenue failed', e);
-        document.getElementById('hero-revenue').textContent = '0 RON';
-    }
 
     // ── Upcoming events (rich cards) ──────────────────────────
     try {
