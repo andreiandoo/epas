@@ -484,7 +484,9 @@ document,'script','https://connect.facebook.net/en_US/fbevents.js');
 (function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}')||localStorage.getItem('ambilet_cookie_consent')||localStorage.getItem('bo_cookie_consent_v1'))}catch(e){}
 if(c&&c.consent)c=c.consent;if(!c||!c.marketing)fbq('consent','revoke');
 window.addEventListener('bo-cookie-consent-updated',function(e){var d=e.detail&&e.detail.consent;fbq('consent',d&&d.marketing?'grant':'revoke');});})();
-fbq('init','{$id}');fbq('track','PageView');
+fbq('init','{$id}');
+window.__fbPageViewEventId=window.__fbPageViewEventId||('pv_'+Date.now()+'_'+Math.random().toString(36).slice(2,10));
+fbq('track','PageView',{},{eventID:window.__fbPageViewEventId});
 </script>
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={$id}&ev=PageView&noscript=1"/></noscript>
 <!-- End Meta Pixel -->

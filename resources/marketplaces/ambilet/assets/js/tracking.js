@@ -182,6 +182,57 @@
         }
     }
 
+    // Browser Meta Pixel events, mirrored from the tracking events. Each one reuses the
+    // event's client_event_id as eventID — the same id the backend bridge sends to CAPI
+    // (Purchase: purchase_{order_id}, same as SendFacebookCapiPurchaseJob) — so Meta
+    // dedupes browser + server. PageView is fired by the pixel snippet itself.
+    const META_EVENTS = {
+        view_item: 'ViewContent',
+        add_to_cart: 'AddToCart',
+        begin_checkout: 'InitiateCheckout',
+        purchase: 'Purchase',
+        search: 'Search',
+        sign_up: 'CompleteRegistration',
+        lead: 'Lead'
+    };
+
+    function sendMetaPixelEvent(eventType, event) {
+        const name = META_EVENTS[eventType];
+        if (!name || typeof window.fbq !== 'function') return;
+        try {
+            // A refresh of the thank-you page must not send the purchase twice
+            let sentKey = null;
+            if (eventType === 'purchase') {
+                sentKey = 'epas_fb_sent_' + event.client_event_id;
+                if (localStorage.getItem(sentKey)) return;
+            }
+
+            // Same custom_data as buildCapiCustomData() on the backend
+            const params = {};
+            if (eventType === 'search') {
+                if (event.event_label) params.search_string = String(event.event_label);
+            } else if (eventType === 'lead' || eventType === 'sign_up') {
+                if (event.event_label) params.content_name = String(event.event_label);
+            } else {
+                if (event.event_value !== null && event.event_value !== undefined && event.event_value !== '') {
+                    params.value = parseFloat(event.event_value) || 0;
+                }
+                if (event.currency) params.currency = event.currency;
+                params.content_type = event.content_type || 'product';
+                if (event.content_id) params.content_ids = [String(event.content_id)];
+                if (event.content_name) params.content_name = event.content_name;
+                const items = event.quantity || event.num_items;
+                if (items) params.num_items = parseInt(items, 10);
+            }
+
+            window.fbq('track', name, params, { eventID: String(event.client_event_id) });
+            if (sentKey) localStorage.setItem(sentKey, '1');
+            log('Meta Pixel:', name, params, event.client_event_id);
+        } catch (e) {
+            // tracking must never break the page
+        }
+    }
+
     /**
      * Track a custom event
      */
@@ -213,6 +264,8 @@
         eventQueue.push(event);
         log('Event queued:', event);
 
+        sendMetaPixelEvent(eventType, event);
+
         // Flush immediately for important events
         if (['purchase', 'add_to_cart', 'begin_checkout'].includes(eventType)) {
             flushEvents();
@@ -223,6 +276,12 @@
      * Track a page view
      */
     function trackPageView(data = {}) {
+        // The first page_view is the pageview the pixel snippet already sent to Meta:
+        // reuse its eventID so the CAPI PageView from the bridge dedupes with it.
+        if (window.__fbPageViewEventId && !data.client_event_id) {
+            data = { ...data, client_event_id: window.__fbPageViewEventId };
+            window.__fbPageViewEventId = null;
+        }
         track('page_view', data);
     }
 
