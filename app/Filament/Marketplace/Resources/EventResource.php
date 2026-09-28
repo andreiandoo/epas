@@ -1552,8 +1552,101 @@ class EventResource extends Resource
                                                 </div>";
                                         }
 
+                                        // Defalcarea cardului „Discounturi": se deschide la click pe card.
+                                        // allocated = partea din reducerea comenzii alocata biletelor valide
+                                        // ale ACESTUI eveniment (aceeasi regula ca in SalesBreakdownService),
+                                        // deci Σ allocated == cardul (± rotunjiri de bani).
+                                        $discountRows = collect($breakdown['discount_by_order'] ?? [])->sortByDesc('created_at')->values();
+                                        $hasDiscounts = $discountRows->isNotEmpty();
+                                        $discountCardAttrs = $hasDiscounts
+                                            ? " role='button' tabindex='0' @click='showDiscounts = !showDiscounts' @keydown.enter='showDiscounts = !showDiscounts' style='cursor:pointer' :style=\"showDiscounts ? { outline: '2px solid #fb923c' } : {}\""
+                                            : '';
+                                        $discountHint = $hasDiscounts
+                                            ? "<div class='text-[10px] text-gray-500 mt-1' x-text=\"showDiscounts ? '" . $t('ascunde detalii', 'hide details') . "' : '" . $t('click pentru detalii', 'click for details') . "'\"></div>"
+                                            : '';
+                                        $discountPanel = '';
+                                        if ($hasDiscounts) {
+                                            $fmtD = fn ($v) => number_format((float) $v, 2, ',', '.');
+                                            $typeLabel = function ($r) use ($t, $fmtD) {
+                                                if (($r['promo_type'] ?? null) === 'percentage' && $r['promo_value'] !== null) {
+                                                    return rtrim(rtrim(number_format($r['promo_value'], 2, ',', '.'), '0'), ',') . '%';
+                                                }
+                                                if ($r['promo_code'] && $r['promo_value'] !== null) {
+                                                    return $fmtD($r['promo_value']) . ' RON';
+                                                }
+                                                if (($r['loyalty_discount'] ?? 0) > 0) {
+                                                    return $t('puncte fidelitate', 'loyalty points');
+                                                }
+                                                return '—';
+                                            };
+                                            // Rezumat pe cod: de unde vine suma.
+                                            $byCode = $discountRows->groupBy(fn ($r) => $r['promo_code'] ?: (($r['loyalty_discount'] ?? 0) > 0 ? '__loyalty' : '__none'))
+                                                ->map(fn ($g, $code) => [
+                                                    'label' => $code === '__loyalty' ? $t('Puncte fidelitate', 'Loyalty points') : ($code === '__none' ? $t('Fără cod', 'No code') : $code),
+                                                    'type' => $typeLabel($g->first()),
+                                                    'orders' => $g->count(),
+                                                    'allocated' => $g->sum('allocated'),
+                                                ])
+                                                ->sortByDesc('allocated')
+                                                ->values();
+                                            $partialD = $discountRows->filter(fn ($r) => $r['allocated'] + 0.005 < $r['order_discount'])->count();
+                                            $th = "style='padding:6px 8px;text-align:left;font-weight:600;color:#9ca3af;white-space:nowrap'";
+                                            $thR = "style='padding:6px 8px;text-align:right;font-weight:600;color:#9ca3af;white-space:nowrap'";
+                                            $td = "style='padding:6px 8px;border-top:1px solid #374151;white-space:nowrap'";
+                                            $tdR = "style='padding:6px 8px;border-top:1px solid #374151;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums'";
+                                            $codesHtml = '';
+                                            foreach ($byCode as $c) {
+                                                $codesHtml .= "<div><b class='text-white'>" . e($c['label']) . "</b> <span class='text-gray-500'>(" . e($c['type']) . ")</span>: <b class='text-orange-300'>" . $fmtD($c['allocated']) . "</b> <span class='text-gray-500'>· {$c['orders']} " . e($t('comenzi', 'orders')) . "</span></div>";
+                                            }
+                                            $partialTitleD = e($t('Reducerea comenzii e împărțită: doar partea biletelor valide la acest eveniment intră în card.', 'The order discount is split: only the share of this event\'s valid tickets counts in the card.'));
+                                            $rowsHtmlD = '';
+                                            foreach ($discountRows as $r) {
+                                                $url = \App\Filament\Marketplace\Resources\OrderResource::getUrl('view', ['record' => $r['order_id']]);
+                                                $date = $r['created_at'] ? \Carbon\Carbon::parse($r['created_at'])->timezone('Europe/Bucharest')->format('d.m.Y H:i') : '—';
+                                                $partial = $r['allocated'] + 0.005 < $r['order_discount'];
+                                                $allocCell = $fmtD($r['allocated']) . ($partial ? " <span style='color:#fbbf24' title='{$partialTitleD}'>⚠</span>" : '');
+                                                $rowsHtmlD .= '<tr>'
+                                                    . "<td {$td}><a href='" . e($url) . "' target='_blank' style='color:#fb923c;text-decoration:underline'>" . e($r['order_number']) . '</a></td>'
+                                                    . "<td {$td}>{$date}</td>"
+                                                    . "<td {$td}>" . e((string) ($r['customer'] ?? '—')) . '</td>'
+                                                    . "<td {$td}>" . e((string) ($r['promo_code'] ?? '—')) . '</td>'
+                                                    . "<td {$td}>" . e($typeLabel($r)) . '</td>'
+                                                    . "<td {$tdR}>" . $fmtD($r['order_discount']) . '</td>'
+                                                    . "<td {$tdR}>{$allocCell}</td>"
+                                                    . "<td {$tdR}>{$r['valid_tickets']} / {$r['order_tickets']}</td>"
+                                                    . '</tr>';
+                                            }
+                                            $partialNoteD = $partialD > 0
+                                                ? "<div style='margin-top:6px;color:#fbbf24'>⚠ " . $partialD . ' ' . e($t('comenzi au reducerea împărțită (bilete anulate/rambursate sau pentru alt eveniment) — în card intră doar partea biletelor valide de aici.', 'orders have their discount split (cancelled/refunded tickets or another event) — only the share of valid tickets here counts.')) . '</div>'
+                                                : '';
+                                            $discountPanel = "
+                                                <div x-show='showDiscounts' x-cloak style='grid-column:1 / -1' class='p-3 bg-gray-800 rounded-lg text-xs text-gray-300'>
+                                                    <div class='text-sm font-semibold text-white'>" . e($t('De unde vin Discounturile', 'Where Discounts come from')) . "</div>
+                                                    <div style='display:flex;flex-direction:column;gap:4px;margin-top:8px'>{$codesHtml}
+                                                        <div>" . e($t('Total', 'Total')) . ": <b class='text-white'>{$discountFormatted}</b></div>
+                                                    </div>
+                                                    <div class='text-gray-500' style='margin-top:6px'>" . e($t('Reducerea e salvată pe comandă. La cod procentual, partea evenimentului = procentul aplicat biletelor valide de aici; altfel reducerea se împarte egal pe biletele comenzii.', 'The discount is stored on the order. For a percentage code, this event\'s share = the rate applied to its valid tickets; otherwise the discount is split evenly across the order\'s tickets.')) . "</div>
+                                                    {$partialNoteD}
+                                                    <div style='max-height:24rem;overflow:auto;margin-top:10px'>
+                                                        <table style='width:100%;border-collapse:collapse'>
+                                                            <thead><tr>
+                                                                <th {$th}>" . e($t('Comandă', 'Order')) . "</th>
+                                                                <th {$th}>" . e($t('Data', 'Date')) . "</th>
+                                                                <th {$th}>" . e($t('Client', 'Customer')) . "</th>
+                                                                <th {$th}>" . e($t('Cod', 'Code')) . "</th>
+                                                                <th {$th}>" . e($t('Tip', 'Type')) . "</th>
+                                                                <th {$thR}>" . e($t('Reducere comandă', 'Order discount')) . "</th>
+                                                                <th {$thR}>" . e($t('În card (eveniment)', 'In card (event)')) . "</th>
+                                                                <th {$thR}>" . e($t('Bilete valide / comandă', 'Valid / order tickets')) . "</th>
+                                                            </tr></thead>
+                                                            <tbody>{$rowsHtmlD}</tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>";
+                                        }
+
                                         return new HtmlString("
-                                            <div class='grid grid-cols-3 gap-3' x-data='{ showExtras: false }'>
+                                            <div class='grid grid-cols-3 gap-3' x-data='{ showExtras: false, showDiscounts: false }'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
                                                     <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
@@ -1576,9 +1669,10 @@ class EventResource extends Resource
                                                     <div class='text-xs text-gray-400'>{$extrasLabel}</div>
                                                     {$extrasHint}
                                                 </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'{$discountCardAttrs}>
                                                     <div class='text-2xl font-bold text-orange-400'>{$discountFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$discountLabel}</div>
+                                                    {$discountHint}
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
@@ -1623,6 +1717,7 @@ class EventResource extends Resource
                                                     </div>
                                                 </div>
                                                 {$extrasPanel}
+                                                {$discountPanel}
                                             </div>
                                             <div class='mt-3'>
                                                 <div class='flex justify-between mb-1 text-xs text-gray-400'>
@@ -1729,6 +1824,8 @@ class EventResource extends Resource
 
                                             return [
                                                 'name' => $tt->name,
+                                                // Pretul biletului (catalog, fara comision peste pret).
+                                                'price' => $isInvitation ? null : (float) $tt->display_price,
                                                 'commission' => $isInvitation ? null : $formatCommission($tt),
                                                 'valid' => $valid,
                                                 'cancelled' => $cancelled,
@@ -1747,8 +1844,15 @@ class EventResource extends Resource
                                         foreach ($rows as $r) {
                                             $name = e($r['name'] ?? '—');
                                             $commission = $r['commission'] ?? null;
-                                            $commissionHtml = $commission
-                                                ? " <span class='text-gray-400 font-normal'>(" . e($commission) . ")</span>"
+                                            $parts = [];
+                                            if ($r['price'] !== null) {
+                                                $parts[] = rtrim(rtrim(number_format($r['price'], 2, ',', '.'), '0'), ',') . ' RON';
+                                            }
+                                            if ($commission) {
+                                                $parts[] = $commission;
+                                            }
+                                            $commissionHtml = $parts
+                                                ? " <span class='text-gray-400 font-normal'>(" . e(implode(' · ', $parts)) . ")</span>"
                                                 : '';
                                             $netFmt = number_format($r['net'] ?? 0, 2, ',', '.');
                                             $rowsHtml .= "
@@ -6589,6 +6693,7 @@ class EventResource extends Resource
             'total_refunded_principal' => $breakdown['total_refunded_principal'] ?? 0,
             'total_extras' => $breakdown['total_extras'],
             'extras_by_order' => $breakdown['extras_by_order'] ?? [],
+            'discount_by_order' => $breakdown['discount_by_order'] ?? [],
             'total_discount' => $breakdown['total_discount'],
             'total_revenue_online' => $onlineBreakdown['total_revenue'],
             'total_commission_online' => $onlineBreakdown['total_commission'],

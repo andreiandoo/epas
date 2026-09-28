@@ -312,6 +312,7 @@ class SalesBreakdownService
         $sumOnTop = 0.0;
         $sumIncluded = 0.0;
         $sumDiscountValid = 0.0;
+        $discountByOrder = [];
         /** @var array<string, float> net exact per zi, cheie 'Y-m-d' în REPORT_TZ */
         $netByDay = [];
         $sumExtrasValid = 0.0;
@@ -492,6 +493,29 @@ class SalesBreakdownService
                         $discountPerTicket = $discountValid / $orderValidCount;
                     }
                 }
+            }
+
+            // Detaliul sumei total_discount pe comanda (tab-ul Vanzari il afiseaza
+            // la click pe cardul „Discounturi"). allocated = exact $discountValid,
+            // deci Σ allocated == total_discount.
+            if ($orderDiscount > 0) {
+                $loyalty = is_array($meta['loyalty_points'] ?? null) ? $meta['loyalty_points'] : null;
+                $discountByOrder[] = [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'created_at' => $order->created_at?->toIso8601String(),
+                    'customer' => $order->customer_name ?: $order->customer_email,
+                    'source' => $order->source,
+                    'promo_code' => $promoInfo['code'] ?? null,
+                    'promo_type' => $promoType,
+                    'promo_value' => isset($promoInfo['value']) ? (float) $promoInfo['value'] : null,
+                    'promo_source' => $promoInfo['source'] ?? null,
+                    'loyalty_discount' => $loyalty ? round((float) ($loyalty['discount'] ?? 0), 2) : 0.0,
+                    'order_discount' => round($orderDiscount, 2),
+                    'allocated' => round($discountValid, 2),
+                    'valid_tickets' => $orderValidCount,
+                    'order_tickets' => (int) ($totalTicketsPerOrder[$orderId] ?? $orderValidCount),
+                ];
             }
 
             $insurance = (float) ($meta['insurance_amount'] ?? 0);
@@ -714,6 +738,8 @@ class SalesBreakdownService
             // — so 1007 − 57 − 200 ≠ 822 and the tab contradicted itself, while
             // the organizer's page, which allocates properly, showed 128.
             'total_discount' => round($sumDiscountValid, 2),
+            // Randurile din care se aduna total_discount (doar comenzi cu reducere).
+            'discount_by_order' => $discountByOrder,
             // F4 — processing fee summed across orders in this period.
             // Zero on marketplaces without payment_fees opted in (kill switch).
             'total_processing_fee' => $totalProcessingFee,
