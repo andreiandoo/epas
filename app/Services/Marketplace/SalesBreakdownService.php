@@ -254,6 +254,32 @@ class SalesBreakdownService
                 ->groupBy('order_id')
                 ->pluck('cnt', 'order_id');
 
+        // Detaliul sumei total_extras pe comanda (tab-ul Vanzari il afiseaza la
+        // click pe cardul „Taxe / Asigurari"). Aceleasi comenzi si aceleasi
+        // campuri ca $totalExtrasCard, deci Σ randuri == total_extras.
+        $validTicketsPerOrder = $tickets->whereNotNull('order_id')->countBy('order_id');
+        $extrasByOrder = [];
+        foreach ($ordersById as $o) {
+            $m = is_array($o->meta) ? $o->meta : [];
+            $insurance = (float) ($m['insurance_amount'] ?? 0);
+            $surcharge = (float) ($m['cultural_card_surcharge'] ?? 0);
+            if ($insurance == 0.0 && $surcharge == 0.0) {
+                continue;
+            }
+            $extrasByOrder[] = [
+                'order_id' => $o->id,
+                'order_number' => $o->order_number,
+                'created_at' => $o->created_at?->toIso8601String(),
+                'customer' => $o->customer_name ?: $o->customer_email,
+                'source' => $o->source,
+                'status' => $o->status,
+                'insurance' => round($insurance, 2),
+                'cultural_card' => round($surcharge, 2),
+                'valid_tickets' => (int) ($validTicketsPerOrder[$o->id] ?? 0),
+                'order_tickets' => (int) ($totalTicketsPerOrder[$o->id] ?? 0),
+            ];
+        }
+
         $defaultRate = (float) (
             $event->commission_rate
             ?? $event->marketplaceOrganizer?->commission_rate
@@ -669,6 +695,8 @@ class SalesBreakdownService
             'total_commission_kept_from_refunds' => round($keptCommission, 2),
             'total_refunded_principal' => round($refundedPrincipal, 2),
             'total_extras' => round($totalExtrasCard, 2),
+            // Randurile din care se aduna total_extras (doar comenzi cu extras > 0).
+            'extras_by_order' => $extrasByOrder,
             // Net EXACT per zi (cheie 'Y-m-d' în REPORT_TZ), acumulat în aceeași
             // buclă pe comenzi care produce total_net — deci Σ net_by_day ==
             // total_net, fără rulări suplimentare ale serviciului.

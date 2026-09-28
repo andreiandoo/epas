@@ -1479,8 +1479,81 @@ class EventResource extends Resource
                                         $discountFormatted = number_format($totalDiscount, 2, ',', '.');
                                         $posSalesFormatted = number_format($totalRevenuePos, 2, ',', '.');
 
+                                        // Defalcarea cardului „Taxe / Asigurari": se deschide la click pe
+                                        // card. Randurile sunt exact comenzile din care SalesBreakdownService
+                                        // aduna total_extras (asigurare bilet + supliment card cultural).
+                                        $extrasRows = collect($breakdown['extras_by_order'] ?? [])->sortByDesc('created_at')->values();
+                                        $hasExtras = $extrasRows->isNotEmpty();
+                                        $extrasCardAttrs = $hasExtras
+                                            ? " role='button' tabindex='0' @click='showExtras = !showExtras' @keydown.enter='showExtras = !showExtras' style='cursor:pointer' :style=\"showExtras ? { outline: '2px solid #c084fc' } : {}\""
+                                            : '';
+                                        $extrasHint = $hasExtras
+                                            ? "<div class='text-[10px] text-gray-500 mt-1' x-text=\"showExtras ? '" . $t('ascunde detalii', 'hide details') . "' : '" . $t('click pentru detalii', 'click for details') . "'\"></div>"
+                                            : '';
+                                        $extrasPanel = '';
+                                        if ($hasExtras) {
+                                            $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+                                            $insTotal = $extrasRows->sum('insurance');
+                                            $ccTotal = $extrasRows->sum('cultural_card');
+                                            $insCount = $extrasRows->where('insurance', '>', 0)->count();
+                                            $ccCount = $extrasRows->where('cultural_card', '>', 0)->count();
+                                            $partialCount = $extrasRows->filter(fn ($r) => $r['order_tickets'] > $r['valid_tickets'])->count();
+                                            $ordersWord = $t('comenzi', 'orders');
+                                            $th = "style='padding:6px 8px;text-align:left;font-weight:600;color:#9ca3af;white-space:nowrap'";
+                                            $thR = "style='padding:6px 8px;text-align:right;font-weight:600;color:#9ca3af;white-space:nowrap'";
+                                            $td = "style='padding:6px 8px;border-top:1px solid #374151;white-space:nowrap'";
+                                            $tdR = "style='padding:6px 8px;border-top:1px solid #374151;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums'";
+                                            $partialTitle = e($t('Nu toate biletele comenzii sunt valide la acest eveniment; suma e numărată integral.', 'Not all tickets of this order are valid for this event; the full amount is counted.'));
+                                            $rowsHtml = '';
+                                            foreach ($extrasRows as $r) {
+                                                $url = \App\Filament\Marketplace\Resources\OrderResource::getUrl('view', ['record' => $r['order_id']]);
+                                                $date = $r['created_at'] ? \Carbon\Carbon::parse($r['created_at'])->timezone('Europe/Bucharest')->format('d.m.Y H:i') : '—';
+                                                $partial = $r['order_tickets'] > $r['valid_tickets'];
+                                                $ticketsCell = $r['valid_tickets'] . ' / ' . $r['order_tickets'] . ($partial ? " <span style='color:#fbbf24' title='{$partialTitle}'>⚠</span>" : '');
+                                                $rowsHtml .= '<tr>'
+                                                    . "<td {$td}><a href='" . e($url) . "' target='_blank' style='color:#c084fc;text-decoration:underline'>" . e($r['order_number']) . '</a></td>'
+                                                    . "<td {$td}>{$date}</td>"
+                                                    . "<td {$td}>" . e((string) ($r['customer'] ?? '—')) . '</td>'
+                                                    . "<td {$td}>" . e((string) ($r['source'] ?? '—')) . '</td>'
+                                                    . "<td {$tdR}>" . ($r['insurance'] > 0 ? $fmt($r['insurance']) : '—') . '</td>'
+                                                    . "<td {$tdR}>" . ($r['cultural_card'] > 0 ? $fmt($r['cultural_card']) : '—') . '</td>'
+                                                    . "<td {$tdR}>" . $fmt($r['insurance'] + $r['cultural_card']) . '</td>'
+                                                    . "<td {$tdR}>{$ticketsCell}</td>"
+                                                    . '</tr>';
+                                            }
+                                            $partialNote = $partialCount > 0
+                                                ? "<div style='margin-top:6px;color:#fbbf24'>⚠ " . $partialCount . ' ' . e($t('comenzi au și bilete anulate/rambursate sau pentru alt eveniment — suma lor e numărată integral, din comandă.', 'orders also hold cancelled/refunded tickets or tickets for another event — their amount is counted in full, from the order.')) . '</div>'
+                                                : '';
+                                            $extrasPanel = "
+                                                <div x-show='showExtras' x-cloak style='grid-column:1 / -1' class='p-3 bg-gray-800 rounded-lg text-xs text-gray-300'>
+                                                    <div class='text-sm font-semibold text-white'>" . e($t('De unde vin Taxe / Asigurări', 'Where Fees / Insurance come from')) . "</div>
+                                                    <div style='display:flex;flex-wrap:wrap;gap:16px;margin-top:8px'>
+                                                        <div>" . e($t('Asigurare bilet', 'Ticket insurance')) . ": <b class='text-purple-300'>" . $fmt($insTotal) . "</b> <span class='text-gray-500'>({$insCount} {$ordersWord})</span></div>
+                                                        <div>" . e($t('Supliment card cultural', 'Cultural card surcharge')) . ": <b class='text-purple-300'>" . $fmt($ccTotal) . "</b> <span class='text-gray-500'>({$ccCount} {$ordersWord})</span></div>
+                                                        <div>" . e($t('Total', 'Total')) . ": <b class='text-white'>{$extrasFormatted}</b></div>
+                                                    </div>
+                                                    <div class='text-gray-500' style='margin-top:6px'>" . e($t('Sumele vin din comenzile plătite care au bilete valide la acest eveniment (asigurarea și suplimentul sunt salvate pe comandă). Comenzile de test nu sunt incluse.', 'Amounts come from paid orders holding valid tickets for this event (insurance and surcharge are stored on the order). Test orders are excluded.')) . "</div>
+                                                    {$partialNote}
+                                                    <div style='max-height:24rem;overflow:auto;margin-top:10px'>
+                                                        <table style='width:100%;border-collapse:collapse'>
+                                                            <thead><tr>
+                                                                <th {$th}>" . e($t('Comandă', 'Order')) . "</th>
+                                                                <th {$th}>" . e($t('Data', 'Date')) . "</th>
+                                                                <th {$th}>" . e($t('Client', 'Customer')) . "</th>
+                                                                <th {$th}>" . e($t('Sursă', 'Source')) . "</th>
+                                                                <th {$thR}>" . e($t('Asigurare', 'Insurance')) . "</th>
+                                                                <th {$thR}>" . e($t('Card cultural', 'Cultural card')) . "</th>
+                                                                <th {$thR}>" . e($t('Total', 'Total')) . "</th>
+                                                                <th {$thR}>" . e($t('Bilete valide / comandă', 'Valid / order tickets')) . "</th>
+                                                            </tr></thead>
+                                                            <tbody>{$rowsHtml}</tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>";
+                                        }
+
                                         return new HtmlString("
-                                            <div class='grid grid-cols-3 gap-3'>
+                                            <div class='grid grid-cols-3 gap-3' x-data='{ showExtras: false }'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
                                                     <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
@@ -1498,9 +1571,10 @@ class EventResource extends Resource
                                                     <div class='text-xs text-gray-400'>{$revenueLabel}</div>
                                                     {$keptFromRefundsHint}
                                                 </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'{$extrasCardAttrs}>
                                                     <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$extrasLabel}</div>
+                                                    {$extrasHint}
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-orange-400'>{$discountFormatted}</div>
@@ -1548,6 +1622,7 @@ class EventResource extends Resource
                                                         </span>
                                                     </div>
                                                 </div>
+                                                {$extrasPanel}
                                             </div>
                                             <div class='mt-3'>
                                                 <div class='flex justify-between mb-1 text-xs text-gray-400'>
@@ -6513,6 +6588,7 @@ class EventResource extends Resource
             'total_commission_kept_from_refunds' => $breakdown['total_commission_kept_from_refunds'] ?? 0,
             'total_refunded_principal' => $breakdown['total_refunded_principal'] ?? 0,
             'total_extras' => $breakdown['total_extras'],
+            'extras_by_order' => $breakdown['extras_by_order'] ?? [],
             'total_discount' => $breakdown['total_discount'],
             'total_revenue_online' => $onlineBreakdown['total_revenue'],
             'total_commission_online' => $onlineBreakdown['total_commission'],
