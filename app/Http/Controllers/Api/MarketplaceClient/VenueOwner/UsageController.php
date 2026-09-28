@@ -49,7 +49,8 @@ class UsageController extends Controller
             $payload = app(VenueOwnerUsageService::class)->build(
                 $venueIds,
                 $venueFilter,
-                $statusFilter
+                $statusFilter,
+                (int) $client->id
             );
 
             // Venue picker options — the shell needs a stable list to render

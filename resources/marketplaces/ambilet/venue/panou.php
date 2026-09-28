@@ -104,10 +104,10 @@ require_once dirname(__DIR__) . '/includes/venue-sidebar.php';
                             <div class="flex items-center justify-center w-11 h-11 rounded-xl" style="background:linear-gradient(135deg, #ec4899, #be185d);">
                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                             </div>
-                            <span class="text-xs font-bold text-pink-600 px-2 py-0.5 rounded-full" style="background:rgba(236,72,153,0.1);">NEXT 30d</span>
+                            
                         </div>
                         <p id="kpi-upcoming" class="text-3xl font-black text-slate-900">—</p>
-                        <p class="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">În curând</p>
+                        <p class="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Viitoare</p>
                     </div>
                 </div>
             </section>

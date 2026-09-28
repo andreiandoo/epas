@@ -28,7 +28,7 @@ class VenueOwnerUsageService
      * @param  string $statusFilter 'all' | 'live' | 'ended' | 'cancelled' | 'unknown' | 'postponed'.
      * @return array{events: \Illuminate\Support\Collection, stats: array<string,int|float>}
      */
-    public function build(array $venueIds, string $venueFilter = 'all', string $statusFilter = 'all'): array
+    public function build(array $venueIds, string $venueFilter = 'all', string $statusFilter = 'all', ?int $marketplaceClientId = null): array
     {
         if (empty($venueIds)) {
             return [
@@ -61,9 +61,19 @@ class VenueOwnerUsageService
             'artists',
         ])
             ->whereIn('venue_id', $filteredVenueIds)
+            // Same event set as the /venue/evenimente list and /venue/panou: only
+            // this marketplace's events (other marketplaces' events at the venue
+            // made the counts differ from page to page).
+            ->when($marketplaceClientId, fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId))
             ->get();
         $sales = VenueEventSales::forEvents($allEvents->pluck('id'));
-        $allEvents = $allEvents->map(fn ($event) => $this->decorateEvent($event, $sales->get($event->id)));
+        // "Upcoming" = Event::upcoming() everywhere (handles range / multi-day events)
+        $upcomingIds = Event::query()
+            ->whereIn('id', $allEvents->pluck('id'))
+            ->upcoming()
+            ->pluck('id')
+            ->flip();
+        $allEvents = $allEvents->map(fn ($event) => $this->decorateEvent($event, $sales->get($event->id), $upcomingIds->has($event->id)));
 
         $events = $statusFilter !== 'all'
             ? $allEvents->where('computed_status', $statusFilter)
@@ -78,7 +88,7 @@ class VenueOwnerUsageService
 
         $stats = [
             'total'         => $allEvents->count(),
-            'upcoming'      => $allEvents->where('computed_status', 'live')->count(),
+            'upcoming'      => $upcomingIds->count(),
             'ended'         => $allEvents->where('computed_status', 'ended')->count(),
             'cancelled'     => $allEvents->where('computed_status', 'cancelled')->count(),
             'unknown'       => $allEvents->where('computed_status', 'unknown')->count(),
@@ -94,7 +104,7 @@ class VenueOwnerUsageService
      * days_until, public_url, artist_names. Mirrors the Filament page so both
      * consumers see identical numbers.
      */
-    private function decorateEvent(Event $event, ?object $sales = null): Event
+    private function decorateEvent(Event $event, ?object $sales = null, bool $isUpcoming = false): Event
     {
         // Sold + revenue come from the tickets actually sold (VenueEventSales).
         // quota_sold × price_cents stayed at 0 for events sold online by
@@ -115,15 +125,17 @@ class VenueOwnerUsageService
         $event->days_until = null;
         if ($event->is_cancelled) {
             $event->computed_status = 'cancelled';
+        } elseif ($isUpcoming) {
+            $event->computed_status = ($event->is_postponed ?? false) ? 'postponed' : 'live';
+            if ($event->event_date && $event->event_date >= $now) {
+                $event->days_until = max(0, (int) now()->diffInDays(Carbon::parse($event->event_date), false));
+            }
         } elseif ($event->is_postponed ?? false) {
             $event->computed_status = 'postponed';
-        } elseif (!$event->event_date) {
+        } elseif (!$event->event_date && !$event->range_end_date && empty($event->multi_slots)) {
             $event->computed_status = 'unknown';
-        } elseif ($event->event_date < $now) {
-            $event->computed_status = 'ended';
         } else {
-            $event->computed_status = 'live';
-            $event->days_until = max(0, (int) now()->diffInDays(Carbon::parse($event->event_date), false));
+            $event->computed_status = 'ended';
         }
 
         $slug = is_array($event->slug)

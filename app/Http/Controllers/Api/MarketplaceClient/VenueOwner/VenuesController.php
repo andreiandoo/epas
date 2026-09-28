@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\VenueOwner;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\Event;
 use App\Services\VenueOwner\VenueEventSales;
 use Illuminate\Support\Facades\DB;
 
@@ -44,30 +45,29 @@ class VenuesController extends Controller
             ]);
         }
 
-        $now      = now()->toDateString();
         $ids      = $venues->pluck('id')->toArray();
 
-        // Aggregate per-venue counts in ONE query, then attach to the
-        // Eloquent collection — cheaper than N separate hasCount calls.
-        $aggregates = DB::table('events')
+        // Same event set and "upcoming" rule as /venue/evenimente (EventsController)
+        // and /venue/utilizare: this marketplace's events at the partner venues,
+        // upcoming = Event::upcoming() (range / multi-day aware).
+        $baseEvents = fn () => Event::query()
             ->whereIn('venue_id', $ids)
-            ->selectRaw(
-                'venue_id,'
-                . ' COUNT(*) AS total_events,'
-                . ' SUM(CASE WHEN event_date >= ? THEN 1 ELSE 0 END) AS upcoming_events',
-                [$now]
-            )
+            ->where('marketplace_client_id', $client->id);
+        $totalPerVenue = $baseEvents()
+            ->selectRaw('venue_id, COUNT(*) AS c')
             ->groupBy('venue_id')
-            ->get()
-            ->keyBy('venue_id');
+            ->pluck('c', 'venue_id');
+        $upcomingPerVenue = $baseEvents()
+            ->upcoming()
+            ->selectRaw('venue_id, COUNT(*) AS c')
+            ->groupBy('venue_id')
+            ->pluck('c', 'venue_id');
 
         // Sold tickets per venue: the tickets actually sold (valid / used on a paid
         // order, no test sales), same count as /venue/utilizare and the organizer
         // reports. The old SUM(ticket_types.quota_sold) is a stock counter and ran
         // higher (single-ticket refunds, imported events, test POS, invitations).
-        $eventVenue = DB::table('events')
-            ->whereIn('venue_id', $ids)
-            ->pluck('venue_id', 'id');
+        $eventVenue = $baseEvents()->pluck('venue_id', 'id');
         $soldPerVenue = [];
         foreach (VenueEventSales::forEvents($eventVenue->keys()) as $eventId => $sales) {
             $venueId = $eventVenue[$eventId] ?? null;
@@ -76,17 +76,16 @@ class VenuesController extends Controller
             }
         }
 
-        $data = $venues->map(function ($v) use ($aggregates, $soldPerVenue) {
+        $data = $venues->map(function ($v) use ($totalPerVenue, $upcomingPerVenue, $soldPerVenue) {
             $name = is_array($v->name) ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name)) : $v->name;
-            $agg  = $aggregates->get($v->id);
             return [
                 'id'              => $v->id,
                 'name'            => is_string($name) ? $name : 'Venue',
                 'city'            => $v->city,
                 'state'           => $v->state,
                 'capacity'        => (int) ($v->capacity ?? 0),
-                'total_events'    => (int) ($agg->total_events ?? 0),
-                'upcoming_events' => (int) ($agg->upcoming_events ?? 0),
+                'total_events'    => (int) ($totalPerVenue[$v->id] ?? 0),
+                'upcoming_events' => (int) ($upcomingPerVenue[$v->id] ?? 0),
                 'total_sold'      => (int) ($soldPerVenue[$v->id] ?? 0),
             ];
         })->values();
