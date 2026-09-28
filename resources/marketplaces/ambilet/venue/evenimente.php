@@ -180,8 +180,6 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const sold = stats.tickets_sold ?? ev.tickets_sold ?? 0;
             const cap = stats.stock_total ?? ev.capacity ?? 0;
             const pct = cap > 0 ? Math.min(100, Math.round(sold / cap * 100)) : 0;
-            const ci = stats.checked_in_count ?? 0;
-            const ciPct = sold > 0 ? Math.round(ci / sold * 100) : 0;
             const fillColor = pct >= 75 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
 
             // Compact poster: 18×18 (72px), just the image or a
@@ -231,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                                 <span class="text-lg font-black text-slate-900">${fmtInt(sold)}</span>
                                 ${cap > 0 ? `<span class="text-[11px] text-slate-400 font-mono">/${fmtInt(cap)}</span>` : ''}
                             </div>
-                            <p class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Bilete${ciPct > 0 ? ` · ${ciPct}% CI` : ''}</p>
+                            <p class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Bilete</p>
                             ${cap > 0 ? `
                                 <div class="mt-1 h-1 bg-slate-100 rounded-full overflow-hidden ml-auto" style="width:100px;">
                                     <div class="h-full rounded-full transition-all" style="width:${pct}%; background:${fillColor};"></div>
