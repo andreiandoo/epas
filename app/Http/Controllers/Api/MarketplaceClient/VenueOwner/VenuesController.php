@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\VenueOwner;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\VenueOwner\VenueEventSales;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -60,21 +61,24 @@ class VenuesController extends Controller
             ->get()
             ->keyBy('venue_id');
 
-        // Sold tickets per venue (denormalised counter kept in sync by
-        // TicketType::quota_sold — the same source the Filament venue
-        // pages read, so numbers match one-to-one).
-        $soldPerVenue = DB::table('events')
-            ->leftJoin('ticket_types', 'ticket_types.event_id', '=', 'events.id')
-            ->whereIn('events.venue_id', $ids)
-            ->selectRaw('events.venue_id, COALESCE(SUM(ticket_types.quota_sold), 0) AS sold')
-            ->groupBy('events.venue_id')
-            ->get()
-            ->keyBy('venue_id');
+        // Sold tickets per venue: the tickets actually sold (valid / used on a paid
+        // order, no test sales), same count as /venue/utilizare and the organizer
+        // reports. The old SUM(ticket_types.quota_sold) is a stock counter and ran
+        // higher (single-ticket refunds, imported events, test POS, invitations).
+        $eventVenue = DB::table('events')
+            ->whereIn('venue_id', $ids)
+            ->pluck('venue_id', 'id');
+        $soldPerVenue = [];
+        foreach (VenueEventSales::forEvents($eventVenue->keys()) as $eventId => $sales) {
+            $venueId = $eventVenue[$eventId] ?? null;
+            if ($venueId) {
+                $soldPerVenue[$venueId] = ($soldPerVenue[$venueId] ?? 0) + $sales->tickets_sold;
+            }
+        }
 
         $data = $venues->map(function ($v) use ($aggregates, $soldPerVenue) {
             $name = is_array($v->name) ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name)) : $v->name;
             $agg  = $aggregates->get($v->id);
-            $sold = $soldPerVenue->get($v->id);
             return [
                 'id'              => $v->id,
                 'name'            => is_string($name) ? $name : 'Venue',
@@ -83,7 +87,7 @@ class VenuesController extends Controller
                 'capacity'        => (int) ($v->capacity ?? 0),
                 'total_events'    => (int) ($agg->total_events ?? 0),
                 'upcoming_events' => (int) ($agg->upcoming_events ?? 0),
-                'total_sold'      => (int) ($sold->sold ?? 0),
+                'total_sold'      => (int) ($soldPerVenue[$v->id] ?? 0),
             ];
         })->values();
 
