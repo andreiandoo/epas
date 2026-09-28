@@ -196,9 +196,35 @@
         lead: 'Lead'
     };
 
+    // head.php injects the pixel lazily (first interaction or ~1s after load), so early
+    // events (ViewContent) are held until fbq exists instead of being dropped.
+    let metaPending = [];
+    let metaWaitTimer = null;
+
+    function waitForMetaPixel() {
+        if (metaWaitTimer) return;
+        const startedAt = Date.now();
+        metaWaitTimer = setInterval(function () {
+            if (typeof window.fbq === 'function' || Date.now() - startedAt > 30000) {
+                clearInterval(metaWaitTimer);
+                metaWaitTimer = null;
+                const pending = metaPending;
+                metaPending = [];
+                if (typeof window.fbq === 'function') {
+                    pending.forEach(function (p) { sendMetaPixelEvent(p[0], p[1]); });
+                }
+            }
+        }, 250);
+    }
+
     function sendMetaPixelEvent(eventType, event) {
         const name = META_EVENTS[eventType];
-        if (!name || typeof window.fbq !== 'function') return;
+        if (!name) return;
+        if (typeof window.fbq !== 'function') {
+            metaPending.push([eventType, event]);
+            waitForMetaPixel();
+            return;
+        }
         try {
             // A refresh of the thank-you page must not send the purchase twice
             let sentKey = null;
@@ -275,13 +301,17 @@
     /**
      * Track a page view
      */
+    let firstPageView = true;
+
     function trackPageView(data = {}) {
-        // The first page_view is the pageview the pixel snippet already sent to Meta:
-        // reuse its eventID so the CAPI PageView from the bridge dedupes with it.
-        if (window.__fbPageViewEventId && !data.client_event_id) {
+        // The first page_view is the pageview the pixel snippet sends to Meta. Whichever
+        // runs first creates the id in window.__fbPageViewEventId and the other reuses it
+        // (the snippet usually loads later), so the CAPI PageView dedupes with the pixel's.
+        if (firstPageView && !data.client_event_id) {
+            window.__fbPageViewEventId = window.__fbPageViewEventId || ('pv_' + generateUUID());
             data = { ...data, client_event_id: window.__fbPageViewEventId };
-            window.__fbPageViewEventId = null;
         }
+        firstPageView = false;
         track('page_view', data);
     }
 

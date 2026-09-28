@@ -207,7 +207,9 @@ $cssBundle = 'event';
 // even when this page is served from page-cache (which would skip setcookie()).
 $organizerTrackingId = !empty($ev['marketplace_organizer_id']) ? (int) $ev['marketplace_organizer_id'] : null;
 if ($organizerTrackingId) {
-    $headExtra = ($headExtra ?? '') . '<script>document.cookie="ambilet_active_organizer=' . $organizerTrackingId . ';path=/;max-age=86400;samesite=Lax";</script>';
+    // __ambOrgTrackingId tells event-single.js the organizer pixels are already in the page
+    // (injecting them again doubled the pixel init and the PageView).
+    $headExtra = ($headExtra ?? '') . '<script>document.cookie="ambilet_active_organizer=' . $organizerTrackingId . ';path=/;max-age=86400;samesite=Lax";window.__ambOrgTrackingId=' . $organizerTrackingId . ';</script>';
 }
 
 // Feed head.php with event-specific data so it can emit Event JSON-LD,

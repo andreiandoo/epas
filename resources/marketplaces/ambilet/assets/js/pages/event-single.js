@@ -6478,6 +6478,8 @@ const EventPage = {
      * Load and inject organizer-specific tracking scripts
      */
     async loadOrganizerTracking(organizerId) {
+        // event.php already rendered this organizer's pixels server-side
+        if (window.__ambOrgTrackingId && String(window.__ambOrgTrackingId) === String(organizerId)) return;
         try {
             var response = await fetch(
                 window.AMBILET.apiUrl + '?action=tracking.organizer-scripts&organizer_id=' + organizerId
