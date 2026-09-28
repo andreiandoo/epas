@@ -1129,7 +1129,17 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->nullable()
-                                    ->live(),
+                                    ->live()
+                                    ->suffixActions([
+                                        Action::make('edit_tax_registry')
+                                            ->icon('heroicon-o-pencil-square')
+                                            ->tooltip($t('Editează Tax Registry', 'Edit Tax Registry'))
+                                            ->url(fn (SGet $get) => $get('marketplace_tax_registry_id')
+                                                ? \App\Filament\Marketplace\Resources\TaxRegistryResource::getUrl('edit', ['record' => $get('marketplace_tax_registry_id')])
+                                                : null)
+                                            ->openUrlInNewTab()
+                                            ->visible(fn (SGet $get) => (bool) $get('marketplace_tax_registry_id')),
+                                    ]),
                             ]),
                         // FEATURED SETTINGS (Marketplace only)
                         SC\Section::make($t('Setări Featured', 'Featured Settings'))
