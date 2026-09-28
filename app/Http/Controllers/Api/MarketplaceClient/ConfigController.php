@@ -354,10 +354,11 @@ class ConfigController extends BaseController
     {
         $headScripts = [];
         $bodyScripts = [];
-        // The slug-derived key does not match every banner: Ambilet's slug gives
-        // `ambiletro_cookie_consent` while its banner writes `ambilet_cookie_consent`,
-        // so the Meta/TikTok snippets also fall back to that key (per-origin storage,
-        // harmless on other sites). Without it every Ambilet pageview was revoked.
+        // The slug-derived key does not match every banner, so the Meta/TikTok snippets
+        // also read the keys the real banners write (per-origin storage, harmless elsewhere):
+        // Ambilet `ambilet_cookie_consent` {marketing}, bilete.online `bo_cookie_consent_v1`
+        // {consent:{marketing}} + its `bo-cookie-consent-updated` event (Ambilet's banner
+        // calls fbq/ttq itself). Without this every pageview on both sites was revoked.
         $consentKey = $client && !empty($client->slug)
             ? str_replace(['-', '.'], '', strtolower($client->slug)) . '_cookie_consent'
             : 'ambilet_cookie_consent';
@@ -480,8 +481,9 @@ n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
-(function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}')||localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
-if(!c||!c.marketing)fbq('consent','revoke');})();
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}')||localStorage.getItem('ambilet_cookie_consent')||localStorage.getItem('bo_cookie_consent_v1'))}catch(e){}
+if(c&&c.consent)c=c.consent;if(!c||!c.marketing)fbq('consent','revoke');
+window.addEventListener('bo-cookie-consent-updated',function(e){var d=e.detail&&e.detail.consent;fbq('consent',d&&d.marketing?'grant':'revoke');});})();
 fbq('init','{$id}');fbq('track','PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={$id}&ev=PageView&noscript=1"/></noscript>
@@ -508,8 +510,9 @@ ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var a=document.createEleme
 a.type="text/javascript",a.async=!0,a.src=r+"?sdkid="+e+"&lib="+t;var s=
 document.getElementsByTagName("script")[0];s.parentNode.insertBefore(a,s)};
 ttq.load('{$id}');
-(function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}')||localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
-if(!c||!c.marketing){ttq.disableCookie();ttq.revokeConsent();}})();
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}')||localStorage.getItem('ambilet_cookie_consent')||localStorage.getItem('bo_cookie_consent_v1'))}catch(e){}
+if(c&&c.consent)c=c.consent;if(!c||!c.marketing){ttq.disableCookie();ttq.revokeConsent();}
+window.addEventListener('bo-cookie-consent-updated',function(e){var d=e.detail&&e.detail.consent;if(d&&d.marketing){ttq.enableCookie();ttq.grantConsent();}else{ttq.disableCookie();ttq.revokeConsent();}});})();
 ttq.page();
 }(window,document,'ttq');
 </script>
