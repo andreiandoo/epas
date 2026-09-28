@@ -1091,11 +1091,19 @@ class EventResource extends Resource
                                             if ($registry) {
                                                 $name = e($registry->name);
                                                 $location = e(implode(', ', array_filter([$registry->city, $registry->county, $registry->country])));
+                                                // Campul „Cotă" (tax_rate) al registrului: taxa folosita in
+                                                // declaratiile de impozit pe spectacole.
+                                                $rateRaw = $registry->tax_rate;
+                                                $rateHtml = ($rateRaw !== null && $rateRaw !== '')
+                                                    ? '<div style="font-size:12px;margin-top:4px;">' . $t('are setată taxa de', 'has the tax rate set to') . ' <strong>'
+                                                        . e(rtrim(rtrim(number_format((float) $rateRaw, 2, ',', '.'), '0'), ',')) . '%</strong></div>'
+                                                    : '<div style="font-size:12px;margin-top:4px;color:#b45309;">' . $t('nu are completată nicio cotă (câmpul Cotă e gol)', 'has no tax rate set (the Rate field is empty)') . '</div>';
                                                 return new HtmlString(
                                                     '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #10b981;background:#f0fdf4;border-radius:6px;color:#065f46;font-size:13px;">'
                                                     . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
                                                     . '<div><strong>' . $t('Tax Registry identificat:', 'Tax Registry found:') . '</strong> ' . $name
-                                                    . '<div style="font-size:11px;color:#047857;margin-top:2px;">' . $location . '</div></div>'
+                                                    . '<div style="font-size:11px;color:#047857;margin-top:2px;">' . $location . '</div>'
+                                                    . $rateHtml . '</div>'
                                                     . '</div>'
                                                 );
                                             }
