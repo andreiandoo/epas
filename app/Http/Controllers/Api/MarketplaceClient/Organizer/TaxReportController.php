@@ -83,6 +83,7 @@ class TaxReportController extends BaseController
         // Get all completed orders for the year
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->where('status', 'completed')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->get();
 
@@ -101,6 +102,7 @@ class TaxReportController extends BaseController
         // Get refunds
         $refunds = Order::where('marketplace_organizer_id', $organizer->id)
             ->where('status', 'refunded')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->whereBetween('refunded_at', [$startDate, $endDate])
             ->sum('total');
 
@@ -159,6 +161,7 @@ class TaxReportController extends BaseController
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->where('status', 'completed')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->get();
 
@@ -241,6 +244,7 @@ class TaxReportController extends BaseController
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->where('status', 'completed')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->get();
 

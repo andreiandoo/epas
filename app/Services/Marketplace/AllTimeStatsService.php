@@ -59,7 +59,7 @@ class AllTimeStatsService
 
         // 3. Orders (money) — lifetime, legacy_import included, external+test excluded
         $orderStats = Order::where(fn ($q) => $this->scopeMarketplaceOrders($q, $marketplaceId))
-            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereNotIn('source', array_merge(self::TEST_SOURCES, ['external_import']))
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
@@ -83,17 +83,22 @@ class AllTimeStatsService
         $ticketStats = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
             ->join('events', 'ticket_types.event_id', '=', 'events.id')
             ->where('events.marketplace_client_id', $marketplaceId)
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->selectRaw('COUNT(*) as total_db')
             ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
             ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') AND DATE(tickets.created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
             ->first();
 
         // Headline "Comenzi" / "Bilete" counts equal the list-page totals.
-        $totalOrdersPage = Order::where('marketplace_client_id', $marketplaceId)->count();
+        // Test POS nu intra in statistici (nici comenzile, nici biletele de test)
+        $totalOrdersPage = Order::where('marketplace_client_id', $marketplaceId)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+            ->count();
         $totalTicketsPage = Ticket::where(function ($q) use ($marketplaceId) {
             $q->whereHas('order', fn ($q2) => $q2->where('marketplace_client_id', $marketplaceId))
                 ->orWhereHas('ticketType.event', fn ($q2) => $q2->where('marketplace_client_id', $marketplaceId));
-        })->count();
+        })->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))->count();
 
         // External import counts
         $externalOrders = Order::where('marketplace_client_id', $marketplaceId)

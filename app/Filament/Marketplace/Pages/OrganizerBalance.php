@@ -154,7 +154,8 @@ class OrganizerBalance extends Page
         $revenuePerEvent = Order::query()
             ->where('marketplace_organizer_id', $this->organizerId)
             ->where('status', 'completed')
-            ->where('source', '!=', 'external_import')
+            // Comenzile de test (Test POS) nu intra in venituri
+            ->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
             ->select(
                 'marketplace_event_id',
                 DB::raw('COUNT(*) as orders_count'),

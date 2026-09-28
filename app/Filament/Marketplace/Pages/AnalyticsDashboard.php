@@ -105,7 +105,7 @@ class AnalyticsDashboard extends Page
             ];
         }
 
-        $query = Order::where('marketplace_client_id', $marketplace->id)->where('source', '!=', 'external_import');
+        $query = Order::where('marketplace_client_id', $marketplace->id)->whereNotIn('source', ['external_import', 'test_order', 'pos_test']);
 
         // Apply date filter
         $startDate = match ($this->dateRange) {
@@ -121,12 +121,15 @@ class AnalyticsDashboard extends Page
 
         $totalRevenue = (clone $query)->where('status', 'paid')->sum('total_cents') / 100;
         $totalOrders = (clone $query)->where('status', 'paid')->count();
-        $totalTickets = Ticket::whereIn('order_id', (clone $query)->where('status', 'paid')->pluck('id'))->count();
+        // Test POS nu intra in statistici
+        $totalTickets = Ticket::whereIn('order_id', (clone $query)->where('status', 'paid')->pluck('id'))
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
+            ->count();
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 
         // Get previous period for comparison
         $previousStartDate = $startDate ? (clone $startDate)->subDays($startDate->diffInDays(Carbon::now())) : null;
-        $previousQuery = Order::where('marketplace_client_id', $marketplace->id)->where('source', '!=', 'external_import')->where('status', 'paid');
+        $previousQuery = Order::where('marketplace_client_id', $marketplace->id)->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])->where('status', 'paid');
 
         if ($previousStartDate && $startDate) {
             $previousQuery->whereBetween('created_at', [$previousStartDate, $startDate]);
@@ -159,7 +162,7 @@ class AnalyticsDashboard extends Page
             default => 30,
         };
 
-        $data = Order::where('marketplace_client_id', $marketplace->id)->where('source', '!=', 'external_import')
+        $data = Order::where('marketplace_client_id', $marketplace->id)->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
             ->where('status', 'paid')
             ->where('created_at', '>=', Carbon::now()->subDays($days))
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) as revenue, COUNT(*) as orders')

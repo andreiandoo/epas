@@ -48,13 +48,22 @@ class PruneDisabledTestPosTicketsCommand extends Command
         $tickets = Ticket::whereIn('ticket_type_id', $ttIds)->get(['id', 'order_id']);
         $orderIds = $tickets->pluck('order_id')->filter()->unique()->values()->all();
 
-        // Only delete orders that are strictly pos_test — never touch an order
-        // that carries a real ticket.
+        // Only delete orders that are strictly test — never touch an order
+        // that carries a real ticket. Comenzile cu DOAR bilete Test POS din
+        // acest lot, orice sursa (si vechile pos_app). Calculat inainte de stergere.
         $testOrderIds = empty($orderIds)
             ? []
-            : Order::whereIn('id', $orderIds)->where('source', 'pos_test')->pluck('id')->all();
+            : Order::whereIn('id', $orderIds)
+                ->whereNotExists(function ($q) use ($ttIds) {
+                    $q->select(DB::raw(1))->from('tickets')
+                        ->whereColumn('tickets.order_id', 'orders.id')
+                        ->where(fn ($w) => $w->whereNull('tickets.ticket_type_id')
+                            ->orWhereNotIn('tickets.ticket_type_id', $ttIds));
+                })
+                ->pluck('id')
+                ->all();
 
-        $this->line("Scope: {$ticketTypes->count()} ticket type(s), {$tickets->count()} ticket(s), " . count($testOrderIds) . ' pos_test order(s)');
+        $this->line("Scope: {$ticketTypes->count()} ticket type(s), {$tickets->count()} ticket(s), " . count($testOrderIds) . ' test-only order(s)');
 
         if ($this->option('dry-run')) {
             $this->info('Dry run — nothing deleted.');

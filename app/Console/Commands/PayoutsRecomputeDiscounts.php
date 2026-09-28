@@ -283,13 +283,14 @@ class PayoutsRecomputeDiscounts extends Command
         $cutoff = $p->created_at;
 
         $tickets = Ticket::with(['ticketType:id,price_cents,sale_price_cents', 'order:id,created_at'])
-            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $p->event_id))
+            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $p->event_id)->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types')))
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
-                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+                    ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
                 if ($cutoff) {
                     $qq->where('created_at', '<=', $cutoff);
                 }

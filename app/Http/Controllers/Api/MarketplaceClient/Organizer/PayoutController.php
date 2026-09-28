@@ -149,6 +149,7 @@ class PayoutController extends BaseController
                 $eventId = $event->id;
                 $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
                     ->where(function ($q) use ($eventId) {
                         $q->where('event_id', $eventId)
                           ->orWhere('marketplace_event_id', $eventId);
@@ -201,6 +202,7 @@ class PayoutController extends BaseController
                             $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId);
                         })
                         ->whereIn('status', ['valid', 'used'])
+                        ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                         ->get(['id', 'order_id', 'price'])
                         ->groupBy('order_id');
 
@@ -330,6 +332,7 @@ class PayoutController extends BaseController
                         ->forEvent((int) $event->id, (int) $organizer->marketplace_client_id),
                     'tickets_sold' => \App\Models\Ticket::whereIn('order_id', $completedOrders->pluck('id'))
                         ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                        ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                         ->count(),
                 ];
             });

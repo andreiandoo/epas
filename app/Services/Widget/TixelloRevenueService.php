@@ -55,7 +55,8 @@ class TixelloRevenueService
 
     /**
      * Sursele de comandă care NU sunt vânzări reale prin platformă:
-     *   test_order      — POS smoke-test (10 lei/bilet, meta.is_test=true)
+     *   test_order      — comenzi de test
+     *   pos_test        — vanzari Test POS (10 lei/bilet, meta.is_test=true)
      *   legacy_import   — import unic din sistemul vechi WordPress AmBilet
      *   external_import — comenzi importate din alte sisteme (Njoy, etc.)
      *
@@ -64,7 +65,7 @@ class TixelloRevenueService
      * nu i-au adus niciun ban efectiv. Aceeași excludere o face
      * SalesBreakdownService + BillingBreakdown (sursa de adevăr).
      */
-    public const EXCLUDED_SOURCES = ['test_order', 'legacy_import', 'external_import'];
+    public const EXCLUDED_SOURCES = ['test_order', 'pos_test', 'legacy_import', 'external_import'];
 
     /**
      * Comisionul Tixello din vânzarea de bilete, pe monedă.
@@ -108,6 +109,8 @@ class TixelloRevenueService
             ->join('tenants', 'tenants.id', '=', 'orders.tenant_id')
             ->whereNull('orders.marketplace_client_id')
             ->whereIn('tickets.status', ['valid', 'used'])
+            // Test POS nu intra in comision
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->selectRaw(
                 'orders.currency as currency, COALESCE(SUM(COALESCE(tickets.price, 0)'
                 . ' * COALESCE(tenants.commission_rate, 0) / 100), 0) as commission'
@@ -126,6 +129,8 @@ class TixelloRevenueService
             ->join('tickets', 'tickets.order_id', '=', 'orders.id')
             ->join('marketplace_clients', 'marketplace_clients.id', '=', 'orders.marketplace_client_id')
             ->whereIn('tickets.status', ['valid', 'used'])
+            // Test POS nu intra in comision
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->selectRaw(
                 'orders.currency as currency, COALESCE(SUM(COALESCE(tickets.price, 0)'
                 . ' * COALESCE(marketplace_clients.commission_rate, 0) / 100), 0) as commission'
@@ -226,6 +231,8 @@ class TixelloRevenueService
         $value = (float) DB::table('tickets')
             ->where('order_id', $order->id)
             ->whereIn('status', ['valid', 'used'])
+            // Test POS nu intra in comision
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
             ->sum('price');
 
         $rate = 0.0;

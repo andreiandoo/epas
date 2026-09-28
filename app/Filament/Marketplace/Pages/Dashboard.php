@@ -529,7 +529,7 @@ class Dashboard extends Page
             // legacy_import (orders migrated from the previous system) so the
             // figures reflect the full history. Only the period/sales views
             // (daily report + Vânzări chart) exclude legacy_import.
-            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import'])
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
@@ -554,6 +554,8 @@ class Dashboard extends Page
         $ticketStats = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
             ->join('events', 'ticket_types.event_id', '=', 'events.id')
             ->where('events.marketplace_client_id', $marketplaceId)
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->selectRaw('COUNT(*) as total_db')
             ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
             ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') AND DATE(tickets.created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
@@ -564,11 +566,14 @@ class Dashboard extends Page
         // as each resource's getEloquentQuery: orders by marketplace_client_id,
         // tickets by order OR ticketType.event marketplace_client_id (the join
         // above misses orphan/legacy tickets with no ticket_type).
-        $totalOrdersPage = Order::where('marketplace_client_id', $marketplaceId)->count();
+        // Test POS nu intra in statistici (nici comenzile, nici biletele de test)
+        $totalOrdersPage = Order::where('marketplace_client_id', $marketplaceId)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+            ->count();
         $totalTicketsPage = Ticket::where(function ($q) use ($marketplaceId) {
             $q->whereHas('order', fn ($q2) => $q2->where('marketplace_client_id', $marketplaceId))
                 ->orWhereHas('ticketType.event', fn ($q2) => $q2->where('marketplace_client_id', $marketplaceId));
-        })->count();
+        })->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))->count();
 
         // External import counts — single combined query
         $externalOrders = Order::where('marketplace_client_id', $marketplaceId)
@@ -631,7 +636,8 @@ class Dashboard extends Page
                 });
             })
             ->withCount(['tickets as sold_tickets_count' => function ($q) {
-                $q->whereIn('tickets.status', ['valid', 'used']);
+                $q->whereIn('tickets.status', ['valid', 'used'])
+                    ->tap(fn ($q2) => \App\Support\TestPos::excludeTickets($q2, 'tickets.ticket_type_id'));
             }])
             ->get();
 
@@ -651,7 +657,7 @@ class Dashboard extends Page
                 // Top-live-events revenue: live (current/upcoming) events have
                 // no legacy_import orders attached, so this matches the All
                 // Time treatment — leave legacy in for consistency.
-                ->whereNotIn('source', ['test_order', 'external_import'])
+                ->whereNotIn('source', ['test_order', 'pos_test', 'external_import'])
                 ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
                 ->groupBy('eid')
                 ->pluck('rev', 'eid');
@@ -1048,6 +1054,8 @@ class Dashboard extends Page
             ->whereIn('t.status', ['valid', 'used'])
             ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
             ->whereNotIn('o.source', $excludedSources)
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
             ->whereBetween('t.created_at', [$startDate, $endDate])
             ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, COUNT(*) as count")
             ->groupBy('date')
@@ -1164,10 +1172,12 @@ class Dashboard extends Page
             ->where('events.marketplace_client_id', $marketplaceId)
             ->whereIn('tickets.status', ['valid', 'used'])
             ->whereBetween('tickets.created_at', [$monthStart, $monthEnd])
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))->from('orders')
                     ->whereColumn('orders.id', 'tickets.order_id')
-                    ->where('orders.source', '!=', 'external_import');
+                    ->whereNotIn('orders.source', ['external_import', 'test_order', 'pos_test']);
             })
             ->count();
 
@@ -1283,6 +1293,8 @@ class Dashboard extends Page
                     ->orWhereIn('o.event_id', $eventSub);
             })
             ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
             ->whereBetween('t.created_at', [$monthStart, $monthEnd])
             ->where(function ($q) {
                 $q->where(function ($q2) {
@@ -1478,6 +1490,8 @@ class Dashboard extends Page
             ->whereIn('t.status', ['valid', 'used'])
             ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
             ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
             ->whereBetween('o.created_at', [$monthStart, $monthEnd])
             ->distinct()
             ->pluck('e.id');
@@ -1518,6 +1532,8 @@ class Dashboard extends Page
             ->whereIn('t.status', ['valid', 'used'])
             ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
             ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
             ->whereBetween('o.created_at', [$start, $end])
             ->select('t.order_id', 't.price', 'e.id as eid', 'o.total as order_total')
             ->get();
@@ -1586,6 +1602,7 @@ class Dashboard extends Page
                         $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
                     })
                     ->whereIn('status', ['valid', 'used'])
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
                     ->min('created_at');
                 $days = $firstSale
                     ? max(1, Carbon::parse($firstSale)->timezone($tz)->startOfDay()->diffInDays(Carbon::now($tz)->startOfDay()) + 1)
@@ -1614,6 +1631,8 @@ class Dashboard extends Page
                     ->whereIn('t.status', ['valid', 'used'])
                     ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
                     ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+                    // Test POS nu intra in statistici
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
                     ->whereBetween('t.created_at', [$since, $todayEnd])
                     ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as d,
                         COUNT(*) as tickets,
@@ -1682,6 +1701,19 @@ class Dashboard extends Page
                     $posOrders = Order::where('event_id', $event->id)
                         ->whereIn('status', ['paid', 'completed'])
                         ->whereIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+                        // Comenzile doar cu bilete Test POS (vechi, cu sursa pos_app) nu intra in cash/card
+                        ->where(function ($w) {
+                            $w->whereNotExists(function ($q) {
+                                $q->select(DB::raw(1))->from('tickets')
+                                    ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+                                    ->whereColumn('tickets.order_id', 'orders.id')
+                                    ->whereRaw(\App\Support\TestPos::typeSql('ticket_types'));
+                            })->orWhereExists(function ($q) {
+                                $q->select(DB::raw(1))->from('tickets')
+                                    ->whereColumn('tickets.order_id', 'orders.id')
+                                    ->tap(fn ($q2) => \App\Support\TestPos::excludeTickets($q2, 'tickets.ticket_type_id'));
+                            });
+                        })
                         ->whereBetween('paid_at', [$sFrom->copy()->utc(), $sTo->copy()->utc()]);
                     $cash = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'cash'")->sum('total'), 2);
                     $card = round((float) (clone $posOrders)->whereRaw("meta->>'payment_method' = 'card'")->sum('total'), 2);
@@ -1818,6 +1850,8 @@ class Dashboard extends Page
             ->whereIn('tickets.status', ['valid', 'used'])
             ->whereIn('orders.status', $paidStatuses)
             ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->selectRaw('events.id as eid, COUNT(*) as cnt')
             ->groupBy('events.id')
             ->pluck('cnt', 'eid');

@@ -1357,11 +1357,11 @@ class Event extends Model
             return $this->capacity;
         }
 
-        // Otherwise sum from ticket types (-1 means unlimited)
-        if ($this->ticketTypes()->where('quota_total', '<', 0)->exists()) {
+        // Otherwise sum from ticket types (-1 means unlimited); Test POS nu intra in capacitate
+        if ($this->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->where('quota_total', '<', 0)->exists()) {
             return -1;
         }
-        return $this->ticketTypes()->sum('quota_total') ?: 0;
+        return $this->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->sum('quota_total') ?: 0;
     }
 
     /**
@@ -1496,6 +1496,9 @@ class Event extends Model
                 // quota planning.
                 'capacity' => 10,
                 'quota_sold' => 0,
+                // Stoc propriu: vanzarile de test nu consuma din capacitatea
+                // generala a evenimentului (general_quota).
+                'is_independent_stock' => true,
                 'is_active' => true,
                 'is_entry_ticket' => true,
                 'is_refundable' => false,

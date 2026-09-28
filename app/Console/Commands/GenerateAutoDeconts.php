@@ -102,6 +102,8 @@ class GenerateAutoDeconts extends Command
         $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            // Comenzile de test (Test POS, preview) nu se deconteaza.
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q))
             ->get();
 
         $commissionMode = $event->getEffectiveCommissionMode();

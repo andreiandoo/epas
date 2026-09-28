@@ -166,6 +166,9 @@ class SalesBreakdownService
         // dates, not datetimes.
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', $ticketStatuses)
+            // Biletele Test POS nu exista in bani, oricare ar fi sursa
+            // comenzii (vanzarile vechi erau scrise ca 'pos_app').
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
             ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos, $orderStatuses, $excludedSources) {
                 // Normal flow: ticket tied to a paid-status order.
                 // See self::PAID_ORDER_STATUSES for the exact list — includes
@@ -568,6 +571,7 @@ class SalesBreakdownService
         // moment the refund was actually processed).
         $keptCommissionQ = \DB::table('marketplace_refund_items as ri')
             ->join('tickets as t', 'ri.ticket_id', '=', 't.id')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
             ->where(function ($q) use ($eventId) {
                 $q->where('t.event_id', $eventId)
                     ->orWhere('t.marketplace_event_id', $eventId);
@@ -595,6 +599,7 @@ class SalesBreakdownService
         // both sides of every refund without having to open the payout.
         $refundedPrincipalQ = \DB::table('marketplace_refund_items as ri')
             ->join('tickets as t', 'ri.ticket_id', '=', 't.id')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
             ->where(function ($q) use ($eventId) {
                 $q->where('t.event_id', $eventId)
                     ->orWhere('t.marketplace_event_id', $eventId);
@@ -779,6 +784,7 @@ class SalesBreakdownService
 
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
             ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                 $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                     $q->whereIn('status', self::PAID_ORDER_STATUSES)

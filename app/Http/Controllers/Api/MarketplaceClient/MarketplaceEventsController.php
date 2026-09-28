@@ -1390,7 +1390,9 @@ class MarketplaceEventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        $ttIds = $event->ticketTypes->pluck('id')->toArray();
+        // Test POS nu intra in statistici
+        $realTicketTypes = $event->ticketTypes->reject(fn ($tt) => $tt->isTestPos())->values();
+        $ttIds = $realTicketTypes->pluck('id')->toArray();
 
         // Per-ticket-type valid-or-used count, restricted to confirmed orders
         // (or invitation tickets with no order). Mirrors the logic used by
@@ -1431,7 +1433,7 @@ class MarketplaceEventsController extends BaseController
             : null;
         $city = $event->venue?->city ?? $event->marketplaceCity?->name;
 
-        $ticketTypes = $event->ticketTypes->map(function ($tt) use ($soldByType) {
+        $ticketTypes = $realTicketTypes->map(function ($tt) use ($soldByType) {
             $sold = (int) ($soldByType[$tt->id] ?? 0);
             $rawTotal = (int) ($tt->quota_total ?? 0);
             $isUnlimited = $rawTotal < 0;
@@ -1453,7 +1455,7 @@ class MarketplaceEventsController extends BaseController
         })->values();
 
         $totalSold = (int) $soldByType->sum();
-        $totalCapacity = $event->ticketTypes->reduce(function ($carry, $tt) {
+        $totalCapacity = $realTicketTypes->reduce(function ($carry, $tt) {
             $q = (int) ($tt->quota_total ?? 0);
             return $carry + max(0, $q);
         }, 0);

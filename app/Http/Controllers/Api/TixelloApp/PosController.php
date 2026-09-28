@@ -140,6 +140,15 @@ class PosController extends Controller
                     );
                 }
 
+                // Test POS: biletele de test nu se amesteca cu cele reale, iar
+                // un cos numai de test se scrie ca 'pos_test' — exclus din
+                // decont, factura POS, sold si rapoarte. Vezi OrderSource.
+                $testFlags = collect($rows)->map(fn ($r) => $r['tt']->isTestPos())->unique();
+                if ($testFlags->count() > 1) {
+                    throw new \RuntimeException('Biletele Test POS nu pot fi vândute în aceeași comandă cu bilete reale.');
+                }
+                $source = $testFlags->first() === true ? 'pos_test' : OrderSource::TIXELLO_APP_POS;
+
                 $order = Order::create([
                     'order_number' => 'POS-'.strtoupper(Str::random(8)),
                     'marketplace_client_id' => $org->marketplace_client_id,
@@ -148,7 +157,7 @@ class PosController extends Controller
                     'total' => $total,
                     'currency' => 'RON',
                     'status' => 'paid',                         // banii au fost incasati la usa
-                    'source' => OrderSource::TIXELLO_APP_POS,   // 'pos_app'
+                    'source' => $source,   // 'pos_app' (sau 'pos_test')
                     'paid_at' => now(),
                     'meta' => [
                         'event_id' => $event->id,

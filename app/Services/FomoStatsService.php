@@ -82,6 +82,7 @@ class FomoStatsService
         $real = Ticket::where('event_id', $event->id)
             ->whereIn('status', ['valid', 'used'])
             ->where('created_at', '>=', now()->subDay())
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->count();
 
         $inflated = (int) max(11, ceil($real * 2.5));
@@ -241,7 +242,9 @@ class FomoStatsService
 
     protected function totalCapacity(Event $event): int
     {
+        // Test POS nu intra in capacitate / vandute
         $sum = TicketType::where('event_id', $event->id)
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->where(function ($q) {
                 $q->whereNull('quota_total')
                     ->orWhere('quota_total', '>=', 0);
@@ -252,6 +255,7 @@ class FomoStatsService
         // treat unlimited tiers as "huge but not infinite" so the scarcity
         // bar still renders something sensible.
         $hasUnlimited = TicketType::where('event_id', $event->id)
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->where(function ($q) {
                 $q->whereNull('quota_total')
                     ->orWhere('quota_total', '<', 0);
@@ -266,7 +270,7 @@ class FomoStatsService
 
     protected function totalSold(Event $event): int
     {
-        return (int) TicketType::where('event_id', $event->id)->sum('quota_sold');
+        return (int) TicketType::where('event_id', $event->id)->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->sum('quota_sold');
     }
 
     protected function daysToEvent(Event $event): int

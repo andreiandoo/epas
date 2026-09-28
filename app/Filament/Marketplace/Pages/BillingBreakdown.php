@@ -100,7 +100,7 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereIn('status', $validStatuses)
-            ->whereNotIn('source', ['test_order', 'external_import']);
+            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import']);
 
         if ($monthStart && $monthEnd) {
             $query->whereBetween('created_at', [$monthStart, $monthEnd]);
@@ -204,7 +204,7 @@ class BillingBreakdown extends Page
         // migrations from Wordpress), and legacy_import (older Wordpress data
         // pre-migration). Mirrors Dashboard::computeMonthlyBilling so the two
         // pages agree on which orders count toward monthly commission.
-        $excludedSources = ['test_order', 'external_import', 'legacy_import'];
+        $excludedSources = ['test_order', 'pos_test', 'external_import', 'legacy_import'];
 
         $eventBreakdown = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
                 $q->where('marketplace_client_id', $marketplaceId);
@@ -275,6 +275,8 @@ class BillingBreakdown extends Page
                 ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                 ->whereIn('tt.event_id', $eventIds)
                 ->whereNotIn('o.source', $excludedSources)
+                // Test POS nu intra in statistici
+                ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
                 ->whereIn('t.status', ['valid', 'used'])
                 ->where(function ($q) {
                     $q->whereNull('t.refund_status')
@@ -367,6 +369,7 @@ class BillingBreakdown extends Page
                 ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                 ->whereIn('t.order_id', $orderIds)
                 ->whereIn('t.status', ['valid', 'used'])
+                ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
                 ->selectRaw('t.order_id, tt.event_id, SUM(t.price) as val')
                 ->groupBy('t.order_id', 'tt.event_id')
                 ->get();
@@ -439,6 +442,19 @@ class BillingBreakdown extends Page
             })
             ->whereIn('status', $paidStatuses)
             ->whereNotIn('source', $excludedSources)
+            // Comenzile doar cu bilete Test POS (vechi, cu sursa pos_app) nu intra in incasari
+            ->where(function ($w) {
+                $w->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))->from('tickets')
+                        ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+                        ->whereColumn('tickets.order_id', 'orders.id')
+                        ->whereRaw(\App\Support\TestPos::typeSql('ticket_types'));
+                })->orWhereExists(function ($q) {
+                    $q->select(DB::raw(1))->from('tickets')
+                        ->whereColumn('tickets.order_id', 'orders.id')
+                        ->tap(fn ($q2) => \App\Support\TestPos::excludeTickets($q2, 'tickets.ticket_type_id'));
+                });
+            })
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw("SUM(CASE WHEN source IN ('pos_app','venue_owner_pos','pos') THEN total ELSE 0 END) as pos_revenue")
             ->selectRaw("SUM(CASE WHEN source NOT IN ('pos_app','venue_owner_pos','pos') THEN total ELSE 0 END) as online_revenue")
@@ -474,6 +490,8 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereNotIn('o.source', $excludedSources)
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
             ->whereBetween('t.created_at', [$monthStart, $monthEnd])
             ->select(
                 't.id',

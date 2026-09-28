@@ -1345,6 +1345,8 @@ class EventResource extends Resource
                                         // up in the per-ticket-type breakdown below.
                                         $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->whereIn('status', ['valid', 'used'])
+                                            // Test POS nu intra in statistici
+                                            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                                             ->where(function ($q) {
                                                 $q->whereHas('order', fn($oq) => $oq
                                                     ->where('source', '!=', 'external_import')
@@ -1355,7 +1357,7 @@ class EventResource extends Resource
                                             })
                                             ->count();
 
-                                        $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
+                                        $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->reject(fn ($tt) => $tt->isTestPos())->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
                                         $views = $record->views ?? $record->views_count ?? 0;
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
@@ -1387,7 +1389,9 @@ class EventResource extends Resource
                                             ->where(function ($q) {
                                                 $q->whereHas('order', fn($oq) => $oq->where('source', '!=', 'external_import'))
                                                   ->orWhere(fn ($iq) => $iq->whereNull('order_id')->where('meta->is_invitation', true));
-                                            });
+                                            })
+                                            // Test POS nu intra in statistici
+                                            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'));
                                         $ticketCountValid = (clone $ticketsQuery)
                                             ->whereIn('status', ['valid', 'used'])
                                             ->where(function ($q) {
@@ -1400,7 +1404,7 @@ class EventResource extends Resource
                                         $ordersQuery = \App\Models\Order::where(fn ($q) => $q
                                             ->where('event_id', $eventId)
                                             ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                        )->where('source', '!=', 'external_import');
+                                        )->whereNotIn('source', ['external_import', 'test_order', 'pos_test']);
                                         $orderCountCompleted = (clone $ordersQuery)->whereIn('status', ['completed', 'confirmed'])->count();
                                         $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $eventId;
                                         $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $eventId;
@@ -1623,7 +1627,8 @@ class EventResource extends Resource
                                             return $rateFmt . '% ' . $modeLabel;
                                         };
 
-                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $perType, $formatCommission) {
+                                        // Test POS are cardul lui separat, nu apare in tabel
+                                        $rows = $record->ticketTypes->reject(fn ($tt) => $tt->isTestPos())->map(function ($tt) use (&$totals, $perType, $formatCommission) {
                                             // Valid/cancelled counts include all non-external-import tickets
                                             // (including invitations without an order) — displayed for inventory.
                                             $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
@@ -2309,11 +2314,21 @@ class EventResource extends Resource
                                         \Illuminate\Support\Facades\DB::transaction(function () use ($tt) {
                                             $tickets = \App\Models\Ticket::where('ticket_type_id', $tt->id)->get(['id', 'order_id']);
                                             $orderIds = $tickets->pluck('order_id')->filter()->unique()->all();
+                                            // Comenzile care au DOAR bilete Test POS de sters (orice sursa, inclusiv
+                                            // vechile pos_app), calculate inainte de stergerea biletelor.
+                                            // O comanda cu macar un alt bilet (real) nu se atinge.
+                                            $testOnlyOrderIds = empty($orderIds) ? [] : \App\Models\Order::whereIn('id', $orderIds)
+                                                ->whereNotExists(function ($q) use ($tt) {
+                                                    $q->select(\Illuminate\Support\Facades\DB::raw(1))->from('tickets')
+                                                        ->whereColumn('tickets.order_id', 'orders.id')
+                                                        ->where(fn ($w) => $w->whereNull('tickets.ticket_type_id')
+                                                            ->orWhere('tickets.ticket_type_id', '<>', $tt->id));
+                                                })
+                                                ->pluck('id')
+                                                ->all();
                                             \App\Models\Ticket::where('ticket_type_id', $tt->id)->delete();
-                                            if (!empty($orderIds)) {
-                                                \App\Models\Order::whereIn('id', $orderIds)
-                                                    ->where('source', 'pos_test')
-                                                    ->delete();
+                                            if (!empty($testOnlyOrderIds)) {
+                                                \App\Models\Order::whereIn('id', $testOnlyOrderIds)->delete();
                                             }
                                             $tt->update(['quota_sold' => 0]);
                                         });

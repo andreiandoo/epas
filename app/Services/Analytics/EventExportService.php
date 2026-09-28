@@ -111,6 +111,8 @@ class EventExportService
 
             $orders = Order::where('marketplace_event_id', $event->id)
                 ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                // Comenzile de test (Test POS) nu intra in export
+                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
                 ->orderBy('paid_at', 'desc')
                 ->limit(100)
                 ->get();
@@ -120,7 +122,7 @@ class EventExportService
                     $order->paid_at?->format('Y-m-d H:i') ?? $order->created_at->format('Y-m-d H:i'),
                     $order->order_number ?? $order->id,
                     $this->maskEmail($order->customer_email),
-                    $order->tickets()->count(),
+                    $order->tickets()->tap(fn ($tq) => \App\Support\TestPos::excludeTickets($tq, 'tickets.ticket_type_id'))->count(),
                     number_format($order->total, 2),
                     $order->source ?? 'Direct',
                 ];
@@ -288,7 +290,13 @@ class EventExportService
 
         $query = Order::where('marketplace_event_id', $event->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->with(['tickets.ticketType', 'marketplaceCustomer'])
+            // Comenzile de test (Test POS) nu intra in export
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+            ->with([
+                'tickets' => fn ($tq) => \App\Support\TestPos::excludeTickets($tq, 'tickets.ticket_type_id'),
+                'tickets.ticketType',
+                'marketplaceCustomer',
+            ])
             ->orderBy('paid_at', 'desc');
 
         if ($dateRange) {

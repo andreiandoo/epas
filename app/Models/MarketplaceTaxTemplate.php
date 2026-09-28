@@ -1005,6 +1005,11 @@ class MarketplaceTaxTemplate extends Model
                     if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
                         continue;
                     }
+                    // Test POS nu se declara niciodata (randurile vechi, create
+                    // doar cu numele, nu au is_declarable = false).
+                    if ($ticketType->isTestPos()) {
+                        continue;
+                    }
                     // Skip invitations — no series, no price, not part of fiscal
                     // declaration. Detected the same way as the EventResource
                     // breakdown: by exact name "Invitatie" or meta flag.
@@ -1197,6 +1202,7 @@ class MarketplaceTaxTemplate extends Model
 
                     $pvTt = $pvAlloc->ticketType;
                     if (!$pvTt) continue;
+                    if ($pvTt->isTestPos()) continue;
                     $pvTtMeta = is_array($pvTt->meta ?? null) ? $pvTt->meta : [];
                     $pvIsInvitation = ($pvTt->name === 'Invitatie') || ((bool) ($pvTtMeta['is_invitation'] ?? false));
                     if ($pvIsInvitation) continue;
@@ -1313,6 +1319,7 @@ class MarketplaceTaxTemplate extends Model
                                           ->orWhere('marketplace_event_id', $event->id))
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q))
                     ->sum('discount_amount');
                 if ($eventDiscountSum > 0) {
                     $totalSalesValue = max(0.0, $totalSalesValue - $eventDiscountSum);
@@ -1350,6 +1357,9 @@ class MarketplaceTaxTemplate extends Model
             if ($template && $template->type === 'declaratie_impozite' && $event) {
                 $realSalesValue = 0.0;
                 foreach ($event->ticketTypes as $tt) {
+                    if ($tt->isTestPos()) {
+                        continue;
+                    }
                     $realSold = \App\Models\Ticket::where('event_id', $event->id)
                         ->where('ticket_type_id', $tt->id)
                         ->whereIn('status', ['valid', 'used', 'checked_in'])
@@ -2485,6 +2495,7 @@ class MarketplaceTaxTemplate extends Model
                     ->where(fn ($q) => $q->where('event_id', $payout->event_id)
                                           ->orWhere('marketplace_event_id', $payout->event_id))
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q))
                     ->where(function ($q) {
                         $q->where('discount_amount', '>', 0)
                           ->orWhere('promo_discount', '>', 0);
@@ -3328,13 +3339,14 @@ class MarketplaceTaxTemplate extends Model
         $cutoff = $payout->created_at;
 
         $tickets = \App\Models\Ticket::with(['ticketType:id,price_cents,sale_price_cents', 'order:id,discount_amount,subtotal,created_at'])
-            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $payout->event_id))
+            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $payout->event_id)->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types')))
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
-                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+                    ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
                 if ($cutoff) {
                     $qq->where('created_at', '<=', $cutoff);
                 }

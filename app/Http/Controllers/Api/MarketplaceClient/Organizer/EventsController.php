@@ -1095,7 +1095,8 @@ class EventsController extends BaseController
         // include invitations (no order) alongside regular tickets. Same
         // tickets.event_id-based scoping as the listing query.
         $statsBase = function () use ($eventScope) {
-            return \App\Models\Ticket::where($eventScope);
+            // Test POS nu intra in statistici
+            return \App\Support\TestPos::excludeTickets(\App\Models\Ticket::where($eventScope), 'tickets.ticket_type_id');
         };
 
         $totalTickets = $statsBase()->whereIn('status', ['valid', 'used'])->count();
@@ -1132,6 +1133,7 @@ class EventsController extends BaseController
 
         $bySource = \App\Models\Ticket::where($joinSafeScope)
             ->whereIn('tickets.status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
             ->where(function ($q) {
                 $q->whereNull('orders.source')
@@ -1170,6 +1172,7 @@ class EventsController extends BaseController
                 ->where(function ($q) {
                     $q->whereRaw("(meta->>'is_test')::boolean IS DISTINCT FROM true");
                 })
+                ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
                 ->where(function ($q) {
                     $q->whereRaw("(meta->>'is_invitation')::boolean IS DISTINCT FROM true")
                         ->orWhereNull('meta');
@@ -1185,6 +1188,7 @@ class EventsController extends BaseController
             ->whereIn('tickets.status', ['valid', 'used'])
             ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
             ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->where(function ($q) {
                 $q->whereNull('orders.source')
                     ->orWhere('orders.source', '!=', 'pos_test');
@@ -1235,6 +1239,7 @@ class EventsController extends BaseController
             $hourlyRows = \App\Models\Ticket::where($joinSafeScope)
                 ->whereIn('tickets.status', ['valid', 'used'])
                 ->whereNotNull('tickets.checked_in_at')
+                ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->leftJoin('orders', 'orders.id', '=', 'tickets.order_id')
                 ->where(function ($q) {
                     $q->whereNull('orders.source')
@@ -1425,7 +1430,8 @@ class EventsController extends BaseController
         // Stats — use the same union (orders + invitations) so totals match
         // what's actually rendered in the table.
         $statsQuery = \App\Models\Ticket::where($branchTickets)
-            ->whereIn('status', ['valid', 'used']);
+            ->whereIn('status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'));
 
         $totalTickets = $statsQuery->count();
         $checkedInCount = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
@@ -1439,6 +1445,7 @@ class EventsController extends BaseController
         $revenue = (float) \App\Models\Ticket::whereIn('event_id', $scopedEventIds)
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', fn ($q) => $q->whereIn('status', $validOrderStatuses))
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->sum('price');
 
         // Unique orders touching this organizer's events. Counted via the
@@ -1448,6 +1455,7 @@ class EventsController extends BaseController
         $ordersCount = (int) \App\Models\Ticket::whereIn('event_id', $scopedEventIds)
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', fn ($q) => $q->whereIn('status', $validOrderStatuses))
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->whereNotNull('order_id')
             ->distinct('order_id')
             ->count('order_id');
@@ -2107,6 +2115,7 @@ class EventsController extends BaseController
                         });
                 });
             })
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->with(['order.marketplaceCustomer', 'ticketType'])
             ->orderByDesc('created_at')
             ->get();
@@ -2196,13 +2205,17 @@ class EventsController extends BaseController
         }
 
         // Get completed orders
-        $completedOrders = $event->orders()->whereIn('status', ['paid', 'confirmed', 'completed'])->get();
+        $completedOrders = $event->orders()->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+            ->get();
 
         // Calculate statistics
         $totalTicketsSold = $event->tickets()
             ->whereHas('order', function ($q) {
                 $q->whereIn('status', ['paid', 'confirmed', 'completed']);
-            })->count();
+            })
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
+            ->count();
 
         $totalRevenue = $completedOrders->sum('total');
         $totalOrders = $completedOrders->count();
@@ -2212,11 +2225,12 @@ class EventsController extends BaseController
             ->whereHas('order', function ($q) {
                 $q->whereIn('status', ['paid', 'confirmed', 'completed']);
             })
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->whereNotNull('checked_in_at')
             ->count();
 
-        // Ticket types breakdown
-        $ticketTypeStats = $event->ticketTypes->map(function ($tt) use ($event) {
+        // Ticket types breakdown (fara Test POS)
+        $ticketTypeStats = $event->ticketTypes->reject(fn ($tt) => $tt->isTestPos())->values()->map(function ($tt) use ($event) {
             $soldTickets = fn () => $event->tickets()
                 ->where('ticket_type_id', $tt->id)
                 ->whereHas('order', function ($q) {
@@ -2326,6 +2340,7 @@ class EventsController extends BaseController
                         });
                 });
             })
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->with(['order.marketplaceCustomer', 'order.event', 'ticketType.event'])
             ->orderByDesc('created_at')
             ->get();
@@ -2519,9 +2534,10 @@ class EventsController extends BaseController
         }
 
         $validStatuses = ['paid', 'confirmed', 'completed'];
-        $completedOrders = $event->orders()->whereIn('status', $validStatuses);
+        $completedOrders = \App\Support\TestPos::excludeOrders($event->orders()->whereIn('status', $validStatuses), 'orders.source');
 
-        $ticketStats = $event->ticketTypes()->get()->map(function ($tt) use ($event, $validStatuses) {
+        // Test POS nu intra in statistici
+        $ticketStats = $event->ticketTypes()->get()->reject(fn ($tt) => $tt->isTestPos())->values()->map(function ($tt) use ($event, $validStatuses) {
             $sold = $event->orders()
                 ->whereIn('status', $validStatuses)
                 ->whereHas('tickets', function ($q) use ($tt) {
@@ -2677,6 +2693,7 @@ class EventsController extends BaseController
         $scopedOrders = fn () => $event->orders()
             ->where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', $validStatuses)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->when($channel, fn ($q) => $orderChannelClause($q));
 
         // Base query for orders in the range (used for chart data & period comparisons)
@@ -2732,6 +2749,7 @@ class EventsController extends BaseController
                 }
             })
             ->whereIn('status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->where(function ($q) {
                 $q->whereDoesntHave('order')
                   ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
@@ -2800,6 +2818,7 @@ class EventsController extends BaseController
         $refundsTotal = (float) Order::where('event_id', $event->id)
             ->where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['refunded', 'partially_refunded'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->sum('total');
 
         $totalRevenue = $grossRevenue; // Keep for backwards compat (chart/comparison)
@@ -2831,7 +2850,7 @@ class EventsController extends BaseController
             ->count();
 
         // Capacity from ticket types
-        $capacity = $event->ticketTypes()->sum('quota_total') ?: ($event->capacity ?? 0);
+        $capacity = $event->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->sum('quota_total') ?: ($event->capacity ?? 0);
 
         // Previous period for comparison
         $periodDays = max(1, $rangeStart->diffInDays($rangeEnd));
@@ -2968,7 +2987,7 @@ class EventsController extends BaseController
         }
 
         // Ticket performance with trend and conversion
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netByTicketTypeId) {
+        $ticketPerformance = $event->ticketTypes->reject(fn ($tt) => $tt->isTestPos())->values()->map(function ($tt) use ($event, $organizer, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netByTicketTypeId) {
             // Broad filter: all valid/used tickets of this tt. Scoping by
             // ticket_type_id is already event-scoped (tt belongs to the event).
             // No event_id check — invitations sometimes have NULL event_id.
@@ -3449,11 +3468,14 @@ class EventsController extends BaseController
         $orders = \App\Models\Order::query()
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->whereIn('status', $validStatuses)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->whereHas('tickets', fn ($q) => $q->where('event_id', $eventId))
             ->with([
                 'tickets' => function ($q) use ($eventId) {
+                    // Test POS nu intra in raport
                     $q->where('event_id', $eventId)
                         ->whereIn('status', ['valid', 'used'])
+                        ->tap(fn ($qq) => \App\Support\TestPos::excludeTickets($qq, 'tickets.ticket_type_id'))
                         ->with('ticketType:id,name');
                 },
             ])
@@ -4841,6 +4863,7 @@ class EventsController extends BaseController
             'color' => $tt->color ?? '#8B5CF6',
             'currency' => $tt->currency ?? 'RON',
             'is_entry_ticket' => (bool) $tt->is_entry_ticket,
+            'meta' => $tt->isTestPos() ? ['is_test' => true] : null,
         ]);
 
         return $this->success([
@@ -5106,16 +5129,26 @@ class EventsController extends BaseController
                     'price' => (float) $tt->display_price,
                     'currency' => $tt->currency ?? 'RON',
                     'quantity' => $tt->quota_total,
-                    'quantity_sold' => $validTickets,
+                    // Test POS: aplicatiile aduna quantity_sold × price pe toate
+                    // tipurile (dashboard, rapoarte) — trimitem 0 ca biletele de
+                    // test sa nu intre in totaluri. `available` ramane real, ca
+                    // vanzarea de test sa functioneze in continuare.
+                    'quantity_sold' => $tt->isTestPos() ? 0 : $validTickets,
                     'available' => $available,
                     'min_per_order' => 1,
                     'max_per_order' => $freeWithCode !== null ? (int) ($tt->max_per_order ?: 3) : 10,
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
                     'is_visible' => $tt->status === 'active',
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
+                    // Aplicatiile POS (ambilet-app2, tixello-app, PWA scan-app)
+                    // recunosc biletul Test POS DOAR dupa meta.is_test: eticheta
+                    // TEST, blocarea cosurilor mixte, source = 'pos_test'. Fara
+                    // cheia asta il vindeau ca bilet real ('pos_app'). Serverul
+                    // decide oricum sursa (OrdersController::create).
+                    'meta' => $tt->isTestPos() ? ['is_test' => true] : null,
                     'has_seats' => $hasSeats,
                     'color' => $tt->color ?? null,
-                    'checked_in' => $checkedIn,
+                    'checked_in' => $tt->isTestPos() ? 0 : $checkedIn,
                     'is_sold_out' => (bool) ($tt->is_sold_out ?? false),
                     'free_with_code' => $freeWithCode,
                 ];

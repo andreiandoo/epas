@@ -191,14 +191,33 @@ class OrdersController extends BaseController
                 $ticketType->increment('quota_sold', $quantity);
             }
 
+            // Test POS: sursa se decide AICI, din tipurile de bilete, nu din
+            // ce trimite clientul. Aplicatiile nu primeau meta.is_test si
+            // vindeau biletele de test ca 'pos_app' (confirmate, platite) —
+            // intrau in decont, factura POS, sold si dashboard. Aceeasi regula
+            // ca VenueOwner/OrdersController: cos numai de test → 'pos_test',
+            // cos mixt → refuzat, iar 'pos_test' cerut pentru bilete reale nu
+            // e acceptat (altfel s-ar putea ocoli comisionul).
+            $testFlags = collect($orderItems)->map(fn ($i) => $i['ticket_type']->isTestPos())->unique();
+            if ($testFlags->count() > 1) {
+                throw new \Exception('Biletele Test POS nu pot fi vândute în aceeași comandă cu bilete reale');
+            }
+            $orderSource = (string) $request->input('source', 'marketplace');
+            if ($testFlags->first() === true) {
+                $orderSource = 'pos_test';
+            } elseif ($orderSource === 'pos_test') {
+                $orderSource = 'pos_app';
+            }
+            // Vanzare fizica din aplicatie: reala sau de test.
+            $isAppPosSale = in_array($orderSource, ['pos_app', 'pos_test'], true);
+
             // Calculate commission
             // POS/mobile app orders (source=pos_app) always use total = subtotal, regardless of commission_mode.
             // The ticket price IS the price the customer pays at the door — commission is never added on top.
             // For online orders: respect commission_mode (on_top adds to price; included deducts from organizer payout).
-            $posSource = $request->input('source', 'marketplace');
             $commissionMode = $event->getEffectiveCommissionMode();
             $commissionAmount = round($subtotal * ($commission / 100), 2);
-            $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && $posSource !== 'pos_app';
+            $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && !$isAppPosSale;
             $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
 
             // POS operators authenticate with a Sanctum token named
@@ -295,7 +314,7 @@ class OrdersController extends BaseController
                 'total' => $total,
                 'currency' => 'RON',
                 'locale' => $resolvedLocale,
-                'source' => $request->input('source', 'marketplace'),
+                'source' => $orderSource,
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $event->marketplace_organizer_id,
                 'newsletter_attribution_id' => $newsletterAttributionId,
@@ -473,10 +492,12 @@ class OrdersController extends BaseController
             // causing PostgreSQL to abort the entire transaction (25P02
             // cascade).
             $paymentMethod = $request->input('payment_method');
-            $source = $request->input('source', 'marketplace');
+            $source = $orderSource;
             $isInvitation = (bool) $request->input('is_invitation', false);
             $isOfflinePos = in_array($paymentMethod, ['cash', 'card'], true);
-            if (($isOfflinePos || $isInvitation) && $source === 'pos_app') {
+            // pos_test se confirma la fel ca pos_app, altfel biletul de test
+            // ramane „pending" si nu poate fi printat / scanat in aplicatie.
+            if (($isOfflinePos || $isInvitation) && $isAppPosSale) {
                 $posMeta = array_merge($order->meta ?? [], $isInvitation ? ['is_invitation' => true] : []);
                 if ($isOfflinePos) {
                     $posMeta['payment_method'] = $paymentMethod;
@@ -553,7 +574,7 @@ class OrdersController extends BaseController
                 ]);
             })->afterResponse();
 
-            $isPosConfirmed = $paymentMethod === 'cash' && $source === 'pos_app';
+            $isPosConfirmed = $paymentMethod === 'cash' && $isAppPosSale;
 
             $responseData = [
                 'order' => [

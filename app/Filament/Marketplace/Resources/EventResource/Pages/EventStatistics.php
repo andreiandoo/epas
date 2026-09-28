@@ -61,6 +61,8 @@ class EventStatistics extends Page
     {
         return $this->record->ticketTypes()
             ->select('id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold', 'currency', 'status')
+            // Test POS nu intra in statistici
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->get()
             ->map(fn ($type) => [
                 'id' => $type->id,
@@ -87,15 +89,18 @@ class EventStatistics extends Page
         // Query orders directly by event_id for marketplace orders
         $revenue = Order::where('event_id', $this->record->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->sum('total');
 
         // If no results, fallback to summing from ticket types (for older orders using total_cents)
         if ($revenue == 0) {
-            $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
+            $ticketTypeIds = $this->record->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->pluck('id');
             $revenueCents = Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
                     $q->whereIn('ticket_type_id', $ticketTypeIds);
                 })
                 ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
                 ->sum('total_cents');
 
             if ($revenueCents > 0) {
@@ -178,6 +183,8 @@ class EventStatistics extends Page
         // (quota_sold on ticket_types includes tickets that were later cancelled).
         $count = Ticket::where('event_id', $this->record->id)
             ->where('is_cancelled', false)
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
             ->count();
 
         if ($count === 0) {
@@ -185,6 +192,7 @@ class EventStatistics extends Page
             if ($ticketTypeIds->isNotEmpty()) {
                 $count = Ticket::whereIn('ticket_type_id', $ticketTypeIds)
                     ->where('is_cancelled', false)
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
                     ->count();
             }
         }
@@ -197,7 +205,8 @@ class EventStatistics extends Page
      */
     public function getTotalCapacity(): int
     {
-        return $this->record->ticketTypes()->sum('quota_total') ?? 0;
+        // Test POS nu intra in capacitate
+        return $this->record->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->sum('quota_total') ?? 0;
     }
 
     /**
@@ -257,6 +266,8 @@ class EventStatistics extends Page
         // Get orders data
         $orders = Order::where('event_id', $this->record->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->get(['total', 'subtotal']);
 
         $customerPaymentTotal = 0;  // What customers actually paid
@@ -339,6 +350,8 @@ class EventStatistics extends Page
     {
         // Query tickets directly by event_id for marketplace events
         $tickets = Ticket::where('event_id', $this->record->id)
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
             ->select('status', 'is_cancelled', DB::raw('count(*) as count'))
             ->groupBy('status', 'is_cancelled')
             ->get();
@@ -381,6 +394,7 @@ class EventStatistics extends Page
             $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
             if ($ticketTypeIds->isNotEmpty()) {
                 $tickets = Ticket::whereIn('ticket_type_id', $ticketTypeIds)
+                    ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q))
                     ->select('status', 'is_cancelled', DB::raw('count(*) as count'))
                     ->groupBy('status', 'is_cancelled')
                     ->get();
@@ -435,6 +449,8 @@ class EventStatistics extends Page
     {
         // Query orders directly by event_id for marketplace orders
         $orders = Order::where('event_id', $this->record->id)
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
@@ -446,6 +462,7 @@ class EventStatistics extends Page
             $orders = Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
                     $q->whereIn('ticket_type_id', $ticketTypeIds);
                 })
+                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
                 ->select('status', DB::raw('count(*) as count'))
                 ->groupBy('status')
                 ->pluck('count', 'status')
@@ -468,8 +485,9 @@ class EventStatistics extends Page
      */
     public function getDailySalesData(): array
     {
-        $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
-        $ticketTypes = $this->record->ticketTypes()->pluck('name', 'id');
+        // Test POS nu intra in grafic
+        $ticketTypeIds = $this->record->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->pluck('id');
+        $ticketTypes = $this->record->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->pluck('name', 'id');
 
         $startDate = now()->subDays(29)->startOfDay();
         $endDate = now()->endOfDay();

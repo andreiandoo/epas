@@ -45,7 +45,9 @@ class EventAnalyticsService
     protected function getOrdersQuery(Event|MarketplaceEvent $event)
     {
         $column = $this->getOrderColumn($event);
-        return Order::where($column, $event->id);
+        // Comenzile de test (Test POS) nu intra in statistici
+        return Order::where($column, $event->id)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'));
     }
 
     /**
@@ -119,20 +121,20 @@ class EventAnalyticsService
         // Tickets sold - for marketplace events, query by marketplace_event_id directly
         if ($isMarketplace) {
             $ticketsSold = Ticket::where('marketplace_event_id', $event->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->count();
 
             $ticketsToday = Ticket::where('marketplace_event_id', $event->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->whereDate('created_at', today())
                 ->count();
         } else {
             $ticketsSold = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->count();
 
             $ticketsToday = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->whereDate('created_at', today())
                 ->count();
         }
@@ -263,7 +265,7 @@ class EventAnalyticsService
         // Get tickets by day
         if ($isMarketplace) {
             $ticketsByDay = Ticket::where('marketplace_event_id', $event->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                 ->selectRaw('DATE(created_at) as date, COUNT(*) as tickets')
                 ->groupBy('date')
@@ -271,7 +273,7 @@ class EventAnalyticsService
                 ->keyBy('date');
         } else {
             $ticketsByDay = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                 ->selectRaw('DATE(created_at) as date, COUNT(*) as tickets')
                 ->groupBy('date')
@@ -327,13 +329,14 @@ class EventAnalyticsService
             $ticketColumn = 'marketplace_ticket_type_id';
         } else {
             // For Event model, try ticket types first
-            $ticketTypes = TicketType::where('event_id', $event->id)->get();
+            // Test POS nu intra in statistici
+            $ticketTypes = TicketType::where('event_id', $event->id)->get()->reject(fn ($tt) => $tt->isTestPos())->values();
             $ticketColumn = 'ticket_type_id';
 
             // If no ticket types found, query tickets by event_id directly and group
             if ($ticketTypes->isEmpty()) {
                 $tickets = Ticket::where('event_id', $event->id)
-                    ->whereIn('status', ['valid', 'checked_in'])
+                    ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                     ->get();
 
                 if ($tickets->isNotEmpty()) {
@@ -373,10 +376,10 @@ class EventAnalyticsService
             // Query tickets - use sum of actual ticket prices for accurate revenue
             if ($isMarketplace) {
                 $ticketsQuery = Ticket::where('marketplace_ticket_type_id', $ticketType->id)
-                    ->whereIn('status', ['valid', 'checked_in']);
+                    ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'));
             } else {
                 $ticketsQuery = Ticket::where('ticket_type_id', $ticketType->id)
-                    ->whereIn('status', ['valid', 'checked_in']);
+                    ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'));
             }
 
             $sold = (clone $ticketsQuery)->count();
@@ -408,7 +411,7 @@ class EventAnalyticsService
             // Calculate trend (compare to previous period)
             $periodDays = $dateRange['start']->diffInDays($dateRange['end']);
             $previousSold = Ticket::where($ticketColumn, $ticketType->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->whereBetween('created_at', [
                     $dateRange['start']->copy()->subDays($periodDays),
                     $dateRange['start']->copy()->subDay()
@@ -946,7 +949,7 @@ class EventAnalyticsService
 
         // Tickets sold
         $ticketsSold = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'checked_in'])
+            ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->whereDate('created_at', $date)
             ->count();
 
@@ -964,10 +967,11 @@ class EventAnalyticsService
 
         // Ticket breakdown
         $ticketBreakdown = TicketType::where('event_id', $event->id)
+            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
             ->get()
             ->map(function ($type) use ($date) {
                 $sold = Ticket::where('ticket_type_id', $type->id)
-                    ->whereIn('status', ['valid', 'checked_in'])
+                    ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                     ->whereDate('created_at', $date)
                     ->count();
 
@@ -1115,7 +1119,7 @@ class EventAnalyticsService
                 ->sum('total');
 
             $ticketsSold = Ticket::where('marketplace_event_id', $event->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereIn('status', ['valid', 'checked_in'])->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
 

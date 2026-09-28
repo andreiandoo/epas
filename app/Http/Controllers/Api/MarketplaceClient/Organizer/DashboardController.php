@@ -46,6 +46,7 @@ class DashboardController extends BaseController
             ->orderBy('event_date')
             ->limit(10)
             ->withCount(['tickets as tickets_sold' => function ($q) use ($organizer) {
+                \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id');
                 $q->whereHas('order', fn ($oq) => $oq->whereIn('status', ['paid', 'completed'])
                     ->where('marketplace_organizer_id', $organizer->id));
             }])
@@ -66,7 +67,7 @@ class DashboardController extends BaseController
                     'venue' => $event->venue_name,
                     'venue_city' => $venueCity,
                     'tickets_sold' => $event->tickets_sold ?? 0,
-                    'tickets_total' => $event->ticketTypes()->where('quota_total', '<', 0)->exists() ? -1 : ($event->ticketTypes()->sum('quota_total') ?: 100),
+                    'tickets_total' => $event->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->where('quota_total', '<', 0)->exists() ? -1 : ($event->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->sum('quota_total') ?: 100),
                     // Total sales (all-time) for this event — canonical cached
                     // number shared with the admin sales page / reports.
                     'revenue' => (float) $event->total_revenue,
@@ -81,7 +82,7 @@ class DashboardController extends BaseController
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
 
         $completedOrders = (clone $orders)->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order');
+            ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
 
         $commissionRate = $organizer->getEffectiveCommissionRate();
         $grossRevenue = (float) (clone $completedOrders)->sum('total');
@@ -92,12 +93,14 @@ class DashboardController extends BaseController
         $ticketsSold = \App\Models\Ticket::whereHas('order', function ($q) use ($organizer, $fromDate, $toDate) {
             $q->where('marketplace_organizer_id', $organizer->id)
               ->whereIn('status', ['paid', 'confirmed', 'completed'])
-              ->where('source', '!=', 'test_order')
+              ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES)
               ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
-        })->whereNotIn('status', ['cancelled', 'refunded', 'void'])->count();
+        })->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
+            ->count();
 
         // Order status breakdown
-        $allOrdersInPeriod = (clone $orders)->where('source', '!=', 'test_order');
+        $allOrdersInPeriod = (clone $orders)->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
         $orderBreakdown = [
             'paid' => (clone $allOrdersInPeriod)->whereIn('status', ['paid', 'confirmed', 'completed'])->count(),
             'pending' => (clone $allOrdersInPeriod)->where('status', 'pending')->count(),
@@ -110,7 +113,7 @@ class DashboardController extends BaseController
         // Weekly sales (last 7 days)
         $weeklySales = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
+            ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES)
             ->where('created_at', '>=', now()->subDays(7))
             ->withCount('tickets')
             ->get()
@@ -129,6 +132,7 @@ class DashboardController extends BaseController
                   ->orWhereIn('marketplace_event_id', $allEventIds);
             })
             ->whereIn('status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->count();
 
         $allTimeViews = 0;
@@ -216,7 +220,7 @@ class DashboardController extends BaseController
 
         $sales = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
+            ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES)
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
             ->selectRaw("{$periodExpr} as period")
             ->selectRaw('COUNT(*) as orders')
@@ -292,6 +296,7 @@ class DashboardController extends BaseController
                       ->orWhereIn('t.marketplace_event_id', $eventIds);
                 })
                 ->whereIn('t.status', ['valid', 'used'])
+                ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
                 ->whereBetween('t.created_at', [$fromUtc, $toUtc])
                 ->selectRaw($dayExpr('t.created_at') . ' as d')
                 ->selectRaw('COUNT(*) as tickets')
@@ -483,6 +488,8 @@ class DashboardController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $query = Order::where('marketplace_organizer_id', $organizer->id)
+            // Comenzile Test POS nu apar in lista de comenzi a organizatorului.
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->with([
                 'event:id,title',
                 'marketplaceEvent:id,name',
@@ -546,12 +553,13 @@ class DashboardController extends BaseController
         // Compute aggregate stats — only paid/confirmed/completed orders
         $statsQuery = (clone $query)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order');
+            ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
 
         // Count only valid tickets (not cancelled/refunded on valid orders)
         $statsOrderIds = (clone $statsQuery)->pluck('id');
         $validTickets = \App\Models\Ticket::whereIn('order_id', $statsOrderIds)
             ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->count();
 
         // Net revenue = sum of ticket base prices (without commission), with
@@ -561,6 +569,7 @@ class DashboardController extends BaseController
         // meta.discount_amount).
         $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $statsOrderIds)
             ->whereIn('status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->with(['order:id,discount_amount,subtotal'])
             ->get(['id', 'order_id', 'price', 'meta'])
             ->sum(fn ($t) => $t->getEffectivePrice());
@@ -573,7 +582,7 @@ class DashboardController extends BaseController
         ];
 
         // Order breakdown for display
-        $allOrdersQuery = (clone $query)->where('source', '!=', 'test_order');
+        $allOrdersQuery = (clone $query)->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
         $stats['order_breakdown'] = [
             'paid' => (int) (clone $allOrdersQuery)->whereIn('status', ['paid', 'confirmed', 'completed'])->count(),
             'pending' => (int) (clone $allOrdersQuery)->where('status', 'pending')->count(),
@@ -706,7 +715,10 @@ class DashboardController extends BaseController
         // (added_on_top / included) silently falls through to organizer
         // default, producing wrong Net bilet values on the CSV.
         $query = Order::where('marketplace_organizer_id', $organizer->id)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->with([
+                // Test POS nu intra in export
+                'tickets' => fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'),
                 'event:id,title,marketplace_organizer_id,commission_rate,commission_mode',
                 'marketplaceEvent:id,name',
                 'marketplaceCustomer:id,first_name,last_name,phone',
@@ -897,7 +909,7 @@ class DashboardController extends BaseController
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
+            ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES)
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->get();
 

@@ -111,6 +111,8 @@ class SalesBreakdown extends Page
                 ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                 ->whereIn('t.order_id', $onlineOrderIds)
                 ->whereIn('t.status', ['valid', 'used'])
+                // Test POS nu intra in statistici
+                ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
                 ->where(function ($q) {
                     $q->whereNull('t.refund_status')
                       ->orWhere('t.refund_status', '<>', 'refunded');
@@ -151,6 +153,19 @@ class SalesBreakdown extends Page
         $posOrders = $scopeOrders(Order::query())
             ->whereIn('status', $paidStatuses)
             ->whereIn('source', $posSources)
+            // Comenzile doar cu bilete Test POS (vechi, cu sursa pos_app) nu intra in POS
+            ->where(function ($w) {
+                $w->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))->from('tickets')
+                        ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+                        ->whereColumn('tickets.order_id', 'orders.id')
+                        ->whereRaw(\App\Support\TestPos::typeSql('ticket_types'));
+                })->orWhereExists(function ($q) {
+                    $q->select(DB::raw(1))->from('tickets')
+                        ->whereColumn('tickets.order_id', 'orders.id')
+                        ->tap(fn ($q2) => \App\Support\TestPos::excludeTickets($q2, 'tickets.ticket_type_id'));
+                });
+            })
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->get(['id', 'source', 'total', 'meta', 'marketplace_event_id', 'event_id']);
 
@@ -199,6 +214,8 @@ class SalesBreakdown extends Page
                 ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                 ->whereIn('t.order_id', $posOrderIds)
                 ->whereIn('t.status', ['valid', 'used'])
+                // Test POS nu intra in statistici
+                ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
                 ->where(function ($q) {
                     $q->whereNull('t.refund_status')
                       ->orWhere('t.refund_status', '<>', 'refunded');

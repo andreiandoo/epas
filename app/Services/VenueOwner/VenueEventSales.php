@@ -79,6 +79,8 @@ class VenueEventSales
             ->leftJoin('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
             ->whereIn('tickets.status', ['valid', 'used'])
             ->whereIn('orders.status', SalesBreakdownService::PAID_ORDER_STATUSES)
-            ->where(fn ($q) => $q->whereNull('orders.source')->orWhereNotIn('orders.source', self::TEST_SOURCES));
+            ->where(fn ($q) => $q->whereNull('orders.source')->orWhereNotIn('orders.source', self::TEST_SOURCES))
+            // Test POS nu intra in statistici
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'));
     }
 }

@@ -118,8 +118,10 @@ class EventStatsCache
         $event = Event::with('ticketTypes')->find($eventId);
         if (!$event) return self::emptyShape();
 
+        // Test POS nu intra in totaluri (per_ticket_type il pastreaza, aplicatia POS isi vede cota)
         $totalSold = (int) Ticket::where('event_id', $eventId)
             ->whereIn('status', ['valid', 'used'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->count();
 
         // Invitations have no order_id (issued directly, free) — same
@@ -128,6 +130,7 @@ class EventStatsCache
         $invitations = (int) Ticket::where('event_id', $eventId)
             ->whereIn('status', ['valid', 'used'])
             ->whereNull('order_id')
+            ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
             ->count();
         $ticketsPaid = max(0, $totalSold - $invitations);
 

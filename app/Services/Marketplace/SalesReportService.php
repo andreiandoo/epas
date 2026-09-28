@@ -149,6 +149,8 @@ class SalesReportService
             ->where(fn ($q) => $q->whereIn('marketplace_event_id', $eventIds)
                                   ->orWhereIn('event_id', $eventIds))
             ->whereIn('status', $statuses)
+            // Comenzile de test (Test POS) nu intra in raport
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
             ->whereBetween($dateColumn, [$from, $to])
             // event() points at App\Models\Event (the real source of truth);
             // marketplaceEvent is a separate model on a different table that
@@ -161,7 +163,7 @@ class SalesReportService
                 'tickets.ticketType',
                 'items',
             ])
-            ->withCount('tickets')
+            ->withCount(['tickets' => fn ($tq) => \App\Support\TestPos::excludeTickets($tq, 'tickets.ticket_type_id')])
             ->orderByDesc($dateColumn);
 
         return $q;
@@ -262,6 +264,7 @@ class SalesReportService
             if (!in_array($ticket->status, ['valid', 'used'], true)) continue;
             $tt = $ticket->ticketType;
             if (!$tt) continue;
+            if ($tt->isTestPos()) continue; // Test POS nu intra in raport
             $price = (float) ($ticket->price ?? 0);
             if ($price <= 0) {
                 $price = ((int) ($tt->sale_price_cents ?? 0) > 0

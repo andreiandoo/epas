@@ -333,14 +333,17 @@ class MarketplacePayout extends Model
         // — including ticket-type-specific promo codes — rather than the
         // catalog price stored in tickets.price.
         $tickets = \App\Models\Ticket::with('order')
-            ->whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            // Test POS nu intra niciodata in decont (vezi App\Support\TestPos).
+            // Pana acum lipsea si 'pos_test' din sursele excluse, asa ca o
+            // vanzare de test confirmata ajungea pe decont ca bilet online.
+            ->whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id)->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types')))
             ->whereIn('status', ['valid', 'used'])
             ->where(function ($q) use ($cutoffEnd) {
                 $q->whereHas('order', function ($q2) use ($cutoffEnd) {
                     $q2->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
                         ->where('source', '!=', 'external_import')
                         ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
-                        ->where('source', '!=', 'test_order');
+                        ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
                     if ($cutoffEnd) {
                         $q2->where('created_at', '<=', $cutoffEnd);
                     }
@@ -874,13 +877,14 @@ class MarketplacePayout extends Model
         $cutoff = $this->created_at;
 
         $tickets = \App\Models\Ticket::with(['ticketType:id,price_cents,sale_price_cents', 'order:id,created_at'])
-            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $this->event_id))
+            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $this->event_id)->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types')))
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
                     ->where('source', '!=', 'external_import')
-                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+                    ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
                 if ($cutoff) {
                     $qq->where('created_at', '<=', $cutoff);
                 }
@@ -2126,10 +2130,22 @@ class MarketplacePayout extends Model
             return [];
         }
 
+        // Test POS types are never part of the decont totals. A snapshot made
+        // before the fix may still carry such a row — flag it like a POS-only
+        // row (shown, but outside the totals). See App\Support\TestPos.
+        $testTypeIds = TicketType::whereIn('id', $typeIds)
+            ->whereRaw(\App\Support\TestPos::typeSql())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         // For each ticket type, check: are there any non-pos_app tickets?
         // If not, and there are pos_app tickets, it's a POS-only type.
-        $posTypeIds = [];
+        $posTypeIds = $testTypeIds;
         foreach ($typeIds as $typeId) {
+            if (in_array((int) $typeId, $testTypeIds, true)) {
+                continue;
+            }
             $hasNonPos = Ticket::where('ticket_type_id', $typeId)
                 ->whereHas('order', function ($q) {
                     $q->where(function ($q2) {
@@ -2137,7 +2153,8 @@ class MarketplacePayout extends Model
                             ->orWhere('marketplace_event_id', $this->event_id);
                     })
                     ->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
-                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES);
+                    ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+                    ->whereNotIn('source', \App\Support\TestPos::ORDER_SOURCES);
                 })
                 ->exists();
 
@@ -2180,7 +2197,8 @@ class MarketplacePayout extends Model
 
         $query = Order::where('event_id', $this->event_id)
             ->whereIn('status', \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES)
-            ->where('discount_amount', '>', 0);
+            ->where('discount_amount', '>', 0)
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q));
 
         if ($this->period_start) {
             $query->where('created_at', '>=', $this->period_start->copy()->startOfDay());

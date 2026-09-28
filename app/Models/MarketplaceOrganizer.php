@@ -517,13 +517,16 @@ class MarketplaceOrganizer extends Authenticatable
     {
         $this->update([
             'total_events' => $this->events()->count(),
+            // Test POS nu intra in statistici
             'total_tickets_sold' => $this->orders()
                 ->where('status', 'completed')
-                ->withCount('tickets')
+                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+                ->withCount(['tickets' => fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id')])
                 ->get()
                 ->sum('tickets_count'),
             'total_revenue' => $this->orders()
                 ->where('status', 'completed')
+                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
                 ->sum('total'),
         ]);
     }

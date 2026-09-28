@@ -109,7 +109,7 @@ class Incomes extends Page
     protected function baseOrderQuery()
     {
         $marketplace = static::getMarketplaceClient();
-        $query = Order::where('marketplace_client_id', $marketplace?->id)->where('source', '!=', 'external_import')
+        $query = Order::where('marketplace_client_id', $marketplace?->id)->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
             ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
         if ($this->organizerId) {
@@ -350,7 +350,7 @@ class Incomes extends Page
         $servicesData = [];
 
         // Daily sales & commissions in a single query
-        $dailyOrderData = Order::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+        $dailyOrderData = Order::where('marketplace_client_id', $marketplaceId)->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
@@ -402,7 +402,7 @@ class Incomes extends Page
      */
     protected function getTopOrganizers(int $marketplaceId, Carbon $startDate, Carbon $endDate): array
     {
-        return Order::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+        return Order::where('marketplace_client_id', $marketplaceId)->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->whereNotNull('marketplace_organizer_id')
@@ -453,7 +453,7 @@ class Incomes extends Page
     {
         [$prevStart, $prevEnd] = $this->getPreviousPeriodRange();
 
-        $prevOrderQuery = Order::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+        $prevOrderQuery = Order::where('marketplace_client_id', $marketplaceId)->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$prevStart, $prevEnd])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId));
