@@ -65,10 +65,7 @@
             </div>
         </div>
 
-        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-            {{ number_format((float) $summary['net'], 2, ',', '.') }} − {{ number_format((float) $summary['paid'], 2, ',', '.') }} − {{ number_format((float) $summary['pending'], 2, ',', '.') }} = <span class="font-semibold">{{ number_format((float) $summary['available'], 2, ',', '.') }} RON</span>
-            · vânzări calculate la {{ $summary['computed_at'] }} (se actualizează la 5 minute sau din „Reîmprospătează"); plățile sunt live.
-        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">Datele se actualizează la 5 minute sau din „Reîmprospătează".</p>
 
         {{-- Avansuri --}}
         @if($advances->isNotEmpty())
@@ -159,14 +156,19 @@
             $th = 'px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider';
             $td = 'px-4 py-3 text-sm text-right whitespace-nowrap';
         @endphp
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <x-heroicon-o-calendar class="w-5 h-5 text-gray-400" />
-                    Sold pe eveniment
-                </h3>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold.</p>
-            </div>
+        <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex items-center justify-between gap-4 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <x-heroicon-o-calendar class="w-5 h-5 text-gray-400" />
+                        Sold pe eveniment
+                        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $eventRows->count() }})</span>
+                    </h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold.</p>
+                </div>
+                <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
+            </button>
+            <div x-show="open" x-cloak>
             @if($eventRows->isEmpty())
                 <div class="text-center py-8">
                     <x-heroicon-o-chart-bar class="mx-auto h-10 w-10 text-gray-400" />
@@ -250,6 +252,7 @@
                 </table>
                 </div>
             @endif
+            </div>
         </div>
 
         {{-- Payout History --}}
