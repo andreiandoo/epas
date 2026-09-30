@@ -55,23 +55,39 @@ class OrganizerBalance extends Page
                 ->url(url('/marketplace/balances'))
                 ->color('gray')
                 ->icon('heroicon-o-arrow-left'),
-            Actions\Action::make('create_payout')
-                ->label('Înregistrează plată')
+            Actions\Action::make('record_advance')
+                ->label('Înregistrează avans')
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
-                ->visible(fn () => $this->organizer && $this->organizer->available_balance > 0)
-                ->modalHeading('Înregistrează plată')
-                ->modalDescription(fn () => 'Sold disponibil: ' . number_format($this->organizer->available_balance, 2, ',', '.') . ' RON')
+                ->visible(fn () => (bool) $this->organizer && MarketplacePayout::advancesEnabled())
+                ->modalHeading('Înregistrează avans')
+                ->modalDescription(fn () => 'Plată în avans din soldul curent, înainte de decontul pe eveniment. Suma se scade imediat din sold; '
+                    . 'deconturile aprobate ulterior se compensează automat din avans (cel mai vechi avans întâi), iar la plată rămâne de transferat doar diferența. '
+                    . 'Sold disponibil: ' . number_format((float) $this->organizer->available_balance, 2, ',', '.') . ' RON.')
+                ->modalSubmitActionLabel('Înregistrează avansul')
                 ->form([
                     Forms\Components\TextInput::make('amount')
-                        ->label('Sumă (RON)')
+                        ->label('Sumă avans (RON)')
                         ->numeric()
                         ->required()
                         ->minValue(0.01)
-                        ->maxValue(fn () => (float) $this->organizer->available_balance)
-                        ->default(fn () => (float) $this->organizer->available_balance)
                         ->suffix('RON')
-                        ->helperText(fn () => 'Maximum: ' . number_format($this->organizer->available_balance, 2, ',', '.') . ' RON'),
+                        ->live(onBlur: true)
+                        ->hint(function ($state) {
+                            $over = (float) $state - (float) $this->organizer->available_balance;
+
+                            return $over > 0.004
+                                ? 'Depășește soldul disponibil cu ' . number_format($over, 2, ',', '.') . ' RON'
+                                : null;
+                        })
+                        ->hintColor('danger')
+                        ->hintIcon(fn ($state) => (float) $state - (float) $this->organizer->available_balance > 0.004 ? 'heroicon-m-exclamation-triangle' : null)
+                        ->helperText(fn () => 'Sold disponibil: ' . number_format((float) $this->organizer->available_balance, 2, ',', '.') . ' RON. Avansul poate depăși soldul — diferența rămâne de recuperat din vânzările următoare.'),
+                    Forms\Components\DatePicker::make('paid_at')
+                        ->label('Data plății')
+                        ->default(now())
+                        ->maxDate(now())
+                        ->required(),
                     Forms\Components\Placeholder::make('bank_info')
                         ->label('Date bancare')
                         ->content(function () {
@@ -100,50 +116,65 @@ class OrganizerBalance extends Page
                     Forms\Components\TextInput::make('payment_reference')
                         ->label('Referință plată')
                         ->required()
+                        ->maxLength(255)
                         ->placeholder('Numărul sau referința transferului')
                         ->helperText('Referința transferului bancar sau ID-ul tranzacției'),
                     Forms\Components\Textarea::make('payment_notes')
                         ->label('Note (opțional)')
                         ->rows(2)
-                        ->placeholder('Detalii suplimentare despre plată'),
+                        ->placeholder('Detalii suplimentare despre avans'),
                 ])
                 ->action(function (array $data) {
-                    $amount = (float) $data['amount'];
-
-                    if ($amount > (float) $this->organizer->available_balance) {
-                        Notification::make()
-                            ->danger()
-                            ->title('Sold insuficient')
-                            ->body('Suma depășește soldul disponibil.')
-                            ->send();
-                        return;
-                    }
-
+                    $amount = round((float) $data['amount'], 2);
+                    $availableBefore = (float) $this->organizer->available_balance;
                     $marketplace = static::getMarketplaceClient();
+                    $admin = Auth::guard('marketplace_admin')->user();
 
-                    // Reserve the balance
-                    $this->organizer->reserveBalanceForPayout($amount);
+                    $payout = DB::transaction(function () use ($amount, $data, $marketplace, $admin) {
+                        $payout = MarketplacePayout::create([
+                            'marketplace_client_id' => $marketplace->id,
+                            'marketplace_organizer_id' => $this->organizer->id,
+                            'event_id' => null,
+                            'amount' => $amount,
+                            'currency' => 'RON',
+                            'status' => 'processing',
+                            'source' => MarketplacePayout::SOURCE_ADVANCE,
+                            'processed_by' => $admin?->id,
+                            'processed_at' => now(),
+                            'admin_notes' => 'Avans din sold curent',
+                        ]);
 
-                    // Create payout record
-                    $payout = MarketplacePayout::create([
-                        'marketplace_client_id' => $marketplace->id,
-                        'marketplace_organizer_id' => $this->organizer->id,
-                        'amount' => $amount,
-                        'currency' => 'RON',
-                        'status' => 'processing',
-                    ]);
+                        // Același traseu ca orice plată: rezervă, apoi finalizează
+                        // (sold, total plătit, tranzacție, notificare organizator).
+                        $this->organizer->reserveBalanceForPayout($amount);
+                        $payout->complete($data['payment_reference'], $data['payment_notes'] ?? null);
 
-                    // Complete the payout immediately (admin is recording a completed transfer)
-                    $payout->complete($data['payment_reference'], $data['payment_notes'] ?? null);
+                        // Data reală a transferului, dacă nu e azi.
+                        $paidAt = \Carbon\Carbon::parse($data['paid_at']);
+                        if (! $paidAt->isToday()) {
+                            $payout->completed_at = $paidAt->setTime(12, 0);
+                            $payout->saveQuietly();
+                        }
 
-                    // Refresh organizer data
+                        return $payout;
+                    });
+
                     $this->organizer->refresh();
 
-                    Notification::make()
-                        ->success()
-                        ->title('Plată înregistrată')
-                        ->body('Plata de ' . number_format($amount, 2, ',', '.') . " RON a fost înregistrată cu referința: {$data['payment_reference']}")
-                        ->send();
+                    $notification = Notification::make()
+                        ->title('Avans înregistrat')
+                        ->body('Avansul ' . $payout->reference . ' de ' . number_format($amount, 2, ',', '.') . ' RON a fost înregistrat și scăzut din sold.');
+
+                    if ($amount - $availableBefore > 0.004) {
+                        $notification->warning()->body(
+                            'Avansul ' . $payout->reference . ' de ' . number_format($amount, 2, ',', '.') . ' RON a fost înregistrat, dar depășește soldul disponibil cu '
+                            . number_format($amount - $availableBefore, 2, ',', '.') . ' RON. Diferența se recuperează din vânzările următoare.'
+                        )->persistent();
+                    } else {
+                        $notification->success();
+                    }
+
+                    $notification->send();
                 }),
         ];
     }
@@ -164,9 +195,26 @@ class OrganizerBalance extends Page
             ->modalDescription(function (array $arguments) {
                 $p = $this->findPayout($arguments['payout'] ?? null);
 
-                return $p
-                    ? 'Sumă: ' . number_format((float) $p->amount, 2, ',', '.') . ' ' . ($p->currency ?? 'RON') . '. Organizatorul primește notificare că plata a fost efectuată.'
-                    : null;
+                if (! $p) {
+                    return null;
+                }
+                $cur = ' ' . ($p->currency ?? 'RON');
+                $covered = $p->advanceCoveredAmount();
+                $text = 'Sumă decont: ' . number_format((float) $p->amount, 2, ',', '.') . $cur . '.';
+                if ($covered > 0) {
+                    $text .= ' Compensat din avans: ' . number_format($covered, 2, ',', '.') . $cur
+                        . '. Rest de plată: ' . number_format($p->cashAmount(), 2, ',', '.') . $cur . '.';
+                }
+
+                return $text . ' Organizatorul primește notificare că plata a fost efectuată.';
+            })
+            ->fillForm(function (array $arguments) {
+                $p = $this->findPayout($arguments['payout'] ?? null);
+
+                // Decont acoperit integral din avans: nu există transfer bancar.
+                return ($p && $p->advanceCoveredAmount() > 0 && $p->cashAmount() <= 0.004)
+                    ? ['payment_reference' => 'Compensat integral din avans']
+                    : [];
             })
             ->modalSubmitActionLabel('Marchează finalizat')
             ->form([
@@ -272,13 +320,19 @@ class OrganizerBalance extends Page
         $payouts = MarketplacePayout::query()
             ->where('marketplace_organizer_id', $this->organizerId)
             ->with(['event.venue'])
+            ->when(MarketplacePayout::advancesEnabled(), fn ($q) => $q->withSum('advanceAllocations as advance_covered', 'amount'))
             ->orderByDesc('created_at')
             ->get();
+
+        // Avansuri, cele mai vechi primele, cu ce deconturi au acoperit.
+        $advances = MarketplacePayout::advancesForOrganizer($this->organizerId);
 
         return [
             'organizer' => $this->organizer,
             'revenuePerEvent' => $revenuePerEvent,
             'payouts' => $payouts,
+            'advances' => $advances,
+            'advanceOpen' => round((float) $advances->sum('advance_remaining'), 2),
         ];
     }
 }

@@ -64,6 +64,67 @@
             </div>
         </div>
 
+        {{-- Avansuri --}}
+        @if($advances->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <x-heroicon-o-arrow-trending-up class="w-5 h-5 text-gray-400" />
+                        Avansuri
+                    </h3>
+                    <span class="text-sm {{ $advanceOpen > 0 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-gray-500 dark:text-gray-400' }}">
+                        Avans nedecontat: {{ number_format($advanceOpen, 2, ',', '.') }} RON
+                    </span>
+                </div>
+                <p class="px-6 pt-3 text-xs text-gray-500 dark:text-gray-400">
+                    Avansul se scade din sold la înregistrare. Deconturile pe eveniment aprobate după aceea se compensează automat din el, cel mai vechi avans întâi; la plată se transferă doar restul.
+                </p>
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 mt-3">
+                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avans</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plătit la</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumă</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compensat</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rămas</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compensat în deconturile</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($advances as $advance)
+                            <tr>
+                                <td class="px-6 py-3 text-sm font-mono">
+                                    <a href="{{ url('/marketplace/payouts/' . $advance->id) }}" class="text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">{{ $advance->reference }}</a>
+                                    @if($advance->payment_reference)
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-sans">Ref: {{ $advance->payment_reference }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">{{ ($advance->completed_at ?? $advance->created_at)?->format('d.m.Y') }}</td>
+                                <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ number_format((float) $advance->amount, 2, ',', '.') }} RON</td>
+                                <td class="px-6 py-3 text-sm text-right text-gray-600 dark:text-gray-300">{{ number_format((float) $advance->advance_used, 2, ',', '.') }} RON</td>
+                                <td class="px-6 py-3 text-sm text-right font-semibold {{ $advance->advance_remaining > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400' }}">{{ number_format((float) $advance->advance_remaining, 2, ',', '.') }} RON</td>
+                                <td class="px-6 py-3 text-xs text-gray-600 dark:text-gray-300">
+                                    @forelse($advance->allocationsFromAdvance as $alloc)
+                                        @php
+                                            $allocEvent = $alloc->payout?->event;
+                                            $allocTitle = $allocEvent ? (is_array($allocEvent->title) ? ($allocEvent->title['ro'] ?? $allocEvent->title['en'] ?? (reset($allocEvent->title) ?: null)) : $allocEvent->title) : null;
+                                        @endphp
+                                        <div>
+                                            <a href="{{ url('/marketplace/payouts/' . $alloc->payout_id) }}" class="font-mono text-primary-600 dark:text-primary-400 hover:underline">{{ $alloc->payout?->decont_series ?? $alloc->payout?->reference ?? ('#' . $alloc->payout_id) }}</a>
+                                            @if($allocTitle) · {{ $allocTitle }} @endif
+                                            · {{ number_format((float) $alloc->amount, 2, ',', '.') }} RON
+                                        </div>
+                                    @empty
+                                        <span class="text-gray-400">Încă necompensat</span>
+                                    @endforelse
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
         {{-- Bank Info --}}
         @if($organizer->bank_name || $organizer->iban)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
@@ -203,6 +264,8 @@
                                         @if(!empty($evMeta))
                                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $evMeta }}</div>
                                         @endif
+                                    @elseif($payout->isAdvance())
+                                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">Avans</span>
                                     @else
                                         <span class="text-gray-400">—</span>
                                     @endif
@@ -217,6 +280,10 @@
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                                     {{ number_format((float) $payout->amount, 2, ',', '.') }} {{ $payout->currency ?? 'RON' }}
+                                    @if((float) ($payout->advance_covered ?? 0) > 0)
+                                        <div class="text-xs font-normal text-amber-600 dark:text-amber-400 mt-0.5">din avans: −{{ number_format((float) $payout->advance_covered, 2, ',', '.') }}</div>
+                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400">de plată: {{ number_format(max(0, (float) $payout->amount - (float) $payout->advance_covered), 2, ',', '.') }}</div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 text-center">
                                     @php

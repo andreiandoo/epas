@@ -631,6 +631,9 @@ class MarketplaceOrganizer extends Authenticatable
      *             them showed organizers millions they had already been paid.
      *   paid      Σ completed payouts, org-wide (multi-event deconturi have a
      *             NULL event_id, so per-event sums would miss them).
+     *             Advances (source = 'advance') are completed payouts, so they
+     *             count here; the part of later deconturi covered by an advance
+     *             is subtracted so it isn't counted twice.
      *   pending   Σ approved + processing. NOT 'pending', which is the
      *             abandoned GenerateAutoDeconts auto-draft batch (2679 rows,
      *             ~15M, never paid and never reserved against the ledger).
@@ -662,6 +665,11 @@ class MarketplaceOrganizer extends Authenticatable
         $pending = (float) \App\Models\MarketplacePayout::where('marketplace_organizer_id', $this->id)
             ->whereIn('status', ['approved', 'processing'])
             ->sum('amount');
+
+        // Avansurile sunt deja în `paid` (plăți finalizate). Partea din
+        // deconturi acoperită din avans nu se mai numără încă o dată.
+        $paid -= \App\Models\MarketplacePayout::advanceOffsetForOrganizer($this->id, ['completed']);
+        $pending -= \App\Models\MarketplacePayout::advanceOffsetForOrganizer($this->id, ['approved', 'processing']);
 
         return [
             'net' => round($net, 2),

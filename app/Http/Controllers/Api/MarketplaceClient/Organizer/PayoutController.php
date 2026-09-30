@@ -54,9 +54,12 @@ class PayoutController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         // Calculate total paid out from completed payouts
-        $totalPaidOut = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+        // Avansurile sunt plăți finalizate; partea din deconturi acoperită din
+        // avans se scade ca să nu fie numărată de două ori (deriveBalances).
+        $totalPaidOut = round((float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('status', 'completed')
-            ->sum('amount');
+            ->sum('amount')
+            - MarketplacePayout::advanceOffsetForOrganizer($organizer->id, ['completed']), 2);
 
         // Get recent transactions (with order and payout relationships for event_id)
         $transactions = MarketplaceTransaction::where('marketplace_organizer_id', $organizer->id)
@@ -100,6 +103,7 @@ class PayoutController extends BaseController
         // one preloaded map instead of formatPayout()'s per-row Event::find.
         $breakdownPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['approved', 'processing', 'completed'])
+            ->when(MarketplacePayout::advancesEnabled(), fn ($q) => $q->withSum('advanceAllocations as advance_covered', 'amount'))
             ->orderByDesc('created_at')
             ->get();
 
@@ -114,11 +118,18 @@ class PayoutController extends BaseController
             });
 
         $mapBreakdownPayout = function (MarketplacePayout $payout) use ($payoutTitles) {
+            $advanceCovered = round((float) ($payout->advance_covered ?? 0), 2);
+
             return [
                 'id' => $payout->id,
                 'reference' => $payout->reference,
                 'decont_series' => $payout->decont_series,
-                'amount' => (float) $payout->amount,
+                // Ce s-a plătit / se plătește efectiv; partea acoperită din
+                // avans e deja în suma avansului.
+                'amount' => round(max(0, (float) $payout->amount - $advanceCovered), 2),
+                'decont_amount' => (float) $payout->amount,
+                'advance_covered' => $advanceCovered,
+                'is_advance' => $payout->isAdvance(),
                 'status' => $payout->status,
                 'event_id' => $payout->event_id,
                 // NULL event_id = multi-event decont; the UI labels it as such.
@@ -347,7 +358,21 @@ class PayoutController extends BaseController
         $netLive = round((float) $events->sum('net_revenue'), 2);
         $pendingLive = round((float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['approved', 'processing'])
-            ->sum('amount'), 2);
+            ->sum('amount')
+            - MarketplacePayout::advanceOffsetForOrganizer($organizer->id, ['approved', 'processing']), 2);
+
+        // Avansuri primite, cu cât s-a compensat deja din deconturi și cât
+        // rămâne de compensat din deconturile următoare.
+        $advances = MarketplacePayout::advancesForOrganizer($organizer->id);
+        $advanceList = $advances->map(fn (MarketplacePayout $a) => [
+            'id' => $a->id,
+            'reference' => $a->reference,
+            'amount' => (float) $a->amount,
+            'used' => (float) $a->advance_used,
+            'remaining' => (float) $a->advance_remaining,
+            'paid_at' => ($a->completed_at ?? $a->created_at)?->toIso8601String(),
+            'payment_reference' => $a->payment_reference,
+        ])->values();
 
         return $this->success([
             'available_balance' => round($netLive - $totalPaidOut - $pendingLive, 2),
@@ -355,6 +380,8 @@ class PayoutController extends BaseController
             'total_paid_out' => $totalPaidOut,
             // Everything the organizer earned from tickets, after discounts.
             'total_sales' => $netLive,
+            'advance_open' => round((float) $advances->sum('advance_remaining'), 2),
+            'advances' => $advanceList,
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
             'transactions' => $transactions,
@@ -768,6 +795,8 @@ class PayoutController extends BaseController
             'period_end' => $payout->period_end?->toDateString(),
             'created_at' => $payout->created_at->toIso8601String(),
             'completed_at' => $payout->completed_at?->toIso8601String(),
+            'is_advance' => $payout->isAdvance(),
+            'advance_covered' => $payout->advanceCoveredAmount(),
         ];
 
         // Include rejection reason for rejected payouts

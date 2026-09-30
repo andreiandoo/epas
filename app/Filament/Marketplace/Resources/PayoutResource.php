@@ -697,6 +697,21 @@ class PayoutResource extends Resource
                                         ->icon('heroicon-o-check-circle')
                                         ->color('success')
                                         ->visible(fn ($record) => $record->canBeCompleted())
+                                        // Decont acoperit (parțial) dintr-un avans: se transferă doar restul.
+                                        ->modalDescription(function ($record) {
+                                            $covered = $record->advanceCoveredAmount();
+                                            if ($covered <= 0) {
+                                                return null;
+                                            }
+                                            $cur = ' ' . ($record->currency ?? 'RON');
+
+                                            return 'Sumă decont: ' . number_format((float) $record->amount, 2, ',', '.') . $cur
+                                                . '. Compensat din avans: ' . number_format($covered, 2, ',', '.') . $cur
+                                                . '. Rest de plată: ' . number_format($record->cashAmount(), 2, ',', '.') . $cur . '.';
+                                        })
+                                        ->fillForm(fn ($record) => ($record->advanceCoveredAmount() > 0 && $record->cashAmount() <= 0.004)
+                                            ? ['payment_reference' => 'Compensat integral din avans']
+                                            : [])
                                         ->form([
                                             \Filament\Forms\Components\TextInput::make('payment_reference')
                                                 ->label('Referință plată')

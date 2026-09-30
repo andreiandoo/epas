@@ -41,6 +41,79 @@ class MarketplacePayout extends Model
     public const LEGACY_SETTLEMENT_FREEZE = '2026-09-10 00:00:00';
 
     /**
+     * Avans către organizator: bani dați înainte de decontul pe eveniment, din
+     * soldul curent. Rând fără eveniment, finalizat la înregistrare, fără serie
+     * de decont. Deconturile pe eveniment aprobate ulterior se compensează din
+     * el automat, cel mai vechi avans întâi (allocateFromAdvances).
+     */
+    public const SOURCE_ADVANCE = 'advance';
+
+    /**
+     * Statusurile în care un decont e „în circuit" (rezervat sau plătit). Doar
+     * atunci poate consuma avans; în orice alt status compensarea se eliberează.
+     */
+    public const ADVANCE_CONSUMING_STATUSES = ['approved', 'processing', 'completed'];
+
+    /** Tabelul de compensări există? (codul poate ajunge pe server înaintea migrării) */
+    public static function advancesEnabled(): bool
+    {
+        static $enabled = null;
+
+        return $enabled ??= \Illuminate\Support\Facades\Schema::hasTable('marketplace_payout_advance_allocations');
+    }
+
+    /**
+     * Σ din avansuri care acoperă deconturile organizatorului aflate în
+     * statusurile date. Se scade din Σ(amount) al acelor deconturi ca avansul
+     * (deja numărat ca plătit) să nu fie numărat a doua oară.
+     */
+    public static function advanceOffsetForOrganizer(int $organizerId, array $statuses): float
+    {
+        if (!static::advancesEnabled()) {
+            return 0.0;
+        }
+
+        return round((float) MarketplacePayoutAdvanceAllocation::query()
+            ->join('marketplace_payouts as p', 'p.id', '=', 'marketplace_payout_advance_allocations.payout_id')
+            ->where('p.marketplace_organizer_id', $organizerId)
+            ->whereIn('p.status', $statuses)
+            ->whereNull('p.deleted_at')
+            ->sum('marketplace_payout_advance_allocations.amount'), 2);
+    }
+
+    /**
+     * Avansurile organizatorului, cele mai vechi primele, fiecare cu
+     * `advance_used` / `advance_remaining` calculate.
+     *
+     * @return \Illuminate\Support\Collection<int, self>
+     */
+    public static function advancesForOrganizer(int $organizerId): \Illuminate\Support\Collection
+    {
+        if (!static::advancesEnabled()) {
+            return collect();
+        }
+
+        return static::where('marketplace_organizer_id', $organizerId)
+            ->where('source', static::SOURCE_ADVANCE)
+            ->where('status', 'completed')
+            ->with(['allocationsFromAdvance.payout.event'])
+            ->orderBy('completed_at')
+            ->orderBy('id')
+            ->get()
+            ->each(function (self $advance) {
+                $used = round((float) $advance->allocationsFromAdvance->sum('amount'), 2);
+                $advance->setAttribute('advance_used', $used);
+                $advance->setAttribute('advance_remaining', round(max(0, (float) $advance->amount - $used), 2));
+            });
+    }
+
+    /** Σ avans încă necompensat al organizatorului. */
+    public static function openAdvanceTotal(int $organizerId): float
+    {
+        return round((float) static::advancesForOrganizer($organizerId)->sum('advance_remaining'), 2);
+    }
+
+    /**
      * Did this event's `legacy_import` revenue get settled through Tixello?
      * True only when a real decont (not a stale auto-draft) existed before the
      * freeze — see LEGACY_SETTLEMENT_FREEZE. Callers pass the negation as
@@ -920,12 +993,46 @@ class MarketplacePayout extends Model
 
         static::creating(function ($payout) {
             if (empty($payout->reference)) {
-                $payout->reference = 'PAY-' . strtoupper(Str::random(8));
+                $payout->reference = ($payout->isAdvance() ? 'AV-' : 'PAY-') . strtoupper(Str::random(8));
             }
             // Assign the marketplace-configurable decont series (prefix +
             // incrementing counter). Saved on the row at creation so it is
             // immutable thereafter. Existing payouts are never touched.
-            $payout->assignDecontSeries();
+            // Avansurile nu sunt deconturi — nu consumă numere din serie.
+            if (!$payout->isAdvance()) {
+                $payout->assignDecontSeries();
+            }
+        });
+
+        // Compensarea din avans urmează statusul decontului: intră în circuit
+        // (aprobat / în procesare) → se acoperă din avans; iese din circuit
+        // (respins, anulat, înapoi la pending) → avansul se eliberează. Suma
+        // unui decont încă neplătit s-a schimbat → se recalculează compensarea.
+        static::saved(function (self $payout) {
+            if ($payout->isAdvance() || !static::advancesEnabled()) {
+                return;
+            }
+
+            $statusChanged = $payout->wasRecentlyCreated || $payout->wasChanged('status');
+
+            if (!in_array($payout->status, static::ADVANCE_CONSUMING_STATUSES, true)) {
+                if ($statusChanged) {
+                    $payout->releaseAdvanceAllocations();
+                }
+
+                return;
+            }
+
+            if ($payout->status === 'completed') {
+                return;
+            }
+
+            if ($payout->wasChanged('amount') && !$payout->wasRecentlyCreated) {
+                $payout->releaseAdvanceAllocations();
+                $payout->allocateFromAdvances();
+            } elseif ($statusChanged) {
+                $payout->allocateFromAdvances();
+            }
         });
 
         static::created(function ($payout) {
@@ -1075,6 +1182,18 @@ class MarketplacePayout extends Model
      * and the refund appears in this payout's PDF document instead of
      * being treated as an unaccounted-for event-level deduction.
      */
+    /** Ca decont: din ce avansuri a fost acoperit. */
+    public function advanceAllocations(): HasMany
+    {
+        return $this->hasMany(MarketplacePayoutAdvanceAllocation::class, 'payout_id');
+    }
+
+    /** Ca avans: ce deconturi a acoperit. */
+    public function allocationsFromAdvance(): HasMany
+    {
+        return $this->hasMany(MarketplacePayoutAdvanceAllocation::class, 'advance_payout_id');
+    }
+
     public function includedRefunds(): HasMany
     {
         return $this->hasMany(MarketplaceRefundRequest::class, 'marketplace_payout_id')
@@ -1971,6 +2090,93 @@ class MarketplacePayout extends Model
         return $this->status === 'cancelled';
     }
 
+    public function isAdvance(): bool
+    {
+        return $this->source === static::SOURCE_ADVANCE;
+    }
+
+    /** Cât din acest decont e acoperit din avansuri. */
+    public function advanceCoveredAmount(): float
+    {
+        if ($this->isAdvance() || !$this->exists || !static::advancesEnabled()) {
+            return 0.0;
+        }
+
+        return round((float) $this->advanceAllocations()->sum('amount'), 2);
+    }
+
+    /** Ce se plătește efectiv prin transfer: suma decontului minus avansul compensat. */
+    public function cashAmount(): float
+    {
+        return round(max(0, (float) $this->amount - $this->advanceCoveredAmount()), 2);
+    }
+
+    /**
+     * Acoperă decontul din avansurile organizatorului, cel mai vechi primul.
+     * Doar deconturile pe eveniment se compensează (plățile fără eveniment
+     * sunt ele însele avansuri / plăți la nivel de organizator). Idempotent:
+     * un decont deja compensat nu mai e atins. Întoarce suma compensată.
+     */
+    public function allocateFromAdvances(): float
+    {
+        if ($this->isAdvance() || !$this->event_id || !static::advancesEnabled()
+            || !in_array($this->status, static::ADVANCE_CONSUMING_STATUSES, true)) {
+            return 0.0;
+        }
+
+        $need = round((float) $this->amount, 2);
+        if ($need <= 0.004) {
+            return 0.0;
+        }
+
+        return DB::transaction(function () use ($need) {
+            // Blochează avansurile organizatorului: două deconturi aprobate în
+            // același timp nu pot consuma de două ori aceeași sumă.
+            $advances = static::where('marketplace_organizer_id', $this->marketplace_organizer_id)
+                ->where('source', static::SOURCE_ADVANCE)
+                ->where('status', 'completed')
+                ->orderBy('completed_at')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            if ($advances->isEmpty() || $this->advanceAllocations()->exists()) {
+                return $this->advanceCoveredAmount();
+            }
+
+            $covered = 0.0;
+            foreach ($advances as $advance) {
+                if ($need <= 0.004) {
+                    break;
+                }
+                $remaining = round((float) $advance->amount - (float) $advance->allocationsFromAdvance()->sum('amount'), 2);
+                if ($remaining <= 0.004) {
+                    continue;
+                }
+                $take = round(min($remaining, $need), 2);
+                MarketplacePayoutAdvanceAllocation::create([
+                    'advance_payout_id' => $advance->id,
+                    'payout_id' => $this->id,
+                    'amount' => $take,
+                ]);
+                $need = round($need - $take, 2);
+                $covered = round($covered + $take, 2);
+            }
+
+            return $covered;
+        });
+    }
+
+    /** Eliberează avansul consumat de acest decont (respins / anulat / modificat). */
+    public function releaseAdvanceAllocations(): void
+    {
+        if ($this->isAdvance() || !$this->exists || !static::advancesEnabled()) {
+            return;
+        }
+
+        $this->advanceAllocations()->delete();
+    }
+
     public function canBeApproved(): bool
     {
         return $this->isPending();
@@ -2047,13 +2253,21 @@ class MarketplacePayout extends Model
             'completed_at' => now(),
         ]);
 
+        // Partea acoperită din avans a fost deja plătită (și scăzută din sold)
+        // când s-a înregistrat avansul — aici se mișcă doar restul.
+        $advanceCovered = $this->advanceCoveredAmount();
+        $cash = $this->cashAmount();
+
         // Update organizer balances
-        $this->organizer->recordPayoutCompleted($this->amount);
+        $this->organizer->recordPayoutCompleted($cash);
 
         // Build description with payment reference
-        $description = "Plată {$this->reference} finalizată";
+        $description = ($this->isAdvance() ? "Avans {$this->reference} plătit" : "Plată {$this->reference} finalizată");
         if ($paymentReference) {
             $description .= " (Ref: {$paymentReference})";
+        }
+        if ($advanceCovered > 0) {
+            $description .= ' — ' . number_format($advanceCovered, 2, ',', '.') . ' ' . ($this->currency ?? 'RON') . ' compensat din avans';
         }
 
         // Record transaction
@@ -2061,7 +2275,7 @@ class MarketplacePayout extends Model
             'marketplace_client_id' => $this->marketplace_client_id,
             'marketplace_organizer_id' => $this->marketplace_organizer_id,
             'type' => 'payout',
-            'amount' => -$this->amount,
+            'amount' => -$cash,
             'currency' => $this->currency,
             'balance_after' => $this->organizer->available_balance,
             'marketplace_payout_id' => $this->id,
@@ -2069,6 +2283,8 @@ class MarketplacePayout extends Model
             'metadata' => [
                 'payment_reference' => $paymentReference,
                 'payment_notes' => $paymentNotes,
+                'advance_covered' => $advanceCovered,
+                'is_advance' => $this->isAdvance(),
             ],
         ]);
 
@@ -2081,6 +2297,8 @@ class MarketplacePayout extends Model
     public function reject(int $userId, string $reason): void
     {
         $wasApproved = $this->isApproved();
+        // Înainte de update: hook-ul saved eliberează compensarea din avans.
+        $cash = $this->cashAmount();
 
         $this->update([
             'status' => 'rejected',
@@ -2090,7 +2308,7 @@ class MarketplacePayout extends Model
         ]);
 
         // Return balance to available
-        $this->organizer->returnPendingBalance($this->amount);
+        $this->organizer->returnPendingBalance($cash);
 
         $this->notifyOrganizer('rejected');
     }
