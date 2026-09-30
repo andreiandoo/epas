@@ -244,8 +244,14 @@ class VenuesController extends BaseController
             ->limit($upcomingEventsLimit)
             ->get()
             ->map(function ($event) use ($language, $client) {
+                // Same public-ticket filter as the category cards
+                // (MarketplaceEventsController): no invitations, Test POS or
+                // free-with-code tickets in the "de la" price.
                 $minPrice = $event->ticketTypes
-                    ->filter(fn ($tt) => $tt->status === 'active')
+                    ->filter(fn ($tt) => $tt->status === 'active'
+                        && !($tt->meta['is_invitation'] ?? false)
+                        && !$tt->isTestPos()
+                        && !$tt->isFreeWithCode())
                     ->map(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) / 100)
                     ->filter()->min();
 

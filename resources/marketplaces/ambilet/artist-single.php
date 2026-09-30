@@ -332,7 +332,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="hidden mt-10">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">📸</span>
+                <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 Galerie
             </h2>
         </div>
@@ -367,7 +367,7 @@ require_once __DIR__ . '/includes/header.php';
                 </a>
             </div>
             <div class="bg-gray-50 rounded-xl h-[200px] mobile:h-[400px] flex items-center justify-center text-gray-400 text-sm">
-                🎵 Spotify Player Embed
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Spotify Player Embed
             </div>
         </div>
     </section>
@@ -377,7 +377,7 @@ require_once __DIR__ . '/includes/header.php';
     <section id="articlesSection" class="hidden mt-10">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">📰</span>
+                <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
                 În presă
             </h2>
         </div>
@@ -394,7 +394,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mt-10 mb-16">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">🎵</span>
+                <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                 Artiști similari
             </h2>
         </div>
