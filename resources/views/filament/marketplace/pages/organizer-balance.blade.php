@@ -10,9 +10,9 @@
                         <x-heroicon-o-wallet class="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Available Balance</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Sold disponibil</p>
                         <p class="text-xl font-bold text-green-600 dark:text-green-400">
-                            {{ number_format($organizer->available_balance, 2) }} RON
+                            {{ number_format((float) $organizer->available_balance, 2, ',', '.') }} RON
                         </p>
                     </div>
                 </div>
@@ -25,9 +25,9 @@
                         <x-heroicon-o-clock class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Pending Payouts</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Plăți în așteptare</p>
                         <p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">
-                            {{ number_format($organizer->pending_balance, 2) }} RON
+                            {{ number_format((float) $organizer->pending_balance, 2, ',', '.') }} RON
                         </p>
                     </div>
                 </div>
@@ -40,9 +40,9 @@
                         <x-heroicon-o-check-circle class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Paid Out</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total plătit</p>
                         <p class="text-xl font-bold text-blue-600 dark:text-blue-400">
-                            {{ number_format($organizer->total_paid_out, 2) }} RON
+                            {{ number_format((float) $organizer->total_paid_out, 2, ',', '.') }} RON
                         </p>
                     </div>
                 </div>
@@ -55,9 +55,9 @@
                         <x-heroicon-o-chart-bar class="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Venituri totale</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">
-                            {{ number_format($organizer->total_revenue, 2) }} RON
+                            {{ number_format((float) $organizer->total_revenue, 2, ',', '.') }} RON
                         </p>
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                     <div class="flex gap-6 text-sm">
                         @if($organizer->bank_name)
                             <div>
-                                <span class="text-gray-500 dark:text-gray-400">Bank:</span>
+                                <span class="text-gray-500 dark:text-gray-400">Bancă:</span>
                                 <span class="font-medium text-gray-900 dark:text-white">{{ $organizer->bank_name }}</span>
                             </div>
                         @endif
@@ -92,42 +92,42 @@
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <x-heroicon-o-calendar class="w-5 h-5 text-gray-400" />
-                    Revenue per Event
+                    Venituri pe eveniment
                 </h3>
             </div>
             @if($revenuePerEvent->isEmpty())
                 <div class="text-center py-8">
                     <x-heroicon-o-chart-bar class="mx-auto h-10 w-10 text-gray-400" />
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No completed orders yet.</p>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Nu există încă comenzi finalizate.</p>
                 </div>
             @else
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Event</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Orders</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gross Revenue</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Commission</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Revenue</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Eveniment</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comenzi</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Venit brut</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comision</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Venit net</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($revenuePerEvent as $row)
                             <tr>
                                 <td class="px-6 py-3 text-sm text-gray-900 dark:text-white">
-                                    {{ $row->marketplaceEvent?->title ?? 'Event #' . $row->marketplace_event_id }}
+                                    {{ $row->marketplaceEvent?->title ?? 'Eveniment #' . $row->marketplace_event_id }}
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right text-gray-600 dark:text-gray-300">
                                     {{ $row->orders_count }}
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right text-gray-900 dark:text-white">
-                                    {{ number_format($row->gross_revenue, 2) }} RON
+                                    {{ number_format($row->gross_revenue, 2, ',', '.') }} RON
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right text-red-600 dark:text-red-400">
-                                    -{{ number_format($row->total_commission, 2) }} RON
+                                    -{{ number_format($row->total_commission, 2, ',', '.') }} RON
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-green-600 dark:text-green-400">
-                                    {{ number_format($row->net_revenue, 2) }} RON
+                                    {{ number_format($row->net_revenue, 2, ',', '.') }} RON
                                 </td>
                             </tr>
                         @endforeach
@@ -136,9 +136,9 @@
                         <tr>
                             <td class="px-6 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total</td>
                             <td class="px-6 py-3 text-sm text-right font-semibold text-gray-900 dark:text-white">{{ $revenuePerEvent->sum('orders_count') }}</td>
-                            <td class="px-6 py-3 text-sm text-right font-semibold text-gray-900 dark:text-white">{{ number_format($revenuePerEvent->sum('gross_revenue'), 2) }} RON</td>
-                            <td class="px-6 py-3 text-sm text-right font-semibold text-red-600 dark:text-red-400">-{{ number_format($revenuePerEvent->sum('total_commission'), 2) }} RON</td>
-                            <td class="px-6 py-3 text-sm text-right font-semibold text-green-600 dark:text-green-400">{{ number_format($revenuePerEvent->sum('net_revenue'), 2) }} RON</td>
+                            <td class="px-6 py-3 text-sm text-right font-semibold text-gray-900 dark:text-white">{{ number_format($revenuePerEvent->sum('gross_revenue'), 2, ',', '.') }} RON</td>
+                            <td class="px-6 py-3 text-sm text-right font-semibold text-red-600 dark:text-red-400">-{{ number_format($revenuePerEvent->sum('total_commission'), 2, ',', '.') }} RON</td>
+                            <td class="px-6 py-3 text-sm text-right font-semibold text-green-600 dark:text-green-400">{{ number_format($revenuePerEvent->sum('net_revenue'), 2, ',', '.') }} RON</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -156,19 +156,20 @@
             @if($payouts->isEmpty())
                 <div class="text-center py-8">
                     <x-heroicon-o-banknotes class="mx-auto h-10 w-10 text-gray-400" />
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No payouts yet.</p>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Nu există încă deconturi.</p>
                 </div>
             @else
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Eveniment</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reference</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumă</th>
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment Ref</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Completed</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință plată</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creat</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finalizat</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acțiuni</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -215,7 +216,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
-                                    {{ number_format($payout->amount, 2) }} {{ $payout->currency ?? 'RON' }}
+                                    {{ number_format((float) $payout->amount, 2, ',', '.') }} {{ $payout->currency ?? 'RON' }}
                                 </td>
                                 <td class="px-6 py-3 text-center">
                                     @php
@@ -230,17 +231,26 @@
                                         $color = $statusColors[$payout->status] ?? $statusColors['cancelled'];
                                     @endphp
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $color }}">
-                                        {{ ucfirst($payout->status) }}
+                                        {{ ['pending' => 'În așteptare', 'approved' => 'Aprobat', 'processing' => 'În procesare', 'completed' => 'Finalizat', 'rejected' => 'Respins', 'cancelled' => 'Anulat'][$payout->status] ?? ucfirst($payout->status) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
                                     {{ $payout->payment_reference ?? '-' }}
                                 </td>
                                 <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    {{ $payout->created_at?->format('d M Y') }}
+                                    {{ $payout->created_at?->format('d.m.Y') }}
                                 </td>
                                 <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    {{ $payout->completed_at?->format('d M Y') ?? '-' }}
+                                    {{ $payout->completed_at?->format('d.m.Y') ?? '-' }}
+                                </td>
+                                <td class="px-6 py-3 text-sm text-right whitespace-nowrap">
+                                    @if($payout->canBeCompleted())
+                                        {{ ($this->completePayoutAction)(['payout' => $payout->id]) }}
+                                    @elseif($payout->isCompleted())
+                                        {{ ($this->editPaymentReferenceAction)(['payout' => $payout->id]) }}
+                                    @elseif($payout->isPending())
+                                        <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-xs text-gray-500 hover:underline dark:text-gray-400" title="Decontul trebuie aprobat înainte de a fi finalizat">Aprobă întâi</a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
