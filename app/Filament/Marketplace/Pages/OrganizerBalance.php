@@ -5,12 +5,14 @@ namespace App\Filament\Marketplace\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplacePayout;
-use App\Models\Order;
+use App\Models\Event;
+use App\Services\Marketplace\SalesBreakdownService;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class OrganizerBalance extends Page
@@ -55,6 +57,14 @@ class OrganizerBalance extends Page
                 ->url(url('/marketplace/balances'))
                 ->color('gray')
                 ->icon('heroicon-o-arrow-left'),
+            Actions\Action::make('refresh_figures')
+                ->label('Reîmprospătează')
+                ->icon('heroicon-o-arrow-path')
+                ->color('gray')
+                ->action(function () {
+                    Cache::forget($this->eventRowsCacheKey());
+                    Notification::make()->success()->title('Cifre recalculate')->send();
+                }),
             Actions\Action::make('record_advance')
                 ->label('Înregistrează avans')
                 ->icon('heroicon-o-banknotes')
@@ -63,7 +73,7 @@ class OrganizerBalance extends Page
                 ->modalHeading('Înregistrează avans')
                 ->modalDescription(fn () => 'Plată în avans din soldul curent, înainte de decontul pe eveniment. Suma se scade imediat din sold; '
                     . 'deconturile aprobate ulterior se compensează automat din avans (cel mai vechi avans întâi), iar la plată rămâne de transferat doar diferența. '
-                    . 'Sold disponibil: ' . number_format((float) $this->organizer->available_balance, 2, ',', '.') . ' RON.')
+                    . 'Sold disponibil: ' . number_format($this->liveAvailable(), 2, ',', '.') . ' RON.')
                 ->modalSubmitActionLabel('Înregistrează avansul')
                 ->form([
                     Forms\Components\TextInput::make('amount')
@@ -74,15 +84,15 @@ class OrganizerBalance extends Page
                         ->suffix('RON')
                         ->live(onBlur: true)
                         ->hint(function ($state) {
-                            $over = (float) $state - (float) $this->organizer->available_balance;
+                            $over = (float) $state - $this->liveAvailable();
 
                             return $over > 0.004
                                 ? 'Depășește soldul disponibil cu ' . number_format($over, 2, ',', '.') . ' RON'
                                 : null;
                         })
                         ->hintColor('danger')
-                        ->hintIcon(fn ($state) => (float) $state - (float) $this->organizer->available_balance > 0.004 ? 'heroicon-m-exclamation-triangle' : null)
-                        ->helperText(fn () => 'Sold disponibil: ' . number_format((float) $this->organizer->available_balance, 2, ',', '.') . ' RON. Avansul poate depăși soldul — diferența rămâne de recuperat din vânzările următoare.'),
+                        ->hintIcon(fn ($state) => (float) $state - $this->liveAvailable() > 0.004 ? 'heroicon-m-exclamation-triangle' : null)
+                        ->helperText(fn () => 'Sold disponibil: ' . number_format($this->liveAvailable(), 2, ',', '.') . ' RON. Avansul poate depăși soldul — diferența rămâne de recuperat din vânzările următoare.'),
                     Forms\Components\DatePicker::make('paid_at')
                         ->label('Data plății')
                         ->default(now())
@@ -126,7 +136,7 @@ class OrganizerBalance extends Page
                 ])
                 ->action(function (array $data) {
                     $amount = round((float) $data['amount'], 2);
-                    $availableBefore = (float) $this->organizer->available_balance;
+                    $availableBefore = $this->liveAvailable();
                     $marketplace = static::getMarketplaceClient();
                     $admin = Auth::guard('marketplace_admin')->user();
 
@@ -297,24 +307,126 @@ class OrganizerBalance extends Page
         return MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)->find((int) $id);
     }
 
+    /**
+     * Cifrele pe eveniment — aceeași sursă ca /organizator/sold și
+     * MarketplaceOrganizer::deriveBalances (SalesBreakdownService, cu regula
+     * legacy_import). Serviciul e costisitor (un calcul complet pe fiecare
+     * eveniment), iar Livewire re-randează pagina la fiecare acțiune, așa că
+     * netul stă 5 minute în cache. Plățile NU sunt în cache: se citesc live,
+     * ca „Finalizează" să se vadă imediat în carduri.
+     */
+    protected function eventRows(): array
+    {
+        return Cache::remember($this->eventRowsCacheKey(), 300, function () {
+            $service = app(SalesBreakdownService::class);
+
+            $events = Event::where('marketplace_organizer_id', $this->organizerId)
+                ->where('marketplace_client_id', $this->organizer->marketplace_client_id)
+                ->with('venue')
+                ->get();
+
+            $rows = [];
+            foreach ($events as $event) {
+                $settled = MarketplacePayout::eventHasLegacySettlement($event->id);
+                $b = $service->build($event, excludeLegacyImport: ! $settled);
+
+                $title = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? (collect($event->title)->first() ?: null))
+                    : $event->title;
+                $venueName = $event->venue
+                    ? (is_array($event->venue->name) ? ($event->venue->name['ro'] ?? $event->venue->name['en'] ?? (collect($event->venue->name)->first() ?: null)) : $event->venue->name)
+                    : null;
+                $date = $event->event_date ?? $event->range_start_date ?? $event->starts_at;
+
+                $rows[] = [
+                    'id' => $event->id,
+                    'title' => $title ?: ('Eveniment #' . $event->id),
+                    'date' => $date?->format('d.m.Y'),
+                    'sort_date' => $date?->format('Y-m-d') ?? '0000-00-00',
+                    'venue' => $venueName,
+                    'city' => $event->venue?->city,
+                    'is_past' => $event->event_date ? $event->event_date->isPast() && ! $event->event_date->isToday() : false,
+                    'revenue' => round((float) ($b['total_revenue'] ?? 0), 2),
+                    'commission' => round((float) ($b['total_commission'] ?? 0), 2),
+                    'discount' => round((float) ($b['total_discount'] ?? 0), 2),
+                    'extras' => round((float) ($b['total_extras'] ?? 0), 2),
+                    'net' => round((float) ($b['total_net'] ?? 0), 2),
+                ];
+            }
+
+            return ['rows' => $rows, 'computed_at' => now()->format('H:i')];
+        });
+    }
+
+    protected function eventRowsCacheKey(): string
+    {
+        return 'organizer_balance_page_events:' . $this->organizerId;
+    }
+
+    /**
+     * Soldul organizatorului, calculat live — aceeași formulă ca
+     * deriveBalances: disponibil = net − plătit − în procesare. Avansurile sunt
+     * plăți finalizate; partea din deconturi acoperită din avans nu se
+     * numără a doua oară.
+     */
+    protected function balanceSummary(): array
+    {
+        $eventData = $this->eventRows();
+        $net = round((float) collect($eventData['rows'])->sum('net'), 2);
+
+        $paid = round((float) MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)
+            ->where('status', 'completed')->sum('amount')
+            - MarketplacePayout::advanceOffsetForOrganizer($this->organizerId, ['completed']), 2);
+        $pending = round((float) MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)
+            ->whereIn('status', ['approved', 'processing'])->sum('amount')
+            - MarketplacePayout::advanceOffsetForOrganizer($this->organizerId, ['approved', 'processing']), 2);
+
+        return [
+            'net' => $net,
+            'paid' => $paid,
+            'pending' => $pending,
+            'available' => round($net - $paid - $pending, 2),
+            'computed_at' => $eventData['computed_at'],
+        ];
+    }
+
+    protected function liveAvailable(): float
+    {
+        return $this->balanceSummary()['available'];
+    }
+
     public function getViewData(): array
     {
-        // Revenue per event
-        $revenuePerEvent = Order::query()
-            ->where('marketplace_organizer_id', $this->organizerId)
-            ->where('status', 'completed')
-            // Comenzile de test (Test POS) nu intra in venituri
-            ->whereNotIn('source', ['external_import', 'test_order', 'pos_test'])
-            ->select(
-                'marketplace_event_id',
-                DB::raw('COUNT(*) as orders_count'),
-                DB::raw('SUM(subtotal) as gross_revenue'),
-                DB::raw('SUM(commission_amount) as total_commission'),
-                DB::raw('SUM(subtotal) - SUM(commission_amount) as net_revenue')
-            )
-            ->groupBy('marketplace_event_id')
-            ->with('marketplaceEvent')
-            ->get();
+        $eventData = $this->eventRows();
+        $summary = $this->balanceSummary();
+
+        // Plăți pe eveniment, live: plătit (finalizate) și în procesare
+        // (aprobate + în procesare). 'pending' = ciorne vechi, nu se numără.
+        $paidByEvent = MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)
+            ->whereNotNull('event_id')->where('status', 'completed')
+            ->groupBy('event_id')->selectRaw('event_id, SUM(amount) as total')->pluck('total', 'event_id');
+        $pendingByEvent = MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)
+            ->whereNotNull('event_id')->whereIn('status', ['approved', 'processing'])
+            ->groupBy('event_id')->selectRaw('event_id, SUM(amount) as total')->pluck('total', 'event_id');
+
+        $eventRows = collect($eventData['rows'])->map(function (array $row) use ($paidByEvent, $pendingByEvent) {
+            $row['paid'] = round((float) ($paidByEvent[$row['id']] ?? 0), 2);
+            $row['pending'] = round((float) ($pendingByEvent[$row['id']] ?? 0), 2);
+            $row['balance'] = round($row['net'] - $row['paid'] - $row['pending'], 2);
+
+            return $row;
+        })
+            // Evenimentele fără vânzări și fără deconturi nu spun nimic aici.
+            ->filter(fn ($r) => abs($r['net']) > 0.004 || $r['paid'] > 0 || $r['pending'] > 0 || abs($r['revenue']) > 0.004)
+            ->sortByDesc('sort_date')
+            ->values();
+
+        // Plăți fără eveniment: avansuri și deconturi multi-eveniment. Intră
+        // în sold (carduri), dar nu aparțin niciunui rând din tabel.
+        $orgWide = MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)
+            ->whereNull('event_id')
+            ->whereIn('status', ['approved', 'processing', 'completed'])
+            ->get(['id', 'amount', 'status', 'source']);
 
         // Payout history — eager-load event + venue for the Eveniment column.
         $payouts = MarketplacePayout::query()
@@ -329,7 +441,12 @@ class OrganizerBalance extends Page
 
         return [
             'organizer' => $this->organizer,
-            'revenuePerEvent' => $revenuePerEvent,
+            'summary' => $summary,
+            'eventRows' => $eventRows,
+            'orgWidePaid' => round((float) $orgWide->where('status', 'completed')->sum('amount'), 2),
+            'orgWidePending' => round((float) $orgWide->whereIn('status', ['approved', 'processing'])->sum('amount'), 2),
+            'advanceOffset' => round($eventRows->sum('paid') + $eventRows->sum('pending')
+                + (float) $orgWide->sum('amount') - $summary['paid'] - $summary['pending'], 2),
             'payouts' => $payouts,
             'advances' => $advances,
             'advanceOpen' => round((float) $advances->sum('advance_remaining'), 2),
