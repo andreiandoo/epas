@@ -152,6 +152,10 @@ class MarketplaceTransaction extends Model
         // Update organizer balance
         $organizer->decrement('available_balance', $commissionAmount);
 
+        // Incrementul de mai sus e aproximativ (comision on-top, asigurări) —
+        // recalculăm soldul exact în coadă, ca jobul de noapte.
+        \App\Jobs\RecomputeOrganizerBalanceJob::schedule($organizerId);
+
         return [$saleTx, $commissionTx];
     }
 
@@ -199,6 +203,8 @@ class MarketplaceTransaction extends Model
             $organizer->increment('available_balance', $commissionRefund);
         }
 
+        \App\Jobs\RecomputeOrganizerBalanceJob::schedule($organizerId);
+
         return [$refundTx, $commissionTx];
     }
 
@@ -231,6 +237,8 @@ class MarketplaceTransaction extends Model
         } else {
             $organizer->decrement('available_balance', abs($amount));
         }
+
+        \App\Jobs\RecomputeOrganizerBalanceJob::schedule($organizerId);
 
         return $tx;
     }
