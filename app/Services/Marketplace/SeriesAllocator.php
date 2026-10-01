@@ -355,7 +355,6 @@ class SeriesAllocator
         $marketplaceClientId = (int) ($event->marketplace_client_id ?? 0);
         $marketplaceOrganizerId = (int) ($event->marketplace_organizer_id ?? 0);
         $eventId = $event->id;
-        $now = now();
 
         // Without an organizer scope on the event, the "must belong to this
         // organizer" rule cannot be satisfied → drop everything.
@@ -369,13 +368,7 @@ class SeriesAllocator
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
             )
             ->where('marketplace_organizer_id', $marketplaceOrganizerId)
-            ->where('status', 'active')
-            ->where(function ($q) use ($now) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
-            })
-            ->where(function ($q) use ($now) {
-                $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
-            })
+            ->where(fn ($q) => $this->whereDeclared($q, 'usage_count'))
             ->get()
             ->filter(fn ($p) => $this->organizerPromoAppliesToEvent($p, $eventId, $ticketTypeIds))
             ->values();
@@ -448,7 +441,6 @@ class SeriesAllocator
         $marketplaceClientId = (int) ($event->marketplace_client_id ?? 0);
         $marketplaceOrganizerId = (int) ($event->marketplace_organizer_id ?? 0);
         $eventId = $event->id;
-        $now = now();
 
         if ($marketplaceOrganizerId === 0) {
             return collect();
@@ -462,16 +454,31 @@ class SeriesAllocator
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
             )
             ->where('marketplace_organizer_id', $marketplaceOrganizerId)
-            ->where('status', 'active')
-            ->where(function ($q) use ($now) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
-            })
-            ->where(function ($q) use ($now) {
-                $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
-            })
+            ->where(fn ($q) => $this->whereDeclared($q, 'current_uses'))
             ->get()
             ->filter(fn ($c) => $this->couponAppliesToEvent($c, $eventId, $ticketTypeIds))
             ->values();
+    }
+
+    /**
+     * Which promo / coupon codes keep their series row.
+     *
+     * A code that was issued for the event stays declared for the event's
+     * whole life — cerere avizare declared it, declaratia impozite reports
+     * its sales and PV distrugere destroys its unsold remainder. Filtering on
+     * status = active + "inside its validity window" dropped the row (qty
+     * allocated → 0) the moment a one-time code was used (exhausted) or its
+     * expiry passed — usually right before the PV is generated, after the
+     * event. So:
+     *   - active, exhausted (used up) and expired codes are always declared;
+     *   - any other status (inactive / disabled) is declared only if the code
+     *     was used at least once — its sold tickets need their series;
+     *   - the validity dates no longer matter.
+     */
+    private function whereDeclared($query, string $usageColumn)
+    {
+        return $query->whereIn('status', ['active', 'exhausted', 'expired'])
+            ->orWhere($usageColumn, '>', 0);
     }
 
     /**
