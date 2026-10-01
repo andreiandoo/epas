@@ -27,6 +27,7 @@ class CouponCode extends Model
         'marketplace_organizer_id',
         'tenant_id',
         'campaign_id',
+        'batch_id',
         'code',
         'code_type',
         'discount_type',
@@ -88,6 +89,12 @@ class CouponCode extends Model
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(CouponCampaign::class, 'campaign_id');
+    }
+
+    /** Lotul din care face parte codul (generare în masă), dacă e cazul. */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(CouponCodeBatch::class, 'batch_id');
     }
 
     public function creator(): BelongsTo

@@ -27,6 +27,12 @@ class ListCouponCodes extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            Actions\Action::make('bulk')
+                ->label('Bulk coupon codes')
+                ->icon('heroicon-o-squares-plus')
+                ->color('gray')
+                ->url(CouponCodeResource::getUrl('bulk'))
+                ->visible(fn () => \App\Models\Coupon\CouponCodeBatch::enabled()),
         ];
     }
 

@@ -405,6 +405,14 @@ class CouponCodeResource extends Resource
                     ]),
                 Tables\Filters\TernaryFilter::make('is_public')
                     ->label('Public'),
+                Tables\Filters\SelectFilter::make('batch_id')
+                    ->label('Lot')
+                    ->options(fn () => \App\Models\Coupon\CouponCodeBatch::enabled()
+                        ? \App\Models\Coupon\CouponCodeBatch::where('marketplace_client_id', static::getMarketplaceClientId())
+                            ->orderByDesc('id')->limit(200)->pluck('id')
+                            ->mapWithKeys(fn ($id) => [$id => 'LOT-' . $id])
+                        : [])
+                    ->visible(fn () => \App\Models\Coupon\CouponCodeBatch::enabled()),
                 Tables\Filters\SelectFilter::make('source')
                     ->label('Sursa')
                     ->options([
@@ -457,6 +465,8 @@ class CouponCodeResource extends Resource
         return [
             'index' => Pages\ListCouponCodes::route('/'),
             'create' => Pages\CreateCouponCode::route('/create'),
+            // Înainte de '/{record}', altfel „bulk" ar fi luat drept id de cod.
+            'bulk' => Pages\BulkCouponCodes::route('/bulk'),
             'view' => Pages\ViewCouponCode::route('/{record}'),
             'edit' => Pages\EditCouponCode::route('/{record}/edit'),
         ];

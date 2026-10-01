@@ -69,6 +69,9 @@ class PromoCodeController extends BaseController
                       ->orWhereJsonContains('applicable_events', (string) $eventId);
                 }
             })
+            // Codurile din loturi (generare în masă) se predau organizatorului
+            // prin CSV — nu le listăm în contul lui.
+            ->when(\App\Models\Coupon\CouponCodeBatch::enabled(), fn ($q) => $q->whereNull('batch_id'))
             ->orderBy('created_at', 'desc');
 
         if ($request->has('status')) {
