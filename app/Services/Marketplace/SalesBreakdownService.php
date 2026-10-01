@@ -883,6 +883,17 @@ class SalesBreakdownService
         $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
         $ordersById = Order::whereIn('id', $orderIds)->get(['id', 'discount_amount', 'subtotal', 'promo_code', 'meta'])->keyBy('id');
 
+        // Codes from a bulk batch are grouped under the batch key (LOT-{id}):
+        // the batch is declared as ONE series, so 400 used codes must be one
+        // row in the declaratie / decont table, not 400.
+        $splitCodes = [];
+        foreach ($ordersById as $o) {
+            $om = is_array($o->meta) ? $o->meta : [];
+            $splitCodes[] = is_array($om['promo_code'] ?? null) ? (string) ($om['promo_code']['code'] ?? '') : '';
+            $splitCodes[] = (string) ($om['coupon_code'] ?? $o->promo_code ?? '');
+        }
+        $splitBatchKeys = \App\Models\Coupon\CouponCodeBatch::mapCodesToBatchKeys((int) ($event->marketplace_client_id ?? 0) ?: null, $splitCodes);
+
         $defaultRate = (float) (
             $event->commission_rate
             ?? $event->marketplaceOrganizer?->commission_rate
@@ -930,6 +941,9 @@ class SalesBreakdownService
             // benefit from a discount — that way a mixed-eligibility order
             // doesn't drag the un-discounted tickets into a "(redus)" row.
             $effectiveCode = $hasPromoOnThisTicket ? $promoCode : '';
+            if ($effectiveCode !== '' && isset($splitBatchKeys[strtoupper($effectiveCode)])) {
+                $effectiveCode = $splitBatchKeys[strtoupper($effectiveCode)];
+            }
 
             $key = $t->ticket_type_id . '|' . number_format($effective, 4, '.', '') . '|' . $effectiveCode;
 

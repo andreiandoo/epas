@@ -68,6 +68,45 @@ class CouponCodeBatch extends Model
 
     public function getLabelAttribute(): string
     {
-        return 'LOT-' . $this->id;
+        return static::keyFor((int) $this->id);
+    }
+
+    /**
+     * Cheia fiscală a lotului: discount_code al seriei unice a lotului
+     * (EventTicketTypePromoSeries) și „codul" sub care se grupează vânzările
+     * făcute cu oricare dintre codurile lotului în documente și decont.
+     */
+    public static function keyFor(int $batchId): string
+    {
+        return 'LOT-' . $batchId;
+    }
+
+    /**
+     * Cod de reducere → cheia lotului, pentru codurile care fac parte dintr-un
+     * lot. Codurile care nu sunt în lot lipsesc din rezultat. Chei uppercase.
+     *
+     * @param  array<int, string>  $codes
+     * @return array<string, string>
+     */
+    public static function mapCodesToBatchKeys(?int $marketplaceClientId, array $codes): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(fn ($c) => strtoupper(trim((string) $c)), $codes))));
+        if (empty($codes) || !static::enabled()) {
+            return [];
+        }
+
+        $map = [];
+        foreach (array_chunk($codes, 1000) as $chunk) {
+            CouponCode::query()
+                ->when($marketplaceClientId, fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId))
+                ->whereNotNull('batch_id')
+                ->whereIn('code', $chunk)
+                ->get(['code', 'batch_id'])
+                ->each(function ($c) use (&$map) {
+                    $map[strtoupper((string) $c->code)] = static::keyFor((int) $c->batch_id);
+                });
+        }
+
+        return $map;
     }
 }

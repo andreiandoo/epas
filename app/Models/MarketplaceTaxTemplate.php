@@ -1188,6 +1188,7 @@ class MarketplaceTaxTemplate extends Model
                             ->keyBy(fn ($c) => strtoupper((string) $c->code));
                     } catch (\Throwable $e) {}
                 }
+                $pvBatchesByKey = static::couponBatchesByKey($event);
 
                 foreach ($pvAllocations as $pvAlloc) {
                     // Skip the parent (full-price) row — already emitted by the
@@ -1239,6 +1240,9 @@ class MarketplaceTaxTemplate extends Model
                                 default      => $pvBasePrice,
                             };
                         }
+                        $pvCodeLabel = (string) $pvAlloc->discount_code;
+                    } elseif ($pvAlloc->discount_source === 'coupon_batch') {
+                        $pvUnitPrice = static::couponBatchUnitPrice($pvBatchesByKey->get((string) $pvAlloc->discount_code), $pvBasePrice);
                         $pvCodeLabel = (string) $pvAlloc->discount_code;
                     }
 
@@ -1959,6 +1963,7 @@ class MarketplaceTaxTemplate extends Model
                             ->keyBy(fn ($c) => strtoupper((string) $c->code));
                     } catch (\Throwable $e) {}
                 }
+                $batchesByKey = static::couponBatchesByKey($event);
 
                 foreach ($allocations as $alloc) {
                     $qty = (int) $alloc->qty_allocated;
@@ -2006,6 +2011,9 @@ class MarketplaceTaxTemplate extends Model
                                 default      => $basePrice,
                             };
                         }
+                        $rowLabel .= ' - ' . $alloc->discount_code;
+                    } elseif ($alloc->discount_source === 'coupon_batch') {
+                        $unitPrice = static::couponBatchUnitPrice($batchesByKey->get((string) $alloc->discount_code), $basePrice);
                         $rowLabel .= ' - ' . $alloc->discount_code;
                     }
 
@@ -3394,6 +3402,43 @@ class MarketplaceTaxTemplate extends Model
      * the prefix sits in a smaller, gray inline-block and the rate
      * itself is bold + red. Empty when there's no rate.
      */
+    /**
+     * Loturi de coduri ale evenimentului, indexate după cheia fiscală (LOT-{id})
+     * = discount_code al rândului 'coupon_batch' din EventTicketTypePromoSeries.
+     */
+    private static function couponBatchesByKey(?\App\Models\Event $event): \Illuminate\Support\Collection
+    {
+        if (!$event || !\App\Models\Coupon\CouponCodeBatch::enabled()) {
+            return collect();
+        }
+
+        try {
+            return \App\Models\Coupon\CouponCodeBatch::query()
+                ->whereIn('ticket_type_id', $event->ticketTypes->pluck('id'))
+                ->get()
+                ->keyBy(fn ($b) => \App\Models\Coupon\CouponCodeBatch::keyFor((int) $b->id));
+        } catch (\Throwable $e) {
+            return collect();
+        }
+    }
+
+    /** Prețul redus al unui bilet din lot — toate codurile lotului au aceeași reducere. */
+    private static function couponBatchUnitPrice(?\App\Models\Coupon\CouponCodeBatch $batch, float $basePrice): float
+    {
+        $settings = $batch?->settings ?? [];
+        $value = (float) ($settings['discount_value'] ?? 0);
+        $price = match ($settings['discount_type'] ?? null) {
+            'percentage' => $basePrice - ($basePrice * $value / 100),
+            'fixed_amount' => $basePrice - $value,
+            default => $basePrice,
+        };
+        if (($settings['discount_type'] ?? null) === 'percentage' && !empty($settings['max_discount_amount'])) {
+            $price = max($price, $basePrice - (float) $settings['max_discount_amount']);
+        }
+
+        return max(0.0, $price);
+    }
+
     private static function commissionLabelHtml(string $rateLabel, ?string $mode, string $context = 'sale'): string
     {
         if ($rateLabel === '') return '';

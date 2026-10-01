@@ -26,6 +26,12 @@ use Illuminate\Support\Facades\DB;
  *   - 'intrinsic_red'   — RED / sale_price reduction on the ticket type
  *   - 'organizer_promo' — MarketplaceOrganizerPromoCode
  *   - 'coupon'          — Coupon\CouponCode
+ *   - 'coupon_batch'    — Coupon\CouponCodeBatch: ONE row for a whole batch of
+ *                         bulk-generated codes (discount_code = 'LOT-{id}'),
+ *                         instead of one row per code. qty_allocated = codes
+ *                         issued (capped at stock) and does NOT drop when codes
+ *                         get used / disabled; sales with any code of the batch
+ *                         are counted under the batch key.
  *
  * Allocation rules:
  *   - PARENT row: always exists for every type with stock. qty_allocated
@@ -61,10 +67,11 @@ class SeriesAllocator
 
         $organizerPromos = $this->loadApplicableOrganizerPromos($event, $ticketTypeIds);
         $couponCodes = $this->loadApplicableCouponCodes($event, $ticketTypeIds);
+        $couponBatches = $this->loadCouponBatches($event, $ticketTypeIds);
 
         $rowsToKeep = [];
 
-        DB::transaction(function () use ($event, $ticketTypes, $organizerPromos, $couponCodes, &$rowsToKeep, $eventId) {
+        DB::transaction(function () use ($event, $ticketTypes, $organizerPromos, $couponCodes, $couponBatches, &$rowsToKeep, $eventId) {
             foreach ($ticketTypes as $tt) {
                 $seriesStart = (string) ($tt->series_start ?? '');
                 $totalStock = (int) ($tt->quota_total ?? $tt->capacity ?? 0);
@@ -134,6 +141,32 @@ class SeriesAllocator
                         false,
                         $allocation,
                         EventTicketTypePromoSeries::derivePrefix($seriesStart, $coupon->code, false)
+                    )->id;
+                }
+
+                // COUPON BATCH rows — one per batch, on the batch's ticket type.
+                foreach ($couponBatches as $batch) {
+                    if ((int) $batch->ticket_type_id !== (int) $tt->id) {
+                        continue;
+                    }
+                    $issued = (int) $batch->issued_count;
+                    if ($issued <= 0) {
+                        continue;
+                    }
+                    // Declared stock = codes issued, capped at the type's stock
+                    // (decizie: seria declarată nu depășește biletele vandabile).
+                    // Stock <= 0 means unlimited / not set → codes issued.
+                    $allocation = $totalStock > 0 ? min($issued, $totalStock) : $issued;
+                    $key = \App\Models\Coupon\CouponCodeBatch::keyFor((int) $batch->id);
+                    $rowsToKeep[] = $this->upsertRow(
+                        $eventId,
+                        $tt,
+                        null,
+                        $key,
+                        'coupon_batch',
+                        false,
+                        $allocation,
+                        EventTicketTypePromoSeries::derivePrefix($seriesStart, $key, false)
                     )->id;
                 }
             }
@@ -212,6 +245,29 @@ class SeriesAllocator
             }
             // Tickets without any code attribute to parent.
             $buckets[$ttId][$code] = ($buckets[$ttId][$code] ?? 0) + 1;
+        }
+
+        // Codes that belong to a bulk batch are counted under the batch key
+        // (LOT-{id}) — the batch has ONE series row, not one per code.
+        $allCodes = [];
+        foreach ($buckets as $byCode) {
+            foreach (array_keys($byCode) as $c) {
+                if ($c !== '') {
+                    $allCodes[] = (string) $c;
+                }
+            }
+        }
+        $batchKeys = \App\Models\Coupon\CouponCodeBatch::mapCodesToBatchKeys((int) ($event->marketplace_client_id ?? 0) ?: null, $allCodes);
+        if (!empty($batchKeys)) {
+            foreach ($buckets as $ttKey => $byCode) {
+                foreach ($byCode as $c => $n) {
+                    $batchKey = $batchKeys[strtoupper((string) $c)] ?? null;
+                    if ($batchKey !== null) {
+                        unset($buckets[$ttKey][$c]);
+                        $buckets[$ttKey][$batchKey] = ($buckets[$ttKey][$batchKey] ?? 0) + $n;
+                    }
+                }
+            }
         }
 
         $allRows = EventTicketTypePromoSeries::query()
@@ -399,6 +455,8 @@ class SeriesAllocator
         }
 
         return CouponCode::query()
+            // Bulk-batch codes are declared as ONE row per batch (loadCouponBatches).
+            ->when(\App\Models\Coupon\CouponCodeBatch::enabled(), fn ($q) => $q->whereNull('batch_id'))
             ->when(
                 $marketplaceClientId > 0,
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
@@ -414,6 +472,24 @@ class SeriesAllocator
             ->get()
             ->filter(fn ($c) => $this->couponAppliesToEvent($c, $eventId, $ticketTypeIds))
             ->values();
+    }
+
+    /**
+     * Bulk coupon batches on this event's ticket types, with `issued_count` =
+     * codes in the batch (not soft-deleted). Status is deliberately ignored:
+     * every issued code was declared, so a used / expired / disabled code
+     * still counts — the unsold remainder is destroyed in the PV.
+     */
+    private function loadCouponBatches(Event $event, array $ticketTypeIds): Collection
+    {
+        if (!\App\Models\Coupon\CouponCodeBatch::enabled() || empty($ticketTypeIds)) {
+            return collect();
+        }
+
+        return \App\Models\Coupon\CouponCodeBatch::query()
+            ->whereIn('ticket_type_id', $ticketTypeIds)
+            ->withCount(['codes as issued_count'])
+            ->get();
     }
 
     /**
