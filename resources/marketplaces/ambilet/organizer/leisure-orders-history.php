@@ -90,7 +90,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">🌐 Online</span>';
     }
     function paymentLabel(pm) {
-        const map = { cash: '💵 Cash', card: '💳 Card', invoice: '📧 Link email', online: '🌐 Online' };
+        const map = { cash: '💵 Cash', card: '💳 Card', invoice: '📧 Via email', online: '🌐 Online' };
         return pm ? '<div class="text-[10px] text-muted mt-0.5">' + (map[pm] || pm) + '</div>' : '';
     }
     function actorBadge(type, name, email) {

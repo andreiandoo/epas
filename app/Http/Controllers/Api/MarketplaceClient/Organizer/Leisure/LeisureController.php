@@ -1059,6 +1059,15 @@ class LeisureController extends BaseController
             return $this->error('Ai introdus date de firmă (denumire/CUI) dar nu ai bifat „Generează factură fiscală". Bifează opțiunea sau șterge datele firmei înainte de finalizare.', 422);
         }
 
+        // „Via email" (payment_method = invoice): linkul de plata / biletele pleaca
+        // pe adresa clientului, deci fara o adresa reala comanda nu are cum ajunge la el.
+        if ($validated['payment_method'] === 'invoice') {
+            $posEmail = trim((string) ($validated['customer']['email'] ?? ''));
+            if ($posEmail === '' || str_contains($posEmail, 'pos@')) {
+                return $this->error('Pentru „Via email" completează adresa de email a clientului (Date client).', 422);
+            }
+        }
+
         // Captura locale efectiv (whitelist din config) — zero risc de injectie.
         $availableLocales = config('locales.available', []);
         $posLocale = null;
@@ -1297,9 +1306,22 @@ class LeisureController extends BaseController
         }
         $subtotal = round($subtotal, 2);
         $commissionTotal = round($commissionTotal, 2);
-        $total = round($subtotal + $commissionTotal, 2);
 
         $paymentMethod = $validated['payment_method'];
+
+        // „Via email" cu cos de valoare 0: biletele pleaca direct pe email, fara
+        // plata. Comisionul fix per bilet ar transforma un cos gratuit intr-o
+        // comanda de plata doar pentru comision, asa ca aici nu se aplica.
+        if ($paymentMethod === 'invoice' && $subtotal <= 0) {
+            $commissionTotal = 0.0;
+            foreach ($items as $idx => $it) {
+                $items[$idx]['commission_per_ticket'] = 0.0;
+            }
+        }
+        $total = round($subtotal + $commissionTotal, 2);
+
+        // „Via email" cu valoare > 0: comanda asteapta plata online prin link.
+        $awaitingPayment = $paymentMethod === 'invoice' && $total > 0;
         $now = Carbon::now();
 
         $order = null;
@@ -1322,11 +1344,14 @@ class LeisureController extends BaseController
                 'total' => $total,
                 'currency' => 'RON',
                 'locale' => $posLocale,
-                'status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
-                'payment_status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
+                'status' => $awaitingPayment ? 'pending' : 'paid',
+                'payment_status' => $awaitingPayment ? 'pending' : 'paid',
                 'payment_processor' => 'pos',
                 'payment_reference' => 'pos-' . $paymentMethod,
-                'paid_at' => $paymentMethod === 'invoice' ? null : $now,
+                'paid_at' => $awaitingPayment ? null : $now,
+                // Linkul de plata expira; orders:expire-pending anuleaza apoi comanda
+                // si elibereaza cursele / unitatile rezervate.
+                'expires_at' => $awaitingPayment ? \App\Services\Leisure\LeisurePosEmail::linkExpiry($visitDate) : null,
                 'source' => 'pos',
                 'meta' => array_merge([
                     'pos' => true,
@@ -1352,7 +1377,14 @@ class LeisureController extends BaseController
                     'commission_rate' => $commissionRate,
                     'commission_fixed' => $commissionFixed,
                     'commission_mode' => $commissionMode,
-                ], (!empty($validated['company']['cui']) || !empty($validated['company']['name'])) ? [
+                ], $awaitingPayment ? [
+                    \App\Services\Leisure\LeisurePosEmail::TOKEN_META_KEY => \App\Services\Leisure\LeisurePosEmail::newToken(),
+                    // Vanzarea POS nu incrementeaza quota_sold, deci nici anularea
+                    // (expirare / plata esuata) nu are ce restitui. Fara stampila,
+                    // Order::releaseSeatsAndRestoreStock ar scadea quota_sold sub
+                    // numarul real de bilete emise.
+                    'stock_released_at' => $now->toIso8601String(),
+                ] : [], (!empty($validated['company']['cui']) || !empty($validated['company']['name'])) ? [
                     // Date firma client (pentru factura B2B). Doar daca operatorul le-a introdus.
                     'company_billing' => array_filter([
                         'name' => $validated['company']['name'] ?? null,
@@ -1438,7 +1470,7 @@ class LeisureController extends BaseController
                             'code' => $packageCode,
                             'barcode' => $packageCode,
                             'locale' => $posLocale,
-                            'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                            'status' => $awaitingPayment ? 'pending' : 'valid',
                             'price' => $it['unit_price'],
                             'attendee_name' => $validated['customer']['name'] ?? null,
                             'attendee_email' => $validated['customer']['email'] ?? null,
@@ -1496,7 +1528,7 @@ class LeisureController extends BaseController
                                     'code' => $code,
                                     'barcode' => $code,
                                     'locale' => $posLocale,
-                                    'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                                    'status' => $awaitingPayment ? 'pending' : 'valid',
                                     'price' => 0, // componenta = $0, prețul e în pachet
                                     'attendee_name' => $validated['customer']['name'] ?? null,
                                     'attendee_email' => $validated['customer']['email'] ?? null,
@@ -1536,7 +1568,7 @@ class LeisureController extends BaseController
                             'code' => $code,
                             'barcode' => $code,
                             'locale' => $posLocale,
-                            'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                            'status' => $awaitingPayment ? 'pending' : 'valid',
                             'price' => $it['unit_price'],
                             'attendee_name' => $validated['customer']['name'] ?? null,
                             'attendee_email' => $validated['customer']['email'] ?? null,
@@ -1582,7 +1614,7 @@ class LeisureController extends BaseController
                                 'code' => $codeBonus,
                                 'barcode' => $codeBonus,
                                 'locale' => $posLocale,
-                                'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                                'status' => $awaitingPayment ? 'pending' : 'valid',
                                 'price' => 0,
                                 'attendee_name' => $validated['customer']['name'] ?? null,
                                 'attendee_email' => $validated['customer']['email'] ?? null,
@@ -1657,6 +1689,30 @@ class LeisureController extends BaseController
             return $this->error('Eroare la procesarea vânzării: ' . $e->getMessage(), 500);
         }
 
+        // „Via email": link de plata (valoare > 0) sau direct biletele (valoare 0),
+        // in limba aleasa de operator. Vanzarea ramane inregistrata chiar daca
+        // trimiterea esueaza — operatorul vede avertismentul in POS.
+        $delivery = null;
+        if ($paymentMethod === 'invoice') {
+            $delivery = [
+                'mode' => $awaitingPayment ? 'payment_link' : 'tickets',
+                'email' => $order->customer_email,
+                'sent' => false,
+                'expires_at' => optional($order->expires_at)->toIso8601String(),
+            ];
+            try {
+                $posEmailService = app(\App\Services\Leisure\LeisurePosEmail::class);
+                $awaitingPayment
+                    ? $posEmailService->sendPaymentLink($order)
+                    : $posEmailService->sendTickets($order);
+                $delivery['sent'] = true;
+            } catch (\Throwable $e) {
+                \Log::error('[posSale] via-email send failed', [
+                    'order_id' => $order->id, 'mode' => $delivery['mode'], 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Datele pentru chitanță 80mm
         $issuer = $organizer->getIssuerData('primary');
         $issuerSecondary = $organizer->has_secondary_issuer ? $organizer->getIssuerData('secondary') : null;
@@ -1705,6 +1761,7 @@ class LeisureController extends BaseController
                 ];
             }, $items),
             'tickets' => $issued,
+            'delivery' => $delivery,
         ]);
     }
 
@@ -5000,7 +5057,7 @@ class LeisureController extends BaseController
                 $pmRaw = $o->meta['payment_method'] ?? null;
                 if ($isPos && $pmRaw === 'cash') $pmLabel = 'Cash (POS)';
                 elseif ($isPos && $pmRaw === 'card') $pmLabel = 'Card (POS)';
-                elseif ($isPos && $pmRaw === 'invoice') $pmLabel = 'Link email (POS)';
+                elseif ($isPos && $pmRaw === 'invoice') $pmLabel = 'Via email (POS)';
                 else $pmLabel = 'Online';
                 $sourceLabel = $isPos ? 'POS' : 'Online';
                 $sessionId = $o->meta['cashier_session_id'] ?? null;
@@ -5521,7 +5578,7 @@ class LeisureController extends BaseController
                 $pmRaw = $o->meta['payment_method'] ?? null;
                 if ($isPos && $pmRaw === 'cash') $pmLabel = 'Cash';
                 elseif ($isPos && $pmRaw === 'card') $pmLabel = 'Card';
-                elseif ($isPos && $pmRaw === 'invoice') $pmLabel = 'Link email (POS)';
+                elseif ($isPos && $pmRaw === 'invoice') $pmLabel = 'Via email (POS)';
                 else $pmLabel = 'Online';
                 $canal = $isPos ? 'POS' : 'Online';
                 $tmId = $o->meta['cashier_team_member_id'] ?? null;

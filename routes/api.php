@@ -1706,6 +1706,10 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.events.sales-breakdown');
 
     // Payment
+    // Leisure POS „Via email": plata prin linkul din email (număr comandă + token).
+    // Înaintea rutelor cu {order}, ca „pay-by-link" să nu fie citit drept id.
+    Route::post('/orders/pay-by-link', [MarketplacePaymentController::class, 'initiateByLink'])
+        ->name('api.marketplace-client.orders.pay-by-link');
     Route::post('/orders/{order}/pay', [MarketplacePaymentController::class, 'initiate'])
         ->name('api.marketplace-client.orders.pay');
     Route::get('/orders/{order}/payment-status', [MarketplacePaymentController::class, 'status'])

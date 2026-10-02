@@ -136,7 +136,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
     function paymentBadge(pm) {
         if (!pm) return '<span class="text-muted">—</span>';
-        const map = { cash: '💵 Cash', card: '💳 Card', invoice: '📧 Link email', online: '🌐 Online' };
+        const map = { cash: '💵 Cash', card: '💳 Card', invoice: '📧 Via email', online: '🌐 Online' };
         return '<span class="text-xs">' + (map[pm] || pm) + '</span>';
     }
     function statusBadge(s) {

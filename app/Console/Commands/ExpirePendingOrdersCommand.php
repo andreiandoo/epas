@@ -67,6 +67,12 @@ class ExpirePendingOrdersCommand extends Command
                 'updated_at' => now(),
             ]);
 
+        // 2b. Leisure: free the physical units (boats etc.) the order was holding
+        //     for its interval. No-op for orders without resource locks.
+        \App\Models\LeisureResourceLock::where('order_id', $order->id)
+            ->where('status', 'active')
+            ->update(['status' => 'released']);
+
         // 3. Finally flip the order. skipTicketSync avoids the observer
         //    duplicating work we already did explicitly.
         $order->skipTicketSync = true;

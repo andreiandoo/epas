@@ -188,6 +188,71 @@ class PaymentController extends BaseController
     }
 
     /**
+     * POST /marketplace-client/orders/pay-by-link
+     *
+     * Linkul de plată trimis pe email din POS-ul leisure („Via email"):
+     * /plata/{order_number}?t={token}. Clientul nu are cont, deci comanda se
+     * identifică prin număr + tokenul din meta, nu prin id.
+     *
+     * Răspunde mereu 200 cu `state` (invalid / paid / expired / failed /
+     * pending / ready / error) + `locale`, ca pagina să poată afișa mesajul în
+     * limba comenzii. Cu `initiate = false` doar raportează starea (întoarcerea
+     * de la procesator) — nu pornește o plată nouă.
+     */
+    public function initiateByLink(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'order_number' => 'required|string|max:64',
+            'token' => 'required|string|max:128',
+            'initiate' => 'nullable|boolean',
+        ]);
+
+        $order = Order::where('order_number', $validated['order_number'])
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        $token = $order ? ($order->meta[\App\Services\Leisure\LeisurePosEmail::TOKEN_META_KEY] ?? null) : null;
+        if (!$order || !is_string($token) || $token === '' || !hash_equals($token, $validated['token'])) {
+            return $this->success(['state' => 'invalid', 'locale' => 'ro']);
+        }
+
+        $base = [
+            'locale' => \App\Services\Leisure\LeisurePosEmail::locale($order),
+            'order_number' => $order->order_number,
+        ];
+
+        if ($order->payment_status === 'paid' || in_array($order->status, ['paid', 'completed', 'confirmed'], true)) {
+            return $this->success($base + ['state' => 'paid']);
+        }
+        if ($order->status === 'failed') {
+            return $this->success($base + ['state' => 'failed']);
+        }
+        if ($order->status !== 'pending' || ($order->expires_at && $order->expires_at->isPast())) {
+            return $this->success($base + ['state' => 'expired']);
+        }
+        if (!$request->boolean('initiate', true)) {
+            return $this->success($base + ['state' => 'pending']);
+        }
+
+        // Clientul pleacă acum la procesator: comanda nu trebuie să expire cât
+        // timp el completează datele cardului / 3DS.
+        $paymentWindow = now()->addMinutes(45);
+        if ($order->expires_at && $order->expires_at->lt($paymentWindow)) {
+            $order->update(['expires_at' => $paymentWindow]);
+        }
+
+        $initiated = $this->initiate($request, $order->id);
+        $payload = $initiated->getData(true);
+        if ($initiated->getStatusCode() >= 400 || empty($payload['data']['payment_url'])) {
+            return $this->success($base + ['state' => 'error', 'message' => $payload['message'] ?? null]);
+        }
+
+        return $this->success($base + ['state' => 'ready'] + $payload['data']);
+    }
+
+    /**
      * Handle payment callback from payment processor
      */
     public function callback(Request $request, string $clientSlug): JsonResponse|\Illuminate\Http\Response
@@ -474,6 +539,14 @@ class PaymentController extends BaseController
                     'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
                 ]);
 
+                // Leisure POS „Via email": a failed payment ends the order, so the
+                // physical units it held for its interval go back on sale.
+                if ($isFailed && \App\Services\Leisure\LeisurePosEmail::isPosEmailOrder($order)) {
+                    \App\Models\LeisureResourceLock::where('order_id', $order->id)
+                        ->where('status', 'active')
+                        ->update(['status' => 'released']);
+                }
+
                 // info, not warning — payment failures (3DS rejection,
                 // insufficient funds, declined cards) are normal business
                 // events. Customer sees the message and can retry. Keep
@@ -562,6 +635,13 @@ class PaymentController extends BaseController
         // every 10 lei test sale is noise (and admin_new_order to
         // bilete@ambilet.ro would trigger the operator's real inbox).
         if (($order->source ?? null) === 'pos_test') {
+            return;
+        }
+
+        // Leisure POS „Via email" orders get their tickets in the language the
+        // operator picked (ro / hu / en), not the Romanian event e-mail below.
+        if (\App\Services\Leisure\LeisurePosEmail::isPosEmailOrder($order)) {
+            app(\App\Services\Leisure\LeisurePosEmail::class)->sendTickets($order);
             return;
         }
 
