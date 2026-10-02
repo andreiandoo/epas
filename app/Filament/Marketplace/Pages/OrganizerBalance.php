@@ -141,12 +141,21 @@ class OrganizerBalance extends Page
                     $admin = Auth::guard('marketplace_admin')->user();
 
                     $payout = DB::transaction(function () use ($amount, $data, $marketplace, $admin) {
+                        $paidDate = \Carbon\Carbon::parse($data['paid_at'])->toDateString();
+
                         $payout = MarketplacePayout::create([
                             'marketplace_client_id' => $marketplace->id,
                             'marketplace_organizer_id' => $this->organizer->id,
                             'event_id' => null,
                             'amount' => $amount,
                             'currency' => 'RON',
+                            // Coloane obligatorii în tabel (NOT NULL, fără valoare
+                            // implicită). Avansul nu acoperă o perioadă de vânzări
+                            // și nu are brut / comision — perioada e ziua plății.
+                            'period_start' => $paidDate,
+                            'period_end' => $paidDate,
+                            'gross_amount' => 0,
+                            'commission_amount' => 0,
                             'status' => 'processing',
                             'source' => MarketplacePayout::SOURCE_ADVANCE,
                             'processed_by' => $admin?->id,
