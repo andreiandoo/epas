@@ -51,6 +51,19 @@ require_once __DIR__ . '/includes/header.php';
             <div class="lg:w-2/3">
                 <h1 class="mb-6 text-2xl font-bold md:text-3xl text-secondary"><?= htmlspecialchars(ct('checkout_h1')) ?></h1>
 
+                <!-- In-app browser notice (Facebook / Instagram / TikTok ...): shown by checkout-page.js -->
+                <div id="inapp-banner" class="hidden p-5 mb-6 border-2 rounded-2xl border-warning/40 bg-warning/10" data-lang="<?= htmlspecialchars($cartLocale) ?>">
+                    <p class="mb-1 font-bold text-secondary"><?= htmlspecialchars(ct('inapp_title')) ?></p>
+                    <p class="mb-4 text-sm text-secondary" id="inapp-body" data-template="<?= htmlspecialchars(ct('inapp_body')) ?>"></p>
+                    <div class="flex flex-wrap gap-2">
+                        <a id="inapp-open" href="#" class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-primary" data-label-ios="<?= htmlspecialchars(ct('inapp_open_safari')) ?>" data-label-android="<?= htmlspecialchars(ct('inapp_open_chrome')) ?>"></a>
+                        <button type="button" id="inapp-copy" class="px-4 py-2.5 text-sm font-semibold bg-white border-2 rounded-xl border-border text-secondary" data-copied="<?= htmlspecialchars(ct('inapp_copied')) ?>"><?= htmlspecialchars(ct('inapp_copy')) ?></button>
+                        <button type="button" id="inapp-dismiss" class="px-3 py-2.5 text-sm underline text-muted"><?= htmlspecialchars(ct('inapp_dismiss')) ?></button>
+                    </div>
+                    <input id="inapp-link" type="text" readonly class="hidden w-full px-3 py-2 mt-3 text-xs bg-white border rounded-lg border-border text-secondary">
+                    <p class="mt-3 text-xs text-muted" id="inapp-hint" data-hint-ios="<?= htmlspecialchars(ct('inapp_hint_ios')) ?>" data-hint-android="<?= htmlspecialchars(ct('inapp_hint_android')) ?>"></p>
+                </div>
+
                 <!-- Loading State -->
                 <div id="checkout-loading" class="space-y-6">
                     <div class="h-48 skeleton rounded-2xl"></div>

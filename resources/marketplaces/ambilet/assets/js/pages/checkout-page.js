@@ -10,6 +10,9 @@ const CheckoutPage = {
     endTime: null,
 
     async init() {
+        // A cart handed over from an in-app browser (see InAppHandoff) must
+        // land in localStorage before anything reads the cart.
+        await InAppHandoff.restore();
         this.items = AmbiletCart.getItems();
         this.loadTaxes();
 
@@ -67,6 +70,8 @@ const CheckoutPage = {
         };
         window.addEventListener('ambilet:cart:update', refresh);
         window.addEventListener('ambilet:cart:promo', refresh);
+
+        InAppHandoff.showBanner(this.items);
     },
 
     async loadCheckoutFeatures() {
@@ -1013,6 +1018,174 @@ const CheckoutPage = {
             payBtnText.textContent = `Plătește ${AmbiletUtils.formatCurrency(this.totals.total)}`;
         }
     }
+};
+
+/**
+ * In-app browsers (Facebook, Instagram, TikTok ...) often lose the payment
+ * at the bank's 3DS step, so the checkout offers to continue in Safari /
+ * Chrome. The cart lives in this browser's localStorage, so it travels in
+ * the link (?cos=, base64url JSON) and restore() unpacks it on the
+ * other side. Seated carts are left alone: their seat holds belong to this
+ * browser's session and would not follow.
+ */
+const InAppHandoff = {
+    PARAM: 'cos',
+    MAX_URL_LENGTH: 7000,
+    DISMISS_KEY: 'ambilet_inapp_dismissed',
+
+    detectApp() {
+        const ua = navigator.userAgent || '';
+        if (/Instagram/i.test(ua)) return 'Instagram';
+        if (/FBAN|FBAV|FB_IAB|FBIOS|FB4A/.test(ua)) return 'Facebook';
+        if (/musical_ly|Bytedance|TikTok|trill_/i.test(ua)) return 'TikTok';
+        if (/LinkedInApp/i.test(ua)) return 'LinkedIn';
+        if (/Snapchat/i.test(ua)) return 'Snapchat';
+        if (/Pinterest/i.test(ua)) return 'Pinterest';
+        return null;
+    },
+
+    isIOS() {
+        return /iPhone|iPad|iPod/.test(navigator.userAgent || '')
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    },
+
+    toBase64Url(bytes) {
+        let binary = '';
+        bytes.forEach(b => { binary += String.fromCharCode(b); });
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    },
+
+    fromBase64Url(str) {
+        const binary = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+        return Uint8Array.from(binary, c => c.charCodeAt(0));
+    },
+
+    // 'j' prefix = base64url JSON; leaves room for another format later.
+    encode(data) {
+        return 'j' + this.toBase64Url(new TextEncoder().encode(JSON.stringify(data)));
+    },
+
+    decode(payload) {
+        if (payload[0] !== 'j') throw new Error('Unknown cart payload format');
+        return JSON.parse(new TextDecoder().decode(this.fromBase64Url(payload.slice(1))));
+    },
+
+    async restore() {
+        let params;
+        try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
+        const payload = params.get(this.PARAM);
+        if (!payload) return;
+
+        try {
+            const data = await this.decode(payload);
+            if (data && Array.isArray(data.items) && data.items.length > 0) {
+                const setOrRemove = (key, value) => {
+                    if (value) localStorage.setItem(key, value); else localStorage.removeItem(key);
+                };
+                setOrRemove(AmbiletCart.PROMO_KEY, data.promo);
+                setOrRemove(AmbiletCart.FREE_CODES_KEY, data.freeCodes);
+
+                const endTime = parseInt(data.endTime, 10);
+                if (endTime > Date.now()) {
+                    localStorage.setItem('cart_end_time', String(endTime));
+                    localStorage.setItem(AmbiletCart.RESERVATION_KEY, new Date(endTime).toISOString());
+                } else {
+                    AmbiletCart.startReservationTimer();
+                }
+
+                AmbiletCart.saveCart({ items: data.items });
+            }
+        } catch (e) {
+            // Unreadable link: keep whatever cart this browser already has.
+        }
+
+        // Drop the payload from the address bar so a refresh / share doesn't replay it.
+        params.delete(this.PARAM);
+        const qs = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+    },
+
+    async buildLink(lang) {
+        const cart = AmbiletCart.getCart();
+        if (!cart.items || cart.items.length === 0) return null;
+
+        const params = new URLSearchParams();
+        if (lang && lang !== 'ro') params.set('lang', lang);
+        params.set(this.PARAM, await this.encode({
+            items: cart.items,
+            promo: localStorage.getItem(AmbiletCart.PROMO_KEY),
+            freeCodes: localStorage.getItem(AmbiletCart.FREE_CODES_KEY),
+            endTime: localStorage.getItem('cart_end_time'),
+        }));
+
+        const url = window.location.origin + '/finalizare?' + params.toString();
+        return url.length <= this.MAX_URL_LENGTH ? url : null;
+    },
+
+    async showBanner(items) {
+        const app = this.detectApp();
+        const banner = document.getElementById('inapp-banner');
+        if (!app || !banner) return;
+        try { if (sessionStorage.getItem(this.DISMISS_KEY)) return; } catch (e) { /* storage blocked */ }
+        if (items.some(item => (item.seat_uids && item.seat_uids.length > 0) || item.event_seating_id)) return;
+
+        const ios = this.isIOS();
+        const openBtn = document.getElementById('inapp-open');
+        const copyBtn = document.getElementById('inapp-copy');
+        const linkInput = document.getElementById('inapp-link');
+        const body = document.getElementById('inapp-body');
+        const hint = document.getElementById('inapp-hint');
+        let currentUrl = null;
+        let dismissed = false;
+
+        const refreshLink = async () => {
+            if (dismissed) return;
+            try { currentUrl = await this.buildLink(banner.dataset.lang); } catch (e) { currentUrl = null; }
+            if (!currentUrl) {
+                banner.classList.add('hidden');
+                return;
+            }
+            openBtn.href = ios
+                // iOS 17+ opens x-safari-https:// links in Safari from in-app browsers.
+                ? 'x-safari-' + currentUrl
+                : 'intent://' + currentUrl.replace(/^https?:\/\//, '')
+                    + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='
+                    + encodeURIComponent(currentUrl) + ';end';
+            linkInput.value = currentUrl;
+            banner.classList.remove('hidden');
+        };
+
+        body.textContent = (body.dataset.template || '').replace('%s', app);
+        openBtn.textContent = ios ? openBtn.dataset.labelIos : openBtn.dataset.labelAndroid;
+        hint.textContent = ios ? hint.dataset.hintIos : hint.dataset.hintAndroid;
+
+        copyBtn.addEventListener('click', () => {
+            if (!currentUrl) return;
+            const showManual = () => {
+                linkInput.classList.remove('hidden');
+                linkInput.focus();
+                linkInput.select();
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(currentUrl)
+                    .then(() => { copyBtn.textContent = copyBtn.dataset.copied; })
+                    .catch(showManual);
+            } else {
+                showManual();
+            }
+        });
+
+        document.getElementById('inapp-dismiss').addEventListener('click', () => {
+            dismissed = true;
+            banner.classList.add('hidden');
+            try { sessionStorage.setItem(this.DISMISS_KEY, '1'); } catch (e) { /* storage blocked */ }
+        });
+
+        // Quantities can still change from the cart drawer; keep the link current.
+        window.addEventListener('ambilet:cart:update', refreshLink);
+        window.addEventListener('ambilet:cart:promo', refreshLink);
+        await refreshLink();
+    },
 };
 
 document.addEventListener('DOMContentLoaded', () => CheckoutPage.init());

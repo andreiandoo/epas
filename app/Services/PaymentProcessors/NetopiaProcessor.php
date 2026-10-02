@@ -94,6 +94,7 @@ class NetopiaProcessor implements PaymentProcessorInterface
             'cancelUrl' => $data['cancel_url'],
             'customer_email' => $data['customer_email'] ?? null,
             'customer_name' => $data['customer_name'] ?? null,
+            'customer_phone' => $data['customer_phone'] ?? null,
         ];
 
         // Create XML request for mobilPay
@@ -412,7 +413,10 @@ class NetopiaProcessor implements PaymentProcessorInterface
         }
 
         $billing->addChild('address', 'N/A');
-        $billing->addChild('mobile_phone', 'N/A');
+        // A real phone + email let Netopia's payment page skip its
+        // "Validează datele" step (it asks for both when either is missing).
+        $phone = preg_replace('/[^0-9+]/', '', (string) ($data['customer_phone'] ?? ''));
+        $billing->addChild('mobile_phone', strlen($phone) >= 6 ? $phone : 'N/A');
 
         $xml->addChild('url');
         $xml->url->addChild('confirm', htmlspecialchars($data['confirmUrl']));

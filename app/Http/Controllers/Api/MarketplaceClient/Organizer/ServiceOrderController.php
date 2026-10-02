@@ -423,6 +423,7 @@ class ServiceOrderController extends BaseController
                 'currency'       => $order->currency ?? 'RON',
                 'customer_email' => $organizer->email ?? '',
                 'customer_name'  => $organizer->name ?? '',
+                'customer_phone' => $organizer->phone ?? null,
                 'description'    => 'Promovare eveniment - ' . $reference,
                 'success_url'    => $baseUrl . '/organizator/servicii?payment=success',
                 'return_url'     => $baseUrl . '/organizator/servicii?payment=success',

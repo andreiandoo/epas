@@ -266,6 +266,7 @@ class CheckoutController extends Controller
                 'currency' => $order->currency ?: 'RON',
                 'customer_email' => $order->customer_email,
                 'customer_name' => $order->customer_name,
+                'customer_phone' => $order->customer_phone,
                 'description' => 'Bilete Tixello',
                 'success_url' => $base.'/comanda-finalizata',
                 'return_url' => $base.'/comanda-finalizata',
