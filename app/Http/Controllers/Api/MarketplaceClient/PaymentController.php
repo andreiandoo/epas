@@ -93,7 +93,10 @@ class PaymentController extends BaseController
 
             $paymentData = $processor->createPayment([
                 'order_id' => $order->id,
-                'order_number' => $order->order_number,
+                // initiateByLink sets a per-attempt id after a declined payment
+                // (request attribute, not client input); everyone else sends
+                // the order number.
+                'order_number' => $request->attributes->get('processor_order_id') ?: $order->order_number,
                 'amount' => $order->total,
                 'currency' => $order->currency,
                 'customer_email' => $order->customer_email,
@@ -195,9 +198,12 @@ class PaymentController extends BaseController
      * identifică prin număr + tokenul din meta, nu prin id.
      *
      * Răspunde mereu 200 cu `state` (invalid / paid / expired / failed /
-     * pending / ready / error) + `locale`, ca pagina să poată afișa mesajul în
-     * limba comenzii. Cu `initiate = false` doar raportează starea (întoarcerea
-     * de la procesator) — nu pornește o plată nouă.
+     * declined / pending / ready / error) + `locale`, ca pagina să poată afișa
+     * mesajul în limba comenzii. Cu `initiate = false` doar raportează starea
+     * (întoarcerea de la procesator) — nu pornește o plată nouă.
+     *
+     * O plată refuzată nu închide comanda (vezi callback): clientul poate
+     * relua plata din același link până la expirarea lui.
      */
     public function initiateByLink(Request $request): JsonResponse
     {
@@ -233,14 +239,25 @@ class PaymentController extends BaseController
             return $this->success($base + ['state' => 'expired']);
         }
         if (!$request->boolean('initiate', true)) {
-            return $this->success($base + ['state' => 'pending']);
+            // payment_error e golit la fiecare încercare nouă, deci dacă e setat
+            // aici, ultima încercare a fost refuzată.
+            return $this->success($base + ['state' => !empty($order->payment_error) ? 'declined' : 'pending']);
         }
 
         // Clientul pleacă acum la procesator: comanda nu trebuie să expire cât
         // timp el completează datele cardului / 3DS.
         $paymentWindow = now()->addMinutes(45);
-        if ($order->expires_at && $order->expires_at->lt($paymentWindow)) {
-            $order->update(['expires_at' => $paymentWindow]);
+        $order->update([
+            'expires_at' => ($order->expires_at && $order->expires_at->lt($paymentWindow)) ? $paymentWindow : $order->expires_at,
+            'payment_error' => null,
+        ]);
+
+        // După o plată refuzată, procesatorul primește un id nou per încercare
+        // (POS-XXXXXXXXXX-R2, -R3 ...): un id deja refuzat poate fi respins la
+        // retrimitere. Callback-ul regăsește comanda după numărul de bază.
+        $failedAttempts = (int) ($order->meta['pay_link_failed_attempts'] ?? 0);
+        if ($failedAttempts > 0) {
+            $request->attributes->set('processor_order_id', $order->order_number . '-R' . ($failedAttempts + 1));
         }
 
         $initiated = $this->initiate($request, $order->id);
@@ -322,11 +339,20 @@ class PaymentController extends BaseController
             $orderId = $request->input('order_id') ?? $request->input('orderId');
             $orderNumber = $request->input('order_number') ?? $request->input('orderNumber');
 
-            $order = Order::where(function ($q) use ($callbackOrderId, $orderId, $orderNumber) {
+            // Leisure POS „Via email": a retry after a declined payment is sent to
+            // the processor as {order_number}-R{n} (see initiateByLink).
+            $retryBaseNumber = ($callbackOrderId && preg_match('/^(POS-[A-Z0-9]{10})-R\d+$/', (string) $callbackOrderId, $retryMatch))
+                ? $retryMatch[1]
+                : null;
+
+            $order = Order::where(function ($q) use ($callbackOrderId, $orderId, $orderNumber, $retryBaseNumber) {
                     // Try callback order ID as order_number first (Netopia uses our order_number as ID)
                     if ($callbackOrderId) {
                         $q->where('order_number', $callbackOrderId)
                           ->orWhere('payment_reference', $callbackOrderId);
+                    }
+                    if ($retryBaseNumber) {
+                        $q->orWhere('order_number', $retryBaseNumber);
                     }
                     if ($orderId) {
                         $q->orWhere('id', $orderId);
@@ -532,6 +558,42 @@ class PaymentController extends BaseController
 
                 $errorMessage = $result['metadata']['error_message'] ?? $result['message'] ?? 'Payment failed';
                 $isFailed = $result['status'] !== 'pending';
+
+                // Leisure POS „Via email": a declined card must not kill the
+                // payment link — the customer retries from the same e-mail. The
+                // order stays pending (still holding its slots) until the link
+                // expires; orders:expire-pending cancels it then.
+                if (
+                    $isFailed
+                    && $order->status === 'pending'
+                    && \App\Services\Leisure\LeisurePosEmail::isPosEmailOrder($order)
+                    && (!$order->expires_at || $order->expires_at->isFuture())
+                ) {
+                    // Netopia's 'paid' / 'paid_pending' with error code 0 mean
+                    // "authorised, confirmation follows" — not a refusal.
+                    $callbackAction = (string) ($result['metadata']['action'] ?? '');
+                    $callbackErrorCode = (string) ($result['metadata']['error_code'] ?? '');
+                    $authorisedOnly = in_array($callbackAction, ['paid', 'paid_pending'], true) && $callbackErrorCode === '0';
+
+                    if (!$authorisedOnly) {
+                        $retryMeta = is_array($order->meta) ? $order->meta : [];
+                        $retryMeta['pay_link_failed_attempts'] = (int) ($retryMeta['pay_link_failed_attempts'] ?? 0) + 1;
+                        $order->update([
+                            'payment_error' => $errorMessage ?: 'Payment failed',
+                            'meta' => $retryMeta,
+                        ]);
+                    }
+
+                    Log::channel('marketplace')->info('POS via-email payment not completed — order kept pending for retry', [
+                        'order_id' => $order->id,
+                        'client_slug' => $clientSlug,
+                        'status' => $result['status'],
+                        'action' => $callbackAction,
+                        'error' => $errorMessage,
+                    ]);
+
+                    return $this->netopiaResponse(0);
+                }
                 $order->update([
                     'status' => $isFailed ? 'failed' : $order->status,
                     'payment_status' => $isFailed ? 'failed' : 'pending',

@@ -48,6 +48,7 @@ if ($linkToken !== '') {
             'redirect' => ['Vă redirecționăm către plată…', 'Veți fi dus imediat pe pagina securizată a procesatorului de plăți.'],
             'paid' => ['Plata a fost confirmată', 'Vă mulțumim! Biletele au fost trimise pe adresa dumneavoastră de email.'],
             'pending' => ['Plata se procesează', 'Dacă plata a fost efectuată, veți primi biletele pe email în câteva minute. Dacă plata nu a fost finalizată, o puteți relua.'],
+            'declined' => ['Plata nu a reușit', 'Plata nu a fost acceptată. Puteți încerca din nou, cu același card sau cu altul.'],
             'failed' => ['Plata nu a reușit', 'Comanda nu a putut fi plătită. Vă rugăm să contactați locația pentru un nou link de plată.'],
             'expired' => ['Linkul de plată a expirat', 'Comanda nu mai este disponibilă. Vă rugăm să contactați locația pentru o comandă nouă.'],
             'invalid' => ['Link invalid', 'Acest link de plată nu este valid.'],
@@ -59,6 +60,7 @@ if ($linkToken !== '') {
             'redirect' => ['Átirányítjuk a fizetéshez…', 'Azonnal a fizetési szolgáltató biztonságos oldalára kerül.'],
             'paid' => ['A fizetés megtörtént', 'Köszönjük! A jegyeket elküldtük az Ön e-mail-címére.'],
             'pending' => ['A fizetés feldolgozás alatt', 'Ha a fizetés sikeres volt, néhány percen belül e-mailben megkapja jegyeit. Ha a fizetés nem fejeződött be, újrapróbálhatja.'],
+            'declined' => ['A fizetés nem sikerült', 'A fizetést nem fogadták el. Újrapróbálhatja ugyanazzal vagy egy másik kártyával.'],
             'failed' => ['A fizetés nem sikerült', 'A rendelést nem sikerült kifizetni. Kérjük, vegye fel a kapcsolatot a helyszínnel egy új fizetési linkért.'],
             'expired' => ['A fizetési link lejárt', 'A rendelés már nem érhető el. Kérjük, vegye fel a kapcsolatot a helyszínnel egy új rendelésért.'],
             'invalid' => ['Érvénytelen link', 'Ez a fizetési link nem érvényes.'],
@@ -70,6 +72,7 @@ if ($linkToken !== '') {
             'redirect' => ['Redirecting you to the payment page…', 'You will be taken to the payment processor\'s secure page in a moment.'],
             'paid' => ['Payment confirmed', 'Thank you! Your tickets have been sent to your email address.'],
             'pending' => ['Your payment is being processed', 'If your payment went through, you will receive your tickets by email within a few minutes. If it was not completed, you can try again.'],
+            'declined' => ['The payment was not successful', 'The payment was not accepted. You can try again, with the same card or a different one.'],
             'failed' => ['The payment was not successful', 'The order could not be paid. Please contact the venue for a new payment link.'],
             'expired' => ['This payment link has expired', 'The order is no longer available. Please contact the venue for a new order.'],
             'invalid' => ['Invalid link', 'This payment link is not valid.'],
@@ -90,7 +93,7 @@ if ($linkToken !== '') {
 
     $stateKey = $hasPayment ? 'redirect' : (isset($linkTexts[$linkState]) && is_array($linkTexts[$linkState]) ? $linkState : 'error');
     [$linkTitle, $linkBody] = $linkTexts[$stateKey];
-    $showRetry = in_array($stateKey, ['pending', 'error'], true);
+    $showRetry = in_array($stateKey, ['pending', 'declined', 'error'], true);
     $accent = $stateKey === 'paid' ? '#1F4E37' : (in_array($stateKey, ['redirect', 'pending'], true) ? '#1f2937' : '#b91c1c');
     header('Cache-Control: no-store, no-cache, must-revalidate');
     ?>
