@@ -48,7 +48,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <p class="text-2xl font-bold text-secondary" id="total-paid-out">0 RON</p>
                         </div>
                     </div>
-                    <p class="mt-3 text-xs leading-relaxed text-muted">Suma deconturilor deja plătite către tine.</p>
+                    <p class="mt-3 text-xs leading-relaxed text-muted">Deconturile și avansurile deja plătite către tine.</p>
                     <button type="button" onclick="toggleBreakdown('paid')" class="flex items-center gap-1.5 mt-3 text-xs font-medium text-primary hover:underline">
                         <span>Din ce deconturi</span>
                         <svg id="chev-paid" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -87,6 +87,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </button>
                 </div>
             </div>
+
+            <!-- Avans primit: completat din financeData.advances (renderAdvances) -->
+            <div id="advance-panel" class="hidden p-6 mb-4 bg-white border rounded-2xl border-border"></div>
 
             <div id="breakdown-panel" class="hidden p-6 mb-8 bg-white border rounded-2xl border-border">
                 <div class="flex items-start justify-between gap-4 mb-4">
@@ -204,6 +207,7 @@ async function loadFinanceData() {
                 : (financeData.available_balance || 0) + (financeData.pending_balance || 0) + (financeData.total_paid_out || 0);
             document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(totalSales);
             allEvents = events;
+            renderAdvances();
             renderEvents();
             renderBreakdowns();
             // Highlight event if coming from events page
@@ -229,6 +233,47 @@ function showEmptyFinance() {
     document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('total-sales').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('events-list').innerHTML = '<div class="p-12 text-center bg-white border rounded-2xl border-border text-muted">Nu exista evenimente</div>';
+}
+
+// ---------- Avansuri ----------
+// Bani primiți în avans din sold, înainte de decontul pe eveniment. Deconturile
+// următoare se compensează automat din avans (cel mai vechi întâi), iar
+// organizatorul primește prin transfer doar diferența.
+function renderAdvances() {
+    const panel = document.getElementById('advance-panel');
+    const list = (financeData && financeData.advances) || [];
+    if (!panel) return;
+    if (!list.length) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+    const fmt = AmbiletUtils.formatCurrency;
+    const total = list.reduce(function (s, a) { return s + (a.amount || 0); }, 0);
+    const open = financeData.advance_open || 0;
+    const rows = list.map(function (a) {
+        const when = a.paid_at ? AmbiletUtils.formatDate(a.paid_at) : '';
+        const status = a.remaining > 0.005
+            ? `rămas de compensat ${fmt(a.remaining)}`
+            : 'compensat integral';
+        return `
+            <div class="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
+                <div class="min-w-0">
+                    <p class="text-sm text-secondary">Avans ${a.reference}${when ? ' · ' + when : ''}</p>
+                    <p class="text-xs text-muted">Compensat din deconturi: ${fmt(a.used || 0)} · ${status}</p>
+                </div>
+                <span class="text-sm font-semibold whitespace-nowrap text-secondary">${fmt(a.amount)}</span>
+            </div>`;
+    }).join('');
+    panel.innerHTML = `
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-3">
+            <div>
+                <h3 class="font-semibold text-secondary">Avans primit</h3>
+                <p class="text-xs text-muted">Bani plătiți în avans din soldul tău. Se scad automat din deconturile următoare; la decont primești doar diferența.</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-muted">Total avans: ${fmt(total)}</p>
+                <p class="text-sm font-semibold ${open > 0.005 ? 'text-warning' : 'text-secondary'}">Rămas de compensat: ${fmt(open)}</p>
+            </div>
+        </div>
+        <div class="space-y-1">${rows}</div>`;
+    panel.classList.remove('hidden');
 }
 
 // ---------- Breakdown-ul cardurilor ----------
@@ -308,7 +353,7 @@ function breakdownMeta(which) {
     }
     return {
         title: 'Total achitat — din ce deconturi',
-        subtitle: 'Deconturi deja plătite către tine.',
+        subtitle: 'Deconturi și avansuri deja plătite către tine.',
         html: function () { return payoutBreakdownHtml((financeData && financeData.payouts_completed) || [], 'Niciun decont plătit încă.'); }
     };
 }
@@ -356,14 +401,16 @@ function payoutBreakdownHtml(list, emptyLabel) {
         // event_id NULL = decont care acoperă mai multe evenimente. Când avem
         // evenimentul în listă, îi atașăm și data/venue-ul, ca în celelalte
         // breakdown-uri.
-        const label = p.event_id ? eventLabelById(p.event_id, p.event_title) : 'Decont multi-eveniment';
+        const label = p.is_advance
+            ? 'Avans din sold'
+            : (p.event_id ? eventLabelById(p.event_id, p.event_title) : 'Decont multi-eveniment');
         const ref = p.decont_series || p.reference || ('#' + p.id);
         const when = p.completed_at || p.created_at;
         return `
             <div class="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
                 <div class="min-w-0">
                     <p class="text-sm truncate text-secondary" title="${escAttr(label)}">${label}</p>
-                    <p class="text-xs text-muted">${ref}${when ? ' · ' + fmtDateTime(when) : ''}</p>
+                    <p class="text-xs text-muted">${ref}${when ? ' · ' + fmtDateTime(when) : ''}${(p.advance_covered || 0) > 0.005 ? ' · decont ' + fmt(p.decont_amount) + ', din care ' + fmt(p.advance_covered) + ' compensat din avans' : ''}</p>
                 </div>
                 <span class="text-sm font-semibold whitespace-nowrap text-secondary">${fmt(p.amount)}</span>
             </div>`;

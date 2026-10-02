@@ -76,6 +76,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
+        <!-- Confirmare „Via email": link de plată / bilete trimise clientului -->
+        <div id="lv-notice" class="hidden mb-4 p-4 border rounded-xl text-sm print:hidden"></div>
 
         <!-- Design aliniat 1:1 cu sectiunea CASA din leisure-dashboard.php -->
         <section id="lv-cash-xreport-panel" class="hidden mb-4 overflow-hidden border-2 shadow-sm rounded-2xl border-emerald-300 bg-emerald-50 print:hidden" role="region" aria-labelledby="lv-cash-xreport-title">
@@ -165,7 +167,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div id="lv-access-banner" class="hidden mx-5 my-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900"></div>
 
                 <!-- Date client opțional -->
-                <details class="px-5 py-3 border-t border-border text-sm">
+                <details id="lv-customer-section" class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary">Date client (opțional)</summary>
                     <div class="mt-3 space-y-2">
                         <input id="lv-cname" type="text" placeholder="Nume" class="w-full px-2 py-1.5 text-sm border border-border rounded">
@@ -241,10 +243,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="grid grid-cols-3 gap-2">
                         <button data-pay="cash" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💵 Cash</button>
                         <button data-pay="card" title="Înregistrează plata cu cardul (procesată la POS-ul bancar fizic) — fără integrare automată cu terminalul" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💳 Card</button>
-                        <button data-pay="invoice" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Link plată</button>
+                        <button data-pay="invoice" title="Clientul primește totul pe email: link de plată dacă are de achitat, direct biletele dacă valoarea e 0" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Via email</button>
                     </div>
                     <p class="text-[10px] text-muted leading-snug mt-1">
-                        💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Link plată pe email</strong>: clientul primește un link pentru plată online — biletele rămân în „așteptare" până la confirmare.
+                        💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Via email</strong>: clientul primește pe email, în limba aleasă, un link de plată online — biletele devin valide și îi sunt trimise după plată. Dacă valoarea coșului e 0, primește direct biletele. Nu se tipărește nimic la casă.
                     </p>
                     <button id="lv-checkout" disabled class="w-full mt-2 px-4 py-3 bg-primary text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors">Finalizează</button>
                 </div>
@@ -325,6 +327,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function fmtMoney(v) { return Number(v || 0).toFixed(2); }
+
+    // Valoarea produselor din coș (bilete + add-on-uri plătite), fără comision.
+    function cartGoodsTotal() {
+        return Object.values(cart).reduce((sum, it) => {
+            let line = it.qty * it.price;
+            const tt = types.find(t => t.id === it.ticket_type_id);
+            (tt && Array.isArray(tt.addons) ? tt.addons : []).forEach(a => {
+                const aQty = (it.addons && it.addons[a.id]) || 0;
+                const freePool = parseInt(a.included_qty || 0, 10) * it.qty;
+                line += Math.max(0, aQty - freePool) * parseFloat(a.price || 0);
+            });
+            return sum + line;
+        }, 0);
+    }
+
+    // „Via email" cu coș de valoare 0: biletele pleacă direct, fără comision
+    // (mirror backend posSale).
+    function isFreeViaEmail() {
+        return payment === 'invoice' && cartGoodsTotal() <= 0;
+    }
 
     const CAT_LABEL = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închiriere', 'activity': 'Activitate', 'extra': 'Extra', 'package': '🎁 Pachet' };
     const CAT_COLOR = { 'access': 'blue', 'parking': 'violet', 'rental': 'amber', 'activity': 'emerald', 'extra': 'slate', 'package': 'rose' };
@@ -564,9 +586,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         let subtotal = 0;
         let commissionTotal = 0;
         let addonsGrandTotal = 0;
+        const freeViaEmail = isFreeViaEmail();
         wrap.innerHTML = entries.map(([key, it]) => {
             const line = it.qty * it.price;
-            const com = commissionPerTicket(it.price) * it.qty;
+            const com = freeViaEmail ? 0 : commissionPerTicket(it.price) * it.qty;
             subtotal += line;
             commissionTotal += com;
             const comRow = (com > 0)
@@ -794,7 +817,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const ticketsList = (data.tickets || []).map(t =>
             `<div style="font-size:9px;padding:1mm 0;border-bottom:1px dotted #ccc"><strong>${t.code}</strong> · ${t.ticket_type}</div>`
         ).join('');
-        const payMap = { cash: 'Cash', card: 'Card', invoice: 'Pe email' };
+        const payMap = { cash: 'Cash', card: 'Card', invoice: 'Via email' };
         return `
             <h2>${iss.name || 'Locație de agrement'}</h2>
             ${iss.tax_id ? `<div style="text-align:center;font-size:10px">CIF: ${iss.tax_id}</div>` : ''}
@@ -1344,9 +1367,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             try { $('lv-co-invoice').focus(); } catch (e) {}
             return;
         }
+        // „Via email": linkul de plată / biletele pleacă pe adresa clientului,
+        // deci fără email nu avem unde trimite.
+        if (payment === 'invoice') {
+            const emailVal = $('lv-cemail').value.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                $('lv-customer-section').open = true;
+                alert('Pentru „Via email" completează adresa de email a clientului.');
+                try { $('lv-cemail').focus(); } catch (e) {}
+                return;
+            }
+        }
         $('lv-checkout').disabled = true;
         $('lv-checkout').textContent = 'Procesează...';
         $('lv-error').classList.add('hidden');
+        $('lv-notice').classList.add('hidden');
 
         const items = Object.entries(cart).map(([key, it]) => {
             const addonList = it.addons ? Object.entries(it.addons)
@@ -1391,12 +1426,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try {
             const res = await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/pos-sale`, body);
             const data = res.data || {};
+            // „Via email": clientul primește totul pe email — la casă nu se
+            // tipărește nimic (nici bilete, nici factură, nici chitanță).
+            const viaEmail = data?.order?.payment_method === 'invoice';
+            if (viaEmail) showDeliveryNotice(data);
 
             // 1. Print termic ESC/POS PRIMUL. Await ca sa nu apara window.print()
             //    peste procesul de printare (era race condition — setTimeout(200ms)
             //    fireata cand printarea bilet 2/3 era in curs).
             let thermalDone = false;
-            if (typeof window.posAutoPrintTickets === 'function') {
+            if (!viaEmail && typeof window.posAutoPrintTickets === 'function') {
                 try {
                     await window.posAutoPrintTickets(data);
                     // Setam flag DOAR cand PosPrinter chiar era disponibil + auto-print activ
@@ -1408,7 +1447,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             // 2. Print factura fiscala pe imprimanta termica daca operatorul a bifat
             //    'Genereaza factura fiscala' + avem date firma cumparator.
-            if (typeof window.posPrintInvoiceFromSale === 'function' && $('lv-co-invoice').checked) {
+            if (!viaEmail && typeof window.posPrintInvoiceFromSale === 'function' && $('lv-co-invoice').checked) {
                 try { await window.posPrintInvoiceFromSale(data); }
                 catch (e) { console.warn('[checkout] invoice print failed:', e); }
             }
@@ -1416,7 +1455,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             // 3. Chitanta A4 (browser dialog) DOAR daca thermal nu a mers.
             //    Fallback pentru statii fara printer termic.
             $('lv-receipt').innerHTML = buildReceiptHtml(data);
-            if (!thermalDone) {
+            if (!viaEmail && !thermalDone) {
                 $('lv-receipt').classList.remove('hidden');
                 setTimeout(() => {
                     window.print();
@@ -1454,6 +1493,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-checkout').textContent = 'Finalizează';
             $('lv-checkout').disabled = Object.keys(cart).length === 0;
         }
+    }
+
+    // Confirmarea de după o vânzare „Via email": ce a plecat pe email și unde.
+    function showDeliveryNotice(data) {
+        const d = data?.delivery || {};
+        const box = $('lv-notice');
+        const esc = (v) => String(v || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        const ord = esc(data?.order?.order_number || '');
+        const email = esc(d.email || '');
+        let html;
+        if (!d.sent) {
+            html = `⚠️ <strong>Comanda ${ord} a fost înregistrată, dar emailul către ${email} NU a putut fi trimis.</strong> Verifică adresa și refă comanda sau contactează suportul.`;
+        } else if (d.mode === 'payment_link') {
+            const until = d.expires_at
+                ? new Date(d.expires_at).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '';
+            html = `📧 <strong>Link de plată trimis la ${email}</strong> · comanda ${ord}. Biletele devin valide și îi sunt trimise clientului după plată${until ? ` (link valabil până la ${until})` : ''}.`;
+        } else {
+            html = `📧 <strong>Bilete trimise la ${email}</strong> · comanda ${ord}. Sunt deja valide — nu e nimic de achitat.`;
+        }
+        box.innerHTML = html;
+        box.className = 'mb-4 p-4 border rounded-xl text-sm print:hidden ' + (d.sent
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+            : 'bg-amber-50 border-amber-300 text-amber-900');
+        try { box.scrollIntoView({ block: 'nearest' }); } catch (e) {}
     }
 
     // Construieste un fake sale-response din starea curenta UI a POS-ului
