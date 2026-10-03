@@ -599,7 +599,15 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .plx-stay-prov{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-pill);background:var(--surface-2)}
 .plx-stay-prov button{min-height:34px;padding:0 12px;border:0;border-radius:var(--r-pill);background:none;color:var(--muted);font:700 .8125rem/1 var(--font);white-space:nowrap;cursor:pointer}
 .plx-stay-prov button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(14,72,55,.2);color:var(--ink)}
-@media (max-width:520px){.plx-stay-x{padding:0 12px 0 10px}.plx-stay-out{margin-left:0}}
+/* on a phone: the way back and the way out share a line, the switch takes the next one, full width */
+@media (max-width:640px){
+  .plx-stay-head{gap:6px}
+  .plx-stay-x,.plx-stay-out{min-height:36px;padding-inline:10px;font-size:.78125rem}
+  .plx-stay-x .ic,.plx-stay-out .ic{width:14px;height:14px}
+  .plx-stay-prov{order:3;display:flex;flex:1 1 100%}
+  .plx-stay-prov button{flex:1;min-height:32px;padding:0 6px}
+  .plx-stay-body .pl-stay-sub,.plx-stay-body .pl-stay-note{font-size:.6875rem}
+}
 
 /* ---------- print: the plan, nothing else ---------- */
 @media print{
