@@ -319,6 +319,11 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="plx-stay" id="plx-stay" hidden>
         <div class="plx-stay-head">
           <button class="plx-stay-x" type="button" id="plx-stay-x"><?= v2_ic('arrow-left') ?>Înapoi la traseu</button>
+          <div class="plx-stay-prov" id="plx-stay-prov" role="group" aria-label="De unde vin cazările">
+            <?php $provFirst = true; foreach (PLAN_STAY22['providers'] as $pvKey => [$pvLabel]): ?>
+            <button type="button" data-prov="<?= v2_e($pvKey) ?>" aria-pressed="<?= $provFirst ? 'true' : 'false' ?>"><?= v2_e($pvLabel) ?></button>
+            <?php $provFirst = false; endforeach; ?>
+          </div>
           <a class="plx-stay-out" id="plx-stay-out" href="<?= v2_e(PLAN_STAY22['link']) ?>" target="_blank" rel="noopener nofollow sponsored">Deschide lista pe Stay22<?= v2_ic('arrow-right') ?></a>
         </div>
         <div class="plx-stay-body" id="pl-pane-stay"></div>

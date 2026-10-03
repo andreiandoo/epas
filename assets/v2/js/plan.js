@@ -763,6 +763,8 @@
     q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
     q.push('zoom=' + (STAY.zoom || 12));
     q.push('ljs=ro');
+    var prov = (STAY.providers || {})[stayProv];
+    if (prov && prov[1]) q.push(prov[1]);
     return (STAY.embed || 'https://www.stay22.com/embed/gm') + '?' + q.join('&');
   }
   /** The same night as a plain page on Stay22, for when the iframe does not come up. */
@@ -781,7 +783,8 @@
     q.push('rooms=' + n.rooms);
     if (n.maxprice > 0) { q.push('max=' + n.maxprice); q.push('priceper=nightly'); q.push('maxprice=' + n.maxprice); }
     q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
-    return (STAY.link || 'https://www.stay22.com/allez/booking') + '?' + q.join('&');
+    var prov = (STAY.providers || {})[stayProv];
+    return ((prov && prov[2]) || STAY.link || 'https://www.stay22.com/allez/booking') + '?' + q.join('&');
   }
 
   /* ---------------------------------------------------------------- storage + url */
@@ -1116,6 +1119,7 @@
   var activeDay = 0;
   var mapTab = 'route';      // what the map area is showing: the route, or the accommodation list
   var stayNight = -1;        // the night the accommodation view is on, -1 for none yet
+  var stayProv = Object.keys((CFG.stay22 || {}).providers || {})[0] || '';      // which source the list is showing
   var focusId = null;        // whose handle to put the focus back on after the next render
 
   /** Says out loud what just moved, for whoever is not looking at the screen. */
@@ -2810,6 +2814,16 @@
 
   if (ui.stayBtn) ui.stayBtn.addEventListener('click', function () { openStay(currentNight()); });
   if (ui.stayX) ui.stayX.addEventListener('click', function () { closeStay(); });
+  // The embed shows one source at a time; the switch rebuilds it for another (the URL changes, so stayInto reloads).
+  var provBox = document.getElementById('plx-stay-prov');
+  if (provBox) provBox.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-prov]');
+    if (!b || !(STAY.providers || {})[b.dataset.prov]) return;
+    stayProv = b.dataset.prov;
+    [].forEach.call(provBox.querySelectorAll('[data-prov]'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    syncStay();
+    announce('Arăt cazările de la ' + b.textContent.trim() + '.');
+  });
 
   /* ---------------------------------------------------------------- the map */
 

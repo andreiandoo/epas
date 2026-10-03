@@ -174,5 +174,12 @@ const PLAN_STAY22 = [
     'maincolor'  => '1E5B48',
     'markertype' => 'circle',
     'zoom'       => 12,
+    // What the list can be asked to show. The embed draws one source at a time, so the traveller
+    // switches between them: label, the embed's own parameters for it, and its plain-list address.
+    'providers'  => [
+        'booking' => ['Booking', 'hotelsapi=booking', 'https://www.stay22.com/allez/booking'],
+        'expedia' => ['Expedia', 'hotelsapi=expedia', 'https://www.stay22.com/allez/expedia'],
+        'vrbo'    => ['Case de vacanță', 'showhotels=false&rentalsapi=vrbo', 'https://www.stay22.com/allez/vrbo'],
+    ],
     'note'       => 'Opțiunile de cazare vin de la Booking, Expedia, Vrbo ș.a. Dacă alegi o cazare din cele propuse, website-ul va înregistra un comision.',
 ];
