@@ -813,7 +813,7 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Cazare Tab -->
                 <?php
                 // Stay22 configuration
-                $stay22AffiliateId = '68f75671f26bfb6f2a73d0b9';
+                $stay22AffiliateId = 'goodtechinc';
                 $stay22Lat = $event['venue']['lat'];
                 $stay22Lng = $event['venue']['lng'];
                 $stay22Address = urlencode($event['venue']['name'] . ', ' . $event['venue']['address'] . ', ' . $event['venue']['city']);

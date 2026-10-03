@@ -1110,7 +1110,7 @@ function tourOptimizer() {
         },
 
         stay22Url(stop) {
-            const aff = '68f75671f26bfb6f2a73d0b9';
+            const aff = 'goodtechinc';
             const lat = stop.lat || 0;
             const lng = stop.lng || 0;
             const checkin = stop.date_iso || this.planner.startDate || '';

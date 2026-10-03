@@ -34,7 +34,7 @@ type Ev = Record<string, any>;
  * merge, inclusiv pe o masina fara fisierul de mediu. `VITE_STAY22_AID` il
  * poate suprascrie, pentru teste cu alt cont.
  */
-const STAY22_AID = (import.meta.env.VITE_STAY22_AID as string | undefined) ?? '68f75671f26bfb6f2a73d0b9';
+const STAY22_AID = (import.meta.env.VITE_STAY22_AID as string | undefined) ?? 'goodtechinc';
 
 /**
  * Linkul catre harti.
