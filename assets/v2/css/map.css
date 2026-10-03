@@ -188,3 +188,10 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
 
 /* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
 .ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}
+
+/* ---------- bare: the host draws the list and the controls, the map is only the map ---------- */
+.epm-bare{grid-template-rows:minmax(0,1fr)}
+.epm-bare .epm-bar,.epm-bare .epm-side,.epm-bare .epm-card{display:none !important}
+.epm-bare .epm-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.epm-bare .epm-pin.is-step{transition:transform var(--dur-state) var(--ease-out),box-shadow var(--dur-state) var(--ease-out)}
+.epm-bare .epm-pin.is-on{transform:scale(1.3);box-shadow:0 0 0 6px rgba(43,182,115,.3),0 6px 14px -4px rgba(0,0,0,.5)}

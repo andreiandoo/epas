@@ -172,6 +172,47 @@ function v2_map_summary(): ?array
     return $value;
 }
 
+/**
+ * The roads of /trasee (includes/v2/map-roads.php) as bin/build-roads.php resolved them: slug =>
+ * km, min, geometry, z (elevation samples), max, up, bounds, a, b, stops. Empty when the file is
+ * missing, so every page that offers the roads simply offers none.
+ */
+function v2_map_roads(): array
+{
+    static $value = null;
+    if ($value !== null) {
+        return $value;
+    }
+    $value = [];
+    $file = BILETEONLINE_ROOT . '/assets/v2/data/drumuri.json';
+    if (is_file($file)) {
+        $data = json_decode((string) file_get_contents($file), true);
+        if (is_array($data['roads'] ?? null)) {
+            $value = $data['roads'];
+        }
+    }
+
+    return $value;
+}
+
+/** An elevation profile as the `d` of an SVG path, on a w×h box; [line, area]. */
+function v2_profile_paths(array $z, int $w = 300, int $h = 44): array
+{
+    $n = count($z);
+    if ($n < 2) {
+        return ['', ''];
+    }
+    $lo = min($z);
+    $span = max(1, max($z) - $lo);
+    $pts = [];
+    foreach ($z as $i => $v) {
+        $pts[] = round($i / ($n - 1) * $w, 1) . ',' . round(($h - 2) - ($v - $lo) / $span * ($h - 6), 1);
+    }
+    $line = 'M' . implode('L', $pts);
+
+    return [$line, 'M0,' . $h . 'L' . implode('L', $pts) . 'L' . $w . ',' . $h . 'Z'];
+}
+
 /** API media paths come either absolute or relative to the core storage. */
 function v2_media_url($path): ?string
 {

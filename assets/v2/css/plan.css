@@ -1,27 +1,57 @@
 /* bilete.online v2: the trip planner on /plan.
-   The start form, then the itinerary beside a map. Hero, map frame and prose columns come from
-   map-page.css; route cards from routes.css. */
+   The brief (three decisions up front, the rest folded), then the plan: one map that never leaves
+   the screen and a list whose scroll position drives it. Prose columns and chips come from
+   map-page.css; route cards from routes.css; the map itself from map.css (its bare flavour). */
 
-/* ---------- start ---------- */
-.pl-start{padding:calc(var(--hdr-h) + clamp(24px,4vw,48px)) 0 clamp(32px,5vw,56px);background:linear-gradient(170deg,var(--tint-green),var(--bg) 70%)}
-.pl-start-in{display:grid;gap:14px;max-width:62rem}
-.pl-start h1{margin:0;font-size:clamp(2rem,4vw,3.25rem);font-weight:700;line-height:1.05;letter-spacing:-.04em;color:var(--green)}
-.pl-start h1 em{font-style:normal;color:var(--red-text)}
-.pl-lead{margin:0;max-width:60ch;font-size:var(--text-lead);color:var(--muted)}
-
-.pl-form{display:grid;gap:var(--space-4);margin-top:var(--space-3);padding:var(--space-5);border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);box-shadow:0 20px 50px -34px rgba(14,72,55,.5)}
-@media (min-width:768px){.pl-form{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr)}}
-.pl-field{display:grid;align-content:start;gap:6px;min-width:0;margin:0;padding:0;border:0}
-.pl-field-wide{grid-column:1/-1}
-.pl-field label,.pl-field legend{padding:0;font-size:.875rem;font-weight:700;color:var(--ink)}
-.pl-opt{font-weight:500;color:var(--muted)}
+/* ---------- the brief ---------- */
+.plb{--plb-mode:var(--action);--plb-tint:var(--tint-green);padding-bottom:clamp(32px,5vw,56px)}
+.plb[data-mode="moto"]{--plb-mode:#C8322B;--plb-tint:#FBE9E6}
+.plb[data-mode="bike"]{--plb-mode:#2D6CCD;--plb-tint:#E6EEFA}
+.plb-hero{position:relative;overflow:clip;padding:calc(var(--hdr-h) + clamp(20px,3vw,36px)) 0 clamp(140px,16vw,180px);background:var(--deep);color:var(--on-deep)}
+.plb-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 80% at 88% 8%,rgba(43,182,115,.24),transparent 70%),radial-gradient(50% 60% at 0% 100%,rgba(242,169,0,.10),transparent 70%);pointer-events:none}
+.plb-hero .wrap{position:relative}
+.plb-hero .crumbs{color:var(--on-deep-muted)}
+.plb-hero .crumbs a:hover{color:var(--on-deep)}
+.plb-hero h1{margin:0;font-size:clamp(2.5rem,6.6vw,4.375rem);font-weight:800;line-height:1.04;letter-spacing:-.035em;color:var(--on-deep)}
+.plb-hero h1 em{font-style:normal;color:var(--online)}
+.plb-hero .pl-lead{margin:14px 0 0;max-width:40rem;font-size:var(--text-lead);color:var(--on-deep-muted)}
+.plb-wrap{position:relative;display:grid;gap:var(--space-5);margin-top:calc(clamp(140px,16vw,180px) * -1 + 28px)}
+.plb-card{display:grid;gap:20px;max-width:780px;padding:16px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop)}
+@media (min-width:700px){.plb-card{gap:24px;padding:26px}}
+.plb-g{display:grid;gap:8px;min-width:0;margin:0;padding:0;border:0}
+.plb-l{padding:0;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .pl-hint{margin:0;font-size:.8125rem;color:var(--muted)}
-.pl-field input[type="text"],.pl-field input[type="date"],.pl-field input[type="number"]{width:100%;height:48px;padding:0 14px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg);color:var(--ink);font:500 1rem/1 var(--font)}
-.pl-field input:focus-visible{outline:2px solid var(--action);outline-offset:1px;background:var(--surface)}
-.pl-field input[aria-invalid="true"]{border-color:var(--red-text)}
+.pl-opt{font-weight:500;color:var(--muted)}
+
+/* how you travel: one of three, with a thumb that slides */
+.plb-seg{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:4px;border-radius:var(--r-m);background:var(--surface-2)}
+.plb-seg-thumb{position:absolute;z-index:-1;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 3);border-radius:12px;background:var(--plb-mode);transform:translateX(calc(var(--i,0) * 100%));transition:transform 420ms var(--ease-out),background-color var(--dur-state) var(--ease-out)}
+.plb-seg button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 6px;border:0;border-radius:12px;background:none;color:var(--muted);font:700 .9375rem/1.1 var(--font);cursor:pointer;transition:color var(--dur-state) var(--ease-out)}
+.plb-seg button[aria-pressed="true"]{color:#fff}
+.plb-seg .ic{width:22px;height:22px;flex:none}
+@media (max-width:400px){.plb-seg button{gap:5px;font-size:.8125rem}.plb-seg .ic{width:18px;height:18px}}
+
+/* from, to, and back: one box, three rows */
+.plb-rt{border:1.5px solid var(--line);border-radius:var(--r-m);background:var(--surface);transition:border-color var(--dur-micro) var(--ease-out)}
+.plb-rt:focus-within{border-color:var(--plb-mode)}
+.plb-rt-row{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center}
+.plb-rt-row[hidden]{display:none}
+.plb-rt-row + .plb-rt-row{border-top:1px solid var(--line)}
+.plb-rt-row:not(.is-back)::after{content:"";position:absolute;left:21px;top:50%;height:100%;border-left:2px dotted var(--line)}
+.plb-rt-row.is-to:has(+ [hidden])::after,.plb-rt-row.is-to:last-child::after{display:none}
+.plb-dot{position:relative;z-index:1;justify-self:center;width:12px;height:12px;border:2.5px solid var(--plb-mode);border-radius:50%;background:var(--surface)}
+.plb-rt-row.is-to .plb-dot{background:var(--plb-mode)}
+.plb-rt-row.is-back .plb-dot{border-radius:3px}
+.plb-rt-f{min-width:0;padding:9px 12px 9px 0}
+.plb-rt-f label{display:block;font-size:.75rem;font-weight:700;color:var(--muted)}
+.plb-rt-f input{width:100%;min-height:30px;padding:1px 0;border:0;outline:0;background:none;color:var(--ink);font:700 1.0625rem/1.2 var(--font)}
+.plb-rt-f input::placeholder{font-weight:500;color:var(--placeholder)}
+.plb-rt-f input[aria-invalid="true"]::placeholder{color:var(--red-text)}
+.plb-rt-row:has(input[aria-invalid="true"]) .plb-dot{border-color:var(--red-text)}
+.plb-link{justify-self:start;min-height:32px;padding:0;border:0;background:none;color:var(--action);font:700 .875rem/1.2 var(--font);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 
 .pl-auto{position:relative}
-.pl-sugg{list-style:none;position:absolute;z-index:5;left:0;right:0;top:calc(100% + 6px);margin:0;padding:6px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);box-shadow:var(--shadow-pop)}
+.pl-sugg{list-style:none;position:absolute;z-index:8;left:-36px;right:0;top:calc(100% + 2px);margin:0;padding:6px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);box-shadow:var(--shadow-pop)}
 .pl-sugg[hidden]{display:none}
 .pl-sugg-hit,.pl-add-hit{display:grid;gap:1px;width:100%;padding:8px 10px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .pl-sugg-hit:hover,.pl-add-hit:hover{background:var(--tint-green)}
@@ -29,49 +59,162 @@
 .pl-sugg-hit b,.pl-add-hit b{font-size:.9375rem}
 .pl-sugg-hit small,.pl-add-hit small{font-size:.75rem;color:var(--muted)}
 
-.pl-stepper{display:flex;align-items:center;gap:6px}
-.pl-stepper input{text-align:center;max-width:90px}
-.pl-step-btn{flex:none;width:44px;height:48px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);font:700 1.25rem/1 var(--font);cursor:pointer}
-.pl-step-btn:hover{border-color:var(--green);background:var(--tint-green)}
-/* who travels: the same stepper, twice, in one column beside the days */
-.pl-party{display:flex;flex-wrap:wrap;gap:10px}
-.pl-party-one{display:grid;gap:4px;flex:1 1 8rem;min-width:0}
-.pl-party-one label{font-size:.75rem;font-weight:600;color:var(--muted)}
-.pl-party .pl-stepper{gap:4px}
-.pl-party .pl-stepper input{max-width:56px}
-.pl-party .pl-step-btn{width:38px;height:44px}
-.pl-party input[type="number"]{height:44px}
+/* days, date, party */
+.plb-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.plb-tiles{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.5fr)}}
+.plb-tile{display:grid;align-content:start;gap:6px;min-width:0;margin:0;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+.plb-tile:focus-within{border-color:var(--plb-mode)}
+.plb-tile > label,.plb-tile > legend{padding:0;font-size:.75rem;font-weight:700;color:var(--muted)}
+.plb-tile-wide{grid-column:1 / -1}
+@media (min-width:640px){.plb-tile-wide{grid-column:auto}}
+.plb-tile input[type="date"]{width:100%;min-height:36px;padding:0;border:0;outline:0;background:none;color:var(--ink);font:700 1rem/1 var(--font)}
+.pl-stepper{display:flex;align-items:center;gap:4px}
+.pl-stepper input{width:44px;height:36px;padding:0;border:0;outline:0;background:none;color:var(--ink);font:800 1.125rem/1 var(--font);font-variant-numeric:tabular-nums;text-align:center;-moz-appearance:textfield;appearance:textfield}
+.pl-stepper input::-webkit-outer-spin-button,.pl-stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pl-step-btn{flex:none;display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:var(--surface-2);color:var(--ink);font:700 1.125rem/1 var(--font);cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
+.pl-step-btn:hover{background:var(--plb-tint)}
+.pl-step-btn:active{transform:scale(.9)}
+.pl-party{display:flex;flex-wrap:wrap;gap:6px 16px}
+.pl-party-one{display:flex;align-items:center;gap:6px;min-width:0}
+.pl-party-one label{font-size:.875rem;font-weight:600;color:var(--ink)}
 
+/* the folded preferences */
+.plb-prefs{border:1.5px solid var(--line);border-radius:var(--r-m)}
+.plb-prefs summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:10px 14px;cursor:pointer}
+.plb-prefs summary::-webkit-details-marker{display:none}
+.plb-prefs summary b{display:block;font-weight:800}
+.plb-prefs summary small{display:block;font-size:.8125rem;line-height:1.35;color:var(--muted)}
+.plb-prefs summary .ic{flex:none;width:18px;height:18px;color:var(--muted);transition:transform var(--dur-state) var(--ease-out)}
+.plb-prefs[open] summary .ic{transform:rotate(180deg)}
+.plb-prefs-in{display:grid;gap:18px;padding:4px 14px 16px}
 .pl-chips{display:flex;flex-wrap:wrap;gap:8px}
 .pl-chip{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .875rem/1.2 var(--font);cursor:pointer;transition:border-color var(--dur-micro) var(--ease-out),background-color var(--dur-micro) var(--ease-out),color var(--dur-micro) var(--ease-out)}
 .pl-chip:hover{border-color:var(--green)}
 .pl-chip[aria-pressed="true"]{border-color:var(--deep);background:var(--deep);color:var(--on-deep)}
+.plb .pl-chip[aria-pressed="true"]{border-color:var(--plb-mode);background:var(--plb-mode);color:#fff}
 .pl-chip-pace{flex-direction:column;align-items:flex-start;gap:2px;padding:10px 16px;border-radius:var(--r-m);text-align:left}
-.pl-chip-pace small{font-weight:500;opacity:.75}
+.pl-chip-pace small{font-weight:500;opacity:.8}
+.plb-paces{display:grid;gap:8px}
+@media (min-width:640px){.plb-paces{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-.pl-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4)}
-.pl-go{flex:none}
-.pl-note{margin:0;font-size:.8125rem;color:var(--muted)}
+.pl-actions{display:grid;gap:10px}
+.pl-go{width:100%;min-height:58px;border-radius:var(--r-m);background:var(--plb-mode);font-size:1.0625rem;transition:filter var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out),background-color var(--dur-state) var(--ease-out)}
+.pl-go:hover{background:var(--plb-mode);filter:brightness(.92)}
+.pl-go:active{transform:scale(.99)}
+.pl-go .ic{transition:transform var(--dur-state) var(--ease-out)}
+.pl-go:hover .ic{transform:translateX(4px)}
+.pl-note{margin:0;font-size:.8125rem;text-align:center;color:var(--muted)}
 .pl-quick{display:grid;gap:8px}
-.pl-quick-h{margin:0;font-size:.875rem;font-weight:600;color:var(--muted)}
+.pl-quick-h{margin:0;font-size:.875rem;font-weight:700;color:var(--ink)}
 
-/* ---------- the plan ---------- */
-/* the band starts under the sticky header, and scrolling to the plan stops short of it, so the title is readable */
-.pl-plan{padding:0 0 clamp(40px,6vw,72px);scroll-margin-top:var(--hdr-h)}
+/* ---------- the plan: one map, one list ----------
+   A full-screen instrument over the page (above the header, below the cookie banner). On a phone the
+   map holds the top and a handle between the two sets how much; on a desk they stand side by side. */
+html.plx-open,html.plx-open body{overflow:hidden}
+.plx{--plx-mode:var(--action);--plx-tint:var(--tint-green);position:fixed;inset:0;z-index:55;display:grid;grid-template-rows:var(--plx-map,46%) minmax(0,1fr);background:var(--bg)}
+.plx[hidden]{display:none}
+.plx[data-mode="moto"]{--plx-mode:#C8322B;--plx-tint:#FBE9E6}
+.plx[data-mode="bike"]{--plx-mode:#2D6CCD;--plx-tint:#E6EEFA}
+.plx.is-snap{transition:grid-template-rows 420ms var(--ease-out)}
+.plx-map{position:relative;min-height:0;overflow:hidden;background:#E6EBE4}
+.plx-frame{position:absolute;inset:0}
+.plx-frame .epm-inline{height:100%;border:0;border-radius:0;box-shadow:none}
+.plx-frame .leaflet-control-zoom{display:none}
+.plx-frame .leaflet-bottom{margin-bottom:18px}
+.epm-route-ghost{pointer-events:none}
+
+.plx-top{position:absolute;z-index:5;left:0;right:0;top:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0;pointer-events:none}
+.plx-top > *{pointer-events:auto}
+.plx-bar{display:flex;align-items:center;gap:4px;max-width:560px;padding:5px;border-radius:18px;background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(1.2) blur(10px);backdrop-filter:saturate(1.2) blur(10px);box-shadow:0 8px 24px -14px rgba(14,72,55,.5),0 0 0 1px rgba(33,33,33,.07)}
+.plx-ib{flex:none;display:grid;place-items:center;width:42px;height:42px;padding:0;border:0;border-radius:13px;background:none;color:var(--ink);cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out)}
+.plx-ib:hover{background:var(--surface-2)}
+.plx-ib .ic{width:20px;height:20px}
+.plx-title{flex:1;min-width:0;padding-inline:4px;line-height:1.2}
+.plx-title b,.plx-title span{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.plx-title b{font-size:.9375rem;font-weight:800;color:var(--ink)}
+.plx-title span{font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--muted)}
+.plx-mode{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--plx-mode);color:#fff}
+.plx-mode .ic{width:18px;height:18px}
+.plx-days{display:flex;gap:6px;margin-inline:-10px;padding:2px 10px 6px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x}
+.plx-days::-webkit-scrollbar{display:none}
+.plx-day{flex:none;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 13px;border:0;border-radius:var(--r-pill);background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 8px 24px -14px rgba(14,72,55,.5),0 0 0 1px rgba(33,33,33,.07);color:var(--ink);font:700 .8125rem/1 var(--font);cursor:pointer;transition:background-color var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
+.plx-day small{font-size:.75rem;font-weight:600;color:var(--muted);transition:color var(--dur-state) var(--ease-out)}
+.plx-day[aria-pressed="true"]{background:var(--plx-mode);color:#fff}
+.plx-day[aria-pressed="true"] small{color:rgba(255,255,255,.84)}
+.plx-day:active{transform:scale(.95)}
+
+.plx-menu{position:absolute;z-index:9;top:calc(env(safe-area-inset-top,0px) + 62px);right:10px;display:grid;width:min(280px,calc(100% - 20px));padding:6px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow-pop);transform-origin:top right;animation:plx-menu 220ms var(--ease-out)}
+.plx-menu[hidden]{display:none}
+@keyframes plx-menu{from{opacity:0;transform:scale(.94) translateY(-6px)}}
+.plx-menu-i{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:none;color:var(--ink);font:600 .9375rem/1.2 var(--font);text-align:left;cursor:pointer}
+.plx-menu-i:hover{background:var(--surface-2)}
+.plx-menu-i.is-done{color:var(--action)}
+.plx-menu-i .ic{width:18px;height:18px;color:var(--green)}
+@media (min-width:1024px){.plx-menu{left:392px;right:auto;transform-origin:top left}}
+
+.plx-ctl{position:absolute;z-index:4;right:10px;bottom:30px;display:grid;gap:6px}
+.plx-ctl button{display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:13px;background:rgba(255,255,255,.95);box-shadow:0 8px 24px -14px rgba(14,72,55,.5),0 0 0 1px rgba(33,33,33,.07);color:var(--ink);cursor:pointer}
+.plx-ctl button:hover{background:var(--surface)}
+.plx-ctl .ic{width:18px;height:18px}
+.plx-zoom{display:none !important}
+@media (hover:hover) and (pointer:fine){.plx-zoom{display:grid !important}}
+
+/* the button that swaps the route for the accommodation list, in the same frame */
+.plx-stay-btn{position:absolute;z-index:4;left:50%;bottom:30px;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px 0 13px;border:0;border-radius:var(--r-pill);background:var(--deep);color:var(--on-deep);font:700 .875rem/1 var(--font);white-space:nowrap;box-shadow:0 10px 24px -10px rgba(14,72,55,.7),0 0 0 2px rgba(255,255,255,.9);transform:translateX(-50%);cursor:pointer;transition:background-color var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out)}
+.plx-stay-btn[hidden]{display:none}
+.plx-stay-btn .ic{width:18px;height:18px;color:var(--yellow);transition:color var(--dur-state) var(--ease-out)}
+.plx-stay-btn.is-hot{background:var(--yellow);color:#2B1F00;animation:plx-hot 1.8s var(--ease-out) 2}
+.plx-stay-btn.is-hot .ic{color:#2B1F00}
+@keyframes plx-hot{0%{box-shadow:0 10px 24px -10px rgba(14,72,55,.7),0 0 0 2px rgba(255,255,255,.9),0 0 0 2px rgba(242,169,0,.55)}100%{box-shadow:0 10px 24px -10px rgba(14,72,55,.7),0 0 0 2px rgba(255,255,255,.9),0 0 0 16px rgba(242,169,0,0)}}
+.plx-stay{position:absolute;z-index:20;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 26px;background:var(--bg);animation:plx-stay 300ms var(--ease-out)}
+.plx-stay[hidden]{display:none}
+@keyframes plx-stay{from{opacity:0;transform:translateY(12px)}}
+.plx-stay-x{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 12px;border:0;border-radius:var(--r-pill);background:var(--deep);color:var(--on-deep);font:700 .875rem/1 var(--font);cursor:pointer}
+.plx-stay-x .ic{width:16px;height:16px}
+.plx-stay-body{min-height:0;overflow:auto}
+.plx-stay-body .pl-stay{grid-template-rows:auto auto minmax(220px,1fr) auto auto;height:100%}
+.plx-stay-body .pl-stay-frame{height:auto;min-height:0}
+
+/* the climb, for two wheels */
+.plx-prof{position:absolute;z-index:4;left:10px;right:60px;bottom:84px;max-width:480px;padding:6px 10px 4px;border-radius:14px;background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 24px -14px rgba(14,72,55,.5),0 0 0 1px rgba(33,33,33,.07);touch-action:none;cursor:ew-resize}
+.plx-prof[hidden]{display:none}
+.plx-prof-h{display:flex;justify-content:space-between;gap:8px;font:700 .6875rem/1.3 var(--font);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.plx-prof-b{color:var(--plx-mode)}
+.plx-prof svg{display:block;width:100%;height:44px;margin-top:2px;overflow:visible}
+.plx-prof-area{fill:var(--plx-tint)}
+.plx-prof-line{fill:none;stroke:var(--plx-mode);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.plx-prof-x{stroke:var(--ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
+
+.plx-sheet{position:relative;z-index:6;display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;margin-top:-18px;border-radius:22px 22px 0 0;background:var(--bg);box-shadow:0 -12px 30px -18px rgba(14,72,55,.45)}
+.plx-grab{display:grid;place-items:center;height:24px;cursor:ns-resize;touch-action:none}
+.plx-grab::before{content:"";width:44px;height:5px;border-radius:5px;background:#C4C7C0}
+.plx-grab:focus-visible{outline:2px solid var(--action);outline-offset:-4px;border-radius:22px 22px 0 0}
+.plx-list{position:relative;min-height:0;padding:0 14px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.plx-end{display:grid;gap:8px;align-content:start;min-height:64vh;padding:20px 2px 40px}
+.plx-end-p{margin:0;font-size:.8125rem;color:var(--muted)}
+.plx-end .rp-note{margin:0}
+@media (min-width:1024px){
+  .plx{grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(400px,480px) minmax(0,1fr)}
+  .plx-sheet{order:-1;grid-template-rows:minmax(0,1fr);margin:0;border-radius:0;box-shadow:1px 0 0 var(--line)}
+  .plx-grab,.plx-size{display:none !important}
+  .plx-list{padding:8px 22px 0}
+  .plx-top{padding:14px 14px 0}
+  .plx-frame .leaflet-bottom{margin-bottom:0}
+  .plx-ctl{right:14px;bottom:26px}
+  .plx-stay-btn{bottom:22px}
+  .plx-prof{left:14px;bottom:76px}
+  .plx-stay{padding:14px 14px 14px}
+}
+
+/* ---------- the list ---------- */
 .pl-plan[hidden]{display:none}
-/* The plan opens under the fixed header, so the bar starts below it and lines its content up with
-   the days underneath rather than sitting in a box of its own. */
-.pl-bar{margin-bottom:var(--space-5);padding:calc(var(--hdr-h) + 14px) 0 14px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,var(--tint-green),var(--surface) 65%)}
-.pl-bar-in{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4)}
-.pl-bar-h{margin:0;font-size:1.375rem;font-weight:700;letter-spacing:-.025em;color:var(--green)}
-.pl-bar-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin:4px 0 0;font-size:.875rem;color:var(--muted)}
-.pl-bar-meta span{position:relative}
-.pl-bar-acts{display:flex;flex-wrap:wrap;gap:8px}
+.pl-bar{margin:0;padding:0}
+.pl-bar:empty{display:none}
+.pl-bar-in{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:2px 0 10px}
 .pl-btn{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 15px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .875rem/1 var(--font);cursor:pointer;transition:border-color var(--dur-micro) var(--ease-out),background-color var(--dur-micro) var(--ease-out)}
 .pl-btn:hover{border-color:var(--green);background:var(--tint-green)}
 .pl-btn.is-done{border-color:var(--action);background:var(--tint-green);color:var(--action)}
 .pl-btn .ic{width:16px;height:16px;color:var(--green)}
-
 .pl-bar-sell{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:var(--r-pill);background:var(--tint-green);font-weight:700;color:var(--action)}
 .pl-sell{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 7px;border-radius:var(--r-pill);background:var(--tint-green);font-size:.6875rem;font-weight:700;color:var(--action)}
 .pl-sell .ic{width:11px;height:11px}
@@ -96,31 +239,8 @@
 .pl-saved-open b{font-size:.875rem}
 .pl-saved-open small{font-size:.75rem;color:var(--muted)}
 
-.pl-cols{display:grid;gap:var(--space-5)}
-@media (min-width:1100px){.pl-cols{grid-template-columns:minmax(0,1fr) minmax(360px,42%);align-items:start}}
-.pl-map-col{display:grid;gap:10px}
-@media (min-width:1100px){.pl-map-col{position:sticky;top:calc(var(--hdr-h) + 16px)}}
-.pl-map-frame .epm-inline{height:min(72vh,760px);border:0;border-radius:0;box-shadow:none}
-/* The itinerary is already the list; the map's own results panel would be the same stops twice on
-   one screen, and it eats the width the map needs. Keep it only where the map is on its own. */
-@media (min-width:1100px){
-  .pl-map-frame .epm-side{display:none}
-  .pl-map-frame .epm-body{grid-template-columns:minmax(0,1fr)}
-  .pl-map-frame .epm-card{left:var(--space-4);right:auto}
-}
 
 
-/* Traseu / Cazare: two panes in one grid cell, so the map keeps its size while it is out of sight
-   and Leaflet has nothing to recover from when it comes back. visibility also takes the hidden
-   pane out of the tab order and out of the accessibility tree. */
-.pl-map-tabs{display:none;gap:6px;padding:4px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface)}
-@media (min-width:1100px){.pl-map-tabs{display:inline-flex;justify-self:start}}
-.pl-map-tab{height:34px;padding:0 16px;border:0;border-radius:var(--r-pill);background:none;color:var(--muted);font:700 .8125rem/1 var(--font);cursor:pointer}
-.pl-map-tab:hover{color:var(--green)}
-.pl-map-tab.is-on{background:var(--deep);color:var(--on-deep)}
-.pl-panes{display:grid;min-width:0}
-.pl-pane{grid-area:1/1;display:grid;gap:10px;align-content:start;min-width:0}
-.pl-pane.is-off{visibility:hidden;pointer-events:none}
 
 /* the accommodation pane: nothing from Stay22 until it is asked for */
 .pl-stay{display:grid;gap:10px}
@@ -138,17 +258,6 @@
 .pl-stay-note{margin:0;font-size:.75rem;color:var(--placeholder)}
 .pl-stay-empty{margin:0;padding:14px;border:1px dashed var(--line);border-radius:var(--r-m);font-size:.875rem;color:var(--muted)}
 
-/* on a phone the accommodation view is a sheet, not a tab: the map column is far below the night */
-.pl-sheet{position:fixed;z-index:70;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--bg)}
-.pl-sheet[hidden]{display:none}
-.pl-sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px var(--space-4);border-bottom:1px solid var(--line);background:var(--surface)}
-.pl-sheet-head .pl-stay-h{font-size:.9375rem}
-.pl-sheet-body{overflow:auto;padding:var(--space-4);-webkit-overflow-scrolling:touch}
-.pl-sheet-body .pl-stay-frame{height:calc(100vh - 230px);min-height:320px}
-.pl-sheet-x{flex:none;display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--ink);cursor:pointer}
-.pl-sheet-x:hover{border-color:var(--green);background:var(--tint-green)}
-.pl-sheet-x .ic{width:16px;height:16px}
-html.pl-sheet-open,html.pl-sheet-open body{overflow:hidden}
 
 .pl-days{display:grid;gap:var(--space-5)}
 /* a night carries the same weight as a day: same card, quieter colours, because it is a suggestion */
@@ -187,8 +296,6 @@ html.pl-sheet-open,html.pl-sheet-open body{overflow:hidden}
 .pl-day-act{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font:600 .8125rem/1 var(--font);text-decoration:none;cursor:pointer}
 .pl-day-act:hover{border-color:var(--green);background:var(--tint-green)}
 .pl-day-act .ic{width:14px;height:14px;color:var(--green)}
-.pl-day.is-active .pl-day-show{border-color:var(--deep);background:var(--deep);color:var(--on-deep)}
-.pl-day.is-active .pl-day-show .ic{color:var(--on-deep)}
 
 .pl-stops{list-style:none;display:grid;gap:10px;margin:0;padding:0}
 /* the gap between two stops: a + appears there, so it is clear that something of yours can go in between */
@@ -320,20 +427,101 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .pl-add-list{list-style:none;position:absolute;z-index:5;left:0;right:0;top:calc(100% + 4px);margin:0;padding:6px;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);box-shadow:var(--shadow-pop)}
 .pl-add-list[hidden]{display:none}
 
-/* ---------- print: the plan, nothing else ---------- */
-@media print{
-  .hdr,.ftr,.pl-start,.pl-bar-acts,.pl-map-col,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-swap,.pl-drop,.pl-ghost,.pl-menu,.pl-ins,.sec,.cc,.cc-dialog,.pl-night-acts,.pl-night-pick,.pl-sheet,.pl-bar-nights{display:none !important}
-  /* the nights print where they sit, between the days, with the town and nothing to click */
-  .pl-night{break-inside:avoid;background:none;border-color:#999}
-  .pl-plan{padding:0}
-  .pl-bar{padding:0 0 12px}
-  .pl-grip .ic{display:none}
-  .pl-stop-top{min-height:0}
-  .pl-cols{grid-template-columns:minmax(0,1fr)}
-  .pl-day{break-inside:avoid;border-color:#999}
-  .pl-stop-card{background:none;border-color:#ccc}
-  .pl-bar{background:none;border-color:#999}
-}
 
 /* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
 .ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}
+
+/* ---------- the list, restyled around what the map is on ---------- */
+.pl-days{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
+.pl-day{padding:0;border:0;border-radius:0;background:none}
+.pl-day.is-active{border:0;box-shadow:none}
+.pl-day-head{position:sticky;top:0;z-index:4;flex-wrap:nowrap;align-items:center;gap:10px;margin:0 -2px 4px;padding:8px 2px 12px;background:linear-gradient(var(--bg) 80%,rgba(247,247,245,0))}
+.pl-day-n{flex:none;display:grid;justify-items:center;width:34px;line-height:1}
+.pl-day-n small{font-size:.5625rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pl-day-n b{font-size:1.875rem;font-weight:900;letter-spacing:-.04em;color:var(--muted);transition:color var(--dur-state) var(--ease-out)}
+.pl-day.is-active .pl-day-n b{color:var(--plx-mode)}
+.pl-day-headings{flex:1}
+.pl-day-h{overflow:hidden;font-size:1.0625rem;white-space:nowrap;text-overflow:ellipsis;color:var(--ink)}
+.pl-day-sub{overflow:hidden;margin-top:1px;font-size:.75rem;font-variant-numeric:tabular-nums;white-space:nowrap;text-overflow:ellipsis}
+.pl-day-acts{flex:none;flex-wrap:nowrap}
+.pl-day-head .pl-day-act{justify-content:center;width:38px;height:38px;padding:0;border-radius:50%}
+.pl-day-head .pl-day-act span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pl-day-head .pl-day-act .ic{width:16px;height:16px}
+.pl-day-tip{margin:0 0 10px 44px;font-size:.75rem;line-height:1.45;color:var(--placeholder)}
+
+.pl-stops{position:relative;gap:8px}
+.pl-stops::before{content:"";position:absolute;left:14px;top:10px;bottom:10px;width:2px;border-radius:2px;background:var(--line)}
+.pl-stop,.pl-edge{position:relative;scroll-margin-top:84px}
+.pl-edge-dot{position:relative;border-style:solid;border-width:2px;border-color:var(--ink);color:var(--ink)}
+.pl-edge-text b{color:var(--ink)}
+.pl-edge.is-focus .pl-edge-dot{border-color:var(--plx-mode);background:var(--plx-mode);color:#fff}
+.pl-grip{background:var(--bg);box-shadow:inset 0 0 0 2px var(--plx-mode);color:var(--plx-mode);transition:background-color var(--dur-state) var(--ease-out),color var(--dur-state) var(--ease-out),transform var(--dur-state) var(--ease-out)}
+.pl-stop.is-own .pl-grip{border:0;box-shadow:inset 0 0 0 1.5px var(--muted);background:var(--bg);color:var(--muted)}
+.pl-stop.is-focus .pl-grip{background:var(--plx-mode);color:#fff;transform:scale(1.12)}
+.pl-stop.is-own.is-focus .pl-grip{background:var(--muted);color:#fff}
+.pl-stop-card{padding:10px 12px;border-color:transparent;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px var(--line);transition:box-shadow var(--dur-state) var(--ease-out),transform var(--dur-state) var(--ease-out)}
+.pl-stop.is-focus .pl-stop-card{box-shadow:0 0 0 2px var(--plx-mode),0 16px 30px -22px rgba(14,72,55,.6)}
+.pl-stop.is-flash .pl-stop-card{animation:pl-flash 900ms var(--ease-out)}
+@keyframes pl-flash{30%{transform:scale(1.015);box-shadow:0 0 0 3px var(--plx-mode),0 20px 40px -20px var(--plx-mode)}}
+.pl-stop-card.is-sell,.pl-stop-card.is-locked,.pl-stop-card.is-locked.is-sell{border-left:1px solid transparent}
+.pl-stop-card.is-sell::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:3px;background:var(--yellow)}
+.pl-stop-body{grid-template-columns:56px minmax(0,1fr)}
+.pl-stop-media{aspect-ratio:4 / 5;border-radius:28px 28px 9px 9px}
+.pl-stop.is-own .pl-stop-media{aspect-ratio:1;border-radius:50%}
+.pl-stop-time{color:var(--plx-mode)}
+.pl-leg .ic{color:var(--plx-mode)}
+/* the gap between two stops is where a stop of your own goes: the + is always there, not only on hover */
+.pl-ins{height:20px;margin:-6px 0;justify-content:flex-start;padding-left:1px}
+.pl-ins-btn,.pl-ins:hover .pl-ins-btn{width:28px;height:28px;border:1.5px dashed var(--muted);background:var(--bg);color:var(--muted);opacity:1;transform:none}
+.pl-ins-btn:hover,.pl-ins-btn:focus-visible{border-style:solid;border-color:var(--plx-mode);background:var(--plx-tint);color:var(--plx-mode)}
+@media (hover:none){.pl-ins-btn{opacity:1}}
+.pl-ins-btn::after{content:"oprire de-a ta";position:absolute;left:38px;font:600 .6875rem/1 var(--font);white-space:nowrap;color:var(--placeholder);opacity:0;transition:opacity var(--dur-micro) var(--ease-out);pointer-events:none}
+.pl-ins{position:relative}
+.pl-ins-btn:hover::after,.pl-ins-btn:focus-visible::after{opacity:1}
+.pl-new,.pl-swap{position:relative}
+.pl-day-foot{margin:10px 0 0 40px}
+
+/* a night: the dark card between two days */
+.pl-night{position:relative;overflow:hidden;gap:12px;padding:16px;border:0;border-radius:22px;background:var(--deep);color:var(--on-deep);scroll-margin-top:84px;transition:box-shadow var(--dur-state) var(--ease-out)}
+.pl-night::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 90% at 100% 0%,rgba(43,182,115,.22),transparent 65%);pointer-events:none}
+.pl-night > *{position:relative}
+.pl-night.is-focus{box-shadow:0 0 0 3px var(--yellow)}
+.pl-night-h{color:var(--on-deep);text-transform:none}
+.pl-night-h .pl-night-em{color:var(--yellow)}
+.pl-night-p,.pl-night.is-far .pl-night-p{color:var(--on-deep-muted)}
+.pl-night-p b{color:#fff}
+.pl-night-acts .pl-day-act{border-color:rgba(247,247,245,.3);background:none;color:var(--on-deep)}
+.pl-night-acts .pl-day-act:hover{border-color:var(--on-deep);background:rgba(247,247,245,.1)}
+.pl-night-acts .pl-day-act .ic{color:var(--on-deep)}
+.pl-night-acts .pl-day-act.is-primary{border-color:var(--yellow);background:var(--yellow);color:#2B1F00}
+.pl-night-acts .pl-day-act.is-primary .ic{color:#2B1F00}
+.pl-night-rooms{margin-left:0;color:var(--on-deep-muted)}
+.pl-night.is-skipped{background:none;color:var(--muted);border:1px dashed var(--line)}
+.pl-night.is-skipped::before{display:none}
+.pl-night.is-skipped .pl-night-h{color:var(--muted)}
+.pl-night.is-skipped .pl-night-p{color:var(--muted)}
+.pl-night.is-skipped .pl-day-act{border-color:var(--line);color:var(--ink)}
+.pl-night.is-skipped .pl-day-act .ic{color:var(--green)}
+.pl-bar-nights{margin:0;min-height:32px}
+
+/* ---------- print: the plan, nothing else ---------- */
+@media print{
+  html.plx-open,html.plx-open body{overflow:visible}
+  .hdr,.ftr,.pl-start,.plx-map,.plx-grab,.pl-add,.pl-stop-tools,.pl-day-acts,.pl-day-tip,.pl-new,.pl-swap,.pl-drop,.pl-ghost,.pl-menu,.pl-ins,.sec,.cc,.cc-dialog,.pl-night-acts,.pl-night-pick,.pl-bar-nights,.plx-end{display:none !important}
+  .plx{position:static;display:block}
+  .plx-sheet{display:block;margin:0;box-shadow:none}
+  .plx-list{overflow:visible;padding:0}
+  .pl-day-head{position:static;background:none}
+  .pl-day{break-inside:avoid}
+  .pl-night{break-inside:avoid;background:none;color:#000;border:1px solid #999}
+  .pl-night::before{display:none}
+  .pl-night-h,.pl-night-p,.pl-night-p b{color:#000}
+  .pl-grip .ic{display:none}
+  .pl-stop-top{min-height:0}
+  .pl-stop-card{box-shadow:0 0 0 1px #ccc}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .plx.is-snap,.plb-seg-thumb{transition:none}
+  .plx-menu,.plx-stay,.plx-stay-btn.is-hot,.pl-stop.is-flash .pl-stop-card{animation:none}
+}
