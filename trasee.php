@@ -56,7 +56,7 @@ foreach (MAP_ROADS as $rSlug => $r) {
     $roadCards[] = [$rSlug, $r['title'], $r['ref'], $r['from'], $r['to'], $r['lead'], $r['modes'], $rd['km'], $rd['max'] ?? 0, $rd['up'] ?? 0, $rd['z'] ?? [], $n];
     $mid = $rd['mid'] ?? $rd['a'];
     $roadPins[] = ['', $r['title'], $r['from'] . ' – ' . $r['to'], '', '', $r['ref'] ?: 'Drum', 'pin', $mid[0], $mid[1], '', 0, 0];
-    $roadLines[] = ['g' => $rd['geometry'], 'color' => $r['modes'][0] === 'bike' ? '#2D6CCD' : '#C8322B', 'modes' => $r['modes']];
+    $roadLines[] = ['g' => $rd['geometry'], 'color' => $r['modes'][0] === 'bike' ? '#2D6CCD' : '#C8322B', 'modes' => $r['modes'], 'breaks' => $rd['breaks'] ?? []];
     $roadKm += (int) $rd['km'];
 }
 
@@ -143,7 +143,7 @@ require __DIR__ . '/includes/v2/plan-icons.php';
       <div class="sec-head">
         <div>
           <h2 id="rdx-h">Drumuri de făcut pe două roți</h2>
-          <p class="rdx-lead">Trecătorile și văile pe care le caută motocicliștii și cicliștii: <?= count($roadCards) ?> drumuri, <?= v2_e(v2_thousands($roadKm)) ?> km, fiecare cu profilul de altitudine, ce vezi pe margine și un buton care îl deschide ca plan.</p>
+          <p class="rdx-lead">Trecătorile și văile pe care le caută motocicliștii, plus traseele lungi de bicicletă: <?= count($roadCards) ?> drumuri, <?= v2_e(v2_thousands($roadKm)) ?> km, fiecare cu profilul de altitudine, ce vezi pe margine și un buton care îl deschide ca plan.</p>
         </div>
         <div class="rdx-tabs" role="group" aria-label="Arată drumurile pentru" id="rdx-tabs">
           <button type="button" data-rdx="all" aria-pressed="true">Toate</button>
@@ -164,7 +164,7 @@ require __DIR__ . '/includes/v2/plan-icons.php';
         <p class="rdx-key"><span><i style="background:#C8322B"></i>motocicletă</span><span><i style="background:#2D6CCD"></i>bicicletă</span></p>
       </div>
       <?php require __DIR__ . '/includes/v2/road-cards.php'; ?>
-      <p class="rp-note">Liniile sunt calculate pe drumurile din <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, iar altitudinile pe un model de teren european; lungimea, altitudinea maximă și urcarea sunt măsurate pe ele, nu preluate din alte surse.</p>
+      <p class="rp-note">Liniile sunt calculate pe drumurile din <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, iar altitudinile pe un model de teren european; lungimea, altitudinea maximă și urcarea sunt măsurate pe ele, nu preluate din alte surse. Traseele lungi de bicicletă — EuroVelo 6, etapele Via Transilvanica și cele din jurul Sighișoarei — sunt preluate ca atare din OpenStreetMap, unde le-a cartografiat comunitatea (© contribuitorii OpenStreetMap, licență <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">ODbL</a>); pagina fiecăruia trimite la relația din OpenStreetMap și la cei care îl marchează pe teren.</p>
     </div>
     <script type="application/json" id="rdx-lines"><?= json_encode($roadLines, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
     <script>
@@ -173,10 +173,31 @@ require __DIR__ . '/includes/v2/plan-icons.php';
       var lines = [];
       try { lines = JSON.parse(document.getElementById('rdx-lines').textContent || '[]'); } catch (e) {}
       var cards = [].slice.call(document.querySelectorAll('.rdx .rd-grid > li'));
+      function decode(str) {
+        var pts = [], i = 0, lat = 0, lng = 0;
+        while (i < str.length) {
+          for (var k = 0; k < 2; k++) {
+            var res = 0, shift = 0, c;
+            do { c = str.charCodeAt(i++) - 63; res |= (c & 31) << shift; shift += 5; } while (c >= 32);
+            var d = (res & 1) ? ~(res >> 1) : (res >> 1);
+            if (k === 0) lat += d; else lng += d;
+          }
+          pts.push([lat / 1e5, lng / 1e5]);
+        }
+        return pts;
+      }
       function draw(mode) {
         var inst = window.EPMap && window.EPMap.instance;
         if (!inst || !inst.setGhosts) return;
-        inst.setGhosts(lines.filter(function (l) { return mode === 'all' || l.modes.indexOf(mode) !== -1; }));
+        var out = [];
+        lines.forEach(function (l) {
+          if (mode !== 'all' && l.modes.indexOf(mode) === -1) return;
+          if (!l.breaks || !l.breaks.length) { out.push(l); return; }
+          // mapped in pieces: one line per piece, so nothing is drawn across a gap
+          var pts = decode(l.g), from = 0;
+          l.breaks.concat([pts.length]).forEach(function (to) { if (to - from > 1) out.push({ g: pts.slice(from, to), color: l.color }); from = to; });
+        });
+        inst.setGhosts(out);
       }
       window.addEventListener('load', function () {
         var inst = window.EPMap && window.EPMap.instance;

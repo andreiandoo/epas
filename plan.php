@@ -60,8 +60,8 @@ $routeCards = array_slice($routeCards, 0, 3);
 $roadsForPlan = [];
 foreach (v2_map_roads() as $rdSlug => $rd) {
     $def = MAP_ROADS[$rdSlug] ?? null;
-    if (!$def) {
-        continue;
+    if (!$def || !empty($def['osm'])) {
+        continue;      // a long-distance route is not a day; it stays on /trasee
     }
     $roadsForPlan[$rdSlug] = [
         'title' => $def['title'], 'mode' => $def['modes'][0], 'from' => $def['from'], 'to' => $def['to'],

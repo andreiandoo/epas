@@ -73,6 +73,7 @@
 .rd-prof-a{fill:var(--rd);opacity:.13}
 .rd-prof-l{fill:none;stroke:var(--rd);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .rd-lead{font-size:.875rem;line-height:1.45;color:var(--muted)}
+.rd-src{font-size:.75rem;color:var(--placeholder)}
 .rd-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:auto;padding-top:4px;font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
 .rd-meta > span{display:inline-flex;align-items:center;gap:5px}
 .rd-meta .ic{width:15px;height:15px;color:var(--rd)}
