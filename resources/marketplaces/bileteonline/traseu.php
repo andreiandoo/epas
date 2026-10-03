@@ -1,6 +1,7 @@
 <?php
 /**
  * /trasee/{slug} — one editorial route: a map in route mode, the stops in order, and the text.
+ * The same address also serves the roads of includes/v2/map-roads.php, with their own template.
  *
  * Copy comes from includes/v2/map-routes.php, everything factual from the `routes` block of
  * assets/v2/data/atractii.summary.json, which the builder resolves against the catalogue.
@@ -13,9 +14,114 @@ require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/map-routes.php';
+require_once __DIR__ . '/includes/v2/map-roads.php';
 
 $summary = v2_map_summary();
 $slug = preg_match('/^[a-z][a-z0-9-]{1,80}$/', (string) ($_GET['slug'] ?? '')) ? (string) $_GET['slug'] : '';
+
+// ------------------------------------------------------------------ a road (includes/v2/map-roads.php)
+$roadDef  = $slug !== '' ? (MAP_ROADS[$slug] ?? null) : null;
+$roadData = $roadDef ? (v2_map_roads()[$slug] ?? null) : null;
+if ($roadDef && $roadData) {
+    $rdKm   = (int) $roadData['km'];
+    $rdMax  = (int) ($roadData['max'] ?? 0);
+    $rdUp   = (int) ($roadData['up'] ?? 0);
+    $rdTime = v2_hm((int) $roadData['min']);
+    $rdBike = $roadDef['modes'] === ['bike'];
+    $rdWho  = implode(' și ', array_map(fn ($m) => mb_strtolower(MAP_ROAD_MODES[$m][0]), $roadDef['modes']));
+
+    // The other roads, nearest in kind first: same first mode, then the rest.
+    $others = [];
+    foreach (MAP_ROADS as $oSlug => $o) {
+        $od = v2_map_roads()[$oSlug] ?? null;
+        if ($oSlug === $slug || !$od) {
+            continue;
+        }
+        $others[] = [$oSlug, $o['title'], $o['ref'], $o['from'], $o['to'], $o['lead'], $o['modes'], $od['km'], $od['max'] ?? 0, $od['up'] ?? 0, $od['z'] ?? [], 0];
+    }
+    usort($others, fn ($a, $b) => (int) ($b[6][0] === $roadDef['modes'][0]) <=> (int) ($a[6][0] === $roadDef['modes'][0]));
+    $others = array_slice($others, 0, 3);
+
+    $roadPage = [
+        'slug' => $slug, 'title' => $roadDef['title'], 'ref' => $roadDef['ref'], 'from' => $roadDef['from'], 'to' => $roadDef['to'],
+        'lead' => $roadDef['lead'], 'season' => $roadDef['season'] ?? '', 'modes' => $roadDef['modes'], 'points' => $roadDef['points'],
+        'km' => $rdKm, 'min' => (int) $roadData['min'], 'max' => $rdMax, 'low' => (int) ($roadData['min_alt'] ?? 0), 'up' => $rdUp,
+        'z' => $roadData['z'] ?? [], 'geometry' => $roadData['geometry'], 'a' => $roadData['a'], 'b' => $roadData['b'],
+        'stops' => $roadData['stops'] ?? [], 'others' => $others,
+        'breadcrumbs' => [['Acasă', '/'], ['Hartă', '/harta'], ['Trasee', '/trasee'], [$roadDef['title'], '/trasee/' . $slug]],
+        'prose' => [
+            '<p>' . v2_e($roadDef['intro']) . '</p>',
+            '<p>Între ' . v2_e($roadDef['from']) . ' și ' . v2_e($roadDef['to']) . ' sunt <strong>' . v2_e(v2_thousands($rdKm)) . ' km</strong>'
+                . ($rdMax > 0 ? ', iar drumul urcă până la <strong>' . v2_e(v2_thousands($rdMax)) . ' m</strong>' : '')
+                . ($rdUp > 0 ? '. Mergând în sensul acesta se adună <strong>' . v2_e(v2_thousands($rdUp)) . ' m de urcare</strong>' : '')
+                . '. ' . ($rdBike
+                    ? 'Traseul e calculat pe rețeaua de biciclete, așa că ține pista acolo unde există.'
+                    : 'Cu motorul pornit și fără opriri înseamnă cam <strong>' . v2_e($rdTime) . '</strong>; cu opririle pentru priveliște, socotește mai mult.')
+                . '</p>',
+            '<p>Butonul <em>Deschide ca plan</em> pune drumul în <a href="/plan?drum=' . v2_e($slug) . '">planificator</a> ca o zi, cu cele două capete ca plecare și sosire și cu atracțiile de pe margine ca opriri. De acolo adaugi o masă, scoți ce nu te interesează, vezi profilul zilei și cauți cazare.</p>',
+        ],
+        'faq' => [
+            ['Când e deschis drumul?', !empty($roadDef['season'])
+                ? $roadDef['season']
+                : 'Nu are o perioadă de închidere anunțată în fiecare an. Iarna și după ploi mari, verifică starea drumurilor la CNAIR înainte de plecare.'],
+            ['De unde vin kilometrii și altitudinile?', 'Linia e calculată pe drumurile din OpenStreetMap, între capetele drumului. Altitudinile sunt citite de pe un model de teren european cu pasul de 25 de metri, în o sută de puncte egal depărtate de-a lungul drumului, deci vârfurile ascuțite ies puțin rotunjite.'],
+            ['Pot să-l parcurg în sens invers?', 'Da. Kilometrii rămân aceiași; urcarea totală se schimbă, pentru că ce era coborâre devine urcuș.'],
+            ['E potrivit pentru ' . ($rdBike ? 'copii' : 'bicicletă') . '?', $rdBike
+                ? 'Profilul îți spune cel mai bine: uită-te la diferența de nivel și la lungime. Unde e pistă separată de trafic, am scris asta în descriere.'
+                : (in_array('bike', $roadDef['modes'], true)
+                    ? 'Se face și pe bicicletă, dar e un drum cu trafic, fără pistă. Uită-te la urcarea totală înainte să pleci și pornește devreme.'
+                    : 'Nu l-am trecut la biciclete: e un drum național cu trafic, fără pistă. Dacă îl faci totuși pe bicicletă, profilul de mai sus îți arată la ce urcare să te aștepți.')],
+        ],
+    ];
+
+    $pageTitleRaw    = $roadDef['title'] . ($roadDef['ref'] !== '' ? ' (' . $roadDef['ref'] . ')' : '') . ' — hartă, profil și ' . v2_thousands($rdKm) . ' km | bilete.online';
+    $pageDescription = $roadDef['title'] . ', ' . $roadDef['from'] . ' – ' . $roadDef['to'] . ': ' . v2_thousands($rdKm) . ' km'
+        . ($rdMax > 0 ? ', până la ' . v2_thousands($rdMax) . ' m altitudine' : '') . '. Harta drumului, profilul de altitudine și ce vezi pe margine, pentru ' . $rdWho . '.';
+    $canonicalUrl    = SITE_URL . '/trasee/' . $slug;
+    $ogImage         = SITE_URL . '/assets/images/og-default.jpg';
+    foreach ($roadData['stops'] ?? [] as $st) {
+        if (($st[9] ?? '') !== '') {
+            $ogImage = $st[9];
+            break;
+        }
+    }
+    $structuredData = [[
+        '@context' => 'https://schema.org',
+        '@type' => 'TouristTrip',
+        'name' => $roadDef['title'],
+        'description' => $roadDef['lead'],
+        'url' => $canonicalUrl,
+        'itinerary' => [
+            '@type' => 'ItemList',
+            'itemListElement' => array_map(
+                fn ($st, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => SITE_URL . '/atractie/' . $st[0], 'name' => $st[1]],
+                $roadData['stops'] ?? [],
+                array_keys($roadData['stops'] ?? [])
+            ),
+        ],
+    ], [
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => array_map(
+            fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]],
+            $roadPage['faq']
+        ),
+    ], [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => array_map(
+            fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc[0], 'item' => SITE_URL . $bc[1]],
+            $roadPage['breadcrumbs'],
+            array_keys($roadPage['breadcrumbs'])
+        ),
+    ]];
+
+    require __DIR__ . '/includes/v2/road-page.php';
+
+    return;
+}
+
+// ------------------------------------------------------------------ an editorial route (includes/v2/map-routes.php)
 $route = $slug !== '' ? v2_map_route($slug) : null;
 $rData = $slug !== '' ? ($summary['routes'][$slug] ?? null) : null;
 if (!$route || !$rData) {

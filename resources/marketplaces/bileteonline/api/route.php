@@ -2,7 +2,7 @@
 /**
  * Road routing for the trip planner: real driving distance and time between a day's stops.
  *
- *   GET /api/route.php?c=45.3553,25.5496;45.3597,25.5428;45.3613,25.5362
+ *   GET /api/route.php?c=45.3553,25.5496;45.3597,25.5428;45.3613,25.5362[&p=bike]
  *   -> { ok: true, km, min, legs: [[km, min], …], geometry: "<encoded polyline>", cached: bool }
  *
  * The planner cannot call the routing service itself: it is a community instance, and a page that
@@ -52,8 +52,12 @@ foreach ($parts as $p) {
     $points[] = [$lat, $lng];
 }
 
+// A bicycle is routed on its own network: cycle paths, no motorways, its own speeds.
+$profile = (($_GET['p'] ?? '') === 'bike') ? 'bike' : 'car';
+
 // ------------------------------------------------------------------ cache
-$key = sha1(json_encode($points));
+// The car key is what it always was, so nothing cached before the profiles existed is lost.
+$key = sha1(json_encode($points) . ($profile === 'car' ? '' : '|' . $profile));
 $cacheDir = sys_get_temp_dir() . '/bileteonline_routes';
 if (!is_dir($cacheDir)) {
     @mkdir($cacheDir, 0755, true);
@@ -93,7 +97,7 @@ if ($state['n'] > $max) {
 
 // ------------------------------------------------------------------ upstream
 $pairs = array_map(fn ($p) => $p[1] . ',' . $p[0], $points);   // OSRM wants lng,lat
-$url = 'https://routing.openstreetmap.de/routed-car/route/v1/driving/' . implode(';', $pairs)
+$url = 'https://routing.openstreetmap.de/routed-' . $profile . '/route/v1/driving/' . implode(';', $pairs)
     . '?overview=simplified&geometries=polyline&annotations=false&steps=false';
 
 $ch = curl_init();

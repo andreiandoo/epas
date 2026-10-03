@@ -18,6 +18,12 @@
  *
  * Nothing is stored on a server unless you ask: the plan lives in the URL hash and in localStorage,
  * so a link is a plan.
+ *
+ * On screen the plan is one map and one list. The map never leaves: on a phone it holds the top of
+ * the screen and the list scrolls under it, on a desk they sit side by side. Whatever the list has
+ * under its heading is what the map shows — the day, then the stop and its neighbours, then the
+ * town of the night — so nobody has to ask for the map. The same map takes the accommodation list
+ * when it is asked for, from the button at its foot.
  */
 (function () {
   'use strict';
@@ -39,7 +45,9 @@
   var MINUTES = CFG.minutes || [15, 30, 45, 60, 90, 120, 180, 240];
   var PARTY = CFG.party || {};                          // how many travel, and how many fit in a room
   var STAY = CFG.stay22 || {};                          // the accommodation embed, minus dates and places
-  var WIDE = '(min-width: 1100px)';                     // where the map column becomes a column
+  var WIDE = '(min-width: 1024px)';                     // where the map stands beside the list instead of above it
+  var MODES = CFG.modes || {};                          // how you travel: speeds, routing profile, what the plan leans to
+  var MODE_COLOR = { car: '#1E5B48', moto: '#C8322B', bike: '#2D6CCD' };
   var COMBINING = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
 
   /* ---------------------------------------------------------------- utils */
@@ -117,11 +125,16 @@
       Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
     return 12742 * Math.asin(Math.min(1, Math.sqrt(x)));
   }
+  function modeKey() { return (plan && MODES[plan.mode]) ? plan.mode : 'car'; }
+  function modeDef() { return (MODES[modeKey()] || [])[2] || {}; }
+  /** How the way you travel tilts the types: a rider stops for a view, not for a street of old houses. */
+  function modeWeight(typeSlug) { var w = modeDef().weights || {}; return w[typeSlug] || 0; }
   function estMin(distKm) {
-    var t = (distKm * (CFG.travel.detour || 1.35)) / (CFG.travel.kmh || 55) * 60;
+    var m = modeDef();
+    var t = (distKm * (m.detour || CFG.travel.detour || 1.35)) / (m.kmh || CFG.travel.kmh || 55) * 60;
     return distKm < 0.3 ? 0 : Math.max(CFG.travel.min_leg || 5, Math.round(t));
   }
-  function estKm(distKm) { return Math.round(distKm * (CFG.travel.detour || 1.35) * 10) / 10; }
+  function estKm(distKm) { return Math.round(distKm * (modeDef().detour || CFG.travel.detour || 1.35) * 10) / 10; }
   function duration(typeSlug) { return CFG.durations[typeSlug] || CFG.durations.default || 45; }
   function dateLabel(iso, offset) {
     if (!iso) return 'Ziua ' + (offset + 1);
@@ -265,7 +278,7 @@
 
   function blankPlan() {
     return {
-      origin: null, where: null, back: null, days: 2, from: '',
+      origin: null, where: null, back: null, days: 2, from: '', mode: 'car',
       interests: [], company: [], pace: 'normal', party: partyDefault(),
       stops: [], locked: {}, removed: {}, custom: {}, extra: {}, nights: {}, token: ''
     };
@@ -301,7 +314,7 @@
   function candidates() {
     var f = D.f, want = wantedTypes(), out = [];
     var centre = [plan.where.lat, plan.where.lng];
-    var radius = plan.where.kind === 'city' ? RADIUS_CITY[Math.min(plan.days, RADIUS_CITY.length) - 1] : 0;
+    var radius = plan.where.kind === 'city' ? RADIUS_CITY[Math.min(plan.days, RADIUS_CITY.length) - 1] * (modeDef().radius || 1) : 0;
 
     for (var i = 0; i < D.rows.length; i++) {
       var r = D.rows[i];
@@ -324,7 +337,7 @@
       if (flags & D.flags.image) score += 2.5;
       if (flags & (D.flags.activities || 4)) score += 4;
       if (duration(tSlug) >= 60) score += 1.5;
-      score += companyWeight(tSlug);
+      score += companyWeight(tSlug) + modeWeight(tSlug);
       score -= d / 40;
       out.push({ id: slug, lat: lat, lng: lng, type: tSlug, dur: duration(tSlug), score: score });
     }
@@ -433,7 +446,7 @@
           var c = pool[k];
           if (used[c.id]) continue;
           var tm = estMin(km(last.lat, last.lng, c.lat, c.lng));
-          if (tm > 75) continue;
+          if (tm > (modeDef().leg_max || 75)) continue;
           var need = tm + c.dur;
           if (spent + need > budget) continue;
           var cost = tm - c.score * 6;
@@ -503,7 +516,7 @@
         if (!key || key.indexOf(';') === -1) return;   // fewer than two points: nothing to route
         if (roadCache[key]) return;
         roadCache[key] = 'pending';
-        fetch('/api/route.php?c=' + encodeURIComponent(key), { credentials: 'omit' })
+        fetch('/api/route.php?c=' + encodeURIComponent(key) + (modeDef().profile === 'bike' ? '&p=bike' : ''), { credentials: 'omit' })
           .then(function (r) { return r.json(); })
           .then(function (j) {
             roadCache[key] = (j && j.ok) ? j : 'failed';
@@ -829,6 +842,8 @@
     };
     // Only when there is something to say: a plan without stops of your own stays as short as it was.
     if (plan.extra && Object.keys(plan.extra).length) compact.x = plan.extra;
+    if (plan.mode && plan.mode !== 'car') compact.m = plan.mode;
+    if (plan.name) compact.e = plan.name;
     var pty = party(), dft = partyDefault();
     if (pty.adults !== dft.adults || pty.children !== dft.children) compact.y = [pty.adults, pty.children];
     var nts = nightsCompact();
@@ -844,6 +859,8 @@
       p.origin = o.o || null; p.where = o.w; p.back = o.b || null;
       p.days = o.d || 2; p.from = o.f || ''; p.interests = o.i || []; p.company = o.g || [];
       p.pace = o.p || 'normal'; p.stops = o.s || []; p.custom = o.c || {}; p.token = o.t || '';
+      p.mode = MODES[o.m] ? o.m : 'car';      // a link made before the modes existed is a car plan
+      if (typeof o.e === 'string') p.name = o.e.slice(0, 80);
       // Links and saved plans made before stops of your own existed simply have none of them.
       p.extra = (o.x && typeof o.x === 'object') ? o.x : {};
       // Same for the nights and for who travels: an older link says nothing, so it gets the defaults.
@@ -964,7 +981,7 @@
     var ll = function (p) { return p.lat + ',' + p.lng; };
     var mid = pts.slice(1, -1);
     if (mid.length > 8) mid = mid.slice(0, 8);      // the URL API takes nine waypoints, no more
-    return 'https://www.google.com/maps/dir/?api=1&travelmode=driving' +
+    return 'https://www.google.com/maps/dir/?api=1&travelmode=' + (modeDef().gmaps || 'driving') +
       '&origin=' + encodeURIComponent(ll(pts[0])) +
       '&destination=' + encodeURIComponent(ll(pts[pts.length - 1])) +
       (mid.length ? '&waypoints=' + encodeURIComponent(mid.map(ll).join('|')) : '');
@@ -999,7 +1016,7 @@
       method: 'POST',
       body: {
         token: plan.token || null,
-        title: 'Plan ' + plan.where.label + ' · ' + plan.days + (plan.days === 1 ? ' zi' : ' zile'),
+        title: (plan.name || ('Plan ' + plan.where.label)) + ' · ' + plan.days + (plan.days === 1 ? ' zi' : ' zile'),
         place: plan.where.label, days: plan.days, stops: total,
         starts_on: plan.from || null, payload: { v: 2, code: encode() }
       }
@@ -1021,7 +1038,8 @@
     panel = el('div', 'pl-saved');
     panel.id = 'pl-saved';
     panel.appendChild(el('p', 'pl-saved-h', 'Se încarcă…'));
-    b.parentNode.parentNode.appendChild(panel);
+    ui.bar.appendChild(panel);
+    if (ui.scroller) ui.scroller.scrollTop = 0;
 
     api('customer.plans').then(function (d) {
       panel.textContent = '';
@@ -1074,15 +1092,25 @@
     list: document.getElementById('pl-days-list'),
     note: document.getElementById('pl-map-note'),
     live: document.getElementById('pl-live'),
-    tabRoute: document.getElementById('pl-tab-route'),
-    tabStay: document.getElementById('pl-tab-stay'),
-    paneRoute: document.getElementById('pl-pane-route'),
-    paneStay: document.getElementById('pl-pane-stay')
+    paneStay: document.getElementById('pl-pane-stay'),
+    scroller: document.getElementById('plx-list'),
+    map: document.getElementById('plx-map'),
+    top: document.getElementById('plx-top'),
+    title: document.getElementById('plx-t'),
+    sub: document.getElementById('plx-s'),
+    badge: document.getElementById('plx-mode'),
+    rail: document.getElementById('plx-days'),
+    menu: document.getElementById('plx-menu'),
+    menuBtn: document.getElementById('plx-menu-b'),
+    stayBtn: document.getElementById('plx-stay-btn'),
+    stayBox: document.getElementById('plx-stay'),
+    stayX: document.getElementById('plx-stay-x'),
+    prof: document.getElementById('plx-prof'),
+    grab: document.getElementById('plx-grab')
   };
   var activeDay = 0;
-  var mapTab = 'route';      // which of the two views the map column is showing
+  var mapTab = 'route';      // what the map area is showing: the route, or the accommodation list
   var stayNight = -1;        // the night the accommodation view is on, -1 for none yet
-  var sheet = null;          // the full-height sheet, on a phone
   var focusId = null;        // whose handle to put the focus back on after the next render
 
   /** Says out loud what just moved, for whoever is not looking at the screen. */
@@ -1108,16 +1136,37 @@
     stale = false;
     startBox.hidden = true;
     root.hidden = false;
-    closeSheet();
+    root.setAttribute('data-mode', modeKey());
+    document.documentElement.classList.add('plx-open');
+    closeMenuX();
+    closeStay(true);          // a fresh plan opens on its own map, not on somebody else's night
     stayNight = -1;
     if (ui.paneStay) { ui.paneStay.textContent = ''; ui.paneStay.dataset.stayUrl = ''; }
-    showTab('route');          // a fresh plan opens on its own map, not on somebody else's night
+    focusKey = null;
+    overview = true;
     renderBar();
     renderDays();
+    if (ui.scroller) ui.scroller.scrollTop = 0;
+    var inst = window.EPMap.instance;
+    if (inst && inst.resize) inst.resize();
     syncMap();
     syncStay();
     save();
     fetchRoads();
+  }
+  /** Back to the form. The plan stays where it is — in the link and in the browser. */
+  function leave() {
+    closeMenuX();
+    closeStay(true);
+    root.hidden = true;
+    startBox.hidden = false;
+    document.documentElement.classList.remove('plx-open');
+    window.scrollTo(0, 0);
+  }
+  function closeMenuX() {
+    if (!ui.menu) return;
+    ui.menu.hidden = true;
+    if (ui.menuBtn) ui.menuBtn.setAttribute('aria-expanded', 'false');
   }
 
   function btn(ic, label, fn, cls) {
@@ -1130,13 +1179,6 @@
   }
 
   function renderBar() {
-    ui.bar.textContent = '';
-    // the band runs the width of the page; its contents keep the page's own column
-    var bar = el('div', 'wrap pl-bar-in');
-    ui.bar.appendChild(bar);
-    var left = el('div', 'pl-bar-main');
-    left.appendChild(el('h2', 'pl-bar-h', (plan.origin ? plan.origin.label + ' → ' : '') + plan.where.label));
-
     var totals = { stops: 0, km: 0, min: 0, cost: 0, routed: 0 };
     for (var d = 0; d < plan.days; d++) {
       var v = dayView(d);
@@ -1147,15 +1189,42 @@
       if (v.routed) totals.routed++;
     }
 
-    var meta = el('p', 'pl-bar-meta');
-    meta.appendChild(el('span', '', plan.days + (plan.days === 1 ? ' zi' : ' zile')));
-    meta.appendChild(el('span', '', totals.stops + (totals.stops === 1 ? ' oprire' : ' opriri')));
-    meta.appendChild(el('span', '', nf(totals.km) + ' km' + (totals.routed === plan.days ? ' pe șosea' : ' (estimat)')));
-    meta.appendChild(el('span', '', (CFG.paces[plan.pace] || ['Normal'])[0]));
-    if (totals.cost > 0) meta.appendChild(el('span', 'pl-bar-sell', 'de la ' + lei(totals.cost) + ' bilete'));
-    left.appendChild(meta);
+    // Over the map: what the plan is, in two lines.
+    ui.title.textContent = plan.name || ((plan.origin ? plan.origin.label + ' → ' : '') + plan.where.label);
+    ui.sub.textContent = [
+      plan.days + (plan.days === 1 ? ' zi' : ' zile'),
+      totals.stops + (totals.stops === 1 ? ' oprire' : ' opriri'),
+      nf(totals.km) + ' km' + (totals.routed === plan.days ? ' pe șosea' : ' (estimat)'),
+      (CFG.paces[plan.pace] || ['Normal'])[0]
+    ].join(' · ');
+    ui.badge.textContent = '';
+    ui.badge.appendChild(icon((MODES[modeKey()] || [])[1] || 'pi-car'));
+    ui.badge.title = (MODES[modeKey()] || ['Mașină'])[0];
 
-    // One line for the nights, and a way into the first one nobody has looked at yet.
+    // Behind the three dots: everything you can do to the plan as a whole.
+    ui.menu.textContent = '';
+    var item = function (ic, label, fn) { var b = btn(ic, label, fn, 'plx-menu-i'); ui.menu.appendChild(b); return b; };
+    item('pl-regen', 'Regenerează', function () { closeMenuX(); generate(); render(); });
+    item('link', 'Copiază link', function (b) {
+      save();
+      var done = function () {
+        b.classList.add('is-done');
+        b.querySelector('span').textContent = 'Copiat';
+        setTimeout(function () { b.classList.remove('is-done'); b.querySelector('span').textContent = 'Copiază link'; closeMenuX(); }, 1300);
+      };
+      if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done);
+      else done();
+    });
+    item('calendar-blank', 'Calendar (.ics)', function () { closeMenuX(); downloadIcs(); });
+    item('printer', 'Tipărește', function () { closeMenuX(); window.print(); });
+    item('user-circle', 'Salvează în cont', savePlan);
+    if (token()) item('list', 'Planurile mele', function (b) { closeMenuX(); openSaved(b); });
+    item('gear-six', 'Schimbă datele', leave);
+
+    // At the head of the list: what it costs and where it sleeps.
+    ui.bar.textContent = '';
+    var box = el('div', 'pl-bar-in');
+    if (totals.cost > 0) box.appendChild(el('span', 'pl-bar-sell', 'de la ' + lei(totals.cost) + ' bilete'));
     if (nightCount() > 0) {
       var towns = [], seenTown = {}, slept = 0;
       for (var ni = 0; ni < nightCount(); ni++) {
@@ -1176,32 +1245,25 @@
         ? slept + (slept === 1 ? ' noapte' : ' nopți') + ' · ' + towns.join(', ')
         : 'Nicio noapte pe traseu'));
       nb.addEventListener('click', jumpToNight);
-      left.appendChild(nb);
+      box.appendChild(nb);
     }
-    bar.appendChild(left);
+    if (box.firstChild) ui.bar.appendChild(box);
 
-    var acts = el('div', 'pl-bar-acts');
-    acts.appendChild(btn('arrow-right', 'Regenerează', function () { generate(); render(); }));
-    acts.appendChild(btn('link', 'Copiază link', function (b) {
-      save();
-      var done = function () {
-        b.classList.add('is-done');
-        b.querySelector('span').textContent = 'Copiat';
-        setTimeout(function () { b.classList.remove('is-done'); b.querySelector('span').textContent = 'Copiază link'; }, 2000);
-      };
-      if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done);
-      else done();
-    }));
-    acts.appendChild(btn('calendar-blank', 'Calendar (.ics)', function () { downloadIcs(); }));
-    acts.appendChild(btn('printer', 'Tipărește', function () { window.print(); }));
-    acts.appendChild(btn('user-circle', 'Salvează în cont', savePlan));
-    if (token()) acts.appendChild(btn('list', 'Planurile mele', openSaved));
-    acts.appendChild(btn('gear-six', 'Schimbă', function () {
-      root.hidden = true;
-      startBox.hidden = false;
-      startBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }));
-    bar.appendChild(acts);
+    // The days, as buttons on the map: where you are, and a way to jump.
+    ui.rail.textContent = '';
+    var all = el('button', 'plx-day', 'Tot traseul');
+    all.type = 'button';
+    all.dataset.day = '-1';
+    ui.rail.appendChild(all);
+    for (var k = 0; k < plan.days; k++) {
+      var pb = el('button', 'plx-day', 'Ziua ' + (k + 1));
+      pb.type = 'button';
+      pb.dataset.day = String(k);
+      var dt = dateOffset(k);
+      if (dt) pb.appendChild(el('small', '', dt.toLocaleDateString('ro-RO', { weekday: 'short', day: 'numeric', month: 'short' })));
+      ui.rail.appendChild(pb);
+    }
+    paintRail();
   }
 
   function renderDays() {
@@ -1247,6 +1309,7 @@
         sp.scrollIntoView({ block: 'nearest' });
       }
     }
+    markFocus();      // the nodes are new; the one the map is on gets its mark back
   }
 
   function dayCard(d) {
@@ -1255,8 +1318,13 @@
     var box = el('section', 'pl-day' + (d === activeDay ? ' is-active' : ''));
     box.dataset.day = String(d);
 
-    var head = el('header', 'pl-day-head');
+    var head = el('header', 'pl-day-head'), tip = null;
     var hl = el('div', 'pl-day-headings');
+    var num = el('span', 'pl-day-n');
+    num.appendChild(el('small', '', 'ziua'));
+    num.appendChild(el('b', '', String(d + 1)));
+    num.setAttribute('aria-hidden', 'true');
+    head.appendChild(num);
     hl.appendChild(el('h3', 'pl-day-h', dateLabel(plan.from, d)));
     var sub = el('p', 'pl-day-sub');
     sub.textContent = stops.length
@@ -1266,19 +1334,12 @@
       : 'Zi liberă — adaugă ceva sau regenerează.';
     hl.appendChild(sub);
     if (d === 0 && stops.length > 1) {
-      hl.appendChild(el('p', 'pl-day-tip',
-        'Trage de bulina din stânga ca să muți o oprire, în zi sau în altă zi. Cu tastatura: Enter pe bulină, apoi săgețile.'));
+      tip = el('p', 'pl-day-tip',
+        'Trage de numărul din stânga ca să muți o oprire, în zi sau în altă zi, iar cu + pui o oprire de-a ta între două locuri. Harta urmărește oprirea la care ai ajuns cu lista.');
     }
     head.appendChild(hl);
 
     var acts = el('div', 'pl-day-acts');
-    var show = el('button', 'pl-day-act pl-day-show');
-    show.type = 'button';
-    show.appendChild(icon('map-pin'));
-    show.appendChild(el('span', '', d === activeDay ? 'Pe hartă' : 'Vezi pe hartă'));
-    show.addEventListener('click', function () { activeDay = d; renderDays(); syncMap(); });
-    acts.appendChild(show);
-
     var mk = el('button', 'pl-day-act');
     mk.type = 'button';
     mk.appendChild(icon('plus'));
@@ -1298,6 +1359,7 @@
     }
     head.appendChild(acts);
     box.appendChild(head);
+    if (tip) box.appendChild(tip);      // under the heading, not in it: the heading stays one line when it sticks
 
     var ol = el('ol', 'pl-stops');
     var n = 0;
@@ -1309,7 +1371,10 @@
         // what could take this stop's place opens right under it, so it is never in doubt which one goes
         if (swap && swap.day === d && swap.pos === r.pos && swap.id === r.e.id) ol.appendChild(swapItem());
       } else {
-        ol.appendChild(edgeItem(r));
+        var edge = edgeItem(r);
+        edge.dataset.day = String(d);
+        edge.dataset.role = r.role;
+        ol.appendChild(edge);
       }
     });
     if (stops.length) ol.appendChild(insertSlot(d, stops.length));
@@ -1687,13 +1752,13 @@
   }
 
   function edgeScroll(y) {
-    var edge = 96;
-    var top = (window.innerHeight || 0);
-    scrollBy = y < edge ? -Math.ceil((edge - y) / 5) : (y > top - edge ? Math.ceil((y - (top - edge)) / 5) : 0);
+    var edge = 84, box = ui.scroller.getBoundingClientRect();
+    scrollBy = y < box.top + edge ? -Math.ceil((box.top + edge - y) / 5)
+      : (y > box.bottom - edge ? Math.ceil((y - (box.bottom - edge)) / 5) : 0);
     if (scrollBy && !scroller) {
       scroller = setInterval(function () {
         if (!drag) return;
-        window.scrollBy(0, scrollBy);
+        ui.scroller.scrollTop += scrollBy;
         drag.target = dropAt(drag.x, drag.y);
         if (drag.target) showMark(drag.target); else hideMark();
       }, 16);
@@ -1822,8 +1887,9 @@
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
     if (drag) { dragEnd(true); return; }
-    if (sheet) { closeSheet(); return; }
+    if (ui.menu && !ui.menu.hidden) { closeMenuX(); if (ui.menuBtn) ui.menuBtn.focus(); return; }
     if (menu) { var b = menu.btn; closeMenu(); b.focus(); return; }
+    if (mapTab === 'stay') { closeStay(); return; }
     if (swap && !grab) closeSwap();
   });
 
@@ -2135,7 +2201,7 @@
       var flags = r[f.flags], s = 0;
       if (flags & D.flags.image) s += 1.5;
       if (flags & (D.flags.activities || 4)) s += 4;
-      s += companyWeight(tSlug);      // who travels tilts the types, it never rules one out
+      s += companyWeight(tSlug) + modeWeight(tSlug);      // who travels, and how, tilts the types; it never rules one out
       if (plan.removed[slug]) s -= 1.5;
       s -= d / per;
       out.push({ id: slug, d: d, score: s });
@@ -2345,8 +2411,8 @@
    *
    * A night card sits between two days and carries three decisions: see what there is, sleep
    * somewhere else, or do not sleep on the road at all. The list of places to sleep is Stay22's,
-   * in an iframe built only when somebody asks for it — on a wide screen in the map column, beside
-   * our own map, and on a phone as a sheet over the plan.
+   * in an iframe built only when somebody asks for it, and it takes the place of our own map — in
+   * the same frame — until the traveller sends it back.
    */
 
   function setCls(node, name, on) { if (node) node.classList[on ? 'add' : 'remove'](name); }
@@ -2575,34 +2641,54 @@
     }
     return -1;
   }
-  function showTab(name) {
-    if (!ui.paneStay) return;
-    if (name === 'stay' && (stayNight < 0 || stayNight >= nightCount())) stayNight = firstOpenNight();
-    mapTab = name;
-    setCls(ui.tabRoute, 'is-on', name === 'route');
-    setCls(ui.tabStay, 'is-on', name === 'stay');
-    if (ui.tabRoute) ui.tabRoute.setAttribute('aria-selected', String(name === 'route'));
-    if (ui.tabStay) ui.tabStay.setAttribute('aria-selected', String(name === 'stay'));
-    // Not unmounted, only out of sight: the map keeps its size, so Leaflet has nothing to recover.
-    setCls(ui.paneRoute, 'is-off', name !== 'route');
-    setCls(ui.paneStay, 'is-off', name !== 'stay');
-    syncStay();
-  }
   function syncStay() {
     if (ui.paneStay && mapTab === 'stay') stayInto(ui.paneStay, stayNight);
-    if (sheet) stayInto(sheet.body, sheet.night);
+    stayButton();
   }
-  function openStay(i) {
-    stayNight = i;
+  /** The night the reader is at: the one under the heading, else the one that follows the day on screen. */
+  function currentNight() {
+    if (!nightCount()) return -1;
+    var m = /^n:(\d+)$/.exec(focusKey || '');
+    var i = m ? +m[1] : Math.min(activeDay, nightCount() - 1);
     var n = nightOf(i);
-    if (wide()) {
-      showTab('stay');
-      var col = document.querySelector('.pl-map-col');
-      if (col && col.scrollIntoView) col.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      announce(n ? 'Am deschis cazările din ' + n.name + ' în coloana din dreapta.' : 'Am deschis cazările.');
-    } else {
-      openSheet(i);
-    }
+    return (n && !n.skip) ? i : firstOpenNight();
+  }
+  /** The button at the foot of the map. It names the town once the list has reached a night. */
+  function stayButton() {
+    if (!ui.stayBtn) return;
+    var i = plan ? currentNight() : -1;
+    ui.stayBtn.hidden = i < 0 || mapTab === 'stay';
+    if (i < 0) return;
+    var atNight = /^n:/.test(focusKey || '') && !overview, n = nightOf(i);
+    ui.stayBtn.querySelector('span').textContent = (atNight && n) ? 'Arată cazări în ' + n.name : 'Arată cazări disponibile';
+    setCls(ui.stayBtn, 'is-hot', atNight);
+  }
+  /**
+   * The accommodation list takes the map's place, in the map's own frame, and hands it back. On a
+   * phone the frame grows first: a list of hotels needs more room than a route does.
+   */
+  function openStay(i) {
+    if (i < 0 || !ui.stayBox) return;
+    stayNight = i;
+    mapTab = 'stay';
+    ui.stayBox.hidden = false;
+    setCls(root, 'is-stay', true);
+    stayInto(ui.paneStay, i);
+    stayButton();
+    if (!wide()) snapMap(0.74);
+    var n = nightOf(i);
+    announce(n ? 'Am deschis cazările din ' + n.name + ', în locul hărții.' : 'Am deschis cazările.');
+    if (ui.stayX) ui.stayX.focus();
+  }
+  function closeStay(quiet) {
+    if (!ui.stayBox || (mapTab !== 'stay' && ui.stayBox.hidden)) return;
+    mapTab = 'route';
+    ui.stayBox.hidden = true;
+    setCls(root, 'is-stay', false);
+    stayButton();
+    if (!wide()) snapMap(0.46);
+    else setTimeout(function () { var inst = window.EPMap.instance; if (inst && inst.resize) inst.resize(); applyFocus(); }, 60);
+    if (!quiet) { announce('Harta traseului e la loc.'); if (ui.stayBtn && !ui.stayBtn.hidden) ui.stayBtn.focus(); }
   }
 
   /**
@@ -2675,69 +2761,423 @@
     return a.toLocaleDateString('ro-RO', f) + ' → ' + b.toLocaleDateString('ro-RO', f);
   }
 
-  /* ---------- on a phone: a sheet over the plan, not a column beside it ---------- */
-
-  function openSheet(i) {
-    closeSheet();
-    var back = document.activeElement;
-    var box = el('div', 'pl-sheet');
-    var head = el('div', 'pl-sheet-head');
-    head.appendChild(el('p', 'pl-stay-h', 'Cazare · ' + nightTitle(i)));
-    var x = el('button', 'pl-sheet-x');
-    x.type = 'button';
-    x.appendChild(icon('x'));
-    x.appendChild(el('span', 'sr', 'Închide cazările'));
-    x.addEventListener('click', function () { closeSheet(); });
-    head.appendChild(x);
-    var body = el('div', 'pl-sheet-body');
-    box.appendChild(head);
-    box.appendChild(body);
-    document.body.appendChild(box);
-    document.documentElement.classList.add('pl-sheet-open');
-    sheet = { box: box, body: body, night: i, back: back };
-    stayInto(body, i);
-    x.focus();
-  }
-  function closeSheet() {
-    if (!sheet) return;
-    var was = sheet;
-    sheet = null;
-    document.documentElement.classList.remove('pl-sheet-open');
-    if (was.box.parentNode) was.box.parentNode.removeChild(was.box);
-    if (was.back && was.back.focus) was.back.focus();
-  }
-
-  if (ui.tabRoute) ui.tabRoute.addEventListener('click', function () { showTab('route'); });
-  if (ui.tabStay) ui.tabStay.addEventListener('click', function () { showTab('stay'); });
+  if (ui.stayBtn) ui.stayBtn.addEventListener('click', function () { openStay(currentNight()); });
+  if (ui.stayX) ui.stayX.addEventListener('click', function () { closeStay(); });
 
   /* ---------------------------------------------------------------- the map */
+
+  var mapIds = [];           // the stops that have a pin, in pin order: index -> stop id
+  var pinWired = false;
 
   function syncMap() {
     var inst = window.EPMap.instance;
     if (!inst) return;
+    if (!pinWired && inst.onPin) {
+      pinWired = true;
+      // A pin is a way into the list: the stop comes up under the heading and the map stays put.
+      inst.onPin(function (i) {
+        var id = mapIds[i];
+        var node = id ? ui.list.querySelector('.pl-stop[data-id="' + id.replace(/"/g, '') + '"]') : null;
+        if (node) scrollToNode(node, true);
+      });
+    }
     var view = dayView(activeDay);
     var r = road(activeDay);
     // Only real places get a pin. A stop of your own is time: whatever driving it carried is folded
     // into the next pin, so the kilometres on the map still add up.
     var rows = [], carry = { km: 0, min: 0 };
+    mapIds = [];
     view.rows.forEach(function (x) {
       if (x.role !== 'stop') return;
       if (x.e.own) { carry.km += x.legKm; carry.min += x.legMin; return; }
       rows.push(mapRow(x.e, x.legKm + carry.km, x.legMin + carry.min));
+      mapIds.push(x.e.id);
       carry.km = 0;
       carry.min = 0;
     });
+    if (inst.setColor) inst.setColor(MODE_COLOR[modeKey()] || MODE_COLOR.car);
     inst.setRoute(rows, r ? r.geometry : '');
+    // The other days stay on the map, faint: the day on screen is a part of a trip, not all of it.
+    if (inst.setGhosts) {
+      var ghosts = [];
+      for (var d = 0; d < plan.days; d++) {
+        if (d === activeDay) continue;
+        var rd = road(d);
+        if (rd && rd.geometry) { ghosts.push(rd.geometry); continue; }
+        var pts = roadPoints(d).map(function (p) { return [p.lat, p.lng]; });
+        if (pts.length > 1) ghosts.push(pts);
+      }
+      inst.setGhosts(ghosts);
+    }
     if (ui.note) {
       ui.note.textContent = rows.length
-        ? 'Ziua ' + (activeDay + 1) + ': ' + rows.length + (rows.length === 1 ? ' oprire, ' : ' opriri, ') +
-          nf(view.km) + ' km ' + (view.routed
-            ? 'pe șosea, cu drumul desenat pe hartă.'
-            : (view.pending ? '— se calculează drumul…' : '(estimat; drumul nu a putut fi calculat).'))
+        ? (view.routed
+          ? 'Kilometrii și timpii de mers sunt calculați pe șosea (OpenStreetMap), fără trafic și fără opriri.'
+          : (view.pending ? 'Se calculează drumul pe șosea…' : 'Drumul nu a putut fi calculat: distanțele sunt estimate din linia dreaptă.'))
         : (view.rows.some(function (x) { return x.role === 'stop'; })
-          ? 'Ziua ' + (activeDay + 1) + ': doar opriri de-ale tale — pe hartă ajung locurile din catalog.'
+          ? 'Ziua ' + (activeDay + 1) + ' are doar opriri de-ale tale; pe hartă ajung locurile din catalog.'
           : 'Ziua ' + (activeDay + 1) + ' e goală.');
     }
+    applyFocus();
+    profile();
+  }
+
+  /* ---------------------------------------------------------------- the list drives the map
+   *
+   * Under the list's heading there is always one thing: the day's departure, a stop, the return, or
+   * a night. That thing is what the map shows. Reaching another day redraws the route; reaching a
+   * stop frames it with its neighbours; reaching a night frames the town and names it on the
+   * accommodation button. At the very top of the list the map shows the whole trip.
+   */
+
+  var focusKey = null;       // 's:<stop id>', 'e:<day>:<role>' or 'n:<night>'
+  var overview = true;       // the whole trip, not one place
+  var holdUntil = 0;         // while a jump is scrolling, the list does not get a say
+
+  function focusNodes() { return ui.list.querySelectorAll('.pl-edge, .pl-stop, .pl-night'); }
+  function keyOfNode(node) {
+    if (node.classList.contains('pl-stop')) return 's:' + node.dataset.id;
+    if (node.classList.contains('pl-night')) return 'n:' + node.dataset.night;
+    return 'e:' + node.dataset.day + ':' + node.dataset.role;
+  }
+  function dayOfNode(node) {
+    return parseInt(node.classList.contains('pl-night') ? node.dataset.night : node.dataset.day, 10);
+  }
+  function markFocus() {
+    [].forEach.call(ui.list.querySelectorAll('.is-focus'), function (x) { x.classList.remove('is-focus'); });
+    if (overview || !focusKey) return;
+    var nodes = focusNodes();
+    for (var i = 0; i < nodes.length; i++) {
+      if (keyOfNode(nodes[i]) === focusKey) { nodes[i].classList.add('is-focus'); break; }
+    }
+  }
+  function paintRail() {
+    if (!ui.rail) return;
+    var on = overview ? -1 : activeDay;
+    [].forEach.call(ui.rail.children, function (b) {
+      var is = parseInt(b.dataset.day, 10) === on;
+      b.setAttribute('aria-pressed', String(is));
+      if (is && !overview && ui.rail.scrollTo) ui.rail.scrollTo({ left: Math.max(0, b.offsetLeft - 70), behavior: 'smooth' });
+    });
+  }
+  function paintActiveDay() {
+    [].forEach.call(ui.list.querySelectorAll('.pl-day'), function (c) {
+      setCls(c, 'is-active', parseInt(c.dataset.day, 10) === activeDay);
+    });
+  }
+  var applyFocusSoon = debounce(function () { applyFocus(); }, 130);
+
+  function setFocus(node) {
+    if (!node) {
+      if (overview) return;
+      overview = true;
+      focusKey = null;
+    } else {
+      var key = keyOfNode(node);
+      if (!overview && key === focusKey) return;
+      overview = false;
+      focusKey = key;
+      var d = dayOfNode(node);
+      if (d !== activeDay && d >= 0 && d < plan.days) {
+        activeDay = d;
+        paintActiveDay();
+        markFocus();
+        paintRail();
+        stayButton();
+        syncMap();              // a new day is a new route; it frames the focus itself when it is drawn
+        return;
+      }
+    }
+    markFocus();
+    paintRail();
+    stayButton();
+    profile();
+    applyFocusSoon();
+  }
+
+  /** What the map has to keep clear: the title and the days above, the button and the profile below. */
+  function mapPad() {
+    var top = ui.top ? ui.top.getBoundingClientRect().height + 16 : 60;
+    return { t: top, r: 46, b: (ui.prof && !ui.prof.hidden ? 160 : 78), l: 46 };
+  }
+  /** A stop is shown with the one before and the one after — unless one of them is a long drive away. */
+  function around(at) {
+    var here = entry(mapIds[at]), out = [at];
+    if (!here) return out;
+    var p = at > 0 ? entry(mapIds[at - 1]) : null, q = at < mapIds.length - 1 ? entry(mapIds[at + 1]) : null;
+    var dp = p ? km(p.lat, p.lng, here.lat, here.lng) : -1, dq = q ? km(here.lat, here.lng, q.lat, q.lng) : -1;
+    if (p && !(dp > 40 && dq >= 0 && dp > dq * 6)) out.push(at - 1);
+    if (q && !(dq > 40 && dp >= 0 && dq > dp * 6)) out.push(at + 1);
+    return out;
+  }
+  function applyFocus() {
+    var inst = window.EPMap.instance;
+    if (!inst || !inst.focusRoute || !plan || root.hidden || mapTab === 'stay') return;
+    var o = { pad: mapPad() };
+    if (overview || !focusKey) { inst.fitRoute({ pad: o.pad, all: true }); return; }
+    var m = /^s:(.+)$/.exec(focusKey);
+    if (m) {
+      var at = mapIds.indexOf(m[1]);
+      if (at !== -1) { inst.focusRoute(at, around(at), o); return; }
+      // A stop of your own has no pin: the map stays with the last real place before it.
+      var ids = plan.stops[activeDay] || [], pos = ids.indexOf(m[1]), k = -1;
+      for (var q = pos - 1; q >= 0 && k === -1; q--) k = mapIds.indexOf(ids[q]);
+      if (k !== -1) inst.focusRoute(-1, [k], o); else inst.fitRoute(o);
+      return;
+    }
+    m = /^n:(\d+)$/.exec(focusKey);
+    if (m) {
+      var n = nightOf(+m[1]);
+      if (n) { inst.fitPoints([[n.lat, n.lng]], { pad: o.pad, maxZoom: 12 }); return; }
+    }
+    inst.fitRoute(o);
+  }
+
+  function onListScroll() {
+    if (!plan || root.hidden || drag || Date.now() < holdUntil) return;
+    if (ui.scroller.scrollTop < 8) { setFocus(null); return; }
+    var line = ui.scroller.getBoundingClientRect().top + 104, nodes = focusNodes(), best = null;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].getBoundingClientRect().top <= line) best = nodes[i]; else break;
+    }
+    setFocus(best || nodes[0] || null);
+  }
+  function scrollToNode(node, flash) {
+    var y = node.getBoundingClientRect().top - ui.scroller.getBoundingClientRect().top + ui.scroller.scrollTop - 78;
+    ui.scroller.scrollTo({ top: Math.max(10, y), behavior: 'smooth' });
+    if (flash) {
+      node.classList.remove('is-flash');
+      void node.offsetWidth;
+      node.classList.add('is-flash');
+    }
+  }
+  if (ui.scroller) {
+    var scrollTick = 0;
+    ui.scroller.addEventListener('scroll', function () {
+      if (scrollTick) return;
+      scrollTick = requestAnimationFrame(function () { scrollTick = 0; onListScroll(); });
+    }, { passive: true });
+  }
+  if (ui.rail) {
+    ui.rail.addEventListener('click', function (ev) {
+      var b = ev.target.closest('.plx-day');
+      if (!b || !plan) return;
+      var d = parseInt(b.dataset.day, 10);
+      holdUntil = Date.now() + 900;
+      if (d < 0) {
+        ui.scroller.scrollTo({ top: 0, behavior: 'smooth' });
+        setFocus(null);
+        return;
+      }
+      var card = ui.list.querySelector('.pl-day[data-day="' + d + '"]');
+      if (!card) return;
+      var y = card.getBoundingClientRect().top - ui.scroller.getBoundingClientRect().top + ui.scroller.scrollTop - 4;
+      ui.scroller.scrollTo({ top: Math.max(10, y), behavior: 'smooth' });
+      setFocus(card.querySelector('.pl-edge, .pl-stop'));
+    });
+  }
+  if (ui.menuBtn) {
+    ui.menuBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      ui.menu.hidden = !ui.menu.hidden;
+      ui.menuBtn.setAttribute('aria-expanded', String(!ui.menu.hidden));
+      if (!ui.menu.hidden) { var f = ui.menu.querySelector('button'); if (f) f.focus(); }
+    });
+    document.addEventListener('click', function (ev) {
+      if (!ui.menu.hidden && !ui.menu.contains(ev.target) && ev.target !== ui.menuBtn) closeMenuX();
+    });
+  }
+  var backBtn = document.getElementById('plx-back');
+  if (backBtn) backBtn.addEventListener('click', leave);
+  [].forEach.call(document.querySelectorAll('[data-plx]'), function (b) {
+    b.addEventListener('click', function () {
+      var inst = window.EPMap.instance, k = b.dataset.plx;
+      if (k === 'size') { snapMap(mapShare() > 0.55 ? 0.3 : 0.72); return; }
+      if (!inst) return;
+      if (k === 'in' && inst.zoomBy) inst.zoomBy(1);
+      else if (k === 'out' && inst.zoomBy) inst.zoomBy(-1);
+      else if (k === 'fit') applyFocus();
+    });
+  });
+
+  /* ---------- how much of the screen the map takes, on a phone ---------- */
+
+  var SNAPS = [0.3, 0.46, 0.72];
+  function mapShare() {
+    var all = root.getBoundingClientRect().height;
+    return all ? ui.map.getBoundingClientRect().height / all : 0.46;
+  }
+  function snapMap(share) {
+    root.classList.add('is-snap');
+    root.style.setProperty('--plx-map', (share * 100).toFixed(1) + '%');
+    setTimeout(function () {
+      root.classList.remove('is-snap');
+      var inst = window.EPMap.instance;
+      if (inst && inst.resize) inst.resize();
+      applyFocus();
+    }, 440);
+  }
+  if (ui.grab) {
+    var pulling = false, pulled = false, pullTick = 0;
+    ui.grab.addEventListener('pointerdown', function (ev) {
+      pulling = true;
+      pulled = false;
+      ui.grab.setPointerCapture(ev.pointerId);
+      root.classList.remove('is-snap');
+    });
+    ui.grab.addEventListener('pointermove', function (ev) {
+      if (!pulling) return;
+      pulled = true;
+      var box = root.getBoundingClientRect();
+      var share = Math.max(0.2, Math.min(0.8, (ev.clientY - box.top + 10) / box.height));
+      root.style.setProperty('--plx-map', (share * 100).toFixed(1) + '%');
+      if (!pullTick) pullTick = requestAnimationFrame(function () {
+        pullTick = 0;
+        var inst = window.EPMap.instance;
+        if (inst && inst.resize) inst.resize();
+      });
+    });
+    var pullEnd = function () {
+      if (!pulling) return;
+      pulling = false;
+      var now = mapShare();
+      if (!pulled) { snapMap(now > 0.55 ? 0.3 : 0.72); return; }
+      snapMap(SNAPS.reduce(function (x, y) { return Math.abs(y - now) < Math.abs(x - now) ? y : x; }));
+    };
+    ui.grab.addEventListener('pointerup', pullEnd);
+    ui.grab.addEventListener('pointercancel', pullEnd);
+    ui.grab.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+      ev.preventDefault();
+      var now = mapShare(), at = 0;
+      SNAPS.forEach(function (s, i) { if (Math.abs(s - now) < Math.abs(SNAPS[at] - now)) at = i; });
+      snapMap(SNAPS[Math.max(0, Math.min(SNAPS.length - 1, at + (ev.key === 'ArrowDown' ? 1 : -1)))]);
+    });
+  }
+  window.addEventListener('resize', debounce(function () {
+    var inst = window.EPMap.instance;
+    if (plan && !root.hidden && inst && inst.resize) { inst.resize(); applyFocus(); }
+  }, 200));
+
+  /* ---------------------------------------------------------------- the climb
+   *
+   * On two wheels the day is its profile as much as its map. Once the road for the day is known,
+   * its line is sampled and /api/profile.php gives the heights — once per distinct day, cached
+   * there. Dragging along the profile moves a marker along the road.
+   */
+
+  var profCache = {};
+  function decodeLine(str) {
+    var out = [], i = 0, lat = 0, lng = 0;
+    while (i < str.length) {
+      for (var k = 0; k < 2; k++) {
+        var res = 0, shift = 0, b;
+        do { b = str.charCodeAt(i++) - 63; res |= (b & 31) << shift; shift += 5; } while (b >= 32);
+        var d = (res & 1) ? ~(res >> 1) : (res >> 1);
+        if (k === 0) lat += d; else lng += d;
+      }
+      out.push([lat / 1e5, lng / 1e5]);
+    }
+    return out;
+  }
+  function sampleLine(pts, count) {
+    var cum = [0], i;
+    for (i = 1; i < pts.length; i++) cum.push(cum[i - 1] + km(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]));
+    var total = cum[cum.length - 1], out = [], j = 0;
+    for (var s = 0; s < count; s++) {
+      var at = total * s / (count - 1);
+      while (j < pts.length - 2 && cum[j + 1] < at) j++;
+      var span = cum[j + 1] - cum[j], f = span > 0 ? (at - cum[j]) / span : 0;
+      out.push([pts[j][0] + (pts[j + 1][0] - pts[j][0]) * f, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * f, at]);
+    }
+    return out;
+  }
+  function climb(z) {
+    var up = 0;
+    for (var i = 1; i < z.length; i++) if (z[i] > z[i - 1]) up += z[i] - z[i - 1];
+    return up;
+  }
+  var profNow = null;
+  function profile() {
+    if (!ui.prof) return;
+    var was = ui.prof.hidden;
+    var hide = function () {
+      ui.prof.hidden = true;
+      profNow = null;
+      var inst = window.EPMap.instance;
+      if (inst && inst.setDot) inst.setDot(null);
+      if (!was) applyFocusSoon();
+    };
+    if (!plan || modeKey() === 'car' || overview) { hide(); return; }
+    var r = road(activeDay);
+    if (!r || !r.geometry) { hide(); return; }
+    var key = dayKey(activeDay), hit = profCache[key];
+    if (!hit) {
+      var pts = decodeLine(r.geometry);
+      if (pts.length < 2) { hide(); return; }
+      var s = sampleLine(pts, 64);
+      profCache[key] = 'pending';
+      fetch('/api/profile.php?c=' + encodeURIComponent(s.map(function (p) { return p[0].toFixed(4) + ',' + p[1].toFixed(4); }).join(';')), { credentials: 'omit' })
+        .then(function (x) { return x.json(); })
+        .then(function (j) {
+          profCache[key] = (j && j.ok && j.z && j.z.length === s.length) ? { z: j.z, pts: s, km: s[s.length - 1][2] } : 'failed';
+          profile();
+        })
+        .catch(function () { profCache[key] = 'failed'; });
+      hide();
+      return;
+    }
+    if (hit === 'pending' || hit === 'failed') { hide(); return; }
+
+    var z = hit.z, lo = Math.min.apply(null, z), hi = Math.max.apply(null, z), n2 = z.length;
+    var line = z.map(function (v, i) {
+      return (i / (n2 - 1) * 300).toFixed(1) + ',' + (42 - (v - lo) / Math.max(hi - lo, 1) * 38).toFixed(1);
+    });
+    ui.prof.querySelector('.plx-prof-line').setAttribute('d', 'M' + line.join('L'));
+    ui.prof.querySelector('.plx-prof-area').setAttribute('d', 'M0,44L' + line.join('L') + 'L300,44Z');
+    profNow = hit;
+    profLabel(-1);
+    ui.prof.hidden = false;
+    if (was) applyFocusSoon();
+  }
+  function profLabel(i) {
+    if (!profNow) return;
+    var z = profNow.z, a = ui.prof.querySelector('.plx-prof-a'), b = ui.prof.querySelector('.plx-prof-b');
+    var mark = ui.prof.querySelector('.plx-prof-x');
+    if (i < 0) {
+      a.textContent = 'Profilul zilei · urcare ' + nf(climb(z)) + ' m';
+      b.textContent = 'max ' + nf(Math.max.apply(null, z)) + ' m';
+      mark.style.display = 'none';
+      return;
+    }
+    a.textContent = 'km ' + Math.round(profNow.pts[i][2]);
+    b.textContent = nf(z[i]) + ' m';
+    var x = i / (z.length - 1) * 300;
+    mark.setAttribute('x1', x);
+    mark.setAttribute('x2', x);
+    mark.style.display = '';
+  }
+  if (ui.prof) {
+    var scrubbing = false;
+    var scrub = function (ev) {
+      if (!profNow) return;
+      var box = ui.prof.querySelector('svg').getBoundingClientRect(), last = profNow.z.length - 1;
+      var i = Math.max(0, Math.min(last, Math.round((ev.clientX - box.left) / box.width * last)));
+      profLabel(i);
+      var inst = window.EPMap.instance;
+      if (inst && inst.setDot) inst.setDot(profNow.pts[i][0], profNow.pts[i][1]);
+    };
+    var scrubEnd = function () {
+      scrubbing = false;
+      profLabel(-1);
+      var inst = window.EPMap.instance;
+      if (inst && inst.setDot) inst.setDot(null);
+    };
+    ui.prof.addEventListener('pointerdown', function (ev) { scrubbing = true; ui.prof.setPointerCapture(ev.pointerId); scrub(ev); });
+    ui.prof.addEventListener('pointermove', function (ev) { if (scrubbing || ev.pointerType === 'mouse') scrub(ev); });
+    ui.prof.addEventListener('pointerup', scrubEnd);
+    ui.prof.addEventListener('pointercancel', scrubEnd);
+    ui.prof.addEventListener('pointerleave', function () { if (!scrubbing) scrubEnd(); });
   }
 
   /* ---------------------------------------------------------------- the start form */
@@ -2848,6 +3288,8 @@
       .map(function (b) { return b.dataset.company; });
     var pace = document.querySelector('#pl-pace [aria-pressed="true"]');
     plan.pace = pace ? pace.dataset.pace : 'normal';
+    var how = document.querySelector('#pl-mode [aria-pressed="true"]');
+    plan.mode = (how && MODES[how.dataset.mode]) ? how.dataset.mode : 'car';
     var ad = document.getElementById('pl-adults'), ch = document.getElementById('pl-children');
     plan.party = {
       adults: clampInt(ad ? ad.value : null, 1, PARTY.adults_max || 12, PARTY.adults || 2),
@@ -2885,6 +3327,46 @@
       x.setAttribute('aria-pressed', String(x === b));
     });
   });
+  /* How you travel: one of three, and the form takes its colour. */
+  function setMode(key) {
+    if (!MODES[key]) key = 'car';
+    var box = document.getElementById('pl-mode');
+    if (!box) return;
+    [].forEach.call(box.querySelectorAll('[data-mode]'), function (b, i) {
+      var on = b.dataset.mode === key;
+      b.setAttribute('aria-pressed', String(on));
+      if (on) box.style.setProperty('--i', String(i));
+    });
+    startBox.setAttribute('data-mode', key);
+  }
+  (function () {
+    var box = document.getElementById('pl-mode');
+    if (box) box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-mode]');
+      if (b) setMode(b.dataset.mode);
+    });
+    var tg = document.getElementById('pl-back-toggle'), row = document.getElementById('pl-back-row');
+    if (tg && row) tg.addEventListener('click', function () {
+      row.hidden = !row.hidden;
+      tg.setAttribute('aria-expanded', String(!row.hidden));
+      tg.textContent = row.hidden ? 'Mă întorc în alt loc' : 'Mă întorc de unde am plecat';
+      if (row.hidden) { fields.back.input.value = ''; fields.back.picked = null; } else fields.back.input.focus();
+    });
+    // One line that says what the folded preferences hold, so they do not have to be opened to be read.
+    var sum = document.getElementById('pl-prefs-sum');
+    var say = function () {
+      if (!sum) return;
+      var who = [].map.call(document.querySelectorAll('#pl-company [aria-pressed="true"]'), function (b) { return b.textContent.trim(); });
+      var what = document.querySelectorAll('#pl-interests [aria-pressed="true"]').length;
+      var pace = document.querySelector('#pl-pace [aria-pressed="true"] b');
+      sum.textContent = [who.length ? who.join(', ') : 'oricine', what ? what + (what === 1 ? ' interes' : ' interese') : 'de toate',
+        'ritm ' + (pace ? pace.textContent.toLowerCase() : 'normal')].join(' · ');
+    };
+    var prefs = document.getElementById('pl-prefs');
+    if (prefs) prefs.addEventListener('click', function () { setTimeout(say, 0); });
+    say();
+  })();
+
   [].forEach.call(document.querySelectorAll('[data-days]'), function (b) {
     b.addEventListener('click', function () {
       var inp = document.getElementById('pl-days');
@@ -2945,11 +3427,11 @@
     generate();
     activeDay = 0;
     render();
-    root.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   /** A plan that came back from a link or from storage shows its party in the form again. */
   function fillParty() {
+    setMode(modeKey());
     var p = party();
     var ad = document.getElementById('pl-adults'), ch = document.getElementById('pl-children');
     if (ad) ad.value = String(p.adults);
@@ -2971,8 +3453,38 @@
 
   /* ---------------------------------------------------------------- boot */
 
+  /**
+   * /plan?drum=<slug>: one of the roads on /trasee, opened as a one-day plan — its two ends as
+   * departure and arrival, the catalogue's places beside it as stops. From there it is a plan like
+   * any other: stops can be added, moved and taken out, and the link carries it.
+   */
+  function roadPlan(slug) {
+    var rd = (CFG.roads || {})[slug];
+    if (!rd) return null;
+    var p = blankPlan();
+    p.mode = MODES[rd.mode] ? rd.mode : 'car';
+    p.name = rd.title + ' · ' + rd.from + ' → ' + rd.to;      // a road has a name; a generated plan is named by its ends
+    p.days = 1;
+    p.origin = { kind: 'point', key: '', label: rd.from, lat: rd.a[0], lng: rd.a[1] };
+    p.back = { kind: 'point', key: '', label: rd.to, lat: rd.b[0], lng: rd.b[1] };
+    p.where = { kind: 'city', key: '', label: rd.title, lat: +((rd.a[0] + rd.b[0]) / 2).toFixed(5), lng: +((rd.a[1] + rd.b[1]) / 2).toFixed(5) };
+    p.stops = [(rd.stops || []).filter(function (id) { return bySlug[id] !== undefined; })];
+    p.stops[0].forEach(function (id) { p.locked[id] = 1; });
+    return p;
+  }
+
   loadData().then(function () {
     ALL_PLACES = places();
+    var query = new URLSearchParams(location.search);
+    var fromRoad = roadPlan(query.get('drum') || '');
+    if (fromRoad) {
+      plan = fromRoad;
+      fillParty();
+      activeDay = 0;
+      render();
+      return;
+    }
+    if (MODES[query.get('mod')]) setMode(query.get('mod'));
     var saved = restore();
     if (saved && saved.stops && saved.stops.length) {
       plan = saved;

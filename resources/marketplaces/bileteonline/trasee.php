@@ -1,7 +1,8 @@
 <?php
 /**
  * /trasee — the index of the editorial routes: twelve itineraries built out of the attraction
- * catalogue, each one an ordered list of real places (includes/v2/map-routes.php).
+ * catalogue, each one an ordered list of real places (includes/v2/map-routes.php) — and, under
+ * them, the roads people ride for the road itself (includes/v2/map-roads.php).
  */
 
 $pageCacheTTL = 1800;
@@ -11,6 +12,7 @@ require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/map-routes.php';
+require_once __DIR__ . '/includes/v2/map-roads.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
 $summary = v2_map_summary();
@@ -40,11 +42,35 @@ foreach (MAP_ROUTES as $slug => $r) {
     $kmTotal += $d['km'];
 }
 
-$v2Styles = ['map-page.css', 'routes.css'];
+// The roads: one card each, and one overview map on which every road wears the number of its card.
+$roadCards = [];
+$roadPins = [];
+$roadLines = [];
+$roadKm = 0;
+foreach (MAP_ROADS as $rSlug => $r) {
+    $rd = v2_map_roads()[$rSlug] ?? null;
+    if (!$rd) {
+        continue;
+    }
+    $n = count($roadCards) + 1;
+    $roadCards[] = [$rSlug, $r['title'], $r['ref'], $r['from'], $r['to'], $r['lead'], $r['modes'], $rd['km'], $rd['max'] ?? 0, $rd['up'] ?? 0, $rd['z'] ?? [], $n];
+    $mid = $rd['mid'] ?? $rd['a'];
+    $roadPins[] = ['', $r['title'], $r['from'] . ' – ' . $r['to'], '', '', $r['ref'] ?: 'Drum', 'pin', $mid[0], $mid[1], '', 0, 0];
+    $roadLines[] = ['g' => $rd['geometry'], 'color' => $r['modes'][0] === 'bike' ? '#2D6CCD' : '#C8322B', 'modes' => $r['modes']];
+    $roadKm += (int) $rd['km'];
+}
 
-$pageTitleRaw    = 'Trasee turistice în România — ' . count($routeCards) . ' itinerarii cu hartă | bilete.online';
+$v2Styles = ['map-page.css', 'routes.css'];
+if ($roadCards) {
+    array_unshift($v2Styles, 'map.css');
+    $v2Scripts = ['map.js'];
+}
+
+$pageTitleRaw    = 'Trasee turistice în România — ' . count($routeCards) . ' itinerarii'
+    . ($roadCards ? ' și ' . count($roadCards) . ' drumuri pentru motocicletă și bicicletă' : ' cu hartă') . ' | bilete.online';
 $pageDescription = count($routeCards) . ' trasee prin România, de la castelele Transilvaniei la cetățile Dobrogei: '
-    . $stopsTotal . ' de opriri reale, fiecare cu hartă, ordinea vizitării și navigare.';
+    . $stopsTotal . ' de opriri reale, fiecare cu hartă, ordinea vizitării și navigare.'
+    . ($roadCards ? ' Plus ' . count($roadCards) . ' drumuri de făcut pe două roți, de la Transfăgărășan la Clisura Dunării, cu profil de altitudine.' : '');
 $canonicalUrl    = SITE_URL . '/trasee';
 $ogImage         = $routeCards[0][7] ?? (SITE_URL . '/assets/images/og-default.jpg');
 
@@ -60,11 +86,11 @@ $structuredData = [[
     '@context' => 'https://schema.org',
     '@type' => 'ItemList',
     'name' => 'Trasee',
-    'numberOfItems' => count($routeCards),
+    'numberOfItems' => count($routeCards) + count($roadCards),
     'itemListElement' => array_map(
         fn ($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => SITE_URL . '/trasee/' . $c[0], 'name' => $c[1]],
-        $routeCards,
-        array_keys($routeCards)
+        array_merge($routeCards, $roadCards),
+        array_keys(array_merge($routeCards, $roadCards))
     ),
 ], [
     '@context' => 'https://schema.org',
@@ -79,6 +105,7 @@ $structuredData = [[
 include __DIR__ . '/includes/v2/head.php';
 $v2PlaceIcons = true; // the route cards' icons (product-icons.php), printed by the header
 include __DIR__ . '/includes/v2/header.php';
+require __DIR__ . '/includes/v2/plan-icons.php';
 ?>
 <main id="main" tabindex="-1">
   <section class="mph" aria-labelledby="mph-h">
@@ -97,6 +124,7 @@ include __DIR__ . '/includes/v2/header.php';
         <li><b><?= count($routeCards) ?></b> trasee</li>
         <li><b><?= v2_e(v2_thousands($stopsTotal)) ?></b> opriri</li>
         <li><b><?= v2_e(v2_thousands($kmTotal)) ?></b> km</li>
+        <?php if ($roadCards): ?><li><a href="#drumuri"><b><?= count($roadCards) ?></b> drumuri pe două roți</a></li><?php endif; ?>
       </ul>
     </div>
   </section>
@@ -107,6 +135,74 @@ include __DIR__ . '/includes/v2/header.php';
       <?php require __DIR__ . '/includes/v2/route-cards.php'; ?>
     </div>
   </section>
+
+<?php if ($roadCards): ?>
+  <!-- ============================== THE ROADS ============================== -->
+  <section class="sec rdx" id="drumuri" aria-labelledby="rdx-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <h2 id="rdx-h">Drumuri de făcut pe două roți</h2>
+          <p class="rdx-lead">Trecătorile și văile pe care le caută motocicliștii și cicliștii: <?= count($roadCards) ?> drumuri, <?= v2_e(v2_thousands($roadKm)) ?> km, fiecare cu profilul de altitudine, ce vezi pe margine și un buton care îl deschide ca plan.</p>
+        </div>
+        <div class="rdx-tabs" role="group" aria-label="Arată drumurile pentru" id="rdx-tabs">
+          <button type="button" data-rdx="all" aria-pressed="true">Toate</button>
+          <button type="button" data-rdx="moto" aria-pressed="false"><?= v2_ic('pl-moto') ?>Motocicletă</button>
+          <button type="button" data-rdx="bike" aria-pressed="false"><?= v2_ic('pi-bicycle') ?>Bicicletă</button>
+        </div>
+      </div>
+      <div class="rdx-map">
+        <div data-epm-root data-epm-config="<?= v2_e(json_encode([
+            'cartoKey'   => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
+            'urlState'   => false,
+            'fixed'      => true,
+            'bare'       => true,
+            'routeLine'  => false,
+            'title'      => 'Drumuri pe două roți',
+            'routeStops' => $roadPins,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
+        <p class="rdx-key"><span><i style="background:#C8322B"></i>motocicletă</span><span><i style="background:#2D6CCD"></i>bicicletă</span></p>
+      </div>
+      <?php require __DIR__ . '/includes/v2/road-cards.php'; ?>
+      <p class="rp-note">Liniile sunt calculate pe drumurile din <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, iar altitudinile pe un model de teren european; lungimea, altitudinea maximă și urcarea sunt măsurate pe ele, nu preluate din alte surse.</p>
+    </div>
+    <script type="application/json" id="rdx-lines"><?= json_encode($roadLines, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+    <script>
+    /* Every road on one map, numbered like its card; the filter narrows both. */
+    (function () {
+      var lines = [];
+      try { lines = JSON.parse(document.getElementById('rdx-lines').textContent || '[]'); } catch (e) {}
+      var cards = [].slice.call(document.querySelectorAll('.rdx .rd-grid > li'));
+      function draw(mode) {
+        var inst = window.EPMap && window.EPMap.instance;
+        if (!inst || !inst.setGhosts) return;
+        inst.setGhosts(lines.filter(function (l) { return mode === 'all' || l.modes.indexOf(mode) !== -1; }));
+      }
+      window.addEventListener('load', function () {
+        var inst = window.EPMap && window.EPMap.instance;
+        if (!inst) return;
+        draw('all');
+        if (inst.onPin) inst.onPin(function (i) {
+          var card = document.querySelector('.rd[data-road="' + (i + 1) + '"]');
+          if (!card) return;
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.remove('is-flash');
+          void card.offsetWidth;
+          card.classList.add('is-flash');
+        });
+      });
+      document.getElementById('rdx-tabs').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-rdx]');
+        if (!b) return;
+        var mode = b.getAttribute('data-rdx');
+        [].forEach.call(this.querySelectorAll('[data-rdx]'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        cards.forEach(function (li) { li.hidden = mode !== 'all' && (li.getAttribute('data-modes') || '').split(' ').indexOf(mode) === -1; });
+        draw(mode);
+      });
+    })();
+    </script>
+  </section>
+<?php endif; ?>
 
   <section class="sec" aria-labelledby="rx-about-h">
     <div class="wrap mp-text">
@@ -120,6 +216,7 @@ include __DIR__ . '/includes/v2/header.php';
         <details open><summary>De unde vin opririle?</summary><p>Din catalogul de atracții al bilete.online. Fiecare oprire are pagină proprie, coordonate verificate și apare pe harta generală.</p></details>
         <details><summary>Se plătește intrarea?</summary><p>Depinde de obiectiv. O parte au acces liber, altele au bilet stabilit de administrator. Unde se vinde bilet prin bilete.online, apare pe pagina obiectivului.</p></details>
         <details><summary>Pot vedea traseul pe telefon?</summary><p>Da. Harta ocupă tot ecranul, iar lista opririlor urcă de jos. Butonul de navigare deschide traseul direct în aplicația de hărți.</p></details>
+        <details><summary>Ce e un „drum pe două roți”?</summary><p>Un drum pe care lumea îl face pentru el însuși: o trecătoare, o vale, un mal de apă. Are hartă, profil de altitudine și atracțiile din catalog aflate pe margine, și se deschide în planificator ca o zi de mers pe motocicletă sau pe bicicletă.</p></details>
         <details><summary>Adăugați trasee noi?</summary><p>Da, pe măsură ce intră locuri noi în catalog. Dacă ai o propunere de traseu, scrie-ne la <?= v2_e(SUPPORT_EMAIL) ?>.</p></details>
       </div>
     </div>

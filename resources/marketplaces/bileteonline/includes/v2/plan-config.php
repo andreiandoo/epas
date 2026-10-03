@@ -106,6 +106,37 @@ const PLAN_SWAP = [
     'km_per_point' => 7,
 ];
 
+/**
+ * How you travel: label, icon (v2 sprite id), and what it changes in the plan.
+ *
+ *   kmh, detour   the straight-line estimate, used until the road answer arrives or if it never does
+ *   profile       which network /api/route.php routes on: a bicycle has its own
+ *   gmaps         the travel mode handed to Google Maps
+ *   leg_max       the longest hop, in minutes, the generator will put between two stops
+ *   radius        how far around a city it looks, against the car's reach: a rider goes further for
+ *                 a good road, a cyclist does not
+ *   weights       how the mode tilts the attraction types, on top of who you travel with. As with
+ *                 the company weights, nothing is ever excluded — it only moves up or down the list.
+ *
+ * Car is the plan as it always was: every number below is the old behaviour.
+ */
+const PLAN_MODES = [
+    'car' => ['Mașină', 'pi-car', [
+        'kmh' => 55, 'detour' => 1.35, 'profile' => 'car', 'gmaps' => 'driving', 'leg_max' => 75, 'radius' => 1.0, 'weights' => [],
+    ]],
+    'moto' => ['Motocicletă', 'pl-moto', [
+        'kmh' => 50, 'detour' => 1.4, 'profile' => 'car', 'gmaps' => 'driving', 'leg_max' => 110, 'radius' => 1.6,
+        'weights' => [
+            'punct-panoramic' => 3.0, 'lac-natura' => 2.5, 'castel-palat' => 1.0,
+            'muzeu' => -0.5, 'monument' => -1.0, 'cladire-istorica' => -1.0,
+        ],
+    ]],
+    'bike' => ['Bicicletă', 'pi-bicycle', [
+        'kmh' => 17, 'detour' => 1.3, 'profile' => 'bike', 'gmaps' => 'bicycling', 'leg_max' => 120, 'radius' => 0.45,
+        'weights' => ['lac-natura' => 2.0, 'punct-panoramic' => 2.0, 'parc-gradina' => 1.5],
+    ]],
+];
+
 /** Average road speed used to turn a straight-line hop into a travel estimate, and the detour factor. */
 const PLAN_TRAVEL = ['kmh' => 55, 'detour' => 1.35, 'min_leg' => 5];
 

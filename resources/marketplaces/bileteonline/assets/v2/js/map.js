@@ -247,6 +247,15 @@
     var theme = cfg.theme || readTheme() || 'light';
     var route = Array.isArray(cfg.routeStops) && cfg.routeStops.length ? cfg.routeStops : null;
     var routeLine = null;
+    /* A host that draws its own list (cfg.bare) drives the view from outside: which stop is lit, what
+       the map frames. A route redraw is asynchronous, so the last instruction waits for it. */
+    var drawing = false, pendingViews = [], ghosts = [], dot = null, onPin = null;
+    function later(fn) { if (!map || drawing) pendingViews.push(fn); else fn(); }
+    function fitOpts(o, maxZoom) {
+      var p = (o && o.pad) || {};
+      return { paddingTopLeft: [p.l || 40, p.t || 40], paddingBottomRight: [p.r || 40, p.b || 40],
+        maxZoom: (o && o.maxZoom) || maxZoom || 15, animate: !reduceMotion && !(o && o.animate === false) };
+    }
 
     var state = {
       q: '',
@@ -368,6 +377,7 @@
       body.appendChild(ui.card);
 
       container.appendChild(body);
+      if (cfg.bare) container.classList.add('epm-bare');
       wire();
     }
 
@@ -597,7 +607,9 @@
       /* Hover previews exactly what a click would open, so the card is the preview. The click
          itself then goes straight to the attraction, in a new tab, because the map is where you
          compare places and losing it to a navigation is the wrong trade. */
-      if (canHover) {
+      if (cfg.bare) {
+        m.on('click', function () { if (onPin) onPin(i, r[f.slug]); });
+      } else if (canHover) {
         m.on('mouseover', function () { hot(i); select(i); });
         m.on('mouseout', function () { hot(-1); });
         m.on('click', function () { window.open(href(i), '_blank', 'noopener'); });
@@ -614,6 +626,7 @@
       if (!cluster) return;
       busy(true);
       /* Let the overlay paint before the (blocking) bulk insert of a few thousand markers. */
+      drawing = true;
       requestAnimationFrame(function () {
         cluster.clearLayers();
         var batch = new Array(visible.length);
@@ -622,6 +635,8 @@
         drawRouteLine();
         busy(false);
         syncView();
+        drawing = false;
+        var runs = pendingViews; pendingViews = []; runs.forEach(function (run) { run(); });
       });
     }
     /**
@@ -634,6 +649,12 @@
       var stops = [];
       for (var i = 0; i < D.rows.length; i++) stops.push([D.lat[i], D.lng[i]]);
 
+      // A host whose pins are not a sequence (the overview of the roads) draws its own lines.
+      if (cfg.routeLine === false) {
+        if (stops.length) map.fitBounds(stops, { padding: [50, 50], maxZoom: 12, animate: false });
+        return;
+      }
+
       var road = null;
       if (cfg.routeGeometry) {
         try { road = decodePolyline(cfg.routeGeometry); } catch (e) { road = null; }
@@ -644,14 +665,14 @@
         // dash pattern would have nothing to attach to
         renderer: window.L.svg(),
         className: 'epm-route-line' + (road ? ' is-road' : ''),
-        color: '#1E5B48',
+        color: cfg.routeColor || '#1E5B48',
         weight: road ? 4 : 3,
         opacity: road ? .8 : .85,
         dashArray: road ? null : '2 8',
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(map);
-      map.fitBounds(stops, { padding: [60, 60], maxZoom: 15, animate: false });
+      if (stops.length) map.fitBounds(road && cfg.bare ? road : stops, { padding: [60, 60], maxZoom: 15, animate: false });
     }
 
     function busy(on) {
@@ -903,7 +924,7 @@
     function select(i) {
       selected = i;
       paintSelection();
-      if (i < 0) { ui.card.hidden = true; return; }
+      if (i < 0 || cfg.bare) { ui.card.hidden = true; return; }
       renderCard(i);
     }
 
@@ -917,7 +938,7 @@
 
     /** How many pixels of the map the bottom sheet covers right now (0 on the two-pane layout). */
     function sheetPad() {
-      if (!sheetLayout()) return 0;
+      if (cfg.bare || !sheetLayout()) return 0;
       var body = ui.canvas.getBoundingClientRect();
       var side = ui.side.getBoundingClientRect();
 
@@ -1300,7 +1321,67 @@
         applyFilters();
         drawMarkers();
       },
-      isOpen: function () { return opened; }
+      isOpen: function () { return opened; },
+
+      /* ---- for a host with its own list (cfg.bare) ---- */
+      onPin: function (fn) { onPin = fn; },
+      /** Light up stop `i` and frame it with the stops in `around` (indices into the current route). */
+      focusRoute: function (i, around, o) {
+        later(function () {
+          if (!D) return;
+          selected = (i >= 0 && i < D.rows.length) ? i : -1;
+          paintSelection();
+          var pts = (around || []).filter(function (k) { return k >= 0 && k < D.rows.length; })
+            .map(function (k) { return [D.lat[k], D.lng[k]]; });
+          if (!pts.length) return;
+          if (pts.length === 1) map.fitBounds([pts[0], pts[0]], fitOpts(o, 14));
+          else map.fitBounds(pts, fitOpts(o, 15));
+        });
+      },
+      /** Frame arbitrary points ([lat, lng]) — a night's town, say — with nothing lit. */
+      fitPoints: function (pts, o) {
+        later(function () {
+          selected = -1;
+          paintSelection();
+          if (pts && pts.length) map.fitBounds(pts.length === 1 ? [pts[0], pts[0]] : pts, fitOpts(o, 12));
+        });
+      },
+      /** The whole current route, or with o.all every ghost line as well. */
+      fitRoute: function (o) {
+        later(function () {
+          selected = -1;
+          paintSelection();
+          var b = routeLine ? window.L.latLngBounds(routeLine.getLatLngs()) : null;
+          if (o && o.all) ghosts.forEach(function (g) { b = b ? b.extend(g.getBounds()) : window.L.latLngBounds(g.getLatLngs()); });
+          if (b && b.isValid()) map.fitBounds(b, fitOpts(o, 15));
+        });
+      },
+      /** The other days of a plan, drawn faint under the current one: encoded polylines. */
+      setGhosts: function (list) {
+        later(function () {
+          ghosts.forEach(function (g) { map.removeLayer(g); });
+          ghosts = [];
+          (list || []).forEach(function (item) {
+            // a line, or { g: line, color } for a line that is meant to be read rather than to recede
+            var enc = (item && item.g !== undefined) ? item.g : item, own = item && item.color, pts = null;
+            try { pts = typeof enc === 'string' ? decodePolyline(enc) : enc; } catch (e) { pts = null; }
+            if (!pts || pts.length < 2) return;
+            ghosts.push(window.L.polyline(pts, { renderer: window.L.svg(), className: 'epm-route-ghost', color: own || '#6F7D77',
+              weight: own ? 4 : 3, opacity: own ? .9 : .55, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(map));
+          });
+          if (routeLine) routeLine.bringToFront();
+        });
+      },
+      /** A marker that follows the elevation profile; null takes it away. */
+      setDot: function (lat, lng) {
+        if (!map) return;
+        if (lat === null || lat === undefined) { if (dot) { map.removeLayer(dot); dot = null; } return; }
+        if (!dot) dot = window.L.circleMarker([lat, lng], { renderer: window.L.svg(), radius: 7, color: cfg.routeColor || '#1E5B48', weight: 4, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(map);
+        else dot.setLatLng([lat, lng]);
+      },
+      setColor: function (c) { cfg.routeColor = c; if (routeLine) routeLine.setStyle({ color: c }); },
+      resize: function () { if (map) map.invalidateSize({ pan: false }); },
+      zoomBy: function (d) { if (map) map.setZoom(map.getZoom() + d); }
     };
 
     if (!cfg.dialog) boot();
