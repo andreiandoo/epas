@@ -28,6 +28,9 @@ if ($roadDef && $roadData) {
     $rdUp   = (int) ($roadData['up'] ?? 0);
     $rdTime = v2_hm((int) $roadData['min']);
     $rdBike = $roadDef['modes'] === ['bike'];
+    $rdOsm  = $roadDef['osm'] ?? [];                 // taken from OpenStreetMap relations, not routed
+    $rdBy   = $roadDef['by'] ?? null;                // who marks or promotes the route: [name, url]
+    $rdMeasured = (int) ($roadData['measured'] ?? 0);
     $rdWho  = implode(' și ', array_map(fn ($m) => mb_strtolower(MAP_ROAD_MODES[$m][0]), $roadDef['modes']));
 
     // The other roads, nearest in kind first: same first mode, then the rest.
@@ -44,33 +47,45 @@ if ($roadDef && $roadData) {
 
     $roadPage = [
         'slug' => $slug, 'title' => $roadDef['title'], 'ref' => $roadDef['ref'], 'from' => $roadDef['from'], 'to' => $roadDef['to'],
-        'lead' => $roadDef['lead'], 'season' => $roadDef['season'] ?? '', 'modes' => $roadDef['modes'], 'points' => $roadDef['points'],
+        'lead' => $roadDef['lead'], 'season' => $roadDef['season'] ?? '', 'modes' => $roadDef['modes'], 'points' => $roadDef['points'] ?? [],
         'km' => $rdKm, 'min' => (int) $roadData['min'], 'max' => $rdMax, 'low' => (int) ($roadData['min_alt'] ?? 0), 'up' => $rdUp,
         'z' => $roadData['z'] ?? [], 'geometry' => $roadData['geometry'], 'a' => $roadData['a'], 'b' => $roadData['b'],
         'stops' => $roadData['stops'] ?? [], 'others' => $others,
+        'osm' => $rdOsm, 'by' => $rdBy, 'kind' => $roadDef['kind'] ?? '', 'breaks' => $roadData['breaks'] ?? [],
         'breadcrumbs' => [['Acasă', '/'], ['Hartă', '/harta'], ['Trasee', '/trasee'], [$roadDef['title'], '/trasee/' . $slug]],
         'prose' => [
             '<p>' . v2_e($roadDef['intro']) . '</p>',
             '<p>Între ' . v2_e($roadDef['from']) . ' și ' . v2_e($roadDef['to']) . ' sunt <strong>' . v2_e(v2_thousands($rdKm)) . ' km</strong>'
                 . ($rdMax > 0 ? ', iar drumul urcă până la <strong>' . v2_e(v2_thousands($rdMax)) . ' m</strong>' : '')
                 . ($rdUp > 0 ? '. Mergând în sensul acesta se adună <strong>' . v2_e(v2_thousands($rdUp)) . ' m de urcare</strong>' : '')
-                . '. ' . ($rdBike
+                . '. ' . ($rdOsm
+                    ? 'Se merge pe: ' . v2_e($roadDef['kind'] ?? 'drumuri mixte') . '.'
+                        . ($rdMeasured > $rdKm * 1.15 ? ' Pe hartă sunt desenate și variantele traseului, de aceea linia însumează ' . v2_e(v2_thousands($rdMeasured)) . ' km.' : '')
+                    : ($rdBike
                     ? 'Traseul e calculat pe rețeaua de biciclete, așa că ține pista acolo unde există.'
-                    : 'Cu motorul pornit și fără opriri înseamnă cam <strong>' . v2_e($rdTime) . '</strong>; cu opririle pentru priveliște, socotește mai mult.')
+                    : 'Cu motorul pornit și fără opriri înseamnă cam <strong>' . v2_e($rdTime) . '</strong>; cu opririle pentru priveliște, socotește mai mult.'))
                 . '</p>',
-            '<p>Butonul <em>Deschide ca plan</em> pune drumul în <a href="/plan?drum=' . v2_e($slug) . '">planificator</a> ca o zi, cu cele două capete ca plecare și sosire și cu atracțiile de pe margine ca opriri. De acolo adaugi o masă, scoți ce nu te interesează, vezi profilul zilei și cauți cazare.</p>',
+            $rdOsm
+                ? '<p><strong>Sursa traseului:</strong> linia e cea cartografiată de comunitate în <a href="https://www.openstreetmap.org/relation/' . (int) $rdOsm[0] . '" target="_blank" rel="noopener">OpenStreetMap</a> (' . (count($rdOsm) > 1 ? 'relațiile ' : 'relația ') . v2_e(implode(', ', $rdOsm)) . '), sub licența ODbL.'
+                    . ($rdBy ? ' Traseul este ' . ($rdBy[0] === 'EuroVelo (ECF)' ? 'coordonat de' : 'marcat și întreținut de') . ' <a href="' . v2_e($rdBy[1]) . '" target="_blank" rel="noopener">' . v2_e($rdBy[0]) . '</a>; pentru starea lui la zi și pentru hărțile oficiale, pornește de acolo.' : '')
+                    . ' Altitudinile sunt măsurate de noi pe un model de teren.</p>'
+                : '<p>Butonul <em>Deschide ca plan</em> pune drumul în <a href="/plan?drum=' . v2_e($slug) . '">planificator</a> ca o zi, cu cele două capete ca plecare și sosire și cu atracțiile de pe margine ca opriri. De acolo adaugi o masă, scoți ce nu te interesează, vezi profilul zilei și cauți cazare.</p>',
         ],
         'faq' => [
             ['Când e deschis drumul?', !empty($roadDef['season'])
                 ? $roadDef['season']
                 : 'Nu are o perioadă de închidere anunțată în fiecare an. Iarna și după ploi mari, verifică starea drumurilor la CNAIR înainte de plecare.'],
-            ['De unde vin kilometrii și altitudinile?', 'Linia e calculată pe drumurile din OpenStreetMap, între capetele drumului. Altitudinile sunt citite de pe un model de teren european cu pasul de 25 de metri, în o sută de puncte egal depărtate de-a lungul drumului, deci vârfurile ascuțite ies puțin rotunjite.'],
+            ['De unde vin kilometrii și altitudinile?', $rdOsm
+                ? 'Linia vine din OpenStreetMap, unde traseul e cartografiat de comunitate ca relație de traseu. Lungimea e cea trecută pe relație, acolo unde există; altfel e măsurată pe linie. Altitudinile sunt citite de pe un model de teren european cu pasul de 25 de metri.'
+                : 'Linia e calculată pe drumurile din OpenStreetMap, între capetele drumului. Altitudinile sunt citite de pe un model de teren european cu pasul de 25 de metri, în o sută de puncte egal depărtate de-a lungul drumului, deci vârfurile ascuțite ies puțin rotunjite.'],
             ['Pot să-l parcurg în sens invers?', 'Da. Kilometrii rămân aceiași; urcarea totală se schimbă, pentru că ce era coborâre devine urcuș.'],
-            ['E potrivit pentru ' . ($rdBike ? 'copii' : 'bicicletă') . '?', $rdBike
+            ['E potrivit pentru ' . ($rdBike ? 'copii' : 'bicicletă') . '?', $rdOsm
+                ? 'Depinde de bucată. Uită-te la profil și la lungime și împarte-l pe zile: un traseu lung se face pe etape, nu dintr-odată.'
+                : ($rdBike
                 ? 'Profilul îți spune cel mai bine: uită-te la diferența de nivel și la lungime. Unde e pistă separată de trafic, am scris asta în descriere.'
                 : (in_array('bike', $roadDef['modes'], true)
                     ? 'Se face și pe bicicletă, dar e un drum cu trafic, fără pistă. Uită-te la urcarea totală înainte să pleci și pornește devreme.'
-                    : 'Nu l-am trecut la biciclete: e un drum național cu trafic, fără pistă. Dacă îl faci totuși pe bicicletă, profilul de mai sus îți arată la ce urcare să te aștepți.')],
+                    : 'Nu l-am trecut la biciclete: e un drum național cu trafic, fără pistă. Dacă îl faci totuși pe bicicletă, profilul de mai sus îți arată la ce urcare să te aștepți.'))],
         ],
     ];
 

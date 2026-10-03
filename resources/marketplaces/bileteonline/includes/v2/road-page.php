@@ -28,10 +28,11 @@ foreach ($rd['stops'] as $s) {
 }
 $rdRows[] = ['', $rd['to'], '', '', '', 'Sosire', 'pin', $rd['b'][0], $rd['b'][1], '', 0, 0];
 
-$rdGmaps = 'https://www.google.com/maps/dir/?api=1&travelmode=' . ($rdMode === 'bike' ? 'bicycling' : 'driving')
+$rdOsm = $rd['osm'] ?? [];
+$rdGmaps = $rdOsm ? '' : 'https://www.google.com/maps/dir/?api=1&travelmode=' . ($rdMode === 'bike' ? 'bicycling' : 'driving')
     . '&origin=' . rawurlencode($rd['a'][0] . ',' . $rd['a'][1])
     . '&destination=' . rawurlencode($rd['b'][0] . ',' . $rd['b'][1])
-    . (count($rd['points']) > 2
+    . (count($rd['points'] ?? []) > 2
         ? '&waypoints=' . rawurlencode(implode('|', array_map(fn ($p) => $p[0] . ',' . $p[1], array_slice($rd['points'], 1, -1))))
         : '');
 
@@ -78,7 +79,9 @@ require __DIR__ . '/plan-icons.php';
               'title'         => $rd['title'],
               'base'          => '/atractie/',
               'routeColor'    => $rdColor,
-              'routeGeometry' => $rd['geometry'],
+              // a route mapped in pieces is drawn in its pieces (below), not as one line across the gaps
+              'routeLine'     => $rdOsm ? false : true,
+              'routeGeometry' => $rdOsm ? '' : $rd['geometry'],
               'routeStops'    => $rdRows,
           ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
         </div>
@@ -90,12 +93,23 @@ require __DIR__ . '/plan-icons.php';
         </div>
         <?php endif; ?>
       </div>
+      <?php if ($rdOsm): ?>
+      <div class="rdp-acts" id="rdp-osm" data-g="<?= v2_e($rd['geometry']) ?>" data-breaks="<?= v2_e(implode(',', $rd['breaks'] ?? [])) ?>" data-color="<?= v2_e($rdColor) ?>">
+        <a class="rdp-link" href="https://www.openstreetmap.org/relation/<?= (int) $rdOsm[0] ?>" target="_blank" rel="noopener">Vezi traseul în OpenStreetMap<?= v2_ic('arrow-right') ?></a>
+        <?php if (!empty($rd['by'])): ?><a class="rdp-link" href="<?= v2_e($rd['by'][1]) ?>" target="_blank" rel="noopener"><?= v2_e($rd['by'][0]) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </div>
+      <?php else: ?>
       <div class="rdp-acts">
         <a class="btn btn-primary rdp-go" href="/plan?drum=<?= v2_e($rd['slug']) ?>"><?= v2_ic('compass') ?>Deschide ca plan</a>
         <a class="rdp-link" href="<?= v2_e($rdGmaps) ?>" target="_blank" rel="noopener">Navighează în Google Maps<?= v2_ic('arrow-right') ?></a>
       </div>
+      <?php endif; ?>
       <?php if (!empty($rd['season'])): ?><p class="rdp-season"><?= v2_ic('info') ?><span><?= v2_e($rd['season']) ?></span></p><?php endif; ?>
+      <?php if ($rdOsm): ?>
+      <p class="rp-note"><strong>Sursa:</strong> <a href="https://www.openstreetmap.org/relation/<?= (int) $rdOsm[0] ?>" target="_blank" rel="noopener">OpenStreetMap</a>, <?= count($rdOsm) > 1 ? 'relațiile' : 'relația' ?> <?= v2_e(implode(', ', $rdOsm)) ?> · © contribuitorii OpenStreetMap, licență <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">ODbL</a><?php if (!empty($rd['by'])): ?> · traseu <?= $rd['by'][0] === 'EuroVelo (ECF)' ? 'coordonat de' : 'marcat de' ?> <?= v2_e($rd['by'][0]) ?><?php endif; ?>. Unde linia e întreruptă, bucata aceea nu e încă trecută în OpenStreetMap. Altitudinile sunt măsurate pe un model de teren cu pasul de 25 m.</p>
+      <?php else: ?>
       <p class="rp-note">Linia e calculată pe drumurile din OpenStreetMap; kilometrii și timpul sunt fără opriri și fără trafic. Altitudinile sunt măsurate pe un model de teren cu pasul de 25 m, deci sunt aproximative.</p>
+      <?php endif; ?>
     </div>
   </section>
 
@@ -105,7 +119,7 @@ require __DIR__ . '/plan-icons.php';
     <div class="wrap">
       <div class="sec-head">
         <h2 id="rd-stops-h">Ce vezi pe drum</h2>
-        <a class="sec-link" href="/plan?drum=<?= v2_e($rd['slug']) ?>">Fă-ți planul<?= v2_ic('arrow-right') ?></a>
+        <?php if (!$rdOsm): ?><a class="sec-link" href="/plan?drum=<?= v2_e($rd['slug']) ?>">Fă-ți planul<?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
       <ol class="rp-stops">
         <?php foreach ($rd['stops'] as $i => $stop): [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sTypeSlug, $sLat, $sLng, $sImg] = $stop; $sAt = $stop[12] ?? 0; ?>
@@ -158,6 +172,29 @@ require __DIR__ . '/plan-icons.php';
   <?php endif; ?>
 </main>
 <script>
+/* A route taken from OpenStreetMap in several pieces is drawn piece by piece, never across a gap. */
+(function () {
+  var box = document.getElementById('rdp-osm');
+  if (!box) return;
+  var str = box.getAttribute('data-g'), pts = [], i = 0, lat = 0, lng = 0;
+  while (i < str.length) {
+    for (var k = 0; k < 2; k++) {
+      var res = 0, shift = 0, c;
+      do { c = str.charCodeAt(i++) - 63; res |= (c & 31) << shift; shift += 5; } while (c >= 32);
+      var d = (res & 1) ? ~(res >> 1) : (res >> 1);
+      if (k === 0) lat += d; else lng += d;
+    }
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  var cuts = (box.getAttribute('data-breaks') || '').split(',').filter(Boolean).map(Number), pieces = [], from = 0;
+  cuts.concat([pts.length]).forEach(function (to) { if (to - from > 1) pieces.push({ g: pts.slice(from, to), color: box.getAttribute('data-color') }); from = to; });
+  window.addEventListener('load', function () {
+    var inst = window.EPMap && window.EPMap.instance;
+    if (!inst || !inst.setGhosts) return;
+    inst.setGhosts(pieces);
+    inst.fitRoute({ all: true });
+  });
+})();
 /* The profile and the map are the same line: dragging along one moves a marker along the other. */
 (function () {
   var box = document.getElementById('rdp-prof');

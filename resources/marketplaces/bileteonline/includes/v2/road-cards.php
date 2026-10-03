@@ -24,6 +24,7 @@ $rdCards = $roadCards ?? [];
       <svg class="rd-prof" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><path class="rd-prof-a" d="<?= v2_e($rArea) ?>"/><path class="rd-prof-l" d="<?= v2_e($rLine) ?>"/></svg>
       <?php endif; ?>
       <span class="rd-lead"><?= v2_e($rLead) ?></span>
+      <?php if (!empty(MAP_ROADS[$rSlug]['osm'])): ?><span class="rd-src">sursa traseului: OpenStreetMap<?= !empty(MAP_ROADS[$rSlug]['by']) ? ' · ' . v2_e(MAP_ROADS[$rSlug]['by'][0]) : '' ?></span><?php endif; ?>
       <span class="rd-meta">
         <span><?= v2_ic('pl-road') ?><?= v2_e(v2_thousands((int) $rKm)) ?> km</span>
         <?php if ($rMax > 0): ?><span><?= v2_ic('pl-mountains') ?>max <?= v2_e(v2_thousands((int) $rMax)) ?> m</span><?php endif; ?>

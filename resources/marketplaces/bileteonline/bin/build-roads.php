@@ -4,7 +4,8 @@
  *
  *   php bin/build-roads.php [--force] [--only=slug]
  *
- * For every road: the line routed through its declared points (FOSSGIS OSRM, OpenStreetMap data),
+ * For every road: the line — routed through its declared points (FOSSGIS OSRM, OpenStreetMap data),
+ * or, for an entry with 'osm', taken from OpenStreetMap route relations through Overpass —
  * the elevation along it (Open Topo Data, EU-DEM 25 m), and the catalogue's attractions that stand
  * within reach of it, in the order you meet them. One routing call and one elevation call per road,
  * spaced out; a road whose points did not change since the last build is reused, not asked again.
@@ -206,6 +207,178 @@ function roadSample(array $pts, int $n): array
     return $out;
 }
 
+/**
+ * A route that already exists as an OpenStreetMap route relation: its member ways, put end to end.
+ *
+ * A relation is a bag of ways, not a line — unordered, sometimes with a branch or a gap. The ways are
+ * chained where they share an end, and the chains are then walked from one extremity of the route to
+ * the other, always taking the nearest chain next. What comes out is one line; where two chains do
+ * not touch, the line jumps, and the jump is neither counted in the length nor allowed to be long.
+ */
+function roadFromOsm(array $ids, ?array $start = null, float $tolM = 25): ?array
+{
+    $q = '[out:json][timeout:180];relation(id:' . implode(',', array_map('intval', $ids)) . ');out geom;';
+    $d = roadGet('http://overpass-api.de/api/interpreter?data=' . rawurlencode($q), 200);
+    if (!is_array($d['elements'] ?? null)) {
+        return null;
+    }
+    $ways = [];
+    $tags = [];
+    foreach ($d['elements'] as $rel) {
+        $tags[] = $rel['tags'] ?? [];
+        foreach ($rel['members'] ?? [] as $m) {
+            if (($m['type'] ?? '') !== 'way' || empty($m['geometry']) || count($m['geometry']) < 2) {
+                continue;
+            }
+            $ways[$m['ref']] = array_map(fn ($g) => [(float) $g['lat'], (float) $g['lon']], $m['geometry']);
+        }
+    }
+    if (!$ways) {
+        return null;
+    }
+    $ways = array_values($ways);
+
+    // 1. chain the ways that share an end point
+    $k = fn ($p) => sprintf('%.6f,%.6f', $p[0], $p[1]);
+    $ends = [];
+    foreach ($ways as $i => $w) {
+        $ends[$k($w[0])][] = $i;
+        $ends[$k(end($w))][] = $i;
+    }
+    $used = [];
+    $chains = [];
+    foreach ($ways as $i => $w) {
+        if (isset($used[$i])) {
+            continue;
+        }
+        $used[$i] = true;
+        $cur = $w;
+        for ($side = 0; $side < 2; $side++) {
+            while (true) {
+                $tip = end($cur);
+                $next = null;
+                foreach ($ends[$k($tip)] ?? [] as $j) {
+                    if (!isset($used[$j])) {
+                        $next = $j;
+                        break;
+                    }
+                }
+                if ($next === null) {
+                    break;
+                }
+                $used[$next] = true;
+                $add = $ways[$next];
+                if ($k($add[0]) !== $k($tip)) {
+                    $add = array_reverse($add);
+                }
+                $cur = array_merge($cur, array_slice($add, 1));
+            }
+            $cur = array_reverse($cur);
+        }
+        $chains[] = $cur;
+    }
+
+    // 2. start at one extremity: the chain end farthest from the end that is farthest from anywhere
+    $tips = [];
+    foreach ($chains as $c) {
+        $tips[] = $c[0];
+        $tips[] = end($c);
+    }
+    $far = function (array $from) use ($tips) {
+        $best = $from;
+        $bd = -1;
+        foreach ($tips as $t) {
+            $dd = roadKm($from[0], $from[1], $t[0], $t[1]);
+            if ($dd > $bd) {
+                $bd = $dd;
+                $best = $t;
+            }
+        }
+
+        return $best;
+    };
+    $at = $far($far($tips[0]));
+    if ($start) {
+        // the route's declared first end: begin at the chain tip nearest to it
+        $bd = INF;
+        foreach ($tips as $t) {
+            $dd = roadKm($start[0], $start[1], $t[0], $t[1]);
+            if ($dd < $bd) {
+                $bd = $dd;
+                $at = $t;
+            }
+        }
+    }
+
+    // 3. walk the chains, nearest next. Each chain is simplified on its own, so the places where the
+    //    line jumps from one to the next stay known: `breaks` holds the index each new piece starts at.
+    $line = [];
+    $breaks = [];
+    $jumps = 0;
+    $skipped = 0.0;
+    $left = $chains;
+    while ($left) {
+        $pick = -1;
+        $rev = false;
+        $bd = INF;
+        foreach ($left as $i => $c) {
+            $d0 = roadKm($at[0], $at[1], $c[0][0], $c[0][1]);
+            $e = end($c);
+            $d1 = roadKm($at[0], $at[1], $e[0], $e[1]);
+            if ($d0 < $bd) {
+                $bd = $d0;
+                $pick = $i;
+                $rev = false;
+            }
+            if ($d1 < $bd) {
+                $bd = $d1;
+                $pick = $i;
+                $rev = true;
+            }
+        }
+        $c = $left[$pick];
+        unset($left[$pick]);
+        if ($rev) {
+            $c = array_reverse($c);
+        }
+        $len = 0.0;
+        for ($i = 1, $n = count($c); $i < $n; $i++) {
+            $len += roadKm($c[$i - 1][0], $c[$i - 1][1], $c[$i][0], $c[$i][1]);
+        }
+        // a scrap far from where the line has got to is left out rather than jumped to
+        if ($line && $bd > 3.0 && $len < 1.5) {
+            $skipped += $len;
+            continue;
+        }
+        $c = roadSimplify($c, $tolM);
+        if ($line && $bd > 0.05) {
+            $jumps++;
+            $breaks[] = count($line);
+        } elseif ($line) {
+            array_shift($c);       // the shared point
+        }
+        $line = array_merge($line, $c);
+        $at = end($line);
+    }
+
+    $km = 0.0;
+    $isBreak = array_flip($breaks);
+    for ($i = 1, $n = count($line); $i < $n; $i++) {
+        if (isset($isBreak[$i])) {
+            continue;          // a jump between two pieces is not road
+        }
+        $km += roadKm($line[$i - 1][0], $line[$i - 1][1], $line[$i][0], $line[$i][1]);
+    }
+    $tagKm = 0.0;
+    foreach ($tags as $t) {
+        if (preg_match('/^\s*([0-9]+(?:[.,][0-9]+)?)/', (string) ($t['distance'] ?? ''), $mm)) {
+            $tagKm += (float) str_replace(',', '.', $mm[1]);
+        }
+    }
+
+    return ['line' => $line, 'breaks' => $breaks, 'km' => $km, 'tag_km' => $tagKm, 'jumps' => $jumps, 'skipped' => $skipped, 'ways' => count($ways), 'chains' => count($chains)];
+}
+
 // ---------------------------------------------------------------- the catalogue, for what stands beside a road
 if (!is_file($pinFile)) {
     fwrite(STDERR, "Missing {$pinFile}: run bin/build-map-data.php first.\n");
@@ -228,13 +401,74 @@ if (is_file($outFile)) {
 
 $out = [];
 foreach (MAP_ROADS as $slug => $road) {
-    $key = substr(sha1(json_encode([$road['points'], $road['modes'][0], $road['cap'] ?? 0])), 0, 12);
+    $key = substr(sha1(json_encode([$road['points'] ?? $road['osm'], $road['modes'][0], $road['cap'] ?? 0])), 0, 12);
     $have = $prev[$slug] ?? null;
     $fresh = ($only !== '' && $only !== $slug) || (!$force && $have && ($have['key'] ?? '') === $key);
 
     if ($fresh && $have) {
         $line = roadDecode($have['geometry']);
         $base = $have;
+    } elseif (!empty($road['osm'])) {
+        // ---- taken from OpenStreetMap route relations rather than routed
+        fwrite(STDOUT, "  {$slug}: OSM relation " . implode(',', $road['osm']) . ' ... ');
+        $osm = roadFromOsm($road['osm'], $road['start'] ?? null, !empty($road['long']) ? 70 : 25);
+        sleep(8);      // Overpass is a shared service
+        if (!$osm || count($osm['line']) < 2) {
+            fwrite(STDERR, "no geometry; the route is left out.\n");
+            if ($have) {
+                $out[$slug] = $have;
+            }
+            continue;
+        }
+        $kmOsm = $osm['tag_km'] > 0 ? $osm['tag_km'] : $osm['km'];
+        $line = $osm['line'];
+        $breaks = $osm['breaks'];
+        fwrite(STDOUT, round($osm['km']) . ' km measured' . ($osm['tag_km'] > 0 ? ', ' . round($osm['tag_km']) . ' km on the relation' : '')
+            . ", {$osm['ways']} ways in {$osm['chains']} chains, {$osm['jumps']} jumps, " . round($osm['skipped']) . ' km left out, ' . count($line) . ' points; '
+            . sprintf('ends %.4f,%.4f -> %.4f,%.4f', $line[0][0], $line[0][1], end($line)[0], end($line)[1]) . '; elevation ... ');
+
+        $samples = roadSample($line, ROAD_SAMPLES);
+        $e = roadGet('https://api.opentopodata.org/v1/eudem25m?locations='
+            . implode('|', array_map(fn ($sm) => round($sm[0], 5) . ',' . round($sm[1], 5), $samples)));
+        $z = [];
+        if (($e['status'] ?? '') === 'OK' && count($e['results'] ?? []) === count($samples)) {
+            $last = 0;
+            foreach ($e['results'] as $res) {
+                $last = is_numeric($res['elevation'] ?? null) ? (int) round((float) $res['elevation']) : $last;
+                $z[] = $last;
+            }
+        }
+        fwrite(STDOUT, ($z ? 'max ' . max($z) . ' m' : 'unavailable') . "\n");
+        sleep(2);
+        $top = $z ? max($z) : 0;
+        $low = $z ? min($z) : 0;
+        // Mapped in many separate pieces, the line is not one ride from end to end: a profile along it
+        // would be a drawing of the gaps. The highest point is still true; the climb is not claimed.
+        if (count($breaks) > 6) {
+            $z = [];
+        }
+        $up = 0;
+        for ($i = 1, $c = count($z); $i < $c; $i++) {
+            $up += max(0, $z[$i] - $z[$i - 1]);
+        }
+        $lats = array_column($line, 0);
+        $lngs = array_column($line, 1);
+        $base = [
+            'key'      => $key,
+            'km'       => (int) round($kmOsm),
+            'min'      => 0,
+            'profile'  => 'osm',
+            'geometry' => roadEncode($line),
+            'breaks'   => $breaks,
+            'measured' => (int) round($osm['km']),
+            'z'        => $z,
+            'max'      => $top,
+            'min_alt'  => $low,
+            'up'       => $up,
+            'bounds'   => [round(min($lats), 5), round(min($lngs), 5), round(max($lats), 5), round(max($lngs), 5)],
+            'a'        => [round($line[0][0], 5), round($line[0][1], 5)],
+            'b'        => [round(end($line)[0], 5), round(end($line)[1], 5)],
+        ];
     } else {
         // A road that is only for bicycles is routed as one; anything a motorcycle takes is routed as a car.
         $profile = $road['modes'] === ['bike'] ? 'bike' : 'car';
