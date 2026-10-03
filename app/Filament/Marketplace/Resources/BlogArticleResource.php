@@ -21,6 +21,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 class BlogArticleResource extends Resource
@@ -752,6 +753,16 @@ class BlogArticleResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    Actions\BulkAction::make('publish')
+                        ->label('Publish selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $records->reject(fn (BlogArticle $record) => $record->status === 'published')
+                                ->each(fn (BlogArticle $record) => $record->publish());
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),
             ])
