@@ -69,6 +69,27 @@ foreach (v2_map_roads() as $rdSlug => $rd) {
     ];
 }
 
+// The editorial routes of /trasee, for /plan?traseu=<slug>: their stops in order, and how many days
+// the author meant them to take ("2 zile" in the route's pace; anything else is one day).
+$routesForPlan = [];
+foreach (MAP_ROUTES as $rtSlug => $rt) {
+    $rtData = $summary['routes'][$rtSlug] ?? null;
+    if (!$rtData || empty($rtData['stops'])) {
+        continue;
+    }
+    $first = $rtData['stops'][0];
+    $last = $rtData['stops'][count($rtData['stops']) - 1];
+    $routesForPlan[$rtSlug] = [
+        'title' => $rt['title'],
+        'days'  => preg_match('/(\d+)\s*zile/u', (string) $rt['pace'], $rtM) ? max(1, min(7, (int) $rtM[1])) : 1,
+        'stops' => array_column($rtData['stops'], 0),
+        'from'  => $first[2] !== '' ? $first[2] : $first[1],
+        'to'    => $last[2] !== '' ? $last[2] : $last[1],
+        'a'     => [$first[7], $first[8]],
+        'b'     => [$last[7], $last[8]],
+    ];
+}
+
 $v2HeaderOverlay = true;   // the page opens on a dark band
 $v2Styles  = ['map.css', 'map-page.css', 'routes.css', 'plan.css'];
 $v2Scripts = ['map.js', 'plan.js'];
@@ -93,6 +114,7 @@ $v2ClientData = [
         'stay22'    => PLAN_STAY22,
         'modes'     => PLAN_MODES,
         'roads'     => $roadsForPlan,
+        'routes'    => $routesForPlan,
     ],
 ];
 

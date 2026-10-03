@@ -159,7 +159,8 @@ const PLAN_PARTY = [
 /**
  * Stay22: everything about the accommodation embed that is not a date, a place or a party.
  *
- * Same affiliate account as the rest of the platform. The embed is third-party, so /plan never
+ * The partner id is the account's own handle in the Stay22 Hub; a link made with an id Stay22 does
+ * not know still works, but is credited to nobody (its Booking label reads "stay22"). The embed is third-party, so /plan never
  * loads it before the traveller asks for it, and says out loud that a booking pays us a commission
  * without costing them more. `link` is the plain list, for when the iframe does not come up.
  */
@@ -169,7 +170,7 @@ const PLAN_NIGHT_BUDGETS = [200, 300, 400, 500, 700, 1000, 1500];
 const PLAN_STAY22 = [
     'embed'      => 'https://www.stay22.com/embed/gm',
     'link'       => 'https://www.stay22.com/allez/booking',
-    'aid'        => '68f75671f26bfb6f2a73d0b9',
+    'aid'        => 'goodtechinc',
     'currency'   => 'RON',
     'maincolor'  => '1E5B48',
     'markertype' => 'circle',

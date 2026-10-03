@@ -3586,10 +3586,33 @@
     return p;
   }
 
+  /**
+   * /plan?traseu=<slug>: one of the editorial routes, opened as a plan — its stops in their order,
+   * split evenly over the days the route was written for, leaving from the town of the first stop
+   * and ending in the town of the last. Every stop is locked, so regenerating keeps the route.
+   */
+  function routePlan(slug) {
+    var rt = (CFG.routes || {})[slug];
+    if (!rt) return null;
+    var ids = (rt.stops || []).filter(function (id) { return bySlug[id] !== undefined; });
+    if (!ids.length) return null;
+    var p = blankPlan();
+    p.name = rt.title;
+    p.days = Math.max(1, Math.min(ids.length, rt.days || 1));
+    p.origin = { kind: 'point', key: '', label: rt.from, lat: rt.a[0], lng: rt.a[1] };
+    p.back = { kind: 'point', key: '', label: rt.to, lat: rt.b[0], lng: rt.b[1] };
+    p.where = { kind: 'city', key: '', label: rt.title, lat: +((rt.a[0] + rt.b[0]) / 2).toFixed(5), lng: +((rt.a[1] + rt.b[1]) / 2).toFixed(5) };
+    var per = Math.ceil(ids.length / p.days);
+    p.stops = [];
+    for (var d = 0; d < p.days; d++) p.stops.push(ids.slice(d * per, (d + 1) * per));
+    ids.forEach(function (id) { p.locked[id] = 1; });
+    return p;
+  }
+
   loadData().then(function () {
     ALL_PLACES = places();
     var query = new URLSearchParams(location.search);
-    var fromRoad = roadPlan(query.get('drum') || '');
+    var fromRoad = roadPlan(query.get('drum') || '') || routePlan(query.get('traseu') || '');
     if (fromRoad) {
       plan = fromRoad;
       fillParty();
