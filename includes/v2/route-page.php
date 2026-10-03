@@ -17,7 +17,7 @@ $rpFirst = $rpStops[0] ?? null;
 $rpLast  = $rpStops[count($rpStops) - 1] ?? null;
 
 $v2Styles  = array_merge(['map.css', 'map-page.css', 'routes.css'], $v2Styles ?? []);
-$v2Scripts = array_merge($v2Scripts ?? [], ['map.js']);
+$v2Scripts = array_merge($v2Scripts ?? [], ['map.js', 'routes.js']);
 
 // Every stop as a waypoint, so the whole route opens in Google Maps in one tap.
 $rpGmaps = 'https://www.google.com/maps/dir/?api=1'
@@ -63,6 +63,10 @@ include __DIR__ . '/header.php';
         <div data-epm-root data-epm-config="<?= v2_e(json_encode($routePage['config'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
       </div>
       <p class="rp-note"><?php if (!empty($routePage['road'])): ?>Distanțele și timpii sunt calculați pe drumurile reale (OpenStreetMap), fără opriri și fără trafic.<?php else: ?>Pentru acest traseu distanța e măsurată în linie dreaptă între opriri, nu pe șosea.<?php endif; ?> <a href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Deschide tot traseul în Google Maps<?= v2_ic('arrow-right') ?></a></p>
+      <div class="rdp-acts">
+        <a class="btn btn-primary rdp-go" href="/plan?traseu=<?= v2_e($routePage['slug']) ?>"><?= v2_ic('compass') ?>Deschide ca plan</a>
+        <p class="rdp-hint">Traseul intră în planificator cu opririle lui, pe zile: muți, scoți sau adaugi opriri, vezi orele și cauți cazare.</p>
+      </div>
     </div>
   </section>
 
@@ -71,23 +75,33 @@ include __DIR__ . '/header.php';
     <div class="wrap">
       <div class="sec-head">
         <h2 id="rp-stops-h">Opririle, în ordine</h2>
-        <a class="sec-link" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Navighează<?= v2_ic('arrow-right') ?></a>
+        <a class="sec-link" href="/plan?traseu=<?= v2_e($routePage['slug']) ?>">Deschide ca plan<?= v2_ic('arrow-right') ?></a>
       </div>
       <ol class="rp-stops">
         <?php foreach ($rpStops as $i => $stop): [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sEmoji, $sLat, $sLng, $sImg, $sLeg] = $stop; $sMin = $stop[11] ?? 0; ?>
-        <li class="rp-stop">
+        <li class="rp-stop" data-place="<?= v2_e($sSlug) ?>">
           <span class="rp-num" aria-hidden="true"><?= $i + 1 ?></span>
-          <a class="rp-card" href="/atractie/<?= v2_e($sSlug) ?>">
-            <span class="rp-media"><?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 320, 240)) ?>" alt="" width="200" height="150" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($sName, $i) ?><?php endif; ?></span>
-            <span class="rp-body">
-              <?php if ($sType): ?><span class="rp-kicker"><span aria-hidden="true"><?= v2_e($sEmoji) ?></span> <?= v2_e($sType) ?></span><?php endif; ?>
-              <span class="rp-title"><?= v2_e($sName) ?></span>
-              <span class="rp-meta">
-                <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
-                <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= v2_e(str_replace('.', ',', (string) $sLeg)) ?> km<?php if (!empty($sMin)): ?> · <?= v2_e(v2_hm((int) $sMin)) ?><?php endif; ?> de la oprirea anterioară</span><?php endif; ?>
+          <div class="rp-card">
+            <button class="rp-main" type="button" aria-expanded="false">
+              <span class="rp-media"><?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 320, 240)) ?>" alt="" width="200" height="150" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($sName, $i) ?><?php endif; ?></span>
+              <span class="rp-body">
+                <?php if ($sType): ?><span class="rp-kicker"><?= v2_e($sType) ?></span><?php endif; ?>
+                <span class="rp-title"><?= v2_e($sName) ?></span>
+                <span class="rp-meta">
+                  <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
+                  <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= v2_e(str_replace('.', ',', (string) $sLeg)) ?> km<?php if (!empty($sMin)): ?> · <?= v2_e(v2_hm((int) $sMin)) ?><?php endif; ?> de la oprirea anterioară</span><?php endif; ?>
+                </span>
               </span>
-            </span>
-          </a>
+              <?= v2_ic('caret-down', 'ic rp-car') ?>
+            </button>
+            <div class="rp-more"><div><div class="rp-in">
+              <p class="rp-about" hidden></p>
+              <div class="rp-acts">
+                <a class="rp-go" href="/atractie/<?= v2_e($sSlug) ?>">Detalii<?= v2_ic('arrow-right') ?></a>
+                <a class="rp-go is-quiet" href="https://www.google.com/maps/search/?api=1&amp;query=<?= v2_e($sLat . ',' . $sLng) ?>" target="_blank" rel="noopener">Arată în Google Maps</a>
+              </div>
+            </div></div></div>
+          </div>
         </li>
         <?php endforeach; ?>
       </ol>

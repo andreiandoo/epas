@@ -30,9 +30,29 @@
 .rp-stop::before{content:"";position:absolute;left:17px;top:38px;bottom:-16px;width:2px;background:repeating-linear-gradient(to bottom,var(--line) 0 4px,transparent 4px 10px)}
 .rp-stop:last-child::before{display:none}
 .rp-num{position:relative;z-index:1;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--green);color:#fff;font:800 .9375rem/1 var(--font);font-variant-numeric:tabular-nums}
-.rp-card{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;padding:10px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out)}
-.rp-card:hover{border-color:var(--green)}
-@media (min-width:768px){.rp-card{grid-template-columns:140px minmax(0,1fr)}}
+/* a stop is a card that opens: one line closed, what the place says about itself when open (routes.js) */
+.rp-card{border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);transition:border-color var(--dur-micro) var(--ease-out),box-shadow var(--dur-state) var(--ease-out)}
+.rp-card:hover,.rp-stop.is-open .rp-card{border-color:var(--green)}
+.rp-stop.is-open .rp-card{box-shadow:0 16px 30px -24px rgba(14,72,55,.6)}
+.rp-main{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:14px;align-items:center;width:100%;padding:10px;border:0;border-radius:var(--r-m);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+@media (min-width:768px){.rp-main{grid-template-columns:140px minmax(0,1fr) auto}}
+.rp-car{width:18px;height:18px;margin-right:4px;color:var(--muted);transition:transform var(--dur-state) var(--ease-out)}
+.rp-stop.is-open .rp-car{transform:rotate(180deg)}
+.rp-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows 380ms var(--ease-out)}
+.rp-stop.is-open .rp-more{grid-template-rows:1fr}
+.rp-more > div{min-height:0;overflow:hidden;visibility:hidden;transition:visibility 0s 380ms}
+.rp-stop.is-open .rp-more > div{visibility:visible;transition-delay:0s}
+.rp-in{display:grid;gap:12px;padding:4px 14px 14px}
+.rp-about{max-width:70ch;margin:0;font-size:.9375rem;line-height:1.5;color:var(--muted)}
+.rp-about[hidden]{display:none}
+.rp-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.rp-go{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:var(--r-pill);background:var(--green);color:#fff;font:700 .875rem/1 var(--font);text-decoration:none}
+.rp-go:hover{background:var(--deep)}
+.rp-go .ic{width:15px;height:15px}
+.rp-go.is-quiet{padding:0;background:none;color:var(--green)}
+.rp-go.is-quiet:hover{background:none;text-decoration:underline;text-underline-offset:3px}
+.rdp-hint{flex:1 1 18rem;max-width:52ch;margin:0;font-size:.875rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.rp-more,.rp-car{transition:none}}
 .rp-media{overflow:hidden;aspect-ratio:4/3;border-radius:12px;background:var(--surface-2)}
 .rp-media img{width:100%;height:100%;object-fit:cover}
 .rp-body{display:grid;align-content:center;gap:4px;min-width:0;padding-right:6px}
@@ -91,8 +111,8 @@
 .rdp-prof-x{stroke:var(--ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
 .rdp-prof-ax{display:flex;justify-content:space-between;margin-top:4px;font-size:.75rem;color:var(--muted)}
 .rdp-acts{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin-top:18px}
-.rdp-go{background:var(--rd)}
-.rdp-go:hover{background:var(--rd);filter:brightness(.92)}
+.rdp-go{background:var(--rd,var(--action))}
+.rdp-go:hover{background:var(--rd,var(--action));filter:brightness(.92)}
 .rdp-link{display:inline-flex;align-items:center;gap:6px;color:var(--green);font-weight:700;text-decoration:none}
 .rdp-link:hover{text-decoration:underline;text-underline-offset:3px}
 .rdp-link .ic{width:16px;height:16px}

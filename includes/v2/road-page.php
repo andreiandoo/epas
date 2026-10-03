@@ -37,7 +37,7 @@ $rdGmaps = $rdOsm ? '' : 'https://www.google.com/maps/dir/?api=1&travelmode=' . 
         : '');
 
 $v2Styles  = array_merge(['map.css', 'map-page.css', 'routes.css'], $v2Styles ?? []);
-$v2Scripts = array_merge($v2Scripts ?? [], ['map.js']);
+$v2Scripts = array_merge($v2Scripts ?? [], ['map.js', 'routes.js']);
 
 include __DIR__ . '/head.php';
 include __DIR__ . '/header.php';
@@ -123,19 +123,29 @@ require __DIR__ . '/plan-icons.php';
       </div>
       <ol class="rp-stops">
         <?php foreach ($rd['stops'] as $i => $stop): [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sTypeSlug, $sLat, $sLng, $sImg] = $stop; $sAt = $stop[12] ?? 0; ?>
-        <li class="rp-stop" id="rd-stop-<?= $i + 2 ?>">
+        <li class="rp-stop" id="rd-stop-<?= $i + 2 ?>" data-place="<?= v2_e($sSlug) ?>">
           <span class="rp-num" aria-hidden="true"><?= $i + 2 ?></span>
-          <a class="rp-card" href="/atractie/<?= v2_e($sSlug) ?>">
-            <span class="rp-media"><?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 320, 240)) ?>" alt="" width="200" height="150" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($sName, $i) ?><?php endif; ?></span>
-            <span class="rp-body">
-              <?php if ($sType): ?><span class="rp-kicker"><?= v2_e($sType) ?></span><?php endif; ?>
-              <span class="rp-title"><?= v2_e($sName) ?></span>
-              <span class="rp-meta">
-                <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
-                <span class="rp-leg"><?= v2_ic('arrow-right') ?>la km <?= v2_e(str_replace('.', ',', (string) round((float) $sAt))) ?> de la <?= v2_e($rd['from']) ?></span>
+          <div class="rp-card">
+            <button class="rp-main" type="button" aria-expanded="false">
+              <span class="rp-media"><?php if ($sImg): ?><img src="<?= v2_e(v2_thumb($sImg, 320, 240)) ?>" alt="" width="200" height="150" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($sName, $i) ?><?php endif; ?></span>
+              <span class="rp-body">
+                <?php if ($sType): ?><span class="rp-kicker"><?= v2_e($sType) ?></span><?php endif; ?>
+                <span class="rp-title"><?= v2_e($sName) ?></span>
+                <span class="rp-meta">
+                  <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
+                  <span class="rp-leg"><?= v2_ic('arrow-right') ?>la km <?= v2_e(str_replace('.', ',', (string) round((float) $sAt))) ?> de la <?= v2_e($rd['from']) ?></span>
+                </span>
               </span>
-            </span>
-          </a>
+              <?= v2_ic('caret-down', 'ic rp-car') ?>
+            </button>
+            <div class="rp-more"><div><div class="rp-in">
+              <p class="rp-about" hidden></p>
+              <div class="rp-acts">
+                <a class="rp-go" href="/atractie/<?= v2_e($sSlug) ?>">Detalii<?= v2_ic('arrow-right') ?></a>
+                <a class="rp-go is-quiet" href="https://www.google.com/maps/search/?api=1&amp;query=<?= v2_e($sLat . ',' . $sLng) ?>" target="_blank" rel="noopener">Arată în Google Maps</a>
+              </div>
+            </div></div></div>
+          </div>
         </li>
         <?php endforeach; ?>
       </ol>
