@@ -108,10 +108,10 @@
 .pl-quick-h{margin:0;font-size:.875rem;font-weight:700;color:var(--ink)}
 
 /* ---------- the plan: one map, one list ----------
-   A full-screen instrument over the page (above the header, below the cookie banner). On a phone the
+   It fills the screen under the site header, which stays where it is. On a phone the
    map holds the top and a handle between the two sets how much; on a desk they stand side by side. */
 html.plx-open,html.plx-open body{overflow:hidden}
-.plx{--plx-mode:var(--action);--plx-tint:var(--tint-green);position:fixed;inset:0;z-index:55;display:grid;grid-template-rows:var(--plx-map,46%) minmax(0,1fr);background:var(--bg)}
+.plx{--plx-mode:var(--action);--plx-tint:var(--tint-green);position:fixed;inset:var(--hdr-h) 0 0 0;z-index:40;display:grid;grid-template-rows:var(--plx-map,46%) minmax(0,1fr);background:var(--bg)}
 .plx[hidden]{display:none}
 .plx[data-mode="moto"]{--plx-mode:#C8322B;--plx-tint:#FBE9E6}
 .plx[data-mode="bike"]{--plx-mode:#2D6CCD;--plx-tint:#E6EEFA}
@@ -123,7 +123,7 @@ html.plx-open,html.plx-open body{overflow:hidden}
 .plx-frame .leaflet-bottom{margin-bottom:18px}
 .epm-route-ghost{pointer-events:none}
 
-.plx-top{position:absolute;z-index:5;left:0;right:0;top:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 0;pointer-events:none}
+.plx-top{position:absolute;z-index:5;left:0;right:0;top:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 10px 0;pointer-events:none}
 .plx-top > *{pointer-events:auto}
 .plx-bar{display:flex;align-items:center;gap:4px;max-width:560px;padding:5px;border-radius:18px;background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(1.2) blur(10px);backdrop-filter:saturate(1.2) blur(10px);box-shadow:0 8px 24px -14px rgba(14,72,55,.5),0 0 0 1px rgba(33,33,33,.07)}
 .plx-ib{flex:none;display:grid;place-items:center;width:42px;height:42px;padding:0;border:0;border-radius:13px;background:none;color:var(--ink);cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out)}
@@ -143,7 +143,7 @@ html.plx-open,html.plx-open body{overflow:hidden}
 .plx-day[aria-pressed="true"] small{color:rgba(255,255,255,.84)}
 .plx-day:active{transform:scale(.95)}
 
-.plx-menu{position:absolute;z-index:9;top:calc(env(safe-area-inset-top,0px) + 62px);right:10px;display:grid;width:min(280px,calc(100% - 20px));padding:6px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow-pop);transform-origin:top right;animation:plx-menu 220ms var(--ease-out)}
+.plx-menu{position:absolute;z-index:9;top:62px;right:10px;display:grid;width:min(280px,calc(100% - 20px));padding:6px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow-pop);transform-origin:top right;animation:plx-menu 220ms var(--ease-out)}
 .plx-menu[hidden]{display:none}
 @keyframes plx-menu{from{opacity:0;transform:scale(.94) translateY(-6px)}}
 .plx-menu-i{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border:0;border-radius:12px;background:none;color:var(--ink);font:600 .9375rem/1.2 var(--font);text-align:left;cursor:pointer}
@@ -166,7 +166,7 @@ html.plx-open,html.plx-open body{overflow:hidden}
 .plx-stay-btn.is-hot{background:var(--yellow);color:#2B1F00;animation:plx-hot 1.8s var(--ease-out) 2}
 .plx-stay-btn.is-hot .ic{color:#2B1F00}
 @keyframes plx-hot{0%{box-shadow:0 10px 24px -10px rgba(14,72,55,.7),0 0 0 2px rgba(255,255,255,.9),0 0 0 2px rgba(242,169,0,.55)}100%{box-shadow:0 10px 24px -10px rgba(14,72,55,.7),0 0 0 2px rgba(255,255,255,.9),0 0 0 16px rgba(242,169,0,0)}}
-.plx-stay{position:absolute;z-index:20;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 26px;background:var(--bg);animation:plx-stay 300ms var(--ease-out)}
+.plx-stay{position:absolute;z-index:20;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:10px 10px 26px;background:var(--bg);animation:plx-stay 300ms var(--ease-out)}
 .plx-stay[hidden]{display:none}
 @keyframes plx-stay{from{opacity:0;transform:translateY(12px)}}
 .plx-stay-x{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 12px;border:0;border-radius:var(--r-pill);background:var(--deep);color:var(--on-deep);font:700 .875rem/1 var(--font);cursor:pointer}
@@ -504,6 +504,93 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .pl-night.is-skipped .pl-day-act .ic{color:var(--green)}
 .pl-bar-nights{margin:0;min-height:32px}
 
+/* ---------- a stop: one line when closed, everything about it when open ---------- */
+.pl-stop-card{display:block;padding:0}
+.pl-grip{margin-top:23px}
+.pl-stop.is-own .pl-grip{margin-top:13px}
+.pl-stop-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:10px;border:0;border-radius:18px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.pl-stop-main:focus-visible{outline:2px solid var(--action);outline-offset:-2px}
+.pl-stop-media{display:grid;place-items:center;width:52px;height:64px;aspect-ratio:auto;overflow:hidden;border-radius:26px 26px 9px 9px;background:var(--plx-tint);color:var(--plx-mode)}
+.pl-stop-media img{display:block;width:100%;height:100%;object-fit:cover}
+.pl-stop-media .ic{width:22px;height:22px}
+.pl-stop.is-own .pl-stop-media{width:40px;height:40px;aspect-ratio:auto;border-radius:50%;background:var(--surface-2);color:var(--muted)}
+.pl-stop-text{display:grid;gap:1px;min-width:0}
+.pl-stop-title{font-size:1rem;font-weight:800;line-height:1.2;color:var(--ink);text-decoration:none}
+.pl-stop-title:hover{color:var(--ink);text-decoration:none}
+.pl-stop-meta{display:block;overflow:hidden;margin:0;font-size:.8125rem;white-space:nowrap;text-overflow:ellipsis;color:var(--muted)}
+.pl-stop-when{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:3px;font-size:.8125rem;font-variant-numeric:tabular-nums}
+.pl-stop-when em{font-style:normal;font-weight:700;color:var(--ink)}
+.pl-stop-when i{padding:1px 8px;border-radius:var(--r-pill);background:var(--plx-tint);color:var(--plx-mode);font-style:normal;font-weight:700}
+.pl-stop-when .pl-sell{margin-left:0;padding:1px 8px;background:#FFF1CC;font-size:.75rem;color:#7A5500}
+.pl-stop-car{width:18px;height:18px;color:var(--muted);transition:transform var(--dur-state) var(--ease-out)}
+.pl-stop.is-open .pl-stop-car{transform:rotate(180deg)}
+.pl-stop-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows 380ms var(--ease-out)}
+.pl-stop.is-open .pl-stop-more{grid-template-rows:1fr}
+.pl-stop-more > div{min-height:0;overflow:hidden;visibility:hidden;transition:visibility 0s 380ms}
+.pl-stop.is-open .pl-stop-more > div{visibility:visible;transition-delay:0s}
+.pl-stop-in{display:grid;gap:10px;padding:2px 12px 12px}
+.pl-stop-note{margin:0;font-size:.875rem;line-height:1.45;color:var(--muted)}
+.pl-stop-note small{display:block;margin-top:2px;font-size:.8125rem}
+.pl-acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.pl-ab{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border:0;border-radius:var(--r-pill);background:var(--surface-2);color:var(--ink);font:700 .8125rem/1 var(--font);text-decoration:none;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out)}
+.pl-ab:hover{background:#E2E2DC}
+.pl-ab:active{transform:scale(.96)}
+.pl-ab .ic{width:15px;height:15px}
+.pl-ab[disabled]{opacity:.35;pointer-events:none}
+.pl-ab.is-sq{justify-content:center;width:38px;padding:0}
+.pl-ab.is-sq span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.pl-ab.is-up .ic{transform:rotate(-90deg)}
+.pl-ab.is-down .ic{transform:rotate(90deg)}
+.pl-ab.is-danger{color:var(--red-text)}
+.pl-ab.is-go{background:var(--plx-mode);color:#fff}
+.pl-durs{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--r-pill);background:var(--surface-2)}
+.pl-durs button{display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:50%;background:var(--surface);color:var(--ink);font:700 1.0625rem/1 var(--font);cursor:pointer}
+.pl-durs button:hover{background:var(--plx-tint)}
+.pl-durs output{min-width:74px;font:800 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;text-align:center}
+
+/* the gap between two stops: the drive, and the + that puts a stop of your own there */
+.pl-ins{display:flex;justify-content:flex-start;align-items:center;gap:14px;height:28px;margin:-2px 0;padding-left:1px}
+.pl-ins-btn::after{display:none}
+.pl-ins-leg{display:inline-flex;align-items:center;gap:7px;font-size:.78125rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--muted)}
+.pl-ins-leg .ic{width:15px;height:15px}
+.pl-ins-leg.is-off{font-style:italic}
+.pl-edge{min-height:38px}
+
+/* adding to a day: suggestions with a face, then the search */
+.pl-add-list{max-height:380px}
+.pl-add-h{padding:6px 8px 4px;font-size:.75rem;font-weight:700;color:var(--muted)}
+.pl-add-list .pl-swap-hit{margin-bottom:4px;border-color:transparent}
+.pl-add-list .pl-swap-hit:hover{border-color:var(--plx-mode);background:var(--plx-tint)}
+
+/* a night: the town in the heading, the budget as chips */
+.pl-night{padding:14px 0 14px}
+.pl-night > *{margin-inline:14px}
+.pl-night-h{align-items:center;gap:12px}
+.pl-night-h .pl-night-em{font-size:1.5rem;line-height:1}
+.pl-night-t{display:grid;gap:1px;min-width:0}
+.pl-night-t b{font-size:1.0625rem;font-weight:800;line-height:1.2}
+.pl-night-t small{font-size:.78125rem;font-weight:500;font-variant-numeric:tabular-nums;color:var(--on-deep-muted)}
+.pl-night.is-skipped .pl-night-t small{color:var(--muted)}
+.pl-night-bud{display:flex;gap:6px;margin-inline:0;padding-inline:14px;overflow-x:auto;scrollbar-width:none}
+.pl-night-bud::-webkit-scrollbar{display:none}
+.pl-night-bud button{flex:none;min-height:34px;padding:0 12px;border:0;border-radius:var(--r-pill);background:none;box-shadow:inset 0 0 0 1.5px rgba(247,247,245,.28);color:var(--on-deep);font:700 .8125rem/1 var(--font);cursor:pointer}
+.pl-night-bud button[aria-pressed="true"]{background:var(--on-deep);box-shadow:none;color:var(--deep)}
+@media (hover:hover) and (pointer:fine){.pl-night-bud{flex-wrap:wrap;overflow:visible}}
+
+/* where the list ends: the same actions as behind the three dots */
+.plx-end-h{margin:0;font-size:1.375rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.plx-end-acts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.plx-end-acts .pl-btn{height:40px}
+.plx-end-acts .pl-btn:first-child{border-color:var(--plx-mode);background:var(--plx-mode);color:#fff}
+.plx-end-acts .pl-btn:first-child .ic{color:#fff}
+
+/* the accommodation frame: the way back and the way out, side by side, always in sight */
+.plx-stay-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.plx-stay-out{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:var(--r-pill);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);color:var(--action);font:700 .875rem/1 var(--font);text-decoration:none}
+.plx-stay-out:hover{box-shadow:inset 0 0 0 1px var(--action)}
+.plx-stay-out .ic{width:15px;height:15px}
+.plx-stay-body .pl-stay-foot{display:none}
+
 /* ---------- print: the plan, nothing else ---------- */
 @media print{
   html.plx-open,html.plx-open body{overflow:visible}
@@ -517,7 +604,7 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
   .pl-night::before{display:none}
   .pl-night-h,.pl-night-p,.pl-night-p b{color:#000}
   .pl-grip .ic{display:none}
-  .pl-stop-top{min-height:0}
+  .pl-stop-more,.pl-stop-car{display:none}
   .pl-stop-card{box-shadow:0 0 0 1px #ccc}
 }
 

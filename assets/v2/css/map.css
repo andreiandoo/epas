@@ -195,3 +195,7 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
 .epm-bare .epm-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
 .epm-bare .epm-pin.is-step{transition:transform var(--dur-state) var(--ease-out),box-shadow var(--dur-state) var(--ease-out)}
 .epm-bare .epm-pin.is-on{transform:scale(1.3);box-shadow:0 0 0 6px rgba(43,182,115,.3),0 6px 14px -4px rgba(0,0,0,.5)}
+/* the direction of travel: dashes that run along the route, first stop to last */
+.epm-route-flow{pointer-events:none;animation:epm-flow 1.1s linear infinite}
+@keyframes epm-flow{to{stroke-dashoffset:-16}}
+@media (prefers-reduced-motion:reduce){.epm-route-flow{animation:none}}
