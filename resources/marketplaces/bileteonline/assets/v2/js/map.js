@@ -249,7 +249,7 @@
     var routeLine = null;
     /* A host that draws its own list (cfg.bare) drives the view from outside: which stop is lit, what
        the map frames. A route redraw is asynchronous, so the last instruction waits for it. */
-    var drawing = false, pendingViews = [], ghosts = [], dot = null, onPin = null;
+    var drawing = false, pendingViews = [], ghosts = [], dot = null, onPin = null, flow = null;
     function later(fn) { if (!map || drawing) pendingViews.push(fn); else fn(); }
     function fitOpts(o, maxZoom) {
       var p = (o && o.pad) || {};
@@ -666,12 +666,18 @@
         renderer: window.L.svg(),
         className: 'epm-route-line' + (road ? ' is-road' : ''),
         color: cfg.routeColor || '#1E5B48',
-        weight: road ? 4 : 3,
-        opacity: road ? .8 : .85,
+        weight: road ? (cfg.bare ? 6 : 4) : 3,
+        opacity: road ? (cfg.bare ? .95 : .8) : .85,
         dashArray: road ? null : '2 8',
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(map);
+      // In a host's own layout the road also says which way it runs: a row of light dashes that
+      // travels along it, from the first stop to the last (map.css moves them; the path is the same).
+      if (road && cfg.bare) {
+        flow = window.L.polyline(road, { renderer: window.L.svg(), className: 'epm-route-flow', color: '#FFFFFF',
+          weight: 2, opacity: .85, dashArray: '2 14', lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
+      }
       if (stops.length) map.fitBounds(road && cfg.bare ? road : stops, { padding: [60, 60], maxZoom: 15, animate: false });
     }
 
@@ -1318,6 +1324,7 @@
         selected = -1;
         ui.card.hidden = true;
         if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+        if (flow) { map.removeLayer(flow); flow = null; }
         applyFilters();
         drawMarkers();
       },
@@ -1370,6 +1377,7 @@
               weight: own ? 4 : 3, opacity: own ? .9 : .55, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(map));
           });
           if (routeLine) routeLine.bringToFront();
+          if (flow) flow.bringToFront();
         });
       },
       /** A marker that follows the elevation profile; null takes it away. */

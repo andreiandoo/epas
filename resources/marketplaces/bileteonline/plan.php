@@ -317,7 +317,10 @@ include __DIR__ . '/includes/v2/header.php';
       <button class="plx-stay-btn" type="button" id="plx-stay-btn" hidden><?= v2_ic('pl-bed') ?><span>Arată cazări disponibile</span></button>
 
       <div class="plx-stay" id="plx-stay" hidden>
-        <button class="plx-stay-x" type="button" id="plx-stay-x"><?= v2_ic('arrow-left') ?>Înapoi la traseu</button>
+        <div class="plx-stay-head">
+          <button class="plx-stay-x" type="button" id="plx-stay-x"><?= v2_ic('arrow-left') ?>Înapoi la traseu</button>
+          <a class="plx-stay-out" id="plx-stay-out" href="<?= v2_e(PLAN_STAY22['link']) ?>" target="_blank" rel="noopener nofollow sponsored">Deschide lista pe Stay22<?= v2_ic('arrow-right') ?></a>
+        </div>
         <div class="plx-stay-body" id="pl-pane-stay"></div>
       </div>
     </div>
@@ -328,6 +331,8 @@ include __DIR__ . '/includes/v2/header.php';
         <header class="pl-bar" id="pl-bar"></header>
         <div class="pl-days" id="pl-days-list"></div>
         <footer class="plx-end">
+          <h3 class="plx-end-h">Asta e tot drumul</h3>
+          <div class="plx-end-acts" id="plx-end-acts"></div>
           <p class="rp-note" id="pl-map-note"></p>
           <p class="plx-end-p">Ce ai mutat, adăugat sau înlocuit rămâne la locul lui când regenerezi restul. Linkul din bara de adrese conține tot planul.</p>
         </footer>
