@@ -548,6 +548,16 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .pl-durs button:hover{background:var(--plx-tint)}
 .pl-durs output{min-width:74px;font:800 .8125rem/1 var(--font);font-variant-numeric:tabular-nums;text-align:center}
 
+.pl-stop-note[hidden]{display:none}
+.pl-stop-note.is-small{font-size:.8125rem}
+.pl-tip{position:relative;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);cursor:help}
+.pl-tip .ic{width:18px;height:18px}
+.pl-tip:hover,.pl-tip:focus-visible{color:var(--ink)}
+.pl-tip[aria-expanded="true"]{background:var(--surface-2);color:var(--ink)}
+.pl-move{position:relative;padding-right:6px;cursor:pointer}
+.pl-move select{max-width:11.5rem;height:38px;padding:0 4px 0 0;border:0;outline:0;background:none;color:inherit;font:700 .8125rem/1 var(--font);cursor:pointer}
+.pl-move:focus-within{box-shadow:0 0 0 2px var(--action)}
+
 /* the gap between two stops: the drive, and the + that puts a stop of your own there */
 .pl-ins{display:flex;justify-content:flex-start;align-items:center;gap:14px;height:28px;margin:-2px 0;padding-left:1px}
 .pl-ins-btn::after{display:none}

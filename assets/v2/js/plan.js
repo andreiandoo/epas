@@ -763,6 +763,7 @@
     q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
     q.push('zoom=' + (STAY.zoom || 12));
     q.push('ljs=ro');
+    q.push('hidebrandlogo=true');
     var prov = (STAY.providers || {})[stayProv];
     if (prov && prov[1]) q.push(prov[1]);
     return (STAY.embed || 'https://www.stay22.com/embed/gm') + '?' + q.join('&');
@@ -1482,11 +1483,16 @@
     var more = el('div', 'pl-stop-more');
     var clip = el('div', '');
     var inn = el('div', 'pl-stop-in');
-    var note = el('p', 'pl-stop-note', e.own
-      ? 'O oprire pusă de tine: durata e cea pe care o alegi.'
-      : 'Durata e o estimare pe tip de obiectiv. Verifică programul înainte de drum.');
-    if (e.approx) note.appendChild(el('small', '', 'Poziția pe hartă e aproximativă.'));
+    // What the place says about itself. It is asked for when the card first opens (the pin dataset
+    // carries no descriptions), and a place with nothing of its own to say shows no text at all.
+    var note = el('p', 'pl-stop-note');
+    note.dataset.about = e.id;
+    if (e.own) note.textContent = ownMeta(e) + '.';
+    else if (aboutCache[e.id]) note.textContent = aboutCache[e.id];
+    else note.hidden = true;
     inn.appendChild(note);
+    if (e.approx) inn.appendChild(el('p', 'pl-stop-note is-small', 'Poziția pe hartă e aproximativă.'));
+    if (open) about(e);
 
     var act = function (ic, label, fn, cls) {
       var b = el('button', 'pl-ab' + (cls ? ' ' + cls : ''));
@@ -1520,6 +1526,19 @@
     durs.appendChild(less);
     durs.appendChild(el('output', '', hm(r.dur)));
     durs.appendChild(plus);
+    var tip = el('button', 'pl-tip');
+    tip.type = 'button';
+    tip.setAttribute('data-tip', e.own
+      ? 'Durata e cea pe care o alegi tu.'
+      : 'Durata e o estimare pe tip de obiectiv. Verifică programul înainte de drum.');
+    tip.title = tip.getAttribute('data-tip');
+    tip.setAttribute('aria-label', 'Despre durată');
+    tip.setAttribute('aria-expanded', 'false');
+    tip.appendChild(icon('info'));
+    var tipText = el('p', 'pl-stop-note is-small', tip.getAttribute('data-tip'));
+    tipText.hidden = true;
+    tip.addEventListener('click', function () { tipText.hidden = !tipText.hidden; tip.setAttribute('aria-expanded', String(!tipText.hidden)); });
+    row.appendChild(tip);
     row.appendChild(durs);
     var count = (plan.stops[d] || []).length;
     var up = act('arrow-right', 'Mai devreme', function () {
@@ -1537,6 +1556,7 @@
     row.appendChild(up);
     row.appendChild(down);
     inn.appendChild(row);
+    inn.appendChild(tipText);
 
     var row2 = el('div', 'pl-acts');
     // A place out of the catalogue can be traded for another one nearby. A stop of your own is
@@ -1555,17 +1575,30 @@
         after();
       }));
     }
-    row2.appendChild(act('plus', 'Oprire după', function () { openComposer(d, r.pos + 1); }));
-    for (var k = 0; k < plan.days; k++) {
-      (function (k) {
-        if (k === d) return;
-        row2.appendChild(act('', 'În ziua ' + (k + 1), function () {
-          if (!relocate(d, r.pos, k, (plan.stops[k] || []).length)) return;
-          focusId = e.id;
-          announce(e.name + ' a trecut în ziua ' + (k + 1) + '.');
-          after();
-        }));
-      })(k);
+    if (plan.days > 1) {
+      var mv = el('label', 'pl-ab pl-move');
+      mv.appendChild(icon('calendar-blank'));
+      var ms = el('select');
+      ms.setAttribute('aria-label', 'Mută ' + e.name + ' în altă zi');
+      var m0 = el('option', '', 'Mută în ziua…');
+      m0.value = '';
+      ms.appendChild(m0);
+      for (var k = 0; k < plan.days; k++) {
+        if (k === d) continue;
+        var dk = dateOffset(k);
+        var mo = el('option', '', 'Ziua ' + (k + 1) + (dk ? ' · ' + dk.toLocaleDateString('ro-RO', { weekday: 'short', day: 'numeric', month: 'short' }) : ''));
+        mo.value = String(k);
+        ms.appendChild(mo);
+      }
+      ms.addEventListener('change', function () {
+        var to = parseInt(ms.value, 10);
+        if (isNaN(to) || !relocate(d, r.pos, to, (plan.stops[to] || []).length)) return;
+        focusId = e.id;
+        announce(e.name + ' a trecut în ziua ' + (to + 1) + '.');
+        after();
+      });
+      mv.appendChild(ms);
+      row2.appendChild(mv);
     }
     row2.appendChild(act('trash', 'Scoate', function () { remove(d, r.pos); }, 'is-danger'));
     if (e.href) {
@@ -1574,7 +1607,7 @@
       go.target = '_blank';
       go.rel = 'noopener';
       go.appendChild(icon(e.bookable || e.price > 0 ? 'ticket' : 'arrow-right'));
-      go.appendChild(el('span', '', e.bookable || e.price > 0 ? 'Vezi bilete' : 'Pagina locului'));
+      go.appendChild(el('span', '', e.bookable || e.price > 0 ? 'Vezi bilete' : 'Detalii'));
       row2.appendChild(go);
     }
     inn.appendChild(row2);
@@ -1585,9 +1618,28 @@
     li.appendChild(card);
     return li;
   }
+  var aboutCache = {};       // stop id -> its description; '' once we know there is none
+  function about(e) {
+    if (!e || e.own) return;
+    var show = function () {
+      [].forEach.call(ui.list.querySelectorAll('.pl-stop-note[data-about]'), function (p) {
+        if (p.dataset.about !== e.id) return;
+        p.textContent = aboutCache[e.id] || '';
+        p.hidden = !aboutCache[e.id];
+      });
+    };
+    if (aboutCache[e.id] !== undefined) { show(); return; }
+    aboutCache[e.id] = '';
+    fetch('/api/place.php?id=' + encodeURIComponent(e.id) + (e.kind === 'location' ? '&kind=location' : ''), { credentials: 'omit' })
+      .then(function (x) { return x.json(); })
+      .then(function (j) { aboutCache[e.id] = (j && j.ok && j.text) ? String(j.text) : ''; show(); })
+      .catch(function () {});
+  }
+
   /** Opens one card and closes the rest, without redrawing the list; the map goes to the one that opened. */
   function toggleStop(id) {
     openStop = openStop === id ? null : id;
+    if (openStop) about(entry(openStop));
     var hit = null;
     [].forEach.call(ui.list.querySelectorAll('.pl-stop'), function (li) {
       var on = li.dataset.id === openStop;
