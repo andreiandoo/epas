@@ -594,6 +594,12 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .plx-stay-out:hover{box-shadow:inset 0 0 0 1px var(--action)}
 .plx-stay-out .ic{width:15px;height:15px}
 .plx-stay-body .pl-stay-foot{display:none}
+.plx-stay-head{justify-content:flex-start}
+.plx-stay-out{margin-left:auto}
+.plx-stay-prov{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-pill);background:var(--surface-2)}
+.plx-stay-prov button{min-height:34px;padding:0 12px;border:0;border-radius:var(--r-pill);background:none;color:var(--muted);font:700 .8125rem/1 var(--font);white-space:nowrap;cursor:pointer}
+.plx-stay-prov button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(14,72,55,.2);color:var(--ink)}
+@media (max-width:520px){.plx-stay-x{padding:0 12px 0 10px}.plx-stay-out{margin-left:0}}
 
 /* ---------- print: the plan, nothing else ---------- */
 @media print{
