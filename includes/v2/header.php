@@ -132,14 +132,14 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       <aside class="mega-aside" aria-label="Idei rapide">
         <p class="mega-label">Idei rapide</p>
         <ul class="ideas">
-          <?php foreach ($v2Ideas as [$icon, $text, $href]): ?>
-          <li><a class="idea" href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li>
+          <?php foreach ($v2Ideas as [$v2hIcon, $v2hText, $v2hHref]): ?>
+          <li><a class="idea" href="<?= $v2hHref ?>"><?= v2_ic($v2hIcon) ?><?= v2_e($v2hText) ?></a></li>
           <?php endforeach; ?>
         </ul>
         <p class="mega-label">Atracții</p>
         <ul class="ideas">
-          <?php foreach ($v2AttrLinks as [$icon, $text, $href]): ?>
-          <li><a class="idea" href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li>
+          <?php foreach ($v2AttrLinks as [$v2hIcon, $v2hText, $v2hHref]): ?>
+          <li><a class="idea" href="<?= $v2hHref ?>"><?= v2_ic($v2hIcon) ?><?= v2_e($v2hText) ?></a></li>
           <?php endforeach; ?>
         </ul>
       </aside>
@@ -154,10 +154,10 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
           <a class="mega-all" href="/atractii">Toate atracțiile<?= v2_ic('arrow-right') ?></a>
         </div>
         <ul class="mp-tools">
-          <?php foreach ($v2PlanTools as [$icon, $title, $href, $text]): ?>
-          <li><a class="mp-tool" href="<?= $href ?>">
-            <span class="mp-ic"><?= v2_ic($icon) ?></span>
-            <span class="mp-t"><b><?= v2_e($title) ?></b><small><?= v2_e($text) ?></small></span>
+          <?php foreach ($v2PlanTools as [$v2hIcon, $v2hTitle, $v2hHref, $v2hText]): ?>
+          <li><a class="mp-tool" href="<?= $v2hHref ?>">
+            <span class="mp-ic"><?= v2_ic($v2hIcon) ?></span>
+            <span class="mp-t"><b><?= v2_e($v2hTitle) ?></b><small><?= v2_e($v2hText) ?></small></span>
             <?= v2_ic('arrow-right') ?>
           </a></li>
           <?php endforeach; ?>
@@ -214,8 +214,8 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
       <aside class="mega-aside" aria-label="Cum funcționează o locație">
         <p class="mega-label">Ce iei online</p>
         <ul class="mloc-how">
-          <?php foreach ($v2LocHow as [$icon, $title, $text]): ?>
-          <li><?= v2_ic($icon) ?><span><b><?= v2_e($title) ?></b><small><?= v2_e($text) ?></small></span></li>
+          <?php foreach ($v2LocHow as [$v2hIcon, $v2hTitle, $v2hText]): ?>
+          <li><?= v2_ic($v2hIcon) ?><span><b><?= v2_e($v2hTitle) ?></b><small><?= v2_e($v2hText) ?></small></span></li>
           <?php endforeach; ?>
         </ul>
         <a class="mloc-op" href="/parteneri">
@@ -252,8 +252,8 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
         <div class="ma-ideas">
           <p class="mega-label">Alege după situație</p>
           <ul class="ideas ideas-row">
-            <?php foreach ($v2Ideas as [$icon, $text, $href]): ?>
-            <li><a class="idea" href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li>
+            <?php foreach ($v2Ideas as [$v2hIcon, $v2hText, $v2hHref]): ?>
+            <li><a class="idea" href="<?= $v2hHref ?>"><?= v2_ic($v2hIcon) ?><?= v2_e($v2hText) ?></a></li>
             <?php endforeach; ?>
           </ul>
         </div>
@@ -329,7 +329,7 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
         <div class="mm-block" style="--i:8">
           <p class="mm-k">Idei rapide</p>
           <ul class="mm-chips">
-            <?php foreach ($v2Ideas as [$icon, $text, $href]): ?><li><a href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li><?php endforeach; ?>
+            <?php foreach ($v2Ideas as [$v2hIcon, $v2hText, $v2hHref]): ?><li><a href="<?= $v2hHref ?>"><?= v2_ic($v2hIcon) ?><?= v2_e($v2hText) ?></a></li><?php endforeach; ?>
           </ul>
         </div>
 
@@ -379,7 +379,7 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
         </div>
         <?php endforeach; ?>
         <p class="mm-k">Atracții</p>
-        <ul class="mm-chips"><?php foreach ($v2AttrLinks as [$icon, $text, $href]): ?><li><a href="<?= $href ?>"><?= v2_ic($icon) ?><?= v2_e($text) ?></a></li><?php endforeach; ?></ul>
+        <ul class="mm-chips"><?php foreach ($v2AttrLinks as [$v2hIcon, $v2hText, $v2hHref]): ?><li><a href="<?= $v2hHref ?>"><?= v2_ic($v2hIcon) ?><?= v2_e($v2hText) ?></a></li><?php endforeach; ?></ul>
       </section>
 
       <?php if ($v2Loc['cities']): ?>
@@ -399,15 +399,15 @@ $v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2N
         </div>
         <?php endforeach; ?>
         <p class="mm-k">Ce iei online</p>
-        <ul class="mm-chips"><?php foreach ($v2LocHow as [$icon, $title, $text]): ?><li><a href="/locatii"><?= v2_ic($icon) ?><?= v2_e($title) ?></a></li><?php endforeach; ?></ul>
+        <ul class="mm-chips"><?php foreach ($v2LocHow as [$v2hIcon, $v2hTitle, $v2hText]): ?><li><a href="/locatii"><?= v2_ic($v2hIcon) ?><?= v2_e($v2hTitle) ?></a></li><?php endforeach; ?></ul>
       </section>
       <?php endif; ?>
 
       <section class="mm-panel" id="mm-plan" aria-labelledby="mm-plan-h" hidden>
         <div class="mm-phead"><button class="mm-back" type="button" data-mm-back><?= v2_ic('arrow-left') ?><span class="sr">Înapoi la meniu</span></button><h2 class="mm-ph" id="mm-plan-h">Planifică</h2><a class="mm-plink" href="/atractii">Atracții</a></div>
         <ul class="mm-main">
-          <?php foreach ($v2PlanTools as [$icon, $title, $href, $text, $short]): ?>
-          <li><a class="mm-row" href="<?= $href ?>"><span class="mm-ic"><?= v2_ic($icon) ?></span><span class="mm-t"><b><?= v2_e($title) ?></b><small><?= v2_e($short) ?></small></span><?= v2_ic('arrow-right') ?></a></li>
+          <?php foreach ($v2PlanTools as [$v2hIcon, $v2hTitle, $v2hHref, $v2hText, $v2hShort]): ?>
+          <li><a class="mm-row" href="<?= $v2hHref ?>"><span class="mm-ic"><?= v2_ic($v2hIcon) ?></span><span class="mm-t"><b><?= v2_e($v2hTitle) ?></b><small><?= v2_e($v2hShort) ?></small></span><?= v2_ic('arrow-right') ?></a></li>
           <?php endforeach; ?>
         </ul>
         <p class="mm-k">Cum te ajută</p>
