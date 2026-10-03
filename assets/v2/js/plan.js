@@ -757,11 +757,12 @@
     ];
     if (p.children > 0) q.push('children=' + p.children);
     q.push('rooms=' + n.rooms);
-    if (n.maxprice > 0) q.push('maxprice=' + n.maxprice);
+    if (n.maxprice > 0) { q.push('max=' + n.maxprice); q.push('priceper=nightly'); q.push('maxprice=' + n.maxprice); }
     q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
     q.push('maincolor=' + encodeURIComponent(STAY.maincolor || '1E5B48'));
     q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
     q.push('zoom=' + (STAY.zoom || 12));
+    q.push('ljs=ro');
     return (STAY.embed || 'https://www.stay22.com/embed/gm') + '?' + q.join('&');
   }
   /** The same night as a plain page on Stay22, for when the iframe does not come up. */
@@ -778,7 +779,7 @@
     ];
     if (p.children > 0) q.push('children=' + p.children);
     q.push('rooms=' + n.rooms);
-    if (n.maxprice > 0) q.push('maxprice=' + n.maxprice);
+    if (n.maxprice > 0) { q.push('max=' + n.maxprice); q.push('priceper=nightly'); q.push('maxprice=' + n.maxprice); }
     q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
     return (STAY.link || 'https://www.stay22.com/allez/booking') + '?' + q.join('&');
   }
@@ -2515,7 +2516,6 @@
     } else {
       setCls(box, 'is-far', n.far);
       box.appendChild(nightLine(n));
-      box.appendChild(nightBudget(i, n));
     }
     var pick = nightPicker(i);
     box.appendChild(nightActs(i, n, pick));
@@ -2578,6 +2578,7 @@
     }));
 
     if (n) {
+      wrap.appendChild(nightBudget(i, n));
       var rl = el('label', 'pl-night-rooms');
       rl.appendChild(el('span', '', 'Camere'));
       var sel = el('select');
@@ -2598,25 +2599,29 @@
     return wrap;
   }
 
-  /** How much the night may cost at most. Stay22 filters on it, so "no limit" means "show me everything". */
+  /** How much the night may cost at most. The accommodation list filters on it; "Orice preț" shows everything. */
   function nightBudget(i, n) {
-    var row = el('div', 'pl-night-bud');
-    row.setAttribute('role', 'group');
-    row.setAttribute('aria-label', 'Cel mult pe noapte');
+    var lab = el('label', 'pl-night-rooms');
+    lab.appendChild(el('span', '', 'Buget'));
+    var sel = el('select');
+    var any = el('option', '', 'Orice preț');
+    any.value = '0';
+    if (!n.maxprice) any.selected = true;
+    sel.appendChild(any);
     var budgets = CFG.budgets && CFG.budgets.length ? CFG.budgets.slice() : [200, 300, 500, 700, 1000];
     if (n.maxprice > 0 && budgets.indexOf(n.maxprice) === -1) budgets.push(n.maxprice);
-    budgets.sort(function (x, y) { return x - y; });
-    [0].concat(budgets).forEach(function (v) {
-      var b = el('button', '', v ? 'până în ' + nf(v) + ' lei' : 'Fără limită');
-      b.type = 'button';
-      b.setAttribute('aria-pressed', String((n.maxprice || 0) === v));
-      b.addEventListener('click', function () {
-        setNight(i, { maxprice: v });
-        afterNight(i);
-      });
-      row.appendChild(b);
+    budgets.sort(function (x, y) { return x - y; }).forEach(function (v) {
+      var o = el('option', '', 'până în ' + nf(v) + ' lei');
+      o.value = String(v);
+      if (v === n.maxprice) o.selected = true;
+      sel.appendChild(o);
     });
-    return row;
+    sel.addEventListener('change', function () {
+      setNight(i, { maxprice: clampInt(sel.value, 0, 100000, 0) });
+      afterNight(i);
+    });
+    lab.appendChild(sel);
+    return lab;
   }
 
   /** The same city list the start form searches, so "another town" means the same thing twice. */
@@ -2793,7 +2798,7 @@
     box.appendChild(foot);
 
     box.appendChild(el('p', 'pl-stay-note', STAY.note ||
-      'Cazările vin de la Stay22. Dacă rezervi, primim un comision — prețul tău nu crește.'));
+      'Opțiunile de cazare vin de la Booking, Expedia, Vrbo ș.a. Dacă alegi o cazare din cele propuse, website-ul va înregistra un comision.'));
     host.appendChild(box);
   }
   function nightRange(i) {

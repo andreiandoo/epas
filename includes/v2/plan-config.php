@@ -174,5 +174,5 @@ const PLAN_STAY22 = [
     'maincolor'  => '1E5B48',
     'markertype' => 'circle',
     'zoom'       => 12,
-    'note'       => 'Cazările vin de la Stay22, care compară Booking, Airbnb și altele. Dacă rezervi, primim un comision — prețul tău nu crește.',
+    'note'       => 'Opțiunile de cazare vin de la Booking, Expedia, Vrbo ș.a. Dacă alegi o cazare din cele propuse, website-ul va înregistra un comision.',
 ];

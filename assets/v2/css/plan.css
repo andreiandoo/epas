@@ -577,6 +577,10 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .pl-night-bud button[aria-pressed="true"]{background:var(--on-deep);box-shadow:none;color:var(--deep)}
 @media (hover:hover) and (pointer:fine){.pl-night-bud{flex-wrap:wrap;overflow:visible}}
 
+.pl-night-rooms{gap:8px;font-size:.8125rem}
+.pl-night-rooms select{min-width:0;height:36px;padding:0 8px;border-radius:10px;font-size:.8125rem}
+.pl-night-acts .pl-night-rooms:first-of-type{margin-left:0}
+
 /* where the list ends: the same actions as behind the three dots */
 .plx-end-h{margin:0;font-size:1.375rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
 .plx-end-acts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
