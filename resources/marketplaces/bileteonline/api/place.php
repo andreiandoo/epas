@@ -93,5 +93,10 @@ if ($bookable) {
     }
 }
 
+// A label is not a description: "biserica din Brașov" says nothing the card does not already show.
+if (mb_strlen($text) < 40) {
+    $text = '';
+}
+
 header('Cache-Control: public, max-age=3600');
 placeOut(['ok' => true, 'text' => placeExcerpt($text)]);
