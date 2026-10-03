@@ -98,8 +98,12 @@ $gdRenderShortcodes = function (string $html) use ($gdShortcode): string {
     if (stripos($html, '[activities') === false) {
         return $html;
     }
-    // Usually wrapped in <p>…</p> by the editor: the cards replace the paragraph, then any bare shortcode.
-    $html = preg_replace_callback('#<p>\s*(\[activities\b[^\]]*\])\s*</p>#i', fn ($m) => $gdShortcode($m[1]), $html);
+    // Usually wrapped in <p>…</p> by the editor: the cards replace the paragraph, then any bare shortcode. A block
+    // with nothing to show takes along the line that announces it (the paragraph before it, when it ends in a colon).
+    $html = preg_replace_callback('#(<p>(?:(?!</p>).)*:\s*</p>\s*)?<p>\s*(\[activities\b[^\]]*\])\s*</p>#is', function ($m) use ($gdShortcode) {
+        $cards = $gdShortcode($m[2]);
+        return $cards === '' ? '' : $m[1] . $cards;
+    }, $html);
     return preg_replace_callback('#\[activities\b[^\]]*\]#i', fn ($m) => $gdShortcode($m[0]), $html);
 };
 
