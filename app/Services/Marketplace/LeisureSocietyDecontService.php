@@ -209,6 +209,13 @@ class LeisureSocietyDecontService
             'account_holder' => $bank->account_holder,
         ] : null;
 
+        // Zero decont (POS-only society): nothing to transfer or confirm, so it
+        // is born 'completed' instead of waiting for a manual "Finalizează".
+        // Set directly rather than via complete(): that would log a 0-lei
+        // ledger transaction and email the organizer a "plată finalizată"
+        // notice for a payment that never happens.
+        $isZeroDecont = empty($ticketBreakdown) && $decontAmount <= 0.004;
+
         $payout = MarketplacePayout::create([
             'marketplace_client_id' => $marketplaceClientId,
             'marketplace_organizer_id' => $organizer->id,
@@ -224,10 +231,12 @@ class LeisureSocietyDecontService
             'refund_amount' => 0,
             'fees_amount' => 0,
             'adjustments_amount' => 0,
-            'status' => 'approved',
+            'status' => $isZeroDecont ? 'completed' : 'approved',
             'source' => 'manual',
             'approved_by' => $approvedById,
             'approved_at' => now(),
+            'completed_at' => $isZeroDecont ? now() : null,
+            'payment_notes' => $isZeroDecont ? 'Decont pe 0 — fără sume de transferat, finalizat automat.' : null,
             'payout_method' => $payoutMethod,
             'ticket_breakdown' => !empty($ticketBreakdown) ? $ticketBreakdown : null,
             'commission_mode' => $commissionMode,
