@@ -33,7 +33,8 @@ use Illuminate\Support\Facades\Storage;
 class LeisureSocietyDecontService
 {
     /**
-     * @throws \RuntimeException on guard failures (no organizer / duplicate / empty)
+     * @throws \RuntimeException on guard failures (no organizer / duplicate / no
+     *                           online AND no POS sales for the society)
      */
     public function generate(
         Event $event,
@@ -144,7 +145,28 @@ class LeisureSocietyDecontService
         }
 
         if (empty($ticketBreakdown)) {
-            throw new \RuntimeException('Nu există bilete de decontat pentru această societate în perioada selectată.');
+            // No online sales for this society in the period. If it still has
+            // POS sales, a ZERO decont is generated: nothing to transfer, but
+            // the payout row is what carries the "Factură organizator" (POS
+            // commission, computed live per period + society on the payout
+            // page), so the operator can close the period. Same empty-snapshot
+            // shape as a fully-refunded decont. Without POS sales either,
+            // there is genuinely nothing to settle → unchanged guard below.
+            $posBreakdown = $svc->build(
+                $event,
+                $from->copy()->startOfDay(),
+                $to->copy()->endOfDay(),
+                onlyPos: true,
+                dateColumn: 'paid_at',
+            );
+            foreach (($posBreakdown['per_type'] ?? []) as $row) {
+                if ($belongsToIssuer($row) && (int) ($row['qty'] ?? 0) > 0) {
+                    $modes[] = (string) ($row['commission_mode'] ?? 'included');
+                }
+            }
+            if (empty($modes)) {
+                throw new \RuntimeException('Nu există bilete de decontat pentru această societate în perioada selectată.');
+            }
         }
 
         $finalGross = round($finalGross, 2);

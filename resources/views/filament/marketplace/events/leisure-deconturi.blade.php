@@ -143,6 +143,9 @@
                                     . "\n\nVânzări online (brut, = suma decont): " . $fmt($sGross) . ' ' . $cur . '  ·  ' . $sTickets . ' bilete'
                                     . "\nComision inclus (de facturat separat către societate): " . $fmt($sComm) . ' ' . $cur
                                     . "\nNet efectiv (după comision): " . $fmt($sNet) . ' ' . $cur
+                                    . ($sTickets > 0 && $sGross <= 0
+                                        ? "\n\nFără vânzări online în perioadă — se generează un decont pe 0 (pentru factura de comision POS)."
+                                        : '')
                                     . "\n\nSe creează decontul + documentul PDF pe această societate.";
                             @endphp
                             <button type="button"
