@@ -2,7 +2,7 @@
 :root{--cnav-h:60px}
 
 /* anchors land below the fixed header and the sticky section nav */
-#activitati,#interese,#attractions,#guides,#nearby,#ghid-local,#getyourguide{scroll-margin-top:calc(var(--hdr-h) + var(--cnav-h))}
+#things-to-do,#interests,#attractions,#guides,#nearby,#local-guide,#getyourguide{scroll-margin-top:calc(var(--hdr-h) + var(--cnav-h))}
 html.lb-lock,html.sheet-lock{overflow:hidden}
 .sec-sub{margin:var(--space-3) 0 0;max-width:56ch;font-size:var(--text-lead);line-height:1.45;color:var(--muted)}
 

@@ -54,7 +54,7 @@ function v2_promoted_card(array $i): ?array
         'title' => $title,
         'href' => $href,
         'image' => v2_media_url($i['image'] ?? null),
-        'cat' => navFlatName($i['category']['name'] ?? '') ?: ($isLocation ? 'Locație' : 'Experiență'),
+        'cat' => navFlatName($i['category']['name'] ?? '') ?: ($isLocation ? 'Venue' : 'Experience'),
         'place' => $locName !== '' && $cityName !== '' ? $locName . ', ' . $cityName : ($locName ?: $cityName),
         'city' => $cityName,
         'subtitle' => mb_substr(trim(strip_tags((string) navFlatName($i['subtitle'] ?? ''))), 0, 140),
@@ -84,20 +84,20 @@ function v2_promoted_section(array $items, array $o): void
         </div>
         <?php if (count($items) > 3): ?>
         <div class="rail-btns" data-for="<?= $id ?>-rail">
-          <button class="rail-btn" type="button" data-dir="-1" aria-label="Anterioarele"><?= v2_ic('arrow-left') ?></button>
-          <button class="rail-btn" type="button" data-dir="1" aria-label="Următoarele"><?= v2_ic('arrow-right') ?></button>
+          <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous"><?= v2_ic('arrow-left') ?></button>
+          <button class="rail-btn" type="button" data-dir="1" aria-label="Next"><?= v2_ic('arrow-right') ?></button>
         </div>
         <?php endif; ?>
       </div>
       <ul class="rail promo-rail" id="<?= $id ?>-rail" data-drag>
         <?php foreach ($items as $n => $a): ?>
         <li class="xp promo-xp"><a href="<?= v2_e($a['href']) ?>">
-          <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $n) ?><span class="promo-tag">Promovat</span></span>
+          <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $n) ?><span class="promo-tag">Promoted</span></span>
           <span class="xp-body">
             <span class="xp-cat"><?= v2_e($a['cat']) ?></span>
             <span class="xp-title" title="<?= v2_e($a['title']) ?>"><?= v2_e($a['title']) ?></span>
             <span class="xp-meta"><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?><?php if ($a['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['dur']) ?></span><?php endif; ?></span>
-            <span class="xp-foot"><span class="xp-avail"><?= v2_ic('arrow-right') ?><span class="xp-avail-t"><?= $a['kind'] === 'location' ? 'Vezi locația' : 'Vezi experiența' ?></span></span><?php if ($a['price']): ?><span class="xp-price">de la<b><?= v2_thousands($a['price']) ?> lei</b></span><?php endif; ?></span>
+            <span class="xp-foot"><span class="xp-avail"><?= v2_ic('arrow-right') ?><span class="xp-avail-t"><?= $a['kind'] === 'location' ? 'See the venue' : 'See the experience' ?></span></span><?php if ($a['price']): ?><span class="xp-price">de la<b><?= v2_thousands($a['price']) ?> lei</b></span><?php endif; ?></span>
           </span>
         </a></li>
         <?php endforeach; ?>
@@ -110,5 +110,5 @@ function v2_promoted_section(array $items, array $o): void
 /** The "Promovat" pill for cards in the regular lists (grids of activities or locations). */
 function v2_promoted_tag(): string
 {
-    return '<span class="promo-tag">Promovat</span>';
+    return '<span class="promo-tag">Promoted</span>';
 }
