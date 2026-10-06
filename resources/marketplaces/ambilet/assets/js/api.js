@@ -964,6 +964,65 @@ const AmbiletAPI = {
     },
 
     /**
+     * GET every page of the organizer's events list.
+     *
+     * /organizer/events is paginated (20 by default, 50 max through the
+     * proxy), so a single call silently drops events for bigger organizers.
+     * Returns the same shape as get('/organizer/events') with all pages
+     * merged into `data`. Results are shared for a short while so the topbar
+     * and the page don't each walk the pages.
+     */
+    async getAllOrganizerEvents(params = {}) {
+        const PER_PAGE = 50;
+        const MAX_PAGES = 40;
+        const filters = { ...params };
+        delete filters.page;
+        delete filters.per_page;
+        delete filters.limit;
+
+        const key = JSON.stringify(filters);
+        this._allEventsCache = this._allEventsCache || {};
+        const cached = this._allEventsCache[key];
+        if (cached && (Date.now() - cached.at) < 30000) {
+            const res = await cached.promise;
+            return { ...res, data: res.data.slice() };
+        }
+
+        const promise = (async () => {
+            const first = await this.get('/organizer/events', { ...filters, per_page: PER_PAGE, page: 1 });
+            const firstItems = Array.isArray(first?.data) ? first.data : [];
+            if (!first || !first.success) return { ...(first || {}), data: firstItems, complete: false };
+
+            let data = firstItems;
+            let complete = true;
+            const lastPage = Math.min(parseInt(first.meta?.last_page, 10) || 1, MAX_PAGES);
+            if (lastPage > 1) {
+                const pages = [];
+                for (let page = 2; page <= lastPage; page++) pages.push(page);
+                const results = await Promise.all(pages.map(page =>
+                    this.get('/organizer/events', { ...filters, per_page: PER_PAGE, page }).catch(() => null)
+                ));
+                results.forEach(res => {
+                    if (res && res.success && Array.isArray(res.data)) data = data.concat(res.data);
+                    else complete = false;
+                });
+            }
+            if (!complete) console.warn('[AmbiletAPI] Events list is incomplete: a page failed to load');
+            return { ...first, data, complete };
+        })();
+
+        this._allEventsCache[key] = { at: Date.now(), promise };
+        try {
+            const res = await promise;
+            if (!res.complete) delete this._allEventsCache[key];
+            return { ...res, data: res.data.slice() };
+        } catch (e) {
+            delete this._allEventsCache[key];
+            throw e;
+        }
+    },
+
+    /**
      * POST request
      */
     async post(endpoint, data = {}) {

@@ -1078,7 +1078,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     async function loadEvents() {
         try {
-            const res = await AmbiletAPI.get('/organizer/events');
+            const res = await AmbiletAPI.getAllOrganizerEvents();
             const all = res.data || [];
             leisureEvents = all.filter((e) => (e.display_template || 'standard') === 'leisure_venue');
 

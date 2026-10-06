@@ -497,7 +497,7 @@ const TeamManager = {
 
         // Detect daca organizatorul are evenimente leisure → arata leisure_role dropdown
         try {
-            const ev = await AmbiletAPI.get('/organizer/events');
+            const ev = await AmbiletAPI.getAllOrganizerEvents();
             const events = ev.data || ev || [];
             const hasLeisure = (Array.isArray(events) ? events : []).some(e => (e.display_template || 'standard') === 'leisure_venue');
             if (hasLeisure) {

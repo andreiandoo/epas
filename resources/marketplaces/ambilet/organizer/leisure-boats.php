@@ -82,7 +82,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     async function loadEvent() {
-        const res = await AmbiletAPI.get('/organizer/events');
+        const res = await AmbiletAPI.getAllOrganizerEvents();
         const events = res.data || [];
         const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
         if (leisure.length === 0) throw new Error('Nu există un eveniment de tip Locație de agrement.');

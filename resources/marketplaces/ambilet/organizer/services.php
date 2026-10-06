@@ -1162,7 +1162,7 @@ function setupDateValidation() {
 
 async function loadEvents() {
     try {
-        const response = await AmbiletAPI.get('/organizer/events');
+        const response = await AmbiletAPI.getAllOrganizerEvents();
         if (response.success && response.data) {
             const allEvents = Array.isArray(response.data) ? response.data : [];
             events = allEvents.filter(e => e.is_editable !== false && e.is_past !== true && !e.is_cancelled);

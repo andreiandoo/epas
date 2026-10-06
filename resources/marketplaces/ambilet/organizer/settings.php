@@ -954,7 +954,7 @@ async function openShareLinkModal() {
     document.getElementById('share-events-empty').classList.add('hidden');
 
     try {
-        const response = await AmbiletAPI.get('/organizer/events', { per_page: 50 });
+        const response = await AmbiletAPI.getAllOrganizerEvents();
         if (response.success) {
             const allEvents = response.data?.events || response.data || [];
             organizerEventsForShare = Array.isArray(allEvents) ? allEvents.filter(ev => {

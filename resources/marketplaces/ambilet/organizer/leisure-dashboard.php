@@ -163,7 +163,7 @@ const LeisureDash = {
         let retries = 0;
         while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
         try {
-            const res = await AmbiletAPI.get('/organizer/events');
+            const res = await AmbiletAPI.getAllOrganizerEvents();
             const events = res.data || [];
             const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
             if (leisure.length) {

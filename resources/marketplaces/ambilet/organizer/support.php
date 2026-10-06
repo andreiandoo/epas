@@ -373,7 +373,7 @@ async function renderConditionalField(field) {
     if (meta.type === 'select-event') {
         if (!eventsCache) {
             try {
-                const res = await AmbiletAPI.organizer.getEvents({ per_page: 50 });
+                const res = await AmbiletAPI.getAllOrganizerEvents();
                 eventsCache = res?.data || res || [];
             } catch (_) { eventsCache = []; }
         }

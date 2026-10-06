@@ -150,8 +150,18 @@ function isEventLive(ev) {
 
 async function loadEvents() {
     try {
-        const response = await AmbiletAPI.get('/organizer/events');
+        const response = await AmbiletAPI.getAllOrganizerEvents();
         const events = response.data || [];
+
+        // Deep link (?event=ID) to an event missing from the list: fetch it on its own
+        const urlEventId = new URLSearchParams(window.location.search).get('event');
+        if (response.success && urlEventId && /^\d+$/.test(urlEventId) && !events.some(e => String(e.id) === urlEventId)) {
+            try {
+                const single = await AmbiletAPI.get('/organizer/events/' + urlEventId);
+                const ev = single.data?.event || single.data;
+                if (single.success && ev && ev.id) events.push(ev);
+            } catch (e) { /* not accessible — fall back to the first event */ }
+        }
 
         if (response.success && events.length > 0) {
             const sortedEvents = events.sort((a, b) => {
@@ -172,7 +182,6 @@ async function loadEvents() {
             });
 
             if (eventsList.length > 0) {
-                const urlEventId = new URLSearchParams(window.location.search).get('event');
                 const matched = urlEventId ? eventsList.find(e => String(e.id) === String(urlEventId)) : null;
                 selectEvent(matched ? matched.id : eventsList[0].id);
             }

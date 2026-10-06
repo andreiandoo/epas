@@ -167,7 +167,7 @@ function isEventLive(ev) {
 
 async function loadEvents() {
     try {
-        const response = await AmbiletAPI.get('/organizer/events', { per_page: 100 });
+        const response = await AmbiletAPI.getAllOrganizerEvents();
         if (response.success) {
             eventsData = response.data.events || response.data || [];
             eventsData.sort((a, b) => {
