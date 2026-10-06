@@ -104,7 +104,6 @@
 .v-types a[aria-current]{background:var(--green);color:var(--on-deep);box-shadow:none}
 @media (max-width:719px){.v-types{flex-wrap:nowrap;overflow-x:auto;margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter);scrollbar-width:none}.v-types a{flex:none}}
 .v-phead-list .v-plink .ic{width:14px;height:14px}
-.v-agrid{grid-template-columns:repeat(6,minmax(0,1fr))}
 .v-acredit{margin-top:28px !important;font-size:.8125rem;color:var(--muted)}
 
 /* /cities: every country with its largest cities */
