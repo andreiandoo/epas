@@ -3194,6 +3194,8 @@ Route::prefix('marketplace-client/locations')->middleware(['throttle:120,1', 'ma
         ->name('api.marketplace-client.locations.cities');
     Route::get('/cities/{identifier}', [MarketplaceLocationsController::class, 'city'])
         ->name('api.marketplace-client.locations.city');
+    Route::get('/countries', [MarketplaceLocationsController::class, 'countries'])
+        ->name('api.marketplace-client.locations.countries');
     Route::get('/regions', [MarketplaceLocationsController::class, 'regions'])
         ->name('api.marketplace-client.locations.regions');
     Route::get('/regions/{identifier}', [MarketplaceLocationsController::class, 'region'])

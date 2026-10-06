@@ -269,7 +269,7 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
       <?php foreach ($V2['categories'] as $i => $c): ?><li><a href="<?= v2_e($c['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($c['name']) ?><?php if ($c['count']): ?><span><?= (int) $c['count'] ?></span><?php endif; ?></a></li><?php endforeach; ?>
     </ul>
     <ul class="v-toplist" id="tp-2" role="tabpanel" aria-labelledby="tt-2" hidden>
-      <?php foreach ($V2['regions'] as $i => $r): ?><li><a href="/<?= v2_e($r['slug']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($r['name']) ?><span><?= v2_e(v2_num($r['citiesCount'], 'city', 'cities')) ?></span></a></li><?php endforeach; ?>
+      <?php foreach (($V2['countriesAll'] ?? $V2['regions']) as $i => $r): ?><li><a href="/<?= v2_e($r['slug']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($r['name']) ?><span><?= v2_e(v2_num($r['citiesCount'], 'city', 'cities')) ?></span></a></li><?php endforeach; ?>
     </ul>
   </div>
 </section>

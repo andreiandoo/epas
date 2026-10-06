@@ -338,6 +338,65 @@ class LocationsController extends BaseController
     }
 
     /**
+     * Countries that have visible cities, each with its largest cities.
+     *
+     * Made for marketplaces that span several countries: the menu needs "country -> top cities" without loading
+     * every region and city (the regions endpoint does that, which is fine for one country and far too much for a
+     * continent). Counts come from one grouped query; the top cities are the featured ones first, then by sort_order.
+     *
+     * Query: top = cities per country (default 8, max 30).
+     */
+    public function countries(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $lang = $client->language ?? $client->locale ?? 'ro';
+        $top = max(1, min((int) $request->input('top', 8), 30));
+
+        $counts = MarketplaceCity::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->whereNotNull('country')
+            ->selectRaw('country, COUNT(*) as cities_count')
+            ->groupBy('country')
+            ->pluck('cities_count', 'country');
+
+        $geo = DB::table('geo_countries')->whereIn('iso2', $counts->keys())->get()->keyBy('iso2');
+
+        $result = [];
+        foreach ($counts as $code => $citiesCount) {
+            $country = $geo[$code] ?? null;
+            $name = $country->name_en ?? $country->name_native ?? $code;
+
+            $topCities = MarketplaceCity::where('marketplace_client_id', $client->id)
+                ->where('is_visible', true)
+                ->where('country', $code)
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->limit($top)
+                ->get()
+                ->map(fn ($city) => [
+                    'id' => $city->id,
+                    'name' => $city->name[$lang] ?? array_values((array) $city->name)[0] ?? $city->slug,
+                    'slug' => $city->slug,
+                    'image' => $city->image_full_url,
+                    'population' => $city->population,
+                    'is_capital' => (bool) $city->is_capital,
+                ]);
+
+            $result[] = [
+                'code' => $code,
+                'name' => $name,
+                'slug' => \Illuminate\Support\Str::slug($name),
+                'cities_count' => (int) $citiesCount,
+                'sort_order' => (int) ($country->sort_order ?? 9999),
+                'top_cities' => $topCities,
+            ];
+        }
+        usort($result, fn ($a, $b) => [$a['sort_order'], $a['name']] <=> [$b['sort_order'], $b['name']]);
+
+        return $this->success(['countries' => $result]);
+    }
+
+    /**
      * Get all regions with top cities
      */
     public function regions(Request $request): JsonResponse
@@ -424,6 +483,10 @@ class LocationsController extends BaseController
             });
         }
 
+        // an exact slug wins over a slug that merely ends with the same word ("bath" vs "great-bath")
+        if (! is_numeric($identifier)) {
+            $query->orderByRaw('CASE WHEN slug = ? THEN 0 ELSE 1 END', [$identifier]);
+        }
         $city = $query->with(['region:id,name,slug', 'county:id,name,code'])->first();
 
         if (!$city) {

@@ -7,7 +7,8 @@
  * Requires includes/config.php, api.php, nav-helpers.php and v2/helpers.php. Sets $V2NAV.
  */
 
-const V2_REGIONS = ['Transilvania', 'Muntenia', 'Moldova', 'Oltenia', 'Dobrogea', 'Crișana', 'Banat', 'Maramureș'];
+// Kept empty for the pages copied from bilete.online that still sort by Romanian regions (cities list).
+const V2_REGIONS = [];
 
 // WebP copies (320 and 640 px) of the platform's category images: the originals are 700-800 KB PNGs each.
 // A category added later falls back to its API image until it gets a copy here.
@@ -47,10 +48,8 @@ const V2_BLOG_CATEGORIES = [
 $v2NavR = api_cached_many([
     'cats' => ['key' => 'v2_categories_all', 'endpoint' => '/events/categories', 'params' => ['all' => 1], 'ttl' => 900],
     'cities' => ['key' => 'v2_cities_featured', 'endpoint' => '/locations/cities/featured', 'params' => [], 'ttl' => 1800],
-    'regions' => ['key' => 'v2_regions', 'endpoint' => '/locations/regions', 'params' => [], 'ttl' => 3600],
-    // every visible city (the menu counts them per region): /orase lists them, the newsletter city field suggests them
-    'allCities1' => ['key' => 'v2_cities_all_1', 'endpoint' => '/locations/cities', 'params' => ['per_page' => 200, 'page' => 1, 'sort' => 'name'], 'ttl' => 21600],
-    'allCities2' => ['key' => 'v2_cities_all_2', 'endpoint' => '/locations/cities', 'params' => ['per_page' => 200, 'page' => 2, 'sort' => 'name'], 'ttl' => 21600],
+    // countries with their largest cities: the "Explore" menu, the footer, the homepage lists and the search suggestions
+    'countries' => ['key' => 'v2_countries', 'endpoint' => '/locations/countries', 'params' => ['top' => 12], 'ttl' => 3600],
     'blog' => ['key' => 'v2_blog', 'endpoint' => '/blog-articles', 'params' => ['per_page' => 6, 'status' => 'published'], 'ttl' => 900],
     // the published locations (activities module): the header menu groups them by city, /locatii lists them all
     'locations' => ['key' => 'v2_am_locations_nav', 'endpoint' => '/activities-module/locations', 'params' => ['per_page' => 50], 'ttl' => 1800],
@@ -101,49 +100,74 @@ foreach ($v2Parents as $c) {
 }
 $V2NAV['categoryBySlug'] = array_column($V2NAV['categories'], null, 'slug');
 
-// ------------------------------------------------------------------ cities and regions
-$v2Cities = [];
-foreach ((array) ($v2NavData('cities')['cities'] ?? []) as $c) {
-    if (!is_array($c) || empty($c['slug'])) {
-        continue;
-    }
+// ------------------------------------------------------------------ countries and cities
+// Viaqui spans a continent, so the shell never loads every city: core returns the countries with their largest
+// cities (/locations/countries). $V2NAV['regions'] keeps its name for the header, but each entry is a country.
+$v2CityRow = function (array $c, string $country) {
     $img = v2_media_url($c['image'] ?? null);
-    $local = V2_CITY_PHOTOS[$c['slug']] ?? null;
-    $v2Cities[$c['slug']] = [
+    $local = V2_SEED_CITY_PHOTOS[$c['slug']] ?? null;
+    return [
         'slug' => $c['slug'],
         'name' => navFlatName($c['name'] ?? ''),
-        'region' => (string) ($c['region'] ?? ''),
+        'region' => $country,
         'count' => (int) ($c['activities_count'] ?? 0) ?: (int) ($c['events_count'] ?? 0),
         'capital' => !empty($c['is_capital']),
+        'population' => (int) ($c['population'] ?? 0),
         'href' => '/' . $c['slug'],
         'photo' => $img ? [$img, 0, 0, ''] : ($local ? [v2_asset($local[0]), $local[1], $local[2], $local[3]] : null),
     ];
+};
+$v2Cities = [];
+$V2NAV['regions'] = [];
+$V2NAV['citiesTotal'] = 0;
+foreach ((array) ($v2NavData('countries')['countries'] ?? []) as $country) {
+    if (!is_array($country) || empty($country['name']) || empty($country['top_cities'])) {
+        continue;
+    }
+    $featured = [];
+    foreach ((array) $country['top_cities'] as $c) {
+        if (is_array($c) && !empty($c['slug'])) {
+            $row = $v2CityRow($c, (string) $country['name']);
+            $featured[] = $row;
+            $v2Cities[$row['slug']] = $row;
+        }
+    }
+    $V2NAV['citiesTotal'] += (int) ($country['cities_count'] ?? 0);
+    $V2NAV['regions'][] = [
+        'name' => (string) $country['name'],
+        // the country page lives at /{slug}; until it exists the link goes to the city list of that country
+        'slug' => 'cities?country=' . strtolower((string) ($country['code'] ?? '')),
+        'code' => (string) ($country['code'] ?? ''),
+        'citiesCount' => (int) ($country['cities_count'] ?? count($featured)),
+        'featured' => $featured,
+        'more' => [],
+    ];
 }
-// Most experiences first; while counts are still equal, the large tourist cities lead instead of the alphabet.
-$v2CityRank = array_flip(['bucuresti', 'brasov', 'cluj-napoca', 'sibiu', 'constanta', 'timisoara', 'iasi', 'oradea', 'sighisoara', 'sinaia',
-    'craiova', 'alba-iulia', 'targu-mures', 'baia-mare', 'suceava', 'tulcea', 'arad', 'pitesti', 'galati', 'ploiesti', 'hunedoara', 'bran']);
-uasort($v2Cities, function ($a, $b) use ($v2CityRank) {
-    return [$b['count'], (int) $b['capital'], $v2CityRank[$a['slug']] ?? 999, $a['name']]
-        <=> [$a['count'], (int) $a['capital'], $v2CityRank[$b['slug']] ?? 999, $b['name']];
+// every country for the lists; the menu shows the first twelve (core returns them in menu order)
+$V2NAV['countriesAll'] = array_map(function ($r) {
+    return ['name' => $r['name'], 'slug' => $r['slug'], 'citiesCount' => $r['citiesCount']];
+}, $V2NAV['regions']);
+$V2NAV['regions'] = array_slice($V2NAV['regions'], 0, 12);
+// cities marked as featured in the admin lead every list; they keep the experience counts the API gives them
+foreach ((array) ($v2NavData('cities')['cities'] ?? []) as $c) {
+    if (is_array($c) && !empty($c['slug'])) {
+        $row = $v2CityRow($c, (string) ($v2Cities[$c['slug']]['region'] ?? ($c['region'] ?? '')));
+        $row['featuredFlag'] = true;
+        $row['population'] = $v2Cities[$c['slug']]['population'] ?? 0;
+        $v2Cities[$c['slug']] = $row;
+    }
+}
+// featured first, then the most experiences, then the largest
+uasort($v2Cities, function ($a, $b) {
+    return [(int) !empty($b['featuredFlag']), $b['count'], $b['population']] <=> [(int) !empty($a['featuredFlag']), $a['count'], $a['population']];
 });
 $V2NAV['cities'] = $v2Cities;
 $V2NAV['citiesList'] = array_values($v2Cities);
-$V2NAV['allCities'] = [];
-foreach (['allCities1', 'allCities2'] as $v2Page) {
-    foreach ($v2NavData($v2Page) as $c) {
-        if (!is_array($c) || empty($c['slug']) || isset($V2NAV['allCities'][$c['slug']])) {
-            continue;
-        }
-        $V2NAV['allCities'][$c['slug']] = [
-            'slug' => $c['slug'],
-            'name' => navFlatName($c['name'] ?? ''),
-            'region' => (string) ($c['region'] ?? ''),
-            'county' => is_array($c['county'] ?? null) ? navFlatName($c['county']['name'] ?? '') : '',
-            'count' => (int) ($c['events_count'] ?? 0),
-            'image' => v2_media_url($c['image'] ?? null),
-        ];
-    }
-}
+// the cities the "A weekend in" / "With kids in" links of the menu point to
+$V2NAV['intentCities'] = array_slice(array_keys($v2Cities), 0, 6);
+$V2NAV['allCities'] = array_map(function ($c) {
+    return ['slug' => $c['slug'], 'name' => $c['name'], 'region' => $c['region'], 'county' => '', 'count' => $c['count'], 'image' => $c['photo'][0] ?? null];
+}, $v2Cities);
 
 // ------------------------------------------------------------------ locations (activities module), by city
 // What the "Locații" menu shows: the cities that have published locations, each with its locations (picture, what
@@ -189,37 +213,6 @@ $V2NAV['locations'] = [
     'cities' => array_values($v2LocCities),
 ];
 
-$v2RegionsRaw = $v2NavData('regions');
-$v2RegionsRaw = isset($v2RegionsRaw['regions']) ? $v2RegionsRaw['regions'] : $v2RegionsRaw;
-$v2RegionInfo = [];
-foreach ((array) $v2RegionsRaw as $r) {
-    if (is_array($r) && !empty($r['name'])) {
-        $v2RegionInfo[$r['name']] = $r;
-    }
-}
-$V2NAV['regions'] = [];
-foreach (V2_REGIONS as $name) {
-    $featured = array_values(array_filter($V2NAV['citiesList'], function ($c) use ($name) {
-        return $c['region'] === $name;
-    }));
-    $seen = array_column($featured, 'slug');
-    $more = [];
-    foreach ((array) ($v2RegionInfo[$name]['top_cities'] ?? []) as $tc) {
-        if (is_array($tc) && !empty($tc['slug']) && !in_array($tc['slug'], $seen, true)) {
-            $more[] = ['name' => navFlatName($tc['name'] ?? ''), 'href' => '/' . $tc['slug']];
-            $seen[] = $tc['slug'];
-        }
-    }
-    $V2NAV['regions'][] = [
-        'name' => $name,
-        // the region page lives at /{slug} (slug.php); the API slug wins, the folded name stands in without it
-        'slug' => (string) ($v2RegionInfo[$name]['slug'] ?? trim(preg_replace('/[^a-z0-9]+/', '-', strtr(mb_strtolower($name), ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't'])), '-')),
-        'citiesCount' => (int) ($v2RegionInfo[$name]['cities_count'] ?? count($featured)),
-        'featured' => $featured,
-        'more' => $more,
-    ];
-}
-
 // ------------------------------------------------------------------ guides
 $v2Blog = $v2NavData('blog');
 $v2Blog = $v2Blog['articles'] ?? $v2Blog['items'] ?? $v2Blog;
@@ -260,12 +253,18 @@ if (!$V2NAV['categories']) {
     foreach (['categories', 'categoryBySlug', 'intentCities', 'seed'] as $v2SeedKey) {
         $V2NAV[$v2SeedKey] = $v2Seed[$v2SeedKey];
     }
-    if (!$V2NAV['citiesList']) {
-        foreach (['cities', 'citiesList', 'allCities', 'regions'] as $v2SeedKey) {
-            $V2NAV[$v2SeedKey] = $v2Seed[$v2SeedKey];
-        }
-    }
     if (!$V2NAV['guides']) {
         $V2NAV['guides'] = $v2Seed['guides'];
     }
+}
+
+// No countries from core yet (empty database, or the API did not answer): the starter list of countries and cities.
+if (!$V2NAV['regions']) {
+    require_once __DIR__ . '/seed.php';
+    $v2Seed = $v2Seed ?? v2_seed_nav();
+    foreach (['cities', 'citiesList', 'allCities', 'regions'] as $v2SeedKey) {
+        $V2NAV[$v2SeedKey] = $v2Seed[$v2SeedKey];
+    }
+    $V2NAV['intentCities'] = $v2Seed['intentCities'];
+    $V2NAV['seed'] = true;
 }
