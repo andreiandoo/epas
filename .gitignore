@@ -56,3 +56,5 @@ resources/marketplaces/bileteonline/cache/
 resources/marketplaces/bileteonline/data/rate-limits/
 resources/marketplaces/viaqui/cache/
 resources/marketplaces/viaqui/data/rate-limits/
+resources/marketplaces/*/data/secrets.php
+resources/marketplaces/*/secrets.php

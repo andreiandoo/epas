@@ -38,7 +38,11 @@ if (USE_STAGE_API) {
     define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
     define('STORAGE_URL', 'https://core.tixello.com/storage');
 }
-define('API_KEY', 'mpc_goiSqTnSIylztVouFaStMLVMYcD4XDSmqMGsaanWJZpXQ8ZovBIS4nodSTmx');
+// The API key is read from data/secrets.php, a file that exists only on the server (data/ is never touched by a
+// deploy); see includes/secrets.example.php. Until that file is uploaded the key below is used, so nothing breaks.
+// After the upload: generate a new key in Tixello core, put it in the file and delete the fallback here.
+$boSecrets = is_file(BILETEONLINE_ROOT . '/data/secrets.php') ? (array) require BILETEONLINE_ROOT . '/data/secrets.php' : [];
+define('API_KEY', (string) ($boSecrets['api_key'] ?? 'mpc_goiSqTnSIylztVouFaStMLVMYcD4XDSmqMGsaanWJZpXQ8ZovBIS4nodSTmx'));
 define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
 // CARTO basemaps key for the maps (Leaflet tiles). A browser key: it travels in every tile URL and CARTO limits it
