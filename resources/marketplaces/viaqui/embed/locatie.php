@@ -125,7 +125,7 @@ $clientData = ['booking' => [
 <title><?= v2_e($lcName) ?> · viaqui.com</title>
 <link rel="canonical" href="<?= v2_e(SITE_URL . '/locatie/' . $slug) ?>">
 <link rel="preconnect" href="<?= v2_e(CORE_URL) ?>" crossorigin>
-<link rel="preload" href="/assets/v2/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/v2/fonts/Geist-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="<?= v2_asset('css/base.css') ?>">
 <link rel="stylesheet" href="<?= v2_asset('css/location.css') ?>">
 <link rel="stylesheet" href="<?= v2_asset('css/embed-am.css') ?>">

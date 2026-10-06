@@ -19,11 +19,11 @@ const V2_CATEGORY_PHOTOS = [
 
 // Provisional photos (Wikimedia Commons, credited in the footer) for cities whose record has no image yet.
 const V2_CITY_PHOTOS = [
-    'brasov' => ['img/dest-brasov.webp', 960, 800, 'Piața Sfatului din Brașov, văzută de sus'],
-    'sibiu' => ['img/dest-sibiu.webp', 640, 540, 'Piața Mare din Sibiu, cu Turnul Sfatului'],
-    'bucuresti' => ['img/dest-bucuresti.webp', 640, 540, 'Ateneul Român din București'],
-    'constanta' => ['img/dest-constanta.webp', 640, 540, 'Cazinoul din Constanța, pe faleză'],
-    'sighisoara' => ['img/dest-sighisoara.webp', 640, 540, 'Stradă cu case colorate în cetatea Sighișoara'],
+    'brasov' => ['img/dest-brasov.webp', 960, 800, 'Council Square in Brașov seen from above'],
+    'sibiu' => ['img/dest-sibiu.webp', 640, 540, 'The Large Square in Sibiu with the Council Tower'],
+    'bucuresti' => ['img/dest-bucuresti.webp', 640, 540, 'The Romanian Athenaeum in Bucharest'],
+    'constanta' => ['img/dest-constanta.webp', 640, 540, 'The Casino in Constanța on the seafront'],
+    'sighisoara' => ['img/dest-sighisoara.webp', 640, 540, 'A street of painted houses in the citadel of Sighișoara'],
 ];
 
 // Provisional guide images while most articles have no cover in the API.
@@ -36,13 +36,12 @@ const V2_GUIDE_THUMBS = [
     'ce-sa-vizitezi-sinaia-bucegi' => 'img/g-sinaia.webp',
 ];
 const V2_GUIDE_COVERS = [
-    'ce-sa-vizitezi-in-brasov-itinerar-weekend' => ['img/insp-brasov.webp', 640, 480, 'Piața Sfatului din Brașov, cu Tâmpa în fundal'],
-    'ce-sa-vizitezi-sinaia-bucegi' => ['img/hero-900.webp', 900, 643, 'Castelul Peleș din Sinaia'],
+    'ce-sa-vizitezi-in-brasov-itinerar-weekend' => ['img/insp-brasov.webp', 640, 480, 'Council Square in Brașov with Tâmpa behind it'],
+    'ce-sa-vizitezi-sinaia-bucegi' => ['img/hero-900.webp', 900, 643, 'Peleș Castle in Sinaia'],
 ];
 
 const V2_BLOG_CATEGORIES = [
-    'Family & kids' => 'Familie & copii', 'City guides' => 'Ghiduri de oraș',
-    'Adventure & adrenaline' => 'Aventură & adrenalină', 'Culture & history' => 'Cultură & istorie',
+    // the API already names blog categories in English; nothing to map on Viaqui
 ];
 
 $v2NavR = api_cached_many([
@@ -158,15 +157,15 @@ foreach ((array) ($v2NavData('locations')['items'] ?? []) as $l) {
     }
     $counts = is_array($l['counts'] ?? null) ? $l['counts'] : [];
     $offer = array_filter([
-        !empty($counts['access']) ? v2_num((int) $counts['access'], 'bilet', 'bilete') : '',
+        !empty($counts['access']) ? v2_num((int) $counts['access'], 'ticket', 'tickets') : '',
         !empty($counts['experience']) ? v2_exp((int) $counts['experience']) : '',
-        !empty($counts['package']) ? v2_num((int) $counts['package'], 'pachet', 'pachete') : '',
+        !empty($counts['package']) ? v2_num((int) $counts['package'], 'package', 'packages') : '',
     ]);
     $v2LocCities[$citySlug]['name'] = $cityName;
     $v2LocCities[$citySlug]['slug'] = $citySlug;
     $v2LocCities[$citySlug]['items'][] = [
         'name' => navFlatName($l['name']),
-        'href' => '/locatie/' . $l['slug'],
+        'href' => '/venue/' . $l['slug'],
         'photo' => v2_media_url($l['cover_image'] ?? null),
         'category' => navFlatName($l['category']['name'] ?? ''),
         'offer' => $offer ? implode(' · ', $offer) : '',
@@ -240,9 +239,29 @@ foreach ((array) $v2Blog as $b) {
         'excerpt' => $excerpt,
         'category' => V2_BLOG_CATEGORIES[$catName] ?? $catName,
         'readTime' => (int) ($b['read_time'] ?? 0),
-        'href' => '/ghiduri/' . $b['slug'],
+        'href' => '/guides/' . $b['slug'],
         'thumb' => $img ?: (isset(V2_GUIDE_THUMBS[$b['slug']]) ? v2_asset(V2_GUIDE_THUMBS[$b['slug']]) : null),
-        'cover' => $img ? [$img, 0, 0, 'Imagine din ghidul: ' . $title] : ($local ? [v2_asset($local[0]), $local[1], $local[2], $local[3]] : null),
+        'cover' => $img ? [$img, 0, 0, 'Picture from the guide: ' . $title] : ($local ? [v2_asset($local[0]), $local[1], $local[2], $local[3]] : null),
         'hasOwnImage' => (bool) $img,
     ];
+}
+
+// ------------------------------------------------------------------ starter catalogue
+// Marketplace 4 starts empty in core. Until it has categories, the shell shows the starter catalogue of v2/seed.php
+// (categories, first countries and cities, guides) instead of an empty menu. $V2NAV['seed'] tells pages it is on.
+$V2NAV['seed'] = false;
+if (!$V2NAV['categories']) {
+    require_once __DIR__ . '/seed.php';
+    $v2Seed = v2_seed_nav();
+    foreach (['categories', 'categoryBySlug', 'intentCities', 'seed'] as $v2SeedKey) {
+        $V2NAV[$v2SeedKey] = $v2Seed[$v2SeedKey];
+    }
+    if (!$V2NAV['citiesList']) {
+        foreach (['cities', 'citiesList', 'allCities', 'regions'] as $v2SeedKey) {
+            $V2NAV[$v2SeedKey] = $v2Seed[$v2SeedKey];
+        }
+    }
+    if (!$V2NAV['guides']) {
+        $V2NAV['guides'] = $v2Seed['guides'];
+    }
 }

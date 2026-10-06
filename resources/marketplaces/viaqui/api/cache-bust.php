@@ -8,7 +8,7 @@
  *   - all page-cache HTML files whose body references the slug
  *     (one slug can produce several files when query strings differ)
  *   - the api_cached entries for `event_preload_<slug>` and
- *     `event_redirect_<slug>` in /tmp/bileteonline_cache
+ *     `event_redirect_<slug>` in /tmp/viaqui_cache
  *
  * Auth: a shared token in CACHE_BUST_TOKEN (defined in includes/config.php
  * via env). Constant-time compare to avoid timing leaks.
@@ -34,7 +34,7 @@ if ($expectedToken === '' || !hash_equals($expectedToken, (string) ($body['token
 
 $slugs = is_array($body['slugs'] ?? null) ? $body['slugs'] : [];
 $pageCacheDir = dirname(__DIR__) . '/includes/cache/pages';
-$apiCachedDir = sys_get_temp_dir() . '/bileteonline_cache';
+$apiCachedDir = sys_get_temp_dir() . '/viaqui_cache';
 
 $result = [];
 $totalPage = 0;

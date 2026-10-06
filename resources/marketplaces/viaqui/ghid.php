@@ -301,7 +301,7 @@ include __DIR__ . '/includes/v2/header.php';
         <h1 class="gd-h" id="gd-h"><?= v2_e($title) ?></h1>
         <?php if ($excerpt !== ''): ?><p class="gd-lead"><?= v2_e($excerpt) ?></p><?php endif; ?>
         <div class="gd-byline">
-          <span class="gd-avatar" aria-hidden="true"><svg viewBox="24 33 148 205"><use href="#sym-g"/></svg></span>
+          <span class="gd-avatar" aria-hidden="true"><svg viewBox="24 53 148 150"><use href="#sym-g"/></svg></span>
           <p class="gd-by"><b>Ghid viaqui.com</b><span><?php if ($dateLabel !== ''): ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time><span aria-hidden="true">·</span><?php endif; ?><?= v2_e($readTime) ?> de citit</span></p>
           <a class="gd-share-jump" href="#gd-share"><?= v2_ic('link') ?>Trimite ghidul</a>
         </div>

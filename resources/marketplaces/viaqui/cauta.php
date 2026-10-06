@@ -18,6 +18,13 @@ require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/promoted.php';
 
 // ---- Input ----
+// English query names used by the Viaqui pages: date= (the day) and who= (traveller type).
+if (!isset($_GET['data']) && isset($_GET['date'])) {
+    $_GET['data'] = $_GET['date'];
+}
+if (!isset($_GET['traveler_types']) && isset($_GET['who']) && is_string($_GET['who'])) {
+    $_GET['traveler_types'] = ['families' => 'familii', 'friends' => 'prieteni', 'couples' => 'cupluri'][$_GET['who']] ?? '';
+}
 $slugParam = function (string $key): string {
     $v = $_GET[$key] ?? '';
     return is_string($v) && preg_match('/^[a-z][a-z0-9-]+$/', $v) ? $v : '';

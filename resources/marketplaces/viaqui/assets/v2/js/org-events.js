@@ -666,11 +666,11 @@
       setTimeout(function () { resolve(window.tinymce || null); }, 20000);
     }).then(function (tm) {
       if (!tm) return null; // no editor: the plain textareas stay and are saved as they are
-      var font = location.origin + '/assets/v2/fonts/Satoshi-Variable.woff2';
+      var font = location.origin + '/assets/v2/fonts/Geist-latin.woff2';
       var base = {
         base_url: TINY, suffix: '.min', menubar: false, statusbar: false, branding: false, promotion: false, license_key: 'gpl',
         plugins: 'lists link autolink', toolbar: 'bold italic underline | bullist numlist | link | hr | undo redo | removeformat',
-        content_style: "@font-face{font-family:Satoshi;src:url('" + font + "') format('woff2');font-weight:300 900}body{font-family:Satoshi,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#212121;margin:12px 14px}",
+        content_style: "@font-face{font-family:Geist;src:url('" + font + "') format('woff2');font-weight:100 900}body{font-family:Geist,system-ui,sans-serif;font-size:15px;line-height:1.6;color:#212121;margin:12px 14px}",
         paste_as_text: false, smart_paste: true,
       };
       function setup(key) {
