@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Ghiduri activități și experiențe — bilete.online</title>
+  <meta name="description" content="Ghiduri bilete.online pentru activități, experiențe și idei de ieșit în oraș: ce să faci în weekend, activități pentru copii, muzee, escape rooms, natură, zile ploioase și orașe din România." />
+  <meta name="keywords" content="ghiduri activități, ce să faci weekend, activități copii, activități București, activități Brașov, escape rooms, muzee, idei ieșit în oraș, activități zile ploioase" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/ghiduri" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Ghiduri activități și experiențe — bilete.online" />
+  <meta property="og:description" content="Idei de activități, ghiduri locale și recomandări pentru weekend, copii, familie, muzee, escape rooms, natură și experiențe în oraș." />
+  <meta property="og:url" content="https://bilete.online/ghiduri" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- ===================== STRUCTURED DATA ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"CollectionPage",
+    "name":"Ghiduri activități și experiențe",
+    "url":"https://bilete.online/ghiduri",
+    "description":"Colecție de ghiduri editoriale despre activități, orașe, categorii, sezon și experiențe disponibile pe bilete.online.",
+    "inLanguage":"ro-RO",
+    "isPartOf":{"@type":"WebSite","name":"bilete.online","url":"https://bilete.online/"},
+    "about":[
+      {"@type":"Thing","name":"activități de weekend"},
+      {"@type":"Thing","name":"activități pentru copii"},
+      {"@type":"Thing","name":"ghiduri locale"},
+      {"@type":"Thing","name":"experiențe cadou"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"BreadcrumbList",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Acasă","item":"https://bilete.online/"},
+      {"@type":"ListItem","position":2,"name":"Ghiduri","item":"https://bilete.online/ghiduri"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"ItemList",
+    "name":"Ghiduri recomandate",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Ce să faci în Brașov weekendul acesta","url":"https://bilete.online/ghiduri/ce-sa-faci-in-brasov-weekend"},
+      {"@type":"ListItem","position":2,"name":"Activități pentru copii în București","url":"https://bilete.online/ghiduri/activitati-copii-bucuresti"},
+      {"@type":"ListItem","position":3,"name":"Cele mai bune activități pentru zile ploioase","url":"https://bilete.online/ghiduri/activitati-zile-ploioase"}
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-10px) rotate(1deg); } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+    @keyframes marquee{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .marquee{ animation:marquee 42s linear infinite; }
+    .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .floaty,.marquee{animation:none!important;} *{transition:none!important;} }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="guidesPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> GHIDURI · IDEI · ACTIVITĂȚI</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/activitati-weekend" class="text-ochre underline-wobble">Activități de weekend</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Locații</a>
+        <a href="/ghiduri" aria-current="page" class="px-3 py-2 rounded-full bg-ink text-paper transition">Ghiduri</a>
+        <a href="/card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Card cadou</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/activitati-azi" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Activități azi</a>
+        <a href="/cos" class="hidden sm:inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Coș</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/categorii" class="block py-2">Categorii</a>
+      <a href="/orase" class="block py-2">Orașe</a>
+      <a href="/locatii" class="block py-2">Locații</a>
+      <a href="/ghiduri" class="block py-2 text-vermilion font-bold">Ghiduri</a>
+      <a href="/card-cadou" class="block py-2">Card cadou</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden border-b-2 border-ink">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_84%_14%,rgba(232,69,39,.24),transparent_30%),radial-gradient(circle_at_14%_76%,rgba(30,74,61,.22),transparent_34%),radial-gradient(circle_at_50%_44%,rgba(218,154,51,.18),transparent_30%)]"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
+      <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Ghiduri</span>
+      </nav>
+
+      <div class="mt-8 grid lg:grid-cols-[1fr_.9fr] gap-12 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">GHIDURI · SEO EDITORIAL · IDEI DE IEȘIT</p>
+          <h1 class="mt-6 font-display text-6xl sm:text-8xl lg:text-[6.45rem] font-bold leading-[.82]">
+            Idei bune pentru când vrei să faci ceva.
+          </h1>
+          <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
+            Ghiduri locale și tematice pentru activități: ce să faci în weekend, unde mergi cu copiii, ce alegi când plouă, ce experiențe merită în orașul tău și cum cumperi bilete online fără haos.
+          </p>
+
+          <div class="mt-8 max-w-2xl">
+            <label class="sr-only" for="guide-search">Caută ghiduri</label>
+            <div class="relative">
+              <input id="guide-search" class="field text-lg pr-14" x-model="search" placeholder="Caută: weekend, copii, Brașov, muzeu, ploaie..." />
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft">
+                <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-2">
+            <template x-for="chip in quickChips" :key="chip.key">
+              <button @click="activeTopic=chip.key" class="rounded-full bg-paper/70 border border-ink/10 px-4 py-2 font-bold hover:bg-ink hover:text-paper transition" x-text="chip.label"></button>
+            </template>
+          </div>
+        </div>
+
+        <div class="relative min-h-[560px]">
+          <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[2deg] shadow-deep"></div>
+
+          <article class="absolute top-0 left-0 right-0 mx-auto max-w-[540px] ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep rotate-[-2deg]" style="--perf:100%">
+            <img src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=1000&q=80" alt="Prieteni care caută activități de weekend" class="h-64 w-full object-cover">
+            <div class="p-6 sm:p-8">
+              <p class="font-mono text-xs tracking-[.18em] text-vermilion">FEATURED GUIDE</p>
+              <h2 class="mt-3 font-display text-4xl font-bold leading-none">Ce să faci în Brașov weekendul acesta</h2>
+              <p class="mt-3 text-ink-soft">Un ghid editorial care leagă orașul, categoriile, activitățile și biletele disponibile.</p>
+              <a href="/ghiduri/ce-sa-faci-in-brasov-weekend" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Citește ghidul</a>
+            </div>
+          </article>
+
+          <div class="floaty absolute left-0 bottom-20 w-60 rounded-3xl border-2 border-ink bg-paper p-5 shadow-deep rotate-[-5deg]">
+            <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">EDITORIAL SEO</p>
+            <p class="mt-2 font-display text-2xl font-bold">ghid + linkuri către activități</p>
+            <p class="mt-2 text-sm text-ink-soft">nu doar blog, ci pagini de descoperire</p>
+          </div>
+
+          <div class="floaty absolute right-0 bottom-0 w-64 rounded-3xl border-2 border-ink bg-ink text-paper p-5 shadow-deep rotate-[5deg]" style="animation-delay:-2.3s">
+            <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">INTENT</p>
+            <p class="mt-2 font-display text-3xl font-bold">weekend</p>
+            <p class="mt-1 text-paper/60 text-sm">copii, ploaie, oraș, buget, cadou</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <section class="marquee-wrap overflow-hidden border-b-2 border-ink bg-ink text-paper py-3">
+    <div class="marquee flex w-[200%] gap-8 font-mono text-xs tracking-[.2em] text-paper/70">
+      <div class="flex gap-8 min-w-1/2">
+        <span>CE SĂ FACI ÎN WEEKEND</span><span>ACTIVITĂȚI COPII</span><span>ZILE PLOIOASE</span><span>GHIDURI LOCALE</span><span>CADOURI EXPERIENȚĂ</span><span>MUZEE</span><span>ESCAPE ROOMS</span>
+      </div>
+      <div class="flex gap-8 min-w-1/2" aria-hidden="true">
+        <span>CE SĂ FACI ÎN WEEKEND</span><span>ACTIVITĂȚI COPII</span><span>ZILE PLOIOASE</span><span>GHIDURI LOCALE</span><span>CADOURI EXPERIENȚĂ</span><span>MUZEE</span><span>ESCAPE ROOMS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDITORIAL STRATEGY -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+    <div class="grid md:grid-cols-3 gap-4">
+      <article class="soft-card p-6">
+        <p class="font-mono text-xs tracking-[.18em] text-vermilion">LOCAL</p>
+        <h2 class="mt-3 font-display text-3xl font-bold">Ghiduri pe orașe</h2>
+        <p class="mt-2 text-ink-soft">Ce să faci în București, Brașov, Cluj, Iași sau Timișoara, cu linkuri către pagini locale și activități.</p>
+      </article>
+      <article class="soft-card p-6 bg-mint">
+        <p class="font-mono text-xs tracking-[.18em] text-forest">INTENT</p>
+        <h2 class="mt-3 font-display text-3xl font-bold">Ghiduri după nevoie</h2>
+        <p class="mt-2 text-ink-soft">Weekend, copii, zile ploioase, zile caniculare, sub 50 lei, cadouri, date night sau grupuri.</p>
+      </article>
+      <article class="soft-card p-6">
+        <p class="font-mono text-xs tracking-[.18em] text-vermilion">CONVERSION</p>
+        <h2 class="mt-3 font-display text-3xl font-bold">Editorial care vinde</h2>
+        <p class="mt-2 text-ink-soft">Fiecare ghid trebuie să trimită natural către activități, locații, categorii și checkout.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- GUIDE LIST -->
+  <section class="border-y-2 border-ink bg-paper-2/65">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[300px_1fr] gap-8 items-start">
+        <aside class="lg:sticky lg:top-28">
+          <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">TOPICURI</p>
+            <div class="mt-4 space-y-2">
+              <template x-for="topic in topics" :key="topic.key">
+                <button @click="activeTopic=topic.key"
+                        :class="activeTopic===topic.key ? 'bg-ink text-paper' : 'bg-paper-2 text-ink hover:bg-ink/5'"
+                        class="w-full rounded-2xl px-4 py-3 text-left font-bold transition flex items-center justify-between gap-3">
+                  <span x-text="topic.label"></span>
+                  <span class="text-xs opacity-60" x-text="topic.count"></span>
+                </button>
+              </template>
+            </div>
+
+            <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+              <p class="font-bold text-forest">Regulă SEO</p>
+              <p class="mt-1 text-sm text-ink-soft">Ghidurile nu trebuie să fie articole izolate. Leagă orașe, categorii, locații și activități reale.</p>
+            </div>
+          </div>
+        </aside>
+
+        <section>
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI</p>
+              <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="currentTopicTitle()"></h2>
+            </div>
+            <p class="text-ink-soft" x-text="filteredGuides().length + ' ghiduri afișate'"></p>
+          </div>
+
+          <div class="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <template x-for="guide in filteredGuides()" :key="guide.slug">
+              <article class="group rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
+                <a :href="'/ghiduri/' + guide.slug" class="block">
+                  <div class="relative h-52 overflow-hidden bg-ink">
+                    <img :src="guide.image" :alt="'Imagine pentru ghidul ' + guide.title" class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
+                    <span class="absolute left-4 top-4 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold" x-text="guide.topicLabel"></span>
+                    <span class="absolute right-4 top-4 rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold" x-text="guide.readTime"></span>
+                    <h3 class="absolute left-4 bottom-4 right-4 font-display text-3xl font-bold text-paper leading-none" x-text="guide.title"></h3>
+                  </div>
+                </a>
+                <div class="p-5">
+                  <p class="text-ink-soft leading-relaxed" x-text="guide.excerpt"></p>
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <template x-for="tag in guide.tags" :key="tag">
+                      <span class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="tag"></span>
+                    </template>
+                  </div>
+                  <div class="mt-5 pt-4 border-t border-ink/10 flex items-center justify-between gap-3">
+                    <a :href="'/ghiduri/' + guide.slug" class="font-bold text-vermilion underline-wobble">Citește ghidul</a>
+                    <span class="text-sm text-ink-soft" x-text="guide.date"></span>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEO HUBS -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10 items-start">
+      <div class="lg:sticky lg:top-28">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">HUBURI EDITORIALE</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Ghidurile trebuie să acopere intenții reale de căutare.</h2>
+        <p class="mt-5 text-lg text-ink-soft leading-relaxed">Această pagină poate funcționa ca strat editorial peste paginile programatice. Ghidurile explică, compară, recomandă și apoi trimit către categorii, orașe și activități.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <template x-for="hub in editorialHubs" :key="hub.url">
+          <a :href="hub.url" class="rounded-3xl border-2 border-ink/15 bg-paper p-5 hover:border-ink hover:-translate-y-1 transition">
+            <p class="font-mono text-xs tracking-[.18em] text-vermilion" x-text="hub.kicker"></p>
+            <h3 class="mt-2 font-display text-3xl font-bold" x-text="hub.title"></h3>
+            <p class="mt-2 text-ink-soft" x-text="hub.description"></p>
+          </a>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEWSLETTER / CTA -->
+  <section class="border-y-2 border-ink bg-ink text-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-10 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">RECOMANDĂRI</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Primește idei de activități înainte să cauți.</h2>
+          <p class="mt-5 text-lg text-paper/60 leading-relaxed">Newsletterul poate trimite ghiduri locale, activități noi, recomandări de weekend, carduri cadou și promoții relevante.</p>
+        </div>
+
+        <form class="ticket bg-paper text-ink rounded-[2rem] overflow-hidden shadow-deep p-6 sm:p-8" style="--perf:100%">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">NEWSLETTER</p>
+          <h3 class="mt-2 font-display text-4xl font-bold leading-none">Idei de ieșit în oraș</h3>
+          <div class="mt-6 grid gap-3">
+            <input class="field" type="email" placeholder="email@example.ro">
+            <select class="field">
+              <option>Oraș preferat</option>
+              <option>București</option>
+              <option>Brașov</option>
+              <option>Cluj-Napoca</option>
+              <option>Iași</option>
+              <option>Timișoara</option>
+            </select>
+            <label class="flex items-start gap-3 text-sm">
+              <input type="checkbox" class="mt-1 w-5 h-5 accent-vermilion">
+              <span>Accept să primesc recomandări și oferte prin email.</span>
+            </label>
+            <button type="button" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Abonează-mă</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
+      <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+      <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-paper/60">EXPLOREAZĂ</p>
+          <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Ai citit ghidul. Acum alege activitatea.</h2>
+          <p class="mt-4 max-w-2xl text-paper/75 text-lg">Ghidurile sunt doar începutul. Vezi categorii, orașe și activități disponibile cu bilete online.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
+          <a href="/categorii" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Vezi categorii</a>
+          <a href="/orase" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Alege orașul</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t-2 border-ink bg-ink text-paper">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+    </div>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">GHIDURI</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/ghiduri">Toate ghidurile</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/ghiduri/weekend">Weekend</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/ghiduri/copii">Copii</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/ghiduri/orase">Orașe</a>
+    </nav>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">DESCOPERIRE</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/categorii">Categorii</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/orase">Orașe</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/locatii">Locații</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/activitati-azi">Activități azi</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+<script>
+function guidesPage(){
+  return {
+    search:'',
+    activeTopic:'all',
+    quickChips:[
+      {label:'Weekend',key:'weekend'},
+      {label:'Copii',key:'kids'},
+      {label:'Orașe',key:'city'},
+      {label:'Zile ploioase',key:'weather'},
+      {label:'Cadouri',key:'gift'}
+    ],
+    topics:[
+      {key:'all',label:'Toate ghidurile',count:18},
+      {key:'weekend',label:'Weekend',count:4},
+      {key:'kids',label:'Copii & familie',count:4},
+      {key:'city',label:'Orașe',count:5},
+      {key:'weather',label:'Vreme & sezon',count:3},
+      {key:'gift',label:'Cadouri & ocazii',count:2}
+    ],
+    guides:[
+      {
+        title:'Ce să faci în Brașov weekendul acesta',
+        slug:'ce-sa-faci-in-brasov-weekend',
+        topic:'city',
+        topicLabel:'Orașe',
+        readTime:'7 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1609167830220-7164aa360951?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Un ghid pentru ieșiri în Brașov: escape rooms, natură, muzee, activități pentru copii și experiențe de weekend.',
+        tags:['Brașov','weekend','turism']
+      },
+      {
+        title:'Activități pentru copii în București: idei bune pentru weekend',
+        slug:'activitati-copii-bucuresti',
+        topic:'kids',
+        topicLabel:'Copii',
+        readTime:'8 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Muzee interactive, ateliere, parcuri și experiențe indoor potrivite pentru copii și părinți.',
+        tags:['București','copii','familie']
+      },
+      {
+        title:'Cele mai bune activități pentru zile ploioase',
+        slug:'activitati-zile-ploioase',
+        topic:'weather',
+        topicLabel:'Vreme',
+        readTime:'6 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Idei indoor când plouă: muzee, escape rooms, expoziții, ateliere și activități pentru familie.',
+        tags:['indoor','ploaie','familie']
+      },
+      {
+        title:'Cum alegi un card cadou pentru experiențe',
+        slug:'cum-alegi-card-cadou-experiente',
+        topic:'gift',
+        topicLabel:'Cadouri',
+        readTime:'5 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=900&q=80',
+        excerpt:'De ce un card cadou pentru activități poate fi mai bun decât un obiect și cum alegi valoarea potrivită.',
+        tags:['card cadou','experiențe','cadou']
+      },
+      {
+        title:'Escape room pentru prima dată: ce trebuie să știi',
+        slug:'escape-room-prima-data',
+        topic:'weekend',
+        topicLabel:'Weekend',
+        readTime:'6 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Cum alegi camera, câte persoane merg, ce înseamnă dificultatea și cum cumperi biletele.',
+        tags:['escape room','grupuri','indoor']
+      },
+      {
+        title:'Activități sub 50 lei: idei accesibile de ieșit',
+        slug:'activitati-sub-50-lei-idei',
+        topic:'weekend',
+        topicLabel:'Weekend',
+        readTime:'7 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1561414927-6d86591d0c4f?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Muzee, tururi, ateliere și experiențe locale care nu îți consumă tot bugetul.',
+        tags:['buget','sub 50 lei','local']
+      },
+      {
+        title:'Ce să faci în București când e foarte cald',
+        slug:'ce-sa-faci-bucuresti-zile-caniculare',
+        topic:'weather',
+        topicLabel:'Vreme',
+        readTime:'6 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Activități indoor, muzee, expoziții și experiențe de seară pentru zile caniculare.',
+        tags:['București','caniculă','indoor']
+      },
+      {
+        title:'Idei de activități pentru zi de naștere',
+        slug:'idei-activitati-zi-de-nastere',
+        topic:'gift',
+        topicLabel:'Cadouri',
+        readTime:'8 min',
+        date:'Mai 2026',
+        image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
+        excerpt:'Escape rooms, ateliere, parcuri și pachete de grup pentru copii, adolescenți și adulți.',
+        tags:['zi de naștere','grupuri','cadou']
+      }
+    ],
+    editorialHubs:[
+      {kicker:'LOCAL',title:'Ghiduri pe orașe',description:'Ce să faci în București, Brașov, Cluj, Iași, Timișoara sau Constanța.',url:'/ghiduri/orase'},
+      {kicker:'FAMILIE',title:'Ghiduri pentru copii',description:'Activități educative, indoor, outdoor și de weekend pentru familie.',url:'/ghiduri/copii'},
+      {kicker:'VREME',title:'Ghiduri după vreme',description:'Zile ploioase, caniculă, iarnă, vară și activități de seară.',url:'/ghiduri/vreme'},
+      {kicker:'BUGET',title:'Ghiduri după buget',description:'Activități gratuite, sub 50 lei și idei accesibile.',url:'/ghiduri/buget'},
+      {kicker:'CADOURI',title:'Ghiduri cadouri experiență',description:'Carduri cadou, date night, aniversări și experiențe pentru doi.',url:'/ghiduri/cadouri'},
+      {kicker:'CATEGORII',title:'Ghiduri pe categorii',description:'Escape rooms, muzee, parcuri, ateliere, natură și tururi.',url:'/ghiduri/categorii'}
+    ],
+    currentTopicTitle(){
+      const found = this.topics.find(t => t.key === this.activeTopic);
+      return found ? found.label : 'Toate ghidurile';
+    },
+    filteredGuides(){
+      const q = this.search.toLowerCase().trim();
+      return this.guides.filter(guide => {
+        const matchesTopic = this.activeTopic === 'all' || guide.topic === this.activeTopic;
+        const blob = JSON.stringify(guide).toLowerCase();
+        const matchesSearch = !q || blob.includes(q);
+        return matchesTopic && matchesSearch;
+      });
+    }
+  }
+}
+</script>
+
+</body>
+</html>

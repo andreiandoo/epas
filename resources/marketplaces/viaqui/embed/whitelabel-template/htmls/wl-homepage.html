@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Fool — Bilete</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ─── TOKENS ──────────────────────────────────────────── */
+  :root {
+    --accent:        #D4A843;
+    --accent-dim:    rgba(212,168,67,0.12);
+    --accent-glow:   rgba(212,168,67,0.35);
+    --bg:            #080808;
+    --bg2:           #0f0f0f;
+    --bg3:           #161616;
+    --border:        rgba(255,255,255,0.07);
+    --text:          #f0ede6;
+    --text-muted:    rgba(240,237,230,0.45);
+    --text-dim:      rgba(240,237,230,0.22);
+    --radius:        4px;
+    --font-display:  'Cormorant Garamond', Georgia, serif;
+    --font-body:     'Outfit', system-ui, sans-serif;
+  }
+
+  /* ─── RESET ───────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ─── GRAIN OVERLAY ───────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: .028;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px;
+  }
+
+  /* ─── NAV ─────────────────────────────────────────────── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 68px;
+    background: rgba(8,8,8,0.88);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo img {
+    height: 36px;
+    width: auto;
+    filter: brightness(0) invert(1);
+    opacity: .92;
+  }
+  .nav-logo span {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .btn-cart {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    background: var(--accent);
+    color: #000;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-cart:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-cart svg { width: 15px; height: 15px; }
+  .cart-count {
+    background: #000;
+    color: var(--accent);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+
+  /* ─── HERO ────────────────────────────────────────────── */
+  .hero {
+    position: relative;
+    height: 520px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(8,8,8,0.3) 0%, rgba(8,8,8,0.92) 100%),
+      linear-gradient(135deg, #1a1200 0%, #0a0a0a 60%);
+  }
+  .hero-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: .07;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,.15) 39px, rgba(255,255,255,.15) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.15) 39px, rgba(255,255,255,.15) 40px);
+  }
+  .hero-spotlight {
+    position: absolute;
+    top: -200px;
+    right: 10%;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 0 40px 56px;
+    max-width: 760px;
+  }
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 28px;
+    height: 1px;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(42px, 6vw, 68px);
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero-meta {
+    font-size: 14px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .hero-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hero-meta svg { opacity: .6; width: 14px; height: 14px; }
+
+  /* ─── FILTERS ─────────────────────────────────────────── */
+  .filters-bar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filters-bar::-webkit-scrollbar { display: none; }
+  .filter-btn {
+    flex-shrink: 0;
+    padding: 18px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color .2s, border-color .2s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { color: var(--text); }
+  .filter-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .filters-sep {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+  .filter-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    flex-shrink: 0;
+  }
+  .filter-search input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    width: 160px;
+  }
+  .filter-search input::placeholder { color: var(--text-dim); }
+  .filter-search svg { color: var(--text-dim); width: 14px; height: 14px; }
+
+  /* ─── SECTION ─────────────────────────────────────────── */
+  .section { padding: 56px 40px; }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .section-title em { font-style: italic; color: var(--accent); }
+  .see-all {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color .2s;
+  }
+  .see-all:hover { color: var(--accent); }
+  .see-all svg { width: 14px; height: 14px; }
+
+  /* ─── EVENT CARDS ─────────────────────────────────────── */
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .events-grid.featured {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .events-grid.featured .card:first-child {
+    grid-row: span 2;
+  }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color .3s, transform .3s;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: rgba(212,168,67,0.3);
+    transform: translateY(-3px);
+  }
+  .card:hover .card-img img { transform: scale(1.05); }
+  .card:hover .card-cta { background: var(--accent); color: #000; }
+
+  .card-img {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    background: var(--bg3);
+  }
+  .events-grid.featured .card:first-child .card-img {
+    aspect-ratio: unset;
+    flex: 1;
+    min-height: 320px;
+  }
+  .card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .5s cubic-bezier(.25,.46,.45,.94);
+  }
+  .card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1600 0%, #0d0d0d 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-img-placeholder svg { width: 48px; height: 48px; opacity: .12; }
+  .card-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(8,8,8,0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .card-badge.urgent {
+    background: rgba(200,60,40,0.9);
+    color: #fff;
+    border-color: transparent;
+  }
+  .card-sold-out {
+    position: absolute;
+    inset: 0;
+    background: rgba(8,8,8,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-sold-out span {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 20px;
+  }
+
+  .card-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+  .card-meta {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-meta-sep { color: var(--text-dim); }
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 400;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .events-grid.featured .card:first-child .card-title { font-size: 26px; }
+  .card-title strong { font-weight: 600; }
+  .card-venue {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .card-venue svg { width: 12px; height: 12px; opacity: .5; }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .card-price {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .card-price strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+  }
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    transition: background .2s, color .2s;
+  }
+  .card-cta svg { width: 12px; height: 12px; }
+
+  /* ─── CALENDAR STRIP ──────────────────────────────────── */
+  .cal-strip {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 40px;
+  }
+  .cal-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+  }
+  .cal-days {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .cal-days::-webkit-scrollbar { display: none; }
+  .cal-day {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    min-width: 64px;
+  }
+  .cal-day:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .cal-day.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .cal-day.active .cal-wd, .cal-day.active .cal-dm { color: #000; }
+  .cal-day.has-events::after {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .cal-day.active.has-events::after { background: #000; }
+  .cal-wd {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .cal-dm {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  /* ─── LIST VIEW (compact) ─────────────────────────────── */
+  .events-list { display: flex; flex-direction: column; gap: 1px; }
+  .list-item {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: border-color .2s, background .2s;
+    cursor: pointer;
+  }
+  .list-item:hover {
+    border-color: rgba(212,168,67,0.3);
+    background: rgba(212,168,67,0.03);
+  }
+  .list-date {
+    text-align: center;
+  }
+  .list-date .day {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .list-date .month {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .list-info { min-width: 0; }
+  .list-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+  .list-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .list-venue {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .list-right { text-align: right; }
+  .list-price {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .list-avail {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .list-avail.low { color: #e05c44; }
+  .list-cta {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 14px;
+    background: var(--accent);
+    color: #000;
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: opacity .2s;
+  }
+  .list-cta:hover { opacity: .85; }
+
+  /* ─── FOOTER ──────────────────────────────────────────── */
+  footer {
+    margin-top: 80px;
+    border-top: 1px solid var(--border);
+    padding: 40px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .footer-brand {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 400;
+  }
+  .footer-powered {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .footer-powered a {
+    color: var(--accent);
+    font-weight: 500;
+    transition: opacity .2s;
+  }
+  .footer-powered a:hover { opacity: .7; }
+  .footer-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+  .footer-links a {
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: color .2s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+
+  /* ─── ANIMATIONS ──────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero-content > * {
+    animation: fadeUp .7s cubic-bezier(.25,.46,.45,.94) both;
+  }
+  .hero-eyebrow { animation-delay: .1s; }
+  .hero h1      { animation-delay: .2s; }
+  .hero-meta    { animation-delay: .35s; }
+
+  /* ─── RESPONSIVE ──────────────────────────────────────── */
+  @media (max-width: 900px) {
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .hero { height: 400px; }
+    .hero-content { padding: 0 20px 40px; }
+    .section { padding: 40px 20px; }
+    .filters-bar { padding: 0 20px; }
+    .cal-strip { padding: 24px 20px; }
+    footer { padding: 32px 20px; }
+    .events-grid.featured { grid-template-columns: 1fr; }
+    .events-grid.featured .card:first-child { grid-row: auto; }
+    .events-grid.featured .card:first-child .card-img { aspect-ratio: 4/3; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     NAV
+══════════════════════════════════════════════ -->
+<nav>
+  <a href="#" class="nav-logo">
+    <span>The Fool</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#" class="active" style="color:var(--text)">Toate evenimentele</a></li>
+    <li><a href="#">Stand-up</a></li>
+    <li><a href="#">Muzică</a></li>
+    <li><a href="#">București</a></li>
+  </ul>
+  <div class="nav-actions">
+    <a href="wl-cart.html" class="btn-cart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      Coșul meu
+      <span class="cart-count">2</span>
+    </a>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-pattern"></div>
+  <div class="hero-spotlight"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Clubul de comedie nr. 1 din România</div>
+    <h1>Seara perfectă<br>începe cu <em>râs.</em></h1>
+    <div class="hero-meta">
+      <span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        24 spectacole în mai 2025
+      </span>
+      <span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        The Fool, Str. Lipscani 45, București
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     CALENDAR STRIP
+══════════════════════════════════════════════ -->
+<div class="cal-strip">
+  <div class="cal-label">Alege data</div>
+  <div class="cal-days" id="calDays"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     FILTERS
+══════════════════════════════════════════════ -->
+<div class="filters-bar">
+  <button class="filter-btn active">Toate</button>
+  <button class="filter-btn">Stand-up</button>
+  <button class="filter-btn">Show interactiv</button>
+  <button class="filter-btn">Open Mic</button>
+  <div class="filters-sep"></div>
+  <div class="filter-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" placeholder="Caută spectacol...">
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     FEATURED EVENTS
+══════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">Spectacole <em>în evidență</em></h2>
+    <a href="#" class="see-all">
+      Toate evenimentele
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </a>
+  </div>
+
+  <div class="events-grid featured">
+
+    <!-- MAIN FEATURED -->
+    <a href="wl-event.html" class="card">
+      <div class="card-img">
+        <div class="card-img-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.89L15 14M3 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+        </div>
+        <div class="card-badge urgent">Mâine — 27 locuri rămase</div>
+      </div>
+      <div class="card-body">
+        <div class="card-meta">14 Apr <span class="card-meta-sep">·</span> 20:00</div>
+        <h3 class="card-title"><strong>N-ARE CUM!</strong> — Show interactiv cu Drăcea și Cîrje</h3>
+        <div class="card-venue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          The Fool, București
+        </div>
+        <div class="card-footer">
+          <div class="card-price">
+            de la <strong>73 lei</strong>
+          </div>
+          <span class="card-cta">
+            Ia bilet
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </span>
+        </div>
+      </div>
+    </a>
+
+    <!-- SECONDARY 1 -->
+    <a href="wl-event.html" class="card">
+      <div class="card-img" style="aspect-ratio: 16/7;">
+        <div class="card-img-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.89L15 14M3 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+        </div>
+        <div class="card-badge">Miercuri</div>
+      </div>
+      <div class="card-body">
+        <div class="card-meta">16 Apr <span class="card-meta-sep">·</span> 20:00</div>
+        <h3 class="card-title">Așa mi-a venit! — <em>Comedie on the spot</em></h3>
+        <div class="card-footer">
+          <div class="card-price">de la <strong>65 lei</strong></div>
+          <span class="card-cta">Ia bilet <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        </div>
+      </div>
+    </a>
+
+    <!-- SECONDARY 2 -->
+    <a href="wl-event.html" class="card">
+      <div class="card-img" style="aspect-ratio: 16/7;">
+        <div class="card-img-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.89L15 14M3 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+        </div>
+        <div class="card-badge">Joi</div>
+      </div>
+      <div class="card-body">
+        <div class="card-meta">17 Apr <span class="card-meta-sep">·</span> 20:00</div>
+        <h3 class="card-title">Open Mic — <em>MCs Moise & Păune</em></h3>
+        <div class="card-footer">
+          <div class="card-price">de la <strong>50 lei</strong></div>
+          <span class="card-cta">Ia bilet <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     UPCOMING LIST
+══════════════════════════════════════════════ -->
+<section class="section" style="padding-top: 0;">
+  <div class="section-header">
+    <h2 class="section-title">Toate spectacolele</h2>
+  </div>
+
+  <div class="events-list">
+    <!-- items -->
+    <script>
+    (function(){
+      const items=[
+        {day:'18',month:'Apr',time:'20:00 · Vineri',title:'Stand-up comedy cu George Tănase, Anisia, Serghei și Frînculescu',venue:'The Fool, București',price:'85 lei',avail:'',availClass:''},
+        {day:'18',month:'Apr',time:'22:30 · Vineri',title:'Roast Battle Jocul by The Fool',venue:'The Fool, București',price:'90 lei',avail:'Sold out',availClass:'low'},
+        {day:'19',month:'Apr',time:'20:00 · Sâmbătă',title:'Stand-up cu Bordea, Bucălae și Cîrje',venue:'The Fool, București',price:'95 lei',avail:'',availClass:''},
+        {day:'19',month:'Apr',time:'22:00 · Sâmbătă',title:'Stand-up cu Drăcea, Cîrje, Serghei și Mincu',venue:'The Fool, București',price:'95 lei',avail:'Doar 8 locuri!',availClass:'low'},
+        {day:'20',month:'Apr',time:'18:00 · Duminică',title:'Stand-up cu Cortea, Bucălae, Drăcea și Dobrotă',venue:'The Fool, București',price:'85 lei',avail:'',availClass:''},
+        {day:'25',month:'Apr',time:'20:00 · Vineri',title:'N-ARE CUM! — Show interactiv Drăcea și Cîrje',venue:'The Fool, București',price:'73 lei',avail:'',availClass:''},
+      ];
+      const container=document.currentScript.parentElement;
+      items.forEach(function(e){
+        const isSoldOut=e.avail==='Sold out';
+        container.insertAdjacentHTML('beforeend',`
+          <a href="wl-event.html" class="list-item">
+            <div class="list-date">
+              <div class="day">${e.day}</div>
+              <div class="month">${e.month}</div>
+            </div>
+            <div class="list-info">
+              <div class="list-time">${e.time}</div>
+              <div class="list-title">${e.title}</div>
+              <div class="list-venue">${e.venue}</div>
+            </div>
+            <div class="list-right">
+              <div class="list-price">${isSoldOut?'—':e.price}</div>
+              ${e.avail?`<div class="list-avail ${e.availClass}">${e.avail}</div>`:''}
+              ${!isSoldOut?`<span class="list-cta">Ia bilet</span>`:''}
+            </div>
+          </a>
+        `);
+      });
+    })();
+    </script>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-brand">The Fool</div>
+  <ul class="footer-links">
+    <li><a href="#">Termeni și condiții</a></li>
+    <li><a href="#">Confidențialitate</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+  <div class="footer-powered">
+    Biletele prin
+    <a href="https://ambilet.ro" target="_blank">AmBilet.ro</a>
+    · Powered by
+    <a href="https://tixello.ro" target="_blank">Tixello</a>
+  </div>
+</footer>
+
+<script>
+// Calendar strip — generate 30 days
+(function(){
+  const days=['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
+  const months=['Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Nov','Dec'];
+  const hasEvents=[0,1,3,4,5,6,8,11,12,13];
+  const today=new Date();
+  const container=document.getElementById('calDays');
+  for(let i=0;i<28;i++){
+    const d=new Date(today);
+    d.setDate(today.getDate()+i);
+    const wd=days[d.getDay()];
+    const dm=d.getDate();
+    const mo=months[d.getMonth()];
+    const hasEv=hasEvents.includes(i);
+    const div=document.createElement('div');
+    div.className='cal-day'+(i===0?' active':'')+(hasEv?' has-events':'');
+    div.innerHTML=`<div class="cal-wd">${wd}</div><div class="cal-dm">${dm}</div><div style="font-size:9px;color:var(--text-dim);letter-spacing:.06em">${mo}</div>`;
+    div.addEventListener('click',function(){
+      document.querySelectorAll('.cal-day').forEach(function(x){x.classList.remove('active');});
+      div.classList.add('active');
+    });
+    container.appendChild(div);
+  }
+})();
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

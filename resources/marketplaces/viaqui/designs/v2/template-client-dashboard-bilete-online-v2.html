@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard client — bilete.online</title>
+  <meta name="description" content="Dashboard client bilete.online: biletele mele, comenzile mele, puncte bonus, carduri cadou, recomandări personalizate, recenzii, suport și setări cont." />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <link rel="canonical" href="https://bilete.online/cont/dashboard" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8',
+          good:'#2E7D4F',warn:'#B7791F',bad:'#C2412D'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:80; pointer-events:none; opacity:.045; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .sidebar-link[aria-current="page"]{ background:#1B1714; color:#F4EFE3; }
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-1.5deg); } 50%{ transform:translateY(-8px) rotate(1deg); } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+    @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(250%)} }
+    .shimmer::after{ content:""; position:absolute; inset:-20% auto -20% 0; width:30%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent); animation:shimmer 5s ease-in-out infinite; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .floaty,.shimmer::after{animation:none!important;} *{transition:none!important;} }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="clientDashboard()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> CONT CLIENT · BILETE · PUNCTE BONUS</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/recuperare-comanda" class="text-ochre underline-wobble">Recuperează comanda</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/80 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Locații</a>
+        <a href="/ghiduri" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ghiduri</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/cos" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Coș</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu cont">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <a href="/cont/setari" class="hidden sm:flex items-center gap-3 rounded-full bg-ink text-paper pl-2 pr-4 py-2 hover:bg-vermilion transition">
+          <span class="grid place-items-center w-8 h-8 rounded-full bg-paper text-ink font-bold">A</span>
+          <span class="text-sm font-bold">Andrei</span>
+        </a>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/cont/dashboard" class="block py-2 text-vermilion font-bold">Dashboard</a>
+      <a href="/cont/biletele-mele" class="block py-2">Biletele mele</a>
+      <a href="/cont/comenzile-mele" class="block py-2">Comenzile mele</a>
+      <a href="/cont/punctele-mele" class="block py-2">Punctele mele</a>
+      <a href="/cont/recomandari" class="block py-2">Recomandări</a>
+      <a href="/cont/setari" class="block py-2">Setări</a>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 lg:py-8">
+  <div class="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+
+    <aside class="hidden lg:block sticky top-28">
+      <div class="rounded-[2rem] border-2 border-ink bg-paper p-4 shadow-ticket">
+        <div class="flex items-center gap-3 p-3 rounded-2xl bg-paper-2 border border-ink/10">
+          <span class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper font-display text-2xl font-bold">A</span>
+          <div class="min-w-0">
+            <p class="font-display text-2xl font-bold leading-none truncate">Andrei</p>
+            <p class="text-sm text-ink-soft truncate">andrei@email.ro</p>
+          </div>
+        </div>
+
+        <nav class="mt-4 space-y-1 text-sm font-bold">
+          <a href="/cont/dashboard" aria-current="page" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Dashboard</span><span>⌘</span></a>
+          <a href="/cont/biletele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Biletele mele</span><span class="rounded-full bg-vermilion text-paper px-2 py-0.5 text-xs">3</span></a>
+          <a href="/cont/comenzile-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Comenzile mele</span><span>12</span></a>
+          <a href="/cont/punctele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Punctele mele</span><span>820</span></a>
+          <a href="/cont/carduri-cadou" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Carduri cadou</span><span>1</span></a>
+          <a href="/cont/tichete-support" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Tichete support</span><span>2</span></a>
+          <a href="/cont/recenzii" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recenzii</span><span>4</span></a>
+          <a href="/cont/recomandari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recomandări</span><span>nou</span></a>
+          <a href="/cont/setari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Setări</span><span>72%</span></a>
+        </nav>
+
+        <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+          <p class="font-bold text-forest">Completează profilul</p>
+          <p class="mt-1 text-sm text-ink-soft">Cu cât știm mai multe preferințe, cu atât recomandările devin mai bune.</p>
+          <div class="mt-3 h-2 rounded-full bg-paper overflow-hidden"><div class="h-full w-[72%] rounded-full bg-forest"></div></div>
+          <a href="/cont/setari#profil-preferinte" class="mt-3 inline-flex text-sm font-bold text-forest underline-wobble">Adaugă detalii</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="min-w-0">
+      <section class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 lg:p-10 shadow-deep">
+        <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+        <div class="relative grid xl:grid-cols-[1fr_380px] gap-8 items-center">
+          <div>
+            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">DASHBOARD CLIENT</p>
+            <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Salut, Andrei. Ai 3 bilete viitoare.</h1>
+            <p class="mt-5 max-w-2xl text-paper/65 text-lg leading-relaxed">Aici vezi ce urmează, ce ai cumpărat, câte puncte ai, ce recomandări ți se potrivesc și ce mai ai de rezolvat înainte de următoarea activitate.</p>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a href="/cont/biletele-mele" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Vezi biletele</a>
+              <a href="/cont/recomandari" class="rounded-full border-2 border-paper/50 px-6 py-4 font-bold hover:bg-paper hover:text-ink transition">Recomandări</a>
+            </div>
+          </div>
+
+          <div class="ticket shimmer relative rounded-[2rem] border-2 border-paper/30 bg-paper text-ink p-6 overflow-hidden rotate-[-2deg]" style="--perf:100%">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">NEXT TICKET</p>
+            <h2 class="mt-3 font-display text-4xl font-bold leading-none">Camera 13</h2>
+            <p class="mt-2 text-ink-soft">Mystery Rooms Brașov</p>
+            <div class="mt-5 grid grid-cols-[1fr_auto] gap-4 items-end">
+              <div>
+                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SÂMBĂTĂ</p>
+                <p class="font-display text-5xl font-bold">18:30</p>
+                <p class="text-sm text-ink-soft">30 mai 2026 · 4 beneficiari</p>
+              </div>
+              <div class="w-24 h-24 rounded-2xl bg-ink text-paper grid place-items-center rotate-3"><span class="font-mono text-xs text-center">QR<br>READY</span></div>
+            </div>
+            <a href="/cont/bilete/BO-2026-004218" class="mt-5 inline-flex rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Deschide bilet</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">BILETE VIITOARE</p><p class="mt-3 font-display text-6xl font-bold">3</p><p class="mt-1 text-ink-soft">2 activități confirmate</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-forest">PUNCTE BONUS</p><p class="mt-3 font-display text-6xl font-bold">820</p><p class="mt-1 text-ink-soft">≈ 41 lei reducere</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">COMENZI</p><p class="mt-3 font-display text-6xl font-bold">12</p><p class="mt-1 text-ink-soft">ultima acum 2 zile</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-rose p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-vermilion">PROFIL</p><p class="mt-3 font-display text-6xl font-bold">72%</p><p class="mt-1 text-ink-soft">completează preferințele</p></article>
+      </section>
+
+      <section class="mt-6 grid xl:grid-cols-[1.15fr_.85fr] gap-6">
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">URMEAZĂ</p><h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Bilete viitoare</h2></div>
+            <a href="/cont/biletele-mele" class="rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Toate biletele</a>
+          </div>
+          <div class="mt-6 space-y-3">
+            <template x-for="ticket in upcomingTickets" :key="ticket.id">
+              <article class="rounded-3xl border-2 border-ink/10 bg-paper-2/70 p-4 hover:border-ink transition">
+                <div class="flex flex-col md:flex-row md:items-center gap-4">
+                  <img :src="ticket.image" :alt="ticket.title" class="w-full md:w-32 h-28 rounded-2xl object-cover border border-ink/10">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap gap-2"><span class="rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold" x-text="ticket.status"></span><span class="rounded-full bg-paper border border-ink/10 px-3 py-1 text-xs font-bold" x-text="ticket.city"></span></div>
+                    <h3 class="mt-2 font-display text-3xl font-bold leading-none" x-text="ticket.title"></h3>
+                    <p class="mt-1 text-ink-soft" x-text="ticket.meta"></p>
+                  </div>
+                  <div class="flex md:flex-col gap-2 md:items-end">
+                    <a :href="ticket.url" class="rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Deschide</a>
+                    <a :href="ticket.calendarUrl" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Calendar</a>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
+        </div>
+
+        <aside class="space-y-6">
+          <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PERSONALIZARE</p>
+            <h2 class="mt-2 font-display text-4xl font-bold leading-none">Recomandări mai bune în 3 pași</h2>
+            <div class="mt-5 space-y-3">
+              <template x-for="task in profileTasks" :key="task.label">
+                <a :href="task.url" class="flex items-center gap-3 rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition">
+                  <span class="grid place-items-center w-10 h-10 rounded-full" :class="task.done ? 'bg-mint text-forest' : 'bg-rose text-vermilion'" x-text="task.done ? '✓' : '!'"></span>
+                  <span class="flex-1"><span class="block font-bold" x-text="task.label"></span><span class="block text-sm text-ink-soft" x-text="task.helper"></span></span>
+                </a>
+              </template>
+            </div>
+            <a href="/cont/setari#profil-preferinte" class="mt-5 inline-flex rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Completează profilul</a>
+          </div>
+
+          <div class="rounded-[2rem] border-2 border-forest bg-mint p-5 sm:p-6">
+            <p class="font-mono text-xs tracking-[.18em] text-forest">AFILIERE</p>
+            <h2 class="mt-2 font-display text-4xl font-bold leading-none">Invită prieteni. Primești puncte.</h2>
+            <p class="mt-3 text-ink-soft">Distribuie linkul tău și primești puncte bonus când prietenii cumpără prima activitate eligibilă.</p>
+            <div class="mt-4 rounded-2xl bg-paper border border-forest/20 p-3 font-mono text-sm break-all">bilete.online/r/andrei</div>
+            <div class="mt-4 flex gap-2"><button class="rounded-full bg-forest text-paper px-5 py-3 font-bold hover:bg-ink transition">Copiază</button><a href="/cont/punctele-mele#afiliere" class="rounded-full border border-forest/30 px-5 py-3 font-bold text-forest hover:bg-forest hover:text-paper transition">Detalii</a></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="mt-6 grid xl:grid-cols-[.95fr_1.05fr] gap-6">
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+          <div class="flex items-end justify-between gap-4"><div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">PENTRU TINE</p><h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Recomandări</h2></div><a href="/cont/recomandari" class="font-bold text-vermilion underline-wobble">Vezi tot</a></div>
+          <div class="mt-6 grid sm:grid-cols-2 gap-4">
+            <template x-for="item in recommendations" :key="item.url">
+              <article class="rounded-3xl border-2 border-ink/10 bg-paper-2 overflow-hidden hover:border-ink transition">
+                <img :src="item.image" :alt="item.title" class="h-36 w-full object-cover">
+                <div class="p-4"><span class="rounded-full bg-paper border border-ink/10 px-3 py-1 text-xs font-bold" x-text="item.reason"></span><h3 class="mt-3 font-display text-2xl font-bold leading-none" x-text="item.title"></h3><p class="mt-2 text-sm text-ink-soft" x-text="item.meta"></p><a :href="item.url" class="mt-4 inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Vezi activitatea</a></div>
+              </article>
+            </template>
+          </div>
+        </div>
+
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+          <div class="flex items-end justify-between gap-4"><div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">ISTORIC</p><h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Comenzi recente</h2></div><a href="/cont/comenzile-mele" class="font-bold text-vermilion underline-wobble">Toate comenzile</a></div>
+          <div class="mt-6 overflow-hidden rounded-3xl border border-ink/10">
+            <table class="w-full text-left">
+              <thead class="bg-paper-2 text-xs font-mono tracking-[.16em] text-ink-soft"><tr><th class="px-4 py-3">Comandă</th><th class="px-4 py-3 hidden sm:table-cell">Data</th><th class="px-4 py-3">Total</th><th class="px-4 py-3">Status</th></tr></thead>
+              <tbody class="divide-y divide-ink/10">
+                <template x-for="order in recentOrders" :key="order.id">
+                  <tr class="hover:bg-paper-2/60"><td class="px-4 py-4"><a :href="order.url" class="font-bold text-vermilion underline-wobble" x-text="order.id"></a><p class="sm:hidden text-xs text-ink-soft" x-text="order.date"></p></td><td class="px-4 py-4 hidden sm:table-cell text-ink-soft" x-text="order.date"></td><td class="px-4 py-4 font-bold" x-text="order.total"></td><td class="px-4 py-4"><span class="rounded-full px-3 py-1 text-xs font-bold" :class="order.statusClass" x-text="order.status"></span></td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid md:grid-cols-3 gap-6">
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUPORT</p><h2 class="mt-2 font-display text-4xl font-bold leading-none">2 tichete active</h2><p class="mt-3 text-ink-soft">Ai o solicitare despre retur și una despre voucher.</p><a href="/cont/tichete-support" class="mt-5 inline-flex rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Vezi tichete</a></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">RECENZII</p><h2 class="mt-2 font-display text-4xl font-bold leading-none">1 recenzie așteaptă</h2><p class="mt-3 text-ink-soft">Scrie despre experiența de la Muzeul Interactiv.</p><a href="/cont/recenzii" class="mt-5 inline-flex rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Scrie recenzie</a></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-6 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-paper/60">CARD CADOU</p><h2 class="mt-2 font-display text-4xl font-bold leading-none">Ai 150 lei disponibili</h2><p class="mt-3 text-paper/70">Un card cadou activ poate fi folosit în următoarea comandă eligibilă.</p><a href="/cont/carduri-cadou" class="mt-5 inline-flex rounded-full bg-paper text-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper transition">Vezi carduri</a></article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+function clientDashboard(){
+  return {
+    upcomingTickets:[
+      {id:'T1',title:'Camera 13',city:'Brașov',status:'confirmat',meta:'30 mai 2026 · 18:30 · 4 beneficiari',image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=500&q=80',url:'/cont/bilete/BO-2026-004218',calendarUrl:'/cont/bilete/BO-2026-004218/calendar'},
+      {id:'T2',title:'Atelier ceramică copii',city:'București',status:'confirmat',meta:'2 iunie 2026 · 11:00 · 2 beneficiari',image:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=500&q=80',url:'/cont/bilete/BO-2026-004102',calendarUrl:'/cont/bilete/BO-2026-004102/calendar'},
+      {id:'T3',title:'Tur ghidat Brașov vechi',city:'Brașov',status:'în așteptare',meta:'8 iunie 2026 · 16:00 · 2 beneficiari',image:'https://images.unsplash.com/photo-1609167830220-7164aa360951?auto=format&fit=crop&w=500&q=80',url:'/cont/bilete/BO-2026-004001',calendarUrl:'/cont/bilete/BO-2026-004001/calendar'}
+    ],
+    profileTasks:[
+      {label:'Adaugă orașul preferat', helper:'recomandări locale mai bune', done:true, url:'/cont/setari#profil-preferinte'},
+      {label:'Alege tipuri de activități', helper:'copii, muzee, natură, escape rooms', done:false, url:'/cont/setari#preferinte-activitati'},
+      {label:'Adaugă vârstele copiilor', helper:'filtrare activități potrivite', done:false, url:'/cont/setari#familie'}
+    ],
+    recommendations:[
+      {title:'Escape rooms în Brașov',reason:'îți plac activitățile de grup',meta:'12 activități · de la 75 lei',image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=500&q=80',url:'/brasov/escape-rooms'},
+      {title:'Ateliere pentru copii în București',reason:'ai cumpărat activități pentru familie',meta:'18 activități · weekend',image:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=500&q=80',url:'/bucuresti/activitati-copii'}
+    ],
+    recentOrders:[
+      {id:'#BO-2026-004218', date:'23 mai 2026', total:'420 lei', status:'confirmată', statusClass:'bg-mint text-forest', url:'/cont/comenzi/BO-2026-004218'},
+      {id:'#BO-2026-004102', date:'18 mai 2026', total:'140 lei', status:'confirmată', statusClass:'bg-mint text-forest', url:'/cont/comenzi/BO-2026-004102'},
+      {id:'#BO-2026-003992', date:'11 mai 2026', total:'95 lei', status:'finalizată', statusClass:'bg-paper-2 text-ink-soft', url:'/cont/comenzi/BO-2026-003992'},
+      {id:'#BO-2026-003871', date:'02 mai 2026', total:'250 lei', status:'retur parțial', statusClass:'bg-rose text-vermilion', url:'/cont/comenzi/BO-2026-003871'}
+    ]
+  }
+}
+</script>
+
+</body>
+</html>

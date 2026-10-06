@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ======================================================
+    TEMPLATE: Pagină locație / venue page
+    Scop: pagină SEO locală pentru o locație care poate avea mai multe activități / bilete / tururi.
+    Înlocuiește placeholder-ele:
+    {{venue_name}}, {{city}}, {{county}}, {{primary_category}}, {{venue_slug}}, {{hero_image}}, etc.
+  ====================================================== -->
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Adventure Hub Brașov — activități, bilete & program | bilete.online</title>
+  <meta name="description" content="Descoperă toate activitățile disponibile la Adventure Hub Brașov: escape rooms, ateliere pentru copii, tururi ghidate și experiențe de familie. Vezi programul, prețurile, adresa și rezervă online cu bilet QR." />
+  <meta name="keywords" content="Adventure Hub Brașov, activități Brașov, bilete Adventure Hub, ce să faci în Brașov, activități copii Brașov, escape room Brașov, bilete online Brașov" />
+  <link rel="canonical" href="https://bilete.online/locatii/adventure-hub-brasov" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="place" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Adventure Hub Brașov — activități, bilete & program" />
+  <meta property="og:description" content="Toate activitățile disponibile la Adventure Hub Brașov într-un singur loc. Rezervi online și intri cu QR." />
+  <meta property="og:url" content="https://bilete.online/locatii/adventure-hub-brasov" />
+  <meta property="og:image" content="https://bilete.online/assets/venues/adventure-hub-brasov-cover.jpg" />
+  <meta property="og:locale" content="ro_RO" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Adventure Hub Brașov — activități, bilete & program" />
+  <meta name="twitter:description" content="Descoperă activitățile, programul, prețurile și biletele disponibile la Adventure Hub Brașov." />
+  <meta name="twitter:image" content="https://bilete.online/assets/venues/adventure-hub-brasov-cover.jpg" />
+
+  <!-- ===================== STRUCTURED DATA / JSON-LD ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://bilete.online/#website",
+        "name": "bilete.online",
+        "url": "https://bilete.online/",
+        "inLanguage": "ro-RO",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Tixello",
+          "url": "https://tixello.ro/"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://bilete.online/cauta?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://bilete.online/locatii/adventure-hub-brasov#breadcrumbs",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Acasă", "item": "https://bilete.online/" },
+          { "@type": "ListItem", "position": 2, "name": "Brașov", "item": "https://bilete.online/brasov" },
+          { "@type": "ListItem", "position": 3, "name": "Locații în Brașov", "item": "https://bilete.online/brasov/locatii" },
+          { "@type": "ListItem", "position": 4, "name": "Adventure Hub Brașov", "item": "https://bilete.online/locatii/adventure-hub-brasov" }
+        ]
+      },
+      {
+        "@type": ["LocalBusiness", "TouristAttraction"],
+        "@id": "https://bilete.online/locatii/adventure-hub-brasov#venue",
+        "name": "Adventure Hub Brașov",
+        "description": "Adventure Hub Brașov este o locație de agrement indoor și outdoor cu escape rooms, activități pentru copii, ateliere creative și experiențe de grup.",
+        "url": "https://bilete.online/locatii/adventure-hub-brasov",
+        "image": [
+          "https://bilete.online/assets/venues/adventure-hub-brasov-cover.jpg",
+          "https://bilete.online/assets/venues/adventure-hub-brasov-gallery-1.jpg",
+          "https://bilete.online/assets/venues/adventure-hub-brasov-gallery-2.jpg"
+        ],
+        "telephone": "+40 700 000 000",
+        "priceRange": "35-180 RON",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Strada Republicii 25",
+          "addressLocality": "Brașov",
+          "addressRegion": "Brașov",
+          "postalCode": "500030",
+          "addressCountry": "RO"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 45.6427,
+          "longitude": 25.5887
+        },
+        "openingHoursSpecification": [
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "10:00", "closes": "21:00" },
+          { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday", "Sunday"], "opens": "09:00", "closes": "22:00" }
+        ],
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "reviewCount": "246"
+        },
+        "makesOffer": [
+          { "@id": "https://bilete.online/activitati/camera-secretelor-brasov#offer" },
+          { "@id": "https://bilete.online/activitati/atelier-micii-exploratori#offer" },
+          { "@id": "https://bilete.online/activitati/tur-ghidat-adventure-hub#offer" }
+        ]
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://bilete.online/locatii/adventure-hub-brasov#webpage",
+        "url": "https://bilete.online/locatii/adventure-hub-brasov",
+        "name": "Adventure Hub Brașov — activități, bilete & program",
+        "description": "Pagină de locație cu activități, bilete, program, adresă, recenzii și informații utile pentru Adventure Hub Brașov.",
+        "inLanguage": "ro-RO",
+        "isPartOf": { "@id": "https://bilete.online/#website" },
+        "breadcrumb": { "@id": "https://bilete.online/locatii/adventure-hub-brasov#breadcrumbs" },
+        "about": { "@id": "https://bilete.online/locatii/adventure-hub-brasov#venue" },
+        "mainEntity": {
+          "@type": "ItemList",
+          "name": "Activități disponibile la Adventure Hub Brașov",
+          "numberOfItems": 6,
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Camera Secretelor", "url": "https://bilete.online/activitati/camera-secretelor-brasov" },
+            { "@type": "ListItem", "position": 2, "name": "Atelier Micii Exploratori", "url": "https://bilete.online/activitati/atelier-micii-exploratori" },
+            { "@type": "ListItem", "position": 3, "name": "Tur ghidat Adventure Hub", "url": "https://bilete.online/activitati/tur-ghidat-adventure-hub" }
+          ]
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://bilete.online/locatii/adventure-hub-brasov#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Ce activități sunt disponibile la Adventure Hub Brașov?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Locația are escape rooms, ateliere pentru copii, tururi ghidate și activități de grup. Disponibilitatea exactă poate varia în funcție de zi și interval orar."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Pot cumpăra bilete online pentru mai multe activități din aceeași locație?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Da. Poți alege fiecare activitate disponibilă, data și intervalul orar, apoi primești biletele cu cod QR pe email."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Unde se află Adventure Hub Brașov?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Adventure Hub Brașov se află pe Strada Republicii 25, aproape de centrul orașului Brașov."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Este potrivită locația pentru copii?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Da, unele activități sunt potrivite pentru copii și familii. Verifică recomandarea de vârstă pe pagina fiecărei activități."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper:    '#F4EFE3',
+            'paper-2':'#EBE2CF',
+            'paper-3':'#E2D7BF',
+            ink:      '#1B1714',
+            'ink-2':  '#2E2820',
+            'ink-soft':'#5A4F41',
+            vermilion:'#E84527',
+            'vermilion-d':'#C5371C',
+            forest:   '#1E4A3D',
+            'forest-l':'#2E6553',
+            ochre:    '#DA9A33',
+            sky:      '#2C5F8A',
+            clay:     '#A55338'
+          },
+          fontFamily: {
+            display: ['Fraunces', 'Georgia', 'serif'],
+            sans:    ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
+            mono:    ['"Spline Sans Mono"', 'ui-monospace', 'monospace']
+          },
+          boxShadow: {
+            soft: '0 26px 60px -35px rgba(27,23,20,.55)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- ===================== ALPINE ===================== -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior: smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    [x-cloak]{ display:none !important; }
+
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-0.018em; }
+    .ital { font-style:italic; }
+
+    .grain::after{
+      content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode:multiply;
+    }
+
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .ticket-lift{ transition:transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s; }
+    .ticket-lift:hover{ transform:translateY(-6px) rotate(-.25deg); box-shadow:0 26px 50px -28px rgba(27,23,20,.55); }
+
+    .duotone{ position:relative; overflow:hidden; }
+    .duotone .grid-tex{ position:absolute; inset:0; opacity:.5; background-image:radial-gradient(currentColor 1px, transparent 1.4px); background-size:13px 13px; mix-blend-mode:overlay; }
+
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .no-bar::-webkit-scrollbar{ display:none; } .no-bar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+    .mega-link{ transition:background-color .2s, transform .2s; }
+    .mega-link:hover{ transform:translateX(2px); }
+
+    .prose-venue p{ margin-bottom:1rem; }
+    .prose-venue a{ color:#E84527; background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; }
+    .prose-venue a:hover{ background-size:0 2px; }
+
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-2deg);} 50%{ transform:translateY(-10px) rotate(2deg);} }
+    .floaty{ animation:floaty 6s ease-in-out infinite; }
+
+    @keyframes rise{ from{opacity:0; transform:translateY(22px)} to{opacity:1; transform:translateY(0)} }
+    [data-stagger]{ opacity:0; transform:translateY(16px); }
+    [data-stagger].in{ opacity:1; transform:translateY(0); transition:all .7s cubic-bezier(.2,.85,.25,1); }
+
+    @media (prefers-reduced-motion: reduce){
+      html{ scroll-behavior:auto; }
+      .floaty{ animation:none !important; }
+      [data-stagger]{ opacity:1 !important; transform:none !important; animation:none !important; }
+    }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper">
+
+  <!-- ====================================================== HEADER ====================================================== -->
+  <header x-data="{ open:false, scrolled:false, mega:false, user:false }"
+          x-init="window.addEventListener('scroll',()=>scrolled = window.scrollY>20)"
+          @keydown.escape.window="mega=false; user=false; open=false"
+          class="sticky top-0 z-50">
+    <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+        <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> ADMISSION · ROMÂNIA · AGREMENT</span>
+        <span class="hidden sm:flex items-center gap-4">
+          <a href="/#card-cadou" class="text-ochre underline-wobble">Carduri cadou</a>
+          <span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span>
+        </span>
+      </div>
+    </div>
+
+    <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'"
+         class="transition-all duration-300">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-2.5 group shrink-0">
+          <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+          </span>
+          <span class="font-display text-xl font-700 tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+        </a>
+
+        <div class="hidden lg:flex items-center gap-1 text-[15px] font-500" @mouseleave="mega=false">
+          <button @mouseenter="mega=true" @click="mega=!mega" :aria-expanded="mega"
+                  :class="mega ? 'bg-ink text-paper' : 'hover:bg-ink/5'"
+                  class="flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-colors duration-200">
+            Explorează
+            <svg :class="mega && 'rotate-180'" class="w-4 h-4 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <a @mouseenter="mega=false" href="/#cum" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Cum funcționează</a>
+          <a @mouseenter="mega=false" href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+          <a @mouseenter="mega=false" href="/#owneri" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Pentru locații</a>
+
+          <div x-show="mega" x-cloak
+               x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+               x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+               class="fixed left-1/2 -translate-x-1/2 top-24 w-[min(1080px,calc(100vw-2rem))] grain">
+            <div class="bg-paper border-2 border-ink rounded-2xl shadow-[0_40px_80px_-40px_rgba(27,23,20,.7)] overflow-hidden grid grid-cols-12">
+              <div class="col-span-7 p-7 border-r-2 border-dashed border-ink/15">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-4">EXPLOREAZĂ DUPĂ CATEGORIE</p>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <a href="/escape-rooms" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-vermilion/10 text-vermilion shrink-0 group-hover:bg-vermilion group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Escape rooms</span><span class="block text-xs text-ink-soft mt-0.5">Camere de evadare</span></span>
+                  </a>
+                  <a href="/parcuri-de-distractii" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-sky/10 text-sky shrink-0 group-hover:bg-sky group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v20M5 8l7 4 7-4M5 16l7-4 7 4"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Parcuri de distracții</span><span class="block text-xs text-ink-soft mt-0.5">Indoor & outdoor</span></span>
+                  </a>
+                  <a href="/muzee" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-forest/10 text-forest shrink-0 group-hover:bg-forest group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Muzee & expoziții</span><span class="block text-xs text-ink-soft mt-0.5">Cultură & educație</span></span>
+                  </a>
+                  <a href="/parcuri-aventura" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-ochre/15 text-ochre shrink-0 group-hover:bg-ochre group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 4 22h16L12 2Zm0 7-3 8m3-8 3 8"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Parcuri de aventură</span><span class="block text-xs text-ink-soft mt-0.5">Trasee & tiroliene</span></span>
+                  </a>
+                </div>
+              </div>
+              <div class="col-span-5 p-7 bg-paper-2/40">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-4">ORAȘE POPULARE</p>
+                <div class="grid grid-cols-2 gap-x-5 gap-y-2 text-[15px]">
+                  <a href="/bucuresti" @click="mega=false" class="mega-link py-1 hover:text-vermilion">București</a>
+                  <a href="/cluj-napoca" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Cluj-Napoca</a>
+                  <a href="/brasov" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Brașov</a>
+                  <a href="/timisoara" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Timișoara</a>
+                  <a href="/iasi" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Iași</a>
+                  <a href="/constanta" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Constanța</a>
+                </div>
+                <a href="/orase" class="inline-flex mt-4 text-sm font-600 text-vermilion underline-wobble">Vezi toate orașele →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <a href="/#owneri" class="hidden md:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
+          <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+            <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-500 max-h-[80vh] overflow-y-auto">
+        <a @click="open=false" href="/categorii" class="block py-2">Categorii</a>
+        <a @click="open=false" href="/orase" class="block py-2">Orașe</a>
+        <a @click="open=false" href="/#card-cadou" class="block py-2">Carduri cadou</a>
+        <a @click="open=false" href="/#owneri" class="block py-2">Pentru locații</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ====================================================== HERO / VENUE OVERVIEW ====================================================== -->
+    <section class="relative overflow-hidden border-b border-ink/10">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(232,69,39,.14),transparent_34%),radial-gradient(circle_at_90%_25%,rgba(30,74,61,.16),transparent_30%)]"></div>
+
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 lg:pt-14 pb-12 lg:pb-16">
+        <nav aria-label="Breadcrumb" class="mb-6 text-sm text-ink-soft">
+          <ol class="flex flex-wrap items-center gap-2">
+            <li><a href="/" class="hover:text-vermilion">Acasă</a></li>
+            <li aria-hidden="true">/</li>
+            <li><a href="/brasov" class="hover:text-vermilion">Brașov</a></li>
+            <li aria-hidden="true">/</li>
+            <li><a href="/brasov/locatii" class="hover:text-vermilion">Locații</a></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" class="text-ink font-600">Adventure Hub Brașov</li>
+          </ol>
+        </nav>
+
+        <div class="grid lg:grid-cols-[1.04fr_.96fr] gap-10 lg:gap-14 items-center">
+          <div>
+            <div class="flex flex-wrap gap-2 mb-5">
+              <span class="stamp inline-flex items-center gap-2 px-3 py-1 rounded-full bg-vermilion text-paper border-vermilion font-mono text-[11px] tracking-[.12em]">LOCAȚIE VERIFICATĂ</span>
+              <span class="stamp inline-flex items-center gap-2 px-3 py-1 rounded-full bg-paper border-ink/30 text-ink-soft font-mono text-[11px] tracking-[.12em]">BRAȘOV · CENTRU</span>
+              <span class="stamp inline-flex items-center gap-2 px-3 py-1 rounded-full bg-paper border-ink/30 text-ink-soft font-mono text-[11px] tracking-[.12em]">6 ACTIVITĂȚI</span>
+            </div>
+
+            <h1 class="font-display text-[clamp(2.6rem,7vw,6.2rem)] leading-[.86] font-700 max-w-4xl">
+              Adventure Hub <span class="ital text-vermilion">Brașov</span>
+            </h1>
+
+            <p class="mt-6 text-xl lg:text-2xl text-ink-soft leading-relaxed max-w-2xl">
+              O locație cu mai multe experiențe într-un singur loc: escape rooms, ateliere pentru copii, tururi ghidate și activități de grup în Brașov.
+            </p>
+
+            <div class="mt-7 flex flex-wrap items-center gap-3 text-sm">
+              <a href="#activitati" class="px-6 py-3 rounded-full bg-ink text-paper font-700 hover:bg-ink-2 transition">Vezi activitățile</a>
+              <a href="#program" class="px-6 py-3 rounded-full bg-paper border-2 border-ink font-700 hover:bg-ink hover:text-paper transition">Program & adresă</a>
+              <a href="#faq" class="px-6 py-3 rounded-full bg-paper-2 border border-ink/10 font-700 hover:bg-paper-3 transition">Întrebări frecvente</a>
+            </div>
+
+            <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
+              <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
+                <p class="font-display text-2xl font-700">4.8</p>
+                <p class="text-xs text-ink-soft">rating mediu</p>
+              </div>
+              <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
+                <p class="font-display text-2xl font-700">246</p>
+                <p class="text-xs text-ink-soft">recenzii</p>
+              </div>
+              <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
+                <p class="font-display text-2xl font-700">35 lei</p>
+                <p class="text-xs text-ink-soft">de la / bilet</p>
+              </div>
+              <div class="bg-paper/80 border border-ink/10 rounded-2xl p-4">
+                <p class="font-display text-2xl font-700">QR</p>
+                <p class="text-xs text-ink-soft">intrare rapidă</p>
+              </div>
+            </div>
+          </div>
+
+          <div x-data="{ active:0, imgs:[
+            {src:'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=1400&auto=format&fit=crop', alt:'Zona principală Adventure Hub Brașov cu activități pentru familii și grupuri'},
+            {src:'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=1400&auto=format&fit=crop', alt:'Activitate de grup indoor la Adventure Hub Brașov'},
+            {src:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1400&auto=format&fit=crop', alt:'Spațiu outdoor pentru activități și experiențe în Brașov'}
+          ] }" class="relative">
+            <div class="ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-soft" style="--perf:100%">
+              <div class="relative aspect-[4/3] bg-ink">
+                <template x-for="(img,i) in imgs" :key="img.src">
+                  <img x-show="active===i" x-transition.opacity :src="img.src" :alt="img.alt" class="absolute inset-0 w-full h-full object-cover opacity-90">
+                </template>
+                <div class="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent"></div>
+                <div class="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-4">
+                  <div>
+                    <p class="font-mono text-[10px] tracking-[.22em] text-paper/70">GALERIE LOCAȚIE</p>
+                    <p class="font-display text-3xl text-paper font-700">Indoor + outdoor</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <template x-for="(img,i) in imgs" :key="i">
+                      <button @click="active=i" :class="active===i ? 'bg-vermilion w-7' : 'bg-paper/60 w-2.5'" class="h-2.5 rounded-full transition-all" :aria-label="`Imagine ${i+1}`"></button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden sm:block absolute -right-4 -bottom-5 floaty">
+              <div class="stamp w-24 h-24 bg-ochre text-ink rounded-full grid place-items-center text-center rotate-12 shadow-soft">
+                <div class="font-mono text-[9px] leading-tight">OPEN<br><span class="font-display text-lg font-700">AZI</span><br>10–21</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== STICKY MINI NAV / ENTITY LINKS ====================================================== -->
+    <section class="sticky top-[96px] z-30 bg-paper/90 backdrop-blur-md border-b border-ink/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="flex items-center gap-2 overflow-x-auto no-bar py-3 text-sm font-700">
+          <a href="#activitati" class="shrink-0 px-4 py-2 rounded-full bg-ink text-paper">Activități</a>
+          <a href="#despre" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">Despre locație</a>
+          <a href="#program" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">Program & adresă</a>
+          <a href="#recenzii" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">Recenzii</a>
+          <a href="#faq" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">FAQ</a>
+          <a href="#similare" class="shrink-0 px-4 py-2 rounded-full bg-paper-2 hover:bg-paper-3 transition">Locații similare</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== ACTIVITIES LIST ====================================================== -->
+    <section id="activitati" class="max-w-7xl mx-auto px-4 sm:px-6 py-14 lg:py-20"
+      x-data="venuePage()"
+      x-init="init()">
+
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">ACTIVITĂȚI ÎN ACEASTĂ LOCAȚIE</p>
+          <h2 class="font-display text-[clamp(2rem,5vw,4rem)] font-700 leading-[.92]">Alege experiența<br><span class="ital text-vermilion">potrivită</span></h2>
+          <p class="mt-4 text-ink-soft text-lg max-w-2xl">Aceeași locație poate avea bilete diferite: acces general, tururi ghidate, intervale orare, camere tematice, ateliere sau abonamente de zi.</p>
+        </div>
+        <div class="ticket bg-paper-2 border-2 border-ink rounded-2xl p-4 max-w-md" style="--perf:100%">
+          <p class="font-700">Cumperi mai multe activități?</p>
+          <p class="text-sm text-ink-soft mt-1">Poți rezerva separat fiecare activitate disponibilă. Toate biletele ajung pe email, cu QR.</p>
+        </div>
+      </div>
+
+      <!-- filters -->
+      <div class="bg-paper-2 border-2 border-ink rounded-3xl p-4 sm:p-5 mb-8">
+        <div class="grid lg:grid-cols-[1fr_.7fr_.7fr_.7fr_auto] gap-3">
+          <label class="relative block">
+            <span class="sr-only">Caută activitate</span>
+            <input x-model="query" type="search" placeholder="Caută în această locație: atelier, escape, tur..."
+              class="w-full h-12 rounded-2xl bg-paper border border-ink/10 px-4 pl-11 focus:outline-none focus:ring-2 focus:ring-vermilion/50" />
+            <svg viewBox="0 0 24 24" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </label>
+
+          <select x-model="category" class="h-12 rounded-2xl bg-paper border border-ink/10 px-4 focus:outline-none focus:ring-2 focus:ring-vermilion/50">
+            <option value="all">Toate categoriile</option>
+            <option value="escape">Escape room</option>
+            <option value="kids">Copii & familie</option>
+            <option value="tour">Tur ghidat</option>
+            <option value="workshop">Atelier</option>
+            <option value="group">Grupuri</option>
+          </select>
+
+          <select x-model="audience" class="h-12 rounded-2xl bg-paper border border-ink/10 px-4 focus:outline-none focus:ring-2 focus:ring-vermilion/50">
+            <option value="all">Orice public</option>
+            <option value="family">Familii</option>
+            <option value="adults">Adulți</option>
+            <option value="kids">Copii</option>
+            <option value="teams">Team-building</option>
+          </select>
+
+          <select x-model="sort" class="h-12 rounded-2xl bg-paper border border-ink/10 px-4 focus:outline-none focus:ring-2 focus:ring-vermilion/50">
+            <option value="recommended">Recomandate</option>
+            <option value="price">Preț crescător</option>
+            <option value="rating">Rating</option>
+            <option value="duration">Durată</option>
+          </select>
+
+          <button @click="reset()" class="h-12 px-5 rounded-2xl bg-ink text-paper font-700 hover:bg-ink-2 transition">Resetează</button>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
+        <div>
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <p class="text-sm text-ink-soft"><span class="font-700 text-ink" x-text="filtered.length"></span> activități găsite</p>
+            <p class="hidden sm:block text-xs font-mono text-ink-soft tracking-[.15em]">ACTUALIZAT AZI</p>
+          </div>
+
+          <div class="space-y-4">
+            <template x-for="item in filtered" :key="item.id">
+              <article class="ticket ticket-lift bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft" style="--perf:72%; --punch:#F4EFE3">
+                <div class="grid md:grid-cols-[240px_1fr]">
+                  <a :href="item.url" class="relative min-h-[220px] bg-ink block overflow-hidden">
+                    <img :src="item.image" :alt="item.alt" class="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-105">
+                    <div class="absolute top-3 left-3 flex flex-wrap gap-2">
+                      <span class="px-2.5 py-1 rounded-full bg-paper text-ink text-[11px] font-800" x-text="item.badge"></span>
+                    </div>
+                    <div class="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-ink/80 text-paper text-[11px] font-mono" x-text="item.duration"></div>
+                  </a>
+
+                  <div class="p-5 lg:p-6 grid md:grid-cols-[1fr_150px] gap-5">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <span class="text-xs font-mono tracking-[.14em] text-vermilion" x-text="item.categoryLabel"></span>
+                        <span class="text-xs text-ink-soft">·</span>
+                        <span class="text-xs text-ink-soft" x-text="item.audienceLabel"></span>
+                      </div>
+                      <h3 class="font-display text-2xl lg:text-3xl leading-[1] font-700">
+                        <a :href="item.url" class="hover:text-vermilion transition" x-text="item.title"></a>
+                      </h3>
+                      <p class="mt-3 text-ink-soft leading-relaxed" x-text="item.description"></p>
+
+                      <div class="mt-4 flex flex-wrap gap-2">
+                        <template x-for="tag in item.tags" :key="tag">
+                          <span class="px-2.5 py-1 rounded-full bg-paper-2 border border-ink/10 text-xs font-700" x-text="tag"></span>
+                        </template>
+                      </div>
+                    </div>
+
+                    <div class="md:border-l-2 md:border-dashed md:border-ink/20 md:pl-5 flex md:flex-col items-end md:items-stretch justify-between gap-4">
+                      <div class="text-right md:text-left">
+                        <p class="text-xs text-ink-soft">de la</p>
+                        <p class="font-display text-3xl font-700"><span x-text="item.price"></span> lei</p>
+                        <p class="text-xs text-forest font-700 mt-1" x-text="item.availability"></p>
+                      </div>
+                      <a :href="item.url" class="inline-flex justify-center px-5 py-3 rounded-full bg-vermilion text-paper font-800 hover:bg-vermilion-d transition">Rezervă</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="perf hidden md:block"></div><div class="notch top hidden md:block"></div><div class="notch bot hidden md:block"></div>
+              </article>
+            </template>
+          </div>
+
+          <div x-show="filtered.length===0" x-cloak class="border-2 border-dashed border-ink/30 rounded-3xl p-10 text-center bg-paper-2">
+            <h3 class="font-display text-3xl font-700">Nu am găsit activități pentru filtrul ales.</h3>
+            <p class="mt-2 text-ink-soft">Încearcă să elimini categoria sau să cauți un termen mai general.</p>
+            <button @click="reset()" class="mt-5 px-6 py-3 rounded-full bg-ink text-paper font-700">Resetează filtrele</button>
+          </div>
+        </div>
+
+        <!-- sticky venue card -->
+        <aside class="lg:sticky lg:top-40 space-y-4">
+          <div class="ticket bg-ink text-paper rounded-3xl overflow-hidden border-2 border-ink shadow-soft" style="--perf:100%">
+            <div class="p-6">
+              <p class="font-mono text-[10px] tracking-[.22em] text-paper/50 mb-3">FIȘA LOCAȚIEI</p>
+              <h3 class="font-display text-3xl font-700 leading-none">Adventure Hub Brașov</h3>
+              <div class="mt-5 space-y-3 text-sm">
+                <div class="flex items-start gap-3">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5 text-ochre shrink-0 mt-.5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                  <span>Strada Republicii 25, Brașov</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5 text-ochre shrink-0 mt-.5" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  <span>Luni–Vineri 10:00–21:00<br>Sâmbătă–Duminică 09:00–22:00</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5 text-ochre shrink-0 mt-.5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7H4m16 5H4m16 5H4"/></svg>
+                  <span>Escape rooms, ateliere, tururi, activități de grup</span>
+                </div>
+              </div>
+
+              <div class="mt-6 grid grid-cols-2 gap-2">
+                <a href="#program" class="px-4 py-3 rounded-2xl bg-paper text-ink font-800 text-center hover:bg-paper-2 transition">Adresă</a>
+                <a href="#activitati" class="px-4 py-3 rounded-2xl bg-vermilion text-paper font-800 text-center hover:bg-vermilion-d transition">Bilete</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-paper-2 rounded-3xl border border-ink/10 p-5">
+            <p class="font-800">Căutări SEO targetate</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-sm">
+              <a href="/brasov" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">activități Brașov</a>
+              <a href="/brasov/copii" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">activități copii Brașov</a>
+              <a href="/escape-rooms/brasov" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">escape room Brașov</a>
+              <a href="/brasov/weekend" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">ce faci în weekend</a>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ====================================================== ABOUT / SEO EDITORIAL ====================================================== -->
+    <section id="despre" class="bg-paper-2 border-y border-ink/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-[.9fr_1.1fr] gap-12">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">DESPRE LOCAȚIE</p>
+          <h2 class="font-display text-[clamp(2rem,5vw,4rem)] font-700 leading-[.92]">O pagină care ajută Google să înțeleagă <span class="ital text-vermilion">locația</span>, nu doar biletele.</h2>
+        </div>
+
+        <div class="prose-venue text-[17px] leading-relaxed text-ink-soft">
+          <p><strong class="text-ink">Adventure Hub Brașov</strong> este o locație de agrement din centrul orașului Brașov, potrivită pentru familii, grupuri de prieteni, turiști și companii care caută activități ușor de rezervat online. În aceeași locație găsești mai multe experiențe, de la <a href="/escape-rooms/brasov">escape rooms în Brașov</a> până la ateliere pentru copii și tururi ghidate.</p>
+          <p>Pagina este construită pentru căutări locale și intenții diferite: persoane care caută numele locației, turiști care vor să afle <a href="/brasov">ce să facă în Brașov</a>, părinți care caută activități pentru copii sau companii interesate de experiențe de grup și team-building.</p>
+          <p>Fiecare activitate are propria pagină dedicată cu descriere, preț, durată, vârstă recomandată, intervale disponibile și bilet QR. Pagina de locație le leagă semantic pe toate și creează un hub intern puternic pentru SEO.</p>
+
+          <div class="mt-8 grid sm:grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-paper border border-ink/10 p-4">
+              <p class="font-display text-2xl font-700">Local SEO</p>
+              <p class="text-sm mt-1">Nume locație, adresă, oraș, categorii și activități.</p>
+            </div>
+            <div class="rounded-2xl bg-paper border border-ink/10 p-4">
+              <p class="font-display text-2xl font-700">Entity SEO</p>
+              <p class="text-sm mt-1">Schema LocalBusiness + TouristAttraction + ItemList.</p>
+            </div>
+            <div class="rounded-2xl bg-paper border border-ink/10 p-4">
+              <p class="font-display text-2xl font-700">Internal links</p>
+              <p class="text-sm mt-1">Legături către oraș, categorii și pagini individuale.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== PROGRAM / LOCATION / MAP ====================================================== -->
+    <section id="program" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-8 lg:gap-12">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">PROGRAM, ADRESĂ & ACCES</p>
+          <h2 class="font-display text-[clamp(2rem,5vw,3.8rem)] font-700 leading-[.95]">Cum ajungi la Adventure Hub Brașov</h2>
+
+          <div class="mt-8 grid sm:grid-cols-2 gap-4">
+            <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-800 text-lg">Adresă</p>
+              <p class="mt-2 text-ink-soft">Strada Republicii 25, Brașov, județul Brașov</p>
+              <a href="https://maps.google.com/?q=Strada+Republicii+25+Brasov" class="inline-flex mt-3 text-vermilion font-800 underline-wobble">Deschide în Maps</a>
+            </div>
+            <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-800 text-lg">Program</p>
+              <p class="mt-2 text-ink-soft">Luni–Vineri: 10:00–21:00<br>Sâmbătă–Duminică: 09:00–22:00</p>
+            </div>
+            <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-800 text-lg">Transport</p>
+              <p class="mt-2 text-ink-soft">Aproape de centrul vechi, acces facil pietonal și cu transport public.</p>
+            </div>
+            <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-800 text-lg">Recomandare</p>
+              <p class="mt-2 text-ink-soft">Ajungi cu 10–15 minute înainte de intervalul ales, mai ales pentru activitățile cu grup.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="ticket bg-ink rounded-[2rem] overflow-hidden border-2 border-ink min-h-[460px] relative" style="--perf:100%">
+          <div class="absolute inset-0 opacity-70" style="background-image:linear-gradient(rgba(244,239,227,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(244,239,227,.08) 1px, transparent 1px); background-size:38px 38px;"></div>
+          <div class="absolute inset-8 rounded-[1.5rem] border-2 border-paper/25"></div>
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-paper">
+            <div class="mx-auto w-20 h-20 rounded-full bg-vermilion grid place-items-center shadow-soft">
+              <svg viewBox="0 0 24 24" class="w-9 h-9" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            </div>
+            <p class="font-display text-4xl font-700 mt-4">Hartă / embed</p>
+            <p class="text-paper/65 mt-2 max-w-sm">În producție, aici poți încărca Google Maps, Mapbox sau o hartă statică optimizată pentru performanță.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== REVIEWS ====================================================== -->
+    <section id="recenzii" class="bg-ink text-paper">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-9">
+          <div>
+            <p class="font-mono text-xs tracking-[.2em] text-ochre mb-3">RECENZII</p>
+            <h2 class="font-display text-[clamp(2rem,5vw,4rem)] font-700 leading-[.92]">Ce spun vizitatorii</h2>
+          </div>
+          <div class="text-left lg:text-right">
+            <p class="font-display text-5xl font-700">4.8/5</p>
+            <p class="text-paper/60">din 246 recenzii verificate</p>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-4">
+          <article class="bg-paper text-ink rounded-3xl p-6">
+            <p class="text-ochre font-800">★★★★★</p>
+            <p class="mt-4 text-ink-soft leading-relaxed">„Am rezervat rapid pentru copii și am primit biletele imediat. Locația e ușor de găsit, iar activitățile sunt foarte bine organizate.”</p>
+            <p class="mt-5 font-800">Ioana M.</p>
+          </article>
+          <article class="bg-paper text-ink rounded-3xl p-6">
+            <p class="text-ochre font-800">★★★★★</p>
+            <p class="mt-4 text-ink-soft leading-relaxed">„Foarte bun pentru un grup de prieteni. Am făcut escape room-ul și apoi am rămas la o activitate scurtă. Totul într-un singur loc.”</p>
+            <p class="mt-5 font-800">Radu P.</p>
+          </article>
+          <article class="bg-paper text-ink rounded-3xl p-6">
+            <p class="text-ochre font-800">★★★★☆</p>
+            <p class="mt-4 text-ink-soft leading-relaxed">„Bună opțiune de weekend în Brașov, mai ales când vrei ceva rezervabil online și nu vrei să suni pentru disponibilitate.”</p>
+            <p class="mt-5 font-800">Mihai D.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== FAQ + INTERNAL LINKS ====================================================== -->
+    <section id="faq" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-[.85fr_1fr] gap-12">
+      <div>
+        <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">ÎNTREBĂRI FRECVENTE</p>
+        <h2 class="font-display text-[clamp(2rem,5vw,3.8rem)] font-700 leading-[.95]">Întrebări despre locație și bilete</h2>
+        <p class="mt-5 text-ink-soft text-lg">FAQ-ul este foarte util pentru SEO long-tail și reduce fricțiunea înainte de cumpărare.</p>
+
+        <div class="mt-8">
+          <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-3">LINKURI INTERNE RELEVANTE</p>
+          <div class="flex flex-wrap gap-2">
+            <a href="/brasov" class="px-4 py-2 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">Activități în Brașov</a>
+            <a href="/escape-rooms/brasov" class="px-4 py-2 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">Escape rooms Brașov</a>
+            <a href="/brasov/copii" class="px-4 py-2 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">Activități pentru copii Brașov</a>
+            <a href="/brasov/weekend" class="px-4 py-2 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">Ce să faci în Brașov weekend</a>
+          </div>
+        </div>
+      </div>
+
+      <div x-data="{ active:0 }" class="space-y-3">
+        <template x-for="(f,i) in [
+          {q:'Ce activități sunt disponibile la Adventure Hub Brașov?', a:'Locația are escape rooms, ateliere pentru copii, tururi ghidate și activități de grup. Lista exactă se actualizează în funcție de disponibilitate și sezon.'},
+          {q:'Pot cumpăra bilete online pentru mai multe activități?', a:'Da. Alegi activitatea dorită, data și intervalul, apoi primești biletul cu cod QR pe email. Pentru activități diferite, rezervarea se face separat.'},
+          {q:'Este locația potrivită pentru copii?', a:'Da, unele activități sunt gândite pentru copii și familii. Verifică vârsta recomandată și regulile de participare pe pagina fiecărei activități.'},
+          {q:'Trebuie să printez biletul?', a:'Nu. Poți arăta biletul digital de pe telefon. Codul QR este suficient pentru validare la intrare.'},
+          {q:'Cum ajung la locație?', a:'Adventure Hub Brașov este pe Strada Republicii 25, aproape de centrul orașului. Poți folosi butonul Deschide în Maps din secțiunea de adresă.'}
+        ]" :key="i">
+          <div class="border-2 border-ink rounded-2xl overflow-hidden bg-paper">
+            <button @click="active = active===i ? null : i" class="w-full flex items-center justify-between gap-4 text-left px-5 py-4">
+              <span class="font-800 text-[17px]" x-text="f.q"></span>
+              <span class="shrink-0 grid place-items-center w-7 h-7 rounded-full border-2 border-ink transition-transform duration-300" :class="active===i && 'rotate-45 bg-vermilion border-vermilion text-paper'">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+              </span>
+            </button>
+            <div x-show="active===i" x-collapse x-cloak>
+              <p class="px-5 pb-5 text-ink-soft leading-relaxed" x-text="f.a"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ====================================================== SIMILAR VENUES ====================================================== -->
+    <section id="similare" class="bg-paper-2 border-y border-ink/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-9">
+          <div>
+            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">LOCAȚII SIMILARE</p>
+            <h2 class="font-display text-[clamp(2rem,5vw,3.8rem)] font-700 leading-[.95]">Mai multe locuri de vizitat în Brașov</h2>
+          </div>
+          <a href="/brasov/locatii" class="inline-flex px-6 py-3 rounded-full bg-ink text-paper font-800 hover:bg-ink-2 transition">Vezi toate locațiile</a>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-5">
+          <a href="/locatii/muzeul-interactiv-brasov" class="ticket ticket-lift block bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft" style="--perf:100%">
+            <img src="https://images.unsplash.com/photo-1564399579883-451a5d44ec08?q=80&w=900&auto=format&fit=crop" alt="Muzeul Interactiv Brașov, locație cu expoziții și activități educative" class="h-52 w-full object-cover">
+            <div class="p-5">
+              <p class="font-mono text-[10px] tracking-[.18em] text-vermilion">MUZEU</p>
+              <h3 class="font-display text-2xl font-700 mt-1">Muzeul Interactiv Brașov</h3>
+              <p class="text-sm text-ink-soft mt-2">Expoziții, tururi și activități educative pentru familii.</p>
+            </div>
+          </a>
+          <a href="/locatii/parcul-aventura-brasov" class="ticket ticket-lift block bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft" style="--perf:100%">
+            <img src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?q=80&w=900&auto=format&fit=crop" alt="Parc de aventură în Brașov cu trasee și activități outdoor" class="h-52 w-full object-cover">
+            <div class="p-5">
+              <p class="font-mono text-[10px] tracking-[.18em] text-forest">AVENTURĂ</p>
+              <h3 class="font-display text-2xl font-700 mt-1">Parcul Aventura Brașov</h3>
+              <p class="text-sm text-ink-soft mt-2">Trasee, tiroliene și experiențe outdoor pentru grupuri.</p>
+            </div>
+          </a>
+          <a href="/locatii/atelierul-copiilor-brasov" class="ticket ticket-lift block bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft" style="--perf:100%">
+            <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=900&auto=format&fit=crop" alt="Atelierul Copiilor Brașov cu activități creative și educative" class="h-52 w-full object-cover">
+            <div class="p-5">
+              <p class="font-mono text-[10px] tracking-[.18em] text-ochre">COPII</p>
+              <h3 class="font-display text-2xl font-700 mt-1">Atelierul Copiilor</h3>
+              <p class="text-sm text-ink-soft mt-2">Ateliere creative și experiențe de învățare prin joacă.</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== CTA ====================================================== -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
+      <div class="ticket relative bg-vermilion text-paper rounded-3xl overflow-hidden border-2 border-ink p-10 sm:p-14 text-center" style="--perf:100%; --punch:#F4EFE3">
+        <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(#fff 1.5px,transparent 1.5px);background-size:26px 26px"></div>
+        <div class="relative">
+          <p class="font-mono text-[10px] tracking-[.22em] text-paper/70 mb-3">ADVENTURE HUB BRAȘOV</p>
+          <h2 class="font-display text-[clamp(2rem,5vw,3.6rem)] font-700 leading-[0.95]">Alege activitatea, rezervă online,<br>intră cu QR.</h2>
+          <p class="mt-4 text-paper/85 text-lg max-w-xl mx-auto">Toate experiențele acestei locații sunt într-un singur loc: program, prețuri, disponibilitate și bilete digitale.</p>
+          <div class="mt-8 flex flex-wrap justify-center gap-3">
+            <a href="#activitati" class="px-7 py-4 rounded-full bg-ink text-paper font-800 hover:bg-ink-2 transition">Vezi activitățile</a>
+            <a href="/brasov" class="px-7 py-4 rounded-full bg-paper text-ink font-800 hover:bg-paper-2 transition">Explorează Brașov</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ====================================================== FOOTER ====================================================== -->
+  <footer class="bg-ink text-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+      <div class="md:col-span-2">
+        <a href="/" class="inline-flex items-center gap-2.5">
+          <span class="grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg]">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+          </span>
+          <span class="font-display text-2xl font-700">bilete<span class="text-vermilion">.</span>online</span>
+        </a>
+        <p class="mt-4 max-w-md text-paper/60">Bilete pentru locuri unde mergi să faci ceva: escape rooms, muzee, parcuri, ateliere, peșteri, rezervații și experiențe locale.</p>
+      </div>
+      <div>
+        <p class="font-800 mb-3">Categorii</p>
+        <div class="space-y-2 text-paper/65">
+          <a href="/escape-rooms" class="block hover:text-paper">Escape rooms</a>
+          <a href="/muzee" class="block hover:text-paper">Muzee</a>
+          <a href="/parcuri-de-distractii" class="block hover:text-paper">Parcuri de distracții</a>
+          <a href="/parcuri-aventura" class="block hover:text-paper">Parcuri de aventură</a>
+        </div>
+      </div>
+      <div>
+        <p class="font-800 mb-3">Pentru parteneri</p>
+        <div class="space-y-2 text-paper/65">
+          <a href="/listeaza-locatia" class="block hover:text-paper">Listează locația</a>
+          <a href="/tixello" class="block hover:text-paper">Operat de Tixello</a>
+          <a href="/contact" class="block hover:text-paper">Contact</a>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-paper/10 py-5">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between text-xs text-paper/50">
+        <p>© 2026 bilete.online. Toate drepturile rezervate.</p>
+        <p>Template HTML + Tailwind + Alpine pentru pagini de locație.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ====================================================== ALPINE DATA ====================================================== -->
+  <script>
+    function venuePage(){
+      return {
+        query: '',
+        category: 'all',
+        audience: 'all',
+        sort: 'recommended',
+        activities: [
+          {
+            id: 1,
+            title: 'Camera Secretelor',
+            url: '/activitati/camera-secretelor-brasov',
+            category: 'escape',
+            categoryLabel: 'ESCAPE ROOM',
+            audience: 'adults',
+            audienceLabel: 'Adulți & prieteni',
+            price: 130,
+            rating: 4.9,
+            durationMin: 60,
+            duration: '60 min',
+            badge: 'Instant',
+            availability: 'Azi · 5 intervale',
+            image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=900&auto=format&fit=crop',
+            alt: 'Camera Secretelor escape room în Brașov la Adventure Hub',
+            description: 'Un escape room cu puzzle-uri logice, atmosferă cinematică și nivel mediu de dificultate.',
+            tags: ['2–6 persoane', 'Indoor', 'Dificultate medie']
+          },
+          {
+            id: 2,
+            title: 'Atelier Micii Exploratori',
+            url: '/activitati/atelier-micii-exploratori',
+            category: 'kids',
+            categoryLabel: 'COPII & FAMILIE',
+            audience: 'kids',
+            audienceLabel: 'Copii 5–10 ani',
+            price: 45,
+            rating: 4.8,
+            durationMin: 90,
+            duration: '90 min',
+            badge: 'Familie',
+            availability: 'Weekend · locuri limitate',
+            image: 'https://images.unsplash.com/photo-1604881991720-f91add269bed?q=80&w=900&auto=format&fit=crop',
+            alt: 'Atelier pentru copii la Adventure Hub Brașov',
+            description: 'Atelier creativ și educativ pentru copii, cu activități practice și ghidaj prietenos.',
+            tags: ['5–10 ani', 'Educativ', 'Cu instructor']
+          },
+          {
+            id: 3,
+            title: 'Tur ghidat Adventure Hub',
+            url: '/activitati/tur-ghidat-adventure-hub',
+            category: 'tour',
+            categoryLabel: 'TUR GHIDAT',
+            audience: 'family',
+            audienceLabel: 'Familii & turiști',
+            price: 35,
+            rating: 4.7,
+            durationMin: 45,
+            duration: '45 min',
+            badge: 'Popular',
+            availability: 'Zilnic · 10:00–18:00',
+            image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=900&auto=format&fit=crop',
+            alt: 'Tur ghidat pentru familii și turiști la Adventure Hub Brașov',
+            description: 'O introducere rapidă în spațiile, poveștile și activitățile disponibile în locație.',
+            tags: ['Ghid inclus', 'Turiști', 'Rapid']
+          },
+          {
+            id: 4,
+            title: 'Misiunea Echipei',
+            url: '/activitati/misiunea-echipei-brasov',
+            category: 'group',
+            categoryLabel: 'GRUPURI',
+            audience: 'teams',
+            audienceLabel: 'Team-building',
+            price: 180,
+            rating: 4.9,
+            durationMin: 120,
+            duration: '120 min',
+            badge: 'Corporate',
+            availability: 'La cerere',
+            image: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=80&w=900&auto=format&fit=crop',
+            alt: 'Activitate de team-building la Adventure Hub Brașov',
+            description: 'Experiență de colaborare pentru echipe, cu provocări, reflecție și facilitare opțională.',
+            tags: ['Companii', '8–30 persoane', 'Facilitator']
+          },
+          {
+            id: 5,
+            title: 'Atelier de weekend: Constructorii',
+            url: '/activitati/atelier-constructorii-brasov',
+            category: 'workshop',
+            categoryLabel: 'ATELIER',
+            audience: 'family',
+            audienceLabel: 'Familii',
+            price: 55,
+            rating: 4.6,
+            durationMin: 75,
+            duration: '75 min',
+            badge: 'Nou',
+            availability: 'Sâmbătă & duminică',
+            image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=900&auto=format&fit=crop',
+            alt: 'Atelier de weekend pentru familii la Adventure Hub Brașov',
+            description: 'Activitate practică pentru copii și părinți, cu materiale incluse și rezultat de luat acasă.',
+            tags: ['Materiale incluse', 'Weekend', 'Creativ']
+          },
+          {
+            id: 6,
+            title: 'Noaptea Enigmelor',
+            url: '/activitati/noaptea-enigmelor-brasov',
+            category: 'escape',
+            categoryLabel: 'ESCAPE ROOM',
+            audience: 'adults',
+            audienceLabel: 'Adulți',
+            price: 150,
+            rating: 4.8,
+            durationMin: 80,
+            duration: '80 min',
+            badge: 'Seara',
+            availability: 'Vineri · 20:00',
+            image: 'https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?q=80&w=900&auto=format&fit=crop',
+            alt: 'Escape room de seară Noaptea Enigmelor la Adventure Hub Brașov',
+            description: 'Experiență de seară cu atmosferă intensă, puzzle-uri narative și recomandare 14+.',
+            tags: ['14+', 'Seara', 'Atmosferic']
+          }
+        ],
+        init(){
+          const els = document.querySelectorAll('[data-stagger]');
+          const obs = new IntersectionObserver((entries)=>{
+            entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('in'); });
+          }, {threshold:.12});
+          els.forEach(el=>obs.observe(el));
+        },
+        reset(){
+          this.query = '';
+          this.category = 'all';
+          this.audience = 'all';
+          this.sort = 'recommended';
+        },
+        get filtered(){
+          let out = this.activities.filter(item => {
+            const q = this.query.trim().toLowerCase();
+            const matchesQ = !q || [item.title, item.description, item.categoryLabel, item.audienceLabel, ...item.tags].join(' ').toLowerCase().includes(q);
+            const matchesCat = this.category === 'all' || item.category === this.category;
+            const matchesAudience = this.audience === 'all' || item.audience === this.audience;
+            return matchesQ && matchesCat && matchesAudience;
+          });
+
+          if(this.sort === 'price') out = [...out].sort((a,b)=>a.price-b.price);
+          if(this.sort === 'rating') out = [...out].sort((a,b)=>b.rating-a.rating);
+          if(this.sort === 'duration') out = [...out].sort((a,b)=>a.durationMin-b.durationMin);
+          if(this.sort === 'recommended') out = [...out].sort((a,b)=>b.rating-a.rating || a.price-b.price);
+
+          return out;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

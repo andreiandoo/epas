@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Punctele mele — bilete.online</title>
+  <meta name="description" content="Punctele mele pe bilete.online: sold puncte bonus, valoare estimată, istoric tranzacții, reguli de folosire, afiliere, link de recomandare și beneficii." />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <link rel="canonical" href="https://bilete.online/cont/punctele-mele" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    html{scroll-behavior:smooth} body{background:#F4EFE3;color:#1B1714;font-feature-settings:"ss01","cv01"}
+    .font-display{font-optical-sizing:auto;letter-spacing:-.018em}
+    .grain::after{content:"";position:fixed;inset:0;z-index:80;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+    .stamp{border:2px solid currentColor;border-radius:9999px}
+    .underline-wobble{background-image:linear-gradient(currentColor,currentColor);background-size:100% 2px;background-repeat:no-repeat;background-position:0 100%;transition:background-size .3s}
+    .underline-wobble:hover{background-size:0% 2px}
+    .field{width:100%;border:2px solid rgba(27,23,20,.16);background:rgba(255,255,255,.28);border-radius:1rem;padding:.85rem 1rem;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
+    .field:focus{border-color:#E84527;box-shadow:0 0 0 4px rgba(232,69,39,.12);background:#F4EFE3}
+    .sidebar-link[aria-current="page"]{background:#1B1714;color:#F4EFE3}
+    .ticket{position:relative;isolation:isolate}
+    .ticket .perf{position:absolute;top:0;bottom:0;left:var(--perf,68%);width:0;border-left:2px dashed rgba(27,23,20,.28)}
+    @keyframes shimmer{0%{transform:translateX(-120%)}100%{transform:translateX(260%)}}
+    .shimmer::after{content:"";position:absolute;inset:-20% auto -20% 0;width:35%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:shimmer 5s ease-in-out infinite}
+    [x-cloak]{display:none!important}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.shimmer::after{animation:none!important}*{transition:none!important}}
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="pointsPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> CONT CLIENT · PUNCTE BONUS · AFILIERE</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/cont/recomandari" class="text-ochre underline-wobble">Recomandări pentru tine</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/80 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Locații</a>
+        <a href="/card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Card cadou</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/cont/recomandari" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Folosește puncte</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu cont">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <a href="/cont/setari" class="hidden sm:flex items-center gap-3 rounded-full bg-ink text-paper pl-2 pr-4 py-2 hover:bg-vermilion transition">
+          <span class="grid place-items-center w-8 h-8 rounded-full bg-paper text-ink font-bold">A</span>
+          <span class="text-sm font-bold">Andrei</span>
+        </a>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/cont/dashboard" class="block py-2">Dashboard</a>
+      <a href="/cont/biletele-mele" class="block py-2">Biletele mele</a>
+      <a href="/cont/comenzile-mele" class="block py-2">Comenzile mele</a>
+      <a href="/cont/punctele-mele" class="block py-2 text-vermilion font-bold">Punctele mele</a>
+      <a href="/cont/recomandari" class="block py-2">Recomandări</a>
+      <a href="/cont/setari" class="block py-2">Setări</a>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 lg:py-8">
+  <div class="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+
+    <aside class="hidden lg:block sticky top-28">
+      <div class="rounded-[2rem] border-2 border-ink bg-paper p-4 shadow-ticket">
+        <div class="flex items-center gap-3 p-3 rounded-2xl bg-paper-2 border border-ink/10">
+          <span class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper font-display text-2xl font-bold">A</span>
+          <div class="min-w-0">
+            <p class="font-display text-2xl font-bold leading-none truncate">Andrei</p>
+            <p class="text-sm text-ink-soft truncate">andrei@email.ro</p>
+          </div>
+        </div>
+
+        <nav class="mt-4 space-y-1 text-sm font-bold">
+          <a href="/cont/dashboard" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Dashboard</span><span>⌘</span></a>
+          <a href="/cont/biletele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Biletele mele</span><span>3</span></a>
+          <a href="/cont/comenzile-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Comenzile mele</span><span>12</span></a>
+          <a href="/cont/punctele-mele" aria-current="page" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Punctele mele</span><span>820</span></a>
+          <a href="/cont/carduri-cadou" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Carduri cadou</span><span>1</span></a>
+          <a href="/cont/tichete-support" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Tichete support</span><span>2</span></a>
+          <a href="/cont/recenzii" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recenzii</span><span>4</span></a>
+          <a href="/cont/recomandari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recomandări</span><span>nou</span></a>
+          <a href="/cont/setari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Setări</span><span>72%</span></a>
+        </nav>
+
+        <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+          <p class="font-bold text-forest">Link afiliat activ</p>
+          <p class="mt-1 text-sm text-ink-soft break-all" x-text="referralLink"></p>
+          <button @click="copyReferral()" class="mt-3 rounded-full bg-forest text-paper px-4 py-2 text-sm font-bold hover:bg-ink transition" x-text="copied ? 'Copiat ✓' : 'Copiază link'"></button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="min-w-0">
+      <section class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 shadow-deep">
+        <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+        <div class="relative grid xl:grid-cols-[1fr_420px] gap-8 items-center">
+          <div>
+            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">LOYALTY WALLET</p>
+            <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Punctele mele</h1>
+            <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">Vezi soldul punctelor bonus, valoarea estimată, cum le poți folosi, ce puncte urmează să expire și câte ai câștigat din comenzi sau afiliere.</p>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a href="/cont/recomandari" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Folosește puncte</a>
+              <a href="#afiliere" class="rounded-full border-2 border-paper/50 px-6 py-4 font-bold hover:bg-paper hover:text-ink transition">Invită prieteni</a>
+            </div>
+          </div>
+
+          <div class="ticket shimmer relative rounded-[2rem] border-2 border-paper/30 bg-paper text-ink p-6 overflow-hidden rotate-[-2deg]" style="--perf:100%">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SOLD DISPONIBIL</p>
+            <p class="mt-3 font-display text-8xl font-bold leading-none">820</p>
+            <p class="mt-2 text-ink-soft">puncte bonus · aproximativ <strong class="text-ink">41 lei</strong></p>
+            <div class="mt-5 h-3 rounded-full bg-paper-2 overflow-hidden border border-ink/10">
+              <div class="h-full w-[68%] rounded-full bg-vermilion"></div>
+            </div>
+            <p class="mt-2 text-sm text-ink-soft">Încă 380 puncte până la nivelul Explorer Plus.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PUNCTE DISPONIBILE</p>
+          <p class="mt-3 font-display text-6xl font-bold">820</p>
+          <p class="mt-1 text-ink-soft">≈ 41 lei</p>
+        </article>
+        <article class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-forest">CÂȘTIGATE TOTAL</p>
+          <p class="mt-3 font-display text-6xl font-bold">1.460</p>
+          <p class="mt-1 text-ink-soft">din comenzi și afiliere</p>
+        </article>
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FOLOSITE</p>
+          <p class="mt-3 font-display text-6xl font-bold">640</p>
+          <p class="mt-1 text-ink-soft">≈ 32 lei reduceri</p>
+        </article>
+        <article class="rounded-[2rem] border-2 border-ink bg-rose p-5 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-vermilion">EXPIRĂ CURÂND</p>
+          <p class="mt-3 font-display text-6xl font-bold">120</p>
+          <p class="mt-1 text-ink-soft">în 31 zile</p>
+        </article>
+      </section>
+
+      <section class="mt-6 grid xl:grid-cols-[1fr_.9fr] gap-6">
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CUM FUNCȚIONEAZĂ</p>
+              <h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Folosești punctele direct în checkout.</h2>
+            </div>
+            <a href="/categorii" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Caută activități</a>
+          </div>
+
+          <div class="mt-6 grid md:grid-cols-3 gap-4">
+            <article class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-display text-5xl font-bold text-vermilion">1</p>
+              <h3 class="mt-2 font-display text-3xl font-bold">Cumperi</h3>
+              <p class="mt-2 text-ink-soft">La comenzile eligibile primești puncte bonus după confirmare.</p>
+            </article>
+            <article class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-display text-5xl font-bold text-vermilion">2</p>
+              <h3 class="mt-2 font-display text-3xl font-bold">Strângi</h3>
+              <p class="mt-2 text-ink-soft">Punctele se adună în cont și apar în istoricul tranzacțiilor.</p>
+            </article>
+            <article class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+              <p class="font-display text-5xl font-bold text-vermilion">3</p>
+              <h3 class="mt-2 font-display text-3xl font-bold">Reduci</h3>
+              <p class="mt-2 text-ink-soft">La checkout alegi câte puncte vrei să aplici în comanda eligibilă.</p>
+            </article>
+          </div>
+
+          <div class="mt-6 rounded-3xl bg-mint border border-forest/20 p-5">
+            <p class="font-bold text-forest">Regulă demo</p>
+            <p class="mt-1 text-ink-soft">În acest template, 20 puncte = 1 leu reducere. În implementarea reală, conversia și limitările trebuie citite din backend.</p>
+          </div>
+        </div>
+
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">NIVEL CLIENT</p>
+          <h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Explorer</h2>
+          <p class="mt-3 text-ink-soft">Ai activitate constantă și ești aproape de următorul nivel.</p>
+
+          <div class="mt-6">
+            <div class="flex justify-between text-sm font-bold">
+              <span>Explorer</span><span>Explorer Plus</span>
+            </div>
+            <div class="mt-2 h-4 rounded-full bg-paper-2 border border-ink/10 overflow-hidden">
+              <div class="h-full w-[68%] rounded-full bg-forest"></div>
+            </div>
+            <p class="mt-2 text-sm text-ink-soft">Mai ai nevoie de 380 puncte pentru următorul nivel.</p>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-3">
+              <span class="font-bold">Bonus la comenzi eligibile</span><span class="text-forest font-bold">activ</span>
+            </div>
+            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-3">
+              <span class="font-bold">Recomandări personalizate</span><span class="text-forest font-bold">activ</span>
+            </div>
+            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-3">
+              <span class="font-bold">Campanii exclusive</span><span class="text-ochre font-bold">soon</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="afiliere" class="mt-6 rounded-[2rem] border-2 border-ink bg-forest text-paper p-6 sm:p-8 shadow-deep">
+        <div class="grid xl:grid-cols-[1fr_420px] gap-8 items-center">
+          <div>
+            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">AFILIERE CLIENT</p>
+            <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Invită prieteni. Câștigă puncte când cumpără.</h2>
+            <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">Distribuie linkul tău de afiliat. Când un prieten creează cont și cumpără prima activitate eligibilă, primești puncte bonus. Prietenul poate primi și el un beneficiu, dacă există campanie activă.</p>
+
+            <div class="mt-6 grid sm:grid-cols-3 gap-3">
+              <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+                <p class="font-display text-5xl font-bold">8</p>
+                <p class="text-paper/55 text-sm">clickuri</p>
+              </div>
+              <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+                <p class="font-display text-5xl font-bold">3</p>
+                <p class="text-paper/55 text-sm">conturi create</p>
+              </div>
+              <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+                <p class="font-display text-5xl font-bold">1</p>
+                <p class="text-paper/55 text-sm">comandă eligibilă</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[2rem] border-2 border-paper/20 bg-paper text-ink p-6 rotate-[-2deg]">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LINKUL TĂU</p>
+            <h3 class="mt-2 font-display text-4xl font-bold leading-none">bilete.online/r/andrei</h3>
+            <div class="mt-5 rounded-2xl bg-paper-2 border border-ink/10 p-4 font-mono text-sm break-all" x-text="referralLink"></div>
+            <div class="mt-5 flex flex-wrap gap-2">
+              <button @click="copyReferral()" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition" x-text="copied ? 'Copiat ✓' : 'Copiază link'"></button>
+              <button class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper transition">Share WhatsApp</button>
+            </div>
+            <p class="mt-4 text-sm text-ink-soft">Cod afiliat: <strong class="font-mono text-ink">ANDREI20</strong></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid xl:grid-cols-[1fr_360px] gap-6 items-start">
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ISTORIC</p>
+              <h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Tranzacții puncte</h2>
+            </div>
+            <select class="field !w-auto" x-model="transactionType">
+              <option value="all">Toate</option>
+              <option value="earned">Câștigate</option>
+              <option value="spent">Folosite</option>
+              <option value="expired">Expirate</option>
+              <option value="affiliate">Afiliere</option>
+            </select>
+          </div>
+
+          <div class="mt-6 overflow-hidden rounded-3xl border border-ink/10">
+            <table class="w-full text-left">
+              <thead class="bg-paper-2 text-xs font-mono tracking-[.16em] text-ink-soft">
+                <tr>
+                  <th class="px-4 py-3">Data</th>
+                  <th class="px-4 py-3">Descriere</th>
+                  <th class="px-4 py-3 hidden md:table-cell">Tip</th>
+                  <th class="px-4 py-3 text-right">Puncte</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink/10">
+                <template x-for="tx in filteredTransactions()" :key="tx.id">
+                  <tr class="hover:bg-paper-2/60">
+                    <td class="px-4 py-4 text-sm text-ink-soft" x-text="tx.date"></td>
+                    <td class="px-4 py-4">
+                      <p class="font-bold" x-text="tx.title"></p>
+                      <p class="text-xs text-ink-soft" x-text="tx.meta"></p>
+                    </td>
+                    <td class="px-4 py-4 hidden md:table-cell">
+                      <span class="rounded-full px-3 py-1 text-xs font-bold" :class="tx.badgeClass" x-text="tx.typeLabel"></span>
+                    </td>
+                    <td class="px-4 py-4 text-right font-display text-2xl font-bold" :class="tx.amount > 0 ? 'text-forest' : 'text-vermilion'" x-text="(tx.amount > 0 ? '+' : '') + tx.amount"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="space-y-6">
+          <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">EXPIRARE</p>
+            <h2 class="mt-2 font-display text-4xl font-bold leading-none">120 puncte expiră curând</h2>
+            <p class="mt-3 text-ink-soft">Folosește-le în următoarele 31 zile la o comandă eligibilă.</p>
+            <a href="/cont/recomandari" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Vezi recomandări</a>
+          </div>
+
+          <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REGULI</p>
+            <h2 class="mt-2 font-display text-4xl font-bold leading-none">Pe scurt</h2>
+            <div class="mt-4 space-y-3 text-sm text-ink-soft">
+              <p><strong class="text-ink">Câștigare:</strong> la comenzi eligibile, după confirmare.</p>
+              <p><strong class="text-ink">Folosire:</strong> direct în checkout, în limita regulilor.</p>
+              <p><strong class="text-ink">Afiliere:</strong> puncte după prima comandă eligibilă a prietenului.</p>
+              <p><strong class="text-ink">Expirare:</strong> punctele pot avea termen de valabilitate.</p>
+            </div>
+            <a href="/termeni-program-puncte" class="mt-5 inline-flex font-bold text-vermilion underline-wobble">Vezi regulament</a>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+function pointsPage(){
+  return {
+    referralLink:'https://bilete.online/r/andrei',
+    copied:false,
+    transactionType:'all',
+    copyReferral(){
+      this.copied = true;
+      setTimeout(() => this.copied = false, 1800);
+    },
+    transactions:[
+      {id:1,date:'23 mai 2026',title:'Comandă #BO-2026-004218',meta:'Camera 13 · Brașov',type:'earned',typeLabel:'câștigate',amount:84,badgeClass:'bg-mint text-forest'},
+      {id:2,date:'18 mai 2026',title:'Comandă #BO-2026-004102',meta:'Atelier ceramică copii · București',type:'earned',typeLabel:'câștigate',amount:28,badgeClass:'bg-mint text-forest'},
+      {id:3,date:'15 mai 2026',title:'Afiliere: prima comandă prieten',meta:'Link /r/andrei · conversie validată',type:'affiliate',typeLabel:'afiliere',amount:250,badgeClass:'bg-forest text-paper'},
+      {id:4,date:'11 mai 2026',title:'Reducere aplicată în checkout',meta:'Comandă #BO-2026-003992',type:'spent',typeLabel:'folosite',amount:-300,badgeClass:'bg-rose text-vermilion'},
+      {id:5,date:'02 mai 2026',title:'Comandă #BO-2026-003871',meta:'Parc aventură · Cluj-Napoca',type:'earned',typeLabel:'câștigate',amount:50,badgeClass:'bg-mint text-forest'},
+      {id:6,date:'28 aprilie 2026',title:'Puncte expirate',meta:'Campanie martie 2026',type:'expired',typeLabel:'expirate',amount:-120,badgeClass:'bg-paper-2 text-ink-soft'}
+    ],
+    filteredTransactions(){
+      if(this.transactionType === 'all') return this.transactions;
+      return this.transactions.filter(tx => tx.type === this.transactionType);
+    }
+  }
+}
+</script>
+
+</body>
+</html>

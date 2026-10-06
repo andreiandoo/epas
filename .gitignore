@@ -54,3 +54,5 @@ nul
 # bilete.online runtime caches (page cache, API cache, generated thumbnails)
 resources/marketplaces/bileteonline/cache/
 resources/marketplaces/bileteonline/data/rate-limits/
+resources/marketplaces/viaqui/cache/
+resources/marketplaces/viaqui/data/rate-limits/

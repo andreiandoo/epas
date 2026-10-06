@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Lucruri de făcut în București — activități, bilete și experiențe | bilete.online</title>
+  <meta name="description" content="Descoperă cele mai bune lucruri de făcut în București: muzee, tururi culturale, activități pentru copii, escape rooms, experiențe cadou, parcuri, expoziții și ghiduri locale." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://bilete.online/bucuresti/ttd/" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Lucruri de făcut în București — bilete.online" />
+  <meta property="og:description" content="Activități, experiențe și bilete pentru București: muzee, tururi, copii, escape rooms, evenimente culturale și ghiduri locale." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1584646098378-0874589d76b1?auto=format&fit=crop&w=1600&q=80" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF', ink:'#1B1714','ink-soft':'#5A4F41', vermilion:'#E84527','vermilion-d':'#C5371C', forest:'#1E4A3D',ochre:'#DA9A33',mint:'#D7E8D3',rose:'#F2C7B8' },
+        fontFamily: { display:['Fraunces','Georgia','serif'], sans:['Hanken Grotesk','system-ui','sans-serif'], mono:['Spline Sans Mono','ui-monospace','monospace'] },
+        boxShadow:{ soft:'0 18px 45px -30px rgba(27,23,20,.75)', panel:'0 32px 90px -52px rgba(27,23,20,.9)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"CollectionPage","name":"Lucruri de făcut în București","description":"Activități, bilete, tururi, experiențe și ghiduri locale pentru București.","url":"https://bilete.online/bucuresti/ttd/","about":{"@type":"City","name":"București"},"publisher":{"@type":"Organization","name":"bilete.online"}}
+  </script>
+
+  <style>
+    html{scroll-behavior:smooth}
+    body{background:#F4EFE3;color:#1B1714;font-family:'Hanken Grotesk',system-ui,sans-serif;font-feature-settings:"ss01","cv01"}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .bo-grain::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+    .field{width:100%;border:2px solid rgba(27,23,20,.14);background:#F4EFE3;border-radius:999px;padding:.95rem 1.15rem;outline:none;transition:.2s}
+    .field:focus{border-color:#E84527;box-shadow:0 0 0 4px rgba(232,69,39,.12)}
+    .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .line-clamp-3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    [x-cloak]{display:none!important}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+
+<body x-data="cityPage()" x-init="init()" class="antialiased selection:bg-vermilion selection:text-paper">
+  <header class="sticky top-0 z-50 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+    <nav class="mx-auto flex h-[72px] max-w-[1500px] items-center gap-3 px-4 sm:px-6">
+      <a href="/" class="flex shrink-0 items-center gap-2.5">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg]">
+          <svg viewBox="0 0 24 24" class="h-5.5 w-5.5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-[1.55rem] font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+      <button @click="searchOpen=true" class="mx-auto hidden h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-paper px-4 text-left transition hover:border-ink/35 md:flex">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="text-sm font-bold text-ink-soft">Caută activități, atracții sau locații în București</span>
+      </button>
+      <div class="ml-auto hidden items-center gap-1 lg:flex">
+        <a href="/bucuresti" class="rounded-full bg-paper-2 px-4 py-2.5 text-sm font-bold">Explorează București</a>
+        <a href="/bucuresti/activitati" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Activități</a>
+        <a href="/ghiduri/bucuresti" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Inspirație</a>
+        <a href="/card-cadou" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Card cadou</a>
+      </div>
+      <div class="ml-auto flex items-center gap-2 lg:ml-0">
+        <a href="/cos" class="rounded-full border-2 border-ink px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Coș</a>
+        <a href="/login" class="rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Log in</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="relative overflow-hidden border-b border-ink/10 bg-paper">
+      <div class="absolute inset-0 opacity-[.08]" style="background-image:radial-gradient(#1B1714 1.2px,transparent 1.3px);background-size:18px 18px"></div>
+      <div class="relative mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-14">
+        <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-ink-soft" aria-label="Breadcrumb">
+          <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><a href="/orase" class="hover:text-vermilion">Orașe</a><span>/</span><span class="text-ink">București</span>
+        </nav>
+        <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_560px] lg:items-end">
+          <div>
+            <p class="font-mono text-xs tracking-[.18em] text-vermilion">BUCUREȘTI · THINGS TO DO</p>
+            <h1 class="mt-3 font-display text-6xl font-bold leading-[.84] sm:text-7xl lg:text-8xl">Lucruri de făcut în București</h1>
+            <p class="mt-6 max-w-4xl text-xl leading-relaxed text-ink-soft">Bucureștiul combină palate, cartiere istorice, muzee, artă contemporană, cafenele, escape rooms și experiențe de familie. Alege activități pentru weekend, bilete pentru atracții, tururi culturale, idei indoor sau experiențe cadou.</p>
+            <div class="mt-7 max-w-3xl rounded-full border-2 border-ink bg-paper p-2 shadow-soft">
+              <div class="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" class="ml-3 h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input x-model="heroSearch" class="w-full bg-transparent px-2 py-3 font-bold outline-none placeholder:text-ink-soft/70" placeholder="Caută activități în București: copii, muzee, escape rooms..." />
+                <a :href="'/bucuresti/search?q=' + encodeURIComponent(heroSearch)" class="shrink-0 rounded-full bg-vermilion px-6 py-3 font-bold text-paper transition hover:bg-vermilion-d">Caută</a>
+              </div>
+            </div>
+          </div>
+          <div class="grid h-[460px] grid-cols-5 grid-rows-4 gap-3">
+            <button @click="openGallery(0)" class="group relative col-span-3 row-span-4 overflow-hidden rounded-[2rem] border-2 border-ink bg-ink">
+              <img :src="gallery[0].src" :alt="gallery[0].alt" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+              <div class="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent"></div>
+              <span class="absolute bottom-4 left-4 rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink">Vezi imagini</span>
+            </button>
+            <template x-for="(image,index) in gallery.slice(1,5)" :key="image.src">
+              <button @click="openGallery(index+1)" class="group relative col-span-2 row-span-1 overflow-hidden rounded-[1.5rem] border-2 border-ink bg-ink">
+                <img :src="image.src" :alt="image.alt" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                <div x-show="index===3" class="absolute inset-0 grid place-items-center bg-ink/60"><span class="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink">+12 fotografii</span></div>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-paper">
+      <div class="mx-auto grid max-w-[1500px] gap-4 px-4 py-6 sm:px-6 md:grid-cols-4">
+        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">SEZON BUN</p><p class="mt-2 font-display text-3xl font-bold leading-none">Aprilie – octombrie</p><p class="mt-2 text-sm text-ink-soft">terasă, tururi, parcuri, evenimente outdoor</p></article>
+        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">CITY BREAK</p><p class="mt-2 font-display text-3xl font-bold leading-none">2 – 4 zile</p><p class="mt-2 text-sm text-ink-soft">destul pentru muzee, centru vechi și experiențe</p></article>
+        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">PENTRU FAMILII</p><p class="mt-2 font-display text-3xl font-bold leading-none">multe opțiuni</p><p class="mt-2 text-sm text-ink-soft">muzee interactive, ateliere, parcuri, teatru</p></article>
+        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">BILETE</p><p class="mt-2 font-display text-3xl font-bold leading-none">QR digital</p><p class="mt-2 text-sm text-ink-soft">rezervare rapidă și puncte bonus</p></article>
+      </div>
+    </section>
+
+    <section class="sticky top-[72px] z-40 border-y border-ink/10 bg-paper/95 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-[1500px] gap-2 overflow-x-auto px-4 py-3 text-sm font-bold sm:px-6">
+        <a href="#top-activities" class="shrink-0 rounded-full bg-ink px-4 py-2.5 text-paper">Top activități</a>
+        <a href="#attractions" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Atracții</a>
+        <a href="#categories" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Categorii</a>
+        <a href="#by-traveler" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Pentru cine</a>
+        <a href="#nearby" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Aproape de București</a>
+        <a href="#guides" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Ghiduri</a>
+        <a href="#faq" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">FAQ</a>
+      </div>
+    </section>
+
+    <section id="attractions" class="bg-paper">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACTII DE NERATAT</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Atracții pe care merită să le pui pe listă</h2></div><a href="/bucuresti/atractii" class="rounded-full border-2 border-ink px-5 py-3 font-bold transition hover:bg-ink hover:text-paper">Vezi toate atracțiile</a></div>
+        <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <template x-for="attraction in attractions" :key="attraction.href">
+            <a :href="attraction.href" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-soft transition hover:-translate-y-0.5 hover:shadow-panel"><div class="relative h-56 overflow-hidden"><img :src="attraction.image" :alt="attraction.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105"><span class="absolute left-4 top-4 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink" x-text="attraction.count + ' activități'"></span></div><div class="p-5"><p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="attraction.title"></p><p class="mt-2 line-clamp-2 text-sm text-ink-soft" x-text="attraction.description"></p></div></a>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section id="top-activities" class="bg-paper-2">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">RECOMANDATE</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Cele mai populare activități în București</h2><p class="mt-3 max-w-3xl text-ink-soft">Selectate pentru rating, disponibilitate, claritate, vânzări și potrivire cu pagina de oraș.</p></div><a href="/bucuresti/activitati" class="rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Vezi toate activitățile</a></div>
+        <div class="mt-8 grid gap-5 lg:grid-cols-3">
+          <template x-for="activity in topActivities" :key="activity.href">
+            <article class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-soft transition hover:-translate-y-0.5 hover:shadow-panel"><a :href="activity.href" class="relative block h-64 overflow-hidden bg-ink"><img :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105"><div class="absolute left-4 top-4 flex gap-2"><span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink" x-text="activity.badge"></span></div><button class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-paper text-2xl text-ink">♡</button></a><div class="p-5"><a :href="activity.href" class="block"><h3 class="font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="activity.title"></h3></a><p class="mt-2 line-clamp-2 text-ink-soft" x-text="activity.description"></p><div class="mt-4 flex flex-wrap items-center gap-2 text-sm font-bold"><span class="text-ochre">★★★★★</span><span x-text="activity.rating"></span><span class="text-ink-soft" x-text="'(' + activity.reviews + ')'"></span><span class="text-ink-soft">·</span><span x-text="activity.duration"></span></div><div class="mt-4 flex items-end justify-between gap-4"><div><p class="text-xs font-bold text-ink-soft">de la</p><p class="font-display text-3xl font-bold leading-none" x-text="activity.price"></p></div><a :href="activity.href" class="rounded-full bg-vermilion px-5 py-3 font-bold text-paper transition hover:bg-vermilion-d">Vezi bilete</a></div></div></article>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section id="categories" class="bg-paper">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p class="font-mono text-xs tracking-[.18em] text-vermilion">EXPLORE MORE</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Explorează mai multe lucruri de făcut în București</h2></div><a href="/bucuresti/categorii" class="rounded-full border-2 border-ink px-5 py-3 font-bold transition hover:bg-ink hover:text-paper">Toate categoriile</a></div>
+        <div class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <template x-for="category in categories" :key="category.href">
+            <a :href="category.href" class="group flex items-center justify-between rounded-3xl border border-ink/10 bg-paper-2 p-5 transition hover:border-ink hover:bg-paper hover:shadow-soft"><div><p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="category.title"></p><p class="mt-1 text-sm text-ink-soft" x-text="category.count + ' activități'"></p></div><span class="text-2xl transition group-hover:translate-x-1">→</span></a>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section id="by-traveler" class="bg-ink text-paper">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <p class="font-mono text-xs tracking-[.18em] text-ochre">PENTRU CINE</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Alege după stilul tău de ieșire</h2>
+        <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <template x-for="item in travelerTypes" :key="item.href">
+            <a :href="item.href" class="group rounded-[2rem] border border-paper/10 bg-paper/8 p-6 transition hover:-translate-y-0.5 hover:bg-paper hover:text-ink"><p class="text-4xl" x-text="item.icon"></p><p class="mt-5 font-display text-4xl font-bold leading-none group-hover:text-vermilion" x-text="item.title"></p><p class="mt-3 text-paper/60 group-hover:text-ink-soft" x-text="item.description"></p></a>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section id="nearby" class="bg-paper">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <p class="font-mono text-xs tracking-[.18em] text-vermilion">ÎN APROPIERE</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Lucruri de făcut lângă București</h2><p class="mt-3 max-w-3xl text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în București.</p>
+        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <template x-for="place in nearbyPlaces" :key="place.href">
+            <a :href="place.href" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-soft transition hover:-translate-y-0.5 hover:shadow-panel"><img :src="place.image" :alt="place.title" class="h-40 w-full object-cover transition duration-500 group-hover:scale-105"><div class="p-4"><p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="place.title"></p><p class="mt-1 text-sm text-ink-soft" x-text="place.meta"></p></div></a>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section id="guides" class="bg-paper-2">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">ARTICOLE</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Ghiduri pentru București</h2></div><a href="/ghiduri/bucuresti" class="rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate ghidurile</a></div>
+        <div class="mt-8 grid gap-5 lg:grid-cols-3">
+          <template x-for="guide in guides" :key="guide.href">
+            <a :href="guide.href" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-soft transition hover:-translate-y-0.5 hover:shadow-panel"><img :src="guide.image" :alt="guide.title" class="h-56 w-full object-cover transition duration-500 group-hover:scale-105"><div class="p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft" x-text="guide.kicker"></p><p class="mt-2 font-display text-4xl font-bold leading-none group-hover:text-vermilion" x-text="guide.title"></p><p class="mt-3 line-clamp-3 text-ink-soft" x-text="guide.excerpt"></p><p class="mt-4 text-sm font-bold text-vermilion">Citește ghidul →</p></div></a>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="bg-paper">
+      <div class="mx-auto grid max-w-[1500px] gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_1fr] lg:py-16">
+        <div><p class="font-mono text-xs tracking-[.18em] text-vermilion">BUCUREȘTI TRAVEL GUIDE</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Întrebări frecvente despre activități în București</h2><p class="mt-4 text-lg leading-relaxed text-ink-soft">Pagina de oraș trebuie să funcționeze și ca hub de descoperire, și ca pagină SEO. De aceea include răspunsuri clare pentru căutări frecvente: activități cu copii, activități indoor, tururi, atracții, experiențe ieftine și idei pentru weekend.</p></div>
+        <div class="divide-y divide-ink/10 overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-soft">
+          <template x-for="(faq,index) in faqs" :key="faq.q"><div><button @click="toggleFaq(index)" class="flex w-full items-center justify-between gap-4 p-5 text-left font-bold"><span x-text="faq.q"></span><span x-text="openFaq.includes(index) ? '−' : '+'"></span></button><div x-show="openFaq.includes(index)" x-collapse class="px-5 pb-5 text-ink-soft" x-text="faq.a"></div></div></template>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-ink text-paper">
+      <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="grid gap-8 rounded-[2rem] border border-paper/10 bg-paper/8 p-6 lg:grid-cols-[1fr_420px] lg:items-center lg:p-10">
+          <div><p class="font-mono text-xs tracking-[.18em] text-ochre">BUCUREȘTI UPDATES</p><h2 class="mt-2 font-display text-6xl font-bold leading-none">Primește idei de activități în București</h2><p class="mt-4 max-w-3xl text-paper/65">Activități noi, ghiduri locale, experiențe pentru copii, tururi, ateliere, oferte și idei de weekend.</p></div>
+          <form class="rounded-[1.5rem] bg-paper p-4 text-ink" @submit.prevent="newsletterSent=true"><label class="block"><span class="mb-1.5 block text-sm font-bold">Email</span><input type="email" required class="field" placeholder="emailul tău"></label><button class="mt-4 w-full rounded-full bg-vermilion px-5 py-3 font-bold text-paper transition hover:bg-vermilion-d">Abonează-mă</button><p x-show="newsletterSent" x-transition class="mt-3 rounded-2xl bg-mint px-4 py-3 text-sm font-bold text-forest">Perfect. Te-ai abonat la noutăți pentru București.</p></form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div x-show="searchOpen" x-cloak x-transition.opacity.duration.180ms class="fixed inset-0 z-[80] bg-ink/65 p-3 backdrop-blur-sm sm:p-5">
+    <div @click.outside="searchOpen=false" class="mx-auto mt-10 max-w-4xl overflow-hidden rounded-[2rem] bg-paper shadow-panel"><div class="border-b border-ink/10 p-4"><div class="flex items-center gap-3"><svg viewBox="0 0 24 24" class="h-6 w-6 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input x-ref="searchInput" x-model="heroSearch" type="search" class="w-full bg-transparent py-3 text-xl font-bold outline-none placeholder:text-ink-soft/70" placeholder="Caută activități în București"><button @click="searchOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button></div></div><div class="p-5"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUGESTII</p><div class="mt-4 grid gap-2 md:grid-cols-2"><template x-for="item in searchSuggestions()" :key="item.href"><a :href="item.href" class="rounded-2xl bg-paper-2 p-4 font-bold hover:bg-ink hover:text-paper"><span x-text="item.title"></span><span class="mt-1 block text-sm font-normal opacity-70" x-text="item.meta"></span></a></template></div></div></div>
+  </div>
+
+  <div x-show="galleryOpen" x-cloak class="fixed inset-0 z-[90] bg-ink/90 p-4 backdrop-blur-sm" @keydown.escape.window="galleryOpen=false">
+    <div class="mx-auto flex h-full max-w-6xl flex-col"><div class="mb-4 flex items-center justify-between gap-4 text-paper"><p class="font-display text-3xl font-bold" x-text="gallery[currentImage]?.alt"></p><button @click="galleryOpen=false" class="grid h-11 w-11 place-items-center rounded-full bg-paper text-2xl font-bold text-ink">×</button></div><div class="grid min-h-0 flex-1 place-items-center"><img :src="gallery[currentImage]?.src" :alt="gallery[currentImage]?.alt" class="max-h-full max-w-full rounded-[2rem] object-contain"></div><div class="mt-4 flex items-center justify-center gap-2"><button @click="currentImage = (currentImage - 1 + gallery.length) % gallery.length" class="rounded-full bg-paper px-5 py-3 font-bold text-ink">←</button><span class="text-paper" x-text="(currentImage+1) + ' / ' + gallery.length"></span><button @click="currentImage = (currentImage + 1) % gallery.length" class="rounded-full bg-paper px-5 py-3 font-bold text-ink">→</button></div></div>
+  </div>
+
+  <script>
+    function cityPage(){
+      return {
+        heroSearch:'', searchOpen:false, galleryOpen:false, currentImage:0, newsletterSent:false, openFaq:[0],
+        gallery:[
+          {src:'https://images.unsplash.com/photo-1584646098378-0874589d76b1?auto=format&fit=crop&w=1600&q=80', alt:'București seara, arhitectură urbană'},
+          {src:'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=900&q=80', alt:'Clădire istorică în București'},
+          {src:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80', alt:'Parc și activități outdoor'},
+          {src:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=900&q=80', alt:'Arhitectură și spații culturale'},
+          {src:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80', alt:'Activități de grup'}
+        ],
+        attractions:[
+          {title:'Palatul Parlamentului', count:'18', href:'/bucuresti/palatul-parlamentului', image:'https://images.unsplash.com/photo-1584646098378-0874589d76b1?auto=format&fit=crop&w=700&q=80', description:'Tururi, arhitectură monumentală și una dintre cele mai cunoscute clădiri ale orașului.'},
+          {title:'Centrul Vechi', count:'34', href:'/bucuresti/centrul-vechi', image:'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=700&q=80', description:'Tururi, gastronomie, povești urbane și viață de noapte.'},
+          {title:'Ateneul Român', count:'12', href:'/bucuresti/ateneul-roman', image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=700&q=80', description:'Concerte, arhitectură și experiențe culturale în centrul orașului.'},
+          {title:'Muzeul Satului', count:'16', href:'/bucuresti/muzeul-satului', image:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=700&q=80', description:'Patrimoniu, arhitectură tradițională și activități pentru familie.'}
+        ],
+        topActivities:[
+          {title:'Tur ghidat București: centru vechi și povești urbane', href:'/activitati/tur-ghidat-bucuresti-centru-vechi', image:'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=800&q=80', badge:'Top rated', description:'Descoperă străzi, pasaje, clădiri și povești locale într-un tur pietonal relaxat.', rating:'4.8', reviews:'1.240', duration:'2 ore', price:'de la 65 lei'},
+          {title:'Palatul Parlamentului: tur cu bilet digital', href:'/activitati/palatul-parlamentului-tur', image:'https://images.unsplash.com/photo-1584646098378-0874589d76b1?auto=format&fit=crop&w=800&q=80', badge:'Likely to sell out', description:'Vizită organizată cu acces rapid și informații esențiale despre clădire.', rating:'4.6', reviews:'980', duration:'1.5 ore', price:'de la 89 lei'},
+          {title:'Escape room București: Camera Secretă', href:'/activitati/escape-room-camera-secreta-bucuresti', image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=80', badge:'Best value', description:'Mister, puzzle-uri și experiență indoor pentru grupuri de prieteni.', rating:'4.9', reviews:'620', duration:'75 min', price:'de la 95 lei'}
+        ],
+        categories:[
+          {title:'Muzee', count:'42', href:'/bucuresti/muzee'}, {title:'Tururi culturale', count:'38', href:'/bucuresti/tururi-culturale'}, {title:'Activități copii', count:'56', href:'/bucuresti/activitati-copii'}, {title:'Escape rooms', count:'31', href:'/bucuresti/escape-rooms'}, {title:'Ateliere creative', count:'44', href:'/bucuresti/ateliere'}, {title:'Experiențe cadou', count:'29', href:'/bucuresti/experiente-cadou'}, {title:'Food & drinks', count:'18', href:'/bucuresti/food-drinks'}, {title:'Activități indoor', count:'67', href:'/bucuresti/activitati-indoor'}, {title:'Evenimente culturale', count:'24', href:'/bucuresti/evenimente-culturale'}, {title:'Tururi de noapte', count:'9', href:'/bucuresti/tururi-de-noapte'}, {title:'Activități pentru școli', count:'21', href:'/bucuresti/activitati-pentru-scoli'}, {title:'Experiențe imersive', count:'14', href:'/bucuresti/experiente-imersive'}
+        ],
+        travelerTypes:[
+          {icon:'👨‍👩‍👧', title:'Pentru familii', href:'/bucuresti/activitati-pentru-familie', description:'Activități sigure, interactive și ușor de planificat cu copiii.'},
+          {icon:'💛', title:'Pentru cupluri', href:'/bucuresti/activitati-pentru-cupluri', description:'Tururi, experiențe cadou, date night și activități de seară.'},
+          {icon:'☔', title:'Când plouă', href:'/bucuresti/activitati-zile-ploioase', description:'Muzee, ateliere, escape rooms și experiențe indoor.'},
+          {icon:'🎒', title:'Pentru turiști', href:'/bucuresti/turisti', description:'Atracții principale, tururi ghidate și experiențe de primă vizită.'}
+        ],
+        nearbyPlaces:[
+          {title:'Mogoșoaia', href:'/mogosoaia', image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=600&q=80', meta:'palat · parc · fotografie'},
+          {title:'Snagov', href:'/snagov', image:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=600&q=80', meta:'lac · natură · relaxare'},
+          {title:'Comana', href:'/comana', image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80', meta:'parc natural · outdoor'},
+          {title:'Ploiești', href:'/ploiesti', image:'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=600&q=80', meta:'muzee · copii · urban'},
+          {title:'Târgoviște', href:'/targoviste', image:'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=600&q=80', meta:'istorie · excursie de o zi'}
+        ],
+        guides:[
+          {kicker:'WEEKEND', title:'Ce să faci în București weekendul acesta', href:'/ghiduri/ce-sa-faci-in-bucuresti-weekend', image:'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=800&q=80', excerpt:'Idei de tururi, muzee, activități indoor, locuri pentru copii și experiențe de seară.'},
+          {kicker:'FAMILY', title:'București cu copiii: activități pentru fiecare vârstă', href:'/ghiduri/bucuresti-cu-copiii', image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80', excerpt:'Muzee interactive, ateliere, parcuri, spectacole și locuri în care copiii pot învăța prin experiență.'},
+          {kicker:'RAINY DAY', title:'Activități indoor în București pentru zile ploioase', href:'/ghiduri/activitati-indoor-bucuresti', image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=80', excerpt:'Escape rooms, expoziții, muzee, ateliere și experiențe care nu depind de vreme.'}
+        ],
+        faqs:[
+          {q:'Care sunt cele mai bune activități în București pentru prima vizită?', a:'Pentru prima vizită, combină un tur ghidat în centrul vechi, o vizită la Palatul Parlamentului, un muzeu important și o experiență locală de seară.'},
+          {q:'Ce activități sunt potrivite pentru copii în București?', a:'Muzeele interactive, atelierele creative, spectacolele pentru copii, parcurile și unele escape rooms adaptate pentru adolescenți sunt opțiuni bune.'},
+          {q:'Ce pot face în București când plouă?', a:'Alege muzee, expoziții, ateliere, escape rooms, experiențe imersive, spectacole sau activități indoor pentru familie.'},
+          {q:'Pot cumpăra bilete digitale?', a:'Da. Activitățile listate pe bilete.online pot folosi bilete digitale cu QR, iar unele oferă și puncte bonus pentru comenzi eligibile.'},
+          {q:'Ce excursii de o zi pot face din București?', a:'Poți alege Mogoșoaia, Snagov, Comana, Târgoviște sau tururi mai lungi spre Valea Prahovei, Sinaia, Bran și Brașov.'}
+        ],
+        init(){},
+        openGallery(index){ this.currentImage=index; this.galleryOpen=true; },
+        toggleFaq(index){ this.openFaq.includes(index) ? this.openFaq=this.openFaq.filter(i=>i!==index) : this.openFaq.push(index); },
+        searchSuggestions(){
+          const q=this.heroSearch.toLowerCase().trim();
+          const items=[
+            {title:'Activități copii București', meta:'familie · weekend · indoor', href:'/bucuresti/activitati-copii'},
+            {title:'Muzee București', meta:'cultură · patrimoniu · interactiv', href:'/bucuresti/muzee'},
+            {title:'Escape rooms București', meta:'mister · grupuri · indoor', href:'/bucuresti/escape-rooms'},
+            {title:'Tururi culturale București', meta:'ghid · oraș · istorie', href:'/bucuresti/tururi-culturale'},
+            {title:'Card cadou experiențe', meta:'cadou flexibil', href:'/card-cadou'},
+            {title:'Activități indoor București', meta:'zile ploioase · familie', href:'/bucuresti/activitati-indoor'}
+          ];
+          if(!q) return items;
+          return items.filter(i=>JSON.stringify(i).toLowerCase().includes(q));
+        }
+      }
+    }
+  </script>
+</body>
+</html>

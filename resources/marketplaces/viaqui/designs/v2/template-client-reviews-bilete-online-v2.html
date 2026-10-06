@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recenziile mele — bilete.online</title>
+  <meta name="description" content="Recenziile mele pe bilete.online: activități de evaluat, recenzii publicate, drafturi, ratinguri, fotografii, status moderare și recomandări îmbunătățite." />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <link rel="canonical" href="https://bilete.online/cont/recenzii" />
+  <meta name="theme-color" content="#1B1714" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF', ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41', vermilion:'#E84527','vermilion-d':'#C5371C', forest:'#1E4A3D','forest-l':'#2E6553', ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8' },
+        fontFamily: { display:['Fraunces','Georgia','serif'], sans:['"Hanken Grotesk"','system-ui','sans-serif'], mono:['"Spline Sans Mono"','ui-monospace','monospace'] },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    html{scroll-behavior:smooth} body{background:#F4EFE3;color:#1B1714;font-feature-settings:"ss01","cv01"}
+    .font-display{font-optical-sizing:auto;letter-spacing:-.018em}
+    .grain::after{content:"";position:fixed;inset:0;z-index:80;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+    .stamp{border:2px solid currentColor;border-radius:9999px}
+    .underline-wobble{background-image:linear-gradient(currentColor,currentColor);background-size:100% 2px;background-repeat:no-repeat;background-position:0 100%;transition:background-size .3s}
+    .underline-wobble:hover{background-size:0% 2px}
+    .field{width:100%;border:2px solid rgba(27,23,20,.16);background:rgba(255,255,255,.28);border-radius:1rem;padding:.85rem 1rem;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
+    .field:focus{border-color:#E84527;box-shadow:0 0 0 4px rgba(232,69,39,.12);background:#F4EFE3}
+    .sidebar-link[aria-current="page"]{background:#1B1714;color:#F4EFE3}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="reviewsPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> CONT CLIENT · RECENZII · RATINGURI</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/cont/recomandari" class="text-ochre underline-wobble">Recomandări pentru tine</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/80 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Locații</a>
+        <a href="/ghiduri" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ghiduri</a>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/cont/recomandari" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Recomandări</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu cont">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <a href="/cont/setari" class="hidden sm:flex items-center gap-3 rounded-full bg-ink text-paper pl-2 pr-4 py-2 hover:bg-vermilion transition">
+          <span class="grid place-items-center w-8 h-8 rounded-full bg-paper text-ink font-bold">A</span>
+          <span class="text-sm font-bold">Andrei</span>
+        </a>
+      </div>
+    </nav>
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/cont/dashboard" class="block py-2">Dashboard</a>
+      <a href="/cont/biletele-mele" class="block py-2">Biletele mele</a>
+      <a href="/cont/comenzile-mele" class="block py-2">Comenzile mele</a>
+      <a href="/cont/punctele-mele" class="block py-2">Punctele mele</a>
+      <a href="/cont/recenzii" class="block py-2 text-vermilion font-bold">Recenzii</a>
+      <a href="/cont/setari" class="block py-2">Setări</a>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 lg:py-8">
+  <div class="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+    <aside class="hidden lg:block sticky top-28">
+      <div class="rounded-[2rem] border-2 border-ink bg-paper p-4 shadow-ticket">
+        <div class="flex items-center gap-3 p-3 rounded-2xl bg-paper-2 border border-ink/10">
+          <span class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper font-display text-2xl font-bold">A</span>
+          <div class="min-w-0"><p class="font-display text-2xl font-bold leading-none truncate">Andrei</p><p class="text-sm text-ink-soft truncate">andrei@email.ro</p></div>
+        </div>
+        <nav class="mt-4 space-y-1 text-sm font-bold">
+          <a href="/cont/dashboard" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Dashboard</span><span>⌘</span></a>
+          <a href="/cont/biletele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Biletele mele</span><span>3</span></a>
+          <a href="/cont/comenzile-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Comenzile mele</span><span>12</span></a>
+          <a href="/cont/punctele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Punctele mele</span><span>820</span></a>
+          <a href="/cont/carduri-cadou" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Carduri cadou</span><span>1</span></a>
+          <a href="/cont/tichete-support" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Tichete support</span><span>2</span></a>
+          <a href="/cont/recenzii" aria-current="page" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recenzii</span><span>4</span></a>
+          <a href="/cont/recomandari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recomandări</span><span>nou</span></a>
+          <a href="/cont/setari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Setări</span><span>72%</span></a>
+        </nav>
+        <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+          <p class="font-bold text-forest">Recenziile ajută</p>
+          <p class="mt-1 text-sm text-ink-soft">Ratingurile tale îmbunătățesc recomandările și ajută alți clienți să aleagă mai bine.</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="min-w-0">
+      <section class="rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 shadow-deep">
+        <div class="grid xl:grid-cols-[1fr_380px] gap-8 items-center">
+          <div>
+            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">CLIENT REVIEWS</p>
+            <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Recenziile mele</h1>
+            <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">Scrie recenzii pentru activitățile la care ai fost, vezi ce ai publicat, editează drafturi și ajută sistemul să îți recomande experiențe mai potrivite.</p>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a href="#de-evaluat" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Scrie recenzie</a>
+              <a href="/cont/recomandari" class="rounded-full border-2 border-paper/50 px-6 py-4 font-bold hover:bg-paper hover:text-ink transition">Vezi recomandări</a>
+            </div>
+          </div>
+          <div class="rounded-[2rem] border-2 border-paper/20 bg-paper text-ink p-6 rotate-[-2deg]">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REVIEW SCORE</p>
+            <p class="mt-3 font-display text-7xl font-bold leading-none">4.7</p>
+            <p class="mt-2 text-ink-soft">rating mediu oferit · 4 recenzii publicate</p>
+            <div class="mt-5 flex text-3xl text-ochre">★★★★★</div>
+            <p class="mt-3 text-sm text-ink-soft">1 recenzie așteaptă să fie scrisă.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">PUBLICATE</p><p class="mt-3 font-display text-6xl font-bold">4</p><p class="mt-1 text-ink-soft">recenzii vizibile</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-forest">DE EVALUAT</p><p class="mt-3 font-display text-6xl font-bold">1</p><p class="mt-1 text-ink-soft">experiență recentă</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">DRAFTURI</p><p class="mt-3 font-display text-6xl font-bold">2</p><p class="mt-1 text-ink-soft">nefinalizate</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-rose p-5 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-vermilion">MODERARE</p><p class="mt-3 font-display text-6xl font-bold">1</p><p class="mt-1 text-ink-soft">în verificare</p></article>
+      </section>
+
+      <section id="de-evaluat" class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">DE EVALUAT</p><h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Activități care așteaptă recenzia ta</h2></div>
+        </div>
+        <div class="mt-6 grid lg:grid-cols-[1fr_420px] gap-6">
+          <article class="rounded-[2rem] border-2 border-ink bg-paper-2/70 overflow-hidden">
+            <div class="grid md:grid-cols-[260px_1fr]">
+              <img src="https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=700&q=80" alt="Muzeu interactiv" class="w-full h-64 md:h-full object-cover">
+              <div class="p-5 sm:p-6">
+                <div class="flex flex-wrap gap-2"><span class="rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold">participare confirmată</span><span class="rounded-full bg-paper border border-ink/10 px-3 py-1 text-xs font-bold">11 mai 2026</span></div>
+                <h3 class="mt-4 font-display text-4xl font-bold leading-none">Muzeu interactiv</h3>
+                <p class="mt-2 text-ink-soft">Muzeul Interactiv București · 2 bilete scanate</p>
+                <div class="mt-5">
+                  <p class="font-bold">Rating rapid</p>
+                  <div class="mt-2 flex gap-1 text-4xl">
+                    <template x-for="star in 5" :key="star"><button @click="newReview.rating=star" class="transition" :class="newReview.rating >= star ? 'text-ochre' : 'text-ink/20'">★</button></template>
+                  </div>
+                </div>
+                <label class="block mt-5">
+                  <span class="block mb-1.5 text-sm font-bold">Ce ți-a plăcut sau ce ar trebui să știe alții?</span>
+                  <textarea class="field min-h-32" x-model="newReview.text" placeholder="Scrie sincer, util și concret. De exemplu: cât a durat, pentru ce vârstă e potrivit, cum a fost accesul, dacă ai merge din nou."></textarea>
+                </label>
+                <div class="mt-4 grid sm:grid-cols-2 gap-3">
+                  <label><span class="block mb-1.5 text-sm font-bold">Potrivit pentru</span><select class="field" x-model="newReview.suitable"><option>Copii</option><option>Familie</option><option>Cuplu</option><option>Grupuri</option><option>Team building</option></select></label>
+                  <label><span class="block mb-1.5 text-sm font-bold">Vârsta recomandată</span><select class="field" x-model="newReview.age"><option>3–6 ani</option><option>6–10 ani</option><option>10–14 ani</option><option>Adulți</option><option>Toate vârstele</option></select></label>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <label class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition cursor-pointer">Atașează poze<input type="file" class="hidden" multiple></label>
+                  <button class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Salvează draft</button>
+                  <button class="rounded-full bg-vermilion text-paper px-5 py-2 text-sm font-bold hover:bg-vermilion-d transition">Publică recenzia</button>
+                </div>
+              </div>
+            </div>
+          </article>
+          <aside class="rounded-[2rem] border-2 border-forest bg-mint p-6">
+            <p class="font-mono text-xs tracking-[.18em] text-forest">GHID RECENZIE BUNĂ</p>
+            <h3 class="mt-2 font-display text-4xl font-bold leading-none">Scrie pentru omul care decide.</h3>
+            <div class="mt-5 space-y-3 text-ink-soft">
+              <p><strong class="text-ink">Concret:</strong> spune durata reală, accesul, aglomerația, vârsta potrivită.</p>
+              <p><strong class="text-ink">Util:</strong> menționează dacă ai merge din nou și cu cine.</p>
+              <p><strong class="text-ink">Corect:</strong> evită date personale sau informații care nu țin de activitate.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+        <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+          <div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">ISTORIC</p><h2 class="mt-2 font-display text-4xl sm:text-5xl font-bold leading-none">Recenzii publicate și drafturi</h2></div>
+          <div class="grid sm:grid-cols-3 gap-2">
+            <input class="field" x-model="search" placeholder="Caută recenzie..." />
+            <select class="field" x-model="status"><option value="all">Toate</option><option value="published">Publicate</option><option value="draft">Drafturi</option><option value="moderation">În moderare</option></select>
+            <select class="field" x-model="rating"><option value="all">Orice rating</option><option value="5">5 stele</option><option value="4">4 stele</option><option value="3">3 stele</option></select>
+          </div>
+        </div>
+        <div class="mt-6 grid xl:grid-cols-2 gap-5">
+          <template x-for="review in filteredReviews()" :key="review.id">
+            <article class="rounded-[2rem] border-2 border-ink bg-paper overflow-hidden">
+              <div class="grid sm:grid-cols-[180px_1fr]">
+                <img :src="review.image" :alt="review.title" class="w-full h-48 sm:h-full object-cover">
+                <div class="p-5">
+                  <div class="flex flex-wrap gap-2"><span class="rounded-full px-3 py-1 text-xs font-bold" :class="review.statusClass" x-text="review.statusLabel"></span><span class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="review.date"></span></div>
+                  <h3 class="mt-3 font-display text-3xl font-bold leading-none" x-text="review.title"></h3>
+                  <p class="mt-1 text-ink-soft" x-text="review.location"></p>
+                  <div class="mt-3 text-2xl text-ochre" x-text="'★'.repeat(review.rating) + '☆'.repeat(5-review.rating)"></div>
+                  <p class="mt-3 text-ink-soft leading-relaxed" x-text="review.text"></p>
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <button class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Editează</button>
+                    <button class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Vezi activitatea</button>
+                    <button class="rounded-full border border-vermilion/30 bg-rose text-vermilion px-4 py-2 text-sm font-bold hover:bg-vermilion hover:text-paper transition">Șterge</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+        <div x-show="filteredReviews().length===0" class="mt-6 rounded-[2rem] border-2 border-ink bg-paper-2 p-8 text-center">
+          <p class="font-display text-4xl font-bold">Nu am găsit recenzii.</p>
+          <p class="mt-2 text-ink-soft">Schimbă filtrele sau caută după alt termen.</p>
+        </div>
+      </section>
+
+      <section class="mt-6 grid md:grid-cols-3 gap-5">
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-ink-soft">PERSONALIZARE</p><h2 class="mt-2 font-display text-4xl font-bold leading-none">Recenziile antrenează recomandările.</h2><p class="mt-3 text-ink-soft">Ratingurile și preferințele din review-uri pot îmbunătăți recomandările viitoare.</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-mint p-6 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-forest">COMUNITATE</p><h2 class="mt-2 font-display text-4xl font-bold leading-none">Ajută alți clienți.</h2><p class="mt-3 text-ink-soft">O recenzie bună reduce incertitudinea și crește încrederea în activități.</p></article>
+        <article class="rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-6 shadow-ticket"><p class="font-mono text-xs tracking-[.18em] text-paper/60">BONUS</p><h2 class="mt-2 font-display text-4xl font-bold leading-none">Review-uri cu puncte?</h2><p class="mt-3 text-paper/70">Poți activa campanii în care recenziile eligibile aduc puncte bonus.</p></article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+function reviewsPage(){
+  return {
+    search:'',
+    status:'all',
+    rating:'all',
+    newReview:{rating:5,text:'',suitable:'Copii',age:'6–10 ani'},
+    reviews:[
+      {id:'R-001',title:'Camera 13',location:'Mystery Rooms Brașov',status:'published',statusLabel:'publicată',statusClass:'bg-mint text-forest',date:'24 mai 2026',rating:5,text:'Foarte bine construită pentru grup. Puzzle-urile au fost clare, ritmul bun și staff-ul foarte ok.',image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=600&q=80'},
+      {id:'R-002',title:'Atelier ceramică copii',location:'Atelierul Urban București',status:'draft',statusLabel:'draft',statusClass:'bg-ochre text-ink',date:'18 mai 2026',rating:4,text:'Copiii au fost implicați aproape tot timpul. Mai am de completat câteva detalii despre durată și materiale.',image:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80'},
+      {id:'R-003',title:'Parc aventură',location:'Adventure Park Cluj',status:'moderation',statusLabel:'în moderare',statusClass:'bg-rose text-vermilion',date:'3 mai 2026',rating:4,text:'Traseele au fost bune, dar ar fi util să fie explicată mai clar diferența de dificultate între ele.',image:'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=600&q=80'},
+      {id:'R-004',title:'Tur ghidat Brașov vechi',location:'Brașov',status:'published',statusLabel:'publicată',statusClass:'bg-mint text-forest',date:'29 aprilie 2026',rating:5,text:'Ghidul a făcut diferența. Traseul a fost scurt, dar foarte dens și potrivit pentru turiști.',image:'https://images.unsplash.com/photo-1609167830220-7164aa360951?auto=format&fit=crop&w=600&q=80'}
+    ],
+    filteredReviews(){
+      const q = this.search.toLowerCase().trim();
+      return this.reviews.filter(r => {
+        const matchesStatus = this.status === 'all' || r.status === this.status;
+        const matchesRating = this.rating === 'all' || String(r.rating) === this.rating;
+        const blob = JSON.stringify(r).toLowerCase();
+        const matchesSearch = !q || blob.includes(q);
+        return matchesStatus && matchesRating && matchesSearch;
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>

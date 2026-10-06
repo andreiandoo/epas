@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Toate categoriile de activități — bilete.online</title>
+  <meta name="description" content="Explorează toate categoriile de activități disponibile pe bilete.online: escape rooms, muzee, parcuri de distracții, parcuri de aventură, natură, peșteri, ateliere, activități pentru copii, familie, cupluri și grupuri." />
+  <meta name="keywords" content="categorii activități, activități România, escape rooms, muzee, parcuri de distracții, parcuri de aventură, activități copii, activități familie, activități indoor, activități outdoor, bilete activități" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/categorii" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Toate categoriile de activități — bilete.online" />
+  <meta property="og:description" content="Găsește activități după categorie, public, vreme, buget sau ocazie. Escape rooms, muzee, parcuri, natură, ateliere și experiențe locale." />
+  <meta property="og:url" content="https://bilete.online/categorii" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- ===================== STRUCTURED DATA ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"CollectionPage",
+    "name":"Toate categoriile de activități",
+    "url":"https://bilete.online/categorii",
+    "description":"Colecție de categorii de activități disponibile pe bilete.online.",
+    "inLanguage":"ro-RO",
+    "isPartOf":{"@type":"WebSite","name":"bilete.online","url":"https://bilete.online/"},
+    "about":[
+      {"@type":"Thing","name":"escape rooms"},
+      {"@type":"Thing","name":"muzee"},
+      {"@type":"Thing","name":"parcuri de distracții"},
+      {"@type":"Thing","name":"activități pentru copii"},
+      {"@type":"Thing","name":"activități outdoor"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"BreadcrumbList",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Acasă","item":"https://bilete.online/"},
+      {"@type":"ListItem","position":2,"name":"Categorii","item":"https://bilete.online/categorii"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"ItemList",
+    "name":"Categorii principale de activități",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Escape rooms","url":"https://bilete.online/escape-rooms"},
+      {"@type":"ListItem","position":2,"name":"Muzee și expoziții","url":"https://bilete.online/muzee"},
+      {"@type":"ListItem","position":3,"name":"Parcuri de distracții","url":"https://bilete.online/parcuri-de-distractii"},
+      {"@type":"ListItem","position":4,"name":"Parcuri de aventură","url":"https://bilete.online/parcuri-aventura"},
+      {"@type":"ListItem","position":5,"name":"Natură și outdoor","url":"https://bilete.online/natura"},
+      {"@type":"ListItem","position":6,"name":"Ateliere și experiențe creative","url":"https://bilete.online/ateliere"}
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    .no-bar::-webkit-scrollbar{ display:none; } .no-bar{ -ms-overflow-style:none; scrollbar-width:none; }
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-10px) rotate(1deg); } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+    @keyframes marquee{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .marquee{ animation:marquee 38s linear infinite; }
+    .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .floaty,.marquee{animation:none!important;} *{transition:none!important;} }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="categoriesPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> CATEGORII · ACTIVITĂȚI · EXPERIENȚE</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/activitati-azi" class="text-ochre underline-wobble">Activități azi</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" aria-current="page" class="px-3 py-2 rounded-full bg-ink text-paper transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Locații</a>
+        <a href="/cum-functioneaza" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Cum funcționează</a>
+        <a href="/card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Card cadou</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/orase" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Alege orașul</a>
+        <a href="/cos" class="hidden sm:inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Coș</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/categorii" class="block py-2 text-vermilion font-bold">Categorii</a>
+      <a href="/orase" class="block py-2">Orașe</a>
+      <a href="/locatii" class="block py-2">Locații</a>
+      <a href="/cum-functioneaza" class="block py-2">Cum funcționează</a>
+      <a href="/card-cadou" class="block py-2">Card cadou</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden border-b-2 border-ink">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_82%_14%,rgba(232,69,39,.24),transparent_30%),radial-gradient(circle_at_16%_72%,rgba(30,74,61,.22),transparent_34%),radial-gradient(circle_at_48%_42%,rgba(218,154,51,.16),transparent_30%)]"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
+      <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Categorii</span>
+      </nav>
+
+      <div class="mt-8 grid lg:grid-cols-[1fr_.88fr] gap-12 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">TOATE CATEGORIILE · ACTIVITĂȚI · BILETE ONLINE</p>
+          <h1 class="mt-6 font-display text-6xl sm:text-8xl lg:text-[6.6rem] font-bold leading-[.82]">
+            Ce vrei să faci?
+          </h1>
+          <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
+            Explorează activități după categorie, public, vreme, buget sau ocazie. De la escape rooms și muzee până la parcuri de aventură, peșteri, rezervații, ateliere și experiențe pentru familie.
+          </p>
+
+          <div class="mt-8 max-w-2xl">
+            <label class="sr-only" for="category-search">Caută categorii de activități</label>
+            <div class="relative">
+              <input id="category-search" class="field text-lg pr-14" x-model="search" placeholder="Caută: escape room, muzeu, copii, indoor, weekend..." />
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft">
+                <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-2">
+            <template x-for="chip in quickChips" :key="chip.label">
+              <a :href="chip.url" class="rounded-full bg-paper/70 border border-ink/10 px-4 py-2 font-bold hover:bg-ink hover:text-paper transition" x-text="chip.label"></a>
+            </template>
+          </div>
+        </div>
+
+        <div class="relative min-h-[560px]">
+          <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[-2deg] shadow-deep"></div>
+
+          <div class="absolute top-0 left-0 right-0 mx-auto max-w-[540px] ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep rotate-[2deg]" style="--perf:100%">
+            <div class="p-6 sm:p-8">
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CATEGORY MAP</p>
+              <h2 class="mt-3 font-display text-4xl font-bold leading-none">Dintr-o idee vagă într-o activitate concretă.</h2>
+
+              <div class="mt-7 grid grid-cols-2 gap-3">
+                <a href="/escape-rooms" class="rounded-3xl bg-vermilion text-paper p-5 rotate-[-2deg] hover:rotate-0 transition">
+                  <p class="text-3xl">🕵️</p><p class="mt-3 font-display text-2xl font-bold">Escape rooms</p>
+                </a>
+                <a href="/muzee" class="rounded-3xl bg-mint text-ink p-5 rotate-[2deg] hover:rotate-0 transition">
+                  <p class="text-3xl">🖼️</p><p class="mt-3 font-display text-2xl font-bold">Muzee</p>
+                </a>
+                <a href="/activitati-copii" class="rounded-3xl bg-ochre text-ink p-5 rotate-[2deg] hover:rotate-0 transition">
+                  <p class="text-3xl">👨‍👩‍👧</p><p class="mt-3 font-display text-2xl font-bold">Copii</p>
+                </a>
+                <a href="/natura" class="rounded-3xl bg-forest text-paper p-5 rotate-[-2deg] hover:rotate-0 transition">
+                  <p class="text-3xl">🌲</p><p class="mt-3 font-display text-2xl font-bold">Natură</p>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="floaty absolute left-0 bottom-20 w-60 rounded-3xl border-2 border-ink bg-paper p-5 shadow-deep rotate-[-5deg]">
+            <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">SEO</p>
+            <p class="mt-2 font-display text-2xl font-bold">categorii + orașe + intenții</p>
+            <p class="mt-2 text-sm text-ink-soft">/brasov/activitati-copii</p>
+          </div>
+
+          <div class="floaty absolute right-0 bottom-0 w-64 rounded-3xl border-2 border-ink bg-ink text-paper p-5 shadow-deep rotate-[5deg]" style="animation-delay:-2.3s">
+            <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">FILTRARE</p>
+            <p class="mt-2 font-display text-3xl font-bold">rapid</p>
+            <p class="mt-1 text-paper/60 text-sm">după public, vreme, buget sau ocazie</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <section class="marquee-wrap overflow-hidden border-b-2 border-ink bg-ink text-paper py-3">
+    <div class="marquee flex w-[200%] gap-8 font-mono text-xs tracking-[.2em] text-paper/70">
+      <div class="flex gap-8 min-w-1/2">
+        <span>ESCAPE ROOMS</span><span>MUZEE</span><span>PARCURI</span><span>NATURĂ</span><span>ATELIERE</span><span>COPII</span><span>INDOOR</span><span>OUTDOOR</span><span>WEEKEND</span>
+      </div>
+      <div class="flex gap-8 min-w-1/2" aria-hidden="true">
+        <span>ESCAPE ROOMS</span><span>MUZEE</span><span>PARCURI</span><span>NATURĂ</span><span>ATELIERE</span><span>COPII</span><span>INDOOR</span><span>OUTDOOR</span><span>WEEKEND</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORY FINDER -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <div class="grid lg:grid-cols-[300px_1fr] gap-8 items-start">
+      <aside class="lg:sticky lg:top-28">
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRARE RAPIDĂ</p>
+          <div class="mt-4 space-y-2">
+            <template x-for="filter in filters" :key="filter.key">
+              <button @click="activeFilter=filter.key"
+                      :class="activeFilter===filter.key ? 'bg-ink text-paper' : 'bg-paper-2 text-ink hover:bg-ink/5'"
+                      class="w-full rounded-2xl px-4 py-3 text-left font-bold transition flex items-center justify-between gap-3">
+                <span x-text="filter.label"></span>
+                <span class="text-xs opacity-60" x-text="filter.count"></span>
+              </button>
+            </template>
+          </div>
+          <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+            <p class="font-bold text-forest">Tip SEO</p>
+            <p class="mt-1 text-sm text-ink-soft">Categoriile principale sunt pentru navigație. Intențiile precum „azi”, „copii”, „ploaie” sau „sub 50 lei” sunt pagini programatice.</p>
+          </div>
+        </div>
+      </aside>
+
+      <section>
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REZULTATE</p>
+            <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="currentFilterTitle()"></h2>
+          </div>
+          <p class="text-ink-soft" x-text="filteredCategories().length + ' categorii afișate'"></p>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <template x-for="category in filteredCategories()" :key="category.url">
+            <article class="group rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
+              <a :href="category.url" class="block">
+                <div class="relative h-48 overflow-hidden bg-ink">
+                  <img :src="category.image" :alt="'Imagine pentru categoria ' + category.title" class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500" loading="lazy">
+                  <div class="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-transparent"></div>
+                  <div class="absolute left-4 bottom-4 right-4 flex items-end justify-between gap-3">
+                    <div>
+                      <p class="text-paper/65 font-mono text-[10px] tracking-[.18em]" x-text="category.type"></p>
+                      <h3 class="font-display text-3xl font-bold text-paper leading-none" x-text="category.title"></h3>
+                    </div>
+                    <span class="grid place-items-center w-11 h-11 rounded-full bg-paper text-ink text-2xl" x-text="category.icon"></span>
+                  </div>
+                </div>
+              </a>
+              <div class="p-5">
+                <p class="text-ink-soft leading-relaxed" x-text="category.description"></p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <template x-for="tag in category.tags" :key="tag">
+                    <span class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="tag"></span>
+                  </template>
+                </div>
+                <div class="mt-5 pt-4 border-t border-ink/10 flex items-center justify-between gap-3">
+                  <a :href="category.url" class="font-bold text-vermilion underline-wobble">Vezi categoria</a>
+                  <span class="text-sm text-ink-soft" x-text="category.count + ' activități'"></span>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- MAIN TAXONOMY -->
+  <section class="border-y-2 border-ink bg-paper-2/65">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="max-w-4xl">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">TAXONOMIE</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Cum sunt organizate activitățile.</h2>
+        <p class="mt-5 text-lg text-ink-soft leading-relaxed">O activitate bună nu trebuie pusă în zece categorii principale. Mai curat: are o categorie reală, apoi audiențe, contexte, buget, vreme și locație.</p>
+      </div>
+
+      <div class="mt-10 grid lg:grid-cols-3 gap-5">
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-6">
+          <p class="font-mono text-xs tracking-[.18em] text-vermilion">CATEGORY</p>
+          <h3 class="mt-3 font-display text-4xl font-bold leading-none">Ce este activitatea?</h3>
+          <ul class="mt-5 space-y-2 text-ink-soft">
+            <li>• Escape room</li>
+            <li>• Muzeu / expoziție</li>
+            <li>• Parc de aventură</li>
+            <li>• Peșteră / natură</li>
+            <li>• Atelier creativ</li>
+          </ul>
+        </article>
+        <article class="rounded-[2rem] border-2 border-ink bg-ink text-paper p-6">
+          <p class="font-mono text-xs tracking-[.18em] text-ochre">AUDIENCE</p>
+          <h3 class="mt-3 font-display text-4xl font-bold leading-none">Pentru cine este?</h3>
+          <ul class="mt-5 space-y-2 text-paper/60">
+            <li>• Copii</li>
+            <li>• Familie</li>
+            <li>• Cupluri</li>
+            <li>• Grupuri</li>
+            <li>• Corporate</li>
+          </ul>
+        </article>
+        <article class="rounded-[2rem] border-2 border-ink bg-paper p-6">
+          <p class="font-mono text-xs tracking-[.18em] text-vermilion">CONTEXT</p>
+          <h3 class="mt-3 font-display text-4xl font-bold leading-none">Când / de ce o alegi?</h3>
+          <ul class="mt-5 space-y-2 text-ink-soft">
+            <li>• Weekend</li>
+            <li>• Azi / mâine</li>
+            <li>• Zi ploioasă</li>
+            <li>• Sub 50 lei</li>
+            <li>• Zi de naștere</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEO INTENT HUBS -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10 items-start">
+      <div class="lg:sticky lg:top-28">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">HUBURI SEO</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Caută după intenție, nu doar după tip.</h2>
+        <p class="mt-5 text-lg text-ink-soft leading-relaxed">Mulți utilizatori nu știu exact ce categorie vor. Ei caută „ceva pentru copii”, „ce facem azi”, „activități când plouă” sau „ceva ieftin”. Aceste pagini trebuie tratate ca huburi SEO reale.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <template x-for="hub in intentHubs" :key="hub.url">
+          <a :href="hub.url" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink hover:bg-paper transition">
+            <p class="font-mono text-xs tracking-[.18em] text-vermilion" x-text="hub.kicker"></p>
+            <h3 class="mt-2 font-display text-3xl font-bold" x-text="hub.title"></h3>
+            <p class="mt-2 text-ink-soft" x-text="hub.description"></p>
+          </a>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- CITY + CATEGORY -->
+  <section class="border-y-2 border-ink bg-ink text-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-10 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">PROGRAMATIC SEO</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Categoriile devin și mai puternice când sunt combinate cu orașele.</h2>
+          <p class="mt-5 text-lg text-paper/60 leading-relaxed">Același sistem poate genera pagini relevante pentru căutări locale: „escape rooms Brașov”, „activități copii București”, „muzee Cluj”, „activități indoor Iași”.</p>
+        </div>
+
+        <div class="ticket bg-paper text-ink rounded-[2rem] overflow-hidden shadow-deep" style="--perf:100%">
+          <div class="p-6 border-b-2 border-dashed border-ink/15">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">EXEMPLE URL</p>
+            <h3 class="mt-2 font-display text-4xl font-bold">Linkuri interne care construiesc trafic.</h3>
+          </div>
+          <div class="p-6 space-y-3">
+            <a href="/brasov/escape-rooms" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>/brasov/escape-rooms</strong><br><span class="text-sm text-ink-soft">oraș + categorie</span></a>
+            <a href="/bucuresti/activitati-copii" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>/bucuresti/activitati-copii</strong><br><span class="text-sm text-ink-soft">oraș + public</span></a>
+            <a href="/cluj-napoca/activitati-indoor" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>/cluj-napoca/activitati-indoor</strong><br><span class="text-sm text-ink-soft">oraș + vreme/context</span></a>
+            <a href="/iasi/activitati-sub-50-lei" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>/iasi/activitati-sub-50-lei</strong><br><span class="text-sm text-ink-soft">oraș + buget</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ / SEO CONTENT -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20" x-data="{open:0}">
+    <div class="text-center max-w-3xl mx-auto">
+      <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">FAQ</p>
+      <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Cum alegi categoria potrivită?</h2>
+      <p class="mt-5 text-lg text-ink-soft">Întrebări utile pentru utilizatori și conținut bun pentru SEO.</p>
+    </div>
+
+    <div class="mt-10 space-y-3">
+      <template x-for="(faq,index) in faqs" :key="faq.q">
+        <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
+          <button @click="open=open===index?null:index" class="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4">
+            <span class="font-display text-2xl sm:text-3xl font-bold" x-text="faq.q"></span>
+            <span class="text-3xl font-bold" x-text="open===index?'−':'+'"></span>
+          </button>
+          <div x-show="open===index" x-collapse class="px-5 sm:px-6 pb-6 text-ink-soft leading-relaxed" x-text="faq.a"></div>
+        </article>
+      </template>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
+      <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+      <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-paper/60">DESCOPERĂ</p>
+          <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Alege categoria. Găsește activitatea.</h2>
+          <p class="mt-4 max-w-2xl text-paper/75 text-lg">Începe cu un tip de activitate sau cu o intenție: copii, weekend, indoor, outdoor, buget, vreme sau oraș.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
+          <a href="/orase" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Alege orașul</a>
+          <a href="/activitati-azi" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Activități azi</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t-2 border-ink bg-ink text-paper">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+      <div class="mt-5 flex flex-wrap gap-2 text-xs font-mono text-paper/45">
+        <span class="rounded-full border border-paper/15 px-3 py-1">categorii</span>
+        <span class="rounded-full border border-paper/15 px-3 py-1">orașe</span>
+        <span class="rounded-full border border-paper/15 px-3 py-1">SEO local</span>
+        <span class="rounded-full border border-paper/15 px-3 py-1">bilete QR</span>
+      </div>
+    </div>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">CATEGORII</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/escape-rooms">Escape rooms</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/muzee">Muzee</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/natura">Natură</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/activitati-copii">Copii</a>
+    </nav>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">DESCOPERIRE</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/orase">Orașe</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/locatii">Locații</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/activitati-azi">Activități azi</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/activitati-weekend">Weekend</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+<script>
+function categoriesPage(){
+  return {
+    search:'',
+    activeFilter:'all',
+    filters:[
+      {key:'all',label:'Toate',count:18},
+      {key:'main',label:'Categorii principale',count:10},
+      {key:'audience',label:'După public',count:6},
+      {key:'context',label:'După context',count:8},
+      {key:'budget',label:'După buget',count:4},
+      {key:'weather',label:'După vreme',count:4}
+    ],
+    quickChips:[
+      {label:'Escape rooms',url:'/escape-rooms'},
+      {label:'Activități copii',url:'/activitati-copii'},
+      {label:'Indoor',url:'/activitati-indoor'},
+      {label:'Weekend',url:'/activitati-weekend'},
+      {label:'Sub 50 lei',url:'/activitati-sub-50-lei'},
+      {label:'Zile ploioase',url:'/activitati-zile-ploioase'}
+    ],
+    categories:[
+      {
+        title:'Escape rooms',
+        type:'CATEGORIE PRINCIPALĂ',
+        taxonomy:'main',
+        url:'/escape-rooms',
+        icon:'🕵️',
+        count:42,
+        image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=900&q=80',
+        description:'Camere de evadare, mister, puzzle-uri, experiențe de grup și provocări contra cronometru.',
+        tags:['indoor','grupuri','team building']
+      },
+      {
+        title:'Muzee & expoziții',
+        type:'CATEGORIE PRINCIPALĂ',
+        taxonomy:'main',
+        url:'/muzee',
+        icon:'🖼️',
+        count:68,
+        image:'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=900&q=80',
+        description:'Muzee de artă, istorie, știință, expoziții temporare, galerii și experiențe interactive.',
+        tags:['cultură','familie','indoor']
+      },
+      {
+        title:'Parcuri de distracții',
+        type:'CATEGORIE PRINCIPALĂ',
+        taxonomy:'main',
+        url:'/parcuri-de-distractii',
+        icon:'🎡',
+        count:31,
+        image:'https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?auto=format&fit=crop&w=900&q=80',
+        description:'Atracții, carusele, zone de joacă, experiențe sezoniere și activități de familie.',
+        tags:['copii','familie','outdoor']
+      },
+      {
+        title:'Parcuri de aventură',
+        type:'CATEGORIE PRINCIPALĂ',
+        taxonomy:'main',
+        url:'/parcuri-aventura',
+        icon:'🧗',
+        count:24,
+        image:'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=900&q=80',
+        description:'Trasee în copaci, tiroliene, escaladă, aventură pentru copii, adulți și echipe.',
+        tags:['outdoor','adrenalină','grupuri']
+      },
+      {
+        title:'Natură & outdoor',
+        type:'CATEGORIE PRINCIPALĂ',
+        taxonomy:'main',
+        url:'/natura',
+        icon:'🌲',
+        count:55,
+        image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
+        description:'Rezervații, peșteri, grădini botanice, trasee ușoare, tururi ghidate și experiențe eco.',
+        tags:['outdoor','turism','familie']
+      },
+      {
+        title:'Ateliere & experiențe creative',
+        type:'CATEGORIE PRINCIPALĂ',
+        taxonomy:'main',
+        url:'/ateliere',
+        icon:'🎨',
+        count:37,
+        image:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=900&q=80',
+        description:'Ateliere de pictură, ceramică, craft, știință, educație și experiențe creative.',
+        tags:['copii','educativ','indoor']
+      },
+      {
+        title:'Activități pentru copii',
+        type:'DUPĂ PUBLIC',
+        taxonomy:'audience',
+        url:'/activitati-copii',
+        icon:'👨‍👩‍👧',
+        count:89,
+        image:'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80',
+        description:'Idei pentru copii și familie: muzee interactive, ateliere, parcuri și activități educative.',
+        tags:['familie','educativ','weekend']
+      },
+      {
+        title:'Activități pentru cupluri',
+        type:'DUPĂ PUBLIC',
+        taxonomy:'audience',
+        url:'/activitati-cupluri',
+        icon:'✨',
+        count:28,
+        image:'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=900&q=80',
+        description:'Experiențe pentru doi: tururi, muzee, ateliere, date nights și cadouri memorabile.',
+        tags:['romantic','cadou','weekend']
+      },
+      {
+        title:'Activități pentru grupuri',
+        type:'DUPĂ PUBLIC',
+        taxonomy:'audience',
+        url:'/activitati-grupuri',
+        icon:'👥',
+        count:48,
+        image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
+        description:'Activități pentru prieteni, colegi, aniversări, team building și ieșiri de grup.',
+        tags:['grupuri','corporate','distracție']
+      },
+      {
+        title:'Activități indoor',
+        type:'DUPĂ VREME',
+        taxonomy:'weather',
+        url:'/activitati-indoor',
+        icon:'🏛️',
+        count:74,
+        image:'https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=900&q=80',
+        description:'Opțiuni bune pentru zile reci, ploioase sau când vrei o experiență predictibilă în interior.',
+        tags:['ploaie','iarna','familie']
+      },
+      {
+        title:'Activități outdoor',
+        type:'DUPĂ VREME',
+        taxonomy:'weather',
+        url:'/activitati-outdoor',
+        icon:'☀️',
+        count:62,
+        image:'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80',
+        description:'Activități în aer liber: natură, parcuri, aventură, tururi, experiențe sezoniere.',
+        tags:['natură','vară','turism']
+      },
+      {
+        title:'Activități de weekend',
+        type:'DUPĂ CONTEXT',
+        taxonomy:'context',
+        url:'/activitati-weekend',
+        icon:'📅',
+        count:104,
+        image:'https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=900&q=80',
+        description:'Idei pentru weekend: copii, familie, grupuri, cupluri, indoor, outdoor și activități locale.',
+        tags:['weekend','local','rapid']
+      },
+      {
+        title:'Activități azi',
+        type:'DUPĂ CONTEXT',
+        taxonomy:'context',
+        url:'/activitati-azi',
+        icon:'⚡',
+        count:36,
+        image:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80',
+        description:'Activități disponibile azi, utile pentru decizii rapide și ieșiri spontane.',
+        tags:['last minute','azi','rapid']
+      },
+      {
+        title:'Activități sub 50 lei',
+        type:'DUPĂ BUGET',
+        taxonomy:'budget',
+        url:'/activitati-sub-50-lei',
+        icon:'💸',
+        count:52,
+        image:'https://images.unsplash.com/photo-1561414927-6d86591d0c4f?auto=format&fit=crop&w=900&q=80',
+        description:'Experiențe accesibile: muzee, ateliere, tururi, activități pentru copii și opțiuni locale.',
+        tags:['buget','ieftin','familie']
+      },
+      {
+        title:'Activități gratuite',
+        type:'DUPĂ BUGET',
+        taxonomy:'budget',
+        url:'/activitati-gratuite',
+        icon:'🎟️',
+        count:18,
+        image:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80',
+        description:'Activități gratuite, intrare liberă, zile speciale și experiențe fără cost de acces.',
+        tags:['gratuit','local','familie']
+      }
+    ],
+    intentHubs:[
+      {kicker:'TIMP',title:'Activități azi',description:'Pentru decizii rapide și activități disponibile imediat.',url:'/activitati-azi'},
+      {kicker:'TIMP',title:'Activități mâine',description:'Pentru planificare scurtă, fără căutări lungi.',url:'/activitati-maine'},
+      {kicker:'VREME',title:'Zile ploioase',description:'Indoor, muzee, escape rooms, ateliere și expoziții.',url:'/activitati-zile-ploioase'},
+      {kicker:'VREME',title:'Zile caniculare',description:'Activități răcoroase, indoor sau de seară.',url:'/activitati-zile-caniculare'},
+      {kicker:'BUGET',title:'Sub 50 lei',description:'Experiențe accesibile, potrivite pentru ieșiri spontane.',url:'/activitati-sub-50-lei'},
+      {kicker:'PUBLIC',title:'Pentru adolescenți',description:'Activități cu autonomie, provocare și interacțiune.',url:'/activitati-adolescenti'},
+      {kicker:'OCazIE',title:'Zi de naștere',description:'Idei pentru grupuri, copii, cupluri și cadouri.',url:'/activitati-zi-de-nastere'},
+      {kicker:'EDU',title:'Școli și excursii',description:'Activități educative pentru clase și grupuri școlare.',url:'/activitati-scoli-excursii'}
+    ],
+    faqs:[
+      {q:'Care este diferența dintre categorie și intenție?', a:'Categoria descrie ce este activitatea: escape room, muzeu, parc, atelier. Intenția descrie de ce o cauți: pentru copii, pentru weekend, când plouă, sub 50 lei sau pentru o zi de naștere.'},
+      {q:'O activitate poate apărea în mai multe pagini?', a:'Da. O activitate are o categorie principală, dar poate apărea în pagini programatice după public, oraș, vreme, buget sau ocazie.'},
+      {q:'Cum aleg rapid o activitate potrivită?', a:'Începe cu orașul, apoi alege contextul: copii, indoor, outdoor, azi, weekend sau buget. Dacă știi exact ce vrei, mergi direct la categoria principală.'},
+      {q:'De ce sunt importante paginile oraș + categorie?', a:'Pentru că utilizatorii caută local: escape rooms Brașov, muzee București, activități copii Cluj. Aceste combinații ajută atât la SEO, cât și la descoperire rapidă.'},
+      {q:'Pot cumpăra bilete direct din categorie?', a:'Da. În implementarea reală, paginile de categorie pot afișa activități disponibile, prețuri, filtre și butoane directe către pagina activității sau checkout.'}
+    ],
+    currentFilterTitle(){
+      const found = this.filters.find(f => f.key === this.activeFilter);
+      return found ? found.label : 'Toate';
+    },
+    filteredCategories(){
+      const q = this.search.toLowerCase().trim();
+      return this.categories.filter(cat => {
+        const matchesFilter = this.activeFilter === 'all' || cat.taxonomy === this.activeFilter;
+        const blob = JSON.stringify(cat).toLowerCase();
+        const matchesSearch = !q || blob.includes(q);
+        return matchesFilter && matchesSearch;
+      });
+    }
+  }
+}
+</script>
+
+</body>
+</html>

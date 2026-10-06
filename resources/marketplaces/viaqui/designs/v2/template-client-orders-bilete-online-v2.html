@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Comenzile mele — bilete.online</title>
+  <meta name="description" content="Istoricul comenzilor tale bilete.online: bilete, statusuri, plăți, taxe, puncte bonus, retururi, confirmări și detalii comandă." />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <link rel="canonical" href="https://bilete.online/cont/comenzile-mele" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8',
+          good:'#2E7D4F',warn:'#B7791F',bad:'#C2412D'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:80; pointer-events:none; opacity:.045; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .sidebar-link[aria-current="page"]{ background:#1B1714; color:#F4EFE3; }
+    [x-cloak]{ display:none!important; }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="ordersPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> CONT CLIENT · COMENZI · PLĂȚI</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/recuperare-comanda" class="text-ochre underline-wobble">Recuperează comanda</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/80 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Locații</a>
+        <a href="/ghiduri" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ghiduri</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/cont/biletele-mele" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Biletele mele</a>
+        <a href="/cont/setari" class="hidden sm:flex items-center gap-3 rounded-full bg-ink text-paper pl-2 pr-4 py-2 hover:bg-vermilion transition">
+          <span class="grid place-items-center w-8 h-8 rounded-full bg-paper text-ink font-bold">A</span>
+          <span class="text-sm font-bold">Andrei</span>
+        </a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu cont">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/cont/dashboard" class="block py-2">Dashboard</a>
+      <a href="/cont/biletele-mele" class="block py-2">Biletele mele</a>
+      <a href="/cont/comenzile-mele" class="block py-2 text-vermilion font-bold">Comenzile mele</a>
+      <a href="/cont/punctele-mele" class="block py-2">Punctele mele</a>
+      <a href="/cont/tichete-support" class="block py-2">Tichete support</a>
+      <a href="/cont/setari" class="block py-2">Setări</a>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 lg:py-8">
+  <div class="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+
+    <!-- SIDEBAR -->
+    <aside class="hidden lg:block sticky top-28">
+      <div class="rounded-[2rem] border-2 border-ink bg-paper p-4 shadow-ticket">
+        <div class="flex items-center gap-3 p-3 rounded-2xl bg-paper-2 border border-ink/10">
+          <span class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper font-display text-2xl font-bold">A</span>
+          <div class="min-w-0">
+            <p class="font-display text-2xl font-bold leading-none truncate">Andrei</p>
+            <p class="text-sm text-ink-soft truncate">andrei@email.ro</p>
+          </div>
+        </div>
+
+        <nav class="mt-4 space-y-1 text-sm font-bold">
+          <a href="/cont/dashboard" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Dashboard</span><span>⌘</span></a>
+          <a href="/cont/biletele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Biletele mele</span><span>3</span></a>
+          <a href="/cont/comenzile-mele" aria-current="page" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Comenzile mele</span><span>12</span></a>
+          <a href="/cont/punctele-mele" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Punctele mele</span><span>820</span></a>
+          <a href="/cont/carduri-cadou" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Carduri cadou</span><span>1</span></a>
+          <a href="/cont/tichete-support" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Tichete support</span><span>2</span></a>
+          <a href="/cont/recenzii" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recenzii</span><span>4</span></a>
+          <a href="/cont/recomandari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Recomandări</span><span>nou</span></a>
+          <a href="/cont/setari" class="sidebar-link flex items-center justify-between gap-3 rounded-2xl px-4 py-3 hover:bg-ink hover:text-paper transition"><span>Setări</span><span>72%</span></a>
+        </nav>
+
+        <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+          <p class="font-bold text-forest">Ai nevoie de document?</p>
+          <p class="mt-1 text-sm text-ink-soft">Descarcă confirmarea, factura sau detaliile comenzii din fiecare rând.</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="min-w-0">
+      <!-- PAGE HEADER -->
+      <section class="rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 shadow-deep">
+        <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-8">
+          <div>
+            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">COMENZI CLIENT</p>
+            <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Comenzile mele</h1>
+            <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">Vezi istoricul complet al comenzilor, statusul plăților, biletele emise, comisioanele, punctele câștigate, documentele și opțiunile de retur.</p>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-2 gap-3 min-w-[320px]">
+            <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+              <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">TOTAL COMENZI</p>
+              <p class="font-display text-4xl font-bold">12</p>
+            </div>
+            <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+              <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">CHELTUIT</p>
+              <p class="font-display text-4xl font-bold">1.945 lei</p>
+            </div>
+            <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+              <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">PUNCTE</p>
+              <p class="font-display text-4xl font-bold">820</p>
+            </div>
+            <div class="rounded-2xl bg-paper/10 border border-paper/10 p-4">
+              <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">RETURURI</p>
+              <p class="font-display text-4xl font-bold">1</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FILTERS -->
+      <section class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+        <div class="grid xl:grid-cols-[1.3fr_.7fr_.7fr_.7fr_auto] gap-3 items-end">
+          <label>
+            <span class="block mb-1.5 text-sm font-bold">Caută comandă</span>
+            <input class="field" x-model="search" placeholder="Număr comandă, activitate, oraș, metodă plată..." />
+          </label>
+          <label>
+            <span class="block mb-1.5 text-sm font-bold">Status</span>
+            <select class="field" x-model="status">
+              <option value="all">Toate</option>
+              <option value="confirmed">Confirmate</option>
+              <option value="pending">În așteptare</option>
+              <option value="refunded">Retur / rambursare</option>
+              <option value="failed">Eșuate</option>
+            </select>
+          </label>
+          <label>
+            <span class="block mb-1.5 text-sm font-bold">Perioadă</span>
+            <select class="field" x-model="period">
+              <option value="all">Toate</option>
+              <option value="30">Ultimele 30 zile</option>
+              <option value="90">Ultimele 90 zile</option>
+              <option value="year">Anul curent</option>
+            </select>
+          </label>
+          <label>
+            <span class="block mb-1.5 text-sm font-bold">Sortare</span>
+            <select class="field" x-model="sort">
+              <option value="newest">Cele mai noi</option>
+              <option value="oldest">Cele mai vechi</option>
+              <option value="value_desc">Valoare desc.</option>
+              <option value="value_asc">Valoare asc.</option>
+            </select>
+          </label>
+          <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3.5 font-bold hover:bg-ink hover:text-paper transition">Reset</button>
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button @click="status='all'" :class="status==='all'?'bg-ink text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Toate</button>
+          <button @click="status='confirmed'" :class="status==='confirmed'?'bg-forest text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Confirmate</button>
+          <button @click="status='pending'" :class="status==='pending'?'bg-ochre text-ink':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">În așteptare</button>
+          <button @click="status='refunded'" :class="status==='refunded'?'bg-rose text-vermilion':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Retururi</button>
+          <button @click="status='failed'" :class="status==='failed'?'bg-vermilion text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Eșuate</button>
+        </div>
+      </section>
+
+      <!-- ORDERS -->
+      <section class="mt-6">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+          <div>
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REZULTATE</p>
+            <h2 class="font-display text-4xl sm:text-5xl font-bold leading-none" x-text="filteredOrders().length + ' comenzi'"></h2>
+          </div>
+          <div class="flex gap-2">
+            <button class="rounded-full bg-paper border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper transition">Export CSV</button>
+            <button class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Descarcă istoric</button>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <template x-for="order in filteredOrders()" :key="order.id">
+            <article class="rounded-[2rem] border-2 border-ink bg-paper shadow-ticket overflow-hidden">
+              <div class="p-5 sm:p-6">
+                <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
+                  <div class="flex gap-4 min-w-0">
+                    <img :src="order.image" :alt="order.title" class="w-24 h-24 rounded-2xl object-cover border border-ink/10 shrink-0">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap gap-2">
+                        <span class="rounded-full px-3 py-1 text-xs font-bold" :class="order.statusClass" x-text="order.statusLabel"></span>
+                        <span class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="order.payment"></span>
+                        <span x-show="order.protection" class="rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold">protecție bilet</span>
+                      </div>
+                      <h3 class="mt-3 font-display text-3xl sm:text-4xl font-bold leading-none">
+                        <a :href="order.url" class="hover:text-vermilion transition" x-text="order.id"></a>
+                      </h3>
+                      <p class="mt-1 text-ink-soft" x-text="order.title + ' · ' + order.city"></p>
+                      <p class="mt-1 text-sm text-ink-soft" x-text="order.date + ' · ' + order.items + ' bilete · ' + order.beneficiaries + ' beneficiari'"></p>
+                    </div>
+                  </div>
+
+                  <div class="xl:text-right">
+                    <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">TOTAL COMANDĂ</p>
+                    <p class="font-display text-5xl font-bold" x-text="order.total"></p>
+                    <p class="mt-1 text-sm text-ink-soft" x-text="'+' + order.points + ' puncte bonus'"></p>
+                  </div>
+                </div>
+
+                <div class="mt-5 grid md:grid-cols-4 gap-3">
+                  <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4">
+                    <p class="font-mono text-[10px] tracking-[.16em] text-ink-soft">BILETE</p>
+                    <p class="mt-1 font-bold" x-text="order.ticketsValue"></p>
+                  </div>
+                  <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4">
+                    <p class="font-mono text-[10px] tracking-[.16em] text-ink-soft">COMISION PLATFORMĂ</p>
+                    <p class="mt-1 font-bold" x-text="order.platformFee"></p>
+                  </div>
+                  <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4">
+                    <p class="font-mono text-[10px] tracking-[.16em] text-ink-soft">PROCESARE PLATĂ</p>
+                    <p class="mt-1 font-bold" x-text="order.processingFee"></p>
+                  </div>
+                  <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4">
+                    <p class="font-mono text-[10px] tracking-[.16em] text-ink-soft">DISCOUNT / PUNCTE</p>
+                    <p class="mt-1 font-bold" x-text="order.discount"></p>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <a :href="order.url" class="rounded-full bg-ink text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion transition">Detalii comandă</a>
+                  <a :href="order.ticketsUrl" class="rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Vezi bilete</a>
+                  <a :href="order.confirmationUrl" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Confirmare PDF</a>
+                  <a :href="order.invoiceUrl" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Factură</a>
+                  <a x-show="order.refundable" :href="order.refundUrl" class="rounded-full border border-vermilion/30 bg-rose text-vermilion px-4 py-2 text-sm font-bold hover:bg-vermilion hover:text-paper transition">Cere retur</a>
+                  <button @click="toggle(order.id)" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">
+                    <span x-text="openOrder===order.id ? 'Ascunde detalii' : 'Mai multe'"></span>
+                  </button>
+                </div>
+              </div>
+
+              <div x-show="openOrder===order.id" x-collapse class="border-t-2 border-dashed border-ink/15 bg-paper-2/60 p-5 sm:p-6">
+                <div class="grid lg:grid-cols-[1fr_360px] gap-6">
+                  <div>
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">BILETE DIN COMANDĂ</p>
+                    <div class="mt-3 space-y-2">
+                      <template x-for="ticket in order.tickets" :key="ticket.code">
+                        <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <p class="font-bold" x-text="ticket.name"></p>
+                            <p class="text-sm text-ink-soft" x-text="ticket.type + ' · ' + ticket.code"></p>
+                          </div>
+                          <span class="rounded-full px-3 py-1 text-xs font-bold" :class="ticket.used ? 'bg-paper-2 text-ink-soft' : 'bg-mint text-forest'" x-text="ticket.used ? 'scanat' : 'valid'"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+
+                  <aside class="rounded-3xl bg-paper border border-ink/10 p-5">
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUMAR FINANCIAR</p>
+                    <div class="mt-4 space-y-3 text-sm">
+                      <div class="flex justify-between gap-4"><span>Bilete</span><strong x-text="order.ticketsValue"></strong></div>
+                      <div class="flex justify-between gap-4"><span>Comision platformă</span><strong x-text="order.platformFee"></strong></div>
+                      <div class="flex justify-between gap-4"><span>Procesare plată</span><strong x-text="order.processingFee"></strong></div>
+                      <div class="flex justify-between gap-4"><span>Discount</span><strong x-text="order.discount"></strong></div>
+                      <div class="pt-3 border-t border-ink/10 flex justify-between gap-4 text-lg"><span>Total</span><strong x-text="order.total"></strong></div>
+                    </div>
+                    <p class="mt-4 text-xs text-ink-soft">Comisioanele sunt afișate separat pentru transparență. Valorile exacte vin din backend.</p>
+                  </aside>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+
+        <div x-show="filteredOrders().length === 0" class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-8 text-center">
+          <p class="font-display text-4xl font-bold">Nu am găsit comenzi.</p>
+          <p class="mt-2 text-ink-soft">Schimbă filtrele sau caută după alt termen.</p>
+          <button @click="resetFilters()" class="mt-5 rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Resetează filtrele</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+function ordersPage(){
+  return {
+    search:'',
+    status:'all',
+    period:'all',
+    sort:'newest',
+    openOrder:null,
+    toggle(id){ this.openOrder = this.openOrder === id ? null : id },
+    resetFilters(){ this.search=''; this.status='all'; this.period='all'; this.sort='newest'; },
+    orders:[
+      {
+        id:'#BO-2026-004218',
+        status:'confirmed',
+        statusLabel:'confirmată',
+        statusClass:'bg-mint text-forest',
+        title:'Camera 13',
+        city:'Brașov',
+        date:'23 mai 2026',
+        payment:'Stripe · card',
+        total:'420 lei',
+        totalNumber:420,
+        items:4,
+        beneficiaries:4,
+        points:84,
+        protection:true,
+        refundable:true,
+        ticketsValue:'400 lei',
+        platformFee:'8 lei',
+        processingFee:'6 lei',
+        discount:'−0 lei',
+        image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=500&q=80',
+        url:'/cont/comenzi/BO-2026-004218',
+        ticketsUrl:'/cont/bilete?order=BO-2026-004218',
+        confirmationUrl:'/cont/comenzi/BO-2026-004218/confirmare.pdf',
+        invoiceUrl:'/cont/comenzi/BO-2026-004218/factura.pdf',
+        refundUrl:'/cerere-retur?order=BO-2026-004218',
+        tickets:[
+          {name:'Andrei Nastase', type:'Adult', code:'T-004218-01', used:false},
+          {name:'Maria Popescu', type:'Adult', code:'T-004218-02', used:false},
+          {name:'Alex Popescu', type:'Adult', code:'T-004218-03', used:false},
+          {name:'Ioana Popescu', type:'Adult', code:'T-004218-04', used:false}
+        ]
+      },
+      {
+        id:'#BO-2026-004102',
+        status:'confirmed',
+        statusLabel:'confirmată',
+        statusClass:'bg-mint text-forest',
+        title:'Atelier ceramică copii',
+        city:'București',
+        date:'18 mai 2026',
+        payment:'Apple Pay',
+        total:'140 lei',
+        totalNumber:140,
+        items:2,
+        beneficiaries:2,
+        points:28,
+        protection:false,
+        refundable:true,
+        ticketsValue:'134 lei',
+        platformFee:'2.68 lei',
+        processingFee:'3.32 lei',
+        discount:'−0 lei',
+        image:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=500&q=80',
+        url:'/cont/comenzi/BO-2026-004102',
+        ticketsUrl:'/cont/bilete?order=BO-2026-004102',
+        confirmationUrl:'/cont/comenzi/BO-2026-004102/confirmare.pdf',
+        invoiceUrl:'/cont/comenzi/BO-2026-004102/factura.pdf',
+        refundUrl:'/cerere-retur?order=BO-2026-004102',
+        tickets:[
+          {name:'Mara Nastase', type:'Copil', code:'T-004102-01', used:false},
+          {name:'Ana Ionescu', type:'Copil', code:'T-004102-02', used:false}
+        ]
+      },
+      {
+        id:'#BO-2026-003992',
+        status:'confirmed',
+        statusLabel:'finalizată',
+        statusClass:'bg-paper-2 text-ink-soft',
+        title:'Muzeu interactiv',
+        city:'București',
+        date:'11 mai 2026',
+        payment:'Google Pay',
+        total:'95 lei',
+        totalNumber:95,
+        items:2,
+        beneficiaries:2,
+        points:19,
+        protection:false,
+        refundable:false,
+        ticketsValue:'90 lei',
+        platformFee:'1.80 lei',
+        processingFee:'3.20 lei',
+        discount:'−0 lei',
+        image:'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=500&q=80',
+        url:'/cont/comenzi/BO-2026-003992',
+        ticketsUrl:'/cont/bilete?order=BO-2026-003992',
+        confirmationUrl:'/cont/comenzi/BO-2026-003992/confirmare.pdf',
+        invoiceUrl:'/cont/comenzi/BO-2026-003992/factura.pdf',
+        refundUrl:'#',
+        tickets:[
+          {name:'Andrei Nastase', type:'Adult', code:'T-003992-01', used:true},
+          {name:'Mara Nastase', type:'Copil', code:'T-003992-02', used:true}
+        ]
+      },
+      {
+        id:'#BO-2026-003871',
+        status:'refunded',
+        statusLabel:'retur parțial',
+        statusClass:'bg-rose text-vermilion',
+        title:'Parc aventură',
+        city:'Cluj-Napoca',
+        date:'02 mai 2026',
+        payment:'Revolut Pay',
+        total:'250 lei',
+        totalNumber:250,
+        items:3,
+        beneficiaries:3,
+        points:0,
+        protection:true,
+        refundable:false,
+        ticketsValue:'240 lei',
+        platformFee:'4.80 lei',
+        processingFee:'5.20 lei',
+        discount:'−80 lei retur',
+        image:'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=500&q=80',
+        url:'/cont/comenzi/BO-2026-003871',
+        ticketsUrl:'/cont/bilete?order=BO-2026-003871',
+        confirmationUrl:'/cont/comenzi/BO-2026-003871/confirmare.pdf',
+        invoiceUrl:'/cont/comenzi/BO-2026-003871/factura.pdf',
+        refundUrl:'#',
+        tickets:[
+          {name:'Andrei Nastase', type:'Adult', code:'T-003871-01', used:true},
+          {name:'Radu Pop', type:'Adult', code:'T-003871-02', used:false},
+          {name:'Mihai Pop', type:'Adult', code:'T-003871-03', used:false}
+        ]
+      },
+      {
+        id:'#BO-2026-003555',
+        status:'failed',
+        statusLabel:'plată eșuată',
+        statusClass:'bg-vermilion text-paper',
+        title:'Tur ghidat Sibiu',
+        city:'Sibiu',
+        date:'20 aprilie 2026',
+        payment:'RoPay',
+        total:'0 lei',
+        totalNumber:0,
+        items:2,
+        beneficiaries:2,
+        points:0,
+        protection:false,
+        refundable:false,
+        ticketsValue:'0 lei',
+        platformFee:'0 lei',
+        processingFee:'0 lei',
+        discount:'−0 lei',
+        image:'https://images.unsplash.com/photo-1558350315-8aa00e8e4590?auto=format&fit=crop&w=500&q=80',
+        url:'/cont/comenzi/BO-2026-003555',
+        ticketsUrl:'#',
+        confirmationUrl:'#',
+        invoiceUrl:'#',
+        refundUrl:'#',
+        tickets:[]
+      }
+    ],
+    filteredOrders(){
+      const q = this.search.toLowerCase().trim();
+      let list = this.orders.filter(order => {
+        const matchesStatus = this.status === 'all' || order.status === this.status;
+        const blob = JSON.stringify(order).toLowerCase();
+        const matchesSearch = !q || blob.includes(q);
+        return matchesStatus && matchesSearch;
+      });
+
+      if(this.sort === 'value_desc') list = [...list].sort((a,b)=>b.totalNumber-a.totalNumber);
+      if(this.sort === 'value_asc') list = [...list].sort((a,b)=>a.totalNumber-b.totalNumber);
+      if(this.sort === 'oldest') list = [...list].reverse();
+      return list;
+    }
+  }
+}
+</script>
+
+</body>
+</html>

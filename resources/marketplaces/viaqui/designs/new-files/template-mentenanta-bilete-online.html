@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Mentenanță programată | bilete.online</title>
+  <meta name="description" content="bilete.online este temporar indisponibil pentru mentenanță programată. Revino în curând sau solicită o notificare când platforma este din nou online.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="maintenancePage()" class="antialiased">
+  <main class="min-h-screen">
+    <section class="mx-auto grid min-h-screen max-w-[1440px] gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center lg:py-12">
+      <div>
+        <a href="/" class="inline-flex items-center gap-2.5">
+          <span class="grid h-10 w-10 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+          <span class="font-display text-2xl font-bold">bilete<span class="text-red">.</span>online</span>
+        </a>
+
+        <!-- Maintenance state -->
+        <div x-show="status==='maintenance'">
+          <div class="mt-10 inline-flex items-center gap-2 rounded-full bg-paper2 px-4 py-2 text-sm font-bold">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-75"></span>
+              <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-gold"></span>
+            </span>
+            Mentenanță în desfășurare
+          </div>
+
+          <h1 class="mt-5 max-w-4xl font-display text-5xl font-bold leading-[.95] sm:text-6xl lg:text-7xl">
+            Revenim în curând.
+          </h1>
+
+          <p class="mt-5 max-w-3xl text-xl leading-relaxed text-muted">
+            Facem câteva îmbunătățiri importante pentru ca bilete.online să fie mai rapid, mai stabil și mai ușor de folosit.
+          </p>
+
+          <div class="mt-7 max-w-3xl rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p class="text-sm font-bold text-muted">Estimare revenire</p>
+                <p class="mt-1 font-display text-3xl font-bold" x-text="estimatedReturn"></p>
+              </div>
+
+              <div class="text-left sm:text-right">
+                <p class="text-sm font-bold text-muted">Progres estimat</p>
+                <p class="mt-1 font-display text-3xl font-bold" x-text="progress + '%'"></p>
+              </div>
+            </div>
+
+            <div class="mt-5 h-2 overflow-hidden rounded-full bg-paper2">
+              <div class="h-full rounded-full bg-red transition-all duration-700" :style="'width:'+progress+'%'"></div>
+            </div>
+
+            <p class="mt-3 text-sm text-muted">
+              Intervalul este orientativ. Dacă finalizăm mai devreme, platforma va reveni automat online.
+            </p>
+          </div>
+
+          <div class="mt-7 max-w-3xl">
+            <p class="font-bold">Anunță-mă când reveniți</p>
+            <p class="mt-2 text-sm text-muted">Îți trimitem un singur email când platforma este din nou disponibilă.</p>
+
+            <form @submit.prevent="subscribe()" class="mt-4 flex flex-col gap-3 sm:flex-row">
+              <input
+                x-model="email"
+                type="email"
+                required
+                class="min-w-0 flex-1 rounded-full border border-ink/15 bg-white px-5 py-3 outline-none focus:border-red"
+                placeholder="emailul tău"
+              >
+              <button class="rounded-full bg-red px-6 py-3 font-bold text-white hover:bg-red2">
+                Anunță-mă
+              </button>
+            </form>
+
+            <p x-show="subscribed" x-cloak class="mt-3 rounded-xl bg-green2 px-4 py-3 text-sm font-bold text-green">
+              Te vom anunța când bilete.online revine online.
+            </p>
+          </div>
+
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href="mailto:suport@bilete.online" class="rounded-full border border-ink/20 bg-white px-5 py-3 text-sm font-bold hover:border-ink">
+              Contact suport
+            </a>
+            <a href="https://status.bilete.online" class="rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">
+              Verifică statusul
+            </a>
+          </div>
+        </div>
+
+        <!-- Online state -->
+        <div x-show="status==='online'" x-cloak>
+          <div class="mt-10 inline-flex items-center gap-2 rounded-full bg-green2 px-4 py-2 text-sm font-bold text-green">
+            <span class="grid h-6 w-6 place-items-center rounded-full bg-green text-white">✓</span>
+            Platforma este din nou online
+          </div>
+
+          <h1 class="mt-5 max-w-4xl font-display text-5xl font-bold leading-[.95] sm:text-6xl lg:text-7xl">
+            Am revenit.
+          </h1>
+
+          <p class="mt-5 max-w-3xl text-xl leading-relaxed text-muted">
+            Mentenanța s-a încheiat și poți continua să explorezi activități și bilete.
+          </p>
+
+          <a href="/" class="mt-7 inline-flex rounded-full bg-red px-6 py-3 font-bold text-white">
+            Intră pe bilete.online
+          </a>
+        </div>
+
+        <div class="mt-10 flex flex-wrap gap-5 text-sm text-muted">
+          <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+          <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+          <a href="/contact" class="hover:text-ink">Contact</a>
+        </div>
+      </div>
+
+      <aside class="relative overflow-hidden rounded-[2rem] bg-ink p-7 text-white shadow-panel lg:p-8">
+        <div class="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-red/30"></div>
+        <div class="absolute -bottom-20 -left-16 h-52 w-52 rounded-full bg-gold/20"></div>
+
+        <div class="relative">
+          <p class="text-xs font-bold uppercase tracking-[.16em] text-gold">CE ÎMBUNĂTĂȚIM</p>
+
+          <h2 class="mt-3 font-display text-4xl font-bold leading-tight">
+            O experiență mai bună, de la căutare până la bilet.
+          </h2>
+
+          <div class="mt-7 space-y-4">
+            <template x-for="item in improvements" :key="item.title">
+              <article class="rounded-xl bg-white/8 p-4">
+                <div class="flex items-start gap-3">
+                  <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-lg" x-text="item.icon"></span>
+                  <div>
+                    <p class="font-bold" x-text="item.title"></p>
+                    <p class="mt-1 text-sm leading-relaxed text-white/60" x-text="item.description"></p>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
+
+          <div class="mt-7 rounded-xl border border-white/10 bg-white/5 p-4">
+            <p class="font-bold">Ai deja o comandă?</p>
+            <p class="mt-2 text-sm leading-relaxed text-white/60">
+              Biletele emise rămân valabile. Pentru situații urgente, contactează echipa de suport și include numărul comenzii.
+            </p>
+            <a href="mailto:suport@bilete.online" class="mt-4 inline-flex text-sm font-bold text-gold">
+              suport@bilete.online →
+            </a>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    function maintenancePage(){
+      return {
+        status:'maintenance',
+        email:'',
+        subscribed:false,
+        progress:72,
+        estimatedReturn:'astăzi, ora 14:30',
+
+        improvements:[
+          {
+            icon:'⚡',
+            title:'Viteză și stabilitate',
+            description:'Optimizăm timpul de încărcare și comportamentul platformei în perioade aglomerate.'
+          },
+          {
+            icon:'🔎',
+            title:'Căutare mai bună',
+            description:'Îmbunătățim rezultatele pentru activități, atracții, orașe și ghiduri.'
+          },
+          {
+            icon:'💳',
+            title:'Checkout mai sigur',
+            description:'Actualizăm fluxurile de plată și gestionarea comenzilor.'
+          },
+          {
+            icon:'🎟️',
+            title:'Bilete și cont client',
+            description:'Facem accesul la bilete și comenzi mai rapid și mai clar.'
+          }
+        ],
+
+        subscribe(){
+          this.subscribed=true;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

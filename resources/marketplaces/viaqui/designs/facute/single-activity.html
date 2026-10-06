@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ======================================================
+    TEMPLATE: SINGLE ACTIVITY LANDING PAGE — bilete.online
+    Versatil pentru: escape room, muzeu, parc de distractii, pestera,
+    rezervatie naturala, parc aventura, atelier, zoo, acvariu etc.
+
+    Recomandare implementare:
+    - inlocuieste variabilele ACTIVITY_* din head + JSON-LD + continut.
+    - pentru fiecare activitate, pastreaza H1 unic, meta description unic,
+      URL canonic unic, imagini cu alt descriptiv si FAQ specific.
+  ======================================================= -->
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Camera 13 Escape Room Cluj — bilete & rezervări online | bilete.online</title>
+  <meta name="description" content="Rezervă online Camera 13 Escape Room din Cluj-Napoca. Experiență de 60 minute pentru 2–6 persoane, dificultate medie, confirmare instant și intrare cu QR." />
+  <meta name="keywords" content="Camera 13 Cluj, escape room Cluj, bilete escape room Cluj, rezervare escape room, activități Cluj-Napoca, experiențe indoor Cluj" />
+  <link rel="canonical" href="https://bilete.online/escape-rooms/camera-13-cluj" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="product" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Camera 13 Escape Room Cluj — rezervări online" />
+  <meta property="og:description" content="60 minute, 2–6 persoane, confirmare instant. Rezervă online și intră cu QR." />
+  <meta property="og:url" content="https://bilete.online/escape-rooms/camera-13-cluj" />
+  <meta property="og:image" content="https://bilete.online/assets/activities/camera-13-cluj/hero.jpg" />
+  <meta property="og:locale" content="ro_RO" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Camera 13 Escape Room Cluj — bilete & rezervări online" />
+  <meta name="twitter:description" content="Rezervă online Camera 13 din Cluj-Napoca. Confirmare instant, bilet cu QR." />
+  <meta name="twitter:image" content="https://bilete.online/assets/activities/camera-13-cluj/hero.jpg" />
+
+  <!-- ===================== STRUCTURED DATA ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://bilete.online/escape-rooms/camera-13-cluj#webpage",
+        "url": "https://bilete.online/escape-rooms/camera-13-cluj",
+        "name": "Camera 13 Escape Room Cluj — bilete & rezervări online",
+        "description": "Rezervă online Camera 13 Escape Room din Cluj-Napoca. Experiență de 60 minute pentru 2–6 persoane, dificultate medie, confirmare instant și intrare cu QR.",
+        "inLanguage": "ro-RO",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "bilete.online",
+          "url": "https://bilete.online/"
+        },
+        "primaryImageOfPage": {
+          "@type": "ImageObject",
+          "url": "https://bilete.online/assets/activities/camera-13-cluj/hero.jpg"
+        },
+        "breadcrumb": {
+          "@id": "https://bilete.online/escape-rooms/camera-13-cluj#breadcrumb"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://bilete.online/escape-rooms/camera-13-cluj#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Acasă", "item": "https://bilete.online/" },
+          { "@type": "ListItem", "position": 2, "name": "Escape rooms", "item": "https://bilete.online/escape-rooms" },
+          { "@type": "ListItem", "position": 3, "name": "Camera 13", "item": "https://bilete.online/escape-rooms/camera-13-cluj" }
+        ]
+      },
+      {
+        "@type": ["Product", "TouristAttraction"],
+        "@id": "https://bilete.online/escape-rooms/camera-13-cluj#activity",
+        "name": "Camera 13 Escape Room",
+        "description": "Camera 13 este un escape room din Cluj-Napoca pentru echipe de 2–6 persoane, cu durată de 60 minute și dificultate medie.",
+        "image": [
+          "https://bilete.online/assets/activities/camera-13-cluj/hero.jpg",
+          "https://bilete.online/assets/activities/camera-13-cluj/gallery-1.jpg",
+          "https://bilete.online/assets/activities/camera-13-cluj/gallery-2.jpg"
+        ],
+        "brand": { "@type": "Brand", "name": "bilete.online" },
+        "category": "Escape room",
+        "url": "https://bilete.online/escape-rooms/camera-13-cluj",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "reviewCount": "126"
+        },
+        "offers": {
+          "@type": "AggregateOffer",
+          "lowPrice": "130",
+          "highPrice": "220",
+          "priceCurrency": "RON",
+          "availability": "https://schema.org/InStock",
+          "url": "https://bilete.online/escape-rooms/camera-13-cluj#rezerva"
+        },
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Strada Exemplu 13",
+          "addressLocality": "Cluj-Napoca",
+          "addressRegion": "Cluj",
+          "addressCountry": "RO"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "46.7712",
+          "longitude": "23.6236"
+        },
+        "touristType": ["families", "groups", "couples", "corporate teams"],
+        "isAccessibleForFree": false
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://bilete.online/escape-rooms/camera-13-cluj#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Câte persoane pot participa la Camera 13?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Camera 13 este potrivită pentru echipe de 2–6 persoane. Pentru grupuri mai mari, recomandăm rezervarea mai multor intervale sau alegerea unei activități similare."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Cât durează experiența?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Experiența durează aproximativ 60 de minute, la care se adaugă câteva minute pentru introducere și instrucțiuni."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Primesc biletul imediat după plată?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Da. După plată primești confirmarea rezervării și biletul cu cod QR pe email. La intrare este suficient să prezinți codul QR."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Activitatea este potrivită pentru copii?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Activitatea este recomandată de la 12 ani. Copiii mai mici pot participa doar împreună cu un adult, în funcție de regulile locației."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',ochre:'#DA9A33',sky:'#2C5F8A'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow: {
+          ticket:'0 26px 50px -28px rgba(27,23,20,.55)'
+        }
+      }}
+    }
+  </script>
+
+  <!-- ===================== ALPINE ===================== -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    [x-cloak]{ display:none !important; }
+
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-0.018em; }
+    .ital { font-style:italic; }
+
+    .grain::after{
+      content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode:multiply;
+    }
+
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,70%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,70%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .ticket-lift{ transition:transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s; }
+    .ticket-lift:hover{ transform:translateY(-6px) rotate(-.25deg); box-shadow:0 26px 50px -28px rgba(27,23,20,.55); }
+
+    .duotone{ position:relative; overflow:hidden; }
+    .duotone .grid-tex{ position:absolute; inset:0; opacity:.45; background-image:radial-gradient(currentColor 1px, transparent 1.4px); background-size:13px 13px; mix-blend-mode:overlay; }
+
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .no-bar::-webkit-scrollbar{ display:none; } .no-bar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+    .mega-link{ transition:background-color .2s, transform .2s; }
+    .mega-link:hover{ transform:translateX(2px); }
+
+    @keyframes foil{ 0%{ background-position:-150% 0 } 100%{ background-position:150% 0 } }
+    .foil{ background:linear-gradient(110deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%); background-size:220% 100%; animation:foil 4.5s linear infinite; mix-blend-mode:screen; pointer-events:none; }
+
+    @keyframes scan{ 0%,100%{ top:14% } 50%{ top:78% } }
+    .scanline{ top:14%; box-shadow:0 0 8px 1px rgba(232,69,39,.7); animation:scan 2.2s ease-in-out infinite; }
+
+    [data-stagger]{ opacity:0; transform:translateY(16px); }
+    [data-stagger].in{ opacity:1; transform:translateY(0); transition:all .7s cubic-bezier(.2,.85,.25,1); }
+
+    .seo-copy h2{ font-family:Fraunces, Georgia, serif; font-weight:700; font-size:clamp(1.8rem,3vw,3rem); line-height:1.02; letter-spacing:-.02em; margin-top:2.5rem; margin-bottom:1rem; }
+    .seo-copy h3{ font-weight:700; font-size:1.25rem; margin-top:1.75rem; margin-bottom:.55rem; }
+    .seo-copy p{ color:#5A4F41; font-size:1.0625rem; line-height:1.75; margin-bottom:1rem; }
+    .seo-copy ul{ margin:1rem 0 1.5rem; padding-left:1.1rem; color:#5A4F41; }
+    .seo-copy li{ margin:.35rem 0; line-height:1.65; }
+    .seo-copy a{ color:#E84527; font-weight:600; background-image:linear-gradient(currentColor,currentColor); background-size:100% 1.5px; background-repeat:no-repeat; background-position:0 100%; }
+
+    @media (prefers-reduced-motion: reduce){
+      html{ scroll-behavior:auto; }
+      .foil,.scanline{ animation:none !important; }
+      [data-stagger]{ opacity:1 !important; transform:none !important; animation:none !important; }
+    }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper">
+
+  <!-- ====================================================== HEADER ====================================================== -->
+  <header x-data="{ open:false, scrolled:false, mega:false, user:false }"
+          x-init="window.addEventListener('scroll',()=>scrolled = window.scrollY>20)"
+          @keydown.escape.window="mega=false; user=false; open=false"
+          class="sticky top-0 z-50">
+    <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+        <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> ADMISSION · ROMÂNIA · AGREMENT</span>
+        <span class="hidden sm:flex items-center gap-4">
+          <a href="/#card-cadou" class="text-ochre underline-wobble">Carduri cadou</a>
+          <span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span>
+        </span>
+      </div>
+    </div>
+
+    <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+          <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+          </span>
+          <span class="font-display text-xl font-700 tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+        </a>
+
+        <div class="hidden lg:flex items-center gap-1 text-[15px] font-500" @mouseleave="mega=false">
+          <button @mouseenter="mega=true" @click="mega=!mega" :aria-expanded="mega" :class="mega ? 'bg-ink text-paper' : 'hover:bg-ink/5'" class="flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-colors duration-200">
+            Explorează
+            <svg :class="mega && 'rotate-180'" class="w-4 h-4 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <a @mouseenter="mega=false" href="/#cum" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Cum funcționează</a>
+          <a @mouseenter="mega=false" href="/#card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Carduri cadou</a>
+          <a @mouseenter="mega=false" href="/#owneri" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Pentru locații</a>
+
+          <div x-show="mega" x-cloak
+               x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+               x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+               class="fixed left-1/2 -translate-x-1/2 top-24 w-[min(1080px,calc(100vw-2rem))] grain">
+            <div class="bg-paper border-2 border-ink rounded-2xl shadow-[0_40px_80px_-40px_rgba(27,23,20,.7)] overflow-hidden grid grid-cols-12">
+              <div class="col-span-7 p-7 border-r-2 border-dashed border-ink/15">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-4">EXPLOREAZĂ DUPĂ CATEGORIE</p>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <a href="/escape-rooms" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-vermilion/10 text-vermilion shrink-0 group-hover:bg-vermilion group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Escape rooms</span><span class="block text-xs text-ink-soft mt-0.5">camere de evadare</span></span>
+                  </a>
+                  <a href="/parcuri-de-distractii" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-sky/10 text-sky shrink-0 group-hover:bg-sky group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v20M5 8l7 4 7-4M5 16l7-4 7 4"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Parcuri de distracții</span><span class="block text-xs text-ink-soft mt-0.5">distracție pentru familie</span></span>
+                  </a>
+                  <a href="/muzee" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-forest/10 text-forest shrink-0 group-hover:bg-forest group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Muzee & expoziții</span><span class="block text-xs text-ink-soft mt-0.5">cultură & educație</span></span>
+                  </a>
+                  <a href="/natura" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-ochre/15 text-ochre shrink-0 group-hover:bg-ochre group-hover:text-paper transition-colors"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11Z"/><path d="M9 11l2 2 4-5"/></svg></span>
+                    <span><span class="block font-600 leading-tight">Natură & peșteri</span><span class="block text-xs text-ink-soft mt-0.5">rezervații, trasee, tururi</span></span>
+                  </a>
+                </div>
+                <a href="/categorii" @click="mega=false" class="inline-flex items-center gap-1.5 mt-4 text-sm font-600 text-vermilion underline-wobble">Vezi toate categoriile →</a>
+              </div>
+              <div class="col-span-5 p-7 flex flex-col bg-paper-2/40">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-4">ORAȘE POPULARE</p>
+                <div class="grid grid-cols-2 gap-x-5 gap-y-2 text-[15px]">
+                  <a href="/bucuresti" @click="mega=false" class="mega-link py-1 hover:text-vermilion">București</a>
+                  <a href="/cluj-napoca" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Cluj-Napoca</a>
+                  <a href="/brasov" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Brașov</a>
+                  <a href="/timisoara" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Timișoara</a>
+                  <a href="/iasi" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Iași</a>
+                  <a href="/constanta" @click="mega=false" class="mega-link py-1 hover:text-vermilion">Constanța</a>
+                </div>
+                <a href="/orase" @click="mega=false" class="mt-3 text-sm font-600 text-vermilion underline-wobble">Vezi toate orașele →</a>
+                <a href="/#card-cadou" @click="mega=false" class="ticket ticket-lift mt-6 block relative bg-ink text-paper rounded-xl overflow-hidden p-4" style="--perf:100%">
+                  <div class="absolute inset-0 foil opacity-50"></div>
+                  <div class="relative flex items-center gap-3">
+                    <span class="grid place-items-center w-11 h-11 rounded-lg bg-vermilion text-paper shrink-0"><svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7m0 0S9.5 2 7 4s5 3 5 3Zm0 0s2.5-5 5-3-5 3-5 3Z"/></svg></span>
+                    <div><p class="font-display text-lg font-700 leading-tight">Card cadou</p><p class="text-xs text-paper/60">Dăruiește o experiență, nu un obiect</p></div>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <a href="/#owneri" class="hidden md:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
+          <a href="#rezerva" class="hidden sm:inline-flex px-4 py-2 rounded-full bg-vermilion text-paper text-sm font-700 hover:bg-vermilion-d transition-colors">Rezervă</a>
+          <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+            <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-500 max-h-[80vh] overflow-y-auto">
+        <a @click="open=false" href="/categorii" class="block py-2">Categorii</a>
+        <a @click="open=false" href="#despre" class="block py-2">Despre activitate</a>
+        <a @click="open=false" href="#program" class="block py-2">Program & bilete</a>
+        <a @click="open=false" href="#locatie" class="block py-2">Locație</a>
+        <a @click="open=false" href="#faq" class="block py-2">Întrebări frecvente</a>
+        <a @click="open=false" href="#rezerva" class="block mt-3 px-4 py-3 rounded-full bg-ink text-paper text-center font-700">Rezervă acum</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top" x-data="activityPage()" x-init="init()">
+
+    <!-- ====================================================== HERO ====================================================== -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0 -z-10 bg-gradient-to-b from-paper via-paper to-paper-2"></div>
+      <div class="absolute -z-10 -top-32 -right-40 w-[640px] h-[640px] rounded-full bg-vermilion/10 blur-3xl"></div>
+      <div class="absolute -z-10 top-40 -left-40 w-[520px] h-[520px] rounded-full bg-forest/10 blur-3xl"></div>
+      <div class="absolute inset-0 -z-10 opacity-[.32]" style="background-image:linear-gradient(to right, rgba(27,23,20,.06) 1px, transparent 1px); background-size:64px 100%"></div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-10 lg:pt-14 pb-8">
+        <!-- Breadcrumbs -->
+        <nav aria-label="Breadcrumb" class="mb-7 font-mono text-[11px] tracking-wide text-ink-soft">
+          <ol class="flex flex-wrap items-center gap-2">
+            <li><a href="/" class="hover:text-vermilion">Acasă</a></li>
+            <li class="text-ink/30">/</li>
+            <li><a href="/escape-rooms" class="hover:text-vermilion">Escape rooms</a></li>
+            <li class="text-ink/30">/</li>
+            <li aria-current="page" class="text-ink">Camera 13</li>
+          </ol>
+        </nav>
+
+        <div class="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          <!-- left hero copy -->
+          <div class="lg:col-span-7">
+            <div class="flex flex-wrap items-center gap-2 mb-5">
+              <span class="stamp px-3 py-1 text-[10px] font-mono tracking-[.2em] text-vermilion rotate-[-1.5deg]">ESCAPE ROOM</span>
+              <span class="px-3 py-1 rounded-full bg-forest/10 text-forest text-xs font-700">Cluj-Napoca</span>
+              <span class="px-3 py-1 rounded-full bg-ink/5 text-ink-soft text-xs font-700">Confirmare instant</span>
+            </div>
+
+            <h1 class="font-display text-[clamp(3.1rem,8vw,7.8rem)] leading-[.86] font-900 tracking-tight max-w-5xl">
+              Camera 13
+              <span class="block text-vermilion ital font-500">escape room în Cluj</span>
+            </h1>
+
+            <p class="mt-6 max-w-2xl text-xl sm:text-2xl leading-snug text-ink-soft">
+              Rezervă o experiență intensă de 60 de minute pentru echipa ta. Indicii ascunse, decor imersiv, decizii rapide și un final care depinde de voi.
+            </p>
+
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a href="#rezerva" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-vermilion text-paper font-800 hover:bg-vermilion-d transition-colors shadow-[0_12px_22px_-14px_rgba(232,69,39,.9)]">
+                Rezervă bilete
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              </a>
+              <a href="#despre" class="inline-flex items-center justify-center px-6 py-3.5 rounded-full border-2 border-ink font-800 hover:bg-ink hover:text-paper transition-colors">Vezi detalii</a>
+            </div>
+
+            <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl">
+              <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
+                <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">DURATĂ</p>
+                <p class="mt-1 font-display text-2xl font-800">60 min</p>
+              </div>
+              <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
+                <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">GRUP</p>
+                <p class="mt-1 font-display text-2xl font-800">2–6</p>
+              </div>
+              <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
+                <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">VÂRSTĂ</p>
+                <p class="mt-1 font-display text-2xl font-800">12+</p>
+              </div>
+              <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
+                <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">RATING</p>
+                <p class="mt-1 font-display text-2xl font-800">4.8★</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- right gallery + booking preview -->
+          <div class="lg:col-span-5">
+            <div class="relative">
+              <div class="ticket bg-ink text-paper rounded-[2rem] border-2 border-ink overflow-hidden shadow-2xl rotate-[1deg]" style="--perf:72%; --punch:#1B1714">
+                <div class="relative h-[420px] duotone bg-gradient-to-br from-vermilion via-ochre to-forest text-paper">
+                  <div class="grid-tex"></div>
+                  <img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80"
+                       alt="Camera 13 escape room Cluj-Napoca - decor imersiv cu lumini dramatice"
+                       class="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-75"
+                       loading="eager" />
+                  <button @click="openGallery(0)" class="absolute inset-0 group" aria-label="Deschide galeria foto">
+                    <span class="absolute bottom-5 left-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-paper text-ink text-sm font-800 group-hover:bg-vermilion group-hover:text-paper transition-colors">
+                      Vezi galeria
+                      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                    </span>
+                  </button>
+                  <span class="stamp absolute top-5 left-5 text-paper/85 px-3 py-1 text-[10px] font-mono -rotate-6">ADMIT ONE TEAM</span>
+                  <div class="absolute right-5 top-5 w-16 h-16 bg-paper/15 backdrop-blur rounded-xl border border-paper/20 grid place-items-center">
+                    <svg viewBox="0 0 24 24" class="w-9 h-9 text-paper/70" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4"/></svg>
+                  </div>
+                </div>
+                <div class="p-5 sm:p-6">
+                  <p class="font-mono text-[10px] text-paper/50 tracking-[.18em]">REZERVARE RAPIDĂ</p>
+                  <div class="mt-3 flex items-end justify-between gap-3">
+                    <div>
+                      <p class="text-paper/60 text-sm">de la</p>
+                      <p class="font-display text-4xl font-900">130 lei</p>
+                    </div>
+                    <a href="#rezerva" class="px-5 py-3 rounded-full bg-vermilion text-paper font-800 hover:bg-vermilion-d transition-colors">Alege ora</a>
+                  </div>
+                </div>
+                <div class="notch top"></div><div class="notch bot"></div><div class="perf hidden sm:block"></div>
+              </div>
+
+              <div class="absolute -bottom-5 -left-3 sm:-left-8 bg-paper border-2 border-ink rounded-2xl p-4 shadow-ticket rotate-[-3deg] max-w-[220px]">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft">POPULAR</p>
+                <p class="mt-1 font-display text-xl font-800 leading-tight">Ideal pentru prieteni, familie sau team building.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== STICKY ANCHOR NAV ====================================================== -->
+    <section class="sticky top-24 z-40 bg-paper/90 backdrop-blur-md border-y border-ink/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6">
+        <div class="no-bar flex items-center gap-2 overflow-x-auto py-3 text-sm font-800">
+          <a href="#despre" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Despre</a>
+          <a href="#rezerva" class="shrink-0 px-4 py-2 rounded-full bg-vermilion text-paper hover:bg-vermilion-d transition-colors">Bilete</a>
+          <a href="#potrivit" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Potrivit pentru</a>
+          <a href="#program" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Program</a>
+          <a href="#locatie" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Locație</a>
+          <a href="#faq" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">FAQ</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== MAIN CONTENT + BOOKING ====================================================== -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
+      <div class="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <!-- LEFT CONTENT -->
+        <div class="lg:col-span-8 space-y-12">
+
+          <!-- trust strip -->
+          <div class="grid sm:grid-cols-3 gap-3">
+            <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5">
+              <p class="font-display text-2xl font-800">QR instant</p>
+              <p class="mt-1 text-ink-soft">Primești biletul imediat pe email.</p>
+            </div>
+            <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5">
+              <p class="font-display text-2xl font-800">Plată sigură</p>
+              <p class="mt-1 text-ink-soft">Confirmare rapidă și rezervare clară.</p>
+            </div>
+            <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5">
+              <p class="font-display text-2xl font-800">Suport</p>
+              <p class="mt-1 text-ink-soft">Ai toate detaliile înainte să ajungi.</p>
+            </div>
+          </div>
+
+          <!-- description -->
+          <section id="despre" class="scroll-mt-40">
+            <div class="flex items-end justify-between gap-4 mb-6">
+              <div>
+                <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">DESPRE ACTIVITATE</p>
+                <h2 class="font-display text-4xl sm:text-5xl font-900 leading-none mt-2">Ce te așteaptă la Camera 13?</h2>
+              </div>
+            </div>
+
+            <div class="grid md:grid-cols-5 gap-6">
+              <div class="md:col-span-3 text-lg leading-8 text-ink-soft">
+                <p>
+                  Camera 13 este o experiență de tip escape room construită pentru echipe care vor suspans, colaborare și o poveste suficient de clară încât să te prindă rapid. În 60 de minute, grupul tău trebuie să descopere indicii, să rezolve mecanisme și să ia decizii sub presiunea timpului.
+                </p>
+                <p class="mt-4">
+                  Template-ul acesta poate fi adaptat ușor pentru orice altă activitate: pentru o peșteră poți transforma această zonă în descriere geologică și traseu; pentru muzeu — colecții și expoziții; pentru parc de distracții — atracții, reguli și tipuri de acces; pentru rezervație — biodiversitate, trasee și recomandări sezoniere.
+                </p>
+              </div>
+
+              <div class="md:col-span-2">
+                <div class="bg-paper-2 rounded-3xl border border-ink/10 p-5">
+                  <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft">PE SCURT</p>
+                  <dl class="mt-4 space-y-3 text-sm">
+                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Categorie</dt><dd class="font-800">Escape room</dd></div>
+                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Dificultate</dt><dd class="font-800">Medie</dd></div>
+                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Indoor/Outdoor</dt><dd class="font-800">Indoor</dd></div>
+                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Sezon</dt><dd class="font-800">Tot anul</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-ink-soft">Acces</dt><dd class="font-800">Cu rezervare</dd></div>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- gallery -->
+          <section id="galerie" class="scroll-mt-40">
+            <div class="flex items-end justify-between gap-4 mb-6">
+              <div>
+                <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">GALERIE</p>
+                <h2 class="font-display text-4xl sm:text-5xl font-900 leading-none mt-2">Vezi atmosfera înainte să rezervi</h2>
+              </div>
+              <button @click="openGallery(0)" class="hidden sm:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-800 hover:bg-ink hover:text-paper transition-colors">Deschide galeria</button>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button @click="openGallery(0)" class="col-span-2 row-span-2 relative rounded-3xl overflow-hidden border-2 border-ink aspect-[4/3] group">
+                <img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80" alt="Imagine principală Camera 13 escape room Cluj" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+              </button>
+              <template x-for="(img, index) in gallery.slice(1,5)" :key="img.src">
+                <button @click="openGallery(index+1)" class="relative rounded-2xl overflow-hidden border border-ink/10 aspect-square group">
+                  <img :src="img.src" :alt="img.alt" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                </button>
+              </template>
+            </div>
+          </section>
+
+          <!-- suitable for / use cases -->
+          <section id="potrivit" class="scroll-mt-40">
+            <div class="mb-6">
+              <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">POTRIVIT PENTRU</p>
+              <h2 class="font-display text-4xl sm:text-5xl font-900 leading-none mt-2">Alege mai ușor dacă e pentru tine</h2>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <template x-for="fit in suitableFor" :key="fit.title">
+                <article class="ticket ticket-lift bg-paper border-2 border-ink rounded-3xl p-5">
+                  <div class="w-11 h-11 rounded-2xl bg-vermilion/10 text-vermilion grid place-items-center mb-4" x-html="fit.icon"></div>
+                  <h3 class="font-display text-2xl font-800 leading-tight" x-text="fit.title"></h3>
+                  <p class="mt-2 text-ink-soft leading-7" x-text="fit.text"></p>
+                </article>
+              </template>
+            </div>
+          </section>
+
+          <!-- program / practical -->
+          <section id="program" class="scroll-mt-40">
+            <div class="grid lg:grid-cols-2 gap-5">
+              <div class="bg-forest text-paper rounded-[2rem] p-6 sm:p-8 overflow-hidden relative">
+                <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(#fff 1px, transparent 1.3px); background-size:14px 14px"></div>
+                <div class="relative">
+                  <p class="font-mono text-[11px] tracking-[.22em] text-paper/60">PROGRAM</p>
+                  <h2 class="font-display text-4xl font-900 leading-none mt-2">Intervale disponibile</h2>
+                  <div class="mt-6 space-y-3">
+                    <div class="flex items-center justify-between gap-4 border-b border-paper/15 pb-3">
+                      <span>Luni–Joi</span><strong>14:00–22:00</strong>
+                    </div>
+                    <div class="flex items-center justify-between gap-4 border-b border-paper/15 pb-3">
+                      <span>Vineri</span><strong>12:00–23:00</strong>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                      <span>Weekend</span><strong>10:00–23:00</strong>
+                    </div>
+                  </div>
+                  <p class="mt-5 text-paper/70 text-sm leading-6">Programul exact poate varia în funcție de disponibilitate. Verifică orele active în zona de rezervare.</p>
+                </div>
+              </div>
+
+              <div class="bg-paper-2 rounded-[2rem] p-6 sm:p-8 border border-ink/10">
+                <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">BINE DE ȘTIUT</p>
+                <h2 class="font-display text-4xl font-900 leading-none mt-2">Reguli & recomandări</h2>
+                <ul class="mt-6 space-y-3">
+                  <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-800">✓</span><span>Ajungeți cu 10 minute înainte de ora rezervată.</span></li>
+                  <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-800">✓</span><span>Nu este nevoie să tipăriți biletul; codul QR este suficient.</span></li>
+                  <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-800">✓</span><span>Pentru copii, verificați recomandarea de vârstă și condițiile de acces.</span></li>
+                  <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-800">✓</span><span>Pentru grupuri corporate, se pot rezerva mai multe intervale consecutive.</span></li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- SEO editorial copy -->
+          <section class="seo-copy scroll-mt-40" id="ghid">
+            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion uppercase mb-3">GHID SEO EDITORIAL</p>
+            <h2>De ce să alegi Camera 13 când cauți un escape room în Cluj-Napoca?</h2>
+            <p>
+              Dacă ești în căutarea unei activități indoor în Cluj-Napoca, un escape room este una dintre cele mai bune variante pentru prieteni, familie, colegi sau vizitatori care vor o experiență memorabilă. Camera 13 combină logica, atenția la detalii și lucrul în echipă într-un format ușor de rezervat online.
+            </p>
+            <p>
+              Pagina este construită ca landing page de vânzare, dar și ca pagină editorială optimizată pentru căutări organice precum <strong>escape room Cluj</strong>, <strong>rezervare escape room Cluj-Napoca</strong>, <strong>activități indoor Cluj</strong> sau <strong>experiențe pentru grupuri în Cluj</strong>.
+            </p>
+
+            <h3>Cum adaptezi această zonă pentru alte tipuri de activități</h3>
+            <ul>
+              <li><strong>Muzeu:</strong> explică expozițiile permanente, colecțiile-cheie, publicul potrivit, timpul mediu de vizitare și valoarea educațională.</li>
+              <li><strong>Peșteră:</strong> descrie traseul, nivelul de dificultate, echipamentul recomandat, accesibilitatea și temperatura interioară.</li>
+              <li><strong>Rezervație naturală:</strong> adaugă biodiversitate, sezonalitate, reguli de vizitare, trasee, puncte foto și recomandări pentru familie.</li>
+              <li><strong>Parc de distracții:</strong> structurează pagina pe atracții, vârstă/înălțime minimă, tipuri de bilete, program, restaurante și facilități.</li>
+            </ul>
+
+            <h3>Linkuri interne recomandate</h3>
+            <p>
+              Pentru SEO, fiecare pagină single trebuie să trimită natural către categoria principală, oraș, activități similare și ghiduri utile. Exemple:
+              <a href="/escape-rooms">toate escape room-urile</a>,
+              <a href="/cluj-napoca">activități în Cluj-Napoca</a>,
+              <a href="/activitati-indoor">activități indoor</a>,
+              <a href="/card-cadou">card cadou pentru experiențe</a>.
+            </p>
+          </section>
+
+          <!-- location -->
+          <section id="locatie" class="scroll-mt-40">
+            <div class="mb-6">
+              <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">LOCAȚIE</p>
+              <h2 class="font-display text-4xl sm:text-5xl font-900 leading-none mt-2">Unde are loc experiența</h2>
+            </div>
+
+            <div class="grid lg:grid-cols-5 gap-5">
+              <div class="lg:col-span-3 rounded-[2rem] overflow-hidden border-2 border-ink min-h-[360px] bg-paper-2 relative">
+                <div class="absolute inset-0 opacity-60" style="background-image:linear-gradient(45deg, rgba(27,23,20,.06) 25%, transparent 25%),linear-gradient(-45deg, rgba(27,23,20,.06) 25%, transparent 25%),linear-gradient(45deg, transparent 75%, rgba(27,23,20,.06) 75%),linear-gradient(-45deg, transparent 75%, rgba(27,23,20,.06) 75%);background-size:32px 32px;background-position:0 0,0 16px,16px -16px,-16px 0"></div>
+                <div class="absolute inset-0 grid place-items-center text-center p-8">
+                  <div>
+                    <div class="mx-auto w-16 h-16 rounded-2xl bg-vermilion text-paper grid place-items-center rotate-[-4deg]">
+                      <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11Z"/><circle cx="12" cy="11" r="2.5"/></svg>
+                    </div>
+                    <p class="mt-4 font-display text-3xl font-900">Hartă / embed Google Maps</p>
+                    <p class="mt-2 text-ink-soft max-w-sm">Înlocuiește acest bloc cu iframe-ul hărții sau cu componenta ta de hartă.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-2 bg-paper border-2 border-ink rounded-[2rem] p-6">
+                <p class="font-mono text-[11px] tracking-[.22em] text-ink-soft">ADRESĂ</p>
+                <h3 class="font-display text-3xl font-900 mt-2">Strada Exemplu 13, Cluj-Napoca</h3>
+                <p class="mt-4 text-ink-soft leading-7">Locația se află aproape de zona centrală. Recomandăm verificarea rutei înainte de plecare, mai ales în weekend.</p>
+                <div class="mt-5 space-y-3 text-sm">
+                  <a href="https://maps.google.com" class="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-paper-2 hover:bg-ink hover:text-paper transition-colors font-800">Deschide în Maps <span>→</span></a>
+                  <a href="tel:+40700000000" class="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-paper-2 hover:bg-ink hover:text-paper transition-colors font-800">Sună locația <span>→</span></a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- FAQ -->
+          <section id="faq" class="scroll-mt-40">
+            <div class="mb-6">
+              <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">ÎNTREBĂRI FRECVENTE</p>
+              <h2 class="font-display text-4xl sm:text-5xl font-900 leading-none mt-2">Tot ce trebuie să știi înainte de rezervare</h2>
+            </div>
+
+            <div class="space-y-3">
+              <template x-for="(faq, index) in faqs" :key="faq.q">
+                <div class="bg-paper border-2 border-ink rounded-2xl overflow-hidden">
+                  <button @click="openFaq = openFaq === index ? null : index" class="w-full flex items-center justify-between gap-4 text-left p-5">
+                    <span class="font-display text-xl font-800 leading-tight" x-text="faq.q"></span>
+                    <span class="shrink-0 w-9 h-9 rounded-full bg-ink text-paper grid place-items-center transition-transform" :class="openFaq === index && 'rotate-45'">+</span>
+                  </button>
+                  <div x-show="openFaq === index" x-collapse>
+                    <div class="px-5 pb-5 text-ink-soft leading-7" x-text="faq.a"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </section>
+
+          <!-- related activities -->
+          <section>
+            <div class="flex items-end justify-between gap-4 mb-6">
+              <div>
+                <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">SIMILARE</p>
+                <h2 class="font-display text-4xl sm:text-5xl font-900 leading-none mt-2">Alte experiențe din Cluj</h2>
+              </div>
+              <a href="/cluj-napoca" class="hidden sm:inline-flex text-vermilion font-800 underline-wobble">Vezi toate →</a>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <template x-for="item in related" :key="item.title">
+                <a :href="item.url" class="ticket ticket-lift bg-paper border-2 border-ink rounded-3xl overflow-hidden group">
+                  <div class="h-40 relative overflow-hidden">
+                    <img :src="item.img" :alt="item.alt" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    <span class="absolute top-3 left-3 px-3 py-1 rounded-full bg-paper text-ink text-xs font-800" x-text="item.tag"></span>
+                  </div>
+                  <div class="p-5">
+                    <h3 class="font-display text-2xl font-800 leading-tight" x-text="item.title"></h3>
+                    <p class="mt-2 text-ink-soft text-sm" x-text="item.meta"></p>
+                    <p class="mt-4 font-900 text-vermilion" x-text="item.price"></p>
+                  </div>
+                </a>
+              </template>
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT BOOKING SIDEBAR -->
+        <aside id="rezerva" class="lg:col-span-4 lg:sticky lg:top-40 scroll-mt-40">
+          <div class="ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-ticket" style="--perf:100%">
+            <div class="bg-ink text-paper p-6 relative">
+              <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(#fff 1px,transparent 1.3px);background-size:14px 14px"></div>
+              <div class="relative">
+                <p class="font-mono text-[10px] tracking-[.2em] text-paper/60">REZERVARE ONLINE</p>
+                <h2 class="font-display text-4xl font-900 mt-2">Alege biletele</h2>
+                <p class="mt-2 text-paper/65">Confirmare instantă. Bilet cu QR pe email.</p>
+              </div>
+            </div>
+
+            <div class="p-5 sm:p-6">
+              <label class="block">
+                <span class="font-800 text-sm">Data</span>
+                <input x-model="selectedDate" type="date" class="mt-2 w-full bg-paper-2 border-2 border-ink/15 focus:border-ink rounded-2xl px-4 py-3 focus:outline-none" />
+              </label>
+
+              <div class="mt-5">
+                <p class="font-800 text-sm mb-2">Ora</p>
+                <div class="grid grid-cols-3 gap-2">
+                  <template x-for="slot in timeSlots" :key="slot">
+                    <button @click="selectedSlot = slot" :class="selectedSlot === slot ? 'bg-ink text-paper border-ink' : 'bg-paper-2 border-ink/10 hover:border-ink'" class="border-2 rounded-2xl py-3 text-sm font-800 transition-colors" x-text="slot"></button>
+                  </template>
+                </div>
+              </div>
+
+              <div class="mt-5">
+                <p class="font-800 text-sm mb-2">Tip bilet</p>
+                <div class="space-y-2">
+                  <template x-for="ticket in tickets" :key="ticket.id">
+                    <div class="flex items-center justify-between gap-3 bg-paper-2 rounded-2xl p-3 border border-ink/10">
+                      <div>
+                        <p class="font-900" x-text="ticket.name"></p>
+                        <p class="text-xs text-ink-soft" x-text="ticket.note"></p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button @click="decrement(ticket.id)" class="w-8 h-8 rounded-full bg-paper border border-ink/20 font-900">−</button>
+                        <span class="w-6 text-center font-900" x-text="ticket.qty"></span>
+                        <button @click="increment(ticket.id)" class="w-8 h-8 rounded-full bg-paper border border-ink/20 font-900">+</button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div class="mt-5 border-t-2 border-dashed border-ink/15 pt-5">
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-ink-soft">Subtotal</span>
+                  <strong class="font-display text-3xl" x-text="total + ' lei'"></strong>
+                </div>
+                <p class="mt-2 text-xs text-ink-soft">Prețurile sunt exemple. În producție, se vor alimenta din sistemul Tixello.</p>
+              </div>
+
+              <button class="mt-5 w-full flex items-center justify-center gap-2 px-5 py-4 rounded-full bg-vermilion text-paper font-900 hover:bg-vermilion-d transition-colors">
+                Continuă rezervarea
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              </button>
+
+              <div class="mt-5 grid grid-cols-3 gap-2 text-center">
+                <div class="rounded-2xl bg-paper-2 p-3">
+                  <p class="font-mono text-[9px] text-ink-soft tracking-widest">DURATĂ</p>
+                  <p class="font-900">60m</p>
+                </div>
+                <div class="rounded-2xl bg-paper-2 p-3">
+                  <p class="font-mono text-[9px] text-ink-soft tracking-widest">GRUP</p>
+                  <p class="font-900">2–6</p>
+                </div>
+                <div class="rounded-2xl bg-paper-2 p-3">
+                  <p class="font-mono text-[9px] text-ink-soft tracking-widest">QR</p>
+                  <p class="font-900">Instant</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 bg-paper-2 rounded-3xl border border-ink/10 p-5">
+            <p class="font-display text-2xl font-800">Vrei să faci cadou experiența?</p>
+            <p class="mt-2 text-ink-soft leading-7">Poți trimite un card cadou valabil pentru această activitate sau pentru orice altă experiență de pe platformă.</p>
+            <a href="/card-cadou" class="mt-4 inline-flex text-vermilion font-900 underline-wobble">Cumpără card cadou →</a>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ====================================================== MOBILE STICKY CTA ====================================================== -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-paper/95 backdrop-blur border-t border-ink/10 p-3">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs text-ink-soft">de la</p>
+          <p class="font-display text-2xl font-900 leading-none">130 lei</p>
+        </div>
+        <a href="#rezerva" class="px-6 py-3 rounded-full bg-vermilion text-paper font-900">Rezervă</a>
+      </div>
+    </div>
+
+    <!-- ====================================================== GALLERY MODAL ====================================================== -->
+    <div x-show="galleryOpen" x-cloak class="fixed inset-0 z-[70] bg-ink/95 text-paper p-4 sm:p-8" @keydown.escape.window="galleryOpen=false">
+      <div class="max-w-6xl mx-auto h-full flex flex-col">
+        <div class="flex items-center justify-between gap-4 mb-4">
+          <p class="font-mono text-xs tracking-[.2em] text-paper/50">GALERIE FOTO</p>
+          <button @click="galleryOpen=false" class="w-11 h-11 rounded-full bg-paper text-ink grid place-items-center font-900">×</button>
+        </div>
+        <div class="relative flex-1 rounded-[2rem] overflow-hidden bg-paper/5 border border-paper/10">
+          <img :src="gallery[galleryIndex].src" :alt="gallery[galleryIndex].alt" class="absolute inset-0 w-full h-full object-contain" />
+          <button @click="prevImage()" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-paper text-ink grid place-items-center font-900">←</button>
+          <button @click="nextImage()" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-paper text-ink grid place-items-center font-900">→</button>
+        </div>
+        <div class="mt-4 no-bar flex gap-2 overflow-x-auto">
+          <template x-for="(img, index) in gallery" :key="img.src">
+            <button @click="galleryIndex=index" :class="galleryIndex===index ? 'ring-2 ring-vermilion' : 'opacity-60'" class="shrink-0 w-24 h-16 rounded-xl overflow-hidden">
+              <img :src="img.src" :alt="img.alt" class="w-full h-full object-cover" />
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================== FOOTER ====================================================== -->
+  <footer class="bg-ink text-paper/70 mt-20 pb-20 lg:pb-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+      <div class="grid md:grid-cols-4 gap-10">
+        <div class="md:col-span-1">
+          <a href="/" class="flex items-center gap-2.5 text-paper">
+            <span class="grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg]">
+              <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+            </span>
+            <span class="font-display text-xl font-700">bilete<span class="text-vermilion">.</span>online</span>
+          </a>
+          <p class="mt-4 text-sm leading-6">Permisul tău pentru lucruri de făcut: escape rooms, muzee, parcuri, peșteri, rezervații și experiențe de agrement.</p>
+        </div>
+
+        <div>
+          <h3 class="font-mono text-xs tracking-wider text-paper/40 mb-4">CATEGORII</h3>
+          <ul class="space-y-2.5 text-sm">
+            <li><a href="/escape-rooms" class="hover:text-paper transition">Escape rooms</a></li>
+            <li><a href="/muzee" class="hover:text-paper transition">Muzee</a></li>
+            <li><a href="/parcuri-de-distractii" class="hover:text-paper transition">Parcuri de distracții</a></li>
+            <li><a href="/pesteri" class="hover:text-paper transition">Peșteri</a></li>
+            <li><a href="/rezervatii-naturale" class="hover:text-paper transition">Rezervații naturale</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="font-mono text-xs tracking-wider text-paper/40 mb-4">ORAȘE</h3>
+          <ul class="space-y-2.5 text-sm">
+            <li><a href="/bucuresti" class="hover:text-paper transition">București</a></li>
+            <li><a href="/cluj-napoca" class="hover:text-paper transition">Cluj-Napoca</a></li>
+            <li><a href="/brasov" class="hover:text-paper transition">Brașov</a></li>
+            <li><a href="/timisoara" class="hover:text-paper transition">Timișoara</a></li>
+            <li><a href="/iasi" class="hover:text-paper transition">Iași</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="font-mono text-xs tracking-wider text-paper/40 mb-4">PLATFORMĂ</h3>
+          <ul class="space-y-2.5 text-sm">
+            <li><a href="/#owneri" class="hover:text-paper transition">Listează-ți locația</a></li>
+            <li><a href="/card-cadou" class="hover:text-paper transition">Carduri cadou</a></li>
+            <li><a href="/ajutor" class="hover:text-paper transition">Ajutor & suport</a></li>
+            <li><a href="/termeni" class="hover:text-paper transition">Termeni & condiții</a></li>
+            <li><a href="/confidentialitate" class="hover:text-paper transition">Confidențialitate</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-14 pt-7 border-t border-paper/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-paper/40 font-mono">
+        <span>© 2026 bilete.online · toate drepturile rezervate</span>
+        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-vermilion"></span> operat de Tixello</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ====================================================== SCRIPTS ====================================================== -->
+  <script>
+    function activityPage(){
+      return {
+        selectedDate: new Date().toISOString().slice(0,10),
+        selectedSlot: '18:00',
+        timeSlots: ['12:00','14:00','16:00','18:00','20:00','22:00'],
+        tickets: [
+          { id:'team2', name:'Echipă 2 persoane', note:'130 lei / echipă', price:130, qty:1 },
+          { id:'extra', name:'Persoană extra', note:'45 lei / persoană', price:45, qty:0 },
+          { id:'gift', name:'Voucher cadou', note:'valabil 12 luni', price:150, qty:0 }
+        ],
+        galleryOpen:false,
+        galleryIndex:0,
+        openFaq:0,
+        gallery:[
+          { src:'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80', alt:'Camera 13 escape room Cluj - decor imersiv principal' },
+          { src:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80', alt:'Detaliu atmosferic pentru activitate indoor' },
+          { src:'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=900&q=80', alt:'Imagine de atmosferă adaptabilă pentru activitate turistică' },
+          { src:'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=900&q=80', alt:'Spațiu interior cu lumină caldă pentru experiență de grup' },
+          { src:'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=900&q=80', alt:'Detaliu vizual pentru pagină single activity' }
+        ],
+        suitableFor:[
+          { title:'Ieșiri cu prietenii', text:'O activitate intensă, ușor de organizat, cu energie bună și miză comună.', icon:'<svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+          { title:'Familie cu adolescenți', text:'Potrivită pentru copii mai mari, părinți și familii care vor ceva diferit de o simplă plimbare.', icon:'<svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V9l9-7 9 7v12"/><path d="M9 21v-6h6v6"/></svg>' },
+          { title:'Team building', text:'Lucru în echipă, comunicare, presiune de timp și un obiectiv clar pentru toți.', icon:'<svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' }
+        ],
+        faqs:[
+          { q:'Câte persoane pot participa?', a:'Camera 13 este potrivită pentru echipe de 2–6 persoane. Pentru grupuri mai mari, alege mai multe intervale sau contactează locația.' },
+          { q:'Cât durează experiența?', a:'Experiența durează aproximativ 60 de minute. Recomandăm să ajungeți cu 10 minute mai devreme pentru introducere și instrucțiuni.' },
+          { q:'Primesc biletul imediat după plată?', a:'Da. După finalizarea plății, primești biletul cu cod QR pe email. La intrare îl poți prezenta direct de pe telefon.' },
+          { q:'Pot modifica rezervarea?', a:'Regulile de modificare depind de politica locației. Recomandarea este să verifici condițiile înainte de plată sau să contactezi suportul.' },
+          { q:'Este potrivit pentru copii?', a:'Activitatea este recomandată de la 12 ani. Copiii mai mici pot participa doar însoțiți de adulți, dacă locația permite acest lucru.' }
+        ],
+        related:[
+          { title:'Laboratorul 7', tag:'Escape room', meta:'Cluj-Napoca · 60 min · 2–6 persoane', price:'de la 140 lei', url:'/escape-rooms/laboratorul-7-cluj', img:'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=800&q=80', alt:'Laboratorul 7 escape room Cluj' },
+          { title:'Muzeul Iluziilor', tag:'Muzeu', meta:'Cluj-Napoca · familie · indoor', price:'de la 35 lei', url:'/muzee/muzeul-iluziilor-cluj', img:'https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=800&q=80', alt:'Muzeu interactiv în Cluj-Napoca' },
+          { title:'Aventura Park', tag:'Outdoor', meta:'lângă Cluj · trasee · familie', price:'de la 55 lei', url:'/parcuri-aventura/aventura-park-cluj', img:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80', alt:'Parc aventura lângă Cluj-Napoca' }
+        ],
+        get total(){
+          return this.tickets.reduce((sum, t) => sum + t.price * t.qty, 0);
+        },
+        increment(id){
+          const t = this.tickets.find(ticket => ticket.id === id);
+          if(t) t.qty++;
+        },
+        decrement(id){
+          const t = this.tickets.find(ticket => ticket.id === id);
+          if(t && t.qty > 0) t.qty--;
+        },
+        openGallery(index){
+          this.galleryIndex = index;
+          this.galleryOpen = true;
+          this.$nextTick(() => document.body.style.overflow = 'hidden');
+        },
+        nextImage(){
+          this.galleryIndex = (this.galleryIndex + 1) % this.gallery.length;
+        },
+        prevImage(){
+          this.galleryIndex = (this.galleryIndex - 1 + this.gallery.length) % this.gallery.length;
+        },
+        init(){
+          this.$watch('galleryOpen', value => {
+            document.body.style.overflow = value ? 'hidden' : '';
+          });
+        }
+      }
+    }
+
+    (function () {
+      const reveal = () => {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add('in');
+              io.unobserve(e.target);
+            }
+          });
+        }, { threshold:.08 });
+        document.querySelectorAll('[data-stagger]').forEach((el, index) => {
+          el.style.transitionDelay = `${Math.min(index * 70, 350)}ms`;
+          io.observe(el);
+        });
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', reveal);
+      else reveal();
+    })();
+  </script>
+</body>
+</html>

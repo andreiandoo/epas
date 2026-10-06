@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Activități și bilete în Constanța | bilete.online</title>
+  <meta name="description" content="Descoperă activități în Constanța: muzee, tururi, activități pentru copii, experiențe indoor și outdoor, bilete și recomandări locale." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://bilete.online/constanta/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config={theme:{extend:{colors:{paper:'#F7F4EC',paper2:'#EEE8DB',ink:'#171512',muted:'#625B50',red:'#E84527',green:'#183E34',green2:'#DCE9DF',gold:'#D99A2B',blue:'#244A66'},fontFamily:{display:['Fraunces','Georgia','serif'],sans:['Hanken Grotesk','system-ui','sans-serif']},boxShadow:{soft:'0 18px 50px -34px rgba(23,21,18,.65)',panel:'0 36px 90px -52px rgba(23,21,18,.82)'}}}}
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    html{scroll-behavior:smooth}body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}.font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}.line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.line-clamp-3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}[x-cloak]{display:none!important}
+  </style>
+</head>
+<body x-data="cityPage()" class="antialiased">
+<header class="sticky top-0 z-50 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+<nav class="mx-auto flex h-[68px] max-w-[1440px] items-center gap-4 px-4 sm:px-6">
+<a href="/" class="flex shrink-0 items-center gap-2.5"><span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span><span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span></a>
+<button class="mx-auto hidden h-11 w-full max-w-[560px] items-center gap-3 rounded-full border border-ink/15 bg-white px-4 text-left md:flex"><span class="text-muted">⌕</span><span class="text-sm font-semibold text-muted">Caută activități în Constanța</span></button>
+<div class="ml-auto flex items-center gap-2"><a href="/cos" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Coș</a><a href="/login" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-white">Log in</a></div>
+</nav>
+</header>
+<main>
+<section class="bg-paper">
+<div class="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:py-12">
+<nav class="flex flex-wrap gap-2 text-sm font-semibold text-muted"><a href="/">Acasă</a><span>/</span><a href="/orase">Orașe</a><span>/</span><span class="text-ink">Constanța</span></nav>
+<div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center">
+<div>
+<h1 class="font-display text-5xl font-bold leading-[.95] sm:text-6xl lg:text-7xl">Lucruri de făcut în Constanța</h1>
+<p class="mt-4 max-w-3xl text-lg leading-relaxed text-muted">Găsește activități, bilete și experiențe în Constanța: muzee, activități pentru copii, escape rooms, tururi și opțiuni indoor sau outdoor.</p>
+<div class="mt-6 max-w-3xl rounded-full border border-ink/15 bg-white p-2 shadow-soft"><div class="flex items-center gap-2"><span class="ml-3 text-muted">⌕</span><input x-model="filters.search" class="w-full bg-transparent px-2 py-3 font-semibold outline-none placeholder:text-muted/70" placeholder="Caută activități în Constanța" /><a href="#activities" class="shrink-0 rounded-full bg-red px-5 py-3 text-sm font-bold text-white">Caută</a></div></div>
+<div class="mt-4 flex flex-wrap gap-2"><template x-for="chip in heroChips" :key="chip.label"><button @click="filters.category=chip.value" class="rounded-full bg-paper2 px-4 py-2 text-sm font-semibold hover:bg-ink hover:text-white" x-text="chip.label"></button></template></div>
+</div>
+<div class="grid h-[380px] grid-cols-2 gap-3">
+<a href="/constanta/activitati-copii" class="group relative overflow-hidden rounded-2xl bg-green"><img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=85" alt="Activități pentru familie în Constanța" class="h-full w-full object-cover opacity-55 transition duration-500 group-hover:scale-105"><div class="absolute inset-0 bg-gradient-to-t from-ink/75 via-transparent to-transparent"></div><div class="absolute bottom-4 left-4"><p class="text-xs font-bold uppercase tracking-wider text-white/70">Popular</p><p class="mt-1 font-display text-3xl font-bold leading-none text-white">Cu familia</p></div></a>
+<a href="/constanta/muzee" class="group relative overflow-hidden rounded-2xl bg-blue"><img src="https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=800&q=85" alt="Muzee în Constanța" class="h-full w-full object-cover opacity-55 transition duration-500 group-hover:scale-105"><div class="absolute inset-0 bg-gradient-to-t from-ink/75 via-transparent to-transparent"></div><div class="absolute bottom-4 left-4"><p class="text-xs font-bold uppercase tracking-wider text-white/70">Cultural</p><p class="mt-1 font-display text-3xl font-bold leading-none text-white">Muzee</p></div></a>
+</div>
+</div>
+</div>
+</section>
+<section id="activities" class="bg-white">
+<div class="mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:py-16">
+<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><h2 class="font-display text-4xl font-bold leading-none sm:text-5xl">Activități populare în Constanța</h2><p class="mt-2 max-w-2xl text-muted">Rezervă bilete și experiențe disponibile în oraș.</p></div><p class="text-sm font-bold text-muted"><span x-text="filteredActivities().length"></span> rezultate</p></div>
+<div class="mt-6 flex gap-2 overflow-x-auto pb-2"><button @click="filtersOpen=true" class="shrink-0 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white">Filtre</button><template x-for="item in quickFilters" :key="item.value"><button @click="filters.category=item.value" :class="filters.category===item.value?'bg-red text-white':'bg-paper2'" class="shrink-0 rounded-full px-5 py-2.5 text-sm font-bold" x-text="item.label"></button></template></div>
+<div class="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4"><template x-for="activity in filteredActivities()" :key="activity.id"><article class="group overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-soft"><a :href="activity.href" class="relative block h-52 overflow-hidden bg-ink"><img :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105"><span class="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold" x-text="activity.badge"></span></a><div class="flex min-h-[300px] flex-col p-4"><p class="text-xs font-bold uppercase tracking-wider text-muted" x-text="activity.categoryLabel"></p><a :href="activity.href"><h3 class="mt-2 font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="activity.title"></h3></a><p class="mt-3 line-clamp-3 text-sm leading-relaxed text-muted" x-text="activity.description"></p><div class="mt-4 text-sm font-bold"><span class="text-gold">★★★★★</span> <span x-text="activity.rating"></span> <span class="text-muted" x-text="'(' + activity.reviews + ')' "></span></div><div class="mt-auto pt-5"><p class="text-xs font-bold text-muted">de la</p><p class="font-display text-3xl font-bold" x-text="formatMoney(activity.price)"></p><a :href="activity.href" class="mt-4 block rounded-full bg-red px-5 py-3 text-center text-sm font-bold text-white">Vezi bilete</a></div></div></article></template></div>
+<div x-show="filteredActivities().length===0" class="mt-8 rounded-2xl border border-dashed border-ink/25 bg-paper p-7 text-center"><h3 class="font-display text-3xl font-bold">Momentan nu sunt activități pentru filtrul ales.</h3><button @click="resetFilters()" class="mt-4 rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">Vezi toate</button></div>
+</div>
+</section>
+<section class="bg-paper">
+<div class="mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:py-16">
+<div class="grid gap-10 lg:grid-cols-[1fr_360px]">
+<div><div class="flex items-end justify-between gap-4"><div><h2 class="font-display text-4xl font-bold leading-none sm:text-5xl">Explorează după interes</h2><p class="mt-2 text-muted">Categorii utile pentru a găsi mai repede ce cauți.</p></div><a href="/constanta/categorii" class="shrink-0 text-sm font-bold text-red">Toate →</a></div><div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><template x-for="category in categories" :key="category.href"><a :href="category.href" class="group flex items-center gap-4 rounded-2xl bg-white p-4 shadow-soft"><span class="grid h-12 w-12 place-items-center rounded-xl text-2xl text-white" :style="'background:'+category.color" x-text="category.icon"></span><div><p class="font-bold group-hover:text-red" x-text="category.title"></p><p class="mt-1 text-sm text-muted" x-text="category.count + ' activități'"></p></div></a></template></div></div>
+<aside class="rounded-2xl bg-ink p-6 text-white"><h3 class="font-display text-3xl font-bold leading-none">Alege după stilul tău</h3><div class="mt-5 space-y-3"><template x-for="item in travelerTypes" :key="item.href"><a :href="item.href" class="flex items-center gap-3 rounded-xl bg-white/8 p-3 hover:bg-white hover:text-ink"><span class="text-2xl" x-text="item.icon"></span><div><p class="font-bold" x-text="item.title"></p><p class="mt-1 text-xs text-white/60" x-text="item.description"></p></div></a></template></div></aside>
+</div>
+</div>
+</section>
+
+<section class="bg-white">
+<div class="mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:py-14">
+<div class="flex items-end justify-between gap-4">
+<div><h2 class="font-display text-4xl font-bold leading-none sm:text-5xl">Atracții de neratat în Constanța</h2><p class="mt-2 text-muted">Descoperă locurile care definesc orașul și vezi activitățile disponibile în jurul lor.</p></div>
+<a href="/constanta/atractii" class="shrink-0 text-sm font-bold text-red">Toate atracțiile →</a>
+</div>
+<div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<template x-for="attraction in attractions" :key="attraction.href">
+<a :href="attraction.href" class="group overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-soft">
+<div class="relative h-44 overflow-hidden"><img :src="attraction.image" :alt="attraction.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105"><span class="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold" x-text="attraction.count + ' activități'"></span></div>
+<div class="p-4"><h3 class="font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="attraction.title"></h3><p class="mt-2 line-clamp-2 text-sm text-muted" x-text="attraction.description"></p></div>
+</a>
+</template>
+</div>
+</div>
+</section>
+
+<section class="bg-paper">
+<div class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:py-12">
+<div class="flex items-end justify-between gap-4">
+<div><h2 class="font-display text-4xl font-bold leading-none">Ghiduri pentru Constanța</h2><p class="mt-2 text-sm text-muted">Idei utile pentru weekend, familie și vizite scurte.</p></div>
+<a href="/ghiduri/constanta" class="shrink-0 text-sm font-bold text-red">Toate ghidurile →</a>
+</div>
+<div class="mt-5 grid gap-4 lg:grid-cols-2">
+<template x-for="guide in guides" :key="guide.href">
+<article class="group overflow-hidden rounded-2xl bg-white shadow-soft">
+<div class="grid min-h-[190px] grid-cols-[180px_1fr]">
+<a :href="guide.href" class="overflow-hidden"><img :src="guide.image" :alt="guide.title" class="h-full min-h-[190px] w-full object-cover transition duration-500 group-hover:scale-105"></a>
+<div class="flex flex-col p-4"><p class="text-[11px] font-bold uppercase tracking-wider text-muted" x-text="guide.kicker"></p><h3 class="mt-2 font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="guide.title"></h3><p class="mt-2 line-clamp-2 text-sm leading-relaxed text-muted" x-text="guide.excerpt"></p><a :href="guide.href" class="mt-auto pt-3 text-sm font-bold text-red">Citește ghidul →</a></div>
+</div>
+</article>
+</template>
+</div>
+</div>
+</section>
+
+<section class="bg-white">
+<div class="mx-auto grid max-w-[1440px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_320px] lg:py-12">
+<article><h2 class="font-display text-4xl font-bold leading-none">Ce să faci în Constanța</h2><div class="mt-4 space-y-3 leading-relaxed text-muted"><p>Constanța combină activități culturale, experiențe pentru familie, muzee, tururi urbane și opțiuni indoor pentru zilele în care vremea nu este potrivită pentru plajă.</p><p>Pentru o vizită scurtă, poți combina centrul vechi, muzeele, o activitate pentru familie și o experiență de seară.</p></div><div class="mt-5 flex flex-wrap gap-2"><template x-for="tag in seoTags" :key="tag"><span class="rounded-full bg-paper px-3 py-2 text-xs font-bold" x-text="tag"></span></template></div></article>
+<aside class="rounded-2xl bg-ink p-5 text-white"><p class="font-display text-2xl font-bold">Constanța pe scurt</p><div class="mt-4 divide-y divide-white/10 text-sm"><div class="flex justify-between py-2.5"><span class="text-white/60">Tip destinație</span><strong>Urban + litoral</strong></div><div class="flex justify-between py-2.5"><span class="text-white/60">Potrivit pentru</span><strong>Familii</strong></div><div class="flex justify-between py-2.5"><span class="text-white/60">Activități</span><strong>Indoor + outdoor</strong></div></div></aside>
+</div>
+</section>
+
+<section class="bg-red text-white">
+<div class="mx-auto grid max-w-[1440px] lg:grid-cols-2">
+<div class="flex items-center px-4 py-9 sm:px-6 lg:px-10 lg:py-10">
+<div><h2 class="font-display text-3xl font-bold leading-none sm:text-4xl">Primește idei de activități în Constanța</h2><p class="mt-2 max-w-xl text-sm text-white/70">Activități noi, ghiduri locale și idei de weekend.</p>
+<form @submit.prevent="newsletterSent=true" class="mt-5 flex max-w-xl gap-2 rounded-full bg-white p-2 text-ink"><input type="email" required class="min-w-0 flex-1 bg-transparent px-3 py-2 outline-none" placeholder="emailul tău"><button class="shrink-0 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white">Abonează-mă</button></form><p x-show="newsletterSent" class="mt-3 text-sm font-bold text-white">Te-ai abonat cu succes.</p></div>
+</div>
+<div class="h-[260px] lg:h-[300px]"><img src="https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=1200&q=85" alt="Constanța" class="h-full w-full object-cover"></div>
+</div>
+</section>
+</main>
+<div x-show="filtersOpen" x-cloak class="fixed inset-0 z-[90] bg-ink/70 p-4 backdrop-blur-sm"><div @click.outside="filtersOpen=false" class="mx-auto mt-8 max-w-4xl rounded-2xl bg-paper p-6 shadow-panel"><div class="flex items-start justify-between gap-4"><h2 class="font-display text-4xl font-bold">Filtrează activitățile</h2><button @click="filtersOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl text-white">×</button></div><div class="mt-6 grid gap-6 md:grid-cols-3"><div><p class="font-bold">Categorie</p><div class="mt-3 space-y-2"><template x-for="item in quickFilters" :key="item.value"><label class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 font-bold"><input type="radio" name="category" :value="item.value" x-model="filters.category" class="h-5 w-5 accent-red"><span x-text="item.label"></span></label></template></div></div><div><p class="font-bold">Preț maxim</p><input type="range" min="0" max="300" step="10" x-model.number="filters.maxPrice" class="mt-4 w-full accent-red"><p class="mt-2 font-bold" x-text="formatMoney(filters.maxPrice)"></p></div><div><p class="font-bold">Rating minim</p><select x-model.number="filters.minRating" class="mt-3 w-full rounded-xl border border-ink/15 bg-white px-4 py-3 font-bold"><option :value="0">Orice rating</option><option :value="4">4.0+</option><option :value="4.5">4.5+</option><option :value="4.8">4.8+</option></select></div></div><div class="mt-6 flex justify-between border-t border-ink/10 pt-5"><button @click="resetFilters()" class="rounded-full border border-ink/20 px-5 py-3 text-sm font-bold">Reset</button><button @click="filtersOpen=false" class="rounded-full bg-red px-6 py-3 text-sm font-bold text-white">Arată <span x-text="filteredActivities().length"></span> rezultate</button></div></div></div>
+<script>
+function cityPage(){return{newsletterSent:false,filtersOpen:false,filters:{search:'',category:'all',maxPrice:300,minRating:0},heroChips:[{label:'Pentru copii',value:'family'},{label:'Muzee',value:'museum'},{label:'Escape rooms',value:'escape'},{label:'Outdoor',value:'outdoor'}],quickFilters:[{label:'Toate',value:'all'},{label:'Pentru copii',value:'family'},{label:'Muzee',value:'museum'},{label:'Escape rooms',value:'escape'},{label:'Outdoor',value:'outdoor'}],activities:[{id:1,category:'museum',categoryLabel:'Muzeu',badge:'Popular',title:'Muzeul de Istorie Națională și Arheologie',description:'Descoperă istoria Dobrogei prin colecții, artefacte și expoziții permanente.',price:40,rating:4.8,reviews:326,href:'/activitati/muzeul-istorie-constanta',image:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=800&q=85'},{id:2,category:'family',categoryLabel:'Familie',badge:'Pentru copii',title:'Experiență interactivă pentru familie în Constanța',description:'Activitate indoor potrivită pentru copii și părinți, cu jocuri și elemente educative.',price:65,rating:4.7,reviews:214,href:'/activitati/familie-constanta',image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=85'},{id:3,category:'escape',categoryLabel:'Escape room',badge:'Top rated',title:'Escape room în centrul Constanței',description:'Mister, puzzle-uri și provocări pentru grupuri de prieteni sau team building.',price:90,rating:4.9,reviews:441,href:'/activitati/escape-room-constanta',image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=85'},{id:4,category:'outdoor',categoryLabel:'Outdoor',badge:'Weekend',title:'Tur urban și plimbare pe faleză',description:'Explorează centrul vechi, portul și principalele repere într-un tur relaxat.',price:75,rating:4.6,reviews:189,href:'/activitati/tur-urban-constanta',image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=800&q=85'}],categories:[{title:'Escape rooms',count:12,href:'/constanta/escape-rooms',icon:'🗝️',color:'#E84527'},{title:'Muzee și expoziții',count:18,href:'/constanta/muzee',icon:'🏛️',color:'#244A66'},{title:'Activități pentru copii',count:24,href:'/constanta/activitati-copii',icon:'👨‍👩‍👧',color:'#183E34'},{title:'Natură și outdoor',count:16,href:'/constanta/outdoor',icon:'🌿',color:'#D58B26'},{title:'Tururi culturale',count:9,href:'/constanta/tururi',icon:'🧭',color:'#183E34'},{title:'Activități indoor',count:21,href:'/constanta/indoor',icon:'☔',color:'#244A66'}],travelerTypes:[{icon:'👨‍👩‍👧',title:'Pentru familii',href:'/constanta/activitati-familie',description:'Experiențe pentru copii și părinți.'},{icon:'💛',title:'Pentru cupluri',href:'/constanta/activitati-cupluri',description:'Idei pentru doi.'},{icon:'☔',title:'Când plouă',href:'/constanta/activitati-indoor',description:'Opțiuni indoor.'},{icon:'🎒',title:'Pentru turiști',href:'/constanta/turisti',description:'Atracții pentru prima vizită.'}],attractions:[
+{title:'Cazinoul din Constanța',count:14,href:'/atractie/cazinoul-din-constanta',image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=700&q=85',description:'Clădire emblematică de pe faleză și unul dintre simbolurile orașului.'},
+{title:'Muzeul de Istorie Națională și Arheologie',count:9,href:'/atractie/muzeul-de-istorie-constanta',image:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=700&q=85',description:'Colecții și expoziții dedicate istoriei Dobrogei și cetății Tomis.'},
+{title:'Moscheea Carol I',count:6,href:'/atractie/moscheea-carol-i-constanta',image:'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=700&q=85',description:'Reper cultural și religios cu panoramă asupra centrului vechi.'},
+{title:'Acvariul Constanța',count:11,href:'/atractie/acvariul-constanta',image:'https://images.unsplash.com/photo-1546026423-cc4642628d2b?auto=format&fit=crop&w=700&q=85',description:'Atracție potrivită pentru familie și copii, aproape de faleză.'}
+],guides:[{kicker:'Weekend',title:'Ce să faci în Constanța într-un weekend',href:'/ghiduri/weekend-constanta',image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=900&q=85',excerpt:'Un traseu simplu pentru două zile: atracții, plimbări și activități.'},{kicker:'Familie',title:'Constanța cu copiii',href:'/ghiduri/constanta-cu-copiii',image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=85',excerpt:'Idei pentru familie, activități indoor și muzee potrivite pe vârste.'}],seoTags:['activități Constanța','bilete Constanța','muzee Constanța','activități copii Constanța','escape rooms Constanța'],filteredActivities(){const q=this.filters.search.toLowerCase().trim();return this.activities.filter(a=>{if(this.filters.category!=='all'&&a.category!==this.filters.category)return false;if(a.price>this.filters.maxPrice)return false;if(a.rating<this.filters.minRating)return false;if(q&&!JSON.stringify(a).toLowerCase().includes(q))return false;return true})},resetFilters(){this.filters={search:'',category:'all',maxPrice:300,minRating:0}},formatMoney(v){return new Intl.NumberFormat('ro-RO',{style:'currency',currency:'RON',maximumFractionDigits:0}).format(v)}}}
+</script>
+</body>
+</html>

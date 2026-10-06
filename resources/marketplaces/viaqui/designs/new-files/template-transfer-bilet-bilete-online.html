@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Transferă biletul | bilete.online</title>
+  <meta name="description" content="Transferă un bilet eligibil către alt beneficiar și trimite-l direct pe email.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66',
+          rose:'#F4D9D1'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="ticketTransferPage()" class="antialiased">
+  <header class="border-b border-ink/10 bg-paper">
+    <nav class="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+      <a href="/" class="flex items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <a href="/cont/bilete" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">
+        Biletele mele
+      </a>
+    </nav>
+  </header>
+
+  <main class="min-h-[calc(100vh-137px)]">
+    <section class="mx-auto max-w-[1100px] px-4 py-10 sm:px-6 lg:py-14">
+      <div class="mb-8">
+        <div class="inline-flex items-center gap-2 rounded-full bg-green2 px-4 py-2 text-sm font-bold text-green">
+          <span>✓</span>
+          Bilet eligibil pentru transfer
+        </div>
+
+        <h1 class="mt-5 font-display text-5xl font-bold leading-[.95] sm:text-6xl">
+          Transferă biletul
+        </h1>
+
+        <p class="mt-4 max-w-3xl text-lg leading-relaxed text-muted">
+          Schimbă beneficiarul și trimite biletul către altă persoană. După confirmare, biletul actual va fi actualizat și noul beneficiar îl va primi pe email.
+        </p>
+      </div>
+
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="space-y-6">
+          <!-- Ticket summary -->
+          <section class="overflow-hidden rounded-[1.5rem] border border-ink/10 bg-white shadow-soft">
+            <div class="grid md:grid-cols-[230px_1fr]">
+              <img :src="ticket.image" :alt="ticket.title" class="h-full min-h-[250px] w-full object-cover">
+
+              <div class="p-6">
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="rounded-full bg-green2 px-3 py-1 text-xs font-bold text-green">Valid</span>
+                  <span class="rounded-full bg-paper2 px-3 py-1 text-xs font-bold" x-text="ticket.type"></span>
+                </div>
+
+                <h2 class="mt-4 font-display text-4xl font-bold leading-tight" x-text="ticket.title"></h2>
+
+                <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Data și ora</p>
+                    <p class="mt-1 font-bold" x-text="ticket.date"></p>
+                  </div>
+
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Locație</p>
+                    <p class="mt-1 font-bold" x-text="ticket.location"></p>
+                  </div>
+
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Beneficiar actual</p>
+                    <p class="mt-1 font-bold" x-text="ticket.currentBeneficiary"></p>
+                  </div>
+
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Cod bilet</p>
+                    <p class="mt-1 font-bold" x-text="ticket.code"></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Recipient form -->
+          <section class="rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-ink font-bold text-white">1</span>
+              <div>
+                <h2 class="font-display text-3xl font-bold">Datele noului beneficiar</h2>
+                <p class="mt-1 text-sm text-muted">Aceste informații vor apărea pe bilet.</p>
+              </div>
+            </div>
+
+            <div class="mt-5 grid gap-4 sm:grid-cols-2">
+              <label class="block">
+                <span class="font-bold">Nume complet</span>
+                <input
+                  x-model="recipient.name"
+                  class="mt-2 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-red"
+                  placeholder="Nume și prenume"
+                >
+              </label>
+
+              <label class="block">
+                <span class="font-bold">Email</span>
+                <input
+                  x-model="recipient.email"
+                  type="email"
+                  class="mt-2 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-red"
+                  placeholder="email@exemplu.ro"
+                >
+              </label>
+
+              <label class="block sm:col-span-2">
+                <span class="font-bold">Confirmă emailul</span>
+                <input
+                  x-model="recipient.emailConfirm"
+                  type="email"
+                  class="mt-2 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-red"
+                  placeholder="Reintrodu adresa de email"
+                >
+              </label>
+            </div>
+
+            <div x-show="emailMismatch" class="mt-4 rounded-xl bg-rose px-4 py-3 text-sm font-bold text-red">
+              Adresele de email nu coincid.
+            </div>
+          </section>
+
+          <!-- Message -->
+          <section class="rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-red font-bold text-white">2</span>
+              <div>
+                <h2 class="font-display text-3xl font-bold">Mesaj pentru beneficiar</h2>
+                <p class="mt-1 text-sm text-muted">Opțional, va fi inclus în emailul de transfer.</p>
+              </div>
+            </div>
+
+            <textarea
+              x-model="recipient.message"
+              rows="4"
+              class="mt-5 w-full rounded-2xl border border-ink/15 bg-paper px-4 py-3 outline-none focus:border-red"
+              placeholder="Exemplu: Distracție plăcută! Acesta este biletul tău."
+            ></textarea>
+          </section>
+
+          <!-- Confirmation -->
+          <section class="rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-full bg-gold font-bold text-white">3</span>
+              <div>
+                <h2 class="font-display text-3xl font-bold">Confirmă transferul</h2>
+                <p class="mt-1 text-sm text-muted">Verifică informațiile înainte de trimitere.</p>
+              </div>
+            </div>
+
+            <div class="mt-5 space-y-3">
+              <label class="flex items-start gap-3 rounded-xl bg-paper p-4">
+                <input type="checkbox" x-model="confirmations.correct" class="mt-1 h-5 w-5 accent-red">
+                <span class="text-sm leading-relaxed text-muted">
+                  Confirm că numele și adresa de email ale beneficiarului sunt corecte.
+                </span>
+              </label>
+
+              <label class="flex items-start gap-3 rounded-xl bg-paper p-4">
+                <input type="checkbox" x-model="confirmations.ownership" class="mt-1 h-5 w-5 accent-red">
+                <span class="text-sm leading-relaxed text-muted">
+                  Înțeleg că beneficiarul actual va fi înlocuit, iar biletul va fi trimis noii persoane.
+                </span>
+              </label>
+
+              <label class="flex items-start gap-3 rounded-xl bg-paper p-4">
+                <input type="checkbox" x-model="confirmations.rules" class="mt-1 h-5 w-5 accent-red">
+                <span class="text-sm leading-relaxed text-muted">
+                  Am citit condițiile de transfer și confirm că biletul nu a fost utilizat.
+                </span>
+              </label>
+            </div>
+          </section>
+        </div>
+
+        <!-- Sidebar -->
+        <aside>
+          <div class="sticky top-6 rounded-[1.5rem] border border-ink/10 bg-white p-5 shadow-panel">
+            <h2 class="font-display text-3xl font-bold">Rezumat transfer</h2>
+
+            <div class="mt-5 divide-y divide-ink/10 text-sm">
+              <div class="py-3">
+                <p class="text-muted">Beneficiar actual</p>
+                <p class="mt-1 font-bold" x-text="ticket.currentBeneficiary"></p>
+              </div>
+
+              <div class="py-3">
+                <p class="text-muted">Beneficiar nou</p>
+                <p class="mt-1 font-bold" x-text="recipient.name || '—'"></p>
+              </div>
+
+              <div class="py-3">
+                <p class="text-muted">Email destinatar</p>
+                <p class="mt-1 break-all font-bold" x-text="recipient.email || '—'"></p>
+              </div>
+
+              <div class="py-3">
+                <p class="text-muted">Cost transfer</p>
+                <p class="mt-1 font-bold">Gratuit</p>
+              </div>
+            </div>
+
+            <div class="mt-5 rounded-xl bg-paper p-4">
+              <p class="font-bold">Ce se întâmplă după transfer</p>
+              <ul class="mt-3 space-y-2 text-sm text-muted">
+                <li>• beneficiarul este actualizat;</li>
+                <li>• noul bilet este trimis pe email;</li>
+                <li>• biletul vechi nu mai poate fi folosit;</li>
+                <li>• transferul apare în istoricul contului.</li>
+              </ul>
+            </div>
+
+            <button
+              @click="submitTransfer()"
+              :disabled="!canSubmit"
+              :class="canSubmit ? 'bg-red hover:bg-red2' : 'cursor-not-allowed bg-ink/20'"
+              class="mt-5 w-full rounded-full px-6 py-3 font-bold text-white transition"
+            >
+              Confirmă transferul
+            </button>
+
+            <p x-show="!canSubmit" class="mt-3 text-center text-xs text-muted">
+              Completează datele și confirmă toate condițiile.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Success -->
+    <div x-show="submitted" x-cloak class="fixed inset-0 z-[90] grid place-items-center bg-ink/70 p-4 backdrop-blur-sm">
+      <div class="w-full max-w-xl rounded-[1.75rem] bg-white p-7 text-center shadow-panel">
+        <div class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green2 text-2xl text-green">✓</div>
+
+        <h2 class="mt-5 font-display text-4xl font-bold">Biletul a fost transferat.</h2>
+
+        <p class="mt-4 leading-relaxed text-muted">
+          Biletul <strong class="text-ink" x-text="ticket.code"></strong> a fost transferat către
+          <strong class="text-ink" x-text="recipient.name"></strong>.
+        </p>
+
+        <div class="mt-5 rounded-2xl bg-paper p-4 text-left">
+          <div class="flex justify-between text-sm">
+            <span class="text-muted">Email trimis către</span>
+            <strong class="break-all" x-text="recipient.email"></strong>
+          </div>
+
+          <div class="mt-3 flex justify-between text-sm">
+            <span class="text-muted">Status</span>
+            <strong class="text-green">Transfer finalizat</strong>
+          </div>
+        </div>
+
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/cont/bilete" class="rounded-full bg-ink px-6 py-3 font-bold text-white">Biletele mele</a>
+          <a href="/cont/comenzi/BO-10482" class="rounded-full border border-ink/20 px-6 py-3 font-bold">Vezi comanda</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-ink/10 bg-paper">
+    <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <p>© 2026 bilete.online</p>
+
+      <div class="flex flex-wrap gap-4">
+        <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+        <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+        <a href="/contact" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function ticketTransferPage(){
+      return {
+        submitted:false,
+
+        ticket:{
+          code:'BO-10482-001',
+          type:'Bilet adult',
+          title:'Escape room în centrul Constanței',
+          date:'14 iunie 2026 · 18:00',
+          location:'Mystery Rooms, Constanța',
+          currentBeneficiary:'Andrei Nastase',
+          image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=900&q=85'
+        },
+
+        recipient:{
+          name:'',
+          email:'',
+          emailConfirm:'',
+          message:''
+        },
+
+        confirmations:{
+          correct:false,
+          ownership:false,
+          rules:false
+        },
+
+        get emailMismatch(){
+          return this.recipient.emailConfirm &&
+                 this.recipient.email !== this.recipient.emailConfirm;
+        },
+
+        get canSubmit(){
+          return this.recipient.name &&
+                 this.recipient.email &&
+                 this.recipient.emailConfirm &&
+                 !this.emailMismatch &&
+                 this.confirmations.correct &&
+                 this.confirmations.ownership &&
+                 this.confirmations.rules;
+        },
+
+        submitTransfer(){
+          if(!this.canSubmit) return;
+          this.submitted=true;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

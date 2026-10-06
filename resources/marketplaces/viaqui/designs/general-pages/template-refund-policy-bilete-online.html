@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#1B1714" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      colors: {
+        paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+        ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+        vermilion:'#E84527','vermilion-d':'#C5371C',
+        forest:'#1E4A3D','forest-l':'#2E6553',
+        ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+      },
+      fontFamily: {
+        display:['Fraunces','Georgia','serif'],
+        sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+        mono:['"Spline Sans Mono"','ui-monospace','monospace']
+      },
+      boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)' }
+    }}
+  }
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  :root { --paper:#F4EFE3; }
+  html { scroll-behavior:smooth; }
+  body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+  .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+  .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+  .ticket{ position:relative; isolation:isolate; }
+  .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+  .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+  .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+  .stamp{ border:2px solid currentColor; border-radius:9999px; }
+  .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+  .underline-wobble:hover{ background-size:0% 2px; }
+  .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+  .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+  .legal-prose h2{ font-family:Fraunces,Georgia,serif; font-size:2rem; line-height:1.05; font-weight:800; margin-top:2.3rem; margin-bottom:.8rem; letter-spacing:-.018em; }
+  .legal-prose h3{ font-size:1.2rem; font-weight:800; margin-top:1.5rem; margin-bottom:.5rem; }
+  .legal-prose p{ color:#5A4F41; margin:.75rem 0; line-height:1.7; }
+  .legal-prose ul{ color:#5A4F41; margin:.75rem 0; padding-left:1.25rem; list-style:disc; line-height:1.7; }
+  .legal-prose strong{ color:#1B1714; }
+  [x-cloak]{ display:none!important; }
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} }
+</style>
+  <title>Politică retur și rambursare — bilete.online</title>
+  <meta name="description" content="Reguli privind returul, anularea și rambursarea biletelor cumpărate prin bilete.online." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/politica-retur" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Politică retur și rambursare — bilete.online" />
+  <meta property="og:description" content="Reguli privind returul, anularea și rambursarea biletelor cumpărate prin bilete.online." />
+  <meta property="og:url" content="https://bilete.online/politica-retur" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebPage","name":"Politică retur și rambursare — bilete.online","description":"Reguli privind returul, anularea și rambursarea biletelor cumpărate prin bilete.online.","url":"https://bilete.online/politica-retur","inLanguage":"ro-RO","isPartOf":{"@type":"WebSite","name":"bilete.online","url":"https://bilete.online/"}}
+  </script>
+
+</head>
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion"></span> ADMISSION · ROMÂNIA · AGREMENT</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/card-cadou" class="text-ochre underline-wobble">Carduri cadou</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg></span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Card cadou</a>
+        <a href="/ajutor" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ajutor</a>
+        <a href="/pentru-locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Pentru locații</a>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/cont/dashboard" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Contul meu</a>
+        <a href="/cos" class="hidden sm:inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Coș</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a @click="open=false" href="/categorii" class="block py-2">Categorii</a>
+      <a @click="open=false" href="/orase" class="block py-2">Orașe</a>
+      <a @click="open=false" href="/card-cadou" class="block py-2">Card cadou</a>
+      <a @click="open=false" href="/ajutor" class="block py-2">Ajutor</a>
+      <a @click="open=false" href="/pentru-locatii" class="block py-2">Pentru locații</a>
+    </div>
+  </div>
+</header>
+
+
+<main>
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-6">
+    <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb"><a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Politică retur și rambursare</span></nav>
+    <div class="mt-7 grid lg:grid-cols-[1fr_320px] gap-8 items-start">
+      <article class="ticket bg-paper border-2 border-ink rounded-3xl p-6 sm:p-10 shadow-ticket" style="--perf:100%">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">RETUR</p>
+        <h1 class="mt-5 font-display text-5xl sm:text-7xl font-bold leading-[.9]">Politică retur și rambursare</h1>
+        <p class="mt-5 max-w-3xl text-xl text-ink-soft">Aici explicăm situațiile în care biletele pot fi rambursate, pașii de solicitare și diferența dintre retur standard și protecția bilet.</p>
+        <p class="mt-4 text-sm font-mono text-ink-soft">Ultima actualizare: 22 mai 2026</p>
+        <div class="legal-prose mt-10"><h2>1. Principiu general</h2><p>Biletele pentru activități cu dată/oră pot avea reguli diferite de rambursare în funcție de locație, tipul activității și momentul solicitării.</p><h2>2. Cum soliciți retur</h2><p>Clientul poate solicita retur din cont, din pagina comenzii sau prin formularul de contact, folosind numărul comenzii și emailul folosit la achiziție.</p><h2>3. Activități anulate sau modificate</h2><p>Dacă activitatea este anulată de locație/organizator, clientul poate primi rambursare sau opțiuni alternative, conform politicii afișate pentru acea activitate.</p><h2>4. Taxe și comisioane</h2><p>În funcție de procesator, unele taxe de procesare pot fi nerambursabile. Regulile finale trebuie afișate clar înainte de checkout.</p><h2>5. Protecție bilet</h2><p>Dacă ai cumpărat protecție bilet, se aplică regulile extinse din politica dedicată.</p></div>
+        <div class="mt-10 rounded-2xl border-2 border-vermilion/25 bg-rose/50 p-5">
+          <p class="font-bold">Notă de implementare</p>
+          <p class="mt-1 text-ink-soft">Acest template include structură și microcopy operațional. Textul juridic final trebuie verificat de avocat / consultant GDPR înainte de publicare.</p>
+        </div>
+      </article>
+      <aside class="lg:sticky lg:top-28 space-y-4">
+        <div class="rounded-3xl border-2 border-ink bg-paper p-5">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft mb-3">DOCUMENTE</p>
+          <nav><a href="/termeni-si-conditii" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Termeni și condiții</a><a href="/confidentialitate" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Confidențialitate</a><a href="/cookies" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Cookies</a><a href="/politica-retur" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Politică retur</a><a href="/protectie-bilet" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Protecție bilet</a><a href="/regulament-puncte-bonus" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Puncte bonus</a><a href="/regulament-carduri-cadou" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Carduri cadou</a><a href="/contact" class="block rounded-xl px-3 py-2 font-bold hover:bg-ink/5">Contact</a></nav>
+        </div>
+        <div class="rounded-3xl bg-ink text-paper p-5">
+          <p class="font-display text-2xl font-bold">Ai întrebări?</p>
+          <p class="mt-2 text-paper/60">Scrie-ne și revenim cu detalii despre comandă, retur sau cont.</p>
+          <a href="/contact" class="mt-4 inline-flex rounded-full bg-vermilion px-5 py-3 font-bold hover:bg-vermilion-d transition">Contact</a>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+
+<footer class="border-t-2 border-ink bg-ink text-paper mt-20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+    </div>
+    <nav aria-label="Platformă">
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">PLATFORMĂ</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/categorii">Categorii</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/orase">Orașe</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/card-cadou">Card cadou</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/pentru-locatii">Pentru locații</a>
+    </nav>
+    <nav aria-label="Legal">
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">LEGAL</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/termeni-si-conditii">Termeni și condiții</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/confidentialitate">Confidențialitate</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/cookies">Cookies</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/politica-retur">Retur & rambursare</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+</body>
+</html>

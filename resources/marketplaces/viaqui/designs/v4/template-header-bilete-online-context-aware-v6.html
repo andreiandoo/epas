@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Header context-aware — bilete.online</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D',ochre:'#DA9A33',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif'],
+          mono:['Spline Sans Mono','ui-monospace','monospace']
+        },
+        boxShadow:{ soft:'0 18px 45px -30px rgba(27,23,20,.75)', panel:'0 32px 90px -52px rgba(27,23,20,.9)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    html{scroll-behavior:smooth}
+    body{background:#F4EFE3;color:#1B1714;font-family:'Hanken Grotesk',system-ui,sans-serif;font-feature-settings:"ss01","cv01"}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .bo-grain::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+    [x-cloak]{display:none!important}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+
+<body x-data="demoState()">
+  <header
+    x-data="boHeaderV6($store.demo)"
+    x-init="init()"
+    @keydown.escape.window="closeAll()"
+    class="sticky top-0 z-50"
+  >
+    <div class="relative border-b border-ink/10 bg-paper/95 backdrop-blur-xl" :class="scrolled ? 'shadow-soft' : ''">
+      <div class="bo-grain pointer-events-none absolute inset-0"></div>
+
+      <nav class="relative mx-auto flex h-[72px] max-w-[1500px] items-center gap-3 px-4 sm:px-6">
+        <a href="/" class="flex shrink-0 items-center gap-2.5" aria-label="bilete.online">
+          <span class="grid h-10 w-10 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg]">
+            <svg viewBox="0 0 24 24" class="h-5.5 w-5.5" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/>
+              <path d="M9 7v10" stroke-dasharray="2 2"/>
+            </svg>
+          </span>
+          <span class="font-display text-[1.55rem] font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+        </a>
+
+        <div class="hidden min-w-0 flex-1 px-2 md:block">
+          <button type="button" @click="searchOpen=true" class="mx-auto flex h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-paper px-4 text-left shadow-[0_12px_30px_-26px_rgba(27,23,20,.8)] transition hover:border-ink/35 hover:bg-white/40">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span class="min-w-0 flex-1 truncate text-sm font-bold text-ink-soft" x-text="searchPlaceholder()"></span>
+            <span class="hidden rounded-full bg-paper-2 px-2.5 py-1 text-[11px] font-bold text-ink-soft lg:inline">Ctrl K</span>
+          </button>
+        </div>
+
+        <div class="ml-auto hidden items-center gap-1 lg:flex" @mouseenter="cancelMegaClose()" @mouseleave="scheduleMegaClose()">
+          <button
+            @mouseenter="openMega('explore')"
+            @focus="openMega('explore')"
+            class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2"
+            :class="megaOpen === 'explore' ? 'bg-paper-2' : ''"
+            x-text="primaryExploreLabel()"
+          ></button>
+
+          <button
+            @mouseenter="openMega('things')"
+            @focus="openMega('things')"
+            class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2"
+            :class="megaOpen === 'things' ? 'bg-paper-2' : ''"
+          >Activități</button>
+
+          <button
+            @mouseenter="openMega('inspiration')"
+            @focus="openMega('inspiration')"
+            class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2"
+            :class="megaOpen === 'inspiration' ? 'bg-paper-2' : ''"
+          >Inspirație</button>
+
+          <a href="/card-cadou" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Card cadou</a>
+
+          <button @click="wishlistOpen=true" class="grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-paper-2" aria-label="Favorite">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+          </button>
+
+          <button @click="cartOpen=true" class="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-paper-2" aria-label="Coș">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+            <span x-show="loggedIn || cartCount > 0" class="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount"></span>
+          </button>
+
+          <button @click="languageOpen=!languageOpen; profileOpen=false" class="rounded-full px-3 py-2.5 text-sm font-bold transition hover:bg-paper-2">RO/RON</button>
+
+          <template x-if="loggedIn">
+            <div class="relative">
+              <button @click="profileOpen=!profileOpen; languageOpen=false" class="grid h-11 w-11 place-items-center rounded-full bg-ink text-sm font-bold text-paper transition hover:bg-vermilion" aria-label="Profil">A</button>
+
+              <div x-show="profileOpen" x-cloak x-transition.origin.top.right @click.outside="profileOpen=false" class="absolute right-0 top-[calc(100%+14px)] w-[330px] overflow-hidden rounded-3xl border border-ink/10 bg-paper shadow-panel">
+                <div class="bg-ink p-5 text-paper">
+                  <div class="flex items-center gap-3">
+                    <span class="grid h-12 w-12 place-items-center rounded-full bg-paper text-xl font-bold text-ink">A</span>
+                    <div><p class="font-display text-3xl font-bold leading-none">Andrei</p><p class="text-sm text-paper/55">andrei@email.ro</p></div>
+                  </div>
+                </div>
+                <nav class="p-2 text-sm font-bold">
+                  <a href="/cont/dashboard" class="flex items-center justify-between rounded-2xl px-4 py-3 hover:bg-paper-2"><span>Dashboard</span><span>→</span></a>
+                  <a href="/cont/biletele-mele" class="flex items-center justify-between rounded-2xl px-4 py-3 hover:bg-paper-2"><span>Biletele mele</span><span class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper">3</span></a>
+                  <a href="/cont/comenzile-mele" class="flex items-center justify-between rounded-2xl px-4 py-3 hover:bg-paper-2"><span>Comenzile mele</span><span>12</span></a>
+                  <a href="/cont/punctele-mele" class="flex items-center justify-between rounded-2xl px-4 py-3 hover:bg-paper-2"><span>Punctele mele</span><span>820</span></a>
+                  <a href="/cont/recomandari" class="flex items-center justify-between rounded-2xl px-4 py-3 hover:bg-paper-2"><span>Recomandări</span><span class="text-vermilion">nou</span></a>
+                  <a href="/cont/setari" class="flex items-center justify-between rounded-2xl px-4 py-3 hover:bg-paper-2"><span>Setări</span><span>→</span></a>
+                </nav>
+                <div class="border-t border-ink/10 p-3">
+                  <a href="/logout" class="block rounded-full border-2 border-ink px-4 py-3 text-center text-sm font-bold transition hover:bg-ink hover:text-paper">Ieși din cont</a>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <template x-if="!loggedIn">
+            <div class="flex items-center gap-2">
+              <a href="/login" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Log in</a>
+              <a href="/register" class="rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Creează cont</a>
+            </div>
+          </template>
+        </div>
+
+        <div class="ml-auto flex items-center gap-1 lg:hidden">
+          <button @click="searchOpen=true" class="grid h-11 w-11 place-items-center rounded-full hover:bg-paper-2" aria-label="Caută">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </button>
+          <button @click="mobileOpen=!mobileOpen" class="grid h-11 w-11 place-items-center rounded-full hover:bg-paper-2" aria-label="Meniu">
+            <svg x-show="!mobileOpen" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <svg x-show="mobileOpen" x-cloak viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Language dropdown -->
+      <div x-show="languageOpen" x-cloak x-transition.origin.top.right @click.outside="languageOpen=false" class="absolute right-[78px] top-[calc(100%+10px)] z-[51] hidden w-[320px] rounded-3xl border border-ink/10 bg-paper p-4 shadow-panel lg:block">
+        <p class="font-display text-3xl font-bold leading-none">Limbă și monedă</p>
+        <div class="mt-4 grid gap-3">
+          <label><span class="mb-1 block text-sm font-bold text-ink-soft">Limbă</span><select class="w-full rounded-2xl border-2 border-ink/10 bg-paper-2 px-4 py-3 font-bold outline-none"><option>Română</option><option>English</option></select></label>
+          <label><span class="mb-1 block text-sm font-bold text-ink-soft">Monedă</span><select class="w-full rounded-2xl border-2 border-ink/10 bg-paper-2 px-4 py-3 font-bold outline-none"><option>RON</option><option>EUR</option></select></label>
+          <button class="rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Aplică</button>
+        </div>
+      </div>
+
+      <!-- Mega menu -->
+      <div x-show="megaOpen" x-cloak x-transition.opacity.duration.160ms @mouseenter="cancelMegaClose()" @mouseleave="scheduleMegaClose()" class="absolute inset-x-0 top-full z-50 hidden border-t border-ink/10 bg-paper shadow-panel lg:block">
+        <div x-show="megaOpen !== 'inspiration'" class="mx-auto grid max-w-[1500px] grid-cols-[280px_1fr] gap-0 px-6 py-6">
+          <aside class="border-r border-ink/10 pr-5">
+            <button @mouseenter="megaTab='places'" @focus="megaTab='places'" :class="megaTab==='places' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition">
+              <span x-text="megaOpen === 'explore' ? contextLabels().places : 'Top activități'"></span><span>→</span>
+            </button>
+            <button @mouseenter="megaTab='things'" @focus="megaTab='things'" :class="megaTab==='things' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition">
+              <span x-text="megaOpen === 'explore' ? contextLabels().things : 'Categorii populare'"></span><span>→</span>
+            </button>
+            <button @mouseenter="megaTab='nearby'" @focus="megaTab='nearby'" :class="megaTab==='nearby' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition">
+              <span x-text="contextLabels().nearby"></span><span>→</span>
+            </button>
+
+            <div class="mt-5 rounded-3xl bg-mint p-5">
+              <p class="font-mono text-xs tracking-[.16em] text-forest" x-text="contextLabels().kicker"></p>
+              <h3 class="mt-2 font-display text-4xl font-bold leading-none" x-text="contextLabels().title"></h3>
+              <p class="mt-2 text-sm text-ink-soft" x-text="contextLabels().description"></p>
+              <a :href="contextLabels().href" class="mt-4 inline-flex rounded-full bg-forest px-4 py-2 text-sm font-bold text-paper" x-text="contextLabels().cta"></a>
+            </div>
+          </aside>
+
+          <section class="pl-6">
+            <div class="flex items-end justify-between gap-6">
+              <div>
+                <p class="font-mono text-xs tracking-[.18em] text-ink-soft" x-text="activeMegaContent().kicker"></p>
+                <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="activeMegaContent().title"></h2>
+                <p class="mt-3 max-w-3xl text-ink-soft" x-text="activeMegaContent().description"></p>
+              </div>
+              <a :href="activeMegaContent().ctaHref" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion" x-text="activeMegaContent().ctaLabel"></a>
+            </div>
+
+            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <template x-for="item in activeMegaContent().items" :key="item.href">
+                <a :href="item.href" class="group rounded-3xl border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-soft">
+                  <div class="flex items-start justify-between gap-4">
+                    <div><span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft" x-text="item.badge"></span><p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="item.title"></p><p class="mt-2 text-sm text-ink-soft" x-text="item.meta"></p></div>
+                    <span class="text-2xl transition group-hover:translate-x-1">→</span>
+                  </div>
+                </a>
+              </template>
+            </div>
+          </section>
+        </div>
+
+        <div x-show="megaOpen === 'inspiration'" x-cloak class="mx-auto grid max-w-[1500px] grid-cols-[300px_1fr] gap-0 px-6 py-6">
+          <aside class="border-r border-ink/10 pr-5">
+            <p class="mb-3 px-4 font-mono text-xs tracking-[.18em] text-ink-soft">INSPIRAȚIE</p>
+            <template x-for="tab in inspirationTabs" :key="tab.key">
+              <button @mouseenter="inspirationTab=tab.key" @focus="inspirationTab=tab.key" :class="inspirationTab===tab.key ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition">
+                <span x-text="tab.label"></span><span>→</span>
+              </button>
+            </template>
+          </aside>
+
+          <section class="pl-6">
+            <div class="flex items-end justify-between gap-6">
+              <div>
+                <p class="font-mono text-xs tracking-[.18em] text-ink-soft" x-text="inspirationContent()[inspirationTab].kicker"></p>
+                <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="inspirationContent()[inspirationTab].title"></h2>
+                <p class="mt-3 max-w-3xl text-ink-soft" x-text="inspirationContent()[inspirationTab].description"></p>
+              </div>
+              <a :href="inspirationContent()[inspirationTab].ctaHref" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion" x-text="inspirationContent()[inspirationTab].ctaLabel"></a>
+            </div>
+
+            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <template x-for="item in inspirationContent()[inspirationTab].items" :key="item.href">
+                <a :href="item.href" class="group rounded-3xl border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-soft">
+                  <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft" x-text="item.badge"></span>
+                  <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="item.title"></p>
+                  <p class="mt-2 text-sm text-ink-soft" x-text="item.meta"></p>
+                </a>
+              </template>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Mobile menu -->
+      <div x-show="mobileOpen" x-cloak x-collapse class="border-t border-ink/10 bg-paper lg:hidden">
+        <div class="px-4 py-4 sm:px-6">
+          <div class="grid gap-2">
+            <a :href="contextLabels().href" class="rounded-2xl bg-ink px-4 py-4 font-display text-3xl font-bold text-paper" x-text="primaryExploreLabel()"></a>
+            <a href="/categorii" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Activități</a>
+            <a href="/orase" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Orașe</a>
+            <a href="/ghiduri" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Inspirație</a>
+            <a href="/card-cadou" class="rounded-2xl bg-mint px-4 py-4 font-display text-3xl font-bold text-forest">Card cadou</a>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <template x-if="loggedIn"><a href="/cont/dashboard" class="rounded-full bg-ink px-5 py-3 text-center font-bold text-paper">Cont</a></template>
+            <template x-if="!loggedIn"><a href="/login" class="rounded-full bg-ink px-5 py-3 text-center font-bold text-paper">Log in</a></template>
+            <a href="/cos" class="rounded-full border-2 border-ink px-5 py-3 text-center font-bold">Coș</a>
+            <template x-if="loggedIn"><a href="/cont/biletele-mele" class="rounded-full border-2 border-ink px-5 py-3 text-center font-bold">Biletele mele</a></template>
+            <template x-if="!loggedIn"><a href="/register" class="rounded-full border-2 border-ink px-5 py-3 text-center font-bold">Creează cont</a></template>
+            <a href="/recuperare-comanda" class="rounded-full border-2 border-ink px-5 py-3 text-center font-bold">Recuperează</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search overlay -->
+    <div x-show="searchOpen" x-cloak x-transition.opacity.duration.180ms class="fixed inset-0 z-[80] bg-ink/65 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Caută pe bilete.online">
+      <div @click.outside="searchOpen=false" class="mx-auto mt-10 max-w-4xl overflow-hidden rounded-[2rem] bg-paper shadow-panel">
+        <div class="border-b border-ink/10 p-4">
+          <div class="flex items-center gap-3">
+            <svg viewBox="0 0 24 24" class="h-6 w-6 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input x-ref="searchInput" x-model="searchQuery" type="search" class="w-full bg-transparent py-3 text-xl font-bold outline-none placeholder:text-ink-soft/70" :placeholder="searchPlaceholder()">
+            <button @click="searchOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+          </div>
+        </div>
+        <div class="grid max-h-[70vh] overflow-auto lg:grid-cols-[1fr_300px]">
+          <section class="p-5">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUGESTII</p>
+            <div class="mt-4 space-y-2">
+              <template x-for="item in filteredSearch()" :key="item.href">
+                <a :href="item.href" class="group flex items-start justify-between gap-4 rounded-2xl p-4 hover:bg-paper-2">
+                  <div><span class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="item.type"></span><p class="mt-2 font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="item.title"></p><p class="mt-1 text-sm text-ink-soft" x-text="item.meta"></p></div>
+                  <span class="text-2xl">→</span>
+                </a>
+              </template>
+            </div>
+          </section>
+          <aside class="border-t border-ink/10 bg-paper-2 p-5 lg:border-l lg:border-t-0">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CĂUTĂRI POPULARE</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <template x-for="tag in popularSearches" :key="tag.href">
+                <a :href="tag.href" class="rounded-full bg-paper px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper" x-text="tag.label"></a>
+              </template>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="min-h-screen">
+    <section class="mx-auto max-w-[1500px] px-4 py-10 sm:px-6 lg:py-16">
+      <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-panel lg:p-8">
+        <p class="font-mono text-xs tracking-[.18em] text-vermilion">DEMO CONTEXT-AWARE HEADER</p>
+        <h1 class="mt-3 font-display text-6xl font-bold leading-none">Același header, conținut diferit în funcție de pagină și login.</h1>
+        <p class="mt-4 max-w-3xl text-lg text-ink-soft">În implementare, setezi contextul din backend: homepage, category, city sau activity. Pentru utilizator, setezi logged in / logged out. Headerul își schimbă textele, mega menu-ul și acțiunile fără să refaci componenta.</p>
+
+        <div class="mt-6 grid gap-5 lg:grid-cols-2">
+          <div class="rounded-3xl bg-paper-2 p-5">
+            <p class="font-bold">Context pagină</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <template x-for="ctx in contexts" :key="ctx.key">
+                <button @click="$store.demo.context=ctx.key" :class="$store.demo.context===ctx.key ? 'bg-ink text-paper' : 'bg-paper'" class="rounded-full px-4 py-2 text-sm font-bold transition hover:bg-ink hover:text-paper" x-text="ctx.label"></button>
+              </template>
+            </div>
+          </div>
+
+          <div class="rounded-3xl bg-paper-2 p-5">
+            <p class="font-bold">Stare utilizator</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button @click="$store.demo.loggedIn=true" :class="$store.demo.loggedIn ? 'bg-ink text-paper' : 'bg-paper'" class="rounded-full px-4 py-2 text-sm font-bold transition hover:bg-ink hover:text-paper">Logged in</button>
+              <button @click="$store.demo.loggedIn=false" :class="!$store.demo.loggedIn ? 'bg-ink text-paper' : 'bg-paper'" class="rounded-full px-4 py-2 text-sm font-bold transition hover:bg-ink hover:text-paper">Logged out</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-3xl bg-mint p-5">
+          <p class="font-bold text-forest">Recomandare de implementare</p>
+          <p class="mt-1 text-ink-soft">Homepage: „Explorează România”. Categorie: „Explorează Escape rooms”. Oraș: „Explorează Sinaia”. Activitate: „Explorează Sinaia”. Logged out: în dreapta apar Log in + Creează cont; logged in: apare avatarul cu dropdown de cont.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('demo', { context:'homepage', loggedIn:true });
+    });
+
+    function demoState(){
+      return {
+        contexts:[
+          {key:'homepage', label:'Homepage'},
+          {key:'category', label:'Categorie'},
+          {key:'city', label:'Oraș'},
+          {key:'activity', label:'Single activity'}
+        ]
+      }
+    }
+
+    function boHeaderV6(store){
+      return {
+        scrolled:false,
+        megaOpen:null,
+        megaTab:'places',
+        inspirationTab:'top',
+        megaCloseTimer:null,
+        mobileOpen:false,
+        searchOpen:false,
+        languageOpen:false,
+        profileOpen:false,
+        wishlistOpen:false,
+        cartOpen:false,
+        searchQuery:'',
+        cartCount:2,
+        get context(){ return store.context; },
+        get loggedIn(){ return store.loggedIn; },
+
+        inspirationTabs:[
+          {key:'top', label:'Top activități'},
+          {key:'interests', label:'Interese'},
+          {key:'style', label:'Stil călător'},
+          {key:'guides', label:'Ghiduri'}
+        ],
+
+        init(){
+          this.scrolled = window.scrollY > 20;
+          window.addEventListener('scroll', () => this.scrolled = window.scrollY > 20);
+          window.addEventListener('keydown', (e) => {
+            if((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === 'k'){
+              e.preventDefault();
+              this.searchOpen = true;
+              this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus());
+            }
+          });
+          this.$watch('searchOpen', open => {
+            if(open){ this.closeDropdowns(); this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus()); }
+          });
+        },
+
+        primaryExploreLabel(){
+          const map = {
+            homepage:'Explorează România',
+            category:'Explorează Escape rooms',
+            city:'Explorează Sinaia',
+            activity:'Explorează Sinaia'
+          };
+          return map[this.context] || 'Explorează';
+        },
+
+        searchPlaceholder(){
+          const map = {
+            homepage:'Caută orașe, activități, locații sau experiențe',
+            category:'Caută escape rooms, orașe sau experiențe similare',
+            city:'Caută activități, atracții sau locații în Sinaia',
+            activity:'Caută activități similare, orașe sau atracții'
+          };
+          return map[this.context] || 'Caută activități';
+        },
+
+        contextLabels(){
+          const data = {
+            homepage:{kicker:'DESCOPERIRE', title:'Explorează România', description:'Activități, experiențe, orașe și locuri populare din toată țara.', href:'/orase', cta:'Vezi orașe', places:'Orașe populare', things:'Activități populare', nearby:'Trending acum'},
+            category:{kicker:'CATEGORIE', title:'Escape rooms', description:'Camere de escape room, jocuri de echipă și experiențe indoor în orașele disponibile.', href:'/escape-rooms', cta:'Vezi categoria', places:'Orașe pentru escape rooms', things:'Tipuri de escape rooms', nearby:'Categorii similare'},
+            city:{kicker:'DESTINAȚIE', title:'Explorează Sinaia', description:'Castele, tururi, natură și activități pe Valea Prahovei.', href:'/sinaia', cta:'Vezi orașul', places:'Locuri de văzut', things:'Lucruri de făcut', nearby:'Aproape de Sinaia'},
+            activity:{kicker:'DESTINAȚIE', title:'Explorează Sinaia', description:'Completează activitatea cu atracții, ghiduri și experiențe apropiate.', href:'/sinaia', cta:'Vezi orașul', places:'Locuri de văzut', things:'Lucruri de făcut', nearby:'Aproape de activitate'}
+          };
+          return data[this.context] || data.homepage;
+        },
+
+        activeMegaContent(){
+          const c = this.context;
+          const tab = this.megaTab;
+          const global = {
+            places:{kicker:'ORAȘE POPULARE', title:'Unde vrei să mergi?', description:'Alege un oraș și descoperă activități, ghiduri și locații locale.', ctaLabel:'Toate orașele', ctaHref:'/orase', items:[
+              {title:'București', meta:'muzee, copii, escape rooms', href:'/bucuresti', badge:'128+'},
+              {title:'Brașov', meta:'tururi, natură, istorie', href:'/brasov', badge:'64+'},
+              {title:'Sinaia', meta:'castele, munte, Valea Prahovei', href:'/sinaia', badge:'42+'},
+              {title:'Cluj-Napoca', meta:'experiențe urbane și familie', href:'/cluj-napoca', badge:'52+'},
+              {title:'Iași', meta:'cultură, muzee, tururi', href:'/iasi', badge:'41+'},
+              {title:'Sibiu', meta:'istorie, familie, city break', href:'/sibiu', badge:'24+'}
+            ]},
+            things:{kicker:'ACTIVITĂȚI POPULARE', title:'Alege după ce vrei să faci', description:'Categorii clare pentru ieșiri, weekenduri, copii, cadouri și experiențe locale.', ctaLabel:'Toate categoriile', ctaHref:'/categorii', items:[
+              {title:'Escape rooms', meta:'mister, logică, grupuri', href:'/escape-rooms', badge:'indoor'},
+              {title:'Activități copii', meta:'familie, educativ, weekend', href:'/activitati-copii', badge:'familie'},
+              {title:'Muzee', meta:'cultură, patrimoniu, interactiv', href:'/muzee', badge:'cultură'},
+              {title:'Tururi culturale', meta:'ghizi, orașe, povești locale', href:'/tururi-culturale', badge:'tururi'},
+              {title:'Ateliere', meta:'creativ, hands-on, relaxat', href:'/ateliere', badge:'creativ'},
+              {title:'Experiențe cadou', meta:'carduri și activități speciale', href:'/experiente-cadou', badge:'cadou'}
+            ]},
+            nearby:{kicker:'TRENDING', title:'Căutări populare acum', description:'Scurtături utile către pagini care se potrivesc sezonului și intereselor frecvente.', ctaLabel:'Vezi recomandări', ctaHref:'/recomandari', items:[
+              {title:'Activități de weekend', meta:'idei rapide pentru zile libere', href:'/activitati-weekend', badge:'weekend'},
+              {title:'Zile ploioase', meta:'indoor, muzee, ateliere', href:'/activitati-zile-ploioase', badge:'indoor'},
+              {title:'Sub 50 lei', meta:'activități accesibile', href:'/activitati-sub-50-lei', badge:'buget'},
+              {title:'Card cadou', meta:'experiențe pentru altcineva', href:'/card-cadou', badge:'gift'},
+              {title:'Pentru școli', meta:'educativ, organizat, grupuri', href:'/activitati-pentru-scoli', badge:'școli'},
+              {title:'Pentru familie', meta:'copii, părinți, weekend', href:'/activitati-pentru-familie', badge:'familie'}
+            ]}
+          };
+
+          const sinaia = {
+            places:{kicker:'TOP ATRACȚII', title:'Locuri de văzut în Sinaia', description:'Atracții importante și experiențe din apropiere.', ctaLabel:'Vezi Sinaia', ctaHref:'/sinaia', items:[
+              {title:'Castelul Peleș', meta:'reședință regală · arhitectură', href:'/sinaia/castelul-peles', badge:'top'},
+              {title:'Castelul Pelișor', meta:'art nouveau · istorie', href:'/sinaia/castelul-pelisor', badge:'palat'},
+              {title:'Mănăstirea Sinaia', meta:'patrimoniu · centru', href:'/sinaia/manastirea-sinaia', badge:'istoric'},
+              {title:'Cota 1400', meta:'munte · panoramă', href:'/sinaia/cota-1400', badge:'outdoor'},
+              {title:'Castelul Bran', meta:'județul Brașov', href:'/brasov/castelul-bran', badge:'aproape'},
+              {title:'Centrul vechi Brașov', meta:'city walk · tururi', href:'/brasov/centrul-vechi', badge:'oraș'}
+            ]},
+            things:{kicker:'LUCRURI DE FĂCUT', title:'Activități în și lângă Sinaia', description:'Tururi, bilete, experiențe de familie, natură și trasee culturale.', ctaLabel:'Activități în Sinaia', ctaHref:'/sinaia/activitati', items:[
+              {title:'Tururi de o zi', meta:'Peleș, Bran, Brașov', href:'/sinaia/tururi-de-o-zi', badge:'tur'},
+              {title:'Bilete de intrare', meta:'atracții și obiective', href:'/sinaia/bilete-intrare', badge:'bilete'},
+              {title:'Activități outdoor', meta:'munte și Valea Prahovei', href:'/sinaia/outdoor', badge:'natură'},
+              {title:'Cu copiii', meta:'ritm lejer, familie', href:'/sinaia/activitati-copii', badge:'familie'},
+              {title:'Experiențe cadou', meta:'pentru city break', href:'/sinaia/cadouri-experienta', badge:'cadou'},
+              {title:'Tururi ghidate', meta:'istorie și context local', href:'/sinaia/tururi-ghidate', badge:'ghid'}
+            ]},
+            nearby:{kicker:'APROAPE DE SINAIA', title:'Completează excursia', description:'Locuri și activități pe care le poți combina cu Sinaia.', ctaLabel:'Valea Prahovei', ctaHref:'/valea-prahovei', items:[
+              {title:'Bușteni', meta:'Cantacuzino, telecabină, munte', href:'/busteni', badge:'aproape'},
+              {title:'Azuga', meta:'outdoor, vin, munte', href:'/azuga', badge:'aproape'},
+              {title:'Predeal', meta:'trasee, familie, aer liber', href:'/predeal', badge:'aproape'},
+              {title:'Bran', meta:'castel, istorie, tururi', href:'/bran', badge:'popular'},
+              {title:'Râșnov', meta:'cetate, panoramă, familie', href:'/rasnov', badge:'familie'},
+              {title:'Brașov', meta:'centrul vechi, tururi, food', href:'/brasov', badge:'oraș'}
+            ]}
+          };
+
+          const category = {
+            places:{kicker:'ORAȘE PENTRU ESCAPE ROOMS', title:'Unde găsești escape rooms', description:'Alege orașul și vezi camerele disponibile.', ctaLabel:'Toate orașele', ctaHref:'/escape-rooms/orase', items:[
+              {title:'București', meta:'cele mai multe camere', href:'/bucuresti/escape-rooms', badge:'popular'},
+              {title:'Brașov', meta:'grupuri și turiști', href:'/brasov/escape-rooms', badge:'oraș'},
+              {title:'Cluj-Napoca', meta:'urban și indoor', href:'/cluj-napoca/escape-rooms', badge:'oraș'},
+              {title:'Iași', meta:'camere tematice', href:'/iasi/escape-rooms', badge:'oraș'},
+              {title:'Timișoara', meta:'experiențe de grup', href:'/timisoara/escape-rooms', badge:'oraș'},
+              {title:'Sibiu', meta:'weekend indoor', href:'/sibiu/escape-rooms', badge:'oraș'}
+            ]},
+            things:{kicker:'TIPURI DE ESCAPE ROOMS', title:'Alege atmosfera camerei', description:'Horror, fantasy, detective, adventure sau camere pentru adolescenți.', ctaLabel:'Toate escape rooms', ctaHref:'/escape-rooms', items:[
+              {title:'Adventure', meta:'dinamic și accesibil', href:'/escape-rooms/adventure', badge:'adventure'},
+              {title:'Fantasy / Sci-fi', meta:'decor și poveste', href:'/escape-rooms/fantasy-sci-fi', badge:'fantasy'},
+              {title:'Detective', meta:'indicii, logică, mister', href:'/escape-rooms/detective', badge:'mister'},
+              {title:'Horror', meta:'intens, atmosferic', href:'/escape-rooms/horror', badge:'horror'},
+              {title:'Pentru adolescenți', meta:'vârste și dificultate adaptate', href:'/escape-rooms-adolescenti', badge:'teen'},
+              {title:'Team building', meta:'colaborare și comunicare', href:'/escape-rooms-team-building', badge:'team'}
+            ]},
+            nearby: global.nearby
+          };
+
+          if(c === 'category') return category[tab] || category.places;
+          if(c === 'city' || c === 'activity') return sinaia[tab] || sinaia.places;
+          return global[tab] || global.places;
+        },
+
+        inspirationContent(){
+          return {
+            top:{kicker:'TOP ACTIVITĂȚI', title:'Cele mai căutate experiențe', description:'Activități bune pentru prima vizită, weekend, grupuri sau zile în care vrei ceva sigur.', ctaLabel:'Vezi top activități', ctaHref:'/top-activitati', items:[
+              {title:'Tur Peleș, Bran și Brașov', meta:'tur de o zi · ghid · transport', href:'/activitati/tur-peles-bran-brasov', badge:'top pick'},
+              {title:'Bilete Castelul Peleș', meta:'intrare · Sinaia · patrimoniu', href:'/sinaia/castelul-peles', badge:'atracție'},
+              {title:'Escape rooms Brașov', meta:'grupuri · indoor · mister', href:'/brasov/escape-rooms', badge:'indoor'},
+              {title:'Activități copii București', meta:'familie · weekend · educativ', href:'/bucuresti/activitati-copii', badge:'familie'},
+              {title:'Tur ghidat Brașov vechi', meta:'walking tour · istorie locală', href:'/activitati/tur-ghidat-brasov-vechi', badge:'local'},
+              {title:'Card cadou experiențe', meta:'alegi suma · ei aleg activitatea', href:'/card-cadou', badge:'cadou'}
+            ]},
+            interests:{kicker:'INTERESE', title:'Alege după ce te atrage', description:'Caută mai rapid activități după interes.', ctaLabel:'Vezi interese', ctaHref:'/categorii', items:[
+              {title:'Castele și palate', meta:'Peleș, Bran, Cantacuzino', href:'/categorii/castele', badge:'patrimoniu'},
+              {title:'Muzee interactive', meta:'educativ · copii · indoor', href:'/muzee-interactive-copii', badge:'muzee'},
+              {title:'Natură și outdoor', meta:'munte · trasee · rezervații', href:'/natura-outdoor', badge:'outdoor'},
+              {title:'Ateliere creative', meta:'ceramică · artă · familie', href:'/ateliere', badge:'creativ'},
+              {title:'Tururi culturale', meta:'orașe · ghizi · povești locale', href:'/tururi-culturale', badge:'cultură'},
+              {title:'Experiențe imersive', meta:'show-uri · expoziții · tehnologie', href:'/experiente-imersive', badge:'wow'}
+            ]},
+            style:{kicker:'STIL CĂLĂTOR', title:'Recomandări după felul în care ieși', description:'Pentru familii, cupluri, grupuri, zile ploioase sau bugete clare.', ctaLabel:'Vezi recomandări', ctaHref:'/cont/recomandari', items:[
+              {title:'Cu copiii', meta:'activități potrivite pe vârste', href:'/activitati-pentru-familie', badge:'familie'},
+              {title:'Date night', meta:'cupluri · experiențe memorabile', href:'/activitati-pentru-cupluri', badge:'cuplu'},
+              {title:'Cu prietenii', meta:'escape rooms · aventură · fun', href:'/activitati-pentru-grupuri', badge:'grup'},
+              {title:'Zile ploioase', meta:'indoor · muzee · ateliere', href:'/activitati-zile-ploioase', badge:'indoor'},
+              {title:'Sub 50 lei', meta:'activități accesibile', href:'/activitati-sub-50-lei', badge:'buget'},
+              {title:'Pentru școli', meta:'educațional · organizat · sigur', href:'/activitati-pentru-scoli', badge:'școli'}
+            ]},
+            guides:{kicker:'GHIDURI', title:'Idei și recomandări editoriale', description:'Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.', ctaLabel:'Vezi toate ghidurile', ctaHref:'/ghiduri', items:[
+              {title:'Weekend în Sinaia', meta:'castele · natură · plimbări', href:'/ghiduri/weekend-sinaia', badge:'ghid'},
+              {title:'Sinaia cu copiii', meta:'activități familie · ritm lejer', href:'/ghiduri/sinaia-cu-copiii', badge:'familie'},
+              {title:'Castelul Peleș fără stres', meta:'program · bilete · tips', href:'/ghiduri/castelul-peles', badge:'atracție'},
+              {title:'Ce faci în Brașov', meta:'centrul vechi · tururi · food', href:'/ghiduri/ce-sa-faci-in-brasov', badge:'oraș'},
+              {title:'Valea Prahovei într-o zi', meta:'Sinaia · Bușteni · Azuga', href:'/ghiduri/valea-prahovei-o-zi', badge:'itinerar'},
+              {title:'Cadouri-experiență', meta:'idei pentru oameni diferiți', href:'/ghiduri/cadouri-experienta', badge:'cadou'}
+            ]}
+          }
+        },
+
+        searchItems(){
+          const common = [
+            {title:'Castelul Peleș', type:'Atracție', meta:'Sinaia · bilete și tururi', href:'/sinaia/castelul-peles'},
+            {title:'Tur Peleș, Bran și Brașov', type:'Activitate', meta:'tur de o zi · ghid · transport', href:'/activitati/tur-peles-bran-brasov'},
+            {title:'Activități în Sinaia', type:'Oraș', meta:'castele, natură, familie', href:'/sinaia'},
+            {title:'Escape rooms Brașov', type:'Categorie', meta:'mister · indoor · grupuri', href:'/brasov/escape-rooms'},
+            {title:'Card cadou experiențe', type:'Cadou', meta:'alegi suma, destinatarul alege activitatea', href:'/card-cadou'},
+            {title:'Recuperează comanda', type:'Ajutor', meta:'găsește biletele după email', href:'/recuperare-comanda'}
+          ];
+          return common;
+        },
+
+        popularSearches:[
+          {label:'Peleș', href:'/sinaia/castelul-peles'},
+          {label:'Bran', href:'/brasov/castelul-bran'},
+          {label:'Sinaia weekend', href:'/sinaia/activitati-weekend'},
+          {label:'Escape rooms', href:'/escape-rooms'},
+          {label:'Cu copiii', href:'/activitati-copii'},
+          {label:'Card cadou', href:'/card-cadou'}
+        ],
+
+        openMega(menu){
+          this.cancelMegaClose();
+          this.megaOpen = menu;
+          if(menu === 'inspiration') this.inspirationTab = this.inspirationTab || 'top';
+          else if(menu === 'things') this.megaTab = 'things';
+          else this.megaTab = 'places';
+          this.languageOpen = false;
+          this.profileOpen = false;
+        },
+        scheduleMegaClose(){ this.cancelMegaClose(); this.megaCloseTimer = setTimeout(() => { this.megaOpen = null; }, 160); },
+        cancelMegaClose(){ if(this.megaCloseTimer){ clearTimeout(this.megaCloseTimer); this.megaCloseTimer = null; } },
+        closeDropdowns(){ this.megaOpen=null; this.languageOpen=false; this.profileOpen=false; this.mobileOpen=false; },
+        closeAll(){ this.closeDropdowns(); this.searchOpen=false; this.cartOpen=false; this.wishlistOpen=false; },
+        filteredSearch(){
+          const q = this.searchQuery.toLowerCase().trim();
+          const list = this.searchItems();
+          if(!q) return list;
+          return list.filter(item => JSON.stringify(item).toLowerCase().includes(q));
+        }
+      }
+    }
+  </script>
+</body>
+</html>
