@@ -66,6 +66,10 @@ define('SITE_NAME', 'Viaqui');
 define('SITE_TAGLINE', 'Your way in.');
 define('SITE_URL', 'https://viaqui.com');
 define('SITE_LOCALE', 'en');
+// Prices are shown in euro everywhere on Viaqui (owner's decision, 2026-10-06). Amounts are not converted:
+// venues price their tickets in euro.
+define('SITE_CURRENCY', 'EUR');
+define('SITE_CURRENCY_SYMBOL', '€');
 
 // Pre-launch: viaqui.com still carries content copied from another marketplace, so search engines are kept out.
 // Set to false at launch (and replace robots.txt).

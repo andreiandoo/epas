@@ -89,7 +89,7 @@ if ($v2Acts) {
         }
         $V2['cards'][] = [
             'title' => $a['title'], 'place' => $a['city'], 'k' => $a['cat'], 'image' => $a['image'], 'href' => $a['href'],
-            'price' => $a['price'] ? $a['price'] . ' lei' : '', 'badges' => ['mob'],
+            'price' => $a['price'] ? v2_money($a['price']) : '', 'badges' => ['mob'],
             'rating' => $a['reviews'] > 0 ? [$a['rating'], $a['reviews']] : null,
         ];
     }
@@ -98,7 +98,7 @@ if ($v2Acts) {
     foreach (V2_SAMPLE_EXPERIENCES as [$title, $place, $k, $img, $price, $badges]) {
         $V2['cards'][] = [
             'title' => $title, 'place' => $place, 'k' => $k, 'image' => v2_asset('img/' . $img . '.webp'), 'href' => '/search?q=' . rawurlencode($title),
-            'price' => '€' . $price, 'badges' => $badges, 'rating' => null,
+            'price' => v2_money($price), 'badges' => $badges, 'rating' => null,
         ];
     }
 }

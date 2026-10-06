@@ -61,7 +61,15 @@ function v2_exp(int $n): string
 
 function v2_thousands(int $n): string
 {
-    return number_format($n, 0, ',', '.');
+    return number_format($n, 0, '.', ',');
+}
+
+/** A price in the site currency: "€12", "€12.50", "€1,250". Takes the amount in whole units, not cents. */
+function v2_money($amount): string
+{
+    $amount = (float) $amount;
+    $whole = abs($amount - round($amount)) < 0.005;
+    return (defined('SITE_CURRENCY_SYMBOL') ? SITE_CURRENCY_SYMBOL : '€') . number_format($amount, $whole ? 0 : 2, '.', ',');
 }
 
 /** Minutes as "45 min" / "2 h" / "2 h 13 min". */
