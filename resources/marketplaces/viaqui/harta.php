@@ -14,6 +14,10 @@
 $pageCacheTTL = 1800;
 require_once __DIR__ . '/includes/page-cache.php';
 require_once __DIR__ . '/includes/config.php';
+// English query name used by the translated pages: city= (the copied page reads oras=).
+if (!isset($_GET['oras']) && isset($_GET['city'])) {
+    $_GET['oras'] = $_GET['city'];
+}
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';

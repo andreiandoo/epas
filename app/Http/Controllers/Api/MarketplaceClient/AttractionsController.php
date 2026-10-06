@@ -43,6 +43,10 @@ class AttractionsController extends BaseController
         if ($typeSlug = $request->query('type')) {
             $query->whereHas('type', fn ($q) => $q->where('slug', $typeSlug));
         }
+        // ISO country code, for marketplaces whose attractions span several countries
+        if (($country = strtoupper(trim((string) $request->query('country', '')))) !== '') {
+            $query->where('country', $country);
+        }
         if ($featured = $request->query('featured')) {
             if (in_array($featured, ['1', 'true', 'yes'], true)) {
                 $query->where('is_featured', true);
@@ -56,16 +60,16 @@ class AttractionsController extends BaseController
             $needle = '%' . mb_strtolower($search) . '%';
             if (DB::connection()->getDriverName() === 'pgsql') {
                 $folded = strtr($needle, ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't']);
-                $query->whereRaw("translate(lower(name->>'ro'), 'ăâîșşțţ', 'aaisstt') LIKE ?", [$folded]);
+                $query->whereRaw("translate(lower(COALESCE(name->>'ro', name->>'en')), 'ăâîșşțţ', 'aaisstt') LIKE ?", [$folded]);
             } else {
-                $query->whereRaw("LOWER(name->>'ro') LIKE ?", [$needle]);
+                $query->whereRaw("LOWER(COALESCE(name->>'ro', name->>'en')) LIKE ?", [$needle]);
             }
         }
 
         // 'default' keeps the curated order (featured, then sort_order). The others let the list page
         // offer a sort control; unknown values fall back to the curated order.
         match ((string) $request->query('sort', '')) {
-            'name'     => $query->orderByRaw("LOWER(name->>'ro') ASC")->orderBy('id'),
+            'name'     => $query->orderByRaw("LOWER(COALESCE(name->>'ro', name->>'en')) ASC")->orderBy('id'),
             'activities' => $query->orderByDesc('activities_count')->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id'),
             default    => $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id'),
         };
@@ -345,6 +349,8 @@ class AttractionsController extends BaseController
             'longitude'       => $a->longitude,
             'is_featured'     => (bool) $a->is_featured,
             'activities_count' => $a->activities_count ?? null,
+            'subtitle'        => $this->translate($a->subtitle, $locale),
+            'country'         => $a->country,
             'type' => $a->type ? [
                 'slug' => $a->type->slug,
                 'name' => $this->translate($a->type->name, $locale),

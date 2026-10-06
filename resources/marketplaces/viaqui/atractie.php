@@ -36,7 +36,7 @@ if (!$attraction) {
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
-$atName       = $attraction['name'] ?? 'Atracție';
+$atName       = $attraction['name'] ?? 'Attraction';
 $atSubtitle   = $attraction['subtitle'] ?? '';
 $atDesc       = $attraction['description'] ?? '';
 $atType       = $attraction['type']['name'] ?? '';
@@ -50,10 +50,18 @@ $atCitySlug   = $atCity['slug'] ?? '';
    and a link that works beats a link that promises more. The section is never hidden: only its
    target and its wording change. */
 $atCityHasPage = $atCitySlug !== '' && ($atCity['has_page'] ?? false);
-$atCityPage    = $atCityHasPage ? '/' . $atCitySlug : ($atCitySlug !== '' ? '/' . $atCitySlug . '/atractii' : '');
-$atCityThings  = $atCityHasPage ? 'activitățile' : 'atracțiile';
+$atCityPage    = $atCityHasPage ? '/' . $atCitySlug : ($atCitySlug !== '' ? '/' . $atCitySlug . '/attractions' : '');
+$atCityThings  = $atCityHasPage ? 'things to do' : 'attractions';
 $atCityName   = $atCity['name'] ?? '';
 $atCounty     = $attraction['county'] ?? '';
+$atCountryName = '';
+$atCountrySlug = '';
+foreach (($V2NAV['countriesFull'] ?? []) as $v2Country) {
+    if (($v2Country['code'] ?? '') !== '' && $v2Country['code'] === strtoupper((string) ($attraction['country'] ?? ''))) {
+        $atCountryName = (string) $v2Country['name'];
+        $atCountrySlug = (string) $v2Country['slug'];
+    }
+}
 $atCover      = v2_media_url($attraction['cover_image_url'] ?? null) ?? '';
 /* CC BY-SA lets us publish the photo only next to the photographer's name, the licence and a way
    back to the original. Null for our own photos, which is most of them. */
@@ -79,9 +87,9 @@ $mapsUrl = ($atLat && $atLng) ? 'https://www.google.com/maps/search/?api=1&query
  * a locator entry, where the map is the content and the photograph is the thing that is missing. */
 $atDescText   = trim((string) $atDesc);
 // The importer writes "Monument în Pojorâta, Suceava" into the subtitle: the kicker already says it.
-$atBoilerSub  = $atSubtitle !== '' && $atSubtitle === trim($atType . ' în ' . $atCityName . ($atCounty !== '' ? ', ' . $atCounty : ''));
+$atBoilerSub  = false;   // Viaqui subtitles are Wikidata's one-line descriptions, never generated boilerplate
 // ...and a description that admits it is a placeholder. Do not frame it as an article.
-$atBoilerDesc = $atDescText !== '' && mb_strpos($atDescText, 'orientare rapidă') !== false;
+$atBoilerDesc = false;
 $atRealDesc   = $atBoilerDesc ? '' : $atDescText;
 $atLead       = $atBoilerSub ? '' : $atSubtitle;
 
@@ -100,7 +108,7 @@ $atShowAbout = $atRealDesc !== '' && $atHeroLead !== $atRealDesc;
 // With no photograph, the map takes the frame: for a monument, where it is IS the content.
 $atHeroMap   = $atCompact && !$lightbox && $mapsUrl !== '';
 $atShowMapSection = $mapsUrl !== '' && !$atHeroMap;
-$atCoords = ($atLat && $atLng) ? number_format((float) $atLat, 4, ',', '') . ', ' . number_format((float) $atLng, 4, ',', '') : '';
+$atCoords = ($atLat && $atLng) ? number_format((float) $atLat, 4, '.', '') . ', ' . number_format((float) $atLng, 4, '.', '') : '';
 
 $durationLabel = function (int $m): string {
     if ($m <= 0) return '';
@@ -110,22 +118,25 @@ $durationLabel = function (int $m): string {
 };
 $pricedFromCents = function ($c): string {
     if (!$c) return '';
-    return number_format($c / 100, 0, ',', '.') . ' lei';
+    return v2_money($c / 100);
 };
-$cardUrl = fn ($a) => '/experienta/' . ($a['slug'] ?? '');
+$cardUrl = fn ($a) => '/experience/' . ($a['slug'] ?? '');
 
-$breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
+$breadcrumbs = [['name' => 'Home', 'url' => SITE_URL . '/']];
+if ($atCountryName !== '') {
+    $breadcrumbs[] = ['name' => $atCountryName, 'url' => SITE_URL . '/' . $atCountrySlug];
+}
 if ($atCityName) {
     $breadcrumbs[] = ['name' => $atCityName, 'url' => $atCityPage !== '' ? SITE_URL . $atCityPage : null];
 }
-$breadcrumbs[] = ['name' => $atName, 'url' => SITE_URL . '/atractie/' . $slug];
+$breadcrumbs[] = ['name' => $atName, 'url' => SITE_URL . '/attraction/' . $slug];
 
 // Kicker line (type · city)
-$kicker = trim($atType . ($atCityName ? ' · ' . $atCityName : ''), ' ·') ?: 'Atracție';
+$kicker = trim($atType . ($atCityName ? ' · ' . $atCityName : ''), ' ·') ?: 'Attraction';
 
-$pageTitleRaw = $atName . ($atCityName ? ' — ' . $atCityName : '') . ' | viaqui.com';
-$pageDescription = $atDesc !== '' ? mb_substr(trim(strip_tags($atDesc)), 0, 160) : ('Activități, tururi și bilete pentru ' . $atName . ($atCityName ? ' din ' . $atCityName : '') . '.');
-$canonicalUrl = SITE_URL . '/atractie/' . $slug;
+$pageTitleRaw = $atName . ($atCityName ? ', ' . $atCityName : ($atCountryName !== '' ? ', ' . $atCountryName : '')) . ' | Viaqui';
+$pageDescription = $atDesc !== '' ? mb_substr(trim(strip_tags($atDesc)), 0, 160) : trim(($atSubtitle !== '' ? ucfirst($atSubtitle) . '. ' : '') . 'Where ' . $atName . ' is, what is around it' . ($atCityName ? ' in ' . $atCityName : '') . ' and what you can book nearby.');
+$canonicalUrl = SITE_URL . '/attraction/' . $slug;
 $ogImage = $atCover ?: (SITE_URL . '/assets/images/og-default.jpg');
 
 $structuredData = [[
@@ -159,7 +170,7 @@ $renderAttractionRow = function (array $p, int $i) {
     $name = $p['name'] ?? '';
     $meta = trim(($p['type']['name'] ?? '') . (!empty($p['city']['name']) ? ' · ' . $p['city']['name'] : ''), ' ·');
     ?>
-    <li><a class="trow" href="/atractie/<?= v2_e($p['slug'] ?? '') ?>">
+    <li><a class="trow" href="/attraction/<?= v2_e($p['slug'] ?? '') ?>">
       <span class="trow-media"><?= $img ? v2_photo([$img, 0, 0, '']) : v2_fallback($name, $i) ?></span>
       <span class="trow-text"><b><?= v2_e($name) ?></b><?php if ($meta): ?><small><?= v2_e($meta) ?></small><?php endif; ?></span>
       <?= v2_ic('arrow-right') ?>
@@ -195,10 +206,10 @@ include __DIR__ . '/includes/v2/header.php';
 
         <?php if ($atCompact): ?>
         <ul class="th-facts">
-          <?php if ($atType !== ''): ?><li><?= v2_ic('tag') ?><span><b>Tip</b><span><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span> <?php endif; ?><?= v2_e($atType) ?></span></span></li><?php endif; ?>
-          <?php if ($atCityName !== '' || $atCounty !== ''): ?><li><?= v2_ic('buildings') ?><span><b>Unde</b><span><?= v2_e(trim($atCityName . ($atCounty !== '' ? ', județul ' . $atCounty : ''), ', ')) ?></span></span></li><?php endif; ?>
-          <?php if ($atAddress !== ''): ?><li><?= v2_ic('map-pin') ?><span><b>Adresă</b><span><?= v2_e($atAddress) ?></span></span></li><?php endif; ?>
-          <?php if ($atCoords !== ''): ?><li><?= v2_ic('target') ?><span><b>Coordonate</b><span><?= v2_e($atCoords) ?></span></span></li><?php endif; ?>
+          <?php if ($atType !== ''): ?><li><?= v2_ic('tag') ?><span><b>Type</b><span><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span> <?php endif; ?><?= v2_e($atType) ?></span></span></li><?php endif; ?>
+          <?php if ($atCityName !== '' || $atCounty !== '' || $atCountryName !== ''): ?><li><?= v2_ic('buildings') ?><span><b>Where</b><span><?= v2_e(implode(', ', array_filter([$atCityName, $atCounty, $atCountryName]))) ?></span></span></li><?php endif; ?>
+          <?php if ($atAddress !== ''): ?><li><?= v2_ic('map-pin') ?><span><b>Address</b><span><?= v2_e($atAddress) ?></span></span></li><?php endif; ?>
+          <?php if ($atCoords !== ''): ?><li><?= v2_ic('target') ?><span><b>Coordinates</b><span><?= v2_e($atCoords) ?></span></span></li><?php endif; ?>
         </ul>
         <?php elseif ($atType || $atAddress): ?>
         <ul class="th-chips">
@@ -209,32 +220,32 @@ include __DIR__ . '/includes/v2/header.php';
 
         <div class="th-cta">
           <?php if (!empty($atActivities)): ?>
-            <a class="btn btn-light" href="#activitati">Vezi ce poți face aici<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="#things-to-do">See what you can do here<?= v2_ic('arrow-right') ?></a>
           <?php elseif ($atCityPage): ?>
-            <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>"><?= $atCityHasPage ? 'Activități' : 'Atracții' ?> în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>"><?= $atCityHasPage ? 'Things to do' : 'Attractions' ?> in <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php if ($atCitySlug !== ''): ?>
-            <a class="btn btn-outline-light" href="/harta?oras=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>Vezi zona pe hartă</a>
+            <a class="btn btn-outline-light" href="/map?city=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>See the area on the map</a>
           <?php endif; ?>
           <?php if ($mapsUrl): ?>
-            <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Maps</a>
+            <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Maps</a>
           <?php endif; ?>
         </div>
       </div>
 
       <div class="th-media">
         <?php if ($lightbox): ?>
-        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Deschide galeria: <?= v2_e($atName) ?>">
+        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Open the gallery: <?= v2_e($atName) ?>">
           <img src="<?= v2_e($atCompact ? v2_thumb($lightbox[0], 960, 600) : $lightbox[0]) ?>" alt="<?= v2_e($atName) ?>" fetchpriority="high" decoding="async">
-          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>Vezi galeria (<?= count($lightbox) ?>)</span><?php endif; ?>
+          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>See the gallery (<?= count($lightbox) ?>)</span><?php endif; ?>
         </button>
         <?php if ($atCredit): ?>
-        <p class="th-credit">Foto: <?= v2_e($atCredit['author'] ?? 'necunoscut') ?><?php if (!empty($atCredit['license'])): ?> · <?php if (!empty($atCredit['license_url'])): ?><a href="<?= v2_e($atCredit['license_url']) ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($atCredit['license']) ?></a><?php else: ?><?= v2_e($atCredit['license']) ?><?php endif; ?><?php endif; ?><?php if (!empty($atCredit['source'])): ?> · <a href="<?= v2_e($atCredit['source']) ?>" target="_blank" rel="noopener nofollow">sursa</a><?php endif; ?></p>
+        <p class="th-credit">Photo: <?= v2_e(($atCredit['author'] ?? '') !== '' ? $atCredit['author'] : 'unknown author') ?><?php if (!empty($atCredit['license'])): ?> · <?php if (!empty($atCredit['license_url'])): ?><a href="<?= v2_e($atCredit['license_url']) ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($atCredit['license']) ?></a><?php else: ?><?= v2_e($atCredit['license']) ?><?php endif; ?><?php endif; ?><?php $atCreditUrl = $atCredit['source_url'] ?? (preg_match('#^https?://#', (string) ($atCredit['source'] ?? '')) ? $atCredit['source'] : ''); if ($atCreditUrl !== ''): ?> · <a href="<?= v2_e($atCreditUrl) ?>" target="_blank" rel="noopener nofollow"><?= v2_e(!empty($atCredit['source_url']) && !empty($atCredit['source']) ? $atCredit['source'] : 'source') ?></a><?php endif; ?></p>
         <?php endif; ?>
         <?php elseif ($atHeroMap): ?>
         <div class="th-map">
-          <iframe title="Hartă <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=14&output=embed"></iframe>
-          <a class="th-map-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
+          <iframe title="Map: <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=14&output=embed"></iframe>
+          <a class="th-map-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Google Maps<?= v2_ic('arrow-right') ?></a>
         </div>
         <?php else: ?>
         <div class="th-arch is-empty"><?= v2_fallback($atName) ?><?php if ($atCityName !== '' || $atType !== ''): ?><span class="th-arch-name" aria-hidden="true"><?php if ($atCityName !== '' && $atType !== ''): ?><small><?= v2_e($atType) ?></small><?php endif; ?><?= v2_e($atCityName !== '' ? $atCityName : $atType) ?></span><?php endif; ?></div>
@@ -250,8 +261,8 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap tabout-grid<?= $atShowMapSection ? '' : ' is-single' ?>">
       <div>
         <?php if ($atShowAbout): ?>
-          <p class="kicker">Despre</p>
-          <h2 id="tabout-h">Despre <?= v2_e($atName) ?></h2>
+          <p class="kicker">About</p>
+          <h2 id="tabout-h">About <?= v2_e($atName) ?></h2>
           <div class="tabout-body"><?= nl2br(v2_e($atRealDesc)) ?></div>
         <?php endif; ?>
 
@@ -266,8 +277,8 @@ include __DIR__ . '/includes/v2/header.php';
 
       <?php if ($atShowMapSection): ?>
       <div class="tmap">
-        <iframe title="Hartă <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=15&output=embed"></iframe>
-        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Deschide în Google Maps<?= v2_ic('arrow-right') ?></a>
+        <iframe title="Map: <?= v2_e($atName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($atLat . ',' . $atLng) ?>&z=15&output=embed"></iframe>
+        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Google Maps<?= v2_ic('arrow-right') ?></a>
       </div>
       <?php endif; ?>
     </div>
@@ -275,11 +286,11 @@ include __DIR__ . '/includes/v2/header.php';
   <?php endif; ?>
 
   <!-- ===================== LINKED ACTIVITIES ===================== -->
-  <section class="sec tact" id="activitati" aria-labelledby="tact-h">
+  <section class="sec tact" id="things-to-do" aria-labelledby="tact-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">Tururi și experiențe</p><h2 id="tact-h">Activități la <?= v2_e($atName) ?></h2></div>
-        <?php if ($atCityPage): ?><a class="sec-link" href="<?= v2_e($atCityPage) ?>">Toate <?= v2_e($atCityThings) ?> din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <div><p class="kicker">Tours and experiences</p><h2 id="tact-h">Things to do at <?= v2_e($atName) ?></h2></div>
+        <?php if ($atCityPage): ?><a class="sec-link" href="<?= v2_e($atCityPage) ?>">All <?= v2_e($atCityThings) ?> in <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
 
       <?php if (!empty($atActivities)): ?>
@@ -291,14 +302,14 @@ include __DIR__ . '/includes/v2/header.php';
             <span class="xp-body">
               <span class="xp-title"><?= v2_e($a['title'] ?? '') ?></span>
               <span class="xp-meta"><?php if (!empty($a['city']['name'])): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['city']['name']) ?></span><?php endif; ?><?php if (!empty($a['duration_minutes'])): ?><span><?= v2_ic('clock') ?><?= v2_e($durationLabel((int) $a['duration_minutes'])) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if (!empty($a['cheapest_price_cents'])): ?><span class="xp-price">de la<b><?= v2_e($pricedFromCents($a['cheapest_price_cents'])) ?></b></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if (!empty($a['cheapest_price_cents'])): ?><span class="xp-price">from<b><?= v2_e($pricedFromCents($a['cheapest_price_cents'])) ?></b></span><?php endif; ?></span>
             </span>
           </a>
         </li>
         <?php endforeach; ?>
       </ul>
       <?php else: ?>
-      <p class="tnone"><?= v2_ic('info') ?>Nu sunt încă activități cu bilete chiar la <?= v2_e($atName) ?>.<?php if ($atCityPage): ?> <a href="<?= v2_e($atCityPage) ?>">Vezi ce mai e în <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
+      <p class="tnone"><?= v2_ic('info') ?>Nothing with tickets is listed at <?= v2_e($atName) ?> yet.<?php if ($atCityPage): ?> <a href="<?= v2_e($atCityPage) ?>">See what else there is in <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
       <?php endif; ?>
     </div>
   </section>
@@ -308,22 +319,22 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="texp" aria-labelledby="texp-h">
     <img src="<?= v2_e($atCover) ?>" alt="<?= v2_e($atCityName) ?>" loading="lazy" decoding="async">
     <div class="wrap texp-in">
-      <p class="kicker">Explorează</p>
+      <p class="kicker">Explore</p>
       <h2 id="texp-h"><?= v2_e($atCityName) ?></h2>
-      <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>">Toate <?= v2_e($atCityThings) ?> din <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+      <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>">All <?= v2_e($atCityThings) ?> in <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
     </div>
   </section>
   <?php endif; ?>
 
   <!-- ===================== NEARBY ATTRACTIONS ===================== -->
   <?php if (!empty($cityAttractions) || !empty($countyAttractions)): ?>
-  <section class="sec tnear" aria-label="Alte atracții">
+  <section class="sec tnear" aria-label="Other attractions">
     <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
     <div class="wrap tnear-grid">
       <?php if (!empty($cityAttractions)): ?>
       <div>
-        <p class="kicker">În <?= v2_e($atCityName ?: 'oraș') ?></p>
-        <h2>Alte atracții din oraș</h2>
+        <p class="kicker">In <?= v2_e($atCityName ?: 'the city') ?></p>
+        <h2>More to see here</h2>
         <ul class="trows">
           <?php foreach ($cityAttractions as $i => $p) { $renderAttractionRow($p, $i); } ?>
         </ul>
@@ -332,8 +343,8 @@ include __DIR__ . '/includes/v2/header.php';
 
       <?php if (!empty($countyAttractions)): ?>
       <div>
-        <p class="kicker"><?= $atCounty ? 'Județul ' . v2_e($atCounty) : 'În apropiere' ?></p>
-        <h2>Atracții din apropiere</h2>
+        <p class="kicker"><?= $atCounty ? v2_e($atCounty) : 'Nearby' ?></p>
+        <h2>Attractions nearby</h2>
         <ul class="trows">
           <?php foreach ($countyAttractions as $i => $p) { $renderAttractionRow($p, $i + 1); } ?>
         </ul>
@@ -349,12 +360,12 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="lb-top">
       <p class="lb-title" id="lb-title"><?= v2_e($atName) ?></p>
       <span class="lb-count" id="lb-count">1 / <?= count($lightbox) ?></span>
-      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Închide galeria</span></button>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Close the gallery</span></button>
     </div>
     <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
     <div class="lb-nav"<?= count($lightbox) < 2 ? ' hidden' : '' ?>>
-      <button class="rail-btn" type="button" data-lb="prev" aria-label="Fotografia anterioară"><?= v2_ic('arrow-left') ?></button>
-      <button class="rail-btn" type="button" data-lb="next" aria-label="Fotografia următoare"><?= v2_ic('arrow-right') ?></button>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="Previous photo"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="Next photo"><?= v2_ic('arrow-right') ?></button>
     </div>
   </div>
   <?php endif; ?>
