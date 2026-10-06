@@ -32,7 +32,7 @@ $again = $allow ? '/embed/locatie/' . rawurlencode($allow['slug']) : '';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title>Comanda ta · <?= v2_e(SITE_NAME) ?></title>
-<link rel="preload" href="/assets/v2/fonts/Satoshi-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/v2/fonts/Geist-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="<?= v2_asset('css/base.css') ?>">
 <link rel="stylesheet" href="<?= v2_asset('css/embed-ck.css') ?>">
 <base target="_blank">

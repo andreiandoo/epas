@@ -51,17 +51,12 @@ function v2_ic(string $name, string $cls = 'ic'): string
 /** Romanian counting: 1 experiență, 5 experiențe, 20 de experiențe, 101 experiențe. */
 function v2_num(int $n, string $one, string $many): string
 {
-    if ($n === 1) {
-        return '1 ' . $one;
-    }
-    $rem = $n % 100;
-    $de = $n >= 20 && !($rem >= 1 && $rem <= 19);
-    return $n . ' ' . ($de ? 'de ' : '') . $many;
+    return number_format($n, 0, '.', ',') . ' ' . ($n === 1 ? $one : $many);
 }
 
 function v2_exp(int $n): string
 {
-    return v2_num($n, 'experiență', 'experiențe');
+    return v2_num($n, 'experience', 'experiences');
 }
 
 function v2_thousands(int $n): string
@@ -291,9 +286,7 @@ function v2_fallback(string $seed, ?int $position = null): string
 
 function v2_brand(string $cls = 'brand'): string
 {
-    return '<span class="' . $cls . '" role="img" aria-label="viaqui.com">'
-        . '<svg class="s" viewBox="24 33 148 205" aria-hidden="true"><use href="#sym-g"/></svg>'
-        . '<svg class="w" viewBox="52 68 514 74" aria-hidden="true"><use href="#logo-g"/></svg></span>';
+    return '<span class="' . $cls . '" role="img" aria-label="Viaqui"><span class="w" aria-hidden="true">VIAQUI</span></span>';
 }
 
 /** Shape of an activity from /activities, as the cards need it. */
@@ -327,7 +320,7 @@ function v2_activity(array $a): ?array
         'rating' => round((float) ($reviews['average'] ?? 0), 1),
         'reviews' => (int) ($reviews['count'] ?? 0),
         'image' => v2_media_url($a['cover_image_url'] ?? null),
-        'href' => '/experienta/' . $slug,
+        'href' => '/experience/' . $slug,
         'dates' => [],
         // A paid promotion running now for this listing (flags.is_promoted from core): listed first, labelled "Promovat".
         'promoted' => !empty($a['flags']['is_promoted']),

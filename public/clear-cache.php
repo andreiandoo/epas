@@ -10,7 +10,7 @@
  * What gets cleared:
  *   1. includes/cache/pages/*.html         — full HTML output cache
  *   2. includes/cache/*.json               — nav-counts + featured + categories
- *   3. sys_get_temp_dir()/bileteonline_cache/*.json  — api_cached() entries
+ *   3. sys_get_temp_dir()/viaqui_cache/*.json  — api_cached() entries
  *   4. /tmp/bileteonline_backend_unreachable.flag    — backend reachability flag
  *   5. assets/js/core-bundle.js                      — JS bundle (head.php rebuilds)
  *   6. opcache_reset() when the extension is loaded  — PHP bytecode cache
@@ -64,8 +64,8 @@ $wipeGlob($root . '/includes/cache/pages/*.html', 'Page cache (HTML)');
 // Nav / featured / categories JSON cache
 $wipeGlob($root . '/includes/cache/*.json', 'Nav + feature cache (JSON)');
 
-// api_cached() responses live in /tmp/bileteonline_cache/
-$wipeGlob(sys_get_temp_dir() . '/bileteonline_cache/*.json', 'API response cache (tmp)');
+// api_cached() responses live in /tmp/viaqui_cache/
+$wipeGlob(sys_get_temp_dir() . '/viaqui_cache/*.json', 'API response cache (tmp)');
 
 // Backend-unreachable flag
 $dropFile(sys_get_temp_dir() . '/bileteonline_backend_unreachable.flag', 'Backend reachability flag');

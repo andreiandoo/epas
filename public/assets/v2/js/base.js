@@ -50,7 +50,7 @@
       clearTimeout(closeTimer);
       hdr.classList.toggle('menu-open', open);
       menuBtn.setAttribute('aria-expanded', String(open));
-      menuBtn.setAttribute('aria-label', open ? 'Închide meniul' : 'Deschide meniul');
+      menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
       menuBtn.querySelector('use').setAttribute('href', open ? '#i-x' : '#i-list');
       document.documentElement.classList.toggle('mm-lock', open);
       // smooth scrolling (homepage, desktop) pauses while the menu is open
@@ -205,7 +205,7 @@
       if (!data || needle.length < 2) { hideSuggest(); return; }
       sug.textContent = '';
       var n = 0;
-      [['Orașe', 'map-pin', data.c || [], 5], ['Categorii', 'squares-four', data.k || [], 3], ['Ghiduri', 'sun', data.g || [], 2]].forEach(function (g) {
+      [['Cities', 'map-pin', data.c || [], 5], ['Categories', 'squares-four', data.k || [], 3], ['Guides', 'sun', data.g || [], 2]].forEach(function (g) {
         var found = hits(g[2], needle, g[3]);
         if (!found.length) return;
         var k = document.createElement('p');
@@ -218,7 +218,7 @@
           sug.appendChild(option('mm-sg-' + n++, href, g[1], String(it[0]), needle, it.length > 2 ? it[1] : ''));
         });
       });
-      sug.appendChild(option('mm-sg-' + n++, '/cauta?q=' + encodeURIComponent(text), 'magnifying-glass', 'Caută „' + text + '”', '', '', ' mm-sg-all'));
+      sug.appendChild(option('mm-sg-' + n++, '/search?q=' + encodeURIComponent(text), 'magnifying-glass', 'Search for “' + text + '”', '', '', ' mm-sg-all'));
       sug.hidden = false;
       q.setAttribute('aria-expanded', 'true');
       active = -1;
@@ -449,7 +449,7 @@
     }
     badge.textContent = n > 99 ? '99+' : String(n);
     badge.hidden = n < 1;
-    badge.parentElement.setAttribute('aria-label', n > 0 ? 'Coșul de cumpărături (' + n + ')' : 'Coșul de cumpărături');
+    badge.parentElement.setAttribute('aria-label', n > 0 ? 'Basket (' + n + ')' : 'Basket');
   }
   if (badge) {
     renderCart();
@@ -473,7 +473,7 @@
       box.textContent = initials;
       box.hidden = false;
       acct.classList.add('is-user');
-      acct.setAttribute('aria-label', 'Contul tău' + (full ? ', ' + full : ''));
+      acct.setAttribute('aria-label', 'Your account' + (full ? ', ' + full : ''));
     }
   }
 
@@ -494,7 +494,7 @@
       if (!email.checkValidity()) { email.reportValidity(); return; }
       busy = true;
       btn.disabled = true;
-      if (btn.hasAttribute('data-icon-only')) btn.setAttribute('aria-busy', 'true'); else btn.textContent = 'Se trimite…';
+      if (btn.hasAttribute('data-icon-only')) btn.setAttribute('aria-busy', 'true'); else btn.textContent = 'Sending…';
       var payload = { email: email.value.trim(), source: form.getAttribute('data-newsletter') };
       if (form.elements.city && form.elements.city.value) payload.city = form.elements.city.value;
       fetch('/api/proxy.php?action=newsletter.subscribe', {
@@ -512,7 +512,7 @@
         say(true, form.getAttribute('data-ok'));
         if (form.hasAttribute('data-keep')) {
           email.disabled = true;
-          btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Gata';
+          btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Done';
         } else {
           form.reset();
           btn.disabled = false; btn.removeAttribute('aria-busy');

@@ -9,33 +9,33 @@
 <section class="cc" id="cc-banner" aria-labelledby="cc-h" hidden>
   <div class="cc-in">
     <div class="cc-text">
-      <h2 class="cc-h" id="cc-h">Folosim cookies ca site-ul să funcționeze bine și să-ți recomandăm activități potrivite.</h2>
-      <p>Cookies esențiale sunt necesare pentru coș, checkout, login și securitate. Cu acordul tău folosim și cookies pentru analytics, personalizare și marketing. <a href="/cookies">Politica de cookies</a></p>
+      <h2 class="cc-h" id="cc-h">We use cookies so the site works well and to suggest things you might like.</h2>
+      <p>Essential cookies are needed for the basket, checkout, sign-in and security. With your consent we also use cookies for analytics, personalisation and marketing. <a href="/cookies">Cookie policy</a></p>
     </div>
     <div class="cc-actions">
-      <button class="btn btn-primary" type="button" data-cc-action="accept">Acceptă toate</button>
-      <button class="btn btn-ghost" type="button" data-cc-action="reject">Refuză opționale</button>
-      <button class="link-btn" type="button" data-cc-action="open">Personalizează</button>
+      <button class="btn btn-primary" type="button" data-cc-action="accept">Accept all</button>
+      <button class="btn btn-ghost" type="button" data-cc-action="reject">Reject optional</button>
+      <button class="link-btn" type="button" data-cc-action="open">Customise</button>
     </div>
   </div>
 </section>
 <div class="cc-dialog" id="cc-dialog" role="dialog" aria-modal="true" aria-labelledby="cc-title" data-lenis-prevent hidden>
   <div class="cc-panel">
     <div class="cc-top">
-      <h2 id="cc-title">Setări cookies</h2>
-      <button class="icon-btn" type="button" data-cc-action="close"><?= v2_ic('x') ?><span class="sr">Închide setările</span></button>
+      <h2 id="cc-title">Cookie settings</h2>
+      <button class="icon-btn" type="button" data-cc-action="close"><?= v2_ic('x') ?><span class="sr">Close settings</span></button>
     </div>
-    <p>Alege ce categorii permiți. Cookies esențiale rămân active pentru funcționarea platformei.</p>
+    <p>Choose which categories you allow. Essential cookies stay on so the platform can work.</p>
     <ul class="cc-list">
-      <li><label><span><b>Esențiale</b><small>Coș, checkout, login, securitate și măsurare de audiență strict agregată.</small></span><input class="cc-switch" type="checkbox" checked disabled></label></li>
-      <li><label><span><b>Analytics</b><small>Măsurarea traficului și a erorilor cu instrumente terțe, de exemplu Google Analytics.</small></span><input class="cc-switch" type="checkbox" data-cc="analytics"></label></li>
-      <li><label><span><b>Personalizare</b><small>Recomandări după orașele și categoriile vizitate, filtre memorate.</small></span><input class="cc-switch" type="checkbox" data-cc="personalization"></label></li>
-      <li><label><span><b>Marketing</b><small>Pixeli pentru campanii și remarketing: Meta, Google Ads, TikTok.</small></span><input class="cc-switch" type="checkbox" data-cc="marketing"></label></li>
+      <li><label><span><b>Essential</b><small>Basket, checkout, sign-in, security and strictly aggregated audience measurement.</small></span><input class="cc-switch" type="checkbox" checked disabled></label></li>
+      <li><label><span><b>Analytics</b><small>Traffic and error measurement with third-party tools such as Google Analytics.</small></span><input class="cc-switch" type="checkbox" data-cc="analytics"></label></li>
+      <li><label><span><b>Personalisation</b><small>Suggestions based on the cities and categories you visit, remembered filters.</small></span><input class="cc-switch" type="checkbox" data-cc="personalization"></label></li>
+      <li><label><span><b>Marketing</b><small>Pixels for campaigns and remarketing: Meta, Google Ads, TikTok.</small></span><input class="cc-switch" type="checkbox" data-cc="marketing"></label></li>
     </ul>
     <div class="cc-foot">
-      <button class="btn btn-ghost" type="button" data-cc-action="reject">Refuză opționale</button>
-      <button class="btn btn-ghost" type="button" data-cc-action="save">Salvează preferințele</button>
-      <button class="btn btn-primary" type="button" data-cc-action="accept">Acceptă toate</button>
+      <button class="btn btn-ghost" type="button" data-cc-action="reject">Reject optional</button>
+      <button class="btn btn-ghost" type="button" data-cc-action="save">Save preferences</button>
+      <button class="btn btn-primary" type="button" data-cc-action="accept">Accept all</button>
     </div>
   </div>
 </div>

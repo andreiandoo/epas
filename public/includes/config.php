@@ -38,17 +38,28 @@ if (USE_STAGE_API) {
     define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
     define('STORAGE_URL', 'https://core.tixello.com/storage');
 }
-define('API_KEY', 'mpc_l23PgOjVYM8H57BpKjxGT7keM61NxRCvgtqMSKz4BbG0K40FnBVlS7pcawMo');
+// Secrets are not kept in git (the repository is public). They are read from a PHP file that exists only on the
+// server and returns an array; see includes/secrets.example.php. First match wins:
+//   1. secrets.php one level above the web directory (on Ploi: /home/<user>/viaqui.com/secrets.php)
+//   2. data/secrets.php inside the site (local development; git-ignored)
+$viaquiSecrets = [];
+foreach ([dirname(BILETEONLINE_ROOT) . '/secrets.php', BILETEONLINE_ROOT . '/data/secrets.php'] as $viaquiSecretsFile) {
+    if (is_file($viaquiSecretsFile)) {
+        $viaquiSecrets = (array) require $viaquiSecretsFile;
+        break;
+    }
+}
+define('API_KEY', (string) ($viaquiSecrets['api_key'] ?? ''));
 define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
 // CARTO basemaps key for the maps (Leaflet tiles). A browser key: it travels in every tile URL and CARTO limits it
 // to the domains set in the CARTO dashboard; maps fall back to OpenStreetMap tiles when CARTO refuses it.
-define('CARTO_API_KEY', 'cb1_3t8y_1_9291a785a6802ef03f29b5e1');
+define('CARTO_API_KEY', 'cb1_4bli_1_60582fe0e737ee021895d6fc');
 
 // Shared secret for /api/cache-bust.php — verifies the POST is coming
 // from Tixello admin (which has the matching VIAQUI_CACHE_BUST_TOKEN
 // in its env). Rotate by updating both sides simultaneously.
-define('CACHE_BUST_TOKEN', 'cb_REPLACE_ME_GENERATE_NEW_TOKEN_FOR_VIAQUI');
+define('CACHE_BUST_TOKEN', (string) ($viaquiSecrets['cache_bust_token'] ?? ''));
 
 // Site Configuration
 define('SITE_NAME', 'Viaqui');
@@ -73,7 +84,7 @@ define('SUPPORT_PHONE', ''); // TODO: set actual phone for viaqui.com
 // BREVO (Sendinblue) Email Configuration
 // ===========================================
 // Get your API key from: https://app.brevo.com/settings/keys/api
-define('BREVO_API_KEY', 'xkeysib-YOUR-API-KEY-HERE'); // Replace with actual Brevo API key
+define('BREVO_API_KEY', (string) ($viaquiSecrets['brevo_api_key'] ?? ''));
 define('BREVO_SENDER_NAME', SITE_NAME);
 define('BREVO_SENDER_EMAIL', 'noreply@viaqui.com'); // Must be verified in Brevo
 

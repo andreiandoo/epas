@@ -139,7 +139,7 @@ function api_request(string $method, string $url, ?array $data = null): array
  */
 function api_cached(string $key, callable $callback, int $ttl = 300)
 {
-    $cacheDir = sys_get_temp_dir() . '/bileteonline_cache';
+    $cacheDir = sys_get_temp_dir() . '/viaqui_cache';
     $cacheFile = $cacheDir . '/' . md5($key) . '.json';
 
     // Create cache directory if needed
@@ -216,7 +216,7 @@ function api_cached(string $key, callable $callback, int $ttl = 300)
  */
 function api_cached_many(array $jobs): array
 {
-    $cacheDir = sys_get_temp_dir() . '/bileteonline_cache';
+    $cacheDir = sys_get_temp_dir() . '/viaqui_cache';
     if (!is_dir($cacheDir)) {
         @mkdir($cacheDir, 0755, true);
     }
