@@ -1,0 +1,1425 @@
+/* viaqui.com v2: the interactive attractions map.
+ *
+ *   EPMap.mount(container, config) -> instance { open, close, setTypes, destroy }
+ *
+ * One engine, several hosts: a full-screen dialog on /atractii, an inline map on /harta, and
+ * pre-filtered mini maps elsewhere. The host only supplies a container and a config; every bit
+ * of UI below (search, type chips, list, card, bottom sheet) is built here, so there is a single
+ * place to fix a map bug.
+ *
+ * Data is the static pin dataset written by bin/build-map-data.php: columnar rows whose layout is
+ * described by its own `fields` array, so the offsets are never hard-coded here. ~7.3k pins arrive
+ * in one immutable, gzipped download and every filter, search and sort after that is local --
+ * no request per pan, and the search the marketplace API does not offer works anyway.
+ *
+ * Leaflet + markercluster load from cdnjs on first open, never on page load. Tiles are CARTO's
+ * with the site key, falling back to OpenStreetMap when CARTO refuses them (see the CARTO_API_KEY
+ * note in includes/config.php).
+ *
+ * Accessibility: the list beside the map is the keyboard and screen-reader path to every pin, so
+ * markers are deliberately not focusable -- 3k tab stops would be worse than none.
+ */
+(function () {
+  'use strict';
+
+  var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+  var CLUSTER = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/';
+  var RO = { lat: 45.94, lng: 24.97, zoom: 7 };
+  /* "Populare" hides the 3.9k churches and monasteries: they are 54% of the dataset and they bury
+     everything else. One list, easy to retune. */
+  var POPULAR_EXCLUDE = ['biserica-manastire'];
+  var LIST_PAGE = 40;
+  var THEME_KEY = 'bo_map_theme';
+  /* Close enough that the streets around the pin are readable — centring at country zoom tells
+     you nothing about where the place actually is. */
+  var FOCUS_ZOOM = 15;
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* A mouse can hover, so a pin can preview on hover and navigate on click. A finger cannot, so
+     there the first tap has to be the preview. */
+  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var libs = null;
+
+  /* ---------------------------------------------------------------- utils */
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+  /* Place icons (includes/v2/product-icons.php, printed by the header as #i-pi-<key>): an attraction type's by its
+     slug, the rest by key. An emoji saved by an older version of the page is read as the key it stood for. */
+  var TYPE_ICON = { 'castel-palat': 'castle', 'muzeu': 'museum', 'monument': 'columns', 'biserica-manastire': 'church', 'parc-gradina': 'park',
+    'piata-centru-vechi': 'city', 'cladire-istorica': 'house', 'punct-panoramic': 'binoculars', 'lac-natura': 'waves', 'teatru-opera': 'theatre' };
+  var OLD_EMOJI = { '\uD83C\uDF7D\uFE0F': 'fork', '\uD83C\uDF7D': 'fork', '\u2615': 'coffee', '\uD83D\uDE0C': 'armchair', '\uD83D\uDEB6': 'walk',
+    '\uD83D\uDECD\uFE0F': 'shopping', '\uD83D\uDECD': 'shopping', '\uD83C\uDFE8': 'bed', '\uD83D\uDD51': 'clock', '\uD83C\uDF9F\uFE0F': 'ticket',
+    '\u2728': 'sparkle', '\uD83D\uDCCD': 'pin' };
+  function placeKey(k, fallback) {
+    if (k && OLD_EMOJI[k]) k = OLD_EMOJI[k];
+    return typeof k === 'string' && /^[a-z]{1,16}$/.test(k) && document.getElementById('i-pi-' + k) ? k : (fallback || 'pin');
+  }
+  function placeIcon(k, fallback, cls) { return icon('pi-' + placeKey(k, fallback), cls || 'ic-em'); }
+  function typeIcon(t, cls) { return placeIcon(t ? (TYPE_ICON[t[0]] || t[2]) : null, 'pin', cls); }
+  function icon(name, cls) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    var u = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    s.setAttribute('class', cls || 'ic');
+    s.setAttribute('aria-hidden', 'true');
+    u.setAttribute('href', '#i-' + name);
+    s.appendChild(u);
+    return s;
+  }
+  /**
+   * Catalogue covers are served at upload size — a 56px row does not need a megabyte. /api/img.php
+   * resizes and caches; it passes anything that is not ours straight back, so this is safe to call
+   * on any absolute URL.
+   */
+  function thumb(url, w, h) {
+    if (!url || url.indexOf('http') !== 0) return url || '';
+    return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
+  }
+
+  function nf(n) { return new Intl.NumberFormat('ro-RO').format(n); }
+  /* Romanian counting, same rule as v2_num() in PHP. */
+  function count(n, one, many) {
+    if (n === 1) return '1 ' + one;
+    var rem = n % 100;
+    return nf(n) + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
+  }
+  function fold(s) {
+    return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+  function debounce(fn, ms) {
+    var t;
+    return function () {
+      var self = this, args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function km(aLat, aLng, bLat, bLng) {
+    var r = Math.PI / 180, dLat = (bLat - aLat) * r, dLng = (bLng - aLng) * r;
+    var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 12742 * Math.asin(Math.min(1, Math.sqrt(x)));
+  }
+  function hm(min) {
+    min = Math.round(min || 0);
+    var h = Math.floor(min / 60), m = min % 60;
+    return h ? (h + ' h' + (m ? ' ' + m + ' min' : '')) : (m + ' min');
+  }
+  function dist(d) { return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(d < 10 ? 1 : 0).replace('.', ',') + ' km'; }
+
+  /* Google's encoded polyline, precision 5 — how OSRM hands back the driving line. */
+  function decodePolyline(str) {
+    var index = 0, lat = 0, lng = 0, out = [], shift, result, byte;
+    while (index < str.length) {
+      shift = 0; result = 0;
+      do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      out.push([lat / 1e5, lng / 1e5]);
+    }
+    return out;
+  }
+
+  function loadCss(href) {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+  }
+  function loadJs(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error(src)); };
+      document.head.appendChild(s);
+    });
+  }
+  /* Leaflet first, then markercluster: the plugin attaches itself to window.L. */
+  function loadLibs() {
+    if (libs) return libs;
+    libs = (window.L && window.L.map ? Promise.resolve() : (loadCss(LEAFLET + 'leaflet.min.css'), loadJs(LEAFLET + 'leaflet.min.js')))
+      .then(function () {
+        if (!window.L || !window.L.map) throw new Error('leaflet');
+        if (window.L.markerClusterGroup) return;
+        loadCss(CLUSTER + 'MarkerCluster.min.css');
+        return loadJs(CLUSTER + 'leaflet.markercluster.min.js');
+      })
+      .then(function () { return window.L; });
+    return libs;
+  }
+
+  /* ---------------------------------------------------------------- data */
+
+  var dataCache = {};
+  function loadData(url) {
+    if (dataCache[url]) return dataCache[url];
+    dataCache[url] = fetch(url, { credentials: 'omit' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('map data ' + r.status);
+        return r.json();
+      })
+      .then(function (raw) {
+        var f = {};
+        (raw.fields || []).forEach(function (name, i) { f[name] = i; });
+        var rows = raw.points || [];
+        var types = raw.types || [];
+        var cities = raw.cities || [];
+        var zones = raw.zones || [];
+        var flagBits = raw.flags || { image: 1, featured: 2, activities: 4 };
+
+        /* One folded haystack per pin (name + city), built once so typing stays instant. */
+        var hay = new Array(rows.length);
+        var lat = new Float64Array(rows.length);
+        var lng = new Float64Array(rows.length);
+        for (var i = 0; i < rows.length; i++) {
+          var r = rows[i];
+          var cityName = r[f.city] >= 0 && cities[r[f.city]] ? cities[r[f.city]][1] : '';
+          hay[i] = fold(r[f.name] + ' ' + cityName);
+          lat[i] = r[f.lat_e5] / 100000;
+          lng[i] = r[f.lng_e5] / 100000;
+        }
+        return { f: f, rows: rows, types: types, cities: cities, zones: zones, flags: flagBits, hay: hay, lat: lat, lng: lng };
+      });
+    return dataCache[url];
+  }
+
+  /**
+   * Route mode builds the same structure loadData() returns, but out of the handful of stops the
+   * page already has. The rest of the module then works unchanged -- and a route page never
+   * downloads the 7k-pin dataset it would not use.
+   * A stop row is [slug, name, city, citySlug, county, type, emoji, lat, lng, img, legKm, legMin,
+   * flags?] -- the last one optional, so a host that has the catalogue flags (the planner) can keep
+   * the "has tickets" marking on its pins.
+   */
+  function datasetFromStops(stops) {
+    var f = { name: 0, slug: 1, type: 2, city: 3, zone: 4, lat_e5: 5, lng_e5: 6, flags: 7, img: 8 };
+    var types = [], typeIdx = {}, cities = [], cityIdx = {};
+    var rows = [], hay = [], lat = new Float64Array(stops.length), lng = new Float64Array(stops.length);
+
+    stops.forEach(function (st, i) {
+      var tName = st[5] || '', tKey = tName + '|' + (st[6] || '');
+      if (tName && typeIdx[tKey] === undefined) {
+        typeIdx[tKey] = types.length;
+        types.push(['t' + types.length, tName, st[6] || '', null, 0]);
+      }
+      var cKey = st[3] || st[2];
+      if (cKey && cityIdx[cKey] === undefined) {
+        cityIdx[cKey] = cities.length;
+        cities.push([st[3] || '', st[2] || '', st[4] || '', '', 0]);
+      }
+      var t = tName ? typeIdx[tKey] : -1, c = cKey ? cityIdx[cKey] : -1;
+      if (t >= 0) types[t][4]++;
+      if (c >= 0) cities[c][4]++;
+      var fl = st[12] !== undefined ? st[12] : (st[9] ? 1 : 0);
+      rows.push([st[1], st[0], t, c, -1, Math.round(st[7] * 100000), Math.round(st[8] * 100000), fl, st[9] || '']);
+      hay.push(fold(st[1] + ' ' + (st[2] || '')));
+      lat[i] = st[7];
+      lng[i] = st[8];
+    });
+
+    return { f: f, rows: rows, types: types, cities: cities, zones: [], flags: { image: 1, featured: 2, activities: 4 }, hay: hay, lat: lat, lng: lng, legs: stops.map(function (st) { return st[10]; }), mins: stops.map(function (st) { return st[11] || 0; }) };
+  }
+
+  /* ---------------------------------------------------------------- instance */
+
+  function mount(container, cfg) {
+    cfg = cfg || {};
+    if (!container) return null;
+
+    var D = null;                      // dataset once loaded
+    var map = null, cluster = null, tiles = null, usingOsm = false;
+    var markers = [];                  // lazily created, one per pin index
+    var visible = [];                  // pin indices passing the filters
+    var inView = [];                   // subset currently on screen, sorted by distance
+    var listShown = LIST_PAGE;
+    var selected = -1;
+    var me = null;                     // [lat, lng] from geolocation
+    var opened = false, booting = false, lastFocus = null;
+    var onChange = null;
+    var theme = cfg.theme || readTheme() || 'light';
+    var route = Array.isArray(cfg.routeStops) && cfg.routeStops.length ? cfg.routeStops : null;
+    var routeLine = null;
+    /* A host that draws its own list (cfg.bare) drives the view from outside: which stop is lit, what
+       the map frames. A route redraw is asynchronous, so the last instruction waits for it. */
+    var drawing = false, pendingViews = [], ghosts = [], dot = null, onPin = null, flow = null;
+    function later(fn) { if (!map || drawing) pendingViews.push(fn); else fn(); }
+    function fitOpts(o, maxZoom) {
+      var p = (o && o.pad) || {};
+      return { paddingTopLeft: [p.l || 40, p.t || 40], paddingBottomRight: [p.r || 40, p.b || 40],
+        maxZoom: (o && o.maxZoom) || maxZoom || 15, animate: !reduceMotion && !(o && o.animate === false) };
+    }
+
+    var state = {
+      q: '',
+      // empty = every type; the host can preselect (the page's own Tip filter carries over)
+      types: (cfg.types && cfg.types.length) ? cfg.types.slice() : [],
+      preset: cfg.preset || 'popular',
+      city: cfg.city || '',
+      zone: cfg.zone || '',          // a county (or, for old links, a region) by name or slug
+      region: cfg.region || '',      // a whole historical region, which spans several counties
+      photo: false,
+      ticket: false
+    };
+
+    function readTheme() {
+      try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
+    }
+    function saveTheme(v) {
+      try { localStorage.setItem(THEME_KEY, v); } catch (e) {}
+    }
+
+    /* ---------- shell ---------- */
+
+    var ui = {};
+    container.classList.add('epm');
+    container.classList.add(cfg.dialog ? 'epm-dialog' : 'epm-inline');
+    if (theme === 'dark') container.classList.add('is-dark');
+    if (cfg.dialog) {
+      container.setAttribute('role', 'dialog');
+      container.setAttribute('aria-modal', 'true');
+      container.setAttribute('aria-label', cfg.title || 'Harta atracțiilor');
+      container.hidden = true;
+    }
+
+    function buildShell() {
+      var bar = el('header', 'epm-bar');
+      var main = el('div', 'epm-bar-main');
+
+      if (cfg.title) main.appendChild(el('h2', 'epm-title', cfg.title));
+
+      var search = el('div', 'epm-search');
+      search.appendChild(icon('magnifying-glass'));
+      ui.input = el('input');
+      ui.input.type = 'search';
+      ui.input.placeholder = 'Caută o atracție sau un oraș';
+      ui.input.setAttribute('aria-label', 'Caută pe hartă');
+      ui.input.autocomplete = 'off';
+      search.appendChild(ui.input);
+      ui.clear = el('button', 'epm-search-clear');
+      ui.clear.type = 'button';
+      ui.clear.hidden = true;
+      ui.clear.appendChild(icon('x'));
+      ui.clear.appendChild(el('span', 'sr', 'Șterge căutarea'));
+      search.appendChild(ui.clear);
+      main.appendChild(search);
+
+      ui.locate = tool('target', 'Lângă mine');
+      main.appendChild(ui.locate);
+
+      ui.theme = tool('sun', 'Aspect');
+      ui.theme.classList.add('epm-tool-icon');
+      ui.theme.querySelector('.epm-tool-label').classList.add('sr');
+      main.appendChild(ui.theme);
+
+      if (cfg.dialog) {
+        ui.close = tool('x', 'Închide harta');
+        ui.close.classList.add('epm-tool-icon');
+        ui.close.querySelector('.epm-tool-label').classList.add('sr');
+        main.appendChild(ui.close);
+      }
+      bar.appendChild(main);
+
+      /* The type row scrolls sideways. Touch has native momentum; with a mouse it needs help, so
+         it gets drag-to-scroll, wheel-to-scroll and a pair of arrows that appear when it overflows. */
+      if (route) search.hidden = true;
+
+      ui.chipbar = el('div', 'epm-chipbar');
+      ui.prev = chipNav('arrow-left', 'Tipuri anterioare', -1);
+      ui.chips = el('div', 'epm-chips');
+      ui.chips.setAttribute('role', 'group');
+      ui.chips.setAttribute('aria-label', 'Tip de atracție');
+      ui.next = chipNav('arrow-right', 'Tipuri următoare', 1);
+      ui.chipbar.appendChild(ui.prev);
+      ui.chipbar.appendChild(ui.chips);
+      ui.chipbar.appendChild(ui.next);
+      if (!route && cfg.chips !== false) bar.appendChild(ui.chipbar);
+
+      ui.meta = el('p', 'epm-meta');
+      ui.meta.setAttribute('aria-live', 'polite');
+      bar.appendChild(ui.meta);
+      container.appendChild(bar);
+
+      var body = el('div', 'epm-body');
+
+      ui.side = el('aside', 'epm-side');
+      ui.side.setAttribute('aria-label', 'Atracțiile din zona afișată');
+      ui.side.setAttribute('data-snap', 'half');
+      ui.grab = el('button', 'epm-sheet-grab');
+      ui.grab.type = 'button';
+      ui.grab.appendChild(el('span', '', 'Trage pentru a mări sau micșora lista'));
+      ui.side.appendChild(ui.grab);
+      var head = el('div', 'epm-side-head');
+      ui.inview = el('span', '', 'Se încarcă…');
+      head.appendChild(ui.inview);
+      ui.all = el('button', 'link-btn', 'Arată toate');
+      ui.all.type = 'button';
+      head.appendChild(ui.all);
+      ui.side.appendChild(head);
+      ui.list = el('ul', 'epm-list');
+      ui.side.appendChild(ui.list);
+      body.appendChild(ui.side);
+
+      ui.canvas = el('div', 'epm-map');
+      ui.loading = el('div', 'epm-loading', 'Se încarcă harta…');
+      ui.canvas.appendChild(ui.loading);
+      body.appendChild(ui.canvas);
+
+      ui.card = el('div', 'epm-card');
+      ui.card.hidden = true;
+      body.appendChild(ui.card);
+
+      container.appendChild(body);
+      if (cfg.bare) container.classList.add('epm-bare');
+      wire();
+    }
+
+    function chipNav(ic, label, dir) {
+      var b = el('button', 'epm-chipnav');
+      b.type = 'button';
+      b.hidden = true;
+      b.appendChild(icon(ic));
+      b.appendChild(el('span', 'sr', label));
+      b.addEventListener('click', function () {
+        ui.chips.scrollBy({ left: dir * Math.round(ui.chips.clientWidth * 0.8), behavior: reduceMotion ? 'auto' : 'smooth' });
+      });
+      return b;
+    }
+
+    /* Drag with the mouse, scroll with the wheel, and keep the arrows in sync. A drag must not
+       land as a click on the chip underneath, hence the capture-phase guard. */
+    function wireChips() {
+      var box = ui.chips, down = null, moved = false;
+
+      function arrows() {
+        var over = box.scrollWidth - box.clientWidth > 4;
+        ui.prev.hidden = !over || box.scrollLeft <= 2;
+        ui.next.hidden = !over || box.scrollLeft >= box.scrollWidth - box.clientWidth - 2;
+        ui.chipbar.classList.toggle('is-over', over);
+      }
+      box.addEventListener('scroll', arrows, { passive: true });
+      window.addEventListener('resize', arrows);
+      ui.syncChipNav = arrows;
+
+      box.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'touch' || e.button !== 0) return;
+        down = { x: e.clientX, left: box.scrollLeft, id: e.pointerId };
+        moved = false;
+      });
+      box.addEventListener('pointermove', function (e) {
+        if (!down || e.pointerId !== down.id) return;
+        var dx = e.clientX - down.x;
+        if (!moved && Math.abs(dx) > 3) {
+          moved = true;
+          box.classList.add('is-dragging');
+          try { box.setPointerCapture(down.id); } catch (err) {}
+        }
+        if (moved) box.scrollLeft = down.left - dx;
+      });
+      ['pointerup', 'pointercancel'].forEach(function (t) {
+        box.addEventListener(t, function (e) {
+          if (down) {
+            try { box.releasePointerCapture(down.id); } catch (err) {}
+          }
+          down = null;
+          box.classList.remove('is-dragging');
+        });
+      });
+      box.addEventListener('click', function (e) {
+        if (!moved) return;
+        moved = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+
+      box.addEventListener('wheel', function (e) {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        if (box.scrollWidth - box.clientWidth <= 4) return;
+        e.preventDefault();
+        box.scrollLeft += e.deltaY;
+      }, { passive: false });
+    }
+
+    function tool(ic, label) {
+      var b = el('button', 'epm-tool');
+      b.type = 'button';
+      b.appendChild(icon(ic));
+      b.appendChild(el('span', 'epm-tool-label', label));
+      b.setAttribute('aria-label', label);
+      return b;
+    }
+
+    /* ---------- filters ---------- */
+
+    function typeSlugs() {
+      return D.types.map(function (t) { return t[0]; });
+    }
+    function presetTypes(name) {
+      if (name === 'all') return [];
+      return typeSlugs().filter(function (s) { return POPULAR_EXCLUDE.indexOf(s) === -1; });
+    }
+    function isPreset(name) {
+      var want = presetTypes(name).slice().sort().join(',');
+      var have = state.types.slice().sort().join(',');
+      return name === 'all' ? state.types.length === 0 : want === have;
+    }
+
+    function buildChips() {
+      var flagsOnly = cfg.chips === 'flags';
+      ui.chips.textContent = '';
+      if (!flagsOnly) ['popular', 'all'].forEach(function (p) {
+        var b = el('button', 'epm-chip epm-chip-preset');
+        b.type = 'button';
+        b.dataset.preset = p;
+        b.textContent = p === 'popular' ? 'Populare' : 'Toate';
+        ui.chips.appendChild(b);
+      });
+      if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
+
+      if (!flagsOnly) D.types.forEach(function (t) {
+        if (!t[4]) return;                                    // no pins of this type, no chip
+        var b = el('button', 'epm-chip');
+        b.type = 'button';
+        b.dataset.type = t[0];
+        var e = el('span', 'epm-chip-emoji');
+        e.appendChild(typeIcon(t));
+        e.setAttribute('aria-hidden', 'true');
+        b.appendChild(e);
+        b.appendChild(document.createTextNode(t[1]));
+        b.appendChild(el('b', '', nf(t[4])));
+        ui.chips.appendChild(b);
+      });
+
+      /* Only offer a toggle that can actually change the result. */
+      var anyPhoto = false, anyTicket = false;
+      for (var i = 0; i < D.rows.length && !(anyPhoto && anyTicket); i++) {
+        var fl = D.rows[i][D.f.flags];
+        if (fl & D.flags.image) anyPhoto = true;
+        if (fl & D.flags.activities) anyTicket = true;
+      }
+      if (anyPhoto || anyTicket) {
+        if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
+        if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', 'Cu bilete'));
+        if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'Cu poză'));
+      }
+      paintChips();
+      if (ui.syncChipNav) ui.syncChipNav();
+    }
+    function flagChip(key, ic, label) {
+      var b = el('button', 'epm-chip');
+      b.type = 'button';
+      b.dataset.flag = key;
+      b.appendChild(icon(ic));
+      b.appendChild(document.createTextNode(label));
+      return b;
+    }
+    function paintChips() {
+      if (!ui.chips || cfg.chips === false) return;
+      [].forEach.call(ui.chips.children, function (b) {
+        if (b.dataset.preset) b.setAttribute('aria-pressed', String(isPreset(b.dataset.preset)));
+        else if (b.dataset.type) b.setAttribute('aria-pressed', String(state.types.indexOf(b.dataset.type) !== -1));
+        else if (b.dataset.flag) b.setAttribute('aria-pressed', String(!!state[b.dataset.flag]));
+      });
+    }
+
+    function applyFilters() {
+      var f = D.f, rows = D.rows, q = fold(state.q.trim());
+      var wantTypes = null;
+      if (state.types.length) {
+        wantTypes = {};
+        state.types.forEach(function (s) { wantTypes[s] = 1; });
+      }
+      var cityIdx = -1;
+      if (state.city) {
+        for (var ci = 0; ci < D.cities.length; ci++) if (D.cities[ci][0] === state.city) { cityIdx = ci; break; }
+      }
+
+      /* A region spans several counties, so the zone filter is a set, not one index. A county name
+         can also equal a region name (Maramureș), so an explicit region wins over the guess. */
+      var slugify = function (v) { return fold(v || '').replace(/\s+/g, '-'); };
+      var zoneSet = null;
+      if (state.region) {
+        zoneSet = {};
+        var wantRegion = slugify(state.region);
+        for (var ri = 0; ri < D.zones.length; ri++) {
+          if (slugify(D.zones[ri][1]) === wantRegion) zoneSet[ri] = 1;
+        }
+      } else if (state.zone) {
+        var wantZone = slugify(state.zone);
+        zoneSet = {};
+        for (var zi = 0; zi < D.zones.length; zi++) {
+          if (slugify(D.zones[zi][0]) === wantZone) zoneSet[zi] = 1;
+        }
+        // Nothing by county: an older ?zona= link that meant a region.
+        if (!Object.keys(zoneSet).length) {
+          for (var zj = 0; zj < D.zones.length; zj++) {
+            if (slugify(D.zones[zj][1]) === wantZone) zoneSet[zj] = 1;
+          }
+        }
+      }
+
+      var out = [];
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        if (wantTypes) {
+          var t = r[f.type];
+          if (t < 0 || !wantTypes[D.types[t][0]]) continue;
+        }
+        if (cityIdx >= 0 && r[f.city] !== cityIdx) continue;
+        if (zoneSet && !zoneSet[r[f.zone]]) continue;
+        if (state.photo && !(r[f.flags] & D.flags.image)) continue;
+        if (state.ticket && !(r[f.flags] & D.flags.activities)) continue;
+        if (q && D.hay[i].indexOf(q) === -1) continue;
+        out.push(i);
+      }
+      visible = out;
+    }
+
+    /* ---------- markers ---------- */
+
+    function markerFor(i) {
+      if (markers[i]) return markers[i];
+      var L = window.L, r = D.rows[i], f = D.f;
+      var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
+      var label = route ? String(i + 1) : null;
+      /* The type also colours the pin: a map where every dot is the same green tells you where
+         things are but not what they are, and the emoji alone is unreadable at pin size. The
+         colours are defined in map.css and repeated on the type tiles in the /harta explorer,
+         which is what makes them a legend rather than decoration. */
+      var pin = el('span', 'epm-pin' + (route ? ' is-step' : '')
+        + (t && t[0] ? ' epm-t-' + t[0] : '')
+        + ((r[f.flags] & D.flags.activities) ? ' has-ticket' : ''), label);
+      if (!route) pin.appendChild(typeIcon(t));
+      pin.setAttribute('data-i', String(i));
+      var m = L.marker([D.lat[i], D.lng[i]], {
+        keyboard: false,
+        title: r[f.name],
+        icon: L.divIcon({ className: 'epm-pin-wrap', html: pin.outerHTML, iconSize: [30, 30], iconAnchor: [15, 15] })
+      });
+      m.epIndex = i;
+      /* Hover previews exactly what a click would open, so the card is the preview. The click
+         itself then goes straight to the attraction, in a new tab, because the map is where you
+         compare places and losing it to a navigation is the wrong trade. */
+      if (cfg.bare) {
+        m.on('click', function () { if (onPin) onPin(i, r[f.slug]); });
+      } else if (canHover) {
+        m.on('mouseover', function () { hot(i); select(i); });
+        m.on('mouseout', function () { hot(-1); });
+        m.on('click', function () { window.open(href(i), '_blank', 'noopener'); });
+      } else {
+        m.on('click', function () { select(i); });
+      }
+      markers[i] = m;
+      return m;
+    }
+
+    function href(i) { return (cfg.base || '/atractie/') + D.rows[i][D.f.slug]; }
+
+    function drawMarkers() {
+      if (!cluster) return;
+      busy(true);
+      /* Let the overlay paint before the (blocking) bulk insert of a few thousand markers. */
+      drawing = true;
+      requestAnimationFrame(function () {
+        cluster.clearLayers();
+        var batch = new Array(visible.length);
+        for (var i = 0; i < visible.length; i++) batch[i] = markerFor(visible[i]);
+        cluster.addLayers(batch);
+        drawRouteLine();
+        busy(false);
+        syncView();
+        drawing = false;
+        var runs = pendingViews; pendingViews = []; runs.forEach(function (run) { run(); });
+      });
+    }
+    /**
+     * The line is the route's order made visible; without it the numbers are just numbers.
+     * With cfg.routeGeometry it is the actual driving line from the routing service, drawn solid;
+     * without it, the straight hops between stops, drawn dashed so nobody reads them as a road.
+     */
+    function drawRouteLine() {
+      if (!route || !map || routeLine) return;
+      var stops = [];
+      for (var i = 0; i < D.rows.length; i++) stops.push([D.lat[i], D.lng[i]]);
+
+      // A host whose pins are not a sequence (the overview of the roads) draws its own lines.
+      if (cfg.routeLine === false) {
+        if (stops.length) map.fitBounds(stops, { padding: [50, 50], maxZoom: 12, animate: false });
+        return;
+      }
+
+      var road = null;
+      if (cfg.routeGeometry) {
+        try { road = decodePolyline(cfg.routeGeometry); } catch (e) { road = null; }
+        if (road && road.length < 2) road = null;
+      }
+      routeLine = window.L.polyline(road || stops, {
+        // an explicit SVG renderer: the map runs with preferCanvas, where a className and a CSS
+        // dash pattern would have nothing to attach to
+        renderer: window.L.svg(),
+        className: 'epm-route-line' + (road ? ' is-road' : ''),
+        color: cfg.routeColor || '#1E5B48',
+        weight: road ? (cfg.bare ? 6 : 4) : 3,
+        opacity: road ? (cfg.bare ? .95 : .8) : .85,
+        dashArray: road ? null : '2 8',
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+      // In a host's own layout the road also says which way it runs: a row of light dashes that
+      // travels along it, from the first stop to the last (map.css moves them; the path is the same).
+      if (road && cfg.bare) {
+        flow = window.L.polyline(road, { renderer: window.L.svg(), className: 'epm-route-flow', color: '#FFFFFF',
+          weight: 2, opacity: .85, dashArray: '2 14', lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(map);
+      }
+      if (stops.length) map.fitBounds(road && cfg.bare ? road : stops, { padding: [60, 60], maxZoom: 15, animate: false });
+    }
+
+    function busy(on) {
+      ui.loading.hidden = !on;
+      if (on) ui.loading.textContent = 'Se actualizează harta…';
+    }
+
+    /* ---------- map ---------- */
+
+    function tileUrl() {
+      var base = 'https://{s}.basemaps.cartocdn.com/' + (theme === 'dark' ? 'dark_all' : 'light_all') + '/{z}/{x}/{y}{r}.png';
+      return base + (cfg.cartoKey ? '?key=' + encodeURIComponent(cfg.cartoKey) : '');
+    }
+    function addTiles() {
+      var L = window.L;
+      usingOsm = false;
+      tiles = L.tileLayer(tileUrl(), {
+        subdomains: 'abcd',
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      });
+      /* CARTO answers 403 for a domain that is not on the key -- fall back once, quietly. */
+      tiles.on('tileerror', function () {
+        if (usingOsm) return;
+        usingOsm = true;
+        map.removeLayer(tiles);
+        tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+      });
+      tiles.addTo(map);
+    }
+
+    function buildMap() {
+      var L = window.L;
+      map = L.map(ui.canvas, {
+        zoomControl: true,
+        scrollWheelZoom: true,
+        attributionControl: true,
+        preferCanvas: true
+      }).setView([RO.lat, RO.lng], RO.zoom);
+      addTiles();
+
+      /* A route never clusters: six stops inside one valley would collapse into a single dot and
+         the numbered order, which is the whole point, would disappear. A layer group with the one
+         method drawMarkers() needs keeps the rest of the code identical. */
+      if (route) {
+        cluster = L.layerGroup();
+        cluster.addLayers = function (list) {
+          for (var i = 0; i < list.length; i++) cluster.addLayer(list[i]);
+        };
+        map.addLayer(cluster);
+        map.on('moveend', syncView);
+        map.on('click', function () { select(-1); });
+        return;
+      }
+
+      cluster = L.markerClusterGroup({
+        chunkedLoading: true,
+        showCoverageOnHover: false,
+        removeOutsideVisibleBounds: true,
+        spiderfyOnMaxZoom: true,
+        animate: !reduceMotion,
+        maxClusterRadius: function (zoom) { return zoom > 12 ? 40 : 70; },
+        iconCreateFunction: function (c) {
+          var n = c.getChildCount();
+          var size = n < 10 ? 38 : n < 100 ? 46 : 56;
+          var tier = n < 10 ? '' : n < 100 ? ' s2' : ' s3';
+          return L.divIcon({
+            className: 'epm-pin-wrap',
+            html: '<span class="epm-cluster' + tier + '" style="width:' + size + 'px;height:' + size + 'px">' + nf(n) + '</span>',
+            iconSize: [size, size]
+          });
+        }
+      });
+      map.addLayer(cluster);
+      map.on('moveend', syncView);
+      map.on('click', function () { select(-1); });
+    }
+
+    function fitVisible() {
+      if (!map) return;
+      if (!visible.length) return;
+      var pts = [];
+      for (var i = 0; i < visible.length; i++) pts.push([D.lat[visible[i]], D.lng[visible[i]]]);
+      map.invalidateSize();
+      if (pts.length === 1) map.setView(pts[0], 13);
+      else map.fitBounds(pts, { padding: [50, 50], maxZoom: 13, animate: !reduceMotion });
+    }
+
+    /* ---------- list ---------- */
+
+    function syncView() {
+      if (!map || !D) return;
+      if (route) {
+        // Stop 1 to stop N, always: a route's order is the whole point of it.
+        inView = D.rows.map(function (_, i) { return [i, me ? km(me[0], me[1], D.lat[i], D.lng[i]) : NaN]; });
+        listShown = inView.length;
+        renderList();
+        renderMeta();
+        pushUrl();
+        return;
+      }
+      var b = map.getBounds(), c = map.getCenter();
+      var origin = me || [c.lat, c.lng];
+      var rows = [];
+      for (var i = 0; i < visible.length; i++) {
+        var p = visible[i];
+        if (!b.contains([D.lat[p], D.lng[p]])) continue;
+        rows.push([p, km(origin[0], origin[1], D.lat[p], D.lng[p])]);
+      }
+      rows.sort(function (a, z) { return a[1] - z[1]; });
+      inView = rows;
+      listShown = LIST_PAGE;
+      renderList();
+      renderMeta();
+      pushUrl();
+    }
+
+    function renderList() {
+      ui.list.textContent = '';
+      ui.inview.textContent = route
+        ? 'Opririle traseului, în ordine'
+        : (inView.length
+          ? count(inView.length, 'atracție în zona afișată', 'atracții în zona afișată')
+          : 'Nicio atracție în zona afișată');
+
+      if (!inView.length) {
+        var empty = el('li', 'epm-empty');
+        empty.appendChild(el('b', '', visible.length ? 'Zona asta e goală' : 'Niciun rezultat'));
+        empty.appendChild(el('p', '', visible.length
+          ? 'Depărtează harta sau apasă „Arată toate”.'
+          : 'Încearcă alt tip de atracție sau alt cuvânt în căutare.'));
+        ui.list.appendChild(empty);
+        return;
+      }
+
+      var frag = document.createDocumentFragment();
+      var n = Math.min(listShown, inView.length);
+      for (var i = 0; i < n; i++) frag.appendChild(row(inView[i][0], inView[i][1]));
+      ui.list.appendChild(frag);
+
+      if (inView.length > n) {
+        var li = el('li');
+        var more = el('button', 'btn btn-light epm-more', 'Încă ' + nf(Math.min(LIST_PAGE, inView.length - n)) + ' din zonă');
+        more.type = 'button';
+        more.addEventListener('click', function () { listShown += LIST_PAGE; renderList(); });
+        li.appendChild(more);
+        ui.list.appendChild(li);
+      }
+    }
+
+    function row(i, d) {
+      var r = D.rows[i], f = D.f;
+      var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
+      var city = r[f.city] >= 0 ? D.cities[r[f.city]][1] : '';
+      var li = el('li');
+      var b = el('button', 'epm-row' + (route ? ' epm-row-step' : ''));
+      b.type = 'button';
+      b.dataset.i = String(i);
+      if (i === selected) b.setAttribute('aria-current', 'true');
+      if (route) {
+        var num = el('span', 'epm-step', String(i + 1));
+        num.setAttribute('aria-hidden', 'true');
+        b.appendChild(num);
+      }
+
+      var media = el('span', 'epm-row-media');
+      if (r[f.img]) {
+        var img = el('img');
+        img.src = thumb(r[f.img], 160, 160);
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.width = 56;
+        img.height = 56;
+        media.appendChild(img);
+      } else {
+        var ph = el('span', '');
+        ph.appendChild(typeIcon(t));
+        ph.setAttribute('aria-hidden', 'true');
+        media.appendChild(ph);
+      }
+      b.appendChild(media);
+
+      var body = el('span', 'epm-row-body');
+      body.appendChild(el('span', 'epm-row-title', r[f.name]));
+      var meta = el('span', 'epm-row-meta');
+      var bits = [];
+      if (t) bits.push(t[1]);
+      if (city) bits.push(city);
+      meta.appendChild(document.createTextNode(bits.join(' · ')));
+      if (route && i > 0 && D.legs && D.legs[i] > 0) {
+        meta.appendChild(document.createTextNode(' · '));
+        var legTxt = '+' + dist(D.legs[i]);
+        if (D.mins && D.mins[i] > 0) legTxt += ', ' + hm(D.mins[i]);
+        meta.appendChild(el('span', 'epm-row-dist', legTxt));
+      } else if (!route && isFinite(d)) {
+        meta.appendChild(document.createTextNode(' · '));
+        meta.appendChild(el('span', 'epm-row-dist', dist(d)));
+      }
+      body.appendChild(meta);
+      b.appendChild(body);
+      li.appendChild(b);
+      return li;
+    }
+
+    function renderMeta() {
+      if (onChange) {
+        try { onChange(api.getState()); } catch (e) {}
+      }
+      ui.meta.textContent = '';
+      if (route) {
+        var bits = count(D.rows.length, 'oprire', 'opriri');
+        if (cfg.routeKm) bits += ' · ' + nf(cfg.routeKm) + ' km' + (cfg.routeRoad ? ' pe șosea' : ' în linie dreaptă');
+        if (cfg.routeMin) bits += ' · ' + hm(cfg.routeMin) + ' de mers';
+        ui.meta.appendChild(el('span', '', bits));
+        return;
+      }
+      ui.meta.appendChild(el('span', '', count(visible.length, 'atracție pe hartă', 'atracții pe hartă')));
+      if (visible.length !== D.rows.length) {
+        var reset = el('button', 'link-btn', 'Șterge filtrele');
+        reset.type = 'button';
+        reset.addEventListener('click', function () {
+          state.q = '';
+          state.types = [];
+          state.photo = false;
+          state.ticket = false;
+          ui.input.value = '';
+          ui.clear.hidden = true;
+          refresh(true);
+        });
+        ui.meta.appendChild(reset);
+      }
+    }
+
+    /* ---------- selection ---------- */
+
+    function paintSelection() {
+      [].forEach.call(ui.list.querySelectorAll('.epm-row'), function (b) {
+        b.toggleAttribute('aria-current', Number(b.dataset.i) === selected);
+      });
+      [].forEach.call(ui.canvas.querySelectorAll('.epm-pin'), function (p) {
+        p.classList.toggle('is-on', Number(p.getAttribute('data-i')) === selected);
+      });
+    }
+
+    function select(i) {
+      selected = i;
+      paintSelection();
+      if (i < 0 || cfg.bare) { ui.card.hidden = true; return; }
+      renderCard(i);
+    }
+
+    /**
+     * From the list to the map: centring alone is not enough — at country zoom the pin is still
+     * inside a cluster, so nothing lights up and you cannot tell which dot you picked. Zoom in
+     * first, then, if the marker is still clustered, let markercluster open it, and only then
+     * paint the highlight (the pin element does not exist until the cluster expands).
+     */
+    function sheetLayout() { return window.matchMedia('(max-width:1023px)').matches; }
+
+    /** How many pixels of the map the bottom sheet covers right now (0 on the two-pane layout). */
+    function sheetPad() {
+      if (cfg.bare || !sheetLayout()) return 0;
+      var body = ui.canvas.getBoundingClientRect();
+      var side = ui.side.getBoundingClientRect();
+
+      return Math.max(0, Math.round(body.bottom - side.top));
+    }
+
+    function focus(i) {
+      select(i);
+      if (!map) return;
+      // On the sheet layout the list covers the bottom half of the map, so drop it to its smallest
+      // position first -- otherwise the pin we are flying to lands behind it.
+      var wasSheet = sheetLayout() && ui.side.getAttribute('data-snap') !== 'peek';
+      if (wasSheet) ui.side.setAttribute('data-snap', 'peek');
+      setTimeout(function () { flyTo(i); }, wasSheet && !reduceMotion ? 260 : 0);
+    }
+
+    function flyTo(i) {
+      var L = window.L;
+      var ll = L.latLng(D.lat[i], D.lng[i]);
+      var m = markers[i];
+      var zoom = Math.max(map.getZoom(), FOCUS_ZOOM);
+
+      // Centre what is left of the map, not the map, so the pin sits in the visible band.
+      var pad = sheetPad();
+      var centre = pad > 8 ? map.unproject(map.project(ll, zoom).add([0, pad / 2]), zoom) : ll;
+
+      var settle = function () {
+        if (cluster && m && typeof cluster.getVisibleParent === 'function' && cluster.hasLayer(m) && cluster.getVisibleParent(m) !== m) {
+          cluster.zoomToShowLayer(m, function () { setTimeout(paintSelection, 30); });
+        } else {
+          setTimeout(paintSelection, 30);
+        }
+      };
+      var still = map.getZoom() === zoom && map.getCenter().distanceTo(centre) < 1;
+      if (still) {
+        settle();
+      } else {
+        map.once('moveend', settle);
+        map.setView(centre, zoom, { animate: !reduceMotion });
+      }
+    }
+
+    function renderCard(i) {
+      var r = D.rows[i], f = D.f;
+      var t = r[f.type] >= 0 ? D.types[r[f.type]] : null;
+      var city = r[f.city] >= 0 ? D.cities[r[f.city]][1] : '';
+      var zone = r[f.zone] >= 0 ? D.zones[r[f.zone]] : null;
+      var url = href(i);
+
+      ui.card.textContent = '';
+      var media = el('a', 'epm-card-media');
+      media.href = url;
+      media.target = '_blank';
+      media.rel = 'noopener';
+      if (r[f.img]) {
+        var img = el('img');
+        img.src = thumb(r[f.img], 480, 280);
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        media.appendChild(img);
+      } else {
+        var ph = el('span', '');
+        ph.appendChild(typeIcon(t));
+        ph.setAttribute('aria-hidden', 'true');
+        media.appendChild(ph);
+      }
+      ui.card.appendChild(media);
+
+      var close = el('button', 'epm-card-close');
+      close.type = 'button';
+      close.appendChild(icon('x'));
+      close.appendChild(el('span', 'sr', 'Închide'));
+      close.addEventListener('click', function () { select(-1); });
+      ui.card.appendChild(close);
+
+      var body = el('div', 'epm-card-body');
+      if (t) body.appendChild(el('p', 'epm-card-kicker', t[1]));
+      body.appendChild(el('h3', 'epm-card-title', r[f.name]));
+
+      var meta = el('p', 'epm-card-meta');
+      if (city || zone) {
+        var where = el('span');
+        where.appendChild(icon('map-pin'));
+        where.appendChild(document.createTextNode([city, zone ? zone[0] : ''].filter(Boolean).join(', ')));
+        meta.appendChild(where);
+      }
+      if (me) {
+        var dd = el('span');
+        dd.appendChild(icon('target'));
+        dd.appendChild(document.createTextNode(dist(km(me[0], me[1], D.lat[i], D.lng[i])) + ' de tine'));
+        meta.appendChild(dd);
+      }
+      if (meta.childNodes.length) body.appendChild(meta);
+
+      var actions = el('div', 'epm-card-actions');
+      var go = el('a', 'btn btn-primary', 'Vezi atracția');
+      go.href = url;
+      go.target = '_blank';
+      go.rel = 'noopener';
+      actions.appendChild(go);
+      var nav = el('a', 'btn btn-light', 'Google Maps');
+      nav.href = 'https://www.google.com/maps/dir/?api=1&destination=' + D.lat[i] + ',' + D.lng[i];
+      nav.target = '_blank';
+      nav.rel = 'noopener';
+      actions.appendChild(nav);
+      body.appendChild(actions);
+
+      ui.card.appendChild(body);
+      ui.card.hidden = false;
+    }
+
+    /* ---------- url ---------- */
+
+    var pushUrl = debounce(function () {
+      if (!cfg.urlState || !map) return;
+      var p = new URLSearchParams(window.location.search);
+      if (!cfg.fixed && state.types.length && !isPreset('all')) p.set('tip', state.types.join(',')); else p.delete('tip');
+      if (state.q.trim()) p.set('q', state.q.trim()); else p.delete('q');
+      // A landing already says in its path what it shows; repeating it as a query is noise.
+      if (!cfg.fixed) {
+        if (state.zone) p.set('zona', state.zone); else p.delete('zona');
+        if (state.city) p.set('oras', state.city); else p.delete('oras');
+      }
+      if (cfg.dialog) p.set('harta', '1');
+      var c = map.getCenter();
+      var hash = '#' + map.getZoom() + '/' + c.lat.toFixed(4) + '/' + c.lng.toFixed(4);
+      var qs = p.toString();
+      history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + hash);
+    }, 400);
+
+    function readUrl() {
+      var p = new URLSearchParams(window.location.search);
+      var tip = p.get('tip');
+      if (tip) {
+        var valid = typeSlugs();
+        state.types = tip.split(',').filter(function (s) { return valid.indexOf(s) !== -1; });
+      }
+      var q = p.get('q');
+      if (q) { state.q = q; ui.input.value = q; ui.clear.hidden = false; }
+      /* A region or city in the URL wins over the host config: /harta?zona=transilvania is a link
+         a page prints, the config is only the default. */
+      if (!cfg.fixed && p.get('zona')) state.zone = p.get('zona');
+      if (!cfg.fixed && p.get('oras')) state.city = p.get('oras');
+
+      var m = /^#(\d{1,2})\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(window.location.hash);
+      return m ? { zoom: +m[1], lat: +m[2], lng: +m[3] } : null;
+    }
+
+    /* ---------- events ---------- */
+
+    function wire() {
+      ui.input.addEventListener('input', debounce(function () {
+        state.q = ui.input.value;
+        ui.clear.hidden = !state.q;
+        refresh(false);
+      }, 160));
+      ui.clear.addEventListener('click', function () {
+        ui.input.value = '';
+        state.q = '';
+        ui.clear.hidden = true;
+        ui.input.focus();
+        refresh(false);
+      });
+
+      ui.chips.addEventListener('click', function (e) {
+        var b = e.target.closest('button');
+        if (!b) return;
+        if (b.dataset.preset) {
+          state.types = presetTypes(b.dataset.preset);
+        } else if (b.dataset.type) {
+          var i = state.types.indexOf(b.dataset.type);
+          /* First click off "Toate" means "only this one", which is what people expect. */
+          if (!state.types.length) state.types = [b.dataset.type];
+          else if (i === -1) state.types.push(b.dataset.type);
+          else state.types.splice(i, 1);
+        } else if (b.dataset.flag) {
+          state[b.dataset.flag] = !state[b.dataset.flag];
+        } else return;
+        refresh(false);
+      });
+
+      ui.list.addEventListener('click', function (e) {
+        var b = e.target.closest('.epm-row');
+        if (b) focus(Number(b.dataset.i));
+      });
+      ui.list.addEventListener('mouseover', function (e) {
+        var b = e.target.closest('.epm-row');
+        hot(b ? Number(b.dataset.i) : -1);
+      });
+      ui.list.addEventListener('mouseleave', function () { hot(-1); });
+
+      ui.all.addEventListener('click', function () {
+        if (route && routeLine) map.fitBounds(routeLine.getBounds(), { padding: [60, 60], maxZoom: 15, animate: !reduceMotion });
+        else fitVisible();
+      });
+      ui.locate.addEventListener('click', locate);
+      ui.theme.addEventListener('click', function () {
+        theme = theme === 'dark' ? 'light' : 'dark';
+        saveTheme(theme);
+        container.classList.toggle('is-dark', theme === 'dark');
+        if (map && tiles && !usingOsm) { map.removeLayer(tiles); addTiles(); }
+      });
+      if (ui.close) ui.close.addEventListener('click', close);
+
+      container.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && cfg.dialog && opened) { e.stopPropagation(); close(); }
+        if (e.key === 'Tab' && cfg.dialog && opened) trapTab(e);
+      });
+
+      wireChips();
+      sheet();
+    }
+
+    function hot(i) {
+      [].forEach.call(ui.canvas.querySelectorAll('.epm-pin'), function (p) {
+        p.classList.toggle('is-hot', Number(p.getAttribute('data-i')) === i);
+      });
+    }
+
+    /* Bottom sheet: tap the handle to cycle, drag it to resize, snap on release. */
+    function sheet() {
+      var snaps = ['peek', 'half', 'full'];
+      var start = null;
+      ui.grab.addEventListener('click', function () {
+        var i = snaps.indexOf(ui.side.getAttribute('data-snap') || 'half');
+        ui.side.setAttribute('data-snap', snaps[(i + 1) % snaps.length]);
+      });
+      ui.grab.addEventListener('pointerdown', function (e) {
+        start = { y: e.clientY, h: ui.side.getBoundingClientRect().height };
+        ui.grab.setPointerCapture(e.pointerId);
+      });
+      ui.grab.addEventListener('pointermove', function (e) {
+        if (!start) return;
+        var h = Math.max(120, Math.min(window.innerHeight * 0.9, start.h + (start.y - e.clientY)));
+        ui.side.style.setProperty('--epm-sheet', h + 'px');
+      });
+      ui.grab.addEventListener('pointerup', function (e) {
+        if (!start) return;
+        var h = ui.side.getBoundingClientRect().height, vh = window.innerHeight;
+        var moved = Math.abs(start.y - e.clientY) > 6;
+        start = null;
+        ui.side.style.removeProperty('--epm-sheet');
+        if (!moved) return;                      // a tap: let the click handler cycle instead
+        ui.side.setAttribute('data-snap', h < vh * 0.28 ? 'peek' : h < vh * 0.66 ? 'half' : 'full');
+      });
+    }
+
+    function locate() {
+      if (!navigator.geolocation) return;
+      ui.locate.classList.add('is-busy');
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        ui.locate.classList.remove('is-busy');
+        me = [pos.coords.latitude, pos.coords.longitude];
+        if (map) map.setView(me, 11, { animate: !reduceMotion });
+        syncView();
+      }, function () {
+        ui.locate.classList.remove('is-busy');
+        ui.inview.textContent = 'Nu am putut afla unde ești.';
+      }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+    }
+
+    function trapTab(e) {
+      var f = container.querySelectorAll('a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])');
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+
+    /* ---------- lifecycle ---------- */
+
+    function refresh(fit) {
+      applyFilters();
+      paintChips();
+      renderMeta();
+      if (selected >= 0 && visible.indexOf(selected) === -1) select(-1);
+      drawMarkers();
+      if (fit) fitVisible();
+    }
+
+    function boot() {
+      if (D || booting) return Promise.resolve(D);
+      // Nothing to show yet: an empty map waiting for setRoute(), not a broken one.
+      if (!route && !cfg.dataUrl) return Promise.resolve(null);
+      booting = true;
+      buildShell();
+      ui.loading.hidden = false;
+      return Promise.all([loadLibs(), route ? Promise.resolve(datasetFromStops(route)) : loadData(cfg.dataUrl)])
+        .then(function (res) {
+          D = res[1];
+              if (!route && !state.types.length && state.preset === 'popular') state.types = presetTypes('popular');
+          if (!route && cfg.chips !== false) buildChips();
+          var view = cfg.urlState ? readUrl() : null;
+          buildMap();
+          applyFilters();
+          paintChips();
+          if (view) map.setView([view.lat, view.lng], view.zoom);
+          else if (state.city || state.zone || state.region || state.q) fitVisible();
+          drawMarkers();
+          ui.loading.hidden = true;
+          booting = false;
+          if (typeof cfg.onReady === 'function') cfg.onReady(api);
+          return D;
+        })
+        .catch(function (err) {
+          booting = false;
+          ui.loading.hidden = false;
+          ui.loading.textContent = 'Harta nu a putut fi încărcată. Reîncarcă pagina.';
+          if (window.console) console.warn('[EPMap]', err);
+        });
+    }
+
+    function open() {
+      if (opened) return;
+      opened = true;
+      lastFocus = document.activeElement;
+      container.hidden = false;
+      document.documentElement.classList.add('epm-locked');
+      boot().then(function () {
+        if (map) map.invalidateSize();
+        if (ui.input) ui.input.focus();
+      });
+    }
+    function close() {
+      if (!opened) return;
+      opened = false;
+      container.hidden = true;
+      document.documentElement.classList.remove('epm-locked');
+      if (cfg.urlState) {
+        var p = new URLSearchParams(window.location.search);
+        p.delete('harta');
+        var qs = p.toString();
+        history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+      }
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    var api = {
+      open: open,
+      close: close,
+      boot: boot,
+      setTypes: function (list) { state.types = list || []; if (D) refresh(true); },
+      /**
+       * Filter the map from outside it. /harta owns its own filter rail, so the map takes the
+       * instruction rather than duplicating the controls.
+       */
+      setFilter: function (patch, fit) {
+        patch = patch || {};
+        if (patch.types !== undefined) state.types = patch.types || [];
+        if (patch.preset !== undefined) state.types = presetTypes(patch.preset);
+        if (patch.region !== undefined) state.region = patch.region || '';
+        if (patch.zone !== undefined) state.zone = patch.zone || '';
+        if (patch.city !== undefined) state.city = patch.city || '';
+        if (patch.q !== undefined) { state.q = patch.q || ''; if (ui.input) ui.input.value = state.q; }
+        if (D) refresh(fit !== false);
+      },
+      /** What the map is showing right now, for a host that draws its own controls. */
+      getState: function () {
+        return {
+          types: state.types.slice(), region: state.region, zone: state.zone, city: state.city,
+          q: state.q, visible: visible.length, total: D ? D.rows.length : 0,
+          typeList: D ? D.types.map(function (t) { return [t[0], t[1], t[2], t[4]]; }) : []
+        };
+      },
+      onChange: function (fn) { onChange = fn; },
+      /* The planner rebuilds its day as a new route: same engine, new stops. */
+      setRoute: function (stops, geometry) {
+        route = (stops && stops.length) ? stops : null;
+        cfg.routeStops = route;
+        cfg.routeGeometry = geometry || '';
+        // Mounted empty and given its stops later (the planner): boot now that there is something
+        // to draw, rather than silently doing nothing until the second call.
+        if (!D) { boot(); return; }
+        D = datasetFromStops(route || []);
+        markers = [];
+        selected = -1;
+        ui.card.hidden = true;
+        if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+        if (flow) { map.removeLayer(flow); flow = null; }
+        applyFilters();
+        drawMarkers();
+      },
+      isOpen: function () { return opened; },
+
+      /* ---- for a host with its own list (cfg.bare) ---- */
+      onPin: function (fn) { onPin = fn; },
+      /** Light up stop `i` and frame it with the stops in `around` (indices into the current route). */
+      focusRoute: function (i, around, o) {
+        later(function () {
+          if (!D) return;
+          selected = (i >= 0 && i < D.rows.length) ? i : -1;
+          paintSelection();
+          var pts = (around || []).filter(function (k) { return k >= 0 && k < D.rows.length; })
+            .map(function (k) { return [D.lat[k], D.lng[k]]; });
+          if (!pts.length) return;
+          if (pts.length === 1) map.fitBounds([pts[0], pts[0]], fitOpts(o, 14));
+          else map.fitBounds(pts, fitOpts(o, 15));
+        });
+      },
+      /** Frame arbitrary points ([lat, lng]) — a night's town, say — with nothing lit. */
+      fitPoints: function (pts, o) {
+        later(function () {
+          selected = -1;
+          paintSelection();
+          if (pts && pts.length) map.fitBounds(pts.length === 1 ? [pts[0], pts[0]] : pts, fitOpts(o, 12));
+        });
+      },
+      /** The whole current route, or with o.all every ghost line as well. */
+      fitRoute: function (o) {
+        later(function () {
+          selected = -1;
+          paintSelection();
+          var b = routeLine ? window.L.latLngBounds(routeLine.getLatLngs()) : null;
+          if (o && o.all) ghosts.forEach(function (g) { b = b ? b.extend(g.getBounds()) : window.L.latLngBounds(g.getLatLngs()); });
+          if (b && b.isValid()) map.fitBounds(b, fitOpts(o, 15));
+        });
+      },
+      /** The other days of a plan, drawn faint under the current one: encoded polylines. */
+      setGhosts: function (list) {
+        later(function () {
+          ghosts.forEach(function (g) { map.removeLayer(g); });
+          ghosts = [];
+          (list || []).forEach(function (item) {
+            // a line, or { g: line, color } for a line that is meant to be read rather than to recede
+            var enc = (item && item.g !== undefined) ? item.g : item, own = item && item.color, pts = null;
+            try { pts = typeof enc === 'string' ? decodePolyline(enc) : enc; } catch (e) { pts = null; }
+            if (!pts || pts.length < 2) return;
+            ghosts.push(window.L.polyline(pts, { renderer: window.L.svg(), className: 'epm-route-ghost', color: own || '#6F7D77',
+              weight: own ? 4 : 3, opacity: own ? .9 : .55, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(map));
+          });
+          if (routeLine) routeLine.bringToFront();
+          if (flow) flow.bringToFront();
+        });
+      },
+      /** A marker that follows the elevation profile; null takes it away. */
+      setDot: function (lat, lng) {
+        if (!map) return;
+        if (lat === null || lat === undefined) { if (dot) { map.removeLayer(dot); dot = null; } return; }
+        if (!dot) dot = window.L.circleMarker([lat, lng], { renderer: window.L.svg(), radius: 7, color: cfg.routeColor || '#1E5B48', weight: 4, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(map);
+        else dot.setLatLng([lat, lng]);
+      },
+      setColor: function (c) { cfg.routeColor = c; if (routeLine) routeLine.setStyle({ color: c }); },
+      resize: function () { if (map) map.invalidateSize({ pan: false }); },
+      zoomBy: function (d) { if (map) map.setZoom(map.getZoom() + d); }
+    };
+
+    if (!cfg.dialog) boot();
+    return api;
+  }
+
+  /* ---------------------------------------------------------------- auto-mount
+   * A page only has to print an empty <div data-epm-root data-epm-config='{...}'> and, for the
+   * dialog flavour, any number of [data-epm-open] buttons. ?harta=1 reopens a shared link. */
+  function auto() {
+    var host = document.querySelector('[data-epm-root]');
+    if (!host) return;
+    var cfg = {};
+    try { cfg = JSON.parse(host.getAttribute('data-epm-config') || '{}'); } catch (e) {}
+
+    var inst = mount(host, cfg);
+    window.EPMap.instance = inst;
+
+    [].forEach.call(document.querySelectorAll('[data-epm-open]'), function (b) {
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        inst.open();
+      });
+    });
+
+    if (cfg.dialog && new URLSearchParams(window.location.search).get('harta') === '1') inst.open();
+  }
+
+  window.EPMap = { mount: mount };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto);
+  else auto();
+})();

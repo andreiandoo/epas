@@ -1,0 +1,364 @@
+/* viaqui.com v2: sign-in / sign-up (/autentificare). Account type (client / venue: the link under the card) and
+   mode (login / register: the two tabs), the customer 2FA step, BileteOnlineAuth calls and redirects, and the jump to
+   the account for someone already signed in. The copy of each state comes from login.php through #v2-data; the state
+   is kept in the address (?ca=venue, ?mode=register) so a reload or a shared link opens the same card. */
+(function () {
+  'use strict';
+  var root = document.getElementById('au');
+  if (!root) return;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var data = {};
+  try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
+  var copy = data.copy || {};
+  var redirectAfter = data.redirectAfter || '/cont';
+  var state = {
+    type: data.accountType === 'venue' ? 'venue' : 'client',
+    mode: data.mode === 'register' ? 'register' : 'login',
+    twofa: false,
+    challenge: '',
+    submitting: false,
+    showPassword: false
+  };
+  var msg = $('au-msg');
+  var forms = { login: $('au-login'), twofa: $('au-2fa'), register: $('au-register') };
+
+  function hasAuth() {
+    return typeof BileteOnlineAuth !== 'undefined';
+  }
+
+  function textFor(type, mode, key) {
+    return ((copy[type] || {})[mode] || {})[key] || '';
+  }
+
+  function showMessage(text, type) {
+    msg.textContent = text || '';
+    msg.className = 'au-msg ' + (type === 'success' ? 'is-ok' : 'is-err');
+    msg.setAttribute('role', type === 'success' ? 'status' : 'alert');
+    msg.hidden = !text;
+    // On a phone the submit button sits well below the message: bring an error into view
+    if (text && type !== 'success') {
+      var r = msg.getBoundingClientRect();
+      if (r.top < 80 || r.bottom > window.innerHeight) msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function setSubmitting(on) {
+    state.submitting = on;
+    root.querySelectorAll('.au-go').forEach(function (b) {
+      b.disabled = on;
+      b.classList.toggle('is-busy', on);
+    });
+  }
+
+  function render() {
+    root.setAttribute('data-type', state.type);
+    root.setAttribute('data-mode', state.mode);
+    $('au-title').textContent = textFor(state.type, state.mode, 'title');
+    $('au-text').textContent = textFor(state.type, state.mode, 'text');
+    $('au-kind-text').textContent = state.type === 'venue' ? 'Cont locație' : 'Cont client';
+
+    // tabs: hidden during the 2FA step, which belongs to signing in
+    root.querySelector('.au-tabs').hidden = state.twofa;
+    root.querySelectorAll('[data-set-mode]').forEach(function (b) {
+      var on = b.getAttribute('data-set-mode') === state.mode;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    $('au-tab-register').textContent = state.type === 'venue' ? 'Cont nou de locație' : 'Cont nou';
+
+    forms.login.hidden = !(state.mode === 'login' && !state.twofa);
+    forms.twofa.hidden = !(state.mode === 'login' && state.twofa);
+    forms.register.hidden = state.mode !== 'register';
+
+    // Fields of the other account type are hidden and disabled, so the browser's required checks skip them
+    root.querySelectorAll('[data-for]').forEach(function (el) {
+      var on = el.getAttribute('data-for') === state.type;
+      el.hidden = !on;
+      el.querySelectorAll('input').forEach(function (input) { input.disabled = !on; });
+    });
+
+    // came through a friend's ?ref= link (kept by base.js / auth.js, sent at sign-up): say so on the client form
+    var invite = $('au-invite'), inviteCopy = state.type === 'client' ? inviteText() : '';
+    if (invite) { invite.textContent = inviteCopy; invite.hidden = !inviteCopy; }
+
+    $('au-login-email').placeholder = state.type === 'venue' ? 'email administrator / staff' : 'email@exemplu.ro';
+    if ($('au-forgot')) $('au-forgot').href = state.type === 'venue' ? '/parola-uitata?ca=venue' : '/parola-uitata';
+    $('au-reg-email').placeholder = state.type === 'venue' ? 'email@locatie.ro' : 'email@exemplu.ro';
+    setIdle($('au-login-submit'), textFor(state.type, 'login', 'submit'));
+    setIdle($('au-register-submit'), textFor(state.type, 'register', 'submit'));
+  }
+
+  // the address follows the card (redirect and email stay as they came)
+  function syncUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (state.type === 'venue') params.set('ca', 'venue'); else params.delete('ca');
+      if (state.mode === 'register') params.set('mode', 'register'); else params.delete('mode');
+      var q = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+    } catch (e) {}
+  }
+
+  function inviteText() {
+    var code = '', info = null;
+    try {
+      code = localStorage.getItem('bileteonline_referral_code') || '';
+      info = JSON.parse(localStorage.getItem('bileteonline_referral_info') || 'null');
+    } catch (e) {}
+    if (!code) return '';
+    var name = info && typeof info.referrer_name === 'string' ? info.referrer_name.trim() : '';
+    var who = name && name !== 'Un prieten' ? 'Ai fost invitat de ' + name + '.' : 'Ai fost invitat de un prieten.';
+    var reward = info ? Math.floor(Number(info.referred_reward) || 0) : 0;
+    if (reward <= 0) return who + ' Creează contul ca invitația să fie înregistrată.';
+    var r = reward % 100;
+    var gift = info.reward_type && info.reward_type !== 'points' ? reward + ' lei' : (reward === 1 ? '1 punct' : reward + (r === 0 || r >= 20 ? ' de puncte' : ' puncte'));
+    return who + ' Creează contul și primești ' + gift + ' bonus.';
+  }
+
+  // The organizer page the login guard came from (auth.js keeps it for this tab): only a page of the organizer area on
+  // this site, otherwise the dashboard. Worked out once, because the login event and the form both ask for it.
+  var orgTarget = '';
+  function organizerTarget() {
+    if (orgTarget) return orgTarget;
+    var saved = '';
+    try {
+      saved = sessionStorage.getItem('bileteonline_redirect_after_login') || '';
+      sessionStorage.removeItem('bileteonline_redirect_after_login');
+    } catch (e) {}
+    orgTarget = '/organizator/panou';
+    try {
+      var u = new URL(saved, window.location.origin);
+      if (saved && u.origin === window.location.origin && /^\/organizator\/./.test(u.pathname) && !/^\/organizator\/login\b/.test(u.pathname)) {
+        orgTarget = u.pathname + u.search + u.hash;
+      }
+    } catch (e) {}
+    return orgTarget;
+  }
+
+  function setIdle(button, text) {
+    var span = button && button.querySelector('[data-idle]');
+    if (span && text) span.textContent = text;
+  }
+
+  // ---------- tabs, account type, password visibility ----------
+  root.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-set-type], [data-set-mode], [data-toggle-pass]');
+    if (!t) return;
+
+    if (t.hasAttribute('data-set-type')) {
+      state.type = t.getAttribute('data-set-type');
+      state.twofa = false;
+      showMessage('');
+      render();
+      syncUrl();
+      // the card changed under the pointer: start again from its top
+      var first = forms[state.mode === 'login' ? 'login' : 'register'].querySelector('input:not([disabled])');
+      var card = $('au-card');
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (first) first.focus({ preventScroll: true });
+    } else if (t.hasAttribute('data-set-mode')) {
+      if (state.mode === t.getAttribute('data-set-mode')) return;
+      state.mode = t.getAttribute('data-set-mode');
+      showMessage('');
+      render();
+      syncUrl();
+    } else {
+      state.showPassword = !state.showPassword;
+      ['au-login-pass', 'au-reg-pass', 'au-reg-pass2'].forEach(function (id) {
+        var input = $(id);
+        if (input) input.type = state.showPassword ? 'text' : 'password';
+      });
+      root.querySelectorAll('[data-toggle-pass]').forEach(function (b) {
+        b.textContent = state.showPassword ? 'ascunde' : 'arată';
+        b.setAttribute('aria-pressed', String(state.showPassword));
+        b.setAttribute('aria-label', state.showPassword ? 'Ascunde parola' : 'Arată parola');
+      });
+    }
+  });
+
+  // arrow keys move between the two tabs (the tab pattern)
+  root.querySelector('.au-tabs').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+    e.preventDefault();
+    var next = state.mode === 'login' ? 'register' : 'login';
+    if (e.key === 'Home') next = 'login';
+    if (e.key === 'End') next = 'register';
+    state.mode = next;
+    showMessage('');
+    render();
+    syncUrl();
+    $(next === 'login' ? 'au-tab-login' : 'au-tab-register').focus();
+  });
+
+  // ---------- login ----------
+  forms.login.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (state.submitting) return;
+    if (!hasAuth()) {
+      showMessage('Sistemul de autentificare nu este încărcat. Reîncarcă pagina.', 'error');
+      return;
+    }
+    showMessage('');
+    setSubmitting(true);
+    try {
+      var fn = state.type === 'venue'
+        ? BileteOnlineAuth.loginOrganizer.bind(BileteOnlineAuth)
+        : BileteOnlineAuth.loginCustomer.bind(BileteOnlineAuth);
+      var result = await fn($('au-login-email').value.trim(), $('au-login-pass').value);
+
+      // 2FA challenge (client accounts): show the code form instead of finishing the login
+      if (result && result.success && result.requires2fa) {
+        state.twofa = true;
+        state.challenge = result.challenge;
+        $('au-2fa-code').value = '';
+        setSubmitting(false);
+        render();
+        $('au-2fa-code').focus();
+        return;
+      }
+
+      if (result && result.success) {
+        showMessage('Conectare reușită. Te redirecționăm…', 'success');
+        var target = state.type === 'venue' ? organizerTarget() : redirectAfter;
+        setTimeout(function () { window.location.href = target; }, 500);
+      } else {
+        showMessage((result && result.message) || 'Email sau parolă incorecte.', 'error');
+        setSubmitting(false);
+      }
+    } catch (err) {
+      showMessage('Eroare la conectare. Încearcă din nou.', 'error');
+      setSubmitting(false);
+    }
+  });
+
+  // ---------- 2FA ----------
+  function cancel2fa() {
+    state.twofa = false;
+    state.challenge = '';
+    setSubmitting(false);
+    render();
+    $('au-login-email').focus();
+  }
+
+  forms.twofa.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (state.submitting) return;
+    if (!hasAuth() || !state.challenge) {
+      showMessage('Sesiunea a expirat. Reia autentificarea.', 'error');
+      cancel2fa();
+      return;
+    }
+    var code = $('au-2fa-code').value.trim();
+    if (!code) {
+      showMessage('Introdu codul.', 'error');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      var r = await BileteOnlineAuth.finishCustomer2faLogin(state.challenge, code);
+      if (r && r.success) {
+        showMessage('Cod corect. Te redirecționăm…', 'success');
+        setTimeout(function () { window.location.href = redirectAfter; }, 500);
+      } else {
+        showMessage((r && r.message) || 'Codul nu este valid.', 'error');
+        setSubmitting(false);
+      }
+    } catch (err) {
+      showMessage('Eroare la verificare.', 'error');
+      setSubmitting(false);
+    }
+  });
+
+  $('au-2fa-cancel').addEventListener('click', cancel2fa);
+
+  // ---------- register ----------
+  forms.register.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (state.submitting) return;
+    if (!hasAuth()) {
+      showMessage('Sistemul de înregistrare nu este încărcat. Reîncarcă pagina.', 'error');
+      return;
+    }
+    var pass = $('au-reg-pass').value;
+    var pass2 = $('au-reg-pass2').value;
+    if (!$('au-terms').checked) {
+      showMessage('Trebuie să accepți termenii și condițiile.', 'error');
+      return;
+    }
+    if (pass !== pass2) {
+      showMessage('Parolele nu coincid.', 'error');
+      return;
+    }
+    if (pass.length < 8) {
+      showMessage('Parola trebuie să aibă minim 8 caractere.', 'error');
+      return;
+    }
+
+    showMessage('');
+    setSubmitting(true);
+    var val = function (id) { return ($(id).value || '').trim(); };
+    var payload;
+    var result;
+    try {
+      if (state.type === 'venue') {
+        payload = {
+          contact_name: val('au-contact'),
+          venue_name: val('au-venue'),
+          name: val('au-venue'),
+          email: val('au-reg-email'),
+          phone: ($('au-venue-phone').value || '').replace(/\s/g, ''),
+          city: val('au-venue-city'),
+          password: pass,
+          password_confirmation: pass2
+        };
+        result = await BileteOnlineAuth.registerOrganizer(payload);
+      } else {
+        payload = {
+          first_name: val('au-first'),
+          last_name: val('au-last'),
+          email: val('au-reg-email'),
+          phone: ($('au-client-phone').value || '').replace(/\s/g, ''),
+          password: pass,
+          password_confirmation: pass2,
+          newsletter: !!$('au-newsletter').checked
+        };
+        result = await BileteOnlineAuth.registerCustomer(payload);
+      }
+
+      if (result && result.success) {
+        showMessage('Cont creat cu succes. Te redirecționăm…', 'success');
+        try {
+          if (window.EPASTracking && typeof EPASTracking.trackSignUp === 'function') {
+            EPASTracking.trackSignUp(state.type === 'venue' ? 'organizer' : 'email', { email: payload.email });
+          }
+        } catch (err) { /* tracking never breaks signup */ }
+        var target = state.type === 'venue' ? '/organizator/panou' : '/verify-email';
+        setTimeout(function () { window.location.href = target; }, 1200);
+      } else {
+        showMessage((result && result.message) || 'Înregistrarea a eșuat.', 'error');
+        setSubmitting(false);
+      }
+    } catch (err) {
+      showMessage('Eroare la înregistrare. Încearcă din nou.', 'error');
+      setSubmitting(false);
+    }
+  });
+
+  // ---------- already signed in: skip the form ----------
+  function goIfSignedIn() {
+    if (hasAuth() && typeof BileteOnlineAuth.isLoggedIn === 'function' && BileteOnlineAuth.isLoggedIn()) {
+      var isOrg = BileteOnlineAuth.isOrganizer && BileteOnlineAuth.isOrganizer();
+      window.location.replace(isOrg ? organizerTarget() : redirectAfter);
+      return true;
+    }
+    return false;
+  }
+  if (!goIfSignedIn()) {
+    window.addEventListener('bileteonline:auth:init', goIfSignedIn);
+    window.addEventListener('bileteonline:auth:login', goIfSignedIn);
+    setTimeout(goIfSignedIn, 400);
+  }
+
+  render();
+})();

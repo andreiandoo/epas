@@ -1,0 +1,369 @@
+<?php
+/**
+ * viaqui.com v2: small helpers shared by the v2 partials and pages.
+ * Prefixed v2_ so nothing collides with the rest of the site.
+ */
+
+function v2_e($s): string
+{
+    return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+/**
+ * Who takes the card payment for this marketplace: ['provider' => 'netopia', 'label' => 'NETOPIA Payments'], read from
+ * the checkout features (cached five minutes) and null while nothing answers. The checkout and the footer name the
+ * processor and show its logo from this, instead of assuming one.
+ */
+function v2_payment_provider(): ?array
+{
+    static $found;
+    if ($found !== null) {
+        return $found ?: null;
+    }
+    $found = false;
+    if (function_exists('api_cached')) {
+        $response = api_cached('checkout_features', fn () => api_get('/checkout/features'), 300);
+        $payment = $response['data']['payment'] ?? null;
+        if (is_array($payment) && !empty($payment['provider'])) {
+            $found = ['provider' => (string) $payment['provider'], 'label' => (string) ($payment['label'] ?? '')];
+        }
+    }
+
+    return $found ?: null;
+}
+
+/** The processor's own logo, when we carry it: a file under assets/images. */
+function v2_payment_logo(?array $provider, string $shape = 'h'): ?string
+{
+    $key = $provider['provider'] ?? '';
+    if ($key !== 'netopia') {
+        return null;
+    }
+
+    return asset('assets/images/netopia-' . ($shape === 'v' ? 'v' : 'h') . '.svg');
+}
+
+function v2_ic(string $name, string $cls = 'ic'): string
+{
+    return '<svg class="' . $cls . '" aria-hidden="true"><use href="#i-' . $name . '"/></svg>';
+}
+
+/** Romanian counting: 1 experiență, 5 experiențe, 20 de experiențe, 101 experiențe. */
+function v2_num(int $n, string $one, string $many): string
+{
+    if ($n === 1) {
+        return '1 ' . $one;
+    }
+    $rem = $n % 100;
+    $de = $n >= 20 && !($rem >= 1 && $rem <= 19);
+    return $n . ' ' . ($de ? 'de ' : '') . $many;
+}
+
+function v2_exp(int $n): string
+{
+    return v2_num($n, 'experiență', 'experiențe');
+}
+
+function v2_thousands(int $n): string
+{
+    return number_format($n, 0, ',', '.');
+}
+
+/** Minutes as "45 min" / "2 h" / "2 h 13 min". */
+function v2_hm(int $minutes): string
+{
+    if ($minutes <= 0) {
+        return '';
+    }
+    $h = intdiv($minutes, 60);
+    $m = $minutes % 60;
+
+    return $h > 0 ? $h . ' h' . ($m ? ' ' . $m . ' min' : '') : $m . ' min';
+}
+
+function v2_asset(string $path): string
+{
+    return asset('assets/v2/' . ltrim($path, '/'));
+}
+
+/**
+ * The pin dataset behind the interactive map, as written by
+ * bin/build-map-data.php: ['url', 'v', 'total', 'types', 'cities', 'generated_at'].
+ *
+ * Returns null when the dataset has not been built yet, which is the signal
+ * for callers to hide the map entry points instead of shipping a button that
+ * opens an empty map.
+ */
+function v2_map_data(): ?array
+{
+    static $cached = false;
+    static $value = null;
+
+    if ($cached) {
+        return $value;
+    }
+    $cached = true;
+
+    $metaFile = BILETEONLINE_ROOT . '/assets/v2/data/atractii.meta.json';
+    $dataFile = BILETEONLINE_ROOT . '/assets/v2/data/atractii.json';
+    if (!is_file($metaFile) || !is_file($dataFile)) {
+        return $value;
+    }
+
+    $meta = json_decode((string) file_get_contents($metaFile), true);
+    if (!is_array($meta) || (int) ($meta['total'] ?? 0) < 1) {
+        return $value;
+    }
+
+    $version = (string) ($meta['v'] ?? filemtime($dataFile));
+    $value = [
+        // ?v=<content hash>: the file name stays stable, the URL changes
+        // whenever the data does, and assets/v2/data/.htaccess marks it immutable.
+        'url'          => '/assets/v2/data/atractii.json?v=' . rawurlencode($version),
+        'v'            => $version,
+        'total'        => (int) $meta['total'],
+        'types'        => (int) ($meta['types'] ?? 0),
+        'cities'       => (int) ($meta['cities'] ?? 0),
+        'bytes'        => (int) ($meta['bytes'] ?? 0),
+        'generated_at' => (string) ($meta['generated_at'] ?? ''),
+    ];
+
+    return $value;
+}
+
+/**
+ * "Caraș-Severin" -> "caras-severin". The form the map's ?zona= expects, and the same folding
+ * map.js does in the browser, so a link printed here matches a zone there.
+ */
+function v2_zone_slug(string $name): string
+{
+    $s = strtr($name, [
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+        'Ă' => 'a', 'Â' => 'a', 'Î' => 'i', 'Ș' => 's', 'Ş' => 's', 'Ț' => 't', 'Ţ' => 't',
+    ]);
+
+    return trim(mb_strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $s)), '-');
+}
+
+/**
+ * The small derived summary next to the pin dataset: counters per type, region, county and city
+ * plus a handful of picks. /harta renders its server-side content from this so the page never has
+ * to parse the ~950 KB pin file. Keys: v, total, types, regions, counties, cities, picks.
+ */
+function v2_map_summary(): ?array
+{
+    static $cached = false;
+    static $value = null;
+
+    if ($cached) {
+        return $value;
+    }
+    $cached = true;
+
+    $file = BILETEONLINE_ROOT . '/assets/v2/data/atractii.summary.json';
+    if (!is_file($file)) {
+        return $value;
+    }
+    $data = json_decode((string) file_get_contents($file), true);
+    if (is_array($data) && !empty($data['types'])) {
+        $value = $data;
+    }
+
+    return $value;
+}
+
+/**
+ * The roads of /trasee (includes/v2/map-roads.php) as bin/build-roads.php resolved them: slug =>
+ * km, min, geometry, z (elevation samples), max, up, bounds, a, b, stops. Empty when the file is
+ * missing, so every page that offers the roads simply offers none.
+ */
+function v2_map_roads(): array
+{
+    static $value = null;
+    if ($value !== null) {
+        return $value;
+    }
+    $value = [];
+    $file = BILETEONLINE_ROOT . '/assets/v2/data/drumuri.json';
+    if (is_file($file)) {
+        $data = json_decode((string) file_get_contents($file), true);
+        if (is_array($data['roads'] ?? null)) {
+            $value = $data['roads'];
+        }
+    }
+
+    return $value;
+}
+
+/** An elevation profile as the `d` of an SVG path, on a w×h box; [line, area]. */
+function v2_profile_paths(array $z, int $w = 300, int $h = 44): array
+{
+    $n = count($z);
+    if ($n < 2) {
+        return ['', ''];
+    }
+    $lo = min($z);
+    $span = max(1, max($z) - $lo);
+    $pts = [];
+    foreach ($z as $i => $v) {
+        $pts[] = round($i / ($n - 1) * $w, 1) . ',' . round(($h - 2) - ($v - $lo) / $span * ($h - 6), 1);
+    }
+    $line = 'M' . implode('L', $pts);
+
+    return [$line, 'M0,' . $h . 'L' . implode('L', $pts) . 'L' . $w . ',' . $h . 'Z'];
+}
+
+/** API media paths come either absolute or relative to the core storage. */
+function v2_media_url($path): ?string
+{
+    if (!is_string($path) || $path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    return rtrim(STORAGE_URL, '/') . '/' . ltrim($path, '/');
+}
+
+function v2_cauta(string $term): string
+{
+    return '/cauta?q=' . rawurlencode($term);
+}
+
+function v2_duration(int $minutes): string
+{
+    if ($minutes <= 0) {
+        return '';
+    }
+    if ($minutes >= 120 && $minutes % 60 === 0) {
+        return ($minutes / 60) . ' ore';
+    }
+    return $minutes . ' min';
+}
+
+/**
+ * A catalogue image at the size it is actually shown.
+ *
+ * The covers come off the core storage at upload size — often over a megabyte for a card 300px
+ * wide — so every card goes through /api/img.php, which resizes once and caches. Anything that is
+ * not a core storage URL is returned untouched.
+ */
+function v2_thumb(?string $url, int $w = 480, int $h = 0): string
+{
+    if (!is_string($url) || $url === '') {
+        return '';
+    }
+    $storage = rtrim(STORAGE_URL, '/') . '/';
+    if (strncmp($url, $storage, strlen($storage)) !== 0) {
+        return $url;
+    }
+
+    return '/api/img.php?u=' . rawurlencode($url) . '&w=' . $w . ($h > 0 ? '&h=' . $h : '');
+}
+
+/** <img> from a [src, width, height, alt] tuple; dimensions only when known. */
+function v2_photo(?array $photo, string $extra = ''): string
+{
+    if (!$photo || empty($photo[0])) {
+        return '';
+    }
+    $dims = !empty($photo[1]) ? ' width="' . (int) $photo[1] . '" height="' . (int) $photo[2] . '"' : '';
+    return '<img src="' . v2_e($photo[0]) . '"' . $dims . ' alt="' . v2_e($photo[3] ?? '') . '" loading="lazy" decoding="async"' . $extra . '>';
+}
+
+/** Image-less state: a segment of the brand line on deep green, picked from the name. */
+function v2_fallback(string $seed, ?int $position = null): string
+{
+    static $segs = [
+        ['1060 585 220 310', '220 / 310'], ['1455 585 290 310', '290 / 310'],
+        ['2170 625 340 270', '340 / 270'], ['2665 625 250 270', '250 / 270'],
+    ];
+    // In a row of cards the position keeps neighbours different; alone, the name decides.
+    $sum = $position ?? 0;
+    if ($position === null) {
+        foreach (preg_split('//u', $seed, -1, PREG_SPLIT_NO_EMPTY) as $ch) {
+            $sum += mb_ord($ch);
+        }
+    }
+    [$vb, $ar] = $segs[$sum % count($segs)];
+    return '<span class="fb" aria-hidden="true"><svg viewBox="' . $vb . '" style="aspect-ratio:' . $ar . '"><use href="#drum-g"/></svg></span>';
+}
+
+function v2_brand(string $cls = 'brand'): string
+{
+    return '<span class="' . $cls . '" role="img" aria-label="viaqui.com">'
+        . '<svg class="s" viewBox="24 33 148 205" aria-hidden="true"><use href="#sym-g"/></svg>'
+        . '<svg class="w" viewBox="52 68 514 74" aria-hidden="true"><use href="#logo-g"/></svg></span>';
+}
+
+/** Shape of an activity from /activities, as the cards need it. */
+function v2_activity(array $a): ?array
+{
+    $title = navFlatName($a['title'] ?? '');
+    $slug = (string) ($a['slug'] ?? '');
+    if ($title === '' || $slug === '') {
+        return null;
+    }
+    $city = is_array($a['city'] ?? null) ? $a['city'] : [];
+    $cat = is_array($a['category'] ?? null) ? $a['category'] : [];
+    $reviews = is_array($a['reviews'] ?? null) ? $a['reviews'] : [];
+    $citySlug = (string) ($city['slug'] ?? '');
+    // The place the experience is run at (activities module). "Inchiriere barca cu vasle" says nothing on its
+    // own in a list; "la Parcul Bucov, in Ploiesti" is the half that matters. Absent before the API knows it.
+    $loc = is_array($a['location'] ?? null) ? $a['location'] : [];
+    $locCity = is_array($loc['city'] ?? null) ? $loc['city'] : [];
+    return [
+        'slug' => $slug,
+        'title' => $title,
+        'city' => navFlatName($city['name'] ?? ''),
+        'citySlug' => $citySlug,
+        'loc' => navFlatName($loc['name'] ?? ''),
+        'locSlug' => (string) ($loc['slug'] ?? ''),
+        'locCity' => navFlatName($locCity['name'] ?? '') ?: navFlatName($city['name'] ?? ''),
+        'cat' => (string) ($cat['slug'] ?? ''),
+        'catName' => navFlatName($cat['name'] ?? ''),
+        'price' => (int) round(((int) ($a['cheapest_price_cents'] ?? 0)) / 100),
+        'dur' => v2_duration((int) ($a['duration_minutes'] ?? 0)),
+        'rating' => round((float) ($reviews['average'] ?? 0), 1),
+        'reviews' => (int) ($reviews['count'] ?? 0),
+        'image' => v2_media_url($a['cover_image_url'] ?? null),
+        'href' => '/experienta/' . $slug,
+        'dates' => [],
+        // A paid promotion running now for this listing (flags.is_promoted from core): listed first, labelled "Promovat".
+        'promoted' => !empty($a['flags']['is_promoted']),
+    ];
+}
+
+/**
+ * Ad tracking of the operator whose experience / location / activity the page shows: sets $organizerTrackingId
+ * (read by includes/tracking.php from v2/head.php, so their pixels load on this page) and returns the snippet that
+ * remembers the operator for a day, so cart and checkout ($trackingFromCookie) keep their pixels until the purchase.
+ * The page HTML is specific to that operator, so it is safe to cache.
+ */
+function v2_track_organizer($organizerId): string
+{
+    $id = is_numeric($organizerId) ? (int) $organizerId : 0;
+    if ($id <= 0) {
+        return '';
+    }
+    $GLOBALS['organizerTrackingId'] = $id;
+    return '<script>try{document.cookie="bileteonline_active_organizer=' . $id . ';path=/;max-age=86400;samesite=Lax"+(location.protocol==="https:"?";secure":"")}catch(e){}</script>';
+}
+
+/** Shape of an attraction from /attractions or /attractions/{slug}. */
+function v2_attraction(array $a): ?array
+{
+    $slug = (string) ($a['slug'] ?? '');
+    $name = navFlatName($a['name'] ?? '');
+    if ($slug === '' || $name === '') {
+        return null;
+    }
+    return [
+        'slug' => $slug,
+        'name' => $name,
+        'city' => is_array($a['city'] ?? null) ? navFlatName($a['city']['name'] ?? '') : '',
+        'type' => is_array($a['type'] ?? null) ? (string) ($a['type']['name'] ?? '') : '',
+        'image' => v2_media_url($a['cover_image_url'] ?? null),
+        'href' => '/atractie/' . $slug,
+    ];
+}

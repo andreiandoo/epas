@@ -1,0 +1,13 @@
+{
+  "name": "Viaqui",
+  "short_name": "Viaqui",
+  "description": "Tickets for attractions, museums, tours and experiences. Mobile tickets with QR, instantly by email.",
+  "icons": [
+    { "src": "/assets/images/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "theme_color": "#0F4D3A",
+  "background_color": "#FAF8F1",
+  "display": "standalone",
+  "start_url": "/",
+  "lang": "en"
+}

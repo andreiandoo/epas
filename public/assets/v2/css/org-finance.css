@@ -1,0 +1,67 @@
+/* viaqui.com v2: the operator's balance (/organizator/sold). Needs base.css + organizer.css, and rides on
+   org-venue.css + org-am.css so the period bar, the figures and the table look exactly like the ones on
+   /organizator/raport. Markup in organizer/finance.php, behaviour in assets/v2/js/org-finance.js. */
+
+.of{display:grid;gap:var(--space-5);min-width:0}
+.of [hidden]{display:none!important}
+@media (max-width:599px){.of{gap:var(--space-4)}}
+.of-body{display:grid;gap:var(--space-5);min-width:0}
+@media (max-width:599px){.of-body{gap:var(--space-4)}}
+
+/* ---------- the model, one line ---------- */
+.of-model{display:flex;align-items:flex-start;gap:12px;margin:0;padding:14px 18px;border:1px solid #BFD4EE;border-radius:18px;background:#EEF4FB;color:#1F3F66;font-size:.9375rem;line-height:1.5}
+.of-model .ic{flex:none;width:20px;height:20px;margin-top:2px}
+
+/* ---------- period bar ---------- */
+.of-filters{align-items:flex-end}
+.of-filters #of-presets{flex:1 1 100%}
+@media (min-width:1100px){.of-filters #of-presets{flex:0 1 auto}}
+
+/* ---------- the four figures of the period ---------- */
+.of-cards{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+@media (min-width:1180px){.of-cards{grid-template-columns:repeat(4, minmax(0,1fr));gap:16px}}
+@media (max-width:519px){.of-cards{grid-template-columns:minmax(0,1fr)}}
+.of-card{display:flex;flex-direction:column;min-width:0;padding:18px 20px;border:1px solid var(--line);border-radius:22px;background:var(--surface)}
+.of-card.is-deep{border-color:var(--deep);background:var(--deep);color:#F7F7F5}
+.of-card.is-mint{border-color:#CDE6D8;background:var(--tint-green)}
+.of-card.is-warm{border-color:#F1DDA8;background:#FFF7E3}
+.of-card-k{margin:0;font-size:.875rem;font-weight:700;color:var(--muted)}
+.of-card.is-deep .of-card-k{color:rgba(247,247,245,.75)}
+.of-card-v{margin:6px 0 0;font-size:clamp(1.5rem, 2.4vw, 2.125rem);font-weight:700;line-height:1.1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--green);overflow-wrap:anywhere}
+.of-card.is-deep .of-card-v{color:#FFFFFF}
+.of-card.is-warm .of-card-v{color:#5C4300}
+.of-card-p{flex:1;margin:6px 0 0;font-size:.8125rem;line-height:1.45;color:var(--muted)}
+.of-card.is-deep .of-card-p{color:rgba(247,247,245,.72)}
+.of-sk{display:block;width:62%;height:30px}
+.of-card.is-deep .org-skel{background:rgba(255,255,255,.16)}
+.of.is-busy{cursor:progress}
+
+/* ---------- owed each way ---------- */
+.of-due-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:900px){.of-due-grid{grid-template-columns:repeat(2, minmax(0,1fr));gap:16px}}
+.of-due-c{display:flex;flex-direction:column;min-width:0;padding:18px 20px;border:1px solid var(--line);border-radius:20px;background:var(--surface)}
+.of-due-c.is-warm{border-color:#F1DDA8;background:#FFF7E3}
+.of-due-c.is-mint{border-color:#CDE6D8;background:var(--tint-green)}
+.of-due-k{margin:0;font-size:.8125rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.of-due-v{margin:8px 0 0;font-size:clamp(1.625rem, 2.6vw, 2.25rem);font-weight:700;line-height:1.1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--green);overflow-wrap:anywhere}
+.of-due-c.is-warm .of-due-v{color:#5C4300}
+.of-due-p{flex:1;margin:8px 0 0;font-size:.875rem;line-height:1.5;color:var(--muted);text-wrap:pretty}
+.of-due-l{display:inline-flex;align-items:center;align-self:flex-start;gap:6px;margin-top:14px;color:var(--action);font-size:.875rem;font-weight:700;text-decoration:none}
+.of-due-l:hover{text-decoration:underline}
+.of-due-l .ic{width:16px;height:16px}
+.of-note{display:flex;align-items:flex-start;gap:10px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:.875rem;line-height:1.5}
+.of-note .ic{flex:none;width:18px;height:18px;margin-top:2px}
+.of-note a{color:var(--action);font-weight:700}
+
+/* ---------- month by month ---------- */
+.of-months .org-panel-head{align-items:flex-end}
+.of-table td:not(:first-child),.of-table th:not(:first-child){text-align:right}
+.of-table td:not(:first-child){font-variant-numeric:tabular-nums;white-space:nowrap}
+.of-table tbody td:first-child{font-weight:600}
+.of-table tfoot td{padding:12px 14px;border-top:2px solid var(--line);background:#FBFBF9;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.of-table tfoot td:first-child{font-variant-numeric:normal}
+.of-table td small{margin-top:2px;font-size:.75rem;font-weight:500}
+
+/* ---------- nothing to show ---------- */
+.of-empty-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
+.org-main .of-empty .of-empty-cta .btn{margin-top:0}
