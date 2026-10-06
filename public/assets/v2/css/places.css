@@ -83,6 +83,30 @@
 .v-pager-step:hover{background:var(--green);color:var(--on-deep)}
 .v-pager-step .ic{width:16px;height:16px}
 
+/* /attractions: filter in the hero, type pills, picture cards */
+.v-afilter{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto;align-items:center;gap:0;width:100%;max-width:860px;margin-top:10px;padding:7px;border-radius:999px;background:var(--surface);color:var(--ink);box-shadow:0 24px 50px -24px rgba(0,0,0,.6)}
+.v-afield{display:grid;gap:1px;min-width:0;padding:6px 18px;border-right:1px solid var(--line)}
+.v-afield:last-of-type{border-right:0}
+.v-afield > span{font-size:.75rem;font-weight:600;color:var(--green)}
+.v-afield input,.v-afield select{width:100%;min-width:0;padding:0;border:0;background:none;color:var(--ink);font:500 .9375rem/1.4 var(--font);-webkit-appearance:none;appearance:none}
+.v-afield input:focus-visible,.v-afield select:focus-visible{outline:none}
+.v-afield:focus-within > span{color:var(--action);text-decoration:underline;text-underline-offset:3px}
+.v-afilter .btn{min-height:50px;padding:0 22px}
+@media (max-width:759px){
+  .v-afilter{grid-template-columns:1fr 1fr;border-radius:26px;padding:8px}
+  .v-afield-q{grid-column:1 / -1;border-right:0;border-bottom:1px solid var(--line)}
+  .v-afield{padding-block:10px}
+  .v-afilter .btn{grid-column:1 / -1;justify-content:center;margin-top:6px}
+}
+.v-types{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:clamp(24px,3vw,40px)}
+.v-types a{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:999px;background:var(--surface);color:var(--ink);font-size:.875rem;font-weight:500;text-decoration:none;box-shadow:inset 0 0 0 1px var(--line)}
+.v-types a:hover{box-shadow:inset 0 0 0 1.5px var(--green);color:var(--green)}
+.v-types a[aria-current]{background:var(--green);color:var(--on-deep);box-shadow:none}
+@media (max-width:719px){.v-types{flex-wrap:nowrap;overflow-x:auto;margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter);scrollbar-width:none}.v-types a{flex:none}}
+.v-phead-list .v-plink .ic{width:14px;height:14px}
+.v-agrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.v-acredit{margin-top:28px !important;font-size:.8125rem;color:var(--muted)}
+
 /* /cities: every country with its largest cities */
 .v-jump{display:flex;flex-wrap:wrap;gap:4px 14px;max-width:70ch;font-size:.8125rem}
 .v-jump a{color:var(--muted);text-decoration:none}

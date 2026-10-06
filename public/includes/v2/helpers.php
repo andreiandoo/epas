@@ -365,6 +365,6 @@ function v2_attraction(array $a): ?array
         'city' => is_array($a['city'] ?? null) ? navFlatName($a['city']['name'] ?? '') : '',
         'type' => is_array($a['type'] ?? null) ? (string) ($a['type']['name'] ?? '') : '',
         'image' => v2_media_url($a['cover_image_url'] ?? null),
-        'href' => '/atractie/' . $slug,
+        'href' => '/attraction/' . $slug,
     ];
 }

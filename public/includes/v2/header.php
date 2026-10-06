@@ -38,10 +38,10 @@ $v2PlanTools = [
 // Under "Explorează": attractions are the places to see (points of interest); tickets are sold on /locatii.
 // The planner, the map and the routes used to sit here too; they have their own "Planifică" entry now.
 $v2AttrLinks = [
-    ['castle-turret', 'Castles and palaces', '/attractions?tip=castel-palat'],
-    ['buildings', 'Museums', '/attractions?tip=muzeu'],
-    ['heart', 'Churches and monasteries', '/attractions?tip=biserica-manastire'],
-    ['sun', 'Parks and gardens', '/attractions?tip=parc-gradina'],
+    ['castle-turret', 'Castles', '/attractions?type=castles'],
+    ['buildings', 'Museums', '/attractions?type=museums'],
+    ['heart', 'Cathedrals', '/attractions?type=cathedrals'],
+    ['sun', 'National parks', '/attractions?type=national-parks'],
     ['map-pin', 'All attractions', '/attractions'],
 ];
 $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV) {
