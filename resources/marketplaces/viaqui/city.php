@@ -91,9 +91,8 @@ $pageNum = max(1, (int) ($_GET['page'] ?? 1));
 $categoryFilter = isset($_GET['category']) && is_string($_GET['category']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['category']) ? $_GET['category'] : null;
 $searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
 
-// Price filter. Empty until Viaqui settles the currency prices are shown in (cities sit in many countries):
-// the copied thresholds were amounts in lei. With an empty list the control is not printed.
-$priceMaxAllowed = [];
+// Price filter, in euro (the site currency). With an empty list the control is not printed.
+$priceMaxAllowed = [10, 25, 50, 100];
 $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $priceMaxAllowed, true))
     ? (int) $_GET['max_price']
     : null;
@@ -182,7 +181,7 @@ foreach ((array) (($listings['locations']['success'] ?? false) ? ($listings['loc
         'href' => '/venue/' . $l['slug'],
         'name' => navFlatName($l['name']),
         'image' => v2_media_url($l['cover_image'] ?? null),
-        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · from ' . v2_thousands((int) round($l['min_price_cents'] / 100)) . ' lei' : ''), ' ·'),
+        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · from ' . v2_money($l['min_price_cents'] / 100) : ''), ' ·'),
         'lodging' => !empty($l['has_lodging']),
         'promoted' => !empty($l['is_promoted']),
     ];
@@ -252,7 +251,7 @@ if ($categoryFilter) {
     $activeChips[] = [$catNameOf($categoryFilter), $cityUrl(['category' => ''])];
 }
 if ($maxPrice !== null) {
-    $activeChips[] = ['Under ' . $maxPrice, $cityUrl(['max_price' => ''])];
+    $activeChips[] = ['Under ' . v2_money($maxPrice), $cityUrl(['max_price' => ''])];
 }
 if ($sort !== 'recommended') {
     $activeChips[] = ['Sorted: ' . $sortOptions[$sort], $cityUrl(['sort' => ''])];
@@ -265,7 +264,7 @@ $priceHtml = function (?int $cents): string {
     if ($cents === 0) {
         return '<span class="xp-price"><b>Free</b></span>';
     }
-    return '<span class="xp-price">from<b>' . v2_e(number_format($cents / 100, 0, '.', ',')) . ' lei</b></span>';
+    return '<span class="xp-price">from<b>' . v2_e(v2_money($cents / 100)) . '</b></span>';
 };
 
 // ============================================================
@@ -534,11 +533,11 @@ include __DIR__ . '/includes/v2/header.php';
             </details>
             <?php if ($priceMaxAllowed): ?>
             <details class="dd">
-              <summary class="dd-btn<?= $maxPrice !== null ? ' is-set' : '' ?>"><?= $maxPrice !== null ? 'Under ' . $maxPrice : 'Price' ?><?= v2_ic('caret-down') ?></summary>
+              <summary class="dd-btn<?= $maxPrice !== null ? ' is-set' : '' ?>"><?= $maxPrice !== null ? 'Under ' . v2_e(v2_money($maxPrice)) : 'Price' ?><?= v2_ic('caret-down') ?></summary>
               <div class="dd-pop">
                 <ul>
                   <li><a href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>>Any price</a></li>
-                  <?php foreach ($priceMaxAllowed as $cap): ?><li><a href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Under <?= $cap ?></a></li><?php endforeach; ?>
+                  <?php foreach ($priceMaxAllowed as $cap): ?><li><a href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Under <?= v2_e(v2_money($cap)) ?></a></li><?php endforeach; ?>
                 </ul>
               </div>
             </details>
@@ -585,7 +584,7 @@ include __DIR__ . '/includes/v2/header.php';
             <h3 class="flabel">Maximum price</h3>
             <div class="fchips">
               <a class="fchip" href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>>Any</a>
-              <?php foreach ($priceMaxAllowed as $cap): ?><a class="fchip" href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Under <?= $cap ?></a><?php endforeach; ?>
+              <?php foreach ($priceMaxAllowed as $cap): ?><a class="fchip" href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Under <?= v2_e(v2_money($cap)) ?></a><?php endforeach; ?>
             </div>
           </section>
           <?php endif; ?>

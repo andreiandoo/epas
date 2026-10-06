@@ -199,7 +199,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
                 <b><?= v2_e($l['name']) ?></b>
                 <small class="mloc-m"><?= v2_e($l['offer'] ?: 'Entry tickets online') ?><?= $l['lodging'] ? ' · stays' : '' ?></small>
               </span>
-              <?php if ($l['price']): ?><span class="mloc-p">from <b><?= v2_e(number_format($l['price'], 0, ',', '.')) ?> lei</b></span><?php endif; ?>
+              <?php if ($l['price']): ?><span class="mloc-p">from <b><?= v2_e(v2_money($l['price'])) ?></b></span><?php endif; ?>
             </a></li>
             <?php endforeach; ?>
           </ul>

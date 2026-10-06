@@ -97,7 +97,7 @@ function v2_promoted_section(array $items, array $o): void
             <span class="xp-cat"><?= v2_e($a['cat']) ?></span>
             <span class="xp-title" title="<?= v2_e($a['title']) ?>"><?= v2_e($a['title']) ?></span>
             <span class="xp-meta"><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?><?php if ($a['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['dur']) ?></span><?php endif; ?></span>
-            <span class="xp-foot"><span class="xp-avail"><?= v2_ic('arrow-right') ?><span class="xp-avail-t"><?= $a['kind'] === 'location' ? 'See the venue' : 'See the experience' ?></span></span><?php if ($a['price']): ?><span class="xp-price">de la<b><?= v2_thousands($a['price']) ?> lei</b></span><?php endif; ?></span>
+            <span class="xp-foot"><span class="xp-avail"><?= v2_ic('arrow-right') ?><span class="xp-avail-t"><?= $a['kind'] === 'location' ? 'See the venue' : 'See the experience' ?></span></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e(v2_money($a['price'])) ?></b></span><?php endif; ?></span>
           </span>
         </a></li>
         <?php endforeach; ?>
