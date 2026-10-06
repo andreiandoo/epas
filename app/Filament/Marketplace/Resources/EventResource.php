@@ -4025,15 +4025,31 @@ class EventResource extends Resource
                                                     // organizer floor is 2.5 → sales charge 2.5"
                                                     // silent divergence seen on event 4744 tt 12000
                                                     // (2026-08-22).
-                                                    ->minValue(function (SGet $get) use ($marketplace) {
-                                                        // Free-with-code tickets: the fixed fee is AmBilet's call
-                                                        // (0 or e.g. 2 lei) — the organizer floor doesn't apply to 0-lei tickets.
-                                                        if (filled($get('meta.free_with_code.code'))) {
-                                                            return 0;
-                                                        }
-                                                        $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
-                                                        return $inh['floor_active'] && $inh['fixed'] > 0 ? $inh['fixed'] : 0;
-                                                    })
+                                                    // A custom rule instead of minValue(): type "Fix" with
+                                                    // amount 0 is the explicit "no commission, no floor" opt-out
+                                                    // (TicketType::allowsCommissionFloor), so 0 must stay saveable.
+                                                    ->minValue(0)
+                                                    ->rules([
+                                                        fn (SGet $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get, $marketplace, $t) {
+                                                            // Free-with-code tickets: the fixed fee is AmBilet's call
+                                                            // (0 or e.g. 2 lei) — the organizer floor doesn't apply to 0-lei tickets.
+                                                            if (filled($get('meta.free_with_code.code'))) {
+                                                                return;
+                                                            }
+                                                            if ($get('commission_type') === 'fixed' && (float) $value === 0.0) {
+                                                                return;
+                                                            }
+                                                            $inh = static::resolveInheritedCommission($get('../../marketplace_organizer_id'), $marketplace);
+                                                            if ($inh['floor_active'] && $inh['fixed'] > 0 && (float) $value < $inh['fixed']) {
+                                                                $fixedStr = number_format($inh['fixed'], 2);
+                                                                $cur = $marketplace?->currency ?? 'RON';
+                                                                $fail($t(
+                                                                    "Floor comision activ: minim $fixedStr $cur/bilet (sau 0 la tipul Fix, pentru bilet fără comision).",
+                                                                    "Commission floor active: min $fixedStr $cur/ticket (or 0 on the Fixed type, for a ticket without commission)."
+                                                                ));
+                                                            }
+                                                        },
+                                                    ])
                                                     ->step(0.01)
                                                     ->placeholder('2.00')
                                                     ->suffix($marketplace?->currency ?? 'RON')
@@ -4079,7 +4095,9 @@ class EventResource extends Resource
                                                         }
                                                         if ($inh['floor_active'] && $inh['fixed'] > 0) {
                                                             $fixedStr = number_format($inh['fixed'], 2);
-                                                            $lines[] = $t("Floor comision activ: minim $fixedStr $cur/bilet", "Commission floor active: min $fixedStr $cur/ticket");
+                                                            $lines[] = $type === 'fixed'
+                                                                ? $t("Floor comision activ: minim $fixedStr $cur/bilet · Sumă fixă 0 = bilet fără comision (floor-ul nu se aplică)", "Commission floor active: min $fixedStr $cur/ticket · Fixed amount 0 = ticket without commission (floor not applied)")
+                                                                : $t("Floor comision activ: minim $fixedStr $cur/bilet", "Commission floor active: min $fixedStr $cur/ticket");
                                                         }
                                                         if (empty($lines)) {
                                                             return null;
