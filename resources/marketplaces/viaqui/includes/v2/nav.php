@@ -135,8 +135,8 @@ foreach ((array) ($v2NavData('countries')['countries'] ?? []) as $country) {
     $V2NAV['citiesTotal'] += (int) ($country['cities_count'] ?? 0);
     $V2NAV['regions'][] = [
         'name' => (string) $country['name'],
-        // the country page lives at /{slug}; until it exists the link goes to the city list of that country
-        'slug' => 'cities?country=' . strtolower((string) ($country['code'] ?? '')),
+        // the country page lives at /{slug} (slug.php -> country.php)
+        'slug' => (string) ($country['slug'] ?? ''),
         'code' => (string) ($country['code'] ?? ''),
         'citiesCount' => (int) ($country['cities_count'] ?? count($featured)),
         'featured' => $featured,
@@ -147,6 +147,7 @@ foreach ((array) ($v2NavData('countries')['countries'] ?? []) as $country) {
 $V2NAV['countriesAll'] = array_map(function ($r) {
     return ['name' => $r['name'], 'slug' => $r['slug'], 'citiesCount' => $r['citiesCount']];
 }, $V2NAV['regions']);
+$V2NAV['countriesFull'] = $V2NAV['regions'];
 $V2NAV['regions'] = array_slice($V2NAV['regions'], 0, 12);
 // cities marked as featured in the admin lead every list; they keep the experience counts the API gives them
 foreach ((array) ($v2NavData('cities')['cities'] ?? []) as $c) {

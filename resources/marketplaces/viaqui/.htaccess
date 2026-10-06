@@ -11,7 +11,7 @@ DirectoryIndex index.php index.html
 # so they win over the older Romanian addresses below, which keep working until each page is translated.
 # ============================================
 RewriteRule ^search/?$ cauta.php [L,QSA]
-RewriteRule ^cities/?$ orase.php [L,QSA]
+RewriteRule ^cities/?$ cities.php [L,QSA]
 RewriteRule ^categories/?$ categorii.php [L,QSA]
 RewriteRule ^experiences/?$ hub-experiente.php [L,QSA]
 RewriteRule ^attractions/?$ hub-atractii.php [L,QSA]
@@ -187,7 +187,7 @@ RewriteRule ^venues/?$ /operatori [R=301,L,QSA]
 # Cities / regions
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^orase/?$ orase.php [L]
+RewriteRule ^orase/?$ /cities [R=301,L]
 
 # Region pages live at /{slug} (slug.php, region.php); the older prefixed forms redirect there
 RewriteRule ^regiune/([a-z0-9-]+)/?$ /$1 [R=301,L,QSA]

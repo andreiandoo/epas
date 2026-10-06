@@ -145,6 +145,12 @@ class LocationsController extends BaseController
             $query->where('country', $country);
         }
 
+        // Filter by region slug (the cities of one region of a country)
+        if ($request->filled('region')) {
+            $regionSlug = trim((string) $request->region);
+            $query->whereHas('region', fn ($q) => $q->where('slug', $regionSlug));
+        }
+
         // Filter by letter - use slug which is always ASCII
         if ($request->has('letter') && $request->letter) {
             $letter = strtoupper($request->letter);
@@ -157,8 +163,16 @@ class LocationsController extends BaseController
             $query->where('slug', 'like', "%{$search}%");
         }
 
-        // Featured cities always appear first, then by sort_order, then slug
-        $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('slug');
+        // Featured cities always appear first, then by sort_order, then slug.
+        // sort=name lists them alphabetically, sort=population by size; neither is re-sorted by events below.
+        $sortBy = $request->input('sort', 'events');
+        if ($sortBy === 'name') {
+            $query->orderBy('slug');
+        } elseif ($sortBy === 'population') {
+            $query->orderByRaw('population IS NULL')->orderByDesc('population')->orderBy('slug');
+        } else {
+            $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('slug');
+        }
 
         // Pagination
         $perPage = min((int) $request->input('per_page', 8), 200);
@@ -181,11 +195,13 @@ class LocationsController extends BaseController
                 ] : null,
                 'events_count' => $eventCounts[$city->id] ?? 0,
                 'is_featured' => (bool) $city->is_featured,
+                'country' => $city->country,
+                'population' => $city->population,
+                'is_capital' => (bool) $city->is_capital,
             ];
         });
 
         // Sort by events if requested — featured cities always come first
-        $sortBy = $request->input('sort', 'events');
         if ($sortBy === 'events') {
             $transformedData = $transformedData->sort(function ($a, $b) {
                 if ($a['is_featured'] !== $b['is_featured']) {
@@ -335,6 +351,63 @@ class LocationsController extends BaseController
             ->values();
 
         return $this->success(['letters' => $letters]);
+    }
+
+    /**
+     * One country, by ISO code or slug: its name, the number of visible cities and its regions with their city
+     * counts. The cities themselves come from the cities endpoint (country=, region=, sort=, page=).
+     */
+    public function country(Request $request, string $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $lang = $client->language ?? $client->locale ?? 'ro';
+        $identifier = strtolower(trim($identifier));
+
+        $codes = MarketplaceCity::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->whereNotNull('country')
+            ->distinct()
+            ->pluck('country');
+
+        $match = null;
+        foreach (DB::table('geo_countries')->whereIn('iso2', $codes)->get() as $row) {
+            $name = $row->name_en ?: $row->name_native;
+            if (strtolower($row->iso2) === $identifier || \Illuminate\Support\Str::slug($name) === $identifier) {
+                $match = ['code' => $row->iso2, 'name' => $name, 'slug' => \Illuminate\Support\Str::slug($name)];
+                break;
+            }
+        }
+        if (! $match) {
+            return $this->error('Country not found', 404);
+        }
+
+        $perRegion = MarketplaceCity::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->where('country', $match['code'])
+            ->whereNotNull('region_id')
+            ->selectRaw('region_id, COUNT(*) as cities_count')
+            ->groupBy('region_id')
+            ->pluck('cities_count', 'region_id');
+
+        $regions = MarketplaceRegion::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->whereIn('id', $perRegion->keys())
+            ->get()
+            ->map(fn ($region) => [
+                'id' => $region->id,
+                'name' => $region->name[$lang] ?? array_values((array) $region->name)[0] ?? $region->slug,
+                'slug' => $region->slug,
+                'cities_count' => (int) ($perRegion[$region->id] ?? 0),
+            ])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        $match['cities_count'] = (int) MarketplaceCity::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->where('country', $match['code'])
+            ->count();
+
+        return $this->success(['country' => $match, 'regions' => $regions]);
     }
 
     /**
