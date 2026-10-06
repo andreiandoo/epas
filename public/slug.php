@@ -4,7 +4,7 @@
  *
  * .htaccess routes `/{slug}` (any single-segment slug not claimed by an
  * earlier explicit rule) to this file. Tries the marketplace API to decide
- * whether the slug is a category, a city, or unknown, and includes the
+ * whether the slug is a category, a country, a city, or unknown, and includes the
  * appropriate render template.
  *
  * Direct access to /category.php?slug=X or /city.php?slug=X still works
@@ -49,21 +49,18 @@ if ($category) {
     return;
 }
 
-// 3. Try region (/muntenia, /transilvania …): only a slug from the cached region list reaches the region endpoint.
-$regionList = api_cached('v2_regions', function () {
-    return api_get('/locations/regions');
+// 3. Try country (/italy, /romania …). The list is the one the menu already caches; a country page never costs an
+//    extra lookup for the other slugs. (Regions are reached through the country page: /italy?region=tuscany.)
+$countryList = api_cached('v2_countries', function () {
+    return api_get('/locations/countries', ['top' => 12]);
 }, 3600);
-$regionList = $regionList['data']['regions'] ?? $regionList['data'] ?? [];
-if (in_array($slug, array_column(array_filter((array) $regionList, 'is_array'), 'slug'), true)) {
-    $regionSlug = $slug;
-    $regionResp = api_cached('v2_region_' . $slug, function () use ($slug) {
-        return api_get('/locations/regions/' . rawurlencode($slug));
-    }, 3600);
-    if (!empty($regionResp['success'])) {
-        require __DIR__ . '/region.php';
+foreach ((array) ($countryList['data']['countries'] ?? []) as $countryRow) {
+    if (is_array($countryRow) && ($countryRow['slug'] ?? '') === $slug) {
+        require __DIR__ . '/country.php';
         return;
     }
 }
+unset($countryRow);
 
 // 4. Try city.
 $cityData = navGetCityBySlug($slug);
