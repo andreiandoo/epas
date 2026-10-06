@@ -302,7 +302,7 @@ $skipJsComponents = true;
             if (headerSearchCache) return headerSearchCache;
             try {
                 if (typeof AmbiletAPI === 'undefined') return [];
-                const response = await AmbiletAPI.get('/organizer/events');
+                const response = await AmbiletAPI.getAllOrganizerEvents();
                 headerSearchCache = response.data || [];
                 return headerSearchCache;
             } catch (e) {

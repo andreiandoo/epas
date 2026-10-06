@@ -704,7 +704,7 @@ const WidgetsPage = {
 
     async loadEvents() {
         try {
-            const resp = await AmbiletAPI.get('/organizer/events', { status: 'published', limit: 50 });
+            const resp = await AmbiletAPI.getAllOrganizerEvents({ status: 'published' });
             const events = resp.data || [];
             const $select = document.getElementById('single-event');
             events.forEach(ev => {

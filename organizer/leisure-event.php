@@ -69,7 +69,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
         if (typeof AmbiletAPI === 'undefined') { $('lv-loading').textContent = 'API indisponibil.'; return; }
         try {
-            const res = await AmbiletAPI.get('/organizer/events');
+            const res = await AmbiletAPI.getAllOrganizerEvents();
             const events = res.data || [];
             const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
             $('lv-loading').classList.add('hidden');

@@ -318,7 +318,7 @@ const OrgPanouNou = {
         try {
             // upcoming=1 uses the Event "upcoming" scope (handles multi-day/range
             // events) + status=published → exactly the "în derulare" set.
-            const res = await AmbiletAPI.get('/organizer/events?status=published&upcoming=1&per_page=100&sort=event_date&order=asc');
+            const res = await AmbiletAPI.getAllOrganizerEvents({ status: 'published' });
             const all = res.data || res || [];
             // "În derulare" = active/published, not ended, not cancelled, not draft.
             // Filtered client-side too (belt-and-suspenders) so ended/draft never leak in.

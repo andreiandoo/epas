@@ -1497,7 +1497,7 @@ function toggleEventDropdown() {
 
 async function loadEventsList() {
     try {
-        const response = await AmbiletAPI.get('/organizer/events?per_page=50');
+        const response = await AmbiletAPI.getAllOrganizerEvents();
         if (response.success) {
             const events = response.data?.events || response.data || [];
             renderEventsList(events);

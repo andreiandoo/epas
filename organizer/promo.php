@@ -123,7 +123,7 @@ let promoEvents = [];
 
 async function loadEvents() {
     try {
-        const res = await AmbiletAPI.get('/organizer/events');
+        const res = await AmbiletAPI.getAllOrganizerEvents();
         if (res.success && res.data) {
             let allEvents = [];
             if (Array.isArray(res.data.events)) {
