@@ -59,6 +59,8 @@ $v2NavData = function (string $k) use ($v2NavR): array {
     return !empty($v2NavR[$k]['success']) && is_array($v2NavR[$k]['data'] ?? null) ? $v2NavR[$k]['data'] : [];
 };
 
+require_once __DIR__ . '/seed.php';
+
 $V2NAV = [];
 
 // ------------------------------------------------------------------ categories (+ subcategories)
@@ -76,7 +78,9 @@ foreach ((array) ($v2NavData('cats')['categories'] ?? []) as $c) {
 }
 $V2NAV['categories'] = [];
 foreach ($v2Parents as $c) {
-    $local = in_array($c['slug'], V2_CATEGORY_PHOTOS, true);
+    // local WebP copy: the copied Romanian slugs, or the picture the starter catalogue gives the English slug
+    $imgKey = in_array($c['slug'], V2_CATEGORY_PHOTOS, true) ? $c['slug'] : (V2_SEED_CATEGORIES[$c['slug']][1] ?? null);
+    $local = $imgKey !== null;
     $apiImage = v2_media_url($c['image'] ?? null);
     $subs = [];
     foreach (array_slice($v2Children[$c['id'] ?? 0] ?? [], 0, 10) as $s) {
@@ -87,9 +91,9 @@ foreach ($v2Parents as $c) {
         'slug' => $c['slug'],
         'name' => navFlatName($c['name'] ?? ''),
         'desc' => trim((string) ($c['description'] ?? '')),
-        'image' => $local ? v2_asset('img/cat-' . $c['slug'] . '.webp') : $apiImage,
-        'thumb' => $local ? v2_asset('img/cat-' . $c['slug'] . '-320.webp') : $apiImage,
-        'srcset' => $local ? v2_asset('img/cat-' . $c['slug'] . '-320.webp') . ' 320w, ' . v2_asset('img/cat-' . $c['slug'] . '.webp') . ' 640w' : '',
+        'image' => $local ? v2_asset('img/cat-' . $imgKey . '.webp') : $apiImage,
+        'thumb' => $local ? v2_asset('img/cat-' . $imgKey . '-320.webp') : $apiImage,
+        'srcset' => $local ? v2_asset('img/cat-' . $imgKey . '-320.webp') . ' 320w, ' . v2_asset('img/cat-' . $imgKey . '.webp') . ' 640w' : '',
         'count' => (int) ($c['activities_count'] ?? 0) ?: (int) ($c['event_count'] ?? 0),
         'href' => '/' . $c['slug'],
         'subs' => $subs,
