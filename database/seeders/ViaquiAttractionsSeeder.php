@@ -122,7 +122,34 @@ class ViaquiAttractionsSeeder extends Seeder
                     ['name', 'subtitle', 'attraction_type_id', 'marketplace_city_id', 'latitude', 'longitude', 'country', 'wikidata_id', 'popularity', 'sort_order', 'updated_at']);
             }
 
-            echo sprintf("%s: %d attractions, %d small places, %d with a photo.\n", $country, count($rows), count($cityRows), count(array_filter($rows, fn ($r) => $r['cover_image_url'])));
+            // ------------------------------------------------------------ what an earlier file held and this one dropped
+            // The rules of the data files change (thresholds, which small places earn a page). Rows that came from an
+            // import (they carry a wikidata_id) and are no longer in the file are removed, unless an experience is
+            // linked to them; small places created by an import that hold nothing any more are removed too.
+            $inFile = array_flip(array_column($data['attractions'], 'q'));
+            $staleIds = DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->where('country', $country)
+                ->whereNotNull('wikidata_id')->pluck('wikidata_id', 'id')->reject(fn ($q) => isset($inFile[$q]))->keys();
+            $removed = 0;
+            foreach ($staleIds->chunk(1000) as $chunk) {
+                $linked = DB::table('activity_attraction')->whereIn('attraction_id', $chunk)->pluck('attraction_id');
+                $removed += DB::table('attractions')->whereIn('id', $chunk->diff($linked))->delete();
+            }
+            $keepSmall = array_flip(array_column($data['extra_cities'], 's'));
+            $smallIds = DB::table('marketplace_cities')->where('marketplace_client_id', self::CLIENT_ID)->where('country', $country)
+                ->where('sort_order', 100000)->pluck('slug', 'id')->reject(fn ($slug) => isset($keepSmall[$slug]))->keys();
+            $removedCities = 0;
+            foreach ($smallIds->chunk(1000) as $chunk) {
+                $used = DB::table('attractions')->whereIn('marketplace_city_id', $chunk)->distinct()->pluck('marketplace_city_id');
+                foreach (['activities' => 'marketplace_city_id', 'activity_locations' => 'marketplace_city_id', 'events' => 'marketplace_city_id'] as $table => $column) {
+                    if (DB::getSchemaBuilder()->hasColumn($table, $column)) {
+                        $used = $used->merge(DB::table($table)->whereIn($column, $chunk)->distinct()->pluck($column));
+                    }
+                }
+                $removedCities += DB::table('marketplace_cities')->whereIn('id', $chunk->diff($used))->delete();
+            }
+
+            echo sprintf("%s: %d attractions, %d small places, %d with a photo; removed %d attractions and %d small places no longer in the file.\n",
+                $country, count($rows), count($cityRows), count(array_filter($rows, fn ($r) => $r['cover_image_url'])), $removed, $removedCities);
         }
 
         echo 'Viaqui attractions in the database: ' . DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->whereNull('deleted_at')->count() . "\n";
