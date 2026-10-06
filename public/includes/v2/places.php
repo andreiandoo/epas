@@ -10,7 +10,7 @@
 const V2_ATTRACTION_TYPES = [
     'castles' => 'Castles', 'palaces' => 'Palaces', 'museums' => 'Museums', 'cathedrals' => 'Cathedrals', 'churches' => 'Churches',
     'monasteries' => 'Monasteries', 'fortresses' => 'Fortresses', 'archaeological-sites' => 'Archaeological sites',
-    'old-towns-squares' => 'Old towns & squares', 'unesco-sites' => 'UNESCO World Heritage', 'viewpoints' => 'Viewpoints',
+    'old-towns-squares' => 'Old towns & squares', 'unesco-sites' => 'UNESCO World Heritage', 'landmarks' => 'Landmarks', 'viewpoints' => 'Viewpoints',
     'theatres-operas' => 'Theatres & operas', 'national-parks' => 'National parks', 'caves' => 'Caves', 'waterfalls' => 'Waterfalls',
     'lakes' => 'Lakes', 'beaches' => 'Beaches', 'zoos' => 'Zoos', 'aquariums' => 'Aquariums', 'botanical-gardens' => 'Botanical gardens',
     'theme-parks' => 'Theme parks', 'thermal-baths' => 'Thermal baths', 'cable-cars' => 'Cable cars', 'salt-mines' => 'Salt mines',
