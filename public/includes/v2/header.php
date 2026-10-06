@@ -101,6 +101,9 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
           <button class="mega-tab" type="button" role="tab" id="mxt-<?= $i ?>" aria-controls="mx-<?= $i ?>" aria-selected="<?= $i === 0 ? 'true' : 'false' ?>" tabindex="<?= $i === 0 ? 0 : -1 ?>"><span><?= v2_e($r['name']) ?></span><small><?= v2_num($r['citiesCount'], 'city', 'cities') ?></small></button>
           <?php endforeach; ?>
         </div>
+        <?php if (count($V2NAV['countriesAll'] ?? []) > count($V2NAV['regions'])): ?>
+        <a class="mega-all" href="/cities">All <?= count($V2NAV['countriesAll']) ?> countries<?= v2_ic('arrow-right') ?></a>
+        <?php endif; ?>
       </div>
       <div>
         <?php foreach ($V2NAV['regions'] as $i => $r):
@@ -297,7 +300,7 @@ foreach ($V2NAV['allCities'] ?? [] as $c) {
         $v2MmCities[$c['slug']] = [$c['name'], $c['region'], '/' . $c['slug']];
     }
 }
-$v2MmCityTotal = count($V2NAV['allCities'] ?? []) ?: array_sum(array_column($V2NAV['regions'], 'citiesCount'));
+$v2MmCityTotal = ($V2NAV['citiesTotal'] ?? 0) ?: array_sum(array_column($V2NAV['regions'], 'citiesCount'));
 ?>
 <div class="mm" id="menu" hidden>
   <div class="mm-scrim" data-mm-close></div>
