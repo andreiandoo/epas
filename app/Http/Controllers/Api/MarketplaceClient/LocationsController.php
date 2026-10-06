@@ -634,6 +634,7 @@ class LocationsController extends BaseController
                     'code' => $city->county->code,
                 ] : null,
                 'events_count' => $eventCount,
+                'country' => $city->country,
                 'population' => $city->population,
                 'latitude' => $city->latitude,
                 'longitude' => $city->longitude,
