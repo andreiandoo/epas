@@ -28,7 +28,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <label class="block mb-2 text-sm font-medium text-secondary">Selecteaza evenimentul</label>
                         <div class="relative w-full lg:w-80" id="event-dropdown-wrapper">
                             <input type="text" id="event-search-input" class="w-full px-4 py-3 pr-10 text-sm font-medium border bg-surface border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Cauta eveniment..." autocomplete="off"
-                                   onfocus="openEventDropdown()" oninput="filterEventDropdown()">
+                                   onfocus="openEventDropdown()" onclick="openEventDropdown()" oninput="filterEventDropdown()">
                             <input type="hidden" id="event-filter" value="">
                             <svg class="absolute w-5 h-5 -translate-y-1/2 pointer-events-none text-muted right-3 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             <div id="event-dropdown-list" class="absolute z-50 hidden w-full mt-1 overflow-y-auto bg-white border shadow-lg max-h-64 border-border rounded-xl"></div>
@@ -122,6 +122,8 @@ let allParticipants = [];
 let selectedEventId = null;
 let eventsList = [];
 let dropdownOpen = false;
+// The picker turns into a search box only when the list is long enough to need one
+const EVENT_SEARCH_MIN = 10;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
@@ -178,8 +180,11 @@ async function loadEvents() {
                 const date = event.starts_at ? AmbiletUtils.formatDate(event.starts_at) : '';
                 const venue = event.venue_name || '';
                 const meta = [date, venue].filter(Boolean).join(' · ');
-                return { id: event.id, label: dot + (event.name || event.title) + (meta ? ' — ' + meta : ''), live };
+                const label = dot + (event.name || event.title) + (meta ? ' — ' + meta : '');
+                return { id: event.id, label, search: normalizeEventSearch(label), live };
             });
+
+            document.getElementById('event-search-input').readOnly = !isEventSearchEnabled();
 
             if (eventsList.length > 0) {
                 const matched = urlEventId ? eventsList.find(e => String(e.id) === String(urlEventId)) : null;
@@ -196,8 +201,23 @@ async function loadEvents() {
     }
 }
 
+function isEventSearchEnabled() {
+    return eventsList.length > EVENT_SEARCH_MIN;
+}
+
+function normalizeEventSearch(str) {
+    return String(str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function openEventDropdown() {
+    if (dropdownOpen || !eventsList.length) return;
     dropdownOpen = true;
+    if (isEventSearchEnabled()) {
+        // Clear the selected label so the organizer can type a name right away
+        const input = document.getElementById('event-search-input');
+        input.value = '';
+        input.placeholder = 'Cauta dupa numele evenimentului...';
+    }
     renderEventDropdown(eventsList);
     document.getElementById('event-dropdown-list').classList.remove('hidden');
 }
@@ -205,14 +225,19 @@ function openEventDropdown() {
 function closeEventDropdown() {
     dropdownOpen = false;
     document.getElementById('event-dropdown-list').classList.add('hidden');
+    // Put the selected event back if the search was abandoned
+    const item = eventsList.find(e => String(e.id) === String(selectedEventId));
+    if (item) document.getElementById('event-search-input').value = item.label;
 }
 
 function filterEventDropdown() {
-    const query = document.getElementById('event-search-input').value.toLowerCase().trim();
-    if (!query) {
+    if (!isEventSearchEnabled()) return;
+    dropdownOpen = true;
+    const words = normalizeEventSearch(document.getElementById('event-search-input').value).split(/\s+/).filter(Boolean);
+    if (!words.length) {
         renderEventDropdown(eventsList);
     } else {
-        const filtered = eventsList.filter(e => e.label.toLowerCase().includes(query));
+        const filtered = eventsList.filter(e => words.every(w => e.search.includes(w)));
         renderEventDropdown(filtered);
     }
     document.getElementById('event-dropdown-list').classList.remove('hidden');
@@ -237,8 +262,9 @@ function selectEvent(id) {
     if (item) {
         document.getElementById('event-search-input').value = item.label;
     }
-    closeEventDropdown();
     selectedEventId = id;
+    closeEventDropdown();
+    document.getElementById('event-search-input').blur();
     loadParticipants();
 }
 
