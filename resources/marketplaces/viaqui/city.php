@@ -115,8 +115,9 @@ $catNameOf = function (string $catSlug) use ($V2NAV): string {
 $actParams = ['city' => $slug, 'page' => $pageNum, 'per_page' => 24];
 if ($categoryFilter) $actParams['category'] = $categoryFilter;
 if ($searchQuery !== '') $actParams['search'] = $searchQuery;
-if ($maxPrice !== null) $actParams['max_price_ron'] = $maxPrice;
-if ($sort === 'price_asc') $actParams['sort'] = 'cheapest';
+// operators sell in their own currency: the API filters and sorts on the euro value of the price
+if ($maxPrice !== null) $actParams['max_price_eur'] = $maxPrice;
+if ($sort === 'price_asc') $actParams['sort'] = 'cheapest_eur';
 
 $cacheSuffix = ($categoryFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
 $listings = api_cached_many([
@@ -160,6 +161,7 @@ foreach ($activities as $a) {
         'image'       => $n['image'],
         'dur'         => $n['dur'],
         'price_cents' => isset($a['cheapest_price_cents']) ? (int) $a['cheapest_price_cents'] : null,
+        'currency'    => (string) ($a['currency'] ?? ''),
         'url'         => $n['href'],
         'cta'         => 'See the experience',
         'promoted'    => !empty($a['flags']['is_promoted']),
@@ -195,7 +197,7 @@ foreach ((array) (($listings['locations']['success'] ?? false) ? ($listings['loc
         'href' => '/venue/' . $l['slug'],
         'name' => navFlatName($l['name']),
         'image' => v2_media_url($l['cover_image'] ?? null),
-        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · from ' . v2_money($l['min_price_cents'] / 100) : ''), ' ·'),
+        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · from ' . v2_own_price_label($l['min_price_cents'], $l['currency'] ?? null) : ''), ' ·'),
         'lodging' => !empty($l['has_lodging']),
         'promoted' => !empty($l['is_promoted']),
     ];
@@ -276,14 +278,14 @@ if ($sort !== 'recommended') {
     $activeChips[] = ['Sorted: ' . $sortOptions[$sort], $cityUrl(['sort' => ''])];
 }
 
-$priceHtml = function (?int $cents): string {
+$priceHtml = function (?int $cents, string $currency = ''): string {
     if ($cents === null) {
         return '';
     }
     if ($cents === 0) {
         return '<span class="xp-price"><b>Free</b></span>';
     }
-    return '<span class="xp-price">from<b>' . v2_e(v2_money($cents / 100)) . '</b></span>';
+    return '<span class="xp-price">from<b>' . v2_e(v2_own_price_label($cents, $currency)) . '</b></span>';
 };
 
 // ============================================================
@@ -621,7 +623,7 @@ include __DIR__ . '/includes/v2/header.php';
     </div>
 
     <div class="wrap">
-      <?php if ($partnerOnPage && ($clFx = v2_fx_note($countryCode)) !== ''): ?><p class="cl-fx"><?= v2_ic('info') ?><?= v2_e($clFx) ?></p><?php endif; ?>
+      <?php if ($cards && ($clFx = v2_fx_note($countryCode)) !== ''): ?><p class="cl-fx"><?= v2_ic('info') ?><?= v2_e($clFx) ?></p><?php endif; ?>
       <?php if (empty($cards)): ?>
       <div class="cl-empty">
         <h3>
@@ -649,7 +651,7 @@ include __DIR__ . '/includes/v2/header.php';
               <span class="xp-cat"><?= v2_e($card['cat']) ?></span>
               <span class="xp-title"><?= v2_e($card['title']) ?></span>
               <span class="xp-meta"><?php if ($card['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($card['dur']) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go"><?= v2_e($card['cta']) ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($card['price_cents']) ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_e($card['cta']) ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($card['price_cents'], $card['currency']) ?></span>
             </span>
           </a>
         </li>

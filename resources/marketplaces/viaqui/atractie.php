@@ -377,7 +377,7 @@ include __DIR__ . '/includes/v2/header.php';
             <span class="xp-body">
               <span class="xp-title"><?= v2_e($a['title'] ?? '') ?></span>
               <span class="xp-meta"><?php if (!empty($a['city']['name'])): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['city']['name']) ?></span><?php endif; ?><?php if (!empty($a['duration_minutes'])): ?><span><?= v2_ic('clock') ?><?= v2_e($durationLabel((int) $a['duration_minutes'])) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if (!empty($a['cheapest_price_cents'])): ?><span class="xp-price">from<b><?= v2_e($pricedFromCents($a['cheapest_price_cents'])) ?></b></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if (!empty($a['cheapest_price_cents'])): ?><span class="xp-price">from<b><?= v2_e(v2_own_price_label($a['cheapest_price_cents'], $a['currency'] ?? null)) ?></b></span><?php endif; ?></span>
             </span>
           </a>
         </li>

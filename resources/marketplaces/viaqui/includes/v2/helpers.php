@@ -3,6 +3,7 @@
  * viaqui.com v2: small helpers shared by the v2 partials and pages.
  * Prefixed v2_ so nothing collides with the rest of the site.
  */
+require_once __DIR__ . '/currency.php';
 
 function v2_e($s): string
 {
@@ -367,6 +368,9 @@ function v2_activity(array $a): ?array
         'cat' => (string) ($cat['slug'] ?? ''),
         'catName' => navFlatName($cat['name'] ?? ''),
         'price' => (int) round(((int) ($a['cheapest_price_cents'] ?? 0)) / 100),
+        // `price` is the amount in the operator's currency; print priceLabel, compare priceEur
+        'priceLabel' => v2_own_price_label($a['cheapest_price_cents'] ?? 0, $a['currency'] ?? null),
+        'priceEur' => v2_own_price_eur($a['cheapest_price_cents'] ?? 0, $a['currency'] ?? null, $a['cheapest_price_eur_cents'] ?? null),
         'dur' => v2_duration((int) ($a['duration_minutes'] ?? 0)),
         'rating' => round((float) ($reviews['average'] ?? 0), 1),
         'reviews' => (int) ($reviews['count'] ?? 0),

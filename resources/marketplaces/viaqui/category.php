@@ -90,8 +90,9 @@ $activityCatSlug = $category['slug'] ?? $slug;
 $actParams = ['category' => $activityCatSlug, 'page' => $pageNum, 'per_page' => 24];
 if ($cityFilter) { $actParams['city'] = $cityFilter; }
 if ($searchQuery !== '') { $actParams['search'] = $searchQuery; }
-if ($maxPrice !== null) { $actParams['max_price_ron'] = $maxPrice; }
-if ($sort === 'price_asc') $actParams['sort'] = 'cheapest';
+// operators sell in their own currency: the API filters and sorts on the euro value of the price
+if ($maxPrice !== null) { $actParams['max_price_eur'] = $maxPrice; }
+if ($sort === 'price_asc') $actParams['sort'] = 'cheapest_eur';
 
 $cacheSuffix = ($cityFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
 $listings = api_cached_many([
@@ -262,7 +263,9 @@ foreach ($activities as $ix => $a) {
         'place'         => $place,
         'rating'        => $rev && isset($rev['average']) ? round((float) $rev['average'], 1) : 0,
         'reviews'       => $rev && isset($rev['count']) ? (int) $rev['count'] : 0,
-        'price'         => isset($a['cheapest_price_cents']) ? (int) round($a['cheapest_price_cents'] / 100) : 0,
+        // the euro value: what the page's price filter and sort compare (the label is printed, see below)
+        'price'         => isset($a['cheapest_price_cents']) ? (int) round(v2_own_price_eur($a['cheapest_price_cents'], $a['currency'] ?? null, $a['cheapest_price_eur_cents'] ?? null)) : 0,
+        'priceLabel'    => v2_own_price_label($a['cheapest_price_cents'] ?? 0, $a['currency'] ?? null),
         'duration'      => $dur > 0 ? ($dur < 60 ? 'short' : ($dur <= 90 ? 'medium' : 'long')) : '',
         'durationLabel' => $dur > 0 ? ($dur . ' min') : '',
         'languages'     => $langs,
@@ -277,9 +280,8 @@ foreach ($activities as $ix => $a) {
         '_lng'          => isset($a['venue']['lng']) ? (float) $a['venue']['lng'] : (isset($a['longitude']) ? (float) $a['longitude'] : null),
     ];
 }
-// Our own prices are in euro. `price` is what the filters and the sort compare; `priceLabel` is what is printed.
+// `price` is what the filters and the sort compare (euro); `priceLabel` is what is printed (the operator's currency).
 foreach ($acts as $k => $a) {
-    $acts[$k]['priceLabel'] = $a['price'] ? v2_money($a['price']) : '';
     $acts[$k]['ext'] = false;
     $acts[$k]['via'] = '';
 }

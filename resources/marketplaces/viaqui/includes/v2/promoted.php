@@ -59,6 +59,7 @@ function v2_promoted_card(array $i): ?array
         'city' => $cityName,
         'subtitle' => mb_substr(trim(strip_tags((string) navFlatName($i['subtitle'] ?? ''))), 0, 140),
         'price' => !empty($i['price_from_cents']) ? (int) round($i['price_from_cents'] / 100) : 0,
+        'priceLabel' => v2_own_price_label($i['price_from_cents'] ?? 0, $i['currency'] ?? null),
         'dur' => v2_duration((int) ($i['duration_minutes'] ?? 0)),
     ];
 }
@@ -97,7 +98,7 @@ function v2_promoted_section(array $items, array $o): void
             <span class="xp-cat"><?= v2_e($a['cat']) ?></span>
             <span class="xp-title" title="<?= v2_e($a['title']) ?>"><?= v2_e($a['title']) ?></span>
             <span class="xp-meta"><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?><?php if ($a['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['dur']) ?></span><?php endif; ?></span>
-            <span class="xp-foot"><span class="xp-avail"><?= v2_ic('arrow-right') ?><span class="xp-avail-t"><?= $a['kind'] === 'location' ? 'See the venue' : 'See the experience' ?></span></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e(v2_money($a['price'])) ?></b></span><?php endif; ?></span>
+            <span class="xp-foot"><span class="xp-avail"><?= v2_ic('arrow-right') ?><span class="xp-avail-t"><?= $a['kind'] === 'location' ? 'See the venue' : 'See the experience' ?></span></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e($a['priceLabel']) ?></b></span><?php endif; ?></span>
           </span>
         </a></li>
         <?php endforeach; ?>
