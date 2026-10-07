@@ -125,6 +125,51 @@ class ViaquiAttractionsSeeder extends Seeder
                     'is_featured' => false, 'is_visible' => true, 'created_at' => $now, 'updated_at' => $now,
                 ];
             }
+            // An attraction is the same one as long as its Wikidata item is: when a newer file gives it another slug (names
+            // follow the English Wikipedia title since 2026-10-07), the row moves to the new slug instead of staying behind
+            // as a second copy. Two steps, through a temporary slug, so that rows swapping slugs do not collide.
+            $slugsOf = [];
+            foreach ($rows as $r) {
+                $slugsOf[$r['wikidata_id']][$r['slug']] = true;
+            }
+            $current = DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->where('country', $country)
+                ->whereNotNull('wikidata_id')->get(['id', 'slug', 'wikidata_id']);
+            $held = [];
+            foreach ($current as $row) {
+                if (isset($slugsOf[$row->wikidata_id][$row->slug])) {
+                    $held[$row->wikidata_id][$row->slug] = true;
+                }
+            }
+            $moves = [];
+            $claimed = [];
+            foreach ($current as $row) {
+                if (! isset($slugsOf[$row->wikidata_id]) || isset($slugsOf[$row->wikidata_id][$row->slug])) {
+                    continue;
+                }
+                foreach (array_keys($slugsOf[$row->wikidata_id]) as $target) {
+                    if (! isset($held[$row->wikidata_id][$target]) && ! isset($claimed[$target])) {
+                        $claimed[$target] = true;
+                        $moves[$row->id] = $target;
+                        break;
+                    }
+                }
+            }
+            if ($moves) {
+                // a target slug may still belong to another row of this client (another country's file, or a row added by hand)
+                $busy = [];
+                foreach (array_chunk(array_values($moves), 1000) as $chunk) {
+                    $busy += DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->whereIn('slug', $chunk)->pluck('id', 'slug')->all();
+                }
+                $moves = array_filter($moves, fn ($target) => ! isset($busy[$target]) || isset($moves[$busy[$target]]));
+                foreach ($moves as $id => $target) {
+                    DB::table('attractions')->where('id', $id)->update(['slug' => 'moving-' . $id]);
+                }
+                foreach ($moves as $id => $target) {
+                    DB::table('attractions')->where('id', $id)->update(['slug' => $target]);
+                }
+            }
+            $moved = count($moves);
+
             foreach (array_chunk($rows, 500) as $chunk) {
                 DB::table('attractions')->upsert($chunk, ['marketplace_client_id', 'slug'],
                     ['name', 'subtitle', 'attraction_type_id', 'marketplace_city_id', 'latitude', 'longitude', 'country', 'wikidata_id', 'popularity', 'sort_order', 'updated_at']);
@@ -171,8 +216,8 @@ class ViaquiAttractionsSeeder extends Seeder
                 $removedCities += DB::table('marketplace_cities')->whereIn('id', $chunk->diff($used))->delete();
             }
 
-            echo sprintf("%s: %d attractions (%d with a description), %d small places, %d with a photo; removed %d attractions and %d small places no longer in the file.\n",
-                $country, count($rows), count(array_filter($rows, fn ($r) => $r['description'])), count($cityRows), count(array_filter($rows, fn ($r) => $r['cover_image_url'])), $removed, $removedCities);
+            echo sprintf("%s: %d attractions (%d with a description), %d small places, %d with a photo; %d moved to a new address; removed %d attractions and %d small places no longer in the file.\n",
+                $country, count($rows), count(array_filter($rows, fn ($r) => $r['description'])), count($cityRows), count(array_filter($rows, fn ($r) => $r['cover_image_url'])), $moved, $removed, $removedCities);
         }
 
         echo 'Viaqui attractions in the database: ' . DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->whereNull('deleted_at')->count() . "\n";
