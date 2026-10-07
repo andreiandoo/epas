@@ -64,8 +64,8 @@ include __DIR__ . '/header.php';
       </div>
       <p class="rp-note"><?php if (!empty($routePage['road'])): ?>Distances and times are calculated on real roads (OpenStreetMap), with no stops and no traffic.<?php else: ?>For this route the distance is measured in a straight line between the stops, not by road.<?php endif; ?></p>
       <div class="rdp-acts">
-        <a class="btn btn-primary rdp-go" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener"><?= v2_ic('compass') ?>Open the route in Google Maps</a>
-        <p class="rdp-hint">The whole route opens with every stop as a waypoint, ready for navigation. You can drive it the other way round or take only part of it.</p>
+        <a class="btn btn-primary rdp-go" href="/plan?route=<?= v2_e($routePage['slug']) ?>"><?= v2_ic('compass') ?>Open as a plan</a>
+        <p class="rdp-hint">The route goes into the planner with its stops, split over days: move, remove or add stops, see the times and look for a place to stay. Or <a href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">open the whole route in Google Maps</a>.</p>
       </div>
     </div>
   </section>

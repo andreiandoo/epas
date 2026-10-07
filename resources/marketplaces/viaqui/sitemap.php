@@ -32,6 +32,7 @@ $urls = [
 require_once __DIR__ . '/includes/v2/places.php';
 foreach (array_keys(v2_map_file('index')['countries'] ?? []) as $mapCountrySlug) {
     $urls[] = ['/map/' . $mapCountrySlug, 'weekly', '0.6'];
+    $urls[] = ['/plan/' . $mapCountrySlug, 'monthly', '0.5'];
 }
 
 // The editorial routes (assets/v2/data/map/routes.json).

@@ -36,7 +36,7 @@
   try { CFG = (JSON.parse((document.getElementById('v2-data') || {}).textContent || '{}')).plan || {}; } catch (e) {}
   if (!CFG.dataUrl) return;
 
-  var STORE = 'bo_plan_v2';
+  var STORE = 'vq_plan_' + (CFG.country || 'eu');      // one saved plan per country: each country is its own dataset
   var DAY_START = 9 * 60;
   var FILL_TO = 0.85;                                   // leave the last sixth of the day free
   var RADIUS_CITY = [45, 60, 75, 90, 100, 110, 120];    // km around a city, by number of days
@@ -69,8 +69,11 @@
   }
   /* Place icons (includes/v2/product-icons.php, printed by the header as #i-pi-<key>): an attraction type's by its
      slug, the rest by key. An emoji saved by an older version of the page is read as the key it stood for. */
-  var TYPE_ICON = { 'castel-palat': 'castle', 'muzeu': 'museum', 'monument': 'columns', 'biserica-manastire': 'church', 'parc-gradina': 'park',
-    'piata-centru-vechi': 'city', 'cladire-istorica': 'house', 'punct-panoramic': 'binoculars', 'lac-natura': 'waves', 'teatru-opera': 'theatre' };
+  var TYPE_ICON = { 'castles': 'castle', 'palaces': 'castle', 'fortresses': 'castle', 'museums': 'museum', 'cathedrals': 'church', 'churches': 'church',
+    'monasteries': 'church', 'archaeological-sites': 'columns', 'unesco-sites': 'star', 'landmarks': 'columns', 'old-towns-squares': 'city',
+    'viewpoints': 'binoculars', 'theatres-operas': 'theatre', 'national-parks': 'mountains', 'caves': 'mountains', 'waterfalls': 'waves', 'lakes': 'waves',
+    'beaches': 'waves', 'zoos': 'tree', 'aquariums': 'waves', 'botanical-gardens': 'park', 'theme-parks': 'sparkle', 'thermal-baths': 'waves',
+    'cable-cars': 'hike', 'salt-mines': 'hammer', 'wineries': 'fork', 'bridges': 'walk', 'lighthouses': 'binoculars' };
   var OLD_EMOJI = { '\uD83C\uDF7D\uFE0F': 'fork', '\uD83C\uDF7D': 'fork', '\u2615': 'coffee', '\uD83D\uDE0C': 'armchair', '\uD83D\uDEB6': 'walk',
     '\uD83D\uDECD\uFE0F': 'shopping', '\uD83D\uDECD': 'shopping', '\uD83C\uDFE8': 'bed', '\uD83D\uDD51': 'clock', '\uD83C\uDF9F\uFE0F': 'ticket',
     '\u2728': 'sparkle', '\uD83D\uDCCD': 'pin' };
@@ -103,13 +106,18 @@
    * on any absolute URL.
    */
   function thumb(url, w, h) {
-    if (!url || url.indexOf('http') !== 0) return url || '';
+    if (!url) return '';
+    /* A bare file name is a Wikimedia Commons photo; Commons serves its own thumbnails, at the widths it keeps ready. */
+    if (url.indexOf('http') !== 0 && url.charAt(0) !== '/') {
+      return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(url.replace(/ /g, '_')) + '?width=' + (w > 250 ? 500 : 250);
+    }
+    if (url.indexOf('http') !== 0) return url;
     return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
   }
 
-  function nf(n) { return new Intl.NumberFormat('ro-RO').format(Math.round(n)); }
-  function km1(n) { return (Math.round(n * 10) / 10).toString().replace('.', ','); }
-  function lei(cents) { return nf(Math.round(cents / 100)) + ' lei'; }
+  function nf(n) { return new Intl.NumberFormat('en-GB').format(Math.round(n)); }
+  function km1(n) { return (Math.round(n * 10) / 10).toString(); }
+  function lei(cents) { return '\u20AC' + nf(Math.round(cents / 100)); }
   function hm(min) {
     min = Math.round(min || 0);
     var h = Math.floor(min / 60), m = min % 60;
@@ -137,11 +145,11 @@
   function estKm(distKm) { return Math.round(distKm * (modeDef().detour || CFG.travel.detour || 1.35) * 10) / 10; }
   function duration(typeSlug) { return CFG.durations[typeSlug] || CFG.durations.default || 45; }
   function dateLabel(iso, offset) {
-    if (!iso) return 'Ziua ' + (offset + 1);
+    if (!iso) return 'Day ' + (offset + 1);
     var d = new Date(iso + 'T12:00:00');
-    if (isNaN(d)) return 'Ziua ' + (offset + 1);
+    if (isNaN(d)) return 'Day ' + (offset + 1);
     d.setDate(d.getDate() + offset);
-    return d.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   }
   function debounce(fn, ms) {
     var t;
@@ -169,7 +177,7 @@
     }).then(function (raw) {
       var f = {};
       (raw.fields || []).forEach(function (name, i) { f[name] = i; });
-      D = { f: f, rows: raw.points || [], types: raw.types || [], cities: raw.cities || [], zones: raw.zones || [], flags: raw.flags || { image: 1, activities: 4 } };
+      D = { f: f, rows: raw.points || [], types: raw.types || [], cities: raw.cities || [], zones: raw.zones || [], flags: raw.flags || { image: 1, featured: 2, activities: 4 } };
 
       var sums = {};
       for (var i = 0; i < D.rows.length; i++) {
@@ -227,16 +235,16 @@
     if (!x) return null;
     var fixed = x.at === 'fix' && typeof x.lat === 'number' && typeof x.lng === 'number';
     return {
-      id: id, kind: 'own', slug: id, name: x.name || 'Oprire', city: '', citySlug: '', county: '',
+      id: id, kind: 'own', slug: id, name: x.name || 'Stop', city: '', citySlug: '', county: '',
       lat: fixed ? x.lat : null, lng: fixed ? x.lng : null, approx: false, price: 0,
       dur: x.minutes || 30, img: '', type: '', emoji: placeKey(x.emoji, 'clock'), typeSlug: '',
       bookable: false, href: '', own: true, at: x.at || 'none', place: x.place || ''
     };
   }
   function ownMeta(e) {
-    if (e.at === 'fix') return 'Oprirea ta · ' + (e.place || 'alt loc');
-    if (e.at === 'prev') return 'Oprirea ta · la oprirea dinainte';
-    return 'Oprirea ta · fără loc anume';
+    if (e.at === 'fix') return 'Your stop · ' + (e.place || 'another place');
+    if (e.at === 'prev') return 'Your stop · at the previous stop';
+    return 'Your stop · no particular place';
   }
 
   function entry(id) {
@@ -247,9 +255,9 @@
       return {
         id: id, kind: b[0], slug: b[1], name: b[2], city: b[3], citySlug: b[4], county: b[5],
         lat: b[6], lng: b[7], approx: !!b[8], price: b[9] || 0, dur: b[10] || 90,
-        img: b[11] || '', type: b[12] || (b[0] === 'location' ? 'Locație' : 'Experiență'),
+        img: b[11] || '', type: b[12] || (b[0] === 'location' ? 'Venue' : 'Experience'),
         emoji: b[0] === 'location' ? 'ticket' : 'sparkle', bookable: true, typeSlug: '',
-        href: (b[0] === 'location' ? '/locatie/' : '/experienta/') + b[1]
+        href: (b[0] === 'location' ? '/venue/' : '/experience/') + b[1]
       };
     }
     var i = bySlug[id];
@@ -262,7 +270,7 @@
       county: c ? c[2] : '', lat: r[f.lat_e5] / 1e5, lng: r[f.lng_e5] / 1e5, approx: false,
       price: 0, dur: duration(t ? t[0] : ''), img: r[f.img] || '', type: t ? t[1] : '',
       emoji: t ? (TYPE_ICON[t[0]] || 'pin') : 'pin', typeSlug: t ? t[0] : '',
-      bookable: !!(r[f.flags] & (D.flags.activities || 4)), href: '/atractie/' + id
+      bookable: !!(r[f.flags] & (D.flags.activities || 4)), href: '/attraction/' + id
     };
   }
 
@@ -336,6 +344,9 @@
       var score = 0;
       if (flags & D.flags.image) score += 2.5;
       if (flags & (D.flags.activities || 4)) score += 4;
+      // The file is sorted by how well known a place is: what people cross a country for comes first.
+      if (flags & (D.flags.featured || 2)) score += 3;
+      score += 6 * Math.pow(1 - i / D.rows.length, 3);
       if (duration(tSlug) >= 60) score += 1.5;
       score += companyWeight(tSlug) + modeWeight(tSlug);
       score -= d / 40;
@@ -610,9 +621,9 @@
   }
   function partyLine(rooms) {
     var p = party();
-    var out = p.adults + (p.adults === 1 ? ' adult' : ' adulți');
-    if (p.children > 0) out += ' · ' + p.children + (p.children === 1 ? ' copil' : ' copii');
-    return out + ' · ' + rooms + (rooms === 1 ? ' cameră' : ' camere');
+    var out = p.adults + (p.adults === 1 ? ' adult' : ' adults');
+    if (p.children > 0) out += ' · ' + p.children + (p.children === 1 ? ' child' : ' children');
+    return out + ' · ' + rooms + (rooms === 1 ? ' room' : ' rooms');
   }
   function nightCount() { return Math.max(0, plan.days - 1); }
 
@@ -730,8 +741,8 @@
   function nightTitle(i) {
     var d = dateOffset(i);
     return d
-      ? 'Noaptea de ' + d.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'short' })
-      : 'Noaptea dintre ziua ' + (i + 1) + ' și ziua ' + (i + 2);
+      ? 'The night of ' + d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
+      : 'The night between day ' + (i + 1) + ' and day ' + (i + 2);
   }
 
   /**
@@ -740,7 +751,7 @@
    * lives in this file. Built only when asked: the embed is third party and never loads on its own.
    */
   function stayAddress(n) {
-    return n.name + (n.county ? ', ' + n.county : '') + ', România';
+    return n.name + (n.county ? ', ' + n.county : '') + (CFG.countryName ? ', ' + CFG.countryName : '');
   }
   function stayUrl(i) {
     var n = nightOf(i);
@@ -758,11 +769,11 @@
     if (p.children > 0) q.push('children=' + p.children);
     q.push('rooms=' + n.rooms);
     if (n.maxprice > 0) { q.push('max=' + n.maxprice); q.push('priceper=nightly'); q.push('maxprice=' + n.maxprice); }
-    q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
+    q.push('currency=' + encodeURIComponent(STAY.currency || 'EUR'));
     q.push('maincolor=' + encodeURIComponent(STAY.maincolor || '1E5B48'));
     q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
     q.push('zoom=' + (STAY.zoom || 12));
-    q.push('ljs=ro');
+    q.push('ljs=en');
     q.push('hidebrandlogo=true');
     var prov = (STAY.providers || {})[stayProv];
     if (prov && prov[1]) q.push(prov[1]);
@@ -783,7 +794,7 @@
     if (p.children > 0) q.push('children=' + p.children);
     q.push('rooms=' + n.rooms);
     if (n.maxprice > 0) { q.push('max=' + n.maxprice); q.push('priceper=nightly'); q.push('maxprice=' + n.maxprice); }
-    q.push('currency=' + encodeURIComponent(STAY.currency || 'RON'));
+    q.push('currency=' + encodeURIComponent(STAY.currency || 'EUR'));
     var prov = (STAY.providers || {})[stayProv];
     return ((prov && prov[2]) || STAY.link || 'https://www.stay22.com/allez/booking') + '?' + q.join('&');
   }
@@ -921,7 +932,7 @@
       .replace(/\r?\n/g, B + 'n');
   }
   function downloadIcs() {
-    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//viaqui.com//Planificator//RO', 'CALSCALE:GREGORIAN'];
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//viaqui.com//Trip planner//EN', 'CALSCALE:GREGORIAN'];
     var stamp = icsTime(0, 0);
     for (var d = 0; d < plan.days; d++) {
       dayView(d).rows.forEach(function (r) {
@@ -941,8 +952,8 @@
         if (typeof r.lat === 'number' && typeof r.lng === 'number') lines.push('GEO:' + r.lat + ';' + r.lng);
         if (e.href) lines.push('URL:https://viaqui.com' + e.href);
         lines.push('DESCRIPTION:' + icsEscape(e.own
-          ? ownMeta(e) + '. Durata e cea pusă de tine.'
-          : (e.type ? e.type + '. ' : '') + 'Durata e o estimare. https://viaqui.com' + e.href));
+          ? ownMeta(e) + '. You set the duration.'
+          : (e.type ? e.type + '. ' : '') + 'The duration is an estimate. https://viaqui.com' + e.href));
         lines.push('END:VEVENT');
       });
     }
@@ -952,15 +963,15 @@
       if (!nt || nt.skip) continue;
       lines.push(
         'BEGIN:VEVENT',
-        'UID:noapte-' + nd + '-' + nt.city + '@viaqui.com',
+        'UID:night-' + nd + '-' + nt.city + '@viaqui.com',
         'DTSTAMP:' + stamp,
         'DTSTART;VALUE=DATE:' + icsDate(nd),
         'DTEND;VALUE=DATE:' + icsDate(nd + 1),
-        'SUMMARY:' + icsEscape('Cazare în ' + nt.name),
+        'SUMMARY:' + icsEscape('Stay in ' + nt.name),
         'LOCATION:' + icsEscape([nt.name, nt.county].filter(Boolean).join(', ')),
         'GEO:' + (+nt.lat).toFixed(5) + ';' + (+nt.lng).toFixed(5),
-        'DESCRIPTION:' + icsEscape('Noaptea propusă de planificator: ' + partyLine(nt.rooms) +
-          '. Lista de cazări se deschide din plan, pe https://viaqui.com/plan'),
+        'DESCRIPTION:' + icsEscape('The night suggested by the planner: ' + partyLine(nt.rooms) +
+          '. The list of places to stay opens from the plan, at https://viaqui.com/plan'),
         'END:VEVENT'
       );
     }
@@ -1016,12 +1027,12 @@
   function savePlan(b) {
     var label = b.querySelector('span');
     var total = plan.stops.reduce(function (n, day) { return n + day.length; }, 0);
-    label.textContent = 'Se salvează…';
+    label.textContent = 'Saving…';
     api('customer.plan.save', {
       method: 'POST',
       body: {
         token: plan.token || null,
-        title: (plan.name || ('Plan ' + plan.where.label)) + ' · ' + plan.days + (plan.days === 1 ? ' zi' : ' zile'),
+        title: (plan.name || ('Plan ' + plan.where.label)) + ' · ' + plan.days + (plan.days === 1 ? ' day' : ' days'),
         place: plan.where.label, days: plan.days, stops: total,
         starts_on: plan.from || null, payload: { v: 2, code: encode() }
       }
@@ -1029,11 +1040,11 @@
       plan.token = (d.plan || {}).token || plan.token;
       save();
       b.classList.add('is-done');
-      label.textContent = 'Salvat în cont';
-      setTimeout(function () { b.classList.remove('is-done'); label.textContent = 'Salvează în cont'; }, 2500);
+      label.textContent = 'Saved to your account';
+      setTimeout(function () { b.classList.remove('is-done'); label.textContent = 'Save to my account'; }, 2500);
     }).catch(function (err) {
-      label.textContent = err.message === 'anonim' ? 'Intră în cont' : 'N-a mers';
-      setTimeout(function () { label.textContent = 'Salvează în cont'; }, 2500);
+      label.textContent = err.message === 'anonim' ? 'Sign in' : 'It did not work';
+      setTimeout(function () { label.textContent = 'Save to my account'; }, 2500);
       if (err.message === 'anonim') window.location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.hash);
     });
   }
@@ -1042,14 +1053,14 @@
     if (panel) { panel.remove(); return; }
     panel = el('div', 'pl-saved');
     panel.id = 'pl-saved';
-    panel.appendChild(el('p', 'pl-saved-h', 'Se încarcă…'));
+    panel.appendChild(el('p', 'pl-saved-h', 'Loading…'));
     ui.bar.appendChild(panel);
     if (ui.scroller) ui.scroller.scrollTop = 0;
 
     api('customer.plans').then(function (d) {
       panel.textContent = '';
       var rows = d.plans || [];
-      panel.appendChild(el('p', 'pl-saved-h', rows.length ? 'Planurile tale' : 'N-ai niciun plan salvat încă.'));
+      panel.appendChild(el('p', 'pl-saved-h', rows.length ? 'Your plans' : 'You have no saved plan yet.'));
       if (!rows.length) return;
       var ul = el('ul', 'pl-saved-list');
       rows.forEach(function (row) {
@@ -1057,7 +1068,7 @@
         var open = el('button', 'pl-saved-open');
         open.type = 'button';
         open.appendChild(el('b', '', row.title));
-        open.appendChild(el('small', '', (row.stops || 0) + ' opriri · actualizat ' + String(row.updated_at || '').slice(0, 10)));
+        open.appendChild(el('small', '', (row.stops || 0) + ' stops · updated ' + String(row.updated_at || '').slice(0, 10)));
         open.addEventListener('click', function () {
           api('customer.plan', { query: '&token=' + encodeURIComponent(row.token) }).then(function (r) {
             var loaded = decode(((r.plan || {}).payload || {}).code || '');
@@ -1073,9 +1084,9 @@
         li.appendChild(open);
         var del = el('button', 'pl-ib pl-ib-del');
         del.type = 'button';
-        del.title = 'Șterge planul';
+        del.title = 'Delete the plan';
         del.appendChild(icon('x'));
-        del.appendChild(el('span', 'sr', 'Șterge planul'));
+        del.appendChild(el('span', 'sr', 'Delete the plan'));
         del.addEventListener('click', function () {
           api('customer.plan.delete', { method: 'DELETE', query: '&token=' + encodeURIComponent(row.token) })
             .then(function () { li.remove(); });
@@ -1086,7 +1097,7 @@
       panel.appendChild(ul);
     }).catch(function (err) {
       panel.textContent = '';
-      panel.appendChild(el('p', 'pl-saved-h', err.message === 'anonim' ? 'Intră în cont ca să-ți vezi planurile.' : 'Nu am putut încărca planurile.'));
+      panel.appendChild(el('p', 'pl-saved-h', err.message === 'anonim' ? 'Sign in to see your plans.' : 'We could not load the plans.'));
     });
   }
 
@@ -1204,36 +1215,36 @@
     // Over the map: what the plan is, in two lines.
     ui.title.textContent = plan.name || ((plan.origin ? plan.origin.label + ' → ' : '') + plan.where.label);
     ui.sub.textContent = [
-      plan.days + (plan.days === 1 ? ' zi' : ' zile'),
-      totals.stops + (totals.stops === 1 ? ' oprire' : ' opriri'),
-      nf(totals.km) + ' km' + (totals.routed === plan.days ? ' pe șosea' : ' (estimat)'),
+      plan.days + (plan.days === 1 ? ' day' : ' days'),
+      totals.stops + (totals.stops === 1 ? ' stop' : ' stops'),
+      nf(totals.km) + ' km' + (totals.routed === plan.days ? ' by road' : ' (estimated)'),
       (CFG.paces[plan.pace] || ['Normal'])[0]
     ].join(' · ');
     ui.badge.textContent = '';
     ui.badge.appendChild(icon((MODES[modeKey()] || [])[1] || 'pi-car'));
-    ui.badge.title = (MODES[modeKey()] || ['Mașină'])[0];
+    ui.badge.title = (MODES[modeKey()] || ['Car'])[0];
 
     // Everything you can do to the plan as a whole: behind the three dots, and again where the list ends.
     var fill = function (host, cls, shut) {
       if (!host) return;
       host.textContent = '';
       var item = function (ic, label, fn) { var b = btn(ic, label, fn, cls); host.appendChild(b); return b; };
-      item('link', 'Copiază link', function (b) {
+      item('link', 'Copy link', function (b) {
         save();
         var done = function () {
           b.classList.add('is-done');
-          b.querySelector('span').textContent = 'Copiat';
-          setTimeout(function () { b.classList.remove('is-done'); b.querySelector('span').textContent = 'Copiază link'; shut(); }, 1300);
+          b.querySelector('span').textContent = 'Copied';
+          setTimeout(function () { b.classList.remove('is-done'); b.querySelector('span').textContent = 'Copy link'; shut(); }, 1300);
         };
         if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done);
         else done();
       });
-      item('pl-regen', 'Regenerează', function () { shut(); generate(); render(); });
-      item('gear-six', 'Schimbă datele', leave);
+      item('pl-regen', 'Regenerate', function () { shut(); generate(); render(); });
+      item('gear-six', 'Change the details', leave);
       item('calendar-blank', 'Calendar (.ics)', function () { shut(); downloadIcs(); });
-      item('printer', 'Tipărește', function () { shut(); window.print(); });
-      item('user-circle', 'Salvează în cont', savePlan);
-      if (token()) item('list', 'Planurile mele', function (b) { shut(); openSaved(b); });
+      item('printer', 'Print', function () { shut(); window.print(); });
+      item('user-circle', 'Save to my account', savePlan);
+      if (token()) item('list', 'My plans', function (b) { shut(); openSaved(b); });
     };
     fill(ui.menu, 'plx-menu-i', closeMenuX);
     fill(ui.endActs, 'pl-btn', function () {});
@@ -1241,7 +1252,7 @@
     // At the head of the list: what it costs and where it sleeps.
     ui.bar.textContent = '';
     var box = el('div', 'pl-bar-in');
-    if (totals.cost > 0) box.appendChild(el('span', 'pl-bar-sell', 'de la ' + lei(totals.cost) + ' bilete'));
+    if (totals.cost > 0) box.appendChild(el('span', 'pl-bar-sell', 'tickets from ' + lei(totals.cost)));
     if (nightCount() > 0) {
       var towns = [], seenTown = {}, slept = 0;
       for (var ni = 0; ni < nightCount(); ni++) {
@@ -1259,8 +1270,8 @@
       nem.setAttribute('aria-hidden', 'true');
       nb.appendChild(nem);
       nb.appendChild(document.createTextNode(slept
-        ? slept + (slept === 1 ? ' noapte' : ' nopți') + ' · ' + towns.join(', ')
-        : 'Nicio noapte pe traseu'));
+        ? slept + (slept === 1 ? ' night' : ' nights') + ' · ' + towns.join(', ')
+        : 'No night on the road'));
       nb.addEventListener('click', jumpToNight);
       box.appendChild(nb);
     }
@@ -1268,16 +1279,16 @@
 
     // The days, as buttons on the map: where you are, and a way to jump.
     ui.rail.textContent = '';
-    var all = el('button', 'plx-day', 'Tot traseul');
+    var all = el('button', 'plx-day', 'Whole trip');
     all.type = 'button';
     all.dataset.day = '-1';
     ui.rail.appendChild(all);
     for (var k = 0; k < plan.days; k++) {
-      var pb = el('button', 'plx-day', 'Ziua ' + (k + 1));
+      var pb = el('button', 'plx-day', 'Day ' + (k + 1));
       pb.type = 'button';
       pb.dataset.day = String(k);
       var dt = dateOffset(k);
-      if (dt) pb.appendChild(el('small', '', dt.toLocaleDateString('ro-RO', { weekday: 'short', day: 'numeric', month: 'short' })));
+      if (dt) pb.appendChild(el('small', '', dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })));
       ui.rail.appendChild(pb);
     }
     paintRail();
@@ -1338,21 +1349,21 @@
     var head = el('header', 'pl-day-head'), tip = null;
     var hl = el('div', 'pl-day-headings');
     var num = el('span', 'pl-day-n');
-    num.appendChild(el('small', '', 'ziua'));
+    num.appendChild(el('small', '', 'day'));
     num.appendChild(el('b', '', String(d + 1)));
     num.setAttribute('aria-hidden', 'true');
     head.appendChild(num);
     hl.appendChild(el('h3', 'pl-day-h', dateLabel(plan.from, d)));
     var sub = el('p', 'pl-day-sub');
     sub.textContent = stops.length
-      ? stops.length + (stops.length === 1 ? ' oprire · ' : ' opriri · ') + nf(view.km) + ' km' +
-        (view.routed ? ' pe șosea' : (view.pending ? ' (se calculează…)' : ' (estimat)')) + ' · ' +
-        clock(DAY_START) + '–' + clock(view.end) + ' · ' + hm(view.travel) + ' pe drum'
-      : 'Zi liberă — adaugă ceva sau regenerează.';
+      ? stops.length + (stops.length === 1 ? ' stop · ' : ' stops · ') + nf(view.km) + ' km' +
+        (view.routed ? ' by road' : (view.pending ? ' (calculating…)' : ' (estimated)')) + ' · ' +
+        clock(DAY_START) + '–' + clock(view.end) + ' · ' + hm(view.travel) + ' on the road'
+      : 'A free day: add something or regenerate.';
     hl.appendChild(sub);
     if (d === 0 && stops.length > 1) {
       tip = el('p', 'pl-day-tip',
-        'Trage de numărul din stânga ca să muți o oprire, în zi sau în altă zi, iar cu + pui o oprire de-a ta între două locuri. Harta urmărește oprirea la care ai ajuns cu lista.');
+        'Drag the number on the left to move a stop, within the day or to another day; the + between two places adds a stop of your own. The map follows the stop you have reached in the list.');
     }
     head.appendChild(hl);
 
@@ -1360,7 +1371,7 @@
     var mk = el('button', 'pl-day-act');
     mk.type = 'button';
     mk.appendChild(icon('plus'));
-    mk.appendChild(el('span', '', 'Oprire de-a ta'));
+    mk.appendChild(el('span', '', 'A stop of your own'));
     mk.addEventListener('click', function () { openComposer(d, (plan.stops[d] || []).length); });
     acts.appendChild(mk);
 
@@ -1405,8 +1416,8 @@
     if (stops.length) {
       var free = dayBudget() - (view.visit + view.travel);
       foot.appendChild(el('p', 'pl-free', free > 20
-        ? 'Rămân ' + hm(free) + ' liberi — loc pentru masă, cafea sau ce apare pe drum.'
-        : 'Ziua e plină.'));
+        ? hm(free) + ' left free: room for a meal, a coffee or whatever comes up on the way.'
+        : 'The day is full.'));
     }
     foot.appendChild(addControl(d));
     box.appendChild(foot);
@@ -1420,10 +1431,10 @@
     dot.appendChild(icon(r.role === 'origin' ? 'map-pin' : 'check'));
     li.appendChild(dot);
     var txt = el('div', 'pl-edge-text');
-    txt.appendChild(el('b', '', (r.role === 'origin' ? 'Plecare din ' : 'Întoarcere la ') + r.name));
+    txt.appendChild(el('b', '', (r.role === 'origin' ? 'Leaving from ' : 'Back to ') + r.name));
     txt.appendChild(el('span', '', r.role === 'origin'
-      ? 'Pornire la ' + clock(r.start)
-      : km1(r.legKm) + ' km · ' + hm(r.legMin) + ' · ajungi pe la ' + clock(r.start)));
+      ? 'Setting off at ' + clock(r.start)
+      : km1(r.legKm) + ' km · ' + hm(r.legMin) + ' · arriving around ' + clock(r.start)));
     li.appendChild(txt);
     return li;
   }
@@ -1470,7 +1481,7 @@
     if (e.bookable || e.price > 0) {
       var tag = el('span', 'pl-sell');
       tag.appendChild(icon('ticket'));
-      tag.appendChild(document.createTextNode(e.price > 0 ? 'de la ' + lei(e.price) : 'are bilete'));
+      tag.appendChild(document.createTextNode(e.price > 0 ? 'from ' + lei(e.price) : 'tickets available'));
       when.appendChild(tag);
     }
     text.appendChild(when);
@@ -1491,7 +1502,7 @@
     else if (aboutCache[e.id]) note.textContent = aboutCache[e.id];
     else note.hidden = true;
     inn.appendChild(note);
-    if (e.approx) inn.appendChild(el('p', 'pl-stop-note is-small', 'Poziția pe hartă e aproximativă.'));
+    if (e.approx) inn.appendChild(el('p', 'pl-stop-note is-small', 'The position on the map is approximate.'));
     if (open) about(e);
 
     var act = function (ic, label, fn, cls) {
@@ -1514,14 +1525,14 @@
     var row = el('div', 'pl-acts');
     var durs = el('span', 'pl-durs');
     durs.setAttribute('role', 'group');
-    durs.setAttribute('aria-label', 'Cât stai la ' + e.name);
+    durs.setAttribute('aria-label', 'How long you stay at ' + e.name);
     var less = el('button', '', '−');
     less.type = 'button';
-    less.setAttribute('aria-label', 'Cu 15 minute mai puțin');
+    less.setAttribute('aria-label', '15 minutes less');
     less.addEventListener('click', function () { setDur(-15); });
     var plus = el('button', '', '+');
     plus.type = 'button';
-    plus.setAttribute('aria-label', 'Cu 15 minute mai mult');
+    plus.setAttribute('aria-label', '15 minutes more');
     plus.addEventListener('click', function () { setDur(15); });
     durs.appendChild(less);
     durs.appendChild(el('output', '', hm(r.dur)));
@@ -1529,10 +1540,10 @@
     var tip = el('button', 'pl-tip');
     tip.type = 'button';
     tip.setAttribute('data-tip', e.own
-      ? 'Durata e cea pe care o alegi tu.'
-      : 'Durata e o estimare pe tip de obiectiv. Verifică programul înainte de drum.');
+      ? 'The duration is the one you choose.'
+      : 'The duration is an estimate for this type of place. Check the opening hours before you go.');
     tip.title = tip.getAttribute('data-tip');
-    tip.setAttribute('aria-label', 'Despre durată');
+    tip.setAttribute('aria-label', 'About the duration');
     tip.setAttribute('aria-expanded', 'false');
     tip.appendChild(icon('info'));
     var tipText = el('p', 'pl-stop-note is-small', tip.getAttribute('data-tip'));
@@ -1541,13 +1552,13 @@
     row.appendChild(tip);
     row.appendChild(durs);
     var count = (plan.stops[d] || []).length;
-    var up = act('arrow-right', 'Mai devreme', function () {
+    var up = act('arrow-right', 'Earlier', function () {
       if (!relocate(d, r.pos, d, r.pos - 1)) return;
       focusId = e.id;
       after();
     }, 'is-sq is-up');
     up.disabled = r.pos === 0;
-    var down = act('arrow-right', 'Mai târziu', function () {
+    var down = act('arrow-right', 'Later', function () {
       if (!relocate(d, r.pos, d, r.pos + 2)) return;
       focusId = e.id;
       after();
@@ -1561,17 +1572,17 @@
     var row2 = el('div', 'pl-acts');
     // A place out of the catalogue can be traded for another one nearby. A stop of your own is
     // not swapped but renamed: those are your words, and the catalogue has no opinion on them.
-    if (!e.own) row2.appendChild(act('pl-regen', 'Înlocuiește', function () { openSwap(d, r.pos); }));
+    if (!e.own) row2.appendChild(act('pl-regen', 'Replace', function () { openSwap(d, r.pos); }));
     if (e.own && plan.extra[e.id]) {
-      row2.appendChild(act('', 'Redenumește', function () {
+      row2.appendChild(act('', 'Rename', function () {
         var now = plan.extra[e.id].name || '';
-        var next = window.prompt('Cum se numește oprirea?', now);
+        var next = window.prompt('What is the stop called?', now);
         if (next === null) return;
         next = next.replace(/\s+/g, ' ').trim().slice(0, 60);
         if (!next || next === now) return;
         plan.extra[e.id].name = next;
         focusId = e.id;
-        announce('Oprirea se numește acum ' + next + '.');
+        announce('The stop is now called ' + next + '.');
         after();
       }));
     }
@@ -1579,14 +1590,14 @@
       var mv = el('label', 'pl-ab pl-move');
       mv.appendChild(icon('calendar-blank'));
       var ms = el('select');
-      ms.setAttribute('aria-label', 'Mută ' + e.name + ' în altă zi');
-      var m0 = el('option', '', 'Mută în ziua…');
+      ms.setAttribute('aria-label', 'Move ' + e.name + ' to another day');
+      var m0 = el('option', '', 'Move to day…');
       m0.value = '';
       ms.appendChild(m0);
       for (var k = 0; k < plan.days; k++) {
         if (k === d) continue;
         var dk = dateOffset(k);
-        var mo = el('option', '', 'Ziua ' + (k + 1) + (dk ? ' · ' + dk.toLocaleDateString('ro-RO', { weekday: 'short', day: 'numeric', month: 'short' }) : ''));
+        var mo = el('option', '', 'Day ' + (k + 1) + (dk ? ' · ' + dk.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : ''));
         mo.value = String(k);
         ms.appendChild(mo);
       }
@@ -1594,20 +1605,20 @@
         var to = parseInt(ms.value, 10);
         if (isNaN(to) || !relocate(d, r.pos, to, (plan.stops[to] || []).length)) return;
         focusId = e.id;
-        announce(e.name + ' a trecut în ziua ' + (to + 1) + '.');
+        announce(e.name + ' moved to day ' + (to + 1) + '.');
         after();
       });
       mv.appendChild(ms);
       row2.appendChild(mv);
     }
-    row2.appendChild(act('trash', 'Scoate', function () { remove(d, r.pos); }, 'is-danger'));
+    row2.appendChild(act('trash', 'Remove', function () { remove(d, r.pos); }, 'is-danger'));
     if (e.href) {
       var go = el('a', 'pl-ab' + (e.bookable || e.price > 0 ? ' is-go' : ''));
       go.href = e.href;
       go.target = '_blank';
       go.rel = 'noopener';
       go.appendChild(icon(e.bookable || e.price > 0 ? 'ticket' : 'arrow-right'));
-      go.appendChild(el('span', '', e.bookable || e.price > 0 ? 'Vezi bilete' : 'Detalii'));
+      go.appendChild(el('span', '', e.bookable || e.price > 0 ? 'See tickets' : 'Details'));
       row2.appendChild(go);
     }
     inn.appendChild(row2);
@@ -1661,13 +1672,13 @@
     var e = r.e;
     var b = el('button', 'pl-grip');
     b.type = 'button';
-    b.title = 'Trage ca să muți oprirea';
+    b.title = 'Drag to move the stop';
     var face = el('span', 'pl-grip-n', e.own ? null : String(n));
     if (e.own) face.appendChild(placeIcon(e.emoji, 'clock'));
     face.setAttribute('aria-hidden', 'true');
     b.appendChild(face);
     b.appendChild(glyph('grip', 'ic pl-grip-ic'));
-    b.appendChild(el('span', 'sr', 'Mută ' + e.name + '. Trage cu mausul, sau apasă Enter și folosește săgețile.'));
+    b.appendChild(el('span', 'sr', 'Move ' + e.name + '. Drag with the mouse, or press Enter and use the arrow keys.'));
     b.addEventListener('pointerdown', function (ev) { dragStart(ev, stopLi(b)); });
     b.addEventListener('keydown', function (ev) { gripKey(ev, stopLi(b)); });
     return b;
@@ -1697,7 +1708,7 @@
   function after() { stale = false; closeMenu(); if (swap && !swapOk()) swap = null; tidy(); renderBar(); renderDays(); syncMap(); syncStay(); save(); fetchRoads(); }
 
   /**
-   * One move for all of them — the arrows are gone, so dragging, the ⋮ menu and the keyboard all
+   * One move for all of them — the arrows are gone, so dragging, the stop menu and the keyboard all
    * come through here. `toPos` is where the stop should land in the day as it looks right now.
    */
   function relocate(fromDay, fromPos, toDay, toPos) {
@@ -1723,7 +1734,7 @@
     delete plan.locked[id];
     delete plan.custom[id];
     if (grab && grab.id === id) grab = null;
-    announce((e ? e.name : 'Oprirea') + ' nu mai e în plan.');
+    announce((e ? e.name : 'The stop') + ' is no longer in the plan.');
     after();
   }
   function add(d, id) {
@@ -1746,7 +1757,7 @@
     plan.stops[d].splice(pos, 0, id);
     activeDay = d;
     focusId = id;
-    announce('Am adăugat ' + def.name + ' în ziua ' + (d + 1) + '.');
+    announce('Added ' + def.name + ' to day ' + (d + 1) + '.');
     after();
   }
 
@@ -1759,7 +1770,7 @@
   var scroller = null;  // the timer that scrolls the page near the edges
   var scrollBy = 0;
 
-  function stopName(id) { var e = entry(id); return e ? e.name : 'Oprirea'; }
+  function stopName(id) { var e = entry(id); return e ? e.name : 'The stop'; }
   function dayStops(d) { return plan.stops[d] || []; }
 
   function showMark(t) {
@@ -1870,7 +1881,7 @@
     if (cancel || !d.moved || !d.target) return;
     if (!relocate(d.day, d.pos, d.target.day, d.target.pos)) return;
     focusId = d.id;
-    announce(stopName(d.id) + ' a ajuns în ziua ' + (d.target.day + 1) + '.');
+    announce(stopName(d.id) + ' is now in day ' + (d.target.day + 1) + '.');
     after();
   }
   window.addEventListener('pointermove', dragMove);
@@ -1884,16 +1895,16 @@
     grab.day0 = grab.day;
     grab.pos0 = grab.pos;
     item.classList.add('is-grabbed');
-    announce('Ai luat ' + stopName(grab.id) +
-      '. Săgeți sus și jos ca s-o muți în zi, stânga și dreapta ca s-o treci în altă zi, Enter ca s-o lași acolo, Escape ca să renunți.');
+    announce('Picked up ' + stopName(grab.id) +
+      '. Up and down arrows move it within the day, left and right to another day, Enter drops it there, Escape cancels.');
   }
   function grabSay() {
-    announce(stopName(grab.id) + ': poziția ' + (grab.pos + 1) + ' din ' + dayStops(grab.day).length +
-      ', ziua ' + (grab.day + 1) + '.');
+    announce(stopName(grab.id) + ': position ' + (grab.pos + 1) + ' of ' + dayStops(grab.day).length +
+      ', day ' + (grab.day + 1) + '.');
   }
   function grabStep(dir) {
     var to = grab.pos + dir;
-    if (to < 0 || to >= dayStops(grab.day).length) { announce('Nu mai e loc în direcția asta.'); return; }
+    if (to < 0 || to >= dayStops(grab.day).length) { announce('No more room in that direction.'); return; }
     if (!relocate(grab.day, grab.pos, grab.day, dir > 0 ? to + 1 : to)) return;
     grab.pos = to;
     after();
@@ -1901,7 +1912,7 @@
   }
   function grabDay(dir) {
     var to = grab.day + dir;
-    if (to < 0 || to >= plan.days) { announce('Nu mai e nicio zi în direcția asta.'); return; }
+    if (to < 0 || to >= plan.days) { announce('No more days in that direction.'); return; }
     if (!relocate(grab.day, grab.pos, to, dayStops(to).length)) return;
     grab.day = to;
     grab.pos = dayStops(to).length - 1;
@@ -1912,7 +1923,7 @@
     var was = grab;
     grab = null;
     focusId = was.id;
-    announce(stopName(was.id) + ' rămâne pe poziția ' + (was.pos + 1) + ' din ziua ' + (was.day + 1) + '.');
+    announce(stopName(was.id) + ' stays at position ' + (was.pos + 1) + ' of day ' + (was.day + 1) + '.');
     after();
   }
   function grabCancel() {
@@ -1924,7 +1935,7 @@
       plan.stops[was.day0].splice(Math.min(was.pos0, plan.stops[was.day0].length), 0, id);
       activeDay = was.day0;
     }
-    announce('Am anulat mutarea. ' + stopName(was.id) + ' e unde era.');
+    announce('Move cancelled. ' + stopName(was.id) + ' is where it was.');
     after();
   }
   function gripKey(ev, item) {
@@ -1963,9 +1974,9 @@
     li.dataset.pos = String(pos);
     var b = el('button', 'pl-ins-btn');
     b.type = 'button';
-    b.title = 'Adaugă o oprire de-a ta aici';
+    b.title = 'Add a stop of your own here';
     b.appendChild(icon('plus'));
-    b.appendChild(el('span', 'sr', 'Adaugă o oprire de-a ta aici, între opriri'));
+    b.appendChild(el('span', 'sr', 'Add a stop of your own here, between stops'));
     b.addEventListener('click', function () { openComposer(d, pos); });
     li.appendChild(b);
     // the drive to the stop below, where there is one
@@ -1975,13 +1986,13 @@
       leg.appendChild(document.createTextNode(hm(r.legMin) + ' · ' + km1(r.legKm) + ' km'));
       li.appendChild(leg);
     } else if (r && r.off) {
-      li.appendChild(el('span', 'pl-ins-leg is-off', 'fără drum în plus'));
+      li.appendChild(el('span', 'pl-ins-leg is-off', 'no extra driving'));
     }
     return li;
   }
 
   function openComposer(d, pos) {
-    var first = PRESETS[0] || ['Pauză', 'clock', 30];
+    var first = PRESETS[0] || ['Break', 'clock', 30];
     swap = null;              // one panel at a time inside a day
     composer = {
       day: d, pos: pos, name: first[0], emoji: first[1], minutes: first[2],
@@ -1998,7 +2009,7 @@
     var c = composer;
     var li = el('li', 'pl-new');
     var box = el('div', 'pl-new-in');
-    box.appendChild(el('p', 'pl-new-h', 'O oprire de-a ta'));
+    box.appendChild(el('p', 'pl-new-h', 'A stop of your own'));
 
     var name = el('input');
     var dur = el('select');
@@ -2031,17 +2042,17 @@
 
     var row = el('div', 'pl-new-row');
     var nameLab = el('label', 'pl-new-f');
-    nameLab.appendChild(el('span', '', 'Ce faci?'));
+    nameLab.appendChild(el('span', '', 'What will you do?'));
     name.type = 'text';
     name.value = c.name;
     name.maxLength = 60;
-    name.placeholder = 'Masă, cafea, o plimbare…';
+    name.placeholder = 'A meal, a coffee, a walk…';
     name.addEventListener('input', function () { c.name = name.value; });
     nameLab.appendChild(name);
     row.appendChild(nameLab);
 
     var durLab = el('label', 'pl-new-f pl-new-f-dur');
-    durLab.appendChild(el('span', '', 'Cât ține?'));
+    durLab.appendChild(el('span', '', 'How long?'));
     MINUTES.forEach(function (m) {
       var o = el('option', '', hm(m));
       o.value = String(m);
@@ -2054,12 +2065,12 @@
     box.appendChild(row);
 
     var fs = el('fieldset', 'pl-new-where');
-    fs.appendChild(el('legend', '', 'Unde o pun?'));
+    fs.appendChild(el('legend', '', 'Where does it go?'));
     var group = 'pl-at-' + Math.random().toString(36).slice(2, 8);
     [
-      ['prev', 'La oprirea dinainte', 'Nu adaugă drum, doar timp.'],
-      ['none', 'Fără loc anume', 'Timp în zi, fără punct pe hartă.'],
-      ['fix', 'Alt loc', 'Alegi un loc din catalog și drumul se recalculează.']
+      ['prev', 'At the previous stop', 'Adds no driving, only time.'],
+      ['none', 'No particular place', 'Time in the day, with no point on the map.'],
+      ['fix', 'Another place', 'Pick a place from the catalogue and the drive is recalculated.']
     ].forEach(function (o) {
       var lab = el('label', 'pl-radio');
       var rd = el('input');
@@ -2085,8 +2096,8 @@
     pick.hidden = c.at !== 'fix';
     find.type = 'search';
     find.autocomplete = 'off';
-    find.placeholder = 'Caută locul…';
-    find.setAttribute('aria-label', 'Caută locul opririi');
+    find.placeholder = 'Search the place…';
+    find.setAttribute('aria-label', 'Search the place of the stop');
     find.value = c.query || c.place || '';
     var hits = el('ul', 'pl-add-list');
     hits.hidden = true;
@@ -2102,7 +2113,7 @@
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
         b.appendChild(el('b', '', h.name));
-        b.appendChild(el('small', '', (h.book ? 'se rezervă · ' : '') + (h.city || '')));
+        b.appendChild(el('small', '', (h.book ? 'bookable · ' : '') + (h.city || '')));
         b.addEventListener('click', function () {
           var e = entry(h.id);
           if (!e) return;
@@ -2125,17 +2136,17 @@
     box.appendChild(msg);
 
     var acts = el('div', 'pl-new-acts');
-    var ok = el('button', 'btn btn-primary pl-new-ok', 'Adaugă oprirea');
+    var ok = el('button', 'btn btn-primary pl-new-ok', 'Add the stop');
     ok.type = 'button';
     ok.addEventListener('click', function () {
       if (c.at === 'fix' && typeof c.lat !== 'number') {
-        msg.textContent = 'Alege întâi locul din listă.';
+        msg.textContent = 'Choose the place from the list first.';
         msg.hidden = false;
         find.focus();
         return;
       }
       var def = {
-        name: (c.name || '').trim() || 'Oprire',
+        name: (c.name || '').trim() || 'Stop',
         minutes: c.minutes || 30,
         emoji: placeKey(c.emoji, 'clock'),
         at: c.at,
@@ -2147,7 +2158,7 @@
       composer = null;
       addOwn(day, at, def);
     });
-    var no = el('button', 'pl-btn pl-new-no', 'Renunță');
+    var no = el('button', 'pl-btn pl-new-no', 'Cancel');
     no.type = 'button';
     no.addEventListener('click', function () { closeComposer(); });
     acts.appendChild(ok);
@@ -2187,8 +2198,8 @@
     var wrap = el('div', 'pl-add');
     var inp = el('input');
     inp.type = 'search';
-    inp.placeholder = 'Adaugă o atracție, o experiență sau o locație…';
-    inp.setAttribute('aria-label', 'Adaugă ceva în ziua ' + (d + 1) + ': alege din sugestii sau caută');
+    inp.placeholder = 'Add an attraction, an experience or a venue…';
+    inp.setAttribute('aria-label', 'Add something to day ' + (d + 1) + ': choose from the suggestions or search');
     inp.autocomplete = 'off';
     var list = el('ul', 'pl-add-list');
     list.hidden = true;
@@ -2202,7 +2213,7 @@
       rows.sort(function (x, y) { return x.d - y.d; });
       rows = rows.slice(0, 6);
       if (!rows.length) { list.hidden = true; return; }
-      list.appendChild(el('li', 'pl-add-h', 'Din apropiere, pe gustul tău. Sau scrie ce cauți.'));
+      list.appendChild(el('li', 'pl-add-h', 'Nearby, to your taste. Or type what you are looking for.'));
       rows.forEach(function (c) { list.appendChild(swapOption(c, pick)); });
       list.hidden = false;
     };
@@ -2214,12 +2225,12 @@
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
         b.appendChild(el('b', '', h.name));
-        b.appendChild(el('small', '', (h.book ? 'se rezervă · ' : '') + (h.city || '')));
+        b.appendChild(el('small', '', (h.book ? 'bookable · ' : '') + (h.city || '')));
         b.addEventListener('click', function () { pick(h.id); });
         li.appendChild(b);
         list.appendChild(li);
       });
-      if (!hits.length) list.appendChild(el('li', 'pl-add-h', 'Nu am găsit nimic cu numele ăsta în catalog.'));
+      if (!hits.length) list.appendChild(el('li', 'pl-add-h', 'Nothing with this name in the catalogue.'));
       list.hidden = false;
     };
     var run = function () { if (inp.value.trim().length < 2) suggest(); else search(); };
@@ -2234,7 +2245,7 @@
   /* ---------- swapping a stop for another place nearby ----------
    *
    * The generator chose this stop; the traveller should not have to argue with the catalogue to
-   * change it. «Înlocuiește» opens, under the stop itself, a ready-made short list of places that
+   * change it. "Replace" opens, under the stop itself, a ready-made short list of places that
    * could stand in for it. Which places get on the list is judged the same way the whole plan was:
    * how close they are to the stop that is going, then the interests that were declared and the
    * company that is travelling — so a family with children is not handed another monastery. What
@@ -2291,6 +2302,8 @@
       var flags = r[f.flags], s = 0;
       if (flags & D.flags.image) s += 1.5;
       if (flags & (D.flags.activities || 4)) s += 4;
+      if (flags & (D.flags.featured || 2)) s += 2;
+      s += 3 * Math.pow(1 - i / D.rows.length, 3);
       s += companyWeight(tSlug) + modeWeight(tSlug);      // who travels, and how, tilts the types; it never rules one out
       if (plan.removed[slug]) s -= 1.5;
       s -= d / per;
@@ -2334,7 +2347,7 @@
     composer = null;
     swap = { day: d, pos: pos, id: id, query: '', focus: true };
     activeDay = d;
-    announce('Caut ce ar putea lua locul lui ' + stopName(id) + '.');
+    announce('Looking for what could replace ' + stopName(id) + '.');
     after();
   }
   function closeSwap(quiet) {
@@ -2342,7 +2355,7 @@
     var id = swap.id;
     swap = null;
     focusId = id;
-    if (!quiet) announce('Am renunțat. ' + stopName(id) + ' rămâne în plan, neschimbată.');
+    if (!quiet) announce('Cancelled. ' + stopName(id) + ' stays in the plan, unchanged.');
     after();
   }
 
@@ -2376,8 +2389,8 @@
     activeDay = d;
     swap = null;
     focusId = newId;
-    announce(ne.name + ' ia locul lui ' + oldName + ', pe aceeași poziție în ziua ' + (d + 1) +
-      '. Am recalculat orele și kilometrii.');
+    announce(ne.name + ' replaces ' + oldName + ', in the same position in day ' + (d + 1) +
+      '. Times and distances have been recalculated.');
     after();
   }
 
@@ -2411,15 +2424,15 @@
 
     var line = el('span', 'pl-swap-line');
     var away = estKm(c.d);      // corrected for real roads, like every other distance on the page
-    line.appendChild(el('span', 'pl-swap-km', away < 0.1 ? 'la câțiva pași' : 'la ' + km1(away) + ' km'));
+    line.appendChild(el('span', 'pl-swap-km', away < 0.1 ? 'a few steps away' : km1(away) + ' km away'));
     line.appendChild(el('span', 'pl-swap-dur', hm(e.dur)));
     if (e.bookable || e.price > 0) {
       var tag = el('span', 'pl-sell');
       tag.appendChild(icon('ticket'));
-      tag.appendChild(document.createTextNode(e.price > 0 ? 'de la ' + lei(e.price) : 'are bilete'));
+      tag.appendChild(document.createTextNode(e.price > 0 ? 'from ' + lei(e.price) : 'tickets available'));
       line.appendChild(tag);
     }
-    if (plan.removed[c.id]) line.appendChild(el('span', 'pl-swap-back', 'ai scos-o mai devreme'));
+    if (plan.removed[c.id]) line.appendChild(el('span', 'pl-swap-back', 'you removed it earlier'));
     text.appendChild(line);
     b.appendChild(text);
 
@@ -2437,16 +2450,16 @@
     li.appendChild(box);
     if (!e) return li;
 
-    box.appendChild(el('p', 'pl-swap-h', 'În locul lui ' + e.name));
-    var bits = [e.type || 'Oprire'];
+    box.appendChild(el('p', 'pl-swap-h', 'Instead of ' + e.name));
+    var bits = [e.type || 'Stop'];
     if (e.city) bits.push(e.city);
     box.appendChild(el('p', 'pl-swap-sub', bits.join(' · ') + ' · ' + hm(plan.custom[s.id] || e.dur) +
-      ' în plan. Alege din apropiere, sau caută tu altceva.'));
+      ' in the plan. Choose from nearby, or search for something else.'));
 
     var res = swapList(s.id);
     if (res.loose) {
       box.appendChild(el('p', 'pl-swap-loose',
-        'Prin apropiere nu e nimic din ce ai bifat că te interesează, așa că îți arăt ce mai este pe-acolo.'));
+        'Nothing nearby matches the interests you chose, so here is what else is around.'));
     }
     if (res.rows.length) {
       var ul = el('ul', 'pl-swap-list');
@@ -2454,15 +2467,15 @@
       box.appendChild(ul);
     } else {
       box.appendChild(el('p', 'pl-swap-empty',
-        'Nu am în catalog niciun alt loc prin apropierea ei. Caută tu mai jos — merge oriunde în țară.'));
+        'There is no other place near it in the catalogue. Search below: anywhere in the country works.'));
     }
 
     var find = el('div', 'pl-swap-find');
     var inp = el('input');
     inp.type = 'search';
     inp.autocomplete = 'off';
-    inp.placeholder = 'Sau caută altceva: o atracție, o experiență, o locație…';
-    inp.setAttribute('aria-label', 'Caută altceva în locul opririi ' + e.name);
+    inp.placeholder = 'Or search for something else: an attraction, an experience, a venue…';
+    inp.setAttribute('aria-label', 'Search for something to replace ' + e.name);
     inp.value = s.query || '';
     var hits = el('ul', 'pl-swap-hits');
     hits.hidden = true;
@@ -2476,8 +2489,8 @@
         var hb = el('button', 'pl-add-hit');
         hb.type = 'button';
         hb.appendChild(el('b', '', h.name));
-        hb.appendChild(el('small', '', (h.book ? 'se rezervă · ' : '') + (h.city || '') +
-          (have[h.id] ? ' · e deja în plan, se mută aici' : '')));
+        hb.appendChild(el('small', '', (h.book ? 'bookable · ' : '') + (h.city || '') +
+          (have[h.id] ? ' · already in the plan, it moves here' : '')));
         hb.addEventListener('click', function () { applySwap(h.id); });
         row.appendChild(hb);
         hits.appendChild(row);
@@ -2489,7 +2502,7 @@
     box.appendChild(find);
 
     var acts = el('div', 'pl-swap-acts');
-    var no = el('button', 'pl-btn pl-swap-no', 'Renunță');
+    var no = el('button', 'pl-btn pl-swap-no', 'Cancel');
     no.type = 'button';
     no.addEventListener('click', function () { closeSwap(); });
     acts.appendChild(no);
@@ -2546,20 +2559,20 @@
     em.setAttribute('aria-hidden', 'true');
     h.appendChild(em);
     var ht = el('span', 'pl-night-t');
-    ht.appendChild(el('b', '', n && !n.skip ? 'Noaptea în ' + n.name : nightTitle(i)));
+    ht.appendChild(el('b', '', n && !n.skip ? 'The night in ' + n.name : nightTitle(i)));
     ht.appendChild(el('small', '', n && !n.skip
-      ? (dateOffset(i) ? nightRange(i) : 'între ziua ' + (i + 1) + ' și ziua ' + (i + 2)) + ' · ' + partyLine(n.rooms)
-      : 'între ziua ' + (i + 1) + ' și ziua ' + (i + 2)));
+      ? (dateOffset(i) ? nightRange(i) : 'between day ' + (i + 1) + ' and day ' + (i + 2)) + ' · ' + partyLine(n.rooms)
+      : 'between day ' + (i + 1) + ' and day ' + (i + 2)));
     h.appendChild(ht);
     box.appendChild(h);
 
     if (n && n.skip) {
       setCls(box, 'is-skipped', true);
-      box.appendChild(el('p', 'pl-night-p', 'Ai spus că nu dormi pe traseu în noaptea asta.'));
+      box.appendChild(el('p', 'pl-night-p', 'You said you are not sleeping on the road that night.'));
       var undo = el('div', 'pl-night-acts');
-      undo.appendChild(nightBtn('plus', 'Pun cazarea la loc', function () {
+      undo.appendChild(nightBtn('plus', 'Put the night back', function () {
         setNight(i, { skip: false });
-        announce('Noaptea a revenit în plan.');
+        announce('The night is back in the plan.');
         afterNight(i);
       }));
       box.appendChild(undo);
@@ -2568,7 +2581,7 @@
 
     if (!n) {
       box.appendChild(el('p', 'pl-night-p',
-        'Nu am în catalog un oraș pe care să ți-l propun pentru noaptea asta. Alege tu unul.'));
+        'There is no town in the catalogue to suggest for this night. Choose one yourself.'));
     } else {
       setCls(box, 'is-far', n.far);
       box.appendChild(nightLine(n));
@@ -2584,27 +2597,27 @@
     var p = el('p', 'pl-night-p');
     var town = el('b', '', n.name);
     if (n.far) {
-      p.appendChild(document.createTextNode('Prin zonă nu e niciun oraș din catalog aproape. Cel mai apropiat e '));
+      p.appendChild(document.createTextNode('There is no town from the catalogue close by. The nearest is '));
       p.appendChild(town);
-      if (n.hasFrom) p.appendChild(document.createTextNode(', la ' + km1(n.kA) + ' km de ultima oprire'));
+      if (n.hasFrom) p.appendChild(document.createTextNode(', ' + km1(n.kA) + ' km from the last stop'));
       if (n.toName) {
-        p.appendChild(document.createTextNode((n.hasFrom ? ' și la ' : ', la ') + km1(n.kB) +
-          ' km de ' + n.toName + ', unde pornești mâine.'));
+        p.appendChild(document.createTextNode((n.hasFrom ? ' and ' : ', ') + km1(n.kB) +
+          ' km from ' + n.toName + ', where you start tomorrow.'));
       } else {
         p.appendChild(document.createTextNode('.'));
       }
-      p.appendChild(document.createTextNode(' Dacă știi ceva mai aproape, alege altă localitate.'));
+      p.appendChild(document.createTextNode(' If you know somewhere closer, choose another town.'));
       return p;
     }
-    p.appendChild(document.createTextNode('Îți propun să dormi în '));
+    p.appendChild(document.createTextNode('We suggest sleeping in '));
     p.appendChild(town);
     if (n.hasFrom && n.toName) {
-      p.appendChild(document.createTextNode(' — ultima oprire e la ' + km1(n.kA) +
-        ' km, iar mâine pornești spre ' + n.toName + ', la ' + km1(n.kB) + ' km.'));
+      p.appendChild(document.createTextNode(': the last stop is ' + km1(n.kA) +
+        ' km away, and tomorrow you start towards ' + n.toName + ', ' + km1(n.kB) + ' km away.'));
     } else if (n.hasFrom) {
-      p.appendChild(document.createTextNode(' — ultima oprire e la ' + km1(n.kA) + ' km.'));
+      p.appendChild(document.createTextNode(': the last stop is ' + km1(n.kA) + ' km away.'));
     } else if (n.toName) {
-      p.appendChild(document.createTextNode(' — mâine pornești spre ' + n.toName + ', la ' + km1(n.kB) + ' km.'));
+      p.appendChild(document.createTextNode(': tomorrow you start towards ' + n.toName + ', ' + km1(n.kB) + ' km away.'));
     } else {
       p.appendChild(document.createTextNode('.'));
     }
@@ -2613,9 +2626,9 @@
 
   function nightActs(i, n, pick) {
     var wrap = el('div', 'pl-night-acts');
-    if (n) wrap.appendChild(nightBtn('buildings', 'Vezi cazări', function () { openStay(i); }, 'is-primary'));
+    if (n) wrap.appendChild(nightBtn('buildings', 'See places to stay', function () { openStay(i); }, 'is-primary'));
 
-    var other = nightBtn('magnifying-glass', n ? 'Altă localitate' : 'Alege localitatea', function (b) {
+    var other = nightBtn('magnifying-glass', n ? 'Another town' : 'Choose the town', function (b) {
       var show = pick.hidden;
       pick.hidden = !show;
       b.setAttribute('aria-expanded', String(show));
@@ -2627,16 +2640,16 @@
     other.setAttribute('aria-expanded', 'false');
     wrap.appendChild(other);
 
-    wrap.appendChild(nightBtn('x', 'Nu dorm aici', function () {
+    wrap.appendChild(nightBtn('x', 'Not sleeping here', function () {
       setNight(i, { skip: true });
-      announce('Am scos noaptea din plan.');
+      announce('The night was removed from the plan.');
       afterNight(i);
     }));
 
     if (n) {
       wrap.appendChild(nightBudget(i, n));
       var rl = el('label', 'pl-night-rooms');
-      rl.appendChild(el('span', '', 'Camere'));
+      rl.appendChild(el('span', '', 'Rooms'));
       var sel = el('select');
       for (var r = 1; r <= (PARTY.rooms_max || 8); r++) {
         var o = el('option', '', String(r));
@@ -2655,19 +2668,19 @@
     return wrap;
   }
 
-  /** How much the night may cost at most. The accommodation list filters on it; "Orice preț" shows everything. */
+  /** How much the night may cost at most. The accommodation list filters on it; "Any price" shows everything. */
   function nightBudget(i, n) {
     var lab = el('label', 'pl-night-rooms');
-    lab.appendChild(el('span', '', 'Buget'));
+    lab.appendChild(el('span', '', 'Budget'));
     var sel = el('select');
-    var any = el('option', '', 'Orice preț');
+    var any = el('option', '', 'Any price');
     any.value = '0';
     if (!n.maxprice) any.selected = true;
     sel.appendChild(any);
     var budgets = CFG.budgets && CFG.budgets.length ? CFG.budgets.slice() : [200, 300, 500, 700, 1000];
     if (n.maxprice > 0 && budgets.indexOf(n.maxprice) === -1) budgets.push(n.maxprice);
     budgets.sort(function (x, y) { return x - y; }).forEach(function (v) {
-      var o = el('option', '', 'până în ' + nf(v) + ' lei');
+      var o = el('option', '', 'up to \u20AC' + nf(v));
       o.value = String(v);
       if (v === n.maxprice) o.selected = true;
       sel.appendChild(o);
@@ -2698,8 +2711,8 @@
     var inp = el('input');
     inp.type = 'search';
     inp.autocomplete = 'off';
-    inp.placeholder = 'Caută orașul în care dormi…';
-    inp.setAttribute('aria-label', 'Caută orașul în care dormi');
+    inp.placeholder = 'Search the town you sleep in…';
+    inp.setAttribute('aria-label', 'Search the town you sleep in');
     var hits = el('ul', 'pl-night-hits');
     hits.hidden = true;
     inp.addEventListener('input', debounce(function () {
@@ -2710,7 +2723,7 @@
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
         b.appendChild(el('b', '', pl.label));
-        b.appendChild(el('small', '', pl.hint + ' · ' + nf(pl.count) + ' atracții'));
+        b.appendChild(el('small', '', pl.hint + ' · ' + nf(pl.count) + ' attractions'));
         b.addEventListener('click', function () {
           var r = resolvePlace(pl);
           if (!r) return;
@@ -2718,7 +2731,7 @@
             city: pl.key, lat: r.lat, lng: r.lng, name: pl.label,
             county: cityCounty[pl.key] || '', skip: false
           });
-          announce('Noaptea se mută în ' + pl.label + '.');
+          announce('The night moves to ' + pl.label + '.');
           afterNight(i);
         });
         li.appendChild(b);
@@ -2762,7 +2775,7 @@
     ui.stayBtn.hidden = i < 0 || mapTab === 'stay';
     if (i < 0) return;
     var atNight = /^n:/.test(focusKey || '') && !overview, n = nightOf(i);
-    ui.stayBtn.querySelector('span').textContent = (atNight && n) ? 'Arată cazări în ' + n.name : 'Arată cazări disponibile';
+    ui.stayBtn.querySelector('span').textContent = (atNight && n) ? 'Show places to stay in ' + n.name : 'Show places to stay';
     setCls(ui.stayBtn, 'is-hot', atNight);
   }
   /**
@@ -2780,7 +2793,7 @@
     stayButton();
     if (!wide()) snapMap(0.74);
     var n = nightOf(i);
-    announce(n ? 'Am deschis cazările din ' + n.name + ', în locul hărții.' : 'Am deschis cazările.');
+    announce(n ? 'Places to stay in ' + n.name + ' opened in place of the map.' : 'Places to stay opened.');
     if (ui.stayX) ui.stayX.focus();
   }
   function closeStay(quiet) {
@@ -2791,7 +2804,7 @@
     stayButton();
     if (!wide()) snapMap(0.46);
     else setTimeout(function () { var inst = window.EPMap.instance; if (inst && inst.resize) inst.resize(); applyFocus(); }, 60);
-    if (!quiet) { announce('Harta traseului e la loc.'); if (ui.stayBtn && !ui.stayBtn.hidden) ui.stayBtn.focus(); }
+    if (!quiet) { announce('The map of the trip is back.'); if (ui.stayBtn && !ui.stayBtn.hidden) ui.stayBtn.focus(); }
   }
 
   /**
@@ -2806,8 +2819,8 @@
       host.textContent = '';
       host.dataset.stayUrl = '-';
       host.appendChild(el('p', 'pl-stay-empty', nightCount()
-        ? 'Alege o noapte din plan și îți deschid aici cazările din orașul ei.'
-        : 'Planul are o singură zi, deci nicio noapte pe drum: te întorci în aceeași zi.'));
+        ? 'Choose a night from the plan and the places to stay in its town open here.'
+        : 'The plan has a single day, so no night on the road: you are back the same day.'));
       return;
     }
     var url = stayUrl(i);
@@ -2816,18 +2829,18 @@
     host.dataset.stayUrl = url;
 
     var box = el('div', 'pl-stay');
-    box.appendChild(el('p', 'pl-stay-h', 'Cazare în ' + n.name));
+    box.appendChild(el('p', 'pl-stay-h', 'Stay in ' + n.name));
     box.appendChild(el('p', 'pl-stay-sub', nightRange(i) + ' · ' + partyLine(n.rooms)
-      + (n.maxprice > 0 ? ' · maxim ' + nf(n.maxprice) + ' lei' : '')));
+      + (n.maxprice > 0 ? ' · at most \u20AC' + nf(n.maxprice) : '')));
 
     var frame = el('div', 'pl-stay-frame');
     var skel = el('div', 'pl-stay-skel');
     var spin = el('span', 'pl-stay-spin');
     spin.setAttribute('aria-hidden', 'true');
     skel.appendChild(spin);
-    skel.appendChild(el('span', '', 'Se încarcă lista de cazări…'));
+    skel.appendChild(el('span', '', 'Loading the list of places to stay…'));
     var fr = el('iframe');
-    fr.title = 'Cazări în ' + n.name + ', pe Stay22';
+    fr.title = 'Places to stay in ' + n.name + ', on Stay22';
     fr.loading = 'lazy';
     fr.referrerPolicy = 'origin';
     fr.setAttribute('allowtransparency', 'true');
@@ -2836,7 +2849,7 @@
     setTimeout(function () {
       if (arrived || !skel.parentNode) return;
       skel.textContent = '';
-      skel.appendChild(el('span', '', 'Lista nu a pornit. Deschide-o pe Stay22, din link-ul de mai jos.'));
+      skel.appendChild(el('span', '', 'The list did not start. Open it on Stay22, from the link below.'));
     }, 12000);
     fr.src = url;
     frame.appendChild(fr);
@@ -2848,20 +2861,20 @@
     out.href = stayLink(i);
     out.target = '_blank';
     out.rel = 'noopener nofollow sponsored';
-    out.appendChild(document.createTextNode('Deschide lista pe Stay22'));
+    out.appendChild(document.createTextNode('Open the list on Stay22'));
     out.appendChild(icon('arrow-right'));
     foot.appendChild(out);
     box.appendChild(foot);
 
     box.appendChild(el('p', 'pl-stay-note', STAY.note ||
-      'Opțiunile de cazare vin de la Booking, Expedia, Vrbo ș.a. Dacă alegi o cazare din cele propuse, website-ul va înregistra un comision.'));
+      'Places to stay come from Booking, Expedia, Vrbo and others. If you book one of them, the website earns a commission.'));
     host.appendChild(box);
   }
   function nightRange(i) {
     var a = dateOffset(i), b = dateOffset(i + 1);
-    if (!a || !b) return 'o noapte';
+    if (!a || !b) return 'one night';
     var f = { day: 'numeric', month: 'short' };
-    return a.toLocaleDateString('ro-RO', f) + ' → ' + b.toLocaleDateString('ro-RO', f);
+    return a.toLocaleDateString('en-GB', f) + ' → ' + b.toLocaleDateString('en-GB', f);
   }
 
   if (ui.stayBtn) ui.stayBtn.addEventListener('click', function () { openStay(currentNight()); });
@@ -2874,7 +2887,7 @@
     stayProv = b.dataset.prov;
     [].forEach.call(provBox.querySelectorAll('[data-prov]'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
     syncStay();
-    announce('Arăt cazările de la ' + b.textContent.trim() + '.');
+    announce('Showing places to stay from ' + b.textContent.trim() + '.');
   });
 
   /* ---------------------------------------------------------------- the map */
@@ -2925,11 +2938,11 @@
     if (ui.note) {
       ui.note.textContent = rows.length
         ? (view.routed
-          ? 'Kilometrii și timpii de mers sunt calculați pe șosea (OpenStreetMap), fără trafic și fără opriri.'
-          : (view.pending ? 'Se calculează drumul pe șosea…' : 'Drumul nu a putut fi calculat: distanțele sunt estimate din linia dreaptă.'))
+          ? 'Distances and driving times are calculated by road (OpenStreetMap), with no traffic and no stops.'
+          : (view.pending ? 'Calculating the road…' : 'The road could not be calculated: distances are estimated from the straight line.'))
         : (view.rows.some(function (x) { return x.role === 'stop'; })
-          ? 'Ziua ' + (activeDay + 1) + ' are doar opriri de-ale tale; pe hartă ajung locurile din catalog.'
-          : 'Ziua ' + (activeDay + 1) + ' e goală.');
+          ? 'Day ' + (activeDay + 1) + ' only has stops of your own; the map shows the places from the catalogue.'
+          : 'Day ' + (activeDay + 1) + ' is empty.');
     }
     applyFocus();
     profile();
@@ -3258,7 +3271,7 @@
     var z = profNow.z, a = ui.prof.querySelector('.plx-prof-a'), b = ui.prof.querySelector('.plx-prof-b');
     var mark = ui.prof.querySelector('.plx-prof-x');
     if (i < 0) {
-      a.textContent = 'Profilul zilei · urcare ' + nf(climb(z)) + ' m';
+      a.textContent = 'Profile of the day · climb ' + nf(climb(z)) + ' m';
       b.textContent = 'max ' + nf(Math.max.apply(null, z)) + ' m';
       mark.style.display = 'none';
       return;
@@ -3306,7 +3319,7 @@
   function places() {
     var out = [];
     (CFG.regions || []).forEach(function (r) {
-      out.push({ kind: 'region', key: r[0], label: r[0], count: r[1], hint: 'regiune' });
+      out.push({ kind: 'region', key: r[0], label: r[1], count: r[2], hint: 'region' });
     });
     if (D) {
       var counts = {};
@@ -3316,12 +3329,12 @@
       }
       Object.keys(counts).forEach(function (ci) {
         var c = D.cities[ci];
-        if (c && c[0]) out.push({ kind: 'city', key: c[0], label: c[1], count: counts[ci], hint: c[2] ? 'oraș · ' + c[2] : 'oraș' });
+        if (c && c[0]) out.push({ kind: 'city', key: c[0], label: c[1], count: counts[ci], hint: c[2] ? 'city · ' + c[2] : 'city' });
       });
       out.sort(function (a, b) { return b.count - a.count; });
     } else {
       (CFG.cities || []).forEach(function (c) {
-        out.push({ kind: 'city', key: c[0], label: c[1], count: c[2], hint: 'oraș' });
+        out.push({ kind: 'city', key: c[0], label: c[1], count: c[2], hint: 'city' });
       });
     }
     return out;
@@ -3336,7 +3349,9 @@
     if (!q) { fld.sugg.hidden = true; return; }
 
     var pool = fld.cities ? ALL_PLACES.filter(function (p) { return p.kind === 'city'; }) : ALL_PLACES;
-    var hits = pool.filter(function (p) { return fold(p.label).indexOf(q) === 0; })
+    // The place called exactly that comes first (the city of Brasov before the county that starts with its name).
+    var hits = pool.filter(function (p) { return fold(p.label) === q; })
+      .concat(pool.filter(function (p) { var l = fold(p.label); return l !== q && l.indexOf(q) === 0; }))
       .concat(pool.filter(function (p) { return fold(p.label).indexOf(q) > 0; }))
       .slice(0, 7);
 
@@ -3346,7 +3361,7 @@
       var b = el('button', 'pl-sugg-hit');
       b.type = 'button';
       b.appendChild(el('b', '', p.label));
-      b.appendChild(el('small', '', p.hint + ' · ' + nf(p.count) + ' atracții'));
+      b.appendChild(el('small', '', p.hint + ' · ' + nf(p.count) + ' attractions'));
       b.addEventListener('click', function () {
         fld.picked = p;
         fld.input.value = p.label;
@@ -3358,7 +3373,7 @@
     });
     if (!hits.length) {
       var li2 = el('li', 'pl-sugg-empty');
-      li2.textContent = 'Nu avem încă atracții catalogate acolo. Încearcă alt oraș sau o regiune.';
+      li2.textContent = 'No attractions listed there yet. Try another city or a region.';
       fld.sugg.appendChild(li2);
     }
     fld.sugg.hidden = false;
@@ -3462,7 +3477,7 @@
     if (tg && row) tg.addEventListener('click', function () {
       row.hidden = !row.hidden;
       tg.setAttribute('aria-expanded', String(!row.hidden));
-      tg.textContent = row.hidden ? 'Mă întorc în alt loc' : 'Mă întorc de unde am plecat';
+      tg.textContent = row.hidden ? 'I return somewhere else' : 'I return to where I started';
       if (row.hidden) { fields.back.input.value = ''; fields.back.picked = null; } else fields.back.input.focus();
     });
     // One line that says what the folded preferences hold, so they do not have to be opened to be read.
@@ -3472,8 +3487,8 @@
       var who = [].map.call(document.querySelectorAll('#pl-company [aria-pressed="true"]'), function (b) { return b.textContent.trim(); });
       var what = document.querySelectorAll('#pl-interests [aria-pressed="true"]').length;
       var pace = document.querySelector('#pl-pace [aria-pressed="true"] b');
-      sum.textContent = [who.length ? who.join(', ') : 'oricine', what ? what + (what === 1 ? ' interes' : ' interese') : 'de toate',
-        'ritm ' + (pace ? pace.textContent.toLowerCase() : 'normal')].join(' · ');
+      sum.textContent = [who.length ? who.join(', ') : 'anyone', what ? what + (what === 1 ? ' interest' : ' interests') : 'a bit of everything',
+        (pace ? pace.textContent.toLowerCase() : 'normal') + ' pace'].join(' · ');
     };
     var prefs = document.getElementById('pl-prefs');
     if (prefs) prefs.addEventListener('click', function () { setTimeout(say, 0); });
@@ -3567,7 +3582,7 @@
   /* ---------------------------------------------------------------- boot */
 
   /**
-   * /plan?drum=<slug>: one of the roads on /trasee, opened as a one-day plan — its two ends as
+   * /plan/{country}?road=<slug>: one of the roads on /routes, opened as a one-day plan — its two ends as
    * departure and arrival, the catalogue's places beside it as stops. From there it is a plan like
    * any other: stops can be added, moved and taken out, and the link carries it.
    */
@@ -3587,7 +3602,7 @@
   }
 
   /**
-   * /plan?traseu=<slug>: one of the editorial routes, opened as a plan — its stops in their order,
+   * /plan/{country}?route=<slug>: one of the editorial routes, opened as a plan — its stops in their order,
    * split evenly over the days the route was written for, leaving from the town of the first stop
    * and ending in the town of the last. Every stop is locked, so regenerating keeps the route.
    */
@@ -3602,9 +3617,9 @@
     p.origin = { kind: 'point', key: '', label: rt.from, lat: rt.a[0], lng: rt.a[1] };
     p.back = { kind: 'point', key: '', label: rt.to, lat: rt.b[0], lng: rt.b[1] };
     p.where = { kind: 'city', key: '', label: rt.title, lat: +((rt.a[0] + rt.b[0]) / 2).toFixed(5), lng: +((rt.a[1] + rt.b[1]) / 2).toFixed(5) };
-    var per = Math.ceil(ids.length / p.days);
+    // Spread evenly, so that no day is left empty when the stops do not divide by the days.
     p.stops = [];
-    for (var d = 0; d < p.days; d++) p.stops.push(ids.slice(d * per, (d + 1) * per));
+    for (var d = 0; d < p.days; d++) p.stops.push(ids.slice(Math.round(d * ids.length / p.days), Math.round((d + 1) * ids.length / p.days)));
     ids.forEach(function (id) { p.locked[id] = 1; });
     return p;
   }
@@ -3612,7 +3627,7 @@
   loadData().then(function () {
     ALL_PLACES = places();
     var query = new URLSearchParams(location.search);
-    var fromRoad = roadPlan(query.get('drum') || '') || routePlan(query.get('traseu') || '');
+    var fromRoad = roadPlan(query.get('road') || '') || routePlan(query.get('route') || '');
     if (fromRoad) {
       plan = fromRoad;
       fillParty();
@@ -3620,7 +3635,7 @@
       render();
       return;
     }
-    if (MODES[query.get('mod')]) setMode(query.get('mod'));
+    if (MODES[query.get('mode')]) setMode(query.get('mode'));
     var saved = restore();
     if (saved && saved.stops && saved.stops.length) {
       plan = saved;
