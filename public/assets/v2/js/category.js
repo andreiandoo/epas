@@ -20,7 +20,7 @@
   }
   var state = blank(), sortBy = 'recommended';
 
-  function lei(n) { return new Intl.NumberFormat('ro-RO').format(n || 0) + ' lei'; }
+  function lei(n) { return '€' + new Intl.NumberFormat('en-GB').format(n || 0); } // a price in euro (the name is from the previous version)
   function each(sel, fn) { [].forEach.call(document.querySelectorAll(sel), fn); }
   function node(tag, cls, text) {
     var n = document.createElement(tag);
@@ -82,11 +82,11 @@
   function label(k, v) { return (labels[k] && labels[k][v]) || v; }
   function chipList() {
     var out = [];
-    if (hasValue('search')) out.push(['Caută: ' + state.search, function () { state.search = ''; }]);
+    if (hasValue('search')) out.push(['Search: ' + state.search, function () { state.search = ''; }]);
     ['categories', 'interests', 'travelerTypes'].forEach(function (k) { state[k].forEach(function (v) { out.push([label(k, v), without(k, v)]); }); });
-    if (hasValue('maxPrice')) out.push(['Max ' + lei(state.maxPrice), function () { state.maxPrice = cap; }]);
+    if (hasValue('maxPrice')) out.push(['Up to ' + lei(state.maxPrice), function () { state.maxPrice = cap; }]);
     ['languages', 'durations', 'features'].forEach(function (k) { state[k].forEach(function (v) { out.push([label(k, v), without(k, v)]); }); });
-    if (hasValue('minRating')) out.push([String(state.minRating).replace('.', ',') + '+ stele', function () { state.minRating = 0; }]);
+    if (hasValue('minRating')) out.push([String(state.minRating) + '+ stars', function () { state.minRating = 0; }]);
     return out;
   }
 
@@ -112,7 +112,7 @@
       var b = node('button', 'achip', c[0]);
       b.type = 'button';
       b.appendChild(icon('x'));
-      b.appendChild(node('span', 'sr', ' (elimină)'));
+      b.appendChild(node('span', 'sr', ' (remove)'));
       b.addEventListener('click', function () { c[1](); apply(); });
       chipBox.appendChild(b);
     });
@@ -240,15 +240,15 @@
     close.type = 'button';
     close.setAttribute('data-unpin', '');
     close.appendChild(icon('x'));
-    close.appendChild(node('span', 'sr', 'Închide'));
+    close.appendChild(node('span', 'sr', 'Close'));
     top.appendChild(text);
     top.appendChild(close);
     body.appendChild(top);
     var row = node('div', 'kmc-row');
-    row.appendChild(node('span', null, a.rating > 0 ? '★ ' + String(a.rating).replace('.', ',') : ''));
+    row.appendChild(node('span', null, a.rating > 0 ? '★ ' + String(a.rating) : ''));
     row.appendChild(node('strong', null, a.price ? lei(a.price) : ''));
     body.appendChild(row);
-    var go = node('a', 'btn btn-primary', 'Vezi bilete');
+    var go = node('a', 'btn btn-primary', 'See the experience');
     go.href = a.href;
     body.appendChild(go);
     mapCard.appendChild(body);
@@ -256,7 +256,7 @@
   /* A real map: Leaflet from cdnjs, loaded the first time the dialog opens. CARTO's light tiles with the site's key
      (data-carto-key), OpenStreetMap's when CARTO refuses them. If the library can't load, the grid preview with % pins
      stays as it was. While the map is on screen the list beside it follows the map: it shows the activities inside
-     the area being looked at, and "Arată toate" brings every result back into view. */
+     the area being looked at, and "Show all" brings every result back into view. */
   var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/', leafletLoad = null, lmap = null, lmarkers = null;
   var mapAll = [], listKey = '';
   function loadLeaflet() {
@@ -281,7 +281,7 @@
     if (!canvas || lmap) return Promise.resolve(lmap);
     return loadLeaflet().then(function (L) {
       if (lmap) return lmap;
-      lmap = L.map(canvas, { zoomControl: true, scrollWheelZoom: true, attributionControl: true }).setView([45.94, 24.97], 6);
+      lmap = L.map(canvas, { zoomControl: true, scrollWheelZoom: true, attributionControl: true }).setView([50, 10], 4);   // Europe, until the pins set the view
       var key = canvas.getAttribute('data-carto-key') || '';
       var osm = false, tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' + (key ? '?key=' + encodeURIComponent(key) : ''), {
         subdomains: 'abcd', maxZoom: 19,
@@ -317,7 +317,7 @@
       var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
-      pin.setAttribute('aria-label', a.title + (a.price ? ', de la ' + lei(a.price) : ''));
+      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + lei(a.price) : ''));
       var m = L.marker([a.geo.lat, a.geo.lng], { icon: L.divIcon({ className: 'kpin-wrap', html: pin, iconSize: [0, 0] }), keyboard: false });
       m.on('click', function () { selected = String(a.id); markPins(); renderCard(); });
       lmarkers.addLayer(m);
@@ -338,7 +338,7 @@
     if (zoneBox) {
       var partial = zone && list.length < mapAll.length;
       zoneBox.hidden = !partial;
-      if (partial) $('k-map-zone-text').textContent = list.length + ' din ' + mapAll.length + ' în zona hărții · ';
+      if (partial) $('k-map-zone-text').textContent = list.length + ' of ' + mapAll.length + ' in this area of the map · ';
     }
     var note = $('k-map-note');
     if (note) note.hidden = !mapAll.some(function (a) { return a.geo && a.geo.approx; });
@@ -352,8 +352,8 @@
     mapList.textContent = '';
     if (!list.length && zone) {
       var li = node('li', 'kmap-empty');
-      li.appendChild(node('b', null, 'Nicio activitate în zona asta.'));
-      li.appendChild(node('span', null, 'Mută harta sau apasă „Arată toate”.'));
+      li.appendChild(node('b', null, 'Nothing in this area.'));
+      li.appendChild(node('span', null, 'Move the map or choose “Show all”.'));
       mapList.appendChild(li);
     }
     list.forEach(function (a) {
@@ -363,8 +363,8 @@
       b.appendChild(media(a, 'kml-media'));
       text.appendChild(node('b', null, a.title));
       if (metaLine(a)) text.appendChild(node('small', null, metaLine(a)));
-      if (a.rating > 0) text.appendChild(node('small', 'kml-rating', '★ ' + String(a.rating).replace('.', ',')));
-      text.appendChild(node('span', 'kml-price', a.price ? 'de la ' + lei(a.price) : 'Vezi preț'));
+      if (a.rating > 0) text.appendChild(node('small', 'kml-rating', '★ ' + String(a.rating)));
+      text.appendChild(node('span', 'kml-price', a.price ? 'from ' + lei(a.price) : 'See price'));
       b.appendChild(text);
       li.appendChild(b);
       mapList.appendChild(li);
@@ -386,7 +386,7 @@
       var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
-      pin.setAttribute('aria-label', a.title + (a.price ? ', de la ' + lei(a.price) : ''));
+      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + lei(a.price) : ''));
       pin.style.left = a.map.x + '%';
       pin.style.top = a.map.y + '%';
       mapPins.appendChild(pin);
