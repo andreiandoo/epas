@@ -154,24 +154,7 @@ function v2_wegotrip_products(string $kind, string $slug, int $limit = 8, string
             error_log('WeGoTrip API: HTTP ' . $code . ' for ' . $url);
             return ['success' => false];
         }
-        $items = [];
-        foreach ($data['results'] as $p) {
-            if (empty($p['id']) || empty($p['slug']) || empty($p['title']) || empty($p['city']['id']) || ($p['tags']['available'] ?? true) === false) {
-                continue;
-            }
-            $items[] = [
-                'title' => (string) $p['title'],
-                // the address format of wegotrip.com, as the product detail returns it in `url`
-                'url' => 'https://wegotrip.com/' . $p['city']['slug'] . '-d' . (int) $p['city']['id'] . '/' . $p['slug'] . '-p' . (int) $p['id'] . '/',
-                'img' => (string) ($p['preview'] ?? ''),
-                'price' => ($p['currencyCode'] ?? '') === SITE_CURRENCY ? (float) ($p['price'] ?? 0) : 0.0,
-                'rating' => (float) ($p['rating'] ?? 0),
-                'ratings' => (int) ($p['ratingsCount'] ?? 0),
-                'duration' => (string) ($p['duration'] ?? ''),
-                'category' => (string) ($p['category'] ?? ''),
-                'city' => (string) ($p['city']['name'] ?? ''),
-            ];
-        }
+        $items = array_values(array_filter(array_map('v2_wegotrip_item', $data['results'])));
         // WeGoTrip's own page of the city (its slug, not ours), for the "see all" link
         $first = $data['results'][0]['city'] ?? null;
         $all = ($kind === 'city' && !empty($first['slug'])) ? 'https://wegotrip.com/' . $first['slug'] . '-d' . $id . '/' : '';
@@ -195,6 +178,136 @@ function v2_wegotrip_products(string $kind, string $slug, int $limit = 8, string
     }
 
     return ['count' => $res['count'], 'items' => array_slice($items, 0, $limit), 'all' => $res['all'] ?? ''];
+}
+
+/** One product of the WeGoTrip list response, in the shape the cards use; null when it cannot be shown or sold. */
+function v2_wegotrip_item($p): ?array
+{
+    if (!is_array($p) || empty($p['id']) || empty($p['slug']) || empty($p['title']) || empty($p['city']['id'])
+        || ($p['tags']['available'] ?? true) === false) {
+        return null;
+    }
+    return [
+        'title' => (string) $p['title'],
+        // the address format of wegotrip.com, as the product detail returns it in `url`
+        'url' => 'https://wegotrip.com/' . $p['city']['slug'] . '-d' . (int) $p['city']['id'] . '/' . $p['slug'] . '-p' . (int) $p['id'] . '/',
+        'img' => (string) ($p['preview'] ?? ''),
+        'price' => ($p['currencyCode'] ?? '') === SITE_CURRENCY ? (float) ($p['price'] ?? 0) : 0.0,
+        'rating' => (float) ($p['rating'] ?? 0),
+        'ratings' => (int) ($p['ratingsCount'] ?? 0),
+        'duration' => (string) ($p['duration'] ?? ''),
+        'category' => (string) ($p['category'] ?? ''),
+        'city' => (string) ($p['city']['name'] ?? ''),
+        'cats' => v2_wegotrip_cats((string) ($p['category'] ?? ''), (string) $p['title'], !empty($p['tags']['audioguide'])),
+    ];
+}
+
+/**
+ * Which of our main categories a WeGoTrip product belongs to (slugs). Their category says what kind of product it
+ * is; the title says what place it is about, so a "Sightseeing Tickets" product for a museum is also under museums.
+ */
+function v2_wegotrip_cats(string $category, string $title, bool $audio): array
+{
+    static $map = [
+        'museum & attraction tickets' => 'museums-exhibitions', 'museum tickets & passes' => 'museums-exhibitions',
+        'art & museums' => 'museums-exhibitions',
+        'history & heritage' => 'culture-art', 'architecture' => 'culture-art', 'cultural tours' => 'culture-art',
+        'literary, art & music tours' => 'culture-art', 'unesco sites' => 'culture-art', 'archeology' => 'culture-art',
+        'landmarks & monuments' => 'culture-art', 'sightseeing tickets' => 'culture-art',
+        'attraction tickets' => 'culture-art', 'skip the line tickets' => 'culture-art',
+        'castle & palace tours' => 'culture-art',
+    ];
+    $cats = [$map[strtolower(trim($category))] ?? 'tours-sightseeing' => true];
+    $t = strtolower(v2_partner_ascii($title));
+    if (preg_match('/\b(museum|museo|musee|gallery|galleria|pinacoteca|exhibition)/', $t)) {
+        $cats['museums-exhibitions'] = true;
+    }
+    if (preg_match('/\b(castle|palace|palazzo|cathedral|basilica|church|chapel|abbey|duomo|old town|fortress|colosseum|acropolis|forum)\b/', $t)) {
+        $cats['culture-art'] = true;
+    }
+    if (preg_match('/\b(zoo|aquarium)\b/', $t)) {
+        $cats['zoos-aquariums'] = true;
+    }
+    if ($audio || preg_match('/\b(tour|walk|stroll|cruise)\b/', $t)) {
+        $cats['tours-sightseeing'] = true;
+    }
+    return array_keys($cats);
+}
+
+/**
+ * Everything WeGoTrip sells in one of our cities, best sellers first, for the city listing (which filters, sorts and
+ * pages it). Empty when partner offers are off, the city is not in the index or the API did not answer.
+ */
+function v2_wegotrip_city_all(string $slug): array
+{
+    $id = (int) (v2_wegotrip_index()['cities'][$slug] ?? 0);
+    if ($id < 1 || !v2_partners_on()) {
+        return [];
+    }
+    $res = api_cached("wegotrip_city_all_{$id}", function () use ($id) {
+        $items = [];
+        for ($page = 1; $page <= 4; $page++) {   // 100 a page; the largest city has a little over a hundred
+            $url = 'https://app.wegotrip.com/api/v2/products/popular/?' . http_build_query([
+                'lang' => 'en', 'currency' => SITE_CURRENCY, 'city' => $id, 'per_page' => 100, 'page' => $page,
+            ]);
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 8, CURLOPT_ENCODING => '',
+                CURLOPT_HTTPHEADER => ['Accept: application/json'],
+            ]);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            $data = is_string($body) ? (json_decode($body, true)['data'] ?? null) : null;
+            if ($code !== 200 || !is_array($data) || !isset($data['results'])) {
+                error_log('WeGoTrip API: HTTP ' . $code . ' for ' . $url);
+                if ($page === 1) {
+                    return ['success' => false];
+                }
+                break;      // a later page failed: show what we have
+            }
+            $items = array_merge($items, array_values(array_filter(array_map('v2_wegotrip_item', $data['results']))));
+            if (empty($data['next'])) {
+                break;
+            }
+        }
+        return ['success' => true, 'items' => $items];
+    }, 12 * 3600);
+
+    return !empty($res['success']) ? $res['items'] : [];
+}
+
+/**
+ * The city listing's filters, applied to partner products: category (one of our slugs), words in the title,
+ * a price ceiling and the sort order. Products without a price in our currency fall out of price filters.
+ */
+function v2_partner_filter(array $items, ?string $category, string $query, ?int $maxPrice, string $sort): array
+{
+    $words = array_filter(preg_split('/\s+/', strtolower(v2_partner_ascii($query))));
+    $items = array_values(array_filter($items, function ($p) use ($category, $words, $maxPrice) {
+        if ($category !== null && $category !== '' && !in_array($category, $p['cats'] ?? [], true)) {
+            return false;
+        }
+        if ($maxPrice !== null && !($p['price'] > 0 && $p['price'] <= $maxPrice)) {
+            return false;
+        }
+        $title = strtolower(v2_partner_ascii($p['title'] . ' ' . $p['category']));
+        foreach ($words as $w) {
+            if (strpos($title, $w) === false) {
+                return false;
+            }
+        }
+        return true;
+    }));
+    if ($sort === 'price_asc' || $sort === 'price_desc') {
+        $priced = array_values(array_filter($items, fn ($p) => $p['price'] > 0));
+        $rest = array_values(array_filter($items, fn ($p) => !($p['price'] > 0)));
+        usort($priced, fn ($a, $b) => $sort === 'price_asc' ? $a['price'] <=> $b['price'] : $b['price'] <=> $a['price']);
+        $items = array_merge($priced, $rest);
+    } elseif ($sort === 'name_asc') {
+        usort($items, fn ($a, $b) => strcasecmp($a['title'], $b['title']));
+    }
+    return $items;
 }
 
 /** Letters without their accents ("Musée" → "Musee"), for comparing names. */
