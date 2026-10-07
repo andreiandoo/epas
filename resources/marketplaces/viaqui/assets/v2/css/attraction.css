@@ -231,4 +231,5 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
 /* Viaqui: the About text reads as an article, not as one block */
 .tabout-body p{margin:0 0 1em;max-width:68ch}
 .tabout-body p:last-child{margin-bottom:0}
-.tabout-body .tabout-lead{font-size:1.125rem;line-height:1.6;color:var(--ink)}
+.tabout-body{color:var(--ink)}
+.tabout-body .tabout-lead{font-size:1.125rem;font-weight:600;line-height:1.6}

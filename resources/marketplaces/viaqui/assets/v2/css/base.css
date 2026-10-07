@@ -1000,3 +1000,8 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 .ptours .sec-head{margin-bottom:var(--space-3)}
 .ptours .sec-head h2{max-width:none}
 .ptours-intro{margin:0 0 clamp(24px, 3vw, 40px);max-width:60ch;color:var(--muted)}
+
+/* The wordmark as the drawn logo: sized by the font size the text wordmark had, so every place keeps its scale.
+   The letters fill the top of the drawing and the tail of the Q hangs below, hence the small shift. */
+.brand svg.w,.brand-lg svg.w,.ftr-mini-brand .brand svg.w,.org-brand .brand svg.w,.org-top-brand .brand svg.w,.gc-brand svg.w{display:inline-block !important;width:auto;height:.93em;aspect-ratio:3690 / 930;position:relative;top:.06em;overflow:visible}
+.mini-gift .gc-brand svg.w{height:22px;top:0}

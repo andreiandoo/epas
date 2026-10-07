@@ -233,3 +233,10 @@
 
 /* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
 .ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}
+
+/* Viaqui: a country pill carries its flag on the same line as the name and the count */
+.mpx-pill{align-items:center;white-space:nowrap}
+.mpx-pill > span{display:inline-flex;align-items:center}
+.mpx-pill .v-flag{display:inline-block;flex:none;width:20px;height:15px;margin-right:8px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(31,41,55,.12)}
+.mpx-note{max-width:none}
+@media (min-width:1024px){.mpx-note{white-space:nowrap}}

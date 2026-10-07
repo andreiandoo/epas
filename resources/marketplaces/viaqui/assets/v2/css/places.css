@@ -176,10 +176,14 @@
 /* Country page: a photo of the country's best-known place in the hero */
 .v-phero-in.has-shot{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.62fr);align-items:center;gap:clamp(24px,5vw,72px)}
 .v-phero-shot{position:relative;margin:0;justify-self:end;width:100%;max-width:440px}
-.v-phero-shot a{display:block;aspect-ratio:5 / 4;overflow:hidden;border-radius:999px 999px 28px 28px / 62% 62% 28px 28px;background:var(--deep-2);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.v-phero-shot a{display:block;aspect-ratio:4 / 3;overflow:hidden;border-radius:42% 42% 28px 28px / 56% 56% 28px 28px;background:var(--deep-2);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
 .v-phero-shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .9s var(--ease-out)}
 .v-phero-shot a:hover img{transform:scale(1.04)}
 .v-phero-shot figcaption{margin-top:10px;font-size:.75rem;line-height:1.4;text-align:center;color:rgba(246,243,232,.66)}
 .v-phero-shot figcaption b{display:block;font-size:.875rem;font-weight:600;color:var(--on-deep)}
 .v-phero-shot figcaption a{display:inline;aspect-ratio:auto;border-radius:0;background:none;box-shadow:none;color:inherit}
 @media (max-width:899px){.v-phero-in.has-shot{grid-template-columns:1fr}.v-phero-shot{display:none}}
+.v-phero-copy{display:grid;gap:16px;justify-items:start;min-width:0}
+.v-phero-copy .v-eyebrow{display:flex;align-items:center;margin:8px 0 0}
+.v-phero-copy .v-phero-h{margin:0}
+.v-phero-copy .v-phero-lede{margin:0}
