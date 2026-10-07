@@ -23,6 +23,7 @@ $atType = isset($_GET['type']) && is_string($_GET['type']) && isset(V2_ATTRACTIO
 $atCountry = isset($_GET['country']) && is_string($_GET['country']) && preg_match('/^[a-zA-Z]{2}$/', $_GET['country']) ? strtoupper($_GET['country']) : '';
 $atQ = isset($_GET['q']) && is_string($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
 $atSort = ($_GET['sort'] ?? '') === 'name' ? 'name' : '';
+$atUnesco = ($_GET['unesco'] ?? '') === '1';      // World Heritage Sites only
 $atPage = max(1, min(2000, (int) ($_GET['page'] ?? 1)));
 
 $atCountries = $V2NAV['countriesFull'] ?? [];
@@ -39,7 +40,7 @@ if ($atCitySlug !== '') {
     $atCountry = '';   // a city already says where
 }
 
-$atParams = array_filter(['city' => $atCitySlug, 'type' => $atType, 'country' => $atCountry, 'search' => $atQ, 'sort' => $atSort, 'per_page' => 24, 'page' => $atPage], fn ($v) => $v !== '' && $v !== null);
+$atParams = array_filter(['city' => $atCitySlug, 'type' => $atType, 'country' => $atCountry, 'search' => $atQ, 'sort' => $atSort, 'unesco' => $atUnesco ? '1' : '', 'per_page' => 24, 'page' => $atPage], fn ($v) => $v !== '' && $v !== null);
 $atJobs = ['list' => ['key' => 'v2_attractions_' . md5(json_encode($atParams)), 'endpoint' => '/attractions', 'params' => $atParams, 'ttl' => 900]];
 if ($atCitySlug !== '') {
     $atJobs['city'] = ['key' => 'city_full_' . $atCitySlug, 'endpoint' => '/locations/cities/' . rawurlencode($atCitySlug), 'params' => [], 'ttl' => 300];
@@ -56,6 +57,10 @@ $atItems = [];
 foreach ((array) ($atR['list']['data']['items'] ?? []) as $row) {
     if (is_array($row) && ($a = v2_attraction($row))) {
         $a['subtitle'] = navFlatName($row['subtitle'] ?? '');
+        $a['unesco'] = !empty($row['is_unesco']);
+        // who took the photo, said where the photo is shown (the full credit, with the licence link, is on the attraction's page)
+        $cr = is_array($row['cover_credit'] ?? null) ? $row['cover_credit'] : null;
+        $a['credit'] = $cr && !empty($cr['license']) ? 'Photo: ' . (($cr['author'] ?? '') !== '' ? $cr['author'] : 'unknown author') . ', ' . $cr['license'] . ', Wikimedia Commons' : '';
         $atItems[] = $a;
     }
 }
@@ -67,19 +72,19 @@ if ($atPage > 1 && !$atItems) {
 }
 
 $atBase = $atCitySlug !== '' ? '/' . $atCitySlug . '/attractions' : '/attractions';
-$atUrl = function (array $over = []) use ($atBase, $atType, $atCountry, $atQ, $atSort) {
-    $q = array_filter(array_merge(['type' => $atType, 'country' => strtolower($atCountry), 'q' => $atQ, 'sort' => $atSort, 'page' => ''], $over), fn ($v) => $v !== '' && $v !== null && $v !== 1);
+$atUrl = function (array $over = []) use ($atBase, $atType, $atCountry, $atQ, $atSort, $atUnesco) {
+    $q = array_filter(array_merge(['type' => $atType, 'country' => strtolower($atCountry), 'q' => $atQ, 'sort' => $atSort, 'unesco' => $atUnesco ? '1' : '', 'page' => ''], $over), fn ($v) => $v !== '' && $v !== null && $v !== 1);
     return $atBase . ($q ? '?' . http_build_query($q) : '');
 };
 $atTypeName = $atType !== '' ? V2_ATTRACTION_TYPES[$atType] : '';
 $atWhere = $atCityName !== '' ? $atCityName : $atCountryName;
-$atHeading = ($atTypeName !== '' ? $atTypeName : 'Attractions') . ($atWhere !== '' ? ' in ' . $atWhere : '');
-$atFiltered = $atType !== '' || $atCountry !== '' || $atQ !== '';
+$atHeading = ($atUnesco ? 'World Heritage ' . ($atTypeName !== '' ? mb_strtolower($atTypeName) : 'sites') : ($atTypeName !== '' ? $atTypeName : 'Attractions')) . ($atWhere !== '' ? ' in ' . $atWhere : '');
+$atFiltered = $atType !== '' || $atCountry !== '' || $atQ !== '' || $atUnesco;
 
 $pageTitle = $atHeading . ($atPage > 1 ? ' (page ' . $atPage . ')' : '');
 $pageDescription = ($atTotal > 0 ? v2_num($atTotal, 'place', 'places') . ': ' : '') . mb_strtolower($atTypeName !== '' ? $atTypeName : 'castles, museums, cathedrals, caves, parks and viewpoints')
     . ($atWhere !== '' ? ' in ' . $atWhere : ' across Europe') . ', each with a map, what is around it and what you can book nearby.';
-$canonicalUrl = SITE_URL . $atUrl(['q' => '', 'sort' => '', 'page' => $atPage > 1 ? $atPage : '']);
+$canonicalUrl = SITE_URL . $atUrl(['q' => '', 'sort' => '', 'page' => $atPage > 1 ? $atPage : '']);      // the UNESCO filter keeps its own address
 $noindex = $atQ !== '' || $atSort !== '';
 $structuredData = [[
     '@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => $atHeading, 'numberOfItems' => $atTotal,
@@ -115,6 +120,7 @@ include __DIR__ . '/includes/v2/header.php';
       <?php endif; ?>
       <label class="v-afield"><span>Order</span><select id="at-sort" name="sort"><option value="">Best known first</option><option value="name"<?= $atSort === 'name' ? ' selected' : '' ?>>A to Z</option></select></label>
       <?php if ($atType !== ''): ?><input type="hidden" name="type" value="<?= v2_e($atType) ?>"><?php endif; ?>
+      <?php if ($atUnesco): ?><input type="hidden" name="unesco" value="1"><?php endif; ?>
       <button class="btn btn-primary" type="submit"><?= v2_ic('magnifying-glass') ?>Show</button>
     </form>
   </div>
@@ -124,6 +130,7 @@ include __DIR__ . '/includes/v2/header.php';
 <section class="v-psec" aria-labelledby="at-list-h">
   <div class="wrap">
     <nav class="v-types" aria-label="Type of attraction">
+      <a class="v-types-u" href="<?= v2_e($atUrl(['unesco' => $atUnesco ? '' : '1'])) ?>"<?= $atUnesco ? ' aria-current="true"' : '' ?>><?= v2_ic('star') ?>UNESCO World Heritage</a>
       <a href="<?= v2_e($atUrl(['type' => ''])) ?>"<?= $atType === '' ? ' aria-current="true"' : '' ?>>All types</a>
       <?php foreach (V2_ATTRACTION_TYPES as $ts => $tn): ?><a href="<?= v2_e($atUrl(['type' => $ts])) ?>"<?= $atType === $ts ? ' aria-current="true"' : '' ?>><?= v2_e($tn) ?></a><?php endforeach; ?>
     </nav>
@@ -137,13 +144,13 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="v-pgrid v-agrid">
       <?php foreach ($atItems as $i => $a): ?>
       <a class="v-pcard" href="<?= v2_e($a['href']) ?>">
-        <span class="v-pcard-ph"><?= $a['image'] ? '<img src="' . v2_e(str_replace('?width=960', '?width=480', $a['image'])) . '" alt="" loading="lazy" decoding="async">' : v2_fallback($a['name'], $i) ?></span>
+        <span class="v-pcard-ph"><?= $a['image'] ? '<img src="' . v2_e(v2_thumb($a['image'], 480)) . '" alt=""' . ($a['credit'] !== '' ? ' title="' . v2_e($a['credit']) . '"' : '') . ' loading="lazy" decoding="async">' : v2_fallback($a['name'], $i) ?><?php if ($a['unesco']): ?><small class="v-pcard-u"><?= v2_ic('star') ?>UNESCO</small><?php endif; ?></span>
         <strong><?= v2_e($a['name']) ?></strong>
         <span><?= v2_e(implode(' · ', array_filter([$a['type'], $a['city']]))) ?></span>
       </a>
       <?php endforeach; ?>
     </div>
-    <p class="v-acredit">Photographs from Wikimedia Commons. The author and the licence of each photo are on the attraction's page.</p>
+    <p class="v-acredit">Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction's page. <a href="/photo-credits">About the photos</a></p>
     <?php else: ?>
     <p class="v-pempty">Nothing matches these filters yet. Try another type<?= $atCitySlug === '' ? ' or another country' : '' ?>.</p>
     <?php endif; ?>

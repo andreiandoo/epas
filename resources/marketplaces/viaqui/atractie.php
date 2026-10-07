@@ -74,6 +74,45 @@ $atLat        = $attraction['latitude'] ?? null;
 $atLng        = $attraction['longitude'] ?? null;
 $atActivities = is_array($attraction['activities'] ?? null) ? array_values($attraction['activities']) : [];
 $cityAttractions   = is_array($attraction['city_attractions'] ?? null) ? array_values($attraction['city_attractions']) : [];
+// What the import knows beyond the basics (core: attractions.facts, see plans/viaqui-data/build_facts.py).
+$atFacts   = is_array($attraction['facts'] ?? null) ? $attraction['facts'] : [];
+$atUnesco  = !empty($attraction['is_unesco']);
+$atNative  = trim((string) ($atFacts['native_name'] ?? ''));
+// Neighbours by distance, each with distance_km; places already shown in the city column are left out.
+$atNearby  = is_array($attraction['nearby'] ?? null) ? array_values($attraction['nearby']) : [];
+$atShownSlugs = array_column($cityAttractions, 'slug');
+$atNearby  = array_values(array_filter($atNearby, fn ($n) => !in_array($n['slug'] ?? '', $atShownSlugs, true)));
+// The facts as rows of a list: [icon, label, html]. Only what is known is printed.
+$atFactRows = [];
+if (!empty($atFacts['year'])) {
+    $atYear = (int) $atFacts['year'];
+    $atFactRows[] = ['calendar-blank', 'Built', v2_e($atYear < 0 ? abs($atYear) . ' BC' : (string) $atYear)];
+}
+if (!empty($atFacts['styles'])) {
+    $atFactRows[] = ['buildings', count($atFacts['styles']) > 1 ? 'Styles' : 'Style', v2_e(ucfirst(implode(', ', array_map('strval', $atFacts['styles']))))];
+}
+if (!empty($atFacts['architects'])) {
+    $atFactRows[] = ['user-circle', count($atFacts['architects']) > 1 ? 'Architects' : 'Architect', v2_e(implode(', ', array_map('strval', $atFacts['architects'])))];
+}
+if (!empty($atFacts['visitors'][0])) {
+    $atVis = (int) $atFacts['visitors'][0];
+    $atVisText = $atVis >= 1000000 ? rtrim(rtrim(number_format($atVis / 1000000, 1), '0'), '.') . ' million' : number_format(round($atVis / 1000) * 1000);
+    $atFactRows[] = ['users-three', 'Visitors a year', v2_e($atVisText . (!empty($atFacts['visitors'][1]) ? ' (' . (int) $atFacts['visitors'][1] . ')' : ''))];
+}
+if (!empty($atFacts['hours'])) {
+    $atFactRows[] = ['clock', 'Opening hours', v2_e(v2_opening_hours((string) $atFacts['hours'])) . ' <small>from OpenStreetMap; check before you go</small>'];
+}
+if (!empty($atFacts['website']) && preg_match('#^https?://#i', (string) $atFacts['website'])) {
+    $atHost = preg_replace('/^www\./', '', (string) parse_url((string) $atFacts['website'], PHP_URL_HOST));
+    $atFactRows[] = ['globe-simple', 'Official website', '<a href="' . v2_e($atFacts['website']) . '" target="_blank" rel="noopener nofollow">' . v2_e($atHost) . '</a>'];
+}
+if (!empty($atFacts['types'])) {
+    $atAlso = array_values(array_filter(array_map(fn ($t) => V2_ATTRACTION_TYPES[$t] ?? '', (array) $atFacts['types'])));
+    if ($atAlso) {
+        $atFactRows[] = ['tag', 'Also listed as', v2_e(implode(', ', $atAlso))];
+    }
+}
+$atGalleryCredits = array_values(array_filter((array) ($atFacts['gallery'] ?? []), fn ($g) => is_array($g) && !empty($g['license'])));
 $countyAttractions = is_array($attraction['county_attractions'] ?? null) ? array_values($attraction['county_attractions']) : [];
 
 /* Partner offers: self-guided audio tours (many with the entry ticket) that WeGoTrip sells for this attraction.
@@ -177,9 +216,13 @@ $renderAttractionRow = function (array $p, int $i) {
     $img = v2_media_url($p['cover_image_url'] ?? null);
     $name = $p['name'] ?? '';
     $meta = trim(($p['type']['name'] ?? '') . (!empty($p['city']['name']) ? ' · ' . $p['city']['name'] : ''), ' ·');
+    if (isset($p['distance_km'])) {
+        $km = (float) $p['distance_km'];
+        $meta = trim($meta . ' · ' . ($km < 1 ? (max(1, (int) round($km * 10)) * 100) . ' m' : rtrim(rtrim(number_format($km, 1), '0'), '.') . ' km') . ' away', ' ·');
+    }
     ?>
     <li><a class="trow" href="/attraction/<?= v2_e($p['slug'] ?? '') ?>">
-      <span class="trow-media"><?= $img ? v2_photo([$img, 0, 0, '']) : v2_fallback($name, $i) ?></span>
+      <span class="trow-media"><?= $img ? v2_photo([v2_thumb($img, 240, 240), 0, 0, '']) : v2_fallback($name, $i) ?></span>
       <span class="trow-text"><b><?= v2_e($name) ?></b><?php if ($meta): ?><small><?= v2_e($meta) ?></small><?php endif; ?></span>
       <?= v2_ic('arrow-right') ?>
     </a></li>
@@ -210,6 +253,8 @@ include __DIR__ . '/includes/v2/header.php';
         </nav>
         <p class="th-kicker"><?= v2_e($kicker) ?></p>
         <h1 class="th-h" id="th-h"><?= v2_e($atName) ?></h1>
+        <?php if ($atNative !== ''): ?><p class="th-native" lang="<?= v2_e(strtolower((string) ($attraction['country'] ?? ''))) ?>"><?= v2_e($atNative) ?></p><?php endif; ?>
+        <?php if ($atUnesco): ?><p class="th-unesco"><?= v2_ic('star') ?>UNESCO World Heritage Site</p><?php endif; ?>
         <?php if ($atHeroLead !== ''): ?><p class="th-sub"><?= v2_e($atHeroLead) ?></p><?php endif; ?>
 
         <?php if ($atCompact): ?>
@@ -237,7 +282,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php
           // "Add to your trip": kept in the browser (assets/v2/js/trip-list.js) and shown on /plan, where the planner of the
           // country turns the saved places into days. The photo is passed as the bare Commons file name when it is one.
-          $atTripImg = preg_match('#Special:FilePath/([^?]+)#', (string) $atCover, $atTripM) ? rawurldecode($atTripM[1]) : (string) $atCover;
+          $atTripImg = v2_commons_name((string) $atCover) ?? (string) $atCover;
           $atTrip = ['s' => (string) $slug, 'n' => (string) $atName, 'c' => $atCountrySlug, 'cn' => $atCountryName, 'city' => (string) $atCityName, 't' => (string) $atType, 'img' => $atTripImg];
           ?>
           <button class="btn btn-outline-light th-trip" type="button" data-trip-add data-trip="<?= v2_e(json_encode($atTrip, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>" aria-pressed="false"><?= v2_ic('heart') ?><span data-trip-label>Add to your trip</span></button>
@@ -284,9 +329,23 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if (count($lightbox) > 1): ?>
           <ul class="tthumbs">
             <?php foreach (array_slice($lightbox, 1, 6) as $gi => $g): ?>
-            <li><button type="button" data-gallery="<?= $gi + 1 ?>" aria-haspopup="dialog" aria-controls="lb"><img src="<?= v2_e($g) ?>" alt="<?= v2_e($atName) ?>" loading="lazy" decoding="async"></button></li>
+            <li><button type="button" data-gallery="<?= $gi + 1 ?>" aria-haspopup="dialog" aria-controls="lb"><img src="<?= v2_e(v2_thumb($g, 480, 320)) ?>" alt="<?= v2_e($atName) ?>" loading="lazy" decoding="async"></button></li>
             <?php endforeach; ?>
           </ul>
+          <?php if ($atGalleryCredits): ?>
+          <p class="th-credit tabout-credit">Photos: <?php foreach ($atGalleryCredits as $gci => $gc): ?><?= $gci ? ' · ' : '' ?><a href="<?= v2_e($gc['source_url'] ?? '#') ?>" target="_blank" rel="noopener nofollow"><?= v2_e(($gc['author'] ?? '') !== '' ? $gc['author'] : 'unknown author') ?></a> (<?= v2_e($gc['license']) ?>)<?php endforeach; ?>, Wikimedia Commons.</p>
+          <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if ($atFactRows): ?>
+        <div class="tfacts">
+          <h2 class="tfacts-h">Good to know</h2>
+          <dl>
+            <?php foreach ($atFactRows as [$fIcon, $fLabel, $fHtml]): ?>
+            <div><dt><?= v2_ic($fIcon) ?><?= v2_e($fLabel) ?></dt><dd><?= $fHtml ?></dd></div>
+            <?php endforeach; ?>
+          </dl>
+        </div>
         <?php endif; ?>
       </div>
 
@@ -355,6 +414,7 @@ include __DIR__ . '/includes/v2/header.php';
   <?php endif; ?>
 
   <!-- ===================== NEARBY ATTRACTIONS ===================== -->
+  <?php if (empty($countyAttractions) && $atNearby) { $countyAttractions = array_slice($atNearby, 0, 6); $atCounty = ''; } // by distance, where the catalogue has no counties ?>
   <?php if (!empty($cityAttractions) || !empty($countyAttractions)): ?>
   <section class="sec tnear" aria-label="Other attractions">
     <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>

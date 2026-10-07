@@ -40,7 +40,7 @@ class ViaquiAttractionsSeeder extends Seeder
         if (! $files) {
             throw new \RuntimeException("No attraction files in {$dir}");
         }
-        foreach (['country', 'wikidata_id', 'popularity', 'description_credit'] as $column) {
+        foreach (['country', 'wikidata_id', 'popularity', 'description_credit', 'facts', 'is_unesco'] as $column) {
             if (! DB::getSchemaBuilder()->hasColumn('attractions', $column)) {
                 throw new \RuntimeException("Column attractions.{$column} is missing: run php artisan migrate first.");
             }
@@ -110,7 +110,27 @@ class ViaquiAttractionsSeeder extends Seeder
                     'source' => 'Wikipedia', 'source_url' => 'https://en.wikipedia.org/wiki/' . rawurlencode(str_replace(' ', '_', $a['w'])),
                     'license' => 'CC BY-SA 4.0', 'license_url' => 'https://creativecommons.org/licenses/by-sa/4.0/',
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null;
+                // Facts the data files carry beyond the basics (plans/viaqui-data/build_facts.py); only what is known is stored.
+                $facts = array_filter([
+                    'types' => $a['ts'] ?? null, 'website' => $a['web'] ?? null, 'year' => $a['yr'] ?? null,
+                    'styles' => $a['sty'] ?? null, 'architects' => $a['arch'] ?? null, 'visitors' => $a['vis'] ?? null,
+                    'native_name' => $a['nat'] ?? null, 'hours' => $a['hrs'] ?? null, 'pageviews' => $a['pv'] ?? null,
+                    'also_in' => $a['also'] ?? null,
+                    'gallery' => ! empty($a['gal']) ? array_map(fn ($g) => [
+                        'url' => 'https://commons.wikimedia.org/wiki/Special:FilePath/' . rawurlencode($g[0]) . '?width=1280',
+                        'author' => $g[1], 'license' => $g[2], 'license_url' => $g[3],
+                        'source_url' => 'https://commons.wikimedia.org/wiki/File:' . rawurlencode(str_replace(' ', '_', $g[0])),
+                    ], $a['gal']) : null,
+                ], fn ($v) => $v !== null && $v !== [] && $v !== '');
+                $gallery = ! empty($a['gal'])
+                    ? array_map(fn ($g) => 'https://commons.wikimedia.org/wiki/Special:FilePath/' . rawurlencode($g[0]) . '?width=1280', $a['gal'])
+                    : null;
+                $popularity = (int) ($a['pop'] ?? $a['k']);
                 $rows[] = [
+                    'facts' => $facts ? json_encode($facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                    'is_unesco' => ! empty($a['u']),
+                    'gallery' => $gallery ? json_encode($gallery, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                    'address' => $a['adr'] ?? null,
                     'marketplace_client_id' => self::CLIENT_ID, 'slug' => mb_substr($a['s'], 0, 191),
                     'name' => json_encode(['en' => $a['n']], JSON_UNESCAPED_UNICODE),
                     'subtitle' => ! empty($a['d']) ? json_encode(['en' => $a['d']], JSON_UNESCAPED_UNICODE) : null,
@@ -119,9 +139,9 @@ class ViaquiAttractionsSeeder extends Seeder
                     'latitude' => $a['la'], 'longitude' => $a['lo'],
                     'cover_image_url' => $cover, 'cover_image_credit' => $credit,
                     'description' => $description, 'description_credit' => $descriptionCredit,
-                    'country' => $country, 'wikidata_id' => $a['q'], 'popularity' => $a['k'],
+                    'country' => $country, 'wikidata_id' => $a['q'], 'popularity' => $popularity,
                     // better-known places first inside the curated order (featured, then sort_order)
-                    'sort_order' => max(0, 1000 - (int) $a['k']),
+                    'sort_order' => max(0, 1000 - $popularity),
                     'is_featured' => false, 'is_visible' => true, 'created_at' => $now, 'updated_at' => $now,
                 ];
             }
@@ -172,7 +192,8 @@ class ViaquiAttractionsSeeder extends Seeder
 
             foreach (array_chunk($rows, 500) as $chunk) {
                 DB::table('attractions')->upsert($chunk, ['marketplace_client_id', 'slug'],
-                    ['name', 'subtitle', 'attraction_type_id', 'marketplace_city_id', 'latitude', 'longitude', 'country', 'wikidata_id', 'popularity', 'sort_order', 'updated_at']);
+                    ['name', 'subtitle', 'attraction_type_id', 'marketplace_city_id', 'latitude', 'longitude', 'country', 'wikidata_id', 'popularity', 'sort_order',
+                        'facts', 'is_unesco', 'updated_at']);
             }
             // Rows that existed before keep what they have, except where it is empty or was itself imported: a description
             // is filled in where there is none or where the one in place came from Wikipedia, a cover only where there is none.
@@ -184,6 +205,14 @@ class ViaquiAttractionsSeeder extends Seeder
             }));
             foreach (array_chunk($textRows, 500) as $chunk) {
                 DB::table('attractions')->upsert($chunk, ['marketplace_client_id', 'slug'], ['description', 'description_credit', 'updated_at']);
+            }
+            $more = DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->where('country', $country)->get(['slug', 'gallery', 'address'])->keyBy('slug');
+            $empty = fn ($v) => $v === null || $v === '' || $v === '[]' || $v === 'null';
+            foreach (['gallery', 'address'] as $column) {
+                $fill = array_values(array_filter($rows, fn ($r) => $r[$column] && isset($more[$r['slug']]) && $empty($more[$r['slug']]->{$column})));
+                foreach (array_chunk($fill, 500) as $chunk) {
+                    DB::table('attractions')->upsert($chunk, ['marketplace_client_id', 'slug'], [$column, 'updated_at']);
+                }
             }
             $coverRows = array_values(array_filter($rows, fn ($r) => $r['cover_image_url'] && isset($existing[$r['slug']]) && $existing[$r['slug']]->cover_image_url === null));
             foreach (array_chunk($coverRows, 500) as $chunk) {

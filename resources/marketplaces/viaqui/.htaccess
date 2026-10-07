@@ -30,6 +30,7 @@ RewriteRule ^help/?$ ajutor.php [L,QSA]
 RewriteRule ^help/search/?$ ajutor-cautare.php [L,QSA]
 RewriteRule ^terms/?$ terms.php [L,QSA]
 RewriteRule ^privacy/?$ privacy.php [L,QSA]
+RewriteRule ^photo-credits/?$ photo-credits.php [L,QSA]
 RewriteRule ^partners/?$ parteneri.php [L,QSA]
 RewriteRule ^list-your-venue/?$ inregistrare-locatie.php [L,QSA]
 RewriteRule ^operators/?$ operatori.php [L,QSA]
@@ -171,6 +172,7 @@ RewriteRule ^locatii/?$ hub-locatii.php [L,QSA]
 
 # Sitemap: hubs, locations and experiences (activities module)
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^sitemap-([a-z][a-z-]{1,40})\.xml$ sitemap.php?part=$1 [L]
 
 # Venue type pages (internal — still reachable, e.g. activity venue links)
 RewriteCond %{REQUEST_FILENAME} !-f

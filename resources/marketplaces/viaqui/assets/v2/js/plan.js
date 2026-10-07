@@ -107,9 +107,9 @@
    */
   function thumb(url, w, h) {
     if (!url) return '';
-    /* A bare file name is a Wikimedia Commons photo; Commons serves its own thumbnails, at the widths it keeps ready. */
+    /* A bare file name is a Wikimedia Commons photo: it comes from our own thumbnail cache (api/img.php). */
     if (url.indexOf('http') !== 0 && url.charAt(0) !== '/') {
-      return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(url.replace(/ /g, '_')) + '?width=' + (w > 250 ? 500 : 250);
+      return '/api/img.php?c=' + encodeURIComponent(url) + '&w=' + (w > 250 ? 480 : 240) + (h ? '&h=' + (w > 250 ? Math.round(480 * h / w) : Math.round(240 * h / w)) : '');
     }
     if (url.indexOf('http') !== 0) return url;
     return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');

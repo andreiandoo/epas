@@ -187,3 +187,19 @@
 .v-phero-copy .v-eyebrow{display:flex;align-items:center;margin:8px 0 0}
 .v-phero-copy .v-phero-h{margin:0}
 .v-phero-copy .v-phero-lede{margin:0}
+
+/* Attractions list: the UNESCO filter and the mark on a card */
+.v-types .v-types-u{gap:8px;box-shadow:inset 0 0 0 1.5px var(--sand-deep)}
+.v-types .v-types-u .ic{width:16px;height:16px;color:#B8860B}
+.v-types .v-types-u[aria-current] .ic{color:inherit}
+.v-pcard-ph .v-pcard-u{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;border-radius:999px;background:rgba(7,41,31,.78);color:#F6F3E8;font-size:.6875rem;font-weight:600;letter-spacing:.04em}
+.v-pcard-u .ic{width:12px;height:12px;color:#E8C56A}
+.v-acredit a{color:var(--green);font-weight:600;white-space:nowrap}
+
+/* Plain reading pages (/photo-credits) */
+.v-prose{max-width:74ch}
+.v-prose h2{margin:1.6em 0 .5em;font-size:1.5rem;font-weight:700;letter-spacing:-.02em;color:var(--green)}
+.v-prose h2:first-child{margin-top:0}
+.v-prose p,.v-prose li{line-height:1.65;color:var(--ink)}
+.v-prose ul{margin:0 0 1em;padding-left:1.2em;display:grid;gap:.5em}
+.v-prose a{color:var(--green);font-weight:600}

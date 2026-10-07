@@ -41,7 +41,17 @@ class AttractionsController extends BaseController
             $query->whereHas('city', fn ($q) => $q->where('slug', $citySlug));
         }
         if ($typeSlug = $request->query('type')) {
-            $query->whereHas('type', fn ($q) => $q->where('slug', $typeSlug));
+            // a place can fit several types (a palace that is a museum): the other ones are listed in facts.types
+            $query->where(function ($q) use ($typeSlug) {
+                $q->whereHas('type', fn ($t) => $t->where('slug', $typeSlug));
+                if ($this->hasFacts()) {
+                    $q->orWhereJsonContains('facts->types', $typeSlug);
+                }
+            });
+        }
+        // World Heritage Sites only
+        if (in_array($request->query('unesco'), ['1', 'true', 'yes'], true) && $this->hasFacts()) {
+            $query->where('is_unesco', true);
         }
         // ISO country code, for marketplaces whose attractions span several countries
         if (($country = strtoupper(trim((string) $request->query('country', '')))) !== '') {
@@ -135,8 +145,36 @@ class AttractionsController extends BaseController
                 ->limit(6)->get()
             : collect();
 
+        // What is around it, by distance: the rails above know only the same city or county, and a castle on a hill or
+        // a monastery in a valley belongs to neither. Taken from a band of about 25 km, better-known places first, a
+        // nearer place winning over a slightly better-known one further away.
+        $nearby = [];
+        if ($attraction->latitude !== null && $attraction->longitude !== null) {
+            $lat = (float) $attraction->latitude;
+            $lng = (float) $attraction->longitude;
+            $dLat = 25 / 111.0;
+            $dLng = 25 / (111.0 * max(0.2, cos(deg2rad($lat))));
+            $candidates = $siblings()
+                ->whereBetween('latitude', [$lat - $dLat, $lat + $dLat])
+                ->whereBetween('longitude', [$lng - $dLng, $lng + $dLng])
+                ->reorder()->orderBy('sort_order')->orderBy('id')
+                ->limit(150)->get();
+            $nearby = $candidates->map(function ($a) use ($lat, $lng) {
+                $x = deg2rad((float) $a->longitude - $lng) * cos(deg2rad(($lat + (float) $a->latitude) / 2));
+                $y = deg2rad((float) $a->latitude - $lat);
+                $a->distance_km = round(6371 * sqrt($x * $x + $y * $y), 1);
+                // sort_order runs from 0 (best known) upwards on imported rows; unknown popularity counts as modest
+                $a->near_score = (1000 - min(1000, (int) $a->sort_order)) / (1 + $a->distance_km / 3);
+
+                return $a;
+            })->filter(fn ($a) => $a->distance_km <= 25)->sortByDesc('near_score')->take(8)->values()
+                ->map(fn ($a) => $this->cardPayload($a, $locale) + ['distance_km' => $a->distance_km])->all();
+        }
+
         return $this->success([
             'attraction' => array_merge($this->cardPayload($attraction, $locale), [
+                'nearby'      => $nearby,
+                'facts'       => $this->hasFacts() ? ($attraction->facts ?: null) : null,
                 'county'      => $attraction->county ? $this->translate($attraction->county->name, $locale) : null,
                 'city_attractions'   => $cityAttractions->map(fn ($a) => $this->cardPayload($a, $locale))->values()->all(),
                 'county_attractions' => $countyAttractions->map(fn ($a) => $this->cardPayload($a, $locale))->values()->all(),
@@ -360,6 +398,7 @@ class AttractionsController extends BaseController
             ] : null,
             // Who took the cover photo and under what licence, when it is not ours to give away.
             'cover_credit' => $a->cover_image_credit ?: null,
+            'is_unesco'    => (bool) ($a->is_unesco ?? false),
             'city' => $a->city ? [
                 'slug' => $a->city->slug,
                 'name' => $this->translate($a->city->name, $locale),
@@ -368,6 +407,14 @@ class AttractionsController extends BaseController
                 'has_page' => (bool) $a->city->is_visible,
             ] : null,
         ];
+    }
+
+    /** The facts / is_unesco columns arrive with a migration; until it has run, the API behaves as before. */
+    private function hasFacts(): bool
+    {
+        static $has = null;
+
+        return $has ??= \Illuminate\Support\Facades\Schema::hasColumn('attractions', 'facts');
     }
 
     private function translate($value, string $locale): ?string

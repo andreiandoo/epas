@@ -61,7 +61,7 @@ function v2_city_card(array $c, int $i = 0): string
     $photo = $c['photo'] ?? null;
     $meta = array_filter([$c['region'] ?? '', !empty($c['population']) ? v2_population((int) $c['population']) . ' inhabitants' : '']);
     return '<a class="v-pcard" href="' . v2_e($c['href']) . '">'
-        . '<span class="v-pcard-ph">' . ($photo ? v2_photo([$photo[0], 0, 0, $photo[3] ?? '']) : v2_fallback($c['name'], $i))
+        . '<span class="v-pcard-ph">' . ($photo ? v2_photo([v2_thumb($photo[0], 480), 0, 0, $photo[3] ?? '']) : v2_fallback($c['name'], $i))
         . (!empty($c['capital']) ? '<small>Capital</small>' : '') . '</span>'
         . '<strong>' . v2_e($c['name']) . '</strong>'
         . ($meta ? '<span>' . v2_e(implode(' · ', $meta)) . '</span>' : '')
@@ -174,4 +174,20 @@ function v2_paragraphs(string $text, int $target = 420): array
         }
     }
     return $out;
+}
+
+/**
+ * Opening hours as OpenStreetMap writes them ("Mo-Fr 09:00-18:00; Sa 10:00-14:00; PH off") in words a visitor
+ * reads: "Mon-Fri 09:00-18:00 · Sat 10:00-14:00 · public holidays closed". Anything it does not know is left as it is.
+ */
+function v2_opening_hours(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '24/7') {
+        return 'Open all day, every day';
+    }
+    $out = strtr($raw, ['Mo' => 'Mon', 'Tu' => 'Tue', 'We' => 'Wed', 'Th' => 'Thu', 'Fr' => 'Fri', 'Sa' => 'Sat', 'Su' => 'Sun']);
+    $out = (string) preg_replace(['/\bPH\b/', '/\bSH\b/', '/\boff\b/', '/\bclosed\b/i', '/\s*;\s*/', '/\s*,\s*/', '/\bsunrise\b/', '/\bsunset\b/'],
+        ['public holidays', 'school holidays', 'closed', 'closed', ' · ', ', ', 'sunrise', 'sunset'], $out);
+    return trim($out, ' ·');
 }
