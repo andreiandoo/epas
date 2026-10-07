@@ -108,6 +108,19 @@ include __DIR__ . '/header.php';
     </div>
   </section>
 
+  <?php if (!empty($routePage['trip'])): ?>
+  <!-- ============================== BEFORE YOU SET OFF (partners: car hire, transfer, eSIM) ============================== -->
+  <section class="sec ptrip-sec" id="before-you-go" aria-labelledby="rp-trip-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">Before you set off</p><h2 id="rp-trip-h">A car for this route</h2></div>
+      </div>
+      <p class="ptrip-intro">Hire the car where you arrive, at the airport or in the first city, and check that it can be returned where the route ends.</p>
+      <?= v2_trip_tiles($routePage['trip'], 'route-' . $routePage['slug']) ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <!-- ============================== TEXT + FAQ ============================== -->
   <section class="sec" aria-labelledby="rp-text-h">
     <div class="wrap mp-text">
