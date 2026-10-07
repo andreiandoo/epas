@@ -127,6 +127,11 @@ class ActivitiesController extends BaseController
         if ($maxPriceRon = (int) $request->query('max_price_ron', 0)) {
             $query->where('cheapest_price_cents', '<=', $maxPriceRon * 100);
         }
+        // A marketplace whose operators sell in different currencies filters on the euro value of the price
+        // (activities.cheapest_price_eur_cents, kept by App\Services\Activities\ActivityCurrency).
+        if (($maxPriceEur = (int) $request->query('max_price_eur', 0)) && \App\Services\Activities\ActivityCurrency::ready()) {
+            $query->where('cheapest_price_eur_cents', '<=', $maxPriceEur * 100);
+        }
 
         $sort = $request->query('sort', 'recent');
 
@@ -140,13 +145,17 @@ class ActivitiesController extends BaseController
                 $request->query('category') ? 'category' : null,
             ])) ?: \App\Services\Activities\PromotionResolver::PLACEMENTS;
             $promotedIds = array_map('intval', app(\App\Services\Activities\PromotionResolver::class)->productIds($client->id, $placements));
-            if ($promotedIds && !in_array($sort, ['cheapest', 'soon'], true)) {
+            if ($promotedIds && !in_array($sort, ['cheapest', 'cheapest_eur', 'soon'], true)) {
                 $query->orderByRaw('CASE WHEN activities.id IN (' . implode(',', $promotedIds) . ') THEN 0 ELSE 1 END');
             }
         }
 
         match ($sort) {
             'cheapest' => $query->orderByRaw('cheapest_price_cents IS NULL ASC')->orderBy('cheapest_price_cents', 'asc'),
+            // by the euro value, for a marketplace with several currencies (the plain order until the column exists)
+            'cheapest_eur' => \App\Services\Activities\ActivityCurrency::ready()
+                ? $query->orderByRaw('cheapest_price_eur_cents IS NULL ASC')->orderBy('cheapest_price_eur_cents', 'asc')
+                : $query->orderByRaw('cheapest_price_cents IS NULL ASC')->orderBy('cheapest_price_cents', 'asc'),
             'soon'     => $query->orderByRaw('next_session_at IS NULL ASC')->orderBy('next_session_at', 'asc'),
             default    => $query->orderBy('is_featured', 'desc')->orderBy('updated_at', 'desc'),
         };
@@ -344,6 +353,9 @@ class ActivitiesController extends BaseController
             'short_description' => $this->translate($activity->short_description, $locale),
             'cover_image_url' => $this->resolveStorageUrl($activity->cover_image_url),
             'cheapest_price_cents' => $activity->cheapest_price_cents,
+            // the currency of that price and its value in euro (null until the product's prices are refreshed)
+            'currency' => $activity->currency,
+            'cheapest_price_eur_cents' => $activity->cheapest_price_eur_cents,
             'duration_minutes' => (int) $activity->duration_minutes,
             'capacity_per_slot' => (int) $activity->capacity_per_slot,
             'city' => $activity->city ? [
@@ -809,6 +821,8 @@ class ActivitiesController extends BaseController
             'title' => $this->translate($rel->title, $locale),
             'cover_image_url' => $this->resolveStorageUrl($rel->cover_image_url),
             'cheapest_price_cents' => $rel->cheapest_price_cents,
+            'currency' => $rel->currency,
+            'cheapest_price_eur_cents' => $rel->cheapest_price_eur_cents,
             'duration_minutes' => (int) $rel->duration_minutes,
             'city' => $rel->city ? [
                 'slug' => $rel->city->slug,

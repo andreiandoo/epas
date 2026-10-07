@@ -91,6 +91,7 @@ class MarketplaceOrganizer extends Authenticatable
         'email_verification_expires_at',
         'commission_rate',
         'fixed_commission_default',
+        'currency',   // the currency the operator sells in; null = the marketplace's (App\Services\Activities\ActivityCurrency)
         'default_commission_mode',
         'commission_use_floor',
         'test_pos_enabled',

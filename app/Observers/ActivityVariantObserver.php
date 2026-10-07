@@ -33,6 +33,29 @@ use Illuminate\Support\Facades\DB;
  */
 class ActivityVariantObserver
 {
+    /**
+     * One currency per operator: when the operator has chosen one, every variant of his is saved in it, whatever
+     * the form sent. Operators without a choice (all of them before the column existed) are left alone.
+     */
+    public function saving(ActivityVariant $variant): void
+    {
+        if (! \App\Services\Activities\ActivityCurrency::ready() || ! $variant->activity_id) {
+            return;
+        }
+        $row = DB::table('activities')
+            ->leftJoin('marketplace_organizers', 'marketplace_organizers.id', '=', 'activities.marketplace_organizer_id')
+            ->leftJoin('marketplace_clients', 'marketplace_clients.id', '=', 'activities.marketplace_client_id')
+            ->where('activities.id', $variant->activity_id)
+            ->first(['marketplace_organizers.currency as organizer_currency', 'marketplace_clients.currency as client_currency']);
+        $own = strtoupper((string) ($row?->organizer_currency ?? ''));
+        if ($own !== '') {
+            $variant->currency = $own;
+        } elseif (! $variant->exists && ! $variant->isDirty('currency')) {
+            // a new variant whose form did not say: the marketplace's currency rather than the column default (RON)
+            $variant->currency = strtoupper((string) ($row?->client_currency ?? '')) ?: \App\Services\Activities\ActivityCurrency::FALLBACK;
+        }
+    }
+
     public function saved(ActivityVariant $variant): void
     {
         $this->refreshParentCheapest($variant->activity_id);
@@ -50,23 +73,8 @@ class ActivityVariantObserver
 
     protected function refreshParentCheapest(?int $activityId): void
     {
-        if (! $activityId) {
-            return;
-        }
-
-        // SUM-of-row aggregate in SQL — much faster than loading all variants
-        // into PHP when an activity has many of them.
-        $cheapest = DB::table('activity_variants')
-            ->where('activity_id', $activityId)
-            ->where('is_active', true)
-            ->whereNull('deleted_at')
-            ->where('price_cents', '>', 0)
-            ->min('price_cents');
-
-        // The activity might be soft-deleted; still update its cached price so the
-        // value is correct if it ever gets restored. Filter by id only.
-        DB::table('activities')
-            ->where('id', $activityId)
-            ->update(['cheapest_price_cents' => $cheapest]);
+        // The cheapest active price, its currency and its value in euro, in one place
+        // (also run daily, because the euro value follows the exchange rate).
+        \App\Services\Activities\ActivityCurrency::refresh($activityId);
     }
 }

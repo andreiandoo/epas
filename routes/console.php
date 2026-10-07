@@ -679,6 +679,12 @@ Schedule::command('exchange-rates:fetch')
         \Log::error('Failed to fetch exchange rates');
     });
 
+// The euro value of each product's cheapest price follows the rate fetched above (activities module)
+Schedule::command('activities:refresh-eur-prices')
+    ->dailyAt('07:20')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
 /*
 |--------------------------------------------------------------------------
 | Artist Social Stats Scheduled Tasks

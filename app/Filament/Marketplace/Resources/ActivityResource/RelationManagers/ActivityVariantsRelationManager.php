@@ -91,7 +91,9 @@ class ActivityVariantsRelationManager extends RelationManager
 
                     Forms\Components\Select::make('currency')
                         ->label('Monedă')
-                        ->options(['RON' => 'RON', 'EUR' => 'EUR'])
+                        // An operator with a selling currency of his own has every variant saved in it
+                        // (ActivityVariantObserver), whatever is chosen here.
+                        ->options(array_combine(array_keys(\App\Services\Activities\ActivityCurrency::CHOICES), array_keys(\App\Services\Activities\ActivityCurrency::CHOICES)))
                         ->default('RON')
                         ->required()
                         ->columnSpanFull(),

@@ -41,6 +41,8 @@ class CatalogPresenter
                 'package'    => $products->where('product_type', Activity::TYPE_PACKAGE)->count(),
             ],
             'min_price_cents'   => $prices->min(),
+            // one operator, one currency: the first variant's is the location's
+            'currency'          => $products->flatMap(fn ($p) => $p->variants)->first()?->currency ?: null,
             'has_lodging'       => !empty($location->lodging['enabled']),
         ];
     }

@@ -263,6 +263,15 @@ class MarketplaceOrganizerResource extends Resource
                             ->step(0.01)
                             ->prefix('RON')
                             ->helperText('Fixed commission amount (absolute value, not %). Leave empty if not applicable.'),
+
+                        // Activities module: the currency the operator sells in (hidden until its migration has run)
+                        Forms\Components\Select::make('currency')
+                            ->label('Selling currency')
+                            ->options(\App\Services\Activities\ActivityCurrency::CHOICES)
+                            ->placeholder('Marketplace currency')
+                            ->native(false)
+                            ->visible(fn () => \App\Services\Activities\ActivityCurrency::ready())
+                            ->helperText('All of this operator\'s prices are in this currency. Changing it does not convert the amounts.'),
                     ])
                     ->columns(2),
             ]);

@@ -196,6 +196,8 @@ class AttractionsController extends BaseController
                     'title'          => $this->translate($act->title, $locale),
                     'cover_image_url' => $this->img($act->cover_image_url),
                     'cheapest_price_cents' => $act->cheapest_price_cents,
+                    'currency' => $act->currency,
+                    'cheapest_price_eur_cents' => $act->cheapest_price_eur_cents,
                     'duration_minutes' => (int) $act->duration_minutes,
                     'city'           => $act->city ? ['slug' => $act->city->slug, 'name' => $this->translate($act->city->name, $locale)] : null,
                     'category'       => $act->category ? ['slug' => $act->category->slug, 'name' => $this->translate($act->category->name, $locale)] : null,

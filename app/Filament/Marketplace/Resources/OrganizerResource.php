@@ -1373,6 +1373,16 @@ class OrganizerResource extends Resource
                                 ->suffix('RON')
                                 ->helperText('Fixed amount per ticket. Leave empty to use only percentage rate.'),
 
+                            // Activities module: the currency the operator sells in. Hidden until the migration
+                            // that adds the column has run, so the form never tries to save a missing column.
+                            Forms\Components\Select::make('currency')
+                                ->label('Selling currency')
+                                ->options(\App\Services\Activities\ActivityCurrency::CHOICES)
+                                ->placeholder('Marketplace currency')
+                                ->native(false)
+                                ->visible(fn () => \App\Services\Activities\ActivityCurrency::ready())
+                                ->helperText('All of this operator\'s prices are in this currency. Changing it does not convert the amounts: the prices must be entered again.'),
+
                             Forms\Components\Select::make('default_commission_mode')
                                 ->label('Default Commission Mode')
                                 ->options([

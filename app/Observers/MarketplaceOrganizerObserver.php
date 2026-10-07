@@ -61,6 +61,16 @@ class MarketplaceOrganizerObserver
         if ($organizer->wasChanged('test_pos_enabled') && $organizer->test_pos_enabled) {
             $this->provisionTestPosTickets($organizer);
         }
+
+        // The operator's currency changed: his price variants take it and his products' cached prices are
+        // recalculated (amounts are not converted). Never derails the organizer save.
+        if ($organizer->wasChanged('currency')) {
+            try {
+                \App\Services\Activities\ActivityCurrency::applyToOrganizer($organizer);
+            } catch (\Throwable $e) {
+                \Log::warning('Operator currency change: prices not refreshed', ['organizer_id' => $organizer->id, 'error' => $e->getMessage()]);
+            }
+        }
     }
 
     /**

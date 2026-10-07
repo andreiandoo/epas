@@ -493,7 +493,28 @@ class AuthController extends BaseController
             'description' => 'nullable|string|max:2000',
             'website' => 'nullable|url|max:255',
             'social_links' => 'nullable|array',
+            // Activities module: the currency the operator sells in
+            'currency' => ['sometimes', 'nullable', 'string', \Illuminate\Validation\Rule::in(array_keys(\App\Services\Activities\ActivityCurrency::CHOICES))],
         ]);
+
+        if (array_key_exists('currency', $validated)) {
+            if (! \App\Services\Activities\ActivityCurrency::ready()) {
+                unset($validated['currency']);
+            } elseif (strtoupper((string) $validated['currency']) !== strtoupper((string) $organizer->currency)) {
+                // Prices are not converted when the currency changes, so the operator can choose it himself only
+                // before he has prices on sale; afterwards the marketplace changes it for him.
+                $hasPrices = \Illuminate\Support\Facades\DB::table('activity_variants')
+                    ->join('activities', 'activities.id', '=', 'activity_variants.activity_id')
+                    ->where('activities.marketplace_organizer_id', $organizer->id)
+                    ->whereNull('activity_variants.deleted_at')
+                    ->where('activity_variants.price_cents', '>', 0)
+                    ->exists();
+                if ($hasPrices) {
+                    return $this->error('The selling currency cannot be changed once prices are set. Please contact support.', 422);
+                }
+                $validated['currency'] = $validated['currency'] ? strtoupper($validated['currency']) : null;
+            }
+        }
 
         $organizer->update($validated);
 
@@ -1355,6 +1376,8 @@ class AuthController extends BaseController
             'is_verified' => $organizer->isVerified(),
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
+            // the currency the operator sells in (his own choice, else the marketplace's)
+            'currency' => \App\Services\Activities\ActivityCurrency::forOrganizer($organizer),
             'stats' => [
                 'total_events' => $organizer->total_events,
                 'total_tickets_sold' => $organizer->total_tickets_sold,

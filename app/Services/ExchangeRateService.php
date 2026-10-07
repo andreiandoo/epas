@@ -19,6 +19,9 @@ class ExchangeRateService
      */
     public const BASE_CURRENCY = 'EUR';
 
+    /** One euro in each currency of the last ECB file read (currency code => rate). */
+    protected array $lastEcbRates = [];
+
     /**
      * Fetch and store exchange rates from ECB
      */
@@ -32,6 +35,15 @@ class ExchangeRateService
 
             if ($rate) {
                 $this->storeRate($date, 'EUR', 'RON', $rate, 'ecb');
+                // The same ECB file carries the other currencies operators sell in (pounds, francs, koruna…).
+                // It is the file of the day, so they are stored only for today, never during a backfill.
+                if ($date->isToday()) {
+                    foreach ($this->lastEcbRates as $currency => $other) {
+                        if ($currency !== 'RON' && $other > 0) {
+                            $this->storeRate($date, 'EUR', $currency, $other, 'ecb');
+                        }
+                    }
+                }
                 return true;
             }
 
@@ -81,15 +93,16 @@ class ExchangeRateService
                 return null;
             }
 
-            // Navigate to the Cube elements
+            // Navigate to the Cube elements; every rate of the file is remembered for fetchAndStoreRates()
+            $this->lastEcbRates = [];
             foreach ($xml->Cube->Cube->Cube as $cube) {
                 $currency = (string) $cube['currency'];
-                if ($currency === 'RON') {
-                    return (float) $cube['rate'];
+                if (preg_match('/^[A-Z]{3}$/', $currency)) {
+                    $this->lastEcbRates[$currency] = (float) $cube['rate'];
                 }
             }
 
-            return null;
+            return $this->lastEcbRates['RON'] ?? null;
 
         } catch (\Exception $e) {
             Log::debug('ECB fetch failed', ['error' => $e->getMessage()]);

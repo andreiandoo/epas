@@ -70,6 +70,7 @@ class PromotedController extends BaseController
                     'category'        => $card['category'],
                     'location'        => null,
                     'price_from_cents' => $card['min_price_cents'],
+                    'currency'        => $card['currency'],
                     'duration_minutes' => null,
                 ];
             }
@@ -100,6 +101,7 @@ class PromotedController extends BaseController
             'category' => $p->category ? ['id' => $p->category->id, 'name' => $presenter->t($p->category->name), 'slug' => $p->category->slug] : null,
             'location' => $location ? ['id' => $location->id, 'name' => $presenter->t($location->name), 'slug' => $location->slug] : null,
             'price_from_cents' => $prices->isNotEmpty() ? (int) $prices->min() : ($p->cheapest_price_cents ?: null),
+            'currency' => $p->currency ?: ($p->variants->first()?->currency ?: null),
             'duration_minutes' => (int) $p->duration_minutes ?: null,
         ];
     }
