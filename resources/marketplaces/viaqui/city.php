@@ -172,6 +172,19 @@ $pagination = [
     'total'        => (int) ($actPagination['total'] ?? count($activities)),
 ];
 
+// Partner products (WeGoTrip: self-guided audio tours, many with the entry ticket) join the same listing, after
+// our own: the same category, search, price and sort filters apply to them, and the pages run on through both.
+// Page n holds what is left of our own listings for that page, then partner products up to 24.
+$perPage = 24;
+$ownTotal = $pagination['total'];
+$partnerAll = v2_partner_filter(v2_wegotrip_city_all((string) $slug), $categoryFilter, $searchQuery, $maxPrice, $sort);
+$partnerOnPage = array_slice($partnerAll, max(0, ($pageNum - 1) * $perPage - $ownTotal), max(0, $perPage - count($cards)));
+foreach ($partnerOnPage as $pp) {
+    $cards[] = ['title' => $pp['title'], 'url' => '', 'partner' => $pp];
+}
+$pagination['total'] = $ownTotal + count($partnerAll);
+$pagination['last_page'] = max(1, (int) ceil($pagination['total'] / $perPage));
+
 // Locations with online tickets in this city (access tickets, experiences, packages). Section hidden when none.
 $cityLocations = [];
 foreach ((array) (($listings['locations']['success'] ?? false) ? ($listings['locations']['data']['items'] ?? []) : []) as $l) {
@@ -225,27 +238,6 @@ $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId
         aria-label="GetYourGuide activities for <?= v2_e($cityName) ?>">
         <span class="gyg-powered">Powered by <a target="_blank" rel="sponsored noopener" href="<?= v2_e($gygUrl) ?>">GetYourGuide</a></span>
       </div>
-    </div>
-  </section>
-    <?php
-};
-
-// Partner tours (WeGoTrip: self-guided audio tours, many with the entry ticket). Same placement rule as the
-// GetYourGuide widget: right after the section nav when the city has nothing of its own, lower down otherwise.
-$partnerTours = v2_wegotrip_products('city', (string) $slug, 8);
-$partnerPromote = $partnerTours['items'] && empty($cards);
-$renderPartnerSection = function () use ($cityName, $slug, $partnerTours, $partnerPromote) {
-    $sub = 'city-' . $slug;
-    ?>
-  <section class="sec ptours" id="audio-tours" aria-labelledby="ptours-h">
-    <div class="wrap">
-      <div class="sec-head">
-        <div><p class="kicker"><?= $partnerPromote ? 'Tours and tickets' : 'More, through our partners' ?></p><h2 id="ptours-h">Self-guided tours in <?= v2_e($cityName) ?></h2></div>
-        <?php if ($partnerTours['all'] !== '' && $partnerTours['count'] > count($partnerTours['items'])): ?><a class="sec-link" href="<?= v2_e(v2_partner_href('wegotrip', $partnerTours['all'], $sub . '-all')) ?>" target="_blank" rel="sponsored nofollow noopener">All <?= (int) $partnerTours['count'] ?> on WeGoTrip<?= v2_ic('arrow-right') ?></a><?php endif; ?>
-      </div>
-      <p class="ptours-intro">Audio tours you follow on your phone, at your own pace. Many include the entry ticket to the museum or landmark.</p>
-      <ul class="xp-grid" data-reveal><?= v2_partner_cards($partnerTours['items'], 'wegotrip', $sub) ?></ul>
-      <?= v2_partner_note('wegotrip') ?>
     </div>
   </section>
     <?php
@@ -313,7 +305,7 @@ $breadcrumbs = array_values(array_filter([
 
 // JSON-LD CollectionPage with City entity
 $itemListElements = [];
-foreach (array_slice($cards, 0, 10) as $i => $card) {
+foreach (array_slice(array_values(array_filter($cards, fn ($c) => empty($c['partner']))), 0, 10) as $i => $card) {   // our own pages only
     $itemListElements[] = [
         '@type' => 'ListItem',
         'position' => $i + 1,
@@ -524,7 +516,6 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== GETYOURGUIDE (promoted: cities without own listings) ============================== -->
   <?php if ($gygPromote) { $renderGygSection(); } ?>
-  <?php if ($partnerPromote) { $renderPartnerSection(); } ?>
 
   <!-- ============================== PROMOVATE (paid city placement) ============================== -->
   <?php v2_promoted_section($promoted, [
@@ -649,6 +640,7 @@ include __DIR__ . '/includes/v2/header.php';
       <?php else: ?>
       <ul class="xp-grid" data-reveal>
         <?php foreach ($cards as $i => $card): ?>
+        <?php if (!empty($card['partner'])): ?><?= v2_partner_cards([$card['partner']], 'wegotrip', 'city-' . $slug) ?><?php continue; endif; ?>
         <li class="xp">
           <a href="<?= v2_e($card['url']) ?>">
             <span class="xp-media"><?= $card['image'] ? v2_photo([$card['image'], 0, 0, '']) : v2_fallback($card['title'], $i) ?><?= $card['promoted'] ? v2_promoted_tag() : '' ?></span>
@@ -662,6 +654,7 @@ include __DIR__ . '/includes/v2/header.php';
         </li>
         <?php endforeach; ?>
       </ul>
+      <?php if ($partnerOnPage): ?><?= v2_partner_note('wegotrip') ?><?php endif; ?>
 
       <?php
       $current = (int) $pagination['current_page'];
@@ -685,7 +678,6 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== GETYOURGUIDE ("extra" slot, below our own listings) ============================== -->
   <?php if ($gygWidgetEnabled && !$gygPromote) { $renderGygSection(); } ?>
-  <?php if ($partnerTours['items'] && !$partnerPromote) { $renderPartnerSection(); } ?>
 
   <!-- ============================== EXPLOREAZĂ DUPĂ INTERES (categorii + traveler) ============================== -->
   <section class="sec ci" id="interests" aria-labelledby="ci-h">
