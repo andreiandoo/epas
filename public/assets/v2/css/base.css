@@ -1037,3 +1037,5 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 .ptrip a:hover .ptrip-go .ic{transform:translateX(3px)}
 .ptrip-sec .sec-head{margin-bottom:var(--space-4)}
 .ptrip-intro{margin:0 0 var(--space-5);max-width:62ch;color:var(--muted)}
+.cl-fx{display:flex;align-items:flex-start;gap:8px;margin:0 0 var(--space-5);font-size:.8125rem;line-height:1.5;color:var(--muted)}
+.cl-fx .ic{flex:none;width:16px;height:16px;margin-top:2px;color:var(--green)}

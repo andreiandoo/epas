@@ -21,6 +21,8 @@
   var state = blank(), sortBy = 'recommended';
 
   function lei(n) { return '€' + new Intl.NumberFormat('en-GB').format(n || 0); } // a price in euro (the name is from the previous version)
+  // What is printed for a listing: its price in the currency of its country (the server sends it); a.price is the euro value the filters use.
+  function shown(a) { return a.priceLabel || lei(a.price); }
   function each(sel, fn) { [].forEach.call(document.querySelectorAll(sel), fn); }
   function node(tag, cls, text) {
     var n = document.createElement(tag);
@@ -246,10 +248,11 @@
     body.appendChild(top);
     var row = node('div', 'kmc-row');
     row.appendChild(node('span', null, a.rating > 0 ? '★ ' + String(a.rating) : ''));
-    row.appendChild(node('strong', null, a.price ? lei(a.price) : ''));
+    row.appendChild(node('strong', null, a.price ? shown(a) : ''));
     body.appendChild(row);
     var go = node('a', 'btn btn-primary', 'See the experience');
     go.href = a.href;
+    if (a.ext) { go.target = '_blank'; go.rel = 'sponsored nofollow noopener'; }
     body.appendChild(go);
     mapCard.appendChild(body);
   }
@@ -314,10 +317,10 @@
     lmarkers.clearLayers();
     list.forEach(function (a) {
       if (!located(a)) return;
-      var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
+      var pin = node('button', 'kpin', a.price ? shown(a) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
-      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + lei(a.price) : ''));
+      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + shown(a) : ''));
       var m = L.marker([a.geo.lat, a.geo.lng], { icon: L.divIcon({ className: 'kpin-wrap', html: pin, iconSize: [0, 0] }), keyboard: false });
       m.on('click', function () { selected = String(a.id); markPins(); renderCard(); });
       lmarkers.addLayer(m);
@@ -364,7 +367,7 @@
       text.appendChild(node('b', null, a.title));
       if (metaLine(a)) text.appendChild(node('small', null, metaLine(a)));
       if (a.rating > 0) text.appendChild(node('small', 'kml-rating', '★ ' + String(a.rating)));
-      text.appendChild(node('span', 'kml-price', a.price ? 'from ' + lei(a.price) : 'See price'));
+      text.appendChild(node('span', 'kml-price', a.price ? 'from ' + shown(a) : 'See price'));
       b.appendChild(text);
       li.appendChild(b);
       mapList.appendChild(li);
@@ -383,10 +386,10 @@
     else ensureMap().then(function (ok) { if (ok && !map.hidden) { drawMarkers(mapAll); syncList(); } });
     mapPins.textContent = '';
     list.forEach(function (a) {
-      var pin = node('button', 'kpin', a.price ? lei(a.price) : '•');
+      var pin = node('button', 'kpin', a.price ? shown(a) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
-      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + lei(a.price) : ''));
+      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + shown(a) : ''));
       pin.style.left = a.map.x + '%';
       pin.style.top = a.map.y + '%';
       mapPins.appendChild(pin);

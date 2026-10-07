@@ -621,6 +621,7 @@ include __DIR__ . '/includes/v2/header.php';
     </div>
 
     <div class="wrap">
+      <?php if ($partnerOnPage && ($clFx = v2_fx_note($countryCode)) !== ''): ?><p class="cl-fx"><?= v2_ic('info') ?><?= v2_e($clFx) ?></p><?php endif; ?>
       <?php if (empty($cards)): ?>
       <div class="cl-empty">
         <h3>
