@@ -10,6 +10,9 @@
  *   3. WeGoTrip: self-guided audio tours, many sold with the entry ticket. The catalogue API is public and is read
  *      live (cached half a day); includes/v2/partners/wegotrip.json says which of our cities and attractions
  *      WeGoTrip knows (built by plans/viaqui-data/build_wegotrip_index.py).
+ *   4. Aviasales: the cheapest return fares found lately to a city, from the large European airports. Read from
+ *      the Travelpayouts data API (cached a day); includes/v2/partners/flights.json says which of our cities have
+ *      an airport and under which IATA code (built by plans/viaqui-data/build_flights_index.py).
  *
  * Everything is off until the Travelpayouts token and marker are set (v2_partners_on()), because a link without
  * them would send visitors away and earn nothing.
@@ -17,6 +20,7 @@
 
 const V2_PARTNER_PROGRAMS = [
     'wegotrip' => ['name' => 'WeGoTrip', 'hosts' => ['wegotrip.com']],
+    'aviasales' => ['name' => 'Aviasales', 'hosts' => ['aviasales.com']],
 ];
 
 function v2_partners_on(): bool
@@ -189,6 +193,94 @@ function v2_partner_ascii(string $s): string
 {
     $out = function_exists('iconv') ? @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s) : false;
     return $out !== false ? $out : $s;
+}
+
+/* ------------------------------------------------------------------ Aviasales */
+
+/** Where fares are shown from: IATA city code => name. The large airports of Europe, one or two per country. */
+const V2_FLIGHT_ORIGINS = [
+    'LON' => 'London', 'PAR' => 'Paris', 'AMS' => 'Amsterdam', 'BER' => 'Berlin', 'FRA' => 'Frankfurt', 'MUC' => 'Munich',
+    'MAD' => 'Madrid', 'BCN' => 'Barcelona', 'ROM' => 'Rome', 'MIL' => 'Milan', 'VIE' => 'Vienna', 'ZRH' => 'Zurich',
+    'BRU' => 'Brussels', 'DUB' => 'Dublin', 'LIS' => 'Lisbon', 'ATH' => 'Athens', 'CPH' => 'Copenhagen',
+    'STO' => 'Stockholm', 'OSL' => 'Oslo', 'HEL' => 'Helsinki', 'WAW' => 'Warsaw', 'PRG' => 'Prague', 'BUD' => 'Budapest',
+    'BUH' => 'Bucharest',
+];
+
+/**
+ * The cheapest return fares to one of our cities, one per origin, cheapest first.
+ * Each: ['from' => 'London', 'price' => 47.0, 'out' => '2026-11-03', 'back' => '2026-11-10', 'direct' => true, 'url' => …].
+ * Empty when partner offers are off, the city has no airport in the index or the API gave nothing.
+ */
+function v2_flights_to(string $slug, int $limit = 6): array
+{
+    static $index = null;
+    if ($index === null) {
+        $file = __DIR__ . '/partners/flights.json';
+        $index = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+    }
+    $code = (string) ($index[$slug] ?? '');
+    if ($code === '' || !v2_partners_on()) {
+        return [];
+    }
+    $res = api_cached('flights_to_' . $code, function () use ($code) {
+        $url = 'https://api.travelpayouts.com/aviasales/v3/get_latest_prices?' . http_build_query([
+            'destination' => $code, 'currency' => strtolower(SITE_CURRENCY), 'period_type' => 'year',
+            'one_way' => 'false', 'sorting' => 'price', 'limit' => 1000,
+        ]);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 8, CURLOPT_ENCODING => '',
+            CURLOPT_HTTPHEADER => ['Accept: application/json', 'X-Access-Token: ' . TRAVELPAYOUTS_TOKEN],
+        ]);
+        $body = curl_exec($ch);
+        $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $rows = is_string($body) ? (json_decode($body, true)['data'] ?? null) : null;
+        if ($http !== 200 || !is_array($rows)) {
+            error_log('Aviasales data API: HTTP ' . $http . ' for ' . $code);
+            return ['success' => false];
+        }
+        $best = [];
+        foreach ($rows as $r) {
+            $from = (string) ($r['origin'] ?? '');
+            $price = (float) ($r['value'] ?? 0);
+            if (!isset(V2_FLIGHT_ORIGINS[$from]) || $from === $code || $price <= 0 || ($r['actual'] ?? true) === false
+                || empty($r['depart_date']) || empty($r['return_date'])) {
+                continue;
+            }
+            if (!isset($best[$from]) || $price < $best[$from]['price']) {
+                $out = substr((string) $r['depart_date'], 0, 10);
+                $back = substr((string) $r['return_date'], 0, 10);
+                $best[$from] = [
+                    'from' => V2_FLIGHT_ORIGINS[$from], 'price' => $price, 'out' => $out, 'back' => $back,
+                    'direct' => (int) ($r['number_of_changes'] ?? 0) === 0,
+                    // Aviasales search address: origin, day and month out, destination, day and month back, one adult
+                    'url' => 'https://www.aviasales.com/search/' . $from . substr($out, 8, 2) . substr($out, 5, 2) . $code
+                        . substr($back, 8, 2) . substr($back, 5, 2) . '1?currency=' . strtolower(SITE_CURRENCY) . '&locale=en',
+                ];
+            }
+        }
+        usort($best, fn ($a, $b) => $a['price'] <=> $b['price']);
+        return ['success' => true, 'fares' => array_slice($best, 0, 12)];
+    }, 86400);
+
+    if (empty($res['success'])) {
+        return [];
+    }
+    // a fare found for a day that has passed since it was cached is no longer on sale
+    $today = date('Y-m-d');
+    return array_slice(array_values(array_filter($res['fares'], fn ($f) => $f['out'] > $today)), 0, $limit);
+}
+
+/** "3 – 10 Nov" / "28 Oct – 4 Nov" */
+function v2_flight_dates(string $out, string $back): string
+{
+    $a = strtotime($out);
+    $b = strtotime($back);
+    if (!$a || !$b) {
+        return '';
+    }
+    return date('M', $a) === date('M', $b) ? date('j', $a) . ' – ' . date('j M', $b) : date('j M', $a) . ' – ' . date('j M', $b);
 }
 
 /** Cards for partner products, in the .xp markup the own listings use, each marked with the partner's name. */
