@@ -91,7 +91,7 @@ $structuredData = [[
     ])),
 ]];
 $v2Styles = ['places.css'];
-$v2Scripts = [];
+$v2Scripts = ['places.js'];
 $v2HeaderOverlay = true;
 
 include __DIR__ . '/includes/v2/head.php';
@@ -105,7 +105,7 @@ include __DIR__ . '/includes/v2/header.php';
       <a href="/">Home</a><span aria-hidden="true">/</span><a href="/cities">Destinations</a><span aria-hidden="true">/</span>
       <?php if ($cnRegion): ?><a href="/<?= v2_e($cnSlug) ?>"><?= v2_e($cnName) ?></a><span aria-hidden="true">/</span><b><?= v2_e($cnRegion['name']) ?></b><?php else: ?><b><?= v2_e($cnName) ?></b><?php endif; ?>
     </nav>
-    <p class="v-eyebrow"><?= $cnRegion ? 'Region of ' . v2_e($cnName) : 'Country' ?></p>
+    <p class="v-eyebrow"><?= v2_flag($cnCode) ?><?= $cnRegion ? 'Region of ' . v2_e($cnName) : 'Country' ?></p>
     <h1 class="v-phero-h" id="cn-h"><?= v2_e(mb_strtolower($cnHeading)) ?></h1>
     <p class="v-phero-lede"><?= v2_e($pageDescription) ?></p>
     <ul class="v-pstats">
@@ -128,15 +128,37 @@ include __DIR__ . '/includes/v2/header.php';
 </section>
 <?php endif; ?>
 
-<?php if (count($cnRegions) > 1): ?>
-<section class="v-psec v-psec-tint" aria-labelledby="cn-reg-h">
+<?php if (count($cnRegions) > 1):
+    // Region outlines (includes/v2/regions/{cc}.json, built by plans/viaqui-data/build_region_maps.py from Natural Earth).
+    // Without a file for this country the section is the list alone.
+    $cnMapFile = __DIR__ . '/includes/v2/regions/' . strtolower($cnCode) . '.json';
+    $cnMap = is_file($cnMapFile) ? json_decode((string) file_get_contents($cnMapFile), true) : null;
+    $cnRegionBySlug = array_column($cnRegions, null, 'slug');
+?>
+<section class="v-psec v-psec-tint" id="regions" aria-labelledby="cn-reg-h">
   <div class="wrap">
     <div class="v-phead"><div><p class="v-eyebrow">By region</p><h2 class="v-ph2" id="cn-reg-h">Regions of <?= v2_e($cnName) ?></h2></div><?php if ($cnRegion): ?><a class="v-plink" href="/<?= v2_e($cnSlug) ?>">All of <?= v2_e($cnName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></div>
-    <ul class="v-regions">
-      <?php foreach ($cnRegions as $r): ?>
-      <li><a href="<?= v2_e($cnUrl(['region' => $r['slug'], 'page' => '', 'sort' => ''])) ?>"<?= $cnRegion && $cnRegion['slug'] === $r['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($r['name']) ?><span><?= (int) $r['cities_count'] ?></span></a></li>
-      <?php endforeach; ?>
-    </ul>
+    <div class="v-rmap<?= $cnMap ? '' : ' is-nomap' ?>" data-vrmap>
+      <ul class="v-rlist">
+        <?php foreach ($cnRegions as $r): ?>
+        <li><a href="<?= v2_e($cnUrl(['region' => $r['slug'], 'page' => '', 'sort' => ''])) ?>#all" data-r="<?= v2_e($r['slug']) ?>"<?= $cnRegion && $cnRegion['slug'] === $r['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($r['name']) ?><span><?= (int) $r['cities_count'] ?></span></a></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php if ($cnMap): ?>
+      <figure class="v-rfig">
+        <svg viewBox="-6 -6 <?= (float) $cnMap['w'] + 12 ?> <?= (float) $cnMap['h'] + 12 ?>" role="img" aria-label="Map of the regions of <?= v2_e($cnName) ?>">
+          <?php foreach ($cnMap['regions'] as $mapSlug => $mapPaths): $mapRegion = $cnRegionBySlug[$mapSlug] ?? null; ?>
+          <?php if ($mapRegion): ?>
+          <a href="<?= v2_e($cnUrl(['region' => $mapSlug, 'page' => '', 'sort' => ''])) ?>#all" data-r="<?= v2_e($mapSlug) ?>" data-name="<?= v2_e($mapRegion['name']) ?>"<?= $cnRegion && $cnRegion['slug'] === $mapSlug ? ' aria-current="true"' : '' ?>><title><?= v2_e($mapRegion['name']) ?></title><?php foreach ($mapPaths as $d): ?><path d="<?= v2_e($d) ?>"/><?php endforeach; ?></a>
+          <?php else: ?>
+          <g class="is-off"><?php foreach ($mapPaths as $d): ?><path d="<?= v2_e($d) ?>"/><?php endforeach; ?></g>
+          <?php endif; ?>
+          <?php endforeach; ?>
+        </svg>
+        <figcaption class="v-rtip" data-vrtip aria-hidden="true"><?= $cnRegion ? v2_e($cnRegion['name']) : 'Point at a region' ?></figcaption>
+      </figure>
+      <?php endif; ?>
+    </div>
   </div>
 </section>
 <?php endif; ?>
@@ -173,7 +195,7 @@ include __DIR__ . '/includes/v2/header.php';
 <section class="v-psec v-ptools-sec" aria-labelledby="cn-tools-h">
   <div class="wrap"><div class="v-ptools">
     <div><p class="v-eyebrow">Plan</p><h2 class="v-ph2" id="cn-tools-h">Turn <?= v2_e($cnName) ?> into an itinerary.</h2><p>Choose where you start and how many days you have. The planner puts the places in the order they link up on the road.</p></div>
-    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/plan"><?= v2_ic('compass') ?>Trip planner</a><a class="btn v-btn-ghost" href="/map"><?= v2_ic('map-trifold') ?>Attractions map</a><a class="btn v-btn-ghost" href="/routes"><?= v2_ic('path') ?>Routes</a></div>
+    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/plan"><?= v2_ic('compass') ?>Trip planner</a><a class="btn v-btn-ghost" href="<?= v2_e(v2_map_href($cnCode)) ?>"><?= v2_ic('map-trifold') ?>Attractions map</a><a class="btn v-btn-ghost" href="/routes"><?= v2_ic('path') ?>Routes</a></div>
   </div></div>
 </section>
 </main>

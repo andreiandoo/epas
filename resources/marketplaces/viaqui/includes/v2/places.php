@@ -17,6 +17,32 @@ const V2_ATTRACTION_TYPES = [
     'wineries' => 'Wineries', 'bridges' => 'Bridges', 'lighthouses' => 'Lighthouses',
 ];
 
+/** The flag of a country as a small image (assets/v2/img/flags, from the MIT-licensed flag-icons set); '' when we have none. */
+function v2_flag(string $code): string
+{
+    $code = strtolower($code);
+    if (!preg_match('/^[a-z]{2}$/', $code) || !is_file(dirname(__DIR__, 2) . '/assets/v2/img/flags/' . $code . '.svg')) {
+        return '';
+    }
+    return '<img class="v-flag" src="' . v2_asset('img/flags/' . $code . '.svg') . '" alt="" width="24" height="18" loading="lazy" decoding="async">';
+}
+
+/** "Photo: author · licence · source", as the Commons licences ask; '' without a credit. */
+function v2_photo_credit(?array $credit, string $what = 'Photo'): string
+{
+    if (!$credit || (empty($credit['license']) && empty($credit['source']))) {
+        return '';
+    }
+    $out = v2_e($what) . ': ' . v2_e(($credit['author'] ?? '') !== '' ? $credit['author'] : 'unknown author');
+    if (!empty($credit['license'])) {
+        $out .= ' · ' . (!empty($credit['license_url']) ? '<a href="' . v2_e($credit['license_url']) . '" target="_blank" rel="noopener nofollow license">' . v2_e($credit['license']) . '</a>' : v2_e($credit['license']));
+    }
+    if (!empty($credit['source_url'])) {
+        $out .= ' · <a href="' . v2_e($credit['source_url']) . '" target="_blank" rel="noopener nofollow">' . v2_e($credit['source'] ?? 'source') . '</a>';
+    }
+    return $out;
+}
+
 /** "2.3 million", "367,000", "11,900": a population a reader takes in at a glance. */
 function v2_population(int $n): string
 {
@@ -56,4 +82,30 @@ function v2_city_from_api(array $c): array
         'href' => '/' . $c['slug'],
         'photo' => $img ? [$img, 0, 0, ''] : ($local ? [v2_asset($local[0]), $local[1], $local[2], $local[3]] : null),
     ];
+}
+
+/**
+ * A file of the attractions map (assets/v2/data/map, written by plans/viaqui-data/build_map_data.py), decoded:
+ * 'index' (country slug => code, name, total, v), 'europe.summary' or '<cc>.summary'. Null when it is missing.
+ */
+function v2_map_file(string $name): ?array
+{
+    static $seen = [];
+    if (!array_key_exists($name, $seen)) {
+        $file = dirname(__DIR__, 2) . '/assets/v2/data/map/' . $name . '.json';
+        $data = preg_match('/^[a-z.]+$/', $name) && is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        $seen[$name] = is_array($data) ? $data : null;
+    }
+    return $seen[$name];
+}
+
+/** The country page of the map for a country code ('IT' => '/map/italy'); '/map' when that country has no map. */
+function v2_map_href(string $code): string
+{
+    foreach ((v2_map_file('index')['countries'] ?? []) as $slug => $c) {
+        if (strcasecmp((string) ($c['code'] ?? ''), $code) === 0) {
+            return '/map/' . $slug;
+        }
+    }
+    return '/map';
 }

@@ -90,7 +90,9 @@ class ViaquiEuropePlacesSeeder extends Seeder
         // ---------------------------------------------------------------- cities
         $cityRows = [];
         foreach ($data['cities'] as $c) {
+            [$cityImage, $cityCredit] = $this->commonsPhoto($c);
             $cityRows[] = [
+                'image_url' => $cityImage, 'image_credit' => $cityCredit,
                 'marketplace_client_id' => self::CLIENT_ID, 'slug' => $c['s'],
                 'name' => json_encode(['en' => $c['n']], JSON_UNESCAPED_UNICODE),
                 'region_id' => $c['r'] ? ($regionIdByKey[$c['r']] ?? null) : null,
@@ -103,11 +105,40 @@ class ViaquiEuropePlacesSeeder extends Seeder
             DB::table('marketplace_cities')->upsert($chunk, ['marketplace_client_id', 'slug'], ['name', 'region_id', 'country', 'latitude', 'longitude', 'timezone', 'population', 'sort_order', 'is_capital', 'updated_at']);
         }
 
+        // City photos from Wikimedia Commons: only where the city has none (never over a photo set in the admin)
+        if (DB::getSchemaBuilder()->hasColumn('marketplace_cities', 'image_credit')) {
+            $noPhoto = DB::table('marketplace_cities')->where('marketplace_client_id', self::CLIENT_ID)->whereNull('image_url')->pluck('slug')->flip();
+            $withPhoto = array_values(array_filter($cityRows, fn ($r) => $r['image_url'] && isset($noPhoto[$r['slug']])));
+            foreach (array_chunk($withPhoto, 500) as $chunk) {
+                DB::table('marketplace_cities')->upsert($chunk, ['marketplace_client_id', 'slug'], ['image_url', 'image_credit', 'updated_at']);
+            }
+            echo count($withPhoto) . " cities received a photo.\n";
+        } else {
+            throw new \RuntimeException('Column marketplace_cities.image_credit is missing: run php artisan migrate first.');
+        }
+
         if (! DB::table('marketplace_cities')->where('marketplace_client_id', self::CLIENT_ID)->where('is_featured', true)->exists()) {
             DB::table('marketplace_cities')->where('marketplace_client_id', self::CLIENT_ID)->whereIn('slug', self::LEAD_CITIES)->update(['is_featured' => true]);
         }
 
         $this->command?->info(sprintf('Viaqui places: %d countries, %d regions, %d cities (client %d).', count($data['countries']), count($regionRows), count($cityRows), self::CLIENT_ID));
         echo sprintf("Viaqui places: %d countries, %d regions, %d cities.\n", count($data['countries']), DB::table('marketplace_regions')->where('marketplace_client_id', self::CLIENT_ID)->count(), DB::table('marketplace_cities')->where('marketplace_client_id', self::CLIENT_ID)->count());
+    }
+
+    /** A hot-link to a 960 px rendition on Wikimedia Commons and the credit its licence asks for; [null, null] without a usable photo. */
+    private function commonsPhoto(array $row): array
+    {
+        if (empty($row['img'])) {
+            return [null, null];
+        }
+        $url = 'https://commons.wikimedia.org/wiki/Special:FilePath/' . rawurlencode($row['img']) . '?width=960';
+        if (strlen($url) > 255) {
+            return [null, null];
+        }
+
+        return [$url, json_encode([
+            'author' => $row['cr'][0] ?? '', 'license' => $row['cr'][1] ?? '', 'license_url' => $row['cr'][2] ?? '',
+            'source' => 'Wikimedia Commons', 'source_url' => 'https://commons.wikimedia.org/wiki/File:' . rawurlencode(str_replace(' ', '_', $row['img'])),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)];
     }
 }

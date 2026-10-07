@@ -26,13 +26,12 @@ $urls = [
     ['/locatii', 'daily', '0.8'],
     ['/experiente', 'daily', '0.8'],
     ['/atractii', 'weekly', '0.7'],
-    ['/harta', 'weekly', '0.7'],
+    ['/map', 'weekly', '0.7'],
 ];
-// The map landings: eight attraction types and eight historical regions, each with its own
-// counters, cities and picks (includes/v2/map-landings.php).
-require_once __DIR__ . '/includes/v2/map-landings.php';
-foreach (array_keys(MAP_LANDINGS) as $landingSlug) {
-    $urls[] = ['/harta/' . $landingSlug, 'weekly', '0.6'];
+// The map of each country (assets/v2/data/map/index.json, see map.php).
+require_once __DIR__ . '/includes/v2/places.php';
+foreach (array_keys(v2_map_file('index')['countries'] ?? []) as $mapCountrySlug) {
+    $urls[] = ['/map/' . $mapCountrySlug, 'weekly', '0.6'];
 }
 
 // The editorial routes (includes/v2/map-routes.php).

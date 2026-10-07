@@ -624,6 +624,7 @@ class LocationsController extends BaseController
                 'seo_body' => isset($city->seo_body[$lang]) ? $city->seo_body[$lang] : ($city->seo_body['ro'] ?? null),
                 'faqs' => $city->faqs ?? [],
                 'image' => $city->image_full_url,
+                'image_credit' => $city->image_credit ?: null,
                 'cover_image' => $city->cover_image_full_url,
                 'region' => $city->region ? [
                     'name' => $city->region->name[$lang] ?? $city->region->name['ro'] ?? '',

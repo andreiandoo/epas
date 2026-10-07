@@ -17,7 +17,7 @@ RewriteRule ^experiences/?$ hub-experiente.php [L,QSA]
 RewriteRule ^attractions/?$ attractions.php [L,QSA]
 RewriteRule ^venues/?$ hub-locatii.php [L,QSA]
 RewriteRule ^guides/?$ ghiduri.php [L,QSA]
-RewriteRule ^map/?$ harta.php [L,QSA]
+RewriteRule ^map/?$ map.php [L,QSA]
 RewriteRule ^routes/?$ trasee.php [L,QSA]
 RewriteRule ^gift-card/?$ card-cadou.php [L,QSA]
 RewriteRule ^gift-experiences/?$ experiente-cadou.php [L,QSA]
@@ -53,7 +53,7 @@ RewriteRule ^attraction/([a-z0-9][a-z0-9-]*)/?$ atractie.php?slug=$1 [L,QSA]
 RewriteRule ^experience/([a-z0-9][a-z0-9-]*)/?$ experienta.php?slug=$1 [L,QSA]
 RewriteRule ^activity/([a-z0-9][a-z0-9-]*)/?$ single-activitate.php?slug=$1 [L,QSA]
 RewriteRule ^guides/([a-z0-9][a-z0-9-]*)/?$ ghid.php?slug=$1 [L,QSA]
-RewriteRule ^map/([a-z0-9][a-z0-9-]*)/?$ harta.php?landing=$1 [L,QSA]
+RewriteRule ^map/([a-z0-9][a-z0-9-]*)/?$ map.php?country=$1 [L,QSA]
 RewriteRule ^routes/([a-z0-9][a-z0-9-]*)/?$ traseu.php?slug=$1 [L,QSA]
 RewriteRule ^help/article/([a-z0-9][a-z0-9-]*)/?$ ajutor-articol.php?slug=$1 [L,QSA]
 RewriteRule ^help/([a-z0-9][a-z0-9-]*)/?$ ajutor-categorie.php?slug=$1 [L,QSA]
@@ -827,8 +827,8 @@ RewriteRule ^atractii/?$ hub-atractii.php [L,QSA]
 # /harta/{castele|muzee|…|transilvania|…}, defined in includes/v2/map-landings.php.
 # An unknown slug 404s in the page, so no catch-all is needed here.
 # ============================================
-RewriteRule ^harta/?$ harta.php [L,QSA]
-RewriteRule ^harta/([a-z][a-z0-9-]{1,50})/?$ harta.php?landing=$1 [L,QSA]
+RewriteRule ^harta/?$ /map [R=301,L]
+RewriteRule ^harta/([a-z][a-z0-9-]{1,50})/?$ /map [R=301,L]
 
 # ============================================
 # ROUTES — /trasee and /trasee/{slug}: the editorial itineraries defined in

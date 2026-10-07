@@ -310,3 +310,7 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
     .attr-line{animation:cy-slide linear both;animation-timeline:view();animation-range:cover}
   }
 }
+
+/* credit for a city photo that is not ours (Wikimedia Commons) */
+.ch-credit{position:absolute;left:50%;top:12px;z-index:2;transform:translateX(-50%);max-width:78%;margin:0;padding:4px 10px;border-radius:999px;background:rgba(7,41,31,.72);color:#F6F3E8;font-size:.6875rem;line-height:1.3;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-credit a{color:inherit}

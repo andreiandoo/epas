@@ -142,6 +142,8 @@ class AttractionsController extends BaseController
                 'county_attractions' => $countyAttractions->map(fn ($a) => $this->cardPayload($a, $locale))->values()->all(),
                 'subtitle'    => $this->translate($attraction->subtitle, $locale),
                 'description' => $this->translate($attraction->description, $locale),
+                // where the description comes from when it is not ours (Wikipedia: source and licence must be shown)
+                'description_credit' => $attraction->description_credit ?: null,
                 'gallery'     => collect((array) $attraction->gallery)->map(fn ($g) => $this->img($g))->filter()->values()->all(),
                 'address'     => $attraction->address,
                 'latitude'    => $attraction->latitude,
