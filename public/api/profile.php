@@ -17,7 +17,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-const PROFILE_BOX = [43.0, 20.0, 49.2, 30.5];
+const PROFILE_BOX = [27.0, -32.0, 72.0, 45.0];
 const PROFILE_MAX = 80;
 const PROFILE_CACHE_DAYS = 180;      // mountains do not move
 

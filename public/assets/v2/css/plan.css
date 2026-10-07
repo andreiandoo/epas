@@ -640,3 +640,14 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
   .plx.is-snap,.plb-seg-thumb{transition:none}
   .plx-menu,.plx-stay,.plx-stay-btn.is-hot,.pl-stop.is-flash .pl-stop-card{animation:none}
 }
+
+/* Viaqui: /plan, the countries to choose from */
+.plc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.plc{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:2px 4px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color .15s,transform .15s}
+.plc:hover{border-color:var(--green);transform:translateY(-1px)}
+.plc .v-flag{grid-row:1 / span 2;margin-right:12px}
+.plc b{font-weight:700}
+.plc span{grid-column:2;font-size:.85rem;color:var(--muted)}
+.plc .ic{grid-column:3;grid-row:1 / span 2;width:18px;height:18px;color:var(--green)}
+.plb-hero h1 .v-flag{width:.9em;height:.68em;margin-right:.3em;vertical-align:baseline}
+.plb-hero .pl-lead a{color:inherit;font-weight:600;white-space:nowrap}

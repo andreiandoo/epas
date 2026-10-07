@@ -164,7 +164,7 @@ $mapPage = [
     'picks' => $summary['picks'] ?? [],
     'ideasHeading' => 'Not sure where to start?',
     'ideasLead' => 'The map shows everything at once, which is a lot. These are the routes already drawn and the places we would open first.',
-    'ideasCta' => ['Start a plan', '/plan'],
+    'ideasCta' => ['Start a plan', $mpCountry ? '/plan/' . $mpCountrySlug : '/plan'],
     'picksHeading' => $mpCountry ? 'Places worth opening in ' . $mpName : 'Places worth opening',
     'listHref' => $mpCountry ? '/attractions?country=' . strtolower($mpCountry['code']) : '/attractions',
     'routeCards' => $mpRouteCards,

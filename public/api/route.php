@@ -19,8 +19,8 @@ require_once dirname(__DIR__) . '/includes/config.php';
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-// Romania plus a margin: a coordinate outside it is not a trip we plan, it is someone poking.
-const RO_BOX = [43.0, 20.0, 49.2, 30.5];
+// Europe and its Atlantic islands (the box the catalogue is built in): a coordinate outside it is not a trip we plan, it is someone poking.
+const RO_BOX = [27.0, -32.0, 72.0, 45.0];
 const MAX_POINTS = 25;
 const CACHE_DAYS = 30;
 

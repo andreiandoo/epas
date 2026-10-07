@@ -1,18 +1,19 @@
 <?php
 /**
- * /plan — the trip planner: say where and how long, get a day-by-day itinerary built out of the
- * attraction catalogue, then move it around until it is yours.
+ * The trip planner (v2, Viaqui): /plan chooses a country, /plan/{country} is the planner for it. Say where and how
+ * long, get a day-by-day itinerary built out of the attraction catalogue, then move it around until it is yours.
  *
- * Everything runs in the browser against the same pin dataset the map uses (assets/v2/js/plan.js):
- * no request per change, no server state, and the plan lives in the URL and in localStorage, so a
- * link is a plan. The map is EPMap in its bare flavour: the page draws the list and the controls,
- * and whatever the list has under its heading is what the map shows.
+ * Each country is its own dataset (assets/v2/data/map/<cc>.json, the one its map uses), so the planner works one
+ * country at a time. Everything runs in the browser against that file (assets/v2/js/plan.js): no request per change,
+ * no server state, and the plan lives in the URL and in localStorage, so a link is a plan. The map is EPMap in its
+ * bare flavour: the page draws the list and the controls, and whatever the list has under its heading is what the
+ * map shows.
  *
- * The planner is deterministic on purpose — no model writes these itineraries. The catalogue has
- * no opening hours, so durations are per-type estimates from includes/v2/plan-config.php and the
- * page says so where it matters.
+ * The planner is deterministic on purpose: no model writes these itineraries. The catalogue has no opening hours,
+ * so durations are per-type estimates from includes/v2/plan-config.php and the page says so where it matters.
+ *
+ * /plan?route={slug} (the "Open as a plan" button of a route) is sent to the planner of the route's country.
  */
-
 $pageCacheTTL = 1800;
 require_once __DIR__ . '/includes/page-cache.php';
 require_once __DIR__ . '/includes/config.php';
@@ -20,122 +21,206 @@ require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/plan-config.php';
-require_once __DIR__ . '/includes/v2/map-routes.php';
-require_once __DIR__ . '/includes/v2/map-roads.php';
 require_once __DIR__ . '/includes/v2/product-icons.php';
+require_once __DIR__ . '/includes/v2/places.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
-$mapData = v2_map_data();
-$summary = v2_map_summary();
-if (!$mapData || !$summary) {
+$plIndex = v2_map_file('index');
+$plRoutes = v2_routes();
+$plCountrySlug = preg_match('/^[a-z0-9][a-z0-9-]{1,60}$/', (string) ($_GET['country'] ?? '')) ? (string) $_GET['country'] : '';
+$plCountry = $plCountrySlug !== '' ? ($plIndex['countries'][$plCountrySlug] ?? null) : null;
+$summary = $plCountry ? v2_map_file(strtolower($plCountry['code']) . '.summary') : null;
+if (!$plIndex || ($plCountrySlug !== '' && !$summary)) {
     http_response_code(404);
     require __DIR__ . '/404.php';
     exit;
 }
 
+// A route opened as a plan belongs to the planner of its country.
+$plRouteSlug = preg_match('/^[a-z][a-z0-9-]{1,80}$/', (string) ($_GET['route'] ?? '')) ? (string) $_GET['route'] : '';
+if (!$plCountry && $plRouteSlug !== '' && isset($plRoutes[$plRouteSlug])) {
+    header('Location: /plan/' . $plRoutes[$plRouteSlug]['countries'][0][2] . '?route=' . rawurlencode($plRouteSlug), true, 302);
+    exit;
+}
+
+$v2PlaceIcons = true; // the route cards' icons (product-icons.php), printed by the header
+
+// ====================================================================== /plan: choose the country
+if (!$plCountry) {
+    $plCountries = [];
+    foreach ($plIndex['countries'] as $cSlug => $c) {
+        $plCountries[] = [$cSlug, $c['code'], $c['name'], (int) $c['total']];
+    }
+    usort($plCountries, fn ($a, $b) => $b[3] <=> $a[3]);
+    $routeCards = [];
+    foreach ($plRoutes as $rSlug => $r) {
+        $routeCards[] = v2_route_card($rSlug, $r);
+    }
+    shuffle($routeCards);
+    $routeCards = array_slice($routeCards, 0, 6);
+
+    $v2Styles = ['map-page.css', 'routes.css', 'plan.css', 'places.css'];
+    $pageTitle = 'Trip planner: a day-by-day itinerary with a map';
+    $pageDescription = 'Choose a country, say where you go and for how many days, and the planner builds your itinerary from the '
+        . v2_thousands((int) $plIndex['total']) . ' attractions on the map: stops day by day, a map that follows the list, times and navigation.';
+    $canonicalUrl = SITE_URL . '/plan';
+    $breadcrumbs = [['Home', '/'], ['Map', '/map'], ['Trip planner', '/plan']];
+    $structuredData = [[
+        '@context' => 'https://schema.org', '@type' => 'WebApplication', 'name' => 'Viaqui trip planner',
+        'applicationCategory' => 'TravelApplication', 'operatingSystem' => 'Web', 'url' => $canonicalUrl, 'inLanguage' => 'en',
+        'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'EUR'],
+    ], [
+        '@context' => 'https://schema.org', '@type' => 'BreadcrumbList',
+        'itemListElement' => array_map(
+            fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc[0], 'item' => SITE_URL . $bc[1]],
+            $breadcrumbs,
+            array_keys($breadcrumbs)
+        ),
+    ]];
+
+    include __DIR__ . '/includes/v2/head.php';
+    include __DIR__ . '/includes/v2/header.php';
+    ?>
+<main id="main" tabindex="-1">
+  <section class="mph" aria-labelledby="mph-h">
+    <div class="wrap mph-in">
+      <div class="mph-copy">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <?php foreach ($breadcrumbs as $i => [$bcName, $bcUrl]): ?>
+            <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
+            <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bcUrl) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
+          <?php endforeach; ?>
+        </nav>
+        <h1 id="mph-h">Trip planner <em>where to?</em></h1>
+        <p class="mph-lead">Choose the country first. Then say where you start, where you go and for how many days, and you get an itinerary day by day, in the order the road links the stops. After that you move it around as you like.</p>
+      </div>
+      <ul class="mph-stats">
+        <li><b><?= count($plCountries) ?></b> countries</li>
+        <li><b><?= v2_e(v2_thousands((int) $plIndex['total'])) ?></b> attractions</li>
+        <li><b><?= count($plRoutes) ?></b> ready-made routes</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="plc-h">
+    <div class="wrap">
+      <div class="sec-head"><h2 id="plc-h">Which country?</h2></div>
+      <ul class="plc-grid">
+        <?php foreach ($plCountries as [$cSlug, $cCode, $cName, $cTotal]): ?>
+        <li><a class="plc" href="/plan/<?= v2_e($cSlug) ?>"><?= v2_flag($cCode) ?><b><?= v2_e($cName) ?></b><span><?= v2_e(v2_num($cTotal, 'attraction', 'attractions')) ?></span><?= v2_ic('arrow-right') ?></a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+
+  <?php if ($routeCards): ?>
+  <section class="sec" aria-labelledby="pl-routes-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2 id="pl-routes-h">Or take a ready-made route</h2>
+        <a class="sec-link" href="/routes">All routes<?= v2_ic('arrow-right') ?></a>
+      </div>
+      <?php require __DIR__ . '/includes/v2/route-cards.php'; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <section class="sec" aria-labelledby="pl-about-h">
+    <div class="wrap mp-text">
+      <div class="mp-prose">
+        <h2 id="pl-about-h" class="sr">About the planner</h2>
+        <p>The planner does not invent places: it takes the real attractions of the catalogue, filters them by what interests you, groups them into days so that each day stays in one area, and puts them in the order that keeps the driving short. No language model writes these itineraries, which is why it will never tell you something about a place that is not in the catalogue.</p>
+        <p>It works one country at a time, because each country has its own map. A trip that crosses a border is two plans, one after the other; the ready-made routes are a good place to start for the best-known drives.</p>
+      </div>
+      <div class="mp-faq">
+        <details open><summary>Is it free?</summary><p>Yes. The planner is free to use and needs no account. With an account you can also save your plans and find them again on another device.</p></details>
+        <details><summary>Is the plan saved?</summary><p>Yes, in your browser and in the address of the page. The link in the address bar holds the whole plan, so you can send it to whoever travels with you.</p></details>
+        <details><summary>Does it work for a motorcycle or a bicycle?</summary><p>Yes. You choose how you travel and the plan changes: on a motorcycle it looks for views and allows longer rides between stops, on a bicycle it stays close and measures the road on the cycling network.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+    <?php
+    include __DIR__ . '/includes/v2/footer.php';
+    return;
+}
+
+// ====================================================================== /plan/{country}: the planner
+$plName = (string) $summary['name'];
+$plCode = (string) $plCountry['code'];
+$plPath = '/plan/' . $plCountrySlug;
+
 // Starting points offered on the first screen: the cities with the most to see.
 $startCities = array_slice($summary['cities'] ?? [], 0, 12);
-$regions = $summary['regions'] ?? [];
+$plTopCities = implode(', ', array_slice(array_column($summary['cities'] ?? [], 1), 0, 2));
+$plTopRegion = (string) (($summary['regions'][0] ?? [])[0] ?? '');
 
-// A few routes as ready-made alternatives to building from scratch.
+// The routes of this country: as cards under the form, and as plans for ?route=<slug> (their stops in order,
+// and how many days the author meant them to take: "3 days" in the route's pace).
 $routeCards = [];
-foreach (MAP_ROUTES as $rSlug => $r) {
-    $rd = $summary['routes'][$rSlug] ?? null;
-    if (!$rd) {
-        continue;
-    }
-    $rImg = '';
-    foreach ($rd['stops'] as $st) {
-        if ($st[9] !== '') {
-            $rImg = $st[9];
-            break;
-        }
-    }
-    $routeCards[] = [$rSlug, $r['title'], $r['lead'], $r['emoji'], $r['pace'], $rd['count'], $rd['km'], $rImg, (int) ($rd['road']['min'] ?? 0)];
-}
-shuffle($routeCards);
-$routeCards = array_slice($routeCards, 0, 3);
-
-// The roads of /trasee, for /plan?drum=<slug>: just what the planner needs to open one as a plan.
-$roadsForPlan = [];
-foreach (v2_map_roads() as $rdSlug => $rd) {
-    $def = MAP_ROADS[$rdSlug] ?? null;
-    if (!$def || !empty($def['osm'])) {
-        continue;      // a long-distance route is not a day; it stays on /trasee
-    }
-    $roadsForPlan[$rdSlug] = [
-        'title' => $def['title'], 'mode' => $def['modes'][0], 'from' => $def['from'], 'to' => $def['to'],
-        'a' => $rd['a'], 'b' => $rd['b'], 'stops' => array_column($rd['stops'], 0),
-    ];
-}
-
-// The editorial routes of /trasee, for /plan?traseu=<slug>: their stops in order, and how many days
-// the author meant them to take ("2 zile" in the route's pace; anything else is one day).
 $routesForPlan = [];
-foreach (MAP_ROUTES as $rtSlug => $rt) {
-    $rtData = $summary['routes'][$rtSlug] ?? null;
-    if (!$rtData || empty($rtData['stops'])) {
+foreach ($plRoutes as $rtSlug => $rt) {
+    if (!in_array($plCode, array_column($rt['countries'], 0), true) || empty($rt['stops'])) {
         continue;
     }
-    $first = $rtData['stops'][0];
-    $last = $rtData['stops'][count($rtData['stops']) - 1];
+    $routeCards[] = v2_route_card($rtSlug, $rt);
+    $first = $rt['stops'][0];
+    $last = $rt['stops'][count($rt['stops']) - 1];
     $routesForPlan[$rtSlug] = [
         'title' => $rt['title'],
-        'days'  => preg_match('/(\d+)\s*zile/u', (string) $rt['pace'], $rtM) ? max(1, min(7, (int) $rtM[1])) : 1,
-        'stops' => array_column($rtData['stops'], 0),
-        'from'  => $first[2] !== '' ? $first[2] : $first[1],
-        'to'    => $last[2] !== '' ? $last[2] : $last[1],
-        'a'     => [$first[7], $first[8]],
-        'b'     => [$last[7], $last[8]],
+        'days' => preg_match('/(\d+)\s*day/', (string) $rt['pace'], $rtM) ? max(1, min(7, (int) $rtM[1])) : 1,
+        'stops' => array_column($rt['stops'], 0),
+        'from' => $first[2] !== '' ? $first[2] : $first[1],
+        'to' => $last[2] !== '' ? $last[2] : $last[1],
+        'a' => [$first[7], $first[8]],
+        'b' => [$last[7], $last[8]],
     ];
 }
+$routeCards = array_slice($routeCards, 0, 3);
 
 $v2HeaderOverlay = true;   // the page opens on a dark band
-$v2Styles  = ['map.css', 'map-page.css', 'routes.css', 'plan.css'];
+$v2Styles = ['map.css', 'map-page.css', 'routes.css', 'plan.css', 'places.css'];
 $v2Scripts = ['map.js', 'plan.js'];
 $v2ClientData = [
     'plan' => [
-        'dataUrl'   => $mapData['url'],
-        'cartoKey'  => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
+        'dataUrl' => '/assets/v2/data/map/' . strtolower($plCode) . '.json?v=' . rawurlencode((string) $summary['v']),
+        'country' => strtolower($plCode),
+        'countryName' => $plName,
+        'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
         'durations' => PLAN_DURATIONS,
-        'paces'     => PLAN_PACES,
+        'paces' => PLAN_PACES,
         'interests' => PLAN_INTERESTS,
-        'company'   => PLAN_COMPANY,
-        'bookables' => $summary['bookables'] ?? [],
-        'travel'    => PLAN_TRAVEL,
-        'swap'      => PLAN_SWAP,
-        'budgets'   => PLAN_NIGHT_BUDGETS,
-        'stops'     => PLAN_STOP_PRESETS,
-        'minutes'   => PLAN_STOP_MINUTES,
-        'cities'    => array_map(fn ($c) => [$c[0], $c[1], $c[4]], $summary['cities'] ?? []),
-        'regions'   => array_map(fn ($r) => [$r[0], $r[1]], $regions),
-        'total'     => (int) $summary['total'],
-        'party'     => PLAN_PARTY,
-        'stay22'    => PLAN_STAY22,
-        'modes'     => PLAN_MODES,
-        'roads'     => $roadsForPlan,
-        'routes'    => $routesForPlan,
+        'company' => PLAN_COMPANY,
+        'bookables' => [],
+        'travel' => PLAN_TRAVEL,
+        'swap' => PLAN_SWAP,
+        'budgets' => PLAN_NIGHT_BUDGETS,
+        'stops' => PLAN_STOP_PRESETS,
+        'minutes' => PLAN_STOP_MINUTES,
+        'cities' => array_map(fn ($c) => [$c[0], $c[1], $c[4]], $summary['cities'] ?? []),
+        // [slug, name, count]: a zone of the dataset carries the region's slug, and that is what the planner filters on
+        'regions' => array_map(fn ($r) => [$r[1], $r[0], $r[2]], $summary['regions'] ?? []),
+        'total' => (int) $summary['total'],
+        'party' => PLAN_PARTY,
+        'stay22' => PLAN_STAY22,
+        'modes' => PLAN_MODES,
+        'roads' => [],
+        'routes' => $routesForPlan,
     ],
 ];
 
-$pageTitleRaw    = 'Planificator de călătorie — itinerariu pe zile, cu hartă | viaqui.com';
-$pageDescription = 'Spune unde mergi, pe câte zile și cu ce — mașină, motocicletă sau bicicletă — iar planificatorul îți face itinerariul din cele '
-    . v2_thousands((int) $summary['total']) . ' de atracții de pe hartă: opriri pe zile, harta care urmărește lista, timpi și navigare.';
-$canonicalUrl    = SITE_URL . '/plan';
+$pageTitle = 'Trip planner for ' . $plName . ': a day-by-day itinerary with a map';
+$pageDescription = 'Say where you go in ' . $plName . ', for how many days and how you travel (car, motorcycle or bicycle), and the planner builds your itinerary from the '
+    . v2_thousands((int) $summary['total']) . ' attractions on the map: stops day by day, a map that follows the list, times and navigation.';
+$canonicalUrl = SITE_URL . $plPath;
 
-$breadcrumbs = [['Acasă', '/'], ['Hartă', '/harta'], ['Planificator', '/plan']];
+$breadcrumbs = [['Home', '/'], ['Map', '/map'], ['Trip planner', '/plan'], [$plName, $plPath]];
 $structuredData = [[
-    '@context' => 'https://schema.org',
-    '@type' => 'WebApplication',
-    'name' => 'Planificator de călătorie viaqui.com',
-    'applicationCategory' => 'TravelApplication',
-    'operatingSystem' => 'Web',
-    'url' => $canonicalUrl,
-    'inLanguage' => 'ro-RO',
-    'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'RON'],
+    '@context' => 'https://schema.org', '@type' => 'WebApplication', 'name' => 'Viaqui trip planner for ' . $plName,
+    'applicationCategory' => 'TravelApplication', 'operatingSystem' => 'Web', 'url' => $canonicalUrl, 'inLanguage' => 'en',
+    'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'EUR'],
 ], [
-    '@context' => 'https://schema.org',
-    '@type' => 'BreadcrumbList',
+    '@context' => 'https://schema.org', '@type' => 'BreadcrumbList',
     'itemListElement' => array_map(
         fn ($bc, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $bc[0], 'item' => SITE_URL . $bc[1]],
         $breadcrumbs,
@@ -158,8 +243,8 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bcUrl) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <h1 id="pl-h">Hai să mergem <em>undeva</em></h1>
-        <p class="pl-lead">Spune de unde pleci, unde ajungi și cu ce. Îți fac itinerariul din cele <?= v2_e(v2_thousands((int) $summary['total'])) ?> de atracții de pe hartă și din experiențele și locațiile care se pot rezerva — pe zile, în ordinea în care se leagă pe drum. Apoi îl muți cum vrei.</p>
+        <h1 id="pl-h"><?= v2_flag($plCode) ?>A trip through <em><?= v2_e($plName) ?></em></h1>
+        <p class="pl-lead">Say where you start, where you go and how you travel. You get an itinerary from the <?= v2_e(v2_thousands((int) $summary['total'])) ?> attractions we list in <?= v2_e($plName) ?>, day by day, in the order the road links them. Then you move it around as you like. <a href="/plan">Another country</a></p>
       </div>
     </div>
     <div id="hdr-sentinel" aria-hidden="true"></div>
@@ -167,7 +252,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap plb-wrap">
       <form class="pl-form plb-card" id="pl-form" novalidate>
         <div class="plb-g">
-          <span class="plb-l" id="pl-mode-l">Cu ce mergi?</span>
+          <span class="plb-l" id="pl-mode-l">How do you travel?</span>
           <div class="plb-seg" id="pl-mode" role="group" aria-labelledby="pl-mode-l">
             <span class="plb-seg-thumb" aria-hidden="true"></span>
             <?php foreach (PLAN_MODES as $mKey => [$mLabel, $mIcon]): ?>
@@ -181,111 +266,111 @@ include __DIR__ . '/includes/v2/header.php';
             <div class="plb-rt-row">
               <span class="plb-dot" aria-hidden="true"></span>
               <div class="plb-rt-f pl-auto">
-                <label for="pl-from-place">De unde pleci?</label>
-                <input id="pl-from-place" type="text" autocomplete="off" placeholder="Orașul din care pornești" required aria-describedby="pl-from-hint">
+                <label for="pl-from-place">Where do you start?</label>
+                <input id="pl-from-place" type="text" autocomplete="off" placeholder="The city you set off from, in <?= v2_e($plName) ?>" required aria-describedby="pl-from-hint">
                 <ul class="pl-sugg" id="pl-sugg-from" role="listbox" hidden></ul>
               </div>
             </div>
             <div class="plb-rt-row is-to">
               <span class="plb-dot" aria-hidden="true"></span>
               <div class="plb-rt-f pl-auto">
-                <label for="pl-where">Unde mergi?</label>
-                <input id="pl-where" type="text" autocomplete="off" placeholder="Un oraș sau o regiune — Brașov, Bucovina…" aria-describedby="pl-where-hint">
+                <label for="pl-where">Where are you going?</label>
+                <input id="pl-where" type="text" autocomplete="off" placeholder="A city or a region<?= $plTopCities !== '' ? ': ' . v2_e($plTopCities) . ($plTopRegion !== '' ? ', ' . v2_e($plTopRegion) : '') . '…' : '' ?>" aria-describedby="pl-where-hint">
                 <ul class="pl-sugg" id="pl-sugg" role="listbox" hidden></ul>
               </div>
             </div>
             <div class="plb-rt-row is-back" id="pl-back-row" hidden>
               <span class="plb-dot" aria-hidden="true"></span>
               <div class="plb-rt-f pl-auto">
-                <label for="pl-back">Unde te întorci?</label>
-                <input id="pl-back" type="text" autocomplete="off" placeholder="Ultima zi se închide aici">
+                <label for="pl-back">Where do you return?</label>
+                <input id="pl-back" type="text" autocomplete="off" placeholder="The last day ends here">
                 <ul class="pl-sugg" id="pl-sugg-back" role="listbox" hidden></ul>
               </div>
             </div>
           </div>
-          <p class="pl-hint"><span id="pl-from-hint">De la plecare se măsoară drumul.</span> <span id="pl-where-hint">Destinația se caută după oraș sau regiune.</span></p>
-          <button class="plb-link" type="button" id="pl-back-toggle" aria-expanded="false" aria-controls="pl-back-row">Mă întorc în alt loc</button>
+          <p class="pl-hint"><span id="pl-from-hint">The drive is measured from where you start: the city you live in, or the one you land in.</span> <span id="pl-where-hint">The destination is a city or a region of <?= v2_e($plName) ?>.</span></p>
+          <button class="plb-link" type="button" id="pl-back-toggle" aria-expanded="false" aria-controls="pl-back-row">I return somewhere else</button>
         </div>
 
         <div class="plb-tiles">
           <div class="plb-tile">
-            <label for="pl-days">Câte zile?</label>
+            <label for="pl-days">How many days?</label>
             <div class="pl-stepper">
-              <button class="pl-step-btn" type="button" data-days="-1" aria-label="O zi mai puțin">−</button>
+              <button class="pl-step-btn" type="button" data-days="-1" aria-label="One day fewer">−</button>
               <input id="pl-days" type="number" min="1" max="7" value="2" inputmode="numeric">
-              <button class="pl-step-btn" type="button" data-days="1" aria-label="O zi în plus">+</button>
+              <button class="pl-step-btn" type="button" data-days="1" aria-label="One day more">+</button>
             </div>
           </div>
           <div class="plb-tile">
-            <label for="pl-from">Din ce zi? <span class="pl-opt">(opțional)</span></label>
+            <label for="pl-from">Starting on <span class="pl-opt">(optional)</span></label>
             <input id="pl-from" type="date">
           </div>
           <fieldset class="plb-tile plb-tile-wide">
-            <legend>Câți sunteți?</legend>
+            <legend>How many of you?</legend>
             <div class="pl-party">
               <div class="pl-party-one">
                 <div class="pl-stepper">
-                  <button class="pl-step-btn" type="button" data-party="adults" data-step="-1" aria-label="Un adult mai puțin">−</button>
-                  <input id="pl-adults" type="number" min="1" max="<?= (int) PLAN_PARTY['adults_max'] ?>" value="<?= (int) PLAN_PARTY['adults'] ?>" inputmode="numeric" aria-label="Adulți">
-                  <button class="pl-step-btn" type="button" data-party="adults" data-step="1" aria-label="Un adult în plus">+</button>
+                  <button class="pl-step-btn" type="button" data-party="adults" data-step="-1" aria-label="One adult fewer">−</button>
+                  <input id="pl-adults" type="number" min="1" max="<?= (int) PLAN_PARTY['adults_max'] ?>" value="<?= (int) PLAN_PARTY['adults'] ?>" inputmode="numeric" aria-label="Adults">
+                  <button class="pl-step-btn" type="button" data-party="adults" data-step="1" aria-label="One adult more">+</button>
                 </div>
-                <label for="pl-adults">adulți</label>
+                <label for="pl-adults">adults</label>
               </div>
               <div class="pl-party-one">
                 <div class="pl-stepper">
-                  <button class="pl-step-btn" type="button" data-party="children" data-step="-1" aria-label="Un copil mai puțin">−</button>
-                  <input id="pl-children" type="number" min="0" max="<?= (int) PLAN_PARTY['children_max'] ?>" value="<?= (int) PLAN_PARTY['children'] ?>" inputmode="numeric" aria-label="Copii">
-                  <button class="pl-step-btn" type="button" data-party="children" data-step="1" aria-label="Un copil în plus">+</button>
+                  <button class="pl-step-btn" type="button" data-party="children" data-step="-1" aria-label="One child fewer">−</button>
+                  <input id="pl-children" type="number" min="0" max="<?= (int) PLAN_PARTY['children_max'] ?>" value="<?= (int) PLAN_PARTY['children'] ?>" inputmode="numeric" aria-label="Children">
+                  <button class="pl-step-btn" type="button" data-party="children" data-step="1" aria-label="One child more">+</button>
                 </div>
-                <label for="pl-children">copii</label>
+                <label for="pl-children">children</label>
               </div>
             </div>
           </fieldset>
         </div>
 
         <details class="plb-prefs" id="pl-prefs">
-          <summary><span><b>Preferințe</b><small id="pl-prefs-sum"></small></span><?= v2_ic('caret-down') ?></summary>
+          <summary><span><b>Preferences</b><small id="pl-prefs-sum"></small></span><?= v2_ic('caret-down') ?></summary>
           <div class="plb-prefs-in">
             <fieldset class="plb-g">
-              <legend class="plb-l">Cu cine mergi?</legend>
+              <legend class="plb-l">Who are you travelling with?</legend>
               <div class="pl-chips" id="pl-company">
                 <?php foreach (PLAN_COMPANY as $key => [$label, $emoji, $budget, $weights]): ?>
                 <button class="pl-chip" type="button" data-company="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= am_product_icon_svg($emoji, 'ic-em') ?></span><?= v2_e($label) ?></button>
                 <?php endforeach; ?>
               </div>
-              <p class="pl-hint">Înclină recomandările spre ce li se potrivește. E o ponderare pe tipuri de locuri, nu o etichetă pusă fiecărui obiectiv.</p>
+              <p class="pl-hint">It tilts the suggestions towards what suits them. It is a weighting of types of places, not a label on each place.</p>
             </fieldset>
             <fieldset class="plb-g">
-              <legend class="plb-l">Ce te interesează?</legend>
+              <legend class="plb-l">What interests you?</legend>
               <div class="pl-chips" id="pl-interests">
                 <?php foreach (PLAN_INTERESTS as $key => [$label, $emoji, $types]): ?>
                 <button class="pl-chip" type="button" data-interest="<?= v2_e($key) ?>" aria-pressed="false"><span aria-hidden="true"><?= am_product_icon_svg($emoji, 'ic-em') ?></span><?= v2_e($label) ?></button>
                 <?php endforeach; ?>
               </div>
-              <p class="pl-hint">Lasă-le nebifate și iau de toate.</p>
+              <p class="pl-hint">Leave them all off and you get a bit of everything.</p>
             </fieldset>
             <fieldset class="plb-g">
-              <legend class="plb-l">În ce ritm?</legend>
+              <legend class="plb-l">At what pace?</legend>
               <div class="pl-chips plb-paces" id="pl-pace">
                 <?php foreach (PLAN_PACES as $key => [$label, $minutes, $note]): ?>
                 <button class="pl-chip pl-chip-pace" type="button" data-pace="<?= v2_e($key) ?>" aria-pressed="<?= $key === 'normal' ? 'true' : 'false' ?>"><b><?= v2_e($label) ?></b><small><?= v2_e($note) ?></small></button>
                 <?php endforeach; ?>
               </div>
             </fieldset>
-            <p class="pl-hint">Numărul de persoane contează la căutarea de cazare, pentru nopțile dintre zile. Pe motocicletă planul caută priveliști și lasă drumuri mai lungi între opriri; pe bicicletă rămâne aproape și măsoară drumul pe rețeaua de biciclete.</p>
+            <p class="pl-hint">The number of people matters when you look for a place to stay, for the nights between the days. On a motorcycle the plan looks for views and allows longer rides between stops; on a bicycle it stays close and measures the road on the cycling network.</p>
           </div>
         </details>
 
         <div class="pl-actions">
-          <button class="btn btn-primary pl-go" type="submit">Fă-mi planul<?= v2_ic('arrow-right') ?></button>
-          <p class="pl-note">Nimic nu pleacă de pe telefonul tău: planul stă în adresa paginii și în browser.</p>
+          <button class="btn btn-primary pl-go" type="submit">Make my plan<?= v2_ic('arrow-right') ?></button>
+          <p class="pl-note">Nothing leaves your phone: the plan lives in the address of the page and in your browser.</p>
         </div>
       </form>
 
       <div class="pl-quick">
-        <p class="pl-quick-h">Sau pornește dintr-un oraș:</p>
+        <p class="pl-quick-h">Or start from a city:</p>
         <ul class="mp-chips">
-          <?php foreach ($startCities as [$cSlug, $cName, $cCounty, $cRegion, $cCount]): ?>
+          <?php foreach ($startCities as [$cSlug, $cName, , , $cCount]): ?>
           <li><button class="mp-chip" type="button" data-start-city="<?= v2_e($cSlug) ?>"><?= v2_e($cName) ?><b><?= v2_e(v2_thousands((int) $cCount)) ?></b></button></li>
           <?php endforeach; ?>
         </ul>
@@ -297,7 +382,7 @@ include __DIR__ . '/includes/v2/header.php';
        One map, one list. The map holds its place — the top of a phone, the right of a desk — and the
        list scrolls beside it; what the list has under its heading is what the map shows. -->
   <section class="pl-plan plx" id="pl-plan" hidden data-mode="car" aria-labelledby="pl-plan-h">
-    <h2 class="sr" id="pl-plan-h">Planul tău</h2>
+    <h2 class="sr" id="pl-plan-h">Your plan</h2>
     <p class="sr" id="pl-live" role="status" aria-live="polite"></p>
 
     <div class="plx-map" id="plx-map">
@@ -305,22 +390,23 @@ include __DIR__ . '/includes/v2/header.php';
         <div data-epm-root data-epm-config="<?= v2_e(json_encode([
             'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
             'urlState' => false,
-            'fixed'    => true,
-            'bare'     => true,
-            'title'    => 'Planul tău',
-            'base'     => '/atractie/',
+            'fixed' => true,
+            'bare' => true,
+            'title' => 'Your plan',
+            'base' => '/attraction/',
+            'view' => !empty($summary['bounds']) ? ['lat' => ($summary['bounds'][0][0] + $summary['bounds'][1][0]) / 2, 'lng' => ($summary['bounds'][0][1] + $summary['bounds'][1][1]) / 2, 'zoom' => 6] : null,
             'routeStops' => [],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
       </div>
 
       <div class="plx-top" id="plx-top">
         <div class="plx-bar">
-          <button class="plx-ib" type="button" id="plx-back" aria-label="Schimbă datele planului"><?= v2_ic('arrow-left') ?></button>
+          <button class="plx-ib" type="button" id="plx-back" aria-label="Change the details of the plan"><?= v2_ic('arrow-left') ?></button>
           <div class="plx-title"><b id="plx-t"></b><span id="plx-s"></span></div>
           <span class="plx-mode" id="plx-mode"></span>
-          <button class="plx-ib" type="button" id="plx-menu-b" aria-label="Ce poți face cu planul" aria-expanded="false" aria-controls="plx-menu"><?= v2_ic('pl-dots') ?></button>
+          <button class="plx-ib" type="button" id="plx-menu-b" aria-label="What you can do with the plan" aria-expanded="false" aria-controls="plx-menu"><?= v2_ic('pl-dots') ?></button>
         </div>
-        <div class="plx-days" id="plx-days" role="group" aria-label="Zilele planului"></div>
+        <div class="plx-days" id="plx-days" role="group" aria-label="The days of the plan"></div>
       </div>
       <div class="plx-menu" id="plx-menu" hidden></div>
 
@@ -330,71 +416,73 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
 
       <div class="plx-ctl">
-        <button type="button" class="plx-zoom" data-plx="in" aria-label="Mărește harta"><?= v2_ic('plus') ?></button>
-        <button type="button" class="plx-zoom" data-plx="out" aria-label="Micșorează harta"><?= v2_ic('pl-minus') ?></button>
-        <button type="button" class="plx-size" data-plx="size" aria-label="Hartă mai mare sau mai mică"><?= v2_ic('pl-size') ?></button>
-        <button type="button" data-plx="fit" aria-label="Încadrează din nou"><?= v2_ic('pl-fit') ?></button>
+        <button type="button" class="plx-zoom" data-plx="in" aria-label="Zoom in"><?= v2_ic('plus') ?></button>
+        <button type="button" class="plx-zoom" data-plx="out" aria-label="Zoom out"><?= v2_ic('pl-minus') ?></button>
+        <button type="button" class="plx-size" data-plx="size" aria-label="A larger or a smaller map"><?= v2_ic('pl-size') ?></button>
+        <button type="button" data-plx="fit" aria-label="Fit the route again"><?= v2_ic('pl-fit') ?></button>
       </div>
 
-      <button class="plx-stay-btn" type="button" id="plx-stay-btn" hidden><?= v2_ic('pl-bed') ?><span>Arată cazări disponibile</span></button>
+      <button class="plx-stay-btn" type="button" id="plx-stay-btn" hidden><?= v2_ic('pl-bed') ?><span>Show places to stay</span></button>
 
       <div class="plx-stay" id="plx-stay" hidden>
         <div class="plx-stay-head">
-          <button class="plx-stay-x" type="button" id="plx-stay-x"><?= v2_ic('arrow-left') ?>Înapoi la traseu</button>
-          <div class="plx-stay-prov" id="plx-stay-prov" role="group" aria-label="De unde vin cazările">
+          <button class="plx-stay-x" type="button" id="plx-stay-x"><?= v2_ic('arrow-left') ?>Back to the route</button>
+          <div class="plx-stay-prov" id="plx-stay-prov" role="group" aria-label="Where the places to stay come from">
             <?php $provFirst = true; foreach (PLAN_STAY22['providers'] as $pvKey => [$pvLabel]): ?>
             <button type="button" data-prov="<?= v2_e($pvKey) ?>" aria-pressed="<?= $provFirst ? 'true' : 'false' ?>"><?= v2_e($pvLabel) ?></button>
             <?php $provFirst = false; endforeach; ?>
           </div>
-          <a class="plx-stay-out" id="plx-stay-out" href="<?= v2_e(PLAN_STAY22['link']) ?>" target="_blank" rel="noopener nofollow sponsored">Deschide lista pe Stay22<?= v2_ic('arrow-right') ?></a>
+          <a class="plx-stay-out" id="plx-stay-out" href="<?= v2_e(PLAN_STAY22['link']) ?>" target="_blank" rel="noopener nofollow sponsored">Open the list on Stay22<?= v2_ic('arrow-right') ?></a>
         </div>
         <div class="plx-stay-body" id="pl-pane-stay"></div>
       </div>
     </div>
 
     <div class="plx-sheet">
-      <div class="plx-grab" id="plx-grab" role="separator" aria-orientation="horizontal" aria-label="Trage ca să schimbi cât din ecran ocupă harta" tabindex="0"></div>
+      <div class="plx-grab" id="plx-grab" role="separator" aria-orientation="horizontal" aria-label="Drag to change how much of the screen the map takes" tabindex="0"></div>
       <div class="plx-list" id="plx-list">
         <header class="pl-bar" id="pl-bar"></header>
         <div class="pl-days" id="pl-days-list"></div>
         <footer class="plx-end">
-          <h3 class="plx-end-h">Asta e tot drumul</h3>
+          <h3 class="plx-end-h">That is the whole trip</h3>
           <div class="plx-end-acts" id="plx-end-acts"></div>
           <p class="rp-note" id="pl-map-note"></p>
-          <p class="plx-end-p">Ce ai mutat, adăugat sau înlocuit rămâne la locul lui când regenerezi restul. Linkul din bara de adrese conține tot planul.</p>
+          <p class="plx-end-p">What you moved, added or replaced stays where it is when you regenerate the rest. The link in the address bar holds the whole plan.</p>
         </footer>
       </div>
     </div>
   </section>
 
+  <?php if ($routeCards): ?>
   <!-- ============================== ALTERNATIVE: READY-MADE ROUTES ============================== -->
   <section class="sec" aria-labelledby="pl-routes-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="pl-routes-h">Sau ia un traseu gata făcut</h2>
-        <a class="sec-link" href="/trasee">Toate traseele<?= v2_ic('arrow-right') ?></a>
+        <h2 id="pl-routes-h">Or take a ready-made route</h2>
+        <a class="sec-link" href="/routes?country=<?= v2_e(strtolower($plCode)) ?>">All routes in <?= v2_e($plName) ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <?php require __DIR__ . '/includes/v2/route-cards.php'; ?>
     </div>
   </section>
+  <?php endif; ?>
 
   <section class="sec" aria-labelledby="pl-about-h">
     <div class="wrap mp-text">
       <div class="mp-prose">
-        <h2 id="pl-about-h" class="sr">Despre planificator</h2>
-        <p>Planificatorul nu inventează locuri: ia atracțiile reale din catalog, le filtrează după ce te interesează, le grupează pe zile astfel încât fiecare zi să stea într-o zonă, și le pune în ordinea care scurtează drumul. Nu scrie nimic un model de limbaj — de-aia nu-ți va spune niciodată despre un loc ceva ce nu e în catalog.</p>
-        <p>Timpii de vizitare sunt <strong>estimări pe tip de obiectiv</strong>: un castel 90 de minute, un muzeu 75, o biserică 30. Catalogul nu are încă programul de vizitare al fiecărui loc, așa că verifică orele înainte de drum. Kilometrii și timpii de mers sunt calculați pe șosea; unde drumul nu poate fi calculat, vezi o estimare și e marcată ca atare.</p>
-        <p>Harta rămâne mereu pe ecran și urmărește lista: ziua la care ai ajuns, apoi oprirea și vecinele ei, apoi orașul în care dormi. Planul rămâne al tău: trage opririle unde vrei, în zi sau în altă zi, scoate ce nu-ți place, adaugă altceva. Dacă o oprire nu ți se potrivește, din meniul ei <em>⋮</em> alegi <em>Înlocuiește</em> și îți pun pe loc câteva locuri din apropierea ei, alese după aceleași interese și aceeași companie cu care ți-am făcut planul; cel ales intră exact pe poziția celui vechi. Poți pune și opriri de-ale tale între cele propuse — o masă, o cafea, o pauză, cazarea — fie la oprirea dinainte, fie fără loc anume, fie în alt loc ales de tine; ziua se recalculează în jurul lor. Ce ai schimbat nu se pierde când regenerez restul. Link-ul din bara de adrese conține tot planul, deci îl poți trimite cuiva sau salva la favorite.</p>
+        <h2 id="pl-about-h" class="sr">About the planner</h2>
+        <p>The planner does not invent places: it takes the real attractions of the catalogue, filters them by what interests you, groups them into days so that each day stays in one area, and puts them in the order that keeps the driving short. The best-known places come first. No language model writes these itineraries, which is why it will never tell you something about a place that is not in the catalogue.</p>
+        <p>Visiting times are <strong>estimates by type of place</strong>: a castle 90 minutes, a museum 75, a church 25. The catalogue does not hold the opening hours of each place yet, so check them before you go. Kilometres and driving times are calculated by road; where the road cannot be calculated you see an estimate, marked as such.</p>
+        <p>The map stays on screen and follows the list: the day you have reached, then the stop and its neighbours, then the town you sleep in. The plan is yours: drag the stops where you want, within the day or to another day, remove what you do not like, add something else. If a stop does not suit you, open it and choose <em>Replace</em>: you get a few places near it, chosen by the same interests, and the one you pick takes its position in the day.</p>
       </div>
       <div class="mp-faq">
-        <details open><summary>De unde știți cât stau la fiecare loc?</summary><p>Nu știm — sunt estimări pe tip de obiectiv, afișate ca atare. Le poți schimba pentru fiecare oprire în parte.</p></details>
-        <details><summary>Nu-mi place o oprire. Pot pune altceva în locul ei?</summary><p>Da. Din meniul <em>⋮</em> al opririi alegi <em>Înlocuiește</em> și îți deschid sub ea o listă scurtă de locuri din apropiere — cu poza, tipul, orașul, la câți kilometri sunt și cât durează vizita — alese după aceleași interese și aceeași companie cu care e făcut planul. Nu-ți propun ceva ce ai deja în plan, iar dacă ceva a fost scos mai devreme ți-o spun. Alegi unul și intră fix pe poziția celui vechi: orele, kilometrii și harta se recalculează, iar locul înlocuit nu mai revine la regenerare. Dacă vrei altceva anume, cauți în aceeași casetă, oriunde în catalog.</p></details>
-        <details><summary>Pot adăuga o pauză sau o masă?</summary><p>Da, oriunde în zi: butonul <em>Oprire de-a ta</em> din capul zilei o pune la final, iar din meniul <em>⋮</em> al unei opriri o pui imediat după ea. Alegi cât ține și dacă rămâne la oprirea dinainte, fără loc anume, sau în alt loc — iar drumul și orele se recalculează.</p></details>
-        <details><summary>Cum e cu cazarea?</summary><p>Între zile îți propun un oraș în care să dormi, ales ca să scurteze și seara, și dimineața următoare — îl poți schimba sau îl poți scoate. Când ajungi cu lista la o noapte, harta se mută pe orașul ei, iar butonul <em>Arată cazări</em> de pe hartă deschide lista chiar acolo, în locul hărții. Opțiunile de cazare vin de la Booking, Expedia, Vrbo ș.a. și se încarcă abia când le ceri. Dacă alegi o cazare din cele propuse, website-ul va înregistra un comision. Pentru ultima noapte nu-ți propun nimic: în ziua aia te întorci acasă.</p></details>
-        <details><summary>Merge și pentru motocicletă sau bicicletă?</summary><p>Da. Alegi cu ce mergi și planul se schimbă: pe motocicletă caută priveliști și lasă drumuri mai lungi între opriri, pe bicicletă rămâne aproape și măsoară drumul pe rețeaua de biciclete. La amândouă vezi profilul de altitudine al zilei, legat de hartă. Drumurile cunoscute — Transfăgărășan, Transalpina, Clisura Dunării și altele — sunt pe <a href="/trasee">/trasee</a> și se deschid de acolo direct ca plan.</p></details>
-        <details><summary>Pot cumpăra biletele de aici?</summary><p>Deocamdată nu direct din plan. Unde locul vinde bilete prin viaqui.com, pagina lui are butonul de rezervare, iar oprirea din plan duce acolo.</p></details>
-        <details><summary>Se salvează planul?</summary><p>Da, în browserul tău și în adresa paginii. Dacă golești datele browserului, link-ul rămâne valabil.</p></details>
-        <details><summary>Merge fără internet?</summary><p>Nu, dar poți tipări planul sau îl poți deschide în Google Maps zi cu zi, ca să-l ai offline acolo.</p></details>
+        <details open><summary>How do you know how long I stay at each place?</summary><p>We do not: these are estimates by type of place, shown as such. You can change them for each stop.</p></details>
+        <details><summary>I do not like a stop. Can I put something else in its place?</summary><p>Yes. Open the stop and choose Replace: a short list of places nearby opens under it, with the photo, the type, the town, how far they are and how long the visit takes, chosen by the same interests and the same company the plan was made for.</p></details>
+        <details><summary>Can I add a break or a meal?</summary><p>Yes, anywhere in the day: the button “A stop of your own” at the head of the day puts it at the end, and the + between two stops puts it exactly there. You choose how long it takes and whether it stays at the previous stop, has no particular place, or is somewhere else; the drive and the times are recalculated.</p></details>
+        <details><summary>What about places to stay?</summary><p>Between days we suggest a town to sleep in, chosen to keep both the evening and the next morning short; you can change it or remove it. When the list reaches a night, the map moves to its town, and the button on the map opens the list of places to stay right there, in place of the map. They come from Booking, Expedia, Vrbo and others; if you book one of them, the website earns a commission, at no extra cost to you.</p></details>
+        <details><summary>Does it work for a motorcycle or a bicycle?</summary><p>Yes. You choose how you travel and the plan changes: on a motorcycle it looks for views and allows longer rides between stops, on a bicycle it stays close and measures the road on the cycling network. For both you see the elevation profile of the day, linked to the map.</p></details>
+        <details><summary>Can I buy tickets from here?</summary><p>Not directly from the plan for now. Where a place sells tickets through Viaqui, its page has the booking button, and the stop in the plan leads there.</p></details>
+        <details><summary>Is the plan saved?</summary><p>Yes, in your browser and in the address of the page. If you clear your browser data, the link still works.</p></details>
+        <details><summary>Does it work offline?</summary><p>No, but you can print the plan or open it in Google Maps day by day, to have it offline there.</p></details>
       </div>
     </div>
   </section>
