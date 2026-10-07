@@ -127,6 +127,19 @@ if ($mpCountry) {
 $faq[] = ['Can I book a ticket straight from the map?', 'Where a place has tickets or experiences on sale, its page has the booking button. The other attractions are places to visit, with no ticket sold here.'];
 $faq[] = ['Does it work on a phone?', 'Yes. On a phone the map fills the screen and the list of results slides up from the bottom; you can drag it to see more of the map or more of the list.'];
 
+// ------------------------------------------------------------------ routes worth showing here
+// A country shows the routes that cross it; the map of Europe shows three, different on each rebuild of the page.
+$mpRouteCards = [];
+foreach (v2_routes() as $rtSlug => $rt) {
+    if (!$mpCountry || in_array($mpCountry['code'], array_column($rt['countries'], 0), true)) {
+        $mpRouteCards[] = v2_route_card($rtSlug, $rt);
+    }
+}
+if (!$mpCountry) {
+    shuffle($mpRouteCards);
+}
+$mpRouteCards = array_slice($mpRouteCards, 0, 3);
+
 // ------------------------------------------------------------------ page
 $breadcrumbs = [['Home', '/'], ['Attractions', '/attractions'], ['Map', '/map']];
 if ($mpCountry) {
@@ -150,11 +163,12 @@ $mapPage = [
     'explorer' => $explorer,
     'picks' => $summary['picks'] ?? [],
     'ideasHeading' => 'Not sure where to start?',
-    'ideasLead' => 'The map shows everything at once, which is a lot. These are the places we would open first.',
+    'ideasLead' => 'The map shows everything at once, which is a lot. These are the routes already drawn and the places we would open first.',
     'ideasCta' => ['Start a plan', '/plan'],
     'picksHeading' => $mpCountry ? 'Places worth opening in ' . $mpName : 'Places worth opening',
     'listHref' => $mpCountry ? '/attractions?country=' . strtolower($mpCountry['code']) : '/attractions',
-    'routeCards' => [],
+    'routeCards' => $mpRouteCards,
+    'routesHeading' => $mpCountry ? 'Routes through ' . $mpName : 'Ready-made routes',
     'config' => [
         'dataUrl' => '/assets/v2/data/map/' . $mpFile . '.json?v=' . rawurlencode((string) $summary['v']),
         'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',

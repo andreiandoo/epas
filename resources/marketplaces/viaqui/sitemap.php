@@ -34,12 +34,11 @@ foreach (array_keys(v2_map_file('index')['countries'] ?? []) as $mapCountrySlug)
     $urls[] = ['/map/' . $mapCountrySlug, 'weekly', '0.6'];
 }
 
-// The editorial routes (includes/v2/map-routes.php).
-require_once __DIR__ . '/includes/v2/map-routes.php';
-$urls[] = ['/trasee', 'weekly', '0.7'];
+// The editorial routes (assets/v2/data/map/routes.json).
+$urls[] = ['/routes', 'weekly', '0.7'];
 $urls[] = ['/plan', 'monthly', '0.6'];
-foreach (array_keys(MAP_ROUTES) as $routeSlug) {
-    $urls[] = ['/trasee/' . $routeSlug, 'monthly', '0.6'];
+foreach (array_keys(v2_routes()) as $routeSlug) {
+    $urls[] = ['/routes/' . $routeSlug, 'monthly', '0.6'];
 }
 
 $cities = [];

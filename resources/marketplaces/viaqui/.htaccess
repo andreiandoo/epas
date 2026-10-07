@@ -18,7 +18,7 @@ RewriteRule ^attractions/?$ attractions.php [L,QSA]
 RewriteRule ^venues/?$ hub-locatii.php [L,QSA]
 RewriteRule ^guides/?$ ghiduri.php [L,QSA]
 RewriteRule ^map/?$ map.php [L,QSA]
-RewriteRule ^routes/?$ trasee.php [L,QSA]
+RewriteRule ^routes/?$ routes.php [L,QSA]
 RewriteRule ^gift-card/?$ card-cadou.php [L,QSA]
 RewriteRule ^gift-experiences/?$ experiente-cadou.php [L,QSA]
 RewriteRule ^cart/?$ cart.php [L,QSA]
@@ -54,7 +54,7 @@ RewriteRule ^experience/([a-z0-9][a-z0-9-]*)/?$ experienta.php?slug=$1 [L,QSA]
 RewriteRule ^activity/([a-z0-9][a-z0-9-]*)/?$ single-activitate.php?slug=$1 [L,QSA]
 RewriteRule ^guides/([a-z0-9][a-z0-9-]*)/?$ ghid.php?slug=$1 [L,QSA]
 RewriteRule ^map/([a-z0-9][a-z0-9-]*)/?$ map.php?country=$1 [L,QSA]
-RewriteRule ^routes/([a-z0-9][a-z0-9-]*)/?$ traseu.php?slug=$1 [L,QSA]
+RewriteRule ^routes/([a-z0-9][a-z0-9-]*)/?$ route.php?slug=$1 [L,QSA]
 RewriteRule ^help/article/([a-z0-9][a-z0-9-]*)/?$ ajutor-articol.php?slug=$1 [L,QSA]
 RewriteRule ^help/([a-z0-9][a-z0-9-]*)/?$ ajutor-categorie.php?slug=$1 [L,QSA]
 RewriteRule ^([a-z][a-z0-9-]{1,50})/experiences/?$ hub-experiente.php?city=$1 [L,QSA]
@@ -834,8 +834,8 @@ RewriteRule ^harta/([a-z][a-z0-9-]{1,50})/?$ /map [R=301,L]
 # ROUTES — /trasee and /trasee/{slug}: the editorial itineraries defined in
 # includes/v2/map-routes.php. An unknown slug 404s in the page.
 # ============================================
-RewriteRule ^trasee/?$ trasee.php [L,QSA]
-RewriteRule ^trasee/([a-z][a-z0-9-]{1,80})/?$ traseu.php?slug=$1 [L,QSA]
+RewriteRule ^trasee/?$ /routes [R=301,L]
+RewriteRule ^trasee/([a-z][a-z0-9-]{1,80})/?$ /routes [R=301,L]
 
 # The trip planner. Everything it does happens in the browser; the page is just the shell.
 RewriteRule ^plan/?$ plan.php [L,QSA]

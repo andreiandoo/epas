@@ -1,6 +1,6 @@
 <?php
 /**
- * viaqui.com v2: one editorial route — /trasee/{slug}.
+ * viaqui.com v2: one editorial route — /routes/{slug}.
  *
  * The map is the same EPMap, in route mode: numbered pins on a dashed line, the list showing the
  * stops in order rather than by distance. Route mode builds its dataset from the stops the page
@@ -48,24 +48,24 @@ include __DIR__ . '/header.php';
         <p class="mph-lead"><?= v2_e($routePage['lead']) ?></p>
       </div>
       <ul class="mph-stats">
-        <li><b><?= count($rpStops) ?></b> opriri</li>
-        <li><b><?= v2_e(v2_thousands((int) $routePage['km'])) ?></b> km<?= !empty($routePage['road']) ? ' pe șosea' : ' în linie dreaptă' ?></li>
-        <?php if (!empty($routePage['drive'])): ?><li><b><?= v2_e($routePage['drive']) ?></b> de condus</li><?php endif; ?>
+        <li><b><?= count($rpStops) ?></b> stops</li>
+        <li><b><?= v2_e(v2_thousands((int) $routePage['km'])) ?></b> km<?= !empty($routePage['road']) ? ' by road' : ' in a straight line' ?></li>
+        <?php if (!empty($routePage['drive'])): ?><li><b><?= v2_e($routePage['drive']) ?></b> of driving</li><?php endif; ?>
         <li><b><?= v2_e($routePage['pace']) ?></b></li>
       </ul>
     </div>
   </section>
 
   <!-- ============================== MAP ============================== -->
-  <section class="mp-band" aria-label="Harta traseului">
+  <section class="mp-band" aria-label="Map of the route">
     <div class="wrap">
       <div class="mp-frame">
         <div data-epm-root data-epm-config="<?= v2_e(json_encode($routePage['config'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
       </div>
-      <p class="rp-note"><?php if (!empty($routePage['road'])): ?>Distanțele și timpii sunt calculați pe drumurile reale (OpenStreetMap), fără opriri și fără trafic.<?php else: ?>Pentru acest traseu distanța e măsurată în linie dreaptă între opriri, nu pe șosea.<?php endif; ?> <a href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Deschide tot traseul în Google Maps<?= v2_ic('arrow-right') ?></a></p>
+      <p class="rp-note"><?php if (!empty($routePage['road'])): ?>Distances and times are calculated on real roads (OpenStreetMap), with no stops and no traffic.<?php else: ?>For this route the distance is measured in a straight line between the stops, not by road.<?php endif; ?></p>
       <div class="rdp-acts">
-        <a class="btn btn-primary rdp-go" href="/plan?traseu=<?= v2_e($routePage['slug']) ?>"><?= v2_ic('compass') ?>Deschide ca plan</a>
-        <p class="rdp-hint">Traseul intră în planificator cu opririle lui, pe zile: muți, scoți sau adaugi opriri, vezi orele și cauți cazare.</p>
+        <a class="btn btn-primary rdp-go" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener"><?= v2_ic('compass') ?>Open the route in Google Maps</a>
+        <p class="rdp-hint">The whole route opens with every stop as a waypoint, ready for navigation. You can drive it the other way round or take only part of it.</p>
       </div>
     </div>
   </section>
@@ -74,8 +74,8 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="rp-stops-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="rp-stops-h">Opririle, în ordine</h2>
-        <a class="sec-link" href="/plan?traseu=<?= v2_e($routePage['slug']) ?>">Deschide ca plan<?= v2_ic('arrow-right') ?></a>
+        <h2 id="rp-stops-h">The stops, in order</h2>
+        <a class="sec-link" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Open in Google Maps<?= v2_ic('arrow-right') ?></a>
       </div>
       <ol class="rp-stops">
         <?php foreach ($rpStops as $i => $stop): [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sEmoji, $sLat, $sLng, $sImg, $sLeg] = $stop; $sMin = $stop[11] ?? 0; ?>
@@ -89,7 +89,7 @@ include __DIR__ . '/header.php';
                 <span class="rp-title"><?= v2_e($sName) ?></span>
                 <span class="rp-meta">
                   <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
-                  <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= v2_e(str_replace('.', ',', (string) $sLeg)) ?> km<?php if (!empty($sMin)): ?> · <?= v2_e(v2_hm((int) $sMin)) ?><?php endif; ?> de la oprirea anterioară</span><?php endif; ?>
+                  <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= v2_e((string) $sLeg) ?> km<?php if (!empty($sMin)): ?> · <?= v2_e(v2_hm((int) $sMin)) ?><?php endif; ?> from the previous stop</span><?php endif; ?>
                 </span>
               </span>
               <?= v2_ic('caret-down', 'ic rp-car') ?>
@@ -97,8 +97,8 @@ include __DIR__ . '/header.php';
             <div class="rp-more"><div><div class="rp-in">
               <p class="rp-about" hidden></p>
               <div class="rp-acts">
-                <a class="rp-go" href="/atractie/<?= v2_e($sSlug) ?>">Detalii<?= v2_ic('arrow-right') ?></a>
-                <a class="rp-go is-quiet" href="https://www.google.com/maps/search/?api=1&amp;query=<?= v2_e($sLat . ',' . $sLng) ?>" target="_blank" rel="noopener">Arată în Google Maps</a>
+                <a class="rp-go" href="/attraction/<?= v2_e($sSlug) ?>">Details<?= v2_ic('arrow-right') ?></a>
+                <a class="rp-go is-quiet" href="https://www.google.com/maps/search/?api=1&amp;query=<?= v2_e($sLat . ',' . $sLng) ?>" target="_blank" rel="noopener">Show in Google Maps</a>
               </div>
             </div></div></div>
           </div>
@@ -112,7 +112,7 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="rp-text-h">
     <div class="wrap mp-text">
       <div class="mp-prose">
-        <h2 id="rp-text-h" class="sr">Despre traseu</h2>
+        <h2 id="rp-text-h" class="sr">About the route</h2>
         <?= implode("\n", $routePage['prose']) ?>
       </div>
       <?php if (!empty($routePage['faq'])): ?>
@@ -130,8 +130,8 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="rp-more-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="rp-more-h">Alte trasee</h2>
-        <a class="sec-link" href="/trasee">Toate traseele<?= v2_ic('arrow-right') ?></a>
+        <h2 id="rp-more-h">Other routes</h2>
+        <a class="sec-link" href="/routes">All routes<?= v2_ic('arrow-right') ?></a>
       </div>
       <?php require __DIR__ . '/route-cards.php'; ?>
     </div>
