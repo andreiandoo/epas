@@ -3,6 +3,7 @@
  * Thumbnails for catalogue images.
  *
  *   /api/img.php?u=<absolute core storage URL>&w=480&h=360
+ *   /api/img.php?c=<Wikimedia Commons file name>&w=480&h=360
  *
  * The attraction covers come off the core storage at whatever size they were uploaded — several
  * are over a megabyte, one is 2.6 MB — and the cards that show them are 230 to 480 pixels wide.
@@ -10,14 +11,18 @@
  * scroll while it decodes them. This resizes once, keeps the result on disk, and serves it with a
  * year-long cache; the encoded file is typically 3% of the original.
  *
- * It only ever touches the core's own storage URLs (no open proxy), and if anything at all goes
+ * Most photos of the catalogue live on Wikimedia Commons. They are fetched from there once, at one of the
+ * widths Commons keeps ready, and served from our own disk afterwards: pages no longer wait on another site,
+ * and Commons sees one request per photo and size instead of one per visitor.
+ *
+ * It only ever touches the core's own storage URLs and Commons files (no open proxy), and if anything at all goes
  * wrong — no GD, a download that fails, an unreadable image — it redirects to the original rather
  * than showing a hole.
  */
 
 require_once dirname(__DIR__) . '/includes/config.php';
 
-const IMG_SIZES = [160, 240, 320, 480, 640, 960];   // a fixed ladder, so the cache cannot be flooded
+const IMG_SIZES = [160, 240, 320, 480, 640, 960, 1280];   // a fixed ladder, so the cache cannot be flooded
 // Bytes are a poor guard — what costs memory is pixels, and GD needs about 4 bytes each. The
 // catalogue has an 18 MB JPEG in it, which is worth resizing precisely because it is 18 MB.
 const IMG_MAX_BYTES = 40 * 1024 * 1024;
@@ -41,18 +46,43 @@ function img_passthrough(string $url): void
 }
 
 // ------------------------------------------------------------------ input
-if (!preg_match('#^https?://#i', $src)) {
-    img_passthrough('');
-}
-$allowed = rtrim(STORAGE_URL, '/') . '/';
-if (strncmp($src, $allowed, strlen($allowed)) !== 0) {
-    // Not ours to resize; sending it back untouched is safer than fetching arbitrary URLs.
-    img_passthrough($src);
-}
 if (!in_array($w, IMG_SIZES, true)) {
     $w = 480;
 }
 $h = ($h > 0 && $h <= 1200) ? $h : 0;
+
+// A Commons photo: by file name (?c=) or by its Special:FilePath address (?u=). It is asked for at the smallest of
+// the widths Commons keeps ready that still covers what we need, so Commons never has to render a size for us.
+$commons = (string) ($_GET['c'] ?? '');
+if ($commons === '' && preg_match('#^https://commons\.wikimedia\.org/wiki/Special:FilePath/([^?\#]+)#', $src, $m)) {
+    $commons = rawurldecode($m[1]);
+}
+$isCommons = false;
+if ($commons !== '') {
+    $commons = str_replace('_', ' ', trim($commons));
+    if (strlen($commons) > 240 || !preg_match('/\.(jpe?g|png|webp|tiff?|gif)$/i', $commons) || preg_match('#[/\\<>\[\]{}|\x00-\x1f]#', $commons)) {
+        img_passthrough('');
+    }
+    $need = max($w, (int) ceil($h * 1.6));
+    $ready = 1280;
+    foreach ([330, 500, 960, 1280] as $step) {
+        if ($step >= $need) {
+            $ready = $step;
+            break;
+        }
+    }
+    $src = 'https://commons.wikimedia.org/wiki/Special:FilePath/' . rawurlencode($commons) . '?width=' . $ready;
+    $isCommons = true;
+}
+
+if (!preg_match('#^https?://#i', $src)) {
+    img_passthrough('');
+}
+$allowed = rtrim(STORAGE_URL, '/') . '/';
+if (!$isCommons && strncmp($src, $allowed, strlen($allowed)) !== 0) {
+    // Not ours and not Commons: nothing to do with it. (Redirecting to it would make this an open redirect.)
+    img_passthrough('');
+}
 
 if (!function_exists('imagecreatetruecolor')) {
     img_passthrough($src);
@@ -82,6 +112,24 @@ if (is_file($file) && filesize($file) > 0 && filemtime($file) > time() - IMG_CAC
     img_send($file, $ext);
 }
 
+// Housekeeping, on about one new thumbnail in three hundred: files nobody rebuilt for IMG_CACHE_DAYS go, so the
+// cache holds what the site shows now and does not grow for ever.
+if (random_int(1, 300) === 1) {
+    $limit = time() - IMG_CACHE_DAYS * 86400;
+    foreach (glob($dir . '/*.{jpg,webp,fail}', GLOB_BRACE) ?: [] as $old) {
+        if (@filemtime($old) < $limit) {
+            @unlink($old);
+        }
+    }
+}
+
+// A source that just failed is not asked again for an hour: the visitor is sent to the original at once, instead of
+// every request waiting on a download that will not come.
+$failMark = $file . '.fail';
+if (is_file($failMark) && filemtime($failMark) > time() - 3600) {
+    img_passthrough($src);
+}
+
 // ------------------------------------------------------------------ fetch
 $ch = curl_init();
 curl_setopt_array($ch, [
@@ -90,16 +138,20 @@ curl_setopt_array($ch, [
     CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_TIMEOUT        => 20,
     CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_MAXREDIRS      => 2,
+    CURLOPT_MAXREDIRS      => 3,
     CURLOPT_SSL_VERIFYPEER => true,
+    // Wikimedia asks every client to say who it is
+    CURLOPT_USERAGENT      => 'ViaquiImageCache/1.0 (https://viaqui.com; ' . (defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : 'contact@viaqui.com') . ')',
 ]);
 $body = curl_exec($ch);
 $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($code !== 200 || !is_string($body) || $body === '' || strlen($body) > IMG_MAX_BYTES) {
+    @touch($failMark);
     img_passthrough($src);
 }
+@unlink($failMark);
 
 $size = @getimagesizefromstring($body);
 if (!$size || ($size[0] * $size[1]) > IMG_MAX_PIXELS) {

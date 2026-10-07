@@ -770,7 +770,7 @@ include __DIR__ . '/includes/v2/header.php';
       <ul class="rail" id="attr-rail">
         <?php foreach ($cityAttractions as $at): ?>
         <li class="at"><a href="<?= v2_e($at['href']) ?>">
-          <span class="at-media"><?= $at['image'] ? v2_photo([$at['image'], 0, 0, '']) : v2_fallback($at['name']) ?><?php if ($at['count'] > 0): ?><span class="at-badge"><?= v2_num($at['count'], 'experience', 'experiences') ?></span><?php endif; ?></span>
+          <span class="at-media"><?= $at['image'] ? v2_photo([v2_thumb($at['image'], 640), 0, 0, '']) : v2_fallback($at['name']) ?><?php if ($at['count'] > 0): ?><span class="at-badge"><?= v2_num($at['count'], 'experience', 'experiences') ?></span><?php endif; ?></span>
           <span class="at-name"><?= v2_e($at['name']) ?><?= v2_ic('arrow-right') ?></span>
           <?php if ($at['type'] !== ''): ?><span class="at-meta"><span><?= v2_e($at['type']) ?></span></span><?php endif; ?>
         </a></li>

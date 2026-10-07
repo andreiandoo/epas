@@ -129,7 +129,7 @@ foreach (v2_map_file(strtolower($cnCode) . '.summary')['picks'] ?? [] as $cnPick
     </div>
     <?php if ($cnShot): $cnShotCr = $cnShot[7] ?? []; ?>
     <figure class="v-phero-shot">
-      <a href="/attraction/<?= v2_e($cnShot[0]) ?>"><img src="<?= v2_e(str_replace('?width=500', '?width=960', $cnShot[6])) ?>" alt="<?= v2_e($cnShot[1]) ?>" fetchpriority="high" decoding="async"></a>
+      <a href="/attraction/<?= v2_e($cnShot[0]) ?>"><img src="<?= v2_e(v2_thumb($cnShot[6], 960)) ?>" alt="<?= v2_e($cnShot[1]) ?>" fetchpriority="high" decoding="async"></a>
       <figcaption><b><?= v2_e($cnShot[1]) ?><?= $cnShot[4] !== '' ? ', ' . v2_e($cnShot[4]) : '' ?></b><?php if (!empty($cnShotCr[1])): ?>Photo: <?= v2_e(($cnShotCr[0] ?? '') !== '' ? $cnShotCr[0] : 'unknown author') ?> · <?php if (!empty($cnShotCr[2])): ?><a href="<?= v2_e($cnShotCr[2]) ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($cnShotCr[1]) ?></a><?php else: ?><?= v2_e($cnShotCr[1]) ?><?php endif; ?> · Wikimedia Commons<?php endif; ?></figcaption>
     </figure>
     <?php endif; ?>

@@ -223,9 +223,36 @@ function v2_media_url($path): ?string
         return null;
     }
     if (preg_match('#^https?://#i', $path)) {
+        // a Commons photo goes through our own thumbnail cache, at the nearest size of its ladder
+        $commons = v2_commons_name($path);
+        if ($commons !== null) {
+            $want = preg_match('/[?&]width=(\d+)/', $path, $m) ? (int) $m[1] : 960;
+            return v2_commons_thumb($commons, $want >= 1200 ? 1280 : ($want >= 700 ? 960 : ($want >= 400 ? 480 : 320)));
+        }
         return $path;
     }
     return rtrim(STORAGE_URL, '/') . '/' . ltrim($path, '/');
+}
+
+/** The file name behind a Wikimedia Commons address (Special:FilePath/<name>, or our own /api/img.php?c=<name>); null otherwise. */
+function v2_commons_name(?string $url): ?string
+{
+    if (!is_string($url) || $url === '') {
+        return null;
+    }
+    if (preg_match('#^https://commons\.wikimedia\.org/wiki/Special:FilePath/([^?\#]+)#', $url, $m)) {
+        return str_replace('_', ' ', rawurldecode($m[1]));
+    }
+    if (preg_match('#^/api/img\.php\?c=([^&]+)#', $url, $m)) {
+        return rawurldecode($m[1]);
+    }
+    return null;
+}
+
+/** A Commons photo from our thumbnail cache (api/img.php): width from its ladder, height only for a cropped box. */
+function v2_commons_thumb(string $name, int $w = 480, int $h = 0): string
+{
+    return '/api/img.php?c=' . rawurlencode($name) . '&w=' . $w . ($h > 0 ? '&h=' . $h : '');
 }
 
 function v2_cauta(string $term): string
@@ -255,6 +282,10 @@ function v2_thumb(?string $url, int $w = 480, int $h = 0): string
 {
     if (!is_string($url) || $url === '') {
         return '';
+    }
+    $commons = v2_commons_name($url);
+    if ($commons !== null) {
+        return v2_commons_thumb($commons, $w, $h);
     }
     $storage = rtrim(STORAGE_URL, '/') . '/';
     if (strncmp($url, $storage, strlen($storage)) !== 0) {

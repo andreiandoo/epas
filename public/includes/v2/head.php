@@ -21,6 +21,9 @@ $v2Desc = mb_substr(trim($pageDescription ?? SITE_TAGLINE), 0, 160);
 $v2Canonical = $canonicalUrl ?? SITE_URL . strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
 $v2Robots = !empty($noindex) ? 'noindex, follow' : 'index, follow, max-image-preview:large, max-snippet:-1';
 $v2Og = $ogImage ?? SITE_URL . '/assets/v2/img/hero-1440.webp';
+if (is_string($v2Og) && strncmp($v2Og, '/', 1) === 0) {
+    $v2Og = SITE_URL . $v2Og;      // a photo from our own thumbnail cache: share previews need the full address
+}
 ?><!DOCTYPE html>
 <html lang="en">
 <head>

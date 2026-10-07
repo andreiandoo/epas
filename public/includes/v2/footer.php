@@ -131,7 +131,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         <p class="vf-pay">Visa · Mastercard · Google Pay · Apple Pay</p>
       </div>
     </div>
-    <p class="vf-credits">City and attraction photographs come from Wikimedia Commons; the author and the licence of each one are on its page. Place data: GeoNames, Wikidata and Natural Earth. Flags: flag-icons.</p>
+    <p class="vf-credits">City and attraction photographs come from Wikimedia Commons; the author and the licence of each one are on its page (<a href="/photo-credits">about the photos</a>). Place data: GeoNames, Wikidata, OpenStreetMap and Natural Earth. Flags: flag-icons.</p>
   </div>
 </footer>
 

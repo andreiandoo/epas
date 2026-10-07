@@ -46,7 +46,7 @@
   function thumb(name) {
     if (!name) return '';
     if (name.indexOf('http') === 0 || name.charAt(0) === '/') return name;
-    return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(name.replace(/ /g, '_')) + '?width=250';
+    return '/api/img.php?c=' + encodeURIComponent(name) + '&w=240&h=240';
   }
   function count(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 

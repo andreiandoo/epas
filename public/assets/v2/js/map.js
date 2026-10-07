@@ -81,9 +81,9 @@
    */
   function thumb(url, w, h) {
     if (!url) return '';
-    /* A bare file name is a Wikimedia Commons photo; Commons serves its own thumbnails, at the widths it keeps ready. */
+    /* A bare file name is a Wikimedia Commons photo: it comes from our own thumbnail cache (api/img.php). */
     if (url.indexOf('http') !== 0 && url.charAt(0) !== '/') {
-      return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(url.replace(/ /g, '_')) + '?width=' + (w > 250 ? 500 : 250);
+      return '/api/img.php?c=' + encodeURIComponent(url) + '&w=' + (w > 250 ? 480 : 240) + (h ? '&h=' + (w > 250 ? Math.round(480 * h / w) : Math.round(240 * h / w)) : '');
     }
     if (url.indexOf('http') !== 0) return url;
     return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
@@ -274,7 +274,8 @@
       zone: cfg.zone || '',          // a county (or, for old links, a region) by name or slug
       region: cfg.region || '',      // a whole historical region, which spans several counties
       photo: false,
-      ticket: false
+      ticket: false,
+      unesco: false
     };
 
     function readTheme() {
@@ -516,6 +517,8 @@
         if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
         if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', 'With tickets'));
         if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'With a photo'));
+        /* World Heritage Sites: a distinction, so it sits with the toggles, not among the types. */
+        if (D.flags.unesco && D.rows.some(function (r) { return r[D.f.flags] & D.flags.unesco; })) ui.chips.appendChild(flagChip('unesco', 'globe-simple', 'UNESCO'));
       }
       paintChips();
       if (ui.syncChipNav) ui.syncChipNav();
@@ -584,6 +587,7 @@
         if (zoneSet && !zoneSet[r[f.zone]]) continue;
         if (state.photo && !(r[f.flags] & D.flags.image)) continue;
         if (state.ticket && !(r[f.flags] & D.flags.activities)) continue;
+        if (state.unesco && !(r[f.flags] & D.flags.unesco)) continue;
         if (q && D.hay[i].indexOf(q) === -1) continue;
         out.push(i);
       }
@@ -916,6 +920,7 @@
           state.types = [];
           state.photo = false;
           state.ticket = false;
+          state.unesco = false;
           ui.input.value = '';
           ui.clear.hidden = true;
           refresh(true);
