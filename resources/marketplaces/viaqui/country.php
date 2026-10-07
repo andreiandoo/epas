@@ -98,9 +98,21 @@ include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" class="v-places">
+<?php
+// The photo of the hero: the country's best-known place that is a sight rather than an interior, from the map's
+// summary of the country (assets/v2/data/map/<cc>.summary.json; each pick carries its photo credit).
+$cnShot = null;
+foreach (v2_map_file(strtolower($cnCode) . '.summary')['picks'] ?? [] as $cnPick) {
+    if (!empty($cnPick[6]) && !in_array($cnPick[3], ['museums', 'theatres-operas', 'zoos', 'aquariums'], true)) {
+        $cnShot = $cnPick;
+        break;
+    }
+}
+?>
 <section class="v-phero" aria-labelledby="cn-h">
   <div class="v-phero-topo" aria-hidden="true"></div>
-  <div class="wrap v-phero-in">
+  <div class="wrap v-phero-in<?= $cnShot ? ' has-shot' : '' ?>">
+    <div class="v-phero-copy">
     <nav class="v-crumbs" aria-label="Breadcrumb">
       <a href="/">Home</a><span aria-hidden="true">/</span><a href="/cities">Destinations</a><span aria-hidden="true">/</span>
       <?php if ($cnRegion): ?><a href="/<?= v2_e($cnSlug) ?>"><?= v2_e($cnName) ?></a><span aria-hidden="true">/</span><b><?= v2_e($cnRegion['name']) ?></b><?php else: ?><b><?= v2_e($cnName) ?></b><?php endif; ?>
@@ -111,8 +123,15 @@ include __DIR__ . '/includes/v2/header.php';
     <ul class="v-pstats">
       <li><b><?= number_format($cnRegion ? (int) $cnRegion['cities_count'] : $cnTotal) ?></b><span><?= ($cnRegion ? (int) $cnRegion['cities_count'] : $cnTotal) === 1 ? 'city' : 'cities and towns' ?></span></li>
       <?php if (!$cnRegion && count($cnRegions) > 1): ?><li><b><?= count($cnRegions) ?></b><span>regions</span></li><?php endif; ?>
-      <li><a class="btn v-btn-cream" href="/plan"><?= v2_ic('compass') ?>Plan a trip</a></li>
+      <li><a class="btn v-btn-cream" href="/plan/<?= v2_e($cnSlug) ?>"><?= v2_ic('compass') ?>Plan a trip</a></li>
     </ul>
+    </div>
+    <?php if ($cnShot): $cnShotCr = $cnShot[7] ?? []; ?>
+    <figure class="v-phero-shot">
+      <a href="/attraction/<?= v2_e($cnShot[0]) ?>"><img src="<?= v2_e(str_replace('?width=500', '?width=960', $cnShot[6])) ?>" alt="<?= v2_e($cnShot[1]) ?>" fetchpriority="high" decoding="async"></a>
+      <figcaption><b><?= v2_e($cnShot[1]) ?><?= $cnShot[4] !== '' ? ', ' . v2_e($cnShot[4]) : '' ?></b><?php if (!empty($cnShotCr[1])): ?>Photo: <?= v2_e(($cnShotCr[0] ?? '') !== '' ? $cnShotCr[0] : 'unknown author') ?> · <?php if (!empty($cnShotCr[2])): ?><a href="<?= v2_e($cnShotCr[2]) ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($cnShotCr[1]) ?></a><?php else: ?><?= v2_e($cnShotCr[1]) ?><?php endif; ?> · Wikimedia Commons<?php endif; ?></figcaption>
+    </figure>
+    <?php endif; ?>
   </div>
 </section>
 <div id="hdr-sentinel" aria-hidden="true"></div>

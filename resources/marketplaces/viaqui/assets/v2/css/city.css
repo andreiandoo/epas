@@ -315,3 +315,20 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
 /* under the arch, not inside it: the arch clips whatever sits on its curve */
 .ch-credit{margin:10px 0 0;color:rgba(246,243,232,.62);font-size:.625rem;line-height:1.35;text-align:center}
 .ch-credit a{color:inherit}
+
+/* The newsletter band of a city page: the footer's own top block, moved into the page and written for the city */
+.cnl{margin-top:clamp(48px,7vw,104px);padding-block:clamp(48px,6vw,88px) clamp(40px,5vw,64px);border-radius:36px 36px 0 0;background:var(--deep);color:var(--on-deep)}
+.cnl .vf-say{justify-content:center}
+.cnl a{color:inherit}
+.cnl .cnl-form{grid-template-columns:minmax(0,1fr)}
+.cnl .vf-field input:focus-visible{outline:none;border-color:var(--action);box-shadow:0 0 0 3px rgba(31,125,77,.22)}
+
+/* Viaqui: a lower hero, after the "Destination page" board: a landscape window instead of a tall arch, tighter spacing */
+.ch-arch{aspect-ratio:4 / 3;border-radius:42% 42% var(--r-l) var(--r-l) / 56% 56% var(--r-l) var(--r-l)}
+@media (min-width:768px){.ch-arch{aspect-ratio:4 / 3}}
+.ch-media{max-width:480px}
+.ch-in{padding-bottom:var(--space-7)}
+@media (min-width:1024px){.ch-in{padding-bottom:var(--space-7)}}
+.ch-city{font-size:clamp(2.5rem,5.6vw,4.5rem)}
+.ch-lead{margin-top:var(--space-4)}
+.ch-search{margin-top:var(--space-5)}

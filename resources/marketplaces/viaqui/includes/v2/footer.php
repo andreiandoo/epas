@@ -51,11 +51,12 @@ $v2FootCats = array_slice($V2NAV['categories'], 0, 8);
 $v2FootCityNames = array_values(array_unique(array_filter(array_column(!empty($V2NAV['allCities']) ? $V2NAV['allCities'] : $V2NAV['citiesList'], 'name'))));
 sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
 ?>
-<footer class="vf"<?= $v2FooterSwitch ? ' data-ftr="full"' : '' ?> aria-labelledby="ftr-h">
+<?php $v2FootNl = ($v2FooterNewsletter ?? true) !== false; // a page with its own newsletter band (city.php) turns this off ?>
+<footer class="vf<?= $v2FootNl ? '' : ' is-joined' ?>"<?= $v2FooterSwitch ? ' data-ftr="full"' : '' ?> aria-labelledby="ftr-h">
   <h2 class="sr" id="ftr-h">About Viaqui</h2>
-  <div class="wrap vf-top">
+  <div class="wrap vf-top<?= $v2FootNl ? '' : ' is-solo' ?>">
     <div class="vf-say">
-      <p class="vf-line">More places.<br>Same feeling.<br><em>Your way in.</em></p>
+      <?php if ($v2FootNl): ?><p class="vf-line">More places.<br>Same feeling.<br><em>Your way in.</em></p><?php endif; ?>
       <div class="vf-venue">
         <p class="vf-k">For venues</p>
         <p class="vf-venue-t">Do you run a place people can book online? List it, sell tickets and scan them at the gate.</p>
@@ -65,6 +66,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         </div>
       </div>
     </div>
+    <?php if ($v2FootNl): ?>
     <section class="vf-nl" aria-labelledby="ftr-nl-h">
       <p class="vf-k">Newsletter</p>
       <h3 id="ftr-nl-h">Weekend ideas, before you ask “what shall we do?”</h3>
@@ -83,6 +85,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
       </ul>
       <p class="vf-fine">By subscribing you agree to receive editorial and commercial messages from Viaqui. See the <a href="/privacy">privacy policy</a>.</p>
     </section>
+    <?php endif; ?>
   </div>
 
   <?php readfile(__DIR__ . '/skyline.svg'); ?>
@@ -126,8 +129,6 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         </a>
         <?php endif; ?>
         <p class="vf-pay">Visa · Mastercard · Google Pay · Apple Pay</p>
-        <a class="ftr-mark ftr-anpc" href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: alternative dispute resolution" width="250" height="62" loading="lazy" decoding="async"></a>
-        <a class="ftr-mark ftr-anpc" href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="EU online dispute resolution" width="250" height="62" loading="lazy" decoding="async"></a>
       </div>
     </div>
     <p class="vf-credits">City and attraction photographs come from Wikimedia Commons; the author and the licence of each one are on its page. Place data: GeoNames, Wikidata and Natural Earth. Flags: flag-icons.</p>

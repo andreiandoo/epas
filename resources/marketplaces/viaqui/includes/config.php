@@ -61,6 +61,13 @@ define('CARTO_API_KEY', 'cb1_4bli_1_60582fe0e737ee021895d6fc');
 // in its env). Rotate by updating both sides simultaneously.
 define('CACHE_BUST_TOKEN', (string) ($viaquiSecrets['cache_bust_token'] ?? ''));
 
+// Travelpayouts (affiliate network: WeGoTrip, Tiqets, Aviasales…). The token is secret; the project id ("trs") and
+// the account marker are not, they are part of every partner link. Project id 582490 = viaqui.com, the same number
+// as in the site script in the <head>. While the marker is 0, partner offers stay off (includes/v2/partners.php).
+define('TRAVELPAYOUTS_TOKEN', (string) ($viaquiSecrets['travelpayouts_token'] ?? ''));
+define('TRAVELPAYOUTS_TRS', 582490);
+define('TRAVELPAYOUTS_MARKER', (int) ($viaquiSecrets['travelpayouts_marker'] ?? 0));
+
 // Site Configuration
 define('SITE_NAME', 'Viaqui');
 define('SITE_TAGLINE', 'Your way in.');
