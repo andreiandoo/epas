@@ -32,8 +32,17 @@ $pageCacheDir = __DIR__ . '/cache/pages';
 // their own cache file and don't collide on stale content.
 $cacheParams = $_GET;
 unset($cacheParams['preview'], $cacheParams['nocache']);
+// Ad click ids and campaign tags are unique per click (fbclid, gclid, ...) and are only
+// read by JavaScript in the browser, never by the page's PHP. Keeping them in the key
+// gave every visitor coming from an ad a cache miss, i.e. the slowest version of the page.
+foreach (array_keys($cacheParams) as $cacheParamName) {
+    if (preg_match('/^(utm_.*|fbclid|gclid|gbraid|wbraid|gad_source|gad_campaignid|dclid|msclkid|ttclid|twclid|li_fat_id|igshid|yclid|mc_cid|mc_eid|_gl|_ga|_gac|_up|fbc|fbp|nl)$/i', (string) $cacheParamName)) {
+        unset($cacheParams[$cacheParamName]);
+    }
+}
 ksort($cacheParams);
-$pageCacheKey = md5(($_SERVER['REQUEST_URI'] ?? '/') . '|' . serialize($cacheParams));
+$pageCachePath = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+$pageCacheKey = md5($pageCachePath . '|' . serialize($cacheParams));
 $pageCacheFile = $pageCacheDir . '/' . $pageCacheKey . '.html';
 
 // Check cache
