@@ -37,6 +37,7 @@ if (!$cityData) {
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/promoted.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 // ============================================================
 // City data extraction
@@ -224,6 +225,27 @@ $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId
         aria-label="GetYourGuide activities for <?= v2_e($cityName) ?>">
         <span class="gyg-powered">Powered by <a target="_blank" rel="sponsored noopener" href="<?= v2_e($gygUrl) ?>">GetYourGuide</a></span>
       </div>
+    </div>
+  </section>
+    <?php
+};
+
+// Partner tours (WeGoTrip: self-guided audio tours, many with the entry ticket). Same placement rule as the
+// GetYourGuide widget: right after the section nav when the city has nothing of its own, lower down otherwise.
+$partnerTours = v2_wegotrip_products('city', (string) $slug, 8);
+$partnerPromote = $partnerTours['items'] && empty($cards);
+$renderPartnerSection = function () use ($cityName, $slug, $partnerTours, $partnerPromote) {
+    $sub = 'city-' . $slug;
+    ?>
+  <section class="sec ptours" id="audio-tours" aria-labelledby="ptours-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker"><?= $partnerPromote ? 'Tours and tickets' : 'More, through our partners' ?></p><h2 id="ptours-h">Self-guided tours in <?= v2_e($cityName) ?></h2></div>
+        <?php if ($partnerTours['all'] !== '' && $partnerTours['count'] > count($partnerTours['items'])): ?><a class="sec-link" href="<?= v2_e(v2_partner_href('wegotrip', $partnerTours['all'], $sub . '-all')) ?>" target="_blank" rel="sponsored nofollow noopener">All <?= (int) $partnerTours['count'] ?> on WeGoTrip<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+      </div>
+      <p class="ptours-intro">Audio tours you follow on your phone, at your own pace. Many include the entry ticket to the museum or landmark.</p>
+      <ul class="xp-grid" data-reveal><?= v2_partner_cards($partnerTours['items'], 'wegotrip', $sub) ?></ul>
+      <?= v2_partner_note('wegotrip') ?>
     </div>
   </section>
     <?php
@@ -497,6 +519,7 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== GETYOURGUIDE (promoted: cities without own listings) ============================== -->
   <?php if ($gygPromote) { $renderGygSection(); } ?>
+  <?php if ($partnerPromote) { $renderPartnerSection(); } ?>
 
   <!-- ============================== PROMOVATE (paid city placement) ============================== -->
   <?php v2_promoted_section($promoted, [
@@ -657,6 +680,7 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== GETYOURGUIDE ("extra" slot, below our own listings) ============================== -->
   <?php if ($gygWidgetEnabled && !$gygPromote) { $renderGygSection(); } ?>
+  <?php if ($partnerTours['items'] && !$partnerPromote) { $renderPartnerSection(); } ?>
 
   <!-- ============================== EXPLOREAZĂ DUPĂ INTERES (categorii + traveler) ============================== -->
   <section class="sec ci" id="interests" aria-labelledby="ci-h">
@@ -884,27 +908,30 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
 
   <!-- ============================== NEWSLETTER ============================== -->
-  <section class="nl" aria-labelledby="nl-h">
-    <div class="wrap nl-grid">
-      <div class="nl-copy">
-        <p class="kicker">Viaqui newsletter</p>
-        <h2 id="nl-h">Get ideas for <?= v2_e($cityName) ?></h2>
-        <p class="nl-lead">New places, local guides and weekend ideas, by email.</p>
-        <form class="nl-form" data-newsletter="city-<?= v2_e($slug) ?>" data-msg="nl-msg" data-ok="You are subscribed. Thank you!" data-err="Something went wrong. Please try again." data-keep>
-          <label class="sr" for="nl-email">Your email</label>
-          <input id="nl-email" name="email" type="email" required placeholder="you@example.com" autocomplete="email">
-          <button class="btn btn-primary" type="submit">Subscribe</button>
+  <!-- One band for the newsletter, written for this city. It takes the place of the footer's own newsletter block
+       (the footer is told below), and sits flush against the footer so the two read as one. -->
+  <section class="cnl" aria-labelledby="nl-h">
+    <div class="wrap vf-top">
+      <div class="vf-say">
+        <h2 class="vf-line" id="nl-h">Get ideas for <?= v2_e($cityName) ?>.<br>More places.<br>Same feeling.<br><em>Your way in.</em></h2>
+      </div>
+      <section class="vf-nl" aria-labelledby="nl-card-h">
+        <p class="vf-k">Newsletter</p>
+        <h3 id="nl-card-h">Ideas for <?= v2_e($cityName) ?>, before you ask “what shall we do?”</h3>
+        <p>New places, routes and guides in and around <?= v2_e($cityName) ?>, ideas for the children and gift experiences. One email when there is something worth the trip.</p>
+        <form class="vf-nl-form cnl-form" data-newsletter="city-<?= v2_e($slug) ?>" data-msg="nl-msg" data-ok="Done. Check your inbox to confirm." data-err="We could not complete the subscription. Please try again." data-keep>
+          <label class="vf-field"><span>Email</span><input id="nl-email" name="email" type="email" required placeholder="you@example.com" autocomplete="email"></label>
+          <input type="hidden" name="city" value="<?= v2_e($cityName) ?>">
+          <button class="btn vf-nl-go" type="submit">Subscribe<?= v2_ic('arrow-right') ?></button>
         </form>
         <p class="form-msg" id="nl-msg" role="status" hidden></p>
-      </div>
-      <?php $nlImg = $coverResolved ?: ($gallery[1]['src'] ?? ($gallery[0]['src'] ?? '')); ?>
-      <div class="nl-media">
-        <?php if ($nlImg): ?>
-        <img src="<?= v2_e($nlImg) ?>" alt="<?= v2_e($cityName) ?>" loading="lazy" decoding="async">
-        <?php else: ?>
-        <?= v2_fallback($cityName) ?><span class="nl-name"><?= v2_e($cityName) ?></span>
-        <?php endif; ?>
-      </div>
+        <ul class="vf-nl-points">
+          <li><?= v2_ic('check') ?>No more than one email a week</li>
+          <li><?= v2_ic('check') ?>Ideas near <?= v2_e($cityName) ?></li>
+          <li><?= v2_ic('check') ?>Unsubscribe with one click</li>
+        </ul>
+        <p class="vf-fine">By subscribing you agree to receive editorial and commercial messages from Viaqui. See the <a href="/privacy">privacy policy</a>.</p>
+      </section>
     </div>
   </section>
 
@@ -924,4 +951,5 @@ include __DIR__ . '/includes/v2/header.php';
   </div>
   <?php endif; ?>
 </main>
+<?php $v2FooterNewsletter = false; // this page carries its own newsletter band, right above the footer ?>
 <?php include __DIR__ . '/includes/v2/footer.php'; ?>

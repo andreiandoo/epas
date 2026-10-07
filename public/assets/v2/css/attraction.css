@@ -218,3 +218,17 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
 .th-trip[aria-pressed="true"] .ic{fill:currentColor}
 .th-tripnote{margin:var(--space-3) 0 0;font-size:.875rem}
 .th-tripnote a{color:#9FE0BF;font-weight:600}
+
+/* Viaqui: the hero actions share one row from tablet up; the city name gives way before the row breaks */
+@media (min-width:768px){
+  .th-cta{flex-wrap:nowrap}
+  .th-cta .btn{flex:0 1 auto;min-width:0;padding-inline:18px;white-space:nowrap}
+  .th-cta .btn:first-child{flex-shrink:1}
+  .th-cta .btn .ic{flex:none}
+  .th-cta-t{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .th-cta .th-trip,.th-cta .btn-outline-light{flex-shrink:0}
+}
+/* Viaqui: the About text reads as an article, not as one block */
+.tabout-body p{margin:0 0 1em;max-width:68ch}
+.tabout-body p:last-child{margin-bottom:0}
+.tabout-body .tabout-lead{font-size:1.125rem;line-height:1.6;color:var(--ink)}

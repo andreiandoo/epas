@@ -34,7 +34,9 @@ if (!$attraction) {
 }
 
 require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/places.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 $atName       = $attraction['name'] ?? 'Attraction';
 $atSubtitle   = $attraction['subtitle'] ?? '';
@@ -74,6 +76,11 @@ $atActivities = is_array($attraction['activities'] ?? null) ? array_values($attr
 $cityAttractions   = is_array($attraction['city_attractions'] ?? null) ? array_values($attraction['city_attractions']) : [];
 $countyAttractions = is_array($attraction['county_attractions'] ?? null) ? array_values($attraction['county_attractions']) : [];
 
+/* Partner offers: self-guided audio tours (many with the entry ticket) that WeGoTrip sells for this attraction.
+   Own listings come first; with none, the partner's fill the section instead of the "nothing listed" line. */
+$atPartner = v2_wegotrip_products('attraction', (string) $slug, 4, (string) ($attraction['name'] ?? ''));
+$atPartnerSub = 'attraction-' . $slug;
+
 // Lightbox images: cover first (if present), then the gallery.
 $lightbox = array_values(array_filter(array_merge($atCover ? [$atCover] : [], $atGallery)));
 
@@ -95,7 +102,7 @@ $atLead       = $atBoilerSub ? '' : $atSubtitle;
 
 $atRichness = (mb_strlen($atRealDesc) >= 600 ? 2 : (mb_strlen($atRealDesc) >= 220 ? 1 : 0))
     + (count($lightbox) >= 3 ? 2 : (count($lightbox) >= 1 ? 1 : 0))
-    + ($atActivities ? 2 : 0);
+    + ($atActivities || $atPartner['items'] ? 2 : 0);
 $atCompact = $atRichness < 4;
 
 // In the compact hero the lead is whatever real prose exists; the "Despre" section then only
@@ -207,29 +214,25 @@ include __DIR__ . '/includes/v2/header.php';
 
         <?php if ($atCompact): ?>
         <ul class="th-facts">
-          <?php if ($atType !== ''): ?><li><?= v2_ic('tag') ?><span><b>Type</b><span><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span> <?php endif; ?><?= v2_e($atType) ?></span></span></li><?php endif; ?>
+          <?php if ($atType !== ''): ?><li><?= v2_ic('tag') ?><span><b>Type</b><span><?= v2_e($atType) ?></span></span></li><?php endif; ?>
           <?php if ($atCityName !== '' || $atCounty !== '' || $atCountryName !== ''): ?><li><?= v2_ic('buildings') ?><span><b>Where</b><span><?= v2_e(implode(', ', array_filter([$atCityName, $atCounty, $atCountryName]))) ?></span></span></li><?php endif; ?>
           <?php if ($atAddress !== ''): ?><li><?= v2_ic('map-pin') ?><span><b>Address</b><span><?= v2_e($atAddress) ?></span></span></li><?php endif; ?>
-          <?php if ($atCoords !== ''): ?><li><?= v2_ic('target') ?><span><b>Coordinates</b><span><?= v2_e($atCoords) ?></span></span></li><?php endif; ?>
         </ul>
         <?php elseif ($atType || $atAddress): ?>
         <ul class="th-chips">
-          <?php if ($atType): ?><li><?php if ($atTypeIcon): ?><span aria-hidden="true"><?= v2_e($atTypeIcon) ?></span><?php endif; ?><?= v2_e($atType) ?></li><?php endif; ?>
+          <?php if ($atType): ?><li><?= v2_e($atType) ?></li><?php endif; ?>
           <?php if ($atAddress): ?><li><?= v2_ic('map-pin') ?><?= v2_e($atAddress) ?></li><?php endif; ?>
         </ul>
         <?php endif; ?>
 
         <div class="th-cta">
-          <?php if (!empty($atActivities)): ?>
+          <?php if (!empty($atActivities) || $atPartner['items']): ?>
             <a class="btn btn-light" href="#things-to-do">See what you can do here<?= v2_ic('arrow-right') ?></a>
           <?php elseif ($atCityPage): ?>
-            <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>"><?= $atCityHasPage ? 'Things to do' : 'Attractions' ?> in <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="<?= v2_e($atCityPage) ?>" title="<?= $atCityHasPage ? 'Things to do' : 'Attractions' ?> in <?= v2_e($atCityName) ?>"><span class="th-cta-t">Explore <?= v2_e($atCityName) ?></span><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php if ($atCitySlug !== ''): ?>
-            <a class="btn btn-outline-light" href="/map?city=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>See the area on the map</a>
-          <?php endif; ?>
-          <?php if ($mapsUrl): ?>
-            <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Maps</a>
+            <a class="btn btn-outline-light" href="/map?city=<?= v2_e($atCitySlug) ?>"><?= v2_ic('globe-simple') ?>On the map</a>
           <?php endif; ?>
           <?php
           // "Add to your trip": kept in the browser (assets/v2/js/trip-list.js) and shown on /plan, where the planner of the
@@ -272,7 +275,7 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($atShowAbout): ?>
           <p class="kicker">About</p>
           <h2 id="tabout-h">About <?= v2_e($atName) ?></h2>
-          <div class="tabout-body"><?= nl2br(v2_e($atRealDesc)) ?></div>
+          <div class="tabout-body"><?php foreach (v2_paragraphs($atRealDesc) as $atPi => $atP): ?><p<?= $atPi === 0 ? ' class="tabout-lead"' : '' ?>><?= v2_e($atP) ?></p><?php endforeach; ?></div>
           <?php if (is_array($attraction['description_credit'] ?? null) && !empty($attraction['description_credit']['source_url'])): $atTextCredit = $attraction['description_credit']; ?>
           <p class="th-credit tabout-credit">Text from <a href="<?= v2_e($atTextCredit['source_url']) ?>" target="_blank" rel="noopener nofollow"><?= v2_e($atTextCredit['source'] ?? 'the source') ?></a><?php if (!empty($atTextCredit['license'])): ?>, available under <a href="<?= v2_e($atTextCredit['license_url'] ?? '#') ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($atTextCredit['license']) ?></a><?php endif; ?>.</p>
           <?php endif; ?>
@@ -298,6 +301,7 @@ include __DIR__ . '/includes/v2/header.php';
   <?php endif; ?>
 
   <!-- ===================== LINKED ACTIVITIES ===================== -->
+  <?php if (!empty($atActivities) || !empty($atPartner['items'])): // with nothing to book here the section would only say so ?>
   <section class="sec tact" id="things-to-do" aria-labelledby="tact-h">
     <div class="wrap">
       <div class="sec-head">
@@ -320,11 +324,23 @@ include __DIR__ . '/includes/v2/header.php';
         </li>
         <?php endforeach; ?>
       </ul>
+      <?php elseif ($atPartner['items']): ?>
+      <ul class="xp-grid" data-reveal><?= v2_partner_cards($atPartner['items'], 'wegotrip', $atPartnerSub) ?></ul>
+      <?= v2_partner_note('wegotrip') ?>
       <?php else: ?>
       <p class="tnone"><?= v2_ic('info') ?>Nothing with tickets is listed at <?= v2_e($atName) ?> yet.<?php if ($atCityPage): ?> <a href="<?= v2_e($atCityPage) ?>">See what else there is in <?= v2_e($atCityName) ?><?= v2_ic('arrow-right') ?></a><?php endif; ?></p>
       <?php endif; ?>
+
+      <?php if (!empty($atActivities) && $atPartner['items']): ?>
+      <div class="partner-more">
+        <h3>Audio tours and tickets from our partner</h3>
+        <ul class="xp-grid" data-reveal><?= v2_partner_cards($atPartner['items'], 'wegotrip', $atPartnerSub) ?></ul>
+        <?= v2_partner_note('wegotrip') ?>
+      </div>
+      <?php endif; ?>
     </div>
   </section>
+  <?php endif; ?>
 
   <!-- ===================== EXPLORE CITY CTA ===================== -->
   <?php if ($atCityPage && $atCover): ?>

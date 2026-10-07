@@ -335,3 +335,8 @@
 @media (prefers-reduced-motion:reduce){
   .v-home *,.v-home *::before,.v-home *::after{animation:none !important;transition:none !important}
 }
+
+/* Category cards with a line icon: the icon a little smaller, and room kept under it so a long title never touches it */
+.v-cat .v-glyph{width:44px;height:44px}
+.v-cat:not(.is-p){padding-top:88px}
+@media (max-width:719px){.v-cat .v-glyph{width:34px;height:34px}.v-cat:not(.is-p){padding-top:64px}}

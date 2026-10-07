@@ -41,7 +41,7 @@ $structuredData = [[
     ],
 ]];
 $v2Styles = ['places.css'];
-$v2Scripts = [];
+$v2Scripts = ['places.js'];
 $v2HeaderOverlay = true;
 
 include __DIR__ . '/includes/v2/head.php';
@@ -78,11 +78,11 @@ include __DIR__ . '/includes/v2/header.php';
 <section class="v-psec v-psec-tint" aria-labelledby="ds-all-h">
   <div class="wrap">
     <div class="v-phead"><div><p class="v-eyebrow">By country</p><h2 class="v-ph2" id="ds-all-h">Every country</h2></div>
-      <p class="v-jump"><?php foreach ($dsCountries as $c): ?><a href="#c-<?= v2_e(strtolower((string) ($c['code'] ?? $c['slug']))) ?>"><?= v2_e($c['name']) ?></a><?php endforeach; ?></p>
+      <label class="v-cfind"><?= v2_ic('magnifying-glass') ?><span class="sr">Search a country or a city</span><input type="search" id="ds-find" placeholder="Search a country or a city" autocomplete="off" spellcheck="false"></label>
     </div>
     <div class="v-countries">
       <?php foreach ($dsCountries as $c): $dsCities = array_slice($c['featured'] ?? [], 0, 8); ?>
-      <article class="v-country" id="c-<?= v2_e(strtolower((string) ($c['code'] ?? $c['slug']))) ?>">
+      <article class="v-country" id="c-<?= v2_e(strtolower((string) ($c['code'] ?? $c['slug']))) ?>" data-find="<?= v2_e(mb_strtolower($c['name'] . ' ' . implode(' ', array_column($c['featured'] ?? [], 'name')))) ?>">
         <h3><a href="/<?= v2_e($c['slug']) ?>"><?= v2_flag((string) ($c['code'] ?? '')) ?><?= v2_e($c['name']) ?></a><span><?= v2_e(v2_num((int) $c['citiesCount'], 'city', 'cities')) ?></span></h3>
         <?php if ($dsCities): ?>
         <ul><?php foreach ($dsCities as $city): ?><li><a href="<?= v2_e($city['href']) ?>"><?= v2_e($city['name']) ?></a></li><?php endforeach; ?></ul>
@@ -91,6 +91,7 @@ include __DIR__ . '/includes/v2/header.php';
       </article>
       <?php endforeach; ?>
     </div>
+    <p class="v-pempty" id="ds-none" hidden>No country or city with this name among the ones listed here. Try the <a href="/search">search</a>.</p>
   </div>
 </section>
 

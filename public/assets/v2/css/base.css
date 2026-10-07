@@ -981,3 +981,22 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
   .vsb:hover i,.vsb.is-drag i{width:8px;background:rgba(31,41,55,.72)}
   .vsb.is-drag i{cursor:grabbing}
 }
+
+/* The footer under a page that carries its own newsletter band: flush against it, and only the venues line on top */
+.vf.is-joined{margin-top:0;padding-top:0;border-radius:0}
+.vf-top.is-solo{grid-template-columns:1fr}
+.vf-top.is-solo .vf-venue{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-4) var(--space-6)}
+.vf-top.is-solo .vf-venue-t{max-width:none}
+.vf-top.is-solo .vf-cta{margin-top:0}
+@media (max-width:899px){.vf-top.is-solo .vf-venue{grid-template-columns:1fr}}
+
+/* ---------- partner offers (includes/v2/partners.php): the .xp card, marked with the partner's name ---------- */
+.xp-partner .xp-media{position:relative}
+.xp-via{position:absolute;left:12px;top:12px;padding:5px 10px;border-radius:999px;background:rgba(247,247,245,.95);color:var(--ink);font-size:.75rem;font-weight:700}
+.partner-note{margin:var(--space-5) 0 0;font-size:.8125rem;color:var(--muted)}
+.partner-more{margin-top:clamp(32px, 4vw, 56px)}
+.partner-more h3{margin:0 0 var(--space-5);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;color:var(--green)}
+.ptours{background:var(--surface-2)}
+.ptours .sec-head{margin-bottom:var(--space-3)}
+.ptours .sec-head h2{max-width:none}
+.ptours-intro{margin:0 0 clamp(24px, 3vw, 40px);max-width:60ch;color:var(--muted)}

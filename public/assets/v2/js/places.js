@@ -31,3 +31,26 @@
     });
   });
 })();
+
+/* /cities: typing in the box above the country cards keeps the countries whose name, or one of whose listed cities,
+   matches. Accents do not have to be typed. */
+(function () {
+  'use strict';
+  var box = document.getElementById('ds-find');
+  if (!box) return;
+  var cards = [].slice.call(document.querySelectorAll('.v-country[data-find]')), none = document.getElementById('ds-none');
+  var MARKS = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
+  function fold(t) { return (t || '').normalize('NFD').replace(MARKS, '').toLowerCase(); }
+  var hay = cards.map(function (c) { return fold(c.getAttribute('data-find')); });
+  box.addEventListener('input', function () {
+    var q = fold(box.value.trim()), shown = 0;
+    cards.forEach(function (c, i) {
+      var on = !q || hay[i].indexOf(q) !== -1;
+      c.hidden = !on;
+      if (on) shown++;
+      // a city that matched is marked, so the eye finds why the country stayed
+      [].forEach.call(c.querySelectorAll('li a'), function (a) { a.classList.toggle('is-hit', !!q && fold(a.textContent).indexOf(q) !== -1); });
+    });
+    if (none) none.hidden = shown > 0;
+  });
+})();

@@ -11,6 +11,7 @@ DirectoryIndex index.php index.html
 # so they win over the older Romanian addresses below, which keep working until each page is translated.
 # ============================================
 RewriteRule ^search/?$ cauta.php [L,QSA]
+RewriteRule ^go/?$ go.php [L,QSA]
 RewriteRule ^cities/?$ cities.php [L,QSA]
 RewriteRule ^categories/?$ categorii.php [L,QSA]
 RewriteRule ^experiences/?$ hub-experiente.php [L,QSA]

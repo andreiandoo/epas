@@ -131,3 +131,47 @@ function v2_route_card(string $slug, array $r): array
     }
     return [$slug, $r['title'], $r['lead'], $r['icon'], $r['pace'], (int) $r['count'], (int) $r['km'], $img, (int) ($r['min'] ?? 0)];
 }
+
+/**
+ * A plain text (the introduction of a Wikipedia article, an operator's description) as paragraphs a page can read:
+ * the line breaks it came with are kept, and a block longer than a few sentences is split at sentence ends.
+ */
+function v2_paragraphs(string $text, int $target = 420): array
+{
+    $out = [];
+    // Wikipedia's plain-text introductions lose their pronunciation keys and leave the labels behind: "(UK: , US: ; Latin: ...)"
+    $text = (string) preg_replace(['/\b(?:UK|US|IPA|pronounced)\s*:?\s*(?=[,;)])/u', '/\(\s*(?:[,;]\s*)+/u', '/\s*\(\s*\)/u', '/\s+([,;.])/u'], ['', '(', '', '$1'], $text);
+    foreach (preg_split('/\R+/u', trim($text)) ?: [] as $block) {
+        $block = trim((string) preg_replace('/\s+/u', ' ', $block));
+        if ($block === '') {
+            continue;
+        }
+        if (mb_strlen($block) <= $target * 1.4) {
+            $out[] = $block;
+            continue;
+        }
+        // a sentence ends at . ! ? followed by a space and a capital or a quote; "St. Peter" and "c. 1200" stay whole
+        $sentences = [];
+        foreach (preg_split('/(?<=[.!?])\s+(?=[\p{Lu}"\x{201C}])/u', $block) ?: [$block] as $piece) {
+            $last = count($sentences) - 1;
+            if ($last >= 0 && preg_match('/\b(?:St|Mt|Dr|Mr|Mrs|Sr|Jr|c|ca|No|vs|[A-Z])\.$/u', $sentences[$last])) {
+                $sentences[$last] .= ' ' . $piece;
+            } else {
+                $sentences[] = $piece;
+            }
+        }
+        $cur = '';
+        foreach ($sentences as $sentence) {
+            if ($cur !== '' && mb_strlen($cur) + mb_strlen($sentence) > $target) {
+                $out[] = $cur;
+                $cur = $sentence;
+            } else {
+                $cur = $cur === '' ? $sentence : $cur . ' ' . $sentence;
+            }
+        }
+        if ($cur !== '') {
+            $out[] = $cur;
+        }
+    }
+    return $out;
+}
