@@ -21,6 +21,8 @@
  * them would send visitors away and earn nothing.
  */
 
+require_once __DIR__ . '/currency.php';
+
 const V2_PARTNER_PROGRAMS = [
     'wegotrip' => ['name' => 'WeGoTrip', 'hosts' => ['wegotrip.com']],
     'aviasales' => ['name' => 'Aviasales', 'hosts' => ['aviasales.com']],
@@ -137,7 +139,7 @@ function v2_wegotrip_products(string $kind, string $slug, int $limit = 8, string
         return $none;
     }
     $fetch = $prefer !== '' ? max($limit, 12) : $limit;
-    $res = api_cached("wegotrip_{$kind}_{$id}_{$fetch}", function () use ($kind, $id, $fetch) {
+    $res = api_cached("wegotrip2_{$kind}_{$id}_{$fetch}", function () use ($kind, $id, $fetch) {
         $url = 'https://app.wegotrip.com/api/v2/products/popular/?' . http_build_query([
             'lang' => 'en', 'currency' => SITE_CURRENCY, $kind => $id, 'per_page' => $fetch,
         ]);
@@ -187,7 +189,11 @@ function v2_wegotrip_item($p): ?array
         || ($p['tags']['available'] ?? true) === false) {
         return null;
     }
+    $place = v2_wegotrip_index()['places'][(string) (int) $p['city']['id']] ?? null;   // [our slug, country, lat, lon]
     return [
+        'place' => $place[0] ?? '',
+        'cc' => $place[1] ?? '',
+        'geo' => $place ? [(float) $place[2], (float) $place[3]] : null,
         'title' => (string) $p['title'],
         // the address format of wegotrip.com, as the product detail returns it in `url`
         'url' => 'https://wegotrip.com/' . $p['city']['slug'] . '-d' . (int) $p['city']['id'] . '/' . $p['slug'] . '-p' . (int) $p['id'] . '/',
@@ -244,7 +250,7 @@ function v2_wegotrip_city_all(string $slug): array
     if ($id < 1 || !v2_partners_on()) {
         return [];
     }
-    $res = api_cached("wegotrip_city_all_{$id}", function () use ($id) {
+    $res = api_cached("wegotrip2_city_all_{$id}", function () use ($id) {
         $items = [];
         for ($page = 1; $page <= 4; $page++) {   // 100 a page; the largest city has a little over a hundred
             $url = 'https://app.wegotrip.com/api/v2/products/popular/?' . http_build_query([
@@ -275,6 +281,65 @@ function v2_wegotrip_city_all(string $slug): array
     }, 12 * 3600);
 
     return !empty($res['success']) ? $res['items'] : [];
+}
+
+/** WeGoTrip's own top-level categories that feed each of our main categories (their ids, from /categories/). */
+const V2_WEGOTRIP_CATEGORY_IDS = [
+    'museums-exhibitions' => [6],     // Museum & Attraction Tickets
+    'culture-art' => [1],             // History & Culture Audio Tours
+    'tours-sightseeing' => [2, 11],   // Sightseeing Audio Tours, Audio Walking Tours
+    'family-kids' => [4],             // Family-Friendly Audio Tours
+];
+
+/**
+ * What WeGoTrip sells across Europe in one of our main categories, best sellers first, for the category page.
+ * Reads the best sellers of the matching WeGoTrip categories (two pages of 100 each) and keeps the ones in a city we
+ * have that our own mapping (v2_wegotrip_cats) also puts in the category. Empty for a category WeGoTrip has no
+ * counterpart for, when partner offers are off or when the API did not answer.
+ */
+function v2_wegotrip_category(string $categorySlug, int $limit = 72): array
+{
+    $ids = V2_WEGOTRIP_CATEGORY_IDS[$categorySlug] ?? [];
+    if (!$ids || !v2_partners_on()) {
+        return [];
+    }
+    $res = api_cached("wegotrip2_category_{$categorySlug}", function () use ($ids, $categorySlug) {
+        $items = [];
+        foreach ($ids as $cid) {
+            for ($page = 1; $page <= 2; $page++) {
+                $url = 'https://app.wegotrip.com/api/v2/products/popular/?' . http_build_query([
+                    'lang' => 'en', 'currency' => SITE_CURRENCY, 'category' => $cid, 'per_page' => 100, 'page' => $page,
+                ]);
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 8, CURLOPT_ENCODING => '',
+                    CURLOPT_HTTPHEADER => ['Accept: application/json'],
+                ]);
+                $body = curl_exec($ch);
+                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                $data = is_string($body) ? (json_decode($body, true)['data'] ?? null) : null;
+                if ($code !== 200 || !is_array($data) || !isset($data['results'])) {
+                    error_log('WeGoTrip API: HTTP ' . $code . ' for ' . $url);
+                    break;
+                }
+                foreach ($data['results'] as $p) {
+                    $item = v2_wegotrip_item($p);
+                    // in Europe (a city of ours), and in the category by our own reading too; the family category has
+                    // no reading of ours, so WeGoTrip's word is taken for it
+                    if ($item && $item['cc'] !== '' && ($categorySlug === 'family-kids' || in_array($categorySlug, $item['cats'], true))) {
+                        $items[$item['url']] = $item;
+                    }
+                }
+                if (empty($data['next'])) {
+                    break;
+                }
+            }
+        }
+        return $items ? ['success' => true, 'items' => array_values($items)] : ['success' => false];
+    }, 12 * 3600);
+
+    return !empty($res['success']) ? array_slice($res['items'], 0, $limit) : [];
 }
 
 /**
@@ -489,7 +554,7 @@ function v2_partner_cards(array $items, string $program, string $sub): string
               <?php if ($p['category'] !== ''): ?><span class="xp-cat"><?= v2_e($p['category']) ?></span><?php endif; ?>
               <span class="xp-title"><?= v2_e($p['title']) ?></span>
               <span class="xp-meta"><?php if ($p['duration'] !== ''): ?><span><?= v2_ic('clock') ?><?= v2_e($p['duration']) ?></span><?php endif; ?><?php if ($p['rating'] > 0 && $p['ratings'] >= 5): ?><span class="xp-rating"><?= v2_ic('star') ?><?= v2_e(number_format($p['rating'], 1)) ?> (<?= v2_e(v2_thousands($p['ratings'])) ?>)</span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-avail">Book on <?= v2_e($name) ?><?= v2_ic('arrow-right') ?></span><?php if ($p['price'] > 0): ?><span class="xp-price">from<b><?= v2_e(v2_money($p['price'])) ?></b></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-avail">Book on <?= v2_e($name) ?><?= v2_ic('arrow-right') ?></span><?php if ($p['price'] > 0): ?><span class="xp-price">from<b><?= v2_e(v2_price_local($p['price'], $p['cc'] ?? '')) ?></b></span><?php endif; ?></span>
             </span>
           </a>
         </li>

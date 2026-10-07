@@ -38,6 +38,7 @@ if (!$category) {
 $category = $category['category'] ?? $category;
 
 require_once __DIR__ . '/includes/v2/helpers.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/promoted.php';
 
@@ -276,8 +277,62 @@ foreach ($activities as $ix => $a) {
         '_lng'          => isset($a['venue']['lng']) ? (float) $a['venue']['lng'] : (isset($a['longitude']) ? (float) $a['longitude'] : null),
     ];
 }
+// Our own prices are in euro. `price` is what the filters and the sort compare; `priceLabel` is what is printed.
+foreach ($acts as $k => $a) {
+    $acts[$k]['priceLabel'] = $a['price'] ? v2_money($a['price']) : '';
+    $acts[$k]['ext'] = false;
+    $acts[$k]['via'] = '';
+}
+
+// Partner products of the category (WeGoTrip), after our own, on the first page: across Europe, or in the chosen
+// city. The same search, price and sort choices apply. Each price is printed in the currency of its country; the
+// filters and the sort work on the euro value.
+$partnerCityGeo = [];
+$partnerActs = [];
+if ($pageNum === 1) {
+    $ptItems = $cityFilter
+        ? v2_partner_filter(v2_wegotrip_city_all($cityFilter), (string) ($category['slug'] ?? $slug), '', null, 'recommended')
+        : v2_wegotrip_category((string) ($category['slug'] ?? $slug));
+    $ptSort = ['price_asc' => 'price_asc', 'price_desc' => 'price_desc', 'name_asc' => 'name_asc'][$sort] ?? 'recommended';
+    foreach (array_slice(v2_partner_filter($ptItems, null, $searchQuery, $maxPrice, $ptSort), 0, 72) as $ix => $pp) {
+        if ($pp['geo'] && $pp['place'] !== '') {
+            $partnerCityGeo[$pp['place']] = $pp['geo'];
+        }
+        $mins = preg_match('/^([\d.]+)/', $pp['duration'], $pm) ? (float) $pm[1] * 60 : 0;   // "2 – 3 hours"
+        $partnerActs[] = [
+            'id'            => 900000 + $ix,
+            'title'         => $pp['title'],
+            'href'          => v2_partner_href('wegotrip', $pp['url'], 'category-' . $slug),
+            'category'      => $pp['category'] !== '' ? $pp['category'] : $catName,
+            'categorySlug'  => '',
+            'image'         => $pp['img'] !== '' ? $pp['img'] : null,
+            'place'         => $pp['city'] !== '' ? $pp['city'] : $heroLocation,
+            'rating'        => $pp['ratings'] >= 5 ? round($pp['rating'], 1) : 0,
+            'reviews'       => $pp['ratings'] >= 5 ? $pp['ratings'] : 0,
+            'price'         => (int) round($pp['price']),
+            'priceLabel'    => $pp['price'] > 0 ? v2_price_local($pp['price'], $pp['cc']) : '',
+            'duration'      => $mins > 0 ? ($mins < 60 ? 'short' : ($mins <= 90 ? 'medium' : 'long')) : '',
+            'durationLabel' => $pp['duration'],
+            'languages'     => [],
+            'features'      => [],
+            'interests'     => [],
+            'travelerTypes' => [],
+            'badges'        => [],
+            'promoted'      => false,
+            'ext'           => true,
+            'via'           => 'WeGoTrip',
+            'text'          => mb_strtolower(implode(' ', [$pp['title'], $pp['category'], $pp['city']])),
+            '_city'         => $pp['place'],
+            '_lat'          => null,
+            '_lng'          => null,
+        ];
+    }
+}
+
 // Same order the browser applies for "Recommended", so nothing moves when category.js starts.
 usort($acts, fn ($x, $y) => [(int) $y['promoted'], $y['rating'], $y['reviews']] <=> [(int) $x['promoted'], $x['rating'], $x['reviews']]);
+// partner products keep the order they came in (best sellers, or the sort asked for) and follow our own
+$acts = array_merge($acts, $partnerActs);
 
 // Map pins: normalize real lat/lng into x/y% (bbox); golden-angle scatter when
 // coords are missing so the map preview stays evenly populated.
@@ -305,9 +360,9 @@ foreach ($acts as $k => $a) {
 // a city so no pin hides another. `approx` tells the map these are city positions.
 $geoCities = [];
 foreach ($acts as $a) {
-    if ($a['_lat'] === null && $a['_city'] !== '' && count($geoCities) < 16) $geoCities[$a['_city']] = true;
+    if ($a['_lat'] === null && $a['_city'] !== '' && !isset($partnerCityGeo[$a['_city']]) && count($geoCities) < 16) $geoCities[$a['_city']] = true;
 }
-$cityGeo = [];
+$cityGeo = $partnerCityGeo;
 if ($geoCities) {
     $geoJobs = [];
     foreach (array_keys($geoCities) as $gs) {
@@ -384,8 +439,8 @@ $durationOptions = [['value' => 'short', 'label' => 'Under 60 min'], ['value' =>
 $ratingOptions = [['value' => 0, 'label' => 'Any rating'], ['value' => 4, 'label' => '4.0+'], ['value' => 4.5, 'label' => '4.5+'], ['value' => 4.8, 'label' => '4.8+']];
 
 $priceVals = array_filter(array_map(fn ($a) => $a['price'], $acts));
-$priceCap = $priceVals ? (int) (ceil(max($priceVals) / 50) * 50) : 250;
-if ($priceCap < 100) $priceCap = 100;
+$priceCap = $priceVals ? (int) (ceil(max($priceVals) / 10) * 10) : 100;   // euro
+if ($priceCap < 50) $priceCap = 50;
 $hasRatings = (bool) array_filter($acts, fn ($a) => $a['rating'] > 0);
 
 $optionLabels = function (array $options): array {
@@ -603,17 +658,18 @@ include __DIR__ . '/includes/v2/header.php';
       <?php endif; ?>
       <div class="kchips" id="k-chips" aria-label="Active filters"></div>
 
+      <?php if ($partnerActs): ?><p class="cl-fx"><?= v2_ic('info') ?>Prices are shown in the currency of each country. The price filter and the sort use their value in euro. Listings marked “on WeGoTrip” are sold by our partner, which may pay Viaqui a commission.</p><?php endif; ?>
       <?php if ($acts): ?>
       <ul class="xp-grid" id="k-grid" data-reveal>
         <?php foreach ($acts as $i => $a): ?>
-        <li class="xp" data-id="<?= $a['id'] ?>">
-          <a href="<?= v2_e($a['href']) ?>">
-            <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?><?php if ($a['badges']): ?><span class="xp-badges"><?php foreach ($a['badges'] as $b): ?><span><?= v2_e($b) ?></span><?php endforeach; ?></span><?php endif; ?></span>
+        <li class="xp<?= $a['ext'] ? ' xp-partner' : '' ?>" data-id="<?= $a['id'] ?>">
+          <a href="<?= v2_e($a['href']) ?>"<?= $a['ext'] ? ' target="_blank" rel="sponsored nofollow noopener"' : '' ?>>
+            <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?><?php if ($a['via'] !== ''): ?><span class="xp-via">on <?= v2_e($a['via']) ?></span><?php endif; ?><?php if ($a['badges']): ?><span class="xp-badges"><?php foreach ($a['badges'] as $b): ?><span><?= v2_e($b) ?></span><?php endforeach; ?></span><?php endif; ?></span>
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($a['category']) ?></span>
               <span class="xp-title"><?= v2_e($a['title']) ?></span>
               <span class="xp-meta"><?php if ($a['rating'] > 0): ?><span class="xp-rating"><?= v2_ic('star') ?><?= (string) $a['rating'] ?><?php if ($a['reviews'] > 0): ?> (<?= v2_thousands($a['reviews']) ?>)<?php endif; ?></span><?php endif; ?><?php if ($a['durationLabel']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['durationLabel']) ?></span><?php endif; ?><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go">See<?= v2_ic('arrow-right') ?></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e(v2_money($a['price'])) ?></b></span><?php else: ?><span class="xp-price is-na"><b>See price</b></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go">See<?= v2_ic('arrow-right') ?></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e($a['priceLabel']) ?></b></span><?php else: ?><span class="xp-price is-na"><b>See price</b></span><?php endif; ?></span>
             </span>
           </a>
           <button class="xp-fav" type="button" data-fav aria-pressed="false"><?= v2_ic('heart', 'ic ic-off') ?><?= v2_ic('heart-fill', 'ic ic-on') ?><span class="sr">Save <?= v2_e($a['title']) ?></span></button>
