@@ -253,6 +253,8 @@ $renderPartnerSection = function () use ($cityName, $slug, $partnerTours, $partn
 
 // Flights (Aviasales): the cheapest return fares found lately from the large European airports, for cities with an airport.
 $flights = v2_flights_to((string) $slug, 6);
+// Plan your trip: airport transfer, luggage storage, eSIM, car hire, where a partner serves this city or its country.
+$tripLinks = v2_trip_links((string) $slug, $countryCode, $cityName, $countryName);
 
 // ---- Links (only validated parameters are carried over; filter links land on the listing) ----
 $baseGet = array_filter([
@@ -830,6 +832,18 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
       </ul>
       <p class="partner-note">Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline's site. Viaqui may earn a commission, at no extra cost to you.</p>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <?php if ($tripLinks): ?>
+  <!-- ============================== PLAN YOUR TRIP (partners: transfer, luggage, eSIM, car) ============================== -->
+  <section class="sec ptrip-sec" id="plan-your-trip" aria-labelledby="ptrip-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">Before you go</p><h2 id="ptrip-h">Plan your trip to <?= v2_e($cityName) ?></h2></div>
+      </div>
+      <?= v2_trip_tiles($tripLinks, 'city-' . $slug) ?>
     </div>
   </section>
   <?php endif; ?>

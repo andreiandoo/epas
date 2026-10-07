@@ -13,6 +13,9 @@
  *   4. Aviasales: the cheapest return fares found lately to a city, from the large European airports. Read from
  *      the Travelpayouts data API (cached a day); includes/v2/partners/flights.json says which of our cities have
  *      an airport and under which IATA code (built by plans/viaqui-data/build_flights_index.py).
+ *   5. "Plan your trip": airport transfer, luggage storage, eSIM and car hire for a city or a country. Plain links
+ *      to pages that exist on the partners' sites; includes/v2/partners/trip.json holds them, checked against each
+ *      partner's sitemap (built by plans/viaqui-data/build_trip_links.py).
  *
  * Everything is off until the Travelpayouts token and marker are set (v2_partners_on()), because a link without
  * them would send visitors away and earn nothing.
@@ -21,6 +24,12 @@
 const V2_PARTNER_PROGRAMS = [
     'wegotrip' => ['name' => 'WeGoTrip', 'hosts' => ['wegotrip.com']],
     'aviasales' => ['name' => 'Aviasales', 'hosts' => ['aviasales.com']],
+    'welcomepickups' => ['name' => 'Welcome Pickups', 'hosts' => ['welcomepickups.com']],
+    'kiwitaxi' => ['name' => 'Kiwitaxi', 'hosts' => ['kiwitaxi.com']],
+    'radicalstorage' => ['name' => 'Radical Storage', 'hosts' => ['radicalstorage.com']],
+    'airalo' => ['name' => 'Airalo', 'hosts' => ['airalo.com']],
+    'localrent' => ['name' => 'Localrent', 'hosts' => ['localrent.com']],
+    'autoeurope' => ['name' => 'Auto Europe', 'hosts' => ['autoeurope.eu']],
 ];
 
 function v2_partners_on(): bool
@@ -281,6 +290,77 @@ function v2_flight_dates(string $out, string $back): string
         return '';
     }
     return date('M', $a) === date('M', $b) ? date('j', $a) . ' – ' . date('j M', $b) : date('j M', $a) . ' – ' . date('j M', $b);
+}
+
+/* ------------------------------------------------------------------ Plan your trip */
+
+/**
+ * The services on offer for a city (pass its slug) or for a whole country (pass '' and the country code).
+ * A city takes what its country has when it has nothing of its own for the eSIM and the car.
+ * Each: ['kind' => 'transfer', 'icon' => …, 'title' => …, 'text' => …, 'program' => …, 'name' => partner, 'url' => …].
+ */
+function v2_trip_links(string $citySlug, string $countryCode, string $cityName = '', string $countryName = ''): array
+{
+    static $index = null;
+    if (!v2_partners_on()) {
+        return [];
+    }
+    if ($index === null) {
+        $file = __DIR__ . '/partners/trip.json';
+        $index = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+    }
+    $city = $citySlug !== '' ? ($index['city'][$citySlug] ?? []) : [];
+    $country = $index['country'][strtoupper($countryCode)] ?? [];
+    $countryName = v2_partner_the($countryName);
+    $where = $cityName !== '' ? $cityName : $countryName;
+    $carHere = isset($city['car']) && $cityName !== '';
+
+    $copy = [
+        'transfer' => ['path', 'Airport transfer', $citySlug !== ''
+            ? 'A driver meets you at arrivals and takes you to your door in ' . $where . ', at a price fixed in advance.'
+            : 'A driver meets you at arrivals, at a price fixed in advance, in the cities and resorts of ' . $where . '.'],
+        'luggage' => ['lock-simple', 'Luggage storage', 'Leave your bags near the station or in the centre and see ' . $where . ' with your hands free.'],
+        'esim' => ['phone', 'eSIM for ' . ($countryName !== '' ? $countryName : 'your trip'), 'Mobile data from the moment you land, with no roaming bill. Installed on your phone before you leave.'],
+        'car' => ['compass', 'Car hire', $carHere
+            ? 'Pick up a car in ' . $cityName . ' and see the towns and coast around it at your own pace.'
+            : 'Hire a car' . ($countryName !== '' ? ' in ' . $countryName : '') . ' and reach the places the trains do not.'],
+    ];
+    $out = [];
+    foreach (['transfer', 'luggage', 'esim', 'car'] as $kind) {
+        // a country has no luggage page; a city borrows the country's eSIM and car pages
+        $pick = $city[$kind] ?? (($kind === 'esim' || $kind === 'car' || $citySlug === '') ? ($country[$kind] ?? null) : null);
+        if (!is_array($pick) || !isset(V2_PARTNER_PROGRAMS[$pick[0]]) || !v2_partner_url_ok($pick[0], (string) $pick[1])) {
+            continue;
+        }
+        $out[] = ['kind' => $kind, 'icon' => $copy[$kind][0], 'title' => $copy[$kind][1], 'text' => $copy[$kind][2],
+            'program' => $pick[0], 'name' => V2_PARTNER_PROGRAMS[$pick[0]]['name'], 'url' => (string) $pick[1]];
+    }
+    return $out;
+}
+
+/** "the United Kingdom", "the Netherlands", "the Faroe Islands"; other names unchanged. */
+function v2_partner_the(string $country): string
+{
+    return preg_match('/^(United|Isle)\b|\b(Republic|Islands|Netherlands)$/', $country) ? 'the ' . $country : $country;
+}
+
+/** The tiles of the "Plan your trip" block and the line that says who sells. $sub is the sub id stem, e.g. "city-rome". */
+function v2_trip_tiles(array $links, string $sub): string
+{
+    ob_start(); ?>
+      <ul class="ptrip">
+        <?php foreach ($links as $l): ?>
+        <li><a href="<?= v2_e(v2_partner_href($l['program'], $l['url'], $sub . '-' . $l['kind'])) ?>" target="_blank" rel="sponsored nofollow noopener">
+          <span class="ptrip-ic"><?= v2_ic($l['icon']) ?></span>
+          <b><?= v2_e($l['title']) ?></b>
+          <span class="ptrip-text"><?= v2_e($l['text']) ?></span>
+          <span class="ptrip-go">On <?= v2_e($l['name']) ?><?= v2_ic('arrow-right') ?></span>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+      <p class="partner-note">These services are sold by our partners: you book and pay on their sites. Viaqui may earn a commission, at no extra cost to you.</p>
+    <?php
+    return (string) ob_get_clean();
 }
 
 /** Cards for partner products, in the .xp markup the own listings use, each marked with the partner's name. */
