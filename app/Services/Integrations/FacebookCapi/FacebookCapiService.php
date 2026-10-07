@@ -485,7 +485,7 @@ class FacebookCapiService
 
     protected function normalizeValue(string $field, string $value): string
     {
-        $value = strtolower(trim($value));
+        $value = mb_strtolower(trim($value), 'UTF-8');
 
         switch ($field) {
             case 'em':
@@ -498,12 +498,13 @@ class FacebookCapiService
 
             case 'fn':
             case 'ln':
-                // Names - lowercase, remove special chars
-                return preg_replace('/[^a-z]/', '', $value);
+                // Names - lowercase letters only. Meta wants UTF-8 letters kept
+                // (stripping to a-z turned "Ștefan" into "tefan" and never matched).
+                return preg_replace('/[^\p{L}]/u', '', $value) ?? '';
 
             case 'ct':
                 // City - lowercase, no special chars/digits
-                return preg_replace('/[^a-z]/', '', $value);
+                return preg_replace('/[^\p{L}]/u', '', $value) ?? '';
 
             case 'st':
                 // State - 2-letter code
@@ -532,10 +533,18 @@ class FacebookCapiService
 
     protected function normalizePhone(string $phone): string
     {
+        $international = str_starts_with(trim($phone), '+');
+
         // Remove all non-digits
         $phone = preg_replace('/[^0-9]/', '', $phone);
 
-        // Remove leading zeros
+        // Meta matches phones only with the country code. A national Romanian
+        // number (0722 123 456) was sent as 722123456 and never matched.
+        if (!$international && !str_starts_with($phone, '00') && strlen($phone) === 10 && $phone[0] === '0') {
+            return '40' . substr($phone, 1);
+        }
+
+        // Remove leading zeros (00 international prefix)
         return ltrim($phone, '0');
     }
 
@@ -706,7 +715,7 @@ class FacebookCapiService
             'test_mode' => $testMode,
             'test_event_code' => $testEventCode ?: ($testMode ? 'TEST' . random_int(10000, 99999) : null),
             'status' => 'active',
-            'enabled_events' => ['Purchase', 'AddToCart', 'InitiateCheckout', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
+            'enabled_events' => ['Purchase', 'AddToCart', 'ViewCart', 'InitiateCheckout', 'AddPaymentInfo', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
         ]);
 
         if ($verifyConnection && !$this->testConnection($connection)) {

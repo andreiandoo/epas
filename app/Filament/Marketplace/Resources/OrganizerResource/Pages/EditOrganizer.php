@@ -345,7 +345,7 @@ class EditOrganizer extends EditRecord
         } else {
             \App\Models\Integrations\FacebookCapi\FacebookCapiConnection::create(array_merge($payload, [
                 'marketplace_organizer_id' => $organizerId,
-                'enabled_events' => ['Purchase', 'AddToCart', 'InitiateCheckout', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
+                'enabled_events' => ['Purchase', 'AddToCart', 'ViewCart', 'InitiateCheckout', 'AddPaymentInfo', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
             ]));
         }
 

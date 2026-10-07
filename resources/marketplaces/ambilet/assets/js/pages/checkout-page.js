@@ -878,6 +878,30 @@ const CheckoutPage = {
         const newsletter = document.getElementById('newsletterCheckbox').checked;
         const acceptTerms = document.getElementById('termsCheckbox').checked;
 
+        // Payment step of the funnel (Meta Pixel + CAPI AddPaymentInfo): the form is
+        // valid and the buyer is being sent to pay.
+        try {
+            const firstEventId = this.items[0]?.eventId || null;
+            if (firstEventId && window.EPASTracking && typeof EPASTracking.trackAddPaymentInfo === 'function') {
+                const identity = {};
+                if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(customer.email)) {
+                    identity.email = customer.email;
+                    identity.customer_email = customer.email;
+                }
+                const fullName = (customer.first_name + ' ' + customer.last_name).trim();
+                if (fullName) identity.customer_name = fullName.substring(0, 255);
+                if (customer.phone) identity.customer_phone = customer.phone.substring(0, 50);
+                EPASTracking.trackAddPaymentInfo(
+                    firstEventId,
+                    this.items.reduce((sum, item) => sum + ((item.ticketType?.price || 0) * (item.quantity || 0)), 0),
+                    'RON',
+                    { num_items: this.items.reduce((s, i) => s + (i.quantity || 0), 0), ...identity }
+                );
+            }
+        } catch (e) {
+            // Tracking must never break checkout
+        }
+
         try {
             // B6: include locale-ul daca a fost setat pe pagina leisure_venue
             // (cookie scoped `ambilet_locale_leisure` setat de leisure-venue.php).

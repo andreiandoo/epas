@@ -10,6 +10,7 @@ const CartPage = {
         this.setupTimer();
         this.loadExistingPromo();
         this.render();
+        this.trackViewCart();
 
         // Re-render when AmbiletCart re-validates the promo against new
         // cart contents. The qty-change path (CartPage.updateQuantity)
@@ -40,6 +41,36 @@ const CartPage = {
         // caught when the async call lands.
         if (typeof AmbiletCart !== 'undefined' && typeof AmbiletCart.revalidatePromoCode === 'function') {
             AmbiletCart.revalidatePromoCode().catch(function () { /* best effort */ });
+        }
+    },
+
+    /**
+     * Cart view for the conversion funnel (Meta Pixel + CAPI "ViewCart"). Fires once per
+     * page load, only with items in the cart. EPASTracking is initialised on
+     * DOMContentLoaded, so wait for it when this runs earlier.
+     */
+    trackViewCart() {
+        const send = () => {
+            try {
+                if (!window.EPASTracking || typeof EPASTracking.trackViewCart !== 'function') return;
+                const items = AmbiletCart.getItems();
+                const firstEventId = items[0]?.eventId || items[0]?.event?.id || null;
+                if (!items.length || !firstEventId) return;
+                const totalValue = items.reduce(
+                    (sum, item) => sum + ((item.ticketType?.price || 0) * (item.quantity || 0)),
+                    0
+                );
+                EPASTracking.trackViewCart(firstEventId, totalValue, 'RON', {
+                    num_items: items.reduce((s, i) => s + (i.quantity || 0), 0),
+                });
+            } catch (e) {
+                // Tracking must never break the cart
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => setTimeout(send, 0));
+        } else {
+            setTimeout(send, 0);
         }
     },
 

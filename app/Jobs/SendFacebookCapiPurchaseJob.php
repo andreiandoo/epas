@@ -90,9 +90,11 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
             'ph' => $order->customer_phone ?: null,
             'fn' => $first ?: null,
             'ln' => $last ?: null,
-            'external_id' => (string) $order->id,
+            // Same id the browser funnel events (ViewContent, AddToCart, InitiateCheckout)
+            // send, so Meta can tie the purchase to them; order id only as a fallback.
+            'external_id' => !empty($meta['visitor_id']) ? (string) $meta['visitor_id'] : (string) $order->id,
             'client_ip_address' => $meta['client_ip'] ?? $meta['ip'] ?? $meta['ip_address'] ?? null,
-            'client_user_agent' => $meta['user_agent'] ?? $meta['ua'] ?? null,
+            'client_user_agent' => $meta['client_user_agent'] ?? $meta['user_agent'] ?? $meta['ua'] ?? null,
             'fbp' => $meta['fbp'] ?? null,
             'fbc' => $fbc,
         ], fn ($v) => $v !== null && $v !== '');

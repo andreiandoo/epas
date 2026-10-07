@@ -190,11 +190,16 @@
         view_item: 'ViewContent',
         add_to_cart: 'AddToCart',
         begin_checkout: 'InitiateCheckout',
+        add_payment_info: 'AddPaymentInfo',
+        view_cart: 'ViewCart',
         purchase: 'Purchase',
         search: 'Search',
         sign_up: 'CompleteRegistration',
         lead: 'Lead'
     };
+
+    // Not standard Meta events: sent with trackCustom under the same name the backend uses
+    const META_CUSTOM_EVENTS = ['ViewCart'];
 
     // head.php injects the pixel lazily (first interaction or ~1s after load), so early
     // events (ViewContent) are held until fbq exists instead of being dropped.
@@ -251,11 +256,41 @@
                 if (items) params.num_items = parseInt(items, 10);
             }
 
-            window.fbq('track', name, params, { eventID: String(event.client_event_id) });
+            window.fbq(META_CUSTOM_EVENTS.includes(name) ? 'trackCustom' : 'track', name, params, { eventID: String(event.client_event_id) });
             if (sentKey) localStorage.setItem(sentKey, '1');
             log('Meta Pixel:', name, params, event.client_event_id);
         } catch (e) {
             // tracking must never break the page
+        }
+    }
+
+    /**
+     * Identity of the logged-in customer (email, name, phone), added to every event so
+     * the server-side funnel events match in Meta the way Purchase does. Only with
+     * marketing consent, like the pixel itself. Empty for guests.
+     */
+    function getCustomerIdentity() {
+        try {
+            const consent = JSON.parse(localStorage.getItem('ambilet_cookie_consent') || 'null');
+            if (!consent || !consent.marketing) return {};
+            if (localStorage.getItem('ambilet_user_type') !== 'customer') return {};
+            const c = JSON.parse(localStorage.getItem('ambilet_customer_data') || 'null');
+            if (!c) return {};
+
+            const identity = {};
+            const email = String(c.email || '').trim();
+            // The backend rejects the whole event for an invalid email
+            if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+                identity.email = email;
+                identity.customer_email = email;
+            }
+            const name = [c.first_name, c.last_name].filter(Boolean).join(' ').trim() || String(c.name || '').trim();
+            if (name) identity.customer_name = name.substring(0, 255);
+            const phone = String(c.phone || '').trim();
+            if (phone) identity.customer_phone = phone.substring(0, 50);
+            return identity;
+        } catch (e) {
+            return {};
         }
     }
 
@@ -279,6 +314,7 @@
             screen_width: window.screen.width,
             screen_height: window.screen.height,
             ...getUtmParams(),
+            ...getCustomerIdentity(),
             ...data,
             // FB CAPI extras (kept last so caller's data cannot override)
             client_event_id: data.client_event_id || generateUUID(),
@@ -293,7 +329,7 @@
         sendMetaPixelEvent(eventType, event);
 
         // Flush immediately for important events
-        if (['purchase', 'add_to_cart', 'begin_checkout'].includes(eventType)) {
+        if (['purchase', 'add_to_cart', 'begin_checkout', 'add_payment_info'].includes(eventType)) {
             flushEvents();
         }
     }
@@ -348,6 +384,30 @@
      */
     function trackBeginCheckout(eventId, totalValue, currency = 'RON', data = {}) {
         track('begin_checkout', {
+            marketplace_event_id: eventId,
+            event_value: totalValue,
+            currency: currency,
+            ...data
+        });
+    }
+
+    /**
+     * Track the cart page being viewed with items in it
+     */
+    function trackViewCart(eventId, totalValue, currency = 'RON', data = {}) {
+        track('view_cart', {
+            marketplace_event_id: eventId,
+            event_value: totalValue,
+            currency: currency,
+            ...data
+        });
+    }
+
+    /**
+     * Track the buyer submitting the checkout form (payment step)
+     */
+    function trackAddPaymentInfo(eventId, totalValue, currency = 'RON', data = {}) {
+        track('add_payment_info', {
             marketplace_event_id: eventId,
             event_value: totalValue,
             currency: currency,
@@ -673,6 +733,8 @@
         trackViewItem,
         trackAddToCart,
         trackBeginCheckout,
+        trackViewCart,
+        trackAddPaymentInfo,
         trackPurchase,
         trackSignUp,
         trackLogin,

@@ -358,6 +358,22 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     (function(){
         var h=<?= json_encode($trackingHeadScripts) ?>;
         var done=false;
+        // Meta advanced matching for a logged-in customer who accepted marketing cookies:
+        // the pixel snippet passes this to fbq('init') and hashes it before sending.
+        try{
+            var cc=JSON.parse(localStorage.getItem('ambilet_cookie_consent')||'null');
+            if(cc&&cc.marketing&&localStorage.getItem('ambilet_user_type')==='customer'){
+                var cu=JSON.parse(localStorage.getItem('ambilet_customer_data')||'null')||{},am={};
+                if(cu.email)am.em=String(cu.email).trim().toLowerCase();
+                if(cu.first_name)am.fn=String(cu.first_name).trim().toLowerCase();
+                if(cu.last_name)am.ln=String(cu.last_name).trim().toLowerCase();
+                var ph=String(cu.phone||'').replace(/\D/g,'');
+                if(ph.length===10&&ph.charAt(0)==='0')ph='40'+ph.slice(1);
+                ph=ph.replace(/^0+/,'');
+                if(ph.length>=9)am.ph=ph;
+                window.__fbAdvancedMatching=am;
+            }
+        }catch(e){}
         function go(){
             if(done)return;done=true;
             var d=document.createElement('div');d.innerHTML=h;

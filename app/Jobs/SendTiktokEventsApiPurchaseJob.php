@@ -93,7 +93,7 @@ class SendTiktokEventsApiPurchaseJob implements ShouldQueue
             'ttclid' => $meta['ttclid'] ?? null,
             'ttp' => $meta['ttp'] ?? null,
             'ip' => $meta['client_ip'] ?? $meta['ip'] ?? $meta['ip_address'] ?? null,
-            'user_agent' => $meta['user_agent'] ?? $meta['ua'] ?? null,
+            'user_agent' => $meta['client_user_agent'] ?? $meta['user_agent'] ?? $meta['ua'] ?? null,
         ], fn ($v) => $v !== null && $v !== '');
     }
 

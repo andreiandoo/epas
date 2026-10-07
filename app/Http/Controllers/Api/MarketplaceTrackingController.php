@@ -65,6 +65,7 @@ class MarketplaceTrackingController extends Controller
             'customer_email' => 'nullable|email|max:255',
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'nullable|string|max:50',
+            'num_items' => 'nullable|integer',
             // Order linkage — frontend passes this on purchase events so
             // ROAS attribution can join core_customer_events ↔ orders.
             'order_id' => 'nullable|integer',
@@ -250,6 +251,10 @@ class MarketplaceTrackingController extends Controller
             'view_item' => 'ViewContent',
             'add_to_cart' => 'AddToCart',
             'begin_checkout' => 'InitiateCheckout',
+            'add_payment_info' => 'AddPaymentInfo',
+            // No standard Meta event for a cart view: sent as a custom event,
+            // same name as the browser's fbq('trackCustom', 'ViewCart').
+            'view_cart' => 'ViewCart',
             'sign_up' => 'CompleteRegistration',
             'lead' => 'Lead',
             default => null,
@@ -617,8 +622,16 @@ class MarketplaceTrackingController extends Controller
             $fbc = sprintf('fb.1.%d.%s', (int) (microtime(true) * 1000), $event->fbclid);
         }
 
+        // Logged-in customer identity, sent by tracking.js on every funnel event
+        // (hashed by FacebookCapiService before it leaves the server).
+        $name = trim((string) $request->input('customer_name'));
+        $nameParts = $name !== '' ? preg_split('/\s+/', $name, 2) : [];
+
         return array_filter([
             'em' => $email ?: null,
+            'ph' => $request->input('customer_phone') ?: null,
+            'fn' => $nameParts[0] ?? null,
+            'ln' => $nameParts[1] ?? null,
             'client_ip_address' => $event->ip_address ?: $request->ip(),
             'client_user_agent' => $request->userAgent(),
             'fbp' => $request->input('fbp') ?: null,
@@ -650,6 +663,8 @@ class MarketplaceTrackingController extends Controller
         }
         if ($event->quantity) {
             $data['num_items'] = (int) $event->quantity;
+        } elseif ((int) $request->input('num_items') > 0) {
+            $data['num_items'] = (int) $request->input('num_items');
         }
 
         return $data;

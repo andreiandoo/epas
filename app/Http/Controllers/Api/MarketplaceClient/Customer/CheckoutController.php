@@ -1148,6 +1148,8 @@ class CheckoutController extends BaseController
                     'beneficiaries' => $validated['beneficiaries'] ?? [],
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
+                    // Real visitor signals for the server-side Purchase (Meta CAPI / TikTok)
+                    ...\App\Support\VisitorSignals::from($request),
                     'ticket_insurance' => $hasInsurance && $insuranceAmount > 0,
                     'insurance_amount' => $hasInsurance ? $insuranceAmount : 0,
                     'cultural_card_surcharge' => $culturalCardSurcharge > 0 ? $culturalCardSurcharge : null,
@@ -1761,6 +1763,7 @@ class CheckoutController extends BaseController
                     'beneficiaries'      => $validated['beneficiaries'] ?? [],
                     'ip_address'         => $request->ip(),
                     'user_agent'         => $request->userAgent(),
+                    ...\App\Support\VisitorSignals::from($request),
                     'payment_method'     => $isTestOrder ? 'test' : $request->input('payment_method', 'card'),
                     'order_type'         => 'activity',
                     'loyalty_points'     => $pointsQuote['points'] > 0 ? ['used' => $pointsQuote['points'], 'discount' => $pointsQuote['discount']] : null,

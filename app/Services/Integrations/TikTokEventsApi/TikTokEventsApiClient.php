@@ -144,6 +144,7 @@ class TikTokEventsApiClient
             'view_item' => 'ViewContent',
             'add_to_cart' => 'AddToCart',
             'begin_checkout' => 'InitiateCheckout',
+            'add_payment_info' => 'AddPaymentInfo',
             'purchase' => 'CompletePayment',
             'sign_up' => 'CompleteRegistration',
             'lead' => 'SubmitForm',

@@ -5012,6 +5012,26 @@ if (!empty($_SERVER['HTTP_X_VISITOR_ID']) && preg_match('/^[A-Za-z0-9._:-]{8,64}
     $headers[] = 'X-Visitor-ID: ' . $_SERVER['HTTP_X_VISITOR_ID'];
 }
 
+// Real browser User-Agent and Meta cookies of the visitor. Core stores them on the
+// order at checkout, so the server-side Purchase (Meta CAPI) carries fbp/fbc and the
+// buyer's browser instead of this proxy's User-Agent.
+$visitorUaForHeader = preg_replace('/[\r\n]+/', ' ', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+if ($visitorUaForHeader !== '') {
+    $headers[] = 'X-Visitor-UA: ' . substr($visitorUaForHeader, 0, 500);
+}
+foreach (['_fbp' => 'X-Visitor-Fbp', '_fbc' => 'X-Visitor-Fbc'] as $fbCookie => $fbHeader) {
+    $fbValue = (string) ($_COOKIE[$fbCookie] ?? '');
+    if ($fbValue !== '' && preg_match('/^fb\.\d+\.\d+\.[A-Za-z0-9_.\-]{1,480}$/', $fbValue)) {
+        $headers[] = $fbHeader . ': ' . $fbValue;
+    }
+}
+
+// Event view counter: core rate-limits this route per client IP, and without this
+// header every visitor shares this server's IP, so views can be dropped in traffic peaks.
+if ($action === 'event.track-view' && filter_var($visitorIpForHeader, FILTER_VALIDATE_IP)) {
+    $headers[] = 'X-Forwarded-For: ' . $visitorIpForHeader;
+}
+
 // Forward X-Auto-Refresh through to the upstream (share-link.data uses
 // this to skip the access_count bump on background polls).
 if (!empty($_SERVER['HTTP_X_AUTO_REFRESH'])) {
