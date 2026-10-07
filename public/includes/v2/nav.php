@@ -199,6 +199,7 @@ foreach ((array) ($v2NavData('locations')['items'] ?? []) as $l) {
         'category' => navFlatName($l['category']['name'] ?? ''),
         'offer' => $offer ? implode(' · ', $offer) : '',
         'price' => !empty($l['min_price_cents']) ? (int) round($l['min_price_cents'] / 100) : null,
+        'priceLabel' => v2_own_price_label($l['min_price_cents'] ?? 0, $l['currency'] ?? null),
         'lodging' => !empty($l['has_lodging']),
     ];
 }

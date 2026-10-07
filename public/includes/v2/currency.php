@@ -129,3 +129,31 @@ function v2_fx_note(?string $countryCode): string
     return 'Prices here are in ' . V2_CURRENCIES[$currency][3] . '. The price filter is in euro: €10 is about '
         . v2_money_in(10 * v2_rate($currency), $currency) . '.';
 }
+
+/* ------------------------------------------------------------------ our own listings
+ * The API sends a product's cheapest price in cents, the operator's currency and the value in euro cents
+ * (`cheapest_price_cents`, `currency`, `cheapest_price_eur_cents`). Older API versions send only the first; the price is
+ * then in the site currency.
+ */
+
+/** What is printed for one of our own prices: "£12.50", "€9". Empty for no price. */
+function v2_own_price_label($cents, ?string $currency = null): string
+{
+    $cents = (int) $cents;
+    if ($cents <= 0) {
+        return '';
+    }
+    $currency = strtoupper((string) $currency);
+    return v2_money_in($cents / 100, $currency !== '' ? $currency : (defined('SITE_CURRENCY') ? SITE_CURRENCY : 'EUR'));
+}
+
+/** The euro value of one of our own prices, for filters and sorting: the API's when it sends it, else our rate. */
+function v2_own_price_eur($cents, ?string $currency = null, $eurCents = null): float
+{
+    if ($eurCents !== null && $eurCents !== '') {
+        return (int) $eurCents / 100;
+    }
+    $currency = strtoupper((string) $currency);
+    $site = defined('SITE_CURRENCY') ? SITE_CURRENCY : 'EUR';
+    return v2_to_eur((int) $cents / 100, $currency !== '' ? $currency : $site);
+}

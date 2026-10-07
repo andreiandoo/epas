@@ -89,7 +89,7 @@ if ($v2Acts) {
         }
         $V2['cards'][] = [
             'title' => $a['title'], 'place' => $a['city'], 'k' => $a['cat'], 'image' => $a['image'], 'href' => $a['href'],
-            'price' => $a['price'] ? v2_money($a['price']) : '', 'badges' => ['mob'],
+            'price' => $a['priceLabel'], 'badges' => ['mob'],
             'rating' => $a['reviews'] > 0 ? [$a['rating'], $a['reviews']] : null,
         ];
     }
