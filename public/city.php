@@ -251,6 +251,9 @@ $renderPartnerSection = function () use ($cityName, $slug, $partnerTours, $partn
     <?php
 };
 
+// Flights (Aviasales): the cheapest return fares found lately from the large European airports, for cities with an airport.
+$flights = v2_flights_to((string) $slug, 6);
+
 // ---- Links (only validated parameters are carried over; filter links land on the listing) ----
 $baseGet = array_filter([
     'q'         => $searchQuery,
@@ -809,6 +812,28 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== ORAȘE APROPIATE ============================== -->
   <?php if (!empty($nearbyCities)): ?>
+  <?php if ($flights): ?>
+  <!-- ============================== FLIGHTS (partner: Aviasales) ============================== -->
+  <section class="sec pfl" id="flights" aria-labelledby="pfl-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">Getting there</p><h2 id="pfl-h">Flights to <?= v2_e($cityName) ?></h2></div>
+      </div>
+      <ul class="pfl-list">
+        <?php foreach ($flights as $f): ?>
+        <li><a href="<?= v2_e(v2_partner_href('aviasales', $f['url'], 'city-' . $slug . '-flights')) ?>" target="_blank" rel="sponsored nofollow noopener">
+          <span class="pfl-from"><small>From</small><b><?= v2_e($f['from']) ?></b></span>
+          <span class="pfl-when"><?= v2_e(v2_flight_dates($f['out'], $f['back'])) ?><small><?= $f['direct'] ? 'Direct' : 'With a stop' ?> · return</small></span>
+          <span class="pfl-price"><small>from</small><b><?= v2_e(v2_money($f['price'])) ?></b></span>
+          <?= v2_ic('arrow-right') ?>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+      <p class="partner-note">Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline's site. Viaqui may earn a commission, at no extra cost to you.</p>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <section class="sec cn" id="nearby" aria-labelledby="nearby-h">
     <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
     <div class="wrap">
