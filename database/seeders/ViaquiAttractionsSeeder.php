@@ -194,9 +194,11 @@ class ViaquiAttractionsSeeder extends Seeder
             // The rules of the data files change (thresholds, which small places earn a page). Rows that came from an
             // import (they carry a wikidata_id) and are no longer in the file are removed, unless an experience is
             // linked to them; small places created by an import that hold nothing any more are removed too.
-            $inFile = array_flip(array_column($data['attractions'], 'q'));
+            // Judged by slug, not by Wikidata id: a row left behind under an older slug of an item the file still holds
+            // is a second copy of it, and goes as well.
+            $inFile = array_flip(array_column($rows, 'slug'));
             $staleIds = DB::table('attractions')->where('marketplace_client_id', self::CLIENT_ID)->where('country', $country)
-                ->whereNotNull('wikidata_id')->pluck('wikidata_id', 'id')->reject(fn ($q) => isset($inFile[$q]))->keys();
+                ->whereNotNull('wikidata_id')->pluck('slug', 'id')->reject(fn ($slug) => isset($inFile[$slug]))->keys();
             $removed = 0;
             foreach ($staleIds->chunk(1000) as $chunk) {
                 $linked = DB::table('activity_attraction')->whereIn('attraction_id', $chunk)->pluck('attraction_id');

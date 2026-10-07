@@ -207,3 +207,14 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
 
 .tabout-credit{margin-top:14px;font-size:.8125rem;color:var(--muted)}
 .tabout-credit a{color:inherit}
+
+/* Viaqui: the "Explore {city}" band reads from the middle */
+.texp-in{text-align:center}
+.texp .kicker{justify-content:center}
+.texp::before{background:linear-gradient(180deg, rgba(6,34,26,.72) 0%, rgba(6,34,26,.6) 50%, rgba(6,34,26,.78) 100%)}
+
+/* Viaqui: "Add to your trip" */
+.th-trip[aria-pressed="true"]{background:#F7F7F5;border-color:#F7F7F5;color:var(--green)}
+.th-trip[aria-pressed="true"] .ic{fill:currentColor}
+.th-tripnote{margin:var(--space-3) 0 0;font-size:.875rem}
+.th-tripnote a{color:#9FE0BF;font-weight:600}

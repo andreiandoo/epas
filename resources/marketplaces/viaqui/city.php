@@ -409,7 +409,7 @@ if (empty($V2NAV['categories'])) {
 }
 
 $v2Styles = ['city.css'];
-$v2Scripts = ['city.js'];
+$v2Scripts = ['hdrag.js', 'city.js'];
 $v2HeaderOverlay = true;
 $v2HeadExtra = $heroPhoto ? '<link rel="preload" as="image" href="' . v2_e($heroPhoto['src']) . '" fetchpriority="high">' : '';
 $v2ClientData = ['gallery' => $gallery];
@@ -458,9 +458,6 @@ include __DIR__ . '/includes/v2/header.php';
           <?php else: ?>
           <?= v2_fallback($cityName) ?>
           <?php endif; ?>
-          <?php if ($coverResolved !== '' && is_array($cityData['image_credit'] ?? null)): require_once __DIR__ . '/includes/v2/places.php'; ?>
-          <p class="ch-credit"><?= v2_photo_credit($cityData['image_credit']) ?></p>
-          <?php endif; ?>
           <?php if ($gallery): ?>
           <button class="ch-gal" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb">
             <span class="ch-thumbs" aria-hidden="true"><?php foreach (array_slice($gallery, 0, 3) as $g): ?><img src="<?= v2_e($g['src']) ?>" alt="" loading="lazy" decoding="async"><?php endforeach; ?></span>
@@ -478,6 +475,9 @@ include __DIR__ . '/includes/v2/header.php';
           </a>
           <?php endforeach; ?>
         </div>
+        <?php if ($coverResolved !== '' && is_array($cityData['image_credit'] ?? null)): require_once __DIR__ . '/includes/v2/places.php'; ?>
+        <p class="ch-credit"><?= v2_photo_credit($cityData['image_credit']) ?></p>
+        <?php endif; ?>
       </div>
     </div>
   </section>

@@ -9,6 +9,7 @@
  *
  *   EPHDrag(el)                      // the strip itself scrolls
  *   EPHDrag(el, { onSync: fn })      // fn({ over, atStart, atEnd }) after every change, for arrows
+ *   EPHDrag(el, { wheel: false })    // drag only; the mouse wheel is left to the page
  *
  * Calling it twice on the same element is a no-op, so a page may wire a strip that is rebuilt.
  */
@@ -81,6 +82,7 @@
     }, true);
 
     box.addEventListener('wheel', function (e) {
+      if (opts.wheel === false) return;                       // a strip in the flow of a page: the wheel keeps scrolling the page
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // a real horizontal wheel: leave it
       if (box.scrollWidth - box.clientWidth <= 4) return;
       e.preventDefault();
