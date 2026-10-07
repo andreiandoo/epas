@@ -16,6 +16,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/places.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 $cnSlug = (string) ($countryRow['slug'] ?? ($_GET['slug'] ?? ''));
 $cnCode = strtoupper((string) ($countryRow['code'] ?? ''));
@@ -218,6 +219,16 @@ foreach (v2_map_file(strtolower($cnCode) . '.summary')['picks'] ?? [] as $cnPick
     <?php endif; ?>
   </div>
 </section>
+
+<?php $cnTrip = ($cnPage === 1 && !$cnRegion) ? v2_trip_links('', (string) $cnCode, '', $cnName) : []; ?>
+<?php if ($cnTrip): ?>
+<section class="v-psec ptrip-sec" id="plan-your-trip" aria-labelledby="cn-trip-h">
+  <div class="wrap">
+    <div class="v-phead"><div><p class="v-eyebrow">Before you go</p><h2 class="v-ph2" id="cn-trip-h">Plan your trip to <?= v2_e(v2_partner_the($cnName)) ?></h2></div></div>
+    <?= v2_trip_tiles($cnTrip, 'country-' . $cnSlug) ?>
+  </div>
+</section>
+<?php endif; ?>
 
 <section class="v-psec v-ptools-sec" aria-labelledby="cn-tools-h">
   <div class="wrap"><div class="v-ptools">
