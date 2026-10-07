@@ -33,7 +33,7 @@ function placeOut(array $payload, int $status = 200): void
 function placeText($v): string
 {
     if (is_array($v)) {
-        $v = $v['ro'] ?? (reset($v) ?: '');
+        $v = $v['en'] ?? (reset($v) ?: '');
     }
     $t = html_entity_decode(strip_tags((string) $v), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 

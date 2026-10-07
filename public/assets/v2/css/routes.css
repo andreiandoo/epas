@@ -122,3 +122,10 @@
 
 /* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
 .ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}
+
+/* Viaqui: the country filter above the route cards (/routes) */
+.rx-filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px}
+.rx-filter a{display:inline-flex;align-items:center;padding:8px 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);color:var(--ink);font-size:.9rem;font-weight:600;text-decoration:none}
+.rx-filter a:hover{border-color:var(--green)}
+.rx-filter a[aria-current]{background:var(--green);border-color:var(--green);color:#fff}
+.rx-filter .v-flag{width:20px;height:15px;margin-right:8px}

@@ -109,3 +109,25 @@ function v2_map_href(string $code): string
     }
     return '/map';
 }
+
+/**
+ * The editorial routes (assets/v2/data/map/routes.json, written by plans/viaqui-data/build_routes.py):
+ * slug => title, lead, intro, pace, icon, countries, regions, stops, count, km, min, road, geometry. [] when missing.
+ */
+function v2_routes(): array
+{
+    return v2_map_file('routes')['routes'] ?? [];
+}
+
+/** A route as the row includes/v2/route-cards.php prints: [slug, title, lead, icon, pace, stops, km, photo, minutes]. */
+function v2_route_card(string $slug, array $r): array
+{
+    $img = '';
+    foreach ($r['stops'] as $s) {
+        if (($s[9] ?? '') !== '') {
+            $img = $s[9];
+            break;
+        }
+    }
+    return [$slug, $r['title'], $r['lead'], $r['icon'], $r['pace'], (int) $r['count'], (int) $r['km'], $img, (int) ($r['min'] ?? 0)];
+}
