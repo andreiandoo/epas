@@ -147,5 +147,15 @@ foreach ($v2Ld as $ld) {
 ?>
 <?php if (empty($ckEmbed)): /* not inside the checkout embedded on an operator's site */ ?>
 <script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js" data-gyg-partner-id="HF2XYCH"></script>
+<?php /* Travelpayouts: site verification and affiliate script, kept as supplied; the same snippet is in includes/head.php */ ?>
+<script nowprocket data-noptimize="1" data-cfasync="false" data-wpfc-render="false" seraph-accel-crit="1" data-no-defer="1" data-cmp-ab="2">
+  (function () {
+      var script = document.createElement("script");
+      script.async = 1;
+      script.setAttribute("data-cmp-ab","2");
+      script.src = 'https://emrldtp.cc/NTgyNDkw.js?t=582490';
+      document.head.appendChild(script);
+  })();
+</script>
 <?php endif; ?>
 </head>
