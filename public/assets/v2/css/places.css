@@ -56,13 +56,35 @@
 @media (max-width:1199px){.v-pgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:719px){.v-pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}}
 
-/* regions: a wrapping row of pills with the number of cities */
-.v-regions{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
-.v-regions a{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 8px 0 16px;border-radius:999px;background:var(--surface);color:var(--ink);font-size:.9375rem;font-weight:500;text-decoration:none;box-shadow:inset 0 0 0 1px var(--line);transition:box-shadow var(--dur-micro),color var(--dur-micro)}
-.v-regions a span{min-width:28px;padding:2px 8px;border-radius:999px;background:var(--mist);color:var(--green);font-size:.75rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
-.v-regions a:hover{box-shadow:inset 0 0 0 1.5px var(--green);color:var(--green)}
-.v-regions a[aria-current]{background:var(--green);color:var(--on-deep);box-shadow:none}
-.v-regions a[aria-current] span{background:rgba(255,255,255,.16);color:var(--on-deep)}
+/* flags */
+.v-flag{display:inline-block;width:24px;height:18px;margin-right:10px;border-radius:3px;vertical-align:-2px;object-fit:cover;box-shadow:0 0 0 1px rgba(31,41,55,.12)}
+.v-phero .v-flag{box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+
+/* regions: the list on the left, the country's map on the right; pointing at either lights up both */
+.v-rmap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:clamp(20px,4vw,56px)}
+.v-rmap.is-nomap{grid-template-columns:1fr}
+.v-rlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;margin:0;padding:0;list-style:none}
+.v-rmap.is-nomap .v-rlist{grid-template-columns:repeat(4,minmax(0,1fr))}
+.v-rlist a{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-inline:-12px;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0;color:var(--ink);font-weight:500;text-decoration:none;transition:background-color var(--dur-micro),color var(--dur-micro)}
+.v-rlist a span{min-width:30px;padding:2px 8px;border-radius:999px;background:var(--surface);color:var(--green);font-size:.75rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.v-rlist a:hover,.v-rlist a.is-hot{background:var(--surface);color:var(--green)}
+.v-rlist a[aria-current]{background:var(--green);color:var(--on-deep);border-radius:10px;border-bottom-color:transparent}
+.v-rlist a[aria-current] span{background:rgba(255,255,255,.16);color:var(--on-deep)}
+.v-rfig{position:sticky;top:calc(var(--hdr-h) + 20px);margin:0;display:grid;gap:10px;justify-items:center}
+.v-rfig svg{display:block;width:100%;height:auto;max-height:min(72vh,640px);overflow:visible}
+.v-rfig path{fill:var(--surface);stroke:#B9C7B6;stroke-width:1;stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:fill var(--dur-micro)}
+.v-rfig .is-off path{fill:#E4EADF}
+.v-rfig a{cursor:pointer;outline:none}
+.v-rfig a:hover path,.v-rfig a.is-hot path,.v-rfig a:focus-visible path{fill:var(--online);stroke:var(--green)}
+.v-rfig a[aria-current] path{fill:var(--green);stroke:var(--green)}
+.v-rtip{min-height:1.5em;font-size:.9375rem;font-weight:600;color:var(--green)}
+@media (max-width:899px){
+  .v-rmap{grid-template-columns:1fr}
+  .v-rfig{position:static;order:-1}
+  .v-rfig svg{max-height:340px}
+  .v-rmap.is-nomap .v-rlist{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:479px){.v-rlist,.v-rmap.is-nomap .v-rlist{grid-template-columns:1fr}}
 
 /* every city: a dense, scannable list */
 .v-sort{display:inline-flex;padding:4px;border-radius:999px;background:var(--surface-2)}

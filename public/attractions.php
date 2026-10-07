@@ -161,7 +161,7 @@ include __DIR__ . '/includes/v2/header.php';
 <section class="v-psec v-ptools-sec" aria-labelledby="at-tools-h">
   <div class="wrap"><div class="v-ptools">
     <div><p class="v-eyebrow">Plan</p><h2 class="v-ph2" id="at-tools-h">See them in the right order.</h2><p>Pick the places you want and let the planner arrange them by day, in the order they link up on the road.</p></div>
-    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/plan"><?= v2_ic('compass') ?>Trip planner</a><a class="btn v-btn-ghost" href="/map"><?= v2_ic('map-trifold') ?>Attractions map</a><a class="btn v-btn-ghost" href="/cities"><?= v2_ic('map-pin') ?>Destinations</a></div>
+    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/plan"><?= v2_ic('compass') ?>Trip planner</a><a class="btn v-btn-ghost" href="<?= v2_e($atCitySlug !== '' ? '/map?city=' . $atCitySlug : ($atCountry !== '' ? v2_map_href($atCountry) : '/map')) ?>"><?= v2_ic('map-trifold') ?>Attractions map</a><a class="btn v-btn-ghost" href="/cities"><?= v2_ic('map-pin') ?>Destinations</a></div>
   </div></div>
 </section>
 </main>

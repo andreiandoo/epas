@@ -202,16 +202,34 @@
    open to filter is also the key to what they are looking at. */
 .mpx-tile[data-mpx-set="type"] .mpx-tile-ic{position:relative;color:#fff;background:var(--pin,var(--surface-2))}
 .mpx-tile[data-mpx-set="type"].is-on .mpx-tile-ic{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pin,var(--green))}
-.mpx-tile[data-mpx-key="biserica-manastire"]{--pin:#5B6B86}
-.mpx-tile[data-mpx-key="monument"]{--pin:#6B6257}
-.mpx-tile[data-mpx-key="muzeu"]{--pin:#1F6FB8}
-.mpx-tile[data-mpx-key="cladire-istorica"]{--pin:#A85A2B}
-.mpx-tile[data-mpx-key="parc-gradina"]{--pin:#2E8B45}
-.mpx-tile[data-mpx-key="teatru-opera"]{--pin:#B03060}
-.mpx-tile[data-mpx-key="castel-palat"]{--pin:#7A4199}
-.mpx-tile[data-mpx-key="lac-natura"]{--pin:#0F8FA8}
-.mpx-tile[data-mpx-key="punct-panoramic"]{--pin:#C07A12}
-.mpx-tile[data-mpx-key="piata-centru-vechi"]{--pin:#0E7C6B}
+.mpx-tile[data-mpx-key="castles"]{--pin:#7A4199}
+.mpx-tile[data-mpx-key="palaces"]{--pin:#9A4C8E}
+.mpx-tile[data-mpx-key="fortresses"]{--pin:#6B4E3A}
+.mpx-tile[data-mpx-key="museums"]{--pin:#1F6FB8}
+.mpx-tile[data-mpx-key="cathedrals"]{--pin:#3F5A8C}
+.mpx-tile[data-mpx-key="churches"]{--pin:#5B6B86}
+.mpx-tile[data-mpx-key="monasteries"]{--pin:#4A6A7A}
+.mpx-tile[data-mpx-key="archaeological-sites"]{--pin:#A85A2B}
+.mpx-tile[data-mpx-key="old-towns-squares"]{--pin:#0E7C6B}
+.mpx-tile[data-mpx-key="unesco-sites"]{--pin:#B8860B}
+.mpx-tile[data-mpx-key="landmarks"]{--pin:#6B6257}
+.mpx-tile[data-mpx-key="viewpoints"]{--pin:#C07A12}
+.mpx-tile[data-mpx-key="theatres-operas"]{--pin:#B03060}
+.mpx-tile[data-mpx-key="national-parks"]{--pin:#2E7D32}
+.mpx-tile[data-mpx-key="caves"]{--pin:#5D4A66}
+.mpx-tile[data-mpx-key="waterfalls"]{--pin:#0F8FA8}
+.mpx-tile[data-mpx-key="lakes"]{--pin:#2A7FA5}
+.mpx-tile[data-mpx-key="beaches"]{--pin:#D08A1E}
+.mpx-tile[data-mpx-key="zoos"]{--pin:#5E8C31}
+.mpx-tile[data-mpx-key="aquariums"]{--pin:#1A8F9C}
+.mpx-tile[data-mpx-key="botanical-gardens"]{--pin:#2E8B45}
+.mpx-tile[data-mpx-key="theme-parks"]{--pin:#D2478A}
+.mpx-tile[data-mpx-key="thermal-baths"]{--pin:#3E8E9E}
+.mpx-tile[data-mpx-key="cable-cars"]{--pin:#8A5A44}
+.mpx-tile[data-mpx-key="salt-mines"]{--pin:#7B7F8C}
+.mpx-tile[data-mpx-key="wineries"]{--pin:#8E2B46}
+.mpx-tile[data-mpx-key="bridges"]{--pin:#566270}
+.mpx-tile[data-mpx-key="lighthouses"]{--pin:#C4502E}
 
 /* An SVG icon where an emoji used to be: sized by the font-size the emoji had (product-icons.php). */
 .ic-em{width:1.15em;height:1.15em;flex:none;vertical-align:-.18em}

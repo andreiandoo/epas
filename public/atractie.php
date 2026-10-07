@@ -101,7 +101,8 @@ $atCompact = $atRichness < 4;
 // In the compact hero the lead is whatever real prose exists; the "Despre" section then only
 // earns its heading when there is more than the hero already showed.
 $atHeroLead = $atLead;
-if ($atCompact && $atHeroLead === '' && $atRealDesc !== '' && mb_strlen($atRealDesc) <= 320) {
+// (text that carries a credit, such as a Wikipedia introduction, always goes in the section below, where the credit is)
+if ($atCompact && $atHeroLead === '' && $atRealDesc !== '' && mb_strlen($atRealDesc) <= 320 && empty($attraction['description_credit'])) {
     $atHeroLead = $atRealDesc;   // short enough to be the whole story; no section repeats it
 }
 $atShowAbout = $atRealDesc !== '' && $atHeroLead !== $atRealDesc;
@@ -264,6 +265,9 @@ include __DIR__ . '/includes/v2/header.php';
           <p class="kicker">About</p>
           <h2 id="tabout-h">About <?= v2_e($atName) ?></h2>
           <div class="tabout-body"><?= nl2br(v2_e($atRealDesc)) ?></div>
+          <?php if (is_array($attraction['description_credit'] ?? null) && !empty($attraction['description_credit']['source_url'])): $atTextCredit = $attraction['description_credit']; ?>
+          <p class="th-credit tabout-credit">Text from <a href="<?= v2_e($atTextCredit['source_url']) ?>" target="_blank" rel="noopener nofollow"><?= v2_e($atTextCredit['source'] ?? 'the source') ?></a><?php if (!empty($atTextCredit['license'])): ?>, available under <a href="<?= v2_e($atTextCredit['license_url'] ?? '#') ?>" target="_blank" rel="noopener nofollow license"><?= v2_e($atTextCredit['license']) ?></a><?php endif; ?>.</p>
+          <?php endif; ?>
         <?php endif; ?>
 
         <?php if (count($lightbox) > 1): ?>

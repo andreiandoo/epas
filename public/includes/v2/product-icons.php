@@ -96,9 +96,11 @@ const AM_PRODUCT_ICONS = [
 
 /** The icon of each attraction type (AM_ATTRACTION_TYPES), for the map, the routes and the planner. */
 const AM_PLACE_TYPE_ICONS = [
-    'castel-palat' => 'castle', 'muzeu' => 'museum', 'monument' => 'columns', 'biserica-manastire' => 'church',
-    'parc-gradina' => 'park', 'piata-centru-vechi' => 'city', 'cladire-istorica' => 'house', 'punct-panoramic' => 'binoculars',
-    'lac-natura' => 'waves', 'teatru-opera' => 'theatre',
+    'castles' => 'castle', 'palaces' => 'castle', 'fortresses' => 'castle', 'museums' => 'museum', 'cathedrals' => 'church', 'churches' => 'church',
+    'monasteries' => 'church', 'archaeological-sites' => 'columns', 'unesco-sites' => 'star', 'landmarks' => 'columns', 'old-towns-squares' => 'city',
+    'viewpoints' => 'binoculars', 'theatres-operas' => 'theatre', 'national-parks' => 'mountains', 'caves' => 'mountains', 'waterfalls' => 'waves',
+    'lakes' => 'waves', 'beaches' => 'waves', 'zoos' => 'tree', 'aquariums' => 'waves', 'botanical-gardens' => 'park', 'theme-parks' => 'sparkle',
+    'thermal-baths' => 'waves', 'cable-cars' => 'hike', 'salt-mines' => 'hammer', 'wineries' => 'fork', 'bridges' => 'walk', 'lighthouses' => 'binoculars',
 ];
 
 /** The icons the map, route and planner pages use (their sprite): the types above plus the planner's own. */

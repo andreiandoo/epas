@@ -1,6 +1,6 @@
 /**
- * viaqui.com v2: the map explorer — the filter surface docked to the top of the map on /harta
- * and on the /harta/{slug} landings (markup in includes/v2/map-page.php).
+ * viaqui.com v2: the map explorer — the filter surface docked to the top of the map on /map
+ * and on the /map/{country} landings (markup in includes/v2/map-page.php).
  *
  * The page renders every type, region, county and city as an ordinary link, so the content is
  * there for a crawler and for anyone without JavaScript. This file turns those same links into
@@ -21,7 +21,7 @@
 
 
   function nf(n) {
-    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
   if (root) initExplorer(root);
@@ -30,7 +30,7 @@
     var base = {};
     try { base = JSON.parse(root.getAttribute('data-mpx-base') || '{}'); } catch (e) {}
     // The baseline is whatever the map settles on after it boots (a preset is a list of types
-    // the page does not know), so "Resetează" only shows once something really changed.
+    // the page does not know), so "Reset" only shows once something really changed.
     var baseKey = null;
 
     var tabs = [].slice.call(root.querySelectorAll('[data-mpx-tab]'));
@@ -80,11 +80,12 @@
     root.addEventListener('click', function (e) {
       var a = e.target.closest ? e.target.closest('[data-mpx-set]') : null;
       if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var kind = a.getAttribute('data-mpx-set');
+      if (kind === 'go') return;            // a link to another map (a country from the Europe map): just follow it
       var m = map();
       if (!m) return;                       // no map (yet): let the link do its job
       e.preventDefault();
 
-      var kind = a.getAttribute('data-mpx-set');
       var k = a.getAttribute('data-mpx-key');
       var st = m.getState();
 
@@ -93,7 +94,8 @@
         return;
       }
       if (kind === 'type') {
-        var list = st.types.slice();
+        /* From the Popular selection (or from everything) a click means "only this one"; after that, clicks add and remove. */
+        var list = (st.preset === 'popular') ? [] : st.types.slice();
         var i = list.indexOf(k);
         if (i >= 0) list.splice(i, 1); else list.push(k);
         m.setFilter({ types: list });
@@ -147,14 +149,14 @@
       if (countEl) {
         var n = st.visible;
         countEl.firstElementChild.textContent = nf(n);
-        countEl.lastElementChild.textContent = n === 1 ? 'loc pe hartă' : 'locuri pe hartă';
+        countEl.lastElementChild.textContent = n === 1 ? 'place on the map' : 'places on the map';
       }
       var chosen = {};
       [].forEach.call(root.querySelectorAll('[data-mpx-set]'), function (a) {
         var kind = a.getAttribute('data-mpx-set');
         if (kind === 'preset') return;
         var k = a.getAttribute('data-mpx-key');
-        var on = kind === 'type' ? st.types.indexOf(k) >= 0 : st[kind] === k;
+        var on = kind === 'type' ? (st.preset !== 'popular' && st.types.indexOf(k) >= 0) : st[kind] === k;
         a.classList.toggle('is-on', on);
         a.setAttribute('aria-pressed', String(on));
         if (on) (chosen[kind] = chosen[kind] || []).push(a.getAttribute('data-mpx-label'));
@@ -169,11 +171,11 @@
         var total = panel ? panel.querySelectorAll('[data-mpx-set]:not([data-mpx-set="preset"])').length : 0;
         if (!sub) return;
         if (!picked.length) {
-          sub.textContent = (kind === 'type' && st.types.length === 0) ? 'toate tipurile' : t.getAttribute('data-mpx-sub');
+          sub.textContent = (kind === 'type' && st.types.length === 0) ? 'all types' : (kind === 'type' && st.preset === 'popular') ? 'popular types' : t.getAttribute('data-mpx-sub');
           t.classList.remove('is-active');
         } else {
           sub.textContent = picked.length === 1 ? picked[0]
-            : (kind === 'type' ? picked.length + ' din ' + total + ' alese' : picked.length + ' alese');
+            : (kind === 'type' ? picked.length + ' of ' + total + ' chosen' : picked.length + ' chosen');
           t.classList.add('is-active');
         }
       });

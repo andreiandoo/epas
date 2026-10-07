@@ -116,16 +116,34 @@ html.epm-locked,html.epm-locked body{overflow:hidden}
    distinction and the emoji confirms it. Hues are picked to stay apart on the pale CARTO basemap
    and to keep a white ring legible. The same variables paint the type tiles in the /harta
    explorer (map-page.css), which is where the legend lives. */
-.epm-pin.epm-t-biserica-manastire{background:#5B6B86}
-.epm-pin.epm-t-monument{background:#6B6257}
-.epm-pin.epm-t-muzeu{background:#1F6FB8}
-.epm-pin.epm-t-cladire-istorica{background:#A85A2B}
-.epm-pin.epm-t-parc-gradina{background:#2E8B45}
-.epm-pin.epm-t-teatru-opera{background:#B03060}
-.epm-pin.epm-t-castel-palat{background:#7A4199}
-.epm-pin.epm-t-lac-natura{background:#0F8FA8}
-.epm-pin.epm-t-punct-panoramic{background:#C07A12}
-.epm-pin.epm-t-piata-centru-vechi{background:#0E7C6B}
+.epm-pin.epm-t-castles{background:#7A4199}
+.epm-pin.epm-t-palaces{background:#9A4C8E}
+.epm-pin.epm-t-fortresses{background:#6B4E3A}
+.epm-pin.epm-t-museums{background:#1F6FB8}
+.epm-pin.epm-t-cathedrals{background:#3F5A8C}
+.epm-pin.epm-t-churches{background:#5B6B86}
+.epm-pin.epm-t-monasteries{background:#4A6A7A}
+.epm-pin.epm-t-archaeological-sites{background:#A85A2B}
+.epm-pin.epm-t-old-towns-squares{background:#0E7C6B}
+.epm-pin.epm-t-unesco-sites{background:#B8860B}
+.epm-pin.epm-t-landmarks{background:#6B6257}
+.epm-pin.epm-t-viewpoints{background:#C07A12}
+.epm-pin.epm-t-theatres-operas{background:#B03060}
+.epm-pin.epm-t-national-parks{background:#2E7D32}
+.epm-pin.epm-t-caves{background:#5D4A66}
+.epm-pin.epm-t-waterfalls{background:#0F8FA8}
+.epm-pin.epm-t-lakes{background:#2A7FA5}
+.epm-pin.epm-t-beaches{background:#D08A1E}
+.epm-pin.epm-t-zoos{background:#5E8C31}
+.epm-pin.epm-t-aquariums{background:#1A8F9C}
+.epm-pin.epm-t-botanical-gardens{background:#2E8B45}
+.epm-pin.epm-t-theme-parks{background:#D2478A}
+.epm-pin.epm-t-thermal-baths{background:#3E8E9E}
+.epm-pin.epm-t-cable-cars{background:#8A5A44}
+.epm-pin.epm-t-salt-mines{background:#7B7F8C}
+.epm-pin.epm-t-wineries{background:#8E2B46}
+.epm-pin.epm-t-bridges{background:#566270}
+.epm-pin.epm-t-lighthouses{background:#C4502E}
 /* A place with tickets keeps its type colour and gains a gold ring: the two facts are
    independent, and overwriting the colour threw one of them away. */
 .epm-pin.has-ticket{box-shadow:0 0 0 3px rgba(242,169,0,.6),0 6px 14px -6px rgba(0,0,0,.6)}

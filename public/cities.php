@@ -83,7 +83,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="v-countries">
       <?php foreach ($dsCountries as $c): $dsCities = array_slice($c['featured'] ?? [], 0, 8); ?>
       <article class="v-country" id="c-<?= v2_e(strtolower((string) ($c['code'] ?? $c['slug']))) ?>">
-        <h3><a href="/<?= v2_e($c['slug']) ?>"><?= v2_e($c['name']) ?></a><span><?= v2_e(v2_num((int) $c['citiesCount'], 'city', 'cities')) ?></span></h3>
+        <h3><a href="/<?= v2_e($c['slug']) ?>"><?= v2_flag((string) ($c['code'] ?? '')) ?><?= v2_e($c['name']) ?></a><span><?= v2_e(v2_num((int) $c['citiesCount'], 'city', 'cities')) ?></span></h3>
         <?php if ($dsCities): ?>
         <ul><?php foreach ($dsCities as $city): ?><li><a href="<?= v2_e($city['href']) ?>"><?= v2_e($city['name']) ?></a></li><?php endforeach; ?></ul>
         <?php endif; ?>

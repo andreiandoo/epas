@@ -2,7 +2,7 @@
  *
  *   EPMap.mount(container, config) -> instance { open, close, setTypes, destroy }
  *
- * One engine, several hosts: a full-screen dialog on /atractii, an inline map on /harta, and
+ * One engine, several hosts: a full-screen dialog on /attractions, an inline map on /map, and
  * pre-filtered mini maps elsewhere. The host only supplies a container and a config; every bit
  * of UI below (search, type chips, list, card, bottom sheet) is built here, so there is a single
  * place to fix a map bug.
@@ -24,10 +24,11 @@
 
   var LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
   var CLUSTER = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/';
-  var RO = { lat: 45.94, lng: 24.97, zoom: 7 };
+  /* Where the map opens before the data arrives; a host passes its own in config.view ({lat, lng, zoom}). */
+  var RO = { lat: 49.5, lng: 12.0, zoom: 4 };
   /* "Populare" hides the 3.9k churches and monasteries: they are 54% of the dataset and they bury
      everything else. One list, easy to retune. */
-  var POPULAR_EXCLUDE = ['biserica-manastire'];
+  var POPULAR_EXCLUDE = ['churches', 'lakes', 'bridges'];
   var LIST_PAGE = 40;
   var THEME_KEY = 'bo_map_theme';
   /* Close enough that the streets around the pin are readable — centring at country zoom tells
@@ -50,8 +51,11 @@
   }
   /* Place icons (includes/v2/product-icons.php, printed by the header as #i-pi-<key>): an attraction type's by its
      slug, the rest by key. An emoji saved by an older version of the page is read as the key it stood for. */
-  var TYPE_ICON = { 'castel-palat': 'castle', 'muzeu': 'museum', 'monument': 'columns', 'biserica-manastire': 'church', 'parc-gradina': 'park',
-    'piata-centru-vechi': 'city', 'cladire-istorica': 'house', 'punct-panoramic': 'binoculars', 'lac-natura': 'waves', 'teatru-opera': 'theatre' };
+  var TYPE_ICON = { 'castles': 'castle', 'palaces': 'castle', 'fortresses': 'castle', 'museums': 'museum', 'cathedrals': 'church', 'churches': 'church',
+    'monasteries': 'church', 'archaeological-sites': 'columns', 'unesco-sites': 'star', 'landmarks': 'columns', 'old-towns-squares': 'city',
+    'viewpoints': 'binoculars', 'theatres-operas': 'theatre', 'national-parks': 'mountains', 'caves': 'mountains', 'waterfalls': 'waves', 'lakes': 'waves',
+    'beaches': 'waves', 'zoos': 'tree', 'aquariums': 'waves', 'botanical-gardens': 'park', 'theme-parks': 'sparkle', 'thermal-baths': 'waves',
+    'cable-cars': 'hike', 'salt-mines': 'hammer', 'wineries': 'fork', 'bridges': 'walk', 'lighthouses': 'binoculars' };
   var OLD_EMOJI = { '\uD83C\uDF7D\uFE0F': 'fork', '\uD83C\uDF7D': 'fork', '\u2615': 'coffee', '\uD83D\uDE0C': 'armchair', '\uD83D\uDEB6': 'walk',
     '\uD83D\uDECD\uFE0F': 'shopping', '\uD83D\uDECD': 'shopping', '\uD83C\uDFE8': 'bed', '\uD83D\uDD51': 'clock', '\uD83C\uDF9F\uFE0F': 'ticket',
     '\u2728': 'sparkle', '\uD83D\uDCCD': 'pin' };
@@ -76,16 +80,20 @@
    * on any absolute URL.
    */
   function thumb(url, w, h) {
-    if (!url || url.indexOf('http') !== 0) return url || '';
+    if (!url) return '';
+    /* A bare file name is a Wikimedia Commons photo; Commons serves its own thumbnails, at the widths it keeps ready. */
+    if (url.indexOf('http') !== 0 && url.charAt(0) !== '/') {
+      return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(url.replace(/ /g, '_')) + '?width=' + (w > 250 ? 500 : 250);
+    }
+    if (url.indexOf('http') !== 0) return url;
     return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
   }
 
-  function nf(n) { return new Intl.NumberFormat('ro-RO').format(n); }
-  /* Romanian counting, same rule as v2_num() in PHP. */
+  function nf(n) { return new Intl.NumberFormat('en-GB').format(n); }
+  /* Same rule as v2_num() in PHP. */
   function count(n, one, many) {
     if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return nf(n) + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
+    return nf(n) + ' ' + many;
   }
   function fold(s) {
     return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -109,7 +117,7 @@
     var h = Math.floor(min / 60), m = min % 60;
     return h ? (h + ' h' + (m ? ' ' + m + ' min' : '')) : (m + ' min');
   }
-  function dist(d) { return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(d < 10 ? 1 : 0).replace('.', ',') + ' km'; }
+  function dist(d) { return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(d < 10 ? 1 : 0) + ' km'; }
 
   /* Google's encoded polyline, precision 5 — how OSRM hands back the driving line. */
   function decodePolyline(str) {
@@ -285,7 +293,7 @@
     if (cfg.dialog) {
       container.setAttribute('role', 'dialog');
       container.setAttribute('aria-modal', 'true');
-      container.setAttribute('aria-label', cfg.title || 'Harta atracțiilor');
+      container.setAttribute('aria-label', cfg.title || 'Attractions map');
       container.hidden = true;
     }
 
@@ -299,19 +307,19 @@
       search.appendChild(icon('magnifying-glass'));
       ui.input = el('input');
       ui.input.type = 'search';
-      ui.input.placeholder = 'Caută o atracție sau un oraș';
-      ui.input.setAttribute('aria-label', 'Caută pe hartă');
+      ui.input.placeholder = 'Search an attraction or a city';
+      ui.input.setAttribute('aria-label', 'Search the map');
       ui.input.autocomplete = 'off';
       search.appendChild(ui.input);
       ui.clear = el('button', 'epm-search-clear');
       ui.clear.type = 'button';
       ui.clear.hidden = true;
       ui.clear.appendChild(icon('x'));
-      ui.clear.appendChild(el('span', 'sr', 'Șterge căutarea'));
+      ui.clear.appendChild(el('span', 'sr', 'Clear the search'));
       search.appendChild(ui.clear);
       main.appendChild(search);
 
-      ui.locate = tool('target', 'Lângă mine');
+      ui.locate = tool('target', 'Near me');
       main.appendChild(ui.locate);
 
       ui.theme = tool('sun', 'Aspect');
@@ -320,7 +328,7 @@
       main.appendChild(ui.theme);
 
       if (cfg.dialog) {
-        ui.close = tool('x', 'Închide harta');
+        ui.close = tool('x', 'Close the map');
         ui.close.classList.add('epm-tool-icon');
         ui.close.querySelector('.epm-tool-label').classList.add('sr');
         main.appendChild(ui.close);
@@ -332,11 +340,11 @@
       if (route) search.hidden = true;
 
       ui.chipbar = el('div', 'epm-chipbar');
-      ui.prev = chipNav('arrow-left', 'Tipuri anterioare', -1);
+      ui.prev = chipNav('arrow-left', 'Previous types', -1);
       ui.chips = el('div', 'epm-chips');
       ui.chips.setAttribute('role', 'group');
-      ui.chips.setAttribute('aria-label', 'Tip de atracție');
-      ui.next = chipNav('arrow-right', 'Tipuri următoare', 1);
+      ui.chips.setAttribute('aria-label', 'Type of attraction');
+      ui.next = chipNav('arrow-right', 'More types', 1);
       ui.chipbar.appendChild(ui.prev);
       ui.chipbar.appendChild(ui.chips);
       ui.chipbar.appendChild(ui.next);
@@ -350,16 +358,16 @@
       var body = el('div', 'epm-body');
 
       ui.side = el('aside', 'epm-side');
-      ui.side.setAttribute('aria-label', 'Atracțiile din zona afișată');
+      ui.side.setAttribute('aria-label', 'Attractions in the area shown');
       ui.side.setAttribute('data-snap', 'half');
       ui.grab = el('button', 'epm-sheet-grab');
       ui.grab.type = 'button';
-      ui.grab.appendChild(el('span', '', 'Trage pentru a mări sau micșora lista'));
+      ui.grab.appendChild(el('span', '', 'Drag to make the list larger or smaller'));
       ui.side.appendChild(ui.grab);
       var head = el('div', 'epm-side-head');
-      ui.inview = el('span', '', 'Se încarcă…');
+      ui.inview = el('span', '', 'Loading…');
       head.appendChild(ui.inview);
-      ui.all = el('button', 'link-btn', 'Arată toate');
+      ui.all = el('button', 'link-btn', 'Show all');
       ui.all.type = 'button';
       head.appendChild(ui.all);
       ui.side.appendChild(head);
@@ -368,7 +376,7 @@
       body.appendChild(ui.side);
 
       ui.canvas = el('div', 'epm-map');
-      ui.loading = el('div', 'epm-loading', 'Se încarcă harta…');
+      ui.loading = el('div', 'epm-loading', 'Loading the map…');
       ui.canvas.appendChild(ui.loading);
       body.appendChild(ui.canvas);
 
@@ -478,7 +486,7 @@
         var b = el('button', 'epm-chip epm-chip-preset');
         b.type = 'button';
         b.dataset.preset = p;
-        b.textContent = p === 'popular' ? 'Populare' : 'Toate';
+        b.textContent = p === 'popular' ? 'Popular' : 'All';
         ui.chips.appendChild(b);
       });
       if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
@@ -506,8 +514,8 @@
       }
       if (anyPhoto || anyTicket) {
         if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
-        if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', 'Cu bilete'));
-        if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'Cu poză'));
+        if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', 'With tickets'));
+        if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'With a photo'));
       }
       paintChips();
       if (ui.syncChipNav) ui.syncChipNav();
@@ -591,7 +599,7 @@
       var label = route ? String(i + 1) : null;
       /* The type also colours the pin: a map where every dot is the same green tells you where
          things are but not what they are, and the emoji alone is unreadable at pin size. The
-         colours are defined in map.css and repeated on the type tiles in the /harta explorer,
+         colours are defined in map.css and repeated on the type tiles in the /map explorer,
          which is what makes them a legend rather than decoration. */
       var pin = el('span', 'epm-pin' + (route ? ' is-step' : '')
         + (t && t[0] ? ' epm-t-' + t[0] : '')
@@ -620,7 +628,7 @@
       return m;
     }
 
-    function href(i) { return (cfg.base || '/atractie/') + D.rows[i][D.f.slug]; }
+    function href(i) { return (cfg.base || '/attraction/') + D.rows[i][D.f.slug]; }
 
     function drawMarkers() {
       if (!cluster) return;
@@ -683,7 +691,7 @@
 
     function busy(on) {
       ui.loading.hidden = !on;
-      if (on) ui.loading.textContent = 'Se actualizează harta…';
+      if (on) ui.loading.textContent = 'Updating the map…';
     }
 
     /* ---------- map ---------- */
@@ -720,7 +728,7 @@
         scrollWheelZoom: true,
         attributionControl: true,
         preferCanvas: true
-      }).setView([RO.lat, RO.lng], RO.zoom);
+      }).setView(cfg.view ? [cfg.view.lat, cfg.view.lng] : [RO.lat, RO.lng], cfg.view ? cfg.view.zoom : RO.zoom);
       addTiles();
 
       /* A route never clusters: six stops inside one valley would collapse into a single dot and
@@ -802,17 +810,17 @@
     function renderList() {
       ui.list.textContent = '';
       ui.inview.textContent = route
-        ? 'Opririle traseului, în ordine'
+        ? 'The stops of the route, in order'
         : (inView.length
-          ? count(inView.length, 'atracție în zona afișată', 'atracții în zona afișată')
-          : 'Nicio atracție în zona afișată');
+          ? count(inView.length, 'attraction in the area shown', 'attractions in the area shown')
+          : 'No attraction in the area shown');
 
       if (!inView.length) {
         var empty = el('li', 'epm-empty');
-        empty.appendChild(el('b', '', visible.length ? 'Zona asta e goală' : 'Niciun rezultat'));
+        empty.appendChild(el('b', '', visible.length ? 'Nothing in this area' : 'No results'));
         empty.appendChild(el('p', '', visible.length
-          ? 'Depărtează harta sau apasă „Arată toate”.'
-          : 'Încearcă alt tip de atracție sau alt cuvânt în căutare.'));
+          ? 'Zoom out or press “Show all”.'
+          : 'Try another type of attraction or another word.'));
         ui.list.appendChild(empty);
         return;
       }
@@ -824,7 +832,7 @@
 
       if (inView.length > n) {
         var li = el('li');
-        var more = el('button', 'btn btn-light epm-more', 'Încă ' + nf(Math.min(LIST_PAGE, inView.length - n)) + ' din zonă');
+        var more = el('button', 'btn btn-light epm-more', nf(Math.min(LIST_PAGE, inView.length - n)) + ' more from this area');
         more.type = 'button';
         more.addEventListener('click', function () { listShown += LIST_PAGE; renderList(); });
         li.appendChild(more);
@@ -894,14 +902,14 @@
       ui.meta.textContent = '';
       if (route) {
         var bits = count(D.rows.length, 'oprire', 'opriri');
-        if (cfg.routeKm) bits += ' · ' + nf(cfg.routeKm) + ' km' + (cfg.routeRoad ? ' pe șosea' : ' în linie dreaptă');
+        if (cfg.routeKm) bits += ' · ' + nf(cfg.routeKm) + ' km' + (cfg.routeRoad ? ' by road' : ' in a straight line');
         if (cfg.routeMin) bits += ' · ' + hm(cfg.routeMin) + ' de mers';
         ui.meta.appendChild(el('span', '', bits));
         return;
       }
-      ui.meta.appendChild(el('span', '', count(visible.length, 'atracție pe hartă', 'atracții pe hartă')));
+      ui.meta.appendChild(el('span', '', count(visible.length, 'attraction on the map', 'attractions on the map')));
       if (visible.length !== D.rows.length) {
-        var reset = el('button', 'link-btn', 'Șterge filtrele');
+        var reset = el('button', 'link-btn', 'Clear the filters');
         reset.type = 'button';
         reset.addEventListener('click', function () {
           state.q = '';
@@ -1017,7 +1025,7 @@
       var close = el('button', 'epm-card-close');
       close.type = 'button';
       close.appendChild(icon('x'));
-      close.appendChild(el('span', 'sr', 'Închide'));
+      close.appendChild(el('span', 'sr', 'Close'));
       close.addEventListener('click', function () { select(-1); });
       ui.card.appendChild(close);
 
@@ -1041,7 +1049,7 @@
       if (meta.childNodes.length) body.appendChild(meta);
 
       var actions = el('div', 'epm-card-actions');
-      var go = el('a', 'btn btn-primary', 'Vezi atracția');
+      var go = el('a', 'btn btn-primary', 'See the attraction');
       go.href = url;
       go.target = '_blank';
       go.rel = 'noopener';
@@ -1062,14 +1070,14 @@
     var pushUrl = debounce(function () {
       if (!cfg.urlState || !map) return;
       var p = new URLSearchParams(window.location.search);
-      if (!cfg.fixed && state.types.length && !isPreset('all')) p.set('tip', state.types.join(',')); else p.delete('tip');
+      if (!cfg.fixed && state.types.length && !isPreset('all') && !(cfg.preset === 'popular' && isPreset('popular'))) p.set('type', state.types.join(',')); else p.delete('type');
       if (state.q.trim()) p.set('q', state.q.trim()); else p.delete('q');
       // A landing already says in its path what it shows; repeating it as a query is noise.
       if (!cfg.fixed) {
-        if (state.zone) p.set('zona', state.zone); else p.delete('zona');
-        if (state.city) p.set('oras', state.city); else p.delete('oras');
+        if (state.region) p.set('region', state.region); else p.delete('region');
+        if (state.city) p.set('city', state.city); else p.delete('city');
       }
-      if (cfg.dialog) p.set('harta', '1');
+      if (cfg.dialog) p.set('map', '1');
       var c = map.getCenter();
       var hash = '#' + map.getZoom() + '/' + c.lat.toFixed(4) + '/' + c.lng.toFixed(4);
       var qs = p.toString();
@@ -1078,17 +1086,17 @@
 
     function readUrl() {
       var p = new URLSearchParams(window.location.search);
-      var tip = p.get('tip');
+      var tip = p.get('type');
       if (tip) {
         var valid = typeSlugs();
         state.types = tip.split(',').filter(function (s) { return valid.indexOf(s) !== -1; });
       }
       var q = p.get('q');
       if (q) { state.q = q; ui.input.value = q; ui.clear.hidden = false; }
-      /* A region or city in the URL wins over the host config: /harta?zona=transilvania is a link
+      /* A region or city in the URL wins over the host config: /map/italy?region=tuscany is a link
          a page prints, the config is only the default. */
-      if (!cfg.fixed && p.get('zona')) state.zone = p.get('zona');
-      if (!cfg.fixed && p.get('oras')) state.city = p.get('oras');
+      if (!cfg.fixed && p.get('region')) state.region = p.get('region');
+      if (!cfg.fixed && p.get('city')) state.city = p.get('city');
 
       var m = /^#(\d{1,2})\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(window.location.hash);
       return m ? { zoom: +m[1], lat: +m[2], lng: +m[3] } : null;
@@ -1203,7 +1211,7 @@
         syncView();
       }, function () {
         ui.locate.classList.remove('is-busy');
-        ui.inview.textContent = 'Nu am putut afla unde ești.';
+        ui.inview.textContent = 'We could not find where you are.';
       }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
     }
 
@@ -1244,6 +1252,8 @@
           paintChips();
           if (view) map.setView([view.lat, view.lng], view.zoom);
           else if (state.city || state.zone || state.region || state.q) fitVisible();
+          /* The host knows the box its data sits in ([[south, west], [north, east]]): open on exactly that. */
+          else if (cfg.bounds) { map.invalidateSize(); map.fitBounds(cfg.bounds, { padding: [20, 20], animate: false }); }
           drawMarkers();
           ui.loading.hidden = true;
           booting = false;
@@ -1253,7 +1263,7 @@
         .catch(function (err) {
           booting = false;
           ui.loading.hidden = false;
-          ui.loading.textContent = 'Harta nu a putut fi încărcată. Reîncarcă pagina.';
+          ui.loading.textContent = 'The map could not be loaded. Reload the page.';
           if (window.console) console.warn('[EPMap]', err);
         });
     }
@@ -1276,7 +1286,7 @@
       document.documentElement.classList.remove('epm-locked');
       if (cfg.urlState) {
         var p = new URLSearchParams(window.location.search);
-        p.delete('harta');
+        p.delete('map');
         var qs = p.toString();
         history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
       }
@@ -1289,7 +1299,7 @@
       boot: boot,
       setTypes: function (list) { state.types = list || []; if (D) refresh(true); },
       /**
-       * Filter the map from outside it. /harta owns its own filter rail, so the map takes the
+       * Filter the map from outside it. /map owns its own filter rail, so the map takes the
        * instruction rather than duplicating the controls.
        */
       setFilter: function (patch, fit) {
@@ -1307,6 +1317,7 @@
         return {
           types: state.types.slice(), region: state.region, zone: state.zone, city: state.city,
           q: state.q, visible: visible.length, total: D ? D.rows.length : 0,
+          preset: D && state.types.length && isPreset('popular') ? 'popular' : '',
           typeList: D ? D.types.map(function (t) { return [t[0], t[1], t[2], t[4]]; }) : []
         };
       },
@@ -1398,7 +1409,7 @@
 
   /* ---------------------------------------------------------------- auto-mount
    * A page only has to print an empty <div data-epm-root data-epm-config='{...}'> and, for the
-   * dialog flavour, any number of [data-epm-open] buttons. ?harta=1 reopens a shared link. */
+   * dialog flavour, any number of [data-epm-open] buttons. ?map=1 reopens a shared link. */
   function auto() {
     var host = document.querySelector('[data-epm-root]');
     if (!host) return;
@@ -1415,7 +1426,7 @@
       });
     });
 
-    if (cfg.dialog && new URLSearchParams(window.location.search).get('harta') === '1') inst.open();
+    if (cfg.dialog && new URLSearchParams(window.location.search).get('map') === '1') inst.open();
   }
 
   window.EPMap = { mount: mount };

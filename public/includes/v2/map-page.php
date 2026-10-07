@@ -1,6 +1,6 @@
 <?php
 /**
- * viaqui.com v2: the map destination page, shared by /harta and the sixteen /harta/{slug}
+ * viaqui.com v2: the map destination page, shared by /map and the sixteen /map/{country}
  * landings.
  *
  * The map is the page. Everything that used to be a section below it — types, historical regions,
@@ -36,7 +36,7 @@ $mpPicks    = $mapPage['picks'] ?? ($mpSummary['picks'] ?? []);
 $mpFaq      = $mapPage['faq'] ?? [];
 $mpExplorer = array_values(array_filter($mapPage['explorer'] ?? [], fn ($p) => !empty($p['rows'])));
 
-// What the map starts on, so the explorer knows when to offer "Resetează".
+// What the map starts on, so the explorer knows when to offer "Reset".
 $mpCfg  = ['dialog' => false] + $mapPage['config'];
 $mpBase = [
     'types'  => array_values($mpCfg['types'] ?? []),
@@ -74,7 +74,7 @@ include __DIR__ . '/header.php';
   </section>
 
   <!-- ============================== MAP + EXPLORER ============================== -->
-  <section class="mp-band" aria-label="Hartă interactivă">
+  <section class="mp-band" aria-label="Interactive map">
     <div class="wrap">
       <div class="mp-shell">
         <?php if ($mpExplorer): ?>
@@ -90,12 +90,12 @@ include __DIR__ . '/header.php';
               <?php endforeach; ?>
             </div>
             <div class="mpx-state">
-              <p class="mpx-count" data-mpx-count aria-live="polite"><b><?= v2_e(v2_thousands((int) ($mapPage['total'] ?? 0))) ?></b> <span>locuri pe hartă</span></p>
-              <button type="button" class="mpx-reset" data-mpx-reset hidden><?= v2_ic('x') ?>Resetează</button>
+              <p class="mpx-count" data-mpx-count aria-live="polite"><b><?= v2_e(v2_thousands((int) ($mapPage['total'] ?? 0))) ?></b> <span>places on the map</span></p>
+              <button type="button" class="mpx-reset" data-mpx-reset hidden><?= v2_ic('x') ?>Reset</button>
             </div>
           </div>
 
-          <?php foreach ($mpExplorer as $px): $pxTiles = in_array($px['kind'], ['type', 'region'], true); ?>
+          <?php foreach ($mpExplorer as $px): $pxTiles = in_array($px['kind'], ['type', 'region'], true) && empty($px['pills']); ?>
           <div class="mpx-panel" id="mpx-p-<?= v2_e($px['id']) ?>" data-mpx-panel="<?= v2_e($px['id']) ?>" data-mpx-kind="<?= v2_e($px['kind']) ?>" hidden>
             <?php if (!empty($px['note']) || !empty($px['presets']) || !empty($px['search'])): ?>
             <div class="mpx-top">
@@ -103,12 +103,12 @@ include __DIR__ . '/header.php';
               <div class="mpx-top-end">
                 <?php if (!empty($px['presets'])): ?>
                 <span class="mpx-presets">
-                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="popular">Doar populare</button>
-                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="all">Toate tipurile</button>
+                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="popular">Popular only</button>
+                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="all">All types</button>
                 </span>
                 <?php endif; ?>
                 <?php if (!empty($px['search'])): ?>
-                <label class="mpx-find"><?= v2_ic('magnifying-glass') ?><span class="sr">Caută în listă</span><input type="search" data-mpx-find="<?= v2_e($px['id']) ?>" placeholder="<?= v2_e($px['search']) ?>" autocomplete="off" spellcheck="false"></label>
+                <label class="mpx-find"><?= v2_ic('magnifying-glass') ?><span class="sr">Search the list</span><input type="search" data-mpx-find="<?= v2_e($px['id']) ?>" placeholder="<?= v2_e($px['search']) ?>" autocomplete="off" spellcheck="false"></label>
                 <?php endif; ?>
               </div>
             </div>
@@ -120,18 +120,18 @@ include __DIR__ . '/header.php';
                 <a class="<?= $pxTiles ? 'mpx-tile' : 'mpx-pill' ?>" href="<?= v2_e($rHref) ?>"
                    data-mpx-set="<?= v2_e($px['kind']) ?>" data-mpx-key="<?= v2_e($rKey) ?>" data-mpx-label="<?= v2_e($rName) ?>" aria-pressed="false">
                   <?php if ($pxTiles): ?>
-                  <span class="mpx-tile-ic" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($rEmoji) ?? 'pin', 'ic-em') ?></span>
-                  <span class="mpx-tile-t"><b><?= v2_e($rName) ?></b><span><?= v2_e(v2_thousands((int) $rCount)) ?> <?= v2_e($px['unit'] ?? 'locuri') ?></span></span>
+                  <span class="mpx-tile-ic" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($rEmoji) ?? am_place_icon($rKey), 'ic-em') ?></span>
+                  <span class="mpx-tile-t"><b><?= v2_e($rName) ?></b><span><?= v2_e(v2_thousands((int) $rCount)) ?> <?= v2_e($px['unit'] ?? 'places') ?></span></span>
                   <span class="mpx-tile-on" aria-hidden="true"><?= v2_ic('check') ?></span>
                   <?php else: ?>
-                  <span><?= v2_e($rName) ?></span><b><?= v2_e(v2_thousands((int) $rCount)) ?></b>
+                  <span><?= !empty($px['flags']) && function_exists('v2_flag') ? v2_flag((string) $rEmoji) : '' ?><?= v2_e($rName) ?></span><b><?= v2_e(v2_thousands((int) $rCount)) ?></b>
                   <?php endif; ?>
                 </a>
               </li>
               <?php endforeach; ?>
             </ul>
 
-            <p class="mpx-empty" data-mpx-empty hidden>Nimic cu numele ăsta în listă.</p>
+            <p class="mpx-empty" data-mpx-empty hidden>Nothing with this name in the list.</p>
             <?php if (!empty($px['more'])): ?>
             <p class="mpx-more"><a href="<?= v2_e($px['more'][1]) ?>"><?= v2_e($px['more'][0]) ?><?= v2_ic('arrow-right') ?></a></p>
             <?php endif; ?>
@@ -146,7 +146,7 @@ include __DIR__ . '/header.php';
         </div>
       </div>
       <noscript>
-        <p class="mp-noscript">Harta are nevoie de JavaScript. Lista completă a atracțiilor este pe <a href="/atractii">pagina de atracții</a>, filtrabilă după tip și oraș.</p>
+        <p class="mp-noscript">The map needs JavaScript. The full list is on the <a href="/attractions">attractions page</a>, which you can filter by type and by country.</p>
       </noscript>
     </div>
   </section>
@@ -156,16 +156,16 @@ include __DIR__ . '/header.php';
   <section class="pt-sec pt-dark mpd" aria-labelledby="mpd-h">
     <div class="wrap">
       <div class="pt-head">
-        <p class="pt-k"><?= v2_ic('target') ?><?= v2_e($mapPage['ideasKicker'] ?? 'Idei de plecare') ?></p>
-        <h2 id="mpd-h"><?= v2_e($mapPage['ideasHeading'] ?? 'Nu știi de unde să începi?') ?></h2>
-        <p class="pt-sub"><?= v2_e($mapPage['ideasLead'] ?? 'Harta le arată pe toate deodată. Astea sunt drumurile deja făcute și locurile pe care le-am deschide noi primele.') ?></p>
+        <p class="pt-k"><?= v2_ic('target') ?><?= v2_e($mapPage['ideasKicker'] ?? 'Ideas') ?></p>
+        <h2 id="mpd-h"><?= v2_e($mapPage['ideasHeading'] ?? 'Not sure where to start?') ?></h2>
+        <p class="pt-sub"><?= v2_e($mapPage['ideasLead'] ?? 'The map shows everything at once. These are the places we would open first.') ?></p>
       </div>
 
       <?php if (!empty($mapPage['routeCards'])): ?>
       <div class="mpd-block">
         <div class="mpd-h">
-          <h3><?= v2_e($mapPage['routesHeading'] ?? 'Trasee gata făcute') ?></h3>
-          <div class="mpd-h-end"><a class="mpd-link" href="/trasee">Toate traseele<?= v2_ic('arrow-right') ?></a></div>
+          <h3><?= v2_e($mapPage['routesHeading'] ?? 'Ready-made routes') ?></h3>
+          <div class="mpd-h-end"><a class="mpd-link" href="/routes">All routes<?= v2_ic('arrow-right') ?></a></div>
         </div>
         <?php $routeCards = $mapPage['routeCards']; require __DIR__ . '/route-cards.php'; ?>
       </div>
@@ -174,12 +174,12 @@ include __DIR__ . '/header.php';
       <?php if ($mpPicks): ?>
       <div class="mpd-block">
         <div class="mpd-h">
-          <h3><?= v2_e($mapPage['picksHeading'] ?? 'Locuri de deschis pe hartă') ?></h3>
+          <h3><?= v2_e($mapPage['picksHeading'] ?? 'Places worth opening') ?></h3>
           <div class="mpd-h-end">
-            <a class="mpd-link" href="/atractii">Vezi lista completă<?= v2_ic('arrow-right') ?></a>
+            <a class="mpd-link" href="<?= v2_e($mapPage['listHref'] ?? '/attractions') ?>">See the full list<?= v2_ic('arrow-right') ?></a>
             <span class="mpd-arrows" data-mpr-arrows hidden>
-              <button type="button" class="mpd-arrow" data-mpr-prev aria-label="Derulează înapoi"><?= v2_ic('arrow-left') ?></button>
-              <button type="button" class="mpd-arrow" data-mpr-next aria-label="Derulează înainte"><?= v2_ic('arrow-right') ?></button>
+              <button type="button" class="mpd-arrow" data-mpr-prev aria-label="Scroll back"><?= v2_ic('arrow-left') ?></button>
+              <button type="button" class="mpd-arrow" data-mpr-next aria-label="Scroll forward"><?= v2_ic('arrow-right') ?></button>
             </span>
           </div>
         </div>
@@ -187,7 +187,7 @@ include __DIR__ . '/header.php';
           <?php $mpTypeSlug = []; foreach ($mpSummary['types'] ?? [] as $mt) { $mpTypeSlug[(string) ($mt[1] ?? '')] = (string) ($mt[0] ?? ''); } ?>
           <?php foreach ($mpPicks as [$pSlug, $pName, $pType, $pEmoji, $pCity, $pCitySlug, $pImg]): ?>
           <li>
-            <a class="mp-pick" href="/atractie/<?= v2_e($pSlug) ?>">
+            <a class="mp-pick" href="/attraction/<?= v2_e($pSlug) ?>">
               <span class="mp-pick-media">
                 <?php if ($pImg): ?><img src="<?= v2_e(v2_thumb($pImg, 320, 240)) ?>" alt="" width="320" height="240" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($pName) ?><?php endif; ?>
                 <?php if ($pType): ?><span class="mp-pick-tag"><span aria-hidden="true"><?= am_product_icon_svg(am_place_icon($mpTypeSlug[(string) $pType] ?? null), 'ic-em') ?></span><?= v2_e($pType) ?></span><?php endif; ?>
@@ -203,8 +203,8 @@ include __DIR__ . '/header.php';
       <?php if (!empty($mapPage['ideasCta'])): ?>
       <div class="mpd-cta">
         <div class="mpd-cta-t">
-          <b><?= v2_e($mapPage['ideasCtaTitle'] ?? 'Sau fă-ți unul al tău') ?></b>
-          <span><?= v2_e($mapPage['ideasCtaLead'] ?? 'Spui de unde pleci, câte zile ai și ce te interesează. Îți facem programul pe zile, cu distanțele pe șosea și cu orele de plecare.') ?></span>
+          <b><?= v2_e($mapPage['ideasCtaTitle'] ?? 'Or plan your own trip') ?></b>
+          <span><?= v2_e($mapPage['ideasCtaLead'] ?? 'Tell us where you start, how many days you have and what you like. You get a day-by-day plan with the distances between stops.') ?></span>
         </div>
         <a class="btn btn-light" href="<?= v2_e($mapPage['ideasCta'][1]) ?>"><?= v2_e($mapPage['ideasCta'][0]) ?><?= v2_ic('arrow-right') ?></a>
       </div>
@@ -218,7 +218,7 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="mp-text-h">
     <div class="wrap mp-text">
       <div class="mp-prose">
-        <h2 id="mp-text-h" class="sr">Despre harta atracțiilor</h2>
+        <h2 id="mp-text-h" class="sr">About the attractions map</h2>
         <?= implode("\n", $mapPage['prose'] ?? []) ?>
       </div>
       <?php if ($mpFaq): ?>

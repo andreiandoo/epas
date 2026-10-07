@@ -204,3 +204,6 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
 .th-credit{margin:8px 2px 0;font-size:.75rem;line-height:1.4;color:var(--on-deep-muted)}
 .th-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .th-credit a:hover{color:#F7F7F5}
+
+.tabout-credit{margin-top:14px;font-size:.8125rem;color:var(--muted)}
+.tabout-credit a{color:inherit}

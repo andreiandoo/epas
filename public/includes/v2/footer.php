@@ -130,7 +130,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         <a class="ftr-mark ftr-anpc" href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="EU online dispute resolution" width="250" height="62" loading="lazy" decoding="async"></a>
       </div>
     </div>
-    <p class="vf-credits">Photographs from Wikimedia Commons under CC BY-SA, CC BY, CC0 or public-domain terms, by Myrabella, Andrei Stroe, Pudelek, Diego Delso, bdmundo.com, yeowatzup and DimiTalen.</p>
+    <p class="vf-credits">City and attraction photographs come from Wikimedia Commons; the author and the licence of each one are on its page. Place data: GeoNames, Wikidata and Natural Earth. Flags: flag-icons.</p>
   </div>
 </footer>
 

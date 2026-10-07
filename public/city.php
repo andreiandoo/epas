@@ -458,6 +458,9 @@ include __DIR__ . '/includes/v2/header.php';
           <?php else: ?>
           <?= v2_fallback($cityName) ?>
           <?php endif; ?>
+          <?php if ($coverResolved !== '' && is_array($cityData['image_credit'] ?? null)): require_once __DIR__ . '/includes/v2/places.php'; ?>
+          <p class="ch-credit"><?= v2_photo_credit($cityData['image_credit']) ?></p>
+          <?php endif; ?>
           <?php if ($gallery): ?>
           <button class="ch-gal" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb">
             <span class="ch-thumbs" aria-hidden="true"><?php foreach (array_slice($gallery, 0, 3) as $g): ?><img src="<?= v2_e($g['src']) ?>" alt="" loading="lazy" decoding="async"><?php endforeach; ?></span>
@@ -610,7 +613,7 @@ include __DIR__ . '/includes/v2/header.php';
         </h3>
         <p>Venues and operators in <?= v2_e($cityName) ?> are being added. Until then, the attractions map and the routes show what there is to see.</p>
         <div class="cl-empty-cta">
-          <a class="btn btn-light" href="/map">Open the map</a>
+          <a class="btn btn-light" href="/map?city=<?= v2_e($slug) ?>">Open the map</a>
           <?php if ($activeChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>#things-to-do">Clear the filters</a><?php endif; ?>
         </div>
         <svg class="cl-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
