@@ -1035,3 +1035,5 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 .ptrip-go{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:.875rem;font-weight:700;color:var(--action)}
 .ptrip-go .ic{width:16px;height:16px;transition:transform var(--dur-micro) var(--ease-out)}
 .ptrip a:hover .ptrip-go .ic{transform:translateX(3px)}
+.ptrip-sec .sec-head{margin-bottom:var(--space-4)}
+.ptrip-intro{margin:0 0 var(--space-5);max-width:62ch;color:var(--muted)}

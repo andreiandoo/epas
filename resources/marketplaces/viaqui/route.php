@@ -11,6 +11,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/product-icons.php';
 require_once __DIR__ . '/includes/v2/places.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 $rtAll = v2_routes();
 $slug = preg_match('/^[a-z][a-z0-9-]{1,80}$/', (string) ($_GET['slug'] ?? '')) ? (string) $_GET['slug'] : '';
@@ -43,8 +44,19 @@ $others = array_column(array_slice($others, 0, 3), 1);
 $rtRegions = $route['regions'] ?? [];
 $rtWhere = 'in ' . implode(' and ', $rtCountryNames) . (count($rtRegions) > 1 ? ', across ' . v2_num(count($rtRegions), 'region', 'regions') : (count($rtRegions) === 1 ? ', in ' . $rtRegions[0] : ''));
 
+// What a driver needs before setting off: a car where the route starts (the first stop's city when a partner has a
+// page for it, otherwise the country), an airport transfer there and mobile data for the maps. No luggage storage:
+// the bags travel in the boot.
+$rtStart = $stops[0] ?? null;
+$rtTrip = array_values(array_filter(
+    v2_trip_links((string) ($rtStart[3] ?? ''), (string) ($rtCodes[0] ?? ''), (string) ($rtStart[2] ?? ''), (string) ($rtCountryNames[0] ?? '')),
+    fn ($l) => $l['kind'] !== 'luggage'
+));
+usort($rtTrip, fn ($a, $b) => ($b['kind'] === 'car') <=> ($a['kind'] === 'car'));   // the car first, the rest in their order
+
 $routePage = [
     'slug' => $slug,
+    'trip' => $rtTrip,
     'title' => $route['title'],
     'lead' => $route['lead'],
     'emoji' => $route['icon'],
