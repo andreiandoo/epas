@@ -58,7 +58,7 @@ foreach ($summary['cities'] ?? [] as [$ctSlug, $ctName, , , $ctCount]) {
 $explorer = [[
     'id' => 'types', 'icon' => 'squares-four', 'kind' => 'type',
     'label' => 'Types of places', 'sub' => v2_num(count($exTypeRows), 'type', 'types'), 'unit' => 'places',
-    'note' => 'Choose as many types as you like. With none chosen, the map shows them all.',
+    'note' => 'Choose as many types as you like; with none chosen, the map shows them all.',
     'presets' => true, 'rows' => $exTypeRows,
 ]];
 if ($mpCountry) {
@@ -82,7 +82,7 @@ if ($mpCountry) {
     $explorer[] = [
         'id' => 'countries', 'icon' => 'globe-simple', 'kind' => 'go', 'flags' => true,
         'label' => 'Countries', 'sub' => v2_num(count($exCountryRows), 'country', 'countries'),
-        'note' => 'Each country has its own map, with every attraction we list there.',
+        'note' => 'Pick a country and see everything worth the trip there, on one map.',
         'search' => 'Search a country', 'rows' => $exCountryRows,
     ];
 }

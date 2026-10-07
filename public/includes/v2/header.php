@@ -57,7 +57,7 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
 <header class="hdr<?= $v2Overlay ? '' : ' is-solid' ?>" id="hdr">
   <div class="hdr-in">
     <a class="brand" href="/" aria-label="Viaqui, home">
-      <span class="w" aria-hidden="true">VIAQUI</span>
+      <?= v2_brand_mark() ?>
     </a>
     <nav class="mnav" aria-label="Main">
       <button class="mnav-btn" type="button" data-mega="explore" aria-expanded="false" aria-controls="mega-explore">Explore<?= v2_ic('caret-down') ?></button>

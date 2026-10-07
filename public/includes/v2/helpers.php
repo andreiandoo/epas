@@ -292,9 +292,21 @@ function v2_fallback(string $seed, ?int $position = null): string
     return '<span class="fb" aria-hidden="true"><svg viewBox="' . $vb . '" style="aspect-ratio:' . $ar . '"><use href="#drum-g"/></svg></span>';
 }
 
+/** The wordmark itself: the drawn logo (includes/v2/brand.svg, traced from the design board) in the colour of the text
+ *  around it; the plain word when the file is missing. */
+function v2_brand_mark(): string
+{
+    static $mark = null;
+    if ($mark === null) {
+        $file = __DIR__ . '/brand.svg';
+        $mark = is_file($file) ? trim((string) file_get_contents($file)) : '<span class="w" aria-hidden="true">VIAQUI</span>';
+    }
+    return $mark;
+}
+
 function v2_brand(string $cls = 'brand'): string
 {
-    return '<span class="' . $cls . '" role="img" aria-label="Viaqui"><span class="w" aria-hidden="true">VIAQUI</span></span>';
+    return '<span class="' . $cls . '" role="img" aria-label="Viaqui">' . v2_brand_mark() . '</span>';
 }
 
 /** Shape of an activity from /activities, as the cards need it. */

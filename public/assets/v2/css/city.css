@@ -317,7 +317,7 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
 .ch-credit a{color:inherit}
 
 /* The newsletter band of a city page: the footer's own top block, moved into the page and written for the city */
-.cnl{margin-top:clamp(48px,7vw,104px);padding-block:clamp(48px,6vw,88px) clamp(40px,5vw,64px);border-radius:36px 36px 0 0;background:var(--deep);color:var(--on-deep)}
+.cnl{position:relative;z-index:1;margin-top:-36px;padding-block:clamp(48px,6vw,88px) clamp(40px,5vw,64px);border-radius:36px 36px 0 0;background:var(--deep);color:var(--on-deep)}
 .cnl .vf-say{justify-content:center}
 .cnl a{color:inherit}
 .cnl .cnl-form{grid-template-columns:minmax(0,1fr)}
