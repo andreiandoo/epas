@@ -175,4 +175,12 @@
       load();
     }
   }
+  /* The card rails (attractions, nearby cities): a mouse can press and drag them, as a finger does. */
+  if (window.EPHDrag) {
+    [].forEach.call(document.querySelectorAll('.rail, .ncities'), function (rail) {
+      window.EPHDrag(rail, { wheel: false });
+      // the browser's own drag of a link or a photo would take the gesture away
+      rail.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    });
+  }
 })();

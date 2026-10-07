@@ -3624,10 +3624,39 @@
     return p;
   }
 
+  /**
+   * /plan/{country}?list=1: the places kept with "Add to your trip" (assets/v2/js/trip-list.js) in this country, as a
+   * plan. They are put in an order that keeps the driving short (each stop followed by the nearest one left), spread
+   * over as many days as four stops a day ask for, and locked, so that regenerating fills the days around them.
+   */
+  function listPlan() {
+    var saved = [];
+    try { saved = JSON.parse(localStorage.getItem('vq_trip_list') || '[]'); } catch (e) {}
+    var ids = (Array.isArray(saved) ? saved : []).map(function (x) { return x && x.s; })
+      .filter(function (id) { return id && bySlug[id] !== undefined; });
+    if (!ids.length) return null;
+    var pts = ids.map(function (id) { var e = entry(id); return { id: id, lat: e.lat, lng: e.lng, city: e.city || e.name }; });
+    var ordered = orderDay(pts);
+    var p = blankPlan();
+    p.name = 'My saved places' + (CFG.countryName ? ' in ' + CFG.countryName : '');
+    p.days = Math.max(1, Math.min(7, Math.ceil(ordered.length / 4)));
+    var first = ordered[0], last = ordered[ordered.length - 1], sLat = 0, sLng = 0;
+    ordered.forEach(function (o) { sLat += o.lat; sLng += o.lng; });
+    p.origin = { kind: 'point', key: '', label: first.city, lat: first.lat, lng: first.lng };
+    p.back = { kind: 'point', key: '', label: last.city, lat: last.lat, lng: last.lng };
+    p.where = { kind: 'city', key: '', label: p.name, lat: +(sLat / ordered.length).toFixed(5), lng: +(sLng / ordered.length).toFixed(5) };
+    p.stops = [];
+    for (var d = 0; d < p.days; d++) {
+      p.stops.push(ordered.slice(Math.round(d * ordered.length / p.days), Math.round((d + 1) * ordered.length / p.days)).map(function (o) { return o.id; }));
+    }
+    ordered.forEach(function (o) { p.locked[o.id] = 1; });
+    return p;
+  }
+
   loadData().then(function () {
     ALL_PLACES = places();
     var query = new URLSearchParams(location.search);
-    var fromRoad = roadPlan(query.get('road') || '') || routePlan(query.get('route') || '');
+    var fromRoad = roadPlan(query.get('road') || '') || routePlan(query.get('route') || '') || (query.get('list') ? listPlan() : null);
     if (fromRoad) {
       plan = fromRoad;
       fillParty();

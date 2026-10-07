@@ -651,3 +651,24 @@ body.pl-dragging .pl-stop-card{cursor:grabbing}
 .plc .ic{grid-column:3;grid-row:1 / span 2;width:18px;height:18px;color:var(--green)}
 .plb-hero h1 .v-flag{width:.9em;height:.68em;margin-right:.3em;vertical-align:baseline}
 .plb-hero .pl-lead a{color:inherit;font-weight:600;white-space:nowrap}
+
+/* Viaqui: the trip list on /plan and the line that offers it on /plan/{country} */
+.tl-empty{max-width:68ch;margin:0;padding:18px 20px;border:1px dashed var(--line);border-radius:var(--r-m);color:var(--muted)}
+.tl-group + .tl-group{margin-top:28px}
+.tl-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.tl-head h3{margin:0;font-size:1.125rem}
+.tl-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.tl-item{position:relative;display:flex;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+.tl-link{display:flex;flex:1;min-width:0;align-items:center;gap:12px;padding:8px 40px 8px 8px;color:var(--ink);text-decoration:none}
+.tl-media{flex:none;width:56px;height:56px;border-radius:10px;overflow:hidden;background:var(--tint-green)}
+.tl-media img{width:100%;height:100%;object-fit:cover;display:block}
+.tl-text{display:grid;min-width:0}
+.tl-text b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.tl-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8125rem;color:var(--muted)}
+.tl-x{position:absolute;right:6px;top:50%;width:30px;height:30px;margin-top:-15px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.25rem;line-height:1;cursor:pointer}
+.tl-x:hover{background:var(--tint-green);color:var(--ink)}
+.pl-saved-line{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 0 16px;padding:12px 16px;border-radius:var(--r-m);background:var(--surface);box-shadow:0 10px 30px rgba(15,77,58,.12);color:var(--ink)}
+.pl-saved-line[hidden]{display:none}
+.pl-saved-line .ic{width:20px;height:20px;color:var(--green)}
+.pl-saved-line span{flex:1 1 14rem}
+.pl-saved-line > a:last-child{font-weight:600;color:var(--green)}

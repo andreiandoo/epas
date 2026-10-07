@@ -180,7 +180,7 @@ $renderAttractionRow = function (array $p, int $i) {
 };
 
 $v2Styles = ['attraction.css'];
-$v2Scripts = ['attraction.js'];
+$v2Scripts = ['attraction.js', 'trip-list.js'];
 $v2HeaderOverlay = true;
 $v2HeadExtra = $lightbox ? '<link rel="preload" as="image" href="' . v2_e($lightbox[0]) . '" fetchpriority="high">' : '';
 $v2ClientData = ['gallery' => array_map(fn ($src) => ['src' => $src, 'alt' => $atName], $lightbox)];
@@ -231,7 +231,15 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if ($mapsUrl): ?>
             <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Maps</a>
           <?php endif; ?>
+          <?php
+          // "Add to your trip": kept in the browser (assets/v2/js/trip-list.js) and shown on /plan, where the planner of the
+          // country turns the saved places into days. The photo is passed as the bare Commons file name when it is one.
+          $atTripImg = preg_match('#Special:FilePath/([^?]+)#', (string) $atCover, $atTripM) ? rawurldecode($atTripM[1]) : (string) $atCover;
+          $atTrip = ['s' => (string) $slug, 'n' => (string) $atName, 'c' => $atCountrySlug, 'cn' => $atCountryName, 'city' => (string) $atCityName, 't' => (string) $atType, 'img' => $atTripImg];
+          ?>
+          <button class="btn btn-outline-light th-trip" type="button" data-trip-add data-trip="<?= v2_e(json_encode($atTrip, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>" aria-pressed="false"><?= v2_ic('heart') ?><span data-trip-label>Add to your trip</span></button>
         </div>
+        <p class="th-tripnote" data-trip-note hidden><a href="/plan#your-trip-list">See your trip list</a></p>
       </div>
 
       <div class="th-media">

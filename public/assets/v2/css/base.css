@@ -969,3 +969,15 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
   .vf-nl-form{grid-template-columns:1fr}
   .vf-sky{height:96px}
 }
+
+/* The page scrollbar takes no room and stays out of sight: a thin thumb is drawn over the content while the page
+   scrolls and fades away after (assets/v2/js/base.js). Only where there is a mouse; a touch screen already does this. */
+@media (hover:hover) and (pointer:fine){
+  html.has-vsb{scrollbar-width:none}
+  html.has-vsb::-webkit-scrollbar,html.has-vsb body::-webkit-scrollbar{width:0;height:0}
+  .vsb{position:fixed;top:0;right:0;bottom:0;z-index:2147483000;width:12px;opacity:0;pointer-events:none;transition:opacity .3s}
+  .vsb.is-on{opacity:1;pointer-events:auto}
+  .vsb i{position:absolute;right:3px;width:6px;min-height:36px;border-radius:6px;background:rgba(31,41,55,.5);box-shadow:0 0 0 1px rgba(255,255,255,.4);cursor:grab;transition:width .15s,background-color .15s}
+  .vsb:hover i,.vsb.is-drag i{width:8px;background:rgba(31,41,55,.72)}
+  .vsb.is-drag i{cursor:grabbing}
+}

@@ -632,3 +632,57 @@
     .catch(function () {})
     .then(clean);
 })();
+
+/* The page scrollbar: hidden, takes no room, and a thin thumb shows over the content only while the page scrolls
+   (styles at the end of base.css). The thumb can be dragged. Keyboard, wheel and touch scrolling are untouched. */
+(function () {
+  'use strict';
+  if (!window.matchMedia || !window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  var root = document.documentElement;
+  var bar = document.createElement('div'), thumb = document.createElement('i');
+  bar.className = 'vsb';
+  bar.setAttribute('aria-hidden', 'true');
+  bar.appendChild(thumb);
+  function mount() { if (!bar.parentNode && document.body) { document.body.appendChild(bar); root.classList.add('has-vsb'); } }
+  if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+
+  var timer = 0, drag = null, over = false;
+  function layout() {
+    var view = window.innerHeight, total = root.scrollHeight;
+    if (total <= view + 2) { bar.classList.remove('is-on'); return false; }
+    var h = Math.max(36, view * view / total);
+    thumb.style.height = h + 'px';
+    thumb.style.top = (window.scrollY / (total - view)) * (view - h) + 'px';
+    return true;
+  }
+  function hideSoon() {
+    clearTimeout(timer);
+    timer = setTimeout(function () { if (!drag && !over) bar.classList.remove('is-on'); }, 900);
+  }
+  function show() {
+    mount();
+    if (!layout()) return;
+    bar.classList.add('is-on');
+    hideSoon();
+  }
+  window.addEventListener('scroll', show, { passive: true });
+  window.addEventListener('resize', function () { if (bar.classList.contains('is-on')) layout(); });
+  bar.addEventListener('pointerenter', function () { over = true; });
+  bar.addEventListener('pointerleave', function () { over = false; hideSoon(); });
+
+  thumb.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    drag = { y: e.clientY, top: window.scrollY, id: e.pointerId };
+    bar.classList.add('is-drag');
+    try { thumb.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  thumb.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var view = window.innerHeight, total = root.scrollHeight, h = thumb.offsetHeight;
+    window.scrollTo(0, drag.top + (e.clientY - drag.y) * (total - view) / Math.max(1, view - h));
+  });
+  ['pointerup', 'pointercancel'].forEach(function (t) {
+    thumb.addEventListener(t, function () { drag = null; bar.classList.remove('is-drag'); hideSoon(); });
+  });
+})();

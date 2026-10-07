@@ -134,6 +134,13 @@ include __DIR__ . '/includes/v2/header.php';
     $cnMapFile = __DIR__ . '/includes/v2/regions/' . strtolower($cnCode) . '.json';
     $cnMap = is_file($cnMapFile) ? json_decode((string) file_get_contents($cnMapFile), true) : null;
     $cnRegionBySlug = array_column($cnRegions, null, 'slug');
+    // How many attractions each region holds: counted by the map's dataset (assets/v2/data/map/<cc>.summary.json).
+    $cnRegionAttr = array_column(v2_map_file(strtolower($cnCode) . '.summary')['regions'] ?? [], 2, 1);
+    // "1,512 attractions · 85 cities": what the list and the bubble on the map say about a region
+    $cnRegionSays = function (array $r) use ($cnRegionAttr): string {
+        $n = (int) ($cnRegionAttr[$r['slug']] ?? 0);
+        return implode(' · ', array_filter([$n > 0 ? v2_num($n, 'attraction', 'attractions') : '', v2_num((int) $r['cities_count'], 'city', 'cities')]));
+    };
 ?>
 <section class="v-psec v-psec-tint" id="regions" aria-labelledby="cn-reg-h">
   <div class="wrap">
@@ -141,7 +148,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="v-rmap<?= $cnMap ? '' : ' is-nomap' ?>" data-vrmap>
       <ul class="v-rlist">
         <?php foreach ($cnRegions as $r): ?>
-        <li><a href="<?= v2_e($cnUrl(['region' => $r['slug'], 'page' => '', 'sort' => ''])) ?>#all" data-r="<?= v2_e($r['slug']) ?>"<?= $cnRegion && $cnRegion['slug'] === $r['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($r['name']) ?><span><?= (int) $r['cities_count'] ?></span></a></li>
+        <li><a href="<?= v2_e($cnUrl(['region' => $r['slug'], 'page' => '', 'sort' => ''])) ?>#all" data-r="<?= v2_e($r['slug']) ?>"<?= $cnRegion && $cnRegion['slug'] === $r['slug'] ? ' aria-current="true"' : '' ?> data-says="<?= v2_e($cnRegionSays($r)) ?>"><?= v2_e($r['name']) ?><span><?php $cnN = (int) ($cnRegionAttr[$r['slug']] ?? 0); ?><?= $cnN > 0 ? v2_e(v2_num($cnN, 'attraction', 'attractions')) : v2_e(v2_num((int) $r['cities_count'], 'city', 'cities')) ?></span></a></li>
         <?php endforeach; ?>
       </ul>
       <?php if ($cnMap): ?>
@@ -149,13 +156,14 @@ include __DIR__ . '/includes/v2/header.php';
         <svg viewBox="-6 -6 <?= (float) $cnMap['w'] + 12 ?> <?= (float) $cnMap['h'] + 12 ?>" role="img" aria-label="Map of the regions of <?= v2_e($cnName) ?>">
           <?php foreach ($cnMap['regions'] as $mapSlug => $mapPaths): $mapRegion = $cnRegionBySlug[$mapSlug] ?? null; ?>
           <?php if ($mapRegion): ?>
-          <a href="<?= v2_e($cnUrl(['region' => $mapSlug, 'page' => '', 'sort' => ''])) ?>#all" data-r="<?= v2_e($mapSlug) ?>" data-name="<?= v2_e($mapRegion['name']) ?>"<?= $cnRegion && $cnRegion['slug'] === $mapSlug ? ' aria-current="true"' : '' ?>><title><?= v2_e($mapRegion['name']) ?></title><?php foreach ($mapPaths as $d): ?><path d="<?= v2_e($d) ?>"/><?php endforeach; ?></a>
+          <a href="<?= v2_e($cnUrl(['region' => $mapSlug, 'page' => '', 'sort' => ''])) ?>#all" data-r="<?= v2_e($mapSlug) ?>" data-name="<?= v2_e($mapRegion['name']) ?>" data-says="<?= v2_e($cnRegionSays($mapRegion)) ?>"<?= $cnRegion && $cnRegion['slug'] === $mapSlug ? ' aria-current="true"' : '' ?> aria-label="<?= v2_e($mapRegion['name'] . ': ' . $cnRegionSays($mapRegion)) ?>"><?php foreach ($mapPaths as $d): ?><path d="<?= v2_e($d) ?>"/><?php endforeach; ?></a>
           <?php else: ?>
           <g class="is-off"><?php foreach ($mapPaths as $d): ?><path d="<?= v2_e($d) ?>"/><?php endforeach; ?></g>
           <?php endif; ?>
           <?php endforeach; ?>
         </svg>
-        <figcaption class="v-rtip" data-vrtip aria-hidden="true"><?= $cnRegion ? v2_e($cnRegion['name']) : 'Point at a region' ?></figcaption>
+        <div class="v-rbub" data-vrbub hidden aria-hidden="true"><b></b><span></span></div>
+        <figcaption class="v-rtip" data-vrtip aria-hidden="true"><?= $cnRegion ? v2_e($cnRegion['name']) : 'Point at a region to see what it holds' ?></figcaption>
       </figure>
       <?php endif; ?>
     </div>

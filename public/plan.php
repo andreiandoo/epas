@@ -60,6 +60,7 @@ if (!$plCountry) {
     $routeCards = array_slice($routeCards, 0, 6);
 
     $v2Styles = ['map-page.css', 'routes.css', 'plan.css', 'places.css'];
+    $v2Scripts = ['trip-list.js'];
     $pageTitle = 'Trip planner: a day-by-day itinerary with a map';
     $pageDescription = 'Choose a country, say where you go and for how many days, and the planner builds your itinerary from the '
         . v2_thousands((int) $plIndex['total']) . ' attractions on the map: stops day by day, a map that follows the list, times and navigation.';
@@ -99,6 +100,20 @@ if (!$plCountry) {
         <li><b><?= v2_e(v2_thousands((int) $plIndex['total'])) ?></b> attractions</li>
         <li><b><?= count($plRoutes) ?></b> ready-made routes</li>
       </ul>
+    </div>
+  </section>
+
+  <!-- The places kept with "Add to your trip" on attraction pages: drawn in the browser, where the list lives. -->
+  <section class="sec tl" id="your-trip-list" data-trip-list aria-labelledby="tl-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <h2 id="tl-h">Your trip list</h2>
+          <p class="sec-sub" data-trip-sum></p>
+        </div>
+      </div>
+      <p class="tl-empty" data-trip-empty>Nothing saved yet. Open an attraction and press <b>Add to your trip</b>: it shows up here, and the planner turns what you saved in a country into a plan, day by day. The list is kept in this browser, with no account needed.</p>
+      <div data-trip-groups></div>
     </div>
   </section>
 
@@ -180,7 +195,7 @@ $routeCards = array_slice($routeCards, 0, 3);
 
 $v2HeaderOverlay = true;   // the page opens on a dark band
 $v2Styles = ['map.css', 'map-page.css', 'routes.css', 'plan.css', 'places.css'];
-$v2Scripts = ['map.js', 'plan.js'];
+$v2Scripts = ['map.js', 'plan.js', 'trip-list.js'];
 $v2ClientData = [
     'plan' => [
         'dataUrl' => '/assets/v2/data/map/' . strtolower($plCode) . '.json?v=' . rawurlencode((string) $summary['v']),
@@ -250,6 +265,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div id="hdr-sentinel" aria-hidden="true"></div>
 
     <div class="wrap plb-wrap">
+      <p class="pl-saved-line" data-trip-country="<?= v2_e($plCountrySlug) ?>" hidden><?= v2_ic('heart') ?><span>You saved <b data-trip-count></b> in <?= v2_e($plName) ?>.</span><a class="btn btn-primary" href="<?= v2_e($plPath) ?>?list=1">Plan a trip with them</a><a href="/plan#your-trip-list">See the list</a></p>
       <form class="pl-form plb-card" id="pl-form" novalidate>
         <div class="plb-g">
           <span class="plb-l" id="pl-mode-l">How do you travel?</span>
