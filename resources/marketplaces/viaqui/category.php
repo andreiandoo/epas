@@ -50,8 +50,8 @@ $catDescription = navFlatName($category['description'] ?? '');
 $catImage = $category['image'] ?? null;
 $eventCount = (int) ($category['event_count'] ?? 0);
 
-$metaTitle = navFlatName($category['meta_title'] ?? '') ?: ($catName . ' — bilete & rezervări online | viaqui.com');
-$metaDescription = navFlatName($category['meta_description'] ?? '') ?: ($catDescription ?: ('Activități din categoria ' . $catName . ' pe viaqui.com. Rezervi online, intri cu QR.'));
+$metaTitle = navFlatName($category['meta_title'] ?? '') ?: ($catName . ': tickets and experiences | Viaqui');
+$metaDescription = navFlatName($category['meta_description'] ?? '') ?: ($catDescription ?: ($catName . ' on Viaqui: experiences across Europe. Book online and walk in with a QR ticket on your phone.'));
 
 $parent = $category['parent'] ?? null;
 $children = $category['children'] ?? [];
@@ -73,16 +73,16 @@ $cityFilter = isset($_GET['city']) && is_string($_GET['city']) && preg_match('/^
 $searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
 
 // Price filter — single max_price value (whitelisted to keep cache key small + DOS-safe)
-$priceMaxAllowed = [50, 100, 200, 500];
+$priceMaxAllowed = [10, 25, 50, 100];   // euro, the same steps as the city page
 $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $priceMaxAllowed, true))
     ? (int) $_GET['max_price']
     : null;
 
 // Sort — whitelisted server-side values matching what MarketplaceEventsController supports
-$sortLabels = ['price_asc' => 'Preț crescător', 'price_desc' => 'Preț descrescător', 'name_asc' => 'Alfabetic', 'date_asc' => 'Data evenimentului'];
+$sortLabels = ['price_asc' => 'Price: low to high', 'price_desc' => 'Price: high to low', 'name_asc' => 'A to Z', 'date_asc' => 'Event date'];
 $sort = (isset($_GET['sort']) && is_string($_GET['sort']) && isset($sortLabels[$_GET['sort']])) ? $_GET['sort'] : 'recommended';
 
-// viaqui.com has no events: the page lists the activities of the category, plus the paid "Promovate în …"
+// viaqui.com has no events: the page lists the activities of the category, plus the paid "Promoted in …"
 // block (fetched concurrently, curl_multi). /activities filters by the exact category slug (parent OR subcategory),
 // so pass the resolved category's real slug so subcategory pages match too.
 $activityCatSlug = $category['slug'] ?? $slug;
@@ -111,7 +111,7 @@ $pagination = [
 
 // Featured cities: hero stat, city links, city filter label.
 $featuredCities = array_slice($V2NAV['citiesList'], 0, 30);
-$heroLocation = 'România';
+$heroLocation = 'Europe';
 if ($cityFilter) {
     $heroLocation = $V2NAV['cities'][$cityFilter]['name'] ?? ucwords(str_replace('-', ' ', $cityFilter));
 }
@@ -123,8 +123,8 @@ if ($cityFilter) {
 // landing rather than indexing thin variants.
 // ============================================================
 if ($cityFilter) {
-    $pageTitleRaw = $catName . ' în ' . $heroLocation . ' — bilete & rezervări online | viaqui.com';
-    $pageDescription = 'Activități ' . mb_strtolower($catName) . ' în ' . $heroLocation . '. Rezervi online cu QR, intri rapid.';
+    $pageTitleRaw = $catName . ' in ' . $heroLocation . ': tickets and experiences | Viaqui';
+    $pageDescription = $catName . ' in ' . $heroLocation . '. Book online and walk in with a QR ticket on your phone.';
 } else {
     $pageTitleRaw = $metaTitle;
     $pageDescription = $metaDescription;
@@ -135,8 +135,8 @@ $canonicalUrl = SITE_URL . '/' . ($shortSlug ?: $slug);
 $ogImage = $catImage ? (str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/')) : (SITE_URL . '/assets/images/og-default.jpg');
 
 $breadcrumbs = [
-    ['name' => 'Acasă', 'url' => SITE_URL . '/'],
-    ['name' => 'Categorii', 'url' => SITE_URL . '/categorii'],
+    ['name' => 'Home', 'url' => SITE_URL . '/'],
+    ['name' => 'Categories', 'url' => SITE_URL . '/categories'],
 ];
 if ($parent && !empty($parent['slug'])) {
     $breadcrumbs[] = [
@@ -155,7 +155,7 @@ foreach (array_slice($activities, 0, 10) as $a) {
         '@type' => 'ListItem',
         'position' => count($itemListElements) + 1,
         'name' => $aTitle,
-        'url' => SITE_URL . '/experienta/' . $a['slug'],
+        'url' => SITE_URL . '/experience/' . $a['slug'],
     ];
 }
 $structuredData = [];
@@ -165,7 +165,7 @@ if (!empty($itemListElements)) {
         '@type' => 'CollectionPage',
         'name' => $metaTitle,
         'url' => $canonicalUrl,
-        'inLanguage' => 'ro-RO',
+        'inLanguage' => 'en',
         'about' => $metaDescription,
         'mainEntity' => [
             '@type' => 'ItemList',
@@ -180,24 +180,24 @@ $faqItems = array_values(array_filter($adminFaqs, fn ($f) => !empty($f['q']) && 
 if (empty($faqItems)) {
     $faqItems = [
         [
-            'q' => 'Cât costă bilete pentru ' . mb_strtolower($catName) . '?',
-            'a' => 'Prețurile încep de la valoarea afișată pe fiecare card și diferă în funcție de operator, dificultate sau durată. Vezi prețul exact pe pagina activității înainte de rezervare.',
+            'q' => 'How much do tickets for ' . mb_strtolower($catName) . ' cost?',
+            'a' => 'Prices start from the amount shown on each card and vary with the operator, the difficulty and the duration. You see the exact price on the experience page before you book.',
         ],
         [
-            'q' => 'Cum primesc biletul după rezervare?',
-            'a' => 'Imediat după plată primești biletul cu cod QR pe email și în contul tău viaqui.com. La intrare prezinți codul QR de pe telefon — fără tipărire obligatorie.',
+            'q' => 'How do I get my ticket after booking?',
+            'a' => 'As soon as you pay, your ticket with a QR code arrives by email and appears in your Viaqui account. Show the QR code on your phone at the entrance; you do not need to print it.',
         ],
         [
-            'q' => 'Pot anula sau reprograma rezervarea?',
-            'a' => 'Politica de anulare e stabilită de fiecare operator și e afișată clar pe pagina activității, înainte de plată. Verifică condițiile concrete pe locul unde rezervi.',
+            'q' => 'Can I cancel or change my booking?',
+            'a' => 'Each operator sets its own cancellation policy, and it is shown on the experience page before you pay. Check the terms of the experience you are booking.',
         ],
         [
-            'q' => navMbUcfirst($catName) . ' sunt disponibile tot anul?',
-            'a' => 'Majoritatea activităților funcționează pe tot parcursul anului, cu intervale orare zilnice. Programul exact apare pe pagina fiecărei locații înainte să selectezi data.',
+            'q' => 'Are ' . mb_strtolower($catName) . ' available all year?',
+            'a' => 'Most experiences run all year, with time slots every day. The exact opening times are on each venue page, before you choose a date.',
         ],
         [
-            'q' => 'Pot plăti cu un card cadou viaqui.com?',
-            'a' => 'Da. Cardurile cadou viaqui.com se pot folosi la orice activitate de pe platformă, inclusiv cele din categoria ' . mb_strtolower($catName) . '.',
+            'q' => 'Can I pay with a Viaqui gift card?',
+            'a' => 'Yes. Viaqui gift cards can be used for any experience on the platform, including those in ' . mb_strtolower($catName) . '.',
         ],
     ];
 }
@@ -247,14 +247,14 @@ foreach ($activities as $ix => $a) {
     $rev = is_array($a['reviews'] ?? null) ? $a['reviews'] : null;
     // Paid promotion first (always labelled), then the editorial pick.
     $promotedA = !empty($flags['is_promoted']);
-    $badges = array_values(array_filter([$promotedA ? 'Promovat' : null, !empty($flags['is_featured']) ? 'Recomandat' : null]));
+    $badges = array_values(array_filter([$promotedA ? 'Promoted' : null, !empty($flags['is_featured']) ? 'Recommended' : null]));
     $catLabel = navFlatName($a['category']['name'] ?? '') ?: $catName;
     $place = navFlatName($a['city']['name'] ?? '') ?: $heroLocation;
     $description = mb_substr(trim(strip_tags((string) navFlatName($a['short_description'] ?? ''))), 0, 160);
     $acts[] = [
         'id'            => (int) ($a['id'] ?? 0) ?: 100000 + $ix,
         'title'         => $title,
-        'href'          => '/experienta/' . $aslug,
+        'href'          => '/experience/' . $aslug,
         'category'      => $catLabel,
         'categorySlug'  => (string) ($a['category']['slug'] ?? ''),
         'image'         => v2_media_url($a['cover_image_url'] ?? null),
@@ -276,7 +276,7 @@ foreach ($activities as $ix => $a) {
         '_lng'          => isset($a['venue']['lng']) ? (float) $a['venue']['lng'] : (isset($a['longitude']) ? (float) $a['longitude'] : null),
     ];
 }
-// Same order the browser applies for "Recomandate", so nothing moves when category.js starts.
+// Same order the browser applies for "Recommended", so nothing moves when category.js starts.
 usort($acts, fn ($x, $y) => [(int) $y['promoted'], $y['rating'], $y['reviews']] <=> [(int) $x['promoted'], $x['rating'], $x['reviews']]);
 
 // Map pins: normalize real lat/lng into x/y% (bbox); golden-angle scatter when
@@ -352,13 +352,13 @@ if (empty($catOptions)) {
     }
 }
 
-$langLabels = ['ro' => 'Română', 'en' => 'Engleză', 'de' => 'Germană', 'fr' => 'Franceză', 'es' => 'Spaniolă', 'it' => 'Italiană', 'hu' => 'Maghiară'];
+$langLabels = ['ro' => 'Romanian', 'en' => 'English', 'de' => 'German', 'fr' => 'French', 'es' => 'Spanish', 'it' => 'Italian', 'hu' => 'Hungarian'];
 $langPresent = [];
 foreach ($acts as $a) foreach ($a['languages'] as $l) $langPresent[$l] = true;
 $langOptions = [];
 foreach (array_keys($langPresent) as $l) $langOptions[] = ['value' => $l, 'label' => $langLabels[$l] ?? mb_strtoupper($l)];
 
-$featLabels = ['family' => 'Potrivit pentru familie', 'wheelchair' => 'Accesibil', 'indoor' => 'Indoor', 'outdoor' => 'Outdoor'];
+$featLabels = ['family' => 'Good for families', 'wheelchair' => 'Wheelchair accessible', 'indoor' => 'Indoors', 'outdoor' => 'Outdoors'];
 $featPresent = [];
 foreach ($acts as $a) foreach ($a['features'] as $f) $featPresent[$f] = true;
 $featOptions = [];
@@ -380,8 +380,8 @@ foreach ($interestNames as $slugK => $nameK) $interestOptions[] = ['value' => $s
 $travelerOptions = [];
 foreach ($travelerNames as $slugK => $nameK) $travelerOptions[] = ['value' => $slugK, 'label' => $nameK];
 
-$durationOptions = [['value' => 'short', 'label' => 'Sub 60 min'], ['value' => 'medium', 'label' => '60–90 min'], ['value' => 'long', 'label' => '90+ min']];
-$ratingOptions = [['value' => 0, 'label' => 'Orice rating'], ['value' => 4, 'label' => '4.0+'], ['value' => 4.5, 'label' => '4.5+'], ['value' => 4.8, 'label' => '4.8+']];
+$durationOptions = [['value' => 'short', 'label' => 'Under 60 min'], ['value' => 'medium', 'label' => '60–90 min'], ['value' => 'long', 'label' => '90+ min']];
+$ratingOptions = [['value' => 0, 'label' => 'Any rating'], ['value' => 4, 'label' => '4.0+'], ['value' => 4.5, 'label' => '4.5+'], ['value' => 4.8, 'label' => '4.8+']];
 
 $priceVals = array_filter(array_map(fn ($a) => $a['price'], $acts));
 $priceCap = $priceVals ? (int) (ceil(max($priceVals) / 50) * 50) : 250;
@@ -395,22 +395,22 @@ $optionLabels = function (array $options): array {
 };
 
 // Quick filters in the bar (key, kicker, popover title) and the tabs of the filters dialog.
-$quickFilters = [['search', 'Caută', 'Caută în categorie'], ['price', 'Preț', 'Bugetul tău'], ['duration', 'Durată', 'Durata activității']];
-if ($interestOptions) $quickFilters[] = ['interests', 'Interese', 'Ce te atrage'];
-if ($travelerOptions) $quickFilters[] = ['traveler', 'Pentru cine', 'Cui i se potrivește'];
-if ($langOptions) $quickFilters[] = ['languages', 'Limbă', 'Limba activității'];
-if ($featOptions) $quickFilters[] = ['features', 'Caracteristici', 'Caracteristici'];
+$quickFilters = [['search', 'Search', 'Search this category'], ['price', 'Price', 'Your budget'], ['duration', 'Duration', 'How long it takes']];
+if ($interestOptions) $quickFilters[] = ['interests', 'Interests', 'What you are into'];
+if ($travelerOptions) $quickFilters[] = ['traveler', 'Who it is for', 'Who it suits'];
+if ($langOptions) $quickFilters[] = ['languages', 'Language', 'Language of the experience'];
+if ($featOptions) $quickFilters[] = ['features', 'Features', 'Features'];
 
 $filterTabs = [];
-if ($catOptions) $filterTabs[] = ['categories', 'Categorii', ''];
-if ($interestOptions) $filterTabs[] = ['interests', 'Interese', 'Alege atmosfera sau tema activității.'];
-if ($travelerOptions) $filterTabs[] = ['traveler', 'Pentru cine', 'Cui i se potrivește activitatea.'];
-$filterTabs[] = ['price', 'Preț', ''];
-if ($langOptions) $filterTabs[] = ['languages', 'Limbă', ''];
-$filterTabs[] = ['duration', 'Durată', ''];
-if ($featOptions) $filterTabs[] = ['features', 'Caracteristici', ''];
-if ($hasRatings) $filterTabs[] = ['rating', 'Rating minim', ''];
-$filterTabTitles = ['rating' => 'Rating minim'];
+if ($catOptions) $filterTabs[] = ['categories', 'Categories', ''];
+if ($interestOptions) $filterTabs[] = ['interests', 'Interests', 'Choose the mood or theme of the experience.'];
+if ($travelerOptions) $filterTabs[] = ['traveler', 'Who it is for', 'Who the experience suits.'];
+$filterTabs[] = ['price', 'Price', ''];
+if ($langOptions) $filterTabs[] = ['languages', 'Language', ''];
+$filterTabs[] = ['duration', 'Duration', ''];
+if ($featOptions) $filterTabs[] = ['features', 'Features', ''];
+if ($hasRatings) $filterTabs[] = ['rating', 'Minimum rating', ''];
+$filterTabTitles = ['rating' => 'Minimum rating'];
 
 // ---- Controls shared by the popovers and the filters dialog (category.js keeps them in sync) ----
 $renderChecks = function (string $field, array $options) {
@@ -419,10 +419,10 @@ $renderChecks = function (string $field, array $options) {
 $renderControl = function (string $key) use ($renderChecks, $priceCap, $catOptions, $interestOptions, $travelerOptions, $langOptions, $durationOptions, $featOptions, $ratingOptions) {
     switch ($key) {
         case 'search':
-            ?><input class="ksearch" type="search" data-f="search" placeholder="Caută după nume, locație, temă..." aria-label="Caută în categorie" autocomplete="off"><?php
+            ?><input class="ksearch" type="search" data-f="search" placeholder="Search by name, place or theme" aria-label="Search this category" autocomplete="off"><?php
             break;
         case 'price':
-            ?><div class="kprice"><div class="kprice-row"><span>Preț maxim</span><strong data-out="maxPrice"><?= v2_thousands($priceCap) ?> lei</strong></div><input class="krange" type="range" min="0" max="<?= $priceCap ?>" step="10" value="<?= $priceCap ?>" data-f="maxPrice" aria-label="Preț maxim, în lei"><div class="kprice-ends"><span>0 lei</span><span><?= v2_thousands($priceCap) ?> lei</span></div></div><?php
+            ?><div class="kprice"><div class="kprice-row"><span>Maximum price</span><strong data-out="maxPrice"><?= v2_e(v2_money($priceCap)) ?></strong></div><input class="krange" type="range" min="0" max="<?= $priceCap ?>" step="10" value="<?= $priceCap ?>" data-f="maxPrice" aria-label="Maximum price, in euro"><div class="kprice-ends"><span><?= v2_e(v2_money(0)) ?></span><span><?= v2_e(v2_money($priceCap)) ?></span></div></div><?php
             break;
         case 'rating':
             ?><div class="krating"><?php foreach ($ratingOptions as $o): ?><button type="button" data-f="minRating" data-v="<?= $o['value'] ?>" aria-pressed="<?= $o['value'] === 0 ? 'true' : 'false' ?>"><span class="kstars" aria-hidden="true">★★★★★</span><span><?= v2_e($o['label']) ?></span></button><?php endforeach; ?></div><?php
@@ -445,10 +445,10 @@ $catUrl = function (array $over = []) use ($baseGet, $slug): string {
     return '/' . $slug . ($p ? '?' . http_build_query($p) : '');
 };
 $serverChips = [];
-if ($searchQuery !== '') $serverChips[] = ['„' . $searchQuery . '”', $catUrl(['q' => ''])];
+if ($searchQuery !== '') $serverChips[] = ['“' . $searchQuery . '”',$catUrl(['q' => ''])];
 if ($cityFilter) $serverChips[] = [$heroLocation, $catUrl(['city' => ''])];
-if ($maxPrice !== null) $serverChips[] = ['Sub ' . $maxPrice . ' lei', $catUrl(['max_price' => ''])];
-if ($sort !== 'recommended') $serverChips[] = ['Sortat: ' . $sortLabels[$sort], $catUrl(['sort' => ''])];
+if ($maxPrice !== null) $serverChips[] = ['Under ' . v2_money($maxPrice), $catUrl(['max_price' => ''])];
+if ($sort !== 'recommended') $serverChips[] = ['Sorted: ' .$sortLabels[$sort], $catUrl(['sort' => ''])];
 
 // Hero photo: the platform photo of the category (or of its parent, for subcategories).
 $photoCat = $V2NAV['categoryBySlug'][$category['slug'] ?? $slug] ?? (($parent && !empty($parent['slug'])) ? ($V2NAV['categoryBySlug'][$parent['slug']] ?? null) : null);
@@ -497,13 +497,13 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <p class="kh-kicker"><i aria-hidden="true"></i>Categorie · disponibile tot anul</p>
-        <h1 class="kh-h" id="kh-h"><?= v2_e($catName) ?> <em>în <?= v2_e($heroLocation) ?></em></h1>
+        <p class="kh-kicker"><i aria-hidden="true"></i>Category · open all year</p>
+        <h1 class="kh-h" id="kh-h"><?= v2_e($catName) ?> <em>in <?= v2_e($heroLocation) ?></em></h1>
         <?php if ($catDescription !== ''): ?><p class="kh-lead"><?= v2_e($catDescription) ?></p><?php endif; ?>
         <ul class="kh-stats">
-          <li><?= v2_num((int) ($pagination['total'] ?? $eventCount), 'activitate', 'activități') ?></li>
-          <?php if (!empty($children)): ?><li><?= v2_num(count($children), 'tip', 'tipuri') ?></li><?php endif; ?>
-          <?php if (!empty($featuredCities)): ?><li><?= count($featuredCities) ?>+ orașe</li><?php endif; ?>
+          <li><?= v2_num((int) ($pagination['total'] ?? $eventCount), 'experience', 'experiences') ?></li>
+          <?php if (!empty($children)): ?><li><?= v2_num(count($children), 'type', 'types') ?></li><?php endif; ?>
+          <?php if (!empty($featuredCities)): ?><li><?= count($featuredCities) ?>+ cities</li><?php endif; ?>
         </ul>
       </div>
       <div class="kh-media">
@@ -521,44 +521,44 @@ include __DIR__ . '/includes/v2/header.php';
 
   <?php v2_promoted_section($promoted, [
       'id' => 'promo-cat',
-      'kicker' => 'Promovat',
-      'title' => 'Promovate în ' . $catLower,
-      'intro' => 'Locuri și experiențe din ' . $catLower . ' puse în față de operatorii lor în perioada asta.',
+      'kicker' => 'Promoted',
+      'title' => 'Promoted in ' . $catLower,
+      'intro' => 'Places and experiences in ' . $catLower . ' that their operators are promoting at the moment.',
   ]); ?>
 
   <!-- ============================== FILTER BAR ============================== -->
   <div class="kbar" id="k-bar">
     <div class="wrap kbar-in">
       <div class="kbar-pills">
-        <button class="kpill kpill-map" type="button" data-open-map aria-haspopup="dialog" aria-controls="k-map"><?= v2_ic('map-pin') ?>Hartă</button>
-        <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?>Filtre<span class="kn" data-fcount hidden>0</span></button>
+        <button class="kpill kpill-map" type="button" data-open-map aria-haspopup="dialog" aria-controls="k-map"><?= v2_ic('map-pin') ?>Map</button>
+        <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?>Filters<span class="kn" data-fcount hidden>0</span></button>
         <?php if (!empty($children)): ?>
-        <button class="kpill" type="button" data-subcat aria-expanded="false" aria-controls="k-sub">Alege tipul de <?= v2_e($catLower) ?><?= v2_ic('caret-down', 'ic kcaret') ?></button>
+        <button class="kpill" type="button" data-subcat aria-expanded="false" aria-controls="k-sub">Types of <?= v2_e($catLower) ?><?= v2_ic('caret-down', 'ic kcaret') ?></button>
         <?php endif; ?>
         <?php foreach ($quickFilters as [$key, $label]): ?>
         <button class="kpill" type="button" data-top="<?= $key ?>" aria-expanded="false" aria-controls="kp-<?= $key ?>"><?= v2_e($label) ?></button>
         <?php endforeach; ?>
-        <button class="kclear" type="button" data-reset data-reset-bar hidden>Șterge tot</button>
+        <button class="kclear" type="button" data-reset data-reset-bar hidden>Clear all</button>
       </div>
-      <label class="ksort"><span>Sortare</span>
+      <label class="ksort"><span>Sort</span>
         <select class="select" id="k-sort">
-          <option value="recommended">Recomandate</option>
+          <option value="recommended">Recommended</option>
           <?php if ($hasRatings): ?><option value="rating">Rating</option><?php endif; ?>
-          <option value="priceAsc">Preț crescător</option>
-          <option value="priceDesc">Preț descrescător</option>
-          <option value="duration">Durată scurtă</option>
+          <option value="priceAsc">Price: low to high</option>
+          <option value="priceDesc">Price: high to low</option>
+          <option value="duration">Shortest first</option>
         </select>
       </label>
       <?php foreach ($quickFilters as [$key, $label, $title]): ?>
       <div class="kpop" id="kp-<?= $key ?>" role="dialog" aria-labelledby="kp-<?= $key ?>-h" hidden>
         <div class="kpop-top">
           <div><p class="kicker"><?= v2_e($label) ?></p><h3 id="kp-<?= $key ?>-h"><?= v2_e($title) ?></h3></div>
-          <button class="icon-btn" type="button" data-pop-close><?= v2_ic('x') ?><span class="sr">Închide</span></button>
+          <button class="icon-btn" type="button" data-pop-close><?= v2_ic('x') ?><span class="sr">Close</span></button>
         </div>
         <?php $renderControl($key); ?>
         <div class="kpop-foot">
-          <button class="btn btn-ghost" type="button" data-clear="<?= $key ?>">Curăță</button>
-          <button class="btn btn-primary" type="button" data-pop-close>Aplică</button>
+          <button class="btn btn-ghost" type="button" data-clear="<?= $key ?>">Clear</button>
+          <button class="btn btn-primary" type="button" data-pop-close>Apply</button>
         </div>
       </div>
       <?php endforeach; ?>
@@ -572,8 +572,8 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ksub-in">
         <div class="wrap ksub-pad">
           <div class="ksub-head">
-            <h2 id="k-sub-h">Alege tipul de <?= v2_e($catLower) ?></h2>
-            <button class="link-btn" type="button" data-subcat><?= count($children) ?> opțiuni · închide</button>
+            <h2 id="k-sub-h">Types of <?= v2_e($catLower) ?></h2>
+            <button class="link-btn" type="button" data-subcat><?= count($children) === 1 ? '1 option' : count($children) . ' options' ?> · close</button>
           </div>
           <ul class="ksub-grid">
             <?php foreach ($children as $child):
@@ -583,7 +583,7 @@ include __DIR__ . '/includes/v2/header.php';
                 $child['parent_slug'] = $category['slug'] ?? '';
                 $childCount = (int) ($child['event_count'] ?? 0);
             ?>
-            <li><a class="ksc" href="/<?= v2_e(bo_short_category_slug($child)) ?>"><span class="ksc-ic" aria-hidden="true"><?= v2_e(mb_substr($childName, 0, 1)) ?></span><span><b><?= v2_e($childName) ?></b><small><?= $childCount > 0 ? v2_num($childCount, 'activitate', 'activități') : 'în curând' ?></small></span></a></li>
+            <li><a class="ksc" href="/<?= v2_e(bo_short_category_slug($child)) ?>"><span class="ksc-ic" aria-hidden="true"><?= v2_e(mb_substr($childName, 0, 1)) ?></span><span><b><?= v2_e($childName) ?></b><small><?= $childCount > 0 ? v2_num($childCount, 'experience', 'experiences') : 'coming soon' ?></small></span></a></li>
             <?php endforeach; ?>
           </ul>
         </div>
@@ -595,13 +595,13 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ============================== RESULTS ============================== -->
   <section class="kres" aria-labelledby="kres-h">
     <div class="wrap">
-      <h2 class="sr" id="kres-h"><?= v2_e($catName) ?>: activități</h2>
+      <h2 class="sr" id="kres-h"><?= v2_e($catName) ?>: experiences</h2>
       <?php if ($serverChips): ?>
-      <ul class="kactive" aria-label="Filtre din adresă">
-        <?php foreach ($serverChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> (elimină)</span></a></li><?php endforeach; ?>
+      <ul class="kactive" aria-label="Filters from the address">
+        <?php foreach ($serverChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> (remove)</span></a></li><?php endforeach; ?>
       </ul>
       <?php endif; ?>
-      <div class="kchips" id="k-chips" aria-label="Filtre active"></div>
+      <div class="kchips" id="k-chips" aria-label="Active filters"></div>
 
       <?php if ($acts): ?>
       <ul class="xp-grid" id="k-grid" data-reveal>
@@ -612,22 +612,22 @@ include __DIR__ . '/includes/v2/header.php';
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($a['category']) ?></span>
               <span class="xp-title"><?= v2_e($a['title']) ?></span>
-              <span class="xp-meta"><?php if ($a['rating'] > 0): ?><span class="xp-rating"><?= v2_ic('star') ?><?= str_replace('.', ',', (string) $a['rating']) ?><?php if ($a['reviews'] > 0): ?> (<?= v2_thousands($a['reviews']) ?>)<?php endif; ?></span><?php endif; ?><?php if ($a['durationLabel']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['durationLabel']) ?></span><?php endif; ?><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go">Vezi<?= v2_ic('arrow-right') ?></span><?php if ($a['price']): ?><span class="xp-price">de la<b><?= v2_thousands($a['price']) ?> lei</b></span><?php else: ?><span class="xp-price is-na"><b>Vezi preț</b></span><?php endif; ?></span>
+              <span class="xp-meta"><?php if ($a['rating'] > 0): ?><span class="xp-rating"><?= v2_ic('star') ?><?= (string) $a['rating'] ?><?php if ($a['reviews'] > 0): ?> (<?= v2_thousands($a['reviews']) ?>)<?php endif; ?></span><?php endif; ?><?php if ($a['durationLabel']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['durationLabel']) ?></span><?php endif; ?><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go">See<?= v2_ic('arrow-right') ?></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e(v2_money($a['price'])) ?></b></span><?php else: ?><span class="xp-price is-na"><b>See price</b></span><?php endif; ?></span>
             </span>
           </a>
-          <button class="xp-fav" type="button" data-fav aria-pressed="false"><?= v2_ic('heart', 'ic ic-off') ?><?= v2_ic('heart-fill', 'ic ic-on') ?><span class="sr">Salvează <?= v2_e($a['title']) ?></span></button>
+          <button class="xp-fav" type="button" data-fav aria-pressed="false"><?= v2_ic('heart', 'ic ic-off') ?><?= v2_ic('heart-fill', 'ic ic-on') ?><span class="sr">Save <?= v2_e($a['title']) ?></span></button>
         </li>
         <?php endforeach; ?>
       </ul>
       <?php endif; ?>
 
       <div class="k-empty" id="k-empty"<?= $acts ? ' hidden' : '' ?>>
-        <h3>Nu am găsit activități.</h3>
-        <p>Schimbă filtrele sau resetează căutarea.</p>
+        <h3>No experiences found.</h3>
+        <p>Change the filters or clear your search.</p>
         <div class="k-empty-cta">
-          <button class="btn btn-light" type="button" data-reset>Resetează filtrele</button>
-          <?php if ($serverChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>">Toate activitățile din categorie</a><?php endif; ?>
+          <button class="btn btn-light" type="button" data-reset>Reset the filters</button>
+          <?php if ($serverChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>">All experiences in this category</a><?php endif; ?>
         </div>
         <svg class="k-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
       </div>
@@ -640,12 +640,12 @@ include __DIR__ . '/includes/v2/header.php';
           $end = min($last, $start + 6);
           $start = max(1, $end - 6);
       ?>
-      <nav class="pager" aria-label="Pagini">
-        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Anterior</a><?php endif; ?>
+      <nav class="pager" aria-label="Pages">
+        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Previous</a><?php endif; ?>
         <?php for ($p = $start; $p <= $end; $p++): ?>
           <?php if ($p === $current): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($catUrl(['page' => $p > 1 ? $p : ''])) ?>"><?= $p ?></a><?php endif; ?>
         <?php endfor; ?>
-        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current + 1])) ?>" rel="next">Următor<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current + 1])) ?>" rel="next">Next<?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </nav>
       <?php endif; ?>
     </div>
@@ -659,7 +659,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if ($seoBodyTitle !== ''): ?>
             <?= v2_e($seoBodyTitle) ?>
           <?php else: ?>
-            Tot ce trebuie să știi despre <em><?= v2_e($catLower) ?></em>
+            What to know about <em><?= v2_e($catLower) ?></em>
           <?php endif; ?>
         </h2>
 
@@ -673,21 +673,21 @@ include __DIR__ . '/includes/v2/header.php';
             <?php endforeach; ?>
           </div>
         <?php else: ?>
-          <p>Pe viaqui.com găsești o selecție curată de <strong><?= v2_e($catLower) ?></strong> din toată România. Rezervi online data și ora dorită, plătești securizat și intri cu biletul QR direct la locație.</p>
+          <p>On Viaqui you will find a careful selection of <strong><?= v2_e($catLower) ?></strong> across Europe. Choose a date and time online, pay securely and walk in with the QR ticket on your phone.</p>
         <?php endif; ?>
 
         <?php if (!empty($featuredCities)): ?>
         <div class="kx">
-          <h3 class="flabel"><?= v2_e($catName) ?> pe orașe</h3>
+          <h3 class="flabel"><?= v2_e($catName) ?> by city</h3>
           <div class="chips-links">
-            <?php foreach (array_slice($featuredCities, 0, 8) as $c): ?><a href="/<?= v2_e($slug) ?>?city=<?= v2_e($c['slug']) ?>"><?= v2_e($catName) ?> <?= v2_e($c['name']) ?></a><?php endforeach; ?>
+            <?php foreach (array_slice($featuredCities, 0, 8) as $c): ?><a href="/<?= v2_e($slug) ?>?city=<?= v2_e($c['slug']) ?>"><?= v2_e($catName) ?> in <?= v2_e($c['name']) ?></a><?php endforeach; ?>
           </div>
         </div>
         <?php endif; ?>
 
         <?php if ($siblings): ?>
         <div class="kx">
-          <h3 class="flabel">Categorii înrudite</h3>
+          <h3 class="flabel">Related categories</h3>
           <div class="chips-links">
             <?php foreach (array_slice($siblings, 0, 8) as $sib): ?><a href="<?= v2_e($sib['href']) ?>"><?= v2_e($sib['name']) ?></a><?php endforeach; ?>
           </div>
@@ -696,7 +696,7 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
 
       <div class="faq-col">
-        <h2 id="kfaq-h">Întrebări frecvente</h2>
+        <h2 id="kfaq-h">Frequently asked questions</h2>
         <?php foreach ($faqItems as $i => $f): ?>
         <details class="qa"<?= $i === 0 ? ' open' : '' ?>><summary><?= v2_e($f['q']) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($f['a']) ?></p></details>
         <?php endforeach; ?>
@@ -708,11 +708,11 @@ include __DIR__ . '/includes/v2/header.php';
   <div class="kdlg" id="k-filters" role="dialog" aria-modal="true" aria-labelledby="kf-h" hidden>
     <div class="kdlg-panel">
       <div class="kdlg-top">
-        <div><p class="kicker">Filtre</p><h2 id="kf-h">Filtrează activitățile</h2></div>
-        <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Închide filtrele</span></button>
+        <div><p class="kicker">Filters</p><h2 id="kf-h">Filter the experiences</h2></div>
+        <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Close filters</span></button>
       </div>
       <div class="kdlg-body">
-        <div class="kdlg-tabs" role="tablist" aria-orientation="vertical" aria-label="Filtre" data-tabs>
+        <div class="kdlg-tabs" role="tablist" aria-orientation="vertical" aria-label="Filters" data-tabs>
           <?php foreach ($filterTabs as $t => [$key, $label]): ?>
           <button type="button" role="tab" id="kft-<?= $key ?>" aria-controls="kfp-<?= $key ?>" aria-selected="<?= $t === 0 ? 'true' : 'false' ?>" tabindex="<?= $t === 0 ? 0 : -1 ?>"><?= v2_e($label) ?><span class="kdot" data-tabdot="<?= $key ?>" hidden></span></button>
           <?php endforeach; ?>
@@ -728,8 +728,8 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
       </div>
       <div class="kdlg-foot">
-        <button class="btn btn-ghost" type="button" data-reset>Șterge tot</button>
-        <button class="btn btn-primary" type="button" data-dlg-close>Arată <span data-count><?= count($acts) ?></span> rezultate</button>
+        <button class="btn btn-ghost" type="button" data-reset>Clear all</button>
+        <button class="btn btn-primary" type="button" data-dlg-close>Show <span data-count><?= count($acts) ?></span> results</button>
       </div>
     </div>
   </div>
@@ -741,23 +741,23 @@ include __DIR__ . '/includes/v2/header.php';
         <div class="kmap-top">
           <div class="kmap-head">
             <div>
-              <p class="kicker">Hartă</p>
-              <h2 id="km-h"><?= v2_e($catName) ?><?= $cityFilter ? ' în ' . v2_e($heroLocation) : '' ?></h2>
-              <p class="kmap-n" id="k-map-n" aria-live="polite"><span data-count><?= count($acts) ?></span> rezultate pe hartă</p>
-              <p class="kmap-zone" id="k-map-zone" hidden><span id="k-map-zone-text"></span><button class="link-btn" type="button" data-map-all>Arată toate</button></p>
-              <p class="kmap-note" id="k-map-note" hidden>Unele activități apar pe hartă în centrul orașului, acolo unde locul exact lipsește.</p>
+              <p class="kicker">Map</p>
+              <h2 id="km-h"><?= v2_e($catName) ?><?= $cityFilter ? ' in ' . v2_e($heroLocation) : '' ?></h2>
+              <p class="kmap-n" id="k-map-n" aria-live="polite"><span data-count><?= count($acts) ?></span> results on the map</p>
+              <p class="kmap-zone" id="k-map-zone" hidden><span id="k-map-zone-text"></span><button class="link-btn" type="button" data-map-all>Show all</button></p>
+              <p class="kmap-note" id="k-map-note" hidden>Where the exact place is missing, an experience is shown in the centre of its city.</p>
             </div>
-            <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Închide harta</span></button>
+            <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Close the map</span></button>
           </div>
           <div class="kmap-quick">
-            <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?>Filtre</button>
-            <button class="kpill" type="button" data-open-filters="price" aria-haspopup="dialog" aria-controls="k-filters">Preț</button>
-            <button class="kpill" type="button" data-open-filters="duration" aria-haspopup="dialog" aria-controls="k-filters">Durată</button>
+            <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?>Filters</button>
+            <button class="kpill" type="button" data-open-filters="price" aria-haspopup="dialog" aria-controls="k-filters">Price</button>
+            <button class="kpill" type="button" data-open-filters="duration" aria-haspopup="dialog" aria-controls="k-filters">Duration</button>
           </div>
         </div>
         <ul class="kmap-list" id="k-map-list"></ul>
       </aside>
-      <section class="kmap-view" aria-label="Previzualizare hartă">
+      <section class="kmap-view" aria-label="Map preview">
         <div class="kmap-canvas" id="k-map-canvas" data-carto-key="<?= v2_e(defined('CARTO_API_KEY') ? CARTO_API_KEY : '') ?>"></div>
         <div id="k-map-pins"></div>
         <div class="kmap-card" id="k-map-card" hidden></div>
