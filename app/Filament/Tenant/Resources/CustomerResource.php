@@ -72,6 +72,49 @@ class CustomerResource extends Resource
                             ->rows(3),
                     ])->columns(2),
 
+                SC\Section::make('Comenzi')
+                    ->icon('heroicon-o-shopping-cart')
+                    ->collapsible()
+                    ->visible(fn ($record) => (bool) $record?->exists)
+                    ->schema([
+                        Forms\Components\Placeholder::make('customer_orders')
+                            ->label('')
+                            ->content(function ($record) {
+                                if (! $record) {
+                                    return '';
+                                }
+                                $orders = \App\Models\Order::where('tenant_id', $record->tenant_id)
+                                    ->where(function ($q) use ($record) {
+                                        $q->where('customer_id', $record->id);
+                                        if (! empty($record->email)) {
+                                            $q->orWhere('customer_email', $record->email);
+                                        }
+                                    })
+                                    ->withCount('tickets')->latest()->limit(50)->get();
+                                if ($orders->isEmpty()) {
+                                    return new \Illuminate\Support\HtmlString('<span style="opacity:.7">Clientul nu are încă nicio comandă.</span>');
+                                }
+
+                                $labels = ['paid' => 'Plătită', 'confirmed' => 'Confirmată', 'completed' => 'Finalizată', 'pending' => 'În așteptare', 'cancelled' => 'Anulată', 'failed' => 'Eșuată', 'refunded' => 'Rambursată'];
+                                $paid = $orders->whereIn('status', ['paid', 'confirmed', 'completed']);
+                                $html = '<div style="font-size:14px;margin-bottom:10px;"><strong>' . $paid->count() . '</strong> comenzi plătite · <strong>'
+                                    . number_format($paid->sum('total_cents') / 100, 2, ',', '.') . ' RON</strong> în total · <strong>' . $paid->sum('tickets_count') . '</strong> bilete</div>';
+                                $html .= '<div style="display:grid;gap:6px;font-size:14px;">';
+                                foreach ($orders as $o) {
+                                    $ok = in_array($o->status, ['paid', 'confirmed', 'completed'], true);
+                                    $html .= '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;padding:8px 0;border-top:1px solid rgba(128,128,128,.25);">'
+                                        . '<a href="' . e(url('/tenant/orders/' . $o->id)) . '" style="font-weight:600;color:#6366f1;">#' . str_pad((string) $o->id, 6, '0', STR_PAD_LEFT) . '</a>'
+                                        . '<span>' . e($o->created_at?->format('d.m.Y H:i')) . '</span>'
+                                        . '<span>' . (int) $o->tickets_count . ' bilete</span>'
+                                        . '<span style="padding:2px 9px;border-radius:9999px;font-size:12px;font-weight:600;' . ($ok ? 'background:#dcfce7;color:#166534;' : 'background:#e5e7eb;color:#374151;') . '">' . e($labels[$o->status] ?? $o->status) . '</span>'
+                                        . '<span style="font-weight:600;">' . number_format(($o->total_cents ?? 0) / 100, 2, ',', '.') . ' RON</span>'
+                                        . '</div>';
+                                }
+
+                                return new \Illuminate\Support\HtmlString($html . '</div>');
+                            }),
+                    ]),
+
                 SC\Section::make('Beneficiari')
                     ->description('Lista beneficiarilor adăugați de acest client în comenzile sale')
                     ->icon('heroicon-o-users')

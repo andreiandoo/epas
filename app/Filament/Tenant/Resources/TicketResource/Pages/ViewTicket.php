@@ -30,6 +30,14 @@ class ViewTicket extends ViewRecord
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action(function () {
                     $ticket = $this->record;
+
+                    // Biletul cu designul tenantului (Ticket Customizer), același pe care îl primește cumpărătorul
+                    $order = $ticket->order;
+                    $designed = $order ? \App\Http\Controllers\Api\TenantClient\DemoStorefrontController::ticketsPdfUrl($order) : null;
+                    if ($designed) {
+                        return redirect()->away($designed . '&code=' . urlencode((string) $ticket->code));
+                    }
+
                     $event = $ticket->ticketType?->event;
                     $venue = $event?->venue;
                     $tenant = $ticket->order?->tenant;
@@ -122,6 +130,87 @@ class ViewTicket extends ViewRecord
                             ->send();
                     }
                 }),
+
+            Actions\Action::make('change_status')
+                ->label('Schimbă starea')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->form([
+                    \Filament\Forms\Components\Select::make('status')
+                        ->label('Stare nouă')
+                        ->options([
+                            'valid' => 'Valid',
+                            'used' => 'Folosit',
+                            'cancelled' => 'Anulat',
+                            'pending' => 'În așteptare',
+                        ])
+                        ->default(fn () => $this->record->status)
+                        ->required(),
+                ])
+                ->requiresConfirmation()
+                ->modalHeading('Schimbă starea biletului')
+                ->modalDescription('Un bilet anulat nu mai e acceptat la intrare.')
+                ->action(function (array $data) {
+                    $ticket = $this->record;
+                    $oldStatus = $ticket->status;
+                    $newStatus = $data['status'];
+                    $hadCheckIn = $ticket->checked_in_at !== null || $ticket->scanned_at !== null;
+
+                    // Un bilet scanat rămâne „valid” și primește doar checked_in_at, deci
+                    // „valid + scanat → valid” e o schimbare reală (șterge scanarea).
+                    if ($oldStatus === $newStatus && ! ($newStatus === 'valid' && $hadCheckIn)) {
+                        Notification::make()->title('Starea nu s-a schimbat')->info()->send();
+
+                        return;
+                    }
+
+                    $ticket->update(['status' => $newStatus] + ($newStatus === 'valid' ? self::clearedCheckInAttributes() : []));
+
+                    activity('tenant')
+                        ->performedOn($ticket)
+                        ->withProperties(['old_status' => $oldStatus, 'new_status' => $newStatus, 'ticket_code' => $ticket->code])
+                        ->log("Ticket status changed: {$oldStatus} → {$newStatus}");
+
+                    Notification::make()->title('Stare actualizată')->success()->send();
+                }),
+
+            // Scanarea ține de coloanele de check-in, nu de stare: un bilet scanat din greșeală se repune aici
+            Actions\Action::make('undo_checkin')
+                ->label('Anulează check-in')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('danger')
+                ->visible(fn () => $this->record->checked_in_at !== null || $this->record->scanned_at !== null)
+                ->requiresConfirmation()
+                ->modalHeading('Anulează check-in-ul biletului')
+                ->modalDescription('Biletul redevine nescanat și poate fi folosit din nou la intrare.')
+                ->action(function () {
+                    $ticket = $this->record;
+                    $oldStatus = $ticket->status;
+                    $attributes = self::clearedCheckInAttributes();
+                    if ($oldStatus === 'used') {
+                        $attributes['status'] = 'valid';
+                    }
+                    $ticket->update($attributes);
+
+                    activity('tenant')
+                        ->performedOn($ticket)
+                        ->withProperties(['ticket_code' => $ticket->code, 'old_status' => $oldStatus, 'new_status' => $ticket->status])
+                        ->log('Ticket check-in undone');
+
+                    Notification::make()->title('Check-in anulat')->body('Biletul poate fi scanat din nou la intrare.')->success()->send();
+                }),
+        ];
+    }
+
+    /** Toate coloanele care marchează trecerea biletului pe la intrare (aplicațiile de scanare + panoul de operator). */
+    protected static function clearedCheckInAttributes(): array
+    {
+        return [
+            'checked_in_at' => null,
+            'checked_in_by' => null,
+            'checked_in_via' => null,
+            'scanned_at' => null,
+            'scanned_by_user_id' => null,
         ];
     }
 
