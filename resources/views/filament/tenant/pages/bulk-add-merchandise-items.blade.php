@@ -7,24 +7,24 @@
         {{-- Spreadsheet-like table --}}
         <div class="mt-6" x-data="bulkTable()">
             <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Produse</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Produse') }}</h3>
                 <div class="flex items-center gap-2">
                     <button type="button" wire:click="addRows"
                         class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        +5 randuri
+                        {{ __('+5 randuri') }}
                     </button>
                     <button type="button" @click="pasteFromClipboard()"
                         class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                        Paste din Excel
+                        {{ __('Paste din Excel') }}
                     </button>
                 </div>
             </div>
 
             <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                Poti face paste direct din Excel/Google Sheets. Ordinea coloanelor: <strong>Nume | Tip | Unitate | Cantitate | Pret</strong>.
-                Sau completeaza manual mai jos.
+                {{ __('Poti face paste direct din Excel/Google Sheets. Ordinea coloanelor:') }} <strong>{{ __('Nume | Tip | Unitate | Cantitate | Pret') }}</strong>.
+                {{ __('Sau completeaza manual mai jos.') }}
             </p>
 
             <div class="overflow-x-auto border border-gray-200 rounded-lg dark:border-gray-700">
@@ -32,11 +32,11 @@
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
                             <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-8">#</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 min-w-[200px]">Nume produs *</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-32">Tip</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-28">Unitate</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-28">Cantitate *</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-32">Pret unitar (RON) *</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 min-w-[200px]">{{ __('Nume produs *') }}</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-32">{{ __('Tip') }}</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-28">{{ __('Unitate') }}</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-28">{{ __('Cantitate *') }}</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 w-32">{{ __('Pret unitar (RON) *') }}</th>
                             <th class="px-2 py-2 w-10"></th>
                         </tr>
                     </thead>
@@ -52,20 +52,20 @@
                             <td class="px-1 py-1">
                                 <select wire:model="rows.{{ $i }}.type"
                                     class="w-full px-2 py-1.5 text-sm border-gray-300 rounded dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                                    <option value="consumable">Consumabil</option>
-                                    <option value="equipment">Echipament</option>
-                                    <option value="packaging">Ambalaj</option>
-                                    <option value="ingredient">Ingredient</option>
-                                    <option value="other">Altele</option>
+                                    <option value="consumable">{{ __('Consumabil') }}</option>
+                                    <option value="equipment">{{ __('Echipament') }}</option>
+                                    <option value="packaging">{{ __('Ambalaj') }}</option>
+                                    <option value="ingredient">{{ __('Ingredient') }}</option>
+                                    <option value="other">{{ __('Altele') }}</option>
                                 </select>
                             </td>
                             <td class="px-1 py-1">
                                 <select wire:model="rows.{{ $i }}.unit"
                                     class="w-full px-2 py-1.5 text-sm border-gray-300 rounded dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                                    <option value="buc">Bucati</option>
-                                    <option value="kg">Kilograme</option>
-                                    <option value="l">Litri</option>
-                                    <option value="set">Seturi</option>
+                                    <option value="buc">{{ __('Bucati') }}</option>
+                                    <option value="kg">{{ __('Kilograme') }}</option>
+                                    <option value="l">{{ __('Litri') }}</option>
+                                    <option value="set">{{ __('Seturi') }}</option>
                                 </select>
                             </td>
                             <td class="px-1 py-1">
@@ -97,9 +97,9 @@
             @endphp
             <div class="flex items-center justify-between mt-4 px-2">
                 <div class="text-sm text-gray-500">
-                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $filledRows->count() }}</span> produse completate
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $filledRows->count() }}</span> {{ __('produse completate') }}
                     &middot;
-                    Valoare totala: <span class="font-medium text-gray-700 dark:text-gray-300">{{ number_format($totalValue, 2) }} RON</span>
+                    {{ __('Valoare totala:') }} <span class="font-medium text-gray-700 dark:text-gray-300">{{ number_format($totalValue, 2) }} RON</span>
                 </div>
 
                 <button type="submit"
@@ -114,7 +114,7 @@
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
                     </span>
-                    Salveaza {{ $filledRows->count() }} produse
+                    {{ __('Salveaza :count produse', ['count' => $filledRows->count()]) }}
                 </button>
             </div>
 
@@ -131,18 +131,18 @@
                     <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                 </div>
                 <div>
-                    <h4 class="text-lg font-semibold text-green-800 dark:text-green-200">{{ $savedCount }} produse adaugate!</h4>
-                    <p class="text-sm text-green-600 dark:text-green-400">Produsele au fost salvate cu succes.</p>
+                    <h4 class="text-lg font-semibold text-green-800 dark:text-green-200">{{ __(':savedCount produse adaugate!', ['savedCount' => $savedCount]) }}</h4>
+                    <p class="text-sm text-green-600 dark:text-green-400">{{ __('Produsele au fost salvate cu succes.') }}</p>
                 </div>
             </div>
             <div class="flex gap-3">
                 <a href="{{ MerchandiseItemResource::getUrl() }}"
                     class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700">
-                    Vezi lista produse
+                    {{ __('Vezi lista produse') }}
                 </a>
                 <button type="button" wire:click="resetForm"
                     class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
-                    Adauga alte produse
+                    {{ __('Adauga alte produse') }}
                 </button>
             </div>
         </div>

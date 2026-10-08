@@ -5,12 +5,12 @@
             {{-- Page Selector --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="font-semibold text-gray-900 dark:text-white">Pages</h3>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Pages') }}</h3>
                     <a
                         href="{{ route('filament.tenant.resources.pages.create') }}"
                         class="text-primary-600 hover:text-primary-700 text-sm font-medium"
                     >
-                        + New Page
+                        {{ __('+ New Page') }}
                     </a>
                 </div>
 
@@ -29,13 +29,13 @@
                             @endif
                             <span class="flex-1 truncate">{{ $page['title'] }}</span>
                             @if(!$page['isPublished'])
-                                <span class="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">Draft</span>
+                                <span class="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">{{ __('Draft') }}</span>
                             @endif
                         </button>
                     @empty
                         <div class="text-sm text-gray-500 text-center py-4">
-                            No pages yet.
-                            <a href="{{ route('filament.tenant.resources.pages.create') }}" class="text-primary-600 hover:underline">Create one</a>
+                            {{ __('No pages yet.') }}
+                            <a href="{{ route('filament.tenant.resources.pages.create') }}" class="text-primary-600 hover:underline">{{ __('Create one') }}</a>
                         </div>
                     @endforelse
                 </div>
@@ -45,7 +45,7 @@
             <div class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 class="font-semibold text-gray-900 dark:text-white">
-                        Blocks
+                        {{ __('Blocks') }}
                         @if($currentPageSlug)
                             <span class="text-gray-400 font-normal text-sm">- {{ $currentPageSlug }}</span>
                         @endif
@@ -56,13 +56,13 @@
                     @if(!$currentPageId)
                         <div class="text-center py-8 text-gray-500">
                             <x-heroicon-o-cursor-arrow-rays class="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                            <p class="text-sm">Select a page first</p>
+                            <p class="text-sm">{{ __('Select a page first') }}</p>
                         </div>
                     @elseif(empty($blocks))
                         <div class="text-center py-8 text-gray-500">
                             <x-heroicon-o-cube class="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                            <p class="text-sm">No blocks yet</p>
-                            <p class="text-xs mt-1">Click "Add Block" below</p>
+                            <p class="text-sm">{{ __('No blocks yet') }}</p>
+                            <p class="text-xs mt-1">{{ __('Click "Add Block" below') }}</p>
                         </div>
                     @else
                         <div class="space-y-2" id="sortable-blocks">
@@ -95,22 +95,22 @@
                                             <button
                                                 wire:click="editBlock('{{ $block['id'] ?? '' }}')"
                                                 class="p-1 text-gray-400 hover:text-primary-600 rounded"
-                                                title="Edit"
+                                                title="{{ __('Edit') }}"
                                             >
                                                 <x-heroicon-o-pencil class="w-3.5 h-3.5" />
                                             </button>
                                             <button
                                                 wire:click="duplicateBlock('{{ $block['id'] ?? '' }}')"
                                                 class="p-1 text-gray-400 hover:text-gray-600 rounded"
-                                                title="Duplicate"
+                                                title="{{ __('Duplicate') }}"
                                             >
                                                 <x-heroicon-o-document-duplicate class="w-3.5 h-3.5" />
                                             </button>
                                             <button
                                                 wire:click="removeBlock('{{ $block['id'] ?? '' }}')"
-                                                wire:confirm="Remove this block?"
+                                                wire:confirm="{{ __('Remove this block?') }}"
                                                 class="p-1 text-gray-400 hover:text-red-600 rounded"
-                                                title="Remove"
+                                                title="{{ __('Remove') }}"
                                             >
                                                 <x-heroicon-o-trash class="w-3.5 h-3.5" />
                                             </button>
@@ -130,7 +130,7 @@
                             class="w-full py-2 px-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary-500 hover:text-primary-500 transition flex items-center justify-center gap-2 text-sm"
                         >
                             <x-heroicon-o-plus class="w-4 h-4" />
-                            Add Block
+                            {{ __('Add Block') }}
                         </button>
                     </div>
                 @endif
@@ -142,7 +142,7 @@
             {{-- Preview Header --}}
             <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Preview</span>
+                    <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ __('Preview') }}</span>
                     @if($currentPageSlug)
                         <span class="text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded">
                             /page/{{ $currentPageSlug }}
@@ -157,7 +157,7 @@
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition"
                     >
                         <x-heroicon-o-arrow-top-right-on-square class="w-3.5 h-3.5" />
-                        Open in New Tab
+                        {{ __('Open in New Tab') }}
                     </a>
                 @endif
             </div>
@@ -175,8 +175,8 @@
                     <div class="flex items-center justify-center h-full text-gray-500">
                         <div class="text-center">
                             <x-heroicon-o-document class="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p class="font-medium">Select a page to preview</p>
-                            <p class="text-sm mt-1">Choose a page from the sidebar</p>
+                            <p class="font-medium">{{ __('Select a page to preview') }}</p>
+                            <p class="text-sm mt-1">{{ __('Choose a page from the sidebar') }}</p>
                         </div>
                     </div>
                 @endif
@@ -209,7 +209,7 @@
             >
                 {{-- Modal Header --}}
                 <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                    <h3 class="font-semibold text-gray-900 dark:text-white">Add Block</h3>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Add Block') }}</h3>
                     <button @click="showBlockPicker = false" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition">
                         <x-heroicon-o-x-mark class="w-5 h-5" />
                     </button>
@@ -240,7 +240,7 @@
                     {{-- Empty state --}}
                     <template x-if="!availableBlocks.blocks || Object.keys(availableBlocks.blocks).length === 0">
                         <div class="text-center py-8 text-gray-500">
-                            <p>No blocks available</p>
+                            <p>{{ __('No blocks available') }}</p>
                         </div>
                     </template>
                 </div>
@@ -251,19 +251,19 @@
     {{-- Block Settings Modal --}}
     <x-filament::modal id="block-settings-modal" width="2xl">
         <x-slot name="heading">
-            Edit Block
+            {{ __('Edit Block') }}
         </x-slot>
 
         <div class="space-y-4">
             {{-- Language Selector --}}
             <div class="flex items-center gap-2 mb-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Content Language:</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Content Language:') }}</span>
                 <select
                     wire:model.live="contentLanguage"
                     class="text-sm border-gray-300 dark:border-gray-600 rounded-lg"
                 >
-                    <option value="en">English</option>
-                    <option value="ro">Romanian</option>
+                    <option value="en">{{ __('English') }}</option>
+                    <option value="ro">{{ __('Romanian') }}</option>
                 </select>
             </div>
 
@@ -279,10 +279,10 @@
                             color="gray"
                             x-on:click="$dispatch('close-modal', { id: 'block-settings-modal' })"
                         >
-                            Cancel
+                            {{ __('Cancel') }}
                         </x-filament::button>
                         <x-filament::button type="submit">
-                            Save Changes
+                            {{ __('Save Changes') }}
                         </x-filament::button>
                     </div>
                 </form>

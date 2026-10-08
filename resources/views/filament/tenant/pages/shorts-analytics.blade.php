@@ -43,7 +43,7 @@
                         <div
                             class="w-full rounded-t bg-primary-500/80"
                             style="height: {{ max(2, (int) round($count / $peak * 100)) }}%"
-                            title="{{ $count }} spectatori"
+                            title="{{ __(':count spectatori', ['count' => $count]) }}"
                         ></div>
                         <span class="text-[10px] text-gray-500 dark:text-gray-400">{{ $bucket * 10 }}%</span>
                     </div>
@@ -56,17 +56,17 @@
             </p>
         </x-filament::section>
 
-        <x-filament::section heading="Top shorts">
+        <x-filament::section heading="{{ __('Top shorts') }}">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            <th class="py-2 pr-4">Short</th>
+                            <th class="py-2 pr-4">{{ __('Short') }}</th>
                             <th class="py-2 pr-4 text-right">Vizionări</th>
                             <th class="py-2 pr-4 text-right">Watch %</th>
                             <th class="py-2 pr-4 text-right">CTA</th>
                             <th class="py-2 pr-4 text-right">Vânzări</th>
-                            <th class="py-2 text-right">Venit</th>
+                            <th class="py-2 text-right">{{ __('Venit') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">

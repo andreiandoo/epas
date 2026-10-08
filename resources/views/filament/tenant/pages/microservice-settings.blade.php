@@ -23,13 +23,13 @@
                     @if($activatedAt)
                         <p class="text-xs text-gray-500 dark:text-gray-500 mt-2 flex items-center gap-1">
                             <x-heroicon-o-calendar class="w-3.5 h-3.5" />
-                            Active since {{ \Carbon\Carbon::parse($activatedAt)->format('M d, Y') }}
+                            {{ __('Active since :date', ['date' => \Carbon\Carbon::parse($activatedAt)->format('M d, Y')]) }}
                         </p>
                     @endif
                 </div>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                    Active
+                    {{ __('Active') }}
                 </span>
             </div>
         </div>
@@ -40,7 +40,7 @@
 
         <div class="mt-6 flex justify-end">
             <x-filament::button type="submit" size="lg">
-                Save Settings
+                {{ __('Save Settings') }}
             </x-filament::button>
         </div>
     </form>

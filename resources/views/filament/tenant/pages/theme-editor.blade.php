@@ -7,7 +7,7 @@
 
                 <div class="mt-6 flex gap-3">
                     <x-filament::button type="submit" class="flex-1">
-                        Save Theme
+                        {{ __('Save Theme') }}
                     </x-filament::button>
 
                     <x-filament::button
@@ -15,7 +15,7 @@
                         color="gray"
                         wire:click="resetToDefaults"
                     >
-                        Reset
+                        {{ __('Reset') }}
                     </x-filament::button>
                 </div>
             </form>
@@ -25,14 +25,14 @@
         <div class="flex-1 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden flex flex-col">
             {{-- Viewport Controls --}}
             <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4">
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Preview:</span>
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ __('Preview:') }}</span>
 
                 <div class="flex gap-1">
                     <button
                         @click="viewport = 'desktop'"
                         :class="viewport === 'desktop' ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
                         class="p-2 rounded-lg transition"
-                        title="Desktop"
+                        title="{{ __('Desktop') }}"
                     >
                         <x-heroicon-o-computer-desktop class="w-5 h-5" />
                     </button>
@@ -40,7 +40,7 @@
                         @click="viewport = 'tablet'"
                         :class="viewport === 'tablet' ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
                         class="p-2 rounded-lg transition"
-                        title="Tablet"
+                        title="{{ __('Tablet') }}"
                     >
                         <x-heroicon-o-device-tablet class="w-5 h-5" />
                     </button>
@@ -48,7 +48,7 @@
                         @click="viewport = 'mobile'"
                         :class="viewport === 'mobile' ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
                         class="p-2 rounded-lg transition"
-                        title="Mobile"
+                        title="{{ __('Mobile') }}"
                     >
                         <x-heroicon-o-device-phone-mobile class="w-5 h-5" />
                     </button>
@@ -57,7 +57,7 @@
                 <button
                     @click="refreshPreview"
                     class="ml-auto p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                    title="Refresh Preview"
+                    title="{{ __('Refresh Preview') }}"
                 >
                     <x-heroicon-o-arrow-path class="w-5 h-5" />
                 </button>
@@ -76,8 +76,8 @@
                 @else
                     <div class="flex flex-col items-center justify-center h-full text-gray-500">
                         <x-heroicon-o-globe-alt class="w-16 h-16 mb-4" />
-                        <p class="text-lg font-medium">No Preview Available</p>
-                        <p class="text-sm mt-2">You need a verified domain to preview your theme.</p>
+                        <p class="text-lg font-medium">{{ __('No Preview Available') }}</p>
+                        <p class="text-sm mt-2">{{ __('You need a verified domain to preview your theme.') }}</p>
                     </div>
                 @endif
             </div>

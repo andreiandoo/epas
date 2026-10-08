@@ -32,13 +32,13 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {{-- Revenue --}}
         <div class="p-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue</p>
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Revenue') }}</p>
             <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($totalRevenue, 0) }} <span class="text-base font-normal text-gray-500">{{ $currency }}</span></p>
         </div>
 
         {{-- Tickets Sold --}}
         <div class="p-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Tickets Sold</p>
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Tickets Sold') }}</p>
             <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($totalSold) }}</p>
             <div class="mt-2 flex items-center gap-2">
                 <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -50,16 +50,16 @@
 
         {{-- Orders --}}
         <div class="p-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Orders</p>
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Total Orders') }}</p>
             <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($orderStats['total']) }}</p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $orderStats['paid'] }} completed</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __(':paid completed', ['paid' => $orderStats['paid']]) }}</p>
         </div>
 
         {{-- Capacity --}}
         <div class="p-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Capacity</p>
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Capacity') }}</p>
             <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($totalCapacity) }}</p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ number_format($totalCapacity - $totalSold) }} available</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __(':count available', ['count' => number_format($totalCapacity - $totalSold)]) }}</p>
         </div>
     </div>
 
@@ -68,17 +68,17 @@
         {{-- Ticket Types --}}
         <div class="lg:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <h2 class="text-sm font-medium text-gray-900 dark:text-white">Ticket Types</h2>
+                <h2 class="text-sm font-medium text-gray-900 dark:text-white">{{ __('Ticket Types') }}</h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-                            <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Type</th>
-                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Price</th>
-                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Sold</th>
-                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue</th>
-                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress</th>
+                            <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Type') }}</th>
+                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Price') }}</th>
+                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Sold') }}</th>
+                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Revenue') }}</th>
+                            <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Progress') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -107,7 +107,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-5 py-8 text-center text-gray-500 dark:text-gray-400">No ticket types configured</td>
+                                <td colspan="5" class="px-5 py-8 text-center text-gray-500 dark:text-gray-400">{{ __('No ticket types configured') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -118,15 +118,15 @@
         {{-- Order Breakdown --}}
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <h2 class="text-sm font-medium text-gray-900 dark:text-white">Order Status</h2>
+                <h2 class="text-sm font-medium text-gray-900 dark:text-white">{{ __('Order Status') }}</h2>
             </div>
             <div class="p-5 space-y-4">
                 @php
                     $statuses = [
-                        ['label' => 'Completed', 'value' => $orderStats['paid'], 'color' => 'emerald'],
-                        ['label' => 'Pending', 'value' => $orderStats['pending'], 'color' => 'amber'],
-                        ['label' => 'Cancelled', 'value' => $orderStats['cancelled'], 'color' => 'red'],
-                        ['label' => 'Refunded', 'value' => $orderStats['refunded'], 'color' => 'gray'],
+                        ['label' => __('Completed'), 'value' => $orderStats['paid'], 'color' => 'emerald'],
+                        ['label' => __('Pending'), 'value' => $orderStats['pending'], 'color' => 'amber'],
+                        ['label' => __('Cancelled'), 'value' => $orderStats['cancelled'], 'color' => 'red'],
+                        ['label' => __('Refunded'), 'value' => $orderStats['refunded'], 'color' => 'gray'],
                     ];
                 @endphp
                 @foreach($statuses as $status)
@@ -145,8 +145,8 @@
     {{-- Sales Chart --}}
     <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
         <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <h2 class="text-sm font-medium text-gray-900 dark:text-white">Sales Over Time</h2>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Last 30 days</p>
+            <h2 class="text-sm font-medium text-gray-900 dark:text-white">{{ __('Sales Over Time') }}</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Last 30 days') }}</p>
         </div>
         <div class="p-5">
             <div style="height: 280px;">
@@ -159,22 +159,22 @@
     @if($analytics['available'] ?? false)
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <h2 class="text-sm font-medium text-gray-900 dark:text-white">Page Analytics</h2>
+                <h2 class="text-sm font-medium text-gray-900 dark:text-white">{{ __('Page Analytics') }}</h2>
             </div>
             <div class="p-5">
                 {{-- Main Stats --}}
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Page Views</p>
+                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Page Views') }}</p>
                         <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{{ number_format($analytics['total_views'] ?? 0) }}</p>
                     </div>
                     <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unique Visitors</p>
+                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Unique Visitors') }}</p>
                         <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{{ number_format($analytics['unique_sessions'] ?? 0) }}</p>
                     </div>
                     @if(!empty($analytics['top_sources']))
                         <div>
-                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Traffic Sources</p>
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{{ __('Traffic Sources') }}</p>
                             @foreach(array_slice($analytics['top_sources'], 0, 3, true) as $source => $count)
                                 <div class="flex justify-between text-sm py-0.5">
                                     <span class="text-gray-600 dark:text-gray-300 truncate max-w-[120px]">{{ $source }}</span>
@@ -185,10 +185,10 @@
                     @endif
                     @if(!empty($analytics['devices']))
                         <div>
-                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Devices</p>
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{{ __('Devices') }}</p>
                             @foreach(array_slice($analytics['devices'], 0, 3, true) as $device => $count)
                                 <div class="flex justify-between text-sm py-0.5">
-                                    <span class="text-gray-600 dark:text-gray-300">{{ ucfirst($device ?? 'Unknown') }}</span>
+                                    <span class="text-gray-600 dark:text-gray-300">{{ ucfirst($device ?? __('Unknown')) }}</span>
                                     <span class="text-gray-500 dark:text-gray-400">{{ $count }}</span>
                                 </div>
                             @endforeach
@@ -200,7 +200,7 @@
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                     @if(!empty($analytics['top_referrers']))
                         <div>
-                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Top Referrers</p>
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{{ __('Top Referrers') }}</p>
                             @foreach(array_slice($analytics['top_referrers'], 0, 3, true) as $referrer => $count)
                                 <div class="flex justify-between text-sm py-0.5">
                                     <span class="text-gray-600 dark:text-gray-300 truncate max-w-[120px]">{{ parse_url($referrer, PHP_URL_HOST) ?: $referrer ?: 'Direct' }}</span>
@@ -211,7 +211,7 @@
                     @endif
                     @if(!empty($analytics['top_countries']))
                         <div>
-                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Top Countries</p>
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{{ __('Top Countries') }}</p>
                             @foreach(array_slice($analytics['top_countries'], 0, 3, true) as $country => $count)
                                 <div class="flex justify-between text-sm py-0.5">
                                     <span class="text-gray-600 dark:text-gray-300">{{ $country }}</span>
@@ -226,11 +226,11 @@
     @else
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <h2 class="text-sm font-medium text-gray-900 dark:text-white">Page Analytics</h2>
+                <h2 class="text-sm font-medium text-gray-900 dark:text-white">{{ __('Page Analytics') }}</h2>
             </div>
             <div class="p-5 text-center text-gray-500 dark:text-gray-400">
-                <p>No analytics data available yet.</p>
-                <p class="text-sm mt-1">Page view tracking will appear here once visitors view this event page.</p>
+                <p>{{ __('No analytics data available yet.') }}</p>
+                <p class="text-sm mt-1">{{ __('Page view tracking will appear here once visitors view this event page.') }}</p>
             </div>
         </div>
     @endif

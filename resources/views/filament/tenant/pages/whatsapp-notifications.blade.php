@@ -6,50 +6,50 @@
                     <x-heroicon-o-chat-bubble-left-right class="w-8 h-8" />
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold">WhatsApp Notifications</h2>
-                    <p class="text-green-100 text-sm">Send order confirmations, reminders, and updates via WhatsApp</p>
+                    <h2 class="text-2xl font-bold">{{ __('WhatsApp Notifications') }}</h2>
+                    <p class="text-green-100 text-sm">{{ __('Send order confirmations, reminders, and updates via WhatsApp') }}</p>
                 </div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Quick Actions') }}</h3>
                 <div class="space-y-3">
                     <a href="/tenant/microservices/whatsapp-notifications/settings"
                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         <x-heroicon-o-cog-6-tooth class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">Configure WhatsApp API</span>
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Configure WhatsApp API') }}</span>
                     </a>
                     <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         <x-heroicon-o-document-text class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">Message Templates</span>
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Message Templates') }}</span>
                     </a>
                     <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         <x-heroicon-o-clock class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">Delivery History</span>
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Delivery History') }}</span>
                     </a>
                 </div>
             </div>
 
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Features</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Features') }}</h3>
                 <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     <li class="flex items-center gap-2">
                         <x-heroicon-s-check-circle class="w-4 h-4 text-green-500" />
-                        Order confirmation messages
+                        {{ __('Order confirmation messages') }}
                     </li>
                     <li class="flex items-center gap-2">
                         <x-heroicon-s-check-circle class="w-4 h-4 text-green-500" />
-                        Event reminders (1 day, 3 hours before)
+                        {{ __('Event reminders (1 day, 3 hours before)') }}
                     </li>
                     <li class="flex items-center gap-2">
                         <x-heroicon-s-check-circle class="w-4 h-4 text-green-500" />
-                        Ticket delivery via WhatsApp
+                        {{ __('Ticket delivery via WhatsApp') }}
                     </li>
                     <li class="flex items-center gap-2">
                         <x-heroicon-s-check-circle class="w-4 h-4 text-green-500" />
-                        Rich media templates with images
+                        {{ __('Rich media templates with images') }}
                     </li>
                 </ul>
             </div>
@@ -59,9 +59,9 @@
             <div class="flex gap-3">
                 <x-heroicon-o-information-circle class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                 <div class="text-sm">
-                    <p class="font-medium text-green-900 dark:text-green-100">Setup Required</p>
+                    <p class="font-medium text-green-900 dark:text-green-100">{{ __('Setup Required') }}</p>
                     <p class="text-green-700 dark:text-green-300 mt-1">
-                        To use WhatsApp notifications, you need to configure your WhatsApp Business API credentials in the settings.
+                        {{ __('To use WhatsApp notifications, you need to configure your WhatsApp Business API credentials in the settings.') }}
                     </p>
                 </div>
             </div>

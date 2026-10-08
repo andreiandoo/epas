@@ -91,7 +91,7 @@ canvas{width:100%!important;}
                 </div>
                 <div style="color:var(--muted);font-size:13px;margin-top:4px;">
                     {{ $venue->city ?? '' }}{{ $venue->country ? ', ' . $venue->country : '' }}
-                    @if($cap) <span style="margin-left:12px;">Capacity: <strong style="color:var(--text);">{{ number_format($cap) }}</strong></span> @endif
+                    @if($cap) <span style="margin-left:12px;">{{ __('Capacity:') }} <strong style="color:var(--text);">{{ number_format($cap) }}</strong></span> @endif
                 </div>
             </div>
             @if($venue->website_url || $venue->facebook_url || $venue->instagram_url)
@@ -107,12 +107,12 @@ canvas{width:100%!important;}
     {{-- KPI CARDS --}}
     <div class="kpi-grid" style="margin-bottom:16px;">
         @foreach([
-            ['l' => 'Events', 'v' => $kpis['total_events'] ?? 0, 'c' => 'var(--text)'],
-            ['l' => 'Tickets Sold', 'v' => number_format($kpis['total_tickets'] ?? 0), 'c' => 'var(--success)'],
-            ['l' => 'Revenue', 'v' => number_format($kpis['total_revenue'] ?? 0, 0) . ' RON', 'c' => 'var(--warn)'],
-            ['l' => 'Avg Occupancy', 'v' => ($kpis['avg_occupancy'] ?? 0) . '%', 'c' => 'var(--accent)'],
-            ['l' => 'Avg Rev/Event', 'v' => number_format($kpis['avg_revenue_per_event'] ?? 0, 0) . ' RON', 'c' => 'var(--primary)'],
-            ['l' => 'Avg Ticket Price', 'v' => number_format($kpis['avg_ticket_price'] ?? 0, 0) . ' RON', 'c' => '#c084fc'],
+            ['l' => __('Events'), 'v' => $kpis['total_events'] ?? 0, 'c' => 'var(--text)'],
+            ['l' => __('Tickets Sold'), 'v' => number_format($kpis['total_tickets'] ?? 0), 'c' => 'var(--success)'],
+            ['l' => __('Revenue'), 'v' => number_format($kpis['total_revenue'] ?? 0, 0) . ' RON', 'c' => 'var(--warn)'],
+            ['l' => __('Avg Occupancy'), 'v' => ($kpis['avg_occupancy'] ?? 0) . '%', 'c' => 'var(--accent)'],
+            ['l' => __('Avg Rev/Event'), 'v' => number_format($kpis['avg_revenue_per_event'] ?? 0, 0) . ' RON', 'c' => 'var(--primary)'],
+            ['l' => __('Avg Ticket Price'), 'v' => number_format($kpis['avg_ticket_price'] ?? 0, 0) . ' RON', 'c' => '#c084fc'],
         ] as $k)
             <div class="kpi"><div class="l">{{ $k['l'] }}</div><div class="v" style="color:{{ $k['c'] }}">{{ $k['v'] }}</div></div>
         @endforeach
@@ -124,7 +124,7 @@ canvas{width:100%!important;}
     <div style="display:grid;grid-template-columns:1fr 5fr;gap:14px;margin-bottom:16px;">
         @if(!empty($healthScore['components']))
         <div class="card" style="min-width:200px;"><div class="card-b" style="text-align:center;">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Venue Health Score</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">{{ __('Venue Health Score') }}</div>
             <div style="position:relative;width:110px;height:110px;margin:0 auto;">
                 <svg viewBox="0 0 36 36" style="width:110px;height:110px;transform:rotate(-90deg);">
                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(122,162,255,.1)" stroke-width="3"/>
@@ -151,7 +151,7 @@ canvas{width:100%!important;}
         @endif
 
         @if(!empty($momentum['metrics']))
-        <div class="card"><div class="card-h">Monthly Momentum — {{ $momentum['current_label'] ?? '' }} vs {{ $momentum['previous_label'] ?? '' }}</div><div class="card-b">
+        <div class="card"><div class="card-h">{{ __('Monthly Momentum — :current_label vs :previous_label', ['current_label' => $momentum['current_label'] ?? '', 'previous_label' => $momentum['previous_label'] ?? '']) }}</div><div class="card-b">
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
                 @foreach($momentum['metrics'] as $mm)
                     @php
@@ -166,7 +166,7 @@ canvas{width:100%!important;}
                             <span>{{ $fmt }}</span>
                             <span style="font-size:14px;color:{{ $tColor }};">{{ $arrow }} {{ $mm['trend']['pct'] >= 0 ? '+' : '' }}{{ $mm['trend']['pct'] }}%</span>
                         </div>
-                        <div style="font-size:10px;color:var(--muted);margin-top:2px;">prev: {{ $fmtPrev }}</div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ __('prev: :fmtPrev', ['fmtPrev' => $fmtPrev]) }}</div>
                     </div>
                 @endforeach
             </div>
@@ -191,8 +191,8 @@ canvas{width:100%!important;}
         {{-- Charts --}}
         @if(!empty($months))
         <div class="g2" style="margin-bottom:14px;">
-            <div class="card"><div class="card-h">Events & Tickets per Month</div><div class="card-b"><canvas id="venueEvTxChart" height="200"></canvas></div></div>
-            <div class="card"><div class="card-h">Revenue & Occupancy per Month</div><div class="card-b"><canvas id="venueRevOccChart" height="200"></canvas></div></div>
+            <div class="card"><div class="card-h">{{ __('Events & Tickets per Month') }}</div><div class="card-b"><canvas id="venueEvTxChart" height="200"></canvas></div></div>
+            <div class="card"><div class="card-h">{{ __('Revenue & Occupancy per Month') }}</div><div class="card-b"><canvas id="venueRevOccChart" height="200"></canvas></div></div>
         </div>
         @endif
 
@@ -200,11 +200,11 @@ canvas{width:100%!important;}
         @php $evPerf = $eventPerformance ?? []; @endphp
         @if(!empty($evPerf))
         <div class="card" style="margin-bottom:14px;">
-            <div class="card-h">Event Performance ({{ count($evPerf) }} events)</div>
+            <div class="card-h">{{ __('Event Performance (:count events)', ['count' => count($evPerf)]) }}</div>
             <div style="overflow-x:auto;">
                 <table class="tbl">
                     <thead><tr>
-                        <th>Date</th><th>Event</th><th>Artists</th><th style="text-align:right">Sold</th><th style="text-align:right">Capacity</th><th style="text-align:right">Sell-Through</th><th style="text-align:right">Revenue</th><th style="text-align:right">Check-in</th>
+                        <th>{{ __('Date') }}</th><th>{{ __('Event') }}</th><th>{{ __('Artists') }}</th><th style="text-align:right">{{ __('Sold') }}</th><th style="text-align:right">{{ __('Capacity') }}</th><th style="text-align:right">{{ __('Sell-Through') }}</th><th style="text-align:right">{{ __('Revenue') }}</th><th style="text-align:right">{{ __('Check-in') }}</th>
                     </tr></thead>
                     <tbody>
                     @foreach(array_slice($evPerf, 0, 25) as $ev)
@@ -230,20 +230,20 @@ canvas{width:100%!important;}
         @php $rb = $revenueBreakdown ?? []; $dayType = $rb['revenue_by_day_type'] ?? []; $yoy = $rb['yoy'] ?? []; @endphp
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($dayType))
-            <div class="card"><div class="card-h">Weekend vs Weekday</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Weekend vs Weekday') }}</div><div class="card-b">
                 @foreach($dayType as $dt)
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed rgba(122,162,255,.08);">
                         <span style="font-weight:600;">{{ $dt['day_type'] }}</span>
-                        <span style="color:var(--muted);">{{ $dt['events'] }} events · {{ $dt['avg_st'] }}% ST · {{ number_format($dt['avg_revenue']) }} RON avg</span>
+                        <span style="color:var(--muted);">{{ __(':events events · :avg_st% ST · :avg_revenue RON avg', ['events' => $dt['events'], 'avg_st' => $dt['avg_st'], 'avg_revenue' => number_format($dt['avg_revenue'])]) }}</span>
                     </div>
                 @endforeach
             </div></div>
             @endif
             @if(!empty($yoy) && ($yoy['last_12'] ?? 0) > 0)
-            <div class="card"><div class="card-h">Year over Year</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Year over Year') }}</div><div class="card-b">
                 <div style="display:flex;gap:20px;align-items:center;">
-                    <div><div style="color:var(--muted);font-size:11px;">Last 12 months</div><div style="font-size:22px;font-weight:700;color:var(--warn);">{{ number_format($yoy['last_12']) }} RON</div></div>
-                    <div><div style="color:var(--muted);font-size:11px;">Previous 12 months</div><div style="font-size:22px;font-weight:700;color:var(--muted);">{{ number_format($yoy['prev_12']) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Last 12 months') }}</div><div style="font-size:22px;font-weight:700;color:var(--warn);">{{ number_format($yoy['last_12']) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Previous 12 months') }}</div><div style="font-size:22px;font-weight:700;color:var(--muted);">{{ number_format($yoy['prev_12']) }} RON</div></div>
                     @if($yoy['change_pct'] !== null)
                         <div style="font-size:18px;font-weight:700;color:{{ $yoy['change_pct'] >= 0 ? 'var(--success)' : 'var(--danger)' }}">{{ $yoy['change_pct'] >= 0 ? '+' : '' }}{{ $yoy['change_pct'] }}%</div>
                     @endif
@@ -256,20 +256,20 @@ canvas{width:100%!important;}
         @php $bench = $competitorBenchmark ?? []; $rps = $revenuePerSeat ?? []; @endphp
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($bench) && $bench['city_avg'])
-            <div class="card"><div class="card-h">Competitor Benchmark — {{ $venue->city ?? '' }}</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Competitor Benchmark — :city', ['city' => $venue->city ?? '']) }}</div><div class="card-b">
                 <div style="display:flex;gap:20px;margin-bottom:12px;">
-                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">Your Avg ST</div><div style="font-size:24px;font-weight:700;color:var(--accent);">{{ $bench['my']['avg_st'] }}%</div></div>
-                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">City Avg ST</div><div style="font-size:24px;font-weight:700;color:var(--muted);">{{ $bench['city_avg']['avg_st'] }}%</div></div>
+                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">{{ __('Your Avg ST') }}</div><div style="font-size:24px;font-weight:700;color:var(--accent);">{{ $bench['my']['avg_st'] }}%</div></div>
+                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">{{ __('City Avg ST') }}</div><div style="font-size:24px;font-weight:700;color:var(--muted);">{{ $bench['city_avg']['avg_st'] }}%</div></div>
                     @if($bench['vs_city'] !== null)
-                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">Difference</div><div style="font-size:24px;font-weight:700;color:{{ $bench['vs_city'] >= 0 ? 'var(--success)' : 'var(--danger)' }}">{{ $bench['vs_city'] >= 0 ? '+' : '' }}{{ $bench['vs_city'] }}%</div></div>
+                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">{{ __('Difference') }}</div><div style="font-size:24px;font-weight:700;color:{{ $bench['vs_city'] >= 0 ? 'var(--success)' : 'var(--danger)' }}">{{ $bench['vs_city'] >= 0 ? '+' : '' }}{{ $bench['vs_city'] }}%</div></div>
                     @endif
                 </div>
                 @if(!empty($bench['competitors']))
-                    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">Other venues in city</div>
+                    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">{{ __('Other venues in city') }}</div>
                     @foreach(array_slice($bench['competitors'], 0, 5) as $comp)
                         <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed rgba(122,162,255,.08);font-size:12px;">
-                            <span>{{ $comp['name'] }} <span style="color:var(--muted);">({{ number_format($comp['capacity']) }} cap)</span></span>
-                            <span>{{ $comp['events'] }} ev · <span style="color:{{ $comp['avg_st'] > $bench['my']['avg_st'] ? 'var(--danger)' : 'var(--success)' }};font-weight:600;">{{ $comp['avg_st'] }}% ST</span> · {{ $comp['avg_price'] }} RON</span>
+                            <span>{{ $comp['name'] }} <span style="color:var(--muted);">{{ __('(:capacity cap)', ['capacity' => number_format($comp['capacity'])]) }}</span></span>
+                            <span>{{ $comp['events'] }} ev · <span style="color:{{ $comp['avg_st'] > $bench['my']['avg_st'] ? 'var(--danger)' : 'var(--success)' }};font-weight:600;">{{ __(':avg_st% ST', ['avg_st' => $comp['avg_st']]) }}</span> · {{ $comp['avg_price'] }} RON</span>
                         </div>
                     @endforeach
                 @endif
@@ -277,14 +277,14 @@ canvas{width:100%!important;}
             @endif
 
             @if(!empty($rps) && ($rps['avg_rev_per_seat'] ?? 0) > 0)
-            <div class="card"><div class="card-h">Revenue per Seat</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Revenue per Seat') }}</div><div class="card-b">
                 <div style="display:flex;gap:20px;margin-bottom:12px;">
-                    <div><div style="color:var(--muted);font-size:11px;">Avg Rev / Seat / Event</div><div style="font-size:24px;font-weight:700;color:var(--warn);">{{ number_format($rps['avg_rev_per_seat'], 0) }} RON</div></div>
-                    <div><div style="color:var(--muted);font-size:11px;">Venue Capacity</div><div style="font-size:24px;font-weight:700;">{{ number_format($rps['capacity']) }}</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Avg Rev / Seat / Event') }}</div><div style="font-size:24px;font-weight:700;color:var(--warn);">{{ number_format($rps['avg_rev_per_seat'], 0) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Venue Capacity') }}</div><div style="font-size:24px;font-weight:700;">{{ number_format($rps['capacity']) }}</div></div>
                 </div>
                 @if($rps['best_event'])
                     <div style="padding:8px 12px;border-radius:8px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);font-size:12px;">
-                        Best: <strong>{{ $rps['best_event']['title'] }}</strong> — {{ number_format($rps['best_event']['rev_per_seat'], 0) }} RON/seat ({{ number_format($rps['best_event']['revenue']) }} RON total)
+                        {{ __('Best:') }} <strong>{{ $rps['best_event']['title'] }}</strong> {{ __('— :rev_per_seat RON/seat (:revenue RON total)', ['rev_per_seat' => number_format($rps['best_event']['rev_per_seat'], 0), 'revenue' => number_format($rps['best_event']['revenue'])]) }}
                     </div>
                 @endif
             </div></div>
@@ -293,32 +293,32 @@ canvas{width:100%!important;}
 
         {{-- Event Comparison Tool --}}
         @if(!empty($evPerf) && count($evPerf) >= 2)
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Event Comparison — Side by Side</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Event Comparison — Side by Side') }}</div><div class="card-b">
             <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
-                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Event A</label>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">{{ __('Event A') }}</label>
                     <select x-model="cmpA" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;max-width:280px;">
-                        <option value="">Select event...</option>
+                        <option value="">{{ __('Select event...') }}</option>
                         @foreach(array_slice($evPerf, 0, 30) as $ev)<option value="{{ $ev['id'] }}">{{ \Illuminate\Support\Str::limit($ev['title'], 35) }} ({{ $ev['date'] ? \Carbon\Carbon::parse($ev['date'])->format('d M y') : '' }})</option>@endforeach
                     </select></div>
-                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Event B</label>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">{{ __('Event B') }}</label>
                     <select x-model="cmpB" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;max-width:280px;">
-                        <option value="">Select event...</option>
+                        <option value="">{{ __('Select event...') }}</option>
                         @foreach(array_slice($evPerf, 0, 30) as $ev)<option value="{{ $ev['id'] }}">{{ \Illuminate\Support\Str::limit($ev['title'], 35) }} ({{ $ev['date'] ? \Carbon\Carbon::parse($ev['date'])->format('d M y') : '' }})</option>@endforeach
                     </select></div>
-                <button @click="runComparison()" style="padding:8px 18px;border-radius:8px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;" :disabled="cmpLoading || !cmpA || !cmpB">Compare</button>
+                <button @click="runComparison()" style="padding:8px 18px;border-radius:8px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;" :disabled="cmpLoading || !cmpA || !cmpB">{{ __('Compare') }}</button>
             </div>
             <template x-if="cmpResult && !cmpResult.error">
                 <div>
-                    <table class="tbl"><thead><tr><th>Metric</th><th style="text-align:right" x-text="cmpResult.event_a.title"></th><th style="text-align:right" x-text="cmpResult.event_b.title"></th></tr></thead>
+                    <table class="tbl"><thead><tr><th>{{ __('Metric') }}</th><th style="text-align:right" x-text="cmpResult.event_a.title"></th><th style="text-align:right" x-text="cmpResult.event_b.title"></th></tr></thead>
                     <tbody>
-                        <tr><td style="font-weight:600;">Date</td><td style="text-align:right" x-text="cmpResult.event_a.date"></td><td style="text-align:right" x-text="cmpResult.event_b.date"></td></tr>
-                        <tr><td style="font-weight:600;">Artists</td><td style="text-align:right;color:var(--muted);font-size:12px;" x-text="cmpResult.event_a.artists"></td><td style="text-align:right;color:var(--muted);font-size:12px;" x-text="cmpResult.event_b.artists"></td></tr>
-                        <tr><td style="font-weight:600;">Sold / Cap</td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_a.sold + ' / ' + cmpResult.event_a.capacity"></td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_b.sold + ' / ' + cmpResult.event_b.capacity"></td></tr>
-                        <tr><td style="font-weight:600;">Sell-Through</td><td style="text-align:right;font-weight:700;" :style="'color:' + ((cmpResult.event_a.sell_through||0) >= (cmpResult.event_b.sell_through||0) ? 'var(--success)' : 'var(--danger)')" x-text="(cmpResult.event_a.sell_through ?? '—') + '%'"></td><td style="text-align:right;font-weight:700;" :style="'color:' + ((cmpResult.event_b.sell_through||0) >= (cmpResult.event_a.sell_through||0) ? 'var(--success)' : 'var(--danger)')" x-text="(cmpResult.event_b.sell_through ?? '—') + '%'"></td></tr>
-                        <tr><td style="font-weight:600;">Revenue</td><td style="text-align:right;color:var(--warn);font-family:monospace;" x-text="Number(cmpResult.event_a.revenue).toLocaleString() + ' RON'"></td><td style="text-align:right;color:var(--warn);font-family:monospace;" x-text="Number(cmpResult.event_b.revenue).toLocaleString() + ' RON'"></td></tr>
-                        <tr><td style="font-weight:600;">Avg Ticket Price</td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_a.avg_price + ' RON'"></td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_b.avg_price + ' RON'"></td></tr>
-                        <tr><td style="font-weight:600;">Avg Lead Time</td><td style="text-align:right;" x-text="cmpResult.event_a.avg_lead_days + 'd'"></td><td style="text-align:right;" x-text="cmpResult.event_b.avg_lead_days + 'd'"></td></tr>
-                        <tr><td style="font-weight:600;">Check-in Rate</td><td style="text-align:right;" x-text="(cmpResult.event_a.checkin_rate ?? '—') + '%'"></td><td style="text-align:right;" x-text="(cmpResult.event_b.checkin_rate ?? '—') + '%'"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Date') }}</td><td style="text-align:right" x-text="cmpResult.event_a.date"></td><td style="text-align:right" x-text="cmpResult.event_b.date"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Artists') }}</td><td style="text-align:right;color:var(--muted);font-size:12px;" x-text="cmpResult.event_a.artists"></td><td style="text-align:right;color:var(--muted);font-size:12px;" x-text="cmpResult.event_b.artists"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Sold / Cap') }}</td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_a.sold + ' / ' + cmpResult.event_a.capacity"></td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_b.sold + ' / ' + cmpResult.event_b.capacity"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Sell-Through') }}</td><td style="text-align:right;font-weight:700;" :style="'color:' + ((cmpResult.event_a.sell_through||0) >= (cmpResult.event_b.sell_through||0) ? 'var(--success)' : 'var(--danger)')" x-text="(cmpResult.event_a.sell_through ?? '—') + '%'"></td><td style="text-align:right;font-weight:700;" :style="'color:' + ((cmpResult.event_b.sell_through||0) >= (cmpResult.event_a.sell_through||0) ? 'var(--success)' : 'var(--danger)')" x-text="(cmpResult.event_b.sell_through ?? '—') + '%'"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Revenue') }}</td><td style="text-align:right;color:var(--warn);font-family:monospace;" x-text="Number(cmpResult.event_a.revenue).toLocaleString() + ' RON'"></td><td style="text-align:right;color:var(--warn);font-family:monospace;" x-text="Number(cmpResult.event_b.revenue).toLocaleString() + ' RON'"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Avg Ticket Price') }}</td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_a.avg_price + ' RON'"></td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_b.avg_price + ' RON'"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Avg Lead Time') }}</td><td style="text-align:right;" x-text="cmpResult.event_a.avg_lead_days + 'd'"></td><td style="text-align:right;" x-text="cmpResult.event_b.avg_lead_days + 'd'"></td></tr>
+                        <tr><td style="font-weight:600;">{{ __('Check-in Rate') }}</td><td style="text-align:right;" x-text="(cmpResult.event_a.checkin_rate ?? '—') + '%'"></td><td style="text-align:right;" x-text="(cmpResult.event_b.checkin_rate ?? '—') + '%'"></td></tr>
                     </tbody></table>
                 </div>
             </template>
@@ -332,8 +332,8 @@ canvas{width:100%!important;}
 
         {{-- Top Artists by Revenue --}}
         @if(!empty($rb['top_artists_by_revenue']))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Top Artists by Revenue</div>
-            <table class="tbl"><thead><tr><th>Artist</th><th style="text-align:right">Events</th><th style="text-align:right">Revenue</th><th style="text-align:right">Avg ST</th></tr></thead>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Top Artists by Revenue') }}</div>
+            <table class="tbl"><thead><tr><th>{{ __('Artist') }}</th><th style="text-align:right">{{ __('Events') }}</th><th style="text-align:right">{{ __('Revenue') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th></tr></thead>
             <tbody>
             @foreach($rb['top_artists_by_revenue'] as $a)
                 <tr><td style="font-weight:600">{{ $a['name'] }}</td><td style="text-align:right">{{ $a['events'] }}</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($a['total_revenue']) }}</td><td style="text-align:right">{{ $a['avg_st'] }}%</td></tr>
@@ -345,21 +345,21 @@ canvas{width:100%!important;}
         {{-- Revenue by Genre + Channel --}}
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($rb['revenue_by_genre']))
-            <div class="card"><div class="card-h">Revenue by Genre</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Revenue by Genre') }}</div><div class="card-b">
                 @foreach($rb['revenue_by_genre'] as $g)
                     <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(122,162,255,.08);">
-                        <span>{{ $g['genre'] }} <span style="color:var(--muted);font-size:11px;">({{ $g['events'] }} events)</span></span>
+                        <span>{{ $g['genre'] }} <span style="color:var(--muted);font-size:11px;">{{ __('(:events events)', ['events' => $g['events']]) }}</span></span>
                         <span style="color:var(--warn);font-family:monospace;font-weight:600;">{{ number_format($g['revenue']) }} RON</span>
                     </div>
                 @endforeach
             </div></div>
             @endif
             @if(!empty($rb['revenue_by_channel']))
-            <div class="card"><div class="card-h">Revenue by Channel</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Revenue by Channel') }}</div><div class="card-b">
                 @foreach($rb['revenue_by_channel'] as $ch)
                     @php $c = is_object($ch) ? $ch : (object)$ch; @endphp
                     <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(122,162,255,.08);">
-                        <span>{{ $c->source ?? 'unknown' }} <span style="color:var(--muted);font-size:11px;">({{ $c->orders ?? 0 }} orders)</span></span>
+                        <span>{{ $c->source ?? 'unknown' }} <span style="color:var(--muted);font-size:11px;">{{ __('(:orders orders)', ['orders' => $c->orders ?? 0]) }}</span></span>
                         <span style="color:var(--warn);font-family:monospace;font-weight:600;">{{ number_format($c->revenue ?? 0) }} RON</span>
                     </div>
                 @endforeach
@@ -371,7 +371,7 @@ canvas{width:100%!important;}
         @php $pi = $pricingIntelligence ?? []; @endphp
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($pi['price_buckets']))
-            <div class="card"><div class="card-h">Price Sensitivity @if($pi['sweet_spot']) <span style="color:var(--success);font-size:11px;margin-left:8px;">Sweet spot: {{ $pi['sweet_spot'] }} RON</span> @endif</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Price Sensitivity') }} @if($pi['sweet_spot']) <span style="color:var(--success);font-size:11px;margin-left:8px;">{{ __('Sweet spot: :sweet_spot RON', ['sweet_spot' => $pi['sweet_spot']]) }}</span> @endif</div><div class="card-b">
                 @foreach($pi['price_buckets'] as $pb)
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;">
                         <span>{{ $pb['range'] }} RON</span>
@@ -385,7 +385,7 @@ canvas{width:100%!important;}
             @endif
             <div>
                 @if(!empty($pi['underpriced']))
-                <div class="card" style="margin-bottom:10px;"><div class="card-h" style="color:var(--warn);">Under-Priced Events (>90% ST)</div><div class="card-b">
+                <div class="card" style="margin-bottom:10px;"><div class="card-h" style="color:var(--warn);">{{ __('Under-Priced Events (>90% ST)') }}</div><div class="card-b">
                     @foreach($pi['underpriced'] as $up)
                         <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;">
                             <span>{{ \Illuminate\Support\Str::limit($up['title'], 30) }}</span>
@@ -395,7 +395,7 @@ canvas{width:100%!important;}
                 </div></div>
                 @endif
                 @if(!empty($pi['overpriced']))
-                <div class="card"><div class="card-h" style="color:var(--danger);">Over-Priced Events (<30% ST)</div><div class="card-b">
+                <div class="card"><div class="card-h" style="color:var(--danger);">{{ __('Over-Priced Events (<30% ST)') }}</div><div class="card-b">
                     @foreach($pi['overpriced'] as $op)
                         <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;">
                             <span>{{ \Illuminate\Support\Str::limit($op['title'], 30) }}</span>
@@ -410,8 +410,8 @@ canvas{width:100%!important;}
         {{-- Revenue Forecast --}}
         @php $rf = $revenueForecast ?? []; @endphp
         @if(!empty($rf['forecast']))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Revenue Forecast (6 months) @if($rf['yoy_change_pct'] !== null) <span style="color:{{ $rf['yoy_change_pct'] >= 0 ? 'var(--success)' : 'var(--danger)' }};font-size:11px;margin-left:8px;">YoY: {{ $rf['yoy_change_pct'] >= 0 ? '+' : '' }}{{ $rf['yoy_change_pct'] }}%</span> @endif</div>
-            <table class="tbl"><thead><tr><th>Month</th><th style="text-align:right">Pessimistic</th><th style="text-align:right">Realistic</th><th style="text-align:right">Optimistic</th></tr></thead>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Revenue Forecast (6 months)') }} @if($rf['yoy_change_pct'] !== null) <span style="color:{{ $rf['yoy_change_pct'] >= 0 ? 'var(--success)' : 'var(--danger)' }};font-size:11px;margin-left:8px;">{{ __('YoY: :change%', ['change' => ($rf['yoy_change_pct'] >= 0 ? '+' : '') . $rf['yoy_change_pct']]) }}</span> @endif</div>
+            <table class="tbl"><thead><tr><th>{{ __('Month') }}</th><th style="text-align:right">{{ __('Pessimistic') }}</th><th style="text-align:right">{{ __('Realistic') }}</th><th style="text-align:right">{{ __('Optimistic') }}</th></tr></thead>
             <tbody>
             @foreach($rf['forecast'] as $f)
                 <tr><td>{{ $f['month'] }}</td><td style="text-align:right;color:var(--muted);font-family:monospace">{{ number_format($f['pessimistic']) }}</td><td style="text-align:right;color:var(--warn);font-weight:600;font-family:monospace">{{ number_format($f['realistic']) }}</td><td style="text-align:right;color:var(--success);font-family:monospace">{{ number_format($f['optimistic']) }}</td></tr>
@@ -423,16 +423,16 @@ canvas{width:100%!important;}
         {{-- Refund Analysis --}}
         @php $refunds = $refundAnalysis ?? []; @endphp
         @if(($refunds['total_refunds'] ?? 0) > 0)
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Refund & Cancellation Analysis</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Refund & Cancellation Analysis') }}</div><div class="card-b">
             <div style="display:flex;gap:20px;margin-bottom:14px;">
-                <div><div style="color:var(--muted);font-size:11px;">Total Orders</div><div style="font-size:20px;font-weight:700;">{{ number_format($refunds['total_orders']) }}</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">Refunds</div><div style="font-size:20px;font-weight:700;color:var(--danger);">{{ number_format($refunds['total_refunds']) }}</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">Refund Rate</div><div style="font-size:20px;font-weight:700;color:{{ $refunds['refund_rate'] > 5 ? 'var(--danger)' : ($refunds['refund_rate'] > 2 ? 'var(--warn)' : 'var(--success)') }};">{{ $refunds['refund_rate'] }}%</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">Revenue Lost</div><div style="font-size:20px;font-weight:700;color:var(--danger);">{{ number_format($refunds['refund_revenue_lost']) }} RON</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Total Orders') }}</div><div style="font-size:20px;font-weight:700;">{{ number_format($refunds['total_orders']) }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Refunds') }}</div><div style="font-size:20px;font-weight:700;color:var(--danger);">{{ number_format($refunds['total_refunds']) }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Refund Rate') }}</div><div style="font-size:20px;font-weight:700;color:{{ $refunds['refund_rate'] > 5 ? 'var(--danger)' : ($refunds['refund_rate'] > 2 ? 'var(--warn)' : 'var(--success)') }};">{{ $refunds['refund_rate'] }}%</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Revenue Lost') }}</div><div style="font-size:20px;font-weight:700;color:var(--danger);">{{ number_format($refunds['refund_revenue_lost']) }} RON</div></div>
             </div>
             @if(!empty($refunds['by_event']))
-                <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">Top Refunded Events</div>
-                <table class="tbl"><thead><tr><th>Event</th><th style="text-align:right">Orders</th><th style="text-align:right">Refunds</th><th style="text-align:right">Rate</th><th style="text-align:right">Lost Revenue</th></tr></thead>
+                <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">{{ __('Top Refunded Events') }}</div>
+                <table class="tbl"><thead><tr><th>{{ __('Event') }}</th><th style="text-align:right">{{ __('Orders') }}</th><th style="text-align:right">{{ __('Refunds') }}</th><th style="text-align:right">{{ __('Rate') }}</th><th style="text-align:right">{{ __('Lost Revenue') }}</th></tr></thead>
                 <tbody>
                 @foreach(array_slice($refunds['by_event'], 0, 8) as $re)
                     <tr><td style="font-weight:600">{{ \Illuminate\Support\Str::limit($re['title'], 35) }} <span style="color:var(--muted);font-size:11px;">{{ $re['date'] ? \Carbon\Carbon::parse($re['date'])->format('d M y') : '' }}</span></td><td style="text-align:right">{{ $re['total_orders'] }}</td><td style="text-align:right;color:var(--danger)">{{ $re['refunds'] }}</td><td style="text-align:right;font-weight:700;color:{{ $re['refund_rate'] > 10 ? 'var(--danger)' : 'var(--muted)' }}">{{ $re['refund_rate'] }}%</td><td style="text-align:right;font-family:monospace;color:var(--danger)">{{ number_format($re['lost_revenue']) }}</td></tr>
@@ -440,7 +440,7 @@ canvas{width:100%!important;}
                 </tbody></table>
             @endif
             @if(!empty($refunds['monthly']))
-                <div style="font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 6px;">Monthly Refund Trend</div>
+                <div style="font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 6px;">{{ __('Monthly Refund Trend') }}</div>
                 <div style="display:flex;align-items:flex-end;gap:3px;height:60px;">
                     @php $maxRefRate = collect($refunds['monthly'])->max('rate') ?: 1; @endphp
                     @foreach($refunds['monthly'] as $mr)
@@ -462,16 +462,16 @@ canvas{width:100%!important;}
 
         {{-- Personas --}}
         @if(!empty($personas))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Audience Personas ({{ $aTotals['total_customers'] ?? 0 }} buyers)</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Audience Personas (:total_customers buyers)', ['total_customers' => $aTotals['total_customers'] ?? 0]) }}</div><div class="card-b">
             <div class="g3">
             @foreach($personas as $p)
                 <div style="padding:14px;border-radius:10px;background:rgba(122,162,255,.04);border:1px solid var(--ring);">
                     <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">{{ $p['label'] }}</div>
                     <div style="font-size:18px;font-weight:700;">{{ $p['age_group'] }} / {{ ucfirst($p['gender']) }}</div>
-                    <div style="color:var(--muted);font-size:12px;margin-top:4px;">{{ $p['count'] }} buyers ({{ $p['percentage'] }}%)</div>
-                    <div style="color:var(--muted);font-size:12px;">Avg spend: {{ number_format($p['avg_spend'], 0) }} RON</div>
+                    <div style="color:var(--muted);font-size:12px;margin-top:4px;">{{ __(':count buyers (:percentage%)', ['count' => $p['count'], 'percentage' => $p['percentage']]) }}</div>
+                    <div style="color:var(--muted);font-size:12px;">{{ __('Avg spend: :avg_spend RON', ['avg_spend' => number_format($p['avg_spend'], 0)]) }}</div>
                     @if(!empty($p['top_cities']))
-                        <div style="color:var(--muted);font-size:11px;margin-top:4px;">Cities: {{ implode(', ', array_keys($p['top_cities'])) }}</div>
+                        <div style="color:var(--muted);font-size:11px;margin-top:4px;">{{ __('Cities: :top_cities', ['top_cities' => implode(', ', array_keys($p['top_cities']))]) }}</div>
                     @endif
                 </div>
             @endforeach
@@ -484,7 +484,7 @@ canvas{width:100%!important;}
         @if(!empty($ageDist) || !empty($genderDist))
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($ageDist))
-            <div class="card"><div class="card-h">Age Distribution</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Age Distribution') }}</div><div class="card-b">
                 @php $maxAge = max(1, max($ageDist)); @endphp
                 @foreach($ageDist as $ageGroup => $count)
                     <div style="display:flex;align-items:center;gap:10px;padding:5px 0;">
@@ -499,7 +499,7 @@ canvas{width:100%!important;}
             </div></div>
             @endif
             @if(!empty($genderDist))
-            <div class="card"><div class="card-h">Gender Distribution</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Gender Distribution') }}</div><div class="card-b">
                 @php $totalGender = max(1, array_sum($genderDist)); @endphp
                 <div style="display:flex;gap:16px;align-items:center;justify-content:center;padding:10px 0;">
                     @foreach($genderDist as $gender => $count)
@@ -507,7 +507,7 @@ canvas{width:100%!important;}
                         <div style="text-align:center;">
                             <div style="font-size:36px;font-weight:700;color:{{ $color }};">{{ $pct }}%</div>
                             <div style="font-size:12px;color:var(--muted);margin-top:4px;">{{ ucfirst($gender) }}</div>
-                            <div style="font-size:11px;color:var(--muted);">{{ number_format($count) }} buyers</div>
+                            <div style="font-size:11px;color:var(--muted);">{{ __(':count buyers', ['count' => number_format($count)]) }}</div>
                         </div>
                     @endforeach
                 </div>
@@ -526,20 +526,20 @@ canvas{width:100%!important;}
         {{-- Loyalty + Geographic --}}
         <div class="g2" style="margin-bottom:14px;">
             @if(($loyalty['total'] ?? 0) > 0)
-            <div class="card"><div class="card-h">Customer Loyalty</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Customer Loyalty') }}</div><div class="card-b">
                 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center;">
-                    @foreach([['v' => $loyalty['total'], 'l' => 'Total', 'c' => 'var(--text)'], ['v' => $loyalty['one_time'], 'l' => 'One-time', 'c' => 'var(--muted)'], ['v' => $loyalty['repeat'], 'l' => 'Repeat', 'c' => 'var(--primary)'], ['v' => $loyalty['regulars'], 'l' => 'Regulars', 'c' => 'var(--accent)'], ['v' => $loyalty['superfan'], 'l' => 'Superfan', 'c' => 'var(--warn)']] as $lk)
+                    @foreach([['v' => $loyalty['total'], 'l' => __('Total'), 'c' => 'var(--text)'], ['v' => $loyalty['one_time'], 'l' => __('One-time'), 'c' => 'var(--muted)'], ['v' => $loyalty['repeat'], 'l' => __('Repeat'), 'c' => 'var(--primary)'], ['v' => $loyalty['regulars'], 'l' => __('Regulars'), 'c' => 'var(--accent)'], ['v' => $loyalty['superfan'], 'l' => __('Superfan'), 'c' => 'var(--warn)']] as $lk)
                         <div><div style="font-size:20px;font-weight:700;color:{{ $lk['c'] }}">{{ $lk['v'] }}</div><div style="font-size:10px;color:var(--muted);">{{ $lk['l'] }}</div></div>
                     @endforeach
                 </div>
-                <div style="text-align:center;margin-top:10px;font-size:13px;"><span style="color:var(--success);font-weight:700;">{{ $loyalty['repeat_rate'] }}%</span> <span style="color:var(--muted);">repeat rate</span></div>
+                <div style="text-align:center;margin-top:10px;font-size:13px;"><span style="color:var(--success);font-weight:700;">{{ $loyalty['repeat_rate'] }}%</span> <span style="color:var(--muted);">{{ __('repeat rate') }}</span></div>
             </div></div>
             @endif
 
             @if(!empty($geoOrig['cities']))
-            <div class="card"><div class="card-h">Where Customers Come From <span style="color:var(--accent);font-size:11px;margin-left:8px;">{{ $geoOrig['out_of_town_ratio'] }}% out-of-town</span></div>
+            <div class="card"><div class="card-h">{{ __('Where Customers Come From') }} <span style="color:var(--accent);font-size:11px;margin-left:8px;">{{ __(':out_of_town_ratio% out-of-town', ['out_of_town_ratio' => $geoOrig['out_of_town_ratio']]) }}</span></div>
                 <div style="max-height:300px;overflow-y:auto;">
-                <table class="tbl"><thead><tr><th>City</th><th style="text-align:right">Customers</th><th style="text-align:right">Revenue</th><th style="text-align:right">Avg Spend</th></tr></thead>
+                <table class="tbl"><thead><tr><th>{{ __('City') }}</th><th style="text-align:right">{{ __('Customers') }}</th><th style="text-align:right">{{ __('Revenue') }}</th><th style="text-align:right">{{ __('Avg Spend') }}</th></tr></thead>
                 <tbody>
                 @foreach(array_slice($geoOrig['cities'], 0, 15) as $c)
                     <tr><td style="font-weight:600">{{ $c['city'] }}</td><td style="text-align:right">{{ $c['customer_count'] }}</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($c['total_revenue']) }}</td><td style="text-align:right;color:var(--muted);font-family:monospace">{{ number_format($c['avg_spend'], 0) }}</td></tr>
@@ -552,8 +552,8 @@ canvas{width:100%!important;}
 
         {{-- Superfan Details --}}
         @if(!empty($loyalty['superfan_details']))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Top Superfans</div>
-            <table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>City</th><th style="text-align:right">Events</th><th style="text-align:right">Total Spent</th></tr></thead>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Top Superfans') }}</div>
+            <table class="tbl"><thead><tr><th>{{ __('Name') }}</th><th>{{ __('Email') }}</th><th>{{ __('City') }}</th><th style="text-align:right">{{ __('Events') }}</th><th style="text-align:right">{{ __('Total Spent') }}</th></tr></thead>
             <tbody>
             @foreach(array_slice($loyalty['superfan_details'], 0, 15) as $sf)
                 <tr><td style="font-weight:600">{{ $sf['name'] }}</td><td style="color:var(--muted)">{{ $sf['email'] }}</td><td>{{ $sf['city'] }}</td><td style="text-align:right">{{ $sf['events'] }}</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($sf['total_spent'], 0) }}</td></tr>
@@ -565,8 +565,8 @@ canvas{width:100%!important;}
         {{-- Genre Loyalty --}}
         @php $gLoyalty = $genreLoyalty ?? []; @endphp
         @if(!empty($gLoyalty))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Recurring Customers by Genre — Which genres build loyalty?</div>
-            <table class="tbl"><thead><tr><th>Genre</th><th style="text-align:right">Total Buyers</th><th style="text-align:right">Repeat Buyers</th><th style="text-align:right">Repeat Rate</th><th style="text-align:right">Avg Events/Buyer</th></tr></thead>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Recurring Customers by Genre — Which genres build loyalty?') }}</div>
+            <table class="tbl"><thead><tr><th>{{ __('Genre') }}</th><th style="text-align:right">{{ __('Total Buyers') }}</th><th style="text-align:right">{{ __('Repeat Buyers') }}</th><th style="text-align:right">{{ __('Repeat Rate') }}</th><th style="text-align:right">{{ __('Avg Events/Buyer') }}</th></tr></thead>
             <tbody>
             @foreach($gLoyalty as $gl)
                 <tr><td style="font-weight:600">{{ $gl['genre'] }}</td><td style="text-align:right">{{ number_format($gl['total_buyers']) }}</td><td style="text-align:right;color:var(--accent)">{{ number_format($gl['repeat_buyers']) }}</td><td style="text-align:right;font-weight:700;color:{{ $gl['repeat_rate'] >= 20 ? 'var(--success)' : ($gl['repeat_rate'] >= 10 ? 'var(--warn)' : 'var(--muted)') }}">{{ $gl['repeat_rate'] }}%</td><td style="text-align:right;font-family:monospace">{{ $gl['avg_events_per_buyer'] }}</td></tr>
@@ -582,9 +582,9 @@ canvas{width:100%!important;}
 
         {{-- Artist Performance --}}
         @if(!empty($artPerf))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Artist Performance at Venue ({{ count($artPerf) }} artists)</div>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Artist Performance at Venue (:count artists)', ['count' => count($artPerf)]) }}</div>
             <div style="overflow-x:auto;">
-            <table class="tbl"><thead><tr><th>Artist</th><th style="text-align:right">Events</th><th style="text-align:right">Tickets</th><th style="text-align:right">Avg ST</th><th style="text-align:right">Best ST</th><th style="text-align:right">Avg Revenue</th></tr></thead>
+            <table class="tbl"><thead><tr><th>{{ __('Artist') }}</th><th style="text-align:right">{{ __('Events') }}</th><th style="text-align:right">{{ __('Tickets') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th><th style="text-align:right">{{ __('Best ST') }}</th><th style="text-align:right">{{ __('Avg Revenue') }}</th></tr></thead>
             <tbody>
             @foreach(array_slice($artPerf, 0, 20) as $ap)
                 <tr><td style="font-weight:600">{{ $ap['artist_name'] }}</td><td style="text-align:right">{{ $ap['events_count'] }}</td><td style="text-align:right;font-family:monospace">{{ number_format($ap['total_tickets']) }}</td><td style="text-align:right;color:{{ $ap['avg_sell_through'] >= 75 ? 'var(--success)' : ($ap['avg_sell_through'] >= 50 ? 'var(--warn)' : 'var(--danger)') }};font-weight:700">{{ $ap['avg_sell_through'] }}%</td><td style="text-align:right;color:var(--muted)">{{ $ap['best_sell_through'] }}%</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($ap['avg_revenue']) }}</td></tr>
@@ -596,8 +596,8 @@ canvas{width:100%!important;}
 
         {{-- Genre Performance --}}
         @if(!empty($genPerf))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Genre Performance</div>
-            <table class="tbl"><thead><tr><th>Genre</th><th style="text-align:right">Events</th><th style="text-align:right">Avg ST</th><th style="text-align:right">Avg Revenue</th><th style="text-align:right">Avg Price</th><th style="text-align:right">Tickets</th></tr></thead>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Genre Performance') }}</div>
+            <table class="tbl"><thead><tr><th>{{ __('Genre') }}</th><th style="text-align:right">{{ __('Events') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th><th style="text-align:right">{{ __('Avg Revenue') }}</th><th style="text-align:right">{{ __('Avg Price') }}</th><th style="text-align:right">{{ __('Tickets') }}</th></tr></thead>
             <tbody>
             @foreach($genPerf as $gp)
                 <tr><td style="font-weight:600">{{ $gp['genre'] }}</td><td style="text-align:right">{{ $gp['events_count'] }}</td><td style="text-align:right;color:{{ $gp['avg_sell_through'] >= 70 ? 'var(--success)' : 'var(--muted)' }};font-weight:700">{{ $gp['avg_sell_through'] }}%</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($gp['avg_revenue']) }}</td><td style="text-align:right;color:var(--muted);font-family:monospace">{{ $gp['avg_ticket_price'] }}</td><td style="text-align:right;font-family:monospace">{{ number_format($gp['total_tickets']) }}</td></tr>
@@ -608,8 +608,8 @@ canvas{width:100%!important;}
 
         {{-- Never Played Artists --}}
         @if(!empty($npArtists))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Artists to Consider Booking</div>
-            <table class="tbl"><thead><tr><th>Artist</th><th style="text-align:right">Events in City</th><th style="text-align:right">Avg ST</th><th style="text-align:right">Est. Draw</th></tr></thead>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Artists to Consider Booking') }}</div>
+            <table class="tbl"><thead><tr><th>{{ __('Artist') }}</th><th style="text-align:right">{{ __('Events in City') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th><th style="text-align:right">{{ __('Est. Draw') }}</th></tr></thead>
             <tbody>
             @foreach(array_slice($npArtists, 0, 15) as $np)
                 <tr><td style="font-weight:600">{{ $np['artist_name'] }}</td><td style="text-align:right">{{ $np['city_events'] }}</td><td style="text-align:right;color:var(--success);font-weight:700">{{ $np['avg_sell_through'] }}%</td><td style="text-align:right;font-family:monospace">{{ number_format($np['estimated_draw']) }}</td></tr>
@@ -625,7 +625,7 @@ canvas{width:100%!important;}
 
         {{-- Heatmap --}}
         @if(!empty($heatmap['matrix']))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Performance Heatmap (Day × Month)</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Performance Heatmap (Day × Month)') }}</div><div class="card-b">
             <div style="overflow-x:auto;">
             <table style="width:100%;font-size:12px;border-collapse:collapse;">
                 <thead><tr><th style="padding:6px;color:var(--muted);"></th>
@@ -649,8 +649,8 @@ canvas{width:100%!important;}
         {{-- Day of Week + Seasonality --}}
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($dow))
-            <div class="card"><div class="card-h">Day of Week Analysis</div>
-                <table class="tbl"><thead><tr><th>Day</th><th style="text-align:right">Events</th><th style="text-align:right">Avg ST</th><th style="text-align:right">Avg Revenue</th></tr></thead>
+            <div class="card"><div class="card-h">{{ __('Day of Week Analysis') }}</div>
+                <table class="tbl"><thead><tr><th>{{ __('Day') }}</th><th style="text-align:right">{{ __('Events') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th><th style="text-align:right">{{ __('Avg Revenue') }}</th></tr></thead>
                 <tbody>
                 @foreach($dow as $d)
                     <tr><td style="font-weight:600">{{ $d['day'] }}</td><td style="text-align:right">{{ $d['events'] }}</td><td style="text-align:right;color:{{ $d['avg_sell_through'] >= 70 ? 'var(--success)' : 'var(--muted)' }};font-weight:700">{{ $d['avg_sell_through'] }}%</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($d['avg_revenue']) }}</td></tr>
@@ -660,8 +660,8 @@ canvas{width:100%!important;}
             @endif
 
             @if(!empty($season))
-            <div class="card"><div class="card-h">Seasonality (by Month)</div>
-                <table class="tbl"><thead><tr><th>Month</th><th style="text-align:right">Events</th><th style="text-align:right">Avg ST</th><th style="text-align:right">Avg Revenue</th><th style="text-align:right">Idle Days</th></tr></thead>
+            <div class="card"><div class="card-h">{{ __('Seasonality (by Month)') }}</div>
+                <table class="tbl"><thead><tr><th>{{ __('Month') }}</th><th style="text-align:right">{{ __('Events') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th><th style="text-align:right">{{ __('Avg Revenue') }}</th><th style="text-align:right">{{ __('Idle Days') }}</th></tr></thead>
                 <tbody>
                 @foreach($season as $s)
                     <tr><td style="font-weight:600">{{ $s['month'] }}</td><td style="text-align:right">{{ $s['events'] }}</td><td style="text-align:right;color:{{ $s['avg_sell_through'] >= 70 ? 'var(--success)' : 'var(--muted)' }};font-weight:700">{{ $s['avg_sell_through'] }}%</td><td style="text-align:right;color:var(--warn);font-family:monospace">{{ number_format($s['avg_revenue']) }}</td><td style="text-align:right;color:{{ $s['idle_days'] > 20 ? 'var(--danger)' : 'var(--muted)' }}">{{ $s['idle_days'] }}</td></tr>
@@ -674,18 +674,18 @@ canvas{width:100%!important;}
         {{-- Idle Days + Frequency --}}
         <div class="g2" style="margin-bottom:14px;">
             @if(($idle['total_idle_weekend_days'] ?? 0) > 0)
-            <div class="card"><div class="card-h">Idle Weekend Days (Last 12 Months)</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Idle Weekend Days (Last 12 Months)') }}</div><div class="card-b">
                 <div style="display:flex;gap:20px;align-items:center;margin-bottom:12px;">
-                    <div><div style="color:var(--muted);font-size:11px;">Idle Fri/Sat/Sun</div><div style="font-size:28px;font-weight:700;color:var(--danger);">{{ $idle['total_idle_weekend_days'] }}</div></div>
-                    <div><div style="color:var(--muted);font-size:11px;">Avg Rev/Event</div><div style="font-size:18px;font-weight:700;color:var(--warn);">{{ number_format($idle['avg_revenue_per_event']) }} RON</div></div>
-                    <div><div style="color:var(--muted);font-size:11px;">Est. Lost Revenue</div><div style="font-size:18px;font-weight:700;color:var(--danger);">{{ number_format($idle['estimated_lost_revenue']) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Idle Fri/Sat/Sun') }}</div><div style="font-size:28px;font-weight:700;color:var(--danger);">{{ $idle['total_idle_weekend_days'] }}</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Avg Rev/Event') }}</div><div style="font-size:18px;font-weight:700;color:var(--warn);">{{ number_format($idle['avg_revenue_per_event']) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Est. Lost Revenue') }}</div><div style="font-size:18px;font-weight:700;color:var(--danger);">{{ number_format($idle['estimated_lost_revenue']) }} RON</div></div>
                 </div>
             </div></div>
             @endif
 
             @if(!empty($optFreq))
-            <div class="card"><div class="card-h">Optimal Event Frequency</div>
-                <table class="tbl"><thead><tr><th>Frequency</th><th style="text-align:right">Weeks</th><th style="text-align:right">Avg ST</th></tr></thead>
+            <div class="card"><div class="card-h">{{ __('Optimal Event Frequency') }}</div>
+                <table class="tbl"><thead><tr><th>{{ __('Frequency') }}</th><th style="text-align:right">{{ __('Weeks') }}</th><th style="text-align:right">{{ __('Avg ST') }}</th></tr></thead>
                 <tbody>
                 @foreach($optFreq as $of)
                     <tr><td style="font-weight:600">{{ $of['frequency'] }}</td><td style="text-align:right">{{ $of['weeks'] }}</td><td style="text-align:right;font-weight:700;color:{{ $of['avg_sell_through'] >= 70 ? 'var(--success)' : 'var(--muted)' }}">{{ $of['avg_sell_through'] }}%</td></tr>
@@ -699,8 +699,8 @@ canvas{width:100%!important;}
         @php $timing = $si['purchase_timing'] ?? []; $velCurves = $si['velocity_curves'] ?? []; @endphp
         <div class="g2" style="margin-bottom:14px;">
             @if(!empty($timing))
-            <div class="card"><div class="card-h">Purchase Timing <span style="color:var(--muted);font-size:11px;margin-left:8px;">(avg {{ $si['avg_lead_days'] ?? 0 }}d before event)</span></div><div class="card-b">
-                @php $timingLabels = ['super_early' => '90+ days', 'early_bird' => '31-90 days', 'last_month' => '8-30 days', 'last_week' => '2-7 days', 'last_minute' => 'Last minute']; @endphp
+            <div class="card"><div class="card-h">{{ __('Purchase Timing') }} <span style="color:var(--muted);font-size:11px;margin-left:8px;">{{ __('(avg :daysd before event)', ['days' => $si['avg_lead_days'] ?? 0]) }}</span></div><div class="card-b">
+                @php $timingLabels = ['super_early' => __('90+ days'), 'early_bird' => __('31-90 days'), 'last_month' => __('8-30 days'), 'last_week' => __('2-7 days'), 'last_minute' => __('Last minute')]; @endphp
                 @foreach($timingLabels as $key => $label)
                     @if(($timing[$key] ?? 0) > 0)
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;">
@@ -713,12 +713,12 @@ canvas{width:100%!important;}
             @endif
 
             @if(!empty($velCurves))
-            <div class="card"><div class="card-h">Sales Velocity (Last 5 Events)</div><div class="card-b" style="font-size:12px;">
+            <div class="card"><div class="card-h">{{ __('Sales Velocity (Last 5 Events)') }}</div><div class="card-b" style="font-size:12px;">
                 @foreach($velCurves as $vc)
                     <div style="margin-bottom:14px;padding-bottom:14px;{{ !$loop->last ? 'border-bottom:1px dashed var(--ring);' : '' }}">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                             <strong>{{ \Illuminate\Support\Str::limit($vc['event_name'], 35) }}</strong>
-                            <span style="color:var(--muted);font-size:11px;">{{ $vc['total_tickets'] }} bilete</span>
+                            <span style="color:var(--muted);font-size:11px;">{{ __(':total_tickets bilete', ['total_tickets' => $vc['total_tickets']]) }}</span>
                         </div>
                         <div style="display:flex;align-items:flex-end;gap:3px;height:40px;">
                         @foreach($vc['points'] as $pt)
@@ -739,11 +739,11 @@ canvas{width:100%!important;}
         {{-- Check-in Time Analysis --}}
         @php $ciAnalysis = $checkinAnalysis ?? []; @endphp
         @if(!empty($ciAnalysis) && ($ciAnalysis['total_checkins'] ?? 0) > 0)
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Check-in / Arrival Time Analysis ({{ number_format($ciAnalysis['total_checkins']) }} check-ins)</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Check-in / Arrival Time Analysis (:total_checkins check-ins)', ['total_checkins' => number_format($ciAnalysis['total_checkins'])]) }}</div><div class="card-b">
             <div style="display:flex;gap:20px;margin-bottom:14px;">
-                <div><div style="color:var(--muted);font-size:11px;">Peak Hour</div><div style="font-size:22px;font-weight:700;color:var(--accent);">{{ $ciAnalysis['peak_hour'] }}</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">50% Arrived By</div><div style="font-size:22px;font-weight:700;">{{ $ciAnalysis['p50_arrival'] }}</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">80% Arrived By</div><div style="font-size:22px;font-weight:700;">{{ $ciAnalysis['p80_arrival'] }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Peak Hour') }}</div><div style="font-size:22px;font-weight:700;color:var(--accent);">{{ $ciAnalysis['peak_hour'] }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('50% Arrived By') }}</div><div style="font-size:22px;font-weight:700;">{{ $ciAnalysis['p50_arrival'] }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('80% Arrived By') }}</div><div style="font-size:22px;font-weight:700;">{{ $ciAnalysis['p80_arrival'] }}</div></div>
             </div>
             <div style="display:flex;align-items:flex-end;gap:2px;height:80px;">
                 @foreach($ciAnalysis['hourly'] as $h)
@@ -758,7 +758,7 @@ canvas{width:100%!important;}
                 <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
             </div>
             <div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:rgba(34,211,238,.04);border:1px solid rgba(34,211,238,.1);font-size:12px;color:var(--muted);">
-                Tip: Open F&B service by <strong style="color:var(--text);">{{ $ciAnalysis['p50_arrival'] }}</strong>. Staff peak needed at <strong style="color:var(--accent);">{{ $ciAnalysis['peak_hour'] }}</strong>. Security can scale down after <strong style="color:var(--text);">{{ $ciAnalysis['p80_arrival'] }}</strong>.
+                {{ __('Tip: Open F&B service by') }} <strong style="color:var(--text);">{{ $ciAnalysis['p50_arrival'] }}</strong>. {{ __('Staff peak needed at') }} <strong style="color:var(--accent);">{{ $ciAnalysis['peak_hour'] }}</strong>. {{ __('Security can scale down after') }} <strong style="color:var(--text);">{{ $ciAnalysis['p80_arrival'] }}</strong>.
             </div>
         </div></div>
         @endif
@@ -769,7 +769,7 @@ canvas{width:100%!important;}
         @php $opps = $opportunities ?? []; $recs = $opps['recommendations'] ?? []; @endphp
         @if(!empty($recs))
         {{-- Human-readable insights summary --}}
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Ce am descoperit</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Ce am descoperit') }}</div><div class="card-b">
             <div style="font-size:14px;line-height:1.8;color:var(--text);">
                 @foreach($recs as $rec)
                     <p style="margin-bottom:8px;">
@@ -781,7 +781,7 @@ canvas{width:100%!important;}
             </div>
         </div></div>
 
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Recomandari detaliate ({{ count($recs) }})</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Recomandari detaliate (:count)', ['count' => count($recs)]) }}</div><div class="card-b">
             <div class="g2">
             @foreach($recs as $rec)
                 <div style="padding:14px;border-radius:10px;background:rgba(122,162,255,.04);border:1px solid var(--ring);">
@@ -796,44 +796,44 @@ canvas{width:100%!important;}
             </div>
         </div></div>
         @else
-        <div class="card" style="margin-bottom:14px;"><div class="card-b" style="text-align:center;color:var(--muted);padding:40px;">Not enough data to generate recommendations. More events needed.</div></div>
+        <div class="card" style="margin-bottom:14px;"><div class="card-b" style="text-align:center;color:var(--muted);padding:40px;">{{ __('Not enough data to generate recommendations. More events needed.') }}</div></div>
         @endif
 
         {{-- Event Simulator --}}
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Event Simulator — Predict Performance</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Event Simulator — Predict Performance') }}</div><div class="card-b">
             <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
-                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Genre</label>
-                    <input x-model="simGenre" placeholder="e.g. Hip-Hop, Rock, Pop..." style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;width:180px;"></div>
-                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Day of Week</label>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">{{ __('Genre') }}</label>
+                    <input x-model="simGenre" placeholder="{{ __('e.g. Hip-Hop, Rock, Pop...') }}" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;width:180px;"></div>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">{{ __('Day of Week') }}</label>
                     <select x-model="simDay" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;">
-                        <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option selected>Friday</option><option>Saturday</option><option>Sunday</option>
+                        <option>{{ __('Monday') }}</option><option>{{ __('Tuesday') }}</option><option>{{ __('Wednesday') }}</option><option>{{ __('Thursday') }}</option><option selected>{{ __('Friday') }}</option><option>{{ __('Saturday') }}</option><option>{{ __('Sunday') }}</option>
                     </select></div>
-                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Ticket Price (RON)</label>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">{{ __('Ticket Price (RON)') }}</label>
                     <input x-model="simPrice" type="number" min="10" max="5000" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;width:120px;"></div>
                 <button @click="runSimulation()" style="padding:8px 20px;border-radius:8px;background:linear-gradient(180deg,rgba(34,211,238,.2),rgba(34,211,238,.1));border:1px solid rgba(34,211,238,.3);color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;" :disabled="simLoading">
-                    <span x-show="!simLoading">Simulate</span><span x-show="simLoading">...</span>
+                    <span x-show="!simLoading">{{ __('Simulate') }}</span><span x-show="simLoading">...</span>
                 </button>
             </div>
 
             <template x-if="simResult && !simResult.error">
                 <div>
                     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
-                        <div class="kpi"><div class="l">Predicted ST</div><div class="v" :style="'color:' + (simResult.predicted_sell_through >= 75 ? 'var(--success)' : simResult.predicted_sell_through >= 50 ? 'var(--warn)' : 'var(--danger)')" x-text="simResult.predicted_sell_through + '%'"></div></div>
-                        <div class="kpi"><div class="l">Est. Tickets</div><div class="v" style="color:var(--accent)" x-text="simResult.predicted_tickets"></div></div>
-                        <div class="kpi"><div class="l">Est. Revenue</div><div class="v" style="color:var(--warn)" x-text="Number(simResult.predicted_revenue).toLocaleString() + ' RON'"></div></div>
-                        <div class="kpi"><div class="l">Demand</div><div class="v" :style="'color:' + (simResult.demand_score >= 75 ? 'var(--success)' : simResult.demand_score >= 50 ? 'var(--primary)' : 'var(--muted)')" x-text="simResult.demand_label + ' (' + simResult.demand_score + ')'"></div></div>
+                        <div class="kpi"><div class="l">{{ __('Predicted ST') }}</div><div class="v" :style="'color:' + (simResult.predicted_sell_through >= 75 ? 'var(--success)' : simResult.predicted_sell_through >= 50 ? 'var(--warn)' : 'var(--danger)')" x-text="simResult.predicted_sell_through + '%'"></div></div>
+                        <div class="kpi"><div class="l">{{ __('Est. Tickets') }}</div><div class="v" style="color:var(--accent)" x-text="simResult.predicted_tickets"></div></div>
+                        <div class="kpi"><div class="l">{{ __('Est. Revenue') }}</div><div class="v" style="color:var(--warn)" x-text="Number(simResult.predicted_revenue).toLocaleString() + ' RON'"></div></div>
+                        <div class="kpi"><div class="l">{{ __('Demand') }}</div><div class="v" :style="'color:' + (simResult.demand_score >= 75 ? 'var(--success)' : simResult.demand_score >= 50 ? 'var(--primary)' : 'var(--muted)')" x-text="simResult.demand_label + ' (' + simResult.demand_score + ')'"></div></div>
                     </div>
                     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-                        Genre baseline: <span x-text="simResult.genre_baseline_st + '%'" style="color:var(--text);"></span> ·
-                        Day modifier: <span x-text="simResult.dow_modifier + 'x'" style="color:var(--text);"></span> ·
-                        Price modifier: <span x-text="simResult.price_modifier + 'x'" style="color:var(--text);"></span>
+                        {{ __('Genre baseline:') }} <span x-text="simResult.genre_baseline_st + '%'" style="color:var(--text);"></span> ·
+                        {{ __('Day modifier:') }} <span x-text="simResult.dow_modifier + 'x'" style="color:var(--text);"></span> ·
+                        {{ __('Price modifier:') }} <span x-text="simResult.price_modifier + 'x'" style="color:var(--text);"></span>
                     </div>
                     <template x-if="simResult.comparables && simResult.comparables.length">
-                        <div><div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;">Comparable Past Events</div>
+                        <div><div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;">{{ __('Comparable Past Events') }}</div>
                             <template x-for="c in simResult.comparables" :key="c.title + c.date">
                                 <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed rgba(122,162,255,.08);font-size:12px;">
                                     <span x-text="c.title"></span>
-                                    <span style="color:var(--muted);"><span x-text="c.sell_through + '%'"></span> ST · <span x-text="c.avg_price"></span> RON</span>
+                                    <span style="color:var(--muted);"><span x-text="c.sell_through + '%'"></span> {{ __('ST') }} · <span x-text="c.avg_price"></span> RON</span>
                                 </div>
                             </template>
                         </div>
@@ -844,12 +844,12 @@ canvas{width:100%!important;}
 
         {{-- Event Suggestions --}}
         <div class="card" style="margin-bottom:14px;"><div class="card-h" style="display:flex;justify-content:space-between;align-items:center;">
-            <span>Event Suggestions — What to Book Next</span>
+            <span>{{ __('Event Suggestions — What to Book Next') }}</span>
             <button @click="loadSuggestions()" style="padding:5px 14px;border-radius:8px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;" :disabled="sugLoading">
-                <span x-show="!sugLoading">Generate Suggestions</span><span x-show="sugLoading">Analyzing...</span>
+                <span x-show="!sugLoading">{{ __('Generate Suggestions') }}</span><span x-show="sugLoading">{{ __('Analyzing...') }}</span>
             </button>
         </div><div class="card-b">
-            <template x-if="!suggestions"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Click "Generate Suggestions" to get data-driven booking recommendations.</div></template>
+            <template x-if="!suggestions"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">{{ __('Click "Generate Suggestions" to get data-driven booking recommendations.') }}</div></template>
             <template x-if="suggestions && suggestions.length">
                 <div>
                     <template x-for="s in suggestions" :key="s.rank">
@@ -861,26 +861,26 @@ canvas{width:100%!important;}
                             </div>
                             <div class="g3" style="font-size:12px;">
                                 <div>
-                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">When</div>
+                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">{{ __('When') }}</div>
                                     <div style="font-weight:700;" x-text="s.when"></div>
                                     <div style="color:var(--muted);margin-top:2px;" x-text="s.why_when"></div>
                                 </div>
                                 <div>
-                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">Pricing</div>
-                                    <div>Regular: <strong x-text="s.pricing.recommended"></strong></div>
-                                    <div style="color:var(--muted);" x-text="'Early bird: ' + s.pricing.early_bird"></div>
-                                    <div style="color:var(--muted);" x-text="'VIP: ' + s.pricing.vip"></div>
+                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">{{ __('Pricing') }}</div>
+                                    <div>{{ __('Regular:') }} <strong x-text="s.pricing.recommended"></strong></div>
+                                    <div style="color:var(--muted);" x-text="@js(__('Early bird:')) + ' ' + s.pricing.early_bird"></div>
+                                    <div style="color:var(--muted);" x-text="@js(__('VIP:')) + ' ' + s.pricing.vip"></div>
                                 </div>
                                 <div>
-                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">Expected</div>
-                                    <div>Revenue: <strong style="color:var(--warn);" x-text="s.estimated_revenue"></strong></div>
-                                    <div style="color:var(--muted);" x-text="'Target: ' + s.target_capacity"></div>
-                                    <div style="color:var(--muted);" x-text="'Audience: ' + s.target_audience"></div>
+                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">{{ __('Expected') }}</div>
+                                    <div>{{ __('Revenue:') }} <strong style="color:var(--warn);" x-text="s.estimated_revenue"></strong></div>
+                                    <div style="color:var(--muted);" x-text="@js(__('Target:')) + ' ' + s.target_capacity"></div>
+                                    <div style="color:var(--muted);" x-text="@js(__('Audience:')) + ' ' + s.target_audience"></div>
                                 </div>
                             </div>
                             <template x-if="s.suggested_artists && s.suggested_artists.length">
                                 <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(122,162,255,.08);">
-                                    <div style="color:var(--accent);font-weight:600;font-size:12px;margin-bottom:4px;">Suggested Artists</div>
+                                    <div style="color:var(--accent);font-weight:600;font-size:12px;margin-bottom:4px;">{{ __('Suggested Artists') }}</div>
                                     <template x-for="a in s.suggested_artists" :key="a.name">
                                         <span style="display:inline-block;padding:3px 10px;border-radius:8px;background:rgba(122,162,255,.06);border:1px solid var(--ring);font-size:12px;margin:2px 4px 2px 0;" x-text="a.name + ' (' + a.avg_sell_through + '% ST)'"></span>
                                     </template>
@@ -899,11 +899,11 @@ canvas{width:100%!important;}
 
         {{-- Announcement Window --}}
         @if(!empty($aw))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Optimal Announcement Window</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Optimal Announcement Window') }}</div><div class="card-b">
             <div style="display:flex;gap:24px;align-items:center;margin-bottom:14px;">
-                <div><div style="color:var(--muted);font-size:11px;">Announce At</div><div style="font-size:28px;font-weight:700;color:var(--accent);">{{ $aw['optimal_announce_days'] ?? 0 }}d</div><div style="color:var(--muted);font-size:11px;">before event</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">P90 Purchase</div><div style="font-size:22px;font-weight:700;">{{ $aw['p90_days'] ?? 0 }}d</div></div>
-                <div><div style="color:var(--muted);font-size:11px;">Median Purchase</div><div style="font-size:22px;font-weight:700;">{{ $aw['median_days'] ?? 0 }}d</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Announce At') }}</div><div style="font-size:28px;font-weight:700;color:var(--accent);">{{ $aw['optimal_announce_days'] ?? 0 }}d</div><div style="color:var(--muted);font-size:11px;">{{ __('before event') }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('P90 Purchase') }}</div><div style="font-size:22px;font-weight:700;">{{ $aw['p90_days'] ?? 0 }}d</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">{{ __('Median Purchase') }}</div><div style="font-size:22px;font-weight:700;">{{ $aw['median_days'] ?? 0 }}d</div></div>
             </div>
             @if(!empty($aw['labels']))
             <canvas id="announceChart" height="120"></canvas>
@@ -914,10 +914,10 @@ canvas{width:100%!important;}
         {{-- Ad Budget --}}
         @if(!empty($ab))
         <div class="g2" style="margin-bottom:14px;">
-            <div class="card"><div class="card-h">Recommended Ad Budget</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Recommended Ad Budget') }}</div><div class="card-b">
                 <div style="display:flex;gap:20px;align-items:center;margin-bottom:14px;">
-                    <div><div style="color:var(--muted);font-size:11px;">Est. Revenue/Event</div><div style="font-size:22px;font-weight:700;color:var(--warn);">{{ number_format($ab['estimated_revenue'] ?? 0) }} RON</div></div>
-                    <div><div style="color:var(--muted);font-size:11px;">Recommended Budget (12%)</div><div style="font-size:22px;font-weight:700;color:var(--accent);">{{ number_format($ab['recommended_budget'] ?? 0) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Est. Revenue/Event') }}</div><div style="font-size:22px;font-weight:700;color:var(--warn);">{{ number_format($ab['estimated_revenue'] ?? 0) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">{{ __('Recommended Budget (12%)') }}</div><div style="font-size:22px;font-weight:700;color:var(--accent);">{{ number_format($ab['recommended_budget'] ?? 0) }} RON</div></div>
                 </div>
                 @if(!empty($ab['budget_phases']))
                     @foreach($ab['budget_phases'] as $bp)
@@ -930,14 +930,14 @@ canvas{width:100%!important;}
             </div></div>
 
             {{-- Budget by Platform visual --}}
-            <div class="card"><div class="card-h">Budget Split by Platform</div><div class="card-b">
+            <div class="card"><div class="card-h">{{ __('Budget Split by Platform') }}</div><div class="card-b">
                 @foreach($ps as $p)
                     @php $color = match($p['platform']) { 'Facebook & Instagram' => '#1877f2', 'Google Ads' => '#ea4335', 'TikTok' => '#00f2ea', default => '#a78bfa' }; @endphp
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed rgba(122,162,255,.08);">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <div style="width:8px;height:8px;border-radius:50%;background:{{ $color }};"></div>
                             <span style="font-weight:600;">{{ $p['platform'] }}</span>
-                            @if(!$p['recommended']) <span style="font-size:10px;color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:1px 6px;border-radius:8px;">Low priority</span> @endif
+                            @if(!$p['recommended']) <span style="font-size:10px;color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:1px 6px;border-radius:8px;">{{ __('Low priority') }}</span> @endif
                         </div>
                         <span style="color:var(--accent);font-weight:700;">{{ $p['budget_pct'] }}%</span>
                     </div>
@@ -950,20 +950,20 @@ canvas{width:100%!important;}
         @if(!empty($ps))
         <div style="margin-bottom:14px;">
             @foreach($ps as $p)
-            <div class="card" style="margin-bottom:10px;"><div class="card-h">{{ $p['platform'] }} @if(!$p['recommended']) <span style="color:var(--danger);font-size:11px;margin-left:8px;">Low priority for your audience</span> @endif</div><div class="card-b">
+            <div class="card" style="margin-bottom:10px;"><div class="card-h">{{ $p['platform'] }} @if(!$p['recommended']) <span style="color:var(--danger);font-size:11px;margin-left:8px;">{{ __('Low priority for your audience') }}</span> @endif</div><div class="card-b">
                 <div class="g3" style="margin-bottom:10px;">
-                    <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">Audience Targeting</div>
+                    <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">{{ __('Audience Targeting') }}</div>
                         @foreach($p['audience'] as $ak => $av)
                             <div style="font-size:12px;margin-bottom:2px;"><strong style="color:var(--accent);">{{ ucfirst($ak) }}:</strong> {{ is_array($av) ? implode(', ', $av) : $av }}</div>
                         @endforeach
                     </div>
-                    <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">Formats</div>
+                    <div><div style="color:var(--muted);font-size:11px;margin-bottom:4px;">{{ __('Formats') }}</div>
                         @foreach($p['formats'] as $f)
                             <div style="font-size:12px;margin-bottom:2px;">• {{ $f }}</div>
                         @endforeach
                     </div>
                     <div>
-                        <div style="color:var(--muted);font-size:11px;margin-bottom:4px;">Active Phases</div>
+                        <div style="color:var(--muted);font-size:11px;margin-bottom:4px;">{{ __('Active Phases') }}</div>
                         <div style="display:flex;gap:4px;flex-wrap:wrap;">
                             @foreach($p['phases'] as $ph)
                                 <span class="chip" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--accent);">{{ $ph }}</span>
@@ -980,8 +980,8 @@ canvas{width:100%!important;}
         {{-- Creative Calendar Generator --}}
         @php $upcomingForCal = $upcomingEvents ?? []; @endphp
         @if(!empty($upcomingForCal))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Creative Calendar — Generate Campaign Timeline</div><div class="card-b">
-            <div style="margin-bottom:12px;font-size:12px;color:var(--muted);">Select an upcoming event to generate a day-by-day promotion campaign:</div>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Creative Calendar — Generate Campaign Timeline') }}</div><div class="card-b">
+            <div style="margin-bottom:12px;font-size:12px;color:var(--muted);">{{ __('Select an upcoming event to generate a day-by-day promotion campaign:') }}</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
                 @foreach(array_slice($upcomingForCal, 0, 8) as $ucal)
                     <button @click="loadCalendar({{ $ucal['id'] }})" style="padding:6px 14px;border-radius:8px;background:rgba(122,162,255,.06);border:1px solid var(--ring);color:var(--text);font-size:12px;cursor:pointer;font-weight:600;" :disabled="calLoading">
@@ -996,9 +996,9 @@ canvas{width:100%!important;}
                         <div style="font-size:16px;font-weight:700;" x-text="calendarResult.event_title"></div>
                         <div style="color:var(--muted);font-size:12px;margin-top:4px;">
                             <span x-text="calendarResult.event_date"></span> · <span x-text="calendarResult.artists"></span> ·
-                            Cap: <span x-text="calendarResult.capacity"></span> · Sold: <span x-text="calendarResult.sold"></span> ·
-                            Est. Revenue: <strong style="color:var(--warn);" x-text="Number(calendarResult.estimated_revenue).toLocaleString() + ' RON'"></strong> ·
-                            Ad Budget: <strong style="color:var(--accent);" x-text="Number(calendarResult.total_ad_budget).toLocaleString() + ' RON'"></strong>
+                            {{ __('Cap:') }} <span x-text="calendarResult.capacity"></span> · {{ __('Sold:') }} <span x-text="calendarResult.sold"></span> ·
+                            {{ __('Est. Revenue:') }} <strong style="color:var(--warn);" x-text="Number(calendarResult.estimated_revenue).toLocaleString() + ' RON'"></strong> ·
+                            {{ __('Ad Budget:') }} <strong style="color:var(--accent);" x-text="Number(calendarResult.total_ad_budget).toLocaleString() + ' RON'"></strong>
                         </div>
                     </div>
 
@@ -1010,12 +1010,12 @@ canvas{width:100%!important;}
 
                             <div style="font-weight:700;font-size:14px;color:var(--accent);" x-text="phase.phase"></div>
                             <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">
-                                <span x-text="phase.date"></span> · <span x-text="phase.days_before + 'd before'"></span> · Budget: <strong x-text="Number(phase.budget).toLocaleString() + ' RON'"></strong>
+                                <span x-text="phase.date"></span> · <span x-text="phase.days_before + @js(__('d before'))"></span> · {{ __('Budget:') }} <strong x-text="Number(phase.budget).toLocaleString() + ' RON'"></strong>
                             </div>
 
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                                 <div>
-                                    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">Actions</div>
+                                    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">{{ __('Actions') }}</div>
                                     <template x-for="action in phase.actions" :key="action">
                                         <div style="font-size:12px;color:var(--text);margin-bottom:3px;padding-left:10px;position:relative;">
                                             <span style="position:absolute;left:0;color:var(--muted);">•</span>
@@ -1024,7 +1024,7 @@ canvas{width:100%!important;}
                                     </template>
                                 </div>
                                 <div>
-                                    <div style="font-size:11px;color:var(--warn);font-weight:600;margin-bottom:4px;">Ad Spend</div>
+                                    <div style="font-size:11px;color:var(--warn);font-weight:600;margin-bottom:4px;">{{ __('Ad Spend') }}</div>
                                     <template x-for="ad in phase.ads" :key="ad">
                                         <div style="font-size:12px;color:var(--muted);margin-bottom:3px;padding-left:10px;position:relative;">
                                             <span style="position:absolute;left:0;color:var(--warn);">›</span>
@@ -1037,7 +1037,7 @@ canvas{width:100%!important;}
                     </template>
                 </div>
             </template>
-            <template x-if="calLoading"><div style="text-align:center;color:var(--muted);padding:20px;">Generating campaign timeline...</div></template>
+            <template x-if="calLoading"><div style="text-align:center;color:var(--muted);padding:20px;">{{ __('Generating campaign timeline...') }}</div></template>
         </div></div>
         @endif
     </div>
@@ -1046,9 +1046,9 @@ canvas{width:100%!important;}
     <div x-show="tab === 'upcoming'" x-cloak>
         @php $upcoming = $upcomingEvents ?? []; @endphp
         @if(!empty($upcoming))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Upcoming Events ({{ count($upcoming) }})</div>
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Upcoming Events (:count)', ['count' => count($upcoming)]) }}</div>
             <div style="overflow-x:auto;">
-            <table class="tbl"><thead><tr><th>Event</th><th>Artists</th><th style="text-align:right">Days Left</th><th style="text-align:right">Sold / Cap</th><th style="text-align:right">Sell-Through</th><th style="text-align:right">Revenue</th><th style="text-align:center">Demand</th></tr></thead>
+            <table class="tbl"><thead><tr><th>{{ __('Event') }}</th><th>{{ __('Artists') }}</th><th style="text-align:right">{{ __('Days Left') }}</th><th style="text-align:right">{{ __('Sold / Cap') }}</th><th style="text-align:right">{{ __('Sell-Through') }}</th><th style="text-align:right">{{ __('Revenue') }}</th><th style="text-align:center">{{ __('Demand') }}</th></tr></thead>
             <tbody>
             @foreach($upcoming as $ue)
                 @php $dColor = match($ue['demand_label']) { 'Hot' => 'var(--success)', 'Strong' => 'var(--primary)', 'Moderate' => 'var(--warn)', default => 'var(--muted)' }; @endphp
@@ -1066,13 +1066,13 @@ canvas{width:100%!important;}
             </div>
         </div>
         @else
-        <div class="card"><div class="card-b" style="text-align:center;color:var(--muted);padding:40px;">No upcoming events at this venue.</div></div>
+        <div class="card"><div class="card-b" style="text-align:center;color:var(--muted);padding:40px;">{{ __('No upcoming events at this venue.') }}</div></div>
         @endif
 
         {{-- Churn Risk Alerts --}}
         @php $churn = $churnAlerts ?? []; @endphp
         @if(!empty($churn))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h" style="color:var(--danger);">Churn Risk Alerts ({{ count($churn) }} events need attention)</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h" style="color:var(--danger);">{{ __('Churn Risk Alerts (:count events need attention)', ['count' => count($churn)]) }}</div><div class="card-b">
             @foreach($churn as $ca)
                 @php $riskColor = match($ca['risk']) { 'critical' => 'var(--danger)', 'high' => 'var(--warn)', default => 'var(--muted)' }; @endphp
                 <div style="padding:14px;border-radius:10px;border:1px solid {{ $riskColor }}33;background:{{ $riskColor }}08;margin-bottom:10px;">
@@ -1080,9 +1080,9 @@ canvas{width:100%!important;}
                         <div>
                             <span class="chip" style="color:{{ $riskColor }};border-color:{{ $riskColor }}33;background:{{ $riskColor }}15;text-transform:uppercase;">{{ $ca['risk'] }}</span>
                             <strong style="margin-left:8px;">{{ \Illuminate\Support\Str::limit($ca['title'], 40) }}</strong>
-                            <span style="color:var(--muted);font-size:12px;margin-left:8px;">{{ $ca['days_until'] }}d left · {{ $ca['sold'] }}/{{ $ca['capacity'] }} ({{ $ca['sell_through'] }}%)</span>
+                            <span style="color:var(--muted);font-size:12px;margin-left:8px;">{{ __(':daysd left · :sold/:capacity (:sell_through%)', ['days' => $ca['days_until'], 'sold' => $ca['sold'], 'capacity' => $ca['capacity'], 'sell_through' => $ca['sell_through']]) }}</span>
                         </div>
-                        <span style="font-size:12px;color:{{ $riskColor }};font-weight:700;">{{ $ca['gap'] }} tickets to fill</span>
+                        <span style="font-size:12px;color:{{ $riskColor }};font-weight:700;">{{ __(':gap tickets to fill', ['gap' => $ca['gap']]) }}</span>
                     </div>
                     <div style="font-size:12px;color:var(--muted);">
                         @foreach($ca['suggestions'] as $sug)
@@ -1099,7 +1099,7 @@ canvas{width:100%!important;}
     <div x-show="tab === 'actions'" x-cloak>
         @php $actions = $actionPriority ?? []; @endphp
         @if(!empty($actions))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Action Priority Dashboard — What to Do Next ({{ count($actions) }} items)</div><div class="card-b">
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">{{ __('Action Priority Dashboard — What to Do Next (:count items)', ['count' => count($actions)]) }}</div><div class="card-b">
             @foreach($actions as $ai => $act)
                 @php $urgColor = match($act['urgency']) { 'critical' => 'var(--danger)', 'high' => '#f97316', 'medium' => 'var(--warn)', default => 'var(--muted)' }; @endphp
                 <div style="display:flex;gap:14px;padding:14px;border-radius:10px;background:{{ $urgColor }}08;border:1px solid {{ $urgColor }}22;margin-bottom:10px;">
@@ -1111,17 +1111,17 @@ canvas{width:100%!important;}
                         </div>
                         <div style="font-weight:700;font-size:14px;margin-bottom:4px;">{{ $act['title'] }}</div>
                         <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">
-                            <span style="color:var(--accent);font-weight:600;">Action:</span> {{ $act['action'] }}
+                            <span style="color:var(--accent);font-weight:600;">{{ __('Action:') }}</span> {{ $act['action'] }}
                         </div>
                         <div style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.1);display:inline-block;">
-                            <span style="color:var(--success);font-weight:600;">Impact:</span> <span style="color:var(--text);">{{ $act['impact'] }}</span>
+                            <span style="color:var(--success);font-weight:600;">{{ __('Impact:') }}</span> <span style="color:var(--text);">{{ $act['impact'] }}</span>
                         </div>
                     </div>
                 </div>
             @endforeach
         </div></div>
         @else
-        <div class="card"><div class="card-b" style="text-align:center;color:var(--success);padding:40px;font-size:14px;font-weight:600;">No urgent actions needed. Your venue is performing well!</div></div>
+        <div class="card"><div class="card-b" style="text-align:center;color:var(--success);padding:40px;font-size:14px;font-weight:600;">{{ __('No urgent actions needed. Your venue is performing well!') }}</div></div>
         @endif
     </div>
 
@@ -1136,13 +1136,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const opts = (extra) => Object.assign({responsive:true,plugins:{legend:{display:true,labels:{color:'#64748B',font:{size:10}}}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748B',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748B',font:{size:10}},beginAtZero:true}}}, extra);
 
     new Chart(document.getElementById('venueEvTxChart'), {type:'bar', data:{labels:months, datasets:[
-        {label:'Events',data:@json($evSeries),backgroundColor:'rgba(99,102,241,0.6)',borderRadius:4,yAxisID:'y'},
-        {label:'Tickets',data:@json($txSeries),backgroundColor:'rgba(16,185,129,0.4)',borderRadius:4,yAxisID:'y1'}
+        {label:@js(__('Events')),data:@json($evSeries),backgroundColor:'rgba(99,102,241,0.6)',borderRadius:4,yAxisID:'y'},
+        {label:@js(__('Tickets')),data:@json($txSeries),backgroundColor:'rgba(16,185,129,0.4)',borderRadius:4,yAxisID:'y1'}
     ]}, options:Object.assign(opts({}),{scales:{y:{position:'left',grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748B'}},y1:{position:'right',grid:{display:false},ticks:{color:'#10b981'}},x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748B',font:{size:10}}}}})});
 
     new Chart(document.getElementById('venueRevOccChart'), {type:'line', data:{labels:months, datasets:[
-        {label:'Revenue (RON)',data:@json($rvSeries),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'},
-        {label:'Occupancy %',data:@json($ocSeries),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y1'}
+        {label:@js(__('Revenue (RON)')),data:@json($rvSeries),borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'},
+        {label:@js(__('Occupancy %')),data:@json($ocSeries),borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y1'}
     ]}, options:Object.assign(opts({}),{scales:{y:{position:'left',grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#fbbf24'}},y1:{position:'right',grid:{display:false},ticks:{color:'#22d3ee',callback:v=>v+'%'},max:100},x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748B',font:{size:10}}}}})});
 
     @if(!empty($promo['announcement_window']['labels'] ?? []))

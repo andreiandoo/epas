@@ -18,15 +18,15 @@
         <div class="p-6 text-white shadow-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl">
             <div class="flex items-start justify-between">
                 <div>
-                    <h2 class="mb-2 text-2xl font-bold">Analytics Dashboard</h2>
+                    <h2 class="mb-2 text-2xl font-bold">{{ __('Analytics Dashboard') }}</h2>
                     <p class="max-w-2xl text-sm text-indigo-100">
-                        Track your sales performance, ticket revenue, and visitor engagement in real-time.
+                        {{ __('Track your sales performance, ticket revenue, and visitor engagement in real-time.') }}
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-sm">
                         <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                        Live
+                        {{ __('Live') }}
                     </div>
                     <div class="w-40">
                         {{ $this->form }}
@@ -41,11 +41,10 @@
             <div class="flex gap-3">
                 <x-heroicon-o-information-circle class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div class="text-sm">
-                    <p class="font-medium text-blue-900 dark:text-blue-100">Tracking not yet active</p>
+                    <p class="font-medium text-blue-900 dark:text-blue-100">{{ __('Tracking not yet active') }}</p>
                     <p class="mt-1 text-blue-700 dark:text-blue-300">
-                        <strong>Revenue & Orders:</strong> Shows real data from your platform sales.<br>
-                        <strong>Traffic & Visitors:</strong> Will show real data once visitors start using your website.
-                        Make sure your website is properly connected and visitors are browsing your site.
+                        <strong>{{ __('Revenue & Orders:') }}</strong> {{ __('Shows real data from your platform sales.') }}<br>
+                        <strong>{{ __('Traffic & Visitors:') }}</strong> {{ __('Will show real data once visitors start using your website. Make sure your website is properly connected and visitors are browsing your site.') }}
                     </p>
                 </div>
             </div>
@@ -58,16 +57,16 @@
             <div class="col-span-12 lg:col-span-4">
                 <div class="p-6 text-white shadow-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl" wire:poll.10s="refreshRealtime">
                     <div class="flex items-center justify-between mb-6">
-                        <span class="text-sm font-medium tracking-wider text-purple-100 uppercase">Real-time</span>
+                        <span class="text-sm font-medium tracking-wider text-purple-100 uppercase">{{ __('Real-time') }}</span>
                         @if($hasTrackingData)
                             <span class="flex items-center px-2 py-1 text-xs text-white rounded-full bg-green-500/80">
                                 <span class="w-1.5 h-1.5 rounded-full bg-white mr-1.5 animate-pulse"></span>
-                                LIVE
+                                {{ __('LIVE') }}
                             </span>
                         @else
                             <span class="flex items-center px-2 py-1 text-xs text-purple-200 rounded-full bg-white/10">
                                 <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 mr-1.5"></span>
-                                No data
+                                {{ __('No data') }}
                             </span>
                         @endif
                     </div>
@@ -76,12 +75,12 @@
                         <div class="mb-2 font-black text-transparent text-7xl bg-gradient-to-r from-white to-purple-200 bg-clip-text">
                             {{ $realtimeData['active_users'] }}
                         </div>
-                        <div class="text-sm text-purple-200">visitors right now</div>
+                        <div class="text-sm text-purple-200">{{ __('visitors right now') }}</div>
                     </div>
 
                     {{-- Activity by Time (Last 30 minutes) --}}
                     <div class="mb-6">
-                        <div class="mb-3 text-xs tracking-wider text-purple-200 uppercase">Activity (last 30 min)</div>
+                        <div class="mb-3 text-xs tracking-wider text-purple-200 uppercase">{{ __('Activity (last 30 min)') }}</div>
                         <div class="flex items-end justify-between h-16 gap-0.5">
                             @foreach($realtimeData['users_per_minute'] as $count)
                                 @php $height = max(8, ($count / max(1, max($realtimeData['users_per_minute']))) * 100); @endphp
@@ -90,14 +89,14 @@
                             @endforeach
                         </div>
                         <div class="flex justify-between mt-2 text-xs text-purple-200">
-                            <span>30 min ago</span>
-                            <span>Now</span>
+                            <span>{{ __('30 min ago') }}</span>
+                            <span>{{ __('Now') }}</span>
                         </div>
                     </div>
 
                     {{-- Top Active Pages --}}
                     <div>
-                        <div class="mb-3 text-xs tracking-wider text-purple-200 uppercase">Top Active Pages</div>
+                        <div class="mb-3 text-xs tracking-wider text-purple-200 uppercase">{{ __('Top Active Pages') }}</div>
                         <div class="space-y-2">
                             @foreach($realtimeData['active_pages'] as $page)
                                 <div class="flex items-center justify-between px-3 py-2 text-sm rounded-lg bg-white/10">
@@ -112,11 +111,11 @@
                 {{-- Real-time Events --}}
                 <div class="p-6 mt-6 bg-white border border-gray-200 shadow-lg dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">Live Activity</h3>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Live Activity') }}</h3>
                         @if($hasTrackingData)
-                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded dark:bg-green-900/50 dark:text-green-300">Live</span>
+                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded dark:bg-green-900/50 dark:text-green-300">{{ __('Live') }}</span>
                         @else
-                            <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded dark:bg-gray-700">Awaiting data</span>
+                            <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded dark:bg-gray-700">{{ __('Awaiting data') }}</span>
                         @endif
                     </div>
                     <div class="space-y-3 overflow-y-auto max-h-64">
@@ -148,11 +147,11 @@
                 <div class="grid grid-cols-1 gap-6">
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Devices</h3>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Devices') }}</h3>
                             @if($deviceStats['hasData'])
-                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                             @else
-                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                             @endif
                         </div>
                         <div class="h-48" wire:ignore>
@@ -161,11 +160,11 @@
                     </div>
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Browsers</h3>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Browsers') }}</h3>
                             @if($browserStats['hasData'])
-                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                             @else
-                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                             @endif
                         </div>
                         <div class="h-48" wire:ignore>
@@ -181,7 +180,7 @@
                 <div>
                     <h3 class="flex items-center gap-2 mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                         <x-heroicon-s-check-badge class="w-4 h-4 text-green-500" />
-                        Real Platform Data
+                        {{ __('Real Platform Data') }}
                     </h3>
                     <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
                         <div class="p-5 text-white shadow-lg bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl">
@@ -189,7 +188,7 @@
                                 <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/20">
                                     <x-heroicon-s-banknotes class="w-5 h-5" />
                                 </div>
-                                <span class="text-xs tracking-wider uppercase text-emerald-100">Revenue</span>
+                                <span class="text-xs tracking-wider uppercase text-emerald-100">{{ __('Revenue') }}</span>
                             </div>
                             <div class="text-3xl font-black">{{ $currencySymbol }}{{ number_format($metrics['total_revenue'], 0) }}</div>
                             @if($metrics['revenue_change'] != 0)
@@ -208,7 +207,7 @@
                                 <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/20">
                                     <x-heroicon-s-shopping-bag class="w-5 h-5" />
                                 </div>
-                                <span class="text-xs tracking-wider text-blue-100 uppercase">Orders</span>
+                                <span class="text-xs tracking-wider text-blue-100 uppercase">{{ __('Orders') }}</span>
                             </div>
                             <div class="text-3xl font-black">{{ number_format($metrics['total_orders']) }}</div>
                         </div>
@@ -217,7 +216,7 @@
                                 <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/20">
                                     <x-heroicon-s-ticket class="w-5 h-5" />
                                 </div>
-                                <span class="text-xs tracking-wider text-orange-100 uppercase">Tickets</span>
+                                <span class="text-xs tracking-wider text-orange-100 uppercase">{{ __('Tickets') }}</span>
                             </div>
                             <div class="text-3xl font-black">{{ number_format($metrics['total_tickets']) }}</div>
                         </div>
@@ -226,7 +225,7 @@
                                 <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/20">
                                     <x-heroicon-s-calculator class="w-5 h-5" />
                                 </div>
-                                <span class="text-xs tracking-wider text-purple-100 uppercase">Avg Order</span>
+                                <span class="text-xs tracking-wider text-purple-100 uppercase">{{ __('Avg Order') }}</span>
                             </div>
                             <div class="text-3xl font-black">{{ $currencySymbol }}{{ number_format($metrics['avg_order_value'], 0) }}</div>
                         </div>
@@ -238,15 +237,15 @@
                     <h3 class="flex items-center gap-2 mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                         @if($hasTrackingData)
                             <x-heroicon-s-check-badge class="w-4 h-4 text-green-500" />
-                            Traffic Data
+                            {{ __('Traffic Data') }}
                         @else
                             <x-heroicon-s-sparkles class="w-4 h-4 text-purple-500" />
-                            Traffic Data (awaiting visitors)
+                            {{ __('Traffic Data (awaiting visitors)') }}
                         @endif
                     </h3>
                     <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
                         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">Users Today</div>
+                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Users Today') }}</div>
                             <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($realtimeData['total_users']) }}</div>
                             @if($realtimeData['users_change'] != 0)
                                 <div class="flex items-center mt-2 text-xs">
@@ -256,15 +255,15 @@
                                         @else
                                             <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
                                         @endif
-                                        {{ $realtimeData['users_change'] >= 0 ? '+' : '' }}{{ number_format($realtimeData['users_change'], 1) }}% vs yesterday
+                                        {{ __(':change% vs yesterday', ['change' => ($realtimeData['users_change'] >= 0 ? '+' : '') . number_format($realtimeData['users_change'], 1)]) }}
                                     </span>
                                 </div>
                             @else
-                                <div class="mt-2 text-xs text-gray-500">vs yesterday</div>
+                                <div class="mt-2 text-xs text-gray-500">{{ __('vs yesterday') }}</div>
                             @endif
                         </div>
                         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">Sessions Today</div>
+                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Sessions Today') }}</div>
                             <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($realtimeData['total_sessions']) }}</div>
                             @if($realtimeData['sessions_change'] != 0)
                                 <div class="flex items-center mt-2 text-xs">
@@ -274,22 +273,22 @@
                                         @else
                                             <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
                                         @endif
-                                        {{ $realtimeData['sessions_change'] >= 0 ? '+' : '' }}{{ number_format($realtimeData['sessions_change'], 1) }}% vs yesterday
+                                        {{ __(':change% vs yesterday', ['change' => ($realtimeData['sessions_change'] >= 0 ? '+' : '') . number_format($realtimeData['sessions_change'], 1)]) }}
                                     </span>
                                 </div>
                             @else
-                                <div class="mt-2 text-xs text-gray-500">vs yesterday</div>
+                                <div class="mt-2 text-xs text-gray-500">{{ __('vs yesterday') }}</div>
                             @endif
                         </div>
                         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">Bounce Rate</div>
+                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Bounce Rate') }}</div>
                             <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($realtimeData['bounce_rate'], 1) }}%</div>
-                            <div class="mt-2 text-xs text-gray-500">today's sessions</div>
+                            <div class="mt-2 text-xs text-gray-500">{{ __('today\'s sessions') }}</div>
                         </div>
                         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">Avg Duration</div>
+                            <div class="text-xs tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Avg Duration') }}</div>
                             <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ $realtimeData['avg_duration'] }}</div>
-                            <div class="mt-2 text-xs text-gray-500">today's sessions</div>
+                            <div class="mt-2 text-xs text-gray-500">{{ __('today\'s sessions') }}</div>
                         </div>
                     </div>
                 </div>
@@ -300,10 +299,10 @@
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white">Revenue Trend</h3>
-                                <p class="text-xs text-gray-500">Based on completed orders</p>
+                                <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Revenue Trend') }}</h3>
+                                <p class="text-xs text-gray-500">{{ __('Based on completed orders') }}</p>
                             </div>
-                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real Data</span>
+                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real Data') }}</span>
                         </div>
                         <div class="h-48" wire:ignore>
                             <canvas id="revenueChart"></canvas>
@@ -314,10 +313,10 @@
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white">Orders Over Time</h3>
-                                <p class="text-xs text-gray-500">Daily order volume</p>
+                                <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Orders Over Time') }}</h3>
+                                <p class="text-xs text-gray-500">{{ __('Daily order volume') }}</p>
                             </div>
-                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real Data</span>
+                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real Data') }}</span>
                         </div>
                         <div class="h-48" wire:ignore>
                             <canvas id="ordersChart"></canvas>
@@ -330,20 +329,20 @@
                     {{-- Top Events (Real) --}}
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Top Events</h3>
-                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Top Events') }}</h3>
+                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                         </div>
                         <div class="space-y-3">
                             @forelse($topEvents as $event)
                                 <div class="flex items-center justify-between p-2 text-sm rounded-lg bg-gray-50 dark:bg-gray-700/50">
                                     <div class="flex-1 min-w-0">
                                         <p class="font-medium text-gray-900 truncate dark:text-white">{{ $event['name'] }}</p>
-                                        <p class="text-xs text-gray-500">{{ $event['orders'] }} orders</p>
+                                        <p class="text-xs text-gray-500">{{ __(':orders orders', ['orders' => $event['orders']]) }}</p>
                                     </div>
                                     <span class="ml-2 font-bold text-green-600 dark:text-green-400">{{ $currencySymbol }}{{ number_format($event['revenue'], 0) }}</span>
                                 </div>
                             @empty
-                                <p class="py-4 text-sm text-center text-gray-500">No sales data yet</p>
+                                <p class="py-4 text-sm text-center text-gray-500">{{ __('No sales data yet') }}</p>
                             @endforelse
                         </div>
                     </div>
@@ -351,11 +350,11 @@
                     {{-- Traffic Sources --}}
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Traffic Sources</h3>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Traffic Sources') }}</h3>
                             @if($hasTrackingData && count($trafficSources) > 0)
-                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                             @else
-                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                             @endif
                         </div>
                         <div class="space-y-3">
@@ -376,11 +375,11 @@
                     {{-- Geographic --}}
                     <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Visitors by Country</h3>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Visitors by Country') }}</h3>
                             @if($hasTrackingData && count($geoData) > 0)
-                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                                <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                             @else
-                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                                <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                             @endif
                         </div>
                         <div class="space-y-2">
@@ -410,11 +409,11 @@
             {{-- Top Pages Visited --}}
             <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-semibold text-gray-900 dark:text-white">Top Pages</h3>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Top Pages') }}</h3>
                     @if(count($pageViews) > 0)
-                        <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                        <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                     @else
-                        <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                        <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                     @endif
                 </div>
                 <div class="space-y-2 overflow-y-auto max-h-64">
@@ -424,7 +423,7 @@
                             <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ number_format($page['views']) }}</span>
                         </div>
                     @empty
-                        <p class="py-4 text-sm text-center text-gray-500 dark:text-gray-400">No page view data yet</p>
+                        <p class="py-4 text-sm text-center text-gray-500 dark:text-gray-400">{{ __('No page view data yet') }}</p>
                     @endforelse
                 </div>
             </div>
@@ -433,11 +432,11 @@
                 {{-- Landing Pages (Entry Pages) --}}
                 <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">Landing Pages</h3>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Landing Pages') }}</h3>
                         @if(count($landingPages) > 0)
-                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                         @else
-                            <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                            <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                         @endif
                     </div>
                     <div class="space-y-2 overflow-y-auto max-h-64">
@@ -447,7 +446,7 @@
                                 <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ number_format($page['sessions']) }}</span>
                             </div>
                         @empty
-                            <p class="py-4 text-sm text-center text-gray-500 dark:text-gray-400">No landing page data yet</p>
+                            <p class="py-4 text-sm text-center text-gray-500 dark:text-gray-400">{{ __('No landing page data yet') }}</p>
                         @endforelse
                     </div>
                 </div>
@@ -455,11 +454,11 @@
                 {{-- Exit Pages --}}
                 <div class="p-6 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-2xl dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">Exit Pages</h3>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">{{ __('Exit Pages') }}</h3>
                         @if(count($exitPages) > 0)
-                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">Real</span>
+                            <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">{{ __('Real') }}</span>
                         @else
-                            <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">No data</span>
+                            <span class="px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-full dark:bg-gray-700">{{ __('No data') }}</span>
                         @endif
                     </div>
                     <div class="space-y-2 overflow-y-auto max-h-64">
@@ -469,7 +468,7 @@
                                 <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ number_format($page['sessions']) }}</span>
                             </div>
                         @empty
-                            <p class="py-4 text-sm text-center text-gray-500 dark:text-gray-400">No exit page data yet</p>
+                            <p class="py-4 text-sm text-center text-gray-500 dark:text-gray-400">{{ __('No exit page data yet') }}</p>
                         @endforelse
                     </div>
                 </div>
@@ -497,7 +496,7 @@
                         data: {
                             labels: @json($salesData['labels']),
                             datasets: [{
-                                label: 'Revenue ({{ $currencySymbol }})',
+                                label: @js(__('Revenue (:currency)', ['currency' => $currencySymbol])),
                                 data: @json($salesData['revenue']),
                                 borderColor: 'rgb(16, 185, 129)',
                                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -526,7 +525,7 @@
                         data: {
                             labels: @json($salesData['labels']),
                             datasets: [{
-                                label: 'Orders',
+                                label: @js(__('Orders')),
                                 data: @json($salesData['orders']),
                                 backgroundColor: 'rgba(99, 102, 241, 0.8)',
                                 borderRadius: 6,

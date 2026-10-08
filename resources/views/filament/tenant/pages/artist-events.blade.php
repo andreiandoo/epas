@@ -1,30 +1,30 @@
 <x-filament-panels::page>
     @if(!$artist)
         <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-6 text-center">
-            <p class="text-gray-500 dark:text-gray-400">No artist profile linked to this tenant.</p>
+            <p class="text-gray-500 dark:text-gray-400">{{ __('No artist profile linked to this tenant.') }}</p>
         </div>
     @else
         {{-- Summary Stats --}}
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['total'] }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Total Events</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total Events') }}</p>
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-emerald-500">{{ $stats['upcoming'] }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Live</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Live') }}</p>
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-gray-400">{{ $stats['past'] }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Ended</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Ended') }}</p>
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-blue-400">{{ number_format($stats['total_sold']) }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Tickets Sold</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Tickets Sold') }}</p>
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-amber-400">{{ number_format($stats['total_revenue'], 2) }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Total Revenue</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total Revenue') }}</p>
             </div>
         </div>
 
@@ -32,12 +32,12 @@
         <div class="flex items-center gap-2 mb-4">
             @php
                 $filters = [
-                    'all' => ['label' => 'All', 'count' => $stats['total'], 'color' => '#6366f1'],
-                    'live' => ['label' => 'Live', 'count' => $stats['upcoming'], 'color' => '#10b981'],
-                    'ended' => ['label' => 'Ended', 'count' => $stats['past'], 'color' => '#64748b'],
-                    'cancelled' => ['label' => 'Cancelled', 'count' => $stats['cancelled'] ?? 0, 'color' => '#ef4444'],
-                    'postponed' => ['label' => 'Postponed', 'count' => $stats['postponed'] ?? 0, 'color' => '#f59e0b'],
-                    'unknown' => ['label' => 'Unknown', 'count' => $stats['unknown'] ?? 0, 'color' => '#94a3b8'],
+                    'all' => ['label' => __('All'), 'count' => $stats['total'], 'color' => '#6366f1'],
+                    'live' => ['label' => __('Live'), 'count' => $stats['upcoming'], 'color' => '#10b981'],
+                    'ended' => ['label' => __('Ended'), 'count' => $stats['past'], 'color' => '#64748b'],
+                    'cancelled' => ['label' => __('Cancelled'), 'count' => $stats['cancelled'] ?? 0, 'color' => '#ef4444'],
+                    'postponed' => ['label' => __('Postponed'), 'count' => $stats['postponed'] ?? 0, 'color' => '#f59e0b'],
+                    'unknown' => ['label' => __('Unknown'), 'count' => $stats['unknown'] ?? 0, 'color' => '#94a3b8'],
                 ];
             @endphp
             @foreach($filters as $key => $filter)
@@ -62,13 +62,13 @@
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 overflow-hidden">
                 {{-- Table header --}}
                 <div class="px-4 py-2 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                    <div class="flex-shrink-0 w-14 text-center">Date</div>
-                    <div class="flex-shrink-0 w-16 text-center">Days Left</div>
-                    <div class="flex-1 min-w-0">Event</div>
-                    <div class="flex-shrink-0 w-28">Seller</div>
-                    <div class="flex-shrink-0 w-32">Organizer</div>
-                    <div class="flex-shrink-0 text-right" style="min-width:70px;">Tickets</div>
-                    <div class="flex-shrink-0 w-24 text-right">Revenue</div>
+                    <div class="flex-shrink-0 w-14 text-center">{{ __('Date') }}</div>
+                    <div class="flex-shrink-0 w-16 text-center">{{ __('Days Left') }}</div>
+                    <div class="flex-1 min-w-0">{{ __('Event') }}</div>
+                    <div class="flex-shrink-0 w-28">{{ __('Seller') }}</div>
+                    <div class="flex-shrink-0 w-32">{{ __('Organizer') }}</div>
+                    <div class="flex-shrink-0 text-right" style="min-width:70px;">{{ __('Tickets') }}</div>
+                    <div class="flex-shrink-0 w-24 text-right">{{ __('Revenue') }}</div>
                     <div class="flex-shrink-0" style="min-width:90px;"></div>
                 </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -100,7 +100,7 @@
                                     <div class="text-xl font-bold {{ $isUpcoming ? 'text-emerald-500' : 'text-gray-400' }}">{{ \Carbon\Carbon::parse($event->event_date)->format('d') }}</div>
                                     <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($event->event_date)->format('Y') }}</div>
                                 @else
-                                    <div class="text-xs text-gray-500 mt-2">TBD</div>
+                                    <div class="text-xs text-gray-500 mt-2">{{ __('TBD') }}</div>
                                 @endif
                             </div>
 
@@ -108,7 +108,7 @@
                             <div class="flex-shrink-0 w-16 text-center">
                                 @if($isUpcoming && $event->days_until !== null)
                                     <div class="text-lg font-bold {{ $event->days_until <= 7 ? 'text-red-400' : ($event->days_until <= 30 ? 'text-amber-400' : 'text-emerald-400') }}">{{ $event->days_until }}</div>
-                                    <div class="text-[10px] text-gray-500">days left</div>
+                                    <div class="text-[10px] text-gray-500">{{ __('days left') }}</div>
                                 @endif
                             </div>
 
@@ -124,9 +124,9 @@
                                         <span class="text-gray-300">{{ $venueName }}@if($venueCity), {{ $venueCity }}@endif</span>
                                     @endif
                                     @if($event->is_cancelled)
-                                        <span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-semibold">CANCELLED</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-semibold">{{ __('CANCELLED') }}</span>
                                     @elseif($event->is_postponed)
-                                        <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold">POSTPONED</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold">{{ __('POSTPONED') }}</span>
                                     @endif
                                 </div>
                             </div>
@@ -135,10 +135,10 @@
                             <div class="flex-shrink-0 w-28 text-xs">
                                 @if($event->marketplace_client_id && $event->marketplaceClient)
                                     <div class="text-gray-300 truncate">{{ $event->marketplaceClient->name }}</div>
-                                    <div class="text-[10px] text-emerald-400">marketplace</div>
+                                    <div class="text-[10px] text-emerald-400">{{ __('marketplace') }}</div>
                                 @elseif($event->tenant)
                                     <div class="text-gray-300 truncate">{{ $event->tenant->public_name ?? $event->tenant->name }}</div>
-                                    <div class="text-[10px] text-gray-500">tenant</div>
+                                    <div class="text-[10px] text-gray-500">{{ __('tenant') }}</div>
                                 @endif
                             </div>
 
@@ -161,9 +161,9 @@
                                 </div>
                                 <div class="text-xs text-gray-500">
                                     @if($ts['fill_rate'] > 0)
-                                        <span class="{{ $ts['fill_rate'] >= 80 ? 'text-emerald-400' : ($ts['fill_rate'] >= 50 ? 'text-blue-400' : 'text-gray-400') }}">{{ $ts['fill_rate'] }}% sold</span>
+                                        <span class="{{ $ts['fill_rate'] >= 80 ? 'text-emerald-400' : ($ts['fill_rate'] >= 50 ? 'text-blue-400' : 'text-gray-400') }}">{{ __(':fill_rate% sold', ['fill_rate' => $ts['fill_rate']]) }}</span>
                                     @else
-                                        <span class="text-gray-400">No sales</span>
+                                        <span class="text-gray-400">{{ __('No sales') }}</span>
                                     @endif
                                 </div>
                             </div>
@@ -183,7 +183,7 @@
                                 <div class="flex-shrink-0 flex items-center gap-1.5">
                                     {{-- Copy link --}}
                                     <button onclick="navigator.clipboard.writeText('{{ $eventUrl }}').then(() => { this.querySelector('.cp-ok').classList.remove('hidden'); setTimeout(() => this.querySelector('.cp-ok').classList.add('hidden'), 1500); })"
-                                            class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition" title="Copy link">
+                                            class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition" title="{{ __('Copy link') }}">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 00-6.364-6.364L4.5 8.25"/></svg>
                                         <svg class="w-4 h-4 text-emerald-400 hidden cp-ok absolute" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                     </button>
@@ -192,7 +192,7 @@
                                        style="background: linear-gradient(135deg, #6366f1, #818cf8); color: white;"
                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold shadow-lg hover:opacity-90 transition-all duration-200">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                                        Tickets
+                                        {{ __('Tickets') }}
                                     </a>
                                 </div>
                             @endif
@@ -206,7 +206,7 @@
         @if($marketplaceEvents->isNotEmpty())
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 overflow-hidden mt-4">
                 <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Marketplace Events ({{ $marketplaceEvents->count() }})</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Marketplace Events (:count)', ['count' => $marketplaceEvents->count()]) }}</h3>
                 </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach($marketplaceEvents as $mpEvent)
@@ -231,7 +231,7 @@
                                     <div class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $mpTitle }}</div>
                                 @endif
                                 <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold">MARKETPLACE</span>
+                                    <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold">{{ __('MARKETPLACE') }}</span>
                                 </div>
                             </div>
                             @if($mpUrl)
@@ -244,7 +244,7 @@
                                               shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/30
                                               transition-all duration-200 hover:-translate-y-0.5">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                                        Tickets
+                                        {{ __('Tickets') }}
                                     </a>
                                 </div>
                             @endif
@@ -257,7 +257,7 @@
         @if($events->isEmpty() && $marketplaceEvents->isEmpty())
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-8 text-center">
                 <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
-                <p class="text-gray-500 dark:text-gray-400">No events found for this filter.</p>
+                <p class="text-gray-500 dark:text-gray-400">{{ __('No events found for this filter.') }}</p>
             </div>
         @endif
     @endif

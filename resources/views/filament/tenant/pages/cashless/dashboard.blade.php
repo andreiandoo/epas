@@ -2,14 +2,14 @@
     @if(!$this->editionId)
         <div class="text-center py-12">
             <x-heroicon-o-presentation-chart-bar class="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">No Active Edition</h3>
-            <p class="text-gray-500 dark:text-gray-400 mt-1">Select or create a festival edition to view the cashless dashboard.</p>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ __('No Active Edition') }}</h3>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">{{ __('Select or create a festival edition to view the cashless dashboard.') }}</p>
         </div>
     @else
         <div class="space-y-6">
             {{-- Edition Selector --}}
             <div class="flex items-center gap-4">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Edition:</label>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Edition:') }}</label>
                 <select wire:model.live="editionId" class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
                     @foreach($this->getEditions() as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>

@@ -13,10 +13,10 @@
         <a href="{{ $ticketUrl }}" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer block">
             <div class="flex-1">
                 <div class="font-medium text-gray-900 dark:text-white">
-                    {{ $event?->getTranslation('title', 'ro') ?? 'Eveniment necunoscut' }}
+                    {{ $event?->getTranslation('title', 'ro') ?? __('Eveniment necunoscut') }}
                 </div>
                 <div class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ $ticketType?->name ?? 'Tip bilet necunoscut' }}
+                    {{ $ticketType?->name ?? __('Tip bilet necunoscut') }}
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-500 mt-1 font-mono">
                     {{ $ticket->code }}

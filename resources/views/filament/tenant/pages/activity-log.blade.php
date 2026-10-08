@@ -2,8 +2,8 @@
     @if($activities->isEmpty())
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-12 text-center">
             <x-heroicon-o-clock class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">No activity yet</h3>
-            <p class="text-gray-600">Your activity history will appear here.</p>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ __('No activity yet') }}</h3>
+            <p class="text-gray-600">{{ __('Your activity history will appear here.') }}</p>
         </div>
     @else
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
@@ -27,7 +27,7 @@
                                     {{ ucfirst($activity->description) }}
                                     @if($activity->subject_type)
                                         <span class="text-gray-500">
-                                            on {{ class_basename($activity->subject_type) }}
+                                            {{ __('on :model', ['model' => class_basename($activity->subject_type)]) }}
                                         </span>
                                     @endif
                                 </p>
@@ -39,7 +39,7 @@
                                 @if($activity->properties && $activity->properties->count() > 0)
                                     <details class="mt-2">
                                         <summary class="text-xs text-indigo-600 cursor-pointer hover:text-indigo-800">
-                                            View details
+                                            {{ __('View details') }}
                                         </summary>
                                         <pre class="mt-2 text-xs bg-gray-50 p-2 rounded overflow-auto max-h-32">{{ json_encode($activity->properties, JSON_PRETTY_PRINT) }}</pre>
                                     </details>

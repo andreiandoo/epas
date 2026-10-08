@@ -2,19 +2,19 @@
     @if($domains->isEmpty())
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-12 text-center">
             <x-heroicon-o-globe-alt class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">No domains configured</h3>
-            <p class="text-gray-600">Contact support to add your website domains.</p>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ __('No domains configured') }}</h3>
+            <p class="text-gray-600">{{ __('Contact support to add your website domains.') }}</p>
         </div>
     @else
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-50 border-b">
                     <tr>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Domain</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Primary</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Added</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Domain') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Status') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Primary') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Added') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
@@ -28,11 +28,11 @@
                             <td class="px-6 py-4">
                                 @if($domain->is_active)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Active
+                                        {{ __('Active') }}
                                     </span>
                                 @else
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        Suspended
+                                        {{ __('Suspended') }}
                                     </span>
                                 @endif
                             </td>
@@ -54,17 +54,17 @@
                                         <a href="{{ route('admin.tenant.package.download', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}"
                                            class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
                                             <x-heroicon-o-arrow-down-tray class="w-3 h-3 mr-1" />
-                                            Download
+                                            {{ __('Download') }}
                                         </a>
                                         <a href="{{ route('admin.tenant.package.instructions', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}"
                                            target="_blank"
                                            class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200">
                                             <x-heroicon-o-document-text class="w-3 h-3 mr-1" />
-                                            Instructions
+                                            {{ __('Instructions') }}
                                         </a>
                                     </div>
                                 @else
-                                    <span class="text-xs text-gray-400">No package</span>
+                                    <span class="text-xs text-gray-400">{{ __('No package') }}</span>
                                 @endif
                             </td>
                         </tr>

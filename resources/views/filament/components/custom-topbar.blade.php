@@ -86,11 +86,11 @@
 <div class="sticky top-0 z-30 flex items-center justify-between px-4 py-2 text-sm font-medium text-amber-800 bg-amber-100 border-b border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700">
     <div class="flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-        <span>DEMO MODE — Viewing demo data for <strong>{{ session('demo_parent_tenant_name', 'Tenant') }}</strong></span>
+        <span>{{ __('DEMO MODE — Viewing demo data for') }} <strong>{{ session('demo_parent_tenant_name', 'Tenant') }}</strong></span>
     </div>
     <a href="{{ route('tenant.demo.exit') }}" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-white transition rounded-md bg-amber-600 hover:bg-amber-700">
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        Exit Demo
+        {{ __('Exit Demo') }}
     </a>
 </div>
 @endif
@@ -105,7 +105,7 @@
             x-data
             x-on:click="window.matchMedia('(min-width: 1024px)').matches ? window.epToggleSidebarRail() : $store.sidebar.open()"
             class="flex items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg shrink-0 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Toggle sidebar"
+            aria-label="{{ __('Toggle sidebar') }}"
         >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
@@ -164,7 +164,7 @@
                                 <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                                 </svg>
-                                Super Admin Mode
+                                {{ __('Super Admin Mode') }}
                             </div>
                         </div>
                         @foreach($marketplaceClients as $client)
@@ -191,7 +191,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
                                 </svg>
-                                Back to Admin Panel
+                                {{ __('Back to Admin Panel') }}
                             </a>
                         </div>
                     </div>
@@ -316,7 +316,7 @@
                                     type="button"
                                     :class="{ 'bg-gray-100 dark:bg-gray-700 text-primary-600': theme === 'light' }"
                                     class="p-2 text-gray-500 transition rounded-lg fi-theme-switcher-btn hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"
-                                    title="Enable light theme"
+                                    title="{{ __('Enable light theme') }}"
                                 >
                                     <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M10 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 2ZM10 15a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 15ZM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM15.657 5.404a.75.75 0 1 0-1.06-1.06l-1.061 1.06a.75.75 0 0 0 1.06 1.06l1.06-1.06ZM6.464 14.596a.75.75 0 1 0-1.06-1.06l-1.06 1.06a.75.75 0 0 0 1.06 1.06l1.06-1.06ZM18 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 18 10ZM5 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 5 10ZM14.596 15.657a.75.75 0 0 0 1.06-1.06l-1.06-1.061a.75.75 0 1 0-1.06 1.06l1.06 1.06ZM5.404 6.464a.75.75 0 0 0 1.06-1.06l-1.06-1.06a.75.75 0 1 0-1.061 1.06l1.06 1.06Z"/>
@@ -329,7 +329,7 @@
                                     type="button"
                                     :class="{ 'bg-gray-100 dark:bg-gray-700 text-primary-600': theme === 'dark' }"
                                     class="p-2 text-gray-500 transition rounded-lg fi-theme-switcher-btn hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"
-                                    title="Enable dark theme"
+                                    title="{{ __('Enable dark theme') }}"
                                 >
                                     <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M7.455 2.004a.75.75 0 0 1 .26.77 7 7 0 0 0 9.958 7.967.75.75 0 0 1 1.067.853A8.5 8.5 0 1 1 6.647 1.921a.75.75 0 0 1 .808.083Z" clip-rule="evenodd"/>
@@ -342,7 +342,7 @@
                                     type="button"
                                     :class="{ 'bg-gray-100 dark:bg-gray-700 text-primary-600': theme === 'system' }"
                                     class="p-2 text-gray-500 transition rounded-lg fi-theme-switcher-btn hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"
-                                    title="Enable system theme"
+                                    title="{{ __('Enable system theme') }}"
                                 >
                                     <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M2 4.25A2.25 2.25 0 0 1 4.25 2h11.5A2.25 2.25 0 0 1 18 4.25v8.5A2.25 2.25 0 0 1 15.75 15h-3.105a3.501 3.501 0 0 0 1.1 1.677A.75.75 0 0 1 13.26 18H6.74a.75.75 0 0 1-.484-1.323A3.501 3.501 0 0 0 7.355 15H4.25A2.25 2.25 0 0 1 2 12.75v-8.5Zm1.5 0a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-.75.75H4.25a.75.75 0 0 1-.75-.75v-7.5Z" clip-rule="evenodd"/>
@@ -357,7 +357,7 @@
                                 <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z"/>
                                 </svg>
-                                <span class="fi-dropdown-list-item-label">Profile</span>
+                                <span class="fi-dropdown-list-item-label">{{ __('Profile') }}</span>
                             </a>
                         </div>
 
@@ -370,7 +370,7 @@
                                         <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clip-rule="evenodd"/>
                                         <path fill-rule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-.943a.75.75 0 1 0-1.004-1.114l-2.5 2.25a.75.75 0 0 0 0 1.114l2.5 2.25a.75.75 0 1 0 1.004-1.114l-1.048-.943h9.546A.75.75 0 0 0 19 10Z" clip-rule="evenodd"/>
                                     </svg>
-                                    <span class="fi-dropdown-list-item-label">Sign out</span>
+                                    <span class="fi-dropdown-list-item-label">{{ __('Sign out') }}</span>
                                 </button>
                             </form>
                         </div>

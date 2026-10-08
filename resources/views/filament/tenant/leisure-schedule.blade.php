@@ -4,7 +4,7 @@
             <div class="p-4 rounded-xl border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/30">
                 <div class="font-bold text-amber-700 dark:text-amber-300">Migrare incompletă</div>
                 <div class="text-sm text-amber-700 dark:text-amber-200 mt-2">
-                    Tabelele <code class="font-mono">tenant_team_members</code> sau
+                    {{ __('Tabelele') }} <code class="font-mono">tenant_team_members</code> sau
                     <code class="font-mono">tenant_team_member_shifts</code> nu există încă. Rulează:
                 </div>
                 <pre class="mt-2 px-3 py-2 rounded bg-amber-100 dark:bg-amber-800 text-xs font-mono">cd epas && php artisan migrate</pre>
@@ -22,14 +22,14 @@
 
         @if ($members->isEmpty())
             <div class="text-center py-12 text-gray-500">
-                Niciun membru activ în echipă. Adaugă unul la <strong>Echipa</strong>.
+                Niciun membru activ în echipă. Adaugă unul la <strong>{{ __('Echipa') }}</strong>.
             </div>
         @else
             <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
                 <table class="min-w-full bg-white dark:bg-gray-800 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-900">
                         <tr>
-                            <th class="px-3 py-2 text-left font-semibold sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">Operator</th>
+                            <th class="px-3 py-2 text-left font-semibold sticky left-0 bg-gray-50 dark:bg-gray-900 z-10">{{ __('Operator') }}</th>
                             @foreach ($days as $d)
                                 @php $isToday = $d->isSameDay(now()); @endphp
                                 <th class="px-3 py-2 text-center font-semibold min-w-[140px] @if($isToday) bg-emerald-50 dark:bg-emerald-900/30 @endif">
@@ -37,7 +37,7 @@
                                     <div>{{ $d->format('d.m') }}</div>
                                 </th>
                             @endforeach
-                            <th class="px-3 py-2 text-right font-semibold">Total</th>
+                            <th class="px-3 py-2 text-right font-semibold">{{ __('Total') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -45,7 +45,7 @@
                             @php $totalMin = $totalsByMember[$m->id] ?? 0; @endphp
                             <tr>
                                 <td class="px-3 py-2 sticky left-0 bg-white dark:bg-gray-800 z-10">
-                                    <div class="font-semibold">{{ $m->user?->name ?? $m->user?->email ?? 'Operator' }}</div>
+                                    <div class="font-semibold">{{ $m->user?->name ?? $m->user?->email ?? __('Operator') }}</div>
                                     <div class="text-xs text-gray-500">{{ $leisureRoles[$m->leisure_role] ?? $m->leisure_role }}</div>
                                 </td>
                                 @foreach ($days as $d)
@@ -90,7 +90,7 @@
             </div>
 
             <div class="text-sm text-gray-500">
-                Apasă pe un operator în <strong>Echipa</strong> pentru a-i edita schimburile.
+                Apasă pe un operator în <strong>{{ __('Echipa') }}</strong> {{ __('pentru a-i edita schimburile.') }}
             </div>
         @endif
     </div>

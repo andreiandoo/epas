@@ -2,20 +2,20 @@
     @if($invoices->isEmpty())
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-12 text-center">
             <x-heroicon-o-document-text class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">No invoices yet</h3>
-            <p class="text-gray-600">Your invoices will appear here after purchases.</p>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ __('No invoices yet') }}</h3>
+            <p class="text-gray-600">{{ __('Your invoices will appear here after purchases.') }}</p>
         </div>
     @else
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-50 border-b">
                     <tr>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Invoice #</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Date</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Description</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Amount</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
-                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Invoice #') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Date') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Description') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Amount') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Status') }}</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
@@ -48,7 +48,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm">
-                                    Download PDF
+                                    {{ __('Download PDF') }}
                                 </a>
                             </td>
                         </tr>

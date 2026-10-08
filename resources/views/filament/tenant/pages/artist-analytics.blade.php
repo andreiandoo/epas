@@ -89,12 +89,12 @@
     <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         @php
             $kpiItems = [
-                ['label' => 'Events', 'value' => $totalEvents, 'color' => 'text-white'],
-                ['label' => 'Tickets Sold', 'value' => number_format($totalTickets), 'color' => 'text-emerald-400'],
-                ['label' => 'Unique Buyers', 'value' => number_format($uniqueBuyers), 'color' => 'text-blue-400'],
-                ['label' => 'Revenue', 'value' => number_format($totalRevenue, 2) . ' RON', 'color' => 'text-amber-400'],
-                ['label' => 'Avg Tickets/Event', 'value' => $avgTicketsPerEvent, 'color' => 'text-cyan-400'],
-                ['label' => 'Avg Ticket Price', 'value' => number_format($avgTicketPrice, 2) . ' RON', 'color' => 'text-purple-400'],
+                ['label' => __('Events'), 'value' => $totalEvents, 'color' => 'text-white'],
+                ['label' => __('Tickets Sold'), 'value' => number_format($totalTickets), 'color' => 'text-emerald-400'],
+                ['label' => __('Unique Buyers'), 'value' => number_format($uniqueBuyers), 'color' => 'text-blue-400'],
+                ['label' => __('Revenue'), 'value' => number_format($totalRevenue, 2) . ' RON', 'color' => 'text-amber-400'],
+                ['label' => __('Avg Tickets/Event'), 'value' => $avgTicketsPerEvent, 'color' => 'text-cyan-400'],
+                ['label' => __('Avg Ticket Price'), 'value' => number_format($avgTicketPrice, 2) . ' RON', 'color' => 'text-purple-400'],
             ];
         @endphp
         @foreach($kpiItems as $kpi)
@@ -109,15 +109,15 @@
     @if(!empty($months))
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                <div class="text-sm font-semibold text-gray-300 mb-3">Events per Month</div>
+                <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Events per Month') }}</div>
                 <canvas id="eventsChart" height="180"></canvas>
             </div>
             <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                <div class="text-sm font-semibold text-gray-300 mb-3">Tickets Sold per Month</div>
+                <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Tickets Sold per Month') }}</div>
                 <canvas id="ticketsChart" height="180"></canvas>
             </div>
             <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                <div class="text-sm font-semibold text-gray-300 mb-3">Revenue per Month</div>
+                <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Revenue per Month') }}</div>
                 <canvas id="revenueChart" height="180"></canvas>
             </div>
         </div>
@@ -127,7 +127,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {{-- Top Venues --}}
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Top Venues</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('Top Venues') }}</div>
             <div class="divide-y divide-gray-800">
                 @forelse($topVenues as $v)
                     @php
@@ -139,37 +139,37 @@
                         <span class="text-gray-400 font-mono">{{ number_format($v->tickets_count) }}</span>
                     </div>
                 @empty
-                    <div class="px-4 py-3 text-xs text-gray-500">No data</div>
+                    <div class="px-4 py-3 text-xs text-gray-500">{{ __('No data') }}</div>
                 @endforelse
             </div>
         </div>
 
         {{-- Top Cities --}}
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Top Cities</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('Top Cities') }}</div>
             <div class="divide-y divide-gray-800">
                 @forelse($topCities as $c)
                     <div class="px-4 py-2 flex justify-between items-center text-xs">
                         <span class="text-gray-300">{{ $c->name }}</span>
-                        <span class="text-gray-400 font-mono">{{ number_format($c->tickets_count) }} <span class="text-gray-500">/ {{ $c->fans_count }} fans</span></span>
+                        <span class="text-gray-400 font-mono">{{ number_format($c->tickets_count) }} <span class="text-gray-500">{{ __('/ :fans_count fans', ['fans_count' => $c->fans_count]) }}</span></span>
                     </div>
                 @empty
-                    <div class="px-4 py-3 text-xs text-gray-500">No data</div>
+                    <div class="px-4 py-3 text-xs text-gray-500">{{ __('No data') }}</div>
                 @endforelse
             </div>
         </div>
 
         {{-- Top Counties --}}
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Top Counties</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('Top Counties') }}</div>
             <div class="divide-y divide-gray-800">
                 @forelse($topCounties as $c)
                     <div class="px-4 py-2 flex justify-between items-center text-xs">
                         <span class="text-gray-300">{{ $c->name }}</span>
-                        <span class="text-gray-400 font-mono">{{ number_format($c->tickets_count) }} <span class="text-gray-500">/ {{ $c->fans_count }} fans</span></span>
+                        <span class="text-gray-400 font-mono">{{ number_format($c->tickets_count) }} <span class="text-gray-500">{{ __('/ :fans_count fans', ['fans_count' => $c->fans_count]) }}</span></span>
                     </div>
                 @empty
-                    <div class="px-4 py-3 text-xs text-gray-500">No data</div>
+                    <div class="px-4 py-3 text-xs text-gray-500">{{ __('No data') }}</div>
                 @endforelse
             </div>
         </div>
@@ -178,15 +178,15 @@
     {{-- Recent Events Table --}}
     @if($artistEvents->isNotEmpty())
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Recent Events ({{ $artistEvents->count() }})</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('Recent Events (:count)', ['count' => $artistEvents->count()]) }}</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <thead>
                         <tr class="bg-gray-800/50">
-                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">Date</th>
-                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">Event</th>
-                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">Venue</th>
-                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">Organizer</th>
+                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">{{ __('Date') }}</th>
+                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">{{ __('Event') }}</th>
+                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">{{ __('Venue') }}</th>
+                            <th class="text-left px-3 py-2 text-gray-400 font-semibold">{{ __('Organizer') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-800/50">
@@ -214,14 +214,14 @@
     @php $personas = $audiencePersonas['personas'] ?? []; $aTotals = $audiencePersonas['totals'] ?? []; @endphp
     @if(!empty($personas))
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4 mb-6">
-            <div class="text-sm font-semibold text-gray-300 mb-4">Audience Personas ({{ $aTotals['total_customers'] ?? 0 }} buyers)</div>
+            <div class="text-sm font-semibold text-gray-300 mb-4">{{ __('Audience Personas (:total_customers buyers)', ['total_customers' => $aTotals['total_customers'] ?? 0]) }}</div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 @foreach($personas as $persona)
                     <div class="rounded-lg bg-gray-800/50 border border-gray-700/30 p-4">
                         <div class="text-xs font-semibold text-indigo-400 uppercase mb-2">{{ $persona['label'] }}</div>
                         <div class="text-lg font-bold text-white">{{ $persona['age_group'] }} / {{ ucfirst($persona['gender']) }}</div>
-                        <div class="text-xs text-gray-400 mt-1">{{ $persona['count'] }} buyers ({{ $persona['percentage'] }}%)</div>
-                        <div class="text-xs text-gray-400">Avg spend: {{ number_format($persona['avg_spend'], 2) }} RON</div>
+                        <div class="text-xs text-gray-400 mt-1">{{ __(':count buyers (:percentage%)', ['count' => $persona['count'], 'percentage' => $persona['percentage']]) }}</div>
+                        <div class="text-xs text-gray-400">{{ __('Avg spend: :avg_spend RON', ['avg_spend' => number_format($persona['avg_spend'], 2)]) }}</div>
                     </div>
                 @endforeach
             </div>
@@ -232,15 +232,15 @@
     @php $geo = $geoIntelligence ?? []; @endphp
     @if(!empty($geo))
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Geographic Intelligence</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('Geographic Intelligence') }}</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <thead><tr class="bg-gray-800/50">
-                        <th class="text-left px-3 py-2 text-gray-400">City</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Events</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Tickets</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Revenue</th>
-                        <th class="text-left px-3 py-2 text-gray-400">Recommended Venue</th>
+                        <th class="text-left px-3 py-2 text-gray-400">{{ __('City') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Events') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Tickets') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Revenue') }}</th>
+                        <th class="text-left px-3 py-2 text-gray-400">{{ __('Recommended Venue') }}</th>
                     </tr></thead>
                     <tbody class="divide-y divide-gray-800/50">
                         @foreach(array_slice($geo, 0, 15) as $g)
@@ -249,7 +249,7 @@
                                 <td class="px-3 py-2 text-gray-400 text-right">{{ $g['events_count'] }}</td>
                                 <td class="px-3 py-2 text-gray-300 text-right font-mono">{{ number_format($g['tickets_sold']) }}</td>
                                 <td class="px-3 py-2 text-emerald-400 text-right font-mono">{{ number_format($g['total_revenue'], 0) }}</td>
-                                <td class="px-3 py-2 text-gray-400">{{ $g['recommended_venue'] ?? '—' }} @if($g['recommended_capacity'] ?? 0) <span class="text-gray-500">({{ number_format($g['recommended_capacity']) }} cap)</span> @endif</td>
+                                <td class="px-3 py-2 text-gray-400">{{ $g['recommended_venue'] ?? '—' }} @if($g['recommended_capacity'] ?? 0) <span class="text-gray-500">{{ __('(:recommended_capacity cap)', ['recommended_capacity' => number_format($g['recommended_capacity'])]) }}</span> @endif</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -265,25 +265,25 @@
             {{-- Customer Loyalty --}}
             @if(!empty($loyalty) && ($loyalty['total'] ?? 0) > 0)
                 <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                    <div class="text-sm font-semibold text-gray-300 mb-3">Customer Loyalty</div>
+                    <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Customer Loyalty') }}</div>
                     <div class="grid grid-cols-4 gap-3 text-center">
-                        <div><div class="text-lg font-bold text-white">{{ $loyalty['total'] }}</div><div class="text-[10px] text-gray-400">Total</div></div>
-                        <div><div class="text-lg font-bold text-gray-400">{{ $loyalty['one_time'] }}</div><div class="text-[10px] text-gray-400">One-time</div></div>
-                        <div><div class="text-lg font-bold text-blue-400">{{ $loyalty['repeat'] }}</div><div class="text-[10px] text-gray-400">Repeat</div></div>
-                        <div><div class="text-lg font-bold text-amber-400">{{ $loyalty['superfan'] }}</div><div class="text-[10px] text-gray-400">Superfan (3+)</div></div>
+                        <div><div class="text-lg font-bold text-white">{{ $loyalty['total'] }}</div><div class="text-[10px] text-gray-400">{{ __('Total') }}</div></div>
+                        <div><div class="text-lg font-bold text-gray-400">{{ $loyalty['one_time'] }}</div><div class="text-[10px] text-gray-400">{{ __('One-time') }}</div></div>
+                        <div><div class="text-lg font-bold text-blue-400">{{ $loyalty['repeat'] }}</div><div class="text-[10px] text-gray-400">{{ __('Repeat') }}</div></div>
+                        <div><div class="text-lg font-bold text-amber-400">{{ $loyalty['superfan'] }}</div><div class="text-[10px] text-gray-400">{{ __('Superfan (3+)') }}</div></div>
                     </div>
-                    <div class="mt-3 text-center text-xs"><span class="text-emerald-400 font-semibold">{{ $loyalty['repeat_rate'] }}%</span> <span class="text-gray-400">repeat rate</span></div>
+                    <div class="mt-3 text-center text-xs"><span class="text-emerald-400 font-semibold">{{ $loyalty['repeat_rate'] }}%</span> <span class="text-gray-400">{{ __('repeat rate') }}</span></div>
                 </div>
             @endif
 
             {{-- Role Comparison --}}
             @if(!empty($roleComp))
                 <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                    <div class="text-sm font-semibold text-gray-300 mb-3">Role Comparison</div>
+                    <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Role Comparison') }}</div>
                     @foreach($roleComp as $role => $stats)
                         <div class="flex justify-between items-center py-2 border-b border-gray-800/50 text-xs">
                             <span class="text-gray-200 font-medium">{{ $role }}</span>
-                            <span class="text-gray-400">{{ $stats['events'] }} events, avg {{ $stats['avg_sold'] }} sold, {{ $stats['avg_sell_through'] }}% ST</span>
+                            <span class="text-gray-400">{{ __(':events events, avg :avg_sold sold, :avg_sell_through% ST', ['events' => $stats['events'], 'avg_sold' => $stats['avg_sold'], 'avg_sell_through' => $stats['avg_sell_through']]) }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -298,7 +298,7 @@
             {{-- Price Sensitivity --}}
             @if(!empty($priceSens))
                 <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                    <div class="text-sm font-semibold text-gray-300 mb-3">Price Sensitivity</div>
+                    <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Price Sensitivity') }}</div>
                     @foreach($priceSens as $ps)
                         <div class="flex justify-between items-center py-1.5 text-xs">
                             <span class="text-gray-300">{{ $ps['range'] }} RON</span>
@@ -310,9 +310,9 @@
                     @endforeach
                     @if($sales['fee_comparison'] ?? null)
                         <div class="mt-3 pt-2 border-t border-gray-800 text-xs">
-                            <span class="text-gray-400">Fee range:</span>
+                            <span class="text-gray-400">{{ __('Fee range:') }}</span>
                             <span class="text-white font-semibold">{{ number_format($sales['fee_comparison']['min_fee'] ?? 0) }} - {{ number_format($sales['fee_comparison']['max_fee'] ?? 0) }} EUR</span>
-                            <span class="ml-2 {{ ($sales['fee_comparison']['in_range'] ?? false) ? 'text-emerald-400' : 'text-amber-400' }}">Avg revenue: {{ number_format($sales['fee_comparison']['avg_revenue'] ?? 0) }}</span>
+                            <span class="ml-2 {{ ($sales['fee_comparison']['in_range'] ?? false) ? 'text-emerald-400' : 'text-amber-400' }}">{{ __('Avg revenue: :avg_revenue', ['avg_revenue' => number_format($sales['fee_comparison']['avg_revenue'] ?? 0)]) }}</span>
                         </div>
                     @endif
                 </div>
@@ -321,8 +321,8 @@
             {{-- Purchase Timing --}}
             @if(!empty($purchaseTiming))
                 <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
-                    <div class="text-sm font-semibold text-gray-300 mb-3">Purchase Timing <span class="text-gray-500 text-[10px]">(avg {{ $sales['avg_lead_days'] ?? 0 }}d before event)</span></div>
-                    @php $timingLabels = ['super_early' => '90+ days', 'early_bird' => '31-90 days', 'last_month' => '8-30 days', 'last_week' => '2-7 days', 'last_minute' => 'Last minute']; @endphp
+                    <div class="text-sm font-semibold text-gray-300 mb-3">{{ __('Purchase Timing') }} <span class="text-gray-500 text-[10px]">{{ __('(avg :daysd before event)', ['days' => $sales['avg_lead_days'] ?? 0]) }}</span></div>
+                    @php $timingLabels = ['super_early' => __('90+ days'), 'early_bird' => __('31-90 days'), 'last_month' => __('8-30 days'), 'last_week' => __('2-7 days'), 'last_minute' => __('Last minute')]; @endphp
                     @foreach($timingLabels as $key => $label)
                         @if(($purchaseTiming[$key] ?? 0) > 0)
                             <div class="flex justify-between items-center py-1.5 text-xs">
@@ -343,15 +343,15 @@
     @php $expansion = $expansionPlanner ?? []; @endphp
     @if(!empty($expansion))
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">City Expansion Opportunities</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('City Expansion Opportunities') }}</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <thead><tr class="bg-gray-800/50">
-                        <th class="text-left px-3 py-2 text-gray-400">City</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Similar Events</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Est. Demand</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Sell-Through</th>
-                        <th class="text-center px-3 py-2 text-gray-400">Confidence</th>
+                        <th class="text-left px-3 py-2 text-gray-400">{{ __('City') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Similar Events') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Est. Demand') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Sell-Through') }}</th>
+                        <th class="text-center px-3 py-2 text-gray-400">{{ __('Confidence') }}</th>
                     </tr></thead>
                     <tbody class="divide-y divide-gray-800/50">
                         @foreach(array_slice($expansion, 0, 10) as $exp)
@@ -373,15 +373,15 @@
     @php $upcoming = $upcomingAnalysis ?? []; @endphp
     @if(!empty($upcoming))
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
-            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Upcoming Events Tracker</div>
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">{{ __('Upcoming Events Tracker') }}</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <thead><tr class="bg-gray-800/50">
-                        <th class="text-left px-3 py-2 text-gray-400">Event</th>
-                        <th class="text-left px-3 py-2 text-gray-400">Venue</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Days Left</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Sold / Cap</th>
-                        <th class="text-right px-3 py-2 text-gray-400">Sell-Through</th>
+                        <th class="text-left px-3 py-2 text-gray-400">{{ __('Event') }}</th>
+                        <th class="text-left px-3 py-2 text-gray-400">{{ __('Venue') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Days Left') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Sold / Cap') }}</th>
+                        <th class="text-right px-3 py-2 text-gray-400">{{ __('Sell-Through') }}</th>
                     </tr></thead>
                     <tbody class="divide-y divide-gray-800/50">
                         @foreach($upcoming as $ue)
@@ -403,7 +403,7 @@
     @php $opps = $opportunities ?? []; $recs = $opps['recommendations'] ?? []; @endphp
     @if(!empty($recs))
         <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4 mb-6">
-            <div class="text-sm font-semibold text-gray-300 mb-4">Recommendations</div>
+            <div class="text-sm font-semibold text-gray-300 mb-4">{{ __('Recommendations') }}</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 @foreach($recs as $rec)
                     <div class="rounded-lg bg-gray-800/50 border border-gray-700/30 p-3">

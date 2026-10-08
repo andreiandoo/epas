@@ -30,16 +30,16 @@
                     <div class="inline-block p-3 bg-white border-2 border-gray-100 rounded-lg">
                         <img
                             src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->getVerifyUrl()) }}&color=181622&margin=0"
-                            alt="QR Code"
+                            alt="{{ __('QR Code') }}"
                             class="w-40 h-40"
                         />
                     </div>
                     <p class="mt-3 font-mono text-xl font-bold text-gray-900 dark:text-white">{{ $ticket->code }}</p>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Cod scanabil la intrare</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Cod scanabil la intrare') }}</p>
 
                     @if($ticket->barcode)
                         <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Barcode</p>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Barcode') }}</p>
                             <p class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{{ $ticket->barcode }}</p>
                         </div>
                     @endif
@@ -52,7 +52,7 @@
                     <div class="mt-4 space-y-2">
                         @if($ticket->checked_in_at && !in_array($ticket->status, ['cancelled', 'void', 'refunded']))
                             <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                ✓ Check-in
+                                {{ __('✓ Check-in') }}
                             </span>
                         @else
                             <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full
@@ -61,10 +61,10 @@
                                 @elseif($ticket->status === 'cancelled' || $ticket->status === 'void') bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                                 @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
                                 @endif">
-                                @if($ticket->status === 'valid') ✓ Valid
-                                @elseif($ticket->status === 'used') ✓ Utilizat
-                                @elseif($ticket->status === 'cancelled') ✗ Anulat
-                                @elseif($ticket->status === 'void') ✗ Anulat
+                                @if($ticket->status === 'valid') {{ __('✓ Valid') }}
+                                @elseif($ticket->status === 'used') {{ __('✓ Utilizat') }}
+                                @elseif($ticket->status === 'cancelled') {{ __('✗ Anulat') }}
+                                @elseif($ticket->status === 'void') {{ __('✗ Anulat') }}
                                 @else {{ ucfirst($ticket->status) }}
                                 @endif
                             </span>
@@ -72,15 +72,15 @@
                         <div class="flex flex-wrap justify-center gap-1">
                             @if($hasInsurance)
                                 <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
-                                    ✓ Asigurat{{ $insuranceAmount ? ' (' . number_format($insuranceAmount, 2) . ' ' . ($ticket->order?->currency ?? 'RON') . ')' : '' }}
+                                    {{ __('✓ Asigurat') }}{{ $insuranceAmount ? ' (' . number_format($insuranceAmount, 2) . ' ' . ($ticket->order?->currency ?? 'RON') . ')' : '' }}
                                 </span>
                             @elseif($isRefundable)
                                 <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                                    ↩ Returnabil
+                                    {{ __('↩ Returnabil') }}
                                 </span>
                             @else
                                 <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                                    ✗ Nereturnabil
+                                    {{ __('✗ Nereturnabil') }}
                                 </span>
                             @endif
                         </div>
@@ -93,10 +93,10 @@
         <div class="space-y-4 lg:col-span-3">
             {{-- Ticket Details --}}
             <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Detalii bilet</h3>
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">{{ __('Detalii bilet') }}</h3>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Tip bilet</span>
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Tip bilet') }}</span>
                         <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? 'N/A' }}</p>
                     </div>
                     @if($hasSeatInfo)
@@ -114,13 +114,13 @@
                         @endif
                         @if($seatNumber)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Loc') }}</span>
                                 <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatNumber }}</p>
                             </div>
                         @endif
                         @if($seatLabel && !$seatSection && !$seatRow && !$seatNumber)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc (ID)</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Loc (ID)') }}</span>
                                 <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatLabel }}</p>
                             </div>
                         @endif
@@ -144,7 +144,7 @@
                         @endif
                     </div>
                     <div>
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Creat la</span>
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Creat la') }}</span>
                         <p class="text-base text-gray-900 dark:text-white">{{ \App\Support\MarketplaceTz::fmt($ticket->created_at, 'd M Y, H:i', $ticket->order?->marketplaceClient) }}</p>
                     </div>
                 </div>
@@ -171,7 +171,7 @@
                 <div class="p-5 bg-blue-50 border border-blue-200 shadow-sm dark:bg-blue-900/20 dark:border-blue-800 rounded-xl">
                     <h3 class="mb-3 text-sm font-semibold tracking-wider text-blue-700 uppercase dark:text-blue-300 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Check-in efectuat
+                        {{ __('Check-in efectuat') }}
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -179,7 +179,7 @@
                             <p class="text-base font-semibold text-gray-900 dark:text-white">{{ \App\Support\MarketplaceTz::fmt($ticket->checked_in_at, 'd M Y, H:i:s', $ticket->order?->marketplaceClient) }}</p>
                         </div>
                         <div>
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Scanat de</span>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Scanat de') }}</span>
                             <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->checked_in_by ?: '—' }}</p>
                         </div>
                         <div class="col-span-2">
@@ -193,7 +193,7 @@
             {{-- Event Details --}}
             @if($event)
                 <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Eveniment</h3>
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">{{ __('Eveniment') }}</h3>
                     <div class="flex items-start gap-4">
                         @if($event->poster_url)
                             <img src="{{ Storage::disk('public')->url($event->poster_url) }}" alt="{{ $eventTitle }}" class="object-cover rounded-lg" style="max-width: 100px; height: auto;">
@@ -217,7 +217,7 @@
                             <div class="flex flex-wrap mt-2 text-sm text-gray-600 gap-x-4 gap-y-1 dark:text-gray-300">
                                 <span class="flex items-center">
                                     <x-heroicon-o-calendar class="w-4 h-4 mr-1 text-gray-400" />
-                                    {{ $event->event_date ? $event->event_date->format('d M Y') : 'TBA' }}
+                                    {{ $event->event_date ? $event->event_date->format('d M Y') : __('TBA') }}
                                 </span>
                                 @if($event->start_time)
                                     <span class="flex items-center">
@@ -271,14 +271,14 @@
                         </div>
                         @if($ticket->order->marketplaceOrganizer)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Organizator</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Organizator') }}</span>
                                 <p class="text-base text-gray-900 dark:text-white">
                                     {{ $ticket->order->marketplaceOrganizer->company_name ?? $ticket->order->marketplaceOrganizer->name ?? '' }}
                                 </p>
                             </div>
                         @elseif($ticket->order->tenant)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Organizator</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Organizator') }}</span>
                                 <p class="text-base text-gray-900 dark:text-white">
                                     @if($isAdminPanel)
                                         <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $ticket->order->tenant]) }}" class="text-primary-600 hover:underline">
@@ -294,7 +294,7 @@
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sursă import</span>
                                 <p class="text-base text-indigo-400">
-                                    🌐 {{ $ticket->order->meta['external_platform'] ?? $ticket->order->meta['imported_from'] ?? 'Extern' }}
+                                    🌐 {{ $ticket->order->meta['external_platform'] ?? $ticket->order->meta['imported_from'] ?? __('Extern') }}
                                 </p>
                             </div>
                         @endif
@@ -312,7 +312,7 @@
                             }
                         @endphp
                         <div>
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Client</span>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Client') }}</span>
                             <p class="text-base text-gray-900 dark:text-white">
                                 @if($customerLink)
                                     <a href="{{ $customerLink }}" class="text-primary-600 hover:underline">{{ $customerName }}</a>
@@ -322,7 +322,7 @@
                             </p>
                         </div>
                         <div>
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Email</span>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Email') }}</span>
                             <p class="text-base text-gray-900 dark:text-white">
                                 @if($customerLink)
                                     <a href="{{ $customerLink }}" class="text-primary-600 hover:underline">{{ $ticket->order->customer_email }}</a>
@@ -333,7 +333,7 @@
                         </div>
                         @if($ticket->order->meta['customer_phone'] ?? null)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Telefon</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Telefon') }}</span>
                                 <p class="text-base text-gray-900 dark:text-white">
                                     <a href="tel:{{ $ticket->order->meta['customer_phone'] }}" class="text-primary-600 hover:underline">
                                         {{ $ticket->order->meta['customer_phone'] }}
@@ -365,7 +365,7 @@
             @endphp
             @if(!empty($transferHistory))
                 <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Istoric transferuri</h3>
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">{{ __('Istoric transferuri') }}</h3>
                     <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-2 space-y-4">
                         @foreach(array_reverse($transferHistory) as $transfer)
                             <li class="ml-4">
@@ -374,7 +374,7 @@
                                     {{ isset($transfer['at']) ? \App\Support\MarketplaceTz::fmt($transfer['at'], 'd.m.Y H:i', $ticket->order?->marketplaceClient) : '—' }}
                                 </time>
                                 <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                                    De la
+                                    {{ __('De la') }}
                                     <strong>{{ $transfer['from_name'] ?? '—' }}</strong>
                                     @if($transfer['from_email'] ?? null)
                                         <span class="text-gray-500 dark:text-gray-400">({{ $transfer['from_email'] }})</span>
@@ -388,7 +388,7 @@
                                 @if(($transfer['ip_address'] ?? null) || ($transfer['user_agent'] ?? null))
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                         @if($transfer['ip_address'] ?? null)
-                                            <span class="font-mono">IP {{ $transfer['ip_address'] }}</span>
+                                            <span class="font-mono">{{ __('IP :ip_address', ['ip_address' => $transfer['ip_address']]) }}</span>
                                         @endif
                                         @if($transfer['user_agent'] ?? null)
                                             <span class="block truncate" title="{{ $transfer['user_agent'] }}">{{ \Illuminate\Support\Str::limit($transfer['user_agent'], 90) }}</span>
@@ -404,21 +404,21 @@
             {{-- Beneficiary --}}
             @if($beneficiary)
                 <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Beneficiar bilet</h3>
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">{{ __('Beneficiar bilet') }}</h3>
                     <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
                         <div>
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Nume</span>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Nume') }}</span>
                             <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $beneficiary['name'] ?? 'N/A' }}</p>
                         </div>
                         @if($beneficiary['email'] ?? null)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Email</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Email') }}</span>
                                 <p class="text-base text-gray-900 dark:text-white">{{ $beneficiary['email'] }}</p>
                             </div>
                         @endif
                         @if($beneficiary['phone'] ?? null)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Telefon</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Telefon') }}</span>
                                 <p class="text-base text-gray-900 dark:text-white">{{ $beneficiary['phone'] }}</p>
                             </div>
                         @endif
@@ -438,7 +438,7 @@
             @endphp
             <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                 <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-                    Istoric alocare loc
+                    {{ __('Istoric alocare loc') }}
                 </h3>
                 @if($seatAllocActivities->isEmpty())
                     <p class="text-sm text-gray-500 dark:text-gray-400 italic">
@@ -475,13 +475,13 @@
                                     @if($seatHuman) <span class="text-gray-500 dark:text-gray-400">({{ $seatHuman }})</span> @endif
                                     @if(!empty($props['previous_seat_uid']))
                                         <span class="block mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                            Loc anterior eliberat: <span class="font-mono">{{ $props['previous_seat_uid'] }}</span> (→ available)
+                                            {{ __('Loc anterior eliberat:') }} <span class="font-mono">{{ $props['previous_seat_uid'] }}</span> (→ available)
                                         </span>
                                     @endif
                                 </p>
                                 @if(!empty($props['reason']))
                                     <p class="mt-1 text-xs text-gray-600 dark:text-gray-400 italic">
-                                        Motiv: {{ $props['reason'] }}
+                                        {{ __('Motiv: :reason', ['reason' => $props['reason']]) }}
                                     </p>
                                 @endif
                                 @if(!empty($props['order_number']) || !empty($props['customer_email']))

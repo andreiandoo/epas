@@ -4,10 +4,10 @@
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
                 <x-heroicon-o-puzzle-piece class="w-8 h-8 text-indigo-500" />
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No microservices yet</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6">Browse our store to add powerful features to your account.</p>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ __('No microservices yet') }}</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">{{ __('Browse our store to add powerful features to your account.') }}</p>
             <a href="{{ route('store.index') }}" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/25">
-                Browse Store
+                {{ __('Browse Store') }}
             </a>
         </div>
     @else
@@ -36,7 +36,7 @@
                             </div>
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                                Active
+                                {{ __('Active') }}
                             </span>
                         </div>
 
@@ -57,7 +57,7 @@
                             @endif
 
                             <span class="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium group-hover:translate-x-1 transition-transform">
-                                Configure
+                                {{ __('Configure') }}
                                 <x-heroicon-o-arrow-right class="w-3.5 h-3.5" />
                             </span>
                         </div>
@@ -68,7 +68,7 @@
 
         <div class="mt-8 text-center">
             <a href="{{ route('store.index') }}" class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                <span>Browse more microservices</span>
+                <span>{{ __('Browse more microservices') }}</span>
                 <x-heroicon-o-arrow-right class="w-4 h-4" />
             </a>
         </div>

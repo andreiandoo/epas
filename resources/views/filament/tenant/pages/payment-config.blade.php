@@ -4,7 +4,7 @@
 
         <div class="mt-6">
             <x-filament::button type="submit">
-                Save Configuration
+                {{ __('Save Configuration') }}
             </x-filament::button>
         </div>
     </form>
@@ -45,7 +45,7 @@
 
                 {{-- Apple Pay Domain Registration --}}
                 <div class="space-y-4">
-                    <h4 class="text-sm font-medium text-gray-950 dark:text-white">Verificare domeniu Apple Pay</h4>
+                    <h4 class="text-sm font-medium text-gray-950 dark:text-white">{{ __('Verificare domeniu Apple Pay') }}</h4>
 
                     <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
                         <div class="flex gap-3">
@@ -53,7 +53,7 @@
                             <div class="text-sm text-amber-800 dark:text-amber-200">
                                 <p class="font-medium mb-1">Pași pentru activare Apple Pay:</p>
                                 <ol class="list-decimal list-inside mt-2 space-y-2 text-amber-700 dark:text-amber-300">
-                                    <li>Site-ul trebuie să folosească <strong>HTTPS</strong> (certificat SSL valid)</li>
+                                    <li>Site-ul trebuie să folosească <strong>HTTPS</strong> {{ __('(certificat SSL valid)') }}</li>
                                     <li>Descarcă fișierul de verificare (butonul de mai jos)</li>
                                     <li>Urcă fișierul pe server la: <code class="bg-amber-100 dark:bg-amber-900 px-1 rounded">/.well-known/apple-developer-merchantid-domain-association</code></li>
                                     <li>Verifică că fișierul este accesibil: <code class="bg-amber-100 dark:bg-amber-900 px-1 rounded">https://domeniu.ro/.well-known/apple-developer-merchantid-domain-association</code></li>
@@ -67,7 +67,7 @@
                     <div class="flex items-center gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-900 dark:text-white">Fișier verificare Apple Pay</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Descarcă și urcă acest fișier în directorul <code>.well-known</code> de pe server</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Descarcă și urcă acest fișier în directorul <code>.well-known</code> {{ __('de pe server') }}</p>
                         </div>
                         <a
                             href="{{ route('apple-pay.verification') }}"
@@ -108,7 +108,7 @@
                                     <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
                                         <div class="flex items-center gap-2">
                                             <x-heroicon-o-check-circle class="h-5 w-5 text-green-500" />
-                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $domain['domain_name'] ?? 'Unknown' }}</span>
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $domain['domain_name'] ?? __('Unknown') }}</span>
                                         </div>
                                         <button
                                             type="button"
@@ -134,7 +134,7 @@
                     @endphp
                     @if($tenantDomains->count() > 0)
                         <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Domeniile tale active:</p>
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Domeniile tale active:') }}</p>
                             <div class="flex flex-wrap gap-2">
                                 @foreach($tenantDomains as $domain)
                                     <button
