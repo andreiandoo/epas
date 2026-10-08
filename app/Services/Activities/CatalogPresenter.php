@@ -126,7 +126,8 @@ class CatalogPresenter
                 'rate'  => $product->organizer ? (float) $product->organizer->getEffectiveCommissionRate() : 0.0,
                 'mode'  => $product->organizer ? $product->organizer->getEffectiveCommissionMode() : 'included',
                 // never less than this per unit sold, so the page shows the same total as the checkout charges
-                'floor' => ActivityCommission::floor($product->organizer),
+                // in the operator's currency when he chose one, so the booking panel shows the fee the checkout charges
+                'floor' => ActivityCommission::floor($product->organizer, ActivityCurrency::chosen($product->organizer)),
             ],
             'variants'              => $product->variants
                 ->filter(fn ($v) => $v->is_active && !$v->pos_only)

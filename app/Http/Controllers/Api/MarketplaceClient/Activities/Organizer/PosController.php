@@ -53,7 +53,7 @@ class PosController extends BaseController
             'commission' => [
                 'rate'  => (float) $organizer->getEffectiveCommissionRate(),
                 'mode'  => $organizer->getEffectiveCommissionMode(),
-                'floor' => ActivityCommission::floor($organizer),
+                'floor' => ActivityCommission::floor($organizer, \App\Services\Activities\ActivityCurrency::chosen($organizer)),
             ],
             'products' => $this->deskProducts($organizer, $location)->map(fn ($p) => $this->deskProduct($p))->values(),
         ]);

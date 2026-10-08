@@ -50,6 +50,15 @@ class ActivityCurrency
         return strtoupper((string) ($client?->currency ?? '')) ?: self::FALLBACK;
     }
 
+    /**
+     * The currency the operator chose himself, null when he chose none (then prices, the commission minimum and
+     * the order all follow the rules from before currencies existed).
+     */
+    public static function chosen(?MarketplaceOrganizer $organizer): ?string
+    {
+        return self::ready() ? (strtoupper((string) ($organizer?->currency ?? '')) ?: null) : null;
+    }
+
     /** An amount in cents of $currency, in euro cents at the latest rate; null when there is no rate. */
     public static function toEurCents(?int $cents, ?string $currency): ?int
     {

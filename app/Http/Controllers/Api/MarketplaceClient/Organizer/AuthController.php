@@ -964,7 +964,7 @@ class AuthController extends BaseController
             $payload['invoice_due_days'] = (int) ($organizer->invoice_due_days
                 ?? ($marketplace->settings['invoice_due_days'] ?? 5));
             // the least the commission can be, per ticket sold — the account pages state it, so it must be the real one
-            $payload['commission_floor'] = \App\Services\Activities\ActivityCommission::floor($organizer);
+            $payload['commission_floor'] = \App\Services\Activities\ActivityCommission::floor($organizer, \App\Services\Activities\ActivityCurrency::chosen($organizer));
         }
 
         return $this->success($payload);
