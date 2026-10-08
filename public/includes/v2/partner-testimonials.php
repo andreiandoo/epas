@@ -1,14 +1,17 @@
 <?php
 /**
- * viaqui.com v2: what partners say, shown on /parteneri. Edit here, nowhere else.
+ * viaqui.com v2: what partners say, shown on /partners. Edit here, nowhere else.
  *
  * - video: one film (YouTube). The page shows its poster and loads the player only when someone presses play.
  * - quotes: short testimonials. The one marked 'pull' => true is the large quote before the finale; the rest form the wall.
  *
  * 'demo' => true marks a stand-in written by us while the real material is prepared. Stand-in quotes are shown to
- * everyone with an "Exemplu" tag and a line above the wall that says they are examples (the owner's call), so nobody
+ * everyone with an "Example" tag and a line above the wall that says they are examples (the owner's call), so nobody
  * takes them for a real customer. The film is the exception: a stand-in film would only confuse, so it shows only in
- * preview (/parteneri?preview=1). To publish for real, replace the text (or the YouTube id) and set 'demo' => false.
+ * preview (/partners?preview=1). To publish for real, replace the text (or the YouTube id) and set 'demo' => false.
+ *
+ * The texts go through v2_t() so the stand-ins follow the language of the page; names of people and places do not.
+ * A real quote is written here in the language it was said in, without v2_t().
  */
 
 function v2_partner_testimonials(): array
@@ -18,56 +21,56 @@ function v2_partner_testimonials(): array
             'demo' => true,
             'youtube' => 'aqz-KE-bpKQ', // stand-in (Blender open film); the Sf. Ana film goes here once it's edited
             'duration' => '2:30',
-            'title' => 'Sf. Ana: bilete online, acces rapid la intrare',
-            'quote' => 'Am trecut de la cozi la intrare la oameni care vin cu biletul în telefon. Vedem în fiecare dimineață câți vin și pe ce interval, iar la final de zi știm exact cât s-a vândut online și cât la ghișeu.',
-            'name' => 'Nume Prenume',
-            'role' => 'Manager',
+            'title' => v2_t('Sf. Ana: tickets online, fast entry at the gate'),
+            'quote' => v2_t('We went from queues at the entrance to people arriving with the ticket on their phone. Every morning we see how many are coming and for which time slot, and at the end of the day we know exactly how much was sold online and how much at the ticket office.'),
+            'name' => v2_t('First name Last name'),
+            'role' => v2_t('Manager'),
             'place' => 'Sf. Ana',
-            'results' => ['Acces fără cozi', 'Online + ghișeu în același raport'],
+            'results' => [v2_t('Entry without queues'), v2_t('Online + ticket office in the same report')],
         ],
         'quotes' => [
             [
                 'demo' => true,
-                'quote' => 'Camerele au sloturi la fiecare oră și înainte ne scriau oamenii pe Instagram ca să rezerve. Acum aleg singuri ora, plătesc și primesc biletul. Noi doar îi primim.',
-                'name' => 'Andreea M.', 'role' => 'Fondatoare', 'venue' => 'Escape room', 'city' => 'Cluj-Napoca',
-                'result' => 'Rezervări fără mesaje',
+                'quote' => v2_t('The rooms have slots every hour, and people used to message us on Instagram to book. Now they pick the time themselves, pay and get the ticket. We just welcome them.'),
+                'name' => 'Andreea M.', 'role' => v2_t('Founder'), 'venue' => v2_t('Escape room'), 'city' => 'Cluj-Napoca',
+                'result' => v2_t('Bookings without messages'),
             ],
             [
                 'demo' => true,
-                'quote' => 'Ghișeul și vânzările online sunt în același raport. La închiderea casei nu mai numărăm de două ori și nu mai facem tabele separate pentru contabilitate.',
-                'name' => 'Radu T.', 'role' => 'Administrator', 'venue' => 'Muzeu', 'city' => 'Sibiu',
-                'result' => 'Închidere de casă în 5 minute',
+                'quote' => v2_t('The ticket office and online sales are in the same report. When we close the register we no longer count twice or keep separate spreadsheets for the accountant.'),
+                'name' => 'Radu T.', 'role' => v2_t('Administrator'), 'venue' => v2_t('Museum'), 'city' => 'Sibiu',
+                'result' => v2_t('Register closed in 5 minutes'),
             ],
             [
                 'demo' => true,
-                'quote' => 'Comisionul nu ne-a atins prețul: cât afișăm, atât încasăm. Asta a fost decizia pentru noi, restul a venit ca bonus.',
-                'name' => 'Ioana P.', 'role' => 'Manager', 'venue' => 'Parc de aventură', 'city' => 'Brașov',
-                'result' => 'Prețul întreg, la fiecare bilet',
+                'quote' => v2_t('The commission didn\'t touch our price: what we display is what we receive. That decided it for us, the rest came as a bonus.'),
+                'name' => 'Ioana P.', 'role' => v2_t('Manager'), 'venue' => v2_t('Adventure park'), 'city' => 'Brașov',
+                'result' => v2_t('The full price, on every ticket'),
             ],
             [
                 'demo' => true,
-                'quote' => 'Scanăm cu telefonul chiar și unde semnalul e slab, iar totul se sincronizează când revine internetul. Pentru un traseu în natură, asta contează enorm.',
-                'name' => 'Mihai D.', 'role' => 'Coordonator', 'venue' => 'Rezervație naturală', 'city' => 'Harghita',
-                'result' => 'Scanare offline',
+                'quote' => v2_t('We scan with the phone even where the signal is weak, and everything syncs when the internet comes back. For a trail out in nature, that matters enormously.'),
+                'name' => 'Mihai D.', 'role' => v2_t('Coordinator'), 'venue' => v2_t('Nature reserve'), 'city' => 'Harghita',
+                'result' => v2_t('Offline scanning'),
             ],
             [
                 'demo' => true,
-                'quote' => 'Atelierele au locuri puține și copii de vârste diferite. Am pus tipuri de bilete pe vârste, iar părinții văd imediat ce e potrivit pentru ei.',
-                'name' => 'Elena S.', 'role' => 'Fondatoare', 'venue' => 'Ateliere creative', 'city' => 'București',
-                'result' => 'Bilete pe vârste',
+                'quote' => v2_t('The workshops have few places and children of different ages. We set up ticket types by age, and parents see straight away what suits them.'),
+                'name' => 'Elena S.', 'role' => v2_t('Founder'), 'venue' => v2_t('Creative workshops'), 'city' => 'București',
+                'result' => v2_t('Tickets by age'),
             ],
             [
                 'demo' => true,
-                'quote' => 'Reclamele ne costau tot mai mult și nu știam ce aduce vânzări. Cu tracking-ul conectat vedem ce campanie vinde și am tăiat ce nu funcționa.',
-                'name' => 'Vlad C.', 'role' => 'Marketing', 'venue' => 'Tururi ghidate', 'city' => 'Timișoara',
-                'result' => 'Reclame care vând',
+                'quote' => v2_t('Ads were costing us more and more and we didn\'t know what was bringing sales. With tracking connected we see which campaign sells, and we cut what wasn\'t working.'),
+                'name' => 'Vlad C.', 'role' => v2_t('Marketing'), 'venue' => v2_t('Guided tours'), 'city' => 'Timișoara',
+                'result' => v2_t('Ads that sell'),
             ],
             [
                 'demo' => true,
                 'pull' => true,
-                'quote' => 'Ne-am făcut contul într-o după-amiază și a doua zi vindeam deja. Nu ne-a trebuit nimic în plus față de ce aveam: un telefon pentru scanare și imprimanta de la casă.',
-                'name' => 'Cristina N.', 'role' => 'Proprietar', 'venue' => 'Parc de distracții', 'city' => 'Constanța',
-                'result' => 'Live a doua zi',
+                'quote' => v2_t('We set up the account in one afternoon and were already selling the next day. We needed nothing beyond what we had: a phone for scanning and the printer at the till.'),
+                'name' => 'Cristina N.', 'role' => v2_t('Owner'), 'venue' => v2_t('Amusement park'), 'city' => 'Constanța',
+                'result' => v2_t('Live the next day'),
             ],
         ],
     ];

@@ -6,8 +6,9 @@
   'use strict';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (id) { return document.getElementById(id); };
-  var nf = new Intl.NumberFormat('ro-RO');
-  var nf2 = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var LOCALE = (window.VQ && VQ.locale && VQ.locale !== 'en') ? VQ.locale : 'en-GB';
+  var nf = new Intl.NumberFormat(LOCALE);
+  var nf2 = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   /* ---------- the mock address bar follows the section ---------- */
   var url = $('sl-url');
@@ -26,7 +27,7 @@
     var lines = [], printTimer = null, resetTimer = null;
     var receipt = $('sl-receipt'), rcLines = $('sl-rc-lines'), rcTotal = $('sl-rc-total');
     var payBtns = [].slice.call(document.querySelectorAll('[data-sl-pay]'));
-    var lei = function (n) { return nf.format(n) + ' lei'; };
+    var lei = function (n) { return '€' + nf.format(n); };
     function total() {
       return lines.reduce(function (s, l) { return s + l.price * l.qty; }, 0);
     }
@@ -44,7 +45,7 @@
       if (!lines.length) {
         var empty = document.createElement('li');
         empty.className = 'sl-tb-empty';
-        empty.textContent = 'Atinge un bilet ca să îl adaugi';
+        empty.textContent = VQ.t('Tap a ticket to add it');
         cart.appendChild(empty);
       } else {
         lines.forEach(function (l) { cart.appendChild(row(l.qty + ' × ' + l.name, lei(l.price * l.qty))); });
@@ -70,13 +71,13 @@
       rcTotal.textContent = lei(total());
       receipt.classList.add('is-out');
       printEl.classList.add('is-done');
-      printEl.textContent = method === 'cash' ? 'Încasat cash. Bon tipărit.' : 'Încasat pe card. Bon tipărit.';
+      printEl.textContent = method === 'cash' ? VQ.t('Paid in cash. Receipt printed.') : VQ.t('Paid by card. Receipt printed.');
       resetTimer = setTimeout(function () {
         lines = [];
         draw();
         receipt.classList.remove('is-out');
         printEl.classList.remove('is-done');
-        printEl.textContent = 'Bon pe imprimanta termică, după fiecare comandă';
+        printEl.textContent = VQ.t('Receipt on the thermal printer, after each order');
       }, reduce ? 2400 : 4200);
     }
     Array.prototype.forEach.call(document.querySelectorAll('[data-sl-add]'), function (btn) {
@@ -92,11 +93,11 @@
   var state = $('sl-state'), stateT = $('sl-state-t'), stateSub = $('sl-state-sub'), rate = $('sl-rate');
   if (state && stateT && !reduce && 'IntersectionObserver' in window) {
     var STATES = [
-      ['is-ok', 'check-circle', 'ACCES APROBAT', 'Bilet adult · 11:00'],
-      ['is-wait', 'clock', 'DEJA SCANAT', 'Bilet folosit anterior, la 10:48'],
-      ['is-ok', 'check-circle', 'ACCES APROBAT', 'Bilet familie · 4 persoane'],
-      ['is-bad', 'x', 'BILET INVALID', 'Bilet nerecunoscut'],
-      ['is-ok', 'check-circle', 'ACCES APROBAT', 'Tur ghidat · 11:00'],
+      ['is-ok', 'check-circle', VQ.t('ACCESS APPROVED'), VQ.t('Adult ticket · 11:00')],
+      ['is-wait', 'clock', VQ.t('ALREADY SCANNED'), VQ.t('Ticket used earlier, at 10:48')],
+      ['is-ok', 'check-circle', VQ.t('ACCESS APPROVED'), VQ.t('Family ticket · 4 people')],
+      ['is-bad', 'x', VQ.t('INVALID TICKET'), VQ.t('Ticket not recognised')],
+      ['is-ok', 'check-circle', VQ.t('ACCESS APPROVED'), VQ.t('Guided tour · 11:00')],
     ];
     var i = 0, timer = null;
     function step() {
@@ -130,10 +131,10 @@
     function calc() {
       var q = Math.round(num(qty, 100000)), p = num(price, 10000);
       var revenue = q * p, fee = revenue * 0.02;
-      outRev.textContent = nf.format(Math.round(revenue)) + ' lei';
-      outFee.textContent = nf.format(Math.round(fee)) + ' lei';
-      outNet.textContent = nf.format(Math.round(revenue)) + ' lei';
-      outBuyer.textContent = nf2.format(p * 1.02) + ' lei';
+      outRev.textContent = '€' + nf.format(Math.round(revenue));
+      outFee.textContent = '€' + nf.format(Math.round(fee));
+      outNet.textContent = '€' + nf.format(Math.round(revenue));
+      outBuyer.textContent = '€' + nf2.format(p * 1.02);
     }
     [qty, price].forEach(function (el) { el.addEventListener('input', calc); });
     calc();

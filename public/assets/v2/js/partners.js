@@ -1,6 +1,6 @@
-/* viaqui.com v2: /parteneri, "product theatre".
+/* viaqui.com v2: /partners, "product theatre".
    - personalisation from ?tip=<type>&loc=<name> (same profiles as /devino-partener): greeting, chip, headline, lead,
-     signup button; signup links carry tip/loc on to /inregistrare-locatie
+     signup button; signup links carry tip/loc on to /list-your-venue
    - funnel pings to leads.track (page_view_landing, cta_click) on the bo_lead_sid session, like /devino-partener
    - the stage: entrance, then small loops while it is on screen (new orders, a receipt printing, tickets scanned,
      live toasts); a slight tilt that follows the pointer
@@ -25,8 +25,9 @@
   try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
   var clamp = function (v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
-  var fmt = new Intl.NumberFormat('ro-RO');
-  var fmt2 = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var LOCALE = (window.VQ && VQ.locale && VQ.locale !== 'en') ? VQ.locale : 'en-GB';
+  var fmt = new Intl.NumberFormat(LOCALE);
+  var fmt2 = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var each = function (list, fn) { Array.prototype.forEach.call(list, fn); };
 
   /* ---------- personalisation ---------- */
@@ -39,20 +40,21 @@
   var profile = typeKey ? PROFILES[typeKey] : null;
 
   if (loc) {
-    var hello = $('pt-hello'), name = document.createElement('strong');
+    // the greeting is one sentence; the name goes in as text, in bold, where the sentence puts it
+    var hello = $('pt-hello'), name = document.createElement('strong'), greeting = VQ.t('Hi, {name}! Here is what we can do together.').split('{name}');
     name.textContent = loc;
-    hello.textContent = 'Salut, ';
+    hello.textContent = greeting[0];
     hello.appendChild(name);
-    hello.appendChild(document.createTextNode('! Iată ce putem face împreună.'));
+    hello.appendChild(document.createTextNode(greeting[1] || ''));
     hello.hidden = false;
   }
   if (profile) {
-    $('pt-chip-t').textContent = 'Ticketing & booking pentru ' + profile.label;
+    if (profile.chip) $('pt-chip-t').textContent = profile.chip;
     $('pt-h1a').textContent = profile.h1a;
     $('pt-h1b').textContent = profile.h1b;
     $('pt-h1c').textContent = profile.h1c;
     $('pt-sub').innerHTML = profile.sub; // the page's own copy (from the server), never text from the address
-    $('pt-cta-t').textContent = 'Pune ' + profile.label + ' online';
+    if (profile.cta) $('pt-cta-t').textContent = profile.cta;
   }
   var carry = [];
   if (typeKey) carry.push('tip=' + encodeURIComponent(typeKey));
@@ -149,11 +151,11 @@
 
   // new orders arrive at the top of the list, the day's figures follow
   var ORDERS = [
-    ['is-green', 'Parc de aventură · Traseu roșu', '3 bilete · 12:00', '195 lei', 195, 3],
-    ['is-yellow', 'Atelier ceramică', '2 locuri · 17:30', '170 lei', 170, 2],
-    ['is-red', 'Escape room · Camera 1', '5 bilete · 20:00', '225 lei', 225, 5],
-    ['is-green', 'Muzeu · Tur ghidat', '4 bilete · 10:00', '120 lei', 120, 4],
-    ['is-yellow', 'Tur ghidat · Centrul vechi', '2 bilete · 16:00', '70 lei', 70, 2]
+    ['is-green', VQ.t('Adventure park · Red trail'), VQ.t('3 tickets · 12:00'), '€195', 195, 3],
+    ['is-yellow', VQ.t('Pottery workshop'), VQ.t('2 places · 17:30'), '€170', 170, 2],
+    ['is-red', VQ.t('Escape room · Room 1'), VQ.t('5 tickets · 20:00'), '€225', 225, 5],
+    ['is-green', VQ.t('Museum · Guided tour'), VQ.t('4 tickets · 10:00'), '€120', 120, 4],
+    ['is-yellow', VQ.t('Guided tour · Old town'), VQ.t('2 tickets · 16:00'), '€70', 70, 2]
   ];
   var orders = $('pt-orders'), sales = 12480, tickets = 286, orderIndex = 0;
   if (orders) {
@@ -190,7 +192,7 @@
       scans++;
       var used = scans % 5 === 0;
       result.style.background = used ? '#F2A900' : '';
-      resultText.textContent = used ? 'Deja scanat · 14:02' : 'Bilet valid';
+      resultText.textContent = used ? VQ.t('Already scanned · 14:02') : VQ.t('Valid ticket');
       if (!used && inside < 150) { inside++; entered.textContent = inside; }
       if (inside >= 150) inside = 118;
       result.classList.add('is-pulse');
@@ -241,7 +243,7 @@
   /* ---------- booking: one state per point of progress (0 → 1) ---------- */
   var bk = $('pt-bk'), bookingMode = 'auto', renderBooking = null;
   if (bk) {
-    var TITLES = ['Alege ziua și ora', 'Tipul de bilet', 'Extra & rentals', 'Personalizează', 'Plată', 'Gata!'];
+    var TITLES = [VQ.t('Choose the day and time'), VQ.t('Ticket type'), VQ.t('Extras & rentals'), VQ.t('Personalise'), VQ.t('Payment'), VQ.t('Done!')];
     var steps = [].slice.call(bk.querySelectorAll('.pt-bk-step'));
     var rail = [].slice.call(bk.querySelectorAll('[data-rail]'));
     var slots = [].slice.call(bk.querySelectorAll('.pt-bk-slot')), bkTickets = [].slice.call(bk.querySelectorAll('.pt-bk-tk'));
@@ -273,7 +275,7 @@
       text(gift, s > 3 || (s === 3 && t > 0.72) ? GIFT : '');
       var paid = s > 4 ? 1 : s < 4 ? 0 : clamp((t - 0.12) / 0.6);
       pay.style.width = Math.round(paid * 100) + '%';
-      text(payText, paid >= 1 ? 'Plată confirmată' : 'Se procesează plata…');
+      text(payText, paid >= 1 ? VQ.t('Payment confirmed') : VQ.t('Processing the payment…'));
       msgs.forEach(function (el, i) { toggle(el, 'is-on', s === 5 && t > 0.08 + i * 0.2); });
     };
 
@@ -320,7 +322,7 @@
     var lines = [], resetTimer = null;
     var slip = $('pt-slip'), slipLines = $('pt-slip-lines'), slipTotal = $('pt-slip-total'), printEl = $('pt-print'), printText = $('pt-print-t');
     var payBtns = [].slice.call(document.querySelectorAll('[data-pos-pay]'));
-    var lei = function (n) { return fmt.format(n) + ' lei'; };
+    var lei = function (n) { return '€' + fmt.format(n); };
     var total = function () { return lines.reduce(function (s, l) { return s + l.price * l.qty; }, 0); };
     var row = function (label, value) {
       var li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
@@ -335,7 +337,7 @@
       if (!lines.length) {
         var empty = document.createElement('li');
         empty.className = 'pt-tb-empty';
-        empty.textContent = 'Atinge un bilet ca să îl adaugi';
+        empty.textContent = VQ.t('Tap a ticket to add it');
         cart.appendChild(empty);
       } else {
         lines.forEach(function (l) { cart.appendChild(row(l.qty + ' × ' + l.name, lei(l.price * l.qty))); });
@@ -346,7 +348,7 @@
     var resetPrint = function () {
       slip.classList.remove('is-out');
       printEl.classList.remove('is-done');
-      printText.textContent = 'Bon pe imprimanta termică, după fiecare comandă';
+      printText.textContent = VQ.t('Receipt on the thermal printer, after each order');
     };
     each(document.querySelectorAll('[data-pos-add]'), function (btn) {
       btn.addEventListener('click', function () {
@@ -369,7 +371,7 @@
         slipTotal.textContent = lei(total());
         slip.classList.add('is-out');
         printEl.classList.add('is-done');
-        printText.textContent = (b.getAttribute('data-pos-pay') === 'cash' ? 'Încasat cash. ' : 'Încasat pe card. ') + 'Bon tipărit.';
+        printText.textContent = b.getAttribute('data-pos-pay') === 'cash' ? VQ.t('Paid in cash. Receipt printed.') : VQ.t('Paid by card. Receipt printed.');
         lines = [];
         draw();
         var focusBack = document.querySelector('[data-pos-add]');
@@ -384,11 +386,11 @@
   var scanState = $('pt-state'), scanText = $('pt-state-t'), scanSub = $('pt-state-sub');
   if (scanState) {
     var STATES = [
-      ['is-ok', 'check-circle', 'ACCES APROBAT', 'Bilet adult · 11:00'],
-      ['is-wait', 'clock', 'DEJA SCANAT', 'Bilet folosit anterior, la 10:48'],
-      ['is-ok', 'check-circle', 'ACCES APROBAT', 'Bilet familie · 4 persoane'],
-      ['is-bad', 'x', 'BILET INVALID', 'Bilet nerecunoscut'],
-      ['is-ok', 'check-circle', 'ACCES APROBAT', 'Tur ghidat · 11:00']
+      ['is-ok', 'check-circle', VQ.t('ACCESS APPROVED'), VQ.t('Adult ticket · 11:00')],
+      ['is-wait', 'clock', VQ.t('ALREADY SCANNED'), VQ.t('Ticket used earlier, at 10:48')],
+      ['is-ok', 'check-circle', VQ.t('ACCESS APPROVED'), VQ.t('Family ticket · 4 people')],
+      ['is-bad', 'x', VQ.t('INVALID TICKET'), VQ.t('Ticket not recognised')],
+      ['is-ok', 'check-circle', VQ.t('ACCESS APPROVED'), VQ.t('Guided tour · 11:00')]
     ];
     var net = $('pt-net'), netText = $('pt-net-t'), rate = $('pt-rate'), insideEl = $('pt-inside'), queue = $('pt-queue');
     var si = 0, beat = 0, gate = 412, pending = 0;
@@ -406,7 +408,7 @@
       if (s[0] === 'is-ok') { gate++; insideEl.textContent = fmt.format(gate); if (offline) pending++; }
       rate.textContent = String(14 + Math.floor(Math.random() * 9));
       net.classList.toggle('is-off', offline);
-      netText.textContent = offline ? 'Offline' : (pending ? 'Se sincronizează' : 'Online');
+      netText.textContent = offline ? VQ.t('Offline') : (pending ? VQ.t('Syncing') : VQ.t('Online'));
       if (!offline && pending) pending = 0;
       queue.textContent = String(pending);
       await sleep(300);
@@ -448,11 +450,11 @@
     };
     var calc = function () {
       var q = Math.round(num(qty, 100000)), p = num(price, 10000), revenue = q * p;
-      outRev.textContent = fmt.format(Math.round(revenue)) + ' lei';
-      outFee.textContent = fmt.format(Math.round(revenue * 0.02)) + ' lei';
-      outNet.textContent = fmt.format(Math.round(revenue)) + ' lei';
-      outClassic.textContent = fmt.format(Math.round(revenue * 0.905)) + ' lei';
-      outBuyer.textContent = fmt2.format(p * 1.02) + ' lei';
+      outRev.textContent = '€' + fmt.format(Math.round(revenue));
+      outFee.textContent = '€' + fmt.format(Math.round(revenue * 0.02));
+      outNet.textContent = '€' + fmt.format(Math.round(revenue));
+      outClassic.textContent = '€' + fmt.format(Math.round(revenue * 0.905));
+      outBuyer.textContent = '€' + fmt2.format(p * 1.02);
     };
     each(document.querySelectorAll('[data-mirror]'), function (range) {
       var field = $(range.getAttribute('data-mirror'));
@@ -493,7 +495,7 @@
     playBtn.addEventListener('click', function () {
       var frame = document.createElement('iframe');
       frame.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(video.getAttribute('data-yt')) + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
-      frame.title = video.getAttribute('data-title') || 'Film';
+      frame.title = video.getAttribute('data-title') || VQ.t('Film');
       frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
       frame.setAttribute('allowfullscreen', '');
       video.classList.add('is-playing');
@@ -507,7 +509,7 @@
     wallToggle.hidden = false;
     wallToggle.addEventListener('click', function () {
       var paused = wall.classList.toggle('is-paused');
-      $('pt-wall-toggle-t').textContent = paused ? 'Pornește derularea' : 'Oprește derularea';
+      $('pt-wall-toggle-t').textContent = paused ? VQ.t('Start the scrolling') : VQ.t('Pause the scrolling');
     });
     whenVisible(wall, function (on) { wall.classList.toggle('is-offscreen', !on); }, 0.01); // no frames spent off screen
   }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Operators catalog: /operatori (v2 design).
+ * Operators catalog: /operators (v2 design).
  *
  * The companies that sell activities on viaqui.com. `/marketplace-events/organizers` gives the operators (name, slug,
  * logo, verified) but counts only core events and has no city or description, so each operator's activities, cities,
@@ -128,7 +128,7 @@ foreach ($operators as $op) {
         'verified' => $op['verified'] || !empty($pd['verified']),
         'logo' => $op['logo'] ?: v2_media_url(is_string($pd['avatar'] ?? null) ? $pd['avatar'] : null),
         'cover' => $cover,
-        'city' => $mainCity ?: ($location ?: 'România'),
+        'city' => $mainCity ?: ($location ?: v2_t('Europe')),
         'cityUrl' => $mainSlug !== '' ? '/' . $mainSlug : '',
         'cityKeys' => array_map('strval', array_keys($cities)),
         'cityNames' => array_column($cities, 0),
@@ -137,8 +137,10 @@ foreach ($operators as $op) {
         'priceFrom' => $prices ? min($prices) : 0,
         'activities' => array_slice($acts, 0, 3),
         'description' => $about !== '' ? $about : ($count > 0
-            ? 'Operator partener viaqui.com cu ' . v2_num($count, 'activitate', 'activități') . ($mainCity !== '' ? ' în ' . $mainCity : '') . '.'
-            : 'Operator partener viaqui.com cu activități disponibile online.'),
+            ? ($mainCity !== ''
+                ? v2_t('A viaqui.com partner operator with {count} in {city}.', ['count' => v2_num($count, 'activity', 'activities'), 'city' => $mainCity])
+                : v2_t('A viaqui.com partner operator with {count}.', ['count' => v2_num($count, 'activity', 'activities')]))
+            : v2_t('A viaqui.com partner operator with activities available online.')),
     ];
 }
 
@@ -163,9 +165,9 @@ $lead = $list[0] ?? null;
 $searchQuery = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 60) : '';
 
 // ------------------------------------------------------------------ page
-$pageTitleRaw = 'Operatori — companii care vând activități · ' . SITE_NAME;
-$pageDescription = 'Descoperă operatorii parteneri viaqui.com: companiile care organizează și vând activități, experiențe și tururi. Profil dedicat, activități listate, bilete cu QR pe email.';
-$canonicalUrl = SITE_URL . '/operatori';
+$pageTitleRaw = v2_t('Operators: the companies that sell activities · {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('Discover the viaqui.com partner operators: the companies that organise and sell activities, experiences and tours. A dedicated profile, listed activities, QR tickets by email.');
+$canonicalUrl = SITE_URL . '/operators';
 $noindex = $apiDown;
 $structuredData = [[
     '@context' => 'https://schema.org',
@@ -173,7 +175,7 @@ $structuredData = [[
     'name' => $pageTitleRaw,
     'description' => $pageDescription,
     'url' => $canonicalUrl,
-    'inLanguage' => 'ro-RO',
+    'inLanguage' => v2_locale(),
     'mainEntity' => [
         '@type' => 'ItemList',
         'numberOfItems' => count($list),
@@ -201,28 +203,28 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <p class="ct-kicker">Operatori · companii · activități</p>
-        <h1 class="ct-h" id="os-h">Cine organizează experiențele.</h1>
-        <p class="ct-lead">Operatorii sunt companiile care creează și vând activitățile de pe platformă: escape rooms, tururi ghidate, ateliere, experiențe și multe altele. Fiecare are profil dedicat cu activitățile lui.</p>
+        <p class="ct-kicker"><?= v2_te('Operators · companies · activities') ?></p>
+        <h1 class="ct-h" id="os-h"><?= v2_te('Who runs the experiences.') ?></h1>
+        <p class="ct-lead"><?= v2_te('Operators are the companies that create and sell the activities on the platform: escape rooms, guided tours, workshops, experiences and much more. Each has a dedicated profile with its activities.') ?></p>
 
-        <form class="ct-search" id="os-form" action="/operatori" method="get" role="search">
-          <label class="sr" for="os-q">Caută operator</label>
-          <input id="os-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Caută: nume operator, oraș..." value="<?= v2_e($searchQuery) ?>">
-          <button type="submit" aria-label="Arată operatorii găsiți"><?= v2_ic('magnifying-glass') ?></button>
+        <form class="ct-search" id="os-form" action="/operators" method="get" role="search">
+          <label class="sr" for="os-q"><?= v2_te('Search for an operator') ?></label>
+          <input id="os-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="<?= v2_te('Search: operator name, city...') ?>" value="<?= v2_e($searchQuery) ?>">
+          <button type="submit" aria-label="<?= v2_te('Show the operators found') ?>"><?= v2_ic('magnifying-glass') ?></button>
         </form>
         <p class="ct-status" id="os-status" role="status"></p>
         <?php if ($list): ?>
-        <div class="os-quick" role="group" aria-label="Filtre rapide">
-          <button type="button" data-quick="all" aria-pressed="true">Toți operatorii<span><?= count($list) ?></span></button>
-          <button type="button" data-quick="verified" aria-pressed="false">Verificați<span><?= $verifiedCount ?></span></button>
+        <div class="os-quick" role="group" aria-label="<?= v2_te('Quick filters') ?>">
+          <button type="button" data-quick="all" aria-pressed="true"><?= v2_te('All operators') ?><span><?= count($list) ?></span></button>
+          <button type="button" data-quick="verified" aria-pressed="false"><?= v2_te('Verified') ?><span><?= $verifiedCount ?></span></button>
         </div>
         <?php endif; ?>
       </div>
 
       <div class="ct-art" aria-hidden="true">
         <div class="ct-art-card os-graph">
-          <p class="kicker">Operator graph</p>
-          <p class="ct-art-h">Un operator poate avea mai multe activități.</p>
+          <p class="kicker"><?= v2_te('Operator graph') ?></p>
+          <p class="ct-art-h"><?= v2_te('One operator can have several activities.') ?></p>
           <?php if ($lead): ?>
           <div class="os-graph-box">
             <div class="os-graph-op">
@@ -232,13 +234,13 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($lead['activities']): ?>
             <ul class="os-graph-rows">
               <?php foreach ($lead['activities'] as $act): ?>
-              <li><span><?= v2_e($act['title']) ?></span><b><?= $act['price'] > 0 ? 'de la ' . $act['price'] . ' lei' : 'bilete' ?></b></li>
+              <li><span><?= v2_e($act['title']) ?></span><b><?= $act['price'] > 0 ? v2_te('from {price}', ['price' => v2_money($act['price'])]) : v2_te('tickets') ?></b></li>
               <?php endforeach; ?>
             </ul>
             <?php endif; ?>
           </div>
           <?php else: ?>
-          <p class="os-graph-empty">Identitate, activități, review-uri și contact, într-o singură pagină.</p>
+          <p class="os-graph-empty"><?= v2_te('Identity, activities, reviews and contact, on a single page.') ?></p>
           <?php endif; ?>
         </div>
       </div>
@@ -249,43 +251,43 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== FILTERS + OPERATORS ===================== -->
   <section class="sec ct-main" id="lista" aria-labelledby="os-title">
     <div class="wrap ct-layout">
-      <aside class="ct-side" aria-label="Filtrează operatorii">
+      <aside class="ct-side" aria-label="<?= v2_te('Filter the operators') ?>">
         <div class="ct-filter os-filter">
-          <p class="kicker">Filtrare operatori</p>
+          <p class="kicker"><?= v2_te('Filter operators') ?></p>
           <?php if ($list): ?>
           <div class="os-field">
-            <label for="os-city">Oraș</label>
-            <span class="os-select"><select id="os-city"><option value="all">Toate orașele</option><?php foreach ($cityOptions as $cityKey => $cityName): ?><option value="<?= v2_e($cityKey) ?>"><?= v2_e($cityName) ?></option><?php endforeach; ?></select><?= v2_ic('caret-down') ?></span>
+            <label for="os-city"><?= v2_te('City') ?></label>
+            <span class="os-select"><select id="os-city"><option value="all"><?= v2_te('All cities') ?></option><?php foreach ($cityOptions as $cityKey => $cityName): ?><option value="<?= v2_e($cityKey) ?>"><?= v2_e($cityName) ?></option><?php endforeach; ?></select><?= v2_ic('caret-down') ?></span>
           </div>
-          <label class="os-check" for="os-verified"><input type="checkbox" id="os-verified"><span>Doar operatori verificați</span></label>
+          <label class="os-check" for="os-verified"><input type="checkbox" id="os-verified"><span><?= v2_te('Verified operators only') ?></span></label>
           <?php endif; ?>
           <div class="ct-note">
-            <b>Ești operator?</b>
-            <p>Ai activități de vândut? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
-            <a href="/parteneri">Devino partener<?= v2_ic('arrow-right') ?></a>
+            <b><?= v2_te('Are you an operator?') ?></b>
+            <p><?= v2_te('Do you have activities to sell? You can have a dedicated page, listed activities, QR tickets and a dashboard.') ?></p>
+            <a href="/partners"><?= v2_te('Become a partner') ?><?= v2_ic('arrow-right') ?></a>
           </div>
         </div>
       </aside>
 
       <div>
         <div class="ct-head">
-          <div><p class="kicker">Operatori</p><h2 id="os-title" tabindex="-1">Operatori parteneri</h2></div>
-          <?php if ($list): ?><p id="os-count" aria-live="polite"><?= count($list) ?> din <?= count($list) ?> operatori</p><?php endif; ?>
+          <div><p class="kicker"><?= v2_te('Operators') ?></p><h2 id="os-title" tabindex="-1"><?= v2_te('Partner operators') ?></h2></div>
+          <?php if ($list): ?><p id="os-count" aria-live="polite"><?= v2_te('{shown} of {total} operators', ['shown' => count($list), 'total' => count($list)]) ?></p><?php endif; ?>
         </div>
 
         <?php if ($apiDown): ?>
         <div class="os-state is-error" role="alert">
           <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
-          <h3>Lista operatorilor nu poate fi încărcată acum.</h3>
-          <p>Încearcă din nou în câteva minute. Între timp poți căuta direct activitățile.</p>
-          <div class="os-state-cta"><a class="btn btn-primary" href="/operatori">Reîncearcă</a><a class="btn btn-ghost" href="/cauta">Caută activități</a></div>
+          <h3><?= v2_te('The list of operators cannot be loaded right now.') ?></h3>
+          <p><?= v2_te('Try again in a few minutes. In the meantime you can search the activities directly.') ?></p>
+          <div class="os-state-cta"><a class="btn btn-primary" href="/operators"><?= v2_te('Try again') ?></a><a class="btn btn-ghost" href="/search"><?= v2_te('Search activities') ?></a></div>
         </div>
         <?php elseif (!$list): ?>
         <div class="os-state">
           <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
-          <h3>Încă nu avem operatori listați.</h3>
-          <p>Primii operatori parteneri apar aici imediat ce își publică activitățile.</p>
-          <div class="os-state-cta"><a class="btn btn-primary" href="/parteneri">Devino partener</a></div>
+          <h3><?= v2_te('We have no operators listed yet.') ?></h3>
+          <p><?= v2_te('The first partner operators appear here as soon as they publish their activities.') ?></p>
+          <div class="os-state-cta"><a class="btn btn-primary" href="/partners"><?= v2_te('Become a partner') ?></a></div>
         </div>
         <?php else: ?>
         <ul class="ct-grid os-grid" id="os-grid">
@@ -295,33 +297,33 @@ include __DIR__ . '/includes/v2/header.php';
               <span class="ct-media"><?= $op['cover'] ? v2_photo([$op['cover'], 0, 0, '']) : v2_fallback($op['name'], $oi) ?></span>
               <?php if ($op['logo']): ?><span class="os-logo"><?= v2_photo([$op['logo'], 0, 0, '']) ?></span><?php endif; ?>
               <span class="ct-over"><small><?= v2_e($op['city']) ?></small><h3><?= v2_e($op['name']) ?></h3></span>
-              <?php if ($op['count'] > 0): ?><span class="ct-badge"><?= v2_e(v2_num($op['count'], 'activitate', 'activități')) ?></span><?php endif; ?>
+              <?php if ($op['count'] > 0): ?><span class="ct-badge"><?= v2_e(v2_num($op['count'], 'activity', 'activities')) ?></span><?php endif; ?>
             </a>
             <div class="ct-body">
               <?php if ($op['verified'] || $op['categories'] || $op['priceFrom'] > 0): ?>
-              <ul class="os-meta" aria-label="<?= v2_e($op['name']) ?>: pe scurt">
-                <?php if ($op['verified']): ?><li class="os-verified"><?= v2_ic('check-circle') ?>Verificat</li><?php endif; ?>
+              <ul class="os-meta" aria-label="<?= v2_te('{name}: in short', ['name' => $op['name']]) ?>">
+                <?php if ($op['verified']): ?><li class="os-verified"><?= v2_ic('check-circle') ?><?= v2_te('Verified') ?></li><?php endif; ?>
                 <?php foreach ($op['categories'] as $category): ?><li class="os-chip"><?= v2_e($category) ?></li><?php endforeach; ?>
-                <?php if ($op['priceFrom'] > 0): ?><li class="os-chip">de la <?= $op['priceFrom'] ?> lei</li><?php endif; ?>
+                <?php if ($op['priceFrom'] > 0): ?><li class="os-chip"><?= v2_te('from {price}', ['price' => v2_money($op['priceFrom'])]) ?></li><?php endif; ?>
               </ul>
               <?php endif; ?>
               <p><?= v2_e($op['description']) ?></p>
-              <ul class="ct-links" aria-label="<?= v2_e($op['name']) ?>: linkuri">
-                <?php if ($op['cityUrl'] !== ''): ?><li><a href="<?= v2_e($op['cityUrl']) ?>">Activități în <?= v2_e($op['city']) ?></a></li><?php endif; ?>
-                <li><a class="is-main" href="<?= v2_e($op['url']) ?>">Vezi operatorul<?= v2_ic('arrow-right') ?></a></li>
+              <ul class="ct-links" aria-label="<?= v2_te('{name}: links', ['name' => $op['name']]) ?>">
+                <?php if ($op['cityUrl'] !== ''): ?><li><a href="<?= v2_e($op['cityUrl']) ?>"><?= v2_te('Activities in {city}', ['city' => $op['city']]) ?></a></li><?php endif; ?>
+                <li><a class="is-main" href="<?= v2_e($op['url']) ?>"><?= v2_te('View the operator') ?><?= v2_ic('arrow-right') ?></a></li>
               </ul>
             </div>
           </li>
           <?php endforeach; ?>
         </ul>
         <?php if (count($list) > 12): ?>
-        <button class="btn btn-ghost ct-more" type="button" id="os-more" hidden>Arată toți cei <?= v2_e(v2_num(count($list), 'operator', 'operatori')) ?><?= v2_ic('caret-down') ?></button>
+        <button class="btn btn-ghost ct-more" type="button" id="os-more" hidden><?= v2_te('Show all {count}', ['count' => v2_num(count($list), 'operator', 'operators')]) ?><?= v2_ic('caret-down') ?></button>
         <?php endif; ?>
         <div class="ct-none" id="os-none" hidden>
           <span class="ct-none-ic"><?= v2_ic('users-three') ?></span>
-          <p>Niciun operator găsit</p>
-          <p class="os-none-sub">Încearcă alt oraș sau șterge filtrele.</p>
-          <button class="btn btn-ghost" type="button" id="os-reset">Arată toți operatorii</button>
+          <p><?= v2_te('No operator found') ?></p>
+          <p class="os-none-sub"><?= v2_te('Try another city or clear the filters.') ?></p>
+          <button class="btn btn-ghost" type="button" id="os-reset"><?= v2_te('Show all operators') ?></button>
         </div>
         <?php endif; ?>
       </div>
@@ -332,15 +334,15 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec ct-hubs os-about" aria-labelledby="os-about-h">
     <div class="wrap ct-hubs-grid">
       <div class="ct-hubs-intro">
-        <p class="kicker">Pagină operator</p>
-        <h2 id="os-about-h">Un operator e mai mult decât un nume.</h2>
-        <p>Pagina unui operator arată cine este, ce activități oferă, unde operează, review-urile clienților și cum poți rezerva.</p>
+        <p class="kicker"><?= v2_te('Operator page') ?></p>
+        <h2 id="os-about-h"><?= v2_te('An operator is more than a name.') ?></h2>
+        <p><?= v2_te('An operator\'s page shows who they are, which activities they offer, where they operate, customer reviews and how you can book.') ?></p>
       </div>
       <ul class="os-features">
-        <li class="os-feature"><small>01</small><h3>Identitate</h3><p>Nume, logo, descriere, orașe, încredere.</p></li>
-        <li class="os-feature is-mint"><small>02</small><h3>Activități</h3><p>Lista activităților, bilete, prețuri, disponibilitate.</p></li>
-        <li class="os-feature"><small>03</small><h3>Review-uri</h3><p>Recenzii verificate de la clienți care au participat.</p></li>
-        <li class="os-feature is-deep"><small>04</small><h3>Contact</h3><p>Întrebări, politici, informații pentru grupuri.</p></li>
+        <li class="os-feature"><small>01</small><h3><?= v2_te('Identity') ?></h3><p><?= v2_te('Name, logo, description, cities, trust.') ?></p></li>
+        <li class="os-feature is-mint"><small>02</small><h3><?= v2_te('Activities') ?></h3><p><?= v2_te('The list of activities, tickets, prices, availability.') ?></p></li>
+        <li class="os-feature"><small>03</small><h3><?= v2_te('Reviews') ?></h3><p><?= v2_te('Verified reviews from customers who took part.') ?></p></li>
+        <li class="os-feature is-deep"><small>04</small><h3><?= v2_te('Contact') ?></h3><p><?= v2_te('Questions, policies, information for groups.') ?></p></li>
       </ul>
     </div>
   </section>
@@ -351,13 +353,13 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ct-final-in">
         <?= $osArches ?>
         <div>
-          <p class="kicker">Operatori</p>
-          <h2 id="os-final-h">Ești operator? Vinde activități online.</h2>
-          <p>Pagină dedicată, activități, bilete QR, dashboard, scanner check-in și rapoarte.</p>
+          <p class="kicker"><?= v2_te('Operators') ?></p>
+          <h2 id="os-final-h"><?= v2_te('Are you an operator? Sell activities online.') ?></h2>
+          <p><?= v2_te('A dedicated page, activities, QR tickets, dashboard, check-in scanner and reports.') ?></p>
         </div>
         <div class="ct-final-cta">
-          <a class="btn btn-light" href="/parteneri">Devino partener<?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="/inregistrare-locatie">Solicită cont</a>
+          <a class="btn btn-light" href="/partners"><?= v2_te('Become a partner') ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-outline-light" href="/list-your-venue"><?= v2_te('Request an account') ?></a>
         </div>
       </div>
     </div>

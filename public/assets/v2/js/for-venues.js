@@ -1,9 +1,10 @@
 /* viaqui.com v2: venue demo request. The form used to post to /api/contact-locatii.php, which doesn't exist, so every
    request was lost. It now goes into the lead pipeline (proxy leads.create → core LeadsController::create, the same one
-   /inregistrare-locatie uses): venue type becomes the category, role / number of activities / the message go into the
+   /list-your-venue uses): venue type becomes the category, role / number of activities / the message go into the
    notes, and the bo_lead_sid session links it to earlier visits of the partner pages. "Sent" shows only when core
    accepted it; failures are said, with the email address as a way out. The page is named in the notes from the form's
-   data-lead-source (/parteneri sets it; /pentru-locatii and /vinde-bilete keep "Pentru locații"). */
+   data-lead-source (/partners sets it; /pentru-locatii and /vinde-bilete keep "Pentru locații"). The notes are read
+   by the team in the admin, not by the visitor, so their labels are not translated. */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -16,9 +17,9 @@
     type: $('fv-type'), count: $('fv-count'), message: $('fv-message'), consent: $('fv-consent'), trap: $('fv-fax') };
   var error = $('fv-error'), submit = $('fv-submit'), LABEL = submit.textContent, busy = false;
   var FIELD_ERRORS = {
-    contact_name: ['Completează numele persoanei de contact.', 'name'], email: ['Adresa de email nu pare corectă. Verific-o și încearcă din nou.', 'email'],
-    phone: ['Numărul de telefon este prea lung.', 'phone'], location_name: ['Completează numele locației.', 'venue'],
-    city: ['Completează orașul locației.', 'city'], notes: ['Mesajul este prea lung.', 'message']
+    contact_name: [VQ.t('Please fill in the name of the contact person.'), 'name'], email: [VQ.t('The email address doesn\'t look right. Check it and try again.'), 'email'],
+    phone: [VQ.t('The phone number is too long.'), 'phone'], location_name: [VQ.t('Please fill in the name of the venue.'), 'venue'],
+    city: [VQ.t('Please fill in the city of the venue.'), 'city'], notes: [VQ.t('The message is too long.'), 'message']
   };
 
   function sessionToken() {
@@ -44,12 +45,13 @@
   function fail(text, fields, withEmail) {
     error.textContent = text;
     if (withEmail && SUPPORT) {
-      var a = document.createElement('a');
+      // one sentence, with the address as a link where the sentence puts it
+      var a = document.createElement('a'), tail = VQ.t('Or write to us at {email}.').split('{email}');
       a.href = 'mailto:' + SUPPORT;
       a.textContent = SUPPORT;
-      error.appendChild(document.createTextNode(' Sau scrie-ne la '));
+      error.appendChild(document.createTextNode(' ' + tail[0]));
       error.appendChild(a);
-      error.appendChild(document.createTextNode('.'));
+      error.appendChild(document.createTextNode(tail[1] || ''));
     }
     error.hidden = false;
     clearInvalid();
@@ -59,7 +61,7 @@
   }
   function done(email) {
     var first = f.name.value.trim().split(/\s+/)[0];
-    $('fv-done-h').textContent = first ? 'Mulțumim, ' + first + '!' : 'Mulțumim!';
+    $('fv-done-h').textContent = first ? VQ.t('Thank you, {name}!', { name: first }) : VQ.t('Thank you!');
     $('fv-done-email').textContent = email;
     form.hidden = true;
     $('fv-done').hidden = false;
@@ -77,9 +79,9 @@
     ['name', 'email', 'phone', 'venue', 'city'].forEach(function (k) { f[k].value = f[k].value.trim(); });
 
     var missing = [f.name, f.email, f.venue, f.city].filter(function (el) { return !el.value; });
-    if (missing.length) { fail('Te rugăm să completezi câmpurile obligatorii.', missing); return; }
-    if (!f.email.checkValidity()) { fail('Adresa de email nu pare corectă. Verific-o și încearcă din nou.', [f.email]); return; }
-    if (!f.consent.checked) { fail('Te rugăm să bifezi acordul de a fi contactat.', [f.consent]); return; }
+    if (missing.length) { fail(VQ.t('Please fill in the required fields.'), missing); return; }
+    if (!f.email.checkValidity()) { fail(VQ.t('The email address doesn\'t look right. Check it and try again.'), [f.email]); return; }
+    if (!f.consent.checked) { fail(VQ.t('Please tick the box to agree to be contacted.'), [f.consent]); return; }
     if (f.trap.value) { done(f.email.value); return; } // a bot: pretend, send nothing
 
     var typeOption = f.type.options[f.type.selectedIndex];
@@ -103,7 +105,7 @@
 
     busy = true;
     submit.disabled = true;
-    submit.textContent = 'Se trimite…';
+    submit.textContent = VQ.t('Sending…');
     fetch('/api/proxy.php?action=leads.create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -117,9 +119,9 @@
         var errors = (r.data && r.data.errors) || {};
         var keys = Object.keys(errors).filter(function (k) { return FIELD_ERRORS[k]; });
         if (r.status === 422 && keys.length) fail(FIELD_ERRORS[keys[0]][0], keys.map(function (k) { return f[FIELD_ERRORS[k][1]]; }));
-        else if (r.status === 429) fail('Am primit prea multe cereri într-un timp scurt. Încearcă din nou mai târziu.', null, true);
-        else if (r.status === 0) fail('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.', null, true);
-        else fail('Nu am putut trimite solicitarea acum. Încearcă din nou în câteva minute.', null, true);
+        else if (r.status === 429) fail(VQ.t('We have received too many requests in a short time. Please try again later.'), null, true);
+        else if (r.status === 0) fail(VQ.t('We could not connect. Check your internet connection and try again.'), null, true);
+        else fail(VQ.t('We could not send the request right now. Please try again in a few minutes.'), null, true);
       })
       .then(function () {
         busy = false;

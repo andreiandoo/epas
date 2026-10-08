@@ -63,22 +63,22 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (sending || !form.reportValidity()) return;
-    if (typeof BileteOnlineAPI === 'undefined' || !data.slug) { say('A apărut o eroare. Încearcă din nou.', false); return; }
+    if (typeof BileteOnlineAPI === 'undefined' || !data.slug) { say(VQ.t('Something went wrong. Please try again.'), false); return; }
     var fields = new FormData(form), payload = {};
     ['first_name', 'last_name', 'email', 'phone', 'message'].forEach(function (k) { payload[k] = String(fields.get(k) || '').trim(); });
     sending = true;
     submit.disabled = true;
-    submit.textContent = 'Se trimite...';
+    submit.textContent = VQ.t('Sending…');
     msg.hidden = true;
     BileteOnlineAPI.post('/marketplace-events/organizers/' + encodeURIComponent(data.slug) + '/contact', payload)
       .then(function (res) {
         if (res && res.success === false) throw new Error(res.message || res.error || '');
-        say('Mesajul a fost trimis cu succes! Organizatorul va reveni cu un răspuns.', true);
+        say(VQ.t('Your message has been sent. The organiser will get back to you.'), true);
         form.reset();
         closeTimer = setTimeout(function () { close(); msg.hidden = true; }, 3000);
       })
       .catch(function (err) {
-        say((err && err.message) || 'A apărut o eroare. Încearcă din nou.', false);
+        say((err && err.message) || VQ.t('Something went wrong. Please try again.'), false);
       })
       .then(function () {
         sending = false;
