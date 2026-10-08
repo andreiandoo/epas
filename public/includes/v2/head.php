@@ -151,16 +151,34 @@ foreach ($v2Ld as $ld) {
 }
 ?>
 <?php if (empty($ckEmbed)): /* not inside the checkout embedded on an operator's site */ ?>
-<script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js" data-gyg-partner-id="HF2XYCH"></script>
-<?php /* Travelpayouts: site verification and affiliate script, kept as supplied; the same snippet is in includes/head.php */ ?>
-<script nowprocket data-noptimize="1" data-cfasync="false" data-wpfc-render="false" seraph-accel-crit="1" data-no-defer="1" data-cmp-ab="2">
-  (function () {
-      var script = document.createElement("script");
-      script.async = 1;
-      script.setAttribute("data-cmp-ab","2");
-      script.src = 'https://emrldtp.cc/NTgyNDkw.js?t=582490';
-      document.head.appendChild(script);
-  })();
+<?php /* Partner scripts (GetYourGuide widget, Travelpayouts): only after the visitor allows marketing cookies, at
+   once when they do. The key and version are the cookie banner's (base.js, cookie-consent.php). */ ?>
+<script>
+(function () {
+    var done = false;
+    function allowed() {
+        try {
+            var s = JSON.parse(localStorage.getItem('bo_cookie_consent_v1'));
+            return !!(s && s.version === '2026-05-26' && s.consent && s.consent.marketing);
+        } catch (e) { return false; }
+    }
+    function load() {
+        if (done || !allowed()) return;
+        done = true;
+        var g = document.createElement('script');
+        g.async = true;
+        g.src = 'https://widget.getyourguide.com/dist/pa.umd.production.min.js';
+        g.setAttribute('data-gyg-partner-id', 'HF2XYCH');
+        document.head.appendChild(g);
+        var t = document.createElement('script');
+        t.async = true;
+        t.setAttribute('data-cmp-ab', '2');
+        t.src = 'https://emrldtp.cc/NTgyNDkw.js?t=582490';
+        document.head.appendChild(t);
+    }
+    load();
+    window.addEventListener('bo-cookie-consent-updated', load);
+})();
 </script>
 <?php endif; ?>
 </head>

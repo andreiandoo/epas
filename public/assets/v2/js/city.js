@@ -174,8 +174,16 @@
   var gyg = $('gyg-mount');
   if (gyg) {
     var loaded = false;
+    var marketingAllowed = function () {
+      try {
+        var c = JSON.parse(localStorage.getItem('bo_cookie_consent_v1'));
+        return !!(c && c.consent && c.consent.marketing);
+      } catch (e) { return false; }
+    };
+    window.addEventListener('bo-cookie-consent-updated', function () { if (seen) load(); });
+    var seen = false;
     var load = function () {
-      if (loaded) return;
+      if (loaded || !marketingAllowed()) return;      // a partner's widget: only with the visitor's consent
       loaded = true;
       var s = document.createElement('script');
       s.async = true;
@@ -185,7 +193,7 @@
     };
     if ('IntersectionObserver' in window) {
       var gio = new IntersectionObserver(function (es) {
-        if (es.some(function (x) { return x.isIntersecting; })) { load(); gio.disconnect(); }
+        if (es.some(function (x) { return x.isIntersecting; })) { seen = true; load(); gio.disconnect(); }
       }, { rootMargin: '600px' });
       gio.observe(gyg);
     } else {
