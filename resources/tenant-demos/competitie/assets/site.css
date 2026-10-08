@@ -642,8 +642,7 @@ html.lenis, html.lenis body { height: auto; }
 .foot-pay { display: grid; gap: 28px; padding: 30px; border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--r-lg); background: rgba(255, 255, 255, .035); }
 .foot-pay__col { display: grid; gap: 14px; align-content: start; }
 .foot-pay__title { font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255, 255, 255, .5); }
-.foot-pay__note { max-width: 46ch; font-size: 14px; color: rgba(255, 255, 255, .55); }
-.paycards { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.site-foot .paycards { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .paycards svg { display: block; width: 64px; height: 40px; border-radius: 6px; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .8); }
 .anpc { display: flex; flex-wrap: wrap; gap: 12px; }
 .anpc a { display: block; border-radius: 8px; overflow: hidden; transition: transform .25s var(--ease); }

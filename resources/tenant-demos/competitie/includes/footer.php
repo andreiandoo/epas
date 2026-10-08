@@ -42,7 +42,6 @@
                         <svg viewBox="0 0 64 40" role="img" aria-label="Maestro"><rect width="64" height="40" rx="6" fill="#fff"/><circle cx="26" cy="20" r="11" fill="#EB001B"/><circle cx="38" cy="20" r="11" fill="#00A2E5"/><path d="M32 10.8a11 11 0 010 18.4 11 11 0 010-18.4z" fill="#7375CF"/></svg>
                     </li>
                 </ul>
-                <p class="foot-pay__note">Datele cardului se introduc direct în pagina procesatorului de plăți și nu ajung pe acest site.</p>
             </div>
             <div class="foot-pay__col foot-pay__col--end">
                 <span class="foot-pay__title">Protecția consumatorului</span>
