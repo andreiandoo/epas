@@ -913,6 +913,8 @@ class EventResource extends Resource
                         ->reorderable()
                         ->reorderableWithDragAndDrop()
                         ->orderColumn('sort_order')
+                        ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => \App\Support\TicketTypeSaleEnd::apply($data))
+                        ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => \App\Support\TicketTypeSaleEnd::apply($data))
                         ->addActionLabel('Adaugă tip bilet')
                         ->itemLabel(function (array $state) {
                             $name = e($state['name'] ?? 'Bilet');
@@ -942,6 +944,8 @@ class EventResource extends Resource
                             if ($isSubscription) {
                                 $badges .= '<span style="font-size:10px;font-weight:600;color:#a16207;background:#fefce8;padding:1px 6px;border-radius:4px;margin-left:4px;display:inline-flex;align-items:center;gap:3px;"><svg style="width:11px;height:11px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Abonament</span>';
                             }
+
+                            $badges .= \App\Support\TicketTypeSaleEnd::badge($state);
 
                             if ($isActive) {
                                 return new \Illuminate\Support\HtmlString('✓ ' . $name . $badges);
@@ -1243,6 +1247,12 @@ class EventResource extends Resource
                                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                             if ($state && !$get('description')) { $set('description', "Reducere până la " . Carbon::parse($state)->format('d.m.Y')); }
                                         })->visible(fn (SGet $get) => $get('has_sale'))->columnSpan(3),
+                                    Forms\Components\Radio::make(\App\Support\TicketTypeSaleEnd::FIELD)->label('După expirarea reducerii')
+                                        ->options(\App\Support\TicketTypeSaleEnd::options())->descriptions(\App\Support\TicketTypeSaleEnd::descriptions())
+                                        ->afterStateHydrated(fn ($component, SGet $get) => $component->state(\App\Support\TicketTypeSaleEnd::resolve(['sales_end_at' => $get('sales_end_at'), 'active_until' => $get('active_until')])))
+                                        ->required(fn (SGet $get) => filled($get('sales_end_at')))
+                                        ->validationMessages(['required' => 'Alege ce se întâmplă cu biletul după expirarea reducerii.'])
+                                        ->visible(fn (SGet $get) => $get('has_sale'))->columnSpan(12),
                                     Forms\Components\TextInput::make('sale_stock')->label('Stoc reducere')->inlineLabel($il)->placeholder('Nelimitat')->numeric()->minValue(0)->nullable()
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.')
                                         ->visible(fn (SGet $get) => $get('has_sale'))->columnSpan(6),

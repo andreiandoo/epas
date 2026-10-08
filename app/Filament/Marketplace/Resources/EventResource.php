@@ -2728,8 +2728,8 @@ class EventResource extends Resource
                                     ->reorderable()
                                     ->reorderableWithDragAndDrop()
                                     ->orderColumn('sort_order')
-                                    ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => static::foldFreeMaxPerOrder($data))
-                                    ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => static::foldFreeMaxPerOrder($data))
+                                    ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => \App\Support\TicketTypeSaleEnd::apply(static::foldFreeMaxPerOrder($data)))
+                                    ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => \App\Support\TicketTypeSaleEnd::apply(static::foldFreeMaxPerOrder($data)))
                                     ->addActionLabel($t('Adaugă tip bilet', 'Add ticket type'))
                                     ->itemLabel(function (array $state) use ($t) {
                                         $name = e($state['name'] ?? $t('Bilet', 'Ticket'));
@@ -2772,6 +2772,8 @@ class EventResource extends Resource
                                             $freeOn = (bool) ($state['meta']['free_with_code']['enabled'] ?? true);
                                             $badges .= '<span style="font-size:10px;font-weight:700;color:' . ($freeOn ? '#be185d;background:#fdf2f8' : '#6b7280;background:#f3f4f6') . ';padding:1px 6px;border-radius:4px;margin-left:4px;">🎁 ' . e(strtoupper($freeCode)) . ($freeOn ? '' : ' (oprit)') . '</span>';
                                         }
+
+                                        $badges .= \App\Support\TicketTypeSaleEnd::badge($state);
 
                                         if ($isActive) {
                                             return new \Illuminate\Support\HtmlString('✓ ' . $name . $badges);
@@ -4318,6 +4320,19 @@ class EventResource extends Resource
                                                     })
                                                     ->visible(fn (SGet $get) => $get('has_sale'))
                                                     ->columnSpan(3),
+
+                                                Forms\Components\Radio::make(\App\Support\TicketTypeSaleEnd::FIELD)
+                                                    ->label($t('După expirarea reducerii', 'After the sale ends'))
+                                                    ->options(\App\Support\TicketTypeSaleEnd::options())
+                                                    ->descriptions(\App\Support\TicketTypeSaleEnd::descriptions())
+                                                    ->afterStateHydrated(fn ($component, SGet $get) => $component->state(\App\Support\TicketTypeSaleEnd::resolve([
+                                                        'sales_end_at' => $get('sales_end_at'),
+                                                        'active_until' => $get('active_until'),
+                                                    ])))
+                                                    ->required(fn (SGet $get) => filled($get('sales_end_at')))
+                                                    ->validationMessages(['required' => $t('Alege ce se întâmplă cu biletul după expirarea reducerii.', 'Choose what happens to the ticket after the sale ends.')])
+                                                    ->visible(fn (SGet $get) => $get('has_sale'))
+                                                    ->columnSpan(12),
 
                                                 Forms\Components\TextInput::make('sale_stock')
                                                     ->label($t('Stoc reducere', 'Sale stock'))
