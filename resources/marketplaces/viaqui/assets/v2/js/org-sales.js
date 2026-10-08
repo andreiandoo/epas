@@ -13,11 +13,11 @@
   var SORTABLE = ['order_number', 'customer_name', 'total', 'status', 'source', 'created_at'];
   var STATUSES = ['', 'completed', 'pending', 'failed', 'expired', 'cancelled', 'refunded'];
   var STATUS_TAG = {
-    completed: ['Finalizată', 'is-ok'], paid: ['Finalizată', 'is-ok'], confirmed: ['Finalizată', 'is-ok'], pending: ['În așteptare', 'is-wait'],
-    cancelled: ['Anulată', 'is-bad'], refunded: ['Rambursată', 'is-info'], partially_refunded: ['Parțial rambursată', 'is-wait'], failed: ['Eșuată', 'is-bad'], expired: ['Expirată', 'is-muted'],
+    completed: [VQ.t('Completed'), 'is-ok'], paid: [VQ.t('Completed'), 'is-ok'], confirmed: [VQ.t('Completed'), 'is-ok'], pending: [VQ.t('Pending'), 'is-wait'],
+    cancelled: [VQ.t('Cancelled'), 'is-bad'], refunded: [VQ.t('Refunded'), 'is-info'], partially_refunded: [VQ.t('Partially refunded'), 'is-wait'], failed: [VQ.t('Failed'), 'is-bad'], expired: [VQ.t('Expired'), 'is-muted'],
   };
-  var SOURCES = { marketplace: 'viaqui.com', widget: 'Widget', pos: 'POS', pos_app: 'Aplicație', api: 'API', manual: 'Manual', legacy_import: 'Import', test_order: 'Test' };
-  var MIX = [['paid', 'Finalizate', 'completed', '#1B7F4E'], ['pending', 'În așteptare', 'pending', '#F2A900'], ['failed', 'Eșuate', 'failed', '#E43A33'], ['cancelled', 'Anulate', 'cancelled', '#8E958F'], ['expired', 'Expirate', 'expired', '#C5CAC6'], ['refunded', 'Rambursate', 'refunded', '#2D6CCD']];
+  var SOURCES = { marketplace: 'viaqui.com', widget: VQ.t('Widget'), pos: VQ.t('POS'), pos_app: VQ.t('App'), api: 'API', manual: VQ.t('Manual'), legacy_import: VQ.t('Import'), test_order: VQ.t('Test') };
+  var MIX = [['paid', VQ.t('Completed'), 'completed', '#1B7F4E'], ['pending', VQ.t('Pending'), 'pending', '#F2A900'], ['failed', VQ.t('Failed'), 'failed', '#E43A33'], ['cancelled', VQ.t('Cancelled'), 'cancelled', '#8E958F'], ['expired', VQ.t('Expired'), 'expired', '#C5CAC6'], ['refunded', VQ.t('Refunded'), 'refunded', '#2D6CCD']];
 
   var DEFAULTS = { mode: 'range', event: '', status: 'completed', from: '', to: '', month: '', q: '', sort: 'created_at', dir: 'desc', page: 1, breakdown: false };
   var S = Object.assign({}, DEFAULTS);
@@ -34,21 +34,21 @@
     var name = parts[0];
     return (name.length > 2 ? name.charAt(0) + new Array(name.length - 1).join('*') + name.charAt(name.length - 1) : name) + '@' + parts[1];
   }
-  function stamp(iso) { // the day and the hour, in Bucharest
+  function stamp(iso) { // the day and the hour, in the shell's time zone
     var d = F.dateOf(iso);
     if (!d) return el('span', { text: '—' });
     return [el('span', { text: F.date(d, { day: '2-digit', month: '2-digit', year: 'numeric' }) }), el('span', { class: 'os-time', text: F.date(d, { hour: '2-digit', minute: '2-digit' }) })];
   }
-  function seatText(list) { // "Parter, rândul B: locurile 12, 13; Balcon: locul 4"
+  function seatText(list) { // "Stalls, row B: seats 12, 13; Balcony: seat 4"
     var heads = [], by = {};
     (Array.isArray(list) ? list : []).forEach(function (s) {
       if (!s) return;
-      var head = [F.flat(s.section), s.row != null && s.row !== '' ? 'rândul ' + s.row : ''].filter(Boolean).join(', ');
+      var head = [F.flat(s.section), s.row != null && s.row !== '' ? VQ.t('row {row}', { row: s.row }) : ''].filter(Boolean).join(', ');
       if (!by[head]) { by[head] = []; heads.push(head); }
       if (s.seat != null && s.seat !== '') by[head].push(String(s.seat));
     });
     return heads.map(function (h) {
-      var n = by[h], seats = n.length ? (n.length > 1 ? 'locurile ' : 'locul ') + n.join(', ') : '';
+      var n = by[h], seats = n.length ? (n.length > 1 ? VQ.t('seats {list}', { list: n.join(', ') }) : VQ.t('seat {list}', { list: n.join(', ') })) : '';
       return h && seats ? h + ': ' + seats : h || seats;
     }).filter(Boolean).join('; ');
   }
@@ -105,7 +105,8 @@
   }
   function sortLabel() {
     var th = document.querySelector('#os-table th[data-sort="' + S.sort + '"]');
-    return (th ? th.textContent.trim() : S.sort) + (S.dir === 'asc' ? ', crescător' : ', descrescător');
+    var col = th ? th.textContent.trim() : S.sort;
+    return S.dir === 'asc' ? VQ.t('{column}, ascending', { column: col }) : VQ.t('{column}, descending', { column: col });
   }
   function currentMonth() { return F.ymd().slice(0, 7); }
   function dates() {
@@ -114,15 +115,15 @@
       var y = +S.month.slice(0, 4), m = +S.month.slice(5, 7), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
       return { from: S.month + '-01', to: S.month + '-' + pad(last) };
     }
-    if (S.from && S.to && S.from > S.to) return { from: S.from, to: S.to, error: 'Data de început trebuie să fie înainte de data de sfârșit.' };
+    if (S.from && S.to && S.from > S.to) return { from: S.from, to: S.to, error: VQ.t('The start date must be before the end date.') };
     return { from: S.from, to: S.to };
   }
   function periodLabel(d) {
     if (S.mode === 'month' && S.month) return cap(dayLabel(S.month + '-15', { month: 'long', year: 'numeric' }));
     if (d.from && d.to) return dayLabel(d.from, { day: 'numeric', month: 'short', year: 'numeric' }) + ' – ' + dayLabel(d.to, { day: 'numeric', month: 'short', year: 'numeric' });
-    if (d.from) return 'De la ' + dayLabel(d.from, { day: 'numeric', month: 'short', year: 'numeric' });
-    if (d.to) return 'Până la ' + dayLabel(d.to, { day: 'numeric', month: 'short', year: 'numeric' });
-    return 'Toată perioada';
+    if (d.from) return VQ.t('From {date}', { date: dayLabel(d.from, { day: 'numeric', month: 'short', year: 'numeric' }) });
+    if (d.to) return VQ.t('Until {date}', { date: dayLabel(d.to, { day: 'numeric', month: 'short', year: 'numeric' }) });
+    return VQ.t('All time');
   }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function filterParams(d, extra) { // activity + period; status and search are added where they apply
@@ -164,20 +165,20 @@
   function eventLabel(ev) {
     var day = naiveDay(ev.starts_at);
     var meta = [day ? dayLabel(day, { day: 'numeric', month: 'short', year: 'numeric' }) : '', F.flat(ev.venue_name)].filter(Boolean).join(' · ');
-    return (F.flat(ev.name || ev.title) || 'Activitatea #' + ev.id) + (meta ? ' — ' + meta : '');
+    return (F.flat(ev.name || ev.title) || VQ.t('Experience #{id}', { id: ev.id })) + (meta ? ' · ' + meta : '');
   }
   function fillEvents() {
     var sel = $('os-event');
     sel.textContent = '';
-    sel.appendChild(el('option', { value: '', text: 'Toate activitățile' }));
+    sel.appendChild(el('option', { value: '', text: VQ.t('All experiences') }));
     var live = events.filter(isLive), other = events.filter(function (e) { return !isLive(e); });
-    if (live.length) sel.appendChild(el('optgroup', { label: 'În derulare' }, live.map(function (e) { return el('option', { value: String(e.id), text: eventLabel(e) }); })));
-    if (other.length) sel.appendChild(el('optgroup', { label: 'Încheiate, amânate, anulate sau nepublicate' }, other.map(function (e) { return el('option', { value: String(e.id), text: eventLabel(e) }); })));
+    if (live.length) sel.appendChild(el('optgroup', { label: VQ.t('Running') }, live.map(function (e) { return el('option', { value: String(e.id), text: eventLabel(e) }); })));
+    if (other.length) sel.appendChild(el('optgroup', { label: VQ.t('Ended, postponed, cancelled or unpublished') }, other.map(function (e) { return el('option', { value: String(e.id), text: eventLabel(e) }); })));
     setEventValue();
   }
   function setEventValue() {
     var sel = $('os-event');
-    if (S.event && !qsa('option', sel).some(function (o) { return o.value === S.event; })) sel.appendChild(el('option', { value: S.event, text: 'Activitatea #' + S.event }));
+    if (S.event && !qsa('option', sel).some(function (o) { return o.value === S.event; })) sel.appendChild(el('option', { value: S.event, text: VQ.t('Experience #{id}', { id: S.event }) }));
     sel.value = S.event;
   }
 
@@ -245,7 +246,7 @@
     if (box.hidden) return;
     MIX.forEach(function (m) {
       var on = S.status === m[2];
-      var btn = el('button', { class: 'os-mix-b', type: 'button', 'aria-pressed': String(on), title: on ? 'Arată toate statusurile' : 'Arată doar comenzile: ' + m[1].toLowerCase() }, [el('i', { 'aria-hidden': 'true' }), m[1], el('b', { text: F.num(b[m[0]]) })]);
+      var btn = el('button', { class: 'os-mix-b', type: 'button', 'aria-pressed': String(on), title: on ? VQ.t('Show all statuses') : VQ.t('Show only orders with status: {status}', { status: m[1] }) }, [el('i', { 'aria-hidden': 'true' }), m[1], el('b', { text: F.num(b[m[0]]) })]);
       btn.querySelector('i').style.setProperty('--dot', m[3]);
       btn.addEventListener('click', function () { S.status = on ? '' : m[2]; S.page = 1; loadOrders(); });
       list.appendChild(btn);
@@ -260,8 +261,8 @@
     body.textContent = '';
     $('os-empty').hidden = true;
     $('os-orders-wrap').hidden = false;
-    $('os-o-count').textContent = F.count(total, 'comandă', 'comenzi') + (S.status ? '' : ' · fără cele anulate sau expirate') + (total > PER_PAGE ? ' · pagina ' + F.num(S.page) + ' din ' + F.num(Math.max(1, F.toNum(meta.last_page))) : '');
-    $('os-live').textContent = total ? F.count(total, 'comandă găsită', 'comenzi găsite') + '.' : 'Nicio comandă găsită.';
+    $('os-o-count').textContent = [VQ.n(total, 'order', 'orders'), S.status ? '' : VQ.t('cancelled and expired ones left out'), total > PER_PAGE ? VQ.t('page {page} of {pages}', { page: F.num(S.page), pages: F.num(Math.max(1, F.toNum(meta.last_page))) }) : ''].filter(Boolean).join(' · ');
+    $('os-live').textContent = total ? VQ.n(total, 'order found', 'orders found') + '.' : VQ.t('No orders found.');
     if (!rows.length) {
       $('os-orders-wrap').hidden = true;
       renderEmpty(false);
@@ -272,28 +273,28 @@
       var seats = seatText(o.seats);
       var di = o.discount_info;
       body.appendChild(el('tr', null, [
-        el('td', { class: 'c-order', 'data-label': 'Comandă' }, [
+        el('td', { class: 'c-order', 'data-label': VQ.t('Order') }, [
           el('span', { class: 'os-num', text: o.order_number || '—' }),
           el('span', { class: 'os-sub', text: '#' + o.id }),
           o.event ? el('span', { class: 'os-event', text: F.flat(o.event) }) : null,
         ]),
-        el('td', { class: 'c-customer', 'data-label': 'Participant' }, [
+        el('td', { class: 'c-customer', 'data-label': VQ.t('Participant') }, [
           el('span', { class: 'os-name', text: F.flat(o.customer) || '—', title: F.flat(o.customer) || null }),
           el('span', { class: 'os-sub', text: maskEmail(o.customer_email) }),
           o.customer_phone ? el('span', { class: 'os-sub', text: o.customer_phone }) : null,
         ]),
-        el('td', { class: 'c-tickets', 'data-label': 'Bilete' }, [ // how many, of which types, on which seats
-          el('span', { class: 'os-count', text: F.count(o.tickets_count, 'bilet', 'bilete') }),
+        el('td', { class: 'c-tickets', 'data-label': VQ.t('Tickets') }, [ // how many, of which types, on which seats
+          el('span', { class: 'os-count', text: VQ.n(Math.round(F.toNum(o.tickets_count)), 'ticket', 'tickets') }),
           types.length ? el('span', { class: 'os-types' }, types.map(function (t) { return el('span', { class: 'os-type', text: F.flat(t) }); })) : null,
           seats ? el('span', { class: 'os-seats', text: seats }) : null,
         ]),
-        el('td', { class: 'is-num', 'data-label': 'Valoare' }, [
+        el('td', { class: 'is-num', 'data-label': VQ.t('Value') }, [
           el('span', { class: 'os-val', text: F.money(o.net_total != null ? o.net_total : o.total) }),
-          di && F.toNum(di.discount_amount) > 0 ? el('span', { class: 'os-disc' }, [di.code ? 'Cod ' + F.flat(di.code) + ': ' : 'Redus ', el('span', { class: 'os-amt', text: '−' + F.money(di.discount_amount) })]) : null,
+          di && F.toNum(di.discount_amount) > 0 ? el('span', { class: 'os-disc' }, [di.code ? VQ.t('Code {code}:', { code: F.flat(di.code) }) + ' ' : VQ.t('Discount') + ' ', el('span', { class: 'os-amt', text: '−' + F.money(di.discount_amount) })]) : null,
         ]),
-        el('td', { class: 'c-status', 'data-label': 'Status' }, statusTag(o.status)),
-        el('td', { 'data-label': 'Sursă' }, el('span', { class: 'os-source', text: SOURCES[o.source] || o.source || 'viaqui.com' })),
-        el('td', { 'data-label': 'Data' }, el('time', { class: 'os-date', datetime: o.created_at || null }, stamp(o.created_at))),
+        el('td', { class: 'c-status', 'data-label': VQ.t('Status') }, statusTag(o.status)),
+        el('td', { 'data-label': VQ.t('Source') }, el('span', { class: 'os-source', text: SOURCES[o.source] || o.source || 'viaqui.com' })),
+        el('td', { 'data-label': VQ.t('Date') }, el('time', { class: 'os-date', datetime: o.created_at || null }, stamp(o.created_at))),
       ]));
     });
   }
@@ -307,10 +308,10 @@
     box.textContent = '';
     box.classList.toggle('is-error', !!error);
     box.appendChild(el('span', { class: 'org-empty-ic' }, icon(error ? 'warning-circle' : 'receipt')));
-    box.appendChild(el('b', { text: error ? 'Nu am putut încărca comenzile' : 'Nu există comenzi pentru filtrele selectate' }));
-    box.appendChild(el('p', { text: error ? 'Verifică conexiunea și încearcă din nou.' : filtered ? 'Schimbă perioada, statusul sau căutarea.' : 'Comenzile finalizate apar aici imediat ce clienții cumpără.' }));
-    if (error) { var retry = el('button', { class: 'btn btn-primary', type: 'button', text: 'Reîncearcă' }); retry.addEventListener('click', function () { loadOrders(); }); cta.push(retry); }
-    else if (filtered) { var reset = el('button', { class: 'btn btn-ghost', type: 'button', text: 'Resetează filtrele' }); reset.addEventListener('click', resetFilters); cta.push(reset); }
+    box.appendChild(el('b', { text: error ? VQ.t('We could not load the orders') : VQ.t('No orders for the selected filters') }));
+    box.appendChild(el('p', { text: error ? VQ.t('Check your connection and try again.') : filtered ? VQ.t('Change the period, the status or the search.') : VQ.t('Completed orders show up here as soon as customers buy.') }));
+    if (error) { var retry = el('button', { class: 'btn btn-primary', type: 'button', text: VQ.t('Try again') }); retry.addEventListener('click', function () { loadOrders(); }); cta.push(retry); }
+    else if (filtered) { var reset = el('button', { class: 'btn btn-ghost', type: 'button', text: VQ.t('Reset filters') }); reset.addEventListener('click', resetFilters); cta.push(reset); }
     if (cta.length) box.appendChild(el('div', { class: 'os-empty-cta' }, cta));
     box.hidden = false;
   }
@@ -330,19 +331,19 @@
     nav.hidden = last <= 1;
     box.textContent = '';
     if (last <= 1) return;
-    $('os-page-info').textContent = 'Pagina ' + F.num(cur) + ' din ' + F.num(last);
+    $('os-page-info').textContent = VQ.t('Page {page} of {pages}', { page: F.num(cur), pages: F.num(last) });
     function go(n, label, attrs) {
       var b = el('button', Object.assign({ class: 'os-pg', type: 'button' }, attrs || {}), label);
       b.addEventListener('click', function () { if (n !== S.page) { S.page = n; loadOrders(true); } });
       return b;
     }
-    box.appendChild(go(cur - 1, 'Anterior', { disabled: cur <= 1, 'aria-label': 'Pagina anterioară' }));
+    box.appendChild(go(cur - 1, VQ.t('Previous'), { disabled: cur <= 1, 'aria-label': VQ.t('Previous page') }));
     var pages = [1, cur - 1, cur, cur + 1, last].filter(function (n, i, a) { return n >= 1 && n <= last && a.indexOf(n) === i; }).sort(function (a, b) { return a - b; });
     pages.forEach(function (n, i) {
       if (i && n - pages[i - 1] > 1) box.appendChild(el('span', { class: 'os-gap', 'aria-hidden': 'true', text: '…' }));
-      box.appendChild(go(n, F.num(n), n === cur ? { 'aria-current': 'page', 'aria-label': 'Pagina ' + n + ', pagina curentă' } : { 'aria-label': 'Pagina ' + n }));
+      box.appendChild(go(n, F.num(n), n === cur ? { 'aria-current': 'page', 'aria-label': VQ.t('Page {n}, current page', { n: n }) } : { 'aria-label': VQ.t('Page {n}', { n: n }) }));
     });
-    box.appendChild(go(cur + 1, 'Următoarea', { disabled: cur >= last, 'aria-label': 'Pagina următoare' }));
+    box.appendChild(go(cur + 1, VQ.t('Next'), { disabled: cur >= last, 'aria-label': VQ.t('Next page') }));
   }
 
   /* =================== BREAKDOWN =================== */
@@ -356,16 +357,16 @@
     if (!force && key === bdKey) return; // only the period changes it: status, search, activity, sort and page don't
     bdKey = key;
     var my = ++bdSeq, body = $('os-bd-body'), foot = $('os-bd-foot'), progress = $('os-bd-progress');
-    $('os-bd-period').textContent = periodLabel(d) + ' · comenzi finalizate';
+    $('os-bd-period').textContent = periodLabel(d) + ' · ' + VQ.t('completed orders');
     body.textContent = '';
     foot.textContent = '';
-    if (!events.length) { body.appendChild(el('tr', null, el('td', { class: 'os-bd-msg', colspan: '4', text: 'Nu există activități.' }))); progress.textContent = ''; return; }
-    body.appendChild(el('tr', null, el('td', { class: 'os-bd-msg', colspan: '4', text: 'Se calculează…' })));
+    if (!events.length) { body.appendChild(el('tr', null, el('td', { class: 'os-bd-msg', colspan: '4', text: VQ.t('There are no experiences.') }))); progress.textContent = ''; return; }
+    body.appendChild(el('tr', null, el('td', { class: 'os-bd-msg', colspan: '4', text: VQ.t('Calculating…') })));
     // an activity that never sold a ticket has no sales in any period: only the others are asked, three at a time (the
     // proxy allows 300 calls a minute per visitor; a refused call waits and is asked again)
     var asked = events.filter(function (e) { return !('tickets_sold' in e || 'revenue' in e) || F.toNum(e.tickets_sold) > 0 || F.toNum(e.tickets_paid) > 0 || F.toNum(e.revenue) > 0; });
     var queue = asked.slice(), results = [], done = 0, failed = 0;
-    progress.textContent = asked.length ? 'Se calculează: 0 din ' + F.num(asked.length) : '';
+    progress.textContent = asked.length ? VQ.t('Calculating: {done} of {total}', { done: F.num(0), total: F.num(asked.length) }) : '';
     function ask(ev, tries) {
       var p = filterParams(d, { event_id: ev.id, per_page: 1 });
       return O.api('/organizer/orders?' + p.toString(), { quiet: true }).catch(function (err) {
@@ -385,34 +386,34 @@
         results.push({ ev: ev, orders: F.toNum(m.completed_orders), tickets: F.toNum(m.total_tickets), revenue: F.toNum(m.total_revenue) });
       }, function () { failed++; }).then(function () {
         done++;
-        if (my === bdSeq) progress.textContent = 'Se calculează: ' + F.num(done) + ' din ' + F.num(asked.length);
+        if (my === bdSeq) progress.textContent = VQ.t('Calculating: {done} of {total}', { done: F.num(done), total: F.num(asked.length) });
         return next();
       });
     }
     Promise.all([next(), next(), next()]).then(function () {
       if (my !== bdSeq) return;
-      progress.textContent = failed ? F.count(failed, 'activitate nu a putut fi calculată', 'activități nu au putut fi calculate') + '.' : '';
+      progress.textContent = failed ? VQ.n(failed, 'experience could not be calculated', 'experiences could not be calculated') + '.' : '';
       body.textContent = '';
       var rows = results.filter(function (x) { return x.orders || x.tickets || x.revenue; }).sort(function (a, b) { return b.revenue - a.revenue || b.orders - a.orders; });
-      if (!rows.length) { body.appendChild(el('tr', null, el('td', { class: 'os-bd-msg', colspan: '4', text: 'Nicio vânzare în perioada selectată.' }))); return; }
+      if (!rows.length) { body.appendChild(el('tr', null, el('td', { class: 'os-bd-msg', colspan: '4', text: VQ.t('No sales in the selected period.') }))); return; }
       var sum = { orders: 0, tickets: 0, revenue: 0 };
       rows.forEach(function (x) {
         sum.orders += x.orders; sum.tickets += x.tickets; sum.revenue += x.revenue;
-        var name = F.flat(x.ev.name || x.ev.title) || 'Activitatea #' + x.ev.id;
-        var btn = el('button', { class: 'os-bd-name', type: 'button', text: name, title: 'Arată comenzile pentru această activitate' });
+        var name = F.flat(x.ev.name || x.ev.title) || VQ.t('Experience #{id}', { id: x.ev.id });
+        var btn = el('button', { class: 'os-bd-name', type: 'button', text: name, title: VQ.t('Show the orders for this experience') });
         btn.addEventListener('click', function () { S.event = String(x.ev.id); S.page = 1; loadOrders(true); });
         body.appendChild(el('tr', null, [
           el('td', null, btn),
-          el('td', { class: 'is-num', 'data-label': 'Comenzi', text: F.num(x.orders) }),
-          el('td', { class: 'is-num', 'data-label': 'Bilete', text: F.num(x.tickets) }),
-          el('td', { class: 'is-num', 'data-label': 'Venituri nete', text: F.money(x.revenue) }),
+          el('td', { class: 'is-num', 'data-label': VQ.t('Orders'), text: F.num(x.orders) }),
+          el('td', { class: 'is-num', 'data-label': VQ.t('Tickets'), text: F.num(x.tickets) }),
+          el('td', { class: 'is-num', 'data-label': VQ.t('Net revenue'), text: F.money(x.revenue) }),
         ]));
       });
       foot.appendChild(el('tr', null, [
-        el('td', { text: 'Total · ' + F.count(rows.length, 'activitate', 'activități') }),
-        el('td', { class: 'is-num', 'data-label': 'Comenzi', text: F.num(sum.orders) }),
-        el('td', { class: 'is-num', 'data-label': 'Bilete', text: F.num(sum.tickets) }),
-        el('td', { class: 'is-num', 'data-label': 'Venituri nete', text: F.money(sum.revenue) }),
+        el('td', { text: VQ.t('Total') + ' · ' + VQ.n(rows.length, 'experience', 'experiences') }),
+        el('td', { class: 'is-num', 'data-label': VQ.t('Orders'), text: F.num(sum.orders) }),
+        el('td', { class: 'is-num', 'data-label': VQ.t('Tickets'), text: F.num(sum.tickets) }),
+        el('td', { class: 'is-num', 'data-label': VQ.t('Net revenue'), text: F.money(sum.revenue) }),
       ]));
     });
   }
@@ -450,12 +451,12 @@
     var d = dates();
     if (d.error) { showFilterError(d.error); $('os-from').focus(); return; }
     var token = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.getToken ? BileteOnlineAuth.getToken() : null;
-    if (!token) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return; }
+    if (!token) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return; }
     // core's export matches the status exactly, while its list counts paid and confirmed orders as "Finalizate"
     var statuses = S.status === 'completed' ? ['paid', 'confirmed', 'completed'] : [S.status];
     var label = btn.querySelector('[data-label]');
     btn.setAttribute('aria-busy', 'true');
-    label.textContent = 'Se generează…';
+    label.textContent = VQ.t('Generating…');
     var base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php';
     Promise.all(statuses.map(function (st) {
       var p = new URLSearchParams();
@@ -478,18 +479,18 @@
       });
     })).then(function (texts) {
       var csv = mergeCsv(texts);
-      if (!csv.rows.length) { O.flash('Nu există comenzi de exportat pentru filtrele alese.'); return; }
-      var name = ['bilete-online-vanzari', S.event ? 'activitate-' + S.event : '', S.mode === 'month' && S.month ? S.month : [d.from, d.to].filter(Boolean).join('_'), F.ymd()].filter(Boolean).join('-') + '.csv';
+      if (!csv.rows.length) { O.flash(VQ.t('There are no orders to export for the chosen filters.')); return; }
+      var name = ['viaqui-sales', S.event ? 'experience-' + S.event : '', S.mode === 'month' && S.month ? S.month : [d.from, d.to].filter(Boolean).join('_'), F.ymd()].filter(Boolean).join('-') + '.csv';
       var blob = new Blob(['﻿' + [csv.header].concat(csv.rows).join('\n') + '\n'], { type: 'text/csv;charset=utf-8' });
       var url = URL.createObjectURL(blob), a = el('a', { href: url, download: name, hidden: true });
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
-      O.flash('Exportul a fost descărcat: ' + F.count(csv.rows.length, 'rând', 'rânduri') + ', câte unul pe bilet.' + (S.status ? '' : ' Include și comenzile anulate sau expirate.') + (S.q ? ' Căutarea nu se aplică exportului.' : ''));
+      O.flash([VQ.t('The export was downloaded: {rows}, one per ticket.', { rows: VQ.n(csv.rows.length, 'row', 'rows') }), S.status ? '' : VQ.t('It also includes cancelled and expired orders.'), S.q ? VQ.t('The search does not apply to the export.') : ''].filter(Boolean).join(' '));
     }).catch(function (err) {
-      function failed() { O.flash('Nu am putut genera exportul. Încearcă din nou.', true); }
+      function failed() { O.flash(VQ.t('We could not generate the export. Try again.'), true); }
       function signOut() {
-        O.flash('Sesiunea a expirat. Te trimitem la autentificare.', true);
+        O.flash(VQ.t('Your session has expired. Taking you to sign in.'), true);
         setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); // a refused token ends the session there
       }
       if (err && err.status === 401) return signOut();
@@ -499,7 +500,7 @@
       failed();
     }).then(function () {
       btn.removeAttribute('aria-busy');
-      label.textContent = 'Export CSV';
+      label.textContent = VQ.t('Export CSV');
     });
   }
 

@@ -13,11 +13,12 @@
   var $ = function (id) { return document.getElementById(id); };
   function qsa(sel, ctx) { return [].slice.call((ctx || document).querySelectorAll(sel)); }
 
-  var STATES = { active: 'Activ', scheduled: 'Programat', expired: 'Expirat', exhausted: 'Epuizat', inactive: 'Dezactivat' };
+  var STATES = { active: VQ.t('Active'), scheduled: VQ.t('Scheduled'), expired: VQ.t('Expired'), exhausted: VQ.t('Used up'), inactive: VQ.t('Paused') };
+  var CUR = '€'; // the site currency: amounts typed here have no currency of their own
   var TAG = { active: 'is-ok', scheduled: 'is-info', expired: 'is-muted', exhausted: 'is-wait', inactive: 'is-bad' };
   var CODE = /^[A-Z0-9][A-Z0-9_-]{2,49}$/;
-  var TTS_HELP = 'Bifează unul sau mai multe. Codul funcționează doar pentru tipurile bifate.';
-  var LIMIT_MSG = 'Scrie un număr întreg, de cel puțin 1, sau lasă gol pentru nelimitat.';
+  var TTS_HELP = VQ.t('Tick one or more. The code works only for the ticked types.');
+  var LIMIT_MSG = VQ.t('Enter a whole number, at least 1, or leave empty for unlimited.');
   var ERR_IDS = ['op-code', 'op-value', 'op-event', 'op-tts', 'op-limit', 'op-limit-cust', 'op-start', 'op-end', 'op-min-amount', 'op-max-disc', 'op-min-tickets'];
   var SERVER_MAP = { code: 'op-code', value: 'op-value', type: 'op-value', event_id: 'op-event', ticket_type_ids: 'op-tts', usage_limit: 'op-limit', usage_limit_per_customer: 'op-limit-cust', starts_at: 'op-start', expires_at: 'op-end', min_purchase_amount: 'op-min-amount', max_discount_amount: 'op-max-disc', min_tickets: 'op-min-tickets' };
 
@@ -55,8 +56,8 @@
     if (c.starts_at && Date.parse(c.starts_at) > t) return 'scheduled';
     return c.status === 'active' ? 'active' : 'inactive';
   }
-  function discountText(c) { var v = F.toNum(c.value); return (c.type === 'fixed' ? F.money(v) : F.num(v) + '%') + ' reducere'; }
-  function eventName(c) { return (c.event && F.flat(c.event.name || c.event.title)) || F.flat(c.event_name) || 'Toate activitățile'; }
+  function discountText(c) { var v = F.toNum(c.value); return VQ.t('{amount} off', { amount: c.type === 'fixed' ? F.money(v) : F.num(v) + '%' }); }
+  function eventName(c) { return (c.event && F.flat(c.event.name || c.event.title)) || F.flat(c.event_name) || VQ.t('All experiences'); }
   function ttIds(c) {
     var ids = Array.isArray(c.applicable_ticket_type_ids) && c.applicable_ticket_type_ids.length ? c.applicable_ticket_type_ids : c.ticket_type && c.ticket_type.id != null ? [c.ticket_type.id] : [];
     return ids.map(String);
@@ -76,18 +77,18 @@
   function errMessage(err) { return String((err && (err.message || (err.data && err.data.message))) || ''); }
   function saveError(err) {
     var s = err && err.status;
-    if (s === 422) return 'Unele câmpuri nu sunt completate corect. Verifică-le și încearcă din nou.';
-    if (s === 429) return 'Prea multe încercări într-un timp scurt. Așteaptă un minut și încearcă din nou.';
-    if (s === 403) return 'Contul tău nu are voie să schimbe codurile promoționale.';
-    if (s === 0 || s == null) return 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.';
-    return 'Nu am putut salva codul. Încearcă din nou.';
+    if (s === 422) return VQ.t('Some fields are not filled in correctly. Check them and try again.');
+    if (s === 429) return VQ.t('Too many attempts in a short time. Wait a minute and try again.');
+    if (s === 403) return VQ.t('Your account is not allowed to change promo codes.');
+    if (s === 0 || s == null) return VQ.t('We could not reach the server. Check your connection and try again.');
+    return VQ.t('We could not save the code. Try again.');
   }
   function markServer(err) {
     var errors = (err && err.errors) || (err && err.data && err.data.errors) || null, first = null;
     if (!errors || typeof errors !== 'object') return;
     Object.keys(errors).forEach(function (k) {
       var id = SERVER_MAP[k.replace(/\.\d+$/, '')];
-      if (id && $(id)) { fieldErr(id, 'Verifică această valoare.'); if (!first) first = id; }
+      if (id && $(id)) { fieldErr(id, VQ.t('Check this value.')); if (!first) first = id; }
     });
     if (first) focusField(first);
   }
@@ -153,14 +154,14 @@
     var active = codes.filter(function (c) { return state(c) === 'active'; }).length;
     $('op-s-active').textContent = F.num(active);
     $('op-s-uses').textContent = F.num(codes.reduce(function (s, c) { return s + F.toNum(c.usage_count); }, 0));
-    $('op-list-p').textContent = codes.length ? F.count(codes.length, 'cod', 'coduri') + ', dintre care ' + F.count(active, 'activ acum', 'active acum') + '.' : 'Încă nu ai coduri de reducere.';
+    $('op-list-p').textContent = codes.length ? VQ.t('{codes}, of which {active}.', { codes: VQ.n(codes.length, 'code', 'codes'), active: VQ.n(active, 'active now', 'active now') }) : VQ.t('You have no promo codes yet.');
     drawGrid();
   }
   /** Discount given and order value: core only has them per code, so the used codes are asked four at a time. */
   function loadStats() {
     var seq = ++statsSeq, own = codes.filter(function (c) { return !isAdmin(c) && F.toNum(c.usage_count) > 0; }), i = 0, disc = 0, orders = 0, failed = false;
     var adminUsed = codes.some(function (c) { return isAdmin(c) && F.toNum(c.usage_count) > 0; });
-    $('op-s-note').textContent = adminUsed ? 'Reducerile și valoarea comenzilor nu includ codurile adăugate de admin.' : '';
+    $('op-s-note').textContent = adminUsed ? VQ.t('The discounts and the order value do not include the codes added by an admin.') : '';
     $('op-s-note').hidden = !adminUsed;
     function next() {
       if (i >= own.length) return Promise.resolve();
@@ -189,13 +190,13 @@
     var box = $('op-grid'), list = shownCodes(), filtered = !!(val('op-q') || $('op-status').value);
     box.textContent = '';
     list.forEach(function (c) { box.appendChild(card(c)); });
-    if (!codes.length) box.appendChild(el('li', { class: 'op-empty' }, [el('b', { text: 'Niciun cod încă' }), el('p', { text: 'Un cod de reducere se aplică la o activitate și la tipurile de bilete alese, pe o perioadă și cu limitele pe care le stabilești.' })]));
+    if (!codes.length) box.appendChild(el('li', { class: 'op-empty' }, [el('b', { text: VQ.t('No codes yet') }), el('p', { text: VQ.t('A promo code applies to one experience and to the ticket types you choose, for a period and with the limits you set.') })]));
     else if (filtered && !list.length) {
-      var reset = el('button', { type: 'button', text: 'Arată toate codurile' });
+      var reset = el('button', { type: 'button', text: VQ.t('Show all codes') });
       reset.addEventListener('click', function () { $('op-q').value = ''; $('op-status').value = ''; drawGrid(); $('op-q').focus(); });
-      box.appendChild(el('li', { class: 'op-none' }, ['Niciun cod nu se potrivește filtrelor.', reset]));
+      box.appendChild(el('li', { class: 'op-none' }, [VQ.t('No code matches the filters.'), reset]));
     }
-    var tile = el('button', { class: 'op-new', type: 'button', 'data-focus': 'code-new' }, [el('span', { class: 'op-new-ic', 'aria-hidden': 'true' }, icon('plus')), el('b', { text: 'Creează cod nou' }), el('small', { text: 'Adaugă un nou cod de reducere' })]);
+    var tile = el('button', { class: 'op-new', type: 'button', 'data-focus': 'code-new' }, [el('span', { class: 'op-new-ic', 'aria-hidden': 'true' }, icon('plus')), el('b', { text: VQ.t('Create a new code') }), el('small', { text: VQ.t('Add a new promo code') })]);
     tile.addEventListener('click', function () { openCode(null, tile); });
     box.appendChild(el('li', null, tile));
   }
@@ -206,25 +207,25 @@
     var st = state(c), admin = isAdmin(c), id = String(c.id), live = st === 'active' || st === 'scheduled';
     var used = F.toNum(c.usage_count), limit = F.toNum(c.usage_limit), n = ttIds(c).length;
     var tags = [tag(STATES[st], TAG[st])];
-    if (admin) tags.push(tag('Adăugat de admin', 'is-info'));
+    if (admin) tags.push(tag(VQ.t('Added by an admin'), 'is-info'));
     var row = [el('code', { class: 'op-code', text: c.code })];
     if (live) {
-      var copy = el('button', { class: 'op-copy', type: 'button', 'data-focus': 'code-copy-' + id, 'aria-label': 'Copiază codul ' + c.code, title: 'Copiază codul' }, icon('copy'));
+      var copy = el('button', { class: 'op-copy', type: 'button', 'data-focus': 'code-copy-' + id, 'aria-label': VQ.t('Copy the code {code}', { code: c.code }), title: VQ.t('Copy the code') }, icon('copy'));
       copy.addEventListener('click', function () { copyCode(c.code); });
       row.push(copy);
     }
-    var whenK = st === 'scheduled' ? 'Începe' : st === 'expired' ? 'Expirat la' : 'Expiră';
-    var whenV = st === 'scheduled' ? dayLabel(c.starts_at) : c.expires_at ? dayLabel(c.expires_at) : 'Nelimitat';
+    var whenK = st === 'scheduled' ? VQ.t('Starts') : st === 'expired' ? VQ.t('Expired on') : VQ.t('Expires');
+    var whenV = st === 'scheduled' ? dayLabel(c.starts_at) : c.expires_at ? dayLabel(c.expires_at) : VQ.t('No end date');
     var figs = el('dl', { class: 'op-figs' }, [
-      el('div', null, [el('dt', { text: 'Utilizări' }), el('dd', { text: F.num(used) + (limit ? ' / ' + F.num(limit) : '') })]),
-      el('div', null, [el('dt', { text: 'Per client' }), el('dd', { text: c.usage_limit_per_customer ? F.num(c.usage_limit_per_customer) : 'Nelimitat' })]),
+      el('div', null, [el('dt', { text: VQ.t('Uses') }), el('dd', { text: F.num(used) + (limit ? ' / ' + F.num(limit) : '') })]),
+      el('div', null, [el('dt', { text: VQ.t('Per customer') }), el('dd', { text: c.usage_limit_per_customer ? F.num(c.usage_limit_per_customer) : VQ.t('Unlimited') })]),
       el('div', null, [el('dt', { text: whenK }), el('dd', { text: whenV })]),
     ]);
     var parts = [
       el('div', { class: 'op-card-top' }, [el('span', { class: 'op-ic', 'aria-hidden': 'true' }, icon('tag')), el('div', { class: 'op-tags' }, tags)]),
       el('div', { class: 'op-code-row' }, row),
       el('p', { class: 'op-disc', text: discountText(c) }),
-      el('p', { class: 'op-ev', text: eventName(c) + (n ? ' · ' + F.count(n, 'tip de bilet', 'tipuri de bilete') : '') }),
+      el('p', { class: 'op-ev', text: eventName(c) + (n ? ' · ' + VQ.n(n, 'ticket type', 'ticket types') : '') }),
       figs,
     ];
     if (limit > 0) {
@@ -232,24 +233,24 @@
       fill.style.width = Math.min(100, Math.round((used / limit) * 100)) + '%';
       parts.push(el('span', { class: 'op-bar', 'aria-hidden': 'true' }, fill));
     }
-    if (admin) parts.push(el('p', { class: 'op-ro', text: 'Codul a fost adăugat de admin și nu se poate modifica aici.' }));
+    if (admin) parts.push(el('p', { class: 'op-ro', text: VQ.t('The code was added by an admin and cannot be changed here.') }));
     else {
       var acts = [];
-      var uses = pill('chart-line-up', 'Utilizări', { 'data-focus': 'code-usage-' + id, 'aria-label': 'Utilizările codului ' + c.code });
+      var uses = pill('chart-line-up', VQ.t('Uses'), { 'data-focus': 'code-usage-' + id, 'aria-label': VQ.t('Uses of the code {code}', { code: c.code }) });
       uses.addEventListener('click', function () { openUsage(c, uses); });
-      var editBtn = pill('pencil-simple', 'Editează', { 'data-focus': 'code-edit-' + id, 'aria-label': 'Editează codul ' + c.code });
+      var editBtn = pill('pencil-simple', VQ.t('Edit'), { 'data-focus': 'code-edit-' + id, 'aria-label': VQ.t('Edit the code {code}', { code: c.code }) });
       editBtn.addEventListener('click', function () { openCode(c, editBtn); });
       acts.push(uses, editBtn);
       if (c.status === 'active' && live) {
-        var pause = pill('pause', 'Pauză', { 'data-focus': 'code-pause-' + id, 'aria-label': 'Pune pe pauză codul ' + c.code });
+        var pause = pill('pause', VQ.t('Pause'), { 'data-focus': 'code-pause-' + id, 'aria-label': VQ.t('Pause the code {code}', { code: c.code }) });
         pause.addEventListener('click', function () { toggle(c, pause, false); });
         acts.push(pause);
       } else if (c.status !== 'active') {
-        var play = pill('play', 'Activează', { 'data-focus': 'code-play-' + id, 'aria-label': 'Activează codul ' + c.code });
+        var play = pill('play', VQ.t('Activate'), { 'data-focus': 'code-play-' + id, 'aria-label': VQ.t('Activate the code {code}', { code: c.code }) });
         play.addEventListener('click', function () { toggle(c, play, true); });
         acts.push(play);
       }
-      var del = pill('trash', 'Șterge', { class: 'op-pill is-danger', 'data-focus': 'code-del-' + id, 'aria-label': 'Șterge codul ' + c.code });
+      var del = pill('trash', VQ.t('Delete'), { class: 'op-pill is-danger', 'data-focus': 'code-del-' + id, 'aria-label': VQ.t('Delete the code {code}', { code: c.code }) });
       del.addEventListener('click', function () { openDelete(c, del); });
       acts.push(del);
       parts.push(el('div', { class: 'op-acts' }, acts));
@@ -257,7 +258,7 @@
     return el('li', { class: 'op-card is-' + st }, parts);
   }
   function copyCode(code) {
-    copyText(code).then(function () { O.flash('Codul ' + code + ' a fost copiat.'); }, function () { O.flash('Nu am putut copia. Selectează codul și copiază-l manual.', true); });
+    copyText(code).then(function () { O.flash(VQ.t('The code {code} was copied.', { code: code })); }, function () { O.flash(VQ.t('We could not copy it. Select the code and copy it by hand.'), true); });
   }
 
   /* =================== PAUSE / ACTIVATE =================== */
@@ -265,16 +266,16 @@
     if (btn.disabled) return;
     btn.disabled = true;
     O.api('/organizer/promo-codes/' + c.id + '/' + (on ? 'activate' : 'deactivate'), { method: 'POST', body: {} }).then(function () {
-      O.flash(on ? 'Codul ' + c.code + ' e din nou activ.' : 'Codul ' + c.code + ' e pe pauză: nu mai poate fi folosit până îl activezi.');
+      O.flash(on ? VQ.t('The code {code} is active again.', { code: c.code }) : VQ.t('The code {code} is paused: it cannot be used until you activate it.', { code: c.code }));
       load((on ? 'code-pause-' : 'code-play-') + c.id);
     }).catch(function (err) {
       btn.disabled = false;
       if (err && err.status === 401) return;
       var m = errMessage(err);
-      if (/expired/i.test(m)) { O.flash('Codul ' + c.code + ' a expirat. Mută data de sfârșit în viitor ca să-l poți activa.', true); return; }
-      if (/exhausted/i.test(m)) { O.flash('Codul ' + c.code + ' și-a atins limita de utilizări. Mărește limita ca să-l poți activa.', true); return; }
-      if (err && err.status === 404) { O.flash('Codul nu mai există.', true); load(); return; }
-      O.flash('Nu am putut ' + (on ? 'activa' : 'opri') + ' codul. Încearcă din nou.', true);
+      if (/expired/i.test(m)) { O.flash(VQ.t('The code {code} has expired. Move the end date into the future to activate it.', { code: c.code }), true); return; }
+      if (/exhausted/i.test(m)) { O.flash(VQ.t('The code {code} has reached its use limit. Raise the limit to activate it.', { code: c.code }), true); return; }
+      if (err && err.status === 404) { O.flash(VQ.t('The code no longer exists.'), true); load(); return; }
+      O.flash(on ? VQ.t('We could not activate the code. Try again.') : VQ.t('We could not pause the code. Try again.'), true);
     });
   }
 
@@ -307,32 +308,32 @@
     sel.textContent = '';
     if (c) {
       var evId = c.event && c.event.id != null ? String(c.event.id) : '';
-      sel.appendChild(el('option', { value: evId, text: c.event ? eventName(c) : 'Fără activitate' }));
+      sel.appendChild(el('option', { value: evId, text: c.event ? eventName(c) : VQ.t('No experience') }));
       sel.value = evId;
       if (evId) loadTts(evId, ttIds(c));
       else {
         $('op-tt-list').textContent = '';
-        $('op-tt-list').appendChild(el('li', { class: 'op-msg', text: 'Codul nu are o activitate, așa că tipurile de bilete nu se pot schimba.' }));
+        $('op-tt-list').appendChild(el('li', { class: 'op-msg', text: VQ.t('The code has no experience, so the ticket types cannot be changed.') }));
         $('op-tts-all').hidden = true;
         $('op-tts-n').textContent = '';
       }
       return;
     }
-    sel.appendChild(el('option', { value: '', text: 'Se încarcă activitățile…' }));
+    sel.appendChild(el('option', { value: '', text: VQ.t('Loading experiences…') }));
     loadTts('', null);
     loadEvents().then(function (list) {
       if (edit || !$('op-code-d').open) return;
       sel.textContent = '';
-      sel.appendChild(el('option', { value: '', text: list.length ? '— Alege o activitate —' : 'Nu ai activități viitoare' }));
+      sel.appendChild(el('option', { value: '', text: list.length ? VQ.t('Choose an experience') : VQ.t('You have no upcoming experiences') }));
       list.forEach(function (e) {
         var day = naiveDay(e.starts_at);
-        sel.appendChild(el('option', { value: String(e.id), text: (F.flat(e.name || e.title) || 'Activitatea #' + e.id) + (day ? ' · ' + dayLabel(day) : '') }));
+        sel.appendChild(el('option', { value: String(e.id), text: (F.flat(e.name || e.title) || VQ.t('Experience #{id}', { id: e.id })) + (day ? ' · ' + dayLabel(day) : '') }));
       });
     }, function () {
       if (edit) return;
       sel.textContent = '';
-      sel.appendChild(el('option', { value: '', text: 'Nu am putut încărca activitățile' }));
-      fieldErr('op-event', 'Nu am putut încărca activitățile. Închide fereastra și încearcă din nou.');
+      sel.appendChild(el('option', { value: '', text: VQ.t('We could not load the experiences') }));
+      fieldErr('op-event', VQ.t('We could not load the experiences. Close the window and try again.'));
     });
   }
   $('op-event').addEventListener('change', function () { fieldErr('op-event', ''); loadTts(val('op-event'), null); });
@@ -342,40 +343,40 @@
     $('op-tts-all').hidden = true;
     $('op-tts-n').textContent = TTS_HELP;
     box.textContent = '';
-    if (!eventId) { box.appendChild(el('li', { class: 'op-msg', text: 'Alege mai întâi activitatea.' })); return; }
-    box.appendChild(el('li', { class: 'op-msg', text: 'Se încarcă tipurile de bilete…' }));
+    if (!eventId) { box.appendChild(el('li', { class: 'op-msg', text: VQ.t('Choose the experience first.') })); return; }
+    box.appendChild(el('li', { class: 'op-msg', text: VQ.t('Loading ticket types…') }));
     var got = ttCache[eventId] ? Promise.resolve(ttCache[eventId]) : O.api('/organizer/events/' + eventId, { quiet: true }).then(function (r) {
       var ev = (r && r.data && (r.data.event || r.data)) || {};
-      // "bilet gratuit cu cod" types are free already and managed by the admin
+      // "free ticket with a code" types are free already and managed by the admin
       return (ttCache[eventId] = (Array.isArray(ev.ticket_types) ? ev.ticket_types : []).filter(function (t) { return t && /^\d+$/.test(String(t.id)) && !t.free_with_code; }));
     });
     got.then(function (list) {
       if (seq !== ttSeq) return;
       box.textContent = '';
-      if (!list.length) { box.appendChild(el('li', { class: 'op-msg', text: 'Activitatea nu are tipuri de bilete.' })); return; }
+      if (!list.length) { box.appendChild(el('li', { class: 'op-msg', text: VQ.t('The experience has no ticket types.') })); return; }
       var keep = pre || list.map(function (t) { return String(t.id); });
       list.forEach(function (t) {
         var id = String(t.id), price = F.toNum(t.price), cb = el('input', { type: 'checkbox', value: id, 'data-tt': '' });
         cb.checked = keep.indexOf(id) > -1;
         cb.addEventListener('change', function () { fieldErr('op-tts', ''); countTts(); });
-        var meta = [price > 0 ? F.money(price) : 'gratuit'];
-        if (t.status && t.status !== 'on_sale') meta.push('nu e în vânzare');
-        box.appendChild(el('li', null, el('label', { class: 'op-tt' }, [cb, el('span', null, [el('b', { text: F.flat(t.name) || 'Bilet #' + id }), el('small', { text: meta.join(' · ') })])])));
+        var meta = [price > 0 ? F.money(price) : VQ.t('free')];
+        if (t.status && t.status !== 'on_sale') meta.push(VQ.t('not on sale'));
+        box.appendChild(el('li', null, el('label', { class: 'op-tt' }, [cb, el('span', null, [el('b', { text: F.flat(t.name) || VQ.t('Ticket #{id}', { id: id }) }), el('small', { text: meta.join(' · ') })])])));
       });
       $('op-tts-all').hidden = list.length < 2;
       countTts();
     }, function () {
       if (seq !== ttSeq) return;
       box.textContent = '';
-      var retry = el('button', { class: 'op-linkbtn', type: 'button', text: 'Reîncearcă' });
+      var retry = el('button', { class: 'op-linkbtn', type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { loadTts(eventId, pre); });
-      box.appendChild(el('li', { class: 'op-msg' }, ['Nu am putut încărca tipurile de bilete.', retry]));
+      box.appendChild(el('li', { class: 'op-msg' }, [VQ.t('We could not load the ticket types.'), retry]));
     });
   }
   function checkedTts() { return qsa('[data-tt]', root).filter(function (c) { return c.checked; }).map(function (c) { return Number(c.value); }); }
   function countTts() {
     var n = checkedTts().length, total = qsa('[data-tt]', root).length;
-    $('op-tts-n').textContent = !total ? TTS_HELP : n ? F.count(n, 'tip de bilet ales', 'tipuri de bilete alese') + ' din ' + total + '.' : 'Bifează cel puțin un tip de bilet.';
+    $('op-tts-n').textContent = !total ? TTS_HELP : n ? VQ.t('{chosen} of {total}.', { chosen: VQ.n(n, 'ticket type chosen', 'ticket types chosen'), total: total }) : VQ.t('Tick at least one ticket type.');
   }
   qsa('[data-tts]', root).forEach(function (b) {
     b.addEventListener('click', function () {
@@ -390,7 +391,7 @@
   function typeValue() { var r = root.querySelector('input[name="op-type"]:checked'); return r ? r.value : 'percentage'; }
   function syncType() {
     var pct = typeValue() === 'percentage';
-    $('op-value-suffix').textContent = pct ? '%' : 'lei';
+    $('op-value-suffix').textContent = pct ? '%' : CUR;
     $('op-value').max = pct ? '100' : '100000';
     $('op-max-f').hidden = !pct;
   }
@@ -409,10 +410,10 @@
   function openCode(c, from) {
     if (!codes) return;
     edit = c || null;
-    $('op-code-h').textContent = c ? 'Editează codul ' + c.code : 'Cod promoțional nou';
+    $('op-code-h').textContent = c ? VQ.t('Edit the code {code}', { code: c.code }) : VQ.t('New promo code');
     $('op-code-p').textContent = c
-      ? 'Codul, reducerea și activitatea nu se mai pot schimba după creare. Pentru altă reducere, creează un cod nou.'
-      : 'Codul se aplică la o activitate și doar la tipurile de bilete pe care le bifezi.';
+      ? VQ.t('The code, the discount and the experience cannot be changed after creation. For a different discount, create a new code.')
+      : VQ.t('The code applies to one experience and only to the ticket types you tick.');
     $('op-fixed').disabled = !!c;
     $('op-code').value = c ? c.code : '';
     qsa('input[name="op-type"]', root).forEach(function (r) { r.checked = r.value === (c && c.type === 'fixed' ? 'fixed' : 'percentage'); });
@@ -428,7 +429,7 @@
     $('op-more').open = !!(c && (c.min_purchase_amount || c.max_discount_amount || c.min_tickets));
     ERR_IDS.forEach(function (id) { fieldErr(id, ''); });
     formErr('op-form-err', '');
-    $('op-code-go').querySelector('[data-label]').textContent = c ? 'Salvează codul' : 'Creează codul';
+    $('op-code-go').querySelector('[data-label]').textContent = c ? VQ.t('Save the code') : VQ.t('Create the code');
     openDialog($('op-code-d'), from);
     fillEvents(c);
     (c ? $('op-limit') : $('op-code')).focus();
@@ -441,25 +442,25 @@
     if (isBusy(btn)) return;
     function need(id, msg) { fieldErr(id, msg); if (msg && !bad) bad = id; }
     function intErr(v, msg) { return v === '' || (/^\d+$/.test(v) && Number(v) >= 1) ? '' : msg; }
-    function amountErr(v) { return v === '' || (isFinite(num(v)) && num(v) >= 0) ? '' : 'Scrie o sumă de cel puțin 0, sau lasă gol.'; }
+    function amountErr(v) { return v === '' || (isFinite(num(v)) && num(v) >= 0) ? '' : VQ.t('Enter an amount of at least 0, or leave empty.'); }
     formErr('op-form-err', '');
     var code = val('op-code').toUpperCase(), type = typeValue(), rawValue = val('op-value'), value = num(rawValue), eventId = val('op-event');
     var tts = checkedTts(), limit = val('op-limit'), perCust = val('op-limit-cust'), start = val('op-start'), end = val('op-end');
     var minAmount = val('op-min-amount'), maxDisc = val('op-max-disc'), minTickets = val('op-min-tickets'), today = F.ymd();
     var used = c ? F.toNum(c.usage_count) : 0, ttsOn = c ? !!(c.event && c.event.id != null) : !!eventId;
     if (!c) {
-      need('op-code', !code ? 'Scrie codul promoțional sau generează unul.' : !CODE.test(code) ? 'Codul are 3–50 caractere: litere fără diacritice, cifre, - sau _.' : '');
-      need('op-value', !rawValue ? 'Scrie valoarea reducerii.' : !isFinite(value) || value <= 0 ? 'Reducerea trebuie să fie mai mare decât 0.' : type === 'percentage' && value > 100 ? 'Reducerea procentuală poate fi de cel mult 100%.' : '');
-      need('op-event', !eventId ? 'Alege activitatea.' : '');
+      need('op-code', !code ? VQ.t('Enter the promo code or generate one.') : !CODE.test(code) ? VQ.t('The code has 3–50 characters: unaccented letters, digits, - or _.') : '');
+      need('op-value', !rawValue ? VQ.t('Enter the discount value.') : !isFinite(value) || value <= 0 ? VQ.t('The discount must be greater than 0.') : type === 'percentage' && value > 100 ? VQ.t('A percentage discount can be at most 100%.') : '');
+      need('op-event', !eventId ? VQ.t('Choose the experience.') : '');
     }
-    need('op-tts', ttsOn && !tts.length ? 'Alege cel puțin un tip de bilet.' : '');
-    need('op-limit', intErr(limit, LIMIT_MSG) || (c && limit !== '' && Number(limit) < used ? 'Codul a fost folosit deja ' + (used === 1 ? 'o dată' : 'de ' + F.count(used, 'dată', 'ori')) + ', așa că limita nu poate fi mai mică de ' + used + '.' : ''));
+    need('op-tts', ttsOn && !tts.length ? VQ.t('Choose at least one ticket type.') : '');
+    need('op-limit', intErr(limit, LIMIT_MSG) || (c && limit !== '' && Number(limit) < used ? VQ.t('The code has already been used {times}, so the limit cannot be lower than {min}.', { times: VQ.n(used, 'time', 'times'), min: used }) : ''));
     need('op-limit-cust', intErr(perCust, LIMIT_MSG));
-    need('op-start', !start && !c ? 'Alege data de început.' : '');
-    need('op-end', !end && !c ? 'Alege data de sfârșit.' : end && end < today && (!c || end !== dayOf(c.expires_at)) ? 'Data de sfârșit a trecut deja.' : end && start && end < start ? 'Data de sfârșit nu poate fi înaintea celei de început.' : '');
+    need('op-start', !start && !c ? VQ.t('Choose the start date.') : '');
+    need('op-end', !end && !c ? VQ.t('Choose the end date.') : end && end < today && (!c || end !== dayOf(c.expires_at)) ? VQ.t('The end date has already passed.') : end && start && end < start ? VQ.t('The end date cannot be before the start date.') : '');
     need('op-min-amount', amountErr(minAmount));
     need('op-max-disc', type === 'percentage' ? amountErr(maxDisc) : '');
-    need('op-min-tickets', intErr(minTickets, 'Scrie un număr întreg, de cel puțin 1, sau lasă gol.'));
+    need('op-min-tickets', intErr(minTickets, VQ.t('Enter a whole number, at least 1, or leave empty.')));
     if (bad) { focusField(bad); return; }
 
     var common = {
@@ -474,33 +475,33 @@
     var body = c
       ? (ttsOn ? Object.assign({ ticket_type_ids: tts }, common) : common)
       : Object.assign({ code: code, type: type, value: value, applies_to: 'ticket_type', event_id: Number(eventId), ticket_type_ids: tts }, common);
-    busyBtn(btn, true, c ? 'Se salvează…' : 'Se creează…');
+    busyBtn(btn, true, c ? VQ.t('Saving…') : VQ.t('Creating…'));
     d.setAttribute('data-busy', '');
     O.api(c ? '/organizer/promo-codes/' + c.id : '/organizer/promo-codes', { method: c ? 'PUT' : 'POST', body: body }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash('Codul ' + (c ? c.code + ' a fost salvat.' : code + ' a fost creat.'));
+      O.flash(c ? VQ.t('The code {code} was saved.', { code: c.code }) : VQ.t('The code {code} was created.', { code: code }));
       load(c ? 'code-edit-' + c.id : null);
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
       var m = errMessage(err);
-      if (/already exists/i.test(m)) { fieldErr('op-code', 'Există deja un cod cu acest nume. Alege altul.'); $('op-code').focus(); return; }
-      if (/cannot exceed 100/i.test(m)) { fieldErr('op-value', 'Reducerea procentuală poate fi de cel mult 100%.'); $('op-value').focus(); return; }
-      if (/usage limit cannot be less/i.test(m)) { fieldErr('op-limit', 'Limita nu poate fi mai mică decât utilizările de până acum.'); $('op-limit').focus(); return; }
+      if (/already exists/i.test(m)) { fieldErr('op-code', VQ.t('A code with this name already exists. Choose another.')); $('op-code').focus(); return; }
+      if (/cannot exceed 100/i.test(m)) { fieldErr('op-value', VQ.t('A percentage discount can be at most 100%.')); $('op-value').focus(); return; }
+      if (/usage limit cannot be less/i.test(m)) { fieldErr('op-limit', VQ.t('The limit cannot be lower than the uses so far.')); $('op-limit').focus(); return; }
       if (/ticket types do not belong/i.test(m)) {
         var evId = c ? String(c.event.id) : eventId;
         delete ttCache[evId];
         loadTts(evId, tts.map(String));
-        fieldErr('op-tts', 'Unele tipuri de bilete nu mai aparțin activității. Am reîncărcat lista: verifică-le și salvează din nou.');
+        fieldErr('op-tts', VQ.t('Some ticket types no longer belong to the experience. We reloaded the list: check them and save again.'));
         return;
       }
-      if (/no associated event/i.test(m)) { formErr('op-form-err', 'Codul nu are o activitate, așa că tipurile de bilete nu se pot schimba.'); return; }
+      if (/no associated event/i.test(m)) { formErr('op-form-err', VQ.t('The code has no experience, so the ticket types cannot be changed.')); return; }
       if (err && err.status === 404) {
-        if (c) { formErr('op-form-err', 'Codul nu mai există. Am reîncărcat lista.'); load(); }
-        else { fieldErr('op-event', 'Activitatea nu mai există sau nu îți aparține.'); $('op-event').focus(); }
+        if (c) { formErr('op-form-err', VQ.t('The code no longer exists. We reloaded the list.')); load(); }
+        else { fieldErr('op-event', VQ.t('The experience no longer exists or is not yours.')); $('op-event').focus(); }
         return;
       }
       formErr('op-form-err', saveError(err));
@@ -512,18 +513,18 @@
   function openUsage(c, from) {
     var seq = (usage ? usage.seq : 0) + 1;
     usage = { c: c, page: 1, rows: [], seq: seq };
-    $('op-usage-h').textContent = 'Utilizările codului ' + c.code;
+    $('op-usage-h').textContent = VQ.t('Uses of the code {code}', { code: c.code });
     $('op-usage-p').textContent = discountText(c) + ' · ' + eventName(c);
     ['op-u-uses', 'op-u-customers', 'op-u-discount', 'op-u-orders'].forEach(function (id) { $(id).textContent = '…'; });
     $('op-uses').textContent = '';
-    $('op-uses').appendChild(el('li', { class: 'op-msg', text: 'Se încarcă utilizările…' }));
+    $('op-uses').appendChild(el('li', { class: 'op-msg', text: VQ.t('Loading uses…') }));
     $('op-usage-more').hidden = true;
     openDialog($('op-usage-d'), from);
     $('op-usage-d').querySelector('.op-x').focus();
     O.api('/organizer/promo-codes/' + c.id + '/stats', { quiet: true }).then(function (r) {
       if (!usage || seq !== usage.seq) return;
       var s = (r && r.data && r.data.stats) || {}, limit = F.toNum(s.usage_limit);
-      $('op-u-uses').textContent = F.num(s.total_uses) + (limit ? ' din ' + F.num(limit) : '');
+      $('op-u-uses').textContent = limit ? VQ.t('{used} of {limit}', { used: F.num(s.total_uses), limit: F.num(limit) }) : F.num(s.total_uses);
       $('op-u-customers').textContent = F.num(s.unique_customers);
       $('op-u-discount').textContent = F.money(s.total_discount_given);
       $('op-u-orders').textContent = F.money(s.total_order_value);
@@ -535,7 +536,7 @@
   }
   function loadUsagePage(n) {
     var u = usage, seq = u.seq, more = $('op-usage-more');
-    if (n > 1) busyBtn(more, true, 'Se încarcă…');
+    if (n > 1) busyBtn(more, true, VQ.t('Loading…'));
     O.api('/organizer/promo-codes/' + u.c.id + '/usage?per_page=20&page=' + n, { quiet: true }).then(function (r) {
       if (seq !== usage.seq) return;
       busyBtn(more, false);
@@ -547,26 +548,26 @@
       if (seq !== usage.seq) return;
       busyBtn(more, false);
       if (err && err.status === 401) return;
-      if (n > 1) { O.flash('Nu am putut încărca mai multe utilizări. Încearcă din nou.', true); return; }
-      var box = $('op-uses'), retry = el('button', { class: 'op-linkbtn', type: 'button', text: 'Reîncearcă' });
+      if (n > 1) { O.flash(VQ.t('We could not load more uses. Try again.'), true); return; }
+      var box = $('op-uses'), retry = el('button', { class: 'op-linkbtn', type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { loadUsagePage(1); });
       box.textContent = '';
-      box.appendChild(el('li', { class: 'op-msg' }, ['Nu am putut încărca utilizările.', retry]));
+      box.appendChild(el('li', { class: 'op-msg' }, [VQ.t('We could not load the uses.'), retry]));
     });
   }
   function drawUsage(hasMore) {
     var box = $('op-uses'), more = $('op-usage-more'), hadFocus = document.activeElement === more;
     box.textContent = '';
-    if (!usage.rows.length) box.appendChild(el('li', { class: 'op-msg', text: 'Codul nu a fost folosit încă.' }));
+    if (!usage.rows.length) box.appendChild(el('li', { class: 'op-msg', text: VQ.t('The code has not been used yet.') }));
     usage.rows.forEach(function (x) {
       var order = x.order || {}, name = F.flat(x.customer_name).trim(), email = F.flat(x.customer_email).trim(), when = F.dateOf(x.used_at);
       box.appendChild(el('li', { class: 'op-use' }, [
         el('div', { class: 'op-use-t' }, [
-          el('b', { text: order.order_number ? 'Comanda ' + F.flat(order.order_number) : 'Comandă' }),
-          el('span', { text: [name, email].filter(Boolean).join(' · ') || 'Client' }),
+          el('b', { text: order.order_number ? VQ.t('Order {number}', { number: F.flat(order.order_number) }) : VQ.t('Order') }),
+          el('span', { text: [name, email].filter(Boolean).join(' · ') || VQ.t('Customer') }),
           el('small', { text: when ? F.date(when, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '' }),
         ]),
-        el('div', { class: 'op-use-v' }, [el('b', { text: '−' + F.money(x.discount_applied) }), el('small', { text: 'din ' + F.money(x.order_total) })]),
+        el('div', { class: 'op-use-v' }, [el('b', { text: '−' + F.money(x.discount_applied) }), el('small', { text: VQ.t('of {total}', { total: F.money(x.order_total) }) })]),
       ]));
     });
     more.hidden = !hasMore;
@@ -577,7 +578,7 @@
   /* =================== DELETE =================== */
   function openDelete(c, from) {
     delTarget = c;
-    $('op-del-h').textContent = 'Ștergi codul ' + c.code + '?';
+    $('op-del-h').textContent = VQ.t('Delete the code {code}?', { code: c.code });
     formErr('op-del-err', '');
     openDialog($('op-del-d'), from);
     $('op-del-d').querySelector('[data-close]').focus();
@@ -585,20 +586,20 @@
   $('op-del-go').addEventListener('click', function () {
     var btn = this, d = $('op-del-d'), c = delTarget;
     if (!c || isBusy(btn)) return;
-    busyBtn(btn, true, 'Se șterge…');
+    busyBtn(btn, true, VQ.t('Deleting…'));
     d.setAttribute('data-busy', '');
     O.api('/organizer/promo-codes/' + c.id, { method: 'DELETE' }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash('Codul ' + c.code + ' a fost șters.');
+      O.flash(VQ.t('The code {code} was deleted.', { code: c.code }));
       load();
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      if (err && err.status === 404) { closeDialog(d); O.flash('Codul fusese deja șters.'); load(); return; }
-      formErr('op-del-err', err && (err.status === 0 || err.status == null) ? 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.' : 'Nu am putut șterge codul. Încearcă din nou.');
+      if (err && err.status === 404) { closeDialog(d); O.flash(VQ.t('The code had already been deleted.')); load(); return; }
+      formErr('op-del-err', err && (err.status === 0 || err.status == null) ? VQ.t('We could not reach the server. Check your connection and try again.') : VQ.t('We could not delete the code. Try again.'));
     });
   });
 
