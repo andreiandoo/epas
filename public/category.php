@@ -333,8 +333,16 @@ if ($pageNum === 1) {
 
 // Same order the browser applies for "Recommended", so nothing moves when category.js starts.
 usort($acts, fn ($x, $y) => [(int) $y['promoted'], $y['rating'], $y['reviews']] <=> [(int) $x['promoted'], $x['rating'], $x['reviews']]);
+// What the page can show: our own total (never less than the cards of this page) plus the partner listings on it.
+// The hero, the announced count and the JSON-LD all print this number; the core total alone ignores the partners.
+$resultsTotal = max((int) ($pagination['total'] ?? 0), count($acts)) + count($partnerActs);
 // partner products keep the order they came in (best sellers, or the sort asked for) and follow our own
 $acts = array_merge($acts, $partnerActs);
+foreach ($structuredData as $sdKey => $sdRow) {
+    if (($sdRow['@type'] ?? '') === 'CollectionPage') {
+        $structuredData[$sdKey]['mainEntity']['numberOfItems'] = $resultsTotal;
+    }
+}
 
 // Map pins: normalize real lat/lng into x/y% (bbox); golden-angle scatter when
 // coords are missing so the map preview stays evenly populated.
@@ -458,7 +466,33 @@ if ($travelerOptions) $quickFilters[] = ['traveler', v2_t('Who it is for'), v2_t
 if ($langOptions) $quickFilters[] = ['languages', v2_t('Language'), v2_t('Language of the experience')];
 if ($featOptions) $quickFilters[] = ['features', v2_t('Features'), v2_t('Features')];
 
+// Where: "Anywhere in Europe", then the cities grouped by country. One list feeds the select (the fallback and the
+// source category.js reads), the search panel of the bar and the "Where" tab of the filters dialog.
+$whereGroups = [];
+$whereKnown = false;
+foreach (($V2NAV['countriesFull'] ?? []) as $kwCountry) {
+    $kwCities = [];
+    foreach ((array) ($kwCountry['featured'] ?? []) as $kwCity) {
+        $kwSlug = ltrim((string) ($kwCity['href'] ?? ''), '/');
+        if ($kwSlug === '') { continue; }
+        $kwCities[] = ['slug' => $kwSlug, 'name' => (string) ($kwCity['name'] ?? $kwSlug)];
+        if ($cityFilter === $kwSlug) { $whereKnown = true; }
+    }
+    if ($kwCities) { $whereGroups[] = ['name' => (string) $kwCountry['name'], 'cities' => $kwCities]; }
+}
+$whereLabel = $cityFilter ? $heroLocation : v2_t('Anywhere in Europe');
+// The search field and the (script-filled) list of places: once in the bar's panel, once in the dialog.
+$renderWhereBox = function (string $id) {
+    ?><div class="kw-box" data-kw="<?= v2_e($id) ?>">
+          <div class="kw-field"><?= v2_ic('magnifying-glass') ?><input class="kw-input" id="<?= v2_e($id) ?>-q" type="text" role="combobox" aria-expanded="true" aria-controls="<?= v2_e($id) ?>-list" aria-autocomplete="list" aria-label="<?= v2_te('Search a country or a city') ?>" placeholder="<?= v2_te('Search a country or a city') ?>" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"></div>
+          <div class="kw-list" id="<?= v2_e($id) ?>-list" role="listbox" aria-label="<?= v2_te('Places') ?>" tabindex="-1" data-lenis-prevent></div>
+          <p class="kw-none" hidden><?= v2_te('No place matches. Try another spelling.') ?></p>
+          <p class="sr" aria-live="polite" data-kw-status></p>
+        </div><?php
+};
+
 $filterTabs = [];
+if ($whereGroups) $filterTabs[] = ['where', v2_t('Where'), v2_t('Pick a country or a city. The list reloads for that place when you show the results.')];
 if ($catOptions) $filterTabs[] = ['categories', v2_t('Categories'), ''];
 if ($interestOptions) $filterTabs[] = ['interests', v2_t('Interests'), v2_t('Choose the mood or theme of the experience.')];
 if ($travelerOptions) $filterTabs[] = ['traveler', v2_t('Who it is for'), v2_t('Who the experience suits.')];
@@ -473,8 +507,11 @@ $filterTabTitles = ['rating' => v2_t('Minimum rating')];
 $renderChecks = function (string $field, array $options) {
     ?><div class="kchecks"><?php foreach ($options as $o): ?><label class="kcheck"><input type="checkbox" data-f="<?= v2_e($field) ?>" value="<?= v2_e($o['value']) ?>"><span><?= v2_e($o['label']) ?></span></label><?php endforeach; ?></div><?php
 };
-$renderControl = function (string $key) use ($renderChecks, $priceCap, $catOptions, $interestOptions, $travelerOptions, $langOptions, $durationOptions, $featOptions, $ratingOptions) {
+$renderControl = function (string $key) use ($renderChecks, $renderWhereBox, $priceCap, $catOptions, $interestOptions, $travelerOptions, $langOptions, $durationOptions, $featOptions, $ratingOptions) {
     switch ($key) {
+        case 'where':
+            $renderWhereBox('kfw');
+            break;
         case 'search':
             ?><input class="ksearch" type="search" data-f="search" placeholder="<?= v2_te('Search by name, place or theme') ?>" aria-label="<?= v2_te('Search this category') ?>" autocomplete="off"><?php
             break;
@@ -524,9 +561,10 @@ if (empty($V2NAV['categories'])) {
 $v2Styles = ['category.css'];
 $v2Scripts = ['category.js'];
 $v2HeaderOverlay = true;
-$v2HeadExtra = $heroImage ? '<link rel="preload" as="image" href="' . v2_e($heroImage) . '"' . ($heroSrcset ? ' imagesrcset="' . v2_e($heroSrcset) . '" imagesizes="(min-width: 1024px) 460px, 78vw"' : '') . ' fetchpriority="high">' : '';
+$v2HeadExtra = $heroImage ? '<link rel="preload" as="image" href="' . v2_e($heroImage) . '"' . ($heroSrcset ? ' imagesrcset="' . v2_e($heroSrcset) . '" imagesizes="(min-width: 768px) 36vw, 100vw"' : '') . ' fetchpriority="high">' : '';
 $v2ClientData = [
     'activities' => $acts,
+    'total'      => $resultsTotal,
     'priceMax'   => $priceCap,
     'labels'     => [
         'categories'    => $optionLabels($catOptions),
@@ -543,9 +581,18 @@ include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
   <!-- ============================== HERO ============================== -->
-  <section class="kh" aria-labelledby="kh-h">
+  <?php /* The photo is a full-height panel on the right edge (a soft backdrop on phones); it is absolutely placed, so the
+           hero is exactly as tall as its copy, with or without a photo. */ ?>
+  <section class="kh<?= $heroImage ? ' kh-has-photo' : '' ?>" aria-labelledby="kh-h">
     <?= $catArches ?>
     <svg class="kh-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
+    <?php if ($heroImage): ?>
+    <div class="kh-media">
+      <div class="kh-photo">
+        <img src="<?= v2_e($heroImage) ?>"<?= $heroSrcset ? ' srcset="' . v2_e($heroSrcset) . '" sizes="(min-width: 768px) 36vw, 100vw"' : '' ?> width="640" height="800" alt="<?= v2_e($catName) ?>" fetchpriority="high" decoding="async">
+      </div>
+    </div>
+    <?php endif; ?>
     <div class="kh-in">
       <div class="kh-copy">
         <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
@@ -557,20 +604,12 @@ include __DIR__ . '/includes/v2/header.php';
         <p class="kh-kicker"><i aria-hidden="true"></i><?= v2_te('Category · open all year') ?></p>
         <h1 class="kh-h" id="kh-h"><?= v2_t('{category} <em>in {place}</em>', ['category' => v2_e($catName), 'place' => v2_e($heroLocation)]) ?></h1>
         <?php if ($catDescription !== ''): ?><p class="kh-lead"><?= v2_e($catDescription) ?></p><?php endif; ?>
+        <?php /* No "0 experiences": the number is what the page lists (see $resultsTotal); with nothing to list it is left out. */ ?>
         <ul class="kh-stats">
-          <li><?= v2_e(v2_num((int) ($pagination['total'] ?? $eventCount), 'experience', 'experiences')) ?></li>
+          <?php if ($resultsTotal > 0): ?><li><?= v2_e(v2_num($resultsTotal, 'experience', 'experiences')) ?></li><?php endif; ?>
           <?php if (!empty($children)): ?><li><?= v2_e(v2_num(count($children), 'type', 'types')) ?></li><?php endif; ?>
           <?php if (!empty($featuredCities)): ?><li><?= v2_te('{n}+ cities', ['n' => count($featuredCities)]) ?></li><?php endif; ?>
         </ul>
-      </div>
-      <div class="kh-media">
-        <div class="kh-arch">
-          <?php if ($heroImage): ?>
-          <img src="<?= v2_e($heroImage) ?>"<?= $heroSrcset ? ' srcset="' . v2_e($heroSrcset) . '" sizes="(min-width: 1024px) 460px, 78vw"' : '' ?> width="640" height="800" alt="<?= v2_e($catName) ?>" fetchpriority="high" decoding="async">
-          <?php else: ?>
-          <?= v2_fallback($catName) ?>
-          <?php endif; ?>
-        </div>
       </div>
     </div>
   </section>
@@ -597,22 +636,28 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
         <button class="kclear" type="button" data-reset data-reset-bar hidden><?= v2_te('Clear all') ?></button>
       </div>
-      <?php /* Where: a country, then one of its cities. A plain choice that reloads the list for that city (?city=). */ ?>
-      <label class="ksort kwhere"><span><?= v2_te('Where') ?></span>
+      <?php /* Where: a country, then one of its cities; choosing reloads the list for that city (?city=). The select is
+               the plain control; with scripts on, category.js reads its options into the search panel that the button
+               opens (and into the "Where" tab of the filters dialog), so both go to the same addresses. */ ?>
+      <label class="ksort kwhere kwhere-fb"><span><?= v2_te('Where') ?></span>
         <select class="select" id="k-where" onchange="if (this.value) window.location.href = this.value;">
           <option value="<?= v2_e($catUrl(['city' => ''])) ?>"<?= $cityFilter ? '' : ' selected' ?>><?= v2_te('Anywhere in Europe') ?></option>
-          <?php foreach (($V2NAV['countriesFull'] ?? []) as $kwCountry): if (empty($kwCountry['featured'])) { continue; } ?>
-          <optgroup label="<?= v2_e($kwCountry['name']) ?>">
-            <?php foreach ($kwCountry['featured'] as $kwCity): $kwSlug = ltrim((string) ($kwCity['href'] ?? ''), '/'); if ($kwSlug === '') { continue; } ?>
-            <option value="<?= v2_e($catUrl(['city' => $kwSlug])) ?>"<?= $cityFilter === $kwSlug ? ' selected' : '' ?>><?= v2_e($kwCity['name']) ?></option>
+          <?php foreach ($whereGroups as $kwGroup): ?>
+          <optgroup label="<?= v2_e($kwGroup['name']) ?>">
+            <?php foreach ($kwGroup['cities'] as $kwCity): ?>
+            <option value="<?= v2_e($catUrl(['city' => $kwCity['slug']])) ?>"<?= $cityFilter === $kwCity['slug'] ? ' selected' : '' ?>><?= v2_e($kwCity['name']) ?></option>
             <?php endforeach; ?>
           </optgroup>
           <?php endforeach; ?>
-          <?php if ($cityFilter && !in_array($cityFilter, array_map(fn ($c) => ltrim((string) ($c['href'] ?? ''), '/'), array_merge(...array_values(array_column($V2NAV['countriesFull'] ?? [], 'featured')) ?: [[]])), true)): ?>
+          <?php if ($cityFilter && !$whereKnown): ?>
           <option value="<?= v2_e($catUrl(['city' => $cityFilter])) ?>" selected><?= v2_e($heroLocation) ?></option>
           <?php endif; ?>
         </select>
       </label>
+      <div class="ksort kwhere kw">
+        <span id="k-where-lab"><?= v2_te('Where') ?></span>
+        <button class="select kw-btn" type="button" id="k-where-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="k-where-pop" aria-labelledby="k-where-lab k-where-val"><span id="k-where-val"><?= v2_e($whereLabel) ?></span></button>
+      </div>
       <label class="ksort"><span><?= v2_te('Sort') ?></span>
         <select class="select" id="k-sort">
           <option value="recommended"><?= v2_te('Recommended') ?></option>
@@ -622,6 +667,13 @@ include __DIR__ . '/includes/v2/header.php';
           <option value="duration"><?= v2_te('Shortest first') ?></option>
         </select>
       </label>
+      <div class="kw-pop" id="k-where-pop" role="dialog" aria-labelledby="k-where-pop-h" hidden>
+        <div class="kw-pop-top">
+          <h3 id="k-where-pop-h"><?= v2_te('Where do you want to go?') ?></h3>
+          <button class="icon-btn" type="button" data-kw-close><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close') ?></span></button>
+        </div>
+        <?php $renderWhereBox('kbw'); ?>
+      </div>
       <?php foreach ($quickFilters as [$key, $label, $title]): ?>
       <div class="kpop" id="kp-<?= $key ?>" role="dialog" aria-labelledby="kp-<?= $key ?>-h" hidden>
         <div class="kpop-top">
@@ -669,6 +721,25 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="kres" aria-labelledby="kres-h">
     <div class="wrap">
       <h2 class="sr" id="kres-h"><?= v2_te('{category}: experiences', ['category' => $catName]) ?></h2>
+      <?php /* The number of results, for screen readers: the same total as the hero; category.js updates it when a filter narrows the list. */ ?>
+      <p class="sr" id="k-total" role="status"><?= $resultsTotal > 0 ? v2_e(v2_num($resultsTotal, 'experience', 'experiences')) : '' ?></p>
+      <?php if ($whereGroups): ?>
+      <noscript>
+        <form class="kw-noscript" method="get" action="/<?= v2_e($slug) ?>">
+          <?php foreach ($baseGet as $bgKey => $bgValue): if ($bgKey === 'city') { continue; } ?><input type="hidden" name="<?= v2_e($bgKey) ?>" value="<?= v2_e($bgValue) ?>"><?php endforeach; ?>
+          <label for="k-where-ns"><?= v2_te('Where') ?></label>
+          <select class="select" id="k-where-ns" name="city">
+            <option value=""><?= v2_te('Anywhere in Europe') ?></option>
+            <?php foreach ($whereGroups as $kwGroup): ?>
+            <optgroup label="<?= v2_e($kwGroup['name']) ?>">
+              <?php foreach ($kwGroup['cities'] as $kwCity): ?><option value="<?= v2_e($kwCity['slug']) ?>"<?= $cityFilter === $kwCity['slug'] ? ' selected' : '' ?>><?= v2_e($kwCity['name']) ?></option><?php endforeach; ?>
+            </optgroup>
+            <?php endforeach; ?>
+          </select>
+          <button class="btn btn-primary" type="submit"><?= v2_te('Show results') ?></button>
+        </form>
+      </noscript>
+      <?php endif; ?>
       <?php if ($serverChips): ?>
       <ul class="kactive" aria-label="<?= v2_te('Filters from the address') ?>">
         <?php foreach ($serverChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> <?= v2_te('(remove)') ?></span></a></li><?php endforeach; ?>
@@ -803,7 +874,8 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
       <div class="kdlg-foot">
         <button class="btn btn-ghost" type="button" data-reset><?= v2_te('Clear all') ?></button>
-        <button class="btn btn-primary" type="button" data-dlg-close><?= v2_t('Show <span data-count>{n}</span> results', ['n' => count($acts)]) ?></button>
+        <?php /* A place chosen in the "Where" tab is applied by this button: it then names the place and loads its list. */ ?>
+        <button class="btn btn-primary" type="button" data-dlg-close data-dlg-apply><span data-apply-count><?= v2_t('Show <span data-count>{n}</span> results', ['n' => count($acts)]) ?></span><span data-apply-place hidden></span></button>
       </div>
     </div>
   </div>

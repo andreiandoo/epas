@@ -520,7 +520,7 @@ return [
         'Anywhere in Europe' => '',      // category.php
         'Apartments' => '',      // includes/v2/am-labels.php
         'Applies to' => '',      // organizer/services.php
-        'Apply' => '',      // category.php
+        'Apply' => '',      // cart.php
         'Apr' => '',      // cauta.php
         'April' => '',      // cauta.php
         'Aquarium' => '',      // locatii.php
@@ -693,6 +693,7 @@ return [
         'Book at least {n} hours before the time slot.' => '',      // activitate.php
         'Book each activity separately. All your tickets arrive by email, with a QR code.' => '',      // locatie.php
         'Book now: straight to checkout' => '',      // single-activitate.php
+        'Book on {partner}' => '',      // includes/v2/partners.php
         'Book online' => '',      // activitate.php
         'Book the entry ticket and the experiences on site ahead of time, in one order.' => '',      // city.php
         'Book tickets' => '',      // activitate.php
@@ -877,7 +878,7 @@ return [
         'Castles and history' => '',      // includes/v2/plan-config.php
         'Castles, museums, monasteries, parks and viewpoints. Each page shows where the place is and what you can do around it.' => '',      // hub-atractii.php
         'Catalogue' => '',      // organizer/events.php
-        'Categories' => '',      // category.php
+        'Categories' => '',      // cart.php
         'Categories and policy' => '',      // cookies.php
         'Categories available on viaqui.com' => '',      // parteneri.php
         'Categories in {region}' => '',      // region.php
@@ -2371,7 +2372,7 @@ return [
         'Manages the experiences they have access to and processes orders, within the permissions given.' => '',      // organizer/team.php
         'Manual check-in' => '',      // organizer/participants.php
         'Many people do not know which category they want. They look for “something for the kids”, “what shall we do today”, “things to do when it rains” or “something cheap”.' => '',      // categorii.php
-        'Map' => '',      // category.php
+        'Map' => '',      // map.php
         'Map of the regions of {country}' => '',      // country.php
         'Map of the route' => '',      // includes/v2/route-page.php
         'Map of {name}' => '',      // activitate.php
@@ -2469,6 +2470,7 @@ return [
         'More than “pay and done”.' => '',      // cum-functioneaza.php
         'More things to do in {city}' => '',      // city-intent.php
         'More to see here' => '',      // atractie.php
+        'More, through our partner' => '',      // city-intent.php
         'More, through our partners' => '',      // city.php
         'Most experiences run all year, with time slots every day. The exact opening times are on each venue page, before you choose a date.' => '',      // category.php
         'Most often, venues start with what they already have in the house.' => '',      // parteneri.php
@@ -2610,6 +2612,7 @@ return [
         'No need to worry: we will send a secure link to your account email. For security, the link is only valid for a limited time.' => '',      // forgot-password.php
         'No open tickets' => '',      // user/dashboard.php
         'No operator found' => '',      // operatori.php
+        'No place matches. Try another spelling.' => '',      // category.php
         'No points about to expire' => '',      // user/rewards.php
         'No products marked for sale at the register. Tick "Register only" or set a register price on the venue\'s products.' => '',      // organizer/pos.php
         'No question matches' => '',      // organizer/help.php
@@ -3038,6 +3041,7 @@ return [
         'Physical tickets issued' => '',      // organizer/venue-report.php
         'Pick a city and see what there is to do there.' => '',      // ghiduri.php
         'Pick a country and see everything worth the trip there, on one map.' => '',      // map.php
+        'Pick a country or a city. The list reloads for that place when you show the results.' => '',      // category.php
         'Pick a day' => '',      // cauta.php
         'Pick a day, then narrow it down. Every listing shows what the ticket includes before you pay.' => '',      // includes/v2/home/sections.php
         'Pick another date' => '',      // cauta.php
@@ -3059,6 +3063,7 @@ return [
         'Place order' => '',      // checkout.php
         'Placed on' => '',      // recuperare-comanda.php
         'Placement preview' => '',      // organizer/services.php
+        'Places' => '',      // category.php
         'Places and experiences in {category} that their operators are promoting at the moment.' => '',      // category.php
         'Places and experiences in {city} that their operators are promoting at the moment.' => '',      // city.php
         'Places are limited for each time slot: you book your time right here.' => '',      // experienta.php
@@ -3880,6 +3885,7 @@ return [
         'So you get a reminder before the activity.' => '',      // thank-you.php
         'Sold' => '',      // organizer/venue-products.php
         'Sold and cancelled' => '',      // organizer/am-bookings.php
+        'Sold and delivered by {partner}. You book on their site at their price; Viaqui may earn a commission, at no extra cost to you.' => '',      // includes/v2/partners.php
         'Sold out' => '',      // organizer/public.php
         'Sold out stops online sales. Door sales only leaves sales at the entrance.' => '',      // organizer/events.php
         'Solo' => '',      // user/reviews.php
@@ -5019,6 +5025,7 @@ return [
         'Where do you set off from?' => '',      // includes/v2/footer.php
         'Where do you start?' => '',      // plan.php
         'Where do you want the experience to appear?' => '',      // organizer/services.php
+        'Where do you want to go?' => '',      // category.php
         'Where it is' => '',      // organizer/venue-settings.php
         'Where it takes place' => '',      // experienta.php
         'Where people are heading' => '',      // cities.php
@@ -5603,6 +5610,7 @@ return [
         'or <a data-vf-account-text href="{url}">go to your dashboard</a> (some features may be limited until your email is verified)' => '',      // verify-email.php
         'or drop it here' => '',      // organizer/settings.php
         'order recovery' => '',      // contact.php
+        'our partner' => '',      // includes/v2/partners.php
         'out of 5' => '',      // single-activitate.php
         'outage' => '',      // status.php
         'outdoor' => '',      // single-activitate.php
@@ -6002,7 +6010,7 @@ return [
         'time|times' => ['time', 'times'],      // assets/v2/js/org-promo.js
         'tracked activity|tracked activities' => ['tracked activity', 'tracked activities'],      // assets/v2/js/share-view.js
         'type chosen|types chosen' => ['type chosen', 'types chosen'],      // assets/v2/js/org-venue-participants.js
-        'type|types' => ['type', 'types'],      // category.php
+        'type|types' => ['type', 'types'],      // map.php
         'unpaid order was cancelled.|unpaid orders were cancelled.' => ['unpaid order was cancelled.', 'unpaid orders were cancelled.'],      // assets/v2/js/org-events.js
         'unused recovery code|unused recovery codes' => ['unused recovery code', 'unused recovery codes'],      // assets/v2/js/settings.js
         'upcoming ticket|upcoming tickets' => ['upcoming ticket', 'upcoming tickets'],      // assets/v2/js/dashboard.js
@@ -8256,6 +8264,8 @@ return [
         'Show password' => '',      // assets/v2/js/org-settings.js
         'Show places to stay' => '',      // assets/v2/js/plan.js
         'Show places to stay in {town}' => '',      // assets/v2/js/plan.js
+        'Show results across Europe' => '',      // assets/v2/js/category.js
+        'Show results in {place}' => '',      // assets/v2/js/category.js
         'Show the CNP' => '',      // assets/v2/js/org-settings.js
         'Show the orders for this experience' => '',      // assets/v2/js/org-sales.js
         'Show the ticket at the entrance, on your phone.' => '',      // assets/v2/js/org-am-products.js

@@ -93,7 +93,8 @@
   }
 
   /* ---------- render ---------- */
-  var grid = $('k-grid'), empty = $('k-empty'), chipBox = $('k-chips'), sortSel = $('k-sort');
+  var grid = $('k-grid'), empty = $('k-empty'), chipBox = $('k-chips'), sortSel = $('k-sort'), totalBox = $('k-total');
+  var total = parseInt(data.total, 10) || 0, saidN = Math.max(total, acts.length); // saidN: the count the server already printed in #k-total
   var itemById = {};
   if (grid) [].forEach.call(grid.children, function (li) { itemById[li.getAttribute('data-id')] = li; });
 
@@ -130,10 +131,13 @@
     if (empty) empty.hidden = visible.length > 0;
     each('[data-count]', function (el) { el.textContent = visible.length; });
     var n = activeCount();
+    // the announced count: the page's total (what the hero prints) until a filter narrows the list
+    var shownN = n === 0 && visible.length === acts.length ? Math.max(total, visible.length) : visible.length;
+    if (totalBox && shownN !== saidN) { saidN = shownN; totalBox.textContent = shownN > 0 ? VQ.n(shownN, 'experience', 'experiences') : ''; }
     each('[data-fcount]', function (el) { el.textContent = n; el.hidden = n === 0; });
     each('[data-reset-bar]', function (el) { el.hidden = n === 0; });
     each('[data-top]', function (b) { b.classList.toggle('is-set', anyOf(TOP_KEYS[b.getAttribute('data-top')])); });
-    each('[data-tabdot]', function (d) { d.hidden = !anyOf(TAB_KEYS[d.getAttribute('data-tabdot')]); });
+    each('[data-tabdot]', function (d) { var k = d.getAttribute('data-tabdot'); d.hidden = k === 'where' ? !pendingPlace : !anyOf(TAB_KEYS[k]); });
     renderChips();
     syncInputs();
     if (map && !map.hidden) renderMap(visible);
@@ -155,6 +159,7 @@
     if (!pop) return;
     if (openPop === pop) { closePop(true); return; }
     closePop(false);
+    closeWhere(false);
     openPop = pop;
     popBtn = btn;
     pop.hidden = false;
@@ -186,6 +191,8 @@
   function openDlg(dlg, opener, tab) {
     if (!dlg) return;
     closePop(false);
+    closeWhere(false);
+    if (dlg === filters && whereBoxes.kfw) whereBoxes.kfw.reset();
     if (tab && $('kft-' + tab)) $('kft-' + tab).click();
     dlg.hidden = false;
     stack.push({ dlg: dlg, opener: opener });
@@ -197,6 +204,7 @@
   function closeDlg(dlg) {
     if (!dlg || dlg.hidden) return;
     dlg.hidden = true;
+    if (dlg === filters) setPending(null); // a place chosen but not applied is dropped with the dialog
     var entry = null;
     stack = stack.filter(function (s) { if (s.dlg === dlg) { entry = s; return false; } return true; });
     if (!stack.length) root.classList.remove('k-lock');
@@ -405,6 +413,210 @@
     mapList.addEventListener('mouseleave', function () { hot(null); });
   }
 
+  /* ---------- Where: a searchable list of places ----------
+     The <select id="k-where"> the server prints is the source: its options (and their addresses) are read into a
+     list with a search field. The bar shows it in a panel under the "Where" button; the filters dialog shows the same
+     list in its "Where" tab. In the bar a choice loads that address at once, as the select did; in the dialog it is
+     kept until "Show results". Filters set in the browser travel with the visitor (sessionStorage, one use). */
+  var whereSel = $('k-where'), whereBtn = $('k-where-btn'), wherePop = $('k-where-pop');
+  var places = [], pendingPlace = null, whereBoxes = {};
+  var FOLD = { 'ł': 'l', 'ø': 'o', 'đ': 'd', 'ð': 'd', 'ß': 'ss', 'æ': 'ae', 'œ': 'oe', 'ı': 'i', 'þ': 'th' };
+  function fold(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[łøđðßæœıþ]/g, function (c) { return FOLD[c]; });
+  }
+  // true when q begins one of the words of text (both folded)
+  function wordStart(text, q) {
+    var i = text.indexOf(q);
+    while (i !== -1) {
+      if (i === 0 || /[^a-z0-9]/.test(text.charAt(i - 1))) return true;
+      i = text.indexOf(q, i + 1);
+    }
+    return false;
+  }
+  if (whereSel) {
+    [].forEach.call(whereSel.children, function (el) {
+      var group = el.tagName === 'OPTGROUP' ? el.label : '';
+      [].forEach.call(group ? el.children : [el], function (o) {
+        if (o.tagName !== 'OPTION') return;
+        var name = o.textContent.trim();
+        places.push({ name: name, group: group, href: o.value, current: o.selected, key: fold(name), groupKey: fold(group) });
+      });
+    });
+  }
+  var STORE = 'vq-category-filters';
+  function goPlace(href) {
+    try {
+      sessionStorage.setItem(STORE, JSON.stringify({ path: new URL(href, window.location.href).pathname, state: state, cap: cap, sortBy: sortBy }));
+    } catch (e) {}
+    window.location.href = href;
+  }
+  function restoreFilters() {
+    var saved = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(STORE) || 'null');
+      sessionStorage.removeItem(STORE);
+    } catch (e) {}
+    if (!saved || !saved.state || saved.path !== window.location.pathname) return;
+    var st = saved.state;
+    if (typeof st.search === 'string') state.search = st.search.slice(0, 80);
+    // only what this place's list offers: a value with no control here would hide everything with no way to clear it
+    LISTS.forEach(function (k) {
+      state[k] = (Array.isArray(st[k]) ? st[k] : []).filter(function (v) {
+        return [].some.call(document.querySelectorAll('input[type="checkbox"][data-f="' + k + '"]'), function (el) { return el.value === String(v); });
+      });
+    });
+    var mp = parseInt(st.maxPrice, 10);
+    if (isFinite(mp) && mp < (parseInt(saved.cap, 10) || 0)) state.maxPrice = Math.min(mp, cap);
+    var mr = parseFloat(st.minRating) || 0;
+    if (mr > 0 && [].some.call(document.querySelectorAll('button[data-f="minRating"]'), function (el) { return parseFloat(el.getAttribute('data-v')) === mr; })) state.minRating = mr;
+    if (sortSel && typeof saved.sortBy === 'string' && [].some.call(sortSel.options, function (o) { return o.value === saved.sortBy; })) {
+      sortBy = sortSel.value = saved.sortBy;
+    }
+  }
+  function currentPlace() {
+    for (var i = 0; i < places.length; i++) if (places[i].current) return places[i];
+    return null;
+  }
+  // The place waiting in the filters dialog: the "Show results" button names it and loads its list.
+  function setPending(place) {
+    pendingPlace = place && !place.current ? place : null;
+    if (whereBoxes.kfw) whereBoxes.kfw.mark(pendingPlace || currentPlace());
+    each('[data-dlg-apply]', function (b) {
+      var count = b.querySelector('[data-apply-count]'), name = b.querySelector('[data-apply-place]');
+      if (!count || !name) return;
+      count.hidden = !!pendingPlace;
+      name.hidden = !pendingPlace;
+      name.textContent = pendingPlace ? (pendingPlace.group ? VQ.t('Show results in {place}', { place: pendingPlace.name }) : VQ.t('Show results across Europe')) : '';
+    });
+    each('[data-tabdot="where"]', function (d) { d.hidden = !pendingPlace; });
+  }
+  // One list with its search field. onPick(place) for a click or Enter; onEscape() when Escape has no query left to clear.
+  function whereBox(box, onPick, onEscape) {
+    var id = box.getAttribute('data-kw'), input = box.querySelector('.kw-input'), list = box.querySelector('.kw-list');
+    var none = box.querySelector('.kw-none'), status = box.querySelector('[data-kw-status]');
+    var rows = [], groups = [], visible = [], active = -1, marked = currentPlace();
+    var lastGroup = null, groupEl = null;
+    places.forEach(function (p, i) {
+      if (p.group !== lastGroup || !groupEl) {
+        lastGroup = p.group;
+        groupEl = node('div', 'kw-grp');
+        groupEl.setAttribute('role', 'group');
+        if (p.group) {
+          var head = node('div', 'kw-grp-h', p.group);
+          head.id = id + '-g' + groups.length;
+          head.setAttribute('role', 'presentation');
+          groupEl.setAttribute('aria-labelledby', head.id);
+          groupEl.appendChild(head);
+        } else groupEl.setAttribute('aria-label', p.name);
+        groups.push(groupEl);
+        list.appendChild(groupEl);
+      }
+      var row = node('div', 'kw-opt');
+      row.id = id + '-o' + i;
+      row.setAttribute('role', 'option');
+      row.setAttribute('data-i', String(i));
+      row.appendChild(node('span', null, p.name));
+      row.appendChild(icon('check'));
+      groupEl.appendChild(row);
+      rows.push(row);
+    });
+    function setActive(k, scroll) {
+      if (active > -1 && rows[active]) rows[active].classList.remove('is-active');
+      active = k;
+      if (k > -1) {
+        rows[k].classList.add('is-active');
+        input.setAttribute('aria-activedescendant', rows[k].id);
+        if (scroll) {
+          // inside the list only: scrollIntoView would also move the page under the sticky bar
+          var top = rows[k].offsetTop, bottom = top + rows[k].offsetHeight;
+          if (top - 40 < list.scrollTop) list.scrollTop = Math.max(0, top - 40); // 40: the country name stuck at the top
+          else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight + 8;
+        }
+      } else input.removeAttribute('aria-activedescendant');
+    }
+    function mark(place) {
+      marked = place;
+      rows.forEach(function (r, i) { r.setAttribute('aria-selected', String(places[i] === marked)); });
+    }
+    function filter(announce) {
+      var q = fold(input.value).trim();
+      visible = [];
+      rows.forEach(function (r, i) {
+        var p = places[i], on = !q || wordStart(p.key, q) || (p.groupKey !== '' && wordStart(p.groupKey, q));
+        r.hidden = !on;
+        if (on) visible.push(i);
+      });
+      groups.forEach(function (g) { g.hidden = !g.querySelector('.kw-opt:not([hidden])'); });
+      none.hidden = visible.length > 0;
+      list.hidden = visible.length === 0;
+      list.scrollTop = 0;
+      // while typing, the first match is the one Enter takes; with no query, the place in use
+      var at = marked ? places.indexOf(marked) : -1;
+      setActive(q ? (visible.length ? visible[0] : -1) : at, false);
+      if (announce && status) status.textContent = visible.length ? VQ.n(visible.length, 'place', 'places') : none.textContent;
+    }
+    function move(step) {
+      if (!visible.length) return;
+      var at = visible.indexOf(active);
+      var next = at === -1 ? (step > 0 ? 0 : visible.length - 1) : Math.max(0, Math.min(visible.length - 1, at + step));
+      setActive(visible[next], true);
+    }
+    input.addEventListener('input', function () { filter(true); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+      else if (e.key === 'PageDown') { e.preventDefault(); move(6); }
+      else if (e.key === 'PageUp') { e.preventDefault(); move(-6); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (active > -1 && !rows[active].hidden) onPick(places[active]);
+      } else if (e.key === 'Escape') {
+        if (input.value !== '') { e.preventDefault(); e.stopPropagation(); input.value = ''; filter(true); }
+        else if (onEscape) { e.preventDefault(); e.stopPropagation(); onEscape(); }
+      }
+    });
+    list.addEventListener('mousedown', function (e) { e.preventDefault(); }); // the field keeps the focus
+    list.addEventListener('click', function (e) {
+      var row = e.target.closest ? e.target.closest('.kw-opt') : null;
+      if (row) onPick(places[parseInt(row.getAttribute('data-i'), 10)]);
+    });
+    mark(marked);
+    filter(false);
+    return {
+      input: input,
+      mark: mark,
+      reset: function () { input.value = ''; filter(false); if (active > -1) setActive(active, true); },
+    };
+  }
+  function whereOpen() { return !!wherePop && !wherePop.hidden; }
+  function openWhere() {
+    if (!wherePop || !whereBoxes.kbw) return;
+    closePop(false);
+    wherePop.hidden = false;
+    whereBtn.setAttribute('aria-expanded', 'true');
+    whereBoxes.kbw.reset();
+    whereBoxes.kbw.input.focus({ preventScroll: true });
+  }
+  function closeWhere(focusBtn) {
+    if (!whereOpen()) return;
+    wherePop.hidden = true;
+    whereBtn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) whereBtn.focus();
+  }
+  if (places.length) {
+    each('[data-kw]', function (box) {
+      var inBar = box.getAttribute('data-kw') === 'kbw';
+      whereBoxes[box.getAttribute('data-kw')] = whereBox(box, function (place) {
+        if (!inBar) { setPending(place); return; }
+        closeWhere(true);
+        if (!place.current) goPlace(place.href);
+      }, inBar ? function () { closeWhere(true); } : null);
+    });
+    // Tab stays inside the small panel of the bar; a click elsewhere closes it
+    if (wherePop) wherePop.addEventListener('keydown', function (e) { if (e.key === 'Tab') trap(e, wherePop); });
+  }
+  restoreFilters();
+
   /* ---------- events ---------- */
   document.addEventListener('input', function (e) {
     var el = e.target;
@@ -432,7 +644,12 @@
     if ((b = t.closest('[data-top]'))) { togglePop(b.getAttribute('data-top'), b); return; }
     if ((b = t.closest('[data-clear]'))) { clearKeys(TOP_KEYS[b.getAttribute('data-clear')]); return; }
     if (t.closest('[data-pop-close]')) { closePop(true); return; }
+    if (t.closest('#k-where-btn')) { if (whereOpen()) closeWhere(true); else openWhere(); return; }
+    if (t.closest('[data-kw-close]')) { closeWhere(true); return; }
+    if (t.closest('[data-dlg-apply]') && pendingPlace) { goPlace(pendingPlace.href); return; }
+    if (whereOpen() && !t.closest('#k-where-pop')) closeWhere(false);
     if (t.closest('[data-reset]')) {
+      setPending(null);
       state = blank();
       sortBy = 'recommended';
       if (sortSel) sortSel.value = 'recommended';
@@ -460,7 +677,8 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      if (stack.length) { e.preventDefault(); closeDlg(stack[stack.length - 1].dlg); }
+      if (whereOpen()) { e.preventDefault(); closeWhere(true); }
+      else if (stack.length) { e.preventDefault(); closeDlg(stack[stack.length - 1].dlg); }
       else if (openPop) closePop(true);
       return;
     }
