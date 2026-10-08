@@ -17,7 +17,7 @@
  *   $v2HeadExtra      raw HTML before </head> (preloads, noscript styles)
  */
 $v2Title = $pageTitleRaw ?? (!empty($pageTitle) ? $pageTitle . ' · ' . SITE_NAME : SITE_NAME);
-$v2Desc = mb_substr(trim($pageDescription ?? SITE_TAGLINE), 0, 160);
+$v2Desc = mb_substr(trim($pageDescription ?? v2_t('Your way in.')), 0, 160);      // the tagline (SITE_TAGLINE), in the visitor's language
 $v2Canonical = $canonicalUrl ?? SITE_URL . strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
 $v2Robots = !empty($noindex) ? 'noindex, follow' : 'index, follow, max-image-preview:large, max-snippet:-1';
 $v2Og = $ogImage ?? SITE_URL . '/assets/v2/img/hero-1440.webp';

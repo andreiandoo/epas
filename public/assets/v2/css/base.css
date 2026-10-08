@@ -645,6 +645,11 @@ body:has(.co-timer:not(.hidden)) .toast-container{top:calc(var(--hdr-h) + 60px)}
 .lang-h{margin:0 0 6px;padding:4px 8px 0;font-size:var(--text-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .lang-opt{display:flex;align-items:center;gap:8px;margin:0;padding:10px;border-radius:12px;background:var(--surface-2);font-weight:700}
 .lang-opt .ic{width:18px;height:18px;color:var(--green)}
+/* two or more languages open: the list of links in the same menu (includes/v2/header.php) */
+.lang-list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+a.lang-opt{background:none;color:inherit;text-decoration:none;font-weight:600}
+a.lang-opt:hover,a.lang-opt[aria-current]{background:var(--surface-2)}
+a.lang-opt[aria-current]{font-weight:700}
 /* rails that can be dragged with the mouse */
 @media (hover:hover) and (pointer:fine){.rail[data-drag]{cursor:grab}}
 .rail.is-dragging{cursor:grabbing;scroll-snap-type:none;user-select:none;-webkit-user-select:none}

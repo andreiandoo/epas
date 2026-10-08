@@ -50,7 +50,7 @@
       clearTimeout(closeTimer);
       hdr.classList.toggle('menu-open', open);
       menuBtn.setAttribute('aria-expanded', String(open));
-      menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      menuBtn.setAttribute('aria-label', open ? VQ.t('Close menu') : VQ.t('Open menu'));
       menuBtn.querySelector('use').setAttribute('href', open ? '#i-x' : '#i-list');
       document.documentElement.classList.toggle('mm-lock', open);
       // smooth scrolling (homepage, desktop) pauses while the menu is open
@@ -205,7 +205,7 @@
       if (!data || needle.length < 2) { hideSuggest(); return; }
       sug.textContent = '';
       var n = 0;
-      [['Cities', 'map-pin', data.c || [], 5], ['Categories', 'squares-four', data.k || [], 3], ['Guides', 'sun', data.g || [], 2]].forEach(function (g) {
+      [[VQ.t('Cities'), 'map-pin', data.c || [], 5], [VQ.t('Categories'), 'squares-four', data.k || [], 3], [VQ.t('Guides'), 'sun', data.g || [], 2]].forEach(function (g) {
         var found = hits(g[2], needle, g[3]);
         if (!found.length) return;
         var k = document.createElement('p');
@@ -215,10 +215,10 @@
         found.forEach(function (it) {
           var href = it[it.length - 1];
           if (typeof href !== 'string' || !/^\/(?!\/)/.test(href)) return;
-          sug.appendChild(option('mm-sg-' + n++, href, g[1], String(it[0]), needle, it.length > 2 ? it[1] : ''));
+          sug.appendChild(option('mm-sg-' + n++, VQ.url(href), g[1], String(it[0]), needle, it.length > 2 ? it[1] : ''));
         });
       });
-      sug.appendChild(option('mm-sg-' + n++, '/search?q=' + encodeURIComponent(text), 'magnifying-glass', 'Search for “' + text + '”', '', '', ' mm-sg-all'));
+      sug.appendChild(option('mm-sg-' + n++, VQ.url('/search?q=' + encodeURIComponent(text)), 'magnifying-glass', VQ.t('Search for “{text}”', { text: text }), '', '', ' mm-sg-all'));
       sug.hidden = false;
       q.setAttribute('aria-expanded', 'true');
       active = -1;
@@ -367,7 +367,7 @@
     });
   }
 
-  /* ---------- language menu (the site is in Romanian) ---------- */
+  /* ---------- language and currency menu ---------- */
   var langBtn = $('lang-btn'), langMenu = $('lang-menu');
   if (langBtn && langMenu) {
     var setLang = function (open) { langMenu.hidden = !open; langBtn.setAttribute('aria-expanded', String(open)); };
@@ -449,7 +449,7 @@
     }
     badge.textContent = n > 99 ? '99+' : String(n);
     badge.hidden = n < 1;
-    badge.parentElement.setAttribute('aria-label', n > 0 ? 'Basket (' + n + ')' : 'Basket');
+    badge.parentElement.setAttribute('aria-label', n > 0 ? VQ.t('Basket ({n})', { n: n }) : VQ.t('Basket'));
   }
   if (badge) {
     renderCart();
@@ -473,7 +473,7 @@
       box.textContent = initials;
       box.hidden = false;
       acct.classList.add('is-user');
-      acct.setAttribute('aria-label', 'Your account' + (full ? ', ' + full : ''));
+      acct.setAttribute('aria-label', full ? VQ.t('Your account, {name}', { name: full }) : VQ.t('Your account'));
     }
   }
 
@@ -494,7 +494,7 @@
       if (!email.checkValidity()) { email.reportValidity(); return; }
       busy = true;
       btn.disabled = true;
-      if (btn.hasAttribute('data-icon-only')) btn.setAttribute('aria-busy', 'true'); else btn.textContent = 'Sending…';
+      if (btn.hasAttribute('data-icon-only')) btn.setAttribute('aria-busy', 'true'); else btn.textContent = VQ.t('Sending…');
       var payload = { email: email.value.trim(), source: form.getAttribute('data-newsletter') };
       if (form.elements.city && form.elements.city.value) payload.city = form.elements.city.value;
       fetch('/api/proxy.php?action=newsletter.subscribe', {
@@ -512,7 +512,8 @@
         say(true, form.getAttribute('data-ok'));
         if (form.hasAttribute('data-keep')) {
           email.disabled = true;
-          btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Done';
+          btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>';
+          btn.appendChild(document.createTextNode(VQ.t('Done')));
         } else {
           form.reset();
           btn.disabled = false; btn.removeAttribute('aria-busy');

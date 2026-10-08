@@ -17,8 +17,8 @@ if (!headers_sent()) {
 }
 $skipPageCache = true;
 
-$pageTitleRaw = 'Page not found · Viaqui';
-$pageDescription = 'The page you are looking for does not exist or has moved. Try another category or city.';
+$pageTitleRaw = v2_t('Page not found · Viaqui');
+$pageDescription = v2_t('The page you are looking for does not exist or has moved. Try another category or city.');
 $canonicalUrl = SITE_URL . '/404';
 $noindex = true;
 $currentPage = '404';
@@ -43,34 +43,34 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="nf" aria-labelledby="nf-h">
     <div class="wrap nf-grid">
       <div class="nf-text">
-        <p class="kicker">404 · Not found</p>
-        <h1 class="nf-h" id="nf-h">This page is <em>not</em><br>on the map.</h1>
-        <p class="nf-lead">The link you followed no longer leads anywhere, or the page has moved. Let us get you back to what you came for.</p>
+        <p class="kicker"><?= v2_te('404 · Not found') ?></p>
+        <h1 class="nf-h" id="nf-h"><?= v2_t('This page is <em>not</em><br>on the map.') ?></h1>
+        <p class="nf-lead"><?= v2_te('The link you followed no longer leads anywhere, or the page has moved. Let us get you back to what you came for.') ?></p>
 
         <form class="nf-search" role="search" action="/search" method="get">
           <?= v2_ic('magnifying-glass') ?>
-          <label class="sr" for="nf-q">Search Viaqui</label>
-          <input id="nf-q" name="q" type="search" placeholder="Search an activity, an attraction or a city" autocomplete="off">
-          <button class="btn btn-primary" type="submit">Search</button>
+          <label class="sr" for="nf-q"><?= v2_te('Search Viaqui') ?></label>
+          <input id="nf-q" name="q" type="search" placeholder="<?= v2_te('Search an activity, an attraction or a city') ?>" autocomplete="off">
+          <button class="btn btn-primary" type="submit"><?= v2_te('Search') ?></button>
         </form>
 
         <div class="nf-cta">
-          <a class="btn btn-primary" href="/"><?= v2_ic('arrow-left') ?>Back to the homepage</a>
-          <a class="btn btn-ghost" href="/categories">See all categories</a>
+          <a class="btn btn-primary" href="/"><?= v2_ic('arrow-left') ?><?= v2_te('Back to the homepage') ?></a>
+          <a class="btn btn-ghost" href="/categories"><?= v2_te('See all categories') ?></a>
         </div>
       </div>
 
       <div class="nf-art" aria-hidden="true">
         <div class="nf-ticket">
           <div class="nf-ticket-top">
-            <span class="nf-stamp">Void</span>
+            <span class="nf-stamp"><?= v2_te('Void') ?></span>
             <span class="nf-num">404</span>
             <svg class="nf-line" viewBox="1455 585 1210 310"><use href="#drum-g"/></svg>
           </div>
           <div class="nf-ticket-body">
-            <p class="nf-ticket-k">Invalid ticket</p>
-            <p class="nf-ticket-t">Access denied</p>
-            <p class="nf-ticket-f"><span>QR illegible</span><b><?= v2_ic('x') ?></b></p>
+            <p class="nf-ticket-k"><?= v2_te('Invalid ticket') ?></p>
+            <p class="nf-ticket-t"><?= v2_te('Access denied') ?></p>
+            <p class="nf-ticket-f"><span><?= v2_te('QR illegible') ?></span><b><?= v2_ic('x') ?></b></p>
           </div>
         </div>
       </div>
@@ -78,17 +78,17 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
 
   <?php if ($topCats || $topCities): ?>
-  <section class="nf-more" aria-label="Suggestions">
+  <section class="nf-more" aria-label="<?= v2_te('Suggestions') ?>">
     <div class="wrap nf-more-grid">
       <?php if ($topCats): ?>
       <div>
-        <p class="flabel">Maybe you were looking for</p>
+        <p class="flabel"><?= v2_te('Maybe you were looking for') ?></p>
         <div class="chips-links"><?php foreach ($topCats as $cat): ?><a href="<?= v2_e($cat['href']) ?>"><?= v2_e($cat['name']) ?></a><?php endforeach; ?></div>
       </div>
       <?php endif; ?>
       <?php if ($topCities): ?>
       <div>
-        <p class="flabel">Or choose a city</p>
+        <p class="flabel"><?= v2_te('Or choose a city') ?></p>
         <div class="chips-links"><?php foreach ($topCities as $c): ?><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a><?php endforeach; ?></div>
       </div>
       <?php endif; ?>

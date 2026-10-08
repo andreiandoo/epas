@@ -19,6 +19,8 @@
  * Rates: one euro in each currency, from open.er-api.com (free, daily), kept a day; the table below is used when the
  * service does not answer. Converted prices are indicative, which is why every one of them is shown as "from".
  */
+require_once __DIR__ . '/i18n.php';   // v2_t(): the currency names and the note under a price filter
+
 
 /** ISO country code => currency. Countries not listed use the euro. */
 const V2_COUNTRY_CURRENCY = [
@@ -29,7 +31,7 @@ const V2_COUNTRY_CURRENCY = [
     'RS' => 'RSD', 'UA' => 'UAH', 'MD' => 'MDL', 'AL' => 'ALL', 'MK' => 'MKD', 'BA' => 'BAM',
 ];
 
-/** currency => [symbol or word, written before the amount?, decimals when the amount is not whole, name in a sentence] */
+/** currency => [symbol or word, written before the amount?, decimals when the amount is not whole, name in a sentence (English; v2_currency_phrase() gives it in the visitor's language)] */
 const V2_CURRENCIES = [
     'EUR' => ['€', true, 2, 'euro'],
     'GBP' => ['£', true, 2, 'pounds'],
@@ -76,12 +78,37 @@ function v2_currency_of(?string $countryCode): string
 function v2_currency_choices(): array
 {
     $names = [
-        'EUR' => 'Euro', 'GBP' => 'Pound sterling', 'CHF' => 'Swiss franc', 'PLN' => 'Polish złoty', 'CZK' => 'Czech koruna',
-        'HUF' => 'Hungarian forint', 'RON' => 'Romanian leu', 'SEK' => 'Swedish krona', 'NOK' => 'Norwegian krone',
-        'DKK' => 'Danish krone', 'ISK' => 'Icelandic króna', 'RSD' => 'Serbian dinar', 'UAH' => 'Ukrainian hryvnia',
-        'MDL' => 'Moldovan leu', 'ALL' => 'Albanian lek', 'MKD' => 'Macedonian denar', 'BAM' => 'Convertible mark',
+        'EUR' => v2_t('Euro'), 'GBP' => v2_t('Pound sterling'), 'CHF' => v2_t('Swiss franc'), 'PLN' => v2_t('Polish złoty'), 'CZK' => v2_t('Czech koruna'),
+        'HUF' => v2_t('Hungarian forint'), 'RON' => v2_t('Romanian leu'), 'SEK' => v2_t('Swedish krona'), 'NOK' => v2_t('Norwegian krone'),
+        'DKK' => v2_t('Danish krone'), 'ISK' => v2_t('Icelandic króna'), 'RSD' => v2_t('Serbian dinar'), 'UAH' => v2_t('Ukrainian hryvnia'),
+        'MDL' => v2_t('Moldovan leu'), 'ALL' => v2_t('Albanian lek'), 'MKD' => v2_t('Macedonian denar'), 'BAM' => v2_t('Convertible mark'),
     ];
     return array_intersect_key($names, V2_CURRENCIES);
+}
+
+/** A currency as it is named inside a sentence ("Prices here are in pounds."), in the visitor's language. */
+function v2_currency_phrase(string $currency): string
+{
+    switch ($currency) {
+        case 'EUR': return v2_t('euro');
+        case 'GBP': return v2_t('pounds');
+        case 'CHF': return v2_t('Swiss francs');
+        case 'CZK': return v2_t('Czech koruna');
+        case 'PLN': return v2_t('Polish złoty');
+        case 'HUF': return v2_t('Hungarian forint');
+        case 'RON': return v2_t('Romanian lei');
+        case 'SEK': return v2_t('Swedish kronor');
+        case 'NOK': return v2_t('Norwegian kroner');
+        case 'DKK': return v2_t('Danish kroner');
+        case 'ISK': return v2_t('Icelandic krónur');
+        case 'RSD': return v2_t('Serbian dinars');
+        case 'UAH': return v2_t('Ukrainian hryvnias');
+        case 'MDL': return v2_t('Moldovan lei');
+        case 'ALL': return v2_t('Albanian lek');
+        case 'MKD': return v2_t('Macedonian denars');
+        case 'BAM': return v2_t('convertible marks');
+        default: return $currency;
+    }
 }
 
 /** The address that sets the visitor's currency and comes back to the page ('' = each place's own currency). */
@@ -164,11 +191,11 @@ function v2_fx_note(?string $countryCode): string
     if ($chosen === null && $currency === 'EUR') {
         return '';
     }
-    $rate = $currency === 'EUR' ? '' : ' The price filter is in euro: €10 is about ' . v2_money_in(10 * v2_rate($currency), $currency) . '.';
+    $rate = $currency === 'EUR' ? '' : ' ' . v2_t('The price filter is in euro: €10 is about {amount}.', ['amount' => v2_money_in(10 * v2_rate($currency), $currency)]);
     if ($chosen !== null) {
-        return 'Prices are shown in ' . V2_CURRENCIES[$currency][3] . ', as you chose. Converted prices are approximate; the amount to pay is confirmed before you pay.' . $rate;
+        return v2_t('Prices are shown in {currency}, as you chose. Converted prices are approximate; the amount to pay is confirmed before you pay.', ['currency' => v2_currency_phrase($currency)]) . $rate;
     }
-    return 'Prices here are in ' . V2_CURRENCIES[$currency][3] . '.' . $rate;
+    return v2_t('Prices here are in {currency}.', ['currency' => v2_currency_phrase($currency)]) . $rate;
 }
 
 /* ------------------------------------------------------------------ our own listings
