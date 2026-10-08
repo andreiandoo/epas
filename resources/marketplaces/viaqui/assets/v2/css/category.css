@@ -2,16 +2,14 @@
 html.k-lock{overflow:hidden}
 
 /* =================== HERO ===================
-   A low hero: its height is the height of the copy. The category photo is not in the flow: from 768px it is a
-   full-height panel on the right edge, cut on its left by one long arch laid on its side (the brand's arch), with a
-   thin outlined arch just outside it; on phones it is a backdrop under a deep green veil. Without a photo
-   (.kh-has-photo missing) nothing is reserved and the copy takes the full width. */
+   A low hero on the deep green ground with the line motif: its height is the height of the copy. On phones the
+   category photo is a backdrop under a deep green veil. From 768px there is no photo: when the list has photos to
+   show, the right side previews it (.kh-pre, the first listings as small ticket cards); otherwise the copy stands
+   alone and takes the full width. */
 .kh{position:relative;isolation:isolate;overflow:hidden;overflow:clip;background:radial-gradient(55% 70% at 100% 0%, rgba(43,182,115,.22), rgba(43,182,115,0) 70%), radial-gradient(45% 55% at 0% 100%, rgba(242,169,0,.12), rgba(242,169,0,0) 70%), var(--deep);color:var(--on-deep);
-  --drum-main:url(#drum-on-dark);--drum-cave:url(#drum-on-dark);--drum-dot:#7FD1A6;--drum-col:#F2A900;
-  --kh-photo:0px}
+  --drum-main:url(#drum-on-dark);--drum-cave:url(#drum-on-dark);--drum-dot:#7FD1A6;--drum-col:#F2A900}
 .kh :focus-visible{outline-color:var(--online)}
 .kh .deco-arches{left:-110px;top:30%;width:340px;opacity:.18}
-/* the line runs under the photo, so it ends at the photo's edge instead of crossing it */
 .kh-line{position:absolute;z-index:0;left:-4%;bottom:-6px;width:108%;height:auto;aspect-ratio:3240 / 310;opacity:.28;pointer-events:none}
 .kh-in{position:relative;z-index:1;max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) var(--space-6)}
 .kh .crumbs,.kh .crumbs a{color:var(--on-deep-muted)}
@@ -28,21 +26,71 @@ html.k-lock{overflow:hidden}
 .kh-stats li{display:flex;align-items:center}
 .kh-stats li + li::before{content:"";width:4px;height:4px;margin-inline:12px;border-radius:50%;background:var(--online)}
 
+/* phones: the photo is a backdrop. The veil is darker than the plain hero, so every text keeps its contrast on any photo. */
 .kh-media{position:absolute;z-index:0;inset:0;pointer-events:none}
 .kh-photo{position:absolute;inset:0;overflow:hidden;overflow:clip;background:var(--deep-2)}
 .kh-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-/* phones: the photo is a backdrop. The veil is darker than the plain hero, so every text keeps its contrast on any photo. */
 .kh-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(7,41,31,.9) 0%, rgba(7,41,31,.84) 45%, rgba(7,41,31,.92) 100%)}
 @media (max-width:767px){.kh-has-photo .kh-line{opacity:.2}}
+@media (min-width:768px){.kh-media{display:none}}
+
+/* The preview of the list: two or three ticket cards (photo, tear line with its two notches, name, place, price),
+   overlapping and slightly turned, the .is-front one on top. Every size comes from the width of the window, so
+   nothing moves while the page loads. The cards lean apart downwards: they overlap over the photos, and the wider
+   inner padding of the cards behind keeps their text clear of the card on top. */
+.kh-pre{display:none}
 @media (min-width:768px){
-  .kh-has-photo{--kh-photo:clamp(260px, 36vw, 720px)}
-  /* the copy stops before the photo: the photo is measured from the window's edge, the copy from the container's */
-  .kh-has-photo .kh-in{padding-right:calc(max(var(--gutter), var(--kh-photo) - max(0px, (100vw - var(--container)) / 2)) + var(--space-6))}
-  .kh-media{inset:0 0 0 auto;width:var(--kh-photo)}
-  .kh-photo{border-radius:150px 0 0 150px / 50% 0 0 50%}
-  /* green from the left (the copy's side) and from the top (the header's links and icons sit on the photo) */
-  .kh-photo::after{background:linear-gradient(180deg, rgba(7,41,31,.84) 0, rgba(7,41,31,.66) var(--hdr-h), rgba(7,41,31,0) 62%), linear-gradient(90deg, rgba(15,77,58,.62) 0%, rgba(15,77,58,.12) 46%, rgba(15,77,58,0) 100%)}
-  .kh-media::before{content:"";position:absolute;inset:0 0 0 -14px;border:1.5px solid rgba(159,224,191,.35);border-right:0;border-radius:164px 0 0 164px / 50% 0 0 50%}
+  .kh-has-pre .kh-in{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--space-5);align-items:center}
+  .kh-pre{display:block;--kt-w:clamp(132px, 17.6vw, 160px);--kt-wf:var(--kt-w);--kt-lap:26px;--kt-body:98px;--kt-n:2;
+    width:calc((var(--kt-n) - 1) * (var(--kt-w) - var(--kt-lap)) + var(--kt-wf))}
+  .kh-pre-lab{display:flex;align-items:center;gap:12px;margin:0 0 10px;font-size:.6875rem;font-weight:700;line-height:18px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;color:var(--on-deep-muted)}
+  .kh-pre-lab::before,.kh-pre-lab::after{content:"";flex:1;height:1px;background:rgba(246,243,232,.22)}
+  /* the tallest card (the one on top) plus the room its corners need when turned */
+  .kh-pre-list{list-style:none;margin:0;padding:0;display:flex;align-items:center;height:calc(var(--kt-wf) * 2 / 3 + var(--kt-body) + 10px)}
+  .kt{--w:var(--kt-w);--r:0deg;--y:0px;position:relative;z-index:1;flex:none;width:var(--w);border-radius:var(--r-m);rotate:var(--r);translate:0 var(--y);filter:drop-shadow(0 14px 16px rgba(4,26,19,.42))}
+  .kt + .kt{margin-left:calc(-1 * var(--kt-lap))}
+  .kt.is-front{--w:var(--kt-wf);--r:-2deg;z-index:2}
+  .kt:first-child:not(.is-front){--r:5deg;--y:6px}
+  .kt.is-front ~ .kt{--r:-6deg;--y:4px}
+  .kh-pre[data-n="3"] .kt:nth-child(3){display:none}
+  .kt-a{--cut:calc(var(--w) * 2 / 3);display:block;overflow:hidden;border-radius:inherit;background:var(--surface);color:var(--ink);text-decoration:none;
+    -webkit-mask-image:radial-gradient(circle 7px at 0 var(--cut), transparent 6.5px, #000 7px), radial-gradient(circle 7px at 100% var(--cut), transparent 6.5px, #000 7px);-webkit-mask-composite:source-in;
+    mask-image:radial-gradient(circle 7px at 0 var(--cut), transparent 6.5px, #000 7px), radial-gradient(circle 7px at 100% var(--cut), transparent 6.5px, #000 7px);mask-composite:intersect}
+  .kt-media{position:relative;display:block;height:var(--cut);overflow:hidden;background:var(--surface-2)}
+  .kt-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .kt-tag{position:absolute;left:8px;top:8px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 8px;border-radius:999px;background:rgba(247,247,245,.95);color:var(--ink);font-size:.6875rem;font-weight:700;line-height:1.3}
+  .kt-body{display:grid;grid-template-rows:auto auto 1fr;gap:4px;height:var(--kt-body);padding:9px 12px 11px;border-top:1.5px dashed #CFD3CC}
+  .kt:first-child:not(.is-front) .kt-body{padding-right:calc(var(--kt-lap) + 4px)}
+  .kt.is-front ~ .kt .kt-body{padding-left:calc(var(--kt-lap) + 4px)}
+  .kt.is-front ~ .kt .kt-tag{left:calc(var(--kt-lap) + 4px);max-width:calc(100% - var(--kt-lap) - 12px)}
+  .kt-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:2.5em;font-size:.8125rem;font-weight:700;line-height:1.25;letter-spacing:-.01em}
+  .kt-place{display:flex;align-items:center;gap:4px;min-width:0;height:16px;font-size:.75rem;line-height:16px;color:var(--muted)}
+  .kt-place .ic{flex:none;width:13px;height:13px}
+  .kt-place span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kt-price{align-self:end;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.6875rem;line-height:1.2;color:var(--muted)}
+  .kt-price b{font-size:.9375rem;font-weight:700;color:var(--ink)}
+  .kt-price.is-na b{font-size:.8125rem;color:var(--green)}
+  /* pointing at a card or tabbing to it brings it on top (the ring is drawn on the card, outside the notched shape) */
+  .kt:hover,.kt:focus-within{z-index:3}
+  .kt:hover .kt-title,.kt:focus-within .kt-title{color:var(--green);text-decoration:underline;text-underline-offset:2px}
+  .kt-a:focus-visible{outline:none}
+  .kt:focus-within{outline:2px solid #9FE0BF;outline-offset:3px}
+  @supports selector(:has(a)){
+    .kt:focus-within{outline:none}
+    .kt:has(:focus-visible){outline:2px solid #9FE0BF;outline-offset:3px}
+  }
+}
+@media (min-width:1024px){
+  .kh-pre{--kt-wf:clamp(160px, 15.625vw, 200px);--kt-lap:28px;--kt-body:102px}
+  .kh-pre[data-n="3"]{--kt-w:clamp(140px, 13.75vw, 176px);--kt-n:3}
+  .kh-pre[data-n="2"]{--kt-w:var(--kt-wf)}
+  .kh-pre[data-n="3"] .kt:nth-child(3){display:block}
+}
+@media (min-width:1280px){.kt-title{font-size:.875rem}}
+/* reduced motion: the cards stay as they lie; only the order and the title change */
+@media (min-width:768px) and (prefers-reduced-motion:no-preference){
+  .kt{transition:rotate var(--dur-state) var(--ease-out), translate var(--dur-state) var(--ease-out), scale var(--dur-state) var(--ease-out)}
+  .kt:hover,.kt:focus-within{rotate:0deg;translate:0 -4px;scale:1.04}
 }
 
 /* =================== FILTER BAR =================== */
