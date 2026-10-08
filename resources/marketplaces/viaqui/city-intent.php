@@ -106,7 +106,7 @@ $clean = static function ($text): string {
     return trim($text);
 };
 
-$intentName = (string) ($intent['name'] ?? 'Things to do');
+$intentName = (string) ($intent['name'] ?? v2_t('Things to do'));
 $intentSlugSafe = (string) ($intent['slug'] ?? $intentSlug);
 $cityName = $city ? (string) ($city['name'] ?? '') : '';
 $citySlugSafe = $city ? (string) ($city['slug'] ?? '') : '';
@@ -139,33 +139,42 @@ $tz = new DateTimeZone('Europe/Bucharest');
 $today = new DateTimeImmutable('today', $tz);
 $dow = (int) $today->format('N');
 $weekendDays = $dow === 7 ? [$today] : ($dow === 6 ? [$today, $today->modify('+1 day')] : [$today->modify('next saturday'), $today->modify('next sunday')]);
-$dayLabel = fn (DateTimeImmutable $d): string => $d->format('j F');
+// "12 October": the month through the language layer, not PHP's English names
+$itMonths = [
+    1 => v2_t('January'), 2 => v2_t('February'), 3 => v2_t('March'), 4 => v2_t('April'), 5 => v2_t('May'), 6 => v2_t('June'),
+    7 => v2_t('July'), 8 => v2_t('August'), 9 => v2_t('September'), 10 => v2_t('October'), 11 => v2_t('November'), 12 => v2_t('December'),
+];
+$dayLabel = fn (DateTimeImmutable $d): string => v2_t('{day} {month}', ['day' => $d->format('j'), 'month' => $itMonths[(int) $d->format('n')]]);
 $weekendLabel = count($weekendDays) === 2
-    ? ($weekendDays[0]->format('n') === $weekendDays[1]->format('n') ? $weekendDays[0]->format('j') . '–' . $dayLabel($weekendDays[1]) : $dayLabel($weekendDays[0]) . ' – ' . $dayLabel($weekendDays[1]))
+    ? ($weekendDays[0]->format('n') === $weekendDays[1]->format('n')
+        ? v2_t('{first}–{last}', ['first' => $weekendDays[0]->format('j'), 'last' => $dayLabel($weekendDays[1])])
+        : v2_t('{first} – {last}', ['first' => $dayLabel($weekendDays[0]), 'last' => $dayLabel($weekendDays[1])]))
     : $dayLabel($weekendDays[0]);
 $tomorrow = $today->modify('+1 day');
 
 // Each rule: API params the activity list understands, then checks on the returned rows; `why` says it in words.
 $itRules = [
-    'activitati-azi' => ['dates' => [$today], 'why' => 'activities with at least one open slot today, ' . $dayLabel($today)],
-    'activitati-maine' => ['dates' => [$tomorrow], 'why' => 'activities with at least one open slot tomorrow, ' . $dayLabel($tomorrow)],
-    'activitati-weekend' => ['dates' => $weekendDays, 'why' => 'activities with places left on ' . (count($weekendDays) === 2 ? 'Saturday or Sunday' : 'Sunday') . ' (' . $weekendLabel . ')'],
-    'activitati-indoor' => ['flag' => 'is_indoor', 'why' => 'activities that take place indoors'],
-    'activitati-zile-ploioase' => ['flag' => 'is_indoor', 'why' => 'indoor activities, out of the rain'],
-    'activitati-outdoor' => ['flag' => 'is_outdoor', 'why' => 'outdoor activities'],
-    'activitati-copii' => ['flag' => 'is_kid_friendly', 'why' => 'activities the organiser has marked as suitable for children'],
-    'activitati-accesibile' => ['flag' => 'is_accessible', 'why' => 'activities marked as accessible to people with disabilities'],
-    'activitati-gratuite' => ['min' => 0, 'max' => 0, 'why' => 'activities with free entry'],
-    'activitati-sub-50-lei' => ['min' => 1, 'max' => 50, 'why' => 'activities with tickets from ' . v2_money(1) . ' to ' . v2_money(50)],
-    'activitati-sub-100-lei' => ['max' => 100, 'why' => 'activities with tickets of ' . v2_money(100) . ' or less'],
-    'activitati-familie' => ['params' => ['traveler_types' => 'familii'], 'why' => 'activities organisers recommend for families'],
-    'activitati-cuplu' => ['params' => ['traveler_types' => 'cupluri'], 'why' => 'activities organisers recommend for couples'],
-    'activitati-romantice' => ['params' => ['interests' => 'romantic'], 'why' => 'activities tagged "Romantic"'],
-    'activitati-grupuri' => ['params' => ['traveler_types' => 'grupuri'], 'why' => 'activities organisers recommend for groups'],
-    'activitati-team-building' => ['params' => ['traveler_types' => 'team-building'], 'why' => 'activities organisers recommend for team building'],
-    'activitati-seniori' => ['params' => ['traveler_types' => 'seniori'], 'why' => 'activities organisers recommend for seniors'],
-    'activitati-adolescenti' => ['params' => ['traveler_types' => 'adolescenti'], 'why' => 'activities organisers recommend for teenagers'],
-    'activitati-educationale' => ['params' => ['interests' => 'educational'], 'why' => 'activities tagged "Educational"'],
+    'activitati-azi' => ['dates' => [$today], 'why' => v2_t('activities with at least one open slot today, {date}', ['date' => $dayLabel($today)])],
+    'activitati-maine' => ['dates' => [$tomorrow], 'why' => v2_t('activities with at least one open slot tomorrow, {date}', ['date' => $dayLabel($tomorrow)])],
+    'activitati-weekend' => ['dates' => $weekendDays, 'why' => count($weekendDays) === 2
+        ? v2_t('activities with places left on Saturday or Sunday ({dates})', ['dates' => $weekendLabel])
+        : v2_t('activities with places left on Sunday ({dates})', ['dates' => $weekendLabel])],
+    'activitati-indoor' => ['flag' => 'is_indoor', 'why' => v2_t('activities that take place indoors')],
+    'activitati-zile-ploioase' => ['flag' => 'is_indoor', 'why' => v2_t('indoor activities, out of the rain')],
+    'activitati-outdoor' => ['flag' => 'is_outdoor', 'why' => v2_t('outdoor activities')],
+    'activitati-copii' => ['flag' => 'is_kid_friendly', 'why' => v2_t('activities the organiser has marked as suitable for children')],
+    'activitati-accesibile' => ['flag' => 'is_accessible', 'why' => v2_t('activities marked as accessible to people with disabilities')],
+    'activitati-gratuite' => ['min' => 0, 'max' => 0, 'why' => v2_t('activities with free entry')],
+    'activitati-sub-50-lei' => ['min' => 1, 'max' => 50, 'why' => v2_t('activities with tickets from {min} to {max}', ['min' => v2_money(1), 'max' => v2_money(50)])],
+    'activitati-sub-100-lei' => ['max' => 100, 'why' => v2_t('activities with tickets of {max} or less', ['max' => v2_money(100)])],
+    'activitati-familie' => ['params' => ['traveler_types' => 'familii'], 'why' => v2_t('activities organisers recommend for families')],
+    'activitati-cuplu' => ['params' => ['traveler_types' => 'cupluri'], 'why' => v2_t('activities organisers recommend for couples')],
+    'activitati-romantice' => ['params' => ['interests' => 'romantic'], 'why' => v2_t('activities tagged "Romantic"')],
+    'activitati-grupuri' => ['params' => ['traveler_types' => 'grupuri'], 'why' => v2_t('activities organisers recommend for groups')],
+    'activitati-team-building' => ['params' => ['traveler_types' => 'team-building'], 'why' => v2_t('activities organisers recommend for team building')],
+    'activitati-seniori' => ['params' => ['traveler_types' => 'seniori'], 'why' => v2_t('activities organisers recommend for seniors')],
+    'activitati-adolescenti' => ['params' => ['traveler_types' => 'adolescenti'], 'why' => v2_t('activities organisers recommend for teenagers')],
+    'activitati-educationale' => ['params' => ['interests' => 'educational'], 'why' => v2_t('activities tagged "Educational"')],
 ];
 $itRule = $itRules[$intentSlugSafe] ?? null;
 
@@ -210,7 +219,7 @@ if ($itRule && $pageNum === 1) {
                 'minutes' => (int) ($a['duration_minutes'] ?? 0),
                 'featured' => !empty($a['flags']['is_featured']),
                 'promoted' => $n['promoted'],
-                'cta' => 'View activity',
+                'cta' => v2_t('View activity'),
             ];
         }
     }
@@ -221,7 +230,7 @@ $total = $actTotal + $eventTotal;
 
 $currentPage = 'intent';
 // SEO setup for head.php
-$pageTitleRaw = $clean($meta['title'] ?? ('Things to do · ' . SITE_NAME));
+$pageTitleRaw = $clean($meta['title'] ?? v2_t('Things to do · {site}', ['site' => SITE_NAME]));
 $pageDescription = $clean($meta['description'] ?? SITE_TAGLINE);
 $canonicalUrl = SITE_URL . $basePath . ($pageNum > 1 ? '?page=' . $pageNum : '');
 $ogImage = $cover;
@@ -235,7 +244,7 @@ $pageUrl = static fn (int $p): string => $basePath . ($p > 1 ? '?page=' . $p : '
 $searchUrl = '/search?intent=' . urlencode($intentSlugSafe) . ($city ? '&city=' . urlencode($citySlugSafe) : '');
 
 // Breadcrumbs
-$breadcrumbs = [['name' => 'Home', 'url' => SITE_URL . '/']];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => SITE_URL . '/']];
 if ($city) {
     $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . $citySlugSafe];
 }
@@ -249,7 +258,7 @@ foreach ($events as $ev) {
     }
     $title = navFlatName($ev['title'] ?? '');
     if ($title === '') {
-        $title = 'Activity';
+        $title = v2_t('Activity');
     }
     $slug = (string) ($ev['slug'] ?? '');
     $category = is_array($ev['marketplace_event_category'] ?? null) ? navFlatName($ev['marketplace_event_category']['name'] ?? '') : '';
@@ -269,7 +278,7 @@ foreach ($events as $ev) {
         'minutes' => 0,
         'featured' => false,
         'promoted' => false,
-        'cta' => 'View tickets',
+        'cta' => v2_t('View tickets'),
     ];
 }
 
@@ -292,7 +301,8 @@ $filterable = count($cards) > 1 && $lastPage === 1;
 
 // Meanwhile: when nothing meets the rule, what is available now (in this city when it has any, else anywhere)
 $altCards = [];
-$altWhere = '';
+$altInCity = false;      // whether the cards below are from this city (else from the whole site)
+$altHeading = '';
 if (!$cards) {
     $all = api_cached_many(['p1' => ['key' => 'v2_all_activities_p1', 'endpoint' => '/activities', 'params' => ['per_page' => 50, 'page' => 1], 'ttl' => 300]]);
     $pool = [];
@@ -307,11 +317,12 @@ if (!$cards) {
     usort($pool, fn ($a, $b) => [(int) $b['promoted'], (int) $b['featured'], $a['title']] <=> [(int) $a['promoted'], (int) $a['featured'], $b['title']]);
     $inCity = $city ? array_values(array_filter($pool, fn ($a) => $a['citySlug'] === $citySlugSafe)) : [];
     $altCards = array_slice($inCity ?: $pool, 0, 4);
-    $altWhere = $inCity ? 'in ' . $cityName : 'on ' . SITE_NAME;
+    $altInCity = (bool) $inCity;
+    $altHeading = $altInCity ? v2_t('Available now in {city}', ['city' => $cityName]) : v2_t('Available now on {site}', ['site' => SITE_NAME]);
 }
 
 // The ideas next to the heading: the menu's situations first, then the API's other intents, never this one
-$ideaSlugs = ['activitati-weekend' => 'Weekend', 'activitati-copii' => 'With kids', 'activitati-zile-ploioase' => 'Rainy days', 'activitati-sub-50-lei' => 'Under ' . v2_money(50), 'activitati-cuplu' => 'For couples'];
+$ideaSlugs = ['activitati-weekend' => v2_t('Weekend'), 'activitati-copii' => v2_t('With kids'), 'activitati-zile-ploioase' => v2_t('Rainy days'), 'activitati-sub-50-lei' => v2_t('Under {price}', ['price' => v2_money(50)]), 'activitati-cuplu' => v2_t('For couples')];
 $ideas = [];
 foreach ($ideaSlugs as $slug => $name) {
     if ($slug !== $intentSlugSafe) {
@@ -331,9 +342,9 @@ $priceHtml = function (?int $cents): string {
         return '<span class="xp-price"><b>—</b></span>';
     }
     if ($cents === 0) {
-        return '<span class="xp-price"><b>Free</b></span>';
+        return '<span class="xp-price"><b>' . v2_te('Free') . '</b></span>';
     }
-    return '<span class="xp-price">from<b>' . v2_e(v2_money($cents / 100)) . '</b></span>';
+    return '<span class="xp-price">' . v2_te('from') . '<b>' . v2_e(v2_money($cents / 100)) . '</b></span>';
 };
 $renderCard = function (array $c, int $i, bool $data) use ($priceHtml): void {
     ?>
@@ -372,7 +383,7 @@ if ($cards) {
         'name' => $pageTitleRaw,
         'description' => $pageDescription,
         'url' => $canonicalUrl,
-        'inLanguage' => 'en',
+        'inLanguage' => v2_locale(),
         'isPartOf' => ['@type' => 'WebSite', 'name' => SITE_NAME, 'url' => SITE_URL],
         'mainEntity' => [
             '@type' => 'ItemList',
@@ -405,7 +416,7 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="it-in">
       <div class="it-text">
         <?php if ($city): ?>
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($breadcrumbs) - 1): ?>
@@ -416,33 +427,33 @@ include __DIR__ . '/includes/v2/header.php';
           <?php endforeach; ?>
         </nav>
         <?php endif; ?>
-        <p class="it-kicker"><span class="it-icon" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span><?= $city ? 'Local · ' . v2_e($cityName) : 'Ideas · all of Europe' ?></p>
+        <p class="it-kicker"><span class="it-icon" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span><?= $city ? v2_te('Local · {city}', ['city' => $cityName]) : v2_te('Ideas · all of Europe') ?></p>
         <h1 class="it-h" id="it-h"><?= v2_e($h1) ?></h1>
         <?php if ($intro !== ''): ?><p class="it-lead"><?= v2_e($intro) ?></p><?php endif; ?>
         <?php if ($total > 0): ?>
-        <ul class="it-facts" aria-label="At a glance">
+        <ul class="it-facts" aria-label="<?= v2_te('At a glance') ?>">
           <li><?= v2_e(v2_num($total, 'result', 'results')) ?></li>
-          <?php if (!$city && count($resultCities) > 1): ?><li>in <?= v2_e(v2_num(count($resultCities), 'city', 'cities')) ?></li><?php endif; ?>
-          <?php if ($fromCents !== null): ?><li><?= $fromCents === 0 ? 'including free options' : 'from ' . v2_e(v2_money($fromCents / 100)) ?></li><?php endif; ?>
+          <?php if (!$city && count($resultCities) > 1): ?><li><?= v2_te('in {cities}', ['cities' => v2_num(count($resultCities), 'city', 'cities')]) ?></li><?php endif; ?>
+          <?php if ($fromCents !== null): ?><li><?= $fromCents === 0 ? v2_te('including free options') : v2_te('from {price}', ['price' => v2_money($fromCents / 100)]) ?></li><?php endif; ?>
         </ul>
         <?php endif; ?>
         <div class="it-cta">
           <?php if ($total > 0): ?>
-          <a class="btn btn-light" href="#activitati">See <?= v2_e(v2_num($total, 'result', 'results')) ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-light" href="#activitati"><?= v2_te('See {results}', ['results' => v2_num($total, 'result', 'results')]) ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php /* with nothing listed yet, the way onward (the city, or all cities) becomes the main button */ ?>
           <?php $itMoreClass = $total > 0 ? 'it-link' : 'btn btn-light'; ?>
           <?php if ($city): ?>
-          <a class="<?= $itMoreClass ?>" href="/<?= v2_e($citySlugSafe) ?>">All activities in <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+          <a class="<?= $itMoreClass ?>" href="/<?= v2_e($citySlugSafe) ?>"><?= v2_te('All activities in {city}', ['city' => $cityName]) ?><?= v2_ic('arrow-right') ?></a>
           <?php else: ?>
-          <a class="<?= $itMoreClass ?>" href="/cities">Browse by city<?= v2_ic('arrow-right') ?></a>
+          <a class="<?= $itMoreClass ?>" href="/cities"><?= v2_te('Browse by city') ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
         </div>
       </div>
 
       <?php if ($ideas): ?>
       <nav class="it-switch" aria-labelledby="it-switch-h">
-        <p class="it-switch-h" id="it-switch-h">More ideas<?= $city ? ' in ' . v2_e($cityName) : '' ?></p>
+        <p class="it-switch-h" id="it-switch-h"><?= $city ? v2_te('More ideas in {city}', ['city' => $cityName]) : v2_te('More ideas') ?></p>
         <ul>
           <?php foreach ($ideas as $idea): ?>
           <li><a href="<?= v2_e($idea['path']) ?>"><span class="it-switch-ic" aria-hidden="true"><?= $itIcon($idea['slug'], $idea['icon']) ?></span><?= v2_e($idea['name']) ?></a></li>
@@ -461,8 +472,8 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="it-empty">
         <span class="it-empty-ic" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span>
         <div class="it-empty-copy">
-          <h2 id="it-list-h">Nothing available right now<?= $city ? ' in ' . v2_e($cityName) : '' ?>.</h2>
-          <p><?= $itRule ? 'This page lists ' . v2_e($itRule['why']) . '. ' : '' ?>It stays live: check back in a few days or try another idea.</p>
+          <h2 id="it-list-h"><?= $city ? v2_te('Nothing available right now in {city}.', ['city' => $cityName]) : v2_te('Nothing available right now.') ?></h2>
+          <p><?= $itRule ? v2_te('This page lists {what}. It stays live: check back in a few days or try another idea.', ['what' => $itRule['why']]) : v2_te('It stays live: check back in a few days or try another idea.') ?></p>
           <?php if ($otherIntents): ?>
           <div class="chips-links it-chips">
             <?php foreach (array_slice($otherIntents, 0, 6) as $li): ?>
@@ -472,20 +483,20 @@ include __DIR__ . '/includes/v2/header.php';
           <?php endif; ?>
         </div>
         <?php if ($city): ?>
-        <a class="btn btn-primary" href="/<?= v2_e($citySlugSafe) ?>">All activities in <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+        <a class="btn btn-primary" href="/<?= v2_e($citySlugSafe) ?>"><?= v2_te('All activities in {city}', ['city' => $cityName]) ?><?= v2_ic('arrow-right') ?></a>
         <?php else: ?>
-        <a class="btn btn-primary" href="/search"><?= v2_ic('magnifying-glass') ?>Search activities</a>
+        <a class="btn btn-primary" href="/search"><?= v2_ic('magnifying-glass') ?><?= v2_te('Search activities') ?></a>
         <?php endif; ?>
       </div>
       <?php if ($altCards): ?>
       <div class="it-alt">
         <div class="sec-head it-head">
-          <div><p class="kicker">In the meantime</p><h2>Available now <?= v2_e($altWhere) ?></h2></div>
-          <a class="sec-link" href="<?= $city && $altWhere !== 'on ' . SITE_NAME ? '/' . v2_e($citySlugSafe) : '/search' ?>">See all<?= v2_ic('arrow-right') ?></a>
+          <div><p class="kicker"><?= v2_te('In the meantime') ?></p><h2><?= v2_e($altHeading) ?></h2></div>
+          <a class="sec-link" href="<?= $city && $altInCity ? '/' . v2_e($citySlugSafe) : '/search' ?>"><?= v2_te('See all') ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <ul class="xp-grid">
           <?php foreach ($altCards as $i => $a): ?>
-          <?php $renderCard(['title' => $a['title'], 'href' => $a['href'], 'category' => $a['catName'], 'city' => $a['city'], 'citySlug' => $a['citySlug'], 'image' => $a['image'], 'cents' => $a['cents'], 'dur' => $a['dur'], 'minutes' => 0, 'cta' => 'View activity'], $i, false); ?>
+          <?php $renderCard(['title' => $a['title'], 'href' => $a['href'], 'category' => $a['catName'], 'city' => $a['city'], 'citySlug' => $a['citySlug'], 'image' => $a['image'], 'cents' => $a['cents'], 'dur' => $a['dur'], 'minutes' => 0, 'cta' => v2_t('View activity')], $i, false); ?>
           <?php endforeach; ?>
         </ul>
       </div>
@@ -493,29 +504,29 @@ include __DIR__ . '/includes/v2/header.php';
       <?php else: ?>
       <div class="it-head">
         <div>
-          <p class="kicker">Results</p>
-          <h2 id="it-list-h"><?= v2_e($intentName) ?><?= $city ? ' in ' . v2_e($cityName) : '' ?></h2>
+          <p class="kicker"><?= v2_te('Results') ?></p>
+          <h2 id="it-list-h"><?= $city ? v2_te('{what} in {city}', ['what' => $intentName, 'city' => $cityName]) : v2_e($intentName) ?></h2>
         </div>
         <div class="it-tools">
-          <p class="it-count" id="it-count" aria-live="polite"><?= v2_e(v2_num($total, 'result', 'results')) ?><?php if ($lastPage > 1): ?> · page <?= $currentPageNum ?> of <?= $lastPage ?><?php endif; ?></p>
+          <p class="it-count" id="it-count" aria-live="polite"><?= $lastPage > 1 ? v2_te('{results} · page {page} of {pages}', ['results' => v2_num($total, 'result', 'results'), 'page' => $currentPageNum, 'pages' => $lastPage]) : v2_e(v2_num($total, 'result', 'results')) ?></p>
           <?php if ($filterable): ?>
-          <label class="it-sort"><span>Sort by</span>
+          <label class="it-sort"><span><?= v2_te('Sort by') ?></span>
             <select class="select" id="it-sort">
-              <option value="recommended">Recommended</option>
-              <option value="priceAsc">Price: low to high</option>
-              <option value="duration">Shortest first</option>
+              <option value="recommended"><?= v2_te('Recommended') ?></option>
+              <option value="priceAsc"><?= v2_te('Price: low to high') ?></option>
+              <option value="duration"><?= v2_te('Shortest first') ?></option>
             </select>
           </label>
           <?php endif; ?>
-          <a class="sec-link" href="<?= v2_e($searchUrl) ?>">More filters<?= v2_ic('arrow-right') ?></a>
+          <a class="sec-link" href="<?= v2_e($searchUrl) ?>"><?= v2_te('More filters') ?><?= v2_ic('arrow-right') ?></a>
         </div>
       </div>
       <?php if ($itRule && $actTotal > 0): ?>
-      <p class="it-why"><?= v2_ic('check-circle') ?><span><b>How we choose:</b> <?= v2_e($itRule['why']) ?><?= $city ? ', in ' . v2_e($cityName) : '' ?>.</span></p>
+      <p class="it-why"><?= v2_ic('check-circle') ?><span><?= $city ? v2_t('<b>How we choose:</b> {what}, in {city}.', ['what' => v2_e($itRule['why']), 'city' => v2_e($cityName)]) : v2_t('<b>How we choose:</b> {what}.', ['what' => v2_e($itRule['why'])]) ?></span></p>
       <?php endif; ?>
       <?php if ($filterable && !$city && count($resultCities) > 1): ?>
-      <div class="it-cities" role="group" aria-label="Filter by city">
-        <button type="button" data-city="all" aria-pressed="true">All<span><?= count($cards) ?></span></button>
+      <div class="it-cities" role="group" aria-label="<?= v2_te('Filter by city') ?>">
+        <button type="button" data-city="all" aria-pressed="true"><?= v2_te('All') ?><span><?= count($cards) ?></span></button>
         <?php foreach ($resultCities as $key => $rc): ?>
         <button type="button" data-city="<?= v2_e($key) ?>" aria-pressed="false"><?= v2_e($rc['name']) ?><span><?= $rc['n'] ?></span></button>
         <?php endforeach; ?>
@@ -532,12 +543,12 @@ include __DIR__ . '/includes/v2/header.php';
           $end = min($lastPage, $start + $maxLinks - 1);
           $start = max(1, $end - $maxLinks + 1);
       ?>
-      <nav class="pager" aria-label="Pages">
-        <?php if ($currentPageNum > 1): ?><a href="<?= v2_e($pageUrl($currentPageNum - 1)) ?>" rel="prev" aria-label="Previous page"><?= v2_ic('arrow-left') ?></a><?php endif; ?>
+      <nav class="pager" aria-label="<?= v2_te('Pages') ?>">
+        <?php if ($currentPageNum > 1): ?><a href="<?= v2_e($pageUrl($currentPageNum - 1)) ?>" rel="prev" aria-label="<?= v2_te('Previous page') ?>"><?= v2_ic('arrow-left') ?></a><?php endif; ?>
         <?php for ($p = $start; $p <= $end; $p++): ?>
           <?php if ($p === $currentPageNum): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($pageUrl($p)) ?>"><?= $p ?></a><?php endif; ?>
         <?php endfor; ?>
-        <?php if ($currentPageNum < $lastPage): ?><a href="<?= v2_e($pageUrl($currentPageNum + 1)) ?>" rel="next" aria-label="Next page"><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($currentPageNum < $lastPage): ?><a href="<?= v2_e($pageUrl($currentPageNum + 1)) ?>" rel="next" aria-label="<?= v2_te('Next page') ?>"><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </nav>
       <?php endif; ?>
       <?php endif; ?>
@@ -546,12 +557,12 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== CROSS-LINKING ============================== -->
   <?php if ($otherIntents || $sameIntent): ?>
-  <section class="it-cross" aria-label="Keep exploring">
+  <section class="it-cross" aria-label="<?= v2_te('Keep exploring') ?>">
     <div class="wrap it-cross-grid">
       <?php if ($otherIntents): ?>
       <div class="it-cross-card">
-        <p class="kicker">More ideas</p>
-        <h2><?= $city ? 'More things to do in ' . v2_e($cityName) : 'Other kinds of activities' ?></h2>
+        <p class="kicker"><?= v2_te('More ideas') ?></p>
+        <h2><?= $city ? v2_te('More things to do in {city}', ['city' => $cityName]) : v2_te('Other kinds of activities') ?></h2>
         <div class="chips-links it-chips">
           <?php foreach ($otherIntents as $li): ?>
           <a href="<?= v2_e($li['path']) ?>"><?php if (!empty($li['icon'])): ?><span aria-hidden="true"><?= v2_e($li['icon']) ?></span><?php endif; ?><?= v2_e($li['name']) ?></a>
@@ -561,8 +572,8 @@ include __DIR__ . '/includes/v2/header.php';
       <?php endif; ?>
       <?php if ($sameIntent): ?>
       <div class="it-cross-card">
-        <p class="kicker">Elsewhere</p>
-        <h2><?= v2_e($intentName) ?> in other cities</h2>
+        <p class="kicker"><?= v2_te('Elsewhere') ?></p>
+        <h2><?= v2_te('{what} in other cities', ['what' => $intentName]) ?></h2>
         <ul class="it-towns">
           <?php foreach ($sameIntent as $li): ?>
           <li><a href="<?= v2_e($li['path']) ?>"><?= v2_e($li['name']) ?><?= v2_ic('arrow-right') ?></a></li>

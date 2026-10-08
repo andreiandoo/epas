@@ -60,7 +60,7 @@ foreach ((array) ($atR['list']['data']['items'] ?? []) as $row) {
         $a['unesco'] = !empty($row['is_unesco']);
         // who took the photo, said where the photo is shown (the full credit, with the licence link, is on the attraction's page)
         $cr = is_array($row['cover_credit'] ?? null) ? $row['cover_credit'] : null;
-        $a['credit'] = $cr && !empty($cr['license']) ? 'Photo: ' . (($cr['author'] ?? '') !== '' ? $cr['author'] : 'unknown author') . ', ' . $cr['license'] . ', Wikimedia Commons' : '';
+        $a['credit'] = $cr && !empty($cr['license']) ? v2_t('Photo: {author}, {licence}, Wikimedia Commons', ['author' => ($cr['author'] ?? '') !== '' ? $cr['author'] : v2_t('unknown author'), 'licence' => $cr['license']]) : '';
         $atItems[] = $a;
     }
 }
@@ -76,14 +76,31 @@ $atUrl = function (array $over = []) use ($atBase, $atType, $atCountry, $atQ, $a
     $q = array_filter(array_merge(['type' => $atType, 'country' => strtolower($atCountry), 'q' => $atQ, 'sort' => $atSort, 'unesco' => $atUnesco ? '1' : '', 'page' => ''], $over), fn ($v) => $v !== '' && $v !== null && $v !== 1);
     return $atBase . ($q ? '?' . http_build_query($q) : '');
 };
-$atTypeName = $atType !== '' ? V2_ATTRACTION_TYPES[$atType] : '';
+$atTypes = v2_attraction_types_t();
+$atTypeName = $atType !== '' ? $atTypes[$atType] : '';
 $atWhere = $atCityName !== '' ? $atCityName : $atCountryName;
-$atHeading = ($atUnesco ? 'World Heritage ' . ($atTypeName !== '' ? mb_strtolower($atTypeName) : 'sites') : ($atTypeName !== '' ? $atTypeName : 'Attractions')) . ($atWhere !== '' ? ' in ' . $atWhere : '');
+// One whole sentence for each shape of the heading: "World Heritage castles in Italy", "Castles in Rome", "Attractions".
+if ($atUnesco && $atTypeName !== '') {
+    $atHeading = $atWhere !== ''
+        ? v2_t('World Heritage {types} in {place}', ['types' => mb_strtolower($atTypeName), 'place' => $atWhere])
+        : v2_t('World Heritage {types}', ['types' => mb_strtolower($atTypeName)]);
+} elseif ($atUnesco) {
+    $atHeading = $atWhere !== '' ? v2_t('World Heritage sites in {place}', ['place' => $atWhere]) : v2_t('World Heritage sites');
+} elseif ($atTypeName !== '') {
+    $atHeading = $atWhere !== '' ? v2_t('{types} in {place}', ['types' => $atTypeName, 'place' => $atWhere]) : $atTypeName;
+} else {
+    $atHeading = $atWhere !== '' ? v2_t('Attractions in {place}', ['place' => $atWhere]) : v2_t('Attractions');
+}
 $atFiltered = $atType !== '' || $atCountry !== '' || $atQ !== '' || $atUnesco;
 
-$pageTitle = $atHeading . ($atPage > 1 ? ' (page ' . $atPage . ')' : '');
-$pageDescription = ($atTotal > 0 ? v2_num($atTotal, 'place', 'places') . ': ' : '') . mb_strtolower($atTypeName !== '' ? $atTypeName : 'castles, museums, cathedrals, caves, parks and viewpoints')
-    . ($atWhere !== '' ? ' in ' . $atWhere : ' across Europe') . ', each with a map, what is around it and what you can book nearby.';
+$pageTitle = $atPage > 1 ? v2_t('{title} (page {page})', ['title' => $atHeading, 'page' => $atPage]) : $atHeading;
+$atWhat = $atTypeName !== '' ? mb_strtolower($atTypeName) : v2_t('castles, museums, cathedrals, caves, parks and viewpoints');
+$pageDescription = $atWhere !== ''
+    ? v2_t('{what} in {place}, each with a map, what is around it and what you can book nearby.', ['what' => $atWhat, 'place' => $atWhere])
+    : v2_t('{what} across Europe, each with a map, what is around it and what you can book nearby.', ['what' => $atWhat]);
+if ($atTotal > 0) {
+    $pageDescription = v2_t('{count}: {text}', ['count' => v2_num($atTotal, 'place', 'places'), 'text' => $pageDescription]);
+}
 $canonicalUrl = SITE_URL . $atUrl(['q' => '', 'sort' => '', 'page' => $atPage > 1 ? $atPage : '']);      // the UNESCO filter keeps its own address
 $noindex = $atQ !== '' || $atSort !== '';
 $structuredData = [[
@@ -101,27 +118,27 @@ include __DIR__ . '/includes/v2/header.php';
 <section class="v-phero" aria-labelledby="at-h">
   <div class="v-phero-topo" aria-hidden="true"></div>
   <div class="wrap v-phero-in">
-    <nav class="v-crumbs" aria-label="Breadcrumb">
-      <a href="/">Home</a><span aria-hidden="true">/</span>
-      <?php if ($atCityName !== ''): ?><a href="/<?= v2_e($atCitySlug) ?>"><?= v2_e($atCityName) ?></a><span aria-hidden="true">/</span><b>Attractions</b>
-      <?php elseif ($atFiltered): ?><a href="/attractions">Attractions</a><span aria-hidden="true">/</span><b><?= v2_e($atTypeName !== '' ? $atTypeName : ($atCountryName !== '' ? $atCountryName : 'Search')) ?></b>
-      <?php else: ?><b>Attractions</b><?php endif; ?>
+    <nav class="v-crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
+      <a href="/"><?= v2_te('Home') ?></a><span aria-hidden="true">/</span>
+      <?php if ($atCityName !== ''): ?><a href="/<?= v2_e($atCitySlug) ?>"><?= v2_e($atCityName) ?></a><span aria-hidden="true">/</span><b><?= v2_te('Attractions') ?></b>
+      <?php elseif ($atFiltered): ?><a href="/attractions"><?= v2_te('Attractions') ?></a><span aria-hidden="true">/</span><b><?= v2_e($atTypeName !== '' ? $atTypeName : ($atCountryName !== '' ? $atCountryName : v2_t('Search'))) ?></b>
+      <?php else: ?><b><?= v2_te('Attractions') ?></b><?php endif; ?>
     </nav>
-    <p class="v-eyebrow">Places to see</p>
+    <p class="v-eyebrow"><?= v2_te('Places to see') ?></p>
     <h1 class="v-phero-h" id="at-h"><?= v2_e(mb_strtolower($atHeading)) ?></h1>
-    <p class="v-phero-lede"><?= v2_e(ucfirst($pageDescription)) ?></p>
-    <form class="v-afilter" action="<?= v2_e($atBase) ?>" method="get" role="search" aria-label="Filter attractions">
-      <label class="v-afield v-afield-q"><span>Name</span><input id="at-q" name="q" type="search" value="<?= v2_e($atQ) ?>" placeholder="Search an attraction by name" autocomplete="off"></label>
+    <p class="v-phero-lede"><?= v2_e(mb_strtoupper(mb_substr($pageDescription, 0, 1)) . mb_substr($pageDescription, 1)) ?></p>
+    <form class="v-afilter" action="<?= v2_e($atBase) ?>" method="get" role="search" aria-label="<?= v2_te('Filter attractions') ?>">
+      <label class="v-afield v-afield-q"><span><?= v2_te('Name') ?></span><input id="at-q" name="q" type="search" value="<?= v2_e($atQ) ?>" placeholder="<?= v2_te('Search an attraction by name') ?>" autocomplete="off"></label>
       <?php if ($atCitySlug === '' && $atCountries): ?>
-      <label class="v-afield"><span>Country</span><select id="at-country" name="country">
-        <option value="">All countries</option>
+      <label class="v-afield"><span><?= v2_te('Country') ?></span><select id="at-country" name="country">
+        <option value=""><?= v2_te('All countries') ?></option>
         <?php foreach ($atCountries as $c): ?><option value="<?= v2_e(strtolower((string) ($c['code'] ?? ''))) ?>"<?= ($c['code'] ?? '') === $atCountry ? ' selected' : '' ?>><?= v2_e($c['name']) ?></option><?php endforeach; ?>
       </select></label>
       <?php endif; ?>
-      <label class="v-afield"><span>Order</span><select id="at-sort" name="sort"><option value="">Best known first</option><option value="name"<?= $atSort === 'name' ? ' selected' : '' ?>>A to Z</option></select></label>
+      <label class="v-afield"><span><?= v2_te('Order') ?></span><select id="at-sort" name="sort"><option value=""><?= v2_te('Best known first') ?></option><option value="name"<?= $atSort === 'name' ? ' selected' : '' ?>><?= v2_te('A to Z') ?></option></select></label>
       <?php if ($atType !== ''): ?><input type="hidden" name="type" value="<?= v2_e($atType) ?>"><?php endif; ?>
       <?php if ($atUnesco): ?><input type="hidden" name="unesco" value="1"><?php endif; ?>
-      <button class="btn btn-primary" type="submit"><?= v2_ic('magnifying-glass') ?>Show</button>
+      <button class="btn btn-primary" type="submit"><?= v2_ic('magnifying-glass') ?><?= v2_te('Show') ?></button>
     </form>
   </div>
 </section>
@@ -129,15 +146,15 @@ include __DIR__ . '/includes/v2/header.php';
 
 <section class="v-psec" aria-labelledby="at-list-h">
   <div class="wrap">
-    <nav class="v-types" aria-label="Type of attraction">
-      <a class="v-types-u" href="<?= v2_e($atUrl(['unesco' => $atUnesco ? '' : '1'])) ?>"<?= $atUnesco ? ' aria-current="true"' : '' ?>><?= v2_ic('star') ?>UNESCO World Heritage</a>
-      <a href="<?= v2_e($atUrl(['type' => ''])) ?>"<?= $atType === '' ? ' aria-current="true"' : '' ?>>All types</a>
-      <?php foreach (V2_ATTRACTION_TYPES as $ts => $tn): ?><a href="<?= v2_e($atUrl(['type' => $ts])) ?>"<?= $atType === $ts ? ' aria-current="true"' : '' ?>><?= v2_e($tn) ?></a><?php endforeach; ?>
+    <nav class="v-types" aria-label="<?= v2_te('Type of attraction') ?>">
+      <a class="v-types-u" href="<?= v2_e($atUrl(['unesco' => $atUnesco ? '' : '1'])) ?>"<?= $atUnesco ? ' aria-current="true"' : '' ?>><?= v2_ic('star') ?><?= v2_te('UNESCO World Heritage') ?></a>
+      <a href="<?= v2_e($atUrl(['type' => ''])) ?>"<?= $atType === '' ? ' aria-current="true"' : '' ?>><?= v2_te('All types') ?></a>
+      <?php foreach ($atTypes as $ts => $tn): ?><a href="<?= v2_e($atUrl(['type' => $ts])) ?>"<?= $atType === $ts ? ' aria-current="true"' : '' ?>><?= v2_e($tn) ?></a><?php endforeach; ?>
     </nav>
 
     <div class="v-phead v-phead-list">
-      <div><p class="v-eyebrow"><?= number_format($atTotal) ?> <?= $atTotal === 1 ? 'place' : 'places' ?><?= $atQ !== '' ? ' for “' . v2_e($atQ) . '”' : '' ?></p><h2 class="v-ph2" id="at-list-h"><?= v2_e($atHeading) ?></h2></div>
-      <?php if ($atFiltered): ?><a class="v-plink" href="<?= v2_e($atBase) ?>">Clear the filters<?= v2_ic('x') ?></a><?php endif; ?>
+      <div><p class="v-eyebrow"><?= $atQ !== '' ? v2_te('{places} for “{query}”', ['places' => v2_num($atTotal, 'place', 'places'), 'query' => $atQ]) : v2_e(v2_num($atTotal, 'place', 'places')) ?></p><h2 class="v-ph2" id="at-list-h"><?= v2_e($atHeading) ?></h2></div>
+      <?php if ($atFiltered): ?><a class="v-plink" href="<?= v2_e($atBase) ?>"><?= v2_te('Clear the filters') ?><?= v2_ic('x') ?></a><?php endif; ?>
     </div>
 
     <?php if ($atItems): ?>
@@ -150,16 +167,16 @@ include __DIR__ . '/includes/v2/header.php';
       </a>
       <?php endforeach; ?>
     </div>
-    <p class="v-acredit">Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction's page. <a href="/photo-credits">About the photos</a></p>
+    <p class="v-acredit"><?= v2_te('Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction\'s page.') ?> <a href="/photo-credits"><?= v2_te('About the photos') ?></a></p>
     <?php else: ?>
-    <p class="v-pempty">Nothing matches these filters yet. Try another type<?= $atCitySlug === '' ? ' or another country' : '' ?>.</p>
+    <p class="v-pempty"><?= $atCitySlug === '' ? v2_te('Nothing matches these filters yet. Try another type or another country.') : v2_te('Nothing matches these filters yet. Try another type.') ?></p>
     <?php endif; ?>
 
     <?php if ($atLast > 1): ?>
-    <nav class="v-pager" aria-label="Pages">
-      <?php if ($atPage > 1): ?><a class="v-pager-step" href="<?= v2_e($atUrl(['page' => $atPage - 1])) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Previous</a><?php endif; ?>
-      <span>Page <?= $atPage ?> of <?= number_format($atLast) ?></span>
-      <?php if ($atPage < $atLast): ?><a class="v-pager-step" href="<?= v2_e($atUrl(['page' => $atPage + 1])) ?>" rel="next">Next<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+    <nav class="v-pager" aria-label="<?= v2_te('Pages') ?>">
+      <?php if ($atPage > 1): ?><a class="v-pager-step" href="<?= v2_e($atUrl(['page' => $atPage - 1])) ?>" rel="prev"><?= v2_ic('arrow-left') ?><?= v2_te('Previous') ?></a><?php endif; ?>
+      <span><?= v2_te('Page {page} of {pages}', ['page' => $atPage, 'pages' => number_format($atLast)]) ?></span>
+      <?php if ($atPage < $atLast): ?><a class="v-pager-step" href="<?= v2_e($atUrl(['page' => $atPage + 1])) ?>" rel="next"><?= v2_te('Next') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
     </nav>
     <?php endif; ?>
   </div>
@@ -167,8 +184,8 @@ include __DIR__ . '/includes/v2/header.php';
 
 <section class="v-psec v-ptools-sec" aria-labelledby="at-tools-h">
   <div class="wrap"><div class="v-ptools">
-    <div><p class="v-eyebrow">Plan</p><h2 class="v-ph2" id="at-tools-h">See them in the right order.</h2><p>Pick the places you want and let the planner arrange them by day, in the order they link up on the road.</p></div>
-    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/plan"><?= v2_ic('compass') ?>Trip planner</a><a class="btn v-btn-ghost" href="<?= v2_e($atCitySlug !== '' ? '/map?city=' . $atCitySlug : ($atCountry !== '' ? v2_map_href($atCountry) : '/map')) ?>"><?= v2_ic('map-trifold') ?>Attractions map</a><a class="btn v-btn-ghost" href="/cities"><?= v2_ic('map-pin') ?>Destinations</a></div>
+    <div><p class="v-eyebrow"><?= v2_te('Plan') ?></p><h2 class="v-ph2" id="at-tools-h"><?= v2_te('See them in the right order.') ?></h2><p><?= v2_te('Pick the places you want and let the planner arrange them by day, in the order they link up on the road.') ?></p></div>
+    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/plan"><?= v2_ic('compass') ?><?= v2_te('Trip planner') ?></a><a class="btn v-btn-ghost" href="<?= v2_e($atCitySlug !== '' ? '/map?city=' . $atCitySlug : ($atCountry !== '' ? v2_map_href($atCountry) : '/map')) ?>"><?= v2_ic('map-trifold') ?><?= v2_te('Attractions map') ?></a><a class="btn v-btn-ghost" href="/cities"><?= v2_ic('map-pin') ?><?= v2_te('Destinations') ?></a></div>
   </div></div>
 </section>
 </main>

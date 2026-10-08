@@ -30,14 +30,14 @@ if (isset($_GET['country']) && is_string($_GET['country'])) {
 $dsFeatured = array_slice(array_values(array_filter($V2NAV['citiesList'], fn ($c) => !empty($c['featuredFlag']))), 0, 12) ?: array_slice($V2NAV['citiesList'], 0, 12);
 $dsTotal = (int) ($V2NAV['citiesTotal'] ?? 0) ?: array_sum(array_column($dsCountries, 'citiesCount'));
 
-$pageTitle = 'Destinations: cities and countries';
-$pageDescription = v2_num($dsTotal, 'city', 'cities') . ' in ' . v2_num(count($dsCountries), 'country', 'countries') . '. Choose a country, then a city, and see the attractions, tours and experiences you can book there.';
+$pageTitle = v2_t('Destinations: cities and countries');
+$pageDescription = v2_t('{cities} in {countries}. Choose a country, then a city, and see the attractions, tours and experiences you can book there.', ['cities' => v2_num($dsTotal, 'city', 'cities'), 'countries' => v2_num(count($dsCountries), 'country', 'countries')]);
 $canonicalUrl = SITE_URL . '/cities';
 $structuredData = [[
     '@context' => 'https://schema.org', '@type' => 'BreadcrumbList',
     'itemListElement' => [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => SITE_URL . '/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Destinations', 'item' => SITE_URL . '/cities'],
+        ['@type' => 'ListItem', 'position' => 1, 'name' => v2_t('Home'), 'item' => SITE_URL . '/'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => v2_t('Destinations'), 'item' => SITE_URL . '/cities'],
     ],
 ]];
 $v2Styles = ['places.css'];
@@ -51,14 +51,14 @@ include __DIR__ . '/includes/v2/header.php';
 <section class="v-phero" aria-labelledby="ds-h">
   <div class="v-phero-topo" aria-hidden="true"></div>
   <div class="wrap v-phero-in">
-    <nav class="v-crumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><b>Destinations</b></nav>
-    <p class="v-eyebrow">Where to</p>
-    <h1 class="v-phero-h" id="ds-h">destinations</h1>
+    <nav class="v-crumbs" aria-label="<?= v2_te('Breadcrumb') ?>"><a href="/"><?= v2_te('Home') ?></a><span aria-hidden="true">/</span><b><?= v2_te('Destinations') ?></b></nav>
+    <p class="v-eyebrow"><?= v2_te('Where to') ?></p>
+    <h1 class="v-phero-h" id="ds-h"><?= v2_te('destinations') ?></h1>
     <p class="v-phero-lede"><?= v2_e($pageDescription) ?></p>
     <ul class="v-pstats">
-      <li><b><?= number_format($dsTotal) ?></b><span>cities and towns</span></li>
-      <li><b><?= count($dsCountries) ?></b><span>countries</span></li>
-      <li><a class="btn v-btn-cream" href="/map"><?= v2_ic('map-trifold') ?>Open the map</a></li>
+      <li><b><?= number_format($dsTotal) ?></b><span><?= v2_e(v2_plural($dsTotal, 'city', 'cities and towns')) ?></span></li>
+      <li><b><?= count($dsCountries) ?></b><span><?= v2_e(v2_plural(count($dsCountries), 'country', 'countries')) ?></span></li>
+      <li><a class="btn v-btn-cream" href="/map"><?= v2_ic('map-trifold') ?><?= v2_te('Open the map') ?></a></li>
     </ul>
   </div>
 </section>
@@ -67,7 +67,7 @@ include __DIR__ . '/includes/v2/header.php';
 <?php if ($dsFeatured): ?>
 <section class="v-psec" aria-labelledby="ds-top-h">
   <div class="wrap">
-    <div class="v-phead"><div><p class="v-eyebrow">Start here</p><h2 class="v-ph2" id="ds-top-h">Where people are heading</h2></div></div>
+    <div class="v-phead"><div><p class="v-eyebrow"><?= v2_te('Start here') ?></p><h2 class="v-ph2" id="ds-top-h"><?= v2_te('Where people are heading') ?></h2></div></div>
     <div class="v-pgrid">
       <?php foreach ($dsFeatured as $i => $c): ?><?= v2_city_card($c, $i) ?><?php endforeach; ?>
     </div>
@@ -77,8 +77,8 @@ include __DIR__ . '/includes/v2/header.php';
 
 <section class="v-psec v-psec-tint" aria-labelledby="ds-all-h">
   <div class="wrap">
-    <div class="v-phead"><div><p class="v-eyebrow">By country</p><h2 class="v-ph2" id="ds-all-h">Every country</h2></div>
-      <label class="v-cfind"><?= v2_ic('magnifying-glass') ?><span class="sr">Search a country or a city</span><input type="search" id="ds-find" placeholder="Search a country or a city" autocomplete="off" spellcheck="false"></label>
+    <div class="v-phead"><div><p class="v-eyebrow"><?= v2_te('By country') ?></p><h2 class="v-ph2" id="ds-all-h"><?= v2_te('Every country') ?></h2></div>
+      <label class="v-cfind"><?= v2_ic('magnifying-glass') ?><span class="sr"><?= v2_te('Search a country or a city') ?></span><input type="search" id="ds-find" placeholder="<?= v2_te('Search a country or a city') ?>" autocomplete="off" spellcheck="false"></label>
     </div>
     <div class="v-countries">
       <?php foreach ($dsCountries as $c): $dsCities = array_slice($c['featured'] ?? [], 0, 8); ?>
@@ -87,18 +87,18 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($dsCities): ?>
         <ul><?php foreach ($dsCities as $city): ?><li><a href="<?= v2_e($city['href']) ?>"><?= v2_e($city['name']) ?></a></li><?php endforeach; ?></ul>
         <?php endif; ?>
-        <a class="v-plink" href="/<?= v2_e($c['slug']) ?>">All of <?= v2_e($c['name']) ?><?= v2_ic('arrow-right') ?></a>
+        <a class="v-plink" href="/<?= v2_e($c['slug']) ?>"><?= v2_te('All of {name}', ['name' => $c['name']]) ?><?= v2_ic('arrow-right') ?></a>
       </article>
       <?php endforeach; ?>
     </div>
-    <p class="v-pempty" id="ds-none" hidden>No country or city with this name among the ones listed here. Try the <a href="/search">search</a>.</p>
+    <p class="v-pempty" id="ds-none" hidden><?= v2_t('No country or city with this name among the ones listed here. Try the <a href="/search">search</a>.') ?></p>
   </div>
 </section>
 
 <section class="v-psec v-ptools-sec" aria-labelledby="ds-tools-h">
   <div class="wrap"><div class="v-ptools">
-    <div><p class="v-eyebrow">Plan</p><h2 class="v-ph2" id="ds-tools-h">Not sure where yet?</h2><p>Start from the map and see what is near you, or follow a ready-made route with the stops already in order.</p></div>
-    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/map"><?= v2_ic('map-trifold') ?>Attractions map</a><a class="btn v-btn-ghost" href="/routes"><?= v2_ic('path') ?>Routes</a><a class="btn v-btn-ghost" href="/plan"><?= v2_ic('compass') ?>Trip planner</a></div>
+    <div><p class="v-eyebrow"><?= v2_te('Plan') ?></p><h2 class="v-ph2" id="ds-tools-h"><?= v2_te('Not sure where yet?') ?></h2><p><?= v2_te('Start from the map and see what is near you, or follow a ready-made route with the stops already in order.') ?></p></div>
+    <div class="v-ptools-cta"><a class="btn v-btn-forest" href="/map"><?= v2_ic('map-trifold') ?><?= v2_te('Attractions map') ?></a><a class="btn v-btn-ghost" href="/routes"><?= v2_ic('path') ?><?= v2_te('Routes') ?></a><a class="btn v-btn-ghost" href="/plan"><?= v2_ic('compass') ?><?= v2_te('Trip planner') ?></a></div>
   </div></div>
 </section>
 </main>

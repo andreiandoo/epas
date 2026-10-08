@@ -99,7 +99,7 @@ $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $pr
     : null;
 
 // Sort — whitelisted to API-supported values
-$sortOptions = ['recommended' => 'Recommended', 'price_asc' => 'Price: low to high', 'price_desc' => 'Price: high to low', 'name_asc' => 'A to Z'];
+$sortOptions = ['recommended' => v2_t('Recommended'), 'price_asc' => v2_t('Price: low to high'), 'price_desc' => v2_t('Price: high to low'), 'name_asc' => v2_t('A to Z')];
 $sort = (isset($_GET['sort']) && is_string($_GET['sort']) && isset($sortOptions[$_GET['sort']])) ? $_GET['sort'] : 'recommended';
 
 // Parent categories for the filters, popular chips, rotating hero cards and the interest grid (max 12).
@@ -164,7 +164,7 @@ foreach ($activities as $a) {
         'currency'    => (string) ($a['currency'] ?? ''),
         'eur_cents'   => $a['cheapest_price_eur_cents'] ?? null,
         'url'         => $n['href'],
-        'cta'         => 'See the experience',
+        'cta'         => v2_t('See the experience'),
         'promoted'    => !empty($a['flags']['is_promoted']),
     ];
 }
@@ -198,7 +198,7 @@ foreach ((array) (($listings['locations']['success'] ?? false) ? ($listings['loc
         'href' => '/venue/' . $l['slug'],
         'name' => navFlatName($l['name']),
         'image' => v2_media_url($l['cover_image'] ?? null),
-        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · from ' . v2_own_price_label($l['min_price_cents'], $l['currency'] ?? null) : ''), ' ·'),
+        'meta' => trim(navFlatName($l['category']['name'] ?? '') . (!empty($l['min_price_cents']) ? ' · ' . v2_t('from {price}', ['price' => v2_own_price_label($l['min_price_cents'], $l['currency'] ?? null)]) : ''), ' ·'),
         'lodging' => !empty($l['has_lodging']),
         'promoted' => !empty($l['is_promoted']),
     ];
@@ -227,9 +227,9 @@ $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId
   <section class="sec gyg" id="getyourguide" aria-labelledby="gyg-h">
     <div class="wrap">
       <div class="gyg-head">
-        <p class="kicker"><?= $gygPromote ? 'Activities and tours' : 'More, through our partners' ?></p>
-        <h2 id="gyg-h"><?= $gygPromote ? 'Activities and tours in ' : 'More activities and tours in ' ?><?= v2_e($cityName) ?></h2>
-        <p>A selection of guided tours, experiences and activities available through GetYourGuide.</p>
+        <p class="kicker"><?= $gygPromote ? v2_te('Activities and tours') : v2_te('More, through our partners') ?></p>
+        <h2 id="gyg-h"><?= $gygPromote ? v2_te('Activities and tours in {city}', ['city' => $cityName]) : v2_te('More activities and tours in {city}', ['city' => $cityName]) ?></h2>
+        <p><?= v2_te('A selection of guided tours, experiences and activities available through GetYourGuide.') ?></p>
       </div>
       <div id="gyg-mount"
         data-gyg-href="https://widget.getyourguide.com/default/activities.frame"
@@ -238,8 +238,8 @@ $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId
         data-gyg-widget="activities"
         data-gyg-number-of-items="40"
         data-gyg-partner-id="<?= v2_e($gygPartnerId) ?>"
-        aria-label="GetYourGuide activities for <?= v2_e($cityName) ?>">
-        <span class="gyg-powered">Powered by <a target="_blank" rel="sponsored noopener" href="<?= v2_e($gygUrl) ?>">GetYourGuide</a></span>
+        aria-label="<?= v2_te('GetYourGuide activities for {city}', ['city' => $cityName]) ?>">
+        <span class="gyg-powered"><?= v2_t('Powered by <a target="_blank" rel="sponsored noopener" href="{url}">GetYourGuide</a>', ['url' => v2_e($gygUrl)]) ?></span>
       </div>
     </div>
   </section>
@@ -273,10 +273,10 @@ if ($categoryFilter) {
     $activeChips[] = [$catNameOf($categoryFilter), $cityUrl(['category' => ''])];
 }
 if ($maxPrice !== null) {
-    $activeChips[] = ['Under ' . v2_money($maxPrice), $cityUrl(['max_price' => ''])];
+    $activeChips[] = [v2_t('Under {price}', ['price' => v2_money($maxPrice)]), $cityUrl(['max_price' => ''])];
 }
 if ($sort !== 'recommended') {
-    $activeChips[] = ['Sorted: ' . $sortOptions[$sort], $cityUrl(['sort' => ''])];
+    $activeChips[] = [v2_t('Sorted: {order}', ['order' => $sortOptions[$sort]]), $cityUrl(['sort' => ''])];
 }
 
 $priceHtml = function (?int $cents, string $currency = '', $eurCents = null): string {
@@ -284,24 +284,26 @@ $priceHtml = function (?int $cents, string $currency = '', $eurCents = null): st
         return '';
     }
     if ($cents === 0) {
-        return '<span class="xp-price"><b>Free</b></span>';
+        return '<span class="xp-price"><b>' . v2_te('Free') . '</b></span>';
     }
-    return '<span class="xp-price">from<b>' . v2_e(v2_own_price_label($cents, $currency, $eurCents)) . '</b></span>';
+    return '<span class="xp-price">' . v2_te('from') . '<b>' . v2_e(v2_own_price_label($cents, $currency, $eurCents)) . '</b></span>';
 };
 
 // ============================================================
 // SEO setup
 // ============================================================
-$pageTitleRaw = 'Things to do in ' . $cityName . ($countryName !== '' ? ', ' . $countryName : '') . ': tickets and experiences | Viaqui';
-$pageDescription = 'Things to do in ' . $cityName . ': attractions, museums, tours, family days out and experiences. Book online and walk in with a QR ticket on your phone.';
+$pageTitleRaw = ($countryName !== ''
+    ? v2_t('Things to do in {city}, {country}: tickets and experiences', ['city' => $cityName, 'country' => $countryName])
+    : v2_t('Things to do in {city}: tickets and experiences', ['city' => $cityName])) . ' | Viaqui';
+$pageDescription = v2_t('Things to do in {city}: attractions, museums, tours, family days out and experiences. Book online and walk in with a QR ticket on your phone.', ['city' => $cityName]);
 $canonicalUrl = SITE_URL . '/' . $slug;
 $ogImage = $cityCover
     ? (str_starts_with($cityCover, 'http') ? $cityCover : STORAGE_URL . '/' . ltrim($cityCover, '/'))
     : (SITE_URL . '/assets/images/og-default.jpg');
 
 $breadcrumbs = array_values(array_filter([
-    ['name' => 'Home', 'url' => SITE_URL . '/'],
-    ['name' => 'Destinations', 'url' => SITE_URL . '/cities'],
+    ['name' => v2_t('Home'), 'url' => SITE_URL . '/'],
+    ['name' => v2_t('Destinations'), 'url' => SITE_URL . '/cities'],
     $countryName !== '' && $countrySlug !== '' ? ['name' => $countryName, 'url' => SITE_URL . '/' . $countrySlug] : null,
     ['name' => $cityName, 'url' => $canonicalUrl],
 ]));
@@ -320,9 +322,9 @@ $structuredData = [];
 $structuredData[] = [
     '@context' => 'https://schema.org',
     '@type' => 'CollectionPage',
-    'name' => 'Things to do in ' . $cityName,
+    'name' => v2_t('Things to do in {city}', ['city' => $cityName]),
     'url' => $canonicalUrl,
-    'inLanguage' => 'en',
+    'inLanguage' => v2_locale(),
     'about' => [
         '@type' => 'City',
         'name' => $cityName,
@@ -392,7 +394,7 @@ foreach (array_slice($topCategories, 0, 6) as $cat) {
     $wheelItems[] = ['label' => $cat['name'], 'image' => $cat['image'], 'srcset' => $cat['srcset'], 'href' => $catLink($cat['slug'])];
 }
 if (empty($wheelItems)) {
-    foreach (['Museums & Exhibitions', 'Tours & Sightseeing', 'Nature & Outdoors', 'Family & Kids'] as $label) {
+    foreach ([v2_t('Museums & Exhibitions'), v2_t('Tours & Sightseeing'), v2_t('Nature & Outdoors'), v2_t('Family & Kids')] as $label) {
         $wheelItems[] = ['label' => $label, 'image' => null, 'srcset' => '', 'href' => '/' . $slug];
     }
 }
@@ -410,10 +412,10 @@ $cityGuides = array_slice($V2NAV['guides'], 0, 3);
 // Traveler types — city-scoped search links (city.php handles ?q), so these
 // always resolve to real filtered results without needing dedicated routes.
 $travelerTypes = [
-    ['icon' => 'users-three',   'title' => 'For families',     'desc' => 'Safe, hands-on and easy to plan with children.',              'href' => '/' . $slug . '?q=' . rawurlencode('kids') . '#things-to-do'],
-    ['icon' => 'heart',         'title' => 'For couples',      'desc' => 'Tours, gift experiences and things to do in the evening.',    'href' => '/' . $slug . '?q=' . rawurlencode('couple') . '#things-to-do'],
-    ['icon' => 'cloud-rain',    'title' => 'When it rains',    'desc' => 'Museums, workshops, escape rooms and indoor experiences.',   'href' => '/' . $slug . '?q=' . rawurlencode('indoor') . '#things-to-do'],
-    ['icon' => 'castle-turret', 'title' => 'On a first visit', 'desc' => 'The main sights, guided tours and what not to miss.',         'href' => '/' . $slug . '?q=' . rawurlencode('tour') . '#things-to-do'],
+    ['icon' => 'users-three',   'title' => v2_t('For families'),     'desc' => v2_t('Safe, hands-on and easy to plan with children.'),              'href' => '/' . $slug . '?q=' . rawurlencode('kids') . '#things-to-do'],
+    ['icon' => 'heart',         'title' => v2_t('For couples'),      'desc' => v2_t('Tours, gift experiences and things to do in the evening.'),    'href' => '/' . $slug . '?q=' . rawurlencode('couple') . '#things-to-do'],
+    ['icon' => 'cloud-rain',    'title' => v2_t('When it rains'),    'desc' => v2_t('Museums, workshops, escape rooms and indoor experiences.'),   'href' => '/' . $slug . '?q=' . rawurlencode('indoor') . '#things-to-do'],
+    ['icon' => 'castle-turret', 'title' => v2_t('On a first visit'), 'desc' => v2_t('The main sights, guided tours and what not to miss.'),         'href' => '/' . $slug . '?q=' . rawurlencode('tour') . '#things-to-do'],
 ];
 
 // Intent hubs (connect the city page to the programmatic intent pages).
@@ -445,29 +447,31 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ch-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ch-in">
       <div class="ch-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <h1 class="ch-h" id="ch-h"><span class="ch-pre">Things to do in</span> <span class="ch-city"><?= v2_e($cityName) ?></span></h1>
+        <h1 class="ch-h" id="ch-h"><?= v2_t('<span class="ch-pre">Things to do in</span> <span class="ch-city">{city}</span>', ['city' => v2_e($cityName)]) ?></h1>
         <p class="ch-lead">
           <?php if ($cityDescription !== ''): ?>
             <?= v2_e($cityDescription) ?>
           <?php else: ?>
-            Attractions, museums, tours, family days out and time outdoors in <?= v2_e($cityName) ?><?= $countryName !== '' ? ', ' . v2_e($countryName) : '' ?>. Choose what to see, book online and walk in with the QR ticket on your phone.
+            <?= $countryName !== ''
+                ? v2_te('Attractions, museums, tours, family days out and time outdoors in {city}, {country}. Choose what to see, book online and walk in with the QR ticket on your phone.', ['city' => $cityName, 'country' => $countryName])
+                : v2_te('Attractions, museums, tours, family days out and time outdoors in {city}. Choose what to see, book online and walk in with the QR ticket on your phone.', ['city' => $cityName]) ?>
           <?php endif; ?>
         </p>
-        <form class="ch-search" action="/<?= v2_e($slug) ?>#things-to-do" method="get" role="search" aria-label="Search things to do in <?= v2_e($cityName) ?>">
+        <form class="ch-search" action="/<?= v2_e($slug) ?>#things-to-do" method="get" role="search" aria-label="<?= v2_te('Search things to do in {city}', ['city' => $cityName]) ?>">
           <?= v2_ic('magnifying-glass') ?>
-          <label class="sr" for="city-search">Search things to do in <?= v2_e($cityName) ?></label>
-          <input id="city-search" name="q" type="search" placeholder="Search in <?= v2_e($cityName) ?>: museums, tours, kids…" autocomplete="off">
-          <button class="btn btn-primary" type="submit">Search</button>
+          <label class="sr" for="city-search"><?= v2_te('Search things to do in {city}', ['city' => $cityName]) ?></label>
+          <input id="city-search" name="q" type="search" placeholder="<?= v2_te('Search in {city}: museums, tours, kids…', ['city' => $cityName]) ?>" autocomplete="off">
+          <button class="btn btn-primary" type="submit"><?= v2_te('Search') ?></button>
         </form>
         <?php if (!empty($topCategories)): ?>
         <div class="ch-pop">
-          <span>Popular:</span>
+          <span><?= v2_te('Popular:') ?></span>
           <?php foreach (array_slice($topCategories, 0, 4) as $cat): ?><a href="<?= v2_e($catLink($cat['slug'])) ?>"><?= v2_e($cat['name']) ?></a><?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -483,17 +487,17 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if ($gallery): ?>
           <button class="ch-gal" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb">
             <span class="ch-thumbs" aria-hidden="true"><?php foreach (array_slice($gallery, 0, 3) as $g): ?><img src="<?= v2_e($g['src']) ?>" alt="" loading="lazy" decoding="async"><?php endforeach; ?></span>
-            <span>Photo gallery</span><b><?= count($gallery) ?></b>
+            <span><?= v2_te('Photo gallery') ?></span><b><?= count($gallery) ?></b>
           </button>
           <?php endif; ?>
         </div>
         <!-- Categorii populare: one card at a time swings in along the arch, then out; cycles continuously. -->
-        <div class="orbit" data-orbit role="group" aria-label="Popular categories in <?= v2_e($cityName) ?>">
+        <div class="orbit" data-orbit role="group" aria-label="<?= v2_te('Popular categories in {city}', ['city' => $cityName]) ?>">
           <?php foreach ($wheelItems as $i => $w): ?>
           <a class="oc<?= $i === 0 ? ' is-on' : '' ?>" href="<?= v2_e($w['href']) ?>">
             <span class="oc-media"><?= $w['image'] ? v2_photo([$w['image'], 640, 800, ''], $w['srcset'] ? ' srcset="' . v2_e($w['srcset']) . '" sizes="170px"' : '') : v2_fallback($w['label'], $i) ?></span>
             <span class="oc-name"><?= v2_e($w['label']) ?></span>
-            <span class="oc-meta">in <?= v2_e($cityName) ?></span>
+            <span class="oc-meta"><?= v2_te('in {city}', ['city' => $cityName]) ?></span>
           </a>
           <?php endforeach; ?>
         </div>
@@ -506,14 +510,14 @@ include __DIR__ . '/includes/v2/header.php';
   <div id="hdr-sentinel" aria-hidden="true"></div>
 
   <!-- ============================== STICKY SECTION NAV ============================== -->
-  <nav class="cnav" aria-label="Sections of this page">
+  <nav class="cnav" aria-label="<?= v2_te('Sections of this page') ?>">
     <div class="wrap cnav-in">
-      <a href="#things-to-do" aria-current="true">Things to do</a>
-      <a href="#interests">Browse by interest</a>
-      <?php if (!empty($cityAttractions)): ?><a href="#attractions">Attractions</a><?php endif; ?>
-      <?php if (!empty($cityGuides)): ?><a href="#guides">Guides</a><?php endif; ?>
-      <?php if (!empty($nearbyCities)): ?><a href="#nearby">More cities</a><?php endif; ?>
-      <a href="#local-guide">FAQ</a>
+      <a href="#things-to-do" aria-current="true"><?= v2_te('Things to do') ?></a>
+      <a href="#interests"><?= v2_te('Browse by interest') ?></a>
+      <?php if (!empty($cityAttractions)): ?><a href="#attractions"><?= v2_te('Attractions') ?></a><?php endif; ?>
+      <?php if (!empty($cityGuides)): ?><a href="#guides"><?= v2_te('Guides') ?></a><?php endif; ?>
+      <?php if (!empty($nearbyCities)): ?><a href="#nearby"><?= v2_te('More cities') ?></a><?php endif; ?>
+      <a href="#local-guide"><?= v2_te('FAQ') ?></a>
     </div>
   </nav>
 
@@ -523,52 +527,52 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ============================== PROMOVATE (paid city placement) ============================== -->
   <?php v2_promoted_section($promoted, [
       'id' => 'promo-city',
-      'kicker' => 'Promoted',
-      'title' => 'Popular in ' . $cityName,
-      'intro' => 'Places and experiences in ' . $cityName . ' that their operators are promoting at the moment.',
+      'kicker' => v2_t('Promoted'),
+      'title' => v2_t('Popular in {city}', ['city' => $cityName]),
+      'intro' => v2_t('Places and experiences in {city} that their operators are promoting at the moment.', ['city' => $cityName]),
   ]); ?>
 
   <!-- ============================== ACTIVITIES ============================== -->
   <section class="cl" id="things-to-do" aria-labelledby="cl-h">
     <div class="wrap cl-head">
-      <h2 id="cl-h">Things to do in <?= v2_e($cityName) ?></h2>
-      <p class="cl-count"><b><?= (int) $pagination['total'] ?></b> <?= (int) $pagination['total'] === 1 ? 'result' : 'results' ?></p>
+      <h2 id="cl-h"><?= v2_te('Things to do in {city}', ['city' => $cityName]) ?></h2>
+      <p class="cl-count"><b><?= (int) $pagination['total'] ?></b> <?= v2_e(v2_plural((int) $pagination['total'], 'result', 'results')) ?></p>
     </div>
 
     <div class="ctb">
       <div class="wrap">
         <div class="ctb-in">
-          <form class="ctb-search" action="/<?= v2_e($slug) ?>#things-to-do" method="get" role="search" aria-label="Search in <?= v2_e($cityName) ?>">
+          <form class="ctb-search" action="/<?= v2_e($slug) ?>#things-to-do" method="get" role="search" aria-label="<?= v2_te('Search in {city}', ['city' => $cityName]) ?>">
             <?= v2_ic('magnifying-glass') ?>
-            <label class="sr" for="cl-q">Search in <?= v2_e($cityName) ?></label>
-            <input id="cl-q" name="q" type="search" value="<?= v2_e($searchQuery) ?>" placeholder="Search in <?= v2_e($cityName) ?>…" autocomplete="off">
+            <label class="sr" for="cl-q"><?= v2_te('Search in {city}', ['city' => $cityName]) ?></label>
+            <input id="cl-q" name="q" type="search" value="<?= v2_e($searchQuery) ?>" placeholder="<?= v2_te('Search in {city}…', ['city' => $cityName]) ?>" autocomplete="off">
             <?php foreach ($baseGet as $k => $v): if ($k === 'q') continue; ?><input type="hidden" name="<?= v2_e($k) ?>" value="<?= v2_e($v) ?>"><?php endforeach; ?>
-            <button class="btn btn-primary ctb-go" type="submit"><span>Search</span><?= v2_ic('arrow-right') ?></button>
+            <button class="btn btn-primary ctb-go" type="submit"><span><?= v2_te('Search') ?></span><?= v2_ic('arrow-right') ?></button>
           </form>
 
           <div class="ctb-dds">
             <details class="dd">
-              <summary class="dd-btn<?= $categoryFilter ? ' is-set' : '' ?>"><?= v2_e($categoryFilter ? $catNameOf($categoryFilter) : 'Category') ?><?= v2_ic('caret-down') ?></summary>
+              <summary class="dd-btn<?= $categoryFilter ? ' is-set' : '' ?>"><?= v2_e($categoryFilter ? $catNameOf($categoryFilter) : v2_t('Category')) ?><?= v2_ic('caret-down') ?></summary>
               <div class="dd-pop">
                 <ul>
-                  <li><a href="<?= v2_e($cityUrl(['category' => ''])) ?>"<?= !$categoryFilter ? ' aria-current="true"' : '' ?>>All categories</a></li>
+                  <li><a href="<?= v2_e($cityUrl(['category' => ''])) ?>"<?= !$categoryFilter ? ' aria-current="true"' : '' ?>><?= v2_te('All categories') ?></a></li>
                   <?php foreach ($topCategories as $c): ?><li><a href="<?= v2_e($cityUrl(['category' => $c['slug']])) ?>"<?= $categoryFilter === $c['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($c['name']) ?></a></li><?php endforeach; ?>
                 </ul>
               </div>
             </details>
             <?php if ($priceMaxAllowed): ?>
             <details class="dd">
-              <summary class="dd-btn<?= $maxPrice !== null ? ' is-set' : '' ?>"><?= $maxPrice !== null ? 'Under ' . v2_e(v2_money($maxPrice)) : 'Price' ?><?= v2_ic('caret-down') ?></summary>
+              <summary class="dd-btn<?= $maxPrice !== null ? ' is-set' : '' ?>"><?= $maxPrice !== null ? v2_te('Under {price}', ['price' => v2_money($maxPrice)]) : v2_te('Price') ?><?= v2_ic('caret-down') ?></summary>
               <div class="dd-pop">
                 <ul>
-                  <li><a href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>>Any price</a></li>
-                  <?php foreach ($priceMaxAllowed as $cap): ?><li><a href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Under <?= v2_e(v2_money($cap)) ?></a></li><?php endforeach; ?>
+                  <li><a href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>><?= v2_te('Any price') ?></a></li>
+                  <?php foreach ($priceMaxAllowed as $cap): ?><li><a href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>><?= v2_te('Under {price}', ['price' => v2_money($cap)]) ?></a></li><?php endforeach; ?>
                 </ul>
               </div>
             </details>
             <?php endif; ?>
             <details class="dd">
-              <summary class="dd-btn<?= $sort !== 'recommended' ? ' is-set' : '' ?>"><?= v2_e($sort !== 'recommended' ? $sortOptions[$sort] : 'Sort') ?><?= v2_ic('caret-down') ?></summary>
+              <summary class="dd-btn<?= $sort !== 'recommended' ? ' is-set' : '' ?>"><?= v2_e($sort !== 'recommended' ? $sortOptions[$sort] : v2_t('Sort')) ?><?= v2_ic('caret-down') ?></summary>
               <div class="dd-pop is-right">
                 <ul>
                   <?php foreach ($sortOptions as $value => $label): ?><li><a href="<?= v2_e($cityUrl(['sort' => $value === 'recommended' ? '' : $value])) ?>"<?= $sort === $value ? ' aria-current="true"' : '' ?>><?= v2_e($label) ?></a></li><?php endforeach; ?>
@@ -577,13 +581,13 @@ include __DIR__ . '/includes/v2/header.php';
             </details>
           </div>
 
-          <button class="ctb-open" type="button" data-sheet-open aria-haspopup="dialog" aria-controls="cl-sheet" aria-expanded="false"><?= v2_ic('list') ?>Filters<?php if ($activeChips): ?><span class="ctb-n"><?= count($activeChips) ?></span><?php endif; ?></button>
+          <button class="ctb-open" type="button" data-sheet-open aria-haspopup="dialog" aria-controls="cl-sheet" aria-expanded="false"><?= v2_ic('list') ?><?= v2_te('Filters') ?><?php if ($activeChips): ?><span class="ctb-n"><?= count($activeChips) ?></span><?php endif; ?></button>
         </div>
 
         <?php if ($activeChips): ?>
-        <ul class="cl-active" aria-label="Active filters">
-          <?php foreach ($activeChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> (remove)</span></a></li><?php endforeach; ?>
-          <li><a class="aclear" href="/<?= v2_e($slug) ?>#things-to-do">Clear all</a></li>
+        <ul class="cl-active" aria-label="<?= v2_te('Active filters') ?>">
+          <?php foreach ($activeChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> <?= v2_te('(remove)') ?></span></a></li><?php endforeach; ?>
+          <li><a class="aclear" href="/<?= v2_e($slug) ?>#things-to-do"><?= v2_te('Clear all') ?></a></li>
         </ul>
         <?php endif; ?>
       </div>
@@ -593,28 +597,28 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="sheet" id="cl-sheet" role="dialog" aria-modal="true" aria-labelledby="cl-sheet-h">
       <div class="sheet-panel">
         <div class="sheet-top">
-          <h2 id="cl-sheet-h">Filters</h2>
-          <button class="icon-btn" type="button" data-sheet-close><?= v2_ic('x') ?><span class="sr">Close filters</span></button>
+          <h2 id="cl-sheet-h"><?= v2_te('Filters') ?></h2>
+          <button class="icon-btn" type="button" data-sheet-close><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close filters') ?></span></button>
         </div>
         <div class="sheet-body">
           <section class="fgroup">
-            <h3 class="flabel">Category</h3>
+            <h3 class="flabel"><?= v2_te('Category') ?></h3>
             <div class="fchips">
-              <a class="fchip" href="<?= v2_e($cityUrl(['category' => ''])) ?>"<?= !$categoryFilter ? ' aria-current="true"' : '' ?>>All</a>
+              <a class="fchip" href="<?= v2_e($cityUrl(['category' => ''])) ?>"<?= !$categoryFilter ? ' aria-current="true"' : '' ?>><?= v2_te('All') ?></a>
               <?php foreach ($topCategories as $c): ?><a class="fchip" href="<?= v2_e($cityUrl(['category' => $c['slug']])) ?>"<?= $categoryFilter === $c['slug'] ? ' aria-current="true"' : '' ?>><?= v2_e($c['name']) ?></a><?php endforeach; ?>
             </div>
           </section>
           <?php if ($priceMaxAllowed): ?>
           <section class="fgroup">
-            <h3 class="flabel">Maximum price</h3>
+            <h3 class="flabel"><?= v2_te('Maximum price') ?></h3>
             <div class="fchips">
-              <a class="fchip" href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>>Any</a>
-              <?php foreach ($priceMaxAllowed as $cap): ?><a class="fchip" href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>>Under <?= v2_e(v2_money($cap)) ?></a><?php endforeach; ?>
+              <a class="fchip" href="<?= v2_e($cityUrl(['max_price' => ''])) ?>"<?= $maxPrice === null ? ' aria-current="true"' : '' ?>><?= v2_te('Any') ?></a>
+              <?php foreach ($priceMaxAllowed as $cap): ?><a class="fchip" href="<?= v2_e($cityUrl(['max_price' => $cap])) ?>"<?= $maxPrice === $cap ? ' aria-current="true"' : '' ?>><?= v2_te('Under {price}', ['price' => v2_money($cap)]) ?></a><?php endforeach; ?>
             </div>
           </section>
           <?php endif; ?>
           <section class="fgroup">
-            <h3 class="flabel">Sort</h3>
+            <h3 class="flabel"><?= v2_te('Sort') ?></h3>
             <div class="fchips">
               <?php foreach ($sortOptions as $value => $label): ?><a class="fchip" href="<?= v2_e($cityUrl(['sort' => $value === 'recommended' ? '' : $value])) ?>"<?= $sort === $value ? ' aria-current="true"' : '' ?>><?= v2_e($label) ?></a><?php endforeach; ?>
             </div>
@@ -629,15 +633,15 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="cl-empty">
         <h3>
           <?php if ($categoryFilter): ?>
-            Nothing in this category in <?= v2_e($cityName) ?> yet.
+            <?= v2_te('Nothing in this category in {city} yet.', ['city' => $cityName]) ?>
           <?php else: ?>
-            Nothing is listed here yet.
+            <?= v2_te('Nothing is listed here yet.') ?>
           <?php endif; ?>
         </h3>
-        <p>Venues and operators in <?= v2_e($cityName) ?> are being added. Until then, the attractions map and the routes show what there is to see.</p>
+        <p><?= v2_te('Venues and operators in {city} are being added. Until then, the attractions map and the routes show what there is to see.', ['city' => $cityName]) ?></p>
         <div class="cl-empty-cta">
-          <a class="btn btn-light" href="/map?city=<?= v2_e($slug) ?>">Open the map</a>
-          <?php if ($activeChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>#things-to-do">Clear the filters</a><?php endif; ?>
+          <a class="btn btn-light" href="/map?city=<?= v2_e($slug) ?>"><?= v2_te('Open the map') ?></a>
+          <?php if ($activeChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>#things-to-do"><?= v2_te('Clear the filters') ?></a><?php endif; ?>
         </div>
         <svg class="cl-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
       </div>
@@ -668,12 +672,12 @@ include __DIR__ . '/includes/v2/header.php';
           $end = min($last, $start + 6);
           $start = max(1, $end - 6);
       ?>
-      <nav class="pager" aria-label="Pages">
-        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($cityUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Previous</a><?php endif; ?>
+      <nav class="pager" aria-label="<?= v2_te('Pages') ?>">
+        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($cityUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?><?= v2_te('Previous') ?></a><?php endif; ?>
         <?php for ($p = $start; $p <= $end; $p++): ?>
           <?php if ($p === $current): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($cityUrl(['page' => $p > 1 ? $p : ''])) ?>"><?= $p ?></a><?php endif; ?>
         <?php endfor; ?>
-        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($cityUrl(['page' => $current + 1])) ?>" rel="next">Next<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($cityUrl(['page' => $current + 1])) ?>" rel="next"><?= v2_te('Next') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </nav>
       <?php endif; ?>
       <?php endif; ?>
@@ -689,8 +693,8 @@ include __DIR__ . '/includes/v2/header.php';
       <div>
         <div class="sec-head">
           <div>
-            <h2 id="ci-h">Browse by interest</h2>
-            <p class="sec-sub">Categories that get you to what you are looking for in <?= v2_e($cityName) ?> faster.</p>
+            <h2 id="ci-h"><?= v2_te('Browse by interest') ?></h2>
+            <p class="sec-sub"><?= v2_te('Categories that get you to what you are looking for in {city} faster.', ['city' => $cityName]) ?></p>
           </div>
         </div>
         <?php if (!empty($topCategories)): ?>
@@ -699,7 +703,7 @@ include __DIR__ . '/includes/v2/header.php';
           <li>
             <a class="ctile" href="<?= v2_e($catLink($cat['slug'])) ?>">
               <span class="ctile-media"><?= $cat['thumb'] ? v2_photo([$cat['thumb'], 0, 0, '']) : v2_fallback($cat['name']) ?></span>
-              <span class="ctile-text"><b><?= v2_e($cat['name']) ?></b><?php if ($cat['count'] > 0): ?><small><?= v2_num($cat['count'], 'experience', 'experiences') ?></small><?php endif; ?></span>
+              <span class="ctile-text"><b><?= v2_e($cat['name']) ?></b><?php if ($cat['count'] > 0): ?><small><?= v2_e(v2_num($cat['count'], 'experience', 'experiences')) ?></small><?php endif; ?></span>
               <?= v2_ic('arrow-right') ?>
             </a>
           </li>
@@ -710,7 +714,7 @@ include __DIR__ . '/includes/v2/header.php';
 
       <aside class="styles" aria-labelledby="styles-h">
         <?= $cityArches ?>
-        <h3 id="styles-h">Choose by how you travel</h3>
+        <h3 id="styles-h"><?= v2_te('Choose by how you travel') ?></h3>
         <ul>
           <?php foreach ($travelerTypes as $tt): ?>
           <li><a class="style" href="<?= v2_e($tt['href']) ?>"><span class="style-ic"><?= v2_ic($tt['icon']) ?></span><span><b><?= v2_e($tt['title']) ?></b><small><?= v2_e($tt['desc']) ?></small></span></a></li>
@@ -726,15 +730,15 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="sec-head">
         <div>
-          <h2 id="loc-h">Venues with online tickets in <?= v2_e($cityName) ?></h2>
-          <p class="sec-sub">Book the entry ticket and the experiences on site ahead of time, in one order.</p>
+          <h2 id="loc-h"><?= v2_te('Venues with online tickets in {city}', ['city' => $cityName]) ?></h2>
+          <p class="sec-sub"><?= v2_te('Book the entry ticket and the experiences on site ahead of time, in one order.') ?></p>
         </div>
         <div class="sec-tools">
-          <a class="sec-link" href="/<?= v2_e($slug) ?>/venues">All venues<?= v2_ic('arrow-right') ?></a>
+          <a class="sec-link" href="/<?= v2_e($slug) ?>/venues"><?= v2_te('All venues') ?><?= v2_ic('arrow-right') ?></a>
           <?php if (count($cityLocations) > 2): ?>
           <div class="rail-btns" data-for="loc-rail">
-            <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous venues"><?= v2_ic('arrow-left') ?></button>
-            <button class="rail-btn" type="button" data-dir="1" aria-label="Next venues"><?= v2_ic('arrow-right') ?></button>
+            <button class="rail-btn" type="button" data-dir="-1" aria-label="<?= v2_te('Previous venues') ?>"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" data-dir="1" aria-label="<?= v2_te('Next venues') ?>"><?= v2_ic('arrow-right') ?></button>
           </div>
           <?php endif; ?>
         </div>
@@ -742,7 +746,7 @@ include __DIR__ . '/includes/v2/header.php';
       <ul class="rail" id="loc-rail">
         <?php foreach ($cityLocations as $li => $lc): ?>
         <li class="at"><a href="<?= v2_e($lc['href']) ?>">
-          <span class="at-media"><?= $lc['image'] ? v2_photo([$lc['image'], 0, 0, '']) : v2_fallback($lc['name'], $li) ?><?php if ($lc['promoted']): ?><?= v2_promoted_tag() ?><?php endif; ?><?php if ($lc['lodging']): ?><span class="at-badge">Stays</span><?php endif; ?></span>
+          <span class="at-media"><?= $lc['image'] ? v2_photo([$lc['image'], 0, 0, '']) : v2_fallback($lc['name'], $li) ?><?php if ($lc['promoted']): ?><?= v2_promoted_tag() ?><?php endif; ?><?php if ($lc['lodging']): ?><span class="at-badge"><?= v2_te('Stays') ?></span><?php endif; ?></span>
           <span class="at-name"><?= v2_e($lc['name']) ?><?= v2_ic('arrow-right') ?></span>
           <?php if ($lc['meta'] !== ''): ?><span class="at-meta"><span><?= v2_e($lc['meta']) ?></span></span><?php endif; ?>
         </a></li>
@@ -759,21 +763,21 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="sec-head">
         <div>
-          <h2 id="attr-h">Attractions not to miss in <?= v2_e($cityName) ?></h2>
-          <p class="sec-sub">The places that define the city, and what you can do around them.</p>
+          <h2 id="attr-h"><?= v2_te('Attractions not to miss in {city}', ['city' => $cityName]) ?></h2>
+          <p class="sec-sub"><?= v2_te('The places that define the city, and what you can do around them.') ?></p>
         </div>
         <div class="sec-tools">
-          <a class="sec-link" href="/<?= v2_e($slug) ?>/attractions">All attractions<?= v2_ic('arrow-right') ?></a>
+          <a class="sec-link" href="/<?= v2_e($slug) ?>/attractions"><?= v2_te('All attractions') ?><?= v2_ic('arrow-right') ?></a>
           <div class="rail-btns" data-for="attr-rail">
-            <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous attractions"><?= v2_ic('arrow-left') ?></button>
-            <button class="rail-btn" type="button" data-dir="1" aria-label="Next attractions"><?= v2_ic('arrow-right') ?></button>
+            <button class="rail-btn" type="button" data-dir="-1" aria-label="<?= v2_te('Previous attractions') ?>"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" data-dir="1" aria-label="<?= v2_te('Next attractions') ?>"><?= v2_ic('arrow-right') ?></button>
           </div>
         </div>
       </div>
       <ul class="rail" id="attr-rail">
         <?php foreach ($cityAttractions as $at): ?>
         <li class="at"><a href="<?= v2_e($at['href']) ?>">
-          <span class="at-media"><?= $at['image'] ? v2_photo([v2_thumb($at['image'], 640), 0, 0, '']) : v2_fallback($at['name']) ?><?php if ($at['count'] > 0): ?><span class="at-badge"><?= v2_num($at['count'], 'experience', 'experiences') ?></span><?php endif; ?></span>
+          <span class="at-media"><?= $at['image'] ? v2_photo([v2_thumb($at['image'], 640), 0, 0, '']) : v2_fallback($at['name']) ?><?php if ($at['count'] > 0): ?><span class="at-badge"><?= v2_e(v2_num($at['count'], 'experience', 'experiences')) ?></span><?php endif; ?></span>
           <span class="at-name"><?= v2_e($at['name']) ?><?= v2_ic('arrow-right') ?></span>
           <?php if ($at['type'] !== ''): ?><span class="at-meta"><span><?= v2_e($at['type']) ?></span></span><?php endif; ?>
         </a></li>
@@ -788,18 +792,18 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec insp" id="guides" aria-labelledby="guides-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="guides-h">Guides and ideas</h2>
-        <a class="sec-link" href="/guides">All guides<?= v2_ic('arrow-right') ?></a>
+        <h2 id="guides-h"><?= v2_te('Guides and ideas') ?></h2>
+        <a class="sec-link" href="/guides"><?= v2_te('All guides') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <ul class="cg-grid" data-reveal>
         <?php foreach ($cityGuides as $g): ?>
         <li class="ia"><a href="<?= v2_e($g['href']) ?>">
           <span class="ia-media"><?= $g['cover'] ? v2_photo($g['cover']) : v2_fallback($g['slug']) ?></span>
           <span class="ia-text">
-            <span class="ia-cat"><?= v2_e($g['category'] !== '' ? $g['category'] : 'Guide') ?></span>
+            <span class="ia-cat"><?= v2_e($g['category'] !== '' ? $g['category'] : v2_t('Guide')) ?></span>
             <h3><?= v2_e($g['title']) ?></h3>
             <?php if ($g['excerpt'] !== ''): ?><p><?= v2_e($g['excerpt']) ?></p><?php endif; ?>
-            <span class="ia-more">Read the guide<?= v2_ic('arrow-right') ?></span>
+            <span class="ia-more"><?= v2_te('Read the guide') ?><?= v2_ic('arrow-right') ?></span>
           </span>
         </a></li>
         <?php endforeach; ?>
@@ -815,19 +819,19 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec pfl" id="flights" aria-labelledby="pfl-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">Getting there</p><h2 id="pfl-h">Flights to <?= v2_e($cityName) ?></h2></div>
+        <div><p class="kicker"><?= v2_te('Getting there') ?></p><h2 id="pfl-h"><?= v2_te('Flights to {city}', ['city' => $cityName]) ?></h2></div>
       </div>
       <ul class="pfl-list">
         <?php foreach ($flights as $f): ?>
         <li><a href="<?= v2_e(v2_partner_href('aviasales', $f['url'], 'city-' . $slug . '-flights')) ?>" target="_blank" rel="sponsored nofollow noopener">
-          <span class="pfl-from"><small>From</small><b><?= v2_e($f['from']) ?></b></span>
-          <span class="pfl-when"><?= v2_e(v2_flight_dates($f['out'], $f['back'])) ?><small><?= $f['direct'] ? 'Direct' : 'With a stop' ?> · return</small></span>
-          <span class="pfl-price"><small>from</small><b><?= v2_e(v2_price_local($f['price'], '')) ?></b></span>
+          <span class="pfl-from"><small><?= v2_te('From') ?></small><b><?= v2_e($f['from']) ?></b></span>
+          <span class="pfl-when"><?= v2_e(v2_flight_dates($f['out'], $f['back'])) ?><small><?= $f['direct'] ? v2_te('Direct · return') : v2_te('With a stop · return') ?></small></span>
+          <span class="pfl-price"><small><?= v2_te('from') ?></small><b><?= v2_e(v2_price_local($f['price'], '')) ?></b></span>
           <?= v2_ic('arrow-right') ?>
         </a></li>
         <?php endforeach; ?>
       </ul>
-      <p class="partner-note">Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline's site. Viaqui may earn a commission, at no extra cost to you.</p>
+      <p class="partner-note"><?= v2_te('Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline\'s site. Viaqui may earn a commission, at no extra cost to you.') ?></p>
     </div>
   </section>
   <?php endif; ?>
@@ -837,7 +841,7 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec ptrip-sec" id="plan-your-trip" aria-labelledby="ptrip-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">Before you go</p><h2 id="ptrip-h">Plan your trip to <?= v2_e($cityName) ?></h2></div>
+        <div><p class="kicker"><?= v2_te('Before you go') ?></p><h2 id="ptrip-h"><?= v2_te('Plan your trip to {city}', ['city' => $cityName]) ?></h2></div>
       </div>
       <?= v2_trip_tiles($tripLinks, 'city-' . $slug) ?>
     </div>
@@ -849,15 +853,15 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="sec-head">
         <div>
-          <h2 id="nearby-h"><?= $sameRegion ? 'More cities to explore in ' . v2_e($cityRegion) : 'More cities to explore' ?></h2>
-          <p class="sec-sub">For a day trip, a weekend away or a second stop that goes well with a visit to <?= v2_e($cityName) ?>.</p>
+          <h2 id="nearby-h"><?= $sameRegion ? v2_te('More cities to explore in {country}', ['country' => $cityRegion]) : v2_te('More cities to explore') ?></h2>
+          <p class="sec-sub"><?= v2_te('For a day trip, a weekend away or a second stop that goes well with a visit to {city}.', ['city' => $cityName]) ?></p>
         </div>
       </div>
       <ul class="ncities" data-reveal>
         <?php foreach ($nearbyCities as $i => $nc): ?>
         <li class="nc"><a href="<?= v2_e($nc['href']) ?>">
           <span class="nc-media"><?= $nc['photo'] ? v2_photo([$nc['photo'][0], $nc['photo'][1], $nc['photo'][2], '']) : v2_fallback($nc['name'], $i) ?></span>
-          <span class="nc-body"><b><?= v2_e($nc['name']) ?><?= v2_ic('arrow-right') ?></b><small><?= $nc['count'] ? v2_exp($nc['count']) : 'Discover the city' ?></small></span>
+          <span class="nc-body"><b><?= v2_e($nc['name']) ?><?= v2_ic('arrow-right') ?></b><small><?= $nc['count'] ? v2_e(v2_exp($nc['count'])) : v2_te('Discover the city') ?></small></span>
         </a></li>
         <?php endforeach; ?>
       </ul>
@@ -869,12 +873,12 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec lg" id="local-guide" aria-labelledby="lg-h">
     <div class="wrap lg-grid">
       <article class="lg-main">
-        <p class="kicker">Local guide</p>
+        <p class="kicker"><?= v2_te('Local guide') ?></p>
         <h2 class="lg-h" id="lg-h">
           <?php if ($citySeoTitle !== ''): ?>
             <?= v2_e($citySeoTitle) ?>
           <?php else: ?>
-            What to do in <?= v2_e($cityName) ?>: ideas for a weekend, a family day or a free afternoon.
+            <?= v2_te('What to do in {city}: ideas for a weekend, a family day or a free afternoon.', ['city' => $cityName]) ?>
           <?php endif; ?>
         </h2>
 
@@ -885,24 +889,24 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($cityDescription !== ''): ?>
               <p><?= nl2br(v2_e($cityDescription)) ?></p>
             <?php else: ?>
-              <p>This page gathers what you can see and book in <?= v2_e($cityName) ?> and around it: the main attractions, museums, tours, things to do with children and time outdoors.</p>
+              <p><?= v2_te('This page gathers what you can see and book in {city} and around it: the main attractions, museums, tours, things to do with children and time outdoors.', ['city' => $cityName]) ?></p>
             <?php endif; ?>
-            <p>Each listing shows the price, how long it takes, who it suits and when it is available. After payment the ticket arrives by email as a QR code that is scanned at the entrance.</p>
+            <p><?= v2_te('Each listing shows the price, how long it takes, who it suits and when it is available. After payment the ticket arrives by email as a QR code that is scanned at the entrance.') ?></p>
           <?php endif; ?>
         </div>
 
         <?php if (!empty($topCategories)): ?>
         <div class="lg-block">
-          <h3>Useful local searches</h3>
+          <h3><?= v2_te('Useful local searches') ?></h3>
           <div class="chips-links">
-            <?php foreach ($topCategories as $cat): ?><a href="<?= v2_e($catLink($cat['slug'])) ?>"><?= v2_e($cat['name']) ?> in <?= v2_e($cityName) ?></a><?php endforeach; ?>
+            <?php foreach ($topCategories as $cat): ?><a href="<?= v2_e($catLink($cat['slug'])) ?>"><?= v2_te('{what} in {city}', ['what' => $cat['name'], 'city' => $cityName]) ?></a><?php endforeach; ?>
           </div>
         </div>
         <?php endif; ?>
 
         <?php if ($intentLinks): ?>
         <div class="lg-block">
-          <h3>By mood</h3>
+          <h3><?= v2_te('By mood') ?></h3>
           <div class="chips-links intents">
             <?php foreach ($intentLinks as [$intentSlug, $icon, $label]): ?><a href="/<?= v2_e($slug) ?>/<?= $intentSlug ?>"><?= v2_ic($icon) ?><?= v2_e($label) ?></a><?php endforeach; ?>
           </div>
@@ -911,7 +915,7 @@ include __DIR__ . '/includes/v2/header.php';
 
         <?php if (!empty($cityFaqs)): ?>
         <div class="lg-block">
-          <h3>Frequent questions about <?= v2_e($cityName) ?></h3>
+          <h3><?= v2_te('Frequent questions about {city}', ['city' => $cityName]) ?></h3>
           <?php foreach ($cityFaqs as $i => $f): ?>
           <details class="qa"<?= $i === 0 ? ' open' : '' ?>><summary><?= v2_e($f['q']) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($f['a']) ?></p></details>
           <?php endforeach; ?>
@@ -922,21 +926,21 @@ include __DIR__ . '/includes/v2/header.php';
       <aside class="lg-aside">
         <?php if (!empty($otherCities)): ?>
         <div class="ocities">
-          <p class="kicker">Other cities</p>
-          <h3>You can also look here</h3>
+          <p class="kicker"><?= v2_te('Other cities') ?></p>
+          <h3><?= v2_te('You can also look here') ?></h3>
           <ul>
             <?php foreach ($otherCities as $c): ?><li><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a></li><?php endforeach; ?>
           </ul>
-          <a class="sec-link" href="/cities">All destinations<?= v2_ic('arrow-right') ?></a>
+          <a class="sec-link" href="/cities"><?= v2_te('All destinations') ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <?php endif; ?>
 
         <div class="owner">
           <?= $cityArches ?>
-          <p class="kicker">For local operators</p>
-          <h3>Do you run something in <?= v2_e($cityName) ?>?</h3>
-          <p>Your own page, QR tickets, online availability and a commission only on what you sell.</p>
-          <a class="btn btn-primary" href="/partners">List your venue<?= v2_ic('arrow-right') ?></a>
+          <p class="kicker"><?= v2_te('For local operators') ?></p>
+          <h3><?= v2_te('Do you run something in {city}?', ['city' => $cityName]) ?></h3>
+          <p><?= v2_te('Your own page, QR tickets, online availability and a commission only on what you sell.') ?></p>
+          <a class="btn btn-primary" href="/partners"><?= v2_te('List your venue') ?><?= v2_ic('arrow-right') ?></a>
         </div>
       </aside>
     </div>
@@ -948,24 +952,24 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="cnl" aria-labelledby="nl-h">
     <div class="wrap vf-top">
       <div class="vf-say">
-        <h2 class="vf-line" id="nl-h">Get ideas for <?= v2_e($cityName) ?>.<br>More places.<br>Same feeling.<br><em>Your way in.</em></h2>
+        <h2 class="vf-line" id="nl-h"><?= v2_t('Get ideas for {city}.<br>More places.<br>Same feeling.<br><em>Your way in.</em>', ['city' => v2_e($cityName)]) ?></h2>
       </div>
       <section class="vf-nl" aria-labelledby="nl-card-h">
-        <p class="vf-k">Newsletter</p>
-        <h3 id="nl-card-h">Ideas for <?= v2_e($cityName) ?>, before you ask “what shall we do?”</h3>
-        <p>New places, routes and guides in and around <?= v2_e($cityName) ?>, ideas for the children and gift experiences. One email when there is something worth the trip.</p>
-        <form class="vf-nl-form cnl-form" data-newsletter="city-<?= v2_e($slug) ?>" data-msg="nl-msg" data-ok="Done. Check your inbox to confirm." data-err="We could not complete the subscription. Please try again." data-keep>
-          <label class="vf-field"><span>Email</span><input id="nl-email" name="email" type="email" required placeholder="you@example.com" autocomplete="email"></label>
+        <p class="vf-k"><?= v2_te('Newsletter') ?></p>
+        <h3 id="nl-card-h"><?= v2_te('Ideas for {city}, before you ask “what shall we do?”', ['city' => $cityName]) ?></h3>
+        <p><?= v2_te('New places, routes and guides in and around {city}, ideas for the children and gift experiences. One email when there is something worth the trip.', ['city' => $cityName]) ?></p>
+        <form class="vf-nl-form cnl-form" data-newsletter="city-<?= v2_e($slug) ?>" data-msg="nl-msg" data-ok="<?= v2_te('Done. Check your inbox to confirm.') ?>" data-err="<?= v2_te('We could not complete the subscription. Please try again.') ?>" data-keep>
+          <label class="vf-field"><span><?= v2_te('Email') ?></span><input id="nl-email" name="email" type="email" required placeholder="<?= v2_te('you@example.com') ?>" autocomplete="email"></label>
           <input type="hidden" name="city" value="<?= v2_e($cityName) ?>">
-          <button class="btn vf-nl-go" type="submit">Subscribe<?= v2_ic('arrow-right') ?></button>
+          <button class="btn vf-nl-go" type="submit"><?= v2_te('Subscribe') ?><?= v2_ic('arrow-right') ?></button>
         </form>
         <p class="form-msg" id="nl-msg" role="status" hidden></p>
         <ul class="vf-nl-points">
-          <li><?= v2_ic('check') ?>No more than one email a week</li>
-          <li><?= v2_ic('check') ?>Ideas near <?= v2_e($cityName) ?></li>
-          <li><?= v2_ic('check') ?>Unsubscribe with one click</li>
+          <li><?= v2_ic('check') ?><?= v2_te('No more than one email a week') ?></li>
+          <li><?= v2_ic('check') ?><?= v2_te('Ideas near {city}', ['city' => $cityName]) ?></li>
+          <li><?= v2_ic('check') ?><?= v2_te('Unsubscribe with one click') ?></li>
         </ul>
-        <p class="vf-fine">By subscribing you agree to receive editorial and commercial messages from Viaqui. See the <a href="/privacy">privacy policy</a>.</p>
+        <p class="vf-fine"><?= v2_t('By subscribing you agree to receive editorial and commercial messages from Viaqui. See the <a href="/privacy">privacy policy</a>.') ?></p>
       </section>
     </div>
   </section>
@@ -976,12 +980,12 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="lb-top">
       <p class="lb-title" id="lb-title"><?= v2_e($gallery[0]['alt']) ?></p>
       <span class="lb-count" id="lb-count">1 / <?= count($gallery) ?></span>
-      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Close the gallery</span></button>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close the gallery') ?></span></button>
     </div>
     <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
     <div class="lb-nav"<?= count($gallery) < 2 ? ' hidden' : '' ?>>
-      <button class="rail-btn" type="button" data-lb="prev" aria-label="Previous photo"><?= v2_ic('arrow-left') ?></button>
-      <button class="rail-btn" type="button" data-lb="next" aria-label="Next photo"><?= v2_ic('arrow-right') ?></button>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="<?= v2_te('Previous photo') ?>"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="<?= v2_te('Next photo') ?>"><?= v2_ic('arrow-right') ?></button>
     </div>
   </div>
   <?php endif; ?>

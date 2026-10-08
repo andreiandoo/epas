@@ -17,6 +17,25 @@ const V2_ATTRACTION_TYPES = [
     'wineries' => 'Wineries', 'bridges' => 'Bridges', 'lighthouses' => 'Lighthouses',
 ];
 
+/**
+ * V2_ATTRACTION_TYPES in the visitor's language: the same slugs in the same order. The constant stays for the code
+ * that only needs the slugs (validating a filter); whatever prints a label reads this.
+ */
+function v2_attraction_types_t(): array
+{
+    return [
+        'castles' => v2_t('Castles'), 'palaces' => v2_t('Palaces'), 'museums' => v2_t('Museums'), 'cathedrals' => v2_t('Cathedrals'),
+        'churches' => v2_t('Churches'), 'monasteries' => v2_t('Monasteries'), 'fortresses' => v2_t('Fortresses'),
+        'archaeological-sites' => v2_t('Archaeological sites'), 'old-towns-squares' => v2_t('Old towns & squares'),
+        'unesco-sites' => v2_t('UNESCO World Heritage'), 'landmarks' => v2_t('Landmarks'), 'viewpoints' => v2_t('Viewpoints'),
+        'theatres-operas' => v2_t('Theatres & operas'), 'national-parks' => v2_t('National parks'), 'caves' => v2_t('Caves'),
+        'waterfalls' => v2_t('Waterfalls'), 'lakes' => v2_t('Lakes'), 'beaches' => v2_t('Beaches'), 'zoos' => v2_t('Zoos'),
+        'aquariums' => v2_t('Aquariums'), 'botanical-gardens' => v2_t('Botanical gardens'), 'theme-parks' => v2_t('Theme parks'),
+        'thermal-baths' => v2_t('Thermal baths'), 'cable-cars' => v2_t('Cable cars'), 'salt-mines' => v2_t('Salt mines'),
+        'wineries' => v2_t('Wineries'), 'bridges' => v2_t('Bridges'), 'lighthouses' => v2_t('Lighthouses'),
+    ];
+}
+
 /** The flag of a country as a small image (assets/v2/img/flags, from the MIT-licensed flag-icons set); '' when we have none. */
 function v2_flag(string $code): string
 {
@@ -28,17 +47,18 @@ function v2_flag(string $code): string
 }
 
 /** "Photo: author · licence · source", as the Commons licences ask; '' without a credit. */
-function v2_photo_credit(?array $credit, string $what = 'Photo'): string
+function v2_photo_credit(?array $credit, ?string $what = null): string
 {
+    $what = $what ?? v2_t('Photo');      // a caller that names the picture otherwise passes a text already translated
     if (!$credit || (empty($credit['license']) && empty($credit['source']))) {
         return '';
     }
-    $out = v2_e($what) . ': ' . v2_e(($credit['author'] ?? '') !== '' ? $credit['author'] : 'unknown author');
+    $out = v2_e($what) . ': ' . v2_e(($credit['author'] ?? '') !== '' ? $credit['author'] : v2_t('unknown author'));
     if (!empty($credit['license'])) {
         $out .= ' · ' . (!empty($credit['license_url']) ? '<a href="' . v2_e($credit['license_url']) . '" target="_blank" rel="noopener nofollow license">' . v2_e($credit['license']) . '</a>' : v2_e($credit['license']));
     }
     if (!empty($credit['source_url'])) {
-        $out .= ' · <a href="' . v2_e($credit['source_url']) . '" target="_blank" rel="noopener nofollow">' . v2_e($credit['source'] ?? 'source') . '</a>';
+        $out .= ' · <a href="' . v2_e($credit['source_url']) . '" target="_blank" rel="noopener nofollow">' . v2_e($credit['source'] ?? v2_t('source')) . '</a>';
     }
     return $out;
 }
@@ -47,7 +67,7 @@ function v2_photo_credit(?array $credit, string $what = 'Photo'): string
 function v2_population(int $n): string
 {
     if ($n >= 1000000) {
-        return rtrim(rtrim(number_format($n / 1000000, 1), '0'), '.') . ' million';
+        return v2_t('{n} million', ['n' => rtrim(rtrim(number_format($n / 1000000, 1), '0'), '.')]);
     }
     if ($n >= 100000) {
         return number_format(round($n / 1000) * 1000);
@@ -59,10 +79,10 @@ function v2_population(int $n): string
 function v2_city_card(array $c, int $i = 0): string
 {
     $photo = $c['photo'] ?? null;
-    $meta = array_filter([$c['region'] ?? '', !empty($c['population']) ? v2_population((int) $c['population']) . ' inhabitants' : '']);
+    $meta = array_filter([$c['region'] ?? '', !empty($c['population']) ? v2_t('{n} inhabitants', ['n' => v2_population((int) $c['population'])]) : '']);
     return '<a class="v-pcard" href="' . v2_e($c['href']) . '">'
         . '<span class="v-pcard-ph">' . ($photo ? v2_photo([v2_thumb($photo[0], 480), 0, 0, $photo[3] ?? '']) : v2_fallback($c['name'], $i))
-        . (!empty($c['capital']) ? '<small>Capital</small>' : '') . '</span>'
+        . (!empty($c['capital']) ? '<small>' . v2_te('Capital') . '</small>' : '') . '</span>'
         . '<strong>' . v2_e($c['name']) . '</strong>'
         . ($meta ? '<span>' . v2_e(implode(' · ', $meta)) . '</span>' : '')
         . '</a>';
@@ -185,10 +205,22 @@ function v2_opening_hours(string $raw): string
 {
     $raw = trim($raw);
     if ($raw === '24/7') {
-        return 'Open all day, every day';
+        return v2_t('Open all day, every day');
     }
-    $out = strtr($raw, ['Mo' => 'Mon', 'Tu' => 'Tue', 'We' => 'Wed', 'Th' => 'Thu', 'Fr' => 'Fri', 'Sa' => 'Sat', 'Su' => 'Sun']);
-    $out = (string) preg_replace(['/\bPH\b/', '/\bSH\b/', '/\boff\b/', '/\bclosed\b/i', '/\s*;\s*/', '/\s*,\s*/', '/\bsunrise\b/', '/\bsunset\b/'],
-        ['public holidays', 'school holidays', 'closed', 'closed', ' · ', ', ', 'sunrise', 'sunset'], $out);
+    // The words are put in after the punctuation is settled and through markers, so that a translated word is never
+    // read again as a token ("So" for Sunday in German must not meet a later rule).
+    $words = [
+        'Mo' => v2_t('Mon'), 'Tu' => v2_t('Tue'), 'We' => v2_t('Wed'), 'Th' => v2_t('Thu'), 'Fr' => v2_t('Fri'), 'Sa' => v2_t('Sat'), 'Su' => v2_t('Sun'),
+        'PH' => v2_t('public holidays'), 'SH' => v2_t('school holidays'), 'off' => v2_t('closed'), 'closed' => v2_t('closed'),
+        'sunrise' => v2_t('sunrise'), 'sunset' => v2_t('sunset'),
+    ];
+    $out = (string) preg_replace(['/\s*;\s*/', '/\s*,\s*/'], [' · ', ', '], $raw);
+    $out = (string) preg_replace_callback('/\b(?:PH|SH|off|sunrise|sunset|(?i:closed))\b|Mo|Tu|We|Th|Fr|Sa|Su/', function ($m) use ($words) {
+        $key = $m[0];
+        if (isset($words[$key])) {
+            return $words[$key];
+        }
+        return strcasecmp($key, 'closed') === 0 ? $words['closed'] : $key;
+    }, $out);
     return trim($out, ' ·');
 }
