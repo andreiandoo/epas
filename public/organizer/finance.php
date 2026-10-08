@@ -24,8 +24,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Sold și încasări — ' . SITE_NAME;
-$pageDescription = 'Ce ai încasat online și la casă, comisionul viaqui.com și cât îți rămâne, pe perioadă și lună de lună.';
+$pageTitle = v2_t('Balance and takings');
+$pageDescription = v2_t('What you took online and at the desk, the Viaqui commission and what you keep, by period and month by month.');
 $canonicalUrl = SITE_URL . '/organizator/sold';
 $noindex = true;
 $skipPageCache = true;
@@ -50,60 +50,60 @@ v2_org_start('finance');
 <div class="ve am of" id="of">
   <header class="ve-head">
     <div>
-      <p class="ve-eyebrow"><?= v2_ic('wallet') ?>Bani</p>
-      <h1 class="ve-h">Sold și încasări</h1>
-      <p class="ve-lead" id="of-lead">Comisionul viaqui.com se adaugă peste prețurile tale, așa că din fiecare bilet îți rămâne prețul tău întreg. Banii din vânzările online se încasează prin viaqui.com și ți se cuvin ție, iar pentru biletele vândute la casă îți trimitem lunar o factură cu comisionul.</p>
+      <p class="ve-eyebrow"><?= v2_ic('wallet') ?><?= v2_te('Money') ?></p>
+      <h1 class="ve-h"><?= v2_te('Balance and takings') ?></h1>
+      <p class="ve-lead" id="of-lead"><?= v2_te('The Viaqui commission is added on top of your prices, so you keep your full price on every ticket. The money from online sales is collected through Viaqui and is owed to you, and for tickets sold at the desk we send you a monthly invoice for the commission.') ?></p>
     </div>
   </header>
 
   <p class="of-model" id="of-model" hidden><?= v2_ic('percent') ?><span id="of-model-t"></span></p>
 
   <form class="am-filters of-filters" id="of-form">
-    <div class="fchips" id="of-presets" role="group" aria-label="Perioada">
-      <button class="fchip" type="button" data-preset="today">Azi</button>
-      <button class="fchip" type="button" data-preset="7">7 zile</button>
-      <button class="fchip" type="button" data-preset="30">30 de zile</button>
-      <button class="fchip" type="button" data-preset="month">Luna aceasta</button>
-      <button class="fchip" type="button" data-preset="last-month">Luna trecută</button>
-      <button class="fchip" type="button" data-preset="year">Anul acesta</button>
+    <div class="fchips" id="of-presets" role="group" aria-label="<?= v2_te('Period') ?>">
+      <button class="fchip" type="button" data-preset="today"><?= v2_te('Today') ?></button>
+      <button class="fchip" type="button" data-preset="7"><?= v2_te('7 days') ?></button>
+      <button class="fchip" type="button" data-preset="30"><?= v2_te('30 days') ?></button>
+      <button class="fchip" type="button" data-preset="month"><?= v2_te('This month') ?></button>
+      <button class="fchip" type="button" data-preset="last-month"><?= v2_te('Last month') ?></button>
+      <button class="fchip" type="button" data-preset="year"><?= v2_te('This year') ?></button>
     </div>
-    <span class="po-field"><label for="of-from">De la</label><input class="po-input" type="date" id="of-from"></span>
-    <span class="po-field"><label for="of-to">Până la</label><input class="po-input" type="date" id="of-to"></span>
-    <span class="po-field"><label for="of-loc">Locația</label><span class="po-select"><select id="of-loc"><option value="">Toate locațiile</option></select><?= v2_ic('caret-down') ?></span></span>
-    <button class="btn btn-primary" type="submit">Arată</button>
+    <span class="po-field"><label for="of-from"><?= v2_te('From') ?></label><input class="po-input" type="date" id="of-from"></span>
+    <span class="po-field"><label for="of-to"><?= v2_te('To') ?></label><input class="po-input" type="date" id="of-to"></span>
+    <span class="po-field"><label for="of-loc"><?= v2_te('Venue') ?></label><span class="po-select"><select id="of-loc"><option value=""><?= v2_te('All venues') ?></option></select><?= v2_ic('caret-down') ?></span></span>
+    <button class="btn btn-primary" type="submit"><?= v2_te('Show') ?></button>
   </form>
 
   <p class="sr" id="of-live" aria-live="polite"></p>
 
   <div class="of-body" id="of-body">
     <section class="of-cards" aria-labelledby="of-cards-h">
-      <h2 class="sr" id="of-cards-h">Perioada aleasă</h2>
-      <?= $ofCard('online', 'is-deep', 'Încasat online', 'Vânzările prin viaqui.com, la prețurile tale.') ?>
-      <?= $ofCard('pos', 'is-mint', 'Încasat la casă', 'Vânzările de la casă, pe care le iei direct de la client.') ?>
-      <?= $ofCard('com', 'is-warm', 'Comision viaqui.com', 'Comisionul real al perioadei, așa cum l-am calculat la fiecare rezervare.') ?>
-      <?= $ofCard('net', '', 'Îți rămâne', 'Ce rămâne la tine din vânzările perioadei.') ?>
+      <h2 class="sr" id="of-cards-h"><?= v2_te('Chosen period') ?></h2>
+      <?= $ofCard('online', 'is-deep', v2_te('Taken online'), v2_te('Sales through Viaqui, at your prices.')) ?>
+      <?= $ofCard('pos', 'is-mint', v2_te('Taken at the desk'), v2_te('Sales at the desk, which you collect directly from the customer.')) ?>
+      <?= $ofCard('com', 'is-warm', v2_te('Viaqui commission'), v2_te('The actual commission of the period, as we calculated it for each booking.')) ?>
+      <?= $ofCard('net', '', v2_te('You keep'), v2_te('What stays with you from the sales of the period.')) ?>
     </section>
 
     <section class="org-panel of-due" aria-labelledby="of-due-h">
       <div class="org-panel-head">
         <div>
-          <p class="org-k">Perioada aleasă</p>
-          <h2 class="org-panel-h" id="of-due-h">De plată și de încasat</h2>
-          <p class="org-panel-p" id="of-period">Pentru perioada de mai sus.</p>
+          <p class="org-k"><?= v2_te('Chosen period') ?></p>
+          <h2 class="org-panel-h" id="of-due-h"><?= v2_te('To pay and to receive') ?></h2>
+          <p class="org-panel-p" id="of-period"><?= v2_te('For the period above.') ?></p>
         </div>
       </div>
       <div class="of-due-grid">
         <article class="of-due-c is-warm">
-          <p class="of-due-k">Comision de plătit către viaqui.com</p>
+          <p class="of-due-k"><?= v2_te('Commission to pay to Viaqui') ?></p>
           <p class="of-due-v" id="of-d-pos"><span class="org-skel of-sk"></span></p>
-          <p class="of-due-p" id="of-d-pos-p">Comisionul pentru biletele vândute la casă. Îl facturăm o dată pe lună.</p>
-          <a class="of-due-l" href="/organizator/facturare">Facturile tale<?= v2_ic('arrow-right') ?></a>
+          <p class="of-due-p" id="of-d-pos-p"><?= v2_te('The commission for tickets sold at the desk. We invoice it once a month.') ?></p>
+          <a class="of-due-l" href="/organizator/facturare"><?= v2_te('Your invoices') ?><?= v2_ic('arrow-right') ?></a>
         </article>
         <article class="of-due-c is-mint">
-          <p class="of-due-k">De încasat din vânzările online</p>
+          <p class="of-due-k"><?= v2_te('To receive from online sales') ?></p>
           <p class="of-due-v" id="of-d-online"><span class="org-skel of-sk"></span></p>
-          <p class="of-due-p" id="of-d-online-p">Banii strânși online de viaqui.com care ți se cuvin ție.</p>
-          <a class="of-due-l" href="/organizator/setari#bank">Contul bancar<?= v2_ic('arrow-right') ?></a>
+          <p class="of-due-p" id="of-d-online-p"><?= v2_te('The money collected online by Viaqui that is owed to you.') ?></p>
+          <a class="of-due-l" href="/organizator/setari#bank"><?= v2_te('Bank account') ?><?= v2_ic('arrow-right') ?></a>
         </article>
       </div>
       <p class="of-note" id="of-bank-note" hidden></p>
@@ -112,23 +112,23 @@ v2_org_start('finance');
     <section class="org-panel of-months" aria-labelledby="of-m-h">
       <div class="org-panel-head">
         <div>
-          <p class="org-k">Istoric</p>
-          <h2 class="org-panel-h" id="of-m-h">Lună de lună</h2>
-          <p class="org-panel-p">Ultimele 13 luni, după data plății. Perioada aleasă mai sus nu schimbă tabelul, dar locația da.</p>
+          <p class="org-k"><?= v2_te('History') ?></p>
+          <h2 class="org-panel-h" id="of-m-h"><?= v2_te('Month by month') ?></h2>
+          <p class="org-panel-p"><?= v2_te('The last 13 months, by payment date. The period chosen above does not change the table, but the venue does.') ?></p>
         </div>
-        <button class="btn btn-ghost" type="button" id="of-csv" disabled><?= v2_ic('file-csv') ?>Descarcă CSV</button>
+        <button class="btn btn-ghost" type="button" id="of-csv" disabled><?= v2_ic('file-csv') ?><?= v2_te('Download CSV') ?></button>
       </div>
       <div class="ve-table-wrap"><table class="ve-table am-table of-table">
         <thead><tr>
-          <th scope="col">Luna</th>
-          <th scope="col">Încasat online</th>
-          <th scope="col">Încasat la casă</th>
-          <th scope="col">Comision viaqui.com</th>
-          <th scope="col">Îți rămâne</th>
+          <th scope="col"><?= v2_te('Month') ?></th>
+          <th scope="col"><?= v2_te('Taken online') ?></th>
+          <th scope="col"><?= v2_te('Taken at the desk') ?></th>
+          <th scope="col"><?= v2_te('Viaqui commission') ?></th>
+          <th scope="col"><?= v2_te('You keep') ?></th>
         </tr></thead>
-        <tbody id="of-months"><tr><td colspan="5" class="ve-state">Se încarcă…</td></tr></tbody>
+        <tbody id="of-months"><tr><td colspan="5" class="ve-state"><?= v2_te('Loading…') ?></td></tr></tbody>
         <tfoot id="of-months-foot" hidden><tr>
-          <td>Total</td>
+          <td><?= v2_te('Total') ?></td>
           <td id="of-t-online">—</td>
           <td id="of-t-pos">—</td>
           <td id="of-t-com">—</td>

@@ -27,9 +27,9 @@
   function monthLabel(m) {
     var d = F.dateOf(/^\d{4}-\d{2}$/.test(String(m || '')) ? m + '-01' : m);
     var s = d ? F.date(d, { month: 'long', year: 'numeric' }) : String(m || '');
-    return s.charAt(0).toUpperCase() + s.slice(1); // "septembrie 2026" reads better as a row label capitalised
+    return s.charAt(0).toUpperCase() + s.slice(1); // a month name reads better as a row label capitalised
   }
-  function bookings(x) { return F.count(n(x && x.bookings), 'rezervare', 'rezervări'); }
+  function bookings(x) { return VQ.n(Math.round(n(x && x.bookings)), 'booking', 'bookings'); }
   function set(id, text) { var node = $(id); if (node) node.textContent = text; }
   function errText(err, fallback) {
     return (err && err.message && err.message !== 'An error occurred') ? String(err.message) : fallback;
@@ -57,8 +57,7 @@
   function applyMode() {
     var lead = $('of-lead');
     if (lead && !onTop) {
-      lead.textContent = 'Comisionul viaqui.com se reține din prețurile tale. Banii din vânzările online se încasează prin '
-        + 'viaqui.com și ți se cuvin ție, iar pentru biletele vândute la casă îți trimitem lunar o factură cu comisionul.';
+      lead.textContent = VQ.t('The Viaqui commission is withheld from your prices. The money from online sales is collected through Viaqui and is owed to you, and for tickets sold at the desk we send you a monthly invoice for the commission.');
     }
   }
   function setMode(mode) {
@@ -72,9 +71,11 @@
     if (!box) return;
     if (rate == null) { box.hidden = true; return; }
     // the minimum per ticket comes from the account (/organizer/contract), never from a number typed here
-    set('of-model-t', 'Comisionul tău e ' + F.pct(rate) + (onTop ? ', adăugat peste prețurile tale' : ', reținut din prețul biletului')
-      + (floor > 0 ? ', minimum ' + F.money(floor) + ' pe bilet' : '')
-      + '. Sumele de mai jos sunt cele reale, calculate de viaqui.com la fiecare rezervare.');
+    var v = { rate: F.pct(rate), min: F.money(floor) };
+    var first = onTop
+      ? (floor > 0 ? VQ.t('Your commission is {rate}, added on top of your prices, minimum {min} per ticket.', v) : VQ.t('Your commission is {rate}, added on top of your prices.', v))
+      : (floor > 0 ? VQ.t('Your commission is {rate}, withheld from the ticket price, minimum {min} per ticket.', v) : VQ.t('Your commission is {rate}, withheld from the ticket price.', v));
+    set('of-model-t', first + ' ' + VQ.t('The amounts below are the actual ones, calculated by Viaqui for each booking.'));
     box.hidden = false;
   }
   /** /organizer/me does not say whether a bank account is on file, so the note is neutral until something does. */
@@ -83,24 +84,26 @@
     if (!box) return;
     box.textContent = '';
     box.appendChild(icon('bank'));
-    box.appendChild(el('span', {
-      text: hasBank === true ? 'Ai un cont bancar în profil. Acolo îți trimitem banii, când plata direct în contul tău va fi activă. Îl schimbi la '
-        : hasBank === false ? 'Nu ai încă un cont bancar în profil. Completează-l acum, ca să fie gata când plata direct în contul tău va fi activă: '
-          : 'Banii ți-i trimitem în contul bancar din profil, când plata direct în contul tău va fi activă. Verifică-l sau completează-l la ',
-    }));
-    box.appendChild(el('a', { href: '/organizator/setari#bank', text: 'Cont & companie' }));
-    box.appendChild(el('span', { text: '.' }));
+    // one sentence per state; {link} marks where the link to the settings goes, so a translation can move it
+    var parts = (hasBank === true ? VQ.t('You have a bank account in your profile. That is where we send the money, once payment straight into your account is live. You can change it in {link}.')
+      : hasBank === false ? VQ.t('You have no bank account in your profile yet. Fill it in now, so it is ready when payment straight into your account goes live: {link}.')
+        : VQ.t('We send the money to the bank account in your profile, once payment straight into your account is live. Check it or fill it in at {link}.')).split('{link}');
+    box.appendChild(el('span', { text: parts[0] }));
+    box.appendChild(el('a', { href: VQ.url('/organizator/setari#bank'), text: VQ.t('Account & company') }));
+    box.appendChild(el('span', { text: parts.slice(1).join('') }));
     box.hidden = false;
   }
-  function term() {
-    return dueDays == null ? '' : ', cu termen de plată de ' + F.count(dueDays, 'zi calendaristică', 'zile calendaristice');
-  }
-  /** The sentence under "de plătit": what the desk commission of the period is, and when the invoice for it is due. */
+  /** The sentence under "to pay": what the desk commission of the period is, and when the invoice for it is due. */
   function renderDue() {
     var pos = ((last && last.by_source && last.by_source.period) || {}).pos || {};
+    var v = { bookings: bookings(pos), days: VQ.n(dueDays == null ? 0 : dueDays, 'calendar day', 'calendar days') };
     set('of-d-pos-p', n(pos.commission)
-      ? 'Comisionul pentru ' + bookings(pos) + ' de la casă din perioada aleasă, pe care le-ai încasat direct tu. Îl facturăm o dată pe lună' + term() + '.'
-      : 'Nicio vânzare la casă în perioada aleasă, deci nimic de facturat pentru ea. Comisionul pe încasările la casă se facturează o dată pe lună' + term() + '.');
+      ? (dueDays == null
+        ? VQ.t('The commission for {bookings} at the desk in the chosen period, which you collected yourself. We invoice it once a month.', v)
+        : VQ.t('The commission for {bookings} at the desk in the chosen period, which you collected yourself. We invoice it once a month, with payment due in {days}.', v))
+      : (dueDays == null
+        ? VQ.t('No desk sales in the chosen period, so nothing to invoice for it. The commission on desk takings is invoiced once a month.')
+        : VQ.t('No desk sales in the chosen period, so nothing to invoice for it. The commission on desk takings is invoiced once a month, with payment due in {days}.', v)));
   }
 
   /* =================== DRAW =================== */
@@ -125,33 +128,32 @@
     if (!modeKnown && n(t.commission) > 0) { onTop = Math.abs(n(t.net) - n(t.value)) < 0.005; applyMode(); renderModel(); }
 
     set('of-c-online', money(on.value));
-    set('of-c-online-p', bookings(on) + ' prin viaqui.com, la prețurile tale.');
+    set('of-c-online-p', VQ.t('{bookings} through Viaqui, at your prices.', { bookings: bookings(on) }));
     set('of-c-pos', money(pos.value));
-    set('of-c-pos-p', bookings(pos) + ' la casă, încasate direct de tine.');
+    set('of-c-pos-p', VQ.t('{bookings} at the desk, collected directly by you.', { bookings: bookings(pos) }));
     set('of-c-com', money(t.commission));
-    set('of-c-com-p', 'Din care ' + money(pos.commission) + ' pentru vânzările la casă.');
+    set('of-c-com-p', VQ.t('Of which {amount} for desk sales.', { amount: money(pos.commission) }));
     set('of-c-net', money(t.net));
     set('of-c-net-p', onTop
-      ? 'Prețurile tale, întregi: comisionul îl plătește clientul, peste ele.'
-      : 'Ce rămâne după ce se scade comisionul viaqui.com.');
+      ? VQ.t('Your prices, in full: the commission is added on top of them.')
+      : VQ.t('What is left after the Viaqui commission is deducted.'));
 
-    set('of-period', 'Pentru ' + dayLabel(d.from || $('of-from').value) + ' – ' + dayLabel(d.to || $('of-to').value) + '.');
+    set('of-period', VQ.t('For {from} – {to}.', { from: dayLabel(d.from || $('of-from').value), to: dayLabel(d.to || $('of-to').value) }));
     set('of-d-pos', money(pos.commission));
     renderDue();
     set('of-d-online', money(on.net));
-    set('of-d-online-p', 'Atât ți se cuvine din vânzările online ale perioadei. Banii sunt încasați de viaqui.com; '
-      + 'plata automată direct în contul tău (split payment) nu este încă activă, deci suma de mai sus arată cât ți se cuvine, nu un transfer deja făcut.');
+    set('of-d-online-p', VQ.t('This is what you are owed from the online sales of the period. The money is collected by Viaqui; automatic payment straight into your account (split payment) is not live yet, so the amount above shows what you are owed, not a transfer already made.'));
 
     drawMonths(Array.isArray(d.by_month) ? d.by_month : []);
-    $('of-live').textContent = 'Perioada ' + dayLabel(d.from) + ' – ' + dayLabel(d.to) + ': încasat online ' + money(on.value)
-      + ', la casă ' + money(pos.value) + ', comision ' + money(t.commission) + ', îți rămâne ' + money(t.net) + '.';
+    $('of-live').textContent = VQ.t('Period {from} – {to}: taken online {online}, at the desk {desk}, commission {commission}, you keep {net}.',
+      { from: dayLabel(d.from), to: dayLabel(d.to), online: money(on.value), desk: money(pos.value), commission: money(t.commission), net: money(t.net) });
   }
   function drawMonths(list) {
     months = list;
     var tb = $('of-months'), foot = $('of-months-foot');
     tb.textContent = '';
     if (!list.length) {
-      tb.appendChild(el('tr', null, el('td', { colspan: 5, class: 've-state', text: 'Nicio vânzare în ultimele 13 luni.' })));
+      tb.appendChild(el('tr', null, el('td', { colspan: 5, class: 've-state', text: VQ.t('No sales in the last 13 months.') })));
       foot.hidden = true;
       $('of-csv').disabled = true;
       return;
@@ -168,7 +170,7 @@
         el('td', { text: monthLabel(m.month) }),
         el('td', { text: money(o.value) }),
         el('td', { text: money(p.value) }),
-        el('td', null, [money(com), el('small', { text: 'la casă ' + money(p.commission) })]),
+        el('td', null, [money(com), el('small', { text: VQ.t('at the desk {amount}', { amount: money(p.commission) }) })]),
         el('td', { text: money(net) }),
       ]));
     });
@@ -200,29 +202,29 @@
     var b = box();
     b.appendChild(el('span', { class: 'org-empty-ic' }, icon('wallet')));
     if ($('of-loc').value) {
-      b.appendChild(el('b', { text: 'Nicio vânzare pentru locația aleasă' }));
-      b.appendChild(el('p', { text: 'Locația asta nu a vândut încă nimic. Alege altă locație sau arată-le pe toate.' }));
-      var all = el('button', { class: 'btn btn-ghost', type: 'button', text: 'Arată toate locațiile' });
+      b.appendChild(el('b', { text: VQ.t('No sales for the chosen venue') }));
+      b.appendChild(el('p', { text: VQ.t('This venue has not sold anything yet. Choose another venue or show them all.') }));
+      var all = el('button', { class: 'btn btn-ghost', type: 'button', text: VQ.t('Show all venues') });
       all.addEventListener('click', function () { $('of-loc').value = ''; load(); });
       b.appendChild(el('div', { class: 'of-empty-cta' }, all));
     } else {
-      b.appendChild(el('b', { text: 'Încă nu ai vânzări' }));
-      b.appendChild(el('p', { text: 'Aici vezi ce ai încasat online și la casă, comisionul viaqui.com și cât îți rămâne. Apar aici de la prima rezervare plătită.' }));
+      b.appendChild(el('b', { text: VQ.t('You have no sales yet') }));
+      b.appendChild(el('p', { text: VQ.t('Here you see what you took online and at the desk, the Viaqui commission and what you keep. They show up here from the first paid booking.') }));
       b.appendChild(el('div', { class: 'of-empty-cta' }, [
-        el('a', { class: 'btn btn-primary', href: '/organizator/produse', text: 'Produsele mele' }),
-        el('a', { class: 'btn btn-ghost', href: '/organizator/rezervari', text: 'Rezervări' }),
+        el('a', { class: 'btn btn-primary', href: VQ.url('/organizator/produse'), text: VQ.t('My products') }),
+        el('a', { class: 'btn btn-ghost', href: VQ.url('/organizator/rezervari'), text: VQ.t('Bookings') }),
       ]));
     }
-    $('of-live').textContent = 'Nicio vânzare de arătat.';
+    $('of-live').textContent = VQ.t('No sales to show.');
     return true;
   }
   function fail(err) {
     var b = box();
     b.classList.add('is-error');
     b.appendChild(el('span', { class: 'org-empty-ic' }, icon('warning-circle')));
-    b.appendChild(el('b', { text: 'Nu am putut încărca soldul' }));
-    b.appendChild(el('p', { text: errText(err, 'Verifică conexiunea și încearcă din nou.') }));
-    var retry = el('button', { class: 'btn btn-primary', type: 'button', text: 'Reîncearcă' });
+    b.appendChild(el('b', { text: VQ.t('We could not load the balance') }));
+    b.appendChild(el('p', { text: errText(err, VQ.t('Check your connection and try again.')) }));
+    var retry = el('button', { class: 'btn btn-primary', type: 'button', text: VQ.t('Try again') });
     retry.addEventListener('click', load);
     b.appendChild(el('div', { class: 'of-empty-cta' }, retry));
   }
@@ -236,7 +238,9 @@
   }
   function csv() {
     if (!months.length) return;
-    var rows = [['Luna', 'Încasat online (lei)', 'Încasat la casă (lei)', 'Comision viaqui.com (lei)', 'Comision la casă (lei)', 'Îți rămâne (lei)']];
+    // the summary carries no currency of its own today: the site currency (euro) unless the data names one
+    var cur = { currency: String((last && (last.currency || (last.totals && last.totals.currency))) || 'EUR') };
+    var rows = [[VQ.t('Month'), VQ.t('Taken online ({currency})', cur), VQ.t('Taken at the desk ({currency})', cur), VQ.t('Viaqui commission ({currency})', cur), VQ.t('Desk commission ({currency})', cur), VQ.t('You keep ({currency})', cur)]];
     var sum = { online: 0, pos: 0, com: 0, posCom: 0, net: 0 };
     months.forEach(function (m) {
       var o = m.online || {}, p = m.pos || {};
@@ -248,10 +252,10 @@
       sum.net += net;
       rows.push([monthLabel(m.month), dec(o.value), dec(p.value), dec(com), dec(p.commission), dec(net)]);
     });
-    rows.push(['Total', dec(sum.online), dec(sum.pos), dec(sum.com), dec(sum.posCom), dec(sum.net)]);
+    rows.push([VQ.t('Total'), dec(sum.online), dec(sum.pos), dec(sum.com), dec(sum.posCom), dec(sum.net)]);
     var body = rows.map(function (r) { return r.map(cell).join(';'); }).join('\r\n');
     var url = URL.createObjectURL(new Blob(['﻿' + body], { type: 'text/csv;charset=utf-8' }));
-    var a = el('a', { href: url, download: 'sold-lunar-' + today + '.csv' });
+    var a = el('a', { href: url, download: 'viaqui-monthly-balance-' + today + '.csv' });
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1000);
@@ -310,7 +314,7 @@
     }, function () { renderModel(); });
     O.api(BASE + '/locations', { quiet: true }).then(function (r) {
       ((r && r.data && r.data.locations) || []).forEach(function (l) {
-        $('of-loc').appendChild(el('option', { value: String(l.id), text: F.flat(l.name) || ('Locația ' + l.id) }));
+        $('of-loc').appendChild(el('option', { value: String(l.id), text: F.flat(l.name) || VQ.t('Venue {id}', { id: l.id }) }));
       });
     }, function () {});
     load();

@@ -14,7 +14,7 @@
   function qsa(sel, ctx) { return [].slice.call((ctx || document).querySelectorAll(sel)); }
 
   var SVGNS = 'http://www.w3.org/2000/svg', MAX = 50;
-  var FIELDS = [['first_name', 'Prenume', 100], ['last_name', 'Nume', 100], ['email', 'Email', 180], ['phone', 'Telefon', 50], ['company', 'Companie', 150], ['notes', 'Note', 500]];
+  var FIELDS = [['first_name', VQ.t('First name'), 100], ['last_name', VQ.t('Last name'), 100], ['email', VQ.t('Email'), 180], ['phone', VQ.t('Phone'), 50], ['company', VQ.t('Company'), 150], ['notes', VQ.t('Notes'), 500]];
   var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   var qs = new URLSearchParams(location.search), EVENT = qs.get('event') || qs.get('event_id') || '';
   if (!/^\d+$/.test(EVENT)) EVENT = '';
@@ -28,7 +28,7 @@
   /* =================== HELPERS =================== */
   function val(id) { var n = $(id); return n ? String(n.value || '').trim() : ''; }
   function norm(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
-  function slug(s) { return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'serie'; }
+  function slug(s) { return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'series'; }
   function tag(text, cls) { return el('span', { class: 'org-tag ' + (cls || ''), text: text }); }
   function naiveDay(v) { var m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v || '')); return m ? m[1] : ''; }
   function timeOf(v) { var m = /T(\d{2}):(\d{2})/.exec(String(v || '')); return m && m[1] + ':' + m[2] !== '00:00' ? m[1] + ':' + m[2] : ''; }
@@ -58,12 +58,12 @@
     if (!s) return '';
     var parts = [];
     if (s.section_name) parts.push(s.section_name);
-    if (s.row_label) parts.push('Rândul ' + s.row_label);
-    if (s.seat_label) parts.push('Locul ' + s.seat_label);
+    if (s.row_label) parts.push(VQ.t('Row {row}', { row: s.row_label }));
+    if (s.seat_label) parts.push(VQ.t('Seat {seat}', { seat: s.seat_label }));
     return parts.length ? parts.join(' · ') : String(s.seat_uid || '');
   }
   function sortSeats(list) {
-    var c = function (a, b) { return String(a || '').localeCompare(String(b || ''), 'ro', { numeric: true }); };
+    var c = function (a, b) { return String(a || '').localeCompare(String(b || ''), VQ.locale === 'en' ? 'en-GB' : VQ.locale, { numeric: true }); };
     return list.sort(function (a, b) { return c(a.section_name, b.section_name) || c(a.row_label, b.row_label) || c(a.seat_label, b.seat_label); });
   }
 
@@ -87,28 +87,28 @@
     $('oi-loading').hidden = true;
     $('oi-choose').hidden = false;
     $('oi-missing').hidden = !reason;
-    if (reason === 'error') $('oi-missing-p').textContent = 'Nu am putut încărca activitatea. Verifică conexiunea și reîncarcă pagina, sau alege din listă.';
+    if (reason === 'error') $('oi-missing-p').textContent = VQ.t('We could not load the experience. Check your connection and reload the page, or choose from the list.');
     var box = $('oi-events');
     box.textContent = '';
-    box.appendChild(el('li', { class: 'oi-msg', text: 'Se încarcă activitățile…' }));
+    box.appendChild(el('li', { class: 'oi-msg', text: VQ.t('Loading experiences…') }));
     loadAllEvents().then(function (list) {
       var upcoming = list.filter(function (e) { return !isOver(e); });
       box.textContent = '';
-      if (!upcoming.length) { box.appendChild(el('li', { class: 'oi-msg', text: 'Nu ai activități care n-au trecut încă.' })); return; }
+      if (!upcoming.length) { box.appendChild(el('li', { class: 'oi-msg', text: VQ.t('You have no experiences that have not ended yet.') })); return; }
       upcoming.forEach(function (e) {
         var day = naiveDay(e.starts_at), t = timeOf(e.starts_at);
         var meta = [day ? dayLabel(day) + (t ? ', ' + t : '') : '', F.flat(e.venue_name)].filter(Boolean).join(' · ');
-        box.appendChild(el('li', null, el('a', { class: 'oi-ev', href: '/organizator/invitatii?event=' + e.id }, [
-          el('span', null, [el('b', { text: F.flat(e.name || e.title) || 'Activitatea #' + e.id }), meta ? el('small', { text: meta }) : null]),
+        box.appendChild(el('li', null, el('a', { class: 'oi-ev', href: VQ.url('/organizator/invitatii?event=' + e.id) }, [
+          el('span', null, [el('b', { text: F.flat(e.name || e.title) || VQ.t('Experience #{id}', { id: e.id }) }), meta ? el('small', { text: meta }) : null]),
           icon('arrow-right'),
         ])));
       });
     }, function (err) {
       if (err && err.status === 401) return;
       box.textContent = '';
-      var retry = el('button', { class: 'oi-link', type: 'button', text: 'Reîncearcă' });
+      var retry = el('button', { class: 'oi-link', type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { choose(reason); });
-      box.appendChild(el('li', { class: 'oi-msg' }, ['Nu am putut încărca activitățile.', retry]));
+      box.appendChild(el('li', { class: 'oi-msg' }, [VQ.t('We could not load the experiences.'), retry]));
     });
   }
   function loadEvent() {
@@ -118,9 +118,9 @@
       ev = e;
       seated = !!(e.has_seating || e.seating_layout_id || e.seating_layout);
       $('oi-loading').hidden = true;
-      $('oi-event-name').textContent = F.flat(e.name || e.title) || 'Activitate';
+      $('oi-event-name').textContent = F.flat(e.name || e.title) || VQ.t('Experience');
       var day = naiveDay(e.starts_at || e.event_date || e.range_start_date), t = timeOf(e.starts_at);
-      $('oi-event-date').textContent = day ? dayLabel(day) + (t ? ', ora ' + t : '') : '';
+      $('oi-event-date').textContent = day ? dayLabel(day) + (t ? ', ' + t : '') : '';
       $('oi-event-date-w').hidden = !day;
       var venue = [F.flat(e.venue_name || (e.venue && e.venue.name)), F.flat(e.venue_city)].filter(Boolean).join(', ');
       $('oi-event-venue').textContent = venue;
@@ -144,11 +144,11 @@
     $('oi-qty-f').hidden = seated;
     $('oi-seats').hidden = !seated;
     $('oi-modes').hidden = seated;
-    $('oi-steps-1').textContent = seated ? 'Locuri' : 'Detalii serie';
-    $('oi-step1-h').textContent = seated ? 'Pasul 1 — Alege locurile' : 'Pasul 1 — Detalii serie';
+    $('oi-steps-1').textContent = seated ? VQ.t('Seats') : VQ.t('Series details');
+    $('oi-step1-h').textContent = seated ? VQ.t('Step 1: Choose the seats') : VQ.t('Step 1: Series details');
     $('oi-step1-p').textContent = seated
-      ? 'Dă un nume seriei (opțional, pentru organizare — ex. „Firma X”, „Sponsori”) și alege locurile de pe hartă.'
-      : 'Dă un nume seriei (opțional, pentru organizare — ex. „Firma X”, „Sponsori”) și alege numărul de invitații.';
+      ? VQ.t('Give the series a name (optional, to keep things organised, e.g. "Company X", "Sponsors") and choose the seats on the map.')
+      : VQ.t('Give the series a name (optional, to keep things organised, e.g. "Company X", "Sponsors") and choose the number of invitations.');
     drawChips();
   }
   function go(n, focus) {
@@ -164,12 +164,12 @@
   $('oi-next').addEventListener('click', function () {
     var count;
     if (seated) {
-      if (!picked.length) { showErr('oi-seats-err', 'Alege cel puțin un loc pe hartă.'); $('oi-open-map').focus(); return; }
+      if (!picked.length) { showErr('oi-seats-err', VQ.t('Choose at least one seat on the map.')); $('oi-open-map').focus(); return; }
       showErr('oi-seats-err', '');
       count = picked.length;
     } else {
       var raw = val('oi-qty');
-      if (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > MAX) { fieldErr('oi-qty', 'Alege între 1 și 50 de invitații. Pentru mai multe, creează mai multe serii.'); $('oi-qty').focus(); return; }
+      if (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > MAX) { fieldErr('oi-qty', VQ.t('Choose between 1 and 50 invitations. For more, create several series.')); $('oi-qty').focus(); return; }
       fieldErr('oi-qty', '');
       count = Number(raw);
     }
@@ -196,7 +196,7 @@
       var rec = rowData[i] || {}, cells = [el('td', { text: String(i + 1) })];
       if (seated) cells.push(el('td', null, el('span', { class: 'oi-seat-tag', text: seatRef(picked[i]) })));
       FIELDS.forEach(function (f) {
-        var inp = el('input', { type: f[0] === 'email' ? 'email' : f[0] === 'phone' ? 'tel' : 'text', maxlength: f[2], autocomplete: 'off', spellcheck: f[0] === 'notes' ? null : 'false', 'data-field': f[0], placeholder: f[1], 'aria-label': f[1] + ', invitatul ' + (i + 1) });
+        var inp = el('input', { type: f[0] === 'email' ? 'email' : f[0] === 'phone' ? 'tel' : 'text', maxlength: f[2], autocomplete: 'off', spellcheck: f[0] === 'notes' ? null : 'false', 'data-field': f[0], placeholder: f[1], 'aria-label': VQ.t('{field}, guest {n}', { field: f[1], n: i + 1 }) });
         inp.value = rec[f[0]] || '';
         inp.addEventListener('input', function () { inp.removeAttribute('aria-invalid'); });
         cells.push(el('td', null, inp));
@@ -222,20 +222,21 @@
     showErr('oi-gen-err', '');
     if (!file) return;
     input.value = '';
-    if (file.size > 2 * 1024 * 1024) { csvRows = null; $('oi-csv-name').textContent = file.name; showErr('oi-csv-err', 'Fișierul e prea mare. Un CSV cu 50 de invitați are câțiva kilobytes.'); return; }
+    if (file.size > 2 * 1024 * 1024) { csvRows = null; $('oi-csv-name').textContent = file.name; showErr('oi-csv-err', VQ.t('The file is too large. A CSV with 50 guests is a few kilobytes.')); return; }
     var reader = new FileReader();
     reader.onload = function () {
       try {
         var res = parseCsv(String(reader.result || ''));
         csvRows = res.rows;
-        $('oi-csv-name').textContent = file.name + ' — ' + F.count(res.rows.length, 'invitat detectat', 'invitați detectați') + (res.skipped ? ', ' + F.count(res.skipped, 'rând ignorat', 'rânduri ignorate') + ' (fără prenume, nume sau email)' : '') + '.';
+        var found = { file: file.name, guests: VQ.n(res.rows.length, 'guest found', 'guests found'), skipped: VQ.n(res.skipped, 'row skipped', 'rows skipped') };
+        $('oi-csv-name').textContent = res.skipped ? VQ.t('{file}: {guests}, {skipped} (no first name, last name or email).', found) : VQ.t('{file}: {guests}.', found);
       } catch (e) {
         csvRows = null;
         $('oi-csv-name').textContent = file.name;
         showErr('oi-csv-err', e.message);
       }
     };
-    reader.onerror = function () { csvRows = null; showErr('oi-csv-err', 'Nu am putut citi fișierul. Încearcă din nou.'); };
+    reader.onerror = function () { csvRows = null; showErr('oi-csv-err', VQ.t('We could not read the file. Try again.')); };
     reader.readAsText(file);
   });
   function splitCsv(line, sep) {
@@ -252,12 +253,12 @@
   function parseCsv(text) {
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
     var lines = text.split(/\r?\n/).filter(function (l) { return l.trim() !== ''; });
-    if (lines.length < 2) throw new Error('CSV-ul e gol sau conține doar antetul.');
-    // Excel with Romanian settings separates columns with ";"
+    if (lines.length < 2) throw new Error(VQ.t('The CSV is empty or has only the header.'));
+    // Excel with many European regional settings separates columns with ";"
     var sep = lines[0].indexOf(';') > -1 && lines[0].indexOf(',') === -1 ? ';' : ',';
     var head = splitCsv(lines[0], sep).map(function (h) { return h.trim().toLowerCase(); });
     var iF = head.indexOf('first_name'), iL = head.indexOf('last_name'), iE = head.indexOf('email');
-    if (iF < 0 || iL < 0 || iE < 0) throw new Error('Lipsesc coloane obligatorii. Antetul trebuie să conțină first_name, last_name, email.');
+    if (iF < 0 || iL < 0 || iE < 0) throw new Error(VQ.t('Required columns are missing. The header must contain first_name, last_name, email.'));
     var extra = [['phone', head.indexOf('phone'), 50], ['company', head.indexOf('company'), 150], ['notes', head.indexOf('notes'), 500]], rows = [], skipped = 0;
     for (var i = 1; i < lines.length; i++) {
       var c = splitCsv(lines[i], sep), first = (c[iF] || '').trim(), last = (c[iL] || '').trim(), email = (c[iE] || '').trim();
@@ -266,24 +267,24 @@
       extra.forEach(function (x) { var v = x[1] > -1 ? (c[x[1]] || '').trim() : ''; if (v) rec[x[0]] = v.slice(0, x[2]); });
       rows.push(rec);
     }
-    if (!rows.length) throw new Error('Niciun rând valid (toate trebuie să aibă prenume, nume, email).');
-    if (rows.length > MAX) throw new Error('CSV-ul are ' + rows.length + ' de invitați, iar o serie poate avea cel mult 50. Împarte fișierul în mai multe.');
+    if (!rows.length) throw new Error(VQ.t('No valid row (each must have a first name, a last name and an email).'));
+    if (rows.length > MAX) throw new Error(VQ.t('The CSV has {count} guests and a series can have at most 50. Split the file into several.', { count: rows.length }));
     var bad = rows.filter(function (r) { return !EMAIL.test(r.email) || r.email.length > 180; }).length;
-    if (bad) throw new Error((bad === 1 ? 'O adresă de email nu e validă' : F.count(bad, 'adresă', 'adrese') + ' de email nu sunt valide') + '. Corectează fișierul și încarcă-l din nou.');
+    if (bad) throw new Error(bad === 1 ? VQ.t('One email address is not valid. Fix the file and upload it again.') : VQ.t('{count} email addresses are not valid. Fix the file and upload it again.', { count: bad }));
     return { rows: rows, skipped: skipped };
   }
   $('oi-csv-template').addEventListener('click', function () {
-    download('organizer.invitations.csv-template', null, 'csv', 'invitatii-template.csv', this).then(function (ok) { if (ok) O.flash('Template-ul CSV a fost descărcat.'); });
+    download('organizer.invitations.csv-template', null, 'csv', 'invitations-template.csv', this).then(function (ok) { if (ok) O.flash(VQ.t('The CSV template was downloaded.')); });
   });
 
   /* =================== DOWNLOADS =================== */
   function download(action, params, kind, name, btn) {
     var token = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.getToken ? BileteOnlineAuth.getToken() : null;
-    if (!token) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return Promise.resolve(false); }
+    if (!token) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return Promise.resolve(false); }
     if (btn && isBusy(btn)) return Promise.resolve(false);
     var base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', disposition = '';
     var url = base + '?action=' + action + (params ? '&' + new URLSearchParams(params).toString() : '');
-    if (btn) busyBtn(btn, true, 'Se descarcă…');
+    if (btn) busyBtn(btn, true, VQ.t('Downloading…'));
     return fetch(url, { headers: { Authorization: 'Bearer ' + token, Accept: kind === 'zip' ? 'application/zip' : kind === 'pdf' ? 'application/pdf' : 'text/csv' } }).then(function (res) {
       disposition = res.headers.get('content-disposition') || '';
       if (!res.ok) {
@@ -305,15 +306,15 @@
       });
     }).catch(function (err) {
       if (err && (err.status === 401 || err.html)) {
-        O.flash('Sesiunea a expirat. Te trimitem la autentificare.', true);
+        O.flash(VQ.t('Your session has expired. Taking you to sign in.'), true);
         setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500);
         return false;
       }
       var m = errMessage(err);
-      if (/No PDFs available/i.test(m)) O.flash('Seria nu are încă PDF-uri. Apasă „Regenerează”, apoi descarcă din nou.', true);
-      else if (/PDF nu este disponibil/i.test(m)) O.flash('PDF-ul acestei invitații lipsește. Regenerează seria, apoi descarcă din nou.', true);
-      else if (err && err.status === 404) O.flash('Nu mai găsim fișierul cerut. Reîncarcă lista de serii.', true);
-      else O.flash('Nu am putut descărca fișierul. Încearcă din nou.', true);
+      if (/No PDFs available/i.test(m)) O.flash(VQ.t('The series has no PDFs yet. Press "Regenerate", then download again.'), true);
+      else if (/PDF nu este disponibil/i.test(m)) O.flash(VQ.t('The PDF of this invitation is missing. Regenerate the series, then download again.'), true);
+      else if (err && err.status === 404) O.flash(VQ.t('We can no longer find that file. Reload the list of series.'), true);
+      else O.flash(VQ.t('We could not download the file. Try again.'), true);
       return false;
     }).then(function (ok) { if (btn) busyBtn(btn, false); return ok; });
   }
@@ -333,7 +334,7 @@
     showErr('oi-gen-err', '');
     showErr('oi-csv-err', '');
     if (mode === 'csv' && !seated) {
-      if (!csvRows) { showErr('oi-csv-err', 'Alege mai întâi un fișier CSV.'); $('oi-csv-pick').focus(); return; }
+      if (!csvRows) { showErr('oi-csv-err', VQ.t('Choose a CSV file first.')); $('oi-csv-pick').focus(); return; }
       recipients = csvRows.slice();
     } else {
       readRows();
@@ -348,14 +349,14 @@
         return rec;
       });
       if (bad.length) {
-        showErr('oi-gen-err', bad.length === 1 ? 'O adresă de email nu e validă. Corecteaz-o sau lasă câmpul gol.' : F.count(bad.length, 'adresă', 'adrese') + ' de email nu sunt valide. Corectează-le sau lasă câmpurile goale.');
+        showErr('oi-gen-err', bad.length === 1 ? VQ.t('One email address is not valid. Fix it or leave the field empty.') : VQ.t('{count} email addresses are not valid. Fix them or leave the fields empty.', { count: bad.length }));
         bad[0].focus();
         return;
       }
     }
-    if (!recipients.length) { showErr('oi-gen-err', 'Adaugă cel puțin un invitat.'); return; }
-    if (recipients.length > MAX) { showErr('oi-gen-err', 'O serie poate avea cel mult 50 de invitații.'); return; }
-    if (seated && recipients.length !== picked.length) { showErr('oi-gen-err', 'Numărul de invitați (' + recipients.length + ') trebuie să fie egal cu numărul de locuri alese (' + picked.length + ').'); return; }
+    if (!recipients.length) { showErr('oi-gen-err', VQ.t('Add at least one guest.')); return; }
+    if (recipients.length > MAX) { showErr('oi-gen-err', VQ.t('A series can have at most 50 invitations.')); return; }
+    if (seated && recipients.length !== picked.length) { showErr('oi-gen-err', VQ.t('The number of guests ({guests}) must equal the number of chosen seats ({seats}).', { guests: recipients.length, seats: picked.length })); return; }
     var body = { event_id: Number(EVENT), recipients: recipients }, name = val('oi-name'), label = val('oi-label'), mark = val('oi-watermark');
     if (name) body.name = name;
     if (label) body.ticket_label = label;
@@ -365,17 +366,17 @@
       body.seats = picked.map(function (s) { return { seat_uid: s.seat_uid, section_name: s.section_name, row_label: s.row_label, seat_label: s.seat_label }; });
     }
     generating = true;
-    busyBtn(btn, true, 'Se generează…');
+    busyBtn(btn, true, VQ.t('Generating…'));
     $('oi-wait').hidden = false;
     $('oi-back-1').disabled = true;
     O.api('/organizer/invitations', { method: 'POST', body: body }).then(function (r) {
       var d = (r && r.data) || {}, batch = d.batch || {}, n = F.toNum(d.rendered);
       doneBatch = batch.id != null ? String(batch.id) : null;
-      doneName = F.flat(batch.name) || name || 'Seria';
-      $('oi-step3-h').textContent = n > 0 ? 'Gata! Invitațiile au fost generate.' : 'Seria a fost creată, fără PDF-uri';
+      doneName = F.flat(batch.name) || name || VQ.t('Series');
+      $('oi-step3-h').textContent = n > 0 ? VQ.t('Done! The invitations were generated.') : VQ.t('The series was created, without PDFs');
       $('oi-done-p').textContent = n > 0
-        ? F.count(n, 'invitație generată', 'invitații generate') + ' în seria „' + doneName + '”.'
-        : 'Seria „' + doneName + '” a fost creată, dar PDF-urile nu s-au generat. Apasă „Regenerează” la seria din listă.';
+        ? VQ.t('{invitations} in the series "{name}".', { invitations: VQ.n(n, 'invitation generated', 'invitations generated'), name: doneName })
+        : VQ.t('The series "{name}" was created, but the PDFs were not generated. Press "Regenerate" on the series in the list.', { name: doneName });
       $('oi-done-ic').classList.toggle('is-wait', n === 0);
       $('oi-done-zip').hidden = !(n > 0 && doneBatch);
       if (seated) { picked = []; pickedSeatingId = null; seating = null; drawChips(); }
@@ -394,22 +395,24 @@
         seating = null;
         drawChips();
         go(1, true);
-        showErr('oi-seats-err', 'Între timp ' + (refs.length === 1 ? 's-a ocupat ' + refs[0] : 's-au ocupat ' + F.count(refs.length || gone.length, 'loc', 'locuri') + (refs.length ? ': ' + refs.join(', ') : '')) + '. Le-am scos din selecție; alege altele pe hartă.');
+        showErr('oi-seats-err', refs.length === 1 ? VQ.t('Meanwhile {seat} was taken. We removed it from the selection; choose another on the map.', { seat: refs[0] })
+          : refs.length ? VQ.t('Meanwhile some of your seats were taken ({seats}): {list}. We removed them from the selection; choose others on the map.', { seats: VQ.n(refs.length, 'seat', 'seats'), list: refs.join(', ') })
+            : VQ.t('Meanwhile some of your seats were taken ({seats}). We removed them from the selection; choose others on the map.', { seats: VQ.n(gone.length, 'seat', 'seats') }));
         return;
       }
       if (s === 422) {
         var marked = markRows(errors);
-        showErr('oi-gen-err', marked ? 'Verifică datele marcate în tabel.' : romanian(m) ? m : 'Unele date nu sunt acceptate. Verifică-le și încearcă din nou.');
+        showErr('oi-gen-err', marked ? VQ.t('Check the fields marked in the table.') : romanian(m) ? m : VQ.t('Some details are not accepted. Check them and try again.'));
         return;
       }
-      if (s === 404) { showErr('oi-gen-err', 'Activitatea nu mai există sau nu îți aparține.'); return; }
+      if (s === 404) { showErr('oi-gen-err', VQ.t('The experience no longer exists or is not yours.')); return; }
       if (offline(err)) {
-        showErr('oi-gen-err', 'Generarea durează mai mult decât de obicei. Seria poate apărea în listă peste câteva momente: verifică lista înainte să încerci din nou, ca să nu generezi de două ori.');
+        showErr('oi-gen-err', VQ.t('Generating is taking longer than usual. The series may show up in the list in a few moments: check the list before trying again, so you do not generate it twice.'));
         loadHistory();
         setTimeout(function () { loadHistory(); }, 8000);
         return;
       }
-      showErr('oi-gen-err', romanian(m) ? m : 'Nu am putut genera invitațiile. Încearcă din nou.');
+      showErr('oi-gen-err', romanian(m) ? m : VQ.t('We could not generate the invitations. Try again.'));
     }).then(function () {
       generating = false;
       busyBtn(btn, false);
@@ -421,8 +424,8 @@
   $('oi-done-zip').addEventListener('click', function () {
     var btn = this;
     if (!doneBatch) return;
-    download('organizer.invitations.download', { batch_id: doneBatch }, 'zip', 'invitatii-' + slug(doneName) + '.zip', btn).then(function (ok) {
-      if (ok) { O.flash('Arhiva cu invitațiile a fost descărcată.'); loadHistory(); }
+    download('organizer.invitations.download', { batch_id: doneBatch }, 'zip', 'invitations-' + slug(doneName) + '.zip', btn).then(function (ok) {
+      if (ok) { O.flash(VQ.t('The archive with the invitations was downloaded.')); loadHistory(); }
     });
   });
   $('oi-again').addEventListener('click', function () {
@@ -441,7 +444,7 @@
   /* =================== SERIES =================== */
   function loadHistory(more, wanted) {
     var page = more ? hPage + 1 : 1, btn = $('oi-history-more');
-    if (more) busyBtn(btn, true, 'Se încarcă…');
+    if (more) busyBtn(btn, true, VQ.t('Loading…'));
     return O.api('/organizer/invitations?event_id=' + EVENT + '&per_page=20&page=' + page, { quiet: true }).then(function (r) {
       var d = r && r.data, rows = Array.isArray(d) ? d : d && Array.isArray(d.data) ? d.data : d && Array.isArray(d.items) ? d.items : [];
       rows = rows.filter(function (b) { return b && b.id != null; });
@@ -453,38 +456,38 @@
       if (more) busyBtn(btn, false);
       drawHistory(wanted);
     }, function (err) {
-      if (more) { busyBtn(btn, false); O.flash('Nu am putut încărca mai multe serii. Încearcă din nou.', true); return; }
+      if (more) { busyBtn(btn, false); O.flash(VQ.t('We could not load more series. Try again.'), true); return; }
       if (err && err.status === 401) return;
-      var box = $('oi-batches'), retry = el('button', { class: 'oi-link', type: 'button', text: 'Reîncearcă' });
+      var box = $('oi-batches'), retry = el('button', { class: 'oi-link', type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { loadHistory(); });
       box.textContent = '';
-      box.appendChild(el('li', { class: 'oi-msg' }, ['Nu am putut încărca seriile.', retry]));
+      box.appendChild(el('li', { class: 'oi-msg' }, [VQ.t('We could not load the series.'), retry]));
     });
   }
   $('oi-history-more').addEventListener('click', function () { if (!isBusy(this)) loadHistory(true); });
   function drawHistory(wanted) {
     var box = $('oi-batches'), keep = keepKey(box, wanted);
     box.textContent = '';
-    if (!batches.length) box.appendChild(el('li', { class: 'oi-msg', text: 'Încă nu ai generat invitații pentru această activitate.' }));
+    if (!batches.length) box.appendChild(el('li', { class: 'oi-msg', text: VQ.t('You have not generated invitations for this experience yet.') }));
     batches.forEach(function (b) { box.appendChild(batchRow(b)); });
     $('oi-history-more').hidden = !hMore;
     var count = batches.reduce(function (s, b) { return s + F.toNum(b.qty_generated); }, 0);
-    $('oi-history-p').textContent = !batches.length ? '' : F.count(hTotal, 'serie', 'serii') + (hMore ? '' : ', ' + F.count(count, 'invitație', 'invitații') + ' în total') + '.';
+    $('oi-history-p').textContent = !batches.length ? '' : hMore ? VQ.n(hTotal, 'series', 'series') + '.' : VQ.t('{series}, {invitations} in total.', { series: VQ.n(hTotal, 'series', 'series'), invitations: VQ.n(count, 'invitation', 'invitations') });
     restoreFocus(box, keep);
   }
   function batchRow(b) {
-    var id = String(b.id), isOpen = !!openSet[id], name = F.flat(b.name) || 'Seria #' + id, created = F.dateOf(b.created_at);
-    var st = b.status === 'ready' ? tag('Gata', 'is-ok') : b.status === 'draft' ? tag('Fără PDF-uri', 'is-wait') : tag(F.flat(b.status) || 'În lucru', 'is-muted');
-    var meta = [created ? F.date(created, { day: 'numeric', month: 'short', year: 'numeric' }) : '', F.num(F.toNum(b.qty_planned)) + ' planificate', F.num(F.toNum(b.qty_rendered)) + ' generate', F.num(F.toNum(b.qty_downloaded)) + ' descărcate'].filter(Boolean).join(' · ');
-    var viewBtn = pill('caret-down', 'Vezi invitați', { 'data-focus': 'b-view-' + id, 'aria-expanded': String(isOpen), 'aria-controls': 'oi-inv-' + id });
+    var id = String(b.id), isOpen = !!openSet[id], name = F.flat(b.name) || VQ.t('Series #{id}', { id: id }), created = F.dateOf(b.created_at);
+    var st = b.status === 'ready' ? tag(VQ.t('Ready'), 'is-ok') : b.status === 'draft' ? tag(VQ.t('No PDFs'), 'is-wait') : tag(F.flat(b.status) || VQ.t('In progress'), 'is-muted');
+    var meta = [created ? F.date(created, { day: 'numeric', month: 'short', year: 'numeric' }) : '', VQ.t('{n} planned', { n: F.num(F.toNum(b.qty_planned)) }), VQ.t('{n} generated', { n: F.num(F.toNum(b.qty_rendered)) }), VQ.t('{n} downloaded', { n: F.num(F.toNum(b.qty_downloaded)) })].filter(Boolean).join(' · ');
+    var viewBtn = pill('caret-down', VQ.t('See the guests'), { 'data-focus': 'b-view-' + id, 'aria-expanded': String(isOpen), 'aria-controls': 'oi-inv-' + id });
     viewBtn.addEventListener('click', function () { toggleInvites(id); });
-    var regen = pill('arrow-counter-clockwise', 'Regenerează', { 'data-focus': 'b-regen-' + id, title: 'Refă PDF-urile cu șablonul și datele actuale' });
+    var regen = pill('arrow-counter-clockwise', VQ.t('Regenerate'), { 'data-focus': 'b-regen-' + id, title: VQ.t('Rebuild the PDFs with the current template and details') });
     regen.addEventListener('click', function () { askRegen(b, regen); });
-    var zip = pill('download-simple', 'Descarcă ZIP', { class: 'oi-pill is-primary', 'data-focus': 'b-zip-' + id });
+    var zip = pill('download-simple', VQ.t('Download ZIP'), { class: 'oi-pill is-primary', 'data-focus': 'b-zip-' + id });
     zip.addEventListener('click', function () {
-      download('organizer.invitations.download', { batch_id: id }, 'zip', 'invitatii-' + slug(name) + '.zip', zip).then(function (ok) {
+      download('organizer.invitations.download', { batch_id: id }, 'zip', 'invitations-' + slug(name) + '.zip', zip).then(function (ok) {
         if (!ok) return;
-        O.flash('Arhiva cu invitațiile a fost descărcată.');
+        O.flash(VQ.t('The archive with the invitations was downloaded.'));
         delete invites[id];
         loadHistory(false, 'b-zip-' + id).then(function () { refreshInvites(id); });
       });
@@ -521,15 +524,15 @@
   function fillInvites(panel, b) {
     var id = String(b.id), list = invites[id];
     if (invErr[id]) {
-      var retry = el('button', { class: 'oi-link', type: 'button', text: 'Reîncearcă', 'data-focus': 'b-retry-' + id });
+      var retry = el('button', { class: 'oi-link', type: 'button', text: VQ.t('Try again'), 'data-focus': 'b-retry-' + id });
       retry.addEventListener('click', function () { refreshInvites(id); });
-      panel.appendChild(el('p', { class: 'oi-msg' }, ['Nu am putut încărca invitații.', retry]));
+      panel.appendChild(el('p', { class: 'oi-msg' }, [VQ.t('We could not load the guests.'), retry]));
       return;
     }
-    if (!list) { panel.appendChild(el('p', { class: 'oi-msg', text: 'Se încarcă invitații…' })); return; }
-    if (!list.length) { panel.appendChild(el('p', { class: 'oi-msg', text: 'Fără invitați.' })); return; }
+    if (!list) { panel.appendChild(el('p', { class: 'oi-msg', text: VQ.t('Loading the guests…') })); return; }
+    if (!list.length) { panel.appendChild(el('p', { class: 'oi-msg', text: VQ.t('No guests.') })); return; }
     var hasSeat = list.some(function (i) { return i.seat_ref || (i.recipient && i.recipient.seat); });
-    var head = ['Nume', 'Email'].concat(hasSeat ? ['Loc'] : [], ['Telefon', 'Companie', 'Cod', 'Acțiuni']);
+    var head = [VQ.t('Name'), VQ.t('Email')].concat(hasSeat ? [VQ.t('Seat')] : [], [VQ.t('Phone'), VQ.t('Company'), VQ.t('Code'), VQ.t('Actions')]);
     panel.appendChild(el('div', { class: 'oi-inv-wrap' }, el('table', { class: 'oi-inv' }, [
       el('thead', null, el('tr', null, head.map(function (h) { return el('th', { scope: 'col', text: h }); }))),
       el('tbody', null, list.map(function (i) { return inviteRow(b, i, hasSeat); })),
@@ -540,20 +543,20 @@
     var name = F.flat(r.name).trim() || [F.flat(r.first_name), F.flat(r.last_name)].join(' ').trim();
     var ref = F.flat(i.seat_ref) || (seat ? seatRef({ section_name: seat.section, row_label: seat.row, seat_label: seat.label, seat_uid: seat.uid }) : '');
     var codeCell = [el('code', { text: code })];
-    if (i.downloaded_at) { var dd = F.dateOf(i.downloaded_at); codeCell.push(el('span', { class: 'oi-dl', title: 'Descărcată', text: '✓ ' + (dd ? F.date(dd, { day: 'numeric', month: 'short' }) : 'descărcată') })); }
+    if (i.downloaded_at) { var dd = F.dateOf(i.downloaded_at); codeCell.push(el('span', { class: 'oi-dl', title: VQ.t('Downloaded'), text: '✓ ' + (dd ? F.date(dd, { day: 'numeric', month: 'short' }) : VQ.t('downloaded')) })); }
     var acts = [];
     if (i.has_pdf) {
-      var dl = el('button', { class: 'oi-link', type: 'button', 'data-focus': 'i-dl-' + iid, 'aria-label': 'Descarcă PDF-ul invitației ' + (name || code) }, el('span', { 'data-label': '' }, 'Descarcă'));
+      var dl = el('button', { class: 'oi-link', type: 'button', 'data-focus': 'i-dl-' + iid, 'aria-label': VQ.t('Download the PDF of the invitation {who}', { who: name || code }) }, el('span', { 'data-label': '' }, VQ.t('Download')));
       dl.addEventListener('click', function () {
-        download('organizer.invitations.download-invite', { batch_id: bid, invite_id: iid }, 'pdf', 'invitatie-' + slug(name || 'invitat') + '-' + code + '.pdf', dl).then(function (ok) {
+        download('organizer.invitations.download-invite', { batch_id: bid, invite_id: iid }, 'pdf', 'invitation-' + slug(name || 'guest') + '-' + code + '.pdf', dl).then(function (ok) {
           if (!ok) return;
           if (!i.downloaded_at) { i.downloaded_at = new Date().toISOString(); b.qty_downloaded = F.toNum(b.qty_downloaded) + 1; }
           drawHistory('i-dl-' + iid);
         });
       });
       acts.push(dl);
-    } else acts.push(el('span', { class: 'oi-nopdf', title: 'Regenerează seria ca să apară PDF-ul', text: 'PDF lipsă' }));
-    var del = el('button', { class: 'oi-link is-danger', type: 'button', 'data-focus': 'i-del-' + iid, 'aria-label': 'Șterge invitația ' + (name || code) }, 'Șterge');
+    } else acts.push(el('span', { class: 'oi-nopdf', title: VQ.t('Regenerate the series to get the PDF'), text: VQ.t('PDF missing') }));
+    var del = el('button', { class: 'oi-link is-danger', type: 'button', 'data-focus': 'i-del-' + iid, 'aria-label': VQ.t('Delete the invitation {who}', { who: name || code }) }, VQ.t('Delete'));
     del.addEventListener('click', function () { askDelete(b, i, name, ref, del); });
     acts.push(del);
     var cells = [el('td', { text: name || '—' }), el('td', { text: F.flat(r.email) || '—' })];
@@ -591,22 +594,22 @@
     });
   });
   function askRegen(b, from) {
-    var id = String(b.id), name = F.flat(b.name) || 'Seria #' + id;
+    var id = String(b.id), name = F.flat(b.name) || VQ.t('Series #{id}', { id: id });
     ask({
-      h: 'Regenerezi seria „' + name + '”?',
-      p: 'Toate PDF-urile din serie se refac cu șablonul și datele actuale ale activității. Codurile invitațiilor rămân aceleași. Poate dura până la un minut.',
-      go: 'Regenerează PDF-urile', busy: 'Se regenerează…',
+      h: VQ.t('Regenerate the series "{name}"?', { name: name }),
+      p: VQ.t('All the PDFs of the series are rebuilt with the current template and details of the experience. The invitation codes stay the same. It can take up to a minute.'),
+      go: VQ.t('Regenerate the PDFs'), busy: VQ.t('Regenerating…'),
       run: function () {
         return O.api('/organizer/invitations/' + id + '/generate', { method: 'POST', body: {} }).then(function (r) {
           var n = F.toNum(r && r.data && r.data.rendered);
-          O.flash(F.count(n, 'invitație regenerată', 'invitații regenerate') + '. Descarcă din nou arhiva ca să ai PDF-urile noi.');
+          O.flash(VQ.t('{invitations}. Download the archive again to get the new PDFs.', { invitations: VQ.n(n, 'invitation regenerated', 'invitations regenerated') }));
           delete invites[id];
           loadHistory(false, 'b-regen-' + id).then(function () { refreshInvites(id); });
         }, function (err) {
           if (err && err.status === 401) return Promise.reject('');
-          if (err && err.status === 404) { loadHistory(); return Promise.reject(/no longer exists/i.test(errMessage(err)) ? 'Activitatea acestei serii nu mai există, așa că PDF-urile nu se pot reface.' : 'Seria nu mai există.'); }
-          if (offline(err)) { setTimeout(function () { loadHistory(); }, 8000); return Promise.reject('Regenerarea durează mai mult decât de obicei. Verifică seria peste un minut înainte să încerci din nou.'); }
-          return Promise.reject('Nu am putut regenera PDF-urile. Încearcă din nou.');
+          if (err && err.status === 404) { loadHistory(); return Promise.reject(/no longer exists/i.test(errMessage(err)) ? VQ.t('The experience of this series no longer exists, so the PDFs cannot be rebuilt.') : VQ.t('The series no longer exists.')); }
+          if (offline(err)) { setTimeout(function () { loadHistory(); }, 8000); return Promise.reject(VQ.t('Regenerating is taking longer than usual. Check the series in a minute before trying again.')); }
+          return Promise.reject(VQ.t('We could not regenerate the PDFs. Try again.'));
         });
       },
     }, from);
@@ -614,22 +617,24 @@
   function askDelete(b, i, name, ref, from) {
     var bid = String(b.id), code = F.flat(i.code);
     ask({
-      h: 'Ștergi invitația?',
-      p: (name ? name + ' · ' : '') + 'cod ' + code + '. Invitația nu mai e valabilă: biletul ei se anulează' + (ref ? ' și locul (' + ref + ') se eliberează pe hartă' : '') + '. Nu se poate recupera.',
-      go: 'Șterge invitația', busy: 'Se șterge…', danger: true,
+      h: VQ.t('Delete the invitation?'),
+      p: (name ? name + ' · ' : '') + VQ.t('code {code}', { code: code }) + '. ' + (ref
+        ? VQ.t('The invitation is no longer valid: its ticket is cancelled and the seat ({seat}) is released on the map. This cannot be undone.', { seat: ref })
+        : VQ.t('The invitation is no longer valid: its ticket is cancelled. This cannot be undone.')),
+      go: VQ.t('Delete the invitation'), busy: VQ.t('Deleting…'), danger: true,
       run: function () {
         return O.api('/organizer/invitations/' + bid + '/invites', { method: 'DELETE', body: { invite_ids: [Number(i.id)] } }).then(function (r) {
           var d = (r && r.data) || {}, remaining = F.toNum(d.batch_remaining);
-          if (F.toNum(d.deleted) < 1) return Promise.reject('Invitația nu a putut fi ștearsă. Încearcă din nou.');
-          O.flash(remaining === 0 ? 'Invitația a fost ștearsă. Seria nu mai avea alte invitații, așa că a fost ștearsă și ea.' : 'Invitația a fost ștearsă.' + (F.toNum(d.seats_released) ? ' Locul a fost eliberat.' : ''));
+          if (F.toNum(d.deleted) < 1) return Promise.reject(VQ.t('The invitation could not be deleted. Try again.'));
+          O.flash(remaining === 0 ? VQ.t('The invitation was deleted. The series had no other invitations, so it was deleted too.') : [VQ.t('The invitation was deleted.'), F.toNum(d.seats_released) ? VQ.t('The seat was released.') : ''].filter(Boolean).join(' '));
           if (remaining === 0) { delete openSet[bid]; delete invites[bid]; }
           else invites[bid] = (invites[bid] || []).filter(function (x) { return String(x.id) !== String(i.id); });
           if (seated) seating = null; // the released seat shows as free the next time the map opens
           loadHistory(false, remaining === 0 ? null : 'b-view-' + bid);
         }, function (err) {
           if (err && err.status === 401) return Promise.reject('');
-          if (err && err.status === 404) { delete invites[bid]; loadHistory(false).then(function () { refreshInvites(bid); }); return Promise.reject('Invitația sau seria nu mai există.'); }
-          return Promise.reject('Nu am putut șterge invitația. Încearcă din nou.');
+          if (err && err.status === 404) { delete invites[bid]; loadHistory(false).then(function () { refreshInvites(bid); }); return Promise.reject(VQ.t('The invitation or the series no longer exists.')); }
+          return Promise.reject(VQ.t('We could not delete the invitation. Try again.'));
         });
       },
     }, from);
@@ -640,7 +645,7 @@
     var box = $('oi-chips'), sum = $('oi-seats-sum');
     box.textContent = '';
     picked.forEach(function (s) {
-      var x = el('button', { type: 'button', 'aria-label': 'Scoate ' + seatRef(s) }, icon('x'));
+      var x = el('button', { type: 'button', 'aria-label': VQ.t('Remove {seat}', { seat: seatRef(s) }) }, icon('x'));
       x.addEventListener('click', function () {
         var at = picked.indexOf(s);
         picked.splice(at, 1);
@@ -650,7 +655,7 @@
       });
       box.appendChild(el('li', { class: 'oi-chip' }, [seatRef(s), x]));
     });
-    sum.textContent = picked.length ? F.count(picked.length, 'loc selectat', 'locuri selectate') + ' (cel mult 50).' : 'Niciun loc selectat.';
+    sum.textContent = picked.length ? VQ.t('{seats} (at most 50).', { seats: VQ.n(picked.length, 'seat selected', 'seats selected') }) : VQ.t('No seat selected.');
     sum.classList.toggle('is-on', picked.length > 0);
   }
   $('oi-open-map').addEventListener('click', function () { openMap(this); });
@@ -666,7 +671,7 @@
     var msg = $('oi-map-msg');
     $('oi-map').hidden = true;
     msg.hidden = false;
-    msg.textContent = 'Se încarcă harta…';
+    msg.textContent = VQ.t('Loading the map…');
     O.api('/organizer/events/' + EVENT + '/seating-map', { quiet: true }).then(function (r) {
       var d = r && r.data;
       if (!d || !Array.isArray(d.sections)) throw { status: 404 };
@@ -676,10 +681,10 @@
       if (!$('oi-map-d').open) return;
       if (err && err.status === 401) { closeDialog($('oi-map-d')); O.api('/organizer/me').catch(function () {}); return; }
       msg.textContent = '';
-      if (err && err.status === 404) { msg.appendChild(el('p', { text: 'Activitatea nu are o hartă de locuri publicată.' })); return; }
-      var retry = el('button', { class: 'btn btn-ghost oi-sm', type: 'button', text: 'Reîncearcă' });
+      if (err && err.status === 404) { msg.appendChild(el('p', { text: VQ.t('The experience has no published seating map.') })); return; }
+      var retry = el('button', { class: 'btn btn-ghost oi-sm', type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', loadMap);
-      msg.appendChild(el('p', { text: 'Nu am putut încărca harta.' }));
+      msg.appendChild(el('p', { text: VQ.t('We could not load the map.') }));
       msg.appendChild(retry);
     });
   }
@@ -690,7 +695,7 @@
     bindPanZoom();
     fit();
   }
-  function countMap() { $('oi-map-count').textContent = F.count(draft.length, 'loc', 'locuri'); }
+  function countMap() { $('oi-map-count').textContent = VQ.n(draft.length, 'seat', 'seats'); }
 
   function svg(tag, attrs, kids) {
     var n = document.createElementNS(SVGNS, tag);
@@ -704,7 +709,7 @@
     var d = seating, host = $('oi-map'), cw = num(d.canvas && d.canvas.width) || 1000, ch = num(d.canvas && d.canvas.height) || 800;
     seatInfo = {};
     host.textContent = '';
-    var s = svg('svg', { viewBox: '0 0 ' + cw + ' ' + ch, width: cw, height: ch, role: 'group', 'aria-label': 'Harta locurilor' });
+    var s = svg('svg', { viewBox: '0 0 ' + cw + ' ' + ch, width: cw, height: ch, role: 'group', 'aria-label': VQ.t('Seating map') });
     d.sections.forEach(function (sec) {
       if (!sec) return;
       var rot = num(sec.rotation), sx = num(sec.x), sy = num(sec.y);
@@ -748,7 +753,7 @@
         var label = seatRef(info) + (info.type ? ' · ' + info.type : '');
         var c = svg('circle', { cx: x, cy: y, r: r, class: 'oi-seat', 'data-uid': uid, role: 'checkbox', 'aria-checked': 'false', 'aria-label': label });
         if (status === 'available') c.setAttribute('tabindex', '0'); else c.setAttribute('aria-disabled', 'true');
-        c.appendChild(svg('title', null, [label + (status === 'available' ? '' : ' (indisponibil)')]));
+        c.appendChild(svg('title', null, [status === 'available' ? label : VQ.t('{seat} (unavailable)', { seat: label })]));
         g.appendChild(c);
         if (status === 'available' && info.seat_label) g.appendChild(svg('text', { x: x, y: y + r * 0.35, 'text-anchor': 'middle', 'font-size': fs, class: 'oi-seat-n', 'aria-hidden': 'true' }, [info.seat_label]));
       });
@@ -833,7 +838,7 @@
     draft.forEach(function (s, i) { if (s.seat_uid === uid) at = i; });
     if (at > -1) draft.splice(at, 1);
     else {
-      if (draft.length >= MAX) { showErr('oi-map-err', 'Poți alege cel mult 50 de locuri într-o serie.'); return; }
+      if (draft.length >= MAX) { showErr('oi-map-err', VQ.t('You can choose at most 50 seats in a series.')); return; }
       draft.push({ seat_uid: uid, section_name: info.section_name, row_label: info.row_label, seat_label: info.seat_label });
     }
     showErr('oi-map-err', '');
@@ -847,7 +852,7 @@
   });
   $('oi-map-clear').addEventListener('click', function () { draft = []; paintAll(); countMap(); showErr('oi-map-err', ''); });
   $('oi-map-ok').addEventListener('click', function () {
-    if (!draft.length) { showErr('oi-map-err', 'Alege cel puțin un loc înainte de a confirma.'); return; }
+    if (!draft.length) { showErr('oi-map-err', VQ.t('Choose at least one seat before confirming.')); return; }
     picked = sortSeats(draft.slice());
     pickedSeatingId = seating && seating.event_seating_id;
     closeDialog($('oi-map-d'));

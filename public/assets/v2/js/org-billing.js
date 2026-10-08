@@ -12,8 +12,8 @@
   function qsa(sel) { return [].slice.call(root.querySelectorAll(sel)); }
 
   var PER = 10;
-  var INV = { paid: ['Plătită', 'is-ok'], pending: ['În așteptare', 'is-wait'], overdue: ['Restantă', 'is-bad'], cancelled: ['Anulată', 'is-muted'], refunded: ['Stornată', 'is-muted'] };
-  var PAY = { pending: ['În așteptare', 'is-wait'], approved: ['Aprobat', 'is-info'], processing: ['În procesare', 'is-info'], completed: ['Finalizat', 'is-ok'], rejected: ['Respins', 'is-bad'], cancelled: ['Anulat', 'is-muted'] };
+  var INV = { paid: [VQ.t('Paid'), 'is-ok'], pending: [VQ.t('Pending'), 'is-wait'], overdue: [VQ.t('Overdue'), 'is-bad'], cancelled: [VQ.t('Cancelled'), 'is-muted'], refunded: [VQ.t('Reversed'), 'is-muted'] };
+  var PAY = { pending: [VQ.t('Pending'), 'is-wait'], approved: [VQ.t('Approved'), 'is-info'], processing: [VQ.t('Processing'), 'is-info'], completed: [VQ.t('Completed'), 'is-ok'], rejected: [VQ.t('Rejected'), 'is-bad'], cancelled: [VQ.t('Cancelled'), 'is-muted'] };
   var inv = { filter: 'all', page: 1, total: 0, rows: [], seq: 0 }, pay = { filter: 'all', rows: null, seq: 0 }, opener = null, dSeq = 0;
 
   function txt(v) { return F.flat(v).trim(); }
@@ -24,12 +24,12 @@
     var box = $(id);
     box.textContent = '';
     box.hidden = !kind;
-    if (kind === 'loading') box.textContent = 'Se încarcă…';
+    if (kind === 'loading') box.textContent = VQ.t('Loading…');
     else if (kind === 'error') {
-      var b = el('button', { type: 'button', text: 'Reîncearcă' });
+      var b = el('button', { type: 'button', text: VQ.t('Try again') });
       b.addEventListener('click', retry);
-      box.appendChild(el('b', { text: 'Nu am putut încărca lista' }));
-      box.appendChild(document.createTextNode('Verifică conexiunea și încearcă din nou.'));
+      box.appendChild(el('b', { text: VQ.t('We could not load the list') }));
+      box.appendChild(document.createTextNode(VQ.t('Check your connection and try again.')));
       box.appendChild(el('br'));
       box.appendChild(b);
     } else if (kind) { box.appendChild(el('b', { text: kind[0] })); box.appendChild(document.createTextNode(kind[1])); }
@@ -106,15 +106,15 @@
         el('td', { class: 'ob-amount', text: money(x.amount) }),
         el('td', null, tag(INV, x.status)),
         el('td', null, el('div', { class: 'ob-acts' }, [
-          pill('file-text', 'Vezi', 'Vezi factura ' + num, function (b) { openInvoice(id, b, false); }),
-          pill('download-simple', 'PDF', 'Printează sau salvează PDF factura ' + num, function (b) { openInvoice(id, b, true); }),
+          pill('file-text', VQ.t('View'), VQ.t('View invoice {number}', { number: num }), function (b) { openInvoice(id, b, false); }),
+          pill('download-simple', 'PDF', VQ.t('Print or save invoice {number} as PDF', { number: num }), function (b) { openInvoice(id, b, true); }),
         ])),
       ]));
     });
-    state('ob-inv-state', inv.rows.length ? null : inv.filter === 'all' ? ['Nicio factură', 'Nu ai nicio factură încă.'] : ['Nicio factură', 'Nicio factură cu acest status.']);
-    $('ob-inv-info').textContent = 'Afișare ' + start + '-' + Math.min(inv.page * PER, inv.total) + ' din ' + F.count(inv.total, 'factură', 'facturi');
+    state('ob-inv-state', inv.rows.length ? null : inv.filter === 'all' ? [VQ.t('No invoices'), VQ.t('You have no invoices yet.')] : [VQ.t('No invoices'), VQ.t('No invoices with this status.')]);
+    $('ob-inv-info').textContent = VQ.t('Showing {from}-{to} of {total}', { from: start, to: Math.min(inv.page * PER, inv.total), total: VQ.n(inv.total, 'invoice', 'invoices') });
     $('ob-inv-pages').hidden = pages <= 1;
-    $('ob-inv-page').textContent = 'Pagina ' + inv.page + ' din ' + pages;
+    $('ob-inv-page').textContent = VQ.t('Page {page} of {pages}', { page: inv.page, pages: pages });
     $('ob-inv-prev').disabled = inv.page <= 1;
     $('ob-inv-next').disabled = inv.page >= pages;
   }
@@ -150,11 +150,11 @@
         el('td', { text: txt(p.event_title) || txt(p.event && (p.event.title || p.event.name)) || '—' }),
         el('td', { class: 'ob-amount', text: money(p.amount) }),
         el('td', null, tag(PAY, p.status)),
-        el('td', null, el('div', { class: 'ob-acts' }, pill('file-text', 'Vezi', 'Vezi decontul ' + ref, function (b) { openPayout(p, b); }))),
+        el('td', null, el('div', { class: 'ob-acts' }, pill('file-text', VQ.t('View'), VQ.t('View payout {reference}', { reference: ref }), function (b) { openPayout(p, b); }))),
       ]));
     });
-    $('ob-pay-info').textContent = pay.rows.length ? F.count(list.length, 'decont', 'deconturi') + (pay.filter === 'all' ? '' : ' cu acest status') + '.' : '';
-    state('ob-pay-state', list.length ? null : ['Niciun decont', pay.rows.length ? 'Niciun decont cu acest status.' : 'Nu ai niciun decont încă.']);
+    $('ob-pay-info').textContent = pay.rows.length ? (pay.filter === 'all' ? VQ.n(list.length, 'payout', 'payouts') + '.' : VQ.t('{payouts} with this status.', { payouts: VQ.n(list.length, 'payout', 'payouts') })) : '';
+    state('ob-pay-state', list.length ? null : [VQ.t('No payouts'), pay.rows.length ? VQ.t('No payouts with this status.') : VQ.t('You have no payouts yet.')]);
   }
 
   /* =================== BILLING DETAILS =================== */
@@ -176,7 +176,7 @@
     $('ob-d-p').textContent = '—';
     $('ob-print').hidden = true;
     $('ob-d-body').textContent = '';
-    $('ob-d-body').appendChild(el('p', { class: 'ob-state', text: 'Se încarcă…' }));
+    $('ob-d-body').appendChild(el('p', { class: 'ob-state', text: VQ.t('Loading…') }));
     if (!d.open) d.showModal();
     d.querySelector('.ob-x').focus();
     return ++dSeq;
@@ -184,46 +184,46 @@
   function failDialog(my, err) {
     if (my !== dSeq || (err && err.status === 401)) return;
     $('ob-d-body').textContent = '';
-    $('ob-d-body').appendChild(el('p', { class: 'ob-note is-bad', text: err && err.status === 404 ? 'Nu mai găsim acest document.' : 'Nu am putut încărca detaliile. Încearcă din nou.' }));
+    $('ob-d-body').appendChild(el('p', { class: 'ob-note is-bad', text: err && err.status === 404 ? VQ.t('We can no longer find this document.') : VQ.t('We could not load the details. Try again.') }));
   }
   function line(label, value) { return value ? el('p', { text: label ? label + ': ' + value : value }) : null; }
   function openInvoice(id, from, print) {
-    var my = openDialog(from, 'Detalii factură');
+    var my = openDialog(from, VQ.t('Invoice details'));
     O.api('/organizer/invoices/' + encodeURIComponent(id)).then(function (r) {
       if (my !== dSeq) return;
       var x = (r && r.data) || {}, iss = x.issuer || {}, cli = x.client || {}, body = $('ob-d-body');
       $('ob-d-p').textContent = txt(x.number) || '#' + id;
       body.textContent = '';
       body.appendChild(el('div', { class: 'ob-parties' }, [
-        el('div', { class: 'ob-party' }, [el('h3', { text: 'Emitent' }), el('b', { text: txt(iss.name) || 'viaqui.com' }), line('CUI', txt(iss.cui)), line('Reg. Com.', txt(iss.reg_com)), line('', txt(iss.address)), iss.iban ? line(txt(iss.bank_name) || 'IBAN', txt(iss.iban)) : null, line('', txt(iss.email))]),
-        el('div', { class: 'ob-party' }, [el('h3', { text: 'Client' }), el('b', { text: txt(cli.name) || '—' }), line('', txt(cli.address)), line('CUI', txt(cli.cui))]),
+        el('div', { class: 'ob-party' }, [el('h3', { text: VQ.t('Issuer') }), el('b', { text: txt(iss.name) || 'Viaqui' }), line(VQ.t('Tax ID'), txt(iss.cui)), line(VQ.t('Company registration no.'), txt(iss.reg_com)), line('', txt(iss.address)), iss.iban ? line(txt(iss.bank_name) || 'IBAN', txt(iss.iban)) : null, line('', txt(iss.email))]),
+        el('div', { class: 'ob-party' }, [el('h3', { text: VQ.t('Customer') }), el('b', { text: txt(cli.name) || '—' }), line('', txt(cli.address)), line(VQ.t('Tax ID'), txt(cli.cui))]),
       ]));
       var items = Array.isArray(x.items) ? x.items : [];
-      var foot = [el('tr', null, [el('td', { colspan: 3, text: 'Subtotal' }), el('td', { text: money(x.subtotal) })])];
-      if (F.toNum(x.vat)) foot.push(el('tr', null, [el('td', { colspan: 3, text: 'TVA (' + F.num(F.toNum(x.vat_rate)) + '%)' }), el('td', { text: money(x.vat) })]));
-      foot.push(el('tr', { class: 'is-total' }, [el('td', { colspan: 3, text: 'Total' }), el('td', { text: money(x.total) })]));
+      var foot = [el('tr', null, [el('td', { colspan: 3, text: VQ.t('Subtotal') }), el('td', { text: money(x.subtotal) })])];
+      if (F.toNum(x.vat)) foot.push(el('tr', null, [el('td', { colspan: 3, text: VQ.t('VAT ({rate}%)', { rate: F.num(F.toNum(x.vat_rate)) }) }), el('td', { text: money(x.vat) })]));
+      foot.push(el('tr', { class: 'is-total' }, [el('td', { colspan: 3, text: VQ.t('Total') }), el('td', { text: money(x.total) })]));
       body.appendChild(el('div', { class: 'ob-table-wrap' }, el('table', { class: 'ob-lines' }, [
-        el('thead', null, el('tr', null, ['Descriere', 'Cant.', 'Preț', 'Total'].map(function (h) { return el('th', { scope: 'col', text: h }); }))),
-        el('tbody', null, items.length ? items.map(function (it) { return el('tr', null, [el('td', { text: txt(it.description) || '—' }), el('td', { text: F.num(F.toNum(it.quantity)) }), el('td', { text: money(it.price) }), el('td', { text: money(it.total) })]); }) : el('tr', null, el('td', { colspan: 4, text: 'Factura nu are linii detaliate.' }))),
+        el('thead', null, el('tr', null, [VQ.t('Description'), VQ.t('Qty'), VQ.t('Price'), VQ.t('Total')].map(function (h) { return el('th', { scope: 'col', text: h }); }))),
+        el('tbody', null, items.length ? items.map(function (it) { return el('tr', null, [el('td', { text: txt(it.description) || '—' }), el('td', { text: F.num(F.toNum(it.quantity)) }), el('td', { text: money(it.price) }), el('td', { text: money(it.total) })]); }) : el('tr', null, el('td', { colspan: 4, text: VQ.t('The invoice has no itemised lines.') }))),
         el('tfoot', null, foot),
       ])));
-      body.appendChild(el('div', { class: 'ob-d-meta' }, [el('span', null, ['Status: ', tag(INV, x.status)]), el('span', { text: 'Emisă: ' + day(x.date) + ' · Scadentă: ' + day(x.due_date) })]));
+      body.appendChild(el('div', { class: 'ob-d-meta' }, [el('span', null, [VQ.t('Status') + ': ', tag(INV, x.status)]), el('span', { text: VQ.t('Issued: {date}', { date: day(x.date) }) + ' · ' + VQ.t('Due: {date}', { date: day(x.due_date) }) })]));
       $('ob-print').hidden = false;
       if (print) setTimeout(function () { if (my === dSeq) window.print(); }, 60);
     }, function (err) { failDialog(my, err); });
   }
   function openPayout(p, from) {
-    var my = openDialog(from, 'Detalii decont');
+    var my = openDialog(from, VQ.t('Payout details'));
     O.api('/organizer/payouts/' + encodeURIComponent(p.id)).then(function (r) {
       if (my !== dSeq) return;
       var x = (r && r.data && (r.data.payout || r.data)) || p, ref = txt(x.reference) || '#' + x.id, body = $('ob-d-body');
-      $('ob-d-p').textContent = 'Decont ' + ref;
+      $('ob-d-p').textContent = VQ.t('Payout {reference}', { reference: ref });
       body.textContent = '';
-      var rows = [['Referință', ref], ['Dată', day(x.created_at)], ['Activitate', txt(x.event_title) || '—'], ['Valoare', money(x.amount)], ['Status', (PAY[x.status] || [txt(x.status)])[0]], ['Cont bancar', txt(x.account) || txt(x.payout_method && x.payout_method.iban) || '—']];
-      if (x.period_start) rows.push(['Perioadă', day(x.period_start) + ' — ' + day(x.period_end)]);
+      var rows = [[VQ.t('Reference'), ref], [VQ.t('Date'), day(x.created_at)], [VQ.t('Experience'), txt(x.event_title) || '—'], [VQ.t('Value'), money(x.amount)], [VQ.t('Status'), (PAY[x.status] || [txt(x.status)])[0]], [VQ.t('Bank account'), txt(x.account) || txt(x.payout_method && x.payout_method.iban) || '—']];
+      if (x.period_start) rows.push([VQ.t('Period'), day(x.period_start) + ' – ' + day(x.period_end)]);
       body.appendChild(el('dl', { class: 'ob-dl' }, rows.map(function (rw) { return el('div', null, [el('dt', { text: rw[0] }), el('dd', { text: rw[1] })]); })));
-      if (txt(x.rejection_reason)) body.appendChild(el('p', { class: 'ob-note is-bad', text: 'Motiv respingere: ' + txt(x.rejection_reason) }));
-      if (txt(x.notes)) body.appendChild(el('p', { class: 'ob-note', text: 'Note: ' + txt(x.notes) }));
+      if (txt(x.rejection_reason)) body.appendChild(el('p', { class: 'ob-note is-bad', text: VQ.t('Reason for rejection: {reason}', { reason: txt(x.rejection_reason) }) }));
+      if (txt(x.notes)) body.appendChild(el('p', { class: 'ob-note', text: VQ.t('Notes: {notes}', { notes: txt(x.notes) }) }));
     }, function (err) { failDialog(my, err); });
   }
   $('ob-print').addEventListener('click', function () { window.print(); });
@@ -234,9 +234,9 @@
   $('ob-export').addEventListener('click', function () {
     var btn = this, token = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.getToken ? BileteOnlineAuth.getToken() : null;
     if (btn.getAttribute('aria-busy') === 'true') return;
-    if (!token) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return; }
-    var base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', name = 'facturi-' + F.ymd() + '.csv';
-    busyBtn(btn, true, 'Se exportă…');
+    if (!token) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return; }
+    var base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', name = 'viaqui-invoices-' + F.ymd() + '.csv';
+    busyBtn(btn, true, VQ.t('Exporting…'));
     fetch(base + '?action=organizer.invoices.export&status=' + encodeURIComponent(inv.filter), { headers: { Authorization: 'Bearer ' + token, Accept: 'text/csv' } }).then(function (res) {
       if (!res.ok) { var e = new Error('export'); e.status = res.status; throw e; }
       var m = /filename="?([^";]+)"?/i.exec(res.headers.get('content-disposition') || '');
@@ -251,11 +251,11 @@
         document.body.appendChild(a);
         a.click();
         setTimeout(function () { URL.revokeObjectURL(href); a.remove(); }, 1500);
-        O.flash('Lista de facturi a fost exportată.');
+        O.flash(VQ.t('The invoice list was exported.'));
       });
     }).catch(function (err) {
-      if (err && (err.status === 401 || err.html)) { O.flash('Sesiunea a expirat. Te trimitem la autentificare.', true); setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); return; }
-      O.flash('Nu am putut exporta facturile. Încearcă din nou.', true);
+      if (err && (err.status === 401 || err.html)) { O.flash(VQ.t('Your session has expired. Taking you to sign in.'), true); setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); return; }
+      O.flash(VQ.t('We could not export the invoices. Try again.'), true);
     }).then(function () { busyBtn(btn, false); });
   });
 })();

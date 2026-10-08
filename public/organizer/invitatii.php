@@ -24,8 +24,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Invitații — ' . SITE_NAME;
-$pageDescription = 'Invitații PDF cu cod QR pentru activitățile unui operator pe viaqui.com.';
+$pageTitle = v2_t('Invitations');
+$pageDescription = v2_t('PDF invitations with a QR code for the experiences of an operator on Viaqui.');
 $canonicalUrl = SITE_URL . '/organizator/invitatii';
 $noindex = true;
 $skipPageCache = true;
@@ -35,17 +35,17 @@ $v2Scripts = ['organizer.js', 'org-invitations.js'];
 $v2LegacyScripts = ['assets/js/config.js', 'assets/js/utils.js', 'assets/js/api.js', 'assets/js/auth.js'];
 $v2HeadExtra = v2_account_client_config('organizer');
 
-$oiX = '<button class="oi-x" type="button" data-close aria-label="Închide">' . v2_ic('x') . '</button>';
+$oiX = '<button class="oi-x" type="button" data-close aria-label="' . v2_te('Close') . '">' . v2_ic('x') . '</button>';
 
 include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('events');
 ?>
 <div class="oi" id="oi">
   <header class="oi-head">
-    <a class="oi-back" href="/organizator/events"><?= v2_ic('arrow-left') ?>Înapoi la activități</a>
-    <p class="org-k">Activități</p>
-    <h1 class="oi-h">Invitații</h1>
-    <p class="oi-lead">Generează invitații în format PDF pentru activitatea aleasă.</p>
+    <a class="oi-back" href="/organizator/events"><?= v2_ic('arrow-left') ?><?= v2_te('Back to experiences') ?></a>
+    <p class="org-k"><?= v2_te('Experiences') ?></p>
+    <h1 class="oi-h"><?= v2_te('Invitations') ?></h1>
+    <p class="oi-lead"><?= v2_te('Generate PDF invitations for the chosen experience.') ?></p>
   </header>
 
   <div class="oi-loading" id="oi-loading" aria-hidden="true"><span class="org-skel"></span></div>
@@ -57,84 +57,84 @@ v2_org_start('events');
       <p class="oi-event-meta">
         <span id="oi-event-date-w"><?= v2_ic('calendar-blank') ?><span id="oi-event-date"></span></span>
         <span id="oi-event-venue-w"><?= v2_ic('map-pin') ?><span id="oi-event-venue"></span></span>
-        <span class="org-tag is-info" id="oi-event-seated" hidden>Cu hartă de locuri</span>
-        <span class="org-tag is-muted" id="oi-event-over" hidden>Încheiată</span>
+        <span class="org-tag is-info" id="oi-event-seated" hidden><?= v2_te('With a seating map') ?></span>
+        <span class="org-tag is-muted" id="oi-event-over" hidden><?= v2_te('Ended') ?></span>
       </p>
     </div>
-    <a class="oi-event-change" href="/organizator/invitatii">Altă activitate</a>
+    <a class="oi-event-change" href="/organizator/invitatii"><?= v2_te('Another experience') ?></a>
   </section>
 
   <section class="org-panel" id="oi-choose" aria-labelledby="oi-choose-h" hidden>
-    <div class="oi-missing" id="oi-missing" role="status" hidden><?= v2_ic('warning-circle') ?><p id="oi-missing-p">Nu am găsit activitatea selectată. Alege o activitate din lista ta.</p></div>
-    <div class="org-panel-head"><div><p class="org-k">Activitatea</p><h2 class="org-panel-h" id="oi-choose-h">Alege activitatea</h2><p class="org-panel-p">Invitațiile se generează pentru o singură activitate. Iată activitățile tale care n-au trecut încă.</p></div></div>
-    <ul class="oi-events" id="oi-events" aria-live="polite"><li class="oi-msg">Se încarcă activitățile…</li></ul>
-    <p class="oi-small"><a href="/organizator/events">Vezi toate activitățile</a></p>
+    <div class="oi-missing" id="oi-missing" role="status" hidden><?= v2_ic('warning-circle') ?><p id="oi-missing-p"><?= v2_te('We could not find the selected experience. Choose one from your list.') ?></p></div>
+    <div class="org-panel-head"><div><p class="org-k"><?= v2_te('Experience') ?></p><h2 class="org-panel-h" id="oi-choose-h"><?= v2_te('Choose the experience') ?></h2><p class="org-panel-p"><?= v2_te('Invitations are generated for one experience at a time. Here are your experiences that have not ended yet.') ?></p></div></div>
+    <ul class="oi-events" id="oi-events" aria-live="polite"><li class="oi-msg"><?= v2_te('Loading experiences…') ?></li></ul>
+    <p class="oi-small"><a href="/organizator/events"><?= v2_te('See all experiences') ?></a></p>
   </section>
 
   <section class="org-panel oi-builder" id="oi-builder" aria-labelledby="oi-builder-h" hidden>
     <div class="org-panel-head oi-builder-head">
-      <div><p class="org-k">Serie nouă</p><h2 class="org-panel-h" id="oi-builder-h">Generează invitații</h2></div>
-      <ol class="oi-steps" aria-label="Pașii">
-        <li data-step="1"><b>1</b><span id="oi-steps-1">Detalii serie</span></li>
-        <li data-step="2"><b>2</b><span>Invitații</span></li>
-        <li data-step="3"><b>3</b><span>Gata</span></li>
+      <div><p class="org-k"><?= v2_te('New series') ?></p><h2 class="org-panel-h" id="oi-builder-h"><?= v2_te('Generate invitations') ?></h2></div>
+      <ol class="oi-steps" aria-label="<?= v2_te('Steps') ?>">
+        <li data-step="1"><b>1</b><span id="oi-steps-1"><?= v2_te('Series details') ?></span></li>
+        <li data-step="2"><b>2</b><span><?= v2_te('Guests') ?></span></li>
+        <li data-step="3"><b>3</b><span><?= v2_te('Done') ?></span></li>
       </ol>
     </div>
 
     <div class="oi-step" id="oi-step-1">
-      <h3 class="oi-step-h" id="oi-step1-h" tabindex="-1">Pasul 1 — Detalii serie</h3>
-      <p class="oi-step-p" id="oi-step1-p">Dă un nume seriei (opțional, pentru organizare — ex. „Firma X”, „Sponsori”) și alege numărul de invitații.</p>
+      <h3 class="oi-step-h" id="oi-step1-h" tabindex="-1"><?= v2_te('Step 1: Series details') ?></h3>
+      <p class="oi-step-p" id="oi-step1-p"><?= v2_te('Give the series a name (optional, to keep things organised, e.g. "Company X", "Sponsors") and choose the number of invitations.') ?></p>
       <div class="oi-grid2">
         <div class="oi-f">
-          <label class="oi-f-l" for="oi-name">Nume serie <small>(opțional)</small></label>
-          <input id="oi-name" type="text" maxlength="120" autocomplete="off" placeholder="ex. Firma X - presa" aria-describedby="oi-name-help">
-          <span class="oi-help" id="oi-name-help">Gol, seria primește numele activității și data.</span>
+          <label class="oi-f-l" for="oi-name"><?= v2_t('Series name <small>(optional)</small>') ?></label>
+          <input id="oi-name" type="text" maxlength="120" autocomplete="off" placeholder="<?= v2_te('e.g. Company X - press') ?>" aria-describedby="oi-name-help">
+          <span class="oi-help" id="oi-name-help"><?= v2_te('Left empty, the series gets the name of the experience and the date.') ?></span>
         </div>
         <div class="oi-f" id="oi-qty-f">
-          <label class="oi-f-l" for="oi-qty">Număr invitații</label>
+          <label class="oi-f-l" for="oi-qty"><?= v2_te('Number of invitations') ?></label>
           <input id="oi-qty" type="number" inputmode="numeric" min="1" max="50" step="1" value="1" aria-describedby="oi-qty-err">
           <span class="oi-err" id="oi-qty-err" hidden></span>
         </div>
       </div>
       <div class="oi-seats" id="oi-seats" hidden>
-        <p class="oi-step-p">Activitatea are hartă de locuri. Selectează locurile pe care vrei să le blochezi pentru invitații. Locurile alese vor fi marcate ca <strong>vândute</strong> și nu vor putea fi cumpărate de clienți.</p>
+        <p class="oi-step-p"><?= v2_t('The experience has a seating map. Select the seats you want to hold for invitations. The chosen seats will be marked as <strong>sold</strong> and customers will not be able to buy them.') ?></p>
         <div class="oi-seats-row">
-          <button class="btn btn-primary" type="button" id="oi-open-map"><?= v2_ic('map-trifold') ?>Alege locurile pe hartă</button>
-          <span class="oi-seats-sum" id="oi-seats-sum" aria-live="polite">Niciun loc selectat.</span>
+          <button class="btn btn-primary" type="button" id="oi-open-map"><?= v2_ic('map-trifold') ?><?= v2_te('Choose the seats on the map') ?></button>
+          <span class="oi-seats-sum" id="oi-seats-sum" aria-live="polite"><?= v2_te('No seat selected.') ?></span>
         </div>
-        <ul class="oi-chips" id="oi-chips" aria-label="Locurile alese"></ul>
+        <ul class="oi-chips" id="oi-chips" aria-label="<?= v2_te('Chosen seats') ?>"></ul>
         <span class="oi-err" id="oi-seats-err" role="alert" hidden></span>
       </div>
       <details class="oi-more" id="oi-more">
-        <summary><?= v2_ic('caret-down') ?>Opțiuni pentru PDF</summary>
+        <summary><?= v2_ic('caret-down') ?><?= v2_te('PDF options') ?></summary>
         <div class="oi-grid2">
           <div class="oi-f">
-            <label class="oi-f-l" for="oi-label">Eticheta de pe invitație <small>(opțional)</small></label>
-            <input id="oi-label" type="text" maxlength="100" autocomplete="off" placeholder="ex. Invitație VIP" aria-describedby="oi-label-help">
-            <span class="oi-help" id="oi-label-help">Apare pe bilet în locul cuvântului „Invitație”.</span>
+            <label class="oi-f-l" for="oi-label"><?= v2_t('Label on the invitation <small>(optional)</small>') ?></label>
+            <input id="oi-label" type="text" maxlength="100" autocomplete="off" placeholder="<?= v2_te('e.g. VIP invitation') ?>" aria-describedby="oi-label-help">
+            <span class="oi-help" id="oi-label-help"><?= v2_te('Shown on the ticket instead of the word "Invitation".') ?></span>
           </div>
           <div class="oi-f">
-            <label class="oi-f-l" for="oi-watermark">Filigran <small>(opțional)</small></label>
-            <input id="oi-watermark" type="text" maxlength="50" autocomplete="off" placeholder="INVITATIE" aria-describedby="oi-watermark-help">
-            <span class="oi-help" id="oi-watermark-help">Textul tipărit în partea de sus a fiecărei invitații.</span>
+            <label class="oi-f-l" for="oi-watermark"><?= v2_t('Watermark <small>(optional)</small>') ?></label>
+            <input id="oi-watermark" type="text" maxlength="50" autocomplete="off" placeholder="<?= v2_te('INVITATION') ?>" aria-describedby="oi-watermark-help">
+            <span class="oi-help" id="oi-watermark-help"><?= v2_te('The text printed at the top of each invitation.') ?></span>
           </div>
         </div>
       </details>
-      <div class="oi-note"><?= v2_ic('warning-circle') ?><p><strong>Maxim 50 de invitații per serie.</strong> Generarea poate dura câteva secunde — fiecare invitație produce un PDF cu QR + șablonul tău de bilet. Dacă ai nevoie de mai multe, creează mai multe serii.</p></div>
-      <div class="oi-act"><button class="btn btn-primary" type="button" id="oi-next">Continuă<?= v2_ic('arrow-right') ?></button></div>
+      <div class="oi-note"><?= v2_ic('warning-circle') ?><p><?= v2_t('<strong>At most 50 invitations per series.</strong> Generating can take a few seconds: each invitation produces a PDF with a QR code and your ticket template. If you need more, create several series.') ?></p></div>
+      <div class="oi-act"><button class="btn btn-primary" type="button" id="oi-next"><?= v2_te('Continue') ?><?= v2_ic('arrow-right') ?></button></div>
     </div>
 
     <div class="oi-step" id="oi-step-2" hidden>
-      <h3 class="oi-step-h" id="oi-step2-h" tabindex="-1">Pasul 2 — Datele invitaților</h3>
-      <p class="oi-step-p">Completează datele invitaților dacă le ai. Toate câmpurile sunt opționale: o invitație fără nume apare pe PDF ca „Invitat 1”, „Invitat 2”…</p>
-      <div class="oi-seg" id="oi-modes" role="group" aria-label="Cum adaugi invitații">
-        <button type="button" data-mode="manual" aria-pressed="true">Completare manuală</button>
-        <button type="button" data-mode="csv" aria-pressed="false">Încarcă CSV</button>
+      <h3 class="oi-step-h" id="oi-step2-h" tabindex="-1"><?= v2_te('Step 2: Guest details') ?></h3>
+      <p class="oi-step-p"><?= v2_te('Fill in the guest details if you have them. All fields are optional: an invitation without a name shows on the PDF as "Guest 1", "Guest 2"…') ?></p>
+      <div class="oi-seg" id="oi-modes" role="group" aria-label="<?= v2_te('How to add the guests') ?>">
+        <button type="button" data-mode="manual" aria-pressed="true"><?= v2_te('Fill in by hand') ?></button>
+        <button type="button" data-mode="csv" aria-pressed="false"><?= v2_te('Upload a CSV') ?></button>
       </div>
       <div id="oi-pane-manual">
         <div class="oi-table-wrap">
           <table class="oi-table">
-            <thead><tr><th scope="col">#</th><th scope="col" id="oi-col-seat" hidden>Loc</th><th scope="col">Prenume</th><th scope="col">Nume</th><th scope="col">Email</th><th scope="col">Telefon</th><th scope="col">Companie</th><th scope="col">Note</th></tr></thead>
+            <thead><tr><th scope="col">#</th><th scope="col" id="oi-col-seat" hidden><?= v2_te('Seat') ?></th><th scope="col"><?= v2_te('First name') ?></th><th scope="col"><?= v2_te('Last name') ?></th><th scope="col"><?= v2_te('Email') ?></th><th scope="col"><?= v2_te('Phone') ?></th><th scope="col"><?= v2_te('Company') ?></th><th scope="col"><?= v2_te('Notes') ?></th></tr></thead>
             <tbody id="oi-rows"></tbody>
           </table>
         </div>
@@ -142,68 +142,68 @@ v2_org_start('events');
       <div id="oi-pane-csv" hidden>
         <div class="oi-drop">
           <input type="file" id="oi-csv" accept=".csv,text/csv" class="oi-sr" tabindex="-1">
-          <p>Încarcă un fișier CSV cu coloanele: <code>first_name, last_name, email, phone, company, notes</code></p>
+          <p><?= v2_t('Upload a CSV file with the columns: {columns}', ['columns' => '<code>first_name, last_name, email, phone, company, notes</code>']) ?></p>
           <div class="oi-drop-act">
-            <button class="btn btn-primary" type="button" id="oi-csv-pick"><?= v2_ic('file-csv') ?>Alege fișier CSV</button>
-            <button class="btn btn-ghost" type="button" id="oi-csv-template"><?= v2_ic('download-simple') ?><span data-label>Descarcă template CSV</span></button>
+            <button class="btn btn-primary" type="button" id="oi-csv-pick"><?= v2_ic('file-csv') ?><?= v2_te('Choose a CSV file') ?></button>
+            <button class="btn btn-ghost" type="button" id="oi-csv-template"><?= v2_ic('download-simple') ?><span data-label><?= v2_te('Download the CSV template') ?></span></button>
           </div>
           <p class="oi-csv-name" id="oi-csv-name" aria-live="polite"></p>
           <p class="oi-err" id="oi-csv-err" role="alert" hidden></p>
         </div>
       </div>
-      <p class="oi-wait" id="oi-wait" hidden>Generarea poate dura până la un minut pentru o serie mare. Nu închide pagina.</p>
+      <p class="oi-wait" id="oi-wait" hidden><?= v2_te('Generating can take up to a minute for a large series. Do not close the page.') ?></p>
       <div class="oi-form-err" id="oi-gen-err" role="alert" hidden></div>
       <div class="oi-act is-split">
-        <button class="btn btn-ghost" type="button" id="oi-back-1"><?= v2_ic('arrow-left') ?>Înapoi</button>
-        <button class="btn btn-primary" type="button" id="oi-generate"><span data-label>Generează PDF-uri</span></button>
+        <button class="btn btn-ghost" type="button" id="oi-back-1"><?= v2_ic('arrow-left') ?><?= v2_te('Back') ?></button>
+        <button class="btn btn-primary" type="button" id="oi-generate"><span data-label><?= v2_te('Generate the PDFs') ?></span></button>
       </div>
     </div>
 
     <div class="oi-step" id="oi-step-3" hidden>
       <div class="oi-done">
         <span class="oi-done-ic" id="oi-done-ic" aria-hidden="true"><?= v2_ic('check') ?></span>
-        <div><h3 class="oi-step-h" id="oi-step3-h" tabindex="-1">Gata! Invitațiile au fost generate.</h3><p class="oi-step-p" id="oi-done-p"></p></div>
+        <div><h3 class="oi-step-h" id="oi-step3-h" tabindex="-1"><?= v2_te('Done! The invitations were generated.') ?></h3><p class="oi-step-p" id="oi-done-p"></p></div>
       </div>
       <div class="oi-act">
-        <button class="btn btn-primary" type="button" id="oi-done-zip"><?= v2_ic('download-simple') ?><span data-label>Descarcă invitațiile</span></button>
-        <button class="btn btn-ghost" type="button" id="oi-again">Generează altă serie</button>
+        <button class="btn btn-primary" type="button" id="oi-done-zip"><?= v2_ic('download-simple') ?><span data-label><?= v2_te('Download the invitations') ?></span></button>
+        <button class="btn btn-ghost" type="button" id="oi-again"><?= v2_te('Generate another series') ?></button>
       </div>
     </div>
   </section>
 
   <section class="org-panel" id="oi-history" aria-labelledby="oi-history-h" hidden>
-    <div class="org-panel-head"><div><p class="org-k">Serii</p><h2 class="org-panel-h" id="oi-history-h">Serii de invitații pentru această activitate</h2><p class="org-panel-p" id="oi-history-p"></p></div></div>
+    <div class="org-panel-head"><div><p class="org-k"><?= v2_te('Series') ?></p><h2 class="org-panel-h" id="oi-history-h"><?= v2_te('Invitation series for this experience') ?></h2><p class="org-panel-p" id="oi-history-p"></p></div></div>
     <ul class="oi-batches" id="oi-batches" aria-live="polite"><li><span class="org-skel oi-sk-row"></span></li></ul>
-    <div class="oi-more-row"><button class="btn btn-ghost oi-sm" type="button" id="oi-history-more" hidden><span data-label>Încarcă mai multe serii</span></button></div>
+    <div class="oi-more-row"><button class="btn btn-ghost oi-sm" type="button" id="oi-history-more" hidden><span data-label><?= v2_te('Load more series') ?></span></button></div>
   </section>
 
   <dialog class="oi-map-d" id="oi-map-d" aria-labelledby="oi-map-h">
     <div class="oi-map-in">
       <div class="oi-map-head">
-        <div><h2 class="oi-d-h" id="oi-map-h">Alege locurile pentru invitații</h2><p class="oi-d-p">Apasă pe un loc ca să-l alegi sau să renunți la el. Mărește harta cu rotița, cu două degete sau cu butoanele.</p></div>
-        <span class="oi-map-count" id="oi-map-count" aria-live="polite">0 locuri</span>
+        <div><h2 class="oi-d-h" id="oi-map-h"><?= v2_te('Choose the seats for the invitations') ?></h2><p class="oi-d-p"><?= v2_te('Click a seat to choose it or to drop it. Zoom the map with the wheel, with two fingers or with the buttons.') ?></p></div>
+        <span class="oi-map-count" id="oi-map-count" aria-live="polite"><?= v2_e(v2_num(0, 'seat', 'seats')) ?></span>
         <?= $oiX ?>
       </div>
       <div class="oi-map-body" id="oi-map-body">
-        <div class="oi-map-msg" id="oi-map-msg">Se încarcă harta…</div>
+        <div class="oi-map-msg" id="oi-map-msg"><?= v2_te('Loading the map…') ?></div>
         <div class="oi-map" id="oi-map" hidden></div>
         <div class="oi-zoom">
-          <button type="button" id="oi-zoom-in" aria-label="Mărește" title="Mărește"><?= v2_ic('plus') ?></button>
-          <button type="button" id="oi-zoom-out" aria-label="Micșorează" title="Micșorează"><?= v2_ic('minus') ?></button>
-          <button type="button" id="oi-zoom-fit" aria-label="Potrivește pe ecran" title="Potrivește pe ecran"><?= v2_ic('arrows-out') ?></button>
+          <button type="button" id="oi-zoom-in" aria-label="<?= v2_te('Zoom in') ?>" title="<?= v2_te('Zoom in') ?>"><?= v2_ic('plus') ?></button>
+          <button type="button" id="oi-zoom-out" aria-label="<?= v2_te('Zoom out') ?>" title="<?= v2_te('Zoom out') ?>"><?= v2_ic('minus') ?></button>
+          <button type="button" id="oi-zoom-fit" aria-label="<?= v2_te('Fit to screen') ?>" title="<?= v2_te('Fit to screen') ?>"><?= v2_ic('arrows-out') ?></button>
         </div>
         <span class="oi-zoom-l" id="oi-zoom-l" aria-hidden="true">100%</span>
       </div>
       <div class="oi-map-foot">
-        <ul class="oi-legend" aria-label="Legenda">
-          <li><i class="is-free"></i>Disponibil</li>
-          <li><i class="is-mine"></i>Selectat de tine</li>
-          <li><i class="is-off"></i>Indisponibil</li>
+        <ul class="oi-legend" aria-label="<?= v2_te('Legend') ?>">
+          <li><i class="is-free"></i><?= v2_te('Available') ?></li>
+          <li><i class="is-mine"></i><?= v2_te('Selected by you') ?></li>
+          <li><i class="is-off"></i><?= v2_te('Unavailable') ?></li>
         </ul>
         <span class="oi-err" id="oi-map-err" role="alert" hidden></span>
         <div class="oi-map-act">
-          <button class="btn btn-ghost" type="button" id="oi-map-clear">Deselectează tot</button>
-          <button class="btn btn-primary" type="button" id="oi-map-ok">Confirmă selecția</button>
+          <button class="btn btn-ghost" type="button" id="oi-map-clear"><?= v2_te('Clear the selection') ?></button>
+          <button class="btn btn-primary" type="button" id="oi-map-ok"><?= v2_te('Confirm the selection') ?></button>
         </div>
       </div>
     </div>
@@ -214,7 +214,7 @@ v2_org_start('events');
       <h2 class="oi-d-h" id="oi-confirm-h"></h2>
       <p class="oi-d-p" id="oi-confirm-p"></p>
       <div class="oi-form-err" id="oi-confirm-err" role="alert" hidden></div>
-      <div class="oi-d-act"><button class="btn btn-ghost" type="button" data-close>Renunță</button><button class="btn btn-primary" type="button" id="oi-confirm-go"><span data-label></span></button></div>
+      <div class="oi-d-act"><button class="btn btn-ghost" type="button" data-close><?= v2_te('Cancel') ?></button><button class="btn btn-primary" type="button" id="oi-confirm-go"><span data-label></span></button></div>
     </div>
   </dialog>
 </div>
