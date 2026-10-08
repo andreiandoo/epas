@@ -97,6 +97,7 @@ class Settings extends Page
                 'mail_region' => $settings['mail']['region'] ?? '',
 
                 // Payment processing fee (settings.payment_fees)
+                'fiscal_vat_rate' => isset($settings['fiscal']['vat_rate']) ? (float) $settings['fiscal']['vat_rate'] : 21,
                 'payment_fee_pass' => ! empty($settings['payment_fees']['pass_to_customer']),
                 'payment_fee_percent' => round((float) ($settings['payment_fees']['percent_rate'] ?? 0), 2),
                 'payment_fee_fixed' => round(((int) ($settings['payment_fees']['fixed_cents'] ?? 0)) / 100, 2),
@@ -137,7 +138,19 @@ class Settings extends Page
                                             ->label('Platitor TVA')
                                             ->helperText('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.')
                                             ->onColor('success')
-                                            ->offColor('gray'),
+                                            ->offColor('gray')
+                                            ->live(),
+
+                                        Forms\Components\TextInput::make('fiscal_vat_rate')
+                                            ->label('Cota de TVA la bilete (%)')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(30)
+                                            ->step(0.01)
+                                            ->default(21)
+                                            ->suffix('%')
+                                            ->helperText('Folosită în declarația de impozit pe spectacole: impozitul se calculează la valoarea fără TVA.')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('vat_payer')),
 
                                         Forms\Components\Select::make('tax_display_mode')
                                             ->label('Modul de afișare taxe')
@@ -659,6 +672,13 @@ class Settings extends Page
         $feeFixedCents = array_key_exists('payment_fee_fixed', $data)
             ? (int) round(((float) ($data['payment_fee_fixed'] ?? 0)) * 100)
             : (int) ($existingFees['fixed_cents'] ?? 0);
+
+        // Cota de TVA (câmpul e ascuns când tenantul nu e plătitor: atunci păstrăm valoarea veche)
+        if (array_key_exists('fiscal_vat_rate', $data) && $data['fiscal_vat_rate'] !== null && $data['fiscal_vat_rate'] !== '') {
+            $settings['fiscal'] = array_merge(is_array($settings['fiscal'] ?? null) ? $settings['fiscal'] : [], [
+                'vat_rate' => round(min(30, max(0, (float) $data['fiscal_vat_rate'])), 2),
+            ]);
+        }
 
         $settings['payment_fees'] = array_merge($existingFees, [
             'pass_to_customer' => (bool) ($data['payment_fee_pass'] ?? false),

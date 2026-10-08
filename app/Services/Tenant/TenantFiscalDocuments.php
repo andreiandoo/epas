@@ -22,6 +22,8 @@ use Illuminate\Support\Str;
  * Refolosește motorul de variabile al șabloanelor de marketplace (MarketplaceTaxTemplate::
  * getVariablesForContext), cu două diferențe: organizatorul este tenantul însuși (datele firmei vin de
  * pe tenant), iar între el și primărie nu există un marketplace, deci variabilele de intermediar rămân goale.
+ * TVA-ul din declarația de impozit urmează setarea tenantului (vat_payer + settings.fiscal.vat_rate) — calculul
+ * e în MarketplaceTaxTemplate::getVariablesForContext, ramura pentru evenimente de tenant.
  *
  * Direcțiile fiscale (cu cota de impozit) sunt ținute de un marketplace; tenantul le folosește pe cele
  * ale marketplace-ului din care și-a copiat șabloanele (settings.fiscal.source_marketplace_client_id).

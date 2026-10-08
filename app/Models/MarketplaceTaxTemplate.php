@@ -1405,6 +1405,17 @@ class MarketplaceTaxTemplate extends Model
                                 ? (float) $org->secondary_vat_rate
                                 : (isset($org->tax_settings['vat_rate']) ? (float) $org->tax_settings['vat_rate'] : 21.0));
                     }
+                } elseif ($event->tenant_id && ! $event->marketplace_client_id) {
+                    // Eveniment de tenant: organizatorul e tenantul însuși. Plătitor de TVA după
+                    // tenants.vat_payer, cu cota din settings.fiscal.vat_rate (implicit 21%).
+                    $tenant = $event->tenant;
+                    $isVatPayer = (bool) ($tenant?->vat_payer ?? false);
+                    if ($isVatPayer) {
+                        $tenantSettings = is_array($tenant->settings) ? $tenant->settings : [];
+                        $vatRate = isset($tenantSettings['fiscal']['vat_rate']) && (float) $tenantSettings['fiscal']['vat_rate'] > 0
+                            ? (float) $tenantSettings['fiscal']['vat_rate']
+                            : 21.0;
+                    }
                 }
                 if ($isVatPayer && $vatRate > 0) {
                     $netSalesValue = $realSalesValue / (1 + $vatRate / 100);
