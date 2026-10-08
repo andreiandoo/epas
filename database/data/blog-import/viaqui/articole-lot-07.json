@@ -48,7 +48,8 @@
         "q": "How long do you need on Museum Island?",
         "a": "About two hours for the Neues Museum and an hour to an hour and a half for each of the others. Two museums are a full half day."
       }
-    ]
+    ],
+    "published_at": "2026-10-11 18:45"
   },
   {
     "nr": 30,
@@ -99,7 +100,8 @@
         "q": "How long does the Upper Belvedere take?",
         "a": "About an hour and a half for The Kiss, the other Klimt and Schiele rooms and the Marble Hall. Add half an hour to walk down through the garden."
       }
-    ]
+    ],
+    "published_at": "2026-10-16 18:45"
   },
   {
     "nr": 31,
@@ -150,7 +152,8 @@
         "q": "Do the audio walks of Salzburg include entry tickets?",
         "a": "No. The audio walks our partner sells are commentary with a map only. Entry to the Mozart houses, the fortress or the cathedral is bought separately."
       }
-    ]
+    ],
+    "published_at": "2026-10-21 18:45"
   },
   {
     "nr": 32,
@@ -201,7 +204,8 @@
         "q": "Can you see Dresden old town in one day?",
         "a": "Yes. The sights lie within ten minutes of each other on foot. A day is enough for the free sights, one museum in the Zwinger and either a Green Vault or a visit to the opera house."
       }
-    ]
+    ],
+    "published_at": "2026-10-26 18:45"
   },
   {
     "nr": 33,
@@ -252,6 +256,7 @@
         "q": "Does the Plaza ticket include the concert hall?",
         "a": "No. A Plaza ticket covers the viewing floor and the walkway round the building. The great hall can be seen only at a concert or on a guided tour."
       }
-    ]
+    ],
+    "published_at": "2026-10-31 18:45"
   }
 ]

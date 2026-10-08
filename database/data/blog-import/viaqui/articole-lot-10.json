@@ -48,7 +48,8 @@
         "q": "Is the Acropolis Museum the same as the National Archaeological Museum?",
         "a": "No. The Acropolis Museum is the modern building below the south side of the rock and shows what was found on the Acropolis. The National Archaeological Museum is a separate, older museum two kilometres to the north, with finds from all of Greece."
       }
-    ]
+    ],
+    "published_at": "2026-10-12 16:15"
   },
   {
     "nr": 45,
@@ -99,7 +100,8 @@
         "q": "Can you see the Tower of the Winds without a ticket?",
         "a": "You see nearly all of it from the street, through the railings of the Roman Agora. A ticket lets you walk around it and look inside."
       }
-    ]
+    ],
+    "published_at": "2026-10-17 16:15"
   },
   {
     "nr": 46,
@@ -150,7 +152,8 @@
         "q": "How far is Lindos from Rhodes town?",
         "a": "About fifty kilometres down the east coast, an hour or more by bus. The Acropolis of Lindos has its own ticket, separate from anything in Rhodes town."
       }
-    ]
+    ],
+    "published_at": "2026-10-22 16:15"
   },
   {
     "nr": 47,
@@ -201,7 +204,8 @@
         "q": "Which entrance to the Dubrovnik walls is least crowded?",
         "a": "The entrance near Ploče Gate, on the east side of the old town, is usually the quietest. The one just inside Pile Gate is the busiest."
       }
-    ]
+    ],
+    "published_at": "2026-10-27 16:15"
   },
   {
     "nr": 48,
@@ -252,6 +256,7 @@
         "q": "Where is Caravaggio's painting in Malta?",
         "a": "The Beheading of St John the Baptist, painted in 1608, hangs in the Oratory of St John's Co-Cathedral in Valletta. It is seen with the ticket to the church."
       }
-    ]
+    ],
+    "published_at": "2026-11-01 16:15"
   }
 ]

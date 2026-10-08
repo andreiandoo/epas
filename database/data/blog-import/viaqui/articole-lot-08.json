@@ -48,7 +48,8 @@
         "q": "Is The Starry Night in the Van Gogh Museum?",
         "a": "No. The Starry Night is in the Museum of Modern Art in New York. The Amsterdam museum has the Potato Eaters, the Sunflowers, the Bedroom, Almond Blossom and Wheatfield with Crows."
       }
-    ]
+    ],
+    "published_at": "2026-10-11 11:05"
   },
   {
     "nr": 35,
@@ -99,7 +100,8 @@
         "q": "Which sights in central Brussels need a ticket?",
         "a": "The City Museum, the Town Hall visit, Belgian Beer World, the Musical Instruments Museum, the Coudenberg, the Royal Museums of Fine Arts, the Magritte Museum and the BELvue Museum. The squares, churches, arcades, gardens and viewpoints are free."
       }
-    ]
+    ],
+    "published_at": "2026-10-16 11:05"
   },
   {
     "nr": 36,
@@ -150,7 +152,8 @@
         "q": "Do the audio walks of Gamla Stan include entry tickets?",
         "a": "No. They are commentary on your own phone, with a map of the route. Tickets for the palace, the cathedral and the museums are bought separately."
       }
-    ]
+    ],
+    "published_at": "2026-10-21 11:05"
   },
   {
     "nr": 37,
@@ -201,7 +204,8 @@
         "q": "How do you get back from the Little Mermaid to the centre?",
         "a": "Walk ten minutes to Østerport station for the metro or a suburban train, or take a yellow harbour bus, a public boat, from Nordre Toldbod back to Nyhavn."
       }
-    ]
+    ],
+    "published_at": "2026-10-26 11:05"
   },
   {
     "nr": 38,
@@ -252,6 +256,7 @@
         "q": "Is Suomenlinna worth visiting in winter?",
         "a": "Yes, if you dress for wind and ice. The ferry runs through the winter and the islands are quiet, but most of the small museums are closed and the paths can be slippery."
       }
-    ]
+    ],
+    "published_at": "2026-10-31 11:05"
   }
 ]

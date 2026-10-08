@@ -48,7 +48,8 @@
         "q": "What can you see at the British Museum in two hours?",
         "a": "The Rosetta Stone, the Assyrian lion hunt reliefs and the Parthenon sculptures on the ground floor, then the Egyptian mummies, the Lewis Chessmen and the Sutton Hoo helmet upstairs."
       }
-    ]
+    ],
+    "published_at": "2026-10-10 09:30"
   },
   {
     "nr": 25,
@@ -99,7 +100,8 @@
         "q": "Is the Cutty Sark worth visiting?",
         "a": "It suits families and anyone interested in ships: the ticket lets you walk the decks and the hold, then stand under the hull, which is raised three metres above the floor of its dock."
       }
-    ]
+    ],
+    "published_at": "2026-10-15 09:30"
   },
   {
     "nr": 26,
@@ -150,7 +152,8 @@
         "q": "Which end of the Royal Mile should you start at?",
         "a": "Start at the castle and walk downhill to the Palace of Holyroodhouse. The castle is quietest in its first slot of the day, and the slope is with you all the way."
       }
-    ]
+    ],
+    "published_at": "2026-10-20 09:30"
   },
   {
     "nr": 27,
@@ -201,7 +204,8 @@
         "q": "Are the York city walls suitable for pushchairs or wheelchairs?",
         "a": "No. Every access is by steps, the path is narrow, and the inner edge has no railing in many places."
       }
-    ]
+    ],
+    "published_at": "2026-10-25 09:30"
   },
   {
     "nr": 28,
@@ -252,6 +256,7 @@
         "q": "How long do you need for the Beatles sites in Liverpool?",
         "a": "One full day for both the suburbs and the centre. With half a day, stay in the centre and visit one museum and Mathew Street."
       }
-    ]
+    ],
+    "published_at": "2026-10-30 09:30"
   }
 ]

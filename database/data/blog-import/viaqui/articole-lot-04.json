@@ -48,7 +48,8 @@
         "q": "Is the Prado open on Mondays?",
         "a": "Yes. The Prado opens every day of the week, with shorter hours on Sundays and public holidays. Check the current hours before your visit."
       }
-    ]
+    ],
+    "published_at": "2026-10-09 17:20"
   },
   {
     "nr": 15,
@@ -99,7 +100,8 @@
         "q": "How long does a visit to Seville Cathedral take?",
         "a": "About an hour and a half for the cathedral and the Giralda together. Add half an hour if you also use the ticket for the Church of El Salvador."
       }
-    ]
+    ],
+    "published_at": "2026-10-14 17:20"
   },
   {
     "nr": 16,
@@ -150,7 +152,8 @@
         "q": "How long does a visit to the Alcázar of Seville take?",
         "a": "About two hours for the palaces and the gardens, and up to two and a half if you walk the gardens at leisure."
       }
-    ]
+    ],
+    "published_at": "2026-10-19 17:20"
   },
   {
     "nr": 17,
@@ -201,7 +204,8 @@
         "q": "Can you walk from Sintra station to Pena Palace?",
         "a": "Yes. A marked path climbs from the old town through the woods in about an hour. It is steep, so many visitors ride up and walk down."
       }
-    ]
+    ],
+    "published_at": "2026-10-24 17:20"
   },
   {
     "nr": 18,
@@ -252,6 +256,7 @@
         "q": "How long do you need at the Dalí Theatre-Museum?",
         "a": "About two hours for the museum and twenty minutes for the Jewels. With the train from Barcelona it fills most of a day."
       }
-    ]
+    ],
+    "published_at": "2026-10-29 17:20"
   }
 ]

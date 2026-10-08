@@ -48,7 +48,8 @@
         "q": "Which day is Versailles closed?",
         "a": "The palace is closed on Mondays. Hours change with the season, so check the current ones before you go."
       }
-    ]
+    ],
+    "published_at": "2026-10-10 12:10"
   },
   {
     "nr": 20,
@@ -99,7 +100,8 @@
         "q": "Can you walk on the sand around Mont-Saint-Michel?",
         "a": "Not on your own. The bay has quicksand and a tide that comes in faster than a person walks. Crossings are made with licensed guides."
       }
-    ]
+    ],
+    "published_at": "2026-10-15 12:10"
   },
   {
     "nr": 21,
@@ -150,7 +152,8 @@
         "q": "What time of day is best for Sainte-Chapelle?",
         "a": "The first slot of the morning has the shortest wait. For the glass, a sunny day matters more than the hour: morning light is on the apse, late afternoon light on the rose window."
       }
-    ]
+    ],
+    "published_at": "2026-10-20 12:10"
   },
   {
     "nr": 22,
@@ -201,7 +204,8 @@
         "q": "Which day is the Musée Rodin closed?",
         "a": "It is closed on Mondays. Hours can change, so check the current ones before you go."
       }
-    ]
+    ],
+    "published_at": "2026-10-25 12:10"
   },
   {
     "nr": 23,
@@ -252,6 +256,7 @@
         "q": "How long do you need at Chambord?",
         "a": "Two to three hours for the château, the staircase and the roof terraces. Chenonceau takes about two hours with its gardens."
       }
-    ]
+    ],
+    "published_at": "2026-10-30 12:10"
   }
 ]

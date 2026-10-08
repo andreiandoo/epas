@@ -48,7 +48,8 @@
         "q": "Can you see the Basilica, the Parliament and the Synagogue in one day?",
         "a": "Yes. They lie on a line of about two and a half kilometres. Book the Parliament tour for the morning, then walk to the Basilica and on to the synagogue, which together fill a long half day."
       }
-    ]
+    ],
+    "published_at": "2026-10-12 07:55"
   },
   {
     "nr": 40,
@@ -99,7 +100,8 @@
         "q": "When is the best time to visit Fisherman's Bastion?",
         "a": "At sunrise it is empty and the upper level is free. For photographs of the Parliament, come from mid-afternoon, when the light falls on Pest, or after dark."
       }
-    ]
+    ],
+    "published_at": "2026-10-17 07:55"
   },
   {
     "nr": 41,
@@ -150,7 +152,8 @@
         "q": "Do you need to book the Schindler Factory in advance?",
         "a": "Yes. Entry is by ticket for a fixed time, numbers are limited, and in season the slots sell out days ahead."
       }
-    ]
+    ],
+    "published_at": "2026-10-22 07:55"
   },
   {
     "nr": 42,
@@ -201,7 +204,8 @@
         "q": "When is Charles Bridge empty?",
         "a": "Early in the morning, before about eight. From mid-morning until dusk it is crowded all year."
       }
-    ]
+    ],
+    "published_at": "2026-10-27 07:55"
   },
   {
     "nr": 43,
@@ -252,6 +256,7 @@
         "q": "Can you walk on the town wall in Tallinn?",
         "a": "On short sections, with a ticket: one between three towers on the north-western side and one on the eastern side. The rest of the wall is seen from the streets and the park outside it."
       }
-    ]
+    ],
+    "published_at": "2026-11-01 07:55"
   }
 ]

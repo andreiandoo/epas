@@ -48,7 +48,8 @@
         "q": "Which day is the Uffizi closed?",
         "a": "The Uffizi is closed on Mondays. Hours and special openings change during the year, so check the current ones before your visit."
       }
-    ]
+    ],
+    "published_at": "2026-10-09 08:40"
   },
   {
     "nr": 10,
@@ -99,7 +100,8 @@
         "q": "What else is in the Accademia besides the David?",
         "a": "Michelangelo's four unfinished Prisoners and his St Matthew, Giambologna's plaster model for the Sabine group, a hall of nineteenth-century plaster casts, Florentine paintings and a collection of historic musical instruments."
       }
-    ]
+    ],
+    "published_at": "2026-10-14 08:40"
   },
   {
     "nr": 11,
@@ -150,7 +152,8 @@
         "q": "Do you need to book Pompeii tickets in advance?",
         "a": "In the busy months it is wise. The park limits the number of visitors each day and issues tickets in the visitor's name, so bring an identity document."
       }
-    ]
+    ],
+    "published_at": "2026-10-19 08:40"
   },
   {
     "nr": 12,
@@ -201,7 +204,8 @@
         "q": "Does the tower ticket include Pisa Cathedral?",
         "a": "Yes, a tower ticket also covers the cathedral, which has no fixed time on the same day. The Baptistery, the Camposanto and the museums need their own or a combined ticket."
       }
-    ]
+    ],
+    "published_at": "2026-10-24 08:40"
   },
   {
     "nr": 13,
@@ -252,6 +256,7 @@
         "q": "Which day is the Pinacoteca di Brera closed?",
         "a": "It is closed on Mondays. Hours and special openings change, so check the current ones before you go."
       }
-    ]
+    ],
+    "published_at": "2026-10-29 08:40"
   }
 ]

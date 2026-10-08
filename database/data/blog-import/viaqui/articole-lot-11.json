@@ -48,7 +48,8 @@
         "q": "Does it rain inside the Pantheon?",
         "a": "Yes. The opening at the top of the dome has no glass, so rain falls on the floor, which is slightly domed and has small drain holes in the marble."
       }
-    ]
+    ],
+    "published_at": "2026-10-13 13:35"
   },
   {
     "nr": 50,
@@ -99,7 +100,8 @@
         "q": "Which day is the Pitti Palace closed?",
         "a": "The palace is closed on Mondays. The gardens have closing days of their own, so check both before you plan the visit."
       }
-    ]
+    ],
+    "published_at": "2026-10-18 13:35"
   },
   {
     "nr": 51,
@@ -150,7 +152,8 @@
         "q": "Do you need to book the Picasso Museum in advance?",
         "a": "It is wise. Entry is by time slot, and in spring, summer and at weekends the slots for the same day are often sold out by late morning."
       }
-    ]
+    ],
+    "published_at": "2026-10-23 13:35"
   },
   {
     "nr": 52,
@@ -201,7 +204,8 @@
         "q": "Which day is the Reina Sofía closed?",
         "a": "It is closed on Tuesdays. The Thyssen is open daily, with shorter hours on Mondays. Check the current hours before you go."
       }
-    ]
+    ],
+    "published_at": "2026-10-28 13:35"
   },
   {
     "nr": 53,
@@ -252,6 +256,7 @@
         "q": "How long do you need at Montserrat?",
         "a": "Three to four hours on the mountain, plus about an hour and a half of travel each way from Barcelona. Six to eight hours in all."
       }
-    ]
+    ],
+    "published_at": "2026-11-02 13:35"
   }
 ]
