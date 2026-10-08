@@ -67,6 +67,29 @@ class ViewOrder extends ViewRecord
                         ->send();
                 }),
 
+            Actions\Action::make('download_tickets')
+                ->label('Descarcă biletele')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->visible(fn () => (bool) \App\Http\Controllers\Api\TenantClient\DemoStorefrontController::ticketsPdfUrl($this->record))
+                ->url(fn () => \App\Http\Controllers\Api\TenantClient\DemoStorefrontController::ticketsPdfUrl($this->record), shouldOpenInNewTab: true),
+
+            Actions\Action::make('resend_tickets')
+                ->label('Retrimite biletele pe email')
+                ->icon('heroicon-o-envelope')
+                ->color('gray')
+                ->visible(fn () => in_array($this->record->status, ['paid', 'confirmed', 'completed'], true) && filled($this->record->customer_email))
+                ->requiresConfirmation()
+                ->modalHeading('Retrimite biletele')
+                ->modalDescription(fn () => 'Emailul cu biletele în PDF pleacă din nou la ' . $this->record->customer_email . '.')
+                ->action(function () {
+                    $sent = \App\Http\Controllers\Api\TenantClient\DemoStorefrontController::sendOrderEmail($this->record->fresh(), true);
+                    $note = \Filament\Notifications\Notification::make()
+                        ->title($sent ? 'Biletele au fost retrimise' : 'Emailul nu a putut fi trimis')
+                        ->body($sent ? $this->record->customer_email : 'Verifică adresa clientului și setările de email.');
+                    ($sent ? $note->success() : $note->danger())->send();
+                }),
+
             Actions\EditAction::make(),
         ];
     }

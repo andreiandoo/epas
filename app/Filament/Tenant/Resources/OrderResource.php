@@ -68,6 +68,54 @@ class OrderResource extends Resource
                             ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
                     ]),
 
+                SC\Section::make('Detalii plată')
+                    ->icon('heroicon-o-credit-card')
+                    ->columns(4)
+                    ->collapsible()
+                    ->schema([
+                        Forms\Components\Placeholder::make('pay_subtotal')
+                            ->label('Valoare bilete')
+                            ->content(function ($record) {
+                                $meta = is_array($record->meta) ? $record->meta : [];
+                                $fee = (int) ($meta['processing_fee_cents'] ?? 0);
+                                $discount = (int) ($meta['discount_cents'] ?? 0);
+                                $subtotal = (int) ($meta['subtotal_cents'] ?? (($record->total_cents ?? 0) - $fee + $discount));
+
+                                return number_format($subtotal / 100, 2, ',', '.') . ' RON';
+                            }),
+                        Forms\Components\Placeholder::make('pay_discount')
+                            ->label('Reducere')
+                            ->content(function ($record) {
+                                $discount = (int) ((is_array($record->meta) ? $record->meta : [])['discount_cents'] ?? 0);
+
+                                return $discount > 0 ? '− ' . number_format($discount / 100, 2, ',', '.') . ' RON' : '—';
+                            }),
+                        Forms\Components\Placeholder::make('pay_fee')
+                            ->label('Taxă de procesare')
+                            ->content(function ($record) {
+                                $fee = (int) ((is_array($record->meta) ? $record->meta : [])['processing_fee_cents'] ?? 0);
+
+                                return $fee > 0 ? number_format($fee / 100, 2, ',', '.') . ' RON (plătită de cumpărător)' : '—';
+                            }),
+                        Forms\Components\Placeholder::make('pay_total')
+                            ->label('Total încasat')
+                            ->content(fn ($record) => new HtmlString('<span style="font-size:18px;font-weight:700;">' . number_format(($record->total_cents ?? 0) / 100, 2, ',', '.') . ' RON</span>')),
+                        Forms\Components\Placeholder::make('pay_email')
+                            ->label('Email cu biletele')
+                            ->columnSpan(2)
+                            ->content(function ($record) {
+                                $sent = (is_array($record->meta) ? $record->meta : [])['confirmation_email_sent_at'] ?? null;
+                                if (! $sent) {
+                                    return 'Netrimis încă';
+                                }
+                                try {
+                                    return 'Trimis la ' . \Illuminate\Support\Carbon::parse($sent)->timezone('Europe/Bucharest')->format('d.m.Y H:i');
+                                } catch (\Throwable) {
+                                    return 'Trimis';
+                                }
+                            }),
+                    ]),
+
                 SC\Section::make('Reducere aplicată')
                     ->icon('heroicon-o-receipt-percent')
                     ->columns(3)
@@ -131,6 +179,37 @@ class OrderResource extends Resource
                             ->content(fn ($record) => new HtmlString(
                                 view('filament.tenant.resources.order-resource.tickets-list', ['record' => $record])->render()
                             )),
+                    ]),
+
+                SC\Section::make('Istoric comandă')
+                    ->icon('heroicon-o-clock')
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\Placeholder::make('order_history')
+                            ->label('')
+                            ->content(function ($record) {
+                                $rows = [['Comandă plasată', $record->created_at]];
+                                try {
+                                    $log = \Spatie\Activitylog\Models\Activity::where('subject_type', $record->getMorphClass())
+                                        ->where('subject_id', $record->id)->orderBy('created_at')->limit(30)->get();
+                                    foreach ($log as $entry) {
+                                        $old = $entry->properties['old_status'] ?? ($entry->properties['old']['status'] ?? null);
+                                        $new = $entry->properties['new_status'] ?? ($entry->properties['attributes']['status'] ?? null);
+                                        if ($new && $old !== $new) {
+                                            $rows[] = ['Stare: ' . ($old ?: '—') . ' → ' . $new, $entry->created_at];
+                                        }
+                                    }
+                                } catch (\Throwable) {
+                                    // jurnalul de activitate e opțional
+                                }
+                                $html = '<div style="display:grid;gap:6px;font-size:14px;">';
+                                foreach ($rows as [$label, $at]) {
+                                    $html .= '<div style="display:flex;justify-content:space-between;gap:16px;"><span>' . e($label) . '</span><span style="opacity:.7;white-space:nowrap;">' . e($at?->format('d.m.Y H:i')) . '</span></div>';
+                                }
+
+                                return new HtmlString($html . '</div>');
+                            }),
                     ]),
 
                 SC\Section::make('Beneficiari')

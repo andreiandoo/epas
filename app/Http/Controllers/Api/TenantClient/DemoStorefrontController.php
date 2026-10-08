@@ -195,22 +195,23 @@ class DemoStorefrontController extends Controller
      * Activ doar pentru tenanții cu settings.storefront.order_emails = true, ca celelalte site-uri
      * demo să rămână neschimbate. Nu aruncă niciodată: plata nu trebuie să depindă de email.
      */
-    public static function sendOrderEmail(Order $order): void
+    public static function sendOrderEmail(Order $order, bool $force = false): bool
     {
         try {
             $tenant = Tenant::find($order->tenant_id);
             $cfg = $tenant && is_array($tenant->settings) ? ($tenant->settings['storefront'] ?? []) : [];
-            if (! $tenant || empty($cfg['order_emails']) || empty($order->customer_email)) {
-                return;
+            // $force = retrimitere cerută din panou: trece peste „deja trimis” și peste setarea de trimitere automată
+            if (! $tenant || empty($order->customer_email) || (! $force && empty($cfg['order_emails']))) {
+                return false;
             }
             $meta = $order->meta ?? [];
-            if (! empty($meta['confirmation_email_sent_at']) || ! in_array($order->status, self::PAID, true)) {
-                return;
+            if ((! $force && ! empty($meta['confirmation_email_sent_at'])) || ! in_array($order->status, self::PAID, true)) {
+                return false;
             }
 
             $tickets = $order->tickets()->with(['ticketType.event.venue', 'order'])->get();
             if ($tickets->isEmpty()) {
-                return;
+                return false;
             }
             $event = $tickets->first()->ticketType?->event
                 ?: (! empty($meta['event_id']) ? Event::with('venue')->find($meta['event_id']) : null);
@@ -278,9 +279,29 @@ class DemoStorefrontController extends Controller
 
             $meta['confirmation_email_sent_at'] = now()->toIso8601String();
             $order->forceFill(['meta' => $meta])->saveQuietly();
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Storefront order confirmation email failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+
+            return false;
         }
+    }
+
+    /** Adresa PDF-ului cu biletele unei comenzi plătite (pentru panou și emailuri); null dacă tenantul nu are domeniu. */
+    public static function ticketsPdfUrl(Order $order): ?string
+    {
+        $tenant = Tenant::find($order->tenant_id);
+        $site = $tenant ? self::siteUrl($tenant) : null;
+        if (! $site || ! in_array($order->status, self::PAID, true)) {
+            return null;
+        }
+
+        return rtrim((string) config('app.url'), '/') . '/api/tenant-client/storefront/tickets.pdf?' . http_build_query([
+            'hostname' => parse_url($site, PHP_URL_HOST),
+            'order'    => $order->id,
+            'token'    => self::orderToken($order),
+        ]);
     }
 
     /** Adresa site-ului public al tenantului (domeniul primar activ). */
