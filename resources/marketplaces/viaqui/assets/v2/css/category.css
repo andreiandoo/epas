@@ -357,3 +357,9 @@ html.js .kwhere-fb{display:none}
 [data-dlg-apply] [hidden]{display:none}
 .kw-noscript{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:var(--space-5);font-size:.875rem;font-weight:600;color:var(--muted)}
 .kw-noscript .btn{min-height:42px;padding:0 18px}
+
+/* a category with nothing listed yet */
+.kbar[hidden],.ksub[hidden],.kh-stats[hidden]{display:none}
+.k-empty-op{font-size:.9375rem}
+.k-empty-op a{color:#F7F7F5;font-weight:600;text-underline-offset:3px}
+.k-empty-op a:hover{color:var(--online)}
