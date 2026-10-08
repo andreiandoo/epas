@@ -1695,6 +1695,14 @@ class CheckoutController extends BaseController
             // Loyalty points paid at checkout (same rules as the event flow above), before the processing fee.
             $loyalty     = app(\App\Services\Gamification\MarketplaceLoyaltyService::class);
             $pointsQuote = ['points' => 0, 'discount' => 0.0, 'error' => null];
+            // Points are worth money in the marketplace's currency. An order in an operator's own, different currency
+            // (staged currency set and not the marketplace's) cannot be part-paid with them yet.
+            $marketplaceCurrency = strtoupper((string) ($client->currency ?? '')) ?: 'RON';
+            if (!$isTestOrder && (int) ($validated['points_to_use'] ?? 0) > 0
+                && ($staged['currency'] ?? null) !== null && $staged['currency'] !== $marketplaceCurrency) {
+                DB::rollBack();
+                return $this->error('Points can be used only on orders in ' . $marketplaceCurrency . '.', 422, ['code' => 'points_invalid']);
+            }
             if (!$isTestOrder && (int) ($validated['points_to_use'] ?? 0) > 0) {
                 $pointsQuote = $loyalty->quote($client, $this->loyaltyCustomer(), (string) $validated['customer']['email'], max(0.0, (float) $subtotal), (int) $validated['points_to_use']);
                 if ($pointsQuote['error']) {
@@ -1724,7 +1732,9 @@ class CheckoutController extends BaseController
                 }
             }
 
-            $currency        = $client->currency ?? 'RON';
+            // The currency of the operator's prices when he chose one (ActivityOrderBuilder::stage refuses a basket
+            // with two); otherwise the marketplace's, as always.
+            $currency        = ($staged['currency'] ?? null) ?: ($client->currency ?? 'RON');
             $isMultiOrganizer = count($organizerIds) > 1;
             $isFreeOrder     = !$isTestOrder && $orderTotal <= 0;
             $isAutoConfirmed = $isTestOrder || $isFreeOrder;

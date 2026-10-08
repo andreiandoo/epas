@@ -92,6 +92,8 @@ class ActivityOrderBuilder
 
         $subtotal = $commission = $onTop = 0.0;
         $organizers = [];
+        $currencies = [];
+        $chosen = false;
         foreach ($lines as $line) {
             $subtotal   += $line['line_total'];
             $commission += $line['commission'];
@@ -99,6 +101,16 @@ class ActivityOrderBuilder
                 $onTop += $line['commission'];
             }
             $organizers[(int) ($line['organizer_id'] ?? 0)] = true;
+            // each line is priced in its operator's currency: the one he chose, else the marketplace's
+            $chosen = $chosen || ($line['organizer_currency'] ?? null) !== null;
+            $currencies[($line['organizer_currency'] ?? null) ?: (strtoupper((string) ($client->currency ?? '')) ?: ActivityCurrency::FALLBACK)] = true;
+        }
+
+        // An order is paid in one currency. Only marketplaces where an operator chose a currency can meet two in one
+        // basket; everywhere else `currency` stays null and the checkout keeps the marketplace's, as before.
+        if ($chosen && count($currencies) > 1) {
+            throw new ActivityCartException('Your basket holds products priced in different currencies (' . implode(', ', array_keys($currencies))
+                . '). Please pay for them in separate orders: remove the products in one currency, finish this order, then order the rest.');
         }
 
         return [
@@ -107,6 +119,7 @@ class ActivityOrderBuilder
             'commission'        => round($commission, 2),
             'commission_on_top' => round($onTop, 2),
             'organizer_ids'     => $organizers,
+            'currency'          => $chosen ? array_key_first($currencies) : null,
         ];
     }
 
@@ -373,7 +386,10 @@ class ActivityOrderBuilder
             : ($organizer ? (float) $organizer->getEffectiveCommissionRate() : 0.0);
         $line['commission_rate']  = $rate;
         $line['commission_mode']  = $organizer ? $organizer->getEffectiveCommissionMode() : 'included';
-        $line['commission_floor'] = ActivityCommission::floor($organizer);
+        // The currency the operator chose to sell in, when he chose one (null for every operator from before currencies
+        // existed, who keep the marketplace's). It sets the order's currency (stage()) and the commission minimum.
+        $line['organizer_currency'] = ActivityCurrency::ready() ? (strtoupper((string) ($organizer?->currency ?? '')) ?: null) : null;
+        $line['commission_floor'] = ActivityCommission::floor($organizer, $line['organizer_currency']);
         $line['commission']       = ActivityCommission::forLine($line['line_total'], $rate, $line['commission_floor'], $quantity);
 
         return $line;

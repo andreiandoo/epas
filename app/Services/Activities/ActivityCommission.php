@@ -17,8 +17,22 @@ class ActivityCommission
     /** What an operator pays per ticket at least, when nothing else is set on the account. */
     public const DEFAULT_FLOOR = 1.5;
 
-    /** The minimum per unit for this operator, 0 when the admin turned it off. */
-    public static function floor(?MarketplaceOrganizer $organizer): float
+    /**
+     * The same minimum for an operator who sells in another currency than the leu: a round amount in his currency,
+     * not 1.50 of whatever he sells in. A currency missing here has no minimum.
+     */
+    public const FLOOR_BY_CURRENCY = [
+        'EUR' => 0.30, 'GBP' => 0.25, 'CHF' => 0.30, 'CZK' => 7.0, 'PLN' => 1.30, 'HUF' => 120.0,
+        'SEK' => 3.50, 'NOK' => 3.50, 'DKK' => 2.20, 'ISK' => 45.0,
+    ];
+
+    /**
+     * The minimum per unit for this operator, 0 when the admin turned it off.
+     *
+     * @param string|null $currency the currency the operator chose to sell in (marketplace_organizers.currency);
+     *                              null or RON keeps the rule every operator had before currencies existed
+     */
+    public static function floor(?MarketplaceOrganizer $organizer, ?string $currency = null): float
     {
         if (!$organizer) {
             return 0.0;
@@ -28,6 +42,11 @@ class ActivityCommission
             return 0.0;
         }
         $fixed = $organizer->fixed_commission_default;
+        $currency = strtoupper((string) $currency);
+        if ($currency !== '' && $currency !== 'RON') {
+            // an amount set on the operator's account is in his currency
+            return $fixed === null ? (self::FLOOR_BY_CURRENCY[$currency] ?? 0.0) : max(0.0, (float) $fixed);
+        }
 
         return $fixed === null ? self::DEFAULT_FLOOR : max(0.0, (float) $fixed);
     }
