@@ -6,6 +6,10 @@
  * United Kingdom, francs in Switzerland, lei in Romania…); filters and sorting work on its value in euro, so that
  * "under €25" means the same in every country.
  *
+ * Since 2026-10-08 the visitor can choose one currency for the whole site (the menu in the header, the form in the
+ * footer). The choice is kept in the cookie V2_CURRENCY_COOKIE and every price is then shown in it, converted from
+ * its euro value. Without a choice the rule above applies. The page cache keys on the cookie (includes/page-cache.php).
+ *
  *   v2_currency_of('GB')            'GBP'
  *   v2_money_in(12.5, 'GBP')        '£12.50'
  *   v2_price_local(15.0, 'GB')      '£12.73'   — a euro amount, shown in the country's currency
@@ -53,9 +57,40 @@ const V2_RATES_FALLBACK = [
     'ALL' => 91.96, 'MKD' => 61.50, 'BAM' => 1.9558,
 ];
 
+const V2_CURRENCY_COOKIE = 'vq_cur';
+
+/** The currency the visitor chose for the whole site, or null when prices follow each place's own currency. */
+function v2_display_currency(): ?string
+{
+    $c = $_COOKIE[V2_CURRENCY_COOKIE] ?? '';
+    return is_string($c) && isset(V2_CURRENCIES[$c]) ? $c : null;
+}
+
+/** The currency prices are shown in for a country: the visitor's choice, else the country's own. */
 function v2_currency_of(?string $countryCode): string
 {
-    return V2_COUNTRY_CURRENCY[strtoupper((string) $countryCode)] ?? 'EUR';
+    return v2_display_currency() ?? (V2_COUNTRY_CURRENCY[strtoupper((string) $countryCode)] ?? 'EUR');
+}
+
+/** The currencies offered in the selector, the common ones first: code => "£ · Pound sterling". */
+function v2_currency_choices(): array
+{
+    $names = [
+        'EUR' => 'Euro', 'GBP' => 'Pound sterling', 'CHF' => 'Swiss franc', 'PLN' => 'Polish złoty', 'CZK' => 'Czech koruna',
+        'HUF' => 'Hungarian forint', 'RON' => 'Romanian leu', 'SEK' => 'Swedish krona', 'NOK' => 'Norwegian krone',
+        'DKK' => 'Danish krone', 'ISK' => 'Icelandic króna', 'RSD' => 'Serbian dinar', 'UAH' => 'Ukrainian hryvnia',
+        'MDL' => 'Moldovan leu', 'ALL' => 'Albanian lek', 'MKD' => 'Macedonian denar', 'BAM' => 'Convertible mark',
+    ];
+    return array_intersect_key($names, V2_CURRENCIES);
+}
+
+/** The address that sets the visitor's currency and comes back to the page ('' = each place's own currency). */
+function v2_currency_href(string $currency): string
+{
+    $back = strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '#');
+    // a page reached with ?nocache or ?preview comes back without them
+    $back = preg_replace('/([?&])(nocache|preview)=[^&]*&?/', '$1', $back);
+    return '/currency?c=' . rawurlencode($currency !== '' ? $currency : 'local') . '&back=' . rawurlencode(rtrim($back, '?&') ?: '/');
 }
 
 /** One euro in $currency. */
@@ -117,17 +152,23 @@ function v2_to_eur($amount, string $currency): float
 }
 
 /**
- * The line under a price filter, for a country that does not use the euro:
- * "Prices here are in pounds. The price filter is in euro: €10 is about £8.48."  Empty for euro countries.
+ * The line under a price filter.
+ *   a country outside the euro: "Prices here are in pounds. The price filter is in euro: €10 is about £8.48."
+ *   a currency the visitor chose: "Prices are shown in pounds, as you chose…"
+ * Empty when prices are in euro and nothing was chosen.
  */
 function v2_fx_note(?string $countryCode): string
 {
+    $chosen = v2_display_currency();
     $currency = v2_currency_of($countryCode);
-    if ($currency === 'EUR') {
+    if ($chosen === null && $currency === 'EUR') {
         return '';
     }
-    return 'Prices here are in ' . V2_CURRENCIES[$currency][3] . '. The price filter is in euro: €10 is about '
-        . v2_money_in(10 * v2_rate($currency), $currency) . '.';
+    $rate = $currency === 'EUR' ? '' : ' The price filter is in euro: €10 is about ' . v2_money_in(10 * v2_rate($currency), $currency) . '.';
+    if ($chosen !== null) {
+        return 'Prices are shown in ' . V2_CURRENCIES[$currency][3] . ', as you chose. Converted prices are approximate; the amount to pay is confirmed before you pay.' . $rate;
+    }
+    return 'Prices here are in ' . V2_CURRENCIES[$currency][3] . '.' . $rate;
 }
 
 /* ------------------------------------------------------------------ our own listings
@@ -136,15 +177,23 @@ function v2_fx_note(?string $countryCode): string
  * then in the site currency.
  */
 
-/** What is printed for one of our own prices: "£12.50", "€9". Empty for no price. */
-function v2_own_price_label($cents, ?string $currency = null): string
+/**
+ * What is printed for one of our own prices: "£12.50", "€9". Empty for no price.
+ * In the operator's currency; in the visitor's when he chose one (converted from the euro value).
+ */
+function v2_own_price_label($cents, ?string $currency = null, $eurCents = null): string
 {
     $cents = (int) $cents;
     if ($cents <= 0) {
         return '';
     }
     $currency = strtoupper((string) $currency);
-    return v2_money_in($cents / 100, $currency !== '' ? $currency : (defined('SITE_CURRENCY') ? SITE_CURRENCY : 'EUR'));
+    $currency = $currency !== '' ? $currency : (defined('SITE_CURRENCY') ? SITE_CURRENCY : 'EUR');
+    $chosen = v2_display_currency();
+    if ($chosen !== null && $chosen !== $currency) {
+        return v2_money_in(v2_own_price_eur($cents, $currency, $eurCents) * v2_rate($chosen), $chosen);
+    }
+    return v2_money_in($cents / 100, $currency);
 }
 
 /** The euro value of one of our own prices, for filters and sorting: the API's when it sends it, else our rate. */

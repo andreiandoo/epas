@@ -116,6 +116,15 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         <button type="button" data-cc-action="open">Cookie settings</button>
         <a href="/contact">Contact</a>
       </nav>
+      <form class="vf-cur" action="/currency" method="get">
+        <label for="vf-cur-c">Currency</label>
+        <select id="vf-cur-c" name="c">
+          <option value="local"<?= v2_display_currency() === null ? ' selected' : '' ?>>Local (each country's own)</option>
+          <?php foreach (v2_currency_choices() as $curCode => $curName): ?><option value="<?= v2_e($curCode) ?>"<?= v2_display_currency() === $curCode ? ' selected' : '' ?>><?= v2_e($curCode . ' · ' . $curName) ?></option><?php endforeach; ?>
+        </select>
+        <input type="hidden" name="back" value="<?= v2_e(strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '?')) ?>">
+        <button type="submit">Change</button>
+      </form>
       <p class="vf-tags">Cities / Cultures / Nature / People / You</p>
       <a class="vf-up" href="#"><?= v2_ic('arrow-right') ?>Back to top</a>
     </div>

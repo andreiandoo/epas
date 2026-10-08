@@ -162,6 +162,7 @@ foreach ($activities as $a) {
         'dur'         => $n['dur'],
         'price_cents' => isset($a['cheapest_price_cents']) ? (int) $a['cheapest_price_cents'] : null,
         'currency'    => (string) ($a['currency'] ?? ''),
+        'eur_cents'   => $a['cheapest_price_eur_cents'] ?? null,
         'url'         => $n['href'],
         'cta'         => 'See the experience',
         'promoted'    => !empty($a['flags']['is_promoted']),
@@ -278,14 +279,14 @@ if ($sort !== 'recommended') {
     $activeChips[] = ['Sorted: ' . $sortOptions[$sort], $cityUrl(['sort' => ''])];
 }
 
-$priceHtml = function (?int $cents, string $currency = ''): string {
+$priceHtml = function (?int $cents, string $currency = '', $eurCents = null): string {
     if ($cents === null) {
         return '';
     }
     if ($cents === 0) {
         return '<span class="xp-price"><b>Free</b></span>';
     }
-    return '<span class="xp-price">from<b>' . v2_e(v2_own_price_label($cents, $currency)) . '</b></span>';
+    return '<span class="xp-price">from<b>' . v2_e(v2_own_price_label($cents, $currency, $eurCents)) . '</b></span>';
 };
 
 // ============================================================
@@ -651,7 +652,7 @@ include __DIR__ . '/includes/v2/header.php';
               <span class="xp-cat"><?= v2_e($card['cat']) ?></span>
               <span class="xp-title"><?= v2_e($card['title']) ?></span>
               <span class="xp-meta"><?php if ($card['dur']): ?><span><?= v2_ic('clock') ?><?= v2_e($card['dur']) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go"><?= v2_e($card['cta']) ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($card['price_cents'], $card['currency']) ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_e($card['cta']) ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($card['price_cents'], $card['currency'], $card['eur_cents']) ?></span>
             </span>
           </a>
         </li>
@@ -821,7 +822,7 @@ include __DIR__ . '/includes/v2/header.php';
         <li><a href="<?= v2_e(v2_partner_href('aviasales', $f['url'], 'city-' . $slug . '-flights')) ?>" target="_blank" rel="sponsored nofollow noopener">
           <span class="pfl-from"><small>From</small><b><?= v2_e($f['from']) ?></b></span>
           <span class="pfl-when"><?= v2_e(v2_flight_dates($f['out'], $f['back'])) ?><small><?= $f['direct'] ? 'Direct' : 'With a stop' ?> · return</small></span>
-          <span class="pfl-price"><small>from</small><b><?= v2_e(v2_money($f['price'])) ?></b></span>
+          <span class="pfl-price"><small>from</small><b><?= v2_e(v2_price_local($f['price'], '')) ?></b></span>
           <?= v2_ic('arrow-right') ?>
         </a></li>
         <?php endforeach; ?>
