@@ -146,11 +146,11 @@ $gdRenderShortcodes = function (string $html) use ($gdShortcode, $gdPartnerShort
     if (stripos($html, '[partner') !== false) {
         // like the activities block: wrapped in a paragraph by the editor; with nothing to show, the line that
         // announces it (the paragraph before it, when it ends in a colon) goes too
-        $html = preg_replace_callback('#(<p>(?:(?!</p>).)*:\s*</p>\s*)?<p>\s*(\[partner[^\]]*\])\s*</p>#is', function ($m) use ($gdPartnerShortcode) {
+        $html = preg_replace_callback('#(<p>(?:(?!</p>).)*:\s*</p>\s*)?<p>\s*(\[partner[^\]]*\])\s*</p>#is', function ($m) use ($gdPartnerShortcode) {
             $cards = $gdPartnerShortcode($m[2]);
             return $cards === '' ? '' : $m[1] . $cards;
         }, $html);
-        $html = preg_replace_callback('#\[partner[^\]]*\]#i', fn ($m) => $gdPartnerShortcode($m[0]), $html);
+        $html = preg_replace_callback('#\[partner[^\]]*\]#i', fn ($m) => $gdPartnerShortcode($m[0]), $html);
     }
     if (stripos($html, '[activities') === false) {
         return $html;
@@ -185,6 +185,30 @@ $dateLabel = $ts ? v2_t('{day} {month} {year}', ['day' => (int) date('j', $ts), 
 // Only the guide's own image (uploaded in the admin) is shown: no stand-in photos.
 $coverUrl = v2_media_url($article['image_url'] ?? null);
 $content = (string) ($article['content'] ?? '');
+
+// What place the guide is about, for the closing section (experiences and attractions there): a line
+// [place attraction="eiffel-tower" city="paris"] anywhere in the body (it prints nothing), else the place of the first
+// [partner …] block.
+$gdPlace = ['attraction' => '', 'city' => ''];
+$gdAttrs = function (string $shortcode): array {
+    $sc = html_entity_decode($shortcode, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $sc = str_replace(['“', '”', '„', '‟', '″', '＂', '«', '»'], '"', $sc);
+    preg_match_all('/([a-z_]+)\s*=\s*["\']([^"\']*)["\']/i', $sc, $found, PREG_SET_ORDER);
+    $attr = [];
+    foreach ($found as $pair) {
+        $attr[strtolower($pair[1])] = trim($pair[2]);
+    }
+    return $attr;
+};
+if (preg_match('/\[place\s[^\]]*\]/i', $content, $gdM) || preg_match('/\[partner\s[^\]]*\]/i', $content, $gdM)) {
+    $gdA = $gdAttrs($gdM[0]);
+    foreach (['attraction', 'city'] as $gdK) {
+        if (preg_match('/^[a-z0-9-]+$/', $gdA[$gdK] ?? '')) {
+            $gdPlace[$gdK] = $gdA[$gdK];
+        }
+    }
+}
+$content = preg_replace('#<p>\s*\[place\s[^\]]*\]\s*</p>|\[place\s[^\]]*\]#i', '', $content);
 $contentHtml = trim(strip_tags($content, '<img><iframe>')) !== '' ? $gdRenderShortcodes($content) : '';
 
 // Contents: every h2/h3 of the body gets an id (the editor's own when set) and an entry; h3 nest under their h2.
@@ -271,6 +295,41 @@ foreach ((array) ($relatedResp['data']['articles'] ?? $relatedResp['data'] ?? []
         break;
     }
 }
+
+// Where the guide is about: experiences to book there (our partner's) and attractions to see around it.
+$gdPlaceName = '';      // "the Eiffel Tower" is not known as a phrase: the attraction's name, as it is
+$gdCityName = '';
+$gdSights = [];
+$gdThere = [];
+if ($gdPlace['attraction'] !== '') {
+    $gdAtResp = api_cached('attraction_' . $gdPlace['attraction'], fn () => api_get('/attractions/' . rawurlencode($gdPlace['attraction'])), 900);
+    $gdAt = is_array($gdAtResp['data']['attraction'] ?? null) ? $gdAtResp['data']['attraction'] : [];
+    $gdPlaceName = navFlatName($gdAt['name'] ?? '');
+    if ($gdPlace['city'] === '' && !empty($gdAt['city']['slug'])) {
+        $gdPlace['city'] = (string) $gdAt['city']['slug'];
+    }
+    $gdCityName = is_array($gdAt['city'] ?? null) ? navFlatName($gdAt['city']['name'] ?? '') : '';
+    foreach (array_merge((array) ($gdAt['nearby'] ?? []), (array) ($gdAt['city_attractions'] ?? [])) as $gdN) {
+        if (is_array($gdN) && ($gdS = v2_attraction($gdN)) && $gdS['slug'] !== $gdPlace['attraction'] && !isset($gdSights[$gdS['slug']])) {
+            $gdSights[$gdS['slug']] = $gdS;
+        }
+    }
+}
+if ($gdPlace['city'] !== '') {
+    if ($gdCityName === '') {
+        $gdCityName = (string) ($V2NAV['cities'][$gdPlace['city']]['name'] ?? mb_convert_case(str_replace('-', ' ', $gdPlace['city']), MB_CASE_TITLE, 'UTF-8'));
+    }
+    if (count($gdSights) < 4) {
+        $gdListResp = api_cached('v2_attractions_' . md5(json_encode(['city' => $gdPlace['city'], 'per_page' => 12, 'page' => 1])), fn () => api_get('/attractions', ['city' => $gdPlace['city'], 'per_page' => 12, 'page' => 1]), 900);
+        foreach ((array) ($gdListResp['data']['items'] ?? []) as $gdN) {
+            if (is_array($gdN) && ($gdS = v2_attraction($gdN)) && $gdS['slug'] !== $gdPlace['attraction'] && !isset($gdSights[$gdS['slug']])) {
+                $gdSights[$gdS['slug']] = $gdS;
+            }
+        }
+    }
+    $gdThere = array_slice(v2_wegotrip_city_all($gdPlace['city']), 0, 10);
+}
+$gdSights = array_slice(array_values($gdSights), 0, 10);
 
 // Every guide ends with a few bookable activities, whatever its shortcodes.
 $railResp = api_cached('guide_rail_' . $slug, fn () => api_get('/activities', ['per_page' => 16, 'sort' => 'recent']), 300);
@@ -461,6 +520,51 @@ include __DIR__ . '/includes/v2/header.php';
       <ul class="rail" id="gd-rail-list">
         <?php foreach ($recommended as $ri => $card): ?><?= $gdCard($card, $ri) ?><?php endforeach; ?>
       </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <?php if ($gdThere || $gdSights): ?>
+  <!-- ===================== AROUND THE PLACE OF THE GUIDE ===================== -->
+  <section class="sec gd-rail gd-around" aria-labelledby="gd-around-h">
+    <div class="wrap">
+      <?php if ($gdThere): ?>
+      <div class="sec-head">
+        <div><p class="kicker"><?= v2_te('Book for your trip') ?></p><h2 id="gd-around-h"><?= v2_te('Experiences in {city}', ['city' => $gdCityName]) ?></h2></div>
+        <div class="rail-btns" data-for="gd-there-list">
+          <button class="rail-btn" type="button" data-dir="-1" aria-label="<?= v2_te('Previous experiences') ?>"><?= v2_ic('arrow-left') ?></button>
+          <button class="rail-btn" type="button" data-dir="1" aria-label="<?= v2_te('Next experiences') ?>"><?= v2_ic('arrow-right') ?></button>
+        </div>
+      </div>
+      <ul class="rail" id="gd-there-list">
+        <?= v2_partner_cards($gdThere, 'wegotrip', 'guide-' . $slug . '-more') ?>
+      </ul>
+      <?= v2_partner_note('wegotrip') ?>
+      <p class="gd-around-more"><a class="sec-link" href="/<?= v2_e($gdPlace['city']) ?>"><?= v2_te('Everything to do in {city}', ['city' => $gdCityName]) ?><?= v2_ic('arrow-right') ?></a></p>
+      <?php endif; ?>
+      <?php if ($gdSights): ?>
+      <div class="sec-head<?= $gdThere ? ' gd-around-second' : '' ?>">
+        <div><p class="kicker"><?= v2_te('See while you are there') ?></p><h2<?= $gdThere ? '' : ' id="gd-around-h"' ?>><?= $gdPlaceName !== '' ? v2_te('Attractions near {place}', ['place' => $gdPlaceName]) : v2_te('Attractions in {city}', ['city' => $gdCityName]) ?></h2></div>
+        <div class="rail-btns" data-for="gd-sights-list">
+          <button class="rail-btn" type="button" data-dir="-1" aria-label="<?= v2_te('Previous attractions') ?>"><?= v2_ic('arrow-left') ?></button>
+          <button class="rail-btn" type="button" data-dir="1" aria-label="<?= v2_te('Next attractions') ?>"><?= v2_ic('arrow-right') ?></button>
+        </div>
+      </div>
+      <ul class="rail" id="gd-sights-list">
+        <?php foreach ($gdSights as $gi => $gs): ?>
+        <li class="xp"><a href="<?= v2_e($gs['href']) ?>">
+          <span class="xp-media"><?= $gs['image'] ? v2_photo([v2_thumb($gs['image'], 480, 320), 480, 320, '']) : v2_fallback($gs['name'], $gi) ?></span>
+          <span class="xp-body">
+            <?php if ($gs['type'] !== ''): ?><span class="xp-cat"><?= v2_e($gs['type']) ?></span><?php endif; ?>
+            <span class="xp-title"><?= v2_e($gs['name']) ?></span>
+            <span class="xp-meta"><?php if ($gs['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($gs['city']) ?></span><?php endif; ?></span>
+            <span class="xp-foot"><span class="xp-go"><?= v2_te('See the attraction') ?><?= v2_ic('arrow-right') ?></span></span>
+          </span>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php if ($gdPlace['city'] !== ''): ?><p class="gd-around-more"><a class="sec-link" href="/<?= v2_e($gdPlace['city']) ?>/attractions"><?= v2_te('All attractions in {city}', ['city' => $gdCityName]) ?><?= v2_ic('arrow-right') ?></a></p><?php endif; ?>
+      <?php endif; ?>
     </div>
   </section>
   <?php endif; ?>
