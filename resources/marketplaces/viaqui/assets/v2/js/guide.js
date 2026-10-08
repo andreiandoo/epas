@@ -116,3 +116,13 @@
     });
   }
 })();
+
+/* The card rails at the end of a guide: a mouse can press and drag them, as a finger does. */
+(function () {
+  'use strict';
+  if (!window.EPHDrag) return;
+  [].forEach.call(document.querySelectorAll('.gd-rail .rail'), function (rail) {
+    window.EPHDrag(rail, { wheel: false });
+    rail.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  });
+})();

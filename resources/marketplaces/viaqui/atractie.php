@@ -421,6 +421,37 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== NEARBY ATTRACTIONS ===================== -->
   <?php if (empty($countyAttractions) && $atNearby) { $countyAttractions = array_slice($atNearby, 0, 6); $atCounty = ''; } // by distance, where the catalogue has no counties ?>
   <?php if (!empty($cityAttractions) || !empty($countyAttractions)): ?>
+  <?php
+  // Guides written about this attraction (their body names it). Shown only when the API confirms it applied the filter.
+  $atGuides = [];
+  $atGuideResp = api_cached('v2_guides_place_' . $slug, fn () => api_get('/blog-articles', ['place' => $slug, 'per_page' => 3, 'status' => 'published']), 900);
+  if (($atGuideResp['meta']['applied_place'] ?? null) === $slug) {
+      foreach ((array) ($atGuideResp['data'] ?? []) as $atG) {
+          if (is_array($atG) && !empty($atG['slug']) && navFlatName($atG['title'] ?? '') !== '') {
+              $atGuides[] = ['href' => '/guides/' . $atG['slug'], 'title' => navFlatName($atG['title']), 'excerpt' => trim((string) ($atG['excerpt'] ?? '')), 'image' => v2_media_url($atG['image_url'] ?? null)];
+          }
+      }
+  }
+  ?>
+  <?php if ($atGuides): ?>
+  <!-- ===================== GUIDES ABOUT THIS ATTRACTION ===================== -->
+  <section class="sec tguides" aria-labelledby="tguides-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker"><?= v2_te('Before you go') ?></p><h2 id="tguides-h"><?= v2_te('Our guide to {name}', ['name' => $atName]) ?></h2></div>
+      </div>
+      <ul class="tguides-list">
+        <?php foreach ($atGuides as $tgi => $tg): ?>
+        <li><a class="tguide" href="<?= v2_e($tg['href']) ?>">
+          <span class="tguide-media"><?= $tg['image'] ? v2_photo([v2_thumb($tg['image'], 640, 420), 640, 420, '']) : v2_fallback($tg['title'], $tgi) ?></span>
+          <span class="tguide-body"><small><?= v2_te('Guide') ?></small><b><?= v2_e($tg['title']) ?></b><?php if ($tg['excerpt'] !== ''): ?><span><?= v2_e($tg['excerpt']) ?></span><?php endif; ?><i><?= v2_te('Read the guide') ?><?= v2_ic('arrow-right') ?></i></span>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <section class="sec tnear" aria-label="<?= v2_te('Other attractions') ?>">
     <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
     <div class="wrap tnear-grid">

@@ -61,6 +61,18 @@ class BlogController extends Controller
             $query->whereHas('category', fn ($q) => $q->where('slug', $category));
         }
 
+        // ?place=<attraction slug>: the guides whose body names that attraction in a [place …] or [partner …] line.
+        // The body is JSON text, so the quotes around the slug are written \" (or &quot; after the admin editor):
+        // `_` stands for the backslash.
+        $place = (string) $request->query('place', '');
+        $place = preg_match('/^[a-z0-9-]{2,120}$/', $place) ? $place : '';
+        if ($place !== '') {
+            $query->where(function ($q) use ($place) {
+                $q->whereRaw('CAST(content AS TEXT) LIKE ?', ['%attraction=_"' . $place . '_"%'])
+                  ->orWhereRaw('CAST(content AS TEXT) LIKE ?', ['%attraction=&quot;' . $place . '&quot;%']);
+            });
+        }
+
         $total      = $query->count();
         $lastPage   = max(1, (int) ceil($total / $perPage));
         $articles   = $query->orderBy('published_at', 'desc')
@@ -79,6 +91,7 @@ class BlogController extends Controller
                 'last_page'    => $lastPage,
                 'per_page'     => $perPage,
                 'total'        => $total,
+                'applied_place' => $place !== '' ? $place : null,
             ],
         ]);
     }
