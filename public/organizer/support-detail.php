@@ -23,12 +23,12 @@ require_once __DIR__ . '/../includes/v2/organizer.php';
 
 $sdtId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($sdtId <= 0) {
-    header('Location: /organizator/suport');
+    header('Location: ' . v2_url('/organizator/suport'));
     exit;
 }
 
-$pageTitleRaw = 'Tichet suport — ' . SITE_NAME;
-$pageDescription = 'Un tichet de suport al unui operator pe viaqui.com: conversația cu echipa și răspunsul tău.';
+$pageTitleRaw = v2_t('Support ticket') . ' · ' . SITE_NAME;
+$pageDescription = v2_t('A support ticket of an operator on Viaqui: the conversation with our team and your reply.');
 $canonicalUrl = SITE_URL . '/organizator/suport/' . $sdtId;
 $noindex = true;
 $skipPageCache = true;
@@ -42,24 +42,24 @@ include __DIR__ . '/../includes/v2/head.php';
 v2_org_start('support');
 ?>
 <div class="osp osd" id="osd" data-id="<?= $sdtId ?>">
-  <nav class="osd-crumbs" aria-label="Breadcrumb">
-    <a class="osd-back" href="/organizator/suport"><?= v2_ic('arrow-left') ?>Înapoi la tichete</a>
+  <nav class="osd-crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
+    <a class="osd-back" href="/organizator/suport"><?= v2_ic('arrow-left') ?><?= v2_te('Back to tickets') ?></a>
     <span class="osd-crumb" aria-hidden="true">·</span>
-    <span class="osd-crumb" id="osd-crumb" aria-current="page">Tichet</span>
+    <span class="osd-crumb" id="osd-crumb" aria-current="page"><?= v2_te('Ticket') ?></span>
   </nav>
 
   <div class="org-panel osd-loading" id="osd-loading" role="status">
     <span class="org-skel osd-sk-a"></span><span class="org-skel osd-sk-b"></span>
-    <p class="osd-loading-t">Se încarcă tichetul…</p>
+    <p class="osd-loading-t"><?= v2_te('Loading the ticket…') ?></p>
   </div>
 
   <div class="org-empty is-error osd-error" id="osd-error" role="alert" hidden>
     <span class="org-empty-ic"><?= v2_ic('warning-circle') ?></span>
-    <b id="osd-err-h">Tichet inexistent</b>
-    <p id="osd-err-p">Verifică linkul sau întoarce-te la lista de tichete.</p>
+    <b id="osd-err-h"><?= v2_te('Ticket not found') ?></b>
+    <p id="osd-err-p"><?= v2_te('Check the link or go back to the ticket list.') ?></p>
     <div class="osd-err-act">
-      <button class="btn btn-primary" type="button" id="osd-retry" hidden>Reîncearcă</button>
-      <a class="btn btn-ghost" href="/organizator/suport"><?= v2_ic('arrow-left') ?>Înapoi la tichete</a>
+      <button class="btn btn-primary" type="button" id="osd-retry" hidden><?= v2_te('Try again') ?></button>
+      <a class="btn btn-ghost" href="/organizator/suport"><?= v2_ic('arrow-left') ?><?= v2_te('Back to tickets') ?></a>
     </div>
   </div>
 
@@ -74,11 +74,11 @@ v2_org_start('support');
             <span class="osp-dept" id="osd-pt" hidden></span>
           </p>
           <h1 class="osd-h" id="osd-subject"></h1>
-          <p class="osd-opened">Deschis pe <time id="osd-opened"></time></p>
+          <p class="osd-opened"><?= v2_t('Opened on {date}', ['date' => '<time id="osd-opened"></time>']) ?></p>
         </div>
         <div class="osd-actions">
-          <button class="btn btn-ghost" type="button" id="osd-close" hidden><?= v2_ic('check-circle') ?>Marchează ca rezolvat</button>
-          <button class="btn btn-primary" type="button" id="osd-reopen" hidden><?= v2_ic('arrow-counter-clockwise') ?><span data-label>Redeschide tichetul</span></button>
+          <button class="btn btn-ghost" type="button" id="osd-close" hidden><?= v2_ic('check-circle') ?><?= v2_te('Mark as resolved') ?></button>
+          <button class="btn btn-primary" type="button" id="osd-reopen" hidden><?= v2_ic('arrow-counter-clockwise') ?><span data-label><?= v2_te('Reopen ticket') ?></span></button>
         </div>
       </div>
       <dl class="osd-meta" id="osd-meta" hidden></dl>
@@ -86,30 +86,30 @@ v2_org_start('support');
 
     <div class="osd-grid">
       <section class="org-panel osd-conv" aria-labelledby="osd-conv-h">
-        <h2 class="osd-sec-h" id="osd-conv-h">Conversație</h2>
+        <h2 class="osd-sec-h" id="osd-conv-h"><?= v2_te('Conversation') ?></h2>
         <ol class="osd-thread" id="osd-thread"></ol>
       </section>
 
       <div class="osd-side">
         <section class="org-panel osd-reply-card" id="osd-reply-card" aria-labelledby="osd-reply-h" hidden>
-          <h2 class="osd-sec-h" id="osd-reply-h">Trimite un răspuns</h2>
+          <h2 class="osd-sec-h" id="osd-reply-h"><?= v2_te('Send a reply') ?></h2>
           <form class="osd-reply" id="osd-reply" novalidate>
-            <label class="sr" for="osd-body">Răspunsul tău</label>
-            <textarea class="osp-in" id="osd-body" rows="6" maxlength="10000" required placeholder="Scrie răspunsul tău…" aria-describedby="osd-body-n osd-reply-err"></textarea>
-            <p class="osp-help osp-count" id="osd-body-n">0 / 10.000</p>
+            <label class="sr" for="osd-body"><?= v2_te('Your reply') ?></label>
+            <textarea class="osp-in" id="osd-body" rows="6" maxlength="10000" required placeholder="<?= v2_te('Write your reply…') ?>" aria-describedby="osd-body-n osd-reply-err"></textarea>
+            <p class="osp-help osp-count" id="osd-body-n"><?= v2_te('{n} / 10,000', ['n' => 0]) ?></p>
             <div class="osp-f">
-              <label class="osp-l" for="osd-files">Atașamente <small>(opțional)</small></label>
+              <label class="osp-l" for="osd-files"><?= v2_t('Attachments <small>(optional)</small>') ?></label>
               <input class="osp-file" type="file" id="osd-files" multiple accept=".jpg,.jpeg,.png,.pdf" aria-describedby="osd-files-help">
-              <p class="osp-help" id="osd-files-help">jpg, png, pdf — maxim 3 MB pe fișier, max 5 fișiere.</p>
-              <ul class="osp-files" id="osd-files-list" aria-label="Fișiere alese" hidden></ul>
+              <p class="osp-help" id="osd-files-help"><?= v2_te('{types}: {size} MB per file at most, up to {max} files.', ['types' => 'jpg, png, pdf', 'size' => 3, 'max' => 5]) ?></p>
+              <ul class="osp-files" id="osd-files-list" aria-label="<?= v2_te('Chosen files') ?>" hidden></ul>
             </div>
             <p class="osp-err" id="osd-reply-err" role="alert" hidden></p>
-            <div class="osd-reply-act"><button class="btn btn-primary" type="submit" id="osd-send"><span data-label>Trimite răspunsul</span></button></div>
+            <div class="osd-reply-act"><button class="btn btn-primary" type="submit" id="osd-send"><span data-label><?= v2_te('Send reply') ?></span></button></div>
           </form>
         </section>
         <div class="osd-closed" id="osd-closed" hidden>
           <?= v2_ic('check-circle') ?>
-          <p>Tichetul este închis. Dacă problema reapare, redeschide-l din butonul de sus.</p>
+          <p><?= v2_te('The ticket is closed. If the problem comes back, reopen it with the button above.') ?></p>
         </div>
       </div>
     </div>
@@ -117,11 +117,11 @@ v2_org_start('support');
 
   <dialog class="osp-dialog is-small" id="osd-confirm" aria-labelledby="osd-confirm-h" aria-describedby="osd-confirm-p">
     <div class="osp-d-inner">
-      <h2 class="osp-d-h" id="osd-confirm-h">Marchezi tichetul ca rezolvat?</h2>
-      <p class="osp-d-p" id="osd-confirm-p">Vei putea să-l redeschizi dacă problema reapare.</p>
+      <h2 class="osp-d-h" id="osd-confirm-h"><?= v2_te('Mark the ticket as resolved?') ?></h2>
+      <p class="osp-d-p" id="osd-confirm-p"><?= v2_te('You can reopen it if the problem comes back.') ?></p>
       <div class="osp-d-act">
-        <button class="btn btn-ghost" type="button" data-close>Renunță</button>
-        <button class="btn btn-primary" type="button" id="osd-confirm-go"><span data-label>Marchează ca rezolvat</span></button>
+        <button class="btn btn-ghost" type="button" data-close><?= v2_te('Cancel') ?></button>
+        <button class="btn btn-primary" type="button" id="osd-confirm-go"><span data-label><?= v2_te('Mark as resolved') ?></span></button>
       </div>
     </div>
   </dialog>

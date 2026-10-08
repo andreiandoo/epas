@@ -73,7 +73,7 @@
     BileteOnlineAPI.post('/marketplace-events/organizers/' + encodeURIComponent(data.slug) + '/contact', payload)
       .then(function (res) {
         if (res && res.success === false) throw new Error(res.message || res.error || '');
-        say(VQ.t('Your message has been sent. The organiser will get back to you.'), true);
+        say(VQ.t('Your message has been sent. The operator will get back to you.'), true);
         form.reset();
         closeTimer = setTimeout(function () { close(); msg.hidden = true; }, 3000);
       })

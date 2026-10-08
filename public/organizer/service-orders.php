@@ -17,8 +17,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Comenzile mele — Servicii — ' . SITE_NAME;
-$pageDescription = 'Istoricul comenzilor de servicii extra ale unui operator pe viaqui.com.';
+$pageTitleRaw = v2_t('My orders · Services') . ' · ' . SITE_NAME;
+$pageDescription = v2_t('The history of extra service orders of an operator on Viaqui.');
 $canonicalUrl = SITE_URL . '/organizator/servicii/comenzi';
 $noindex = true;
 $skipPageCache = true;
@@ -38,34 +38,34 @@ v2_org_start('services');
 <div class="sq" id="sq">
   <header class="sq-head">
     <div>
-      <nav class="sq-crumbs" aria-label="Breadcrumb"><a href="/organizator/servicii">Servicii extra</a><span aria-hidden="true">›</span><span aria-current="page">Comenzile mele</span></nav>
-      <h1 class="sq-h">Comenzile mele</h1>
-      <p class="sq-lead">Istoric comenzi servicii extra.</p>
+      <nav class="sq-crumbs" aria-label="<?= v2_te('Breadcrumb') ?>"><a href="/organizator/servicii"><?= v2_te('Extra services') ?></a><span aria-hidden="true">›</span><span aria-current="page"><?= v2_te('My orders') ?></span></nav>
+      <h1 class="sq-h"><?= v2_te('My orders') ?></h1>
+      <p class="sq-lead"><?= v2_te('The history of your extra service orders.') ?></p>
     </div>
-    <a class="btn btn-ghost" href="/organizator/servicii"><?= v2_ic('arrow-left') ?>Înapoi la servicii</a>
+    <a class="btn btn-ghost" href="/organizator/servicii"><?= v2_ic('arrow-left') ?><?= v2_te('Back to services') ?></a>
   </header>
 
-  <section class="sq-stats" aria-label="Pe scurt">
-    <?= $sqStat('total', 'Total comenzi', 'receipt') ?>
-    <?= $sqStat('active', 'Servicii active', 'chart-line-up') ?>
-    <?= $sqStat('pending', 'În așteptare', 'clock') ?>
-    <?= $sqStat('spent', 'Investit total', 'bank') ?>
+  <section class="sq-stats" aria-label="<?= v2_te('At a glance') ?>">
+    <?= $sqStat('total', v2_te('Total orders'), 'receipt') ?>
+    <?= $sqStat('active', v2_te('Active services'), 'chart-line-up') ?>
+    <?= $sqStat('pending', v2_te('Pending'), 'clock') ?>
+    <?= $sqStat('spent', v2_te('Total spent'), 'bank') ?>
   </section>
 
   <section class="org-panel" aria-labelledby="sq-list-h">
-    <h2 class="sq-sr" id="sq-list-h">Comenzi</h2>
+    <h2 class="sq-sr" id="sq-list-h"><?= v2_te('Orders') ?></h2>
     <div class="sq-filters">
-      <label class="sq-search"><?= v2_ic('magnifying-glass') ?><input id="sq-q" type="search" autocomplete="off" placeholder="Caută după număr comandă sau activitate…" aria-label="Caută comenzi" aria-controls="sq-rows"></label>
-      <span class="sq-select"><select id="sq-status" aria-label="Status"><option value="">Toate statusurile</option><option value="pending_payment">Așteaptă plata</option><option value="processing">În procesare</option><option value="active">Activ</option><option value="completed">Finalizat</option><option value="cancelled">Anulat</option></select><?= v2_ic('caret-down') ?></span>
-      <span class="sq-select"><select id="sq-type" aria-label="Tip serviciu"><option value="">Toate tipurile</option><option value="featuring">Promovare activitate</option><option value="location_featuring">Promovare locație</option><option value="email">Email marketing</option><option value="tracking">Ad tracking</option><option value="campaign">Creare campanie</option></select><?= v2_ic('caret-down') ?></span>
+      <label class="sq-search"><?= v2_ic('magnifying-glass') ?><input id="sq-q" type="search" autocomplete="off" placeholder="<?= v2_te('Search by order number or experience…') ?>" aria-label="<?= v2_te('Search orders') ?>" aria-controls="sq-rows"></label>
+      <span class="sq-select"><select id="sq-status" aria-label="<?= v2_te('Status') ?>"><option value=""><?= v2_te('All statuses') ?></option><option value="pending_payment"><?= v2_te('Awaiting payment') ?></option><option value="processing"><?= v2_te('Processing') ?></option><option value="active"><?= v2_te('Active') ?></option><option value="completed"><?= v2_te('Completed') ?></option><option value="cancelled"><?= v2_te('Cancelled') ?></option></select><?= v2_ic('caret-down') ?></span>
+      <span class="sq-select"><select id="sq-type" aria-label="<?= v2_te('Service type') ?>"><option value=""><?= v2_te('All types') ?></option><option value="featuring"><?= v2_te('Experience promotion') ?></option><option value="location_featuring"><?= v2_te('Venue promotion') ?></option><option value="email"><?= v2_te('Email marketing') ?></option><option value="tracking"><?= v2_te('Ad tracking') ?></option><option value="campaign"><?= v2_te('Campaign creation') ?></option></select><?= v2_ic('caret-down') ?></span>
     </div>
     <div class="sq-table-wrap"><table class="sq-table">
-      <thead><tr><th scope="col">Comandă</th><th scope="col">Tip serviciu</th><th scope="col">Activitate</th><th scope="col">Perioadă</th><th scope="col" class="sq-right">Total</th><th scope="col">Status</th><th scope="col" class="sq-right">Data</th></tr></thead>
-      <tbody id="sq-rows"><tr><td colspan="7" class="sq-state">Se încarcă…</td></tr></tbody>
+      <thead><tr><th scope="col"><?= v2_te('Order') ?></th><th scope="col"><?= v2_te('Service type') ?></th><th scope="col"><?= v2_te('Experience') ?></th><th scope="col"><?= v2_te('Period') ?></th><th scope="col" class="sq-right"><?= v2_te('Total') ?></th><th scope="col"><?= v2_te('Status') ?></th><th scope="col" class="sq-right"><?= v2_te('Date') ?></th></tr></thead>
+      <tbody id="sq-rows"><tr><td colspan="7" class="sq-state"><?= v2_te('Loading…') ?></td></tr></tbody>
     </table></div>
-    <nav class="sq-pages" aria-label="Pagini">
-      <p id="sq-info" aria-live="polite">Se încarcă…</p>
-      <div><button class="sq-pill" type="button" id="sq-prev"><?= v2_ic('arrow-left') ?>Înapoi</button><button class="sq-pill" type="button" id="sq-next">Înainte<?= v2_ic('arrow-right') ?></button></div>
+    <nav class="sq-pages" aria-label="<?= v2_te('Pages') ?>">
+      <p id="sq-info" aria-live="polite"><?= v2_te('Loading…') ?></p>
+      <div><button class="sq-pill" type="button" id="sq-prev"><?= v2_ic('arrow-left') ?><?= v2_te('Previous') ?></button><button class="sq-pill" type="button" id="sq-next"><?= v2_te('Next') ?><?= v2_ic('arrow-right') ?></button></div>
     </nav>
   </section>
 </div>

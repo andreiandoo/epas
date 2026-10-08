@@ -36,7 +36,7 @@
   /* ---------- API key ---------- */
   function showKey(k) {
     apiKey = typeof k === 'string' && k ? k : null;
-    $('oad-key').textContent = apiKey || 'Nu există cheie API';
+    $('oad-key').textContent = apiKey || VQ.t('There is no API key');
     $('oad-key').classList.toggle('is-empty', !apiKey);
     $('oad-key-copy').disabled = !apiKey;
   }
@@ -45,14 +45,14 @@
       showKey(r && r.success && r.data ? r.data.api_key : null);
     }, function (err) {
       if (err && err.status === 401) return;
-      $('oad-key').textContent = 'Eroare la încărcare';
+      $('oad-key').textContent = VQ.t('Could not load');
       $('oad-key').classList.add('is-empty');
       $('oad-key-copy').disabled = true;
     });
   }
   $('oad-key-copy').addEventListener('click', function () {
     if (!apiKey) return;
-    copyText(apiKey).then(function () { O.flash('Cheia API a fost copiată.'); }, function () { O.flash('Nu s-a putut copia cheia.', true); });
+    copyText(apiKey).then(function () { O.flash(VQ.t('The API key has been copied.')); }, function () { O.flash(VQ.t('We could not copy the key.'), true); });
   });
 
   var dlg = $('oad-regen-d');
@@ -73,7 +73,7 @@
   $('oad-regen-go').addEventListener('click', function () {
     var btn = this;
     if (btn.getAttribute('aria-busy') === 'true') return;
-    busyBtn(btn, true, 'Se regenerează…');
+    busyBtn(btn, true, VQ.t('Regenerating…'));
     dlg.setAttribute('data-busy', '');
     var done = function () { dlg.removeAttribute('data-busy'); busyBtn(btn, false); };
     O.api('/organizer/api-key/regenerate', { method: 'POST', body: {} }).then(function (r) {
@@ -81,17 +81,17 @@
       if (r && r.success && r.data && r.data.api_key) {
         closeDlg();
         showKey(r.data.api_key);
-        O.flash('Cheia API a fost regenerată.');
+        O.flash(VQ.t('The API key has been regenerated.'));
         return;
       }
       var e = $('oad-regen-err');
-      e.textContent = (r && typeof r.message === 'string' && r.message) || 'Eroare la regenerarea cheii.';
+      e.textContent = (r && typeof r.message === 'string' && r.message) || VQ.t('We could not regenerate the key.');
       e.hidden = false;
     }, function (err) {
       done();
       if (err && err.status === 401) return;
       var e = $('oad-regen-err');
-      e.textContent = 'Eroare la regenerarea cheii API.';
+      e.textContent = VQ.t('We could not regenerate the API key.');
       e.hidden = false;
     });
   });
@@ -101,10 +101,10 @@
     btn.addEventListener('click', function () {
       var pre = btn.closest('.oad-code').querySelector('pre'), l = btn.querySelector('[data-label]');
       copyText(pre.textContent).then(function () {
-        l.textContent = 'Copiat!';
-        O.flash('Codul a fost copiat.');
-        setTimeout(function () { l.textContent = 'Copiază'; }, 2000);
-      }, function () { O.flash('Nu s-a putut copia codul.', true); });
+        l.textContent = VQ.t('Copied!');
+        O.flash(VQ.t('The code has been copied.'));
+        setTimeout(function () { l.textContent = VQ.t('Copy'); }, 2000);
+      }, function () { O.flash(VQ.t('We could not copy the code.'), true); });
     });
   });
 
@@ -120,17 +120,17 @@
     e.preventDefault();
     var btn = $('oad-hook-go'), url = $('oad-hook-url').value.trim();
     if (btn.getAttribute('aria-busy') === 'true') return;
-    if (!url) { hookMsg('Introdu URL-ul webhook.', true); $('oad-hook-url').focus(); return; }
+    if (!url) { hookMsg(VQ.t('Enter the webhook URL.'), true); $('oad-hook-url').focus(); return; }
     hookMsg('');
-    busyBtn(btn, true, 'Se salvează…');
+    busyBtn(btn, true, VQ.t('Saving…'));
     O.api('/organizer/webhook', { method: 'POST', body: { url: url } }).then(function (r) {
       busyBtn(btn, false);
-      if (r && r.success) { hookMsg('URL-ul webhook a fost salvat.'); O.flash('URL-ul webhook a fost salvat.'); }
-      else hookMsg((r && typeof r.message === 'string' && r.message) || 'Eroare la salvarea webhook-ului.', true);
+      if (r && r.success) { hookMsg(VQ.t('The webhook URL has been saved.')); O.flash(VQ.t('The webhook URL has been saved.')); }
+      else hookMsg((r && typeof r.message === 'string' && r.message) || VQ.t('We could not save the webhook.'), true);
     }, function (err) {
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      hookMsg('Eroare la salvarea webhook-ului.', true);
+      hookMsg(VQ.t('We could not save the webhook.'), true);
     });
   });
 

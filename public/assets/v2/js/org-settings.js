@@ -17,13 +17,13 @@
 
   var TABS = ['profile', 'company', 'bank', 'contract', 'notifications', 'security', 'sharelinks'];
   var BANKS = { BTRL: 'Banca Transilvania', BRDE: 'BRD', RNCB: 'BCR', INGB: 'ING Bank', RZBR: 'Raiffeisen Bank', BACX: 'UniCredit Bank', CECE: 'CEC Bank', PIRB: 'First Bank', UGBI: 'Garanti BBVA', LIBR: 'Libra Internet Bank', OTPV: 'OTP Bank', BUCU: 'Alpha Bank', CARP: 'Patria Bank', EXIM: 'Exim Banca Românească', TREZ: 'Trezoreria Statului', NBOR: 'Banca Națională a României' };
-  var ID_TYPES = { ci: 'Carte de identitate', passport: 'Pașaport' };
-  var WORK = { exclusive: ['Exclusiv', 'Vinzi bilete doar prin viaqui.com.'], non_exclusive: ['Neexclusiv', 'Vinzi bilete și pe alte platforme.'] };
-  var MODE = { included: ['Inclus în preț', 'Comisionul este cuprins în prețul afișat al biletului.'], added_on_top: ['Adăugat peste preț', 'Clientul plătește comisionul peste prețul biletului.'], on_top: ['Adăugat peste preț', 'Clientul plătește comisionul peste prețul biletului.'] };
-  var NTYPES = { 'Vanzari bilete': 'Vânzări bilete', 'Cereri rambursare': 'Cereri de rambursare', 'Comenzi servicii': 'Comenzi de servicii', 'Cereri plată': 'Cereri de plată' };
-  var NTYPES_FALLBACK = ['Vânzări bilete', 'Cereri de rambursare', 'Documente generate', 'Comenzi de servicii', 'Servicii pornite și finalizate', 'Facturi și rezultate servicii', 'Cereri de plată', 'Plăți aprobate, în procesare, plătite sau respinse'];
+  var ID_TYPES = { ci: VQ.t('Identity card'), passport: VQ.t('Passport') };
+  var WORK = { exclusive: [VQ.t('Exclusive'), VQ.t('You sell tickets only through Viaqui.')], non_exclusive: [VQ.t('Non-exclusive'), VQ.t('You also sell tickets on other platforms.')] };
+  var MODE = { included: [VQ.t('Included in the price'), VQ.t('The commission is part of the displayed ticket price.')], added_on_top: [VQ.t('Added on top of the price'), VQ.t('The customer pays the commission on top of the ticket price.')], on_top: [VQ.t('Added on top of the price'), VQ.t('The customer pays the commission on top of the ticket price.')] };
+  var NTYPES = { 'Vanzari bilete': VQ.t('Ticket sales'), 'Cereri rambursare': VQ.t('Refund requests'), 'Comenzi servicii': VQ.t('Service orders'), 'Cereri plată': VQ.t('Payout requests') };
+  var NTYPES_FALLBACK = [VQ.t('Ticket sales'), VQ.t('Refund requests'), VQ.t('Generated documents'), VQ.t('Service orders'), VQ.t('Services started and completed'), VQ.t('Service invoices and results'), VQ.t('Payout requests'), VQ.t('Payouts approved, in processing, paid or rejected')];
   var DOC_KEY = { id_card: 'id_card', cui_document: 'cui' };
-  var DOC_NAME = { id_card: 'copia CI', cui_document: 'certificatul CUI' };
+  var DOC_MISSING = { id_card: VQ.t('The ID copy is missing.'), cui_document: VQ.t('The CUI certificate is missing.') };
   var MAX_LINK_EVENTS = 20;
 
   var me, accounts, contract, links, events = null, eventsReq = null; // undefined = still loading, null = failed
@@ -48,7 +48,7 @@
   function emptyBox(box, tagName, text, retry) {
     box.textContent = '';
     var p = el(tagName || 'p', { class: 'os-empty-p' }, [text]);
-    if (retry) { var b = el('button', { type: 'button', text: 'Reîncearcă' }); b.addEventListener('click', retry); p.appendChild(b); }
+    if (retry) { var b = el('button', { type: 'button', text: VQ.t('Try again') }); b.addEventListener('click', retry); p.appendChild(b); }
     box.appendChild(p);
   }
   function copyText(text) {
@@ -79,17 +79,17 @@
   function errMessage(err) { return String((err && (err.message || (err.data && err.data.message))) || ''); }
   function saveError(err) {
     var s = err && err.status;
-    if (s === 422) return 'Unele câmpuri nu sunt completate corect. Verifică-le și încearcă din nou.';
-    if (s === 429) return 'Prea multe încercări într-un timp scurt. Așteaptă un minut și încearcă din nou.';
-    if (s === 403) return 'Contul nu are voie să facă această schimbare. Scrie-ne dacă e o greșeală.';
-    if (s === 0 || s == null) return 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.';
-    return 'Nu am putut salva. Încearcă din nou.';
+    if (s === 422) return VQ.t('Some fields are not filled in correctly. Check them and try again.');
+    if (s === 429) return VQ.t('Too many attempts in a short time. Wait a minute and try again.');
+    if (s === 403) return VQ.t('This account is not allowed to make this change. Write to us if this is a mistake.');
+    if (s === 0 || s == null) return VQ.t('We could not reach the server. Check your connection and try again.');
+    return VQ.t('We could not save. Try again.');
   }
   /** Laravel field errors onto the form's fields; returns the first field it marked. */
   function markServer(err, map) {
     var errors = (err && err.errors) || (err && err.data && err.data.errors) || null, first = null;
     if (!errors || typeof errors !== 'object') return null;
-    Object.keys(errors).forEach(function (k) { if (map[k] && $(map[k])) { fieldErr(map[k], 'Verifică această valoare.'); if (!first) first = map[k]; } });
+    Object.keys(errors).forEach(function (k) { if (map[k] && $(map[k])) { fieldErr(map[k], VQ.t('Check this value.')); if (!first) first = map[k]; } });
     if (first) $(first).focus();
     return first;
   }
@@ -144,28 +144,28 @@
   }
   function docsOf() { var d = (contract && contract.documents) || {}; return { id_card: safeUrl(d.id_card), cui_document: safeUrl(d.cui) }; }
   function renderSummary() {
-    if (me === null) sum('status', '—', 'Nu am putut încărca contul.', 'is-bad');
+    if (me === null) sum('status', '—', VQ.t('We could not load the account.'), 'is-bad');
     else if (me) {
       var s = String(me.status || '');
-      if (s === 'active') sum('status', 'Activ', me.is_verified ? 'Date verificate.' : 'Datele firmei nu sunt verificate încă.', 'is-ok');
-      else if (s === 'suspended') sum('status', 'Suspendat', 'Scrie-ne la suport ca să aflăm ce s-a întâmplat.', 'is-bad');
-      else if (s === 'pending') sum('status', 'În așteptare', 'Îl activăm după ce verificăm documentele.', 'is-todo');
+      if (s === 'active') sum('status', VQ.t('Active'), me.is_verified ? VQ.t('Details verified.') : VQ.t('The company details are not verified yet.'), 'is-ok');
+      else if (s === 'suspended') sum('status', VQ.t('Suspended'), VQ.t('Write to support so we can find out what happened.'), 'is-bad');
+      else if (s === 'pending') sum('status', VQ.t('Pending'), VQ.t('We activate it once we have checked your documents.'), 'is-todo');
       else sum('status', F.flat(s) || '—', '', '');
     }
     var docs = docsOf(), nDocs = (docs.id_card ? 1 : 0) + (docs.cui_document ? 1 : 0);
-    if (contract === null) { sum('contract', '—', 'Nu am putut încărca contractul.', 'is-bad'); sum('docs', '—', '', 'is-bad'); }
+    if (contract === null) { sum('contract', '—', VQ.t('We could not load the contract.'), 'is-bad'); sum('docs', '—', '', 'is-bad'); }
     else if (contract) {
-      if (contract.is_signed) sum('contract', 'Semnat', contract.signed_at ? 'Pe ' + dayLabel(contract.signed_at) + '.' : '', 'is-ok');
-      else if (contract.signature_required) sum('contract', 'De semnat', 'Semnează-l din tabul Contract.', 'is-todo');
-      else if (contract.has_contract) sum('contract', 'Generat', 'Îl poți descărca oricând.', 'is-ok');
-      else sum('contract', 'Negenerat', 'Se generează după ce încarci documentele.', 'is-todo');
-      sum('docs', nDocs + ' din 2 încărcate', nDocs === 2 ? 'Copia CI și certificatul CUI.' : 'Lipsește ' + ['id_card', 'cui_document'].filter(function (k) { return !docs[k]; }).map(function (k) { return DOC_NAME[k]; }).join(' și ') + '.', nDocs === 2 ? 'is-ok' : 'is-todo');
+      if (contract.is_signed) sum('contract', VQ.t('Signed'), contract.signed_at ? VQ.t('On {date}.', { date: dayLabel(contract.signed_at) }) : '', 'is-ok');
+      else if (contract.signature_required) sum('contract', VQ.t('To be signed'), VQ.t('Sign it in the Contract tab.'), 'is-todo');
+      else if (contract.has_contract) sum('contract', VQ.t('Generated'), VQ.t('You can download it at any time.'), 'is-ok');
+      else sum('contract', VQ.t('Not generated'), VQ.t('It is generated after you upload the documents.'), 'is-todo');
+      sum('docs', VQ.t('{n} of 2 uploaded', { n: nDocs }), nDocs === 2 ? VQ.t('The ID copy and the CUI certificate.') : nDocs === 0 ? VQ.t('The ID copy and the CUI certificate are missing.') : DOC_MISSING[docs.id_card ? 'cui_document' : 'id_card'], nDocs === 2 ? 'is-ok' : 'is-todo');
     }
-    if (accounts === null) sum('bank', '—', 'Nu am putut încărca conturile.', 'is-bad');
+    if (accounts === null) sum('bank', '—', VQ.t('We could not load the accounts.'), 'is-bad');
     else if (accounts) {
       var primary = accounts.filter(function (a) { return a.is_primary; })[0];
-      if (!accounts.length) sum('bank', 'Niciun cont bancar', 'Adaugă contul în care primești banii.', 'is-todo');
-      else sum('bank', F.count(accounts.length, 'cont bancar', 'conturi bancare'), primary ? 'Principal: ' + (F.flat(primary.bank) || 'cont') + ' •••• ' + String(primary.iban || '').replace(/\s+/g, '').slice(-4) : 'Alege un cont principal.', primary ? 'is-ok' : 'is-todo');
+      if (!accounts.length) sum('bank', VQ.t('No bank account'), VQ.t('Add the account your money goes to.'), 'is-todo');
+      else sum('bank', VQ.n(accounts.length, 'bank account', 'bank accounts'), primary ? VQ.t('Primary: {bank} •••• {last4}', { bank: F.flat(primary.bank) || VQ.t('account'), last4: String(primary.iban || '').replace(/\s+/g, '').slice(-4) }) : VQ.t('Choose a primary account.'), primary ? 'is-ok' : 'is-todo');
     }
     $('os-dot-company').hidden = !(me && !(F.flat(me.company_name).trim() && F.flat(me.company_tax_id).trim()));
     $('os-dot-bank').hidden = !(accounts && !accounts.length);
@@ -197,7 +197,7 @@
     ['os-profile-go', 'os-company-go', 'os-sc2-go', 'os-sc2-on'].forEach(function (id) { $(id).disabled = on; });
     if (!on && me) syncCompany();
   }
-  function countDesc() { var n = $('os-desc').value.length; $('os-desc-n').textContent = F.num(n) + ' / 2.000'; }
+  function countDesc() { var n = $('os-desc').value.length; $('os-desc-n').textContent = VQ.t('{n} / 2,000', { n: F.num(n) }); }
   $('os-desc').addEventListener('input', countDesc);
   function fillProfile() {
     setVal('os-name', F.flat(me.name));
@@ -212,20 +212,20 @@
   function mask(v) { return v.length > 4 ? '•'.repeat(v.length - 4) + v.slice(-4) : v; }
   function renderGuarantor() {
     var g = me, box = $('os-guarantor'), dl = $('os-guarantor-dl');
-    var rows = [['Prenume', g.guarantor_first_name], ['Nume', g.guarantor_last_name], ['CNP', g.guarantor_cnp, 'cnp'], ['Localitatea', g.guarantor_city], ['Adresa de domiciliu', g.guarantor_address, 'wide'],
-      ['Tipul actului', ID_TYPES[g.guarantor_id_type] || g.guarantor_id_type], ['Seria', g.guarantor_id_series], ['Numărul', g.guarantor_id_number], ['Data eliberării', g.guarantor_id_issued_date ? dayLabel(g.guarantor_id_issued_date) : ''], ['Eliberat de', g.guarantor_id_issued_by]];
+    var rows = [[VQ.t('First name'), g.guarantor_first_name], [VQ.t('Last name'), g.guarantor_last_name], [VQ.t('Personal ID number (CNP)'), g.guarantor_cnp, 'cnp'], [VQ.t('Town or city'), g.guarantor_city], [VQ.t('Home address'), g.guarantor_address, 'wide'],
+      [VQ.t('ID type'), ID_TYPES[g.guarantor_id_type] || g.guarantor_id_type], [VQ.t('Series'), g.guarantor_id_series], [VQ.t('Number'), g.guarantor_id_number], [VQ.t('Date of issue'), g.guarantor_id_issued_date ? dayLabel(g.guarantor_id_issued_date) : ''], [VQ.t('Issued by'), g.guarantor_id_issued_by]];
     dl.textContent = '';
     box.hidden = !(F.flat(g.guarantor_first_name) || F.flat(g.guarantor_last_name) || F.flat(g.guarantor_cnp));
     rows.forEach(function (r) {
       var v = F.flat(r[1]).trim(), dd = el('dd');
       if (r[2] === 'cnp' && v) {
-        var shown = false, span = el('span', { text: mask(v) }), btn = el('button', { class: 'os-reveal', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Arată CNP-ul', text: 'Arată' });
+        var shown = false, span = el('span', { text: mask(v) }), btn = el('button', { class: 'os-reveal', type: 'button', 'aria-pressed': 'false', 'aria-label': VQ.t('Show the CNP'), text: VQ.t('Show') });
         btn.addEventListener('click', function () {
           shown = !shown;
           span.textContent = shown ? v : mask(v);
-          btn.textContent = shown ? 'Ascunde' : 'Arată';
+          btn.textContent = shown ? VQ.t('Hide') : VQ.t('Show');
           btn.setAttribute('aria-pressed', String(shown));
-          btn.setAttribute('aria-label', shown ? 'Ascunde CNP-ul' : 'Arată CNP-ul');
+          btn.setAttribute('aria-label', shown ? VQ.t('Hide the CNP') : VQ.t('Show the CNP'));
         });
         dd.appendChild(span);
         dd.appendChild(btn);
@@ -241,7 +241,7 @@
   }
   function need(state, id, msg) { fieldErr(id, msg); if (msg && !state.bad) state.bad = id; }
   function saveProfile(btn, body, errBox, okText, map) {
-    busyBtn(btn, true, 'Se salvează…');
+    busyBtn(btn, true, VQ.t('Saving…'));
     return O.api('/organizer/profile', { method: 'PUT', body: body }).then(function (r) {
       busyBtn(btn, false);
       var d = r && r.data;
@@ -263,12 +263,12 @@
     if (!me || isBusy(btn)) return;
     clearErrs(['os-name', 'os-phone', 'os-website'], 'os-profile-err');
     var name = val('os-name'), phone = val('os-phone'), website = normalizeUrl(val('os-website'));
-    need(st, 'os-name', name ? '' : 'Scrie numele operatorului.');
-    need(st, 'os-phone', phone && (!/^[+\d][\d\s().\/-]*$/.test(phone) || phone.replace(/\D/g, '').length < 6) ? 'Scrie un număr de telefon valid, de exemplu 0722 123 456.' : '');
-    need(st, 'os-website', website === null ? 'Scrie o adresă validă, de exemplu www.firma-ta.ro.' : '');
+    need(st, 'os-name', name ? '' : VQ.t('Enter the operator name.'));
+    need(st, 'os-phone', phone && (!/^[+\d][\d\s().\/-]*$/.test(phone) || phone.replace(/\D/g, '').length < 6) ? VQ.t('Enter a valid phone number, for example +351 912 345 678.') : '');
+    need(st, 'os-website', website === null ? VQ.t('Enter a valid address, for example www.your-company.com.') : '');
     if (st.bad) { $(st.bad).focus(); return; }
     if (website) setVal('os-website', website);
-    saveProfile(btn, { name: name, contact_name: val('os-contact') || null, phone: phone || null, website: website || null, description: $('os-desc').value.trim() || null }, 'os-profile-err', 'Profilul a fost salvat.', { name: 'os-name', contact_name: 'os-contact', phone: 'os-phone', website: 'os-website', description: 'os-desc' });
+    saveProfile(btn, { name: name, contact_name: val('os-contact') || null, phone: phone || null, website: website || null, description: $('os-desc').value.trim() || null }, 'os-profile-err', VQ.t('Your profile has been saved.'), { name: 'os-name', contact_name: 'os-contact', phone: 'os-phone', website: 'os-website', description: 'os-desc' });
   });
 
   /* =================== COMPANY =================== */
@@ -285,7 +285,7 @@
     anaf1 = anaf2 = null;
     setVal('os-cui', F.flat(me.company_tax_id));
     SC1_FIELDS.forEach(function (p) { setVal(p[0], F.flat(me[p[1]])); });
-    $('os-vat').textContent = me.vat_payer == null ? '—' : me.vat_payer ? 'Da' : 'Nu';
+    $('os-vat').textContent = me.vat_payer == null ? '—' : me.vat_payer ? VQ.t('Yes') : VQ.t('No');
     $('os-sc2-on').checked = !!me.has_secondary_issuer;
     setVal('os-s-cui', F.flat(me.secondary_company_tax_id));
     SC2_FIELDS.forEach(function (p) { setVal(p[0], F.flat(me[p[1]])); });
@@ -312,7 +312,7 @@
     var canSave = !!me && ((on && !locked && !!anaf2) || (!on && !!me.has_secondary_issuer));
     $('os-sc2-act').hidden = !canSave;
     $('os-sc2-go').disabled = !canSave;
-    $('os-sc2-go').querySelector('[data-label]').textContent = on ? 'Salvează SC2' : 'Oprește a doua societate';
+    $('os-sc2-go').querySelector('[data-label]').textContent = on ? VQ.t('Save SC2') : VQ.t('Turn off the second company');
   }
   $('os-sc2-on').addEventListener('change', syncSc2);
   /** ANAF lookup for one CUI field; fills the read-only fields and resolves the company, or null after saying why. */
@@ -320,17 +320,17 @@
     var cui = val(cuiId), msg = $(msgId);
     if (isBusy(btn)) return Promise.resolve(null);
     fieldErr(cuiId, '');
-    if (!CUI.test(cui)) { fieldErr(cuiId, 'Scrie CUI-ul firmei, de exemplu RO12345678.'); $(cuiId).focus(); return Promise.resolve(null); }
-    busyBtn(btn, true, 'Se verifică…');
+    if (!CUI.test(cui)) { fieldErr(cuiId, VQ.t('Enter the company tax ID (CUI), for example RO12345678.')); $(cuiId).focus(); return Promise.resolve(null); }
+    busyBtn(btn, true, VQ.t('Checking…'));
     msg.className = 'os-help';
-    msg.textContent = 'Căutăm firma în registrul ANAF…';
+    msg.textContent = VQ.t('Looking the company up in the ANAF register…');
     return O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui }, quiet: true }).then(function (r) {
       busyBtn(btn, false);
       var d = r && r.data;
       if (!d || !F.flat(d.company_name).trim()) { var e = new Error('anaf'); e.status = 404; throw e; }
       if (d.deregistered || /RADI/i.test(F.flat(d.status))) {
         msg.className = 'os-help is-bad';
-        msg.textContent = 'Firma cu acest CUI e radiată la ANAF. Folosește CUI-ul unei firme active.';
+        msg.textContent = VQ.t('The company with this CUI is struck off at ANAF. Use the CUI of an active company.');
         return null;
       }
       var co = {
@@ -339,21 +339,21 @@
       };
       [co.name, co.reg, co.addr, co.city, co.county, co.zip].forEach(function (v, i) { setVal(fields[i][0], v); });
       msg.className = 'os-help is-ok';
-      msg.textContent = 'Am găsit firma în ANAF' + (F.flat(d.status).trim() ? ' (' + tidyPlace(d.status) + ')' : '') + '. Verifică datele și salvează.';
+      msg.textContent = F.flat(d.status).trim() ? VQ.t('We found the company at ANAF ({status}). Check the details and save.', { status: tidyPlace(d.status) }) : VQ.t('We found the company at ANAF. Check the details and save.');
       return co;
     }).catch(function (err) {
       busyBtn(btn, false);
       msg.className = 'os-help is-bad';
-      msg.textContent = err && err.status === 404 ? 'Nu am găsit firma în ANAF. Verifică CUI-ul.'
-        : err && (err.status === 502 || err.status === 503) ? 'Serviciul ANAF nu răspunde acum. Încearcă din nou în câteva minute.'
-        : 'Nu am putut verifica acum. Încearcă din nou.';
+      msg.textContent = err && err.status === 404 ? VQ.t('We did not find the company at ANAF. Check the CUI.')
+        : err && (err.status === 502 || err.status === 503) ? VQ.t('The ANAF service is not answering right now. Try again in a few minutes.')
+        : VQ.t('We could not check right now. Try again.');
       return null;
     });
   }
   $('os-anaf').addEventListener('click', function () {
     checkAnaf(this, 'os-cui', 'os-anaf-msg', SC1_FIELDS).then(function (co) {
       anaf1 = co;
-      if (co) $('os-vat').textContent = (co.vat ? 'Da' : 'Nu') + ', după ANAF';
+      if (co) $('os-vat').textContent = co.vat ? VQ.t('Yes, according to ANAF') : VQ.t('No, according to ANAF');
       syncCompany();
     });
   });
@@ -367,10 +367,10 @@
     var btn = $('os-company-go');
     if (!me || isBusy(btn) || hasSc1()) return;
     clearErrs(['os-cui'], 'os-company-err');
-    if (!anaf1) { fieldErr('os-cui', 'Verifică întâi CUI-ul în ANAF.'); $('os-cui').focus(); return; }
+    if (!anaf1) { fieldErr('os-cui', VQ.t('Check the CUI with ANAF first.')); $('os-cui').focus(); return; }
     var c = anaf1;
     saveProfile(btn, { company_tax_id: c.cui, company_name: c.name, company_registration: c.reg || null, company_address: c.addr || null, company_city: c.city || null, company_county: c.county || null, company_zip: c.zip || null },
-      'os-company-err', 'Datele firmei au fost salvate.', { company_tax_id: 'os-cui' })
+      'os-company-err', VQ.t('The company details have been saved.'), { company_tax_id: 'os-cui' })
       .then(function (ok) { if (ok) fillCompany(); });
   });
   $('os-sc2-form').addEventListener('submit', function (ev) {
@@ -381,13 +381,13 @@
     var body;
     if (on) {
       if (hasSc2()) return;
-      if (!anaf2) { fieldErr('os-s-cui', 'Verifică întâi CUI-ul în ANAF.'); $('os-s-cui').focus(); return; }
+      if (!anaf2) { fieldErr('os-s-cui', VQ.t('Check the CUI with ANAF first.')); $('os-s-cui').focus(); return; }
       var c = anaf2;
       body = { has_secondary_issuer: true, secondary_company_tax_id: c.cui, secondary_company_name: c.name, secondary_company_registration: c.reg || null, secondary_company_address: c.addr || null, secondary_company_city: c.city || null, secondary_company_county: c.county || null, secondary_company_zip: c.zip || null };
     } else {
       body = { has_secondary_issuer: false };
     }
-    saveProfile(btn, body, 'os-sc2-err', on ? 'A doua societate a fost salvată.' : 'A doua societate emitentă a fost oprită.', { secondary_company_tax_id: 'os-s-cui' })
+    saveProfile(btn, body, 'os-sc2-err', on ? VQ.t('The second company has been saved.') : VQ.t('The second issuing company has been turned off.'), { secondary_company_tax_id: 'os-s-cui' })
       .then(function (ok) { if (ok) { fillCompany(); if (accounts) renderAccounts(); } });
   });
 
@@ -405,14 +405,14 @@
   function ibanCheck(v) {
     var s = compactIban(v);
     if (!s) return { ok: false, msg: '' };
-    if (!/^[A-Z]{2}/.test(s)) return { ok: false, msg: 'Un IBAN începe cu codul țării, de exemplu RO.' };
-    if (/[^A-Z0-9]/.test(s)) return { ok: false, msg: 'IBAN-ul are doar litere și cifre.' };
-    if (s.slice(0, 2) === 'RO' && s.length < 24) return { ok: false, partial: true, msg: 'Mai lipsesc ' + F.count(24 - s.length, 'caracter', 'caractere') + ' (un IBAN românesc are 24).' };
-    if (s.slice(0, 2) === 'RO' && s.length > 24) return { ok: false, msg: 'Are ' + F.count(s.length - 24, 'caracter', 'caractere') + ' în plus (un IBAN românesc are 24).' };
-    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)) return { ok: false, partial: s.length < 15, msg: 'Formatul nu pare corect.' };
-    if (!mod97(s)) return { ok: false, msg: 'Cifrele de control nu se potrivesc. Verifică IBAN-ul.' };
+    if (!/^[A-Z]{2}/.test(s)) return { ok: false, msg: VQ.t('An IBAN starts with the country code, for example DE.') };
+    if (/[^A-Z0-9]/.test(s)) return { ok: false, msg: VQ.t('An IBAN has only letters and digits.') };
+    if (s.slice(0, 2) === 'RO' && s.length < 24) return { ok: false, partial: true, msg: VQ.t('{chars} missing (a Romanian IBAN has 24).', { chars: VQ.n(24 - s.length, 'character', 'characters') }) };
+    if (s.slice(0, 2) === 'RO' && s.length > 24) return { ok: false, msg: VQ.t('{chars} too many (a Romanian IBAN has 24).', { chars: VQ.n(s.length - 24, 'character', 'characters') }) };
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)) return { ok: false, partial: s.length < 15, msg: VQ.t('The format does not look right.') };
+    if (!mod97(s)) return { ok: false, msg: VQ.t('The check digits do not match. Check the IBAN.') };
     var bank = s.slice(0, 2) === 'RO' ? BANKS[s.slice(4, 8)] || '' : '';
-    return { ok: true, iban: s, bank: bank, msg: 'IBAN valid' + (bank ? ' · ' + bank : '') + '.' };
+    return { ok: true, iban: s, bank: bank, msg: bank ? VQ.t('Valid IBAN · {bank}.', { bank: bank }) : VQ.t('Valid IBAN.') };
   }
   function loadAccounts(wanted) {
     var box = $('os-bank-list');
@@ -426,7 +426,7 @@
     }, function (err) {
       if (err && err.status === 401) return;
       accounts = null;
-      emptyBox(box, 'li', 'Nu am putut încărca conturile bancare.', function () { loadAccounts(); });
+      emptyBox(box, 'li', VQ.t('We could not load the bank accounts.'), function () { loadAccounts(); });
       renderSummary();
     });
   }
@@ -435,66 +435,66 @@
     box.textContent = '';
     $('os-bank-add').disabled = accounts.length >= 5;
     if (!accounts.length) {
-      var cta = el('button', { class: 'btn btn-primary os-sm', type: 'button', 'data-focus': 'bank-first' }, [icon('plus'), 'Adaugă primul cont']);
+      var cta = el('button', { class: 'btn btn-primary os-sm', type: 'button', 'data-focus': 'bank-first' }, [icon('plus'), VQ.t('Add your first account')]);
       cta.addEventListener('click', function () { openBank(cta); });
-      box.appendChild(el('li', { class: 'os-empty' }, [el('b', { text: 'Niciun cont bancar' }), el('p', { text: 'Adaugă contul în care vrei să primești banii din vânzări.' }), cta]));
+      box.appendChild(el('li', { class: 'os-empty' }, [el('b', { text: VQ.t('No bank account') }), el('p', { text: VQ.t('Add the account where you want to receive the money from sales.') }), cta]));
       return;
     }
     accounts.forEach(function (a) {
-      var bank = F.flat(a.bank) || 'Cont bancar', iban = groupIban(a.iban), issuer = a.issuing_company === 'secondary' ? 'secondary' : 'primary', acts = [];
-      var copy = pill('copy', 'Copiază IBAN-ul', { 'data-focus': 'bank-copy-' + a.id, 'aria-label': 'Copiază IBAN-ul contului ' + bank });
+      var bank = F.flat(a.bank) || VQ.t('Bank account'), iban = groupIban(a.iban), issuer = a.issuing_company === 'secondary' ? 'secondary' : 'primary', acts = [];
+      var copy = pill('copy', VQ.t('Copy IBAN'), { 'data-focus': 'bank-copy-' + a.id, 'aria-label': VQ.t('Copy the IBAN of the account {bank}', { bank: bank }) });
       copy.addEventListener('click', function () {
-        copyText(compactIban(a.iban)).then(function () { O.flash('IBAN-ul a fost copiat.'); }, function () { O.flash('Nu am putut copia. Selectează IBAN-ul și copiază-l manual.', true); });
+        copyText(compactIban(a.iban)).then(function () { O.flash(VQ.t('The IBAN has been copied.')); }, function () { O.flash(VQ.t('We could not copy it. Select the IBAN and copy it by hand.'), true); });
       });
       acts.push(copy);
       if (sc2) {
-        var sel = el('select', { 'aria-label': 'Societatea emitentă pentru contul ' + bank, 'data-focus': 'bank-issuer-' + a.id }, [el('option', { value: 'primary', text: 'SC1 · principală' }), el('option', { value: 'secondary', text: 'SC2 · secundară' })]);
+        var sel = el('select', { 'aria-label': VQ.t('Issuing company for the account {bank}', { bank: bank }), 'data-focus': 'bank-issuer-' + a.id }, [el('option', { value: 'primary', text: VQ.t('SC1 · main') }), el('option', { value: 'secondary', text: VQ.t('SC2 · second') })]);
         sel.value = issuer;
         sel.addEventListener('change', function () {
           var next = sel.value;
           sel.disabled = true;
           O.api('/organizer/bank-accounts/' + a.id, { method: 'PUT', body: { issuing_company: next } }).then(function () {
             a.issuing_company = next;
-            O.flash('Contul ' + bank + ' încasează acum pentru ' + (next === 'secondary' ? 'SC2' : 'SC1') + '.');
+            O.flash(VQ.t('The account {bank} now collects for {company}.', { bank: bank, company: next === 'secondary' ? 'SC2' : 'SC1' }));
             loadAccounts('bank-issuer-' + a.id);
           }).catch(function (err) {
             sel.value = issuer;
             sel.disabled = false;
             if (err && err.status === 401) return;
-            O.flash('Nu am putut schimba societatea emitentă. Încearcă din nou.', true);
+            O.flash(VQ.t('We could not change the issuing company. Try again.'), true);
           });
         });
         acts.push(el('span', { class: 'os-mini' }, [sel, icon('caret-down')]));
       }
       if (!a.is_primary) {
-        var prim = pill('check-circle', 'Setează principal', { 'data-focus': 'bank-primary-' + a.id, 'aria-label': 'Setează ' + bank + ' ca cont principal' });
+        var prim = pill('check-circle', VQ.t('Set as primary'), { 'data-focus': 'bank-primary-' + a.id, 'aria-label': VQ.t('Set {bank} as the primary account', { bank: bank }) });
         prim.addEventListener('click', function () {
           prim.disabled = true;
           O.api('/organizer/bank-accounts/' + a.id + '/primary', { method: 'POST', body: {} }).then(function () {
-            O.flash('Contul principal este acum ' + bank + '.');
+            O.flash(VQ.t('The primary account is now {bank}.', { bank: bank }));
             loadAccounts('bank-copy-' + a.id);
           }).catch(function (err) {
             prim.disabled = false;
             if (err && err.status === 401) return;
-            O.flash('Nu am putut schimba contul principal. Încearcă din nou.', true);
+            O.flash(VQ.t('We could not change the primary account. Try again.'), true);
           });
         });
         acts.push(prim);
       }
-      var del = pill('trash', 'Șterge', { class: 'os-pill is-danger', 'data-focus': 'bank-del-' + a.id, 'aria-label': 'Șterge contul ' + bank });
+      var del = pill('trash', VQ.t('Delete'), { class: 'os-pill is-danger', 'data-focus': 'bank-del-' + a.id, 'aria-label': VQ.t('Delete the account {bank}', { bank: bank }) });
       del.addEventListener('click', function () { openDelete('bank', a, del); });
       acts.push(del);
       box.appendChild(el('li', { class: 'os-acc' + (a.is_primary ? ' is-primary' : '') }, [
         el('span', { class: 'os-acc-ic', 'aria-hidden': 'true' }, icon('bank')),
         el('div', { class: 'os-acc-t' }, [
-          el('div', { class: 'os-acc-top' }, [el('b', { text: bank }), a.is_primary ? tag('Principal', 'is-ok') : null, sc2 ? tag(issuer === 'secondary' ? 'SC2' : 'SC1', 'is-muted') : null]),
+          el('div', { class: 'os-acc-top' }, [el('b', { text: bank }), a.is_primary ? tag(VQ.t('Primary'), 'is-ok') : null, sc2 ? tag(issuer === 'secondary' ? 'SC2' : 'SC1', 'is-muted') : null]),
           el('span', { class: 'os-iban', text: iban }),
-          el('span', { class: 'os-meta', text: F.flat(a.holder) ? 'Titular: ' + F.flat(a.holder) : '' }),
+          el('span', { class: 'os-meta', text: F.flat(a.holder) ? VQ.t('Holder: {name}', { name: F.flat(a.holder) }) : '' }),
         ]),
         el('div', { class: 'os-acc-act' }, acts),
       ]));
     });
-    if (accounts.length >= 5) box.appendChild(el('li', { class: 'os-limit', text: 'Ai atins numărul maxim de 5 conturi. Ca să adaugi altul, șterge unul pe care nu îl mai folosești.' }));
+    if (accounts.length >= 5) box.appendChild(el('li', { class: 'os-limit', text: VQ.t('You have reached the maximum of 5 accounts. To add another, delete one you no longer use.') }));
   }
   var bankAuto = '';
   function openBank(from) {
@@ -527,26 +527,26 @@
     if (isBusy(btn)) return;
     clearErrs(['os-iban', 'os-bname', 'os-holder'], 'os-bank-err');
     var c = ibanCheck(val('os-iban'));
-    need(st, 'os-iban', !val('os-iban') ? 'Scrie IBAN-ul contului.' : c.ok ? '' : c.msg || 'IBAN-ul nu este valid.');
-    need(st, 'os-bname', val('os-bname') ? '' : 'Scrie numele băncii.');
-    need(st, 'os-holder', val('os-holder') ? '' : 'Scrie titularul contului.');
+    need(st, 'os-iban', !val('os-iban') ? VQ.t('Enter the IBAN of the account.') : c.ok ? '' : c.msg || VQ.t('The IBAN is not valid.'));
+    need(st, 'os-bname', val('os-bname') ? '' : VQ.t('Enter the name of the bank.'));
+    need(st, 'os-holder', val('os-holder') ? '' : VQ.t('Enter the account holder.'));
     if (st.bad) { $(st.bad).focus(); return; }
     var body = { bank: val('os-bname'), iban: c.iban, holder: val('os-holder'), issuing_company: me && me.has_secondary_issuer ? $('os-issuer').value : 'primary' };
-    busyBtn(btn, true, 'Se adaugă…');
+    busyBtn(btn, true, VQ.t('Adding…'));
     d.setAttribute('data-busy', '');
     O.api('/organizer/bank-accounts', { method: 'POST', body: body }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash('Contul bancar a fost adăugat.' + (accounts && !accounts.length ? ' Fiind primul, e și contul principal.' : ''));
+      O.flash(accounts && !accounts.length ? VQ.t('The bank account has been added. As the first one, it is also the primary account.') : VQ.t('The bank account has been added.'));
       loadAccounts();
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
       var m = norm(errMessage(err));
-      if (/deja adaugat/.test(m)) { fieldErr('os-iban', 'Acest IBAN este deja adăugat în cont.'); $('os-iban').focus(); return; }
-      if (/numarul maxim/.test(m)) { formErr('os-bank-err', 'Poți avea cel mult 5 conturi bancare.'); return; }
+      if (/deja adaugat/.test(m)) { fieldErr('os-iban', VQ.t('This IBAN is already added to the account.')); $('os-iban').focus(); return; }
+      if (/numarul maxim/.test(m)) { formErr('os-bank-err', VQ.t('You can have 5 bank accounts at most.')); return; }
       formErr('os-bank-err', saveError(err));
       markServer(err, { iban: 'os-iban', bank: 'os-bname', holder: 'os-holder' });
     });
@@ -564,10 +564,10 @@
       var box = $('os-contract-state');
       box.className = 'os-callout is-bad';
       box.textContent = '';
-      var retry = el('button', { class: 'os-linkbtn', type: 'button', text: 'Reîncearcă' });
+      var retry = el('button', { class: 'os-linkbtn', type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { loadContract(); });
       box.appendChild(icon('warning-circle'));
-      box.appendChild(el('div', null, [el('b', { text: 'Nu am putut încărca contractul' }), el('p', null, ['Verifică conexiunea. ', retry])]));
+      box.appendChild(el('div', null, [el('b', { text: VQ.t('We could not load the contract') }), el('p', null, [VQ.t('Check your connection.') + ' ', retry])]));
       renderSummary();
     });
   }
@@ -582,7 +582,7 @@
   function renderContract() {
     var c = contract, w = WORK[c.work_mode] || [F.flat(c.work_mode) || '—', ''], m = MODE[c.commission_mode] || [F.flat(c.commission_mode) || '—', ''];
     $('os-k-comm').textContent = c.commission_rate != null && c.commission_rate !== '' ? F.pct(c.commission_rate, 2) : '—';
-    $('os-k-comm-p').textContent = c.commission_mode === 'included' ? 'inclus în prețul afișat, conform contractului' : 'adăugat peste prețul tău, conform contractului';
+    $('os-k-comm-p').textContent = c.commission_mode === 'included' ? VQ.t('included in the displayed price, as set in the contract') : VQ.t('added on top of your price, as set in the contract');
     $('os-k-work').textContent = w[0];
     $('os-k-work-p').textContent = w[1];
     $('os-k-mode').textContent = m[0];
@@ -590,13 +590,13 @@
     // The contract terms are viaqui.com's own commercial model (no payouts, commission on top, the POS commission
     // invoiced once a month): the wording lives in the page, only the operator's real numbers come from the API.
     var due = Math.round(F.toNum(c.invoice_due_days));
-    $('os-term-due').textContent = due > 0 ? F.count(due, 'zi calendaristică', 'zile calendaristice') : '5 zile calendaristice';
+    $('os-term-due').textContent = due > 0 ? VQ.n(due, 'calendar day', 'calendar days') : VQ.t('5 calendar days');
     $('os-term-comm').textContent = c.commission_rate != null && c.commission_rate !== '' ? F.pct(c.commission_rate, 2) : '—';
-    $('os-term-work').textContent = c.work_mode === 'exclusive' ? 'exclusiv' : c.work_mode === 'non_exclusive' ? 'neexclusiv' : '—';
-    if (c.is_signed) setState('is-ok', 'check-circle', 'Contract semnat', c.signed_at ? 'Semnat electronic pe ' + stamp(c.signed_at) + '.' : 'Semnat electronic.');
-    else if (c.signature_required) setState('is-warm', 'signature', 'Contractul așteaptă semnătura ta', 'Semnează mai jos. Până atunci nu poți cere plăți.');
-    else if (c.has_contract) setState('', 'file-text', 'Contract generat', c.contract && c.contract.issued_at ? 'Emis pe ' + dayLabel(c.contract.issued_at) + '.' : '');
-    else setState('', 'info', 'Contractul nu este generat încă', 'Se generează automat după ce încarci ambele documente de mai jos și îți verificăm datele.');
+    $('os-term-work').textContent = c.work_mode === 'exclusive' ? VQ.t('exclusive') : c.work_mode === 'non_exclusive' ? VQ.t('non-exclusive') : '—';
+    if (c.is_signed) setState('is-ok', 'check-circle', VQ.t('Contract signed'), c.signed_at ? VQ.t('Signed electronically on {date}.', { date: stamp(c.signed_at) }) : VQ.t('Signed electronically.'));
+    else if (c.signature_required) setState('is-warm', 'signature', VQ.t('The contract is waiting for your signature'), VQ.t('Sign below. Until then you cannot request payouts.'));
+    else if (c.has_contract) setState('', 'file-text', VQ.t('Contract generated'), c.contract && c.contract.issued_at ? VQ.t('Issued on {date}.', { date: dayLabel(c.contract.issued_at) }) : '');
+    else setState('', 'info', VQ.t('The contract is not generated yet'), VQ.t('It is generated automatically after you upload both documents below and we check your details.'));
     $('os-contract-dl').hidden = $('os-contract-view').hidden = !contractUrl();
     var sign = $('os-sign'), read = $('os-sign-read');
     sign.hidden = !(c.signature_required && !c.is_signed);
@@ -610,7 +610,7 @@
   $('os-contract-dl').addEventListener('click', function () {
     var url = contractUrl();
     if (url) { window.open(url, '_blank', 'noopener'); return; }
-    O.flash('Contractul nu este disponibil acum. Scrie-ne și ți-l trimitem.', true);
+    O.flash(VQ.t('The contract is not available right now. Write to us and we will send it to you.'), true);
   });
 
   /* ----- read the contract before signing it ----- */
@@ -618,7 +618,7 @@
   // frame, the window offers the two links that do work there. Signing itself is untouched, and stays below.
   function openContract(from) {
     var url = contractUrl();
-    if (!url) { O.flash('Contractul nu este disponibil acum. Scrie-ne și ți-l trimitem.', true); return; }
+    if (!url) { O.flash(VQ.t('The contract is not available right now. Write to us and we will send it to you.'), true); return; }
     var small = !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
     $('os-ct-open').href = url;
     $('os-ct-dl').href = url;
@@ -627,8 +627,8 @@
     $('os-ct-fallback').hidden = !small;
     $('os-ct-frame').src = small ? 'about:blank' : url;
     $('os-contract-d-p').textContent = contract && contract.is_signed
-      ? 'Varianta semnată, așa cum a fost înregistrată.'
-      : 'Citește-l înainte să-l semnezi.';
+      ? VQ.t('The signed version, as it was registered.')
+      : VQ.t('Read it before you sign it.');
     openDialog($('os-contract-d'), from);
     $('os-contract-d').querySelector('.os-x').focus();
   }
@@ -721,9 +721,9 @@
     var btn = $('os-sign-go');
     if (isBusy(btn) || !contract) return;
     formErr('os-sign-err', '');
-    if (!drawn && !typed) { formErr('os-sign-err', 'Desenează semnătura în casetă sau scrie-ți numele.'); $('os-sign-typed').focus(); return; }
-    if (!$('os-agree').checked) { formErr('os-sign-err', 'Bifează că ai citit contractul și ești de acord cu termenii lui.'); $('os-agree').focus(); return; }
-    busyBtn(btn, true, 'Se semnează…');
+    if (!drawn && !typed) { formErr('os-sign-err', VQ.t('Draw your signature in the box or type your name.')); $('os-sign-typed').focus(); return; }
+    if (!$('os-agree').checked) { formErr('os-sign-err', VQ.t('Tick the box to confirm you have read the contract and agree to its terms.')); $('os-agree').focus(); return; }
+    busyBtn(btn, true, VQ.t('Signing…'));
     O.api('/organizer/contract/sign', { method: 'POST', body: { signature: pad.toDataURL('image/png'), agreement: true } }).then(function (r) {
       busyBtn(btn, false);
       var d = (r && r.data) || {};
@@ -734,14 +734,14 @@
       $('os-agree').checked = false;
       renderContract();
       renderSummary();
-      O.flash(d.already_signed ? 'Contractul era deja semnat.' : 'Contractul a fost semnat. Îl poți descărca oricând de aici.');
+      O.flash(d.already_signed ? VQ.t('The contract was already signed.') : VQ.t('The contract has been signed. You can download it from here at any time.'));
       var state = $('os-contract-state');
       state.setAttribute('tabindex', '-1');
       state.focus();
     }).catch(function (err) {
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      formErr('os-sign-err', err && err.status === 422 ? 'Nu am putut folosi semnătura. Desenează sau scrie-o din nou și încearcă iar.' : saveError(err));
+      formErr('os-sign-err', err && err.status === 422 ? VQ.t('We could not use the signature. Draw or type it again and try once more.') : saveError(err));
     });
   });
 
@@ -750,25 +750,25 @@
   function renderDoc(type, url) {
     var box = docBox(type), tagBox = box.querySelector('[data-doc-tag]'), view = box.querySelector('[data-doc-view]');
     tagBox.textContent = '';
-    tagBox.appendChild(tag(url ? 'Încărcat' : 'Lipsește', url ? 'is-ok' : 'is-wait'));
+    tagBox.appendChild(tag(url ? VQ.t('Uploaded') : VQ.t('Missing'), url ? 'is-ok' : 'is-wait'));
     view.hidden = !url;
     if (url) view.href = url;
-    box.querySelector('[data-doc-cta]').textContent = url ? 'Înlocuiește fișierul' : 'Alege fișierul';
+    box.querySelector('[data-doc-cta]').textContent = url ? VQ.t('Replace file') : VQ.t('Choose file');
   }
   function docStatus(type, text, cls) { var s = docBox(type).querySelector('[data-doc-status]'); s.textContent = text || ''; s.className = 'os-doc-s' + (cls ? ' ' + cls : ''); }
   function upload(type, file) {
     var box = docBox(type);
     if (!file || box.classList.contains('is-busy')) return;
     var okType = /^(application\/pdf|image\/jpe?g|image\/png)$/i.test(file.type || '') || (!file.type && /\.(pdf|jpe?g|png)$/i.test(file.name || ''));
-    if (!okType) { docStatus(type, 'Alege un fișier PDF, JPG sau PNG.', 'is-bad'); return; }
-    if (file.size > 5 * 1024 * 1024) { docStatus(type, 'Fișierul are ' + new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 }).format(file.size / 1048576) + ' MB; limita este 5 MB.', 'is-bad'); return; }
+    if (!okType) { docStatus(type, VQ.t('Choose a PDF, JPG or PNG file.'), 'is-bad'); return; }
+    if (file.size > 5 * 1024 * 1024) { docStatus(type, VQ.t('The file is {size} MB; the limit is 5 MB.', { size: new Intl.NumberFormat(VQ.locale === 'en' ? 'en-GB' : VQ.locale, { maximumFractionDigits: 1 }).format(file.size / 1048576) }), 'is-bad'); return; }
     var tk = token();
-    if (!tk) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return; }
+    if (!tk) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return; }
     var fd = new FormData();
     fd.append('file', file, file.name || 'document');
     fd.append('type', type);
     box.classList.add('is-busy');
-    docStatus(type, 'Se încarcă ' + (file.name || 'documentul') + '…', 'is-busy');
+    docStatus(type, VQ.t('Uploading {file}…', { file: file.name || VQ.t('the document') }), 'is-busy');
     fetch(apiUrl() + '?action=organizer.documents.upload', { method: 'POST', body: fd, credentials: 'same-origin', headers: { Authorization: 'Bearer ' + tk, Accept: 'application/json' } }).then(function (res) {
       return res.text().then(function (t) {
         var body = null;
@@ -785,16 +785,16 @@
       contract.documents[DOC_KEY[type]] = safeUrl(d.url) || contract.documents[DOC_KEY[type]] || 'https://' + location.host + '/';
       renderDoc(type, safeUrl(contract.documents[DOC_KEY[type]]));
       renderSummary();
-      docStatus(type, 'Documentul a fost încărcat.' + (d.both_documents_uploaded ? ' Ai încărcat ambele documente: contractul se generează în câteva minute.' : ''), 'is-ok');
+      docStatus(type, d.both_documents_uploaded ? VQ.t('The document has been uploaded. You have uploaded both documents: the contract is generated within a few minutes.') : VQ.t('The document has been uploaded.'), 'is-ok');
       if (d.both_documents_uploaded) setTimeout(loadContract, 1500);
     }).catch(function (err) {
       box.classList.remove('is-busy');
-      function failed(text) { docStatus(type, text || 'Nu am putut încărca documentul. Încearcă din nou.', 'is-bad'); }
-      if (err && err.status === 401) { failed('Sesiunea a expirat. Te trimitem la autentificare.'); setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); return; }
-      if (err && err.html) { O.api('/organizer/me', { quiet: true }).then(function () { failed(); }, function (e) { if (e && e.status === 401) { failed('Sesiunea a expirat. Te trimitem la autentificare.'); setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); } else failed(); }); return; }
-      if (err && err.status === 413) return failed('Fișierul e prea mare pentru server. Alege unul mai mic de 5 MB.');
-      if (err && err.status === 422) return failed('Fișierul nu a fost acceptat. Alege un PDF, JPG sau PNG de cel mult 5 MB.');
-      if (err && err.status === 0) return failed('Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.');
+      function failed(text) { docStatus(type, text || VQ.t('We could not upload the document. Try again.'), 'is-bad'); }
+      if (err && err.status === 401) { failed(VQ.t('Your session has expired. We are sending you to sign in.')); setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); return; }
+      if (err && err.html) { O.api('/organizer/me', { quiet: true }).then(function () { failed(); }, function (e) { if (e && e.status === 401) { failed(VQ.t('Your session has expired. We are sending you to sign in.')); setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500); } else failed(); }); return; }
+      if (err && err.status === 413) return failed(VQ.t('The file is too large for the server. Choose one smaller than 5 MB.'));
+      if (err && err.status === 422) return failed(VQ.t('The file was not accepted. Choose a PDF, JPG or PNG of 5 MB at most.'));
+      if (err && err.status === 0) return failed(VQ.t('We could not reach the server. Check your connection and try again.'));
       failed();
     });
   }
@@ -826,9 +826,9 @@
   function renderNotifMail() {
     var p = $('os-nmail'), email = F.flat(me && me.email).trim();
     p.textContent = '';
-    p.appendChild(document.createTextNode('Primești email' + (email ? ' la ' : '')));
-    if (email) p.appendChild(el('b', { text: email }));
-    p.appendChild(document.createTextNode(' când o cerere de plată este înregistrată, aprobată, în procesare, plătită sau respinsă.'));
+    var parts = (email ? VQ.t('You get an email at {email} when a payout request is registered, approved, in processing, paid or rejected.') : VQ.t('You get an email when a payout request is registered, approved, in processing, paid or rejected.')).split('{email}');
+    p.appendChild(document.createTextNode(parts[0]));
+    if (parts.length > 1) { p.appendChild(el('b', { text: email })); p.appendChild(document.createTextNode(parts[1])); }
   }
 
   /* =================== SECURITY =================== */
@@ -837,7 +837,7 @@
       var input = $(b.getAttribute('data-eye')), show = input.type === 'password';
       input.type = show ? 'text' : 'password';
       b.setAttribute('aria-pressed', String(show));
-      b.setAttribute('aria-label', show ? 'Ascunde parola' : 'Arată parola');
+      b.setAttribute('aria-label', show ? VQ.t('Hide password') : VQ.t('Show password'));
       var use = b.querySelector('use');
       if (use) use.setAttribute('href', '#i-' + (show ? 'eye-slash' : 'eye'));
     });
@@ -854,23 +854,23 @@
     if (isBusy(btn)) return;
     clearErrs(['os-pass-cur', 'os-pass-new', 'os-pass-conf'], 'os-pass-err');
     var cur = $('os-pass-cur').value, nw = $('os-pass-new').value, conf = $('os-pass-conf').value;
-    need(st, 'os-pass-cur', cur ? '' : 'Scrie parola curentă.');
-    need(st, 'os-pass-new', !nw ? 'Scrie parola nouă.' : nw.length < 8 ? 'Parola nouă trebuie să aibă cel puțin 8 caractere.' : nw === cur ? 'Parola nouă trebuie să fie diferită de cea curentă.' : '');
-    need(st, 'os-pass-conf', !conf ? 'Scrie din nou parola nouă.' : conf !== nw ? 'Parolele nu se potrivesc.' : '');
+    need(st, 'os-pass-cur', cur ? '' : VQ.t('Enter your current password.'));
+    need(st, 'os-pass-new', !nw ? VQ.t('Enter the new password.') : nw.length < 8 ? VQ.t('The new password must have at least 8 characters.') : nw === cur ? VQ.t('The new password must be different from the current one.') : '');
+    need(st, 'os-pass-conf', !conf ? VQ.t('Enter the new password again.') : conf !== nw ? VQ.t('The passwords do not match.') : '');
     if (st.bad) { $(st.bad).focus(); return; }
-    busyBtn(btn, true, 'Se schimbă…');
+    busyBtn(btn, true, VQ.t('Changing…'));
     O.api('/organizer/password', { method: 'PUT', body: { current_password: cur, password: nw, password_confirmation: conf } }).then(function () {
       busyBtn(btn, false);
       $('os-pass-form').reset();
       qsa('[data-eye]', $('os-pass-form')).forEach(function (b) { if (b.getAttribute('aria-pressed') === 'true') b.click(); });
       rules();
-      O.flash('Parola a fost schimbată.');
+      O.flash(VQ.t('Your password has been changed.'));
     }).catch(function (err) {
       busyBtn(btn, false);
       if (err && err.status === 401) return;
       var m = errMessage(err);
-      if (/current password/i.test(m) || (err && err.errors && err.errors.current_password)) { fieldErr('os-pass-cur', 'Parola curentă nu este corectă.'); $('os-pass-cur').focus(); return; }
-      if (err && err.errors && err.errors.password) { fieldErr('os-pass-new', 'Alege o parolă de cel puțin 8 caractere, diferită de cele simple.'); $('os-pass-new').focus(); return; }
+      if (/current password/i.test(m) || (err && err.errors && err.errors.current_password)) { fieldErr('os-pass-cur', VQ.t('The current password is not correct.')); $('os-pass-cur').focus(); return; }
+      if (err && err.errors && err.errors.password) { fieldErr('os-pass-new', VQ.t('Choose a password of at least 8 characters that is not a simple one.')); $('os-pass-new').focus(); return; }
       formErr('os-pass-err', saveError(err));
     });
   });
@@ -889,7 +889,7 @@
     }, function (err) {
       if (err && err.status === 401) return;
       links = null;
-      emptyBox(box, 'li', 'Nu am putut încărca linkurile.', function () { loadLinks(); });
+      emptyBox(box, 'li', VQ.t('We could not load the links.'), function () { loadLinks(); });
     });
   }
   function updateLink(l, body, okText, btn) {
@@ -901,7 +901,7 @@
     }).catch(function (err) {
       if (btn) btn.disabled = false;
       if (err && err.status === 401) return;
-      O.flash(err && err.status === 404 ? 'Linkul nu mai există.' : 'Nu am putut actualiza linkul. Încearcă din nou.', true);
+      O.flash(err && err.status === 404 ? VQ.t('The link no longer exists.') : VQ.t('We could not update the link. Try again.'), true);
       if (err && err.status === 404) loadLinks();
     });
   }
@@ -909,25 +909,25 @@
     var box = $('os-share-list');
     box.textContent = '';
     if (!links.length) {
-      var cta = el('button', { class: 'btn btn-primary os-sm', type: 'button', 'data-focus': 'link-first' }, [icon('plus'), 'Creează primul link']);
+      var cta = el('button', { class: 'btn btn-primary os-sm', type: 'button', 'data-focus': 'link-first' }, [icon('plus'), VQ.t('Create your first link')]);
       cta.addEventListener('click', function () { openShare(cta); });
-      box.appendChild(el('li', { class: 'os-empty' }, [el('b', { text: 'Niciun link de monitorizare' }), el('p', { text: 'Creează un link pentru un partener sau un sponsor.' }), cta]));
+      box.appendChild(el('li', { class: 'os-empty' }, [el('b', { text: VQ.t('No monitoring link') }), el('p', { text: VQ.t('Create a link for a partner or a sponsor.') }), cta]));
       return;
     }
     links.forEach(function (l) {
-      var active = l.is_active !== false && l.is_active !== 0, n = Array.isArray(l.event_ids) ? l.event_ids.length : 0, url = linkUrl(l.code), name = F.flat(l.name).trim() || 'Link';
-      var meta = [F.count(n, 'activitate', 'activități'), F.count(l.access_count, 'accesare', 'accesări'), l.created_at ? 'creat pe ' + dayLabel(l.created_at) : '', l.last_accessed_at ? 'deschis ultima dată ' + F.ago(l.last_accessed_at) : ''].filter(Boolean).join(' · ');
-      var copy = pill('copy', 'Copiază', { 'data-focus': 'link-copy-' + l.code, 'aria-label': 'Copiază linkul ' + name });
-      copy.addEventListener('click', function () { copyText(url).then(function () { O.flash('Linkul a fost copiat.'); }, function () { O.flash('Nu am putut copia. Selectează linkul și copiază-l manual.', true); }); });
-      var openA = el('a', { class: 'os-pill', href: url, target: '_blank', rel: 'noopener', 'data-focus': 'link-open-' + l.code, 'aria-label': 'Deschide linkul ' + name + ' într-o filă nouă' }, [icon('arrow-up-right'), 'Deschide']);
-      var refresh = pill('arrow-counter-clockwise', 'Actualizează datele', { 'data-focus': 'link-refresh-' + l.code, 'aria-label': 'Actualizează datele linkului ' + name });
-      refresh.addEventListener('click', function () { updateLink(l, { refresh_data: true }, 'Datele linkului au fost actualizate.', refresh); });
-      var toggle = pill(active ? 'prohibit' : 'check-circle', active ? 'Oprește' : 'Pornește', { 'data-focus': 'link-toggle-' + l.code, 'aria-label': (active ? 'Oprește' : 'Pornește') + ' linkul ' + name });
-      toggle.addEventListener('click', function () { updateLink(l, { is_active: !active }, active ? 'Linkul a fost oprit. Cine îl deschide vede că nu mai este activ.' : 'Linkul a fost pornit.', toggle); });
-      var del = pill('trash', 'Șterge', { class: 'os-pill is-danger', 'data-focus': 'link-del-' + l.code, 'aria-label': 'Șterge linkul ' + name });
+      var active = l.is_active !== false && l.is_active !== 0, n = Array.isArray(l.event_ids) ? l.event_ids.length : 0, url = linkUrl(l.code), name = F.flat(l.name).trim() || VQ.t('Link');
+      var meta = [VQ.n(n, 'experience', 'experiences'), VQ.n(Math.round(F.toNum(l.access_count)), 'view', 'views'), l.created_at ? VQ.t('created on {date}', { date: dayLabel(l.created_at) }) : '', l.last_accessed_at ? VQ.t('last opened {when}', { when: F.ago(l.last_accessed_at) }) : ''].filter(Boolean).join(' · ');
+      var copy = pill('copy', VQ.t('Copy'), { 'data-focus': 'link-copy-' + l.code, 'aria-label': VQ.t('Copy the link {name}', { name: name }) });
+      copy.addEventListener('click', function () { copyText(url).then(function () { O.flash(VQ.t('The link has been copied.')); }, function () { O.flash(VQ.t('We could not copy it. Select the link and copy it by hand.'), true); }); });
+      var openA = el('a', { class: 'os-pill', href: url, target: '_blank', rel: 'noopener', 'data-focus': 'link-open-' + l.code, 'aria-label': VQ.t('Open the link {name} in a new tab', { name: name }) }, [icon('arrow-up-right'), VQ.t('Open')]);
+      var refresh = pill('arrow-counter-clockwise', VQ.t('Refresh data'), { 'data-focus': 'link-refresh-' + l.code, 'aria-label': VQ.t('Refresh the data of the link {name}', { name: name }) });
+      refresh.addEventListener('click', function () { updateLink(l, { refresh_data: true }, VQ.t('The link data has been refreshed.'), refresh); });
+      var toggle = pill(active ? 'prohibit' : 'check-circle', active ? VQ.t('Turn off') : VQ.t('Turn on'), { 'data-focus': 'link-toggle-' + l.code, 'aria-label': active ? VQ.t('Turn off the link {name}', { name: name }) : VQ.t('Turn on the link {name}', { name: name }) });
+      toggle.addEventListener('click', function () { updateLink(l, { is_active: !active }, active ? VQ.t('The link has been turned off. Whoever opens it sees that it is no longer active.') : VQ.t('The link has been turned on.'), toggle); });
+      var del = pill('trash', VQ.t('Delete'), { class: 'os-pill is-danger', 'data-focus': 'link-del-' + l.code, 'aria-label': VQ.t('Delete the link {name}', { name: name }) });
       del.addEventListener('click', function () { openDelete('link', l, del); });
       box.appendChild(el('li', { class: 'os-share' + (active ? '' : ' is-off') + (newCode && newCode === l.code ? ' is-new' : '') }, [
-        el('div', { class: 'os-share-top' }, [el('b', { text: name }), tag(active ? 'Activ' : 'Oprit', active ? 'is-ok' : 'is-muted'), l.has_password ? tag('Cu parolă', 'is-info') : null, l.show_participants ? tag('Participanți', 'is-wait') : null, l.show_revenue ? tag('Încasări', 'is-info') : null]),
+        el('div', { class: 'os-share-top' }, [el('b', { text: name }), tag(active ? VQ.t('Active') : VQ.t('Off'), active ? 'is-ok' : 'is-muted'), l.has_password ? tag(VQ.t('With password'), 'is-info') : null, l.show_participants ? tag(VQ.t('Participants'), 'is-wait') : null, l.show_revenue ? tag(VQ.t('Revenue'), 'is-info') : null]),
         el('p', { class: 'os-meta', text: meta }),
         el('div', { class: 'os-url' }, [icon('link'), el('code', { text: url, title: url })]),
         el('div', { class: 'os-share-act' }, [copy, openA, refresh, toggle, del]),
@@ -963,18 +963,18 @@
     var box = $('os-picks'), q = norm(val('os-pq')), n = pickedIds().length, full = n >= MAX_LINK_EVENTS;
     box.textContent = '';
     $('os-psearch').hidden = !(events && events.length > 8);
-    if (!events.length) { box.appendChild(el('li', { class: 'os-picks-msg', text: 'Nu ai activități în desfășurare sau viitoare.' })); $('os-picks-n').textContent = ''; return; }
+    if (!events.length) { box.appendChild(el('li', { class: 'os-picks-msg', text: VQ.t('You have no running or upcoming experiences.') })); $('os-picks-n').textContent = ''; return; }
     var shown = events.filter(function (e) { return !q || norm(F.flat(e.name || e.title) + ' ' + F.flat(e.venue_name) + ' ' + F.flat(e.venue_city)).indexOf(q) > -1; });
-    if (!shown.length) box.appendChild(el('li', { class: 'os-picks-msg', text: 'Nicio activitate nu se potrivește căutării.' }));
+    if (!shown.length) box.appendChild(el('li', { class: 'os-picks-msg', text: VQ.t('No experience matches your search.') }));
     shown.forEach(function (e) {
       var id = String(e.id), on = !!picked[id], day = naiveDay(e.starts_at);
       var cb = el('input', { type: 'checkbox', value: id });
       cb.checked = on;
       cb.disabled = full && !on;
       cb.addEventListener('change', function () { picked[id] = cb.checked; fieldErr('os-picks', ''); renderPicks(); var again = box.querySelector('input[value="' + id + '"]'); if (again) again.focus(); });
-      box.appendChild(el('li', null, el('label', { class: 'os-pick' }, [cb, el('span', null, [el('b', { text: F.flat(e.name || e.title) || 'Activitatea #' + id }), el('small', { text: [day ? dayLabel(day) : '', F.flat(e.venue_name), F.flat(e.venue_city)].filter(Boolean).join(' · ') })])])));
+      box.appendChild(el('li', null, el('label', { class: 'os-pick' }, [cb, el('span', null, [el('b', { text: F.flat(e.name || e.title) || VQ.t('Experience #{id}', { id: id }) }), el('small', { text: [day ? dayLabel(day) : '', F.flat(e.venue_name), F.flat(e.venue_city)].filter(Boolean).join(' · ') })])])));
     });
-    $('os-picks-n').textContent = n ? F.count(n, 'activitate aleasă', 'activități alese') + (full ? ' · ai atins maximul de ' + MAX_LINK_EVENTS : ' · cel mult ' + MAX_LINK_EVENTS) : 'Alege cel puțin o activitate (cel mult ' + MAX_LINK_EVENTS + ').';
+    $('os-picks-n').textContent = n ? (full ? VQ.t('{chosen} · you have reached the maximum of {max}', { chosen: VQ.n(n, 'experience chosen', 'experiences chosen'), max: MAX_LINK_EVENTS }) : VQ.t('{chosen} · {max} at most', { chosen: VQ.n(n, 'experience chosen', 'experiences chosen'), max: MAX_LINK_EVENTS })) : VQ.t('Choose at least one experience ({max} at most).', { max: MAX_LINK_EVENTS });
   }
   $('os-pq').addEventListener('input', renderPicks);
   function openShare(from) {
@@ -989,12 +989,12 @@
     openDialog($('os-share-d'), from);
     $('os-sname').focus();
     var box = $('os-picks');
-    if (!events) { box.textContent = ''; box.appendChild(el('li', { class: 'os-picks-msg', text: 'Se încarcă activitățile…' })); }
+    if (!events) { box.textContent = ''; box.appendChild(el('li', { class: 'os-picks-msg', text: VQ.t('Loading experiences…') })); }
     loadEvents().then(renderPicks, function () {
       box.textContent = '';
-      var retry = el('button', { class: 'os-linkbtn', type: 'button', text: 'Reîncearcă' });
-      retry.addEventListener('click', function () { box.textContent = ''; box.appendChild(el('li', { class: 'os-picks-msg', text: 'Se încarcă activitățile…' })); loadEvents().then(renderPicks, function () { emptyBox(box, 'li', 'Nu am putut încărca activitățile.'); }); });
-      box.appendChild(el('li', { class: 'os-picks-msg' }, ['Nu am putut încărca activitățile. ', retry]));
+      var retry = el('button', { class: 'os-linkbtn', type: 'button', text: VQ.t('Try again') });
+      retry.addEventListener('click', function () { box.textContent = ''; box.appendChild(el('li', { class: 'os-picks-msg', text: VQ.t('Loading experiences…') })); loadEvents().then(renderPicks, function () { emptyBox(box, 'li', VQ.t('We could not load the experiences.')); }); });
+      box.appendChild(el('li', { class: 'os-picks-msg' }, [VQ.t('We could not load the experiences.') + ' ', retry]));
     });
   }
   $('os-share-add').addEventListener('click', function () { openShare(this); });
@@ -1003,13 +1003,13 @@
     var d = $('os-share-d'), btn = $('os-share-go'), ids = pickedIds();
     if (isBusy(btn)) return;
     clearErrs(['os-sname', 'os-picks'], 'os-share-err');
-    if (!ids.length) { fieldErr('os-picks', 'Alege cel puțin o activitate.'); var first = $('os-picks').querySelector('input'); if (first) first.focus(); return; }
+    if (!ids.length) { fieldErr('os-picks', VQ.t('Choose at least one experience.')); var first = $('os-picks').querySelector('input'); if (first) first.focus(); return; }
     var body = { event_ids: ids.slice(0, MAX_LINK_EVENTS).map(Number) };
     if (val('os-sname')) body.name = val('os-sname');
     if ($('os-spass').value.trim()) body.password = $('os-spass').value.trim();
     if ($('os-sp-participants').checked) body.show_participants = true;
     if ($('os-sp-revenue').checked) body.show_revenue = true;
-    busyBtn(btn, true, 'Se generează…');
+    busyBtn(btn, true, VQ.t('Generating…'));
     d.setAttribute('data-busy', '');
     O.api('/organizer/share-links', { method: 'POST', body: body }).then(function (r) {
       d.removeAttribute('data-busy');
@@ -1017,13 +1017,13 @@
       closeDialog(d);
       var data = (r && r.data) || {}, link = data.data || data.link || data, code = link && /^[A-Za-z0-9]{6,20}$/.test(String(link.code)) ? String(link.code) : '';
       loadLinks(code);
-      if (!code) { O.flash('Linkul a fost creat.'); return; }
-      copyText(linkUrl(code)).then(function () { O.flash('Linkul a fost creat și copiat. Îl poți trimite partenerului.'); }, function () { O.flash('Linkul a fost creat. Copiază-l din listă.'); });
+      if (!code) { O.flash(VQ.t('The link has been created.')); return; }
+      copyText(linkUrl(code)).then(function () { O.flash(VQ.t('The link has been created and copied. You can send it to your partner.')); }, function () { O.flash(VQ.t('The link has been created. Copy it from the list.')); });
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      if (/maximum 50/i.test(errMessage(err))) { formErr('os-share-err', 'Poți avea cel mult 50 de linkuri. Șterge unul pe care nu îl mai folosești.'); return; }
+      if (/maximum 50/i.test(errMessage(err))) { formErr('os-share-err', VQ.t('You can have 50 links at most. Delete one you no longer use.')); return; }
       formErr('os-share-err', saveError(err));
       markServer(err, { name: 'os-sname', event_ids: 'os-picks' });
     });
@@ -1051,13 +1051,13 @@
     });
   });
   function openDelete(kind, item, from) {
-    var bank = kind === 'bank', name = bank ? F.flat(item.bank) || 'contul' : F.flat(item.name).trim() || 'linkul';
+    var bank = kind === 'bank', name = bank ? F.flat(item.bank) || VQ.t('the account') : F.flat(item.name).trim() || VQ.t('the link');
     delTarget = { kind: kind, item: item };
-    $('os-del-h').textContent = bank ? 'Ștergi contul bancar?' : 'Ștergi linkul?';
+    $('os-del-h').textContent = bank ? VQ.t('Delete the bank account?') : VQ.t('Delete the link?');
     $('os-del-p').textContent = bank
-      ? '„' + name + '” (' + groupIban(item.iban) + ') dispare din cont. Plățile deja făcute nu sunt afectate.' + (item.is_primary && accounts && accounts.length > 1 ? ' Alt cont devine principal.' : item.is_primary ? ' Fără un cont bancar nu poți cere plăți.' : '')
-      : '„' + name + '” nu se mai deschide pentru nimeni. Dacă vrei doar să-l pui pe pauză, folosește „Oprește”.';
-    $('os-del-go').querySelector('[data-label]').textContent = bank ? 'Șterge contul' : 'Șterge linkul';
+      ? VQ.t('"{name}" ({iban}) is removed from your account. Payouts already made are not affected.', { name: name, iban: groupIban(item.iban) }) + (item.is_primary && accounts && accounts.length > 1 ? ' ' + VQ.t('Another account becomes the primary one.') : item.is_primary ? ' ' + VQ.t('Without a bank account you cannot request payouts.') : '')
+      : VQ.t('"{name}" no longer opens for anyone. If you only want to pause it, use "Turn off".', { name: name });
+    $('os-del-go').querySelector('[data-label]').textContent = bank ? VQ.t('Delete account') : VQ.t('Delete link');
     formErr('os-del-err', '');
     fallbackFocus = bank ? $('os-bank-add') : $('os-share-add');
     openDialog($('os-del-d'), from);
@@ -1067,20 +1067,20 @@
     var btn = this, d = $('os-del-d'), t = delTarget;
     if (!t || isBusy(btn)) return;
     var bank = t.kind === 'bank', path = bank ? '/organizer/bank-accounts/' + t.item.id : '/organizer/share-links/' + t.item.code;
-    busyBtn(btn, true, 'Se șterge…');
+    busyBtn(btn, true, VQ.t('Deleting…'));
     d.setAttribute('data-busy', '');
     O.api(path, { method: 'DELETE' }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash(bank ? 'Contul bancar a fost șters.' : 'Linkul a fost șters.');
+      O.flash(bank ? VQ.t('The bank account has been deleted.') : VQ.t('The link has been deleted.'));
       if (bank) loadAccounts(); else loadLinks();
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      if (err && err.status === 404) { closeDialog(d); O.flash(bank ? 'Contul fusese deja șters.' : 'Linkul fusese deja șters.'); if (bank) loadAccounts(); else loadLinks(); return; }
-      formErr('os-del-err', err && err.status === 429 ? 'Prea multe încercări într-un timp scurt. Așteaptă un minut și încearcă din nou.' : err && (err.status === 0 || err.status == null) ? 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.' : 'Nu am putut șterge. Încearcă din nou.');
+      if (err && err.status === 404) { closeDialog(d); O.flash(bank ? VQ.t('The account had already been deleted.') : VQ.t('The link had already been deleted.')); if (bank) loadAccounts(); else loadLinks(); return; }
+      formErr('os-del-err', err && err.status === 429 ? VQ.t('Too many attempts in a short time. Wait a minute and try again.') : err && (err.status === 0 || err.status == null) ? VQ.t('We could not reach the server. Check your connection and try again.') : VQ.t('We could not delete. Try again.'));
     });
   });
 

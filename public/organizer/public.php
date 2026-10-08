@@ -43,8 +43,8 @@ if (!$org) {
     header('Retry-After: 120');
     $skipPageCache = true;
     $noindex = true;
-    $pageTitleRaw = 'Operator · ' . SITE_NAME;
-    $pageDescription = 'Profilul operatorului nu poate fi afișat momentan. Reîncearcă peste câteva minute.';
+    $pageTitleRaw = v2_t('Operator') . ' · ' . SITE_NAME;
+    $pageDescription = v2_t('The operator profile cannot be shown right now. Please try again in a few minutes.');
     include __DIR__ . '/../includes/v2/head.php';
     include __DIR__ . '/../includes/v2/header.php';
     ?>
@@ -53,9 +53,9 @@ if (!$org) {
     <div class="wrap">
       <div class="op-empty">
         <span class="op-empty-ic"><?= v2_ic('clock') ?></span>
-        <h1 class="op-down-h" id="op-down-h">Datele operatorului nu sunt disponibile momentan.</h1>
-        <p>Reîncearcă peste câteva minute.</p>
-        <div class="op-down-cta"><a class="btn btn-primary" href="/operatori">Toți operatorii</a><a class="btn btn-ghost" href="/">Acasă</a></div>
+        <h1 class="op-down-h" id="op-down-h"><?= v2_te('The operator details are not available right now.') ?></h1>
+        <p><?= v2_te('Please try again in a few minutes.') ?></p>
+        <div class="op-down-cta"><a class="btn btn-primary" href="/operators"><?= v2_te('All operators') ?></a><a class="btn btn-ghost" href="/"><?= v2_te('Home') ?></a></div>
       </div>
     </div>
   </section>
@@ -71,7 +71,7 @@ $opText = function ($v): string {
         $v = $v['name'];
     }
     if (is_array($v)) {
-        $v = $v['ro'] ?? $v['en'] ?? reset($v);
+        $v = $v[v2_locale()] ?? $v['en'] ?? reset($v);
     }
     return is_scalar($v) ? trim((string) $v) : '';
 };
@@ -93,10 +93,10 @@ $opExcerpt = function (string $text, int $max): string {
     return rtrim($space !== false && $space > $max * 0.6 ? mb_substr($cut, 0, $space) : $cut, ' ,.;:–-') . '…';
 };
 $opUrl = fn ($u) => is_string($u) && preg_match('#^https?://[^\s"<>]+$#i', $u) ? $u : '';
-$opDecimal = fn ($s) => str_replace('.', ',', (string) $s); // the API formats 1.2K and 4.8
+$opDecimal = fn ($s) => (string) $s; // the API formats 1.2K and 4.8
 
 $tz = new DateTimeZone('Europe/Bucharest');
-$months = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+$months = [v2_t('Jan'), v2_t('Feb'), v2_t('Mar'), v2_t('Apr'), v2_t('May'), v2_t('Jun'), v2_t('Jul'), v2_t('Aug'), v2_t('Sep'), v2_t('Oct'), v2_t('Nov'), v2_t('Dec')];
 $opDate = function ($value) use ($tz): ?DateTimeImmutable {
     if (!is_string($value) || $value === '') {
         return null;
@@ -118,7 +118,7 @@ $verified = !empty($org['verified']);
 $isPro = !empty($org['pro']);
 $about = $opPlain($org['about'] ?? '');
 $tagline = $opExcerpt($opPlain($org['tagline'] ?? ''), 220);
-$location = $opText($org['location'] ?? '') ?: 'România';
+$location = $opText($org['location'] ?? '');
 $stats = is_array($org['stats'] ?? null) ? $org['stats'] : [];
 $followers = trim((string) ($stats['followers'] ?? '0'));
 $rating = trim((string) ($stats['rating'] ?? '-'));
@@ -127,7 +127,7 @@ $website = $opUrl($social['website'] ?? '');
 $socialLinks = array_values(array_filter([
     ['Facebook', $opUrl($social['facebook'] ?? ''), '<path fill="currentColor" stroke="none" d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>'],
     ['Instagram', $opUrl($social['instagram'] ?? ''), '<rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/>'],
-    ['Website', $website, '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'],
+    [v2_t('Website'), $website, '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'],
 ], fn ($link) => $link[1] !== ''));
 
 $factIcons = ['calendar' => 'calendar-blank', 'location' => 'map-pin', 'star' => 'star', 'shield' => 'check-circle'];
@@ -186,7 +186,7 @@ foreach ((array) ($org['upcomingEvents'] ?? []) as $ev) {
         'time' => preg_match('/^\d{1,2}:\d{2}$/', (string) ($ev['start_time'] ?? '')) ? (string) $ev['start_time'] : '',
         'venue' => implode(', ', array_filter([$opText($ev['venue_name'] ?? ''), $opText($ev['venue_city'] ?? '')], 'strlen')),
         'category' => $opText($ev['category'] ?? ''),
-        'price' => is_numeric($evPrice) && $evPrice > 0 ? v2_thousands((int) ceil((float) $evPrice)) . ' lei' : '',
+        'price' => is_numeric($evPrice) && $evPrice > 0 ? v2_money((int) ceil((float) $evPrice)) : '',
         'soldOut' => !empty($ev['is_sold_out']) || ($ev['status'] ?? '') === 'soldout',
     ];
 }
@@ -208,13 +208,13 @@ foreach ((array) ($org['pastEvents'] ?? []) as $ev) {
 $upcomingCount = count($activities) + count($events);
 $pastCount = count($past);
 $heroImage = $cover ?: (($activities[0]['image'] ?? null) ?: ($events[0]['image'] ?? null));
-$aboutText = $about !== '' ? $about : 'Informații indisponibile momentan.';
+$aboutText = $about !== '' ? $about : v2_t('No information available yet.');
 
 // ------------------------------------------------------------------ page
-$breadcrumbs = [['name' => 'Acasă', 'url' => '/'], ['name' => 'Operatori', 'url' => '/operatori'], ['name' => $name, 'url' => '/operator/' . $slug]];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => '/'], ['name' => v2_t('Operators'), 'url' => '/operators'], ['name' => $name, 'url' => '/operator/' . $slug]];
 
-$pageTitleRaw = $name . ' — ' . SITE_NAME;
-$pageDescription = $tagline !== '' ? $opExcerpt($tagline, 160) : 'Descoperă activitățile ' . $name . ' pe viaqui.com.';
+$pageTitleRaw = $name . ' · ' . SITE_NAME;
+$pageDescription = $tagline !== '' ? $opExcerpt($tagline, 160) : v2_t('Discover the experiences of {name} on Viaqui.', ['name' => $name]);
 $canonicalUrl = SITE_URL . '/operator/' . $slug;
 $ogImage = $heroImage ?: ($avatar ?: SITE_URL . '/assets/images/og-default.jpg');
 
@@ -237,7 +237,7 @@ $structuredData = [$opClean([
     'logo' => $avatar,
     'image' => $heroImage,
     'description' => $pageDescription,
-    'address' => $location !== 'România' ? ['@type' => 'PostalAddress', 'addressLocality' => $location, 'addressCountry' => 'RO'] : null,
+    'address' => $location !== '' ? ['@type' => 'PostalAddress', 'addressLocality' => $location] : null,
     'sameAs' => array_column($socialLinks, 1),
 ]), [
     '@context' => 'https://schema.org',
@@ -261,7 +261,7 @@ $v2HeadExtra = ($heroImage ? '<link rel="preload" as="image" href="' . v2_e($her
         'storageUrl' => STORAGE_URL,
         'env' => API_ENV,
         'locale' => SITE_LOCALE,
-        'currency' => 'RON',
+        'currency' => defined('SITE_CURRENCY') ? SITE_CURRENCY : 'EUR',
         'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 $v2ClientData = ['slug' => $slug];
@@ -276,7 +276,7 @@ include __DIR__ . '/../includes/v2/header.php';
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <svg class="op-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="op-in">
-      <nav class="crumbs" aria-label="Breadcrumb">
+      <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
         <?php foreach ($breadcrumbs as $bi => $bc): ?>
           <?php if ($bi > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
           <?php if ($bi < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bc['url']) ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
@@ -285,28 +285,28 @@ include __DIR__ . '/../includes/v2/header.php';
 
       <div class="op-profile">
         <div class="op-avatar"<?= $avatar ? '' : ' aria-hidden="true"' ?>>
-          <?php if ($avatar): ?><img src="<?= v2_e($avatar) ?>" alt="Logo <?= v2_e($name) ?>" decoding="async"><?php else: ?><?= v2_e($initial) ?><?php endif; ?>
+          <?php if ($avatar): ?><img src="<?= v2_e($avatar) ?>" alt="<?= v2_te('{name} logo', ['name' => $name]) ?>" decoding="async"><?php else: ?><?= v2_e($initial) ?><?php endif; ?>
         </div>
 
         <div class="op-id">
           <?php if ($verified || $isPro): ?>
           <ul class="op-badges">
-            <?php if ($verified): ?><li><?= v2_ic('check-circle') ?>Verificat</li><?php endif; ?>
+            <?php if ($verified): ?><li><?= v2_ic('check-circle') ?><?= v2_te('Verified') ?></li><?php endif; ?>
             <?php if ($isPro): ?><li class="is-pro">PRO</li><?php endif; ?>
           </ul>
           <?php endif; ?>
           <h1 class="op-h" id="op-h"><?= v2_e($name) ?></h1>
           <?php if ($tagline !== ''): ?><p class="op-tagline"><?= v2_e($tagline) ?></p><?php endif; ?>
           <ul class="op-meta">
-            <li><?= v2_ic('map-pin') ?><?= v2_e($location) ?></li>
-            <?php if ($followers !== '' && $followers !== '0'): ?><li><?= v2_ic('users-three') ?><b><?= v2_e($opDecimal($followers)) ?></b><span>urmăritori</span></li><?php endif; ?>
-            <?php if ($rating !== '' && $rating !== '-'): ?><li><?= v2_ic('star') ?><b><?= v2_e($opDecimal($rating)) ?></b><span>rating</span></li><?php endif; ?>
+            <?php if ($location !== ''): ?><li><?= v2_ic('map-pin') ?><?= v2_e($location) ?></li><?php endif; ?>
+            <?php if ($followers !== '' && $followers !== '0'): ?><li><?= v2_ic('users-three') ?><b><?= v2_e($opDecimal($followers)) ?></b><span><?= v2_te('followers') ?></span></li><?php endif; ?>
+            <?php if ($rating !== '' && $rating !== '-'): ?><li><?= v2_ic('star') ?><b><?= v2_e($opDecimal($rating)) ?></b><span><?= v2_te('rating') ?></span></li><?php endif; ?>
           </ul>
         </div>
 
         <div class="op-actions">
-          <a class="btn btn-light" href="#op-tabs"><?= $upcomingCount ? 'Vezi activitățile' : 'Vezi profilul' ?><?= v2_ic('arrow-right') ?></a>
-          <button class="btn btn-outline-light" type="button" data-contact aria-haspopup="dialog" aria-controls="op-contact"><?= v2_ic('envelope-simple') ?>Trimite mesaj</button>
+          <a class="btn btn-light" href="#op-tabs"><?= $upcomingCount ? v2_te('See the experiences') : v2_te('See the profile') ?><?= v2_ic('arrow-right') ?></a>
+          <button class="btn btn-outline-light" type="button" data-contact aria-haspopup="dialog" aria-controls="op-contact"><?= v2_ic('envelope-simple') ?><?= v2_te('Send a message') ?></button>
           <?php if ($socialLinks): ?>
           <div class="op-social">
             <?php foreach ($socialLinks as [$socialLabel, $socialUrl, $socialIcon]): ?>
@@ -321,17 +321,17 @@ include __DIR__ . '/../includes/v2/header.php';
   <div id="hdr-sentinel" aria-hidden="true"></div>
 
   <!-- ===================== TABS + SIDEBAR ===================== -->
-  <section class="sec op-main" aria-label="Activitățile și profilul operatorului">
+  <section class="sec op-main" aria-label="<?= v2_te('The experiences and profile of the operator') ?>">
     <div class="wrap op-layout">
       <div>
-        <div class="op-tabs" id="op-tabs" role="tablist" data-tabs aria-label="Profilul operatorului">
-          <button class="tab" id="op-tab-events" type="button" role="tab" aria-selected="true" aria-controls="op-panel-events"><?= v2_ic('calendar-blank') ?>Activități<span class="op-count"><?= $upcomingCount ?></span></button>
-          <button class="tab" id="op-tab-past" type="button" role="tab" aria-selected="false" aria-controls="op-panel-past" tabindex="-1"><?= v2_ic('check-circle') ?>Trecut<span class="op-count"><?= $pastCount ?></span></button>
-          <button class="tab" id="op-tab-about" type="button" role="tab" aria-selected="false" aria-controls="op-panel-about" tabindex="-1"><?= v2_ic('user-circle') ?>Despre</button>
+        <div class="op-tabs" id="op-tabs" role="tablist" data-tabs aria-label="<?= v2_te('Operator profile') ?>">
+          <button class="tab" id="op-tab-events" type="button" role="tab" aria-selected="true" aria-controls="op-panel-events"><?= v2_ic('calendar-blank') ?><?= v2_te('Experiences') ?><span class="op-count"><?= $upcomingCount ?></span></button>
+          <button class="tab" id="op-tab-past" type="button" role="tab" aria-selected="false" aria-controls="op-panel-past" tabindex="-1"><?= v2_ic('check-circle') ?><?= v2_te('Past') ?><span class="op-count"><?= $pastCount ?></span></button>
+          <button class="tab" id="op-tab-about" type="button" role="tab" aria-selected="false" aria-controls="op-panel-about" tabindex="-1"><?= v2_ic('user-circle') ?><?= v2_te('About') ?></button>
         </div>
 
         <section class="op-panel" id="op-panel-events" role="tabpanel" aria-labelledby="op-tab-events">
-          <h2>Activități viitoare</h2>
+          <h2><?= v2_te('Upcoming experiences') ?></h2>
           <?php if ($upcomingCount): ?>
           <ul class="xp-grid op-cards">
             <?php foreach ($activities as $ai => $card): ?>
@@ -339,10 +339,10 @@ include __DIR__ . '/../includes/v2/header.php';
               <a href="<?= v2_e($card['href']) ?>">
                 <span class="xp-media"><?= $card['image'] ? v2_photo([$card['image'], 0, 0, '']) : v2_fallback($card['title'], $ai) ?></span>
                 <span class="xp-body">
-                  <span class="xp-cat"><?= v2_e($card['catName'] ?: 'Activitate') ?></span>
+                  <span class="xp-cat"><?= v2_e($card['catName'] ?: v2_t('Experience')) ?></span>
                   <span class="xp-title"><?= v2_e($card['title']) ?></span>
-                  <span class="xp-meta"><?php if ($card['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($card['city']) ?></span><?php endif; ?><?php if ($card['dur'] !== ''): ?><span><?= v2_ic('clock') ?><?= v2_e($card['dur']) ?></span><?php endif; ?><?php if ($card['reviews'] > 0): ?><span class="xp-rating"><?= v2_ic('star') ?><?= v2_e(number_format($card['rating'], 1, ',', '')) ?> (<?= v2_thousands($card['reviews']) ?>)</span><?php endif; ?></span>
-                  <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if ($card['price'] > 0): ?><span class="xp-price">de la<b><?= v2_thousands($card['price']) ?> lei</b></span><?php endif; ?></span>
+                  <span class="xp-meta"><?php if ($card['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($card['city']) ?></span><?php endif; ?><?php if ($card['dur'] !== ''): ?><span><?= v2_ic('clock') ?><?= v2_e($card['dur']) ?></span><?php endif; ?><?php if ($card['reviews'] > 0): ?><span class="xp-rating"><?= v2_ic('star') ?><?= v2_e(number_format($card['rating'], 1, '.', '')) ?> (<?= v2_thousands($card['reviews']) ?>)</span><?php endif; ?></span>
+                  <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if ($card['price'] > 0): ?><span class="xp-price"><?= v2_t('from<b>{price}</b>', ['price' => v2_e(!empty($card['priceLabel']) ? $card['priceLabel'] : v2_money((int) $card['price']))]) ?></span><?php endif; ?></span>
                 </span>
               </a>
             </li>
@@ -353,13 +353,13 @@ include __DIR__ . '/../includes/v2/header.php';
                 <span class="xp-media">
                   <?= $ev['image'] ? v2_photo([$ev['image'], 0, 0, '']) : v2_fallback($ev['title'], $ei + count($activities)) ?>
                   <?php if ($ev['day'] !== ''): ?><span class="op-date"><b><?= v2_e($ev['day']) ?></b><small><?= v2_e($ev['month']) ?></small></span><?php endif; ?>
-                  <?php if ($ev['soldOut']): ?><span class="op-flag">Sold out</span><?php endif; ?>
+                  <?php if ($ev['soldOut']): ?><span class="op-flag"><?= v2_te('Sold out') ?></span><?php endif; ?>
                 </span>
                 <span class="xp-body">
-                  <span class="xp-cat"><?= v2_e($ev['category'] ?: 'Eveniment') ?></span>
+                  <span class="xp-cat"><?= v2_e($ev['category'] ?: v2_t('Event')) ?></span>
                   <span class="xp-title"><?= v2_e($ev['title']) ?></span>
                   <span class="xp-meta"><?php if ($ev['when'] !== ''): ?><span><?= v2_ic('calendar-blank') ?><?= v2_e($ev['when']) ?></span><?php endif; ?><?php if ($ev['time'] !== ''): ?><span><?= v2_ic('clock') ?><?= v2_e($ev['time']) ?></span><?php endif; ?><?php if ($ev['venue'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($ev['venue']) ?></span><?php endif; ?></span>
-                  <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if ($ev['soldOut']): ?><span class="xp-soldout">Sold out</span><?php elseif ($ev['price'] !== ''): ?><span class="xp-price">de la<b><?= v2_e($ev['price']) ?></b></span><?php endif; ?></span>
+                  <span class="xp-foot"><span class="xp-go"><?= v2_ic('arrow-right') ?></span><?php if ($ev['soldOut']): ?><span class="xp-soldout"><?= v2_te('Sold out') ?></span><?php elseif ($ev['price'] !== ''): ?><span class="xp-price"><?= v2_t('from<b>{price}</b>', ['price' => v2_e($ev['price'])]) ?></span><?php endif; ?></span>
                 </span>
               </a>
             </li>
@@ -368,14 +368,14 @@ include __DIR__ . '/../includes/v2/header.php';
           <?php else: ?>
           <div class="op-empty">
             <span class="op-empty-ic"><?= v2_ic('calendar-blank') ?></span>
-            <p>Nu sunt activități viitoare momentan.</p>
-            <a class="btn btn-ghost" href="/operatori">Vezi alți operatori<?= v2_ic('arrow-right') ?></a>
+            <p><?= v2_te('There are no upcoming experiences right now.') ?></p>
+            <a class="btn btn-ghost" href="/operators"><?= v2_te('See other operators') ?><?= v2_ic('arrow-right') ?></a>
           </div>
           <?php endif; ?>
         </section>
 
         <section class="op-panel" id="op-panel-past" role="tabpanel" aria-labelledby="op-tab-past" hidden>
-          <h2>Activități trecute</h2>
+          <h2><?= v2_te('Past experiences') ?></h2>
           <?php if ($past): ?>
           <ul class="op-past">
             <?php foreach ($past as $pi => $item): ?>
@@ -392,16 +392,16 @@ include __DIR__ . '/../includes/v2/header.php';
           <?php else: ?>
           <div class="op-empty">
             <span class="op-empty-ic"><?= v2_ic('check-circle') ?></span>
-            <p>Nu sunt activități trecute.</p>
+            <p><?= v2_te('There are no past experiences.') ?></p>
           </div>
           <?php endif; ?>
         </section>
 
         <section class="op-panel" id="op-panel-about" role="tabpanel" aria-labelledby="op-tab-about" hidden>
-          <h2>Despre operator</h2>
+          <h2><?= v2_te('About the operator') ?></h2>
           <p class="op-about"><?= v2_e($aboutText) ?></p>
           <?php if ($facts): ?>
-          <h3>Informații despre operator</h3>
+          <h3><?= v2_te('Operator details') ?></h3>
           <ul class="op-facts-grid">
             <?php foreach ($facts as [$factIcon, $factLabel, $factValue]): ?>
             <li class="op-fact"><span class="op-fact-ic"><?= v2_ic($factIcon) ?></span><span><small><?= v2_e($factLabel) ?></small><b><?= v2_e($factValue) ?></b></span></li>
@@ -411,16 +411,16 @@ include __DIR__ . '/../includes/v2/header.php';
         </section>
       </div>
 
-      <aside class="op-side" aria-label="Despre operator">
+      <aside class="op-side" aria-label="<?= v2_te('About the operator') ?>">
         <div class="op-box">
-          <h3>Despre operator</h3>
+          <h3><?= v2_te('About the operator') ?></h3>
           <p class="op-box-text"><?= v2_e($aboutText) ?></p>
-          <?php if (mb_strlen($about) > 280): ?><button class="op-more" type="button" data-open-tab="op-tab-about">Citește tot</button><?php endif; ?>
+          <?php if (mb_strlen($about) > 280): ?><button class="op-more" type="button" data-open-tab="op-tab-about"><?= v2_te('Read more') ?></button><?php endif; ?>
         </div>
 
         <?php if ($facts): ?>
         <div class="op-box">
-          <h3>Informații rapide</h3>
+          <h3><?= v2_te('Quick facts') ?></h3>
           <ul class="op-list">
             <?php foreach ($facts as [$factIcon, $factLabel, $factValue]): ?>
             <li><span class="op-list-ic"><?= v2_ic($factIcon) ?></span><span><small><?= v2_e($factLabel) ?></small><b><?= v2_e($factValue) ?></b></span></li>
@@ -430,20 +430,20 @@ include __DIR__ . '/../includes/v2/header.php';
         <?php endif; ?>
 
         <div class="op-box">
-          <h3>De ce viaqui.com</h3>
+          <h3><?= v2_te('Why {site}', ['site' => SITE_NAME]) ?></h3>
           <ul class="op-list op-trust">
-            <li><span class="op-list-ic"><?= v2_ic('check') ?></span><span>Confirmare instant</span></li>
-            <li><span class="op-list-ic"><?= v2_ic('qr-code') ?></span><span>Bilet digital cu cod QR</span></li>
-            <li><span class="op-list-ic"><?= v2_ic('lock-simple') ?></span><span>Plată securizată</span></li>
-            <li><span class="op-list-ic"><?= v2_ic('star') ?></span><span>Puncte bonus la fiecare comandă</span></li>
+            <li><span class="op-list-ic"><?= v2_ic('check') ?></span><span><?= v2_te('Instant confirmation') ?></span></li>
+            <li><span class="op-list-ic"><?= v2_ic('qr-code') ?></span><span><?= v2_te('Digital ticket with a QR code') ?></span></li>
+            <li><span class="op-list-ic"><?= v2_ic('lock-simple') ?></span><span><?= v2_te('Secure payment') ?></span></li>
+            <li><span class="op-list-ic"><?= v2_ic('star') ?></span><span><?= v2_te('Bonus points with every order') ?></span></li>
           </ul>
         </div>
 
         <div class="op-contact">
-          <h3>Interesat de colaborare?</h3>
-          <p>Contactează operatorul pentru activități private sau corporate.</p>
-          <button class="btn btn-light" type="button" data-contact aria-haspopup="dialog" aria-controls="op-contact"><?= v2_ic('envelope-simple') ?>Trimite mesaj</button>
-          <?php if ($website !== ''): ?><a class="btn btn-outline-light" href="<?= v2_e($website) ?>" target="_blank" rel="noopener nofollow">Website<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+          <h3><?= v2_te('Planning something together?') ?></h3>
+          <p><?= v2_te('Contact the operator about private or corporate experiences.') ?></p>
+          <button class="btn btn-light" type="button" data-contact aria-haspopup="dialog" aria-controls="op-contact"><?= v2_ic('envelope-simple') ?><?= v2_te('Send a message') ?></button>
+          <?php if ($website !== ''): ?><a class="btn btn-outline-light" href="<?= v2_e($website) ?>" target="_blank" rel="noopener nofollow"><?= v2_te('Website') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
         </div>
       </aside>
     </div>
@@ -454,21 +454,21 @@ include __DIR__ . '/../includes/v2/header.php';
     <div class="op-modal-box">
       <div class="op-modal-top">
         <div>
-          <h2 id="op-contact-h">Trimite mesaj</h2>
-          <p id="op-contact-to">Către <?= v2_e($name) ?></p>
+          <h2 id="op-contact-h"><?= v2_te('Send a message') ?></h2>
+          <p id="op-contact-to"><?= v2_te('To {name}', ['name' => $name]) ?></p>
         </div>
-        <button class="icon-btn" type="button" data-close><?= v2_ic('x') ?><span class="sr">Închide</span></button>
+        <button class="icon-btn" type="button" data-close><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close') ?></span></button>
       </div>
       <form class="op-form" id="op-form">
         <div class="op-row">
-          <div class="op-field"><label for="op-first">Prenume <abbr title="obligatoriu">*</abbr></label><input id="op-first" name="first_name" type="text" autocomplete="given-name" maxlength="100" required placeholder="Prenumele tău"></div>
-          <div class="op-field"><label for="op-last">Nume <abbr title="obligatoriu">*</abbr></label><input id="op-last" name="last_name" type="text" autocomplete="family-name" maxlength="100" required placeholder="Numele tău"></div>
+          <div class="op-field"><label for="op-first"><?= v2_te('First name') ?> <abbr title="<?= v2_te('required') ?>">*</abbr></label><input id="op-first" name="first_name" type="text" autocomplete="given-name" maxlength="100" required placeholder="<?= v2_te('Your first name') ?>"></div>
+          <div class="op-field"><label for="op-last"><?= v2_te('Last name') ?> <abbr title="<?= v2_te('required') ?>">*</abbr></label><input id="op-last" name="last_name" type="text" autocomplete="family-name" maxlength="100" required placeholder="<?= v2_te('Your last name') ?>"></div>
         </div>
-        <div class="op-field"><label for="op-email">Email <abbr title="obligatoriu">*</abbr></label><input id="op-email" name="email" type="email" autocomplete="email" maxlength="255" required placeholder="email@exemplu.ro"></div>
-        <div class="op-field"><label for="op-phone">Telefon</label><input id="op-phone" name="phone" type="tel" autocomplete="tel" maxlength="50" placeholder="07xx xxx xxx"></div>
-        <div class="op-field"><label for="op-message">Mesaj <abbr title="obligatoriu">*</abbr></label><textarea id="op-message" name="message" rows="5" maxlength="5000" required placeholder="Scrie mesajul tău aici..."></textarea></div>
+        <div class="op-field"><label for="op-email"><?= v2_te('Email') ?> <abbr title="<?= v2_te('required') ?>">*</abbr></label><input id="op-email" name="email" type="email" autocomplete="email" maxlength="255" required placeholder="<?= v2_te('you@example.com') ?>"></div>
+        <div class="op-field"><label for="op-phone"><?= v2_te('Phone') ?></label><input id="op-phone" name="phone" type="tel" autocomplete="tel" maxlength="50" placeholder="<?= v2_te('Your phone number') ?>"></div>
+        <div class="op-field"><label for="op-message"><?= v2_te('Message') ?> <abbr title="<?= v2_te('required') ?>">*</abbr></label><textarea id="op-message" name="message" rows="5" maxlength="5000" required placeholder="<?= v2_te('Write your message here…') ?>"></textarea></div>
         <p class="form-msg" id="op-form-msg" role="status" aria-live="polite" hidden></p>
-        <button class="btn btn-primary" id="op-submit" type="submit">Trimite mesajul</button>
+        <button class="btn btn-primary" id="op-submit" type="submit"><?= v2_te('Send message') ?></button>
       </form>
     </div>
   </div>
