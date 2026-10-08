@@ -193,7 +193,7 @@ function v2_org_end(): void
         <a href="/organizator/suport"><?= v2_ic('question') ?><?= v2_te('Support') ?></a>
       </nav>
       <a class="org-ftr-status" href="/status" title="<?= v2_te('Service status in real time and over the last 90 days') ?>"><span aria-hidden="true"></span><?= v2_te('All systems operational') ?></a>
-      <p class="org-ftr-copy"><?= v2_t('© {year} Viaqui · operated by {company}', ['year' => date('Y'), 'company' => '<a href="https://tixello.ro" target="_blank" rel="noopener">Tixello</a>']) ?></p>
+      <p class="org-ftr-copy"><?= v2_t('© {year} Viaqui · operated by {company}', ['year' => date('Y'), 'company' => '<a href="https://tixello.com" target="_blank" rel="noopener">Tixello</a>']) ?></p>
     </footer>
   </div>
 </div>

@@ -325,7 +325,7 @@ if (!$cards) {
 }
 
 // The ideas next to the heading: the menu's situations first, then the API's other intents, never this one
-$ideaSlugs = ['activitati-weekend' => v2_t('Weekend'), 'activitati-copii' => v2_t('With kids'), 'activitati-zile-ploioase' => v2_t('Rainy days'), 'activitati-sub-50-lei' => v2_t('Under {price}', ['price' => v2_money(50)]), 'activitati-cuplu' => v2_t('For couples')];
+$ideaSlugs = ['activitati-weekend' => v2_t('Weekend'), 'activitati-copii' => v2_t('With kids'), 'activitati-zile-ploioase' => v2_t('Rainy days'), 'activitati-cuplu' => v2_t('For couples')];
 $ideas = [];
 foreach ($ideaSlugs as $slug => $name) {
     if ($slug !== $intentSlugSafe) {
