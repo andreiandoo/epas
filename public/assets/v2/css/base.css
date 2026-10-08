@@ -1066,3 +1066,17 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 @media (min-width:1024px){.vf-legal-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}.vf-legal-row .vf-cur{justify-self:center}.vf-legal-row .vf-tags{justify-self:end;text-align:right}}
 @media (max-width:1023px){.vf-legal-row .vf-cur{flex:1 1 100%;justify-content:center}}
 .vf-marks .vf-up{margin-left:10px}
+
+/* a list that goes on (more.js): the row under the grid that says a page is loading, the button that takes over,
+   and the way back to the start of a list opened in the middle. Used by the city page and the attraction lists. */
+.cl-more{display:grid;justify-items:center;align-content:center;gap:var(--space-3);min-height:52px;margin-top:var(--space-6);text-align:center}
+.cl-more-status{display:flex;align-items:center;justify-content:center;gap:10px;margin:0;font-size:.9375rem;line-height:1.4;color:var(--muted)}
+.cl-more-line:empty{display:none}
+.cl-more.is-busy .cl-more-status::before{content:"";flex:none;width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--action);border-radius:50%;animation:cl-spin 800ms linear infinite}
+@keyframes cl-spin{to{transform:rotate(360deg)}}
+.cl-more-btn[hidden]{display:none}
+.cl-earlier{margin:var(--space-5) 0 0}
+.cl-earlier a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:var(--green);font-weight:700;text-decoration:underline;text-decoration-color:rgba(15,77,58,.3);text-underline-offset:4px}
+.cl-earlier a:hover{text-decoration-color:var(--green)}
+.cl-earlier .ic{width:18px;height:18px}
+@media (prefers-reduced-motion: reduce){.cl-more.is-busy .cl-more-status::before{animation:none;border-color:var(--action)}}
