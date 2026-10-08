@@ -78,9 +78,9 @@ define('SITE_LOCALE', 'en');
 define('SITE_CURRENCY', 'EUR');
 define('SITE_CURRENCY_SYMBOL', '€');
 
-// Pre-launch: viaqui.com still carries content copied from another marketplace, so search engines are kept out.
-// Set to false at launch (and replace robots.txt).
-define('SITE_PRELAUNCH', true);
+// Launched on 2026-10-08: search engines are let in (robots.txt lists what stays closed). Set to true to hide the
+// whole site again (every answer then carries "noindex", and bin/ping-search.php stops sending).
+define('SITE_PRELAUNCH', false);
 if (SITE_PRELAUNCH && PHP_SAPI !== 'cli' && !headers_sent()) {
     header('X-Robots-Tag: noindex, nofollow');
 }
