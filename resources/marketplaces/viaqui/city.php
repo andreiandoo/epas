@@ -646,6 +646,9 @@ include __DIR__ . '/includes/v2/header.php';
         <svg class="cl-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
       </div>
       <?php else: ?>
+      <?php if ($pageNum > 1): // opened in the middle of the list: the way back to its start, with or without the pager ?>
+      <p class="cl-earlier"><a href="<?= v2_e($cityUrl(['page' => ''])) ?>"><?= v2_ic('arrow-left') ?><?= v2_te('See the list from the start') ?></a></p>
+      <?php endif; ?>
       <ul class="xp-grid" data-reveal>
         <?php foreach ($cards as $i => $card): ?>
         <?php if (!empty($card['partner'])): ?><?= v2_partner_cards([$card['partner']], 'wegotrip', 'city-' . $slug) ?><?php continue; endif; ?>
@@ -816,36 +819,118 @@ include __DIR__ . '/includes/v2/header.php';
   <?php if (!empty($nearbyCities)): ?>
   <?php if ($flights): ?>
   <!-- ============================== FLIGHTS (partner: Aviasales) ============================== -->
-  <section class="sec pfl" id="flights" aria-labelledby="pfl-h">
+  <?php
+  // A boarding pass: the lowest fare found leads on the deep stub, the fare of each departure city is a row of the
+  // board beside it. Every number is a fare the Aviasales data returned (cheapest first); nothing is rounded or added.
+  $flBest = $flights[0];
+  $flSub = 'city-' . $slug . '-flights';
+  $flBestPrice = v2_price_local($flBest['price'], '');
+  $flBestDates = v2_flight_dates($flBest['out'], $flBest['back']);
+  // Aviasales' own search form with this city filled in as the destination: every fare, from wherever the visitor is
+  $flAllUrl = !empty($flBest['to'])
+      ? 'https://www.aviasales.com/?destination_iata=' . rawurlencode((string) $flBest['to']) . '&currency=' . strtolower(SITE_CURRENCY) . '&locale=en'
+      : $flBest['url'];
+  ?>
+  <section class="sec flp" id="flights" aria-labelledby="fl-h">
     <div class="wrap">
-      <div class="sec-head">
-        <div><p class="kicker"><?= v2_te('Getting there') ?></p><h2 id="pfl-h"><?= v2_te('Flights to {city}', ['city' => $cityName]) ?></h2></div>
+      <div class="fl-pass">
+        <div class="fl-lead">
+          <?php if ($heroPhoto): ?><img class="fl-photo" src="<?= v2_e($heroPhoto['src']) ?>" alt="" loading="lazy" decoding="async"><?php endif; ?>
+          <p class="kicker"><?= v2_te('Getting there') ?></p>
+          <h2 id="fl-h"><?= v2_t('Return flights to {city} <span class="fl-price">from <b>{price}</b></span>', ['city' => v2_e($cityName), 'price' => v2_e($flBestPrice)]) ?></h2>
+          <p class="fl-best"><?= $flBest['direct']
+              ? v2_te('The lowest fare we found: {origin} to {city}, {dates}, direct.', ['origin' => $flBest['from'], 'city' => $cityName, 'dates' => $flBestDates])
+              : v2_te('The lowest fare we found: {origin} to {city}, {dates}, with a stop.', ['origin' => $flBest['from'], 'city' => $cityName, 'dates' => $flBestDates]) ?></p>
+          <a class="btn btn-light fl-all" href="<?= v2_e(v2_partner_href('aviasales', $flAllUrl, $flSub)) ?>" target="_blank" rel="sponsored nofollow noopener"><?= v2_te('Search all flights to {city}', ['city' => $cityName]) ?><?= v2_ic('arrow-right') ?></a>
+          <p class="fl-on"><?= v2_te('Opens the search on Aviasales, with {city} already filled in.', ['city' => $cityName]) ?></p>
+        </div>
+        <div class="fl-board">
+          <p class="fl-board-h"><?= v2_te('Lowest return fare found, by departure city') ?></p>
+          <ol class="fl-list">
+            <?php foreach ($flights as $fi => $f): ?>
+            <li><a href="<?= v2_e(v2_partner_href('aviasales', $f['url'], $flSub)) ?>" target="_blank" rel="sponsored nofollow noopener">
+              <span class="fl-route"><b><?= v2_e($f['from']) ?></b><?= v2_ic('arrow-right') ?><span><?= v2_e($cityName) ?></span><?php if ($fi === 0 && count($flights) > 1): ?><i class="fl-tag"><?= v2_te('Lowest') ?></i><?php endif; ?></span>
+              <span class="fl-when"><?= v2_ic('calendar-blank') ?><span><?= v2_e(v2_flight_dates($f['out'], $f['back'])) ?></span><span class="fl-stop"><?= $f['direct'] ? v2_te('Direct') : v2_te('With a stop') ?></span></span>
+              <span class="fl-fare"><small><?= v2_te('from') ?></small><b><?= v2_e(v2_price_local($f['price'], '')) ?></b></span>
+              <span class="fl-go"><span class="sr"><?= v2_te('See this fare on Aviasales') ?></span><?= v2_ic('arrow-right') ?></span>
+            </a></li>
+            <?php endforeach; ?>
+          </ol>
+          <p class="fl-note"><?= v2_te('Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline\'s site. Viaqui may earn a commission, at no extra cost to you.') ?></p>
+        </div>
       </div>
-      <ul class="pfl-list">
-        <?php foreach ($flights as $f): ?>
-        <li><a href="<?= v2_e(v2_partner_href('aviasales', $f['url'], 'city-' . $slug . '-flights')) ?>" target="_blank" rel="sponsored nofollow noopener">
-          <span class="pfl-from"><small><?= v2_te('From') ?></small><b><?= v2_e($f['from']) ?></b></span>
-          <span class="pfl-when"><?= v2_e(v2_flight_dates($f['out'], $f['back'])) ?><small><?= $f['direct'] ? v2_te('Direct · return') : v2_te('With a stop · return') ?></small></span>
-          <span class="pfl-price"><small><?= v2_te('from') ?></small><b><?= v2_e(v2_price_local($f['price'], '')) ?></b></span>
-          <?= v2_ic('arrow-right') ?>
-        </a></li>
-        <?php endforeach; ?>
-      </ul>
-      <p class="partner-note"><?= v2_te('Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline\'s site. Viaqui may earn a commission, at no extra cost to you.') ?></p>
     </div>
   </section>
   <?php endif; ?>
 
   <?php if ($tripLinks): ?>
   <!-- ============================== PLAN YOUR TRIP (partners: transfer, luggage, eSIM, car) ============================== -->
-  <section class="sec ptrip-sec" id="plan-your-trip" aria-labelledby="ptrip-h">
+  <?php
+  // What each service solves for someone arriving in this city: [name of the service, the benefit, one line, the action].
+  // The two a city visit needs first (the ride in from the airport, somewhere for the bags) are the large cards.
+  $tripCountry = v2_partner_the($countryName);
+  $tripCopy = [
+      'transfer' => [
+          v2_t('Airport transfer'),
+          v2_t('A driver waiting for you at arrivals'),
+          v2_t('The price is fixed when you book, before you fly, so there is no meter to watch on the way to your door in {city}.', ['city' => $cityName]),
+          v2_t('Book a transfer'),
+      ],
+      'luggage' => [
+          v2_t('Luggage storage'),
+          v2_t('Free hands between check-out and your flight'),
+          v2_t('Leave your bags for a few hours near the station or in the centre, and spend the last day in {city} without them.', ['city' => $cityName]),
+          v2_t('Find luggage storage'),
+      ],
+      'esim' => [
+          $tripCountry !== '' ? v2_t('eSIM for {country}', ['country' => $tripCountry]) : v2_t('eSIM for your trip'),
+          v2_t('Mobile data from the moment you land'),
+          v2_t('Install it on your phone before you leave home and switch it on when you land, with no roaming bill to come home to.'),
+          v2_t('Get an eSIM'),
+      ],
+      'car' => [
+          v2_t('Car hire'),
+          v2_t('A car for the days you leave {city}', ['city' => $cityName]),
+          v2_t('See the towns and countryside around {city} on your own timetable, and hand the car back when you are done.', ['city' => $cityName]),
+          v2_t('Compare car hire'),
+      ],
+  ];
+  $tripCards = array_values(array_filter($tripLinks, fn ($l) => isset($tripCopy[$l['kind']])));
+  $tripLead = array_values(array_intersect(['transfer', 'luggage'], array_column($tripCards, 'kind')));
+  if (!$tripLead && $tripCards) {
+      $tripLead = [$tripCards[0]['kind']];      // neither is on offer here: the first service leads
+  }
+  usort($tripCards, fn ($a, $b) => in_array($b['kind'], $tripLead, true) <=> in_array($a['kind'], $tripLead, true));   // large cards first; the order is otherwise kept
+  ?>
+  <?php if ($tripCards): ?>
+  <section class="sec trip" id="plan-your-trip" aria-labelledby="trip-h">
     <div class="wrap">
-      <div class="sec-head">
-        <div><p class="kicker"><?= v2_te('Before you go') ?></p><h2 id="ptrip-h"><?= v2_te('Plan your trip to {city}', ['city' => $cityName]) ?></h2></div>
+      <div class="trip-head">
+        <p class="kicker"><?= v2_te('Before you go') ?></p>
+        <h2 id="trip-h"><?= v2_te('Arrive in {city} with the practical things sorted', ['city' => $cityName]) ?></h2>
+        <p class="trip-sub"><?= v2_te('The parts of a city trip that are easier to settle at home than at the airport. Each is booked online, ahead of the trip, on the partner\'s own site.') ?></p>
       </div>
-      <?= v2_trip_tiles($tripLinks, 'city-' . $slug) ?>
+      <ul class="trip-list" data-lead="<?= count($tripLead) ?>" data-rest="<?= count($tripCards) - count($tripLead) ?>">
+        <?php foreach ($tripCards as $l): [$tKind, $tTitle, $tText, $tCta] = $tripCopy[$l['kind']]; $tLead = in_array($l['kind'], $tripLead, true); ?>
+        <li class="trip-card<?= $tLead ? ' is-lead' : '' ?>"><a href="<?= v2_e(v2_partner_href($l['program'], $l['url'], 'city-' . $slug . '-' . $l['kind'])) ?>" target="_blank" rel="sponsored nofollow noopener">
+          <span class="trip-ic"><?= v2_ic($l['icon']) ?></span>
+          <span class="trip-body">
+            <span class="trip-kind"><?= v2_e($tKind) ?></span>
+            <b class="trip-title"><?= v2_e($tTitle) ?></b>
+            <span class="trip-text"><?= v2_e($tText) ?></span>
+          </span>
+          <span class="trip-foot">
+            <span class="trip-cta"><?= v2_e($tCta) ?><?= v2_ic('arrow-right') ?></span>
+            <span class="trip-by"><?= v2_te('Booked and paid on {partner}', ['partner' => $l['name']]) ?></span>
+          </span>
+          <?php if ($tLead): ?><?= v2_ic($l['icon'], 'trip-mark') ?><?php endif; ?>
+        </a></li>
+        <?php endforeach; ?>
+      </ul>
+      <p class="partner-note"><?= v2_te('These services are sold by our partners: you book and pay on their sites. Viaqui may earn a commission, at no extra cost to you.') ?></p>
     </div>
   </section>
+  <?php endif; ?>
   <?php endif; ?>
 
   <section class="sec cn" id="nearby" aria-labelledby="nearby-h">
