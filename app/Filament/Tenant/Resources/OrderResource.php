@@ -39,11 +39,13 @@ class OrderResource extends Resource
                             ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">#' . str_pad($record->id, 6, '0', STR_PAD_LEFT) . '</span>')),
                         Forms\Components\Placeholder::make('status')
                             ->label('Status')
-                            ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->status) {
-                                'pending' => 'bg-warning-100 text-warning-700',
-                                'paid', 'confirmed' => 'bg-success-100 text-success-700',
-                                'cancelled' => 'bg-danger-100 text-danger-700',
-                                default => 'bg-gray-100 text-gray-700',
+                            // Culori scrise explicit: clasele de nuanță nu sunt toate în tema compilată, iar pe tema
+                            // închisă textul ajungea alb pe fundal verde deschis.
+                            ->content(fn ($record) => new HtmlString('<span style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:14px;font-weight:600;' . match ($record->status) {
+                                'pending' => 'background:#fef3c7;color:#92400e;',
+                                'paid', 'confirmed', 'completed' => 'background:#dcfce7;color:#166534;',
+                                'cancelled', 'failed' => 'background:#fee2e2;color:#991b1b;',
+                                default => 'background:#e5e7eb;color:#374151;',
                             } . '">' . match ($record->status) {
                                 'pending' => 'În așteptare',
                                 'paid' => 'Plătită',

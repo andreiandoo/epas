@@ -30,7 +30,7 @@
     } elseif ($isMarketplacePanel) {
         $searchPlaceholder = 'Search events, organizers, orders, customers...';
     } else {
-        $searchPlaceholder = 'Search pages, events, orders, tickets...';
+        $searchPlaceholder = __('Search pages, events, orders, tickets...');
     }
 
     // Get tenant slug for search API (tenant panel only)
@@ -248,12 +248,12 @@
                 href="{{ $publicSiteUrl }}"
                 target="_blank"
                 class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                title="View Public Site"
+                title="{{ __('View Public Site') }}"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                 </svg>
-                <span class="hidden md:inline">Public Site</span>
+                <span class="hidden md:inline">{{ __('Public Site') }}</span>
             </a>
 
             {{-- User Account Menu with Theme Switcher --}}

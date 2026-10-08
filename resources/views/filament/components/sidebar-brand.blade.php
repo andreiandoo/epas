@@ -44,8 +44,10 @@
     .dark .ep-logo-dark { display: block; }
 </style>
 @if($isTenantPanel)
-    <img src="{{ asset('images/tixello-wordmark-dark.svg') }}" alt="{{ $brandName }}" class="ep-logo-light" style="height:22px;width:auto;max-width:150px;">
-    <img src="{{ asset('images/tixello-wordmark-white.svg') }}" alt="{{ $brandName }}" class="ep-logo-dark" style="height:22px;width:auto;max-width:150px;">
+    <div style="display:flex;justify-content:flex-start;align-items:center;width:100%;padding:2px 12px 20px;">
+        <img src="{{ asset('images/tixello-wordmark-dark.svg') }}" alt="{{ $brandName }}" class="ep-logo-light" style="height:22px;width:auto;max-width:150px;margin:0;">
+        <img src="{{ asset('images/tixello-wordmark-white.svg') }}" alt="{{ $brandName }}" class="ep-logo-dark" style="height:22px;width:auto;max-width:150px;margin:0;">
+    </div>
 @elseif($logoLight || $logoDark)
     @if($logoLight && $logoDark)
         {{-- Both logos provided --}}

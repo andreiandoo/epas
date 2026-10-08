@@ -23,17 +23,17 @@
                 </div>
             </div>
             <div class="text-right flex items-center gap-3">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ match($ticket->status) {
-                    'valid' => 'bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-400',
-                    'used' => 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400',
-                    'cancelled' => 'bg-danger-100 text-danger-700 dark:bg-danger-500/20 dark:text-danger-400',
-                    default => 'bg-warning-100 text-warning-700 dark:bg-warning-500/20 dark:text-warning-400',
+                <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:9999px;font-size:12px;font-weight:600;{{ match($ticket->status) {
+                    'valid' => 'background:#dcfce7;color:#166534;',
+                    'used' => 'background:#e5e7eb;color:#374151;',
+                    'cancelled' => 'background:#fee2e2;color:#991b1b;',
+                    default => 'background:#fef3c7;color:#92400e;',
                 } }}">
                     {{ match($ticket->status) {
                         'valid' => 'Valid',
                         'used' => 'Folosit',
                         'cancelled' => 'Anulat',
-                        'pending' => 'In asteptare',
+                        'pending' => 'În așteptare',
                         default => ucfirst($ticket->status ?? 'N/A'),
                     } }}
                 </span>
