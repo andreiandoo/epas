@@ -3,10 +3,14 @@
 ?>
 <footer class="site-foot">
     <div class="wrap">
+        <div class="site-foot__big" aria-hidden="true">Karate WUKF</div>
         <div class="site-foot__grid">
             <div>
-                <h3><?= e(SITE_NAME) ?></h3>
-                <p style="max-width:44ch">Biletele pentru cupele și campionatele naționale se cumpără online și se primesc pe email, cu cod QR pentru acces în sală.</p>
+                <div class="site-foot__brand">
+                    <img src="/assets/logo-wukf.png" alt="" width="52" height="52" loading="lazy">
+                    <span><?= e(SITE_NAME) ?></span>
+                </div>
+                <p style="max-width:44ch">Biletele pentru cupele și campionatele naționale se cumpără online și ajung pe email, cu cod QR pentru accesul în sală.</p>
             </div>
             <div>
                 <h3>Bilete</h3>
@@ -31,6 +35,7 @@
     </div>
 </footer>
 
-<div class="toast" x-data="toastHost" x-show="show" x-cloak x-text="msg" role="status"></div>
+<div class="toast" x-data="toastHost" x-show="show" x-cloak x-transition.opacity x-text="msg" role="status"></div>
+<?= $pageFootScripts ?? '' ?>
 </body>
 </html>

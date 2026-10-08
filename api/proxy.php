@@ -26,6 +26,7 @@ $action = $_GET['action'] ?? '';
 // Rutare acțiune → (method, path upstream)
 $routes = [
     'checkout'    => ['POST', '/tenant-client/demo-checkout'],
+    'quote'       => ['POST', '/tenant-client/demo-checkout/quote'],
     'login'       => ['POST', '/tenant-client/auth/login'],
     'register'    => ['POST', '/tenant-client/auth/register'],
     'me'          => ['GET',  '/tenant-client/auth/me'],
