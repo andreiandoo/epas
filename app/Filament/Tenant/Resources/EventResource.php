@@ -1409,6 +1409,31 @@ class EventResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
+            // Vânzările evenimentului (doar pe un eveniment salvat): cifre, tipuri de bilet, zile, ultimele comenzi
+            SC\Tabs\Tab::make('Vânzări')
+                ->key('vanzari')
+                ->icon('heroicon-o-banknotes')
+                ->visible(fn (?Event $record) => (bool) $record?->exists)
+                ->schema([
+                    Forms\Components\Placeholder::make('sales_summary')
+                        ->hiddenLabel()
+                        ->columnSpanFull()
+                        ->content(function (?Event $record) {
+                            if (! $record || ! $record->exists) {
+                                return '';
+                            }
+                            try {
+                                return new HtmlString(view('filament.tenant.resources.event-resource.sales-tab', [
+                                    's' => \App\Support\Tenant\EventSalesSummary::for($record),
+                                ])->render());
+                            } catch (\Throwable $e) {
+                                report($e);
+
+                                return new HtmlString('<div class="text-sm text-gray-500">Cifrele de vânzări nu au putut fi încărcate.</div>');
+                            }
+                        }),
+                ]),
+
             SC\Tabs\Tab::make('SEO')->icon('heroicon-o-magnifying-glass')->schema([
 
             // SEO Section
