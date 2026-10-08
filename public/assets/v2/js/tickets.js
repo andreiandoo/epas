@@ -10,14 +10,14 @@
   if (!$('tk-content') || !window.BO_ACCOUNT) return;
   var account = window.BO_ACCOUNT;
 
-  var MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
-  var LABELS = { valid: 'valid', paid: 'plătit', confirmed: 'confirmat', pending: 'în așteptare', cancelled: 'anulat', refunded: 'rambursat' };
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var LABELS = { valid: VQ.t('valid'), paid: VQ.t('paid'), confirmed: VQ.t('confirmed'), pending: VQ.t('pending'), cancelled: VQ.t('cancelled'), refunded: VQ.t('refunded') };
   var READY = ['valid', 'paid', 'confirmed', 'pending'];
   var STATUSES = ['all', 'upcoming', 'valid', 'used', 'expired', 'action'];
   var SORTS = ['soon', 'newest', 'activity'];
   var DEFAULTS = { q: '', status: 'upcoming', city: 'all', sort: 'soon' };
   var FAR = 8.64e15;
-  var num = new Intl.NumberFormat('ro-RO');
+  var num = new Intl.NumberFormat(LOC);
   var state = Object.assign({}, DEFAULTS);
   var tickets = [], loaded = false, current = null, opener = null, bulkBusy = false, sayTimer = 0, qTimer = 0;
   var today = new Date(); today.setHours(0, 0, 0, 0);
@@ -30,25 +30,20 @@
     return svg;
   }
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
     return v == null ? '' : String(v);
   }
   function fold(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
-  function plural(n, one, many) {
-    n = Math.max(0, Math.floor(Number(n) || 0));
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
+
   function show(id, on) { $(id).hidden = !on; }
   function parseDate(v) { var d = v ? new Date(v) : null; return d && !isNaN(d.getTime()) ? d : null; }
-  function shortDate(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  function shortDate(d) { return d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' }); }
   function when(t) {
     if (!t.date) return '—';
-    if (t.end) return t.date.getDate() + ' ' + MONTHS[t.date.getMonth()] + (t.date.getFullYear() !== t.end.getFullYear() ? ' ' + t.date.getFullYear() : '') + ' – ' + shortDate(t.end);
+    if (t.end) return (t.date.getFullYear() !== t.end.getFullYear() ? shortDate(t.date) : t.date.toLocaleDateString(LOC, { day: 'numeric', month: 'short' })) + ' – ' + shortDate(t.end);
     return shortDate(t.date) + (t.time ? ' · ' + t.time : '');
   }
-  function fileName(s) { return String(s || '').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'bilet'; }
+  function fileName(s) { return String(s || '').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'ticket'; }
   function say(message, tone) {
     clearTimeout(sayTimer);
     [$('tk-status-line'), $('tk-d-msg')].forEach(function (line) {
@@ -69,9 +64,9 @@
       id: txt(raw.id), seq: Number(raw.id) || i, code: txt(raw.code || raw.barcode), status: status,
       used: raw.checked_in === true || status === 'checked_in' || status === 'used',
       cancelled: status === 'cancelled' || status === 'refunded',
-      title: txt(ev.name || ev.title || raw.event_title) || 'Bilet', venue: txt(ev.venue || raw.venue_name), city: txt(ev.city || raw.event_city),
+      title: txt(ev.name || ev.title || raw.event_title) || VQ.t('Ticket'), venue: txt(ev.venue || raw.venue_name), city: txt(ev.city || raw.event_city),
       date: date, end: end && date && end > date ? end : null, time: time ? time[0] : '', eventKey: txt(ev.id || ev.slug || ev.name),
-      attendee: txt(raw.attendee_name).trim(), type: txt(raw.type || raw.ticket_type) || 'Standard',
+      attendee: txt(raw.attendee_name).trim(), type: txt(raw.type || raw.ticket_type) || VQ.t('Standard'),
       seat: txt(raw.seat_label), order: txt(raw.order_number),
       protection: !!(raw.has_protection || raw.protection || raw.protected || (raw.options && raw.options.protection))
     };
@@ -102,7 +97,7 @@
       return matches(t, state.status) && (state.city === 'all' || t.city === state.city)
         && words.every(function (w) { return t.haystack.indexOf(w) !== -1; });
     });
-    if (state.sort === 'activity') list.sort(function (a, b) { return a.title.localeCompare(b.title, 'ro') || time(a) - time(b); });
+    if (state.sort === 'activity') list.sort(function (a, b) { return a.title.localeCompare(b.title, VQ.locale) || time(a) - time(b); });
     else if (state.sort === 'newest') list.sort(function (a, b) { return b.seq - a.seq; });
     else list.sort(bySoon);
     return list;
@@ -156,7 +151,7 @@
     var select = $('tk-city'), seen = {};
     tickets.forEach(function (t) { if (t.city) seen[t.city] = true; });
     while (select.options.length > 1) select.remove(1);
-    Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, 'ro'); }).forEach(function (c) { select.appendChild(new Option(c, c)); });
+    Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, VQ.locale); }).forEach(function (c) { select.appendChild(new Option(c, c)); });
   }
   function renderCounts() {
     var up = 0, events = {}, ready = 0, used = 0, action = 0;
@@ -167,7 +162,7 @@
       if (needsName(t)) action++;
     });
     $('tk-c-upcoming').textContent = num.format(up);
-    $('tk-c-activities').textContent = 'în ' + plural(Object.keys(events).length, 'activitate', 'activități');
+    $('tk-c-activities').textContent = VQ.t('in {activities}', { activities: VQ.n(Object.keys(events).length, 'activity', 'activities') });
     $('tk-c-valid').textContent = num.format(ready);
     $('tk-c-used').textContent = num.format(used);
     $('tk-c-action').textContent = num.format(action);
@@ -177,19 +172,19 @@
   function renderNext() {
     var next = tickets.filter(function (t) { return t.upcoming && !t.cancelled && !t.used; }).sort(bySoon)[0] || null;
     var btn = $('tk-next-qr'), slot = $('tk-next-qr-slot');
-    $('tk-next-t').textContent = next ? next.title : 'În curând';
-    $('tk-next-sub').textContent = next ? [when(next), next.city].filter(function (x) { return x && x !== '—'; }).join(' · ') : 'Nu ai bilete viitoare';
+    $('tk-next-t').textContent = next ? next.title : VQ.t('Coming soon');
+    $('tk-next-sub').textContent = next ? [when(next), next.city].filter(function (x) { return x && x !== '—'; }).join(' · ') : VQ.t('You have no upcoming tickets');
     btn.disabled = !(next && next.code);
     if (!next || !next.code) return;
     var svg = account.qr(next.code);
     if (svg) { slot.textContent = ''; slot.appendChild(svg); }
-    btn.setAttribute('aria-label', 'QR mare: ' + next.title);
+    btn.setAttribute('aria-label', VQ.t('Large QR: {title}', { title: next.title }));
     btn.onclick = function () { openQr(next, btn); };
   }
   function badge(t) {
-    if (t.used) return ['scanat', 'is-used'];
+    if (t.used) return [VQ.t('scanned'), 'is-used'];
     if (t.cancelled) return [LABELS[t.status], 'is-bad'];
-    if (!t.upcoming && READY.indexOf(t.status) !== -1) return ['expirat', 'is-past'];
+    if (!t.upcoming && READY.indexOf(t.status) !== -1) return [VQ.t('expired'), 'is-past'];
     if (t.status === 'pending') return [LABELS.pending, 'is-wait'];
     if (READY.indexOf(t.status) !== -1) return [LABELS[t.status], 'is-ok'];
     return [LABELS[t.status] || t.status || '—', ''];
@@ -223,11 +218,11 @@
     var li = el('li', 'tk-card' + (t.cancelled || (!t.upcoming && !t.used) ? ' is-muted' : ''));
     li.id = 't-' + t.id;
     var ticket = el('article', 'tk-ticket'), main = el('div', 'tk-main'), tags = el('div', 'tk-tags'), b = badge(t);
-    var orderUrl = t.order ? '/cont/comenzi#' + encodeURIComponent(t.order) : '/cont/comenzi';
+    var orderUrl = t.order ? VQ.url('/account/orders') + '#' + encodeURIComponent(t.order) : VQ.url('/account/orders');
 
     tags.appendChild(el('span', 'tk-badge ' + b[1], b[0]));
     if (t.city) tags.appendChild(el('span', 'tk-badge', t.city));
-    if (t.protection) tags.appendChild(el('span', 'tk-badge is-prot', 'protecție bilet'));
+    if (t.protection) tags.appendChild(el('span', 'tk-badge is-prot', VQ.t('ticket protection')));
     main.appendChild(tags);
     var h = el('h3', null, t.title);
     h.id = 'tk-t-' + t.id;
@@ -236,32 +231,32 @@
     if (t.venue) main.appendChild(el('p', 'tk-venue', t.venue));
 
     var facts = el('dl', 'tk-facts');
-    fact(facts, 'Data', whenNode(t));
-    fact(facts, 'Beneficiar', t.attendee || 'necompletat', t.attendee ? '' : 'is-empty');
-    fact(facts, 'Tip bilet', t.type);
-    fact(facts, 'Cod', t.code || '—', 'is-code');
-    if (t.seat) fact(facts, 'Loc', t.seat, '', true);
+    fact(facts, VQ.t('Date'), whenNode(t));
+    fact(facts, VQ.t('Guest'), t.attendee || VQ.t('not filled in'), t.attendee ? '' : 'is-empty');
+    fact(facts, VQ.t('Ticket type'), t.type);
+    fact(facts, VQ.t('Code'), t.code || '—', 'is-code');
+    if (t.seat) fact(facts, VQ.t('Seat'), t.seat, '', true);
     main.appendChild(facts);
 
     if (needsName(t)) {
       var notice = el('div', 'tk-notice');
-      notice.appendChild(el('b', null, 'Adaugă beneficiar'));
-      notice.appendChild(el('p', null, 'Completează numele înainte de eveniment pentru a evita probleme la intrare.'));
+      notice.appendChild(el('b', null, VQ.t('Add a guest name')));
+      notice.appendChild(el('p', null, VQ.t('Fill in the name before the activity to avoid trouble at the entrance.')));
       main.appendChild(notice);
     }
 
-    var actions = el('div', 'tk-actions'), open = el('a', 'btn btn-primary', 'Deschide');
+    var actions = el('div', 'tk-actions'), open = el('a', 'btn btn-primary', VQ.t('Open'));
     open.href = orderUrl;
-    open.setAttribute('aria-label', 'Deschide comanda pentru ' + t.title);
+    open.setAttribute('aria-label', VQ.t('Open the order for {title}', { title: t.title }));
     actions.appendChild(open);
-    if (t.id) actions.appendChild(button('btn btn-ghost', 'PDF', 'Descarcă PDF: ' + t.title, function (e) { pdfOne(t, e.currentTarget); }));
-    if (t.date && !t.cancelled) actions.appendChild(button('btn btn-ghost', 'Calendar', 'Adaugă în calendar: ' + t.title, function () { calendarFor([t], t.title); }, 'calendar-blank'));
-    if (t.code && !t.cancelled) actions.appendChild(button('btn btn-ghost', 'QR mare', 'QR mare: ' + t.title, function (e) { openQr(t, e.currentTarget); }, 'qr-code'));
+    if (t.id) actions.appendChild(button('btn btn-ghost', VQ.t('PDF'), VQ.t('Download PDF: {title}', { title: t.title }), function (e) { pdfOne(t, e.currentTarget); }));
+    if (t.date && !t.cancelled) actions.appendChild(button('btn btn-ghost', VQ.t('Calendar'), VQ.t('Add to calendar: {title}', { title: t.title }), function () { calendarFor([t], t.title); }, 'calendar-blank'));
+    if (t.code && !t.cancelled) actions.appendChild(button('btn btn-ghost', VQ.t('Large QR'), VQ.t('Large QR: {title}', { title: t.title }), function (e) { openQr(t, e.currentTarget); }, 'qr-code'));
     main.appendChild(actions);
     if (t.upcoming && !t.used && !t.cancelled) {
-      var more = el('div', 'tk-more'), rename = el('a', null, 'Schimbă numele'), refund = el('a', 'tk-refund', 'Retur');
-      rename.href = '/contact?motiv=bilete';
-      refund.href = '/contact?motiv=retur';
+      var more = el('div', 'tk-more'), rename = el('a', null, VQ.t('Change the name')), refund = el('a', 'tk-refund', VQ.t('Refund'));
+      rename.href = VQ.url('/contact') + '?motiv=bilete';
+      refund.href = VQ.url('/contact') + '?motiv=retur';
       more.appendChild(rename);
       more.appendChild(refund);
       main.appendChild(more);
@@ -272,17 +267,17 @@
     qrBtn.type = 'button';
     var svg = t.code && !t.cancelled ? account.qr(t.code) : null;
     qrBtn.appendChild(svg || ic('qr-code'));
-    if (t.used || t.cancelled) qrBtn.appendChild(el('span', 'tk-stub-state', t.used ? 'Scanat' : (t.status === 'refunded' ? 'Rambursat' : 'Anulat')));
+    if (t.used || t.cancelled) qrBtn.appendChild(el('span', 'tk-stub-state', t.used ? VQ.t('Scanned') : (t.status === 'refunded' ? VQ.t('Refunded') : VQ.t('Cancelled'))));
     if (t.code && !t.cancelled) {
-      qrBtn.setAttribute('aria-label', 'QR mare: ' + t.title);
+      qrBtn.setAttribute('aria-label', VQ.t('Large QR: {title}', { title: t.title }));
       qrBtn.addEventListener('click', function () { openQr(t, qrBtn); });
     } else {
       qrBtn.disabled = true;
-      qrBtn.setAttribute('aria-label', t.cancelled ? 'Bilet ' + (LABELS[t.status] || 'anulat') + ', fără QR' : 'QR indisponibil');
+      qrBtn.setAttribute('aria-label', t.cancelled ? VQ.t('Ticket {status}, no QR', { status: LABELS[t.status] || VQ.t('cancelled') }) : VQ.t('QR not available'));
     }
     stub.appendChild(qrBtn);
     if (t.code) stub.appendChild(el('p', 'tk-stub-code', t.code.slice(-6).toUpperCase()));
-    stub.appendChild(el('p', 'tk-k', 'Comandă'));
+    stub.appendChild(el('p', 'tk-k', VQ.t('Order')));
     if (t.order) {
       var orderLink = el('a', 'tk-order', '#' + t.order);
       orderLink.href = orderUrl;
@@ -296,7 +291,7 @@
   }
   function render() {
     var list = filtered(), ul = $('tk-list'), frag = document.createDocumentFragment();
-    $('tk-count').textContent = plural(list.length, 'bilet', 'bilete');
+    $('tk-count').textContent = VQ.n(list.length, 'ticket', 'tickets');
     $('tk-all-pdf').disabled = bulkBusy || !list.length;
     $('tk-all-cal').disabled = !list.length;
     list.forEach(function (t) { frag.appendChild(card(t)); });
@@ -308,8 +303,8 @@
     show('tk-empty', !list.length);
     if (!list.length) {
       var none = !tickets.length;
-      $('tk-empty-h').textContent = none ? 'Nu ai bilete încă' : 'Nicio potrivire';
-      $('tk-empty-p').textContent = none ? 'Descoperă activități și rezervă online.' : 'Schimbă filtrele sau resetează căutarea.';
+      $('tk-empty-h').textContent = none ? VQ.t('You have no tickets yet') : VQ.t('Nothing matches');
+      $('tk-empty-p').textContent = none ? VQ.t('Find things to do and book online.') : VQ.t('Change the filters or reset the search.');
       show('tk-empty-cta', none);
       show('tk-empty-reset', !none);
     }
@@ -332,27 +327,27 @@
     try { token = BileteOnlineAuth.getToken(); } catch (e) {}
     if (!token) return Promise.resolve('auth');
     var label = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = 'Se descarcă…'; }
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = VQ.t('Downloading…'); }
     var api = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php';
     return fetch(api + '?action=ticket.download-pdf&id=' + encodeURIComponent(t.id), {
       headers: { Authorization: 'Bearer ' + token, Accept: 'application/pdf' }, credentials: 'same-origin', cache: 'no-store'
     }).then(function (r) {
       if (r.status === 401) return 'auth';
       if (!r.ok || (r.headers.get('Content-Type') || '').indexOf('pdf') === -1) return 'missing';
-      return r.blob().then(function (blob) { account.save(blob, 'bilet-' + fileName(t.code || t.id) + '.pdf'); return 'ok'; });
+      return r.blob().then(function (blob) { account.save(blob, 'ticket-' + fileName(t.code || t.id) + '.pdf'); return 'ok'; });
     }, function () { return 'network'; }).then(function (result) {
       if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = label; }
       return result;
     });
   }
   function pdfMessage(result, t) {
-    if (result === 'auth') return 'Sesiunea a expirat. Intră din nou în cont ca să descarci biletele.';
-    if (result === 'missing') return 'PDF-ul pentru „' + t.title + '” nu este disponibil acum. Încearcă din nou în câteva minute sau scrie-ne.';
-    return 'Nu am putut descărca PDF-ul. Verifică conexiunea și încearcă din nou.';
+    if (result === 'auth') return VQ.t('Your session has expired. Sign in again to download your tickets.');
+    if (result === 'missing') return VQ.t('The PDF for “{title}” is not available right now. Try again in a few minutes or write to us.', { title: t.title });
+    return VQ.t('We could not download the PDF. Check your connection and try again.');
   }
   function pdfOne(t, btn) {
     pdf(t, btn).then(function (result) {
-      if (result === 'ok') say('Am descărcat biletul pentru „' + t.title + '”.', 'ok');
+      if (result === 'ok') say(VQ.t('The ticket for “{title}” was downloaded.', { title: t.title }), 'ok');
       else say(pdfMessage(result, t), 'error');
     });
   }
@@ -366,7 +361,7 @@
     (function step() {
       if (i >= list.length) return finish();
       var t = list[i++];
-      btn.textContent = 'Se descarcă ' + i + '/' + list.length + '…';
+      btn.textContent = VQ.t('Downloading {done}/{total}…', { done: i, total: list.length });
       pdf(t, null).then(function (result) {
         if (result === 'ok') ok++;
         else { failed++; lastError = pdfMessage(result, t); if (result === 'auth') { failed += list.length - i; i = list.length; } }
@@ -376,10 +371,10 @@
     function finish() {
       bulkBusy = false;
       btn.removeAttribute('aria-busy');
-      btn.textContent = 'Descarcă toate PDF';
+      btn.textContent = VQ.t('Download all PDFs');
       btn.disabled = !filtered().length;
-      if (!failed) say('Am descărcat ' + plural(ok, 'PDF', 'PDF-uri') + '.', 'ok');
-      else say((ok ? 'Am descărcat ' + plural(ok, 'PDF', 'PDF-uri') + '. ' : '') + plural(failed, 'bilet nu a putut fi descărcat.', 'bilete nu au putut fi descărcate.') + ' ' + lastError, 'error');
+      if (!failed) say(VQ.t('Downloaded: {files}.', { files: VQ.n(ok, 'PDF', 'PDFs') }), 'ok');
+      else say((ok ? VQ.t('Downloaded: {files}.', { files: VQ.n(ok, 'PDF', 'PDFs') }) + ' ' : '') + VQ.t('Could not download: {tickets}.', { tickets: VQ.n(failed, 'ticket', 'tickets') }) + ' ' + lastError, 'error');
     }
   });
 
@@ -393,20 +388,22 @@
       groups[key].count++;
       if (t.attendee && groups[key].names.indexOf(t.attendee) === -1) groups[key].names.push(t.attendee);
     });
-    var page = window.location.origin + '/cont/bilete';
+    var page = window.location.origin + VQ.url('/account/tickets');
     var events = keys.map(function (key) {
       var g = groups[key], t = g.t;
       return {
         title: t.title, date: t.date, end: t.end, venue: t.venue, city: t.city,
         uid: 'bilet-' + (t.order || 'x') + '-' + (t.eventKey || t.id) + '-' + t.date.getTime(),
-        note: plural(g.count, 'bilet', 'bilete') + (g.names.length ? ' (' + g.names.join(', ') + ')' : '') + '. Biletele tale sunt în contul viaqui.com: ' + page
+        note: g.names.length
+          ? VQ.t('{tickets} ({names}). Your tickets are in your Viaqui account: {url}', { tickets: VQ.n(g.count, 'ticket', 'tickets'), names: g.names.join(', '), url: page })
+          : VQ.t('{tickets}. Your tickets are in your Viaqui account: {url}', { tickets: VQ.n(g.count, 'ticket', 'tickets'), url: page })
       };
     });
-    if (!events.length) { say('Biletele alese nu au o dată de adăugat în calendar.', 'error'); return; }
+    if (!events.length) { say(VQ.t('The chosen tickets have no date to add to a calendar.'), 'error'); return; }
     account.calendar(events, name);
-    say(events.length === 1 ? 'Am pregătit fișierul de calendar pentru „' + events[0].title + '”.' : 'Am pregătit un fișier de calendar cu ' + plural(events.length, 'activitate', 'activități') + '.', 'ok');
+    say(events.length === 1 ? VQ.t('The calendar file for “{title}” is ready.', { title: events[0].title }) : VQ.t('A calendar file with {activities} is ready.', { activities: VQ.n(events.length, 'activity', 'activities') }), 'ok');
   }
-  $('tk-all-cal').addEventListener('click', function () { calendarFor(filtered(), 'biletele-mele'); });
+  $('tk-all-cal').addEventListener('click', function () { calendarFor(filtered(), 'my-tickets'); });
 
   // ---------- QR dialog ----------
   var dialog = $('tk-dialog');
@@ -414,12 +411,12 @@
     current = t;
     opener = from || null;
     $('tk-d-title').textContent = t.title;
-    $('tk-d-name').textContent = t.attendee || 'Beneficiar necompletat';
+    $('tk-d-name').textContent = t.attendee || VQ.t('No guest name yet');
     $('tk-d-code').textContent = t.code;
     $('tk-d-msg').textContent = '';
-    var box = $('tk-d-qr'), svg = account.qr(t.code, 'Cod QR pentru ' + t.title);
+    var box = $('tk-d-qr'), svg = account.qr(t.code, VQ.t('QR code for {title}', { title: t.title }));
     box.textContent = '';
-    if (svg) box.appendChild(svg); else box.textContent = t.code || 'QR indisponibil';
+    if (svg) box.appendChild(svg); else box.textContent = t.code || VQ.t('QR not available');
     $('tk-d-cal').hidden = !t.date;
     if (typeof dialog.showModal === 'function') { if (!dialog.open) dialog.showModal(); }
     else dialog.setAttribute('open', '');

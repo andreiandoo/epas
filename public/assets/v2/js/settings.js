@@ -18,7 +18,7 @@
   var account = window.BO_ACCOUNT, API = BileteOnlineAPI;
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  var MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
   var TAB_HASH = { personal: 'date-personale', security: 'securitate', preferences: 'profil-preferinte', family: 'familie', notifications: 'notificari', payments: 'plati', privacy: 'gdpr' };
   var HASH_RULES = [
     ['preferences', /preferint|preferenc|recomand|interes/],
@@ -32,7 +32,7 @@
   var NOTIF = ['tickets', 'points', 'recommendations', 'newsletter', 'reviews', 'support'];
   var NOTIF_LEGACY = ['favorites', 'history', 'marketing'];
   var LIFESTYLE = ['radius', 'budget', 'frequency', 'moment'];
-  var RELATIONS = { self: 'eu', partner: 'partener', child: 'copil', parent: 'părinte', sibling: 'frate / soră', friend: 'prieten', other: 'altă relație' };
+  var RELATIONS = { self: VQ.t('me'), partner: VQ.t('partner'), child: VQ.t('child'), parent: VQ.t('parent'), sibling: VQ.t('brother / sister'), friend: VQ.t('friend'), other: VQ.t('other relationship') };
   var BRANDS = { visa: 'Visa', mastercard: 'Mastercard', amex: 'Amex', discover: 'Discover', maestro: 'Maestro', unionpay: 'UnionPay', jcb: 'JCB', diners: 'Diners' };
   var EMOJI = {
     'escape-rooms': '🔐', 'muzee-expozitii': '🏛️', 'parcuri-de-distractii': '🎢', 'parcuri-de-aventura': '🌲',
@@ -40,27 +40,28 @@
     'tururi-experiente': '🚶', 'gastronomie': '🍽️'
   };
   var FALLBACK_CATEGORIES = [
-    { slug: 'escape-rooms', name: 'Escape rooms' }, { slug: 'muzee-expozitii', name: 'Muzee & expoziții' },
-    { slug: 'parcuri-de-distractii', name: 'Parcuri de distracții' }, { slug: 'parcuri-de-aventura', name: 'Parcuri de aventură' },
-    { slug: 'natura-outdoor', name: 'Natură & outdoor' }, { slug: 'acvarii-zoo-animale', name: 'Acvarii, zoo & animale' },
-    { slug: 'ateliere-experiente-creative', name: 'Ateliere & experiențe creative' }, { slug: 'tururi-experiente-turistice', name: 'Tururi & experiențe turistice' },
-    { slug: 'educatie-invatare-experientiala', name: 'Educație & învățare' }, { slug: 'familie-copii', name: 'Familie & copii' },
-    { slug: 'corporate-grupuri', name: 'Corporate & grupuri' }, { slug: 'cultura-arta', name: 'Cultură & artă' }
+    { slug: 'escape-rooms', name: VQ.t('Escape rooms') }, { slug: 'muzee-expozitii', name: VQ.t('Museums & exhibitions') },
+    { slug: 'parcuri-de-distractii', name: VQ.t('Amusement parks') }, { slug: 'parcuri-de-aventura', name: VQ.t('Adventure parks') },
+    { slug: 'natura-outdoor', name: VQ.t('Nature & outdoors') }, { slug: 'acvarii-zoo-animale', name: VQ.t('Aquariums, zoos & animals') },
+    { slug: 'ateliere-experiente-creative', name: VQ.t('Workshops & creative experiences') }, { slug: 'tururi-experiente-turistice', name: VQ.t('Tours & sightseeing') },
+    { slug: 'educatie-invatare-experientiala', name: VQ.t('Education & learning') }, { slug: 'familie-copii', name: VQ.t('Family & kids') },
+    { slug: 'corporate-grupuri', name: VQ.t('Corporate & groups') }, { slug: 'cultura-arta', name: VQ.t('Culture & art') }
   ];
-  var FALLBACK_CITIES = ['București', 'Cluj-Napoca', 'Brașov', 'Timișoara', 'Iași', 'Constanța', 'Sibiu', 'Oradea', 'Craiova', 'Galați', 'Ploiești', 'Bacău', 'Pitești', 'Arad', 'Târgu Mureș', 'Baia Mare', 'Suceava', 'Râmnicu Vâlcea', 'Buzău', 'Botoșani', 'Satu Mare', 'Brăila', 'Drobeta-Turnu Severin', 'Deva', 'Alba Iulia', 'Hunedoara', 'Focșani', 'Bistrița', 'Reșița', 'Slatina', 'Călărași', 'Giurgiu', 'Târgoviște', 'Tulcea', 'Slobozia', 'Vaslui', 'Zalău', 'Sfântu Gheorghe', 'Piatra Neamț', 'Târgu Jiu', 'Miercurea Ciuc'];
+  // shown only when the list of covered cities does not load (names of places are data, not translated)
+  var FALLBACK_CITIES = ['Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Brussels', 'Budapest', 'Copenhagen', 'Dublin', 'Edinburgh', 'Florence', 'Lisbon', 'London', 'Madrid', 'Milan', 'Munich', 'Paris', 'Porto', 'Prague', 'Rome', 'Stockholm', 'Venice', 'Vienna', 'Warsaw', 'Zurich'];
   var PROFILE_FIELDS = { first_name: 'st-first', last_name: 'st-last', phone: 'st-phone', birth_date: 'st-birth', gender: 'st-gender', city: 'st-city' };
   var PROFILE_ERRORS = {
-    first_name: 'Prenumele poate avea cel mult 100 de caractere.', last_name: 'Numele poate avea cel mult 100 de caractere.',
-    phone: 'Numărul de telefon poate avea cel mult 50 de caractere.', birth_date: 'Data nașterii trebuie să fie o dată validă din trecut.',
-    gender: 'Alege una dintre opțiunile pentru gen.', city: 'Alege un oraș din listă.'
+    first_name: VQ.t('The first name can have at most 100 characters.'), last_name: VQ.t('The last name can have at most 100 characters.'),
+    phone: VQ.t('The phone number can have at most 50 characters.'), birth_date: VQ.t('The date of birth must be a valid date in the past.'),
+    gender: VQ.t('Choose one of the gender options.'), city: VQ.t('Choose a city from the list.')
   };
   var BEN_FIELDS = { name: 'st-ben-name', relation: 'st-ben-relation', birth_date: 'st-ben-birth', email: 'st-ben-email', phone: 'st-ben-phone', notes: 'st-ben-notes' };
   var BEN_ERRORS = {
-    name: 'Numele poate avea cel mult 150 de caractere.', relation: 'Alege o relație din listă.', birth_date: 'Data nașterii nu poate fi în viitor.',
-    email: 'Adresa de email nu pare validă.', phone: 'Numărul de telefon este prea lung.', notes: 'Notele pot avea cel mult 1000 de caractere.'
+    name: VQ.t('The name can have at most 150 characters.'), relation: VQ.t('Choose a relationship from the list.'), birth_date: VQ.t('The date of birth cannot be in the future.'),
+    email: VQ.t('The email address does not look valid.'), phone: VQ.t('The phone number is too long.'), notes: VQ.t('Notes can have at most 1,000 characters.')
   };
   var MAX_PICK = 20, MAX_BENEFICIARIES = 25, POLL_MS = 5000, POLL_LIMIT = 10 * 60000;
-  var num = new Intl.NumberFormat('ro-RO'), dec = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 });
+  var num = new Intl.NumberFormat(LOC), dec = new Intl.NumberFormat(LOC, { maximumFractionDigits: 1 });
 
   var state = {
     ready: false,
@@ -87,7 +88,7 @@
   function show(id, on) { var n = typeof id === 'string' ? $(id) : id; if (n) n.hidden = !on; }
   function obj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
     return v == null || typeof v === 'object' ? '' : String(v).trim();
   }
   function strings(a) { return Array.isArray(a) ? a.map(txt).filter(function (x, i, all) { return x && all.indexOf(x) === i; }) : []; }
@@ -99,12 +100,7 @@
   }
   function pick() { for (var i = 0; i < arguments.length; i++) { var b = bool(arguments[i]); if (b !== undefined) return b; } return undefined; }
   function count(v) { var n = Number(v); return isFinite(n) && n > 0 ? Math.floor(n) : 0; }
-  function plural(n, one, many) {
-    n = count(n);
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
+
   function pad(n) { return String(n).padStart(2, '0'); }
   function toDate(v) {
     if (!v) return null;
@@ -112,17 +108,17 @@
     var d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(v);
     return isNaN(d.getTime()) ? null : d;
   }
-  function day(v) { var d = toDate(v); return d ? d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : ''; }
+  function day(v) { var d = toDate(v); return d ? d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
   function dayTime(v) { var d = toDate(v); return d ? day(v) + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) : ''; }
   function ago(v) {
     var d = toDate(v);
     if (!d) return '';
     var s = Math.round((Date.now() - d.getTime()) / 1000);
-    if (s < 60) return 'chiar acum';
-    if (s < 3600) return 'acum ' + plural(Math.floor(s / 60), 'minut', 'minute');
-    if (s < 86400) return 'acum ' + plural(Math.floor(s / 3600), 'oră', 'ore');
-    if (s < 86400 * 30) return 'acum ' + plural(Math.floor(s / 86400), 'zi', 'zile');
-    return 'pe ' + day(v);
+    if (s < 60) return VQ.t('just now');
+    if (s < 3600) return VQ.t('{time} ago', { time: VQ.n(Math.floor(s / 60), 'minute', 'minutes') });
+    if (s < 86400) return VQ.t('{time} ago', { time: VQ.n(Math.floor(s / 3600), 'hour', 'hours') });
+    if (s < 86400 * 30) return VQ.t('{time} ago', { time: VQ.n(Math.floor(s / 86400), 'day', 'days') });
+    return VQ.t('on {date}', { date: day(v) });
   }
   function bytes(n) {
     n = Number(n);
@@ -137,13 +133,13 @@
   function apiUrl() { return (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php'; }
   function token() { try { return BileteOnlineAuth.getToken() || ''; } catch (e) { return ''; } }
   function isRo(m) { return /[ăâîșțşţ]/i.test(m) || /\b(nu|este|sau|pentru|contul|parola|codul|cardul)\b/i.test(m); }
-  /** A message for the customer: core's own text when it is Romanian, otherwise ours. */
+  /** A message for the customer: core's own text when it is Romanian and the site is shown in Romanian, otherwise ours. */
   function errMessage(err, fallback) {
-    if (!err || !err.status) return 'Nu am putut contacta serverul. Verifică conexiunea și încearcă din nou.';
-    if (err.status === 401) return 'Sesiunea a expirat. Intră din nou în cont și reîncearcă.';
-    if (err.status === 429) return 'Prea multe încercări într-un timp scurt. Mai încearcă peste un minut.';
+    if (!err || !err.status) return VQ.t('We could not reach the server. Check your connection and try again.');
+    if (err.status === 401) return VQ.t('Your session has expired. Sign in again and retry.');
+    if (err.status === 429) return VQ.t('Too many attempts in a short time. Try again in a minute.');
     var m = String(err.message || '').trim();
-    return m && m.length < 300 && isRo(m) ? m : fallback;
+    return m && m.length < 300 && isRo(m) && VQ.locale === 'ro' ? m : fallback;
   }
   function say(message, tone) {
     var f = $('st-flash');
@@ -181,16 +177,16 @@
     p.classList.toggle('is-error', !!retry);
     p.hidden = false;
     if (!retry) return;
-    var b = el('button', 'st-retry', 'Reîncearcă');
+    var b = el('button', 'st-retry', VQ.t('Try again'));
     b.type = 'button';
-    b.addEventListener('click', function () { p.textContent = 'Se încarcă…'; p.classList.remove('is-error'); retry(); });
+    b.addEventListener('click', function () { p.textContent = VQ.t('Loading…'); p.classList.remove('is-error'); retry(); });
     p.appendChild(document.createTextNode(' '));
     p.appendChild(b);
   }
   /** Swaps a row's buttons for "question [yes] [Renunță]"; run(done) performs the action, done(false) brings the row back. */
   function confirmRow(box, question, yesLabel, run) {
     var kept = [].slice.call(box.childNodes), opener = document.activeElement;
-    var q = el('span', 'st-confirm-q', question), yes = button(yesLabel, 'st-danger'), no = button('Renunță', 'btn-ghost');
+    var q = el('span', 'st-confirm-q', question), yes = button(yesLabel, 'st-danger'), no = button(VQ.t('Cancel'), 'btn-ghost');
     function restore() {
       box.textContent = '';
       kept.forEach(function (n) { box.appendChild(n); });
@@ -202,7 +198,7 @@
     box.appendChild(no);
     no.addEventListener('click', restore);
     yes.addEventListener('click', function () {
-      busy(yes, true, 'Se procesează…');
+      busy(yes, true, VQ.t('Working…'));
       no.disabled = true;
       run(function (ok) { if (!ok && box.isConnected) restore(); });
     });
@@ -210,12 +206,12 @@
   }
   function copyText(text, b) {
     if (b.dataset.copied) return;
-    function manual() { say('Nu am putut copia automat. Selectează textul și copiază-l manual.', 'error'); }
+    function manual() { say(VQ.t('We could not copy it automatically. Select the text and copy it by hand.'), 'error'); }
     if (!navigator.clipboard || !navigator.clipboard.writeText) { manual(); return; }
     navigator.clipboard.writeText(text).then(function () {
       var label = b.textContent;
       b.dataset.copied = '1';
-      b.textContent = 'Copiat';
+      b.textContent = VQ.t('Copied');
       setTimeout(function () { b.textContent = label; delete b.dataset.copied; }, 2000);
     }, manual);
   }
@@ -286,12 +282,12 @@
     v = String(v || '').trim();
     if (!v) return { iso: '' };
     var m = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/.exec(v);
-    if (!m) return { error: 'Scrie data nașterii ca zi/lună/an, de exemplu 15/06/1992.' };
+    if (!m) return { error: VQ.t('Write the date of birth as day/month/year, for example 15/06/1992.') };
     var d = +m[1], mo = +m[2], y = +m[3], dt = new Date(y, mo - 1, d), today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return { error: 'Data nașterii nu există în calendar. Verifică ziua și luna.' };
-    if (y < 1900) return { error: 'Verifică anul nașterii.' };
-    if (dt >= today) return { error: 'Data nașterii trebuie să fie în trecut.' };
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return { error: VQ.t('That date of birth is not in the calendar. Check the day and the month.') };
+    if (y < 1900) return { error: VQ.t('Check the year of birth.') };
+    if (dt >= today) return { error: VQ.t('The date of birth must be in the past.') };
     return { iso: y + '-' + pad(mo) + '-' + pad(d) };
   }
   function readProfile() {
@@ -360,7 +356,7 @@
     b.textContent = '';
     if (!state.profile.email) return;
     if (state.verified) b.appendChild(icon('check'));
-    b.appendChild(document.createTextNode(state.verified ? 'Email verificat' : 'Email neverificat'));
+    b.appendChild(document.createTextNode(state.verified ? VQ.t('Email verified') : VQ.t('Email not verified')));
     b.className = 'st-verified ' + (state.verified ? 'is-ok' : 'is-bad');
     if (!verifyTimer) show('st-verify-send', state.ready && !state.verified);
   }
@@ -368,8 +364,8 @@
   function renderCompletion() {
     var p = readProfile(), it = state.interests;
     var checks = [
-      ['data nașterii', p.birth_date], ['oraș principal', p.city], ['categorii preferate', it.event_categories.length], ['telefon', p.phone],
-      ['gen', p.gender], ['orașe secundare', it.preferred_cities.length], ['prenume', p.first_name], ['nume', p.last_name]
+      [VQ.t('date of birth'), p.birth_date], [VQ.t('main city'), p.city], [VQ.t('favourite categories'), it.event_categories.length], [VQ.t('phone'), p.phone],
+      [VQ.t('gender'), p.gender], [VQ.t('other cities'), it.preferred_cities.length], [VQ.t('first name'), p.first_name], [VQ.t('last name'), p.last_name]
     ];
     var missing = checks.filter(function (c) { return !c[1]; }).map(function (c) { return c[0]; });
     var pct = Math.round((checks.length - missing.length) / checks.length * 100), bar = $('st-completion-bar');
@@ -377,8 +373,10 @@
     bar.setAttribute('aria-valuenow', String(pct));
     bar.firstElementChild.style.width = pct + '%';
     $('st-missing').textContent = missing.length
-      ? 'Mai completează: ' + missing.slice(0, 3).join(', ') + (missing.length > 3 ? ' și încă ' + (missing.length - 3) : '') + '.'
-      : 'Toate câmpurile esențiale sunt completate.';
+      ? (missing.length > 3
+        ? VQ.t('Still to fill in: {fields} and {n} more.', { fields: missing.slice(0, 3).join(', '), n: missing.length - 3 })
+        : VQ.t('Still to fill in: {fields}.', { fields: missing.join(', ') }))
+      : VQ.t('All the essential fields are filled in.');
 
     var signals = { cats: it.event_categories.length > 0, cities: !!(p.city || it.preferred_cities.length), budget: !!$('st-budget').value, frequency: !!$('st-frequency').value, moment: !!$('st-moment').value };
     var on = 0;
@@ -388,7 +386,7 @@
       if (!li) return;
       li.classList.toggle('is-on', signals[k]);
       var sr = li.querySelector('.sr') || li.appendChild(el('span', 'sr'));
-      sr.textContent = signals[k] ? ' (completat)' : ' (necompletat)';
+      sr.textContent = signals[k] ? VQ.t(' (filled in)') : VQ.t(' (not filled in)');
     });
     var catCount = document.querySelector('#st-signals [data-signal="cats"] span:not(.sr)');
     if (catCount) catCount.textContent = it.event_categories.length ? '(' + it.event_categories.length + ')' : '';
@@ -413,14 +411,14 @@
     var form = this, p = readProfile(), save = $('st-profile-save');
     clearInvalid(form);
     formError('st-profile-error', '');
-    if (!p.first_name) return formError('st-profile-error', 'Completează prenumele.', $('st-first'));
-    if (!p.last_name) return formError('st-profile-error', 'Completează numele.', $('st-last'));
+    if (!p.first_name) return formError('st-profile-error', VQ.t('Fill in your first name.'), $('st-first'));
+    if (!p.last_name) return formError('st-profile-error', VQ.t('Fill in your last name.'), $('st-last'));
     if (p.phone && (p.phone.replace(/\D/g, '').length < 6 || /[^\d\s+().\/-]/.test(p.phone))) {
-      return formError('st-profile-error', 'Numărul de telefon nu pare valid. Folosește cifre, spații și, la nevoie, prefixul +40.', $('st-phone'));
+      return formError('st-profile-error', VQ.t('The phone number does not look valid. Use digits, spaces and, if needed, the country prefix (for example +43).'), $('st-phone'));
     }
     var birth = displayToIso(p.birth_date);
     if (birth.error) return formError('st-profile-error', birth.error, $('st-birth'));
-    busy(save, true, 'Se salvează…');
+    busy(save, true, VQ.t('Saving…'));
     API.customer.updateProfile({ first_name: p.first_name, last_name: p.last_name, phone: p.phone || null, birth_date: birth.iso || null, gender: p.gender || null, city: p.city || null })
       .then(function (resp) {
         var u = resp && resp.data && obj(resp.data.customer) ? resp.data.customer : null;
@@ -432,11 +430,11 @@
         state.profile.gender = p.gender;
         state.savedCity = p.city;
         if (birth.iso) $('st-birth').value = isoToDisplay(birth.iso);
-        say('Datele au fost salvate.');
+        say(VQ.t('Your details were saved.'));
       }, function (err) {
         var field = err && obj(err.errors) ? Object.keys(err.errors).filter(function (k) { return PROFILE_FIELDS[k]; })[0] : null;
         if (field) formError('st-profile-error', PROFILE_ERRORS[field], $(PROFILE_FIELDS[field]));
-        else formError('st-profile-error', errMessage(err, 'Nu am putut salva datele. Încearcă din nou.'));
+        else formError('st-profile-error', errMessage(err, VQ.t('We could not save your details. Try again.')));
       })
       .then(function () { busy(save, false); });
   });
@@ -444,22 +442,22 @@
   $('st-verify-send').addEventListener('click', function () {
     var b = this;
     if (b.disabled || !state.profile.email) return;
-    busy(b, true, 'Se trimite…');
+    busy(b, true, VQ.t('Sending…'));
     API.customer.resendVerification(state.profile.email).then(function (resp) {
       if (resp && /already verified/i.test(String(resp.message || ''))) {
         busy(b, false);
         state.verified = true;
         renderVerified();
         renderSecurity();
-        say('Emailul tău este deja verificat.');
+        say(VQ.t('Your email is already verified.'));
         return;
       }
-      say('Ți-am trimis linkul de verificare pe email. Dacă nu apare în câteva minute, verifică și folderul Spam.');
+      say(VQ.t('We sent the verification link to your email. If it does not arrive in a few minutes, check your spam folder too.'));
       cooldown(b, 60);
     }, function (err) {
-      if (err && err.status === 429) { say('Ți-am trimis deja un link recent. Poți cere altul peste un minut.', 'error'); cooldown(b, 60); return; }
+      if (err && err.status === 429) { say(VQ.t('We sent you a link a moment ago. You can ask for another one in a minute.'), 'error'); cooldown(b, 60); return; }
       busy(b, false);
-      say(errMessage(err, 'Nu am putut trimite linkul de verificare. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not send the verification link. Try again.')), 'error');
     });
   });
   function cooldown(b, seconds) {
@@ -467,15 +465,15 @@
     delete b.dataset.html;
     b.removeAttribute('aria-busy');
     b.disabled = true;
-    b.textContent = 'Poți retrimite în ' + left + ' s';
+    b.textContent = VQ.t('You can send again in {n} s', { n: left });
     clearInterval(verifyTimer);
     verifyTimer = setInterval(function () {
       left--;
-      if (left > 0) { b.textContent = 'Poți retrimite în ' + left + ' s'; return; }
+      if (left > 0) { b.textContent = VQ.t('You can send again in {n} s', { n: left }); return; }
       clearInterval(verifyTimer);
       verifyTimer = 0;
       b.disabled = false;
-      b.textContent = 'Trimite link verificare';
+      b.textContent = VQ.t('Send verification link');
       renderVerified();
     }, 1000);
   }
@@ -486,19 +484,19 @@
     var form = this, cur = $('st-pass-current'), pw = $('st-pass-new'), conf = $('st-pass-confirm'), save = $('st-pass-save');
     clearInvalid(form);
     formError('st-pass-error', '');
-    if (!cur.value) return formError('st-pass-error', 'Scrie parola curentă.', cur);
-    if (pw.value.length < 8) return formError('st-pass-error', 'Parola nouă trebuie să aibă cel puțin 8 caractere.', pw);
-    if (pw.value === cur.value) return formError('st-pass-error', 'Parola nouă trebuie să fie diferită de cea curentă.', pw);
-    if (pw.value !== conf.value) return formError('st-pass-error', 'Parolele noi nu coincid.', conf);
-    busy(save, true, 'Se actualizează…');
+    if (!cur.value) return formError('st-pass-error', VQ.t('Enter your current password.'), cur);
+    if (pw.value.length < 8) return formError('st-pass-error', VQ.t('The new password must have at least 8 characters.'), pw);
+    if (pw.value === cur.value) return formError('st-pass-error', VQ.t('The new password must be different from the current one.'), pw);
+    if (pw.value !== conf.value) return formError('st-pass-error', VQ.t('The new passwords do not match.'), conf);
+    busy(save, true, VQ.t('Updating…'));
     API.customer.changePassword(cur.value, pw.value, conf.value).then(function () {
       form.reset();
-      say('Parola a fost schimbată.');
+      say(VQ.t('Your password was changed.'));
     }, function (err) {
       var status = err && err.status;
-      if (status === 422 && /current password/i.test(String(err.message || ''))) formError('st-pass-error', 'Parola curentă nu este corectă.', cur);
-      else if (status === 422 && obj(err.errors) && err.errors.password) formError('st-pass-error', 'Parola nouă nu este acceptată. Folosește cel puțin 8 caractere.', pw);
-      else formError('st-pass-error', errMessage(err, 'Nu am putut schimba parola. Încearcă din nou.'));
+      if (status === 422 && /current password/i.test(String(err.message || ''))) formError('st-pass-error', VQ.t('The current password is not correct.'), cur);
+      else if (status === 422 && obj(err.errors) && err.errors.password) formError('st-pass-error', VQ.t('The new password is not accepted. Use at least 8 characters.'), pw);
+      else formError('st-pass-error', errMessage(err, VQ.t('We could not change the password. Try again.')));
     }).then(function () { busy(save, false); });
   });
 
@@ -518,13 +516,13 @@
     show('st-2fa-off', !active && !tfaSetup);
     show('st-2fa-setup', !active && tfaSetup);
     show('st-2fa-on', active);
-    tag.textContent = failed ? 'status indisponibil' : active ? 'activ' : (tfaSetup || pending) ? 'configurare începută' : 'inactiv';
+    tag.textContent = failed ? VQ.t('status unavailable') : active ? VQ.t('on') : (tfaSetup || pending) ? VQ.t('setup started') : VQ.t('off');
     tag.className = 'acc-tag ' + (active ? 'is-ok' : (tfaSetup || pending) ? 'is-wait' : 'is-muted');
-    $('st-2fa-start').textContent = pending ? 'Reia configurarea 2FA' : 'Activează 2FA';
+    $('st-2fa-start').textContent = pending ? VQ.t('Resume 2FA setup') : VQ.t('Turn on 2FA');
     if (active) {
       var n = count(t.recovery_codes_remaining), since = day(t.confirmed_at);
-      $('st-2fa-summary').textContent = (since ? 'Activă din ' + since + '. ' : 'Activă. ')
-        + (n ? 'Ai ' + plural(n, 'cod de recuperare nefolosit', 'coduri de recuperare nefolosite') + '.' + (n <= 3 ? ' Rămân puține: regenerează-le din timp.' : '') : 'Nu mai ai coduri de recuperare: regenerează-le acum.');
+      $('st-2fa-summary').textContent = (since ? VQ.t('On since {date}.', { date: since }) : VQ.t('On.')) + ' '
+        + (n ? VQ.t('You have {codes}.', { codes: VQ.n(n, 'unused recovery code', 'unused recovery codes') }) + (n <= 3 ? ' ' + VQ.t('Only a few are left: make new ones in good time.') : '') : VQ.t('You have no recovery codes left: make new ones now.'));
     }
     renderSecurity();
   }
@@ -536,13 +534,13 @@
   }
   $('st-2fa-start').addEventListener('click', function () {
     var b = this;
-    busy(b, true, 'Se pregătește…');
+    busy(b, true, VQ.t('Getting ready…'));
     API.post('/customer/2fa/initiate', {}).then(function (resp) {
       var d = resp && resp.data;
-      if (!obj(d) || !d.secret) { say('Nu am putut porni configurarea 2FA. Încearcă din nou.', 'error'); return; }
-      var box = $('st-2fa-qr'), svg = d.qr_url ? account.qr(String(d.qr_url), 'Cod QR pentru aplicația de autentificare') : null;
+      if (!obj(d) || !d.secret) { say(VQ.t('We could not start the 2FA setup. Try again.'), 'error'); return; }
+      var box = $('st-2fa-qr'), svg = d.qr_url ? account.qr(String(d.qr_url), VQ.t('QR code for the authenticator app')) : null;
       box.textContent = '';
-      box.appendChild(svg || el('p', 'st-note', 'Codul QR nu poate fi afișat. Introdu secretul manual.'));
+      box.appendChild(svg || el('p', 'st-note', VQ.t('The QR code cannot be shown. Enter the secret by hand.')));
       $('st-2fa-secret').textContent = String(d.secret).replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim();
       $('st-2fa-secret-copy').dataset.secret = String(d.secret).replace(/\s+/g, '');
       show($('st-2fa-codes').closest('.st-recovery'), fillCodes('st-2fa-codes', d.recovery_codes) > 0);
@@ -556,7 +554,7 @@
       try { $('st-2fa-code').focus({ preventScroll: true }); } catch (e) {}
     }, function (err) {
       if (err && err.status === 422) loadTfa();
-      say(errMessage(err, 'Nu am putut porni configurarea 2FA. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not start the 2FA setup. Try again.')), 'error');
     }).then(function () { busy(b, false); renderTfa(); });
   });
   $('st-2fa-secret-copy').addEventListener('click', function () { copyText(this.dataset.secret || '', this); });
@@ -569,7 +567,7 @@
     var b = this, code = $('st-2fa-code');
     if (code.value.length !== 6) return;
     formError('st-2fa-error', '');
-    busy(b, true, 'Se verifică…');
+    busy(b, true, VQ.t('Checking…'));
     API.post('/customer/2fa/confirm', { code: code.value }).then(function () {
       var codes = [].map.call($('st-2fa-codes').children, function (li) { return li.textContent; });
       tfaSetup = false;
@@ -579,18 +577,18 @@
       busy(b, false);
       if (codes.length) {
         fillCodes('st-2fa-newcodes-list', codes);
-        $('st-2fa-newcodes').querySelector('b').textContent = 'Codurile tale de recuperare';
-        $('st-2fa-newcodes').querySelector('p').textContent = 'Salvează-le acum într-un loc sigur. Nu le mai afișăm după ce închizi pagina.';
+        $('st-2fa-newcodes').querySelector('b').textContent = VQ.t('Your recovery codes');
+        $('st-2fa-newcodes').querySelector('p').textContent = VQ.t('Save them somewhere safe now. We do not show them again after you close the page.');
         show('st-2fa-newcodes', true);
       }
-      say('Autentificarea în doi pași este activă.');
+      say(VQ.t('Two-step sign-in is on.'));
       state.tfa = Object.assign({}, state.tfa || {}, { two_factor_active: true, has_pending_setup: false, recovery_codes_remaining: codes.length });
       renderTfa();
       loadTfa();
     }, function (err) {
       busy(b, false);
       b.disabled = code.value.length !== 6;
-      formError('st-2fa-error', errMessage(err, 'Codul nu este valid. Verifică ora telefonului și încearcă din nou.'), code);
+      formError('st-2fa-error', errMessage(err, VQ.t('The code is not valid. Check the time on your phone and try again.')), code);
       code.select();
     });
   });
@@ -626,15 +624,15 @@
       e.preventDefault();
       var submit = form.querySelector('[type="submit"]');
       formError(error, '');
-      if (!input.value) return formError(error, 'Scrie parola contului.', input);
-      busy(submit, true, 'Se procesează…');
+      if (!input.value) return formError(error, VQ.t('Enter your account password.'), input);
+      busy(submit, true, VQ.t('Working…'));
       API.post(endpoint, { password: input.value }).then(function (resp) {
         busy(submit, false);
         inlineOpen(form, false);
         done(resp);
       }, function (err) {
         busy(submit, false);
-        formError(error, errMessage(err, 'Nu am putut finaliza. Încearcă din nou.'), input);
+        formError(error, errMessage(err, VQ.t('We could not finish. Try again.')), input);
       });
     });
   }
@@ -642,16 +640,16 @@
     show('st-2fa-newcodes', false);
     state.tfa = Object.assign({}, state.tfa || {}, { two_factor_active: false, has_pending_setup: false });
     renderTfa();
-    say('Autentificarea în doi pași a fost dezactivată.');
+    say(VQ.t('Two-step sign-in was turned off.'));
     $('st-2fa-start').focus();
     loadTfa();
   });
   tfaPasswordForm('st-2fa-regen', '/customer/2fa/recovery-codes/regenerate', function (resp) {
     var n = fillCodes('st-2fa-newcodes-list', resp && resp.data && resp.data.recovery_codes);
-    $('st-2fa-newcodes').querySelector('b').textContent = 'Codurile noi de recuperare';
-    $('st-2fa-newcodes').querySelector('p').textContent = 'Salvează-le într-un loc sigur. Cele vechi nu mai funcționează.';
+    $('st-2fa-newcodes').querySelector('b').textContent = VQ.t('Your new recovery codes');
+    $('st-2fa-newcodes').querySelector('p').textContent = VQ.t('Keep them somewhere safe. The old ones no longer work.');
     show('st-2fa-newcodes', n > 0);
-    say('Am generat coduri noi de recuperare. Cele vechi nu mai funcționează.');
+    say(VQ.t('New recovery codes were made. The old ones no longer work.'));
     loadTfa();
   });
   [].forEach.call(document.querySelectorAll('[data-copy-codes]'), function (b) {
@@ -671,12 +669,12 @@
       if (err && err.status === 401) return;
       state.sessions = null;
       show('st-sessions', false);
-      stateMsg('st-sessions-state', 'Nu am putut încărca sesiunile.', loadSessions);
+      stateMsg('st-sessions-state', VQ.t('We could not load the sessions.'), loadSessions);
       renderSecurity();
     });
   }
   function sessionName(s) {
-    return txt(s.device) || [txt(s.browser), txt(s.os)].filter(Boolean).join(' · ') || txt(s.platform) || txt(s.name) || 'Dispozitiv necunoscut';
+    return txt(s.device) || [txt(s.browser), txt(s.os)].filter(Boolean).join(' · ') || txt(s.platform) || txt(s.name) || VQ.t('Unknown device');
   }
   function renderSessions() {
     var ul = $('st-sessions'), list = state.sessions.slice().sort(function (a, b) { return (b.is_current ? 1 : 0) - (a.is_current ? 1 : 0); });
@@ -685,16 +683,16 @@
       var li = el('li'), main = el('div'), actions = el('div', 'st-row-actions'), name = sessionName(s);
       var platform = txt(s.platform); // core marks browser sessions "web" and old tokens "legacy": no use to the customer
       var meta = [platform && !/^(web|legacy)$/i.test(platform) && name.indexOf(platform) === -1 ? platform : '', txt(s.ip) ? 'IP ' + txt(s.ip) : '',
-        s.last_used_at ? 'ultima activitate ' + ago(s.last_used_at) : ''].filter(Boolean).join(' · ');
+        s.last_used_at ? VQ.t('last activity {when}', { when: ago(s.last_used_at) }) : ''].filter(Boolean).join(' · ');
       main.appendChild(el('b', null, name));
       if (meta) main.appendChild(el('small', null, meta));
-      if (s.created_at) main.appendChild(el('small', null, 'Conectat pe ' + dayTime(s.created_at)));
-      if (s.is_current) actions.appendChild(el('span', 'acc-tag is-ok', 'acest dispozitiv'));
+      if (s.created_at) main.appendChild(el('small', null, VQ.t('Signed in on {date}', { date: dayTime(s.created_at) })));
+      if (s.is_current) actions.appendChild(el('span', 'acc-tag is-ok', VQ.t('this device')));
       else {
-        var close = button('Închide', 'st-danger');
-        close.setAttribute('aria-label', 'Închide sesiunea ' + name);
+        var close = button(VQ.t('Close'), 'st-danger');
+        close.setAttribute('aria-label', VQ.t('Close the session {name}', { name: name }));
         close.addEventListener('click', function () {
-          confirmRow(actions, 'Închizi sesiunea?', 'Da, închide', function (done) { revokeSession(s, name, done); });
+          confirmRow(actions, VQ.t('Close this session?'), VQ.t('Yes, close'), function (done) { revokeSession(s, name, done); });
         });
         actions.appendChild(close);
       }
@@ -706,20 +704,20 @@
     ul.appendChild(frag);
     show(ul, list.length > 0);
     if (list.length) show('st-sessions-state', false);
-    else stateMsg('st-sessions-state', 'Nu am găsit sesiuni active.');
+    else stateMsg('st-sessions-state', VQ.t('No active sessions found.'));
     document.querySelector('[data-confirm-sessions="others"]').disabled = !list.some(function (s) { return !s.is_current; });
     renderSecurity();
   }
   function revokeSession(s, name, done) {
     API.delete('/customer/sessions/' + encodeURIComponent(s.id), {}).then(function (resp) {
       done(true);
-      if (resp && resp.data && resp.data.logged_out_current) { leave('Ai închis sesiunea de pe acest dispozitiv.'); return; }
-      say('Am închis sesiunea „' + name + '”.');
+      if (resp && resp.data && resp.data.logged_out_current) { leave(VQ.t('You closed the session on this device.')); return; }
+      say(VQ.t('The session “{name}” was closed.', { name: name }));
       loadSessions().then(focusSessions);
     }, function (err) {
-      if (err && err.status === 404) { done(true); say('Sesiunea era deja închisă.'); loadSessions().then(focusSessions); return; }
+      if (err && err.status === 404) { done(true); say(VQ.t('The session was already closed.')); loadSessions().then(focusSessions); return; }
       done(false);
-      say(errMessage(err, 'Nu am putut închide sesiunea. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not close the session. Try again.')), 'error');
     });
   }
   function focusSessions() {
@@ -727,9 +725,9 @@
     (next || document.querySelector('[data-confirm-sessions="all"]')).focus();
   }
   function leave(message) {
-    say(message + ' Te redirecționăm la autentificare…');
+    say(message + ' ' + VQ.t('Taking you to sign in…'));
     try { BileteOnlineAuth.clearCustomerSession(); } catch (e) {}
-    setTimeout(function () { window.location.href = '/autentificare?redirect=%2Fcont%2Fsetari'; }, 1200);
+    setTimeout(function () { window.location.href = VQ.url('/login') + '?redirect=' + encodeURIComponent(VQ.url('/account/settings')); }, 1200);
   }
   var sessionsMode = '', sessionsOpener = null;
   [].forEach.call(document.querySelectorAll('[data-confirm-sessions]'), function (b) {
@@ -737,8 +735,8 @@
       sessionsMode = b.getAttribute('data-confirm-sessions');
       sessionsOpener = b;
       $('st-sessions-confirm-t').textContent = sessionsMode === 'all'
-        ? 'Te deconectăm de pe toate dispozitivele, inclusiv de pe acesta. Va trebui să intri din nou în cont.'
-        : 'Închidem toate celelalte sesiuni. Rămâi conectat doar pe acest dispozitiv.';
+        ? VQ.t('We will sign you out on every device, this one included. You will have to sign in again.')
+        : VQ.t('We will close all the other sessions. You stay signed in only on this device.');
       show('st-sessions-confirm', true);
       $('st-sessions-no').focus();
     });
@@ -749,21 +747,21 @@
   });
   $('st-sessions-yes').addEventListener('click', function () {
     var b = this, all = sessionsMode === 'all';
-    busy(b, true, 'Se închid sesiunile…');
+    busy(b, true, VQ.t('Closing sessions…'));
     $('st-sessions-no').disabled = true;
     API.delete('/customer/sessions/all', {}).then(function (resp) {
       if (all) return null;
       var n = count(resp && resp.data && resp.data.revoked);
-      say(n ? 'Am închis ' + plural(n, 'sesiune', 'sesiuni') + '. Rămâi conectat doar pe acest dispozitiv.' : 'Nu mai era deschisă nicio altă sesiune.');
+      say(n ? VQ.t('Closed: {sessions}. You stay signed in only on this device.', { sessions: VQ.n(n, 'session', 'sessions') }) : VQ.t('No other session was open.'));
       return loadSessions();
     }, function (err) {
       if (all) return null; // this device is signed out below anyway
-      say(errMessage(err, 'Nu am putut închide sesiunile. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not close the sessions. Try again.')), 'error');
       return null;
     }).then(function () {
       if (all) {
         var out = API.customer && API.customer.logout ? API.customer.logout() : null;
-        return Promise.resolve(out).catch(function () {}).then(function () { leave('Te-am deconectat de pe toate dispozitivele.'); });
+        return Promise.resolve(out).catch(function () {}).then(function () { leave(VQ.t('You were signed out on every device.')); });
       }
       busy(b, false);
       $('st-sessions-no').disabled = false;
@@ -775,12 +773,12 @@
   function renderSecurity() {
     var verified = state.verified, tfaOn = !!(state.tfa && state.tfa.two_factor_active);
     if (!state.ready) return;
-    $('st-s-security').textContent = verified && tfaOn ? 'excelentă' : verified ? 'bună' : 'medie';
-    $('st-s-security-p').textContent = verified ? (tfaOn ? 'email verificat · 2FA activ' : 'email verificat') : 'verifică email-ul';
-    var lines = [verified ? 'Emailul este verificat.' : 'Emailul nu este verificat încă: trimite linkul din „Date personale”.'];
-    lines.push(tfaOn ? 'Autentificarea în doi pași este activă.' : 'Autentificarea în doi pași este oprită. Activeaz-o pentru protecție suplimentară.');
+    $('st-s-security').textContent = verified && tfaOn ? VQ.t('excellent') : verified ? VQ.t('good') : VQ.t('fair');
+    $('st-s-security-p').textContent = verified ? (tfaOn ? VQ.t('email verified · 2FA on') : VQ.t('email verified')) : VQ.t('verify your email');
+    var lines = [verified ? VQ.t('Your email is verified.') : VQ.t('Your email is not verified yet: send the link from “Personal details”.')];
+    lines.push(tfaOn ? VQ.t('Two-step sign-in is on.') : VQ.t('Two-step sign-in is off. Turn it on for extra protection.'));
     if (Array.isArray(state.sessions) && state.sessions.length) {
-      lines.push(state.sessions.length === 1 ? 'Ești conectat doar pe acest dispozitiv.' : 'Ești conectat pe ' + plural(state.sessions.length, 'dispozitiv', 'dispozitive') + '.');
+      lines.push(state.sessions.length === 1 ? VQ.t('You are signed in only on this device.') : VQ.t('You are signed in on {devices}.', { devices: VQ.n(state.sessions.length, 'device', 'devices') }));
     }
     $('st-security-status').textContent = lines.join(' ');
   }
@@ -819,7 +817,7 @@
     if (!b) return;
     var sel = state.interests.event_categories, i = sel.indexOf(b.dataset.slug);
     if (i !== -1) sel.splice(i, 1);
-    else if (sel.length >= MAX_PICK) { say('Poți alege cel mult 20 de categorii. Deselectează una ca să adaugi alta.', 'error'); return; }
+    else if (sel.length >= MAX_PICK) { say(VQ.t('You can choose at most 20 categories. Unselect one to add another.'), 'error'); return; }
     else sel.push(b.dataset.slug);
     b.setAttribute('aria-pressed', String(i === -1));
     renderCompletion();
@@ -849,7 +847,7 @@
     var names = cityNames();
     [$('st-city'), $('st-city2')].forEach(function (s) {
       var frag = document.createDocumentFragment();
-      frag.appendChild(new Option('— alege orașul —', ''));
+      frag.appendChild(new Option(VQ.t('choose a city'), ''));
       names.forEach(function (n) { frag.appendChild(new Option(n, n)); });
       s.textContent = '';
       s.appendChild(frag);
@@ -871,7 +869,7 @@
       var b = el('button', 'st-chip');
       b.type = 'button';
       b.dataset.city = name;
-      b.setAttribute('aria-label', 'Elimină ' + name);
+      b.setAttribute('aria-label', VQ.t('Remove {name}', { name: name }));
       b.appendChild(document.createTextNode(name));
       b.appendChild(icon('x'));
       frag.appendChild(b);
@@ -893,7 +891,7 @@
       li.appendChild(label);
       frag.appendChild(li);
     });
-    if (!names.length) frag.appendChild(el('li', 'st-none', 'Niciun oraș găsit pentru „' + raw + '”.'));
+    if (!names.length) frag.appendChild(el('li', 'st-none', VQ.t('No city found for “{query}”.', { query: raw })));
     ul.textContent = '';
     ul.appendChild(frag);
   }
@@ -903,7 +901,7 @@
     if (!input || input.type !== 'checkbox') return;
     var i = sel.indexOf(input.value);
     if (input.checked && i === -1) {
-      if (sel.length >= MAX_PICK) { input.checked = false; say('Poți alege cel mult 20 de orașe secundare.', 'error'); return; }
+      if (sel.length >= MAX_PICK) { input.checked = false; say(VQ.t('You can choose at most 20 other cities.'), 'error'); return; }
       sel.push(input.value);
     } else if (!input.checked && i !== -1) sel.splice(i, 1);
     var chips = $('st-sec-chips'), keep = document.activeElement;
@@ -917,7 +915,7 @@
       var b = el('button', 'st-chip');
       b.type = 'button';
       b.dataset.city = name;
-      b.setAttribute('aria-label', 'Elimină ' + name);
+      b.setAttribute('aria-label', VQ.t('Remove {name}', { name: name }));
       b.appendChild(document.createTextNode(name));
       b.appendChild(icon('x'));
       frag.appendChild(b);
@@ -941,7 +939,7 @@
   $('st-prefs-save').addEventListener('click', function () {
     if (!state.ready) return;
     var b = this, city = state.profile.city;
-    busy(b, true, 'Se salvează…');
+    busy(b, true, VQ.t('Saving…'));
     var step = city !== state.savedCity
       ? API.customer.updateProfile({ city: city || null }).then(function (resp) {
         state.savedCity = city;
@@ -954,9 +952,9 @@
       return API.put('/customer/settings', { interests: { preferred_cities: state.interests.preferred_cities.slice(), event_categories: state.interests.event_categories.slice(), lifestyle: lifestyle } });
     }).then(function () {
       LIFESTYLE.forEach(function (k) { state.lifestyle[k] = $('st-' + k).value; });
-      say('Preferințele au fost salvate.');
+      say(VQ.t('Your preferences were saved.'));
     }, function (err) {
-      say(errMessage(err, 'Nu am putut salva preferințele. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not save your preferences. Try again.')), 'error');
     }).then(function () { busy(b, false); });
   });
 
@@ -969,7 +967,7 @@
     }, function (err) {
       if (err && err.status === 401) return;
       show('st-bens', false);
-      stateMsg('st-ben-state', 'Nu am putut încărca beneficiarii.', loadBeneficiaries);
+      stateMsg('st-ben-state', VQ.t('We could not load your guests.'), loadBeneficiaries);
     });
   }
   function ageOf(b) {
@@ -983,13 +981,13 @@
   function renderBeneficiaries() {
     var ul = $('st-bens'), list = state.beneficiaries, frag = document.createDocumentFragment();
     list.forEach(function (b) {
-      var li = el('li', 'st-ben'), name = txt(b.name) || 'Fără nume', age = ageOf(b), actions = el('div', 'st-row-actions');
+      var li = el('li', 'st-ben'), name = txt(b.name) || VQ.t('No name'), age = ageOf(b), actions = el('div', 'st-row-actions');
       li.id = 'ben-' + b.id;
       var relation = RELATIONS[b.relation] || txt(b.relation);
       li.appendChild(el('h3', null, name));
-      var bits = [relation, age === null ? '' : age === 0 ? 'sub 1 an' : plural(age, 'an', 'ani')].filter(Boolean).join(' · ');
+      var bits = [relation, age === null ? '' : age === 0 ? VQ.t('under 1 year') : VQ.n(age, 'year old', 'years old')].filter(Boolean).join(' · ');
       if (bits) li.appendChild(el('p', null, bits));
-      if (b.birth_date) li.appendChild(el('p', null, 'Data nașterii: ' + day(String(b.birth_date).slice(0, 10))));
+      if (b.birth_date) li.appendChild(el('p', null, VQ.t('Date of birth: {date}', { date: day(String(b.birth_date).slice(0, 10)) })));
       var contact = [txt(b.email), txt(b.phone)].filter(Boolean).join(' · ');
       if (contact) li.appendChild(el('p', 'st-ben-contact', contact));
       if (txt(b.notes)) li.appendChild(el('p', 'st-ben-notes', txt(b.notes)));
@@ -999,12 +997,12 @@
         interests.slice(0, 6).forEach(function (x) { chips.appendChild(el('span', 'acc-tag', x)); });
         li.appendChild(chips);
       }
-      var edit = button('Editează', 'btn-ghost st-ben-edit'), del = button('Șterge', 'st-danger');
-      edit.setAttribute('aria-label', 'Editează ' + name);
-      del.setAttribute('aria-label', 'Șterge ' + name);
+      var edit = button(VQ.t('Edit'), 'btn-ghost st-ben-edit'), del = button(VQ.t('Delete'), 'st-danger');
+      edit.setAttribute('aria-label', VQ.t('Edit {name}', { name: name }));
+      del.setAttribute('aria-label', VQ.t('Delete {name}', { name: name }));
       edit.addEventListener('click', function () { openBenForm(b, edit); });
       del.addEventListener('click', function () {
-        confirmRow(actions, 'Ștergi beneficiarul?', 'Da, șterge', function (done) { deleteBeneficiary(b, name, done); });
+        confirmRow(actions, VQ.t('Delete this guest?'), VQ.t('Yes, delete'), function (done) { deleteBeneficiary(b, name, done); });
       });
       actions.appendChild(edit);
       actions.appendChild(del);
@@ -1017,17 +1015,17 @@
       add.type = 'button';
       add.id = 'st-ben-add';
       add.appendChild(icon('plus'));
-      add.appendChild(el('span', null, 'Adaugă beneficiar'));
-      add.appendChild(el('small', 'st-note', list.length ? 'încă ' + plural(left, 'loc liber', 'locuri libere') : 'copil, partener, părinte sau prieten'));
+      add.appendChild(el('span', null, VQ.t('Add a guest')));
+      add.appendChild(el('small', 'st-note', list.length ? VQ.n(left, 'place left', 'places left') : VQ.t('a child, a partner, a parent or a friend')));
       add.addEventListener('click', function () { openBenForm(null, add); });
       tile.appendChild(add);
-    } else tile.appendChild(el('p', 'st-note st-ben-full', 'Ai atins limita de 25 de beneficiari. Șterge unul ca să adaugi altul.'));
+    } else tile.appendChild(el('p', 'st-note st-ben-full', VQ.t('You have reached the limit of 25 guests. Delete one to add another.')));
     frag.appendChild(tile);
     ul.textContent = '';
     ul.appendChild(frag);
     show(ul, true);
     if (list.length) show('st-ben-state', false);
-    else stateMsg('st-ben-state', 'Nu ai salvat încă niciun beneficiar. Adaugă primul ca să nu mai scrii numele la fiecare comandă.');
+    else stateMsg('st-ben-state', VQ.t('You have not saved any guests yet. Add the first one so you do not type the name with every order.'));
   }
   function openBenForm(b, opener) {
     var form = $('st-ben-form');
@@ -1037,8 +1035,8 @@
     form.reset();
     formError('st-ben-error', '');
     [].forEach.call(form.querySelectorAll('[data-touched]'), function (n) { delete n.dataset.touched; });
-    $('st-ben-form-h').textContent = b ? 'Editează: ' + (txt(b.name) || 'beneficiar') : 'Beneficiar nou';
-    $('st-ben-save').textContent = b ? 'Salvează modificările' : 'Adaugă beneficiarul';
+    $('st-ben-form-h').textContent = b ? VQ.t('Edit: {name}', { name: txt(b.name) || VQ.t('guest') }) : VQ.t('New guest');
+    $('st-ben-save').textContent = b ? VQ.t('Save changes') : VQ.t('Add the guest');
     $('st-ben-birth').max = todayIso();
     if (b) {
       $('st-ben-name').value = txt(b.name);
@@ -1068,16 +1066,16 @@
     };
     clearInvalid(form);
     formError('st-ben-error', '');
-    if (!data.name) return formError('st-ben-error', 'Scrie numele beneficiarului.', $('st-ben-name'));
+    if (!data.name) return formError('st-ben-error', VQ.t('Enter the name of the guest.'), $('st-ben-name'));
     if (data.birth_date && data.birth_date > todayIso()) return formError('st-ben-error', BEN_ERRORS.birth_date, $('st-ben-birth'));
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email)) return formError('st-ben-error', BEN_ERRORS.email, $('st-ben-email'));
-    busy(save, true, 'Se salvează…');
+    busy(save, true, VQ.t('Saving…'));
     var req = isNew ? API.post('/customer/beneficiaries', data) : API.put('/customer/beneficiaries/' + encodeURIComponent(id), data);
     req.then(function (resp) {
       busy(save, false);
-      if (!(resp && resp.data && obj(resp.data.beneficiary))) { formError('st-ben-error', 'Nu am putut salva beneficiarul. Încearcă din nou.'); return; }
+      if (!(resp && resp.data && obj(resp.data.beneficiary))) { formError('st-ben-error', VQ.t('We could not save the guest. Try again.')); return; }
       closeBenForm(false);
-      say(isNew ? 'Am adăugat beneficiarul ' + data.name + '.' : 'Am actualizat datele pentru ' + data.name + '.');
+      say(isNew ? VQ.t('{name} was added to your guests.', { name: data.name }) : VQ.t('The details for {name} were updated.', { name: data.name }));
       loadBeneficiaries().then(function () { // the list is drawn again: focus its new add tile / edit button
         var li = isNew ? null : $('ben-' + id), focus = li ? li.querySelector('.st-ben-edit') : $('st-ben-add');
         if (focus) focus.focus();
@@ -1086,20 +1084,20 @@
       busy(save, false);
       var field = err && obj(err.errors) ? Object.keys(err.errors).filter(function (k) { return BEN_FIELDS[k]; })[0] : null;
       if (field) formError('st-ben-error', BEN_ERRORS[field], $(BEN_FIELDS[field]));
-      else formError('st-ben-error', errMessage(err, 'Nu am putut salva beneficiarul. Încearcă din nou.'));
+      else formError('st-ben-error', errMessage(err, VQ.t('We could not save the guest. Try again.')));
     });
   });
   function deleteBeneficiary(b, name, done) {
     API.delete('/customer/beneficiaries/' + encodeURIComponent(b.id), {}).then(function (resp) {
-      if (resp && resp.success === false) { done(false); say('Nu am putut șterge beneficiarul. Încearcă din nou.', 'error'); return; }
+      if (resp && resp.success === false) { done(false); say(VQ.t('We could not delete the guest. Try again.'), 'error'); return; }
       done(true);
       if (benEditing === b.id) closeBenForm(false);
-      say('Am șters beneficiarul ' + name + '.');
+      say(VQ.t('{name} was removed from your guests.', { name: name }));
       loadBeneficiaries().then(function () { if ($('st-ben-add')) $('st-ben-add').focus(); });
     }, function (err) {
-      if (err && err.status === 404) { done(true); say('Beneficiarul fusese deja șters.'); loadBeneficiaries(); return; }
+      if (err && err.status === 404) { done(true); say(VQ.t('The guest had already been deleted.')); loadBeneficiaries(); return; }
       done(false);
-      say(errMessage(err, 'Nu am putut șterge beneficiarul. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not delete the guest. Try again.')), 'error');
     });
   }
 
@@ -1114,12 +1112,12 @@
     var b = this, prefs = Object.assign({}, state.notifLegacy);
     NOTIF.forEach(function (k) { prefs[k] = $('st-n-' + k).checked; });
     prefs.reminders = prefs.tickets; // the older key the reminder e-mails still read
-    busy(b, true, 'Se salvează…');
+    busy(b, true, VQ.t('Saving…'));
     API.put('/customer/settings', { notification_preferences: prefs }).then(function () {
       NOTIF.forEach(function (k) { state.notif[k] = prefs[k]; });
-      say('Notificările au fost salvate.');
+      say(VQ.t('Your notifications were saved.'));
     }, function (err) {
-      say(errMessage(err, 'Nu am putut salva notificările. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not save your notifications. Try again.')), 'error');
     }).then(function () { busy(b, false); });
   });
 
@@ -1135,7 +1133,7 @@
       show('st-cards', false);
       show('st-cards-empty', false);
       show('st-card-add-row', false);
-      stateMsg('st-cards-state', 'Nu am putut încărca metodele de plată.', loadCards);
+      stateMsg('st-cards-state', VQ.t('We could not load your payment methods.'), loadCards);
     });
   }
   function canAddCards() { return !!(state.stripe.configured && state.stripe.key); }
@@ -1144,29 +1142,29 @@
     var ul = $('st-cards'), list = state.cards, frag = document.createDocumentFragment();
     list.forEach(function (c) {
       var li = el('li'), id = el('div', 'st-card-id'), info = el('div'), small = el('small'), actions = el('div', 'st-row-actions');
-      var brandKey = norm(c.brand), brand = BRANDS[brandKey] || txt(c.brand) || txt(c.provider) || 'Card', last4 = txt(c.last4);
+      var brandKey = norm(c.brand), brand = BRANDS[brandKey] || txt(c.brand) || txt(c.provider) || VQ.t('Card'), last4 = txt(c.last4);
       var label = brand + (last4 ? ' •••• ' + last4 : '');
       id.appendChild(el('span', 'st-brand', brand));
       info.appendChild(el('b', null, last4 ? '•••• ' + last4 : brand));
       var bits = [];
-      if (c.exp_month && c.exp_year) bits.push('expiră ' + pad(c.exp_month) + '/' + String(c.exp_year).slice(-2));
+      if (c.exp_month && c.exp_year) bits.push(VQ.t('expires {date}', { date: pad(c.exp_month) + '/' + String(c.exp_year).slice(-2) }));
       var name = txt(c.label) || txt(c.cardholder);
       if (name) bits.push(name);
       small.appendChild(document.createTextNode(bits.join(' · ')));
-      if (c.is_expired) { small.appendChild(document.createTextNode(bits.length ? ' · ' : '')); small.appendChild(el('span', 'is-bad', 'expirat')); }
-      if (c.is_default) { small.appendChild(document.createTextNode(small.textContent ? ' · ' : '')); small.appendChild(el('span', 'is-ok', 'implicit')); }
+      if (c.is_expired) { small.appendChild(document.createTextNode(bits.length ? ' · ' : '')); small.appendChild(el('span', 'is-bad', VQ.t('expired'))); }
+      if (c.is_default) { small.appendChild(document.createTextNode(small.textContent ? ' · ' : '')); small.appendChild(el('span', 'is-ok', VQ.t('default'))); }
       info.appendChild(small);
       id.appendChild(info);
       if (!c.is_default && !c.is_expired) {
-        var def = button('Setează implicit', 'btn-ghost');
-        def.setAttribute('aria-label', 'Setează implicit ' + label);
+        var def = button(VQ.t('Make default'), 'btn-ghost');
+        def.setAttribute('aria-label', VQ.t('Make {card} the default', { card: label }));
         def.addEventListener('click', function () { setDefaultCard(c, label, def); });
         actions.appendChild(def);
       }
-      var del = button('Șterge', 'st-danger');
-      del.setAttribute('aria-label', 'Șterge ' + label);
+      var del = button(VQ.t('Delete'), 'st-danger');
+      del.setAttribute('aria-label', VQ.t('Delete {name}', { name: label }));
       del.addEventListener('click', function () {
-        confirmRow(actions, 'Ștergi cardul?', 'Da, șterge', function (done) { deleteCard(c, label, done); });
+        confirmRow(actions, VQ.t('Delete this card?'), VQ.t('Yes, delete'), function (done) { deleteCard(c, label, done); });
       });
       actions.appendChild(del);
       li.appendChild(id);
@@ -1182,24 +1180,24 @@
     show('st-card-add-row', canAddCards() && $('st-card-form').hidden);
   }
   function setDefaultCard(c, label, b) {
-    busy(b, true, 'Se setează…');
+    busy(b, true, VQ.t('Setting…'));
     API.put('/customer/payment-methods/' + encodeURIComponent(c.id) + '/default', {}).then(function () {
-      say(label + ' este acum cardul implicit.');
+      say(VQ.t('{card} is now your default card.', { card: label }));
       return loadCards().then(focusCards);
     }, function (err) {
       busy(b, false);
-      say(errMessage(err, 'Nu am putut seta cardul implicit. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not set the default card. Try again.')), 'error');
     });
   }
   function deleteCard(c, label, done) {
     API.delete('/customer/payment-methods/' + encodeURIComponent(c.id), {}).then(function () {
       done(true);
-      say('Am șters ' + label + '.');
+      say(VQ.t('{name} was deleted.', { name: label }));
       loadCards().then(focusCards);
     }, function (err) {
-      if (err && err.status === 404) { done(true); say('Cardul fusese deja șters.'); loadCards(); return; }
+      if (err && err.status === 404) { done(true); say(VQ.t('The card had already been deleted.')); loadCards(); return; }
       done(false);
-      say(errMessage(err, 'Nu am putut șterge cardul. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not delete the card. Try again.')), 'error');
     });
   }
   function loadStripe() {
@@ -1225,7 +1223,7 @@
     if (focusAdd && !$('st-card-add-row').hidden) $('st-card-add').focus();
   }
   $('st-card-add').addEventListener('click', function () {
-    if (!canAddCards()) { say('Procesatorul de plăți nu este configurat încă.', 'error'); return; }
+    if (!canAddCards()) { say(VQ.t('The payment processor is not set up yet.'), 'error'); return; }
     var box = $('st-card-element'), save = $('st-card-save');
     show('st-card-form', true);
     show('st-card-add-row', false);
@@ -1233,13 +1231,13 @@
     save.disabled = true;
     cardComplete = false;
     box.textContent = '';
-    box.appendChild(el('p', 'st-note', 'Se încarcă formularul securizat…'));
+    box.appendChild(el('p', 'st-note', VQ.t('Loading the secure form…')));
     $('st-card-form').scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
     loadStripe().then(function (Stripe) {
       if ($('st-card-form').hidden || cardEl) return;
       if (!stripe || stripeKey !== state.stripe.key) { stripe = Stripe(state.stripe.key); stripeKey = state.stripe.key; }
       box.textContent = '';
-      cardEl = stripe.elements({ locale: 'ro' }).create('card', {
+      cardEl = stripe.elements({ locale: VQ.locale }).create('card', {
         hidePostalCode: true,
         style: {
           base: { fontFamily: getComputedStyle(document.body).fontFamily, fontSize: '16px', color: '#212121', '::placeholder': { color: '#6B6F6C' } },
@@ -1255,33 +1253,33 @@
       cardEl.on('ready', function () { try { cardEl.focus(); } catch (e) {} });
     }, function () {
       box.textContent = '';
-      formError('st-card-error', 'Nu am putut încărca formularul securizat Stripe. Verifică conexiunea sau extensiile care blochează scripturi, apoi încearcă din nou.');
+      formError('st-card-error', VQ.t('We could not load the secure Stripe form. Check your connection or any extensions that block scripts, then try again.'));
     });
   });
   $('st-card-cancel').addEventListener('click', function () { closeCardForm(true); });
   $('st-card-save').addEventListener('click', function () {
     if (!stripe || !cardEl || !cardComplete) return;
     var b = this, holder = (state.profile.first_name + ' ' + state.profile.last_name).trim();
-    busy(b, true, 'Se salvează…');
+    busy(b, true, VQ.t('Saving…'));
     formError('st-card-error', '');
     API.post('/customer/payment-methods/setup-intent', {}).then(function (resp) {
       var secret = resp && resp.data && resp.data.client_secret;
-      if (!secret) throw { custom: 'Nu am putut porni salvarea cardului. Încearcă din nou.' };
+      if (!secret) throw { custom: VQ.t('We could not start saving the card. Try again.') };
       return stripe.confirmCardSetup(secret, { payment_method: { card: cardEl, billing_details: { name: holder || undefined, email: state.profile.email || undefined } } });
     }).then(function (result) {
-      if (!result || result.error || !result.setupIntent) throw { custom: (result && result.error && result.error.message) || 'Cardul nu a putut fi verificat.' };
+      if (!result || result.error || !result.setupIntent) throw { custom: (result && result.error && result.error.message) || VQ.t('The card could not be verified.') };
       return API.post('/customer/payment-methods/confirm', { setup_intent_id: result.setupIntent.id });
     }).then(function (resp) {
-      if (!(resp && resp.data && obj(resp.data.payment_method))) throw { custom: 'Cardul a fost verificat, dar nu l-am putut salva. Încearcă din nou.' };
+      if (!(resp && resp.data && obj(resp.data.payment_method))) throw { custom: VQ.t('The card was verified, but we could not save it. Try again.') };
       busy(b, false);
       closeCardForm(false);
-      say('Cardul a fost salvat.');
+      say(VQ.t('The card was saved.'));
       return loadCards();
     }).catch(function (err) {
       busy(b, false);
       b.disabled = !cardComplete;
-      if (err && err.status === 503) { state.stripe.configured = false; closeCardForm(false); renderCards(); say('Procesatorul de plăți nu este configurat încă.', 'error'); return; }
-      formError('st-card-error', (err && err.custom) || errMessage(err, 'Nu am putut salva cardul. Încearcă din nou.'));
+      if (err && err.status === 503) { state.stripe.configured = false; closeCardForm(false); renderCards(); say(VQ.t('The payment processor is not set up yet.'), 'error'); return; }
+      formError('st-card-error', (err && err.custom) || errMessage(err, VQ.t('We could not save the card. Try again.')));
     });
   });
 
@@ -1294,8 +1292,8 @@
       var d = resp && resp.data;
       state.gdpr = obj(d) && obj(d.latest) ? d.latest : null;
       if (exportBusy(before) && state.gdpr && !exportBusy(state.gdpr)) {
-        if (state.gdpr.status === 'completed') say('Arhiva cu datele tale e gata de descărcat.');
-        else if (state.gdpr.status === 'failed') say('Exportul datelor nu a reușit. Poți încerca din nou.', 'error');
+        if (state.gdpr.status === 'completed') say(VQ.t('The archive with your data is ready to download.'));
+        else if (state.gdpr.status === 'failed') say(VQ.t('The data export did not work. You can try again.'), 'error');
       }
       if (!(silent && exportBusy(before) && exportBusy(state.gdpr))) renderGdpr();
       schedulePoll();
@@ -1306,7 +1304,7 @@
       box.textContent = '';
       box.appendChild(el('p', 'st-state', ''));
       box.firstChild.id = 'st-export-state';
-      stateMsg('st-export-state', 'Nu am putut verifica exporturile.', function () { loadGdpr(false); });
+      stateMsg('st-export-state', VQ.t('We could not check for exports.'), function () { loadGdpr(false); });
     });
   }
   function schedulePoll() {
@@ -1324,12 +1322,12 @@
     box.textContent = '';
     if (exportBusy(r)) {
       c = el('div', 'st-callout is-wait');
-      c.appendChild(el('b', null, r.status === 'processing' ? 'Pregătim arhiva…' : 'Cererea ta este în așteptare…'));
-      c.appendChild(el('p', null, (r.requested_at ? 'Trimisă ' + ago(r.requested_at) + '. ' : '')
-        + (pollSlow ? 'Durează mai mult decât de obicei. Îți trimitem un email când arhiva e gata.' : 'Pagina se actualizează singură, iar când e gata primești și un email.')));
+      c.appendChild(el('b', null, r.status === 'processing' ? VQ.t('Preparing the archive…') : VQ.t('Your request is waiting…')));
+      c.appendChild(el('p', null, (r.requested_at ? VQ.t('Sent {when}.', { when: ago(r.requested_at) }) + ' ' : '')
+        + (pollSlow ? VQ.t('It is taking longer than usual. We will email you when the archive is ready.') : VQ.t('This page updates by itself, and you also get an email when it is ready.'))));
       if (pollSlow) {
-        var again = button('Verifică din nou', 'btn-ghost');
-        again.addEventListener('click', function () { pollStarted = 0; pollSlow = false; busy(again, true, 'Se verifică…'); loadGdpr(false); });
+        var again = button(VQ.t('Check again'), 'btn-ghost');
+        again.addEventListener('click', function () { pollStarted = 0; pollSlow = false; busy(again, true, VQ.t('Checking…')); loadGdpr(false); });
         row.appendChild(again);
         c.appendChild(row);
       }
@@ -1338,29 +1336,31 @@
     }
     if (r && r.status === 'completed' && r.download_url && !exportExpired(r)) {
       c = el('div', 'st-callout is-ok');
-      c.appendChild(el('b', null, 'Arhiva ta este gata'));
-      c.appendChild(el('p', null, ['ZIP' + (bytes(r.file_size_bytes) ? ', ' + bytes(r.file_size_bytes) : ''), r.expires_at ? 'disponibilă până pe ' + day(r.expires_at) : '', r.downloaded_at ? 'descărcată ' + ago(r.downloaded_at) : ''].filter(Boolean).join(' · ')));
-      var dl = button('Descarcă arhiva', 'btn-primary');
+      c.appendChild(el('b', null, VQ.t('Your archive is ready')));
+      c.appendChild(el('p', null, ['ZIP' + (bytes(r.file_size_bytes) ? ', ' + bytes(r.file_size_bytes) : ''), r.expires_at ? VQ.t('available until {date}', { date: day(r.expires_at) }) : '', r.downloaded_at ? VQ.t('downloaded {when}', { when: ago(r.downloaded_at) }) : ''].filter(Boolean).join(' · ')));
+      var dl = button(VQ.t('Download the archive'), 'btn-primary');
       dl.addEventListener('click', function () { downloadExport(r, dl); });
       row.appendChild(dl);
-      row.appendChild(requestButton('Cere un export nou', 'btn-ghost'));
+      row.appendChild(requestButton(VQ.t('Ask for a new export'), 'btn-ghost'));
       c.appendChild(row);
       box.appendChild(c);
       return;
     }
     if (r && r.status === 'failed') {
       c = el('div', 'st-callout is-bad');
-      c.appendChild(el('b', null, 'Exportul anterior nu a reușit'));
+      c.appendChild(el('b', null, VQ.t('The last export did not work')));
       var why = txt(r.error_message);
-      c.appendChild(el('p', null, why && isRo(why) ? why : 'A apărut o eroare la pregătirea arhivei. Poți încerca din nou.'));
+      c.appendChild(el('p', null, why && isRo(why) && VQ.locale === 'ro' ? why : VQ.t('Something went wrong while preparing the archive. You can try again.')));
       box.appendChild(c);
-      row.appendChild(requestButton('Încearcă din nou', 'btn-primary'));
+      row.appendChild(requestButton(VQ.t('Try again'), 'btn-primary'));
     } else {
       var note = r && r.status === 'completed'
-        ? 'Arhiva din ' + (day(r.processed_at || r.requested_at) || 'cererea anterioară') + ' a expirat. Poți cere una nouă oricând.'
-        : 'Pregătim o arhivă ZIP în câteva minute. Primești un email când e gata, iar linkul de descărcare rămâne valabil 14 zile.';
+        ? (day(r.processed_at || r.requested_at)
+          ? VQ.t('The archive from {date} has expired. You can ask for a new one at any time.', { date: day(r.processed_at || r.requested_at) })
+          : VQ.t('The archive from your last request has expired. You can ask for a new one at any time.'))
+        : VQ.t('We prepare a ZIP archive in a few minutes. You get an email when it is ready, and the download link stays valid for 14 days.');
       box.appendChild(el('p', 'st-note', note));
-      row.appendChild(requestButton('Solicită exportul', 'btn-primary'));
+      row.appendChild(requestButton(VQ.t('Ask for the export'), 'btn-primary'));
     }
     box.appendChild(row);
   }
@@ -1370,59 +1370,59 @@
     return b;
   }
   function requestExport(b) {
-    busy(b, true, 'Se trimite…');
+    busy(b, true, VQ.t('Sending…'));
     API.post('/customer/gdpr/export', {}).then(function (resp) {
       var r = resp && resp.data && obj(resp.data.request) ? resp.data.request : null;
-      if (!r) { busy(b, false); say('Nu am putut înregistra cererea. Încearcă din nou.', 'error'); return; }
+      if (!r) { busy(b, false); say(VQ.t('We could not record the request. Try again.'), 'error'); return; }
       state.gdpr = r;
       pollStarted = 0;
       pollSlow = false;
-      say(resp.data.reused ? 'Ai deja o cerere de export în curs. Te anunțăm când arhiva e gata.' : 'Am înregistrat cererea. Pregătim arhiva și îți trimitem un email când e gata.');
+      say(resp.data.reused ? VQ.t('You already have an export request in progress. We will let you know when the archive is ready.') : VQ.t('Your request is recorded. We are preparing the archive and will email you when it is ready.'));
       renderGdpr();
       schedulePoll();
       $('st-export').focus();
     }, function (err) {
       busy(b, false);
-      say(err && err.status === 429 ? 'Ai cerut deja mai multe exporturi în ultima oră. Mai încearcă puțin mai târziu.' : errMessage(err, 'Nu am putut înregistra cererea de export. Încearcă din nou.'), 'error');
+      say(err && err.status === 429 ? VQ.t('You have already asked for several exports in the last hour. Try again a little later.') : errMessage(err, VQ.t('We could not record the export request. Try again.')), 'error');
     });
   }
   function downloadExport(r, b) {
     var m = /\/gdpr\/download\/([A-Za-z0-9]+)\/?$/.exec(String(r.download_url || '')), auth = token();
-    if (!m) { say('Linkul de descărcare nu este valid. Cere un export nou.', 'error'); return; }
-    if (!auth) { say('Sesiunea a expirat. Intră din nou în cont ca să descarci arhiva.', 'error'); return; }
-    busy(b, true, 'Se descarcă…');
+    if (!m) { say(VQ.t('The download link is not valid. Ask for a new export.'), 'error'); return; }
+    if (!auth) { say(VQ.t('Your session has expired. Sign in again to download the archive.'), 'error'); return; }
+    busy(b, true, VQ.t('Downloading…'));
     fetch(apiUrl() + '?action=customer.gdpr.download&export=' + encodeURIComponent(m[1]), {
       headers: { Authorization: 'Bearer ' + auth, Accept: 'application/zip' }, credentials: 'same-origin', cache: 'no-store'
     }).then(function (res) {
       if (res.status === 401) return 'auth';
       if (res.status === 404 || res.status === 410) return 'gone';
       if (!res.ok || (res.headers.get('Content-Type') || '').indexOf('zip') === -1) return 'fail';
-      var cd = res.headers.get('Content-Disposition') || '', fm = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd), name = 'bilete-online-date-personale.zip';
+      var cd = res.headers.get('Content-Disposition') || '', fm = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd), name = 'viaqui-personal-data.zip';
       if (fm) { try { name = decodeURIComponent(fm[1]); } catch (e) { name = fm[1]; } }
       return res.blob().then(function (blob) { account.save(blob, name); return 'ok'; });
     }, function () { return 'network'; }).then(function (result) {
       busy(b, false);
-      if (result === 'ok') say('Am descărcat arhiva cu datele tale.');
-      else if (result === 'auth') say('Sesiunea a expirat. Intră din nou în cont ca să descarci arhiva.', 'error');
-      else if (result === 'gone') { say('Arhiva a expirat sau nu mai există. Cere un export nou.', 'error'); loadGdpr(false); }
-      else if (result === 'network') say('Nu am putut descărca arhiva. Verifică conexiunea și încearcă din nou.', 'error');
-      else say('Nu am putut descărca arhiva acum. Încearcă din nou în câteva minute.', 'error');
+      if (result === 'ok') say(VQ.t('The archive with your data was downloaded.'));
+      else if (result === 'auth') say(VQ.t('Your session has expired. Sign in again to download the archive.'), 'error');
+      else if (result === 'gone') { say(VQ.t('The archive has expired or no longer exists. Ask for a new export.'), 'error'); loadGdpr(false); }
+      else if (result === 'network') say(VQ.t('We could not download the archive. Check your connection and try again.'), 'error');
+      else say(VQ.t('We could not download the archive right now. Try again in a few minutes.'), 'error');
     });
   }
 
   // ---------- privacy: personalisation ----------
-  function renderPersonalization() { $('st-personalization-l').textContent = $('st-personalization').checked ? 'Activ' : 'Inactiv'; }
+  function renderPersonalization() { $('st-personalization-l').textContent = $('st-personalization').checked ? VQ.t('On') : VQ.t('Off'); }
   $('st-personalization').addEventListener('change', function () {
     var input = this, on = input.checked;
     renderPersonalization();
     input.disabled = true;
     API.put('/customer/settings', { personalization_enabled: on }).then(function () {
       state.personalization = on;
-      say(on ? 'Personalizarea recomandărilor este activă.' : 'Personalizarea este oprită. Vei vedea recomandări generale.');
+      say(on ? VQ.t('Personalised recommendations are on.') : VQ.t('Personalisation is off. You will see general recommendations.'));
     }, function (err) {
       input.checked = !on;
       renderPersonalization();
-      say(errMessage(err, 'Nu am putut salva setarea. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not save the setting. Try again.')), 'error');
     }).then(function () { input.disabled = !state.ready; });
   });
 
@@ -1437,7 +1437,7 @@
     clearInvalid(this);
     formError('st-delete-error', '');
     if (!$('st-delete-confirm').checked) return;
-    if (!pass.value) return formError('st-delete-error', 'Scrie parola curentă ca să confirmi ștergerea.', pass);
+    if (!pass.value) return formError('st-delete-error', VQ.t('Enter your current password to confirm the deletion.'), pass);
     $('st-delete-submit').disabled = true;
     show('st-delete-final', true);
     $('st-delete-no').focus();
@@ -1449,15 +1449,15 @@
   });
   $('st-delete-yes').addEventListener('click', function () {
     var b = this, pass = $('st-delete-pass');
-    busy(b, true, 'Se șterge contul…');
+    busy(b, true, VQ.t('Deleting the account…'));
     $('st-delete-no').disabled = true;
     API.customer.deleteAccount(pass.value, $('st-delete-reason').value.trim() || null).then(function (resp) {
       if (resp && resp.success === false) throw { status: 400, message: resp.message || '' };
-      say('Contul a fost șters. Te redirecționăm…');
+      say(VQ.t('Your account was deleted. Taking you to the home page…'));
       [].forEach.call(document.querySelectorAll('#st-content button, #st-content input, #st-content select, #st-content textarea'), function (n) { n.disabled = true; });
       setTimeout(function () {
         try { BileteOnlineAuth.clearCustomerSession(); } catch (e) {}
-        window.location.href = '/';
+        window.location.href = VQ.url('/');
       }, 1500);
     }).catch(function (err) {
       busy(b, false);
@@ -1465,9 +1465,9 @@
       show('st-delete-final', false);
       $('st-delete-submit').disabled = !$('st-delete-confirm').checked;
       var status = err && err.status;
-      if (status === 422) formError('st-delete-error', 'Parola curentă nu este corectă.', pass);
-      else if (status === 400) formError('st-delete-error', 'Nu putem șterge contul cât timp ai bilete la activități care nu au avut loc încă. Scrie-ne dacă vrei să le anulezi.');
-      else formError('st-delete-error', errMessage(err, 'Nu am putut șterge contul. Încearcă din nou.'));
+      if (status === 422) formError('st-delete-error', VQ.t('The current password is not correct.'), pass);
+      else if (status === 400) formError('st-delete-error', VQ.t('We cannot delete the account while you have tickets for activities that have not taken place yet. Write to us if you want to cancel them.'));
+      else formError('st-delete-error', errMessage(err, VQ.t('We could not delete the account. Try again.')));
     });
   });
 
@@ -1488,7 +1488,7 @@
   }
   $('st-retry').addEventListener('click', function () {
     var b = this;
-    busy(b, true, 'Se încarcă…');
+    busy(b, true, VQ.t('Loading…'));
     loadMe().then(function () { busy(b, false); });
   });
 

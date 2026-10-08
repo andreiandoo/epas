@@ -17,7 +17,7 @@
   var BUDGETS = ['all', 'low', 'mid', 'high'];
   var HIDDEN_KEY = 'bo_rec_hidden';
   var SEGMENTS = [['1060 585 220 310', '220 / 310'], ['1455 585 290 310', '290 / 310'], ['2170 625 340 270', '340 / 270'], ['2665 625 250 270', '250 / 270']];
-  var num = new Intl.NumberFormat('ro-RO');
+  var num = new Intl.NumberFormat(VQ.locale === 'en' ? 'en-GB' : VQ.locale);
 
   var items = [], loaded = false, stats = {}, signals = {}, engine = {}, perLei = 100, categoryNames = {};
   var hidden = readHidden(), flashTimer = 0, flashSet = 0, undoFn = null;
@@ -34,16 +34,12 @@
   function show(id, on) { var n = typeof id === 'string' ? $(id) : id; if (n) n.hidden = !on; }
   function obj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
   function txt(v) {
-    if (obj(v)) v = v.ro || v.en || Object.keys(v).map(function (k) { return v[k]; }).filter(function (x) { return typeof x === 'string'; })[0];
+    if (obj(v)) v = v[VQ.locale] || v.en || v.ro || Object.keys(v).map(function (k) { return v[k]; }).filter(function (x) { return typeof x === 'string'; })[0];
     return v == null || typeof v === 'object' ? '' : String(v).trim();
   }
   function count(v) { var n = Number(v); return isFinite(n) && n > 0 ? Math.floor(n) : 0; }
-  function plural(n, one, many) {
-    n = count(n);
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
+  // money is in the marketplace's currency
+  function money(n) { n = Number(n) || 0; return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(n) : '€' + n; }
   function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
   function fresh(path) { return API.request(path, { method: 'GET', noCache: true }); }
   function safeUrl(u) {
@@ -102,7 +98,7 @@
   function normItem(it, i) {
     var reasons = (Array.isArray(it.reasons) ? it.reasons : []).map(txt).filter(Boolean);
     return {
-      id: it.id != null ? it.id : i, title: txt(it.title) || 'Activitate', url: safeUrl(it.url) || (it.slug ? '/activitate/' + encodeURIComponent(String(it.slug)) : ''),
+      id: it.id != null ? it.id : i, title: txt(it.title) || VQ.t('Activity'), url: safeUrl(it.url) || (it.slug ? VQ.url('/activity/' + encodeURIComponent(String(it.slug))) : ''),
       image: imgUrl(it.image), city: txt(it.city), category: txt(it.category), categorySlug: txt(it.category_slug), price: txt(it.price_label),
       description: txt(it.short_description), match: Math.max(0, Math.min(99, Math.round(Number(it.match_score) || 0))), reasons: reasons,
       reason: REASONS.indexOf(it.reason_primary) > 0 ? it.reason_primary : 'profile', points: !!it.can_use_points, family: !!it.is_family,
@@ -131,7 +127,7 @@
       if (err && err.status === 401) { guard(); return; }
       show('rc-skel', false);
       show('rc-error', true);
-      $('rc-results-h').textContent = 'Recomandări';
+      $('rc-results-h').textContent = VQ.t('Recommendations');
     });
   }
   function loadPoints() {
@@ -146,7 +142,7 @@
         });
       }
       renderExpiring(0, 0, true);
-    }).catch(function () { $('rc-s-exp').textContent = '—'; $('rc-s-exp-p').textContent = 'nu am putut verifica'; });
+    }).catch(function () { $('rc-s-exp').textContent = '—'; $('rc-s-exp-p').textContent = VQ.t('could not check'); });
   }
   function resolveInterest() {
     var slug = txt(signals.interest);
@@ -161,34 +157,34 @@
   // ---------- render ----------
   function renderSignals() {
     var interest = txt(signals.interest);
-    $('rc-sig-city').textContent = txt(signals.city) || 'neales';
-    $('rc-sig-interest').textContent = interest ? (categoryNames[interest] || (/^[a-z0-9-]+$/.test(interest) ? slugName(interest) : interest)) : 'descoperire';
-    $('rc-sig-family').textContent = txt(signals.family) || 'doar tu';
+    $('rc-sig-city').textContent = txt(signals.city) || VQ.t('not chosen');
+    $('rc-sig-interest').textContent = interest ? (categoryNames[interest] || (/^[a-z0-9-]+$/.test(interest) ? slugName(interest) : interest)) : VQ.t('discovery');
+    $('rc-sig-family').textContent = txt(signals.family) || VQ.t('just you');
     $('rc-sig-points').textContent = num.format(count(signals.points));
     ['rc-sig-city', 'rc-sig-interest', 'rc-sig-family'].forEach(function (id) { $(id).title = $(id).textContent; });
 
     var history = !!engine.has_history, family = !!txt(signals.family) && txt(signals.family) !== 'doar tu';
     var cities = (Array.isArray(engine.pref_cities) ? engine.pref_cities : []).map(txt).filter(Boolean);
-    control('rc-c-history', history, history ? 'activități cumpărate anterior' : 'nicio comandă în ultimele 12 luni');
-    control('rc-c-family', family, family ? txt(signals.family) : 'adaugă copiii în profilul familiei');
-    control('rc-c-cities', cities.length > 0, cities.length ? cities.join(', ') : 'încă nimic ales');
+    control('rc-c-history', history, history ? VQ.t('activities you bought before') : VQ.t('no orders in the last 12 months'));
+    control('rc-c-family', family, family ? txt(signals.family) : VQ.t('add your children to the family profile'));
+    control('rc-c-cities', cities.length > 0, cities.length ? cities.join(', ') : VQ.t('nothing chosen yet'));
     renderPoints();
   }
   function control(id, on, text) {
     var li = $(id), small = $(id + '-t'), sr = li.querySelector('.sr') || li.querySelector('b').appendChild(el('span', 'sr'));
     li.classList.toggle('is-on', on);
     li.classList.toggle('is-off', !on);
-    sr.textContent = on ? ' (folosit)' : ' (nefolosit)';
+    sr.textContent = on ? VQ.t(' (used)') : VQ.t(' (not used)');
     if (small) small.textContent = text;
   }
   function renderPoints() {
     var p = count(signals.points);
     $('rc-p-points').textContent = num.format(p);
-    $('rc-p-lei').textContent = num.format(Math.floor(p / perLei)) + ' lei';
+    $('rc-p-lei').textContent = money(Math.floor(p / perLei));
   }
   function renderExpiring(n, days, never) {
     $('rc-s-exp').textContent = num.format(n);
-    $('rc-s-exp-p').textContent = n ? 'puncte în ' + plural(days, 'zi', 'zile') : (never ? 'punctele nu expiră' : 'fără puncte care expiră');
+    $('rc-s-exp-p').textContent = n ? VQ.t('points within {days}', { days: VQ.n(count(days), 'day', 'days') }) : (never ? VQ.t('points do not expire') : VQ.t('no points expiring'));
   }
   function renderStats() {
     var pick = function (key, fallbackCount) { return stats[key] != null ? count(stats[key]) : fallbackCount; };
@@ -199,7 +195,7 @@
   function fillCities() {
     var sel = $('rc-city'), names = [];
     items.forEach(function (it) { if (it.city && names.indexOf(it.city) === -1) names.push(it.city); });
-    names.sort(function (a, b) { return a.localeCompare(b, 'ro'); });
+    names.sort(function (a, b) { return a.localeCompare(b, VQ.locale); });
     if (filters.city !== 'all' && names.indexOf(filters.city) === -1) names.unshift(filters.city);
     while (sel.options.length > 1) sel.remove(1);
     names.forEach(function (n) { sel.appendChild(new Option(n, n)); });
@@ -229,31 +225,31 @@
       media.appendChild(img);
     } else media.appendChild(fallback(i));
     top.appendChild(media);
-    if (it.match > 0) top.appendChild(el('span', 'rc-badge is-match', it.match + '% match'));
-    if (it.points) top.appendChild(el('span', 'rc-badge is-points', 'poți folosi puncte'));
+    if (it.match > 0) top.appendChild(el('span', 'rc-badge is-match', VQ.t('{n}% match', { n: it.match })));
+    if (it.points) top.appendChild(el('span', 'rc-badge is-points', VQ.t('you can use points')));
     top.appendChild(el('h3', null, it.title));
 
     var tags = el('div', 'rc-tags');
     [it.city, it.category, it.price].filter(Boolean).forEach(function (t) { tags.appendChild(el('span', 'acc-tag', t)); });
-    if (it.family) tags.appendChild(el('span', 'acc-tag is-ok', 'pentru copii'));
+    if (it.family) tags.appendChild(el('span', 'acc-tag is-ok', VQ.t('for kids')));
     if (tags.childNodes.length) body.appendChild(tags);
     if (it.description) body.appendChild(el('p', 'rc-desc', it.description));
     var why = el('div', 'rc-why'), ul = el('ul');
-    why.appendChild(el('b', null, 'De ce ți-o recomandăm?'));
-    (it.reasons.length ? it.reasons : ['Activitate populară pe care credem că o vei aprecia.']).forEach(function (r) { ul.appendChild(el('li', null, r)); });
+    why.appendChild(el('b', null, VQ.t('Why do we recommend it?')));
+    (it.reasons.length ? it.reasons : [VQ.t('A popular activity we think you will enjoy.')]).forEach(function (r) { ul.appendChild(el('li', null, r)); });
     why.appendChild(ul);
     body.appendChild(why);
 
     var actions = el('div', 'rc-actions');
     if (it.url) {
-      var go = el('a', 'btn btn-primary', 'Vezi bilete');
+      var go = el('a', 'btn btn-primary', VQ.t('View tickets'));
       go.href = it.url;
-      go.setAttribute('aria-label', 'Vezi bilete: ' + it.title);
+      go.setAttribute('aria-label', VQ.t('View tickets: {title}', { title: it.title }));
       actions.appendChild(go);
     }
-    var no = el('button', 'btn btn-ghost rc-hide', 'Nu mă interesează');
+    var no = el('button', 'btn btn-ghost rc-hide', VQ.t('Not interested'));
     no.type = 'button';
-    no.setAttribute('aria-label', 'Nu mă interesează: ' + it.title);
+    no.setAttribute('aria-label', VQ.t('Not interested: {title}', { title: it.title }));
     no.addEventListener('click', function () { hide(it); });
     actions.appendChild(no);
     body.appendChild(actions);
@@ -268,8 +264,8 @@
     grid.textContent = '';
     grid.appendChild(frag);
     var hiddenHere = items.filter(isHidden).length;
-    $('rc-results-h').textContent = plural(list.length, 'recomandare', 'recomandări');
-    $('rc-unhide').textContent = 'Arată ascunse (' + num.format(hiddenHere) + ')';
+    $('rc-results-h').textContent = VQ.n(list.length, 'recommendation', 'recommendations');
+    $('rc-unhide').textContent = VQ.t('Show hidden ({n})', { n: num.format(hiddenHere) });
     show('rc-unhide', hiddenHere > 0);
     show('rc-skel', false);
     show('rc-error', false);
@@ -277,10 +273,10 @@
     show('rc-empty', !list.length);
     if (!list.length) {
       var none = !items.length;
-      $('rc-empty-h').textContent = none ? 'Încă nu avem recomandări pentru tine.' : 'Nu am găsit recomandări.';
+      $('rc-empty-h').textContent = none ? VQ.t('We have no recommendations for you yet.') : VQ.t('No recommendations found.');
       $('rc-empty-p').textContent = none
-        ? 'Completează preferințele (orașe, categorii, buget) ca să îți putem propune activități potrivite.'
-        : (filtering() ? 'Schimbă filtrele sau completează profilul pentru sugestii mai bune.' : 'Ai ascuns toate recomandările. Le poți readuce oricând.');
+        ? VQ.t('Fill in your preferences (cities, categories, budget) so we can suggest activities that suit you.')
+        : (filtering() ? VQ.t('Change the filters or complete your profile for better suggestions.') : VQ.t('You have hidden all the recommendations. You can bring them back at any time.'));
       show('rc-empty-reset', filtering());
     }
     [].forEach.call(document.querySelectorAll('.rc-pill'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-reason') === filters.reason)); });
@@ -293,7 +289,7 @@
     render();
     var buttons = document.querySelectorAll('#rc-grid .rc-hide');
     (buttons[Math.min(at, buttons.length - 1)] || $('rc-results-h')).focus();
-    say('Am ascuns „' + it.title + '”.', null, function () {
+    say(VQ.t('“{title}” is hidden.', { title: it.title }), null, function () {
       hidden = hidden.filter(function (k) { return k !== keyOf(it); });
       saveHidden();
       render();
@@ -306,7 +302,7 @@
     hidden = hidden.filter(function (k) { return keys.indexOf(k) === -1; });
     saveHidden();
     render();
-    say('Am readus ' + plural(before - hidden.length, 'recomandare ascunsă', 'recomandări ascunse') + '.');
+    say(VQ.t('Brought back: {items}.', { items: VQ.n(before - hidden.length, 'hidden recommendation', 'hidden recommendations') }));
     $('rc-results-h').focus();
   });
 

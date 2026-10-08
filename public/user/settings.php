@@ -24,9 +24,9 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/nav.php';
 require_once __DIR__ . '/../includes/v2/account.php';
 
-$pageTitleRaw = 'Setări cont — ' . SITE_NAME;
-$pageDescription = 'Gestionează datele tale de contact, parola, preferințele pentru recomandări, profilul familiei, notificările, plățile și opțiunile de confidențialitate.';
-$canonicalUrl = SITE_URL . '/cont/setari';
+$pageTitleRaw = v2_t('Account settings: {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('Manage your contact details, password, recommendation preferences, family profile, notifications, payments and privacy options.');
+$canonicalUrl = SITE_URL . '/account/settings';
 $noindex = true;
 $skipPageCache = true;
 
@@ -37,23 +37,23 @@ $v2HeadExtra = v2_account_client_config();
 $v2FooterCompact = true;
 
 $stTabs = [
-    'personal' => 'Date personale',
-    'security' => 'Securitate',
-    'preferences' => 'Preferințe',
-    'family' => 'Familie',
-    'notifications' => 'Notificări',
-    'payments' => 'Plăți',
-    'privacy' => 'Privacy / GDPR',
+    'personal' => v2_t('Personal details'),
+    'security' => v2_t('Security'),
+    'preferences' => v2_t('Preferences'),
+    'family' => v2_t('Family'),
+    'notifications' => v2_t('Notifications'),
+    'payments' => v2_t('Payments'),
+    'privacy' => v2_t('Privacy / GDPR'),
 ];
 $stPanelIds = ['preferences' => 'profil-preferinte', 'family' => 'familie'];
 $stPanel = function (string $key) use ($stPanelIds): string { return $stPanelIds[$key] ?? 'st-p-' . $key; };
 $stNotifications = [
-    'tickets' => ['Bilete și comenzi', 'confirmări, QR, modificări, remindere înainte de activitate'],
-    'points' => ['Puncte bonus', 'puncte câștigate, puncte care expiră, campanii loyalty'],
-    'recommendations' => ['Recomandări', 'activități potrivite după profil, oraș și istoric'],
-    'newsletter' => ['Newsletter', 'ghiduri, oferte, activități noi și idei de weekend'],
-    'reviews' => ['Recenzii', 'remindere pentru activități evaluate și status moderare'],
-    'support' => ['Support', 'răspunsuri la tichete și actualizări de retur'],
+    'tickets' => [v2_t('Tickets and orders'), v2_t('confirmations, QR codes, changes, reminders before an activity')],
+    'points' => [v2_t('Bonus points'), v2_t('points earned, points about to expire, loyalty campaigns')],
+    'recommendations' => [v2_t('Recommendations'), v2_t('activities that fit your profile, city and history')],
+    'newsletter' => [v2_t('Newsletter'), v2_t('guides, offers, new activities and weekend ideas')],
+    'reviews' => [v2_t('Reviews'), v2_t('reminders to review activities and moderation status')],
+    'support' => [v2_t('Support'), v2_t('replies to tickets and refund updates')],
 ];
 $stCaret = v2_ic('caret-down');
 
@@ -67,43 +67,43 @@ include __DIR__ . '/../includes/v2/header.php';
     <!-- not signed in -->
     <section class="acc-guard" id="st-guard" hidden aria-labelledby="st-guard-h">
       <span class="acc-guard-ic" aria-hidden="true"><?= v2_ic('lock-simple') ?></span>
-      <h1 id="st-guard-h">Trebuie să fii autentificat</h1>
-      <p>Intră în cont pentru a-ți vedea setările.</p>
-      <a class="btn btn-primary" href="/autentificare?redirect=%2Fcont%2Fsetari">Intră în cont<?= v2_ic('arrow-right') ?></a>
+      <h1 id="st-guard-h"><?= v2_te('You need to sign in') ?></h1>
+      <p><?= v2_te('Sign in to see your settings.') ?></p>
+      <a class="btn btn-primary" href="/login?redirect=%2Faccount%2Fsettings"><?= v2_te('Sign in') ?><?= v2_ic('arrow-right') ?></a>
     </section>
 
     <div class="acc-body" id="st-content">
       <!-- HERO -->
       <section class="acc-hero st-hero" aria-labelledby="st-h">
         <div>
-          <p class="acc-kicker">Account settings</p>
-          <h1 class="acc-h" id="st-h">Setări cont</h1>
-          <p class="acc-lead">Administrează datele personale, securitatea, preferințele pentru recomandări, notificările, plățile și opțiunile de confidențialitate.</p>
+          <p class="acc-kicker"><?= v2_te('Account settings') ?></p>
+          <h1 class="acc-h" id="st-h"><?= v2_te('Account settings') ?></h1>
+          <p class="acc-lead"><?= v2_te('Manage your personal details, security, recommendation preferences, notifications, payments and privacy options.') ?></p>
           <div class="st-cta">
-            <button class="btn btn-light" type="button" data-open-tab="preferences"><?= v2_ic('star') ?>Completează preferințe</button>
-            <button class="btn btn-outline-light" type="button" data-open-tab="privacy">Privacy &amp; GDPR</button>
+            <button class="btn btn-light" type="button" data-open-tab="preferences"><?= v2_ic('star') ?><?= v2_te('Fill in preferences') ?></button>
+            <button class="btn btn-outline-light" type="button" data-open-tab="privacy"><?= v2_te('Privacy & GDPR') ?></button>
           </div>
         </div>
         <article class="st-completion" aria-labelledby="st-completion-k">
-          <p class="acc-k" id="st-completion-k">Profile completion</p>
+          <p class="acc-k" id="st-completion-k"><?= v2_te('Profile completion') ?></p>
           <p class="st-completion-v"><span id="st-completion">0</span>%</p>
-          <p class="st-completion-l">profil complet pentru recomandări</p>
-          <div class="st-bar" role="progressbar" id="st-completion-bar" aria-label="Profil completat" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
-          <p class="st-completion-hint" id="st-missing">Toate câmpurile esențiale sunt completate.</p>
+          <p class="st-completion-l"><?= v2_te('of your profile is complete for recommendations') ?></p>
+          <div class="st-bar" role="progressbar" id="st-completion-bar" aria-label="<?= v2_te('Profile completed') ?>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+          <p class="st-completion-hint" id="st-missing"><?= v2_te('All the essential fields are filled in.') ?></p>
         </article>
       </section>
 
       <!-- SUMMARY -->
-      <section class="st-stats" aria-label="Pe scurt">
-        <article class="st-stat"><p class="acc-k">Securitate</p><p class="st-stat-v" id="st-s-security">—</p><p class="st-stat-p" id="st-s-security-p">se verifică…</p></article>
-        <article class="st-stat is-mint"><p class="acc-k">Preferințe</p><p class="st-stat-v" id="st-s-prefs">—</p><p class="st-stat-p">pentru recomandări</p></article>
-        <article class="st-stat"><p class="acc-k">Notificări</p><p class="st-stat-v" id="st-s-notif">—</p><p class="st-stat-p">email + push</p></article>
-        <article class="st-stat is-warm"><p class="acc-k">GDPR</p><p class="st-stat-v">control</p><p class="st-stat-p">export / ștergere</p></article>
+      <section class="st-stats" aria-label="<?= v2_te('At a glance') ?>">
+        <article class="st-stat"><p class="acc-k"><?= v2_te('Security') ?></p><p class="st-stat-v" id="st-s-security">—</p><p class="st-stat-p" id="st-s-security-p"><?= v2_te('checking…') ?></p></article>
+        <article class="st-stat is-mint"><p class="acc-k"><?= v2_te('Preferences') ?></p><p class="st-stat-v" id="st-s-prefs">—</p><p class="st-stat-p"><?= v2_te('for recommendations') ?></p></article>
+        <article class="st-stat"><p class="acc-k"><?= v2_te('Notifications') ?></p><p class="st-stat-v" id="st-s-notif">—</p><p class="st-stat-p"><?= v2_te('email + push') ?></p></article>
+        <article class="st-stat is-warm"><p class="acc-k"><?= v2_te('GDPR') ?></p><p class="st-stat-v"><?= v2_te('control') ?></p><p class="st-stat-p"><?= v2_te('export / deletion') ?></p></article>
       </section>
 
       <!-- TABS -->
       <div class="st-tabs-wrap" id="st-tabs-wrap">
-        <div class="st-tabs" role="tablist" aria-label="Secțiuni setări" data-tabs>
+        <div class="st-tabs" role="tablist" aria-label="<?= v2_te('Settings sections') ?>" data-tabs>
           <?php $first = true; foreach ($stTabs as $key => $label): ?>
           <button class="st-tab" type="button" role="tab" id="st-tab-<?= $key ?>" aria-controls="<?= $stPanel($key) ?>" aria-selected="<?= $first ? 'true' : 'false' ?>"<?= $first ? '' : ' tabindex="-1"' ?>><?= v2_e($label) ?></button>
           <?php $first = false; endforeach; ?>
@@ -111,258 +111,258 @@ include __DIR__ . '/../includes/v2/header.php';
       </div>
       <p class="st-flash" id="st-flash" role="status" aria-live="polite"></p>
       <div class="st-callout is-bad" id="st-load-error" role="alert" hidden>
-        <b>Nu am putut încărca datele contului</b>
-        <p>Verifică conexiunea și încearcă din nou. Până atunci nu salvăm nimic, ca să nu suprascriem datele tale.</p>
-        <div class="st-actions"><button class="btn btn-ghost" type="button" id="st-retry">Reîncearcă</button></div>
+        <b><?= v2_te('We could not load your account details') ?></b>
+        <p><?= v2_te('Check your connection and try again. Until then nothing is saved, so your details are not overwritten.') ?></p>
+        <div class="st-actions"><button class="btn btn-ghost" type="button" id="st-retry"><?= v2_te('Try again') ?></button></div>
       </div>
 
       <!-- 1. PERSONAL -->
       <section class="acc-panel st-panel" id="<?= $stPanel('personal') ?>" role="tabpanel" aria-labelledby="st-tab-personal">
-        <p class="acc-k">Date personale</p>
-        <h2>Cine ești și cum te contactăm</h2>
-        <p class="st-lead">Aceste informații apar pe bilete, pe email-urile de confirmare și pe facturi.</p>
+        <p class="acc-k"><?= v2_te('Personal details') ?></p>
+        <h2><?= v2_te('Who you are and how we reach you') ?></h2>
+        <p class="st-lead"><?= v2_te('These details appear on tickets, confirmation emails and invoices.') ?></p>
         <form class="st-form" id="st-profile-form" novalidate>
           <div class="st-grid">
-            <div class="acc-field"><label for="st-first">Prenume</label><span class="acc-input is-plain"><input id="st-first" autocomplete="given-name" maxlength="100" required></span></div>
-            <div class="acc-field"><label for="st-last">Nume</label><span class="acc-input is-plain"><input id="st-last" autocomplete="family-name" maxlength="100" required></span></div>
+            <div class="acc-field"><label for="st-first"><?= v2_te('First name') ?></label><span class="acc-input is-plain"><input id="st-first" autocomplete="given-name" maxlength="100" required></span></div>
+            <div class="acc-field"><label for="st-last"><?= v2_te('Last name') ?></label><span class="acc-input is-plain"><input id="st-last" autocomplete="family-name" maxlength="100" required></span></div>
             <div class="acc-field">
-              <label for="st-email">Email</label>
+              <label for="st-email"><?= v2_te('Email') ?></label>
               <span class="acc-input is-plain"><input id="st-email" type="email" autocomplete="email" disabled aria-describedby="st-email-note"></span>
               <small class="st-verified" id="st-verified">—</small>
-              <small class="st-note" id="st-email-note">Emailul nu poate fi schimbat de aici. <a href="/contact?motiv=altele">Scrie-ne</a> dacă trebuie actualizat.</small>
+              <small class="st-note" id="st-email-note"><?= v2_t('The email cannot be changed here. <a href="{url}">Write to us</a> if it needs updating.', ['url' => '/contact?motiv=altele']) ?></small>
             </div>
-            <div class="acc-field"><label for="st-phone">Telefon</label><span class="acc-input is-plain"><input id="st-phone" type="tel" autocomplete="tel" maxlength="50" placeholder="0722 123 456"></span></div>
+            <div class="acc-field"><label for="st-phone"><?= v2_te('Phone') ?></label><span class="acc-input is-plain"><input id="st-phone" type="tel" autocomplete="tel" maxlength="50" placeholder="+43 660 123 4567"></span></div>
             <div class="acc-field">
-              <label for="st-city">Oraș principal</label>
-              <span class="acc-select"><select id="st-city" data-city-select><option value="">— alege orașul —</option></select><?= $stCaret ?></span>
-              <small class="st-note">Alege din lista de orașe acoperite. Folosit pentru recomandări locale.</small>
+              <label for="st-city"><?= v2_te('Main city') ?></label>
+              <span class="acc-select"><select id="st-city" data-city-select><option value=""><?= v2_te('choose a city') ?></option></select><?= $stCaret ?></span>
+              <small class="st-note"><?= v2_te('Choose from the cities we cover. Used for local recommendations.') ?></small>
             </div>
             <div class="acc-field">
-              <label for="st-birth">Data nașterii</label>
-              <span class="acc-input is-plain"><input id="st-birth" inputmode="numeric" maxlength="10" placeholder="zz/ll/aaaa" autocomplete="bday" aria-describedby="st-birth-note"></span>
-              <small class="st-note" id="st-birth-note">Format: zi/lună/an (exemplu: 15/06/1992)</small>
+              <label for="st-birth"><?= v2_te('Date of birth') ?></label>
+              <span class="acc-input is-plain"><input id="st-birth" inputmode="numeric" maxlength="10" placeholder="<?= v2_te('dd/mm/yyyy') ?>" autocomplete="bday" aria-describedby="st-birth-note"></span>
+              <small class="st-note" id="st-birth-note"><?= v2_te('Format: day/month/year (example: 15/06/1992)') ?></small>
             </div>
             <div class="acc-field is-wide">
-              <label for="st-gender">Gen (opțional)</label>
-              <span class="acc-select"><select id="st-gender"><option value="">— alege —</option><option value="female">Femeie</option><option value="male">Bărbat</option><option value="other">Altul</option></select><?= $stCaret ?></span>
+              <label for="st-gender"><?= v2_te('Gender (optional)') ?></label>
+              <span class="acc-select"><select id="st-gender"><option value=""><?= v2_te('choose') ?></option><option value="female"><?= v2_te('Woman') ?></option><option value="male"><?= v2_te('Man') ?></option><option value="other"><?= v2_te('Other') ?></option></select><?= $stCaret ?></span>
             </div>
           </div>
           <p class="st-error" id="st-profile-error" role="alert" hidden></p>
           <div class="st-actions">
-            <button class="btn btn-primary" type="submit" id="st-profile-save">Salvează datele</button>
-            <button class="btn btn-ghost" type="button" id="st-verify-send" hidden>Trimite link verificare</button>
+            <button class="btn btn-primary" type="submit" id="st-profile-save"><?= v2_te('Save details') ?></button>
+            <button class="btn btn-ghost" type="button" id="st-verify-send" hidden><?= v2_te('Send verification link') ?></button>
           </div>
         </form>
       </section>
 
       <!-- 2. SECURITY -->
       <section class="acc-panel st-panel" id="<?= $stPanel('security') ?>" role="tabpanel" aria-labelledby="st-tab-security" hidden>
-        <p class="acc-k">Securitate</p>
-        <h2>Parolă, sesiuni și protecția contului</h2>
+        <p class="acc-k"><?= v2_te('Security') ?></p>
+        <h2><?= v2_te('Password, sessions and account protection') ?></h2>
         <div class="st-two">
           <div class="st-stack">
             <div class="st-block">
-              <h3>Schimbă parola</h3>
+              <h3><?= v2_te('Change password') ?></h3>
               <form class="st-form" id="st-pass-form" novalidate>
-                <div class="acc-field"><label for="st-pass-current">Parolă curentă</label><span class="acc-input is-plain"><input id="st-pass-current" type="password" autocomplete="current-password" required></span></div>
+                <div class="acc-field"><label for="st-pass-current"><?= v2_te('Current password') ?></label><span class="acc-input is-plain"><input id="st-pass-current" type="password" autocomplete="current-password" required></span></div>
                 <div class="st-grid">
-                  <div class="acc-field"><label for="st-pass-new">Parolă nouă</label><span class="acc-input is-plain"><input id="st-pass-new" type="password" autocomplete="new-password" minlength="8" required></span></div>
-                  <div class="acc-field"><label for="st-pass-confirm">Confirmă parola nouă</label><span class="acc-input is-plain"><input id="st-pass-confirm" type="password" autocomplete="new-password" minlength="8" required></span></div>
+                  <div class="acc-field"><label for="st-pass-new"><?= v2_te('New password') ?></label><span class="acc-input is-plain"><input id="st-pass-new" type="password" autocomplete="new-password" minlength="8" required></span></div>
+                  <div class="acc-field"><label for="st-pass-confirm"><?= v2_te('Confirm the new password') ?></label><span class="acc-input is-plain"><input id="st-pass-confirm" type="password" autocomplete="new-password" minlength="8" required></span></div>
                 </div>
                 <p class="st-error" id="st-pass-error" role="alert" hidden></p>
-                <div class="st-actions"><button class="btn btn-primary" type="submit" id="st-pass-save">Actualizează parola</button></div>
+                <div class="st-actions"><button class="btn btn-primary" type="submit" id="st-pass-save"><?= v2_te('Update password') ?></button></div>
               </form>
             </div>
 
             <div class="st-block" id="st-2fa">
               <div class="st-block-head">
                 <div>
-                  <h3>Autentificare în doi pași</h3>
-                  <p class="st-note">Recomandat pentru protecție suplimentară. Vei avea nevoie de un cod TOTP de 6 cifre la fiecare login.</p>
+                  <h3><?= v2_te('Two-step sign-in') ?></h3>
+                  <p class="st-note"><?= v2_te('Recommended for extra protection. You will need a 6-digit TOTP code every time you sign in.') ?></p>
                 </div>
-                <span class="acc-tag" id="st-2fa-tag">inactiv</span>
+                <span class="acc-tag" id="st-2fa-tag"><?= v2_te('off') ?></span>
               </div>
               <div id="st-2fa-off">
-                <button class="btn btn-primary" type="button" id="st-2fa-start">Activează 2FA</button>
+                <button class="btn btn-primary" type="button" id="st-2fa-start"><?= v2_te('Turn on 2FA') ?></button>
               </div>
               <div class="st-2fa-setup" id="st-2fa-setup" hidden>
                 <div class="st-2fa-qr">
                   <div class="st-qr-box" id="st-2fa-qr"></div>
-                  <p class="st-note">Scanează QR cu Google Authenticator, Authy, 1Password sau Bitwarden.</p>
+                  <p class="st-note"><?= v2_te('Scan the QR code with Google Authenticator, Authy, 1Password or Bitwarden.') ?></p>
                 </div>
                 <div class="st-2fa-steps">
-                  <p class="st-note">Sau introdu secretul manual:</p>
+                  <p class="st-note"><?= v2_te('Or enter the secret by hand:') ?></p>
                   <code class="st-code" id="st-2fa-secret"></code>
-                  <button class="btn btn-ghost st-copy" type="button" id="st-2fa-secret-copy">Copiază secretul</button>
-                  <label class="st-strong" for="st-2fa-code">Pas 2 — introdu codul de 6 cifre afișat în aplicație:</label>
+                  <button class="btn btn-ghost st-copy" type="button" id="st-2fa-secret-copy"><?= v2_te('Copy the secret') ?></button>
+                  <label class="st-strong" for="st-2fa-code"><?= v2_te('Step 2: enter the 6-digit code shown in the app:') ?></label>
                   <span class="acc-input is-plain"><input class="st-otp" id="st-2fa-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456"></span>
                   <p class="st-error" id="st-2fa-error" role="alert" hidden></p>
                   <div class="st-actions">
-                    <button class="btn btn-primary" type="button" id="st-2fa-confirm" disabled>Verifică și activează</button>
-                    <button class="btn btn-ghost" type="button" id="st-2fa-cancel">Renunță</button>
+                    <button class="btn btn-primary" type="button" id="st-2fa-confirm" disabled><?= v2_te('Check and turn on') ?></button>
+                    <button class="btn btn-ghost" type="button" id="st-2fa-cancel"><?= v2_te('Cancel') ?></button>
                   </div>
                 </div>
                 <div class="st-recovery">
-                  <b>Coduri de recuperare</b>
-                  <p>Salvează aceste coduri într-un loc sigur — fiecare poate fi folosit o singură dată dacă pierzi accesul la aplicație.</p>
+                  <b><?= v2_te('Recovery codes') ?></b>
+                  <p><?= v2_te('Keep these codes somewhere safe: each one can be used once if you lose access to the app.') ?></p>
                   <ol class="st-codes" id="st-2fa-codes"></ol>
-                  <button class="btn btn-ghost" type="button" data-copy-codes="st-2fa-codes">Copiază codurile</button>
+                  <button class="btn btn-ghost" type="button" data-copy-codes="st-2fa-codes"><?= v2_te('Copy the codes') ?></button>
                 </div>
               </div>
               <div id="st-2fa-on" hidden>
                 <p class="st-note" id="st-2fa-summary"></p>
                 <div class="st-actions">
-                  <button class="btn st-danger" type="button" data-inline="st-2fa-disable">Dezactivează 2FA</button>
-                  <button class="btn btn-ghost" type="button" data-inline="st-2fa-regen">Regenerează coduri</button>
+                  <button class="btn st-danger" type="button" data-inline="st-2fa-disable"><?= v2_te('Turn off 2FA') ?></button>
+                  <button class="btn btn-ghost" type="button" data-inline="st-2fa-regen"><?= v2_te('Make new codes') ?></button>
                 </div>
                 <form class="st-inline" id="st-2fa-disable" hidden novalidate>
-                  <label for="st-2fa-disable-pass">Confirmă parola pentru a dezactiva 2FA:</label>
+                  <label for="st-2fa-disable-pass"><?= v2_te('Confirm your password to turn off 2FA:') ?></label>
                   <div class="st-inline-row">
                     <span class="acc-input is-plain"><input id="st-2fa-disable-pass" type="password" autocomplete="current-password"></span>
-                    <button class="btn st-danger" type="submit">Dezactivează</button>
-                    <button class="btn btn-ghost" type="button" data-inline-close>Renunță</button>
+                    <button class="btn st-danger" type="submit"><?= v2_te('Turn off') ?></button>
+                    <button class="btn btn-ghost" type="button" data-inline-close><?= v2_te('Cancel') ?></button>
                   </div>
                   <p class="st-error" role="alert" hidden></p>
                 </form>
                 <form class="st-inline" id="st-2fa-regen" hidden novalidate>
-                  <label for="st-2fa-regen-pass">Confirmă parola pentru a regenera codurile (cele vechi nu vor mai funcționa):</label>
+                  <label for="st-2fa-regen-pass"><?= v2_te('Confirm your password to make new codes (the old ones will stop working):') ?></label>
                   <div class="st-inline-row">
                     <span class="acc-input is-plain"><input id="st-2fa-regen-pass" type="password" autocomplete="current-password"></span>
-                    <button class="btn btn-primary" type="submit">Regenerează</button>
-                    <button class="btn btn-ghost" type="button" data-inline-close>Renunță</button>
+                    <button class="btn btn-primary" type="submit"><?= v2_te('Make new codes') ?></button>
+                    <button class="btn btn-ghost" type="button" data-inline-close><?= v2_te('Cancel') ?></button>
                   </div>
                   <p class="st-error" role="alert" hidden></p>
                 </form>
                 <div class="st-recovery" id="st-2fa-newcodes" hidden>
-                  <b>Codurile noi de recuperare</b>
-                  <p>Salvează-le într-un loc sigur. Cele vechi nu mai funcționează.</p>
+                  <b><?= v2_te('Your new recovery codes') ?></b>
+                  <p><?= v2_te('Keep them somewhere safe. The old ones no longer work.') ?></p>
                   <ol class="st-codes" id="st-2fa-newcodes-list"></ol>
-                  <button class="btn btn-ghost" type="button" data-copy-codes="st-2fa-newcodes-list">Copiază codurile</button>
+                  <button class="btn btn-ghost" type="button" data-copy-codes="st-2fa-newcodes-list"><?= v2_te('Copy the codes') ?></button>
                 </div>
               </div>
             </div>
 
             <div class="st-block">
-              <h3>Sesiuni active</h3>
-              <p class="st-note">Dispozitivele unde ești conectat acum. Închide-le pe cele necunoscute.</p>
-              <p class="st-state" id="st-sessions-state">Se încarcă sesiunile…</p>
+              <h3><?= v2_te('Active sessions') ?></h3>
+              <p class="st-note"><?= v2_te('The devices where you are signed in now. Close the ones you do not recognise.') ?></p>
+              <p class="st-state" id="st-sessions-state"><?= v2_te('Loading sessions…') ?></p>
               <ul class="st-sessions" id="st-sessions" hidden></ul>
               <div class="st-actions">
-                <button class="btn st-danger" type="button" data-confirm-sessions="others">Închide restul sesiunilor</button>
-                <button class="btn btn-ghost" type="button" data-confirm-sessions="all">Deconectare totală (inclusiv aceasta)</button>
+                <button class="btn st-danger" type="button" data-confirm-sessions="others"><?= v2_te('Close the other sessions') ?></button>
+                <button class="btn btn-ghost" type="button" data-confirm-sessions="all"><?= v2_te('Sign out everywhere (this device too)') ?></button>
               </div>
               <div class="st-inline" id="st-sessions-confirm" hidden>
                 <p id="st-sessions-confirm-t"></p>
                 <div class="st-inline-row">
-                  <button class="btn st-danger" type="button" id="st-sessions-yes">Da, continuă</button>
-                  <button class="btn btn-ghost" type="button" id="st-sessions-no">Renunță</button>
+                  <button class="btn st-danger" type="button" id="st-sessions-yes"><?= v2_te('Yes, continue') ?></button>
+                  <button class="btn btn-ghost" type="button" id="st-sessions-no"><?= v2_te('Cancel') ?></button>
                 </div>
               </div>
             </div>
           </div>
           <aside class="st-aside is-mint">
-            <b>Status securitate</b>
-            <p id="st-security-status">Se verifică…</p>
+            <b><?= v2_te('Security status') ?></b>
+            <p id="st-security-status"><?= v2_te('Checking…') ?></p>
           </aside>
         </div>
       </section>
 
       <!-- 3. PREFERENCES -->
       <section class="acc-panel st-panel" id="<?= $stPanel('preferences') ?>" role="tabpanel" aria-labelledby="st-tab-preferences" hidden>
-        <p class="acc-k">Preferințe recomandări</p>
-        <h2>Ce fel de activități vrei să primești?</h2>
-        <p class="st-lead">Aceste câmpuri sunt cele mai importante pentru pagina de <a href="/cont/recomandari">Recomandări</a>. Cu cât sunt mai clare, cu atât putem propune activități mai potrivite.</p>
+        <p class="acc-k"><?= v2_te('Recommendation preferences') ?></p>
+        <h2><?= v2_te('What kind of activities would you like to see?') ?></h2>
+        <p class="st-lead"><?= v2_t('These fields matter most for your <a href="{url}">Recommendations</a> page. The clearer they are, the better the activities we can suggest.', ['url' => '/cont/recomandari']) ?></p>
         <div class="st-two">
           <div class="st-stack">
             <div class="st-block">
-              <h3>Categorii preferate</h3>
-              <p class="st-state" id="st-cats-state">Se încarcă categoriile…</p>
-              <div class="st-chips" id="st-cats" role="group" aria-label="Categorii preferate"></div>
-              <p class="st-note">Poți alege până la 20 de categorii.</p>
+              <h3><?= v2_te('Favourite categories') ?></h3>
+              <p class="st-state" id="st-cats-state"><?= v2_te('Loading categories…') ?></p>
+              <div class="st-chips" id="st-cats" role="group" aria-label="<?= v2_te('Favourite categories') ?>"></div>
+              <p class="st-note"><?= v2_te('You can choose up to 20 categories.') ?></p>
             </div>
             <div class="st-block">
-              <h3>Orașe de interes</h3>
+              <h3><?= v2_te('Cities you are interested in') ?></h3>
               <div class="st-grid">
                 <div class="acc-field">
-                  <label for="st-city2">Oraș principal</label>
-                  <span class="acc-select"><select id="st-city2" data-city-select><option value="">— alege orașul —</option></select><?= $stCaret ?></span>
-                  <small class="st-note">Folosit ca semnal principal pentru recomandări.</small>
+                  <label for="st-city2"><?= v2_te('Main city') ?></label>
+                  <span class="acc-select"><select id="st-city2" data-city-select><option value=""><?= v2_te('choose a city') ?></option></select><?= $stCaret ?></span>
+                  <small class="st-note"><?= v2_te('Used as the main signal for recommendations.') ?></small>
                 </div>
                 <div class="acc-field">
-                  <label for="st-radius">Rază recomandări</label>
-                  <span class="acc-select"><select id="st-radius"><option value="">— alege —</option><option value="city">Doar orașul meu</option><option value="25km">+25 km</option><option value="50km">+50 km</option><option value="country">Toată țara</option></select><?= $stCaret ?></span>
+                  <label for="st-radius"><?= v2_te('Recommendation radius') ?></label>
+                  <span class="acc-select"><select id="st-radius"><option value=""><?= v2_te('choose') ?></option><option value="city"><?= v2_te('Only my city') ?></option><option value="25km">+25 km</option><option value="50km">+50 km</option><option value="country"><?= v2_te('The whole country') ?></option></select><?= $stCaret ?></span>
                 </div>
               </div>
               <div class="acc-field st-multi">
-                <label for="st-city-search">Orașe secundare unde mergi des</label>
-                <span class="acc-input"><?= v2_ic('magnifying-glass') ?><input id="st-city-search" type="search" placeholder="Caută oraș…" autocomplete="off" aria-controls="st-city-list"></span>
+                <label for="st-city-search"><?= v2_te('Other cities you often go to') ?></label>
+                <span class="acc-input"><?= v2_ic('magnifying-glass') ?><input id="st-city-search" type="search" placeholder="<?= v2_te('Search for a city…') ?>" autocomplete="off" aria-controls="st-city-list"></span>
                 <div class="st-chips is-selected" id="st-sec-chips" aria-live="polite"></div>
-                <ul class="st-city-list" id="st-city-list" aria-label="Orașe secundare"></ul>
+                <ul class="st-city-list" id="st-city-list" aria-label="<?= v2_te('Other cities') ?>"></ul>
               </div>
             </div>
             <div class="st-block">
-              <h3>Buget și ritm</h3>
+              <h3><?= v2_te('Budget and pace') ?></h3>
               <div class="st-grid is-3">
-                <div class="acc-field"><label for="st-budget">Buget per persoană</label><span class="acc-select"><select id="st-budget"><option value="">— alege —</option><option value="under_50">sub 50 lei</option><option value="50_120">50–120 lei</option><option value="120_250">120–250 lei</option><option value="250_plus">250+ lei</option></select><?= $stCaret ?></span></div>
-                <div class="acc-field"><label for="st-frequency">Frecvență</label><span class="acc-select"><select id="st-frequency"><option value="">— alege —</option><option value="spontaneous">spontan</option><option value="monthly">2-3 ori / lună</option><option value="weekly">săptămânal</option></select><?= $stCaret ?></span></div>
-                <div class="acc-field"><label for="st-moment">Tip moment</label><span class="acc-select"><select id="st-moment"><option value="">— alege —</option><option value="weekend">weekend</option><option value="afterwork">după job</option><option value="vacations">vacanțe</option><option value="anytime">oricând</option></select><?= $stCaret ?></span></div>
+                <div class="acc-field"><label for="st-budget"><?= v2_te('Budget per person') ?></label><span class="acc-select"><select id="st-budget"><option value=""><?= v2_te('choose') ?></option><option value="under_50"><?= v2_te('under {amount}', ['amount' => v2_money(50)]) ?></option><option value="50_120"><?= v2_te('{from} to {to}', ['from' => v2_money(50), 'to' => v2_money(120)]) ?></option><option value="120_250"><?= v2_te('{from} to {to}', ['from' => v2_money(120), 'to' => v2_money(250)]) ?></option><option value="250_plus"><?= v2_te('{amount} and over', ['amount' => v2_money(250)]) ?></option></select><?= $stCaret ?></span></div>
+                <div class="acc-field"><label for="st-frequency"><?= v2_te('How often') ?></label><span class="acc-select"><select id="st-frequency"><option value=""><?= v2_te('choose') ?></option><option value="spontaneous"><?= v2_te('on the spur of the moment') ?></option><option value="monthly"><?= v2_te('2 or 3 times a month') ?></option><option value="weekly"><?= v2_te('every week') ?></option></select><?= $stCaret ?></span></div>
+                <div class="acc-field"><label for="st-moment"><?= v2_te('When') ?></label><span class="acc-select"><select id="st-moment"><option value=""><?= v2_te('choose') ?></option><option value="weekend"><?= v2_te('weekends') ?></option><option value="afterwork"><?= v2_te('after work') ?></option><option value="vacations"><?= v2_te('holidays') ?></option><option value="anytime"><?= v2_te('any time') ?></option></select><?= $stCaret ?></span></div>
               </div>
             </div>
           </div>
           <aside class="st-aside is-deep">
-            <p class="acc-k">Recommendation engine</p>
-            <h3>Semnale utile</h3>
+            <p class="acc-k"><?= v2_te('Recommendation engine') ?></p>
+            <h3><?= v2_te('Useful signals') ?></h3>
             <ul class="st-signals" id="st-signals">
-              <li data-signal="cats">Categorii preferate <span></span></li>
-              <li data-signal="cities">Orașe și rază</li>
-              <li data-signal="budget">Buget</li>
-              <li data-signal="frequency">Frecvență</li>
-              <li data-signal="moment">Tip moment</li>
-              <li class="is-auto">Istoric comenzi (automat)</li>
+              <li data-signal="cats"><?= v2_te('Favourite categories') ?> <span></span></li>
+              <li data-signal="cities"><?= v2_te('Cities and radius') ?></li>
+              <li data-signal="budget"><?= v2_te('Budget') ?></li>
+              <li data-signal="frequency"><?= v2_te('How often') ?></li>
+              <li data-signal="moment"><?= v2_te('When') ?></li>
+              <li class="is-auto"><?= v2_te('Order history (automatic)') ?></li>
             </ul>
-            <button class="btn btn-light" type="button" id="st-prefs-save">Salvează preferințele</button>
+            <button class="btn btn-light" type="button" id="st-prefs-save"><?= v2_te('Save preferences') ?></button>
           </aside>
         </div>
       </section>
 
       <!-- 4. FAMILY -->
       <section class="acc-panel st-panel" id="<?= $stPanel('family') ?>" role="tabpanel" aria-labelledby="st-tab-family" hidden>
-        <p class="acc-k">Familie &amp; beneficiari</p>
-        <h2>Beneficiari salvați și profil familie</h2>
-        <p class="st-lead">Adaugă persoane pentru care cumperi des bilete (copil, partener, prieten). Apar automat la checkout și ne ajută să-ți propunem activități potrivite.</p>
+        <p class="acc-k"><?= v2_te('Family & guests') ?></p>
+        <h2><?= v2_te('Saved guests and family profile') ?></h2>
+        <p class="st-lead"><?= v2_te('Add the people you often buy tickets for (a child, a partner, a friend). They show up at checkout and help us suggest activities that fit.') ?></p>
         <div class="st-two">
           <div class="st-stack">
-            <p class="st-state" id="st-ben-state">Se încarcă beneficiarii…</p>
+            <p class="st-state" id="st-ben-state"><?= v2_te('Loading guests…') ?></p>
             <ul class="st-bens" id="st-bens" hidden></ul>
             <form class="st-block st-ben-form" id="st-ben-form" hidden novalidate>
-              <h3 id="st-ben-form-h">Beneficiar nou</h3>
+              <h3 id="st-ben-form-h"><?= v2_te('New guest') ?></h3>
               <div class="st-grid">
-                <div class="acc-field is-wide"><label for="st-ben-name">Nume complet</label><span class="acc-input is-plain"><input id="st-ben-name" maxlength="150" autocomplete="off" required></span></div>
-                <div class="acc-field"><label for="st-ben-relation">Relație</label><span class="acc-select"><select id="st-ben-relation"><option value="">— alege —</option><option value="self">Eu însumi</option><option value="partner">Partener</option><option value="child">Copil</option><option value="parent">Părinte</option><option value="sibling">Frate / soră</option><option value="friend">Prieten</option><option value="other">Altă relație</option></select><?= $stCaret ?></span></div>
-                <div class="acc-field"><label for="st-ben-birth">Data nașterii</label><span class="acc-input is-plain"><input id="st-ben-birth" type="date"></span></div>
-                <div class="acc-field"><label for="st-ben-email">Email (opțional)</label><span class="acc-input is-plain"><input id="st-ben-email" type="email" maxlength="200" autocomplete="off"></span></div>
-                <div class="acc-field"><label for="st-ben-phone">Telefon (opțional)</label><span class="acc-input is-plain"><input id="st-ben-phone" type="tel" maxlength="30" autocomplete="off"></span></div>
-                <div class="acc-field is-wide"><label for="st-ben-notes">Note (opțional)</label><textarea class="st-textarea" id="st-ben-notes" maxlength="1000" rows="3" placeholder="alergii, preferințe, mărime tricou…"></textarea></div>
+                <div class="acc-field is-wide"><label for="st-ben-name"><?= v2_te('Full name') ?></label><span class="acc-input is-plain"><input id="st-ben-name" maxlength="150" autocomplete="off" required></span></div>
+                <div class="acc-field"><label for="st-ben-relation"><?= v2_te('Relationship') ?></label><span class="acc-select"><select id="st-ben-relation"><option value=""><?= v2_te('choose') ?></option><option value="self"><?= v2_te('Myself') ?></option><option value="partner"><?= v2_te('Partner') ?></option><option value="child"><?= v2_te('Child') ?></option><option value="parent"><?= v2_te('Parent') ?></option><option value="sibling"><?= v2_te('Brother / sister') ?></option><option value="friend"><?= v2_te('Friend') ?></option><option value="other"><?= v2_te('Other relationship') ?></option></select><?= $stCaret ?></span></div>
+                <div class="acc-field"><label for="st-ben-birth"><?= v2_te('Date of birth') ?></label><span class="acc-input is-plain"><input id="st-ben-birth" type="date"></span></div>
+                <div class="acc-field"><label for="st-ben-email"><?= v2_te('Email (optional)') ?></label><span class="acc-input is-plain"><input id="st-ben-email" type="email" maxlength="200" autocomplete="off"></span></div>
+                <div class="acc-field"><label for="st-ben-phone"><?= v2_te('Phone (optional)') ?></label><span class="acc-input is-plain"><input id="st-ben-phone" type="tel" maxlength="30" autocomplete="off"></span></div>
+                <div class="acc-field is-wide"><label for="st-ben-notes"><?= v2_te('Notes (optional)') ?></label><textarea class="st-textarea" id="st-ben-notes" maxlength="1000" rows="3" placeholder="<?= v2_te('allergies, preferences, T-shirt size…') ?>"></textarea></div>
               </div>
               <p class="st-error" id="st-ben-error" role="alert" hidden></p>
               <div class="st-actions">
-                <button class="btn btn-primary" type="submit" id="st-ben-save">Salvează</button>
-                <button class="btn btn-ghost" type="button" id="st-ben-cancel">Renunță</button>
+                <button class="btn btn-primary" type="submit" id="st-ben-save"><?= v2_te('Save') ?></button>
+                <button class="btn btn-ghost" type="button" id="st-ben-cancel"><?= v2_te('Cancel') ?></button>
               </div>
             </form>
           </div>
           <aside class="st-aside is-mint">
-            <b>De ce contează?</b>
-            <p>Beneficiarii frecvenți te scapă de retastarea numelor la checkout. Profilul familiei (vârste, interese) ajută motorul de recomandări să-ți propună activități potrivite pentru toată echipa.</p>
-            <small>Limită: 25 beneficiari per cont.</small>
+            <b><?= v2_te('Why does it matter?') ?></b>
+            <p><?= v2_te('Saved guests spare you typing the names again at checkout. The family profile (ages, interests) helps the recommendation engine suggest activities that suit the whole group.') ?></p>
+            <small><?= v2_te('Limit: 25 guests per account.') ?></small>
           </aside>
         </div>
       </section>
 
       <!-- 5. NOTIFICATIONS -->
       <section class="acc-panel st-panel" id="<?= $stPanel('notifications') ?>" role="tabpanel" aria-labelledby="st-tab-notifications" hidden>
-        <p class="acc-k">Notificări &amp; newsletter</p>
-        <h2>Ce vrei să primești?</h2>
+        <p class="acc-k"><?= v2_te('Notifications & newsletter') ?></p>
+        <h2><?= v2_te('What would you like to receive?') ?></h2>
         <div class="st-toggles">
           <?php foreach ($stNotifications as $key => [$title, $desc]): ?>
           <label class="st-toggle" for="st-n-<?= $key ?>">
@@ -372,87 +372,87 @@ include __DIR__ . '/../includes/v2/header.php';
           <?php endforeach; ?>
         </div>
         <div class="st-callout is-warm">
-          <b>Newsletter personalizat</b>
-          <p>Poți primi recomandări pe orașe, activități pentru copii, oferte, puncte care expiră și ghiduri editoriale. Dezabonarea e disponibilă în orice email.</p>
+          <b><?= v2_te('A newsletter made for you') ?></b>
+          <p><?= v2_te('You can get recommendations by city, activities for children, offers, points about to expire and editorial guides. Every email has an unsubscribe link.') ?></p>
         </div>
-        <div class="st-actions"><button class="btn btn-primary" type="button" id="st-notif-save">Salvează notificările</button></div>
+        <div class="st-actions"><button class="btn btn-primary" type="button" id="st-notif-save"><?= v2_te('Save notifications') ?></button></div>
       </section>
 
       <!-- 6. PAYMENTS -->
       <section class="acc-panel st-panel" id="<?= $stPanel('payments') ?>" role="tabpanel" aria-labelledby="st-tab-payments" hidden>
-        <p class="acc-k">Plăți · Stripe</p>
-        <h2>Metode de plată și facturare</h2>
-        <p class="st-lead">Salvează cardul ca să nu-l mai introduci la fiecare comandă. Datele cardului sunt stocate la Stripe — niciodată pe serverele viaqui.com.</p>
+        <p class="acc-k"><?= v2_te('Payments · Stripe') ?></p>
+        <h2><?= v2_te('Payment methods and billing') ?></h2>
+        <p class="st-lead"><?= v2_te('Save your card so you do not have to enter it with every order. Card details are stored by Stripe, never on Viaqui servers.') ?></p>
         <div class="st-two">
           <div class="st-stack">
             <div class="st-callout is-bad" id="st-pay-off" hidden>
-              <b>Procesatorul de plăți nu este încă activ</b>
-              <p>Echipa viaqui.com finalizează integrarea Stripe. Vei putea salva carduri imediat ce e gata.</p>
+              <b><?= v2_te('The payment processor is not active yet') ?></b>
+              <p><?= v2_te('The Viaqui team is finishing the Stripe integration. You will be able to save cards as soon as it is ready.') ?></p>
             </div>
-            <p class="st-state" id="st-cards-state">Se încarcă cardurile…</p>
+            <p class="st-state" id="st-cards-state"><?= v2_te('Loading cards…') ?></p>
             <ul class="st-cards" id="st-cards" hidden></ul>
-            <div class="st-empty" id="st-cards-empty" hidden><b>Niciun card salvat</b><p>Adaugă un card ca să cumperi mai rapid data viitoare.</p></div>
-            <div class="st-actions is-end" id="st-card-add-row" hidden><button class="btn btn-primary" type="button" id="st-card-add"><?= v2_ic('plus') ?>Adaugă card</button></div>
+            <div class="st-empty" id="st-cards-empty" hidden><b><?= v2_te('No saved cards') ?></b><p><?= v2_te('Add a card to buy faster next time.') ?></p></div>
+            <div class="st-actions is-end" id="st-card-add-row" hidden><button class="btn btn-primary" type="button" id="st-card-add"><?= v2_ic('plus') ?><?= v2_te('Add a card') ?></button></div>
             <div class="st-block" id="st-card-form" hidden>
-              <h3>Card nou</h3>
-              <p class="st-note">Datele cardului sunt criptate și trimise direct la Stripe.</p>
+              <h3><?= v2_te('New card') ?></h3>
+              <p class="st-note"><?= v2_te('Card details are encrypted and sent straight to Stripe.') ?></p>
               <div class="st-card-element" id="st-card-element"></div>
               <p class="st-error" id="st-card-error" role="alert" hidden></p>
               <div class="st-actions">
-                <button class="btn btn-primary" type="button" id="st-card-save" disabled>Salvează cardul</button>
-                <button class="btn btn-ghost" type="button" id="st-card-cancel">Renunță</button>
+                <button class="btn btn-primary" type="button" id="st-card-save" disabled><?= v2_te('Save card') ?></button>
+                <button class="btn btn-ghost" type="button" id="st-card-cancel"><?= v2_te('Cancel') ?></button>
               </div>
             </div>
           </div>
           <aside class="st-aside">
-            <b>Date facturare</b>
-            <p>Salvăm datele de facturare cu profilul tău, pe baza câmpurilor din tab-ul „Date personale” (nume + adresă).</p>
-            <button class="btn btn-ghost" type="button" data-open-tab="personal">Mergi la datele personale</button>
-            <small>PCI-DSS: viaqui.com nu stochează niciodată numere de card. Stocăm doar un identificator opac (Stripe payment method id) + brand + ultimele 4 cifre pentru afișare.</small>
+            <b><?= v2_te('Billing details') ?></b>
+            <p><?= v2_te('We keep your billing details with your profile, from the fields in the “Personal details” tab (name + address).') ?></p>
+            <button class="btn btn-ghost" type="button" data-open-tab="personal"><?= v2_te('Go to personal details') ?></button>
+            <small><?= v2_te('PCI-DSS: Viaqui never stores card numbers. We keep only an opaque identifier (the Stripe payment method id), the brand and the last 4 digits, to show them to you.') ?></small>
           </aside>
         </div>
       </section>
 
       <!-- 7. PRIVACY -->
       <section class="acc-panel st-panel" id="<?= $stPanel('privacy') ?>" role="tabpanel" aria-labelledby="st-tab-privacy" hidden>
-        <p class="acc-k">Privacy &amp; GDPR</p>
-        <h2>Controlezi datele tale</h2>
+        <p class="acc-k"><?= v2_te('Privacy & GDPR') ?></p>
+        <h2><?= v2_te('You are in control of your data') ?></h2>
         <div class="st-privacy">
           <article class="st-block">
-            <h3>Export date personale</h3>
-            <p class="st-note">Descarcă o copie cu datele de cont, comenzile, biletele, preferințele, beneficiarii și punctele.</p>
-            <div class="st-export" id="st-export" tabindex="-1"><p class="st-state">Se verifică exporturile…</p></div>
+            <h3><?= v2_te('Export your personal data') ?></h3>
+            <p class="st-note"><?= v2_te('Download a copy of your account details, orders, tickets, preferences, guests and points.') ?></p>
+            <div class="st-export" id="st-export" tabindex="-1"><p class="st-state"><?= v2_te('Checking for exports…') ?></p></div>
           </article>
           <article class="st-block is-mint">
-            <h3>Personalizare recomandări</h3>
-            <p class="st-note">Permite folosirea istoricului, recenziilor și preferințelor pentru recomandări mai relevante.</p>
+            <h3><?= v2_te('Personalised recommendations') ?></h3>
+            <p class="st-note"><?= v2_te('Lets us use your history, reviews and preferences for more relevant recommendations.') ?></p>
             <label class="st-toggle is-inline" for="st-personalization">
               <input class="st-switch" type="checkbox" role="switch" id="st-personalization">
-              <b id="st-personalization-l">Activ</b>
+              <b id="st-personalization-l"><?= v2_te('On') ?></b>
             </label>
           </article>
           <article class="st-block is-warm">
-            <h3>Tracking marketing</h3>
-            <p class="st-note">Controlează consimțământul pentru pixeli, analytics și campanii personalizate.</p>
+            <h3><?= v2_te('Marketing tracking') ?></h3>
+            <p class="st-note"><?= v2_te('Manage your consent for pixels, analytics and personalised campaigns.') ?></p>
             <div class="st-actions">
-              <button class="btn btn-ghost" type="button" data-cc-action="open">Setări cookies</button>
-              <a class="st-link" href="/cookies">Politica de cookies</a>
+              <button class="btn btn-ghost" type="button" data-cc-action="open"><?= v2_te('Cookie settings') ?></button>
+              <a class="st-link" href="/cookies"><?= v2_te('Cookie policy') ?></a>
             </div>
           </article>
           <article class="st-block is-danger">
-            <h3>Ștergere cont</h3>
-            <p class="st-note">Datele personale vor fi anonimizate. Comenzile rămân în istoricul fiscal conform obligațiilor legale. Nu poți șterge contul dacă ai bilete viitoare neutilizate.</p>
+            <h3><?= v2_te('Delete account') ?></h3>
+            <p class="st-note"><?= v2_te('Your personal data will be anonymised. Orders stay in the tax records, as the law requires. You cannot delete the account while you have unused tickets for upcoming activities.') ?></p>
             <form class="st-form" id="st-delete-form" novalidate>
-              <div class="acc-field"><label for="st-delete-pass">Parola curentă</label><span class="acc-input is-plain"><input id="st-delete-pass" type="password" autocomplete="current-password" required></span></div>
-              <div class="acc-field"><label for="st-delete-reason">Motivul ștergerii (opțional)</label><textarea class="st-textarea" id="st-delete-reason" maxlength="500" rows="3"></textarea></div>
-              <label class="st-check" for="st-delete-confirm"><input type="checkbox" id="st-delete-confirm"><span>Înțeleg că datele mele vor fi anonimizate și că această acțiune este definitivă.</span></label>
+              <div class="acc-field"><label for="st-delete-pass"><?= v2_te('Current password') ?></label><span class="acc-input is-plain"><input id="st-delete-pass" type="password" autocomplete="current-password" required></span></div>
+              <div class="acc-field"><label for="st-delete-reason"><?= v2_te('Reason for deleting (optional)') ?></label><textarea class="st-textarea" id="st-delete-reason" maxlength="500" rows="3"></textarea></div>
+              <label class="st-check" for="st-delete-confirm"><input type="checkbox" id="st-delete-confirm"><span><?= v2_te('I understand that my data will be anonymised and that this cannot be undone.') ?></span></label>
               <p class="st-error" id="st-delete-error" role="alert" hidden></p>
-              <div class="st-actions"><button class="btn st-danger" type="submit" id="st-delete-submit" disabled>Șterge contul</button></div>
+              <div class="st-actions"><button class="btn st-danger" type="submit" id="st-delete-submit" disabled><?= v2_te('Delete account') ?></button></div>
               <div class="st-inline" id="st-delete-final" hidden>
-                <p>Ultimul pas: contul va fi anonimizat și nu îl mai poți recupera.</p>
+                <p><?= v2_te('Last step: the account will be anonymised and you cannot get it back.') ?></p>
                 <div class="st-inline-row">
-                  <button class="btn st-danger" type="button" id="st-delete-yes">Da, șterge definitiv contul</button>
-                  <button class="btn btn-ghost" type="button" id="st-delete-no">Renunță</button>
+                  <button class="btn st-danger" type="button" id="st-delete-yes"><?= v2_te('Yes, delete the account for good') ?></button>
+                  <button class="btn btn-ghost" type="button" id="st-delete-no"><?= v2_te('Cancel') ?></button>
                 </div>
               </div>
             </form>

@@ -14,11 +14,11 @@
 
   var data = {};
   try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
-  var MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
-  var STATUS = { open: ['deschis', 'is-wait'], in_progress: ['în lucru', 'is-ok'], awaiting_organizer: ['în așteptare', 'is-wait'], resolved: ['rezolvat', 'is-muted'], closed: ['închis', 'is-muted'] };
-  var PRIORITY = { low: ['prioritate scăzută', 'is-muted'], high: ['prioritate ridicată', 'is-wait'], urgent: ['urgent', 'is-bad'] };
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var STATUS = { open: [VQ.t('open'), 'is-wait'], in_progress: [VQ.t('in progress'), 'is-ok'], awaiting_organizer: [VQ.t('waiting'), 'is-wait'], resolved: [VQ.t('resolved'), 'is-muted'], closed: [VQ.t('closed'), 'is-muted'] };
+  var PRIORITY = { low: [VQ.t('low priority'), 'is-muted'], high: [VQ.t('high priority'), 'is-wait'], urgent: [VQ.t('urgent'), 'is-bad'] };
   var MAX = 5000;
-  var num = new Intl.NumberFormat('ro-RO');
+  var num = new Intl.NumberFormat(LOC);
   var tickets = [], counts = null, meta = { departments: [], problem_types: [] }, filter = 'all', current = null, opener = null, openerRow = '', sayTimer = 0;
   var hashId = /^#t-(\d+)$/.exec(window.location.hash || '');
   var wantTicket = Number(data.ticket) || (hashId ? Number(hashId[1]) : 0);
@@ -31,22 +31,17 @@
     return svg;
   }
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
     return v == null ? '' : String(v);
   }
   function obj(x) { return x && typeof x === 'object'; }
   function count(v) { var n = Number(v); return isFinite(n) && n > 0 ? Math.floor(n) : 0; }
-  function plural(n, one, many) {
-    n = count(n);
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
+
   function show(id, on) { $(id).hidden = !on; }
   function when(v) {
     var d = v ? new Date(v) : null;
     if (!d || isNaN(d.getTime())) return '';
-    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    return d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
   function say(message, tone) {
     var line = $('sp-status-line');
@@ -73,23 +68,23 @@
     var open = counts && counts.open != null ? count(counts.open) : tickets.filter(isActive).length;
     var total = counts && counts.total != null ? count(counts.total) : tickets.length;
     $('sp-open').textContent = num.format(open);
-    $('sp-total').textContent = plural(total, 'tichet în total', 'tichete în total');
+    $('sp-total').textContent = VQ.t('{tickets} in total', { tickets: VQ.n(count(total), 'ticket', 'tickets') });
     account.setBadges({ support: open });
   }
   function render() {
     var list = tickets.filter(function (t) { return filter === 'all' || (filter === 'active' ? isActive(t) : !isActive(t)); });
     var ul = $('sp-list'), frag = document.createDocumentFragment();
-    $('sp-count').textContent = plural(list.length, 'tichet', 'tichete');
+    $('sp-count').textContent = VQ.n(list.length, 'ticket', 'tickets');
     [].forEach.call(document.querySelectorAll('.sp-pills [data-filter]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-filter') === filter)); });
     list.forEach(function (t) {
-      var li = el('li', 'sp-item'), row = el('button', 'sp-row'), main = el('span', 'sp-row-main'), tags = el('span', 'sp-tags'), go = el('span', 'sp-open', 'Deschide');
+      var li = el('li', 'sp-item'), row = el('button', 'sp-row'), main = el('span', 'sp-row-main'), tags = el('span', 'sp-tags'), go = el('span', 'sp-open', VQ.t('Open'));
       li.id = 't-' + txt(t.id);
       row.type = 'button';
       row.setAttribute('aria-haspopup', 'dialog');
       fillTags(tags, t);
       main.appendChild(tags);
-      main.appendChild(el('span', 'sp-subject', txt(t.subject) || 'Fără subiect'));
-      main.appendChild(el('span', 'sp-meta', [txt(t.ticket_number), (t.last_activity || t.opened_at) ? 'ultima activitate ' + when(t.last_activity || t.opened_at) : ''].filter(Boolean).join(' · ')));
+      main.appendChild(el('span', 'sp-subject', txt(t.subject) || VQ.t('No subject')));
+      main.appendChild(el('span', 'sp-meta', [txt(t.ticket_number), (t.last_activity || t.opened_at) ? VQ.t('last activity {when}', { when: when(t.last_activity || t.opened_at) }) : ''].filter(Boolean).join(' · ')));
       go.appendChild(ic('arrow-right'));
       row.appendChild(main);
       row.appendChild(go);
@@ -105,8 +100,8 @@
     show('sp-empty', !list.length);
     if (!list.length) {
       var none = !tickets.length;
-      $('sp-empty-h').textContent = none ? 'Niciun tichet deschis' : (filter === 'active' ? 'Niciun tichet activ' : 'Niciun tichet închis');
-      $('sp-empty-p').textContent = none ? 'Trimite o solicitare echipei dacă ai nevoie de ajutor.' : 'Schimbă filtrul ca să vezi celelalte tichete.';
+      $('sp-empty-h').textContent = none ? VQ.t('No open tickets') : (filter === 'active' ? VQ.t('No active tickets') : VQ.t('No closed tickets'));
+      $('sp-empty-p').textContent = none ? VQ.t('Send the team a request if you need help.') : VQ.t('Change the filter to see your other tickets.');
     }
   }
   function load(silent) {
@@ -204,17 +199,19 @@
     e.preventDefault();
     var subject = $('sp-subject').value.trim(), message = $('sp-message').value.trim(), btn = $('sp-new-submit');
     show('sp-new-error', false);
-    if (!subject || !message) { newError('Completează subiectul și mesajul.', !subject ? $('sp-subject') : $('sp-message')); return; }
+    if (!subject || !message) { newError(VQ.t('Fill in the subject and the message.'), !subject ? $('sp-subject') : $('sp-message')); return; }
     var payload = { subject: subject, message: message, priority: $('sp-priority').value };
     if ($('sp-dep').value) payload.support_department_id = Number($('sp-dep').value);
     if ($('sp-type').value) payload.support_problem_type_id = Number($('sp-type').value);
     btn.disabled = true;
-    btn.textContent = 'Se trimite…';
+    btn.textContent = VQ.t('Sending…');
     BileteOnlineAPI.post('/customer/support-tickets', payload).then(function (resp) {
       var ticket = resp && resp.success && obj(resp.data) ? resp.data.ticket : null;
       if (!obj(ticket)) throw { status: -1 };
       closeDialog(dialogNew);
-      say('Tichetul ' + (txt(ticket.ticket_number) || '') + ' a fost trimis. Vei vedea răspunsul echipei aici.'.replace('Tichetul  a', 'Tichetul a'), 'ok');
+      say(txt(ticket.ticket_number)
+        ? VQ.t('Ticket {number} was sent. You will see the reply from the team here.', { number: txt(ticket.ticket_number) })
+        : VQ.t('The ticket was sent. You will see the reply from the team here.'), 'ok');
       tickets.unshift(ticket);
       counts = null;
       filter = 'all';
@@ -224,32 +221,32 @@
     }).catch(function (err) {
       var errors = (err && (err.errors || (err.data && err.data.errors))) || {};
       if (err && err.status === 422) {
-        if (errors.subject) newError('Subiectul lipsește sau depășește 200 de caractere.', $('sp-subject'));
-        else if (errors.message) newError('Mesajul lipsește sau depășește 5.000 de caractere.', $('sp-message'));
-        else newError('Verifică datele din formular și încearcă din nou.');
+        if (errors.subject) newError(VQ.t('The subject is missing or longer than 200 characters.'), $('sp-subject'));
+        else if (errors.message) newError(VQ.t('The message is missing or longer than 5,000 characters.'), $('sp-message'));
+        else newError(VQ.t('Check the details in the form and try again.'));
       } else if (err && err.status === 429) {
-        newError('Ai trimis mai multe tichete într-un timp scurt. Încearcă din nou peste un minut.');
+        newError(VQ.t('You sent several tickets in a short time. Try again in a minute.'));
       } else if (err && err.status === 401) {
-        newError('Sesiunea a expirat. Intră din nou în cont ca să trimiți tichetul.');
+        newError(VQ.t('Your session has expired. Sign in again to send the ticket.'));
       } else {
-        newError('Nu am putut trimite tichetul. Încearcă din nou.');
+        newError(VQ.t('We could not send the ticket. Try again.'));
       }
     }).then(function () {
       btn.disabled = false;
-      btn.textContent = 'Trimite tichetul';
+      btn.textContent = VQ.t('Send ticket');
     });
   });
 
   // ---------- thread ----------
   function head(t) {
-    $('sp-t-num').textContent = t ? txt(t.ticket_number) || 'Tichet' : 'Tichet';
-    $('sp-t-h').textContent = t ? txt(t.subject) || 'Fără subiect' : 'Tichet';
+    $('sp-t-num').textContent = t ? txt(t.ticket_number) || VQ.t('Ticket') : VQ.t('Ticket');
+    $('sp-t-h').textContent = t ? txt(t.subject) || VQ.t('No subject') : VQ.t('Ticket');
     if (t) fillTags($('sp-t-tags'), t); else $('sp-t-tags').textContent = '';
   }
   function bubble(m) {
     var li = el('li', 'sp-msg ' + (m.is_staff ? 'is-staff' : 'is-mine'));
     li.appendChild(el('p', 'sp-msg-body', txt(m.body)));
-    li.appendChild(el('p', 'sp-msg-meta', (m.is_staff ? 'Echipa' : 'Tu') + (m.created_at ? ' · ' + when(m.created_at) : '')));
+    li.appendChild(el('p', 'sp-msg-meta', (m.is_staff ? VQ.t('The team') : VQ.t('You')) + (m.created_at ? ' · ' + when(m.created_at) : '')));
     return li;
   }
   function drawThread() {
@@ -258,7 +255,7 @@
     ol.textContent = '';
     current.messages.forEach(function (m) { ol.appendChild(bubble(m)); });
     state.classList.remove('is-error');
-    state.textContent = current.messages.length ? '' : 'Nu există mesaje în acest tichet.';
+    state.textContent = current.messages.length ? '' : VQ.t('There are no messages in this ticket.');
     show('sp-t-state', !current.messages.length);
     var closed = t.status === 'closed';
     show('sp-t-closed', closed);
@@ -273,7 +270,7 @@
     head(summary);
     $('sp-t-messages').textContent = '';
     $('sp-t-state').classList.remove('is-error');
-    $('sp-t-state').textContent = 'Se încarcă conversația…';
+    $('sp-t-state').textContent = VQ.t('Loading the conversation…');
     show('sp-t-state', true);
     show('sp-t-closed', false);
     show('sp-reply', false);
@@ -292,7 +289,7 @@
     }).catch(function (err) {
       if (!current || String(current.id) !== String(id)) return;
       if (err && err.status === 401) { closeDialog(dialogThread); guard(); return; }
-      $('sp-t-state').textContent = err && err.status === 404 ? 'Tichetul nu există sau nu îți aparține.' : 'Nu am putut încărca conversația. Închide și încearcă din nou.';
+      $('sp-t-state').textContent = err && err.status === 404 ? VQ.t('The ticket does not exist or is not yours.') : VQ.t('We could not load the conversation. Close it and try again.');
       $('sp-t-state').classList.add('is-error');
     });
   }
@@ -306,7 +303,7 @@
     var text = $('sp-reply-text').value.trim(), btn = $('sp-reply-submit'), id = current.id;
     if (!text) return;
     btn.disabled = true;
-    btn.textContent = 'Se trimite…';
+    btn.textContent = VQ.t('Sending…');
     show('sp-reply-error', false);
     BileteOnlineAPI.post('/customer/support-tickets/' + encodeURIComponent(id) + '/messages', { message: text }).then(function (resp) {
       if (!(resp && resp.success)) throw { status: -1 };
@@ -320,14 +317,14 @@
       }
       load(true);
     }).catch(function (err) {
-      var message = err && err.status === 400 ? (txt(err.message) || 'Tichetul este închis. Deschide unul nou pentru o solicitare nouă.')
-        : err && err.status === 429 ? 'Ai trimis multe mesaje într-un timp scurt. Încearcă din nou peste un minut.'
-        : err && err.status === 401 ? 'Sesiunea a expirat. Intră din nou în cont ca să răspunzi.'
-        : 'Nu am putut trimite răspunsul. Încearcă din nou.';
+      var message = err && err.status === 400 ? (txt(err.message) || VQ.t('This ticket is closed. Open a new one for a new request.'))
+        : err && err.status === 429 ? VQ.t('You sent many messages in a short time. Try again in a minute.')
+        : err && err.status === 401 ? VQ.t('Your session has expired. Sign in again to reply.')
+        : VQ.t('We could not send the reply. Try again.');
       $('sp-reply-error').textContent = message;
       show('sp-reply-error', true);
     }).then(function () {
-      btn.textContent = 'Trimite răspunsul';
+      btn.textContent = VQ.t('Send reply');
       btn.disabled = !$('sp-reply-text').value.trim();
     });
   });

@@ -11,15 +11,15 @@
   if (!$('od-content') || !window.BO_ACCOUNT) return;
   var account = window.BO_ACCOUNT;
 
-  var MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-  var EN_MONTHS = { Jan: 'ian', Feb: 'feb', Mar: 'mar', Apr: 'apr', May: 'mai', Jun: 'iun', Jul: 'iul', Aug: 'aug', Sep: 'sep', Oct: 'oct', Nov: 'noi', Dec: 'dec' };
-  var STEPS = { 'Comanda plasata': 'Comanda plasată', 'Plata confirmata': 'Plata confirmată', 'Bilete emise': 'Bilete emise', 'Comanda anulata': 'Comanda anulată', 'Comanda rambursata': 'Comanda rambursată' };
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  // the history steps as core names them (keys) → what the customer reads
+  var STEPS = { 'Comanda plasata': VQ.t('Order placed'), 'Plata confirmata': VQ.t('Payment confirmed'), 'Bilete emise': VQ.t('Tickets issued'), 'Comanda anulata': VQ.t('Order cancelled'), 'Comanda rambursata': VQ.t('Order refunded') };
   // status → [label, filter group, tag tone]
   var STATUS = {
-    paid: ['plătită', 'confirmed', 'is-ok'], confirmed: ['confirmată', 'confirmed', 'is-ok'], completed: ['finalizată', 'confirmed', 'is-muted'],
-    free: ['gratuită', 'confirmed', 'is-ok'], pending: ['în așteptare', 'pending', 'is-wait'], processing: ['în procesare', 'pending', 'is-wait'],
-    refunded: ['retur', 'refunded', 'is-bad'], partially_refunded: ['retur parțial', 'refunded', 'is-bad'], cancelled: ['anulată', 'refunded', 'is-bad'],
-    failed: ['plată eșuată', 'failed', 'is-bad'], expired: ['expirată', 'failed', 'is-muted']
+    paid: [VQ.t('paid'), 'confirmed', 'is-ok'], confirmed: [VQ.t('confirmed'), 'confirmed', 'is-ok'], completed: [VQ.t('completed'), 'confirmed', 'is-muted'],
+    free: [VQ.t('free'), 'confirmed', 'is-ok'], pending: [VQ.t('pending'), 'pending', 'is-wait'], processing: [VQ.t('processing'), 'pending', 'is-wait'],
+    refunded: [VQ.t('refunded'), 'refunded', 'is-bad'], partially_refunded: [VQ.t('partly refunded'), 'refunded', 'is-bad'], cancelled: [VQ.t('cancelled'), 'refunded', 'is-bad'],
+    failed: [VQ.t('payment failed'), 'failed', 'is-bad'], expired: [VQ.t('expired'), 'failed', 'is-muted']
   };
   var PAID = ['paid', 'confirmed', 'completed', 'free'];
   var GROUPS = ['all', 'confirmed', 'pending', 'refunded', 'failed'];
@@ -27,9 +27,7 @@
   var SORTS = ['newest', 'oldest', 'value_desc', 'value_asc'];
   var DEFAULTS = { q: '', status: 'all', period: 'all', sort: 'newest' };
   var PER_PAGE = 50, MAX_PAGES = 40;
-  var num = new Intl.NumberFormat('ro-RO');
-  var whole = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
-  var cents = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var num = new Intl.NumberFormat(LOC);
   var PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88"><rect width="88" height="88" fill="#E6F4EC"/><path d="M30 24h28v40l-5-3-4 3-5-3-5 3-4-3-5 3z" fill="none" stroke="#1B7F4E" stroke-width="3" stroke-linejoin="round"/><path d="M36 34h16M36 42h16M36 50h10" stroke="#1B7F4E" stroke-width="3" stroke-linecap="round"/></svg>');
   var state = Object.assign({}, DEFAULTS);
   var orders = [], byNumber = {}, stats = null, loaded = false, openKey = null, details = {}, sayTimer = 0, qTimer = 0;
@@ -42,21 +40,16 @@
     return svg;
   }
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
     return v == null ? '' : String(v);
   }
   function fold(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
   function amount(v) { var n = Number(v); return isFinite(n) ? n : 0; }
-  function plural(n, one, many) {
-    n = Math.max(0, Math.floor(Number(n) || 0));
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
-  function money(n) { n = amount(n); return (Math.round(n * 100) % 100 ? cents : whole).format(n) + ' lei'; }
+  // an amount is in the marketplace's currency unless the order names another one
+  function money(n, cur) { n = amount(n); return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(n, cur || true) : '€' + n; }
   function parseDate(v) { var d = v ? new Date(v) : null; return d && !isNaN(d.getTime()) ? d : null; }
-  function longDate(d) { return d ? d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : ''; }
-  function roDate(s) { return String(s || '').replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/, function (m) { return EN_MONTHS[m]; }); }
+  function longDate(d) { return d ? d.toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' }) : ''; }
+  function roDate(s) { return String(s || ''); } // core writes the history dates itself, in the language asked for
   function safeUrl(u, fallback) { u = typeof u === 'string' ? u.trim() : ''; return /^(\/(?![\/\\])|https?:\/\/)/i.test(u) ? u : fallback; }
   function show(id, on) { $(id).hidden = !on; }
   function say(message, tone) {
@@ -86,7 +79,8 @@
     var number = (txt(o.order_number || o.reference) || 'BO-' + txt(o.id)).replace(/^#/, '');
     var t = {
       raw: o, id: txt(o.id), number: number, status: status, label: meta[0], group: meta[1], tone: meta[2], seq: i,
-      title: txt(ev.name || ev.title) || 'Comandă', city: txt(ev.city), venue: txt(ev.venue), image: ev.image || ev.featured_image || '',
+      currency: txt(o.currency),
+      title: txt(ev.name || ev.title) || VQ.t('Order'), city: txt(ev.city), venue: txt(ev.venue), image: ev.image || ev.featured_image || '',
       created: parseDate(o.created_at), paidAt: parseDate(o.paid_at), payment: txt(o.payment_method), promo: txt(o.promo_code),
       tickets: Math.max(0, Math.floor(amount(o.tickets_count))), total: total, subtotal: subtotal, discount: discount, insurance: insurance,
       fee: Math.max(0, Math.round((total - subtotal + discount - insurance) * 100) / 100),
@@ -163,7 +157,7 @@
     var totalOrders = stats && stats.total_orders != null ? Math.floor(amount(stats.total_orders)) : orders.length;
     var spent = stats && stats.total_spent != null ? amount(stats.total_spent) : orders.filter(function (t) { return t.paid; }).reduce(function (s, t) { return s + t.total; }, 0);
     $('od-k-orders').textContent = num.format(totalOrders);
-    $('od-k-spent').textContent = whole.format(spent) + ' lei';
+    $('od-k-spent').textContent = money(Math.round(spent));
     $('od-k-refunds').textContent = num.format(orders.filter(function (t) { return t.group === 'refunded'; }).length);
     account.setBadges({ orders: totalOrders });
   }
@@ -200,46 +194,46 @@
     var head = el('div', 'od-id'), tags = el('div', 'od-tags');
     tags.appendChild(el('span', 'acc-tag ' + t.tone, t.label));
     if (t.payment) tags.appendChild(el('span', 'acc-tag', t.payment));
-    if (t.insurance > 0) tags.appendChild(el('span', 'acc-tag is-ok', 'protecție bilet'));
+    if (t.insurance > 0) tags.appendChild(el('span', 'acc-tag is-ok', VQ.t('ticket protection')));
     head.appendChild(tags);
     var h = el('h3', 'od-num', '#' + t.number);
     h.id = 'od-h-' + key(t);
     order.setAttribute('aria-labelledby', h.id);
     head.appendChild(h);
     head.appendChild(el('p', 'od-what', t.title + (t.city ? ' · ' + t.city : '')));
-    head.appendChild(el('p', 'od-meta', [longDate(t.created), t.tickets ? plural(t.tickets, 'bilet', 'bilete') : ''].filter(Boolean).join(' · ')));
+    head.appendChild(el('p', 'od-meta', [longDate(t.created), t.tickets ? VQ.n(t.tickets, 'ticket', 'tickets') : ''].filter(Boolean).join(' · ')));
     top.appendChild(head);
     var total = el('div', 'od-total');
-    total.appendChild(el('p', 'acc-k', 'Total comandă'));
-    total.appendChild(el('p', 'od-total-v', money(t.total)));
-    if (t.points) total.appendChild(el('p', 'od-points', '+' + num.format(t.points) + ' puncte bonus'));
+    total.appendChild(el('p', 'acc-k', VQ.t('Order total')));
+    total.appendChild(el('p', 'od-total-v', money(t.total, t.currency)));
+    if (t.points) total.appendChild(el('p', 'od-points', VQ.t('+{points} bonus points', { points: num.format(t.points) })));
     top.appendChild(total);
     body.appendChild(top);
 
     var costs = el('dl', 'od-costs');
-    cost(costs, 'Bilete', money(t.subtotal));
-    cost(costs, 'Comision platformă', money(t.fee));
-    cost(costs, 'Protecție bilet', money(t.insurance));
-    cost(costs, 'Discount / puncte', t.discount > 0 ? '−' + money(t.discount) : money(0), t.discount > 0 ? 'is-discount' : '');
+    cost(costs, VQ.t('Tickets'), money(t.subtotal, t.currency));
+    cost(costs, VQ.t('Service fee'), money(t.fee, t.currency));
+    cost(costs, VQ.t('Ticket protection'), money(t.insurance, t.currency));
+    cost(costs, VQ.t('Discount / points'), t.discount > 0 ? '−' + money(t.discount, t.currency) : money(0, t.currency), t.discount > 0 ? 'is-discount' : '');
     body.appendChild(costs);
 
     var actions = el('div', 'od-actions'), panelId = 'od-d-' + key(t);
-    var toggle = button('btn btn-primary od-toggle', 'Detalii comandă', null, function () {
+    var toggle = button('btn btn-primary od-toggle', VQ.t('Order details'), null, function () {
       openKey = openKey === t.number ? null : t.number;
       syncOpen();
     }, 'caret-down');
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-controls', panelId);
     actions.appendChild(toggle);
-    var tickets = el('a', 'btn btn-ghost', 'Vezi bilete');
-    tickets.href = '/cont/bilete?status=all&q=' + encodeURIComponent(t.number);
+    var tickets = el('a', 'btn btn-ghost', VQ.t('View tickets'));
+    tickets.href = VQ.url('/account/tickets') + '?status=all&q=' + encodeURIComponent(t.number);
     actions.appendChild(tickets);
-    if (t.paid) actions.appendChild(button('btn btn-ghost', 'PDF bilete', 'Descarcă PDF-ul biletelor din comanda ' + t.number, function (e) { pdf(t, e.currentTarget); }));
+    if (t.paid) actions.appendChild(button('btn btn-ghost', VQ.t('Tickets PDF'), VQ.t('Download the tickets PDF for order {number}', { number: t.number }), function (e) { pdf(t, e.currentTarget); }));
     body.appendChild(actions);
 
     var more = el('div', 'od-more');
-    if (t.paid) { var invoice = el('a', null, 'Cere factura'); invoice.href = '/contact?motiv=comanda'; more.appendChild(invoice); }
-    if (t.refundable) { var refund = el('a', 'is-refund', 'Cere retur'); refund.href = '/contact?motiv=retur'; more.appendChild(refund); }
+    if (t.paid) { var invoice = el('a', null, VQ.t('Ask for an invoice')); invoice.href = VQ.url('/contact') + '?motiv=comanda'; more.appendChild(invoice); }
+    if (t.refundable) { var refund = el('a', 'is-refund', VQ.t('Ask for a refund')); refund.href = VQ.url('/contact') + '?motiv=retur'; more.appendChild(refund); }
     if (more.children.length) body.appendChild(more);
 
     var panel = el('div', 'od-details');
@@ -252,7 +246,7 @@
   }
   function render() {
     var list = filtered(), ul = $('od-list'), frag = document.createDocumentFragment();
-    $('od-count').textContent = plural(list.length, 'comandă', 'comenzi');
+    $('od-count').textContent = VQ.n(list.length, 'order', 'orders');
     $('od-csv').disabled = !list.length;
     list.forEach(function (t) { frag.appendChild(card(t)); });
     ul.textContent = '';
@@ -263,7 +257,7 @@
     show('od-empty', !list.length);
     if (!list.length) {
       var none = !orders.length;
-      $('od-empty-h').textContent = none ? 'Nu ai comenzi încă' : 'Nicio comandă pentru filtrele alese';
+      $('od-empty-h').textContent = none ? VQ.t('You have no orders yet') : VQ.t('No orders match these filters');
       show('od-empty-cta', none);
       show('od-empty-reset', !none);
     }
@@ -277,7 +271,7 @@
       var btn = li.querySelector('.od-toggle'), panel = li.querySelector('.od-details');
       if (open === !panel.hidden) return;
       btn.setAttribute('aria-expanded', String(open));
-      btn.firstChild.textContent = open ? 'Ascunde detaliile' : 'Detalii comandă';
+      btn.firstChild.textContent = open ? VQ.t('Hide details') : VQ.t('Order details');
       panel.hidden = !open;
       if (open) fillDetails(t, panel); else panel.textContent = '';
     });
@@ -290,25 +284,25 @@
   }
   function summary(t) {
     var box = el('aside', 'od-summary'), dl = el('dl');
-    box.appendChild(el('p', 'acc-k', 'Sumar financiar'));
-    summaryRow(dl, 'Bilete', money(t.subtotal));
-    summaryRow(dl, 'Comision platformă', money(t.fee));
-    summaryRow(dl, 'Protecție bilet', money(t.insurance));
-    summaryRow(dl, 'Discount', t.discount > 0 ? '−' + money(t.discount) : money(0));
-    summaryRow(dl, 'Total', money(t.total), 'is-total');
+    box.appendChild(el('p', 'acc-k', VQ.t('Cost summary')));
+    summaryRow(dl, VQ.t('Tickets'), money(t.subtotal, t.currency));
+    summaryRow(dl, VQ.t('Service fee'), money(t.fee, t.currency));
+    summaryRow(dl, VQ.t('Ticket protection'), money(t.insurance, t.currency));
+    summaryRow(dl, VQ.t('Discount'), t.discount > 0 ? '−' + money(t.discount, t.currency) : money(0, t.currency));
+    summaryRow(dl, VQ.t('Total'), money(t.total, t.currency), 'is-total');
     box.appendChild(dl);
-    box.appendChild(el('p', 'od-note', 'Comisioanele sunt afișate separat pentru transparență.'));
-    var pay = [t.payment ? 'Plată: ' + t.payment : '', t.paidAt ? 'plătită pe ' + longDate(t.paidAt) : ''].filter(Boolean).join(' · ');
+    box.appendChild(el('p', 'od-note', VQ.t('Fees are shown separately so you can see what you paid for.')));
+    var pay = [t.payment ? VQ.t('Payment: {method}', { method: t.payment }) : '', t.paidAt ? VQ.t('paid on {date}', { date: longDate(t.paidAt) }) : ''].filter(Boolean).join(' · ');
     if (pay) box.appendChild(el('p', 'od-pay', pay));
-    if (t.promo) box.appendChild(el('p', 'od-pay', 'Cod promoțional: ' + t.promo));
-    var help = el('a', 'od-help', 'Nu ai primit emailul cu biletele? Scrie-ne');
-    help.href = '/contact?motiv=comanda';
+    if (t.promo) box.appendChild(el('p', 'od-pay', VQ.t('Promo code: {code}', { code: t.promo })));
+    var help = el('a', 'od-help', VQ.t('Did the email with your tickets not arrive? Write to us'));
+    help.href = VQ.url('/contact') + '?motiv=comanda';
     box.appendChild(help);
     return box;
   }
   function fillDetails(t, panel) {
     var inner = el('div', 'od-details-in'), main = el('div', 'od-d-main'), slot = el('div', 'od-d-slot');
-    main.appendChild(el('p', 'acc-k', 'Bilete din comandă'));
+    main.appendChild(el('p', 'acc-k', VQ.t('Tickets in this order')));
     main.appendChild(slot);
     inner.appendChild(main);
     inner.appendChild(summary(t));
@@ -317,7 +311,7 @@
 
     var cached = details[t.number];
     if (cached && cached.order) { drawDetails(slot, cached.order); return; }
-    slot.appendChild(el('p', 'od-d-state', 'Se încarcă biletele…'));
+    slot.appendChild(el('p', 'od-d-state', VQ.t('Loading tickets…')));
     if (cached && cached.pending) return;
     details[t.number] = { pending: true };
     BileteOnlineAPI.customer.getOrder(t.id || t.number).then(function (resp) {
@@ -333,8 +327,8 @@
       if (d.order) { drawDetails(live, d.order); return; }
       if (d.status === 401) { guard(); return; }
       live.textContent = '';
-      var p = el('p', 'od-d-state is-error', 'Nu am putut încărca biletele. ');
-      p.appendChild(button('', 'Încearcă din nou', null, function () {
+      var p = el('p', 'od-d-state is-error', VQ.t('We could not load the tickets.') + ' ');
+      p.appendChild(button('', VQ.t('Try again'), null, function () {
         delete details[t.number];
         var panelNow = live.closest('.od-details');
         if (panelNow) fillDetails(t, panelNow);
@@ -353,7 +347,7 @@
     slot.textContent = '';
     var tickets = Array.isArray(order.tickets) ? order.tickets.filter(function (x) { return x && typeof x === 'object'; }) : [];
     if (!tickets.length) {
-      slot.appendChild(el('p', 'od-d-state', 'Nu există bilete emise pentru această comandă.'));
+      slot.appendChild(el('p', 'od-d-state', VQ.t('No tickets have been issued for this order.')));
     } else {
       var ul = el('ul', 'od-tickets');
       tickets.forEach(function (tk) {
@@ -361,18 +355,18 @@
         var status = String(tk.status || '').toLowerCase(), used = tk.checked_in === true || status === 'used' || status === 'checked_in';
         var cancelled = status === 'cancelled' || status === 'refunded';
         var seat = txt(tk.seat_label || (tk.seat && tk.seat.label));
-        box.appendChild(el('b', null, txt(tk.attendee_name).trim() || 'Beneficiar necompletat'));
-        small.appendChild(document.createTextNode((txt(tk.type) || 'Standard') + ' · '));
+        box.appendChild(el('b', null, txt(tk.attendee_name).trim() || VQ.t('No guest name yet')));
+        small.appendChild(document.createTextNode((txt(tk.type) || VQ.t('Standard')) + ' · '));
         small.appendChild(el('code', null, txt(tk.barcode || tk.code) || '—'));
-        if (seat) small.appendChild(document.createTextNode(' · Loc ' + seat));
+        if (seat) small.appendChild(document.createTextNode(' · ' + VQ.t('Seat {seat}', { seat: seat })));
         box.appendChild(small);
         li.appendChild(box);
         var side = el('div', 'od-t-side');
-        side.appendChild(el('span', 'acc-tag ' + (used ? 'is-muted' : cancelled ? 'is-bad' : 'is-ok'), used ? 'scanat' : cancelled ? (status === 'refunded' ? 'rambursat' : 'anulat') : 'valid'));
+        side.appendChild(el('span', 'acc-tag ' + (used ? 'is-muted' : cancelled ? 'is-bad' : 'is-ok'), used ? VQ.t('scanned') : cancelled ? (status === 'refunded' ? VQ.t('refunded') : VQ.t('cancelled')) : VQ.t('valid')));
         li.appendChild(side);
         if (tk.id != null && !cancelled) {
-          var qr = el('a', null, 'Vezi QR');
-          qr.href = '/cont/bilete#t-' + encodeURIComponent(txt(tk.id));
+          var qr = el('a', null, VQ.t('View QR'));
+          qr.href = VQ.url('/account/tickets') + '#t-' + encodeURIComponent(txt(tk.id));
           side.appendChild(qr);
         }
         ul.appendChild(li);
@@ -381,7 +375,7 @@
     }
     var steps = Array.isArray(order.timeline) ? order.timeline.filter(function (x) { return x && typeof x === 'object'; }) : [];
     if (steps.length) {
-      slot.appendChild(el('p', 'acc-k od-sub', 'Istoric'));
+      slot.appendChild(el('p', 'acc-k od-sub', VQ.t('History')));
       var ol = el('ol', 'od-timeline');
       steps.forEach(function (s) {
         var li = el('li', /cancel|refund/.test(String(s.status || '')) ? 'is-bad' : null);
@@ -414,22 +408,22 @@
     var label = btn.firstChild.textContent;
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
-    btn.firstChild.textContent = 'Se descarcă…';
+    btn.firstChild.textContent = VQ.t('Downloading…');
     var api = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php';
     var headers = { Accept: 'application/pdf' };
     if (token) headers.Authorization = 'Bearer ' + token;
     fetch(api + '?action=order.download-tickets-pdf&order=' + encodeURIComponent(t.number), { headers: headers, credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) {
         if (!r.ok || (r.headers.get('Content-Type') || '').indexOf('pdf') === -1) return 'missing';
-        return r.blob().then(function (blob) { account.save(blob, 'bilete-' + key(t) + '.pdf'); return 'ok'; });
+        return r.blob().then(function (blob) { account.save(blob, 'tickets-' + key(t) + '.pdf'); return 'ok'; });
       }, function () { return 'network'; })
       .then(function (result) {
         btn.disabled = false;
         btn.removeAttribute('aria-busy');
         btn.firstChild.textContent = label;
-        if (result === 'ok') say('Am descărcat biletele din comanda #' + t.number + '.', 'ok');
-        else if (result === 'missing') say('PDF-ul pentru comanda #' + t.number + ' nu este disponibil acum. Încearcă din nou în câteva minute sau scrie-ne.', 'error');
-        else say('Nu am putut descărca PDF-ul. Verifică conexiunea și încearcă din nou.', 'error');
+        if (result === 'ok') say(VQ.t('The tickets for order #{number} were downloaded.', { number: t.number }), 'ok');
+        else if (result === 'missing') say(VQ.t('The PDF for order #{number} is not available right now. Try again in a few minutes or write to us.', { number: t.number }), 'error');
+        else say(VQ.t('We could not download the PDF. Check your connection and try again.'), 'error');
       });
   }
   function csvCell(value) {
@@ -440,35 +434,35 @@
   function exportCsv() {
     var list = filtered();
     if (!list.length) return 0;
-    var rows = [['Comandă', 'Data', 'Activitate', 'Oraș', 'Plată', 'Status', 'Nr. bilete', 'Bilete', 'Comision platformă', 'Protecție bilet', 'Discount', 'Total']];
+    var rows = [[VQ.t('Order'), VQ.t('Date'), VQ.t('Activity'), VQ.t('City'), VQ.t('Payment'), VQ.t('Status'), VQ.t('Number of tickets'), VQ.t('Tickets'), VQ.t('Service fee'), VQ.t('Ticket protection'), VQ.t('Discount'), VQ.t('Total')]];
     list.forEach(function (t) {
-      rows.push(['#' + t.number, longDate(t.created), t.title, t.city, t.payment, t.label, t.tickets, money(t.subtotal), money(t.fee), money(t.insurance), t.discount > 0 ? '−' + money(t.discount) : money(0), money(t.total)]);
+      rows.push(['#' + t.number, longDate(t.created), t.title, t.city, t.payment, t.label, t.tickets, money(t.subtotal, t.currency), money(t.fee, t.currency), money(t.insurance, t.currency), t.discount > 0 ? '−' + money(t.discount, t.currency) : money(0, t.currency), money(t.total, t.currency)]);
     });
     var csv = rows.map(function (r) { return r.map(csvCell).join(';'); }).join('\r\n');
     var d = new Date(), stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    account.save(new Blob(['﻿' + csv + '\r\n'], { type: 'text/csv;charset=utf-8' }), 'comenzi-bilete-online-' + stamp + '.csv');
+    account.save(new Blob(['﻿' + csv + '\r\n'], { type: 'text/csv;charset=utf-8' }), 'viaqui-orders-' + stamp + '.csv');
     return list.length;
   }
   $('od-csv').addEventListener('click', function () {
     var n = exportCsv();
-    if (n) say('Am descărcat ' + plural(n, 'comandă', 'comenzi') + ' în CSV.', 'ok');
+    if (n) say(VQ.t('Downloaded as CSV: {orders}.', { orders: VQ.n(n, 'order', 'orders') }), 'ok');
   });
   $('od-history').addEventListener('click', function () {
     var btn = this;
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
-    btn.textContent = 'Se trimite cererea…';
+    btn.textContent = VQ.t('Sending the request…');
     BileteOnlineAPI.post('/customer/gdpr/export', {}).then(function (resp) {
       if (!(resp && resp.success)) throw { status: -1 };
-      say(txt(resp.message) || 'Exportul a fost programat. Vei primi un email când e gata.', 'ok');
+      say(txt(resp.message) || VQ.t('The export is scheduled. You will get an email when it is ready.'), 'ok');
     }).catch(function (err) {
-      if (err && err.status === 401) { say('Sesiunea a expirat. Intră din nou în cont ca să ceri istoricul.', 'error'); return; }
+      if (err && err.status === 401) { say(VQ.t('Your session has expired. Sign in again to ask for your history.'), 'error'); return; }
       var n = exportCsv();
-      say(n ? 'Nu am putut porni exportul complet acum, așa că am descărcat în CSV ' + (n === 1 ? 'comanda afișată' : 'cele ' + plural(n, 'comandă afișată', 'comenzi afișate')) + '.' : 'Nu am putut porni exportul acum. Încearcă din nou în câteva minute.', 'error');
+      say(n ? VQ.t('The full export could not start right now, so we downloaded what is on screen as CSV: {orders}.', { orders: VQ.n(n, 'order', 'orders') }) : VQ.t('The export could not start right now. Try again in a few minutes.'), 'error');
     }).then(function () {
       btn.disabled = false;
       btn.removeAttribute('aria-busy');
-      btn.textContent = 'Descarcă istoric';
+      btn.textContent = VQ.t('Download history');
     });
   });
 
@@ -486,7 +480,7 @@
     renderCounts();
     render();
     focusHash();
-    if (partial) say('Am încărcat doar o parte din comenzi. Reîncarcă pagina mai târziu pentru restul.', 'error');
+    if (partial) say(VQ.t('Only some of your orders loaded. Reload the page later for the rest.'), 'error');
   }
   function load() {
     show('od-error', false); show('od-empty', false); show('od-list', false); show('od-skel', true);

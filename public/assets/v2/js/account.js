@@ -25,14 +25,14 @@
   function setUser(u) {
     if (!u) return;
     var full = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || u.name || '';
-    var label = full || u.email || 'Client';
+    var label = full || u.email || VQ.t('Customer');
     var initials = label.split(/\s+/).filter(Boolean).map(function (s) { return s.charAt(0); }).join('').slice(0, 2).toUpperCase() || '?';
     [].forEach.call(root.querySelectorAll('[data-acc-initials]'), function (el) { el.textContent = initials; });
     [].forEach.call(root.querySelectorAll('[data-acc-name]'), function (el) { el.textContent = label; });
     [].forEach.call(root.querySelectorAll('[data-acc-email]'), function (el) { el.textContent = u.email || '—'; });
   }
 
-  var fmt = new Intl.NumberFormat('ro-RO');
+  var fmt = new Intl.NumberFormat(VQ.locale === 'en' ? 'en-GB' : VQ.locale);
   function setBadges(badges) {
     Object.keys(badges || {}).forEach(function (key) {
       var n = Number(badges[key]);
@@ -53,7 +53,7 @@
     btn.addEventListener('click', function () {
       [].forEach.call(root.querySelectorAll('[data-acc-logout]'), function (b) { b.disabled = true; });
       var label = btn.querySelector('span');
-      if (label) label.textContent = 'Se deconectează…';
+      if (label) label.textContent = VQ.t('Signing out…');
       var a = auth();
       if (a && typeof a.logoutCustomer === 'function') a.logoutCustomer(); // clears the session and goes to /
       else window.location.href = '/';
@@ -96,19 +96,19 @@
   function calendar(events, name) {
     events = (events || []).filter(function (e) { return e && e.date instanceof Date && !isNaN(e.date.getTime()); });
     if (!events.length) return false;
-    var page = window.location.origin + '/cont/bilete', stamp = icsDate(new Date());
-    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//viaqui.com//Contul meu//RO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+    var page = window.location.origin + VQ.url('/account/tickets'), stamp = icsDate(new Date());
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//viaqui.com//My account//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
     events.forEach(function (e) {
       var where = [e.venue, e.city].filter(Boolean).join(', ');
       var hasEnd = e.end instanceof Date && !isNaN(e.end.getTime()) && e.end > e.date;
       lines.push('BEGIN:VEVENT', 'UID:' + icsText(e.uid || 'bilet-' + e.date.getTime()) + '@viaqui.com', 'DTSTAMP:' + stamp,
         'DTSTART:' + icsDate(e.date), hasEnd ? 'DTEND:' + icsDate(e.end) : 'DURATION:PT2H', 'SUMMARY:' + icsText(e.title));
       if (where) lines.push('LOCATION:' + icsText(where));
-      lines.push('DESCRIPTION:' + icsText(e.note || 'Biletele tale sunt în contul viaqui.com: ' + page), 'URL:' + page,
+      lines.push('DESCRIPTION:' + icsText(e.note || VQ.t('Your tickets are in your Viaqui account: {url}', { url: page })), 'URL:' + page,
         'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsText(e.title), 'TRIGGER:-PT2H', 'END:VALARM', 'END:VEVENT');
     });
     lines.push('END:VCALENDAR');
-    save(new Blob([lines.map(icsFold).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' }), (fileSlug(name || events[0].title) || 'bilet') + '.ics');
+    save(new Blob([lines.map(icsFold).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' }), (fileSlug(name || events[0].title) || 'ticket') + '.ics');
     return true;
   }
 
@@ -145,7 +145,7 @@
   function toLogin() {
     var a = auth();
     try { if (a && a.clearCustomerSession && a.getUserType() !== 'organizer') a.clearCustomerSession(); } catch (e) {}
-    window.location.replace('/autentificare?redirect=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash));
+    window.location.replace(VQ.url('/login') + '?redirect=' + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash));
   }
 
   window.BO_ACCOUNT = { isCustomer: isCustomer, cachedUser: cachedUser, setUser: setUser, setBadges: setBadges, save: save, calendar: calendar, qr: qr, toLogin: toLogin };

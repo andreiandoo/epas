@@ -22,9 +22,9 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/nav.php';
 require_once __DIR__ . '/../includes/v2/account.php';
 
-$pageTitleRaw = 'Comenzile mele — ' . SITE_NAME;
-$pageDescription = 'Comenzile mele pe viaqui.com: bilete, plăți, comisioane, puncte câștigate, documente, retururi.';
-$canonicalUrl = SITE_URL . '/cont/comenzi';
+$pageTitleRaw = v2_t('My orders: {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('Your orders on Viaqui: tickets, payments, fees, points earned, documents and refunds.');
+$canonicalUrl = SITE_URL . '/account/orders';
 $noindex = true;
 $skipPageCache = true;
 
@@ -44,76 +44,76 @@ include __DIR__ . '/../includes/v2/header.php';
     <!-- not signed in -->
     <section class="acc-guard" id="od-guard" hidden aria-labelledby="od-guard-h">
       <span class="acc-guard-ic" aria-hidden="true"><?= v2_ic('lock-simple') ?></span>
-      <h1 id="od-guard-h">Trebuie să fii autentificat</h1>
-      <p>Intră în cont pentru a vedea comenzile.</p>
-      <a class="btn btn-primary" href="/autentificare?redirect=%2Fcont%2Fcomenzi">Intră în cont<?= v2_ic('arrow-right') ?></a>
+      <h1 id="od-guard-h"><?= v2_te('You need to sign in') ?></h1>
+      <p><?= v2_te('Sign in to see your orders.') ?></p>
+      <a class="btn btn-primary" href="/login?redirect=%2Faccount%2Forders"><?= v2_te('Sign in') ?><?= v2_ic('arrow-right') ?></a>
     </section>
 
     <div class="acc-body" id="od-content">
       <!-- HERO -->
       <section class="acc-hero od-hero" aria-labelledby="od-h">
         <div>
-          <p class="acc-kicker">Comenzi client</p>
-          <h1 class="acc-h" id="od-h">Comenzile mele</h1>
-          <p class="acc-lead">Vezi istoricul complet al comenzilor, statusul plăților, biletele emise, comisioanele, punctele câștigate, documentele și opțiunile de retur.</p>
+          <p class="acc-kicker"><?= v2_te('Your orders') ?></p>
+          <h1 class="acc-h" id="od-h"><?= v2_te('My orders') ?></h1>
+          <p class="acc-lead"><?= v2_te('See your full order history, payment status, issued tickets, fees, points earned, documents and refund options.') ?></p>
         </div>
-        <dl class="od-kpis" aria-label="Pe scurt">
-          <div><dt>Total comenzi</dt><dd id="od-k-orders">0</dd></div>
-          <div><dt>Cheltuit</dt><dd id="od-k-spent">0 lei</dd></div>
-          <div><dt>Puncte</dt><dd id="od-k-points">0</dd></div>
-          <div><dt>Retururi</dt><dd id="od-k-refunds">0</dd></div>
+        <dl class="od-kpis" aria-label="<?= v2_te('At a glance') ?>">
+          <div><dt><?= v2_te('Total orders') ?></dt><dd id="od-k-orders">0</dd></div>
+          <div><dt><?= v2_te('Spent') ?></dt><dd id="od-k-spent"><?= v2_e(v2_money(0)) ?></dd></div>
+          <div><dt><?= v2_te('Points') ?></dt><dd id="od-k-points">0</dd></div>
+          <div><dt><?= v2_te('Refunds') ?></dt><dd id="od-k-refunds">0</dd></div>
         </dl>
       </section>
 
       <!-- FILTERS -->
-      <section class="acc-panel" aria-label="Filtre comenzi">
+      <section class="acc-panel" aria-label="<?= v2_te('Order filters') ?>">
         <form class="acc-filter-row" id="od-filters" role="search">
-          <label class="acc-field is-search"><span>Caută comandă</span>
-            <span class="acc-input"><?= v2_ic('magnifying-glass') ?><input type="search" id="od-q" maxlength="100" placeholder="Număr comandă, activitate, oraș, metodă plată…" autocomplete="off" enterkeyhint="search"></span>
+          <label class="acc-field is-search"><span><?= v2_te('Search orders') ?></span>
+            <span class="acc-input"><?= v2_ic('magnifying-glass') ?><input type="search" id="od-q" maxlength="100" placeholder="<?= v2_te('Order number, activity, city, payment method…') ?>" autocomplete="off" enterkeyhint="search"></span>
           </label>
-          <label class="acc-field"><span>Status</span>
+          <label class="acc-field"><span><?= v2_te('Status') ?></span>
             <span class="acc-select"><select id="od-status">
-              <option value="all" selected>Toate</option>
-              <option value="confirmed">Confirmate</option>
-              <option value="pending">În așteptare</option>
-              <option value="refunded">Retur / rambursare</option>
-              <option value="failed">Eșuate</option>
+              <option value="all" selected><?= v2_te('All') ?></option>
+              <option value="confirmed"><?= v2_te('Confirmed') ?></option>
+              <option value="pending"><?= v2_te('Pending') ?></option>
+              <option value="refunded"><?= v2_te('Returned or refunded') ?></option>
+              <option value="failed"><?= v2_te('Failed') ?></option>
             </select><?= v2_ic('caret-down') ?></span>
           </label>
-          <label class="acc-field"><span>Perioadă</span>
+          <label class="acc-field"><span><?= v2_te('Period') ?></span>
             <span class="acc-select"><select id="od-period">
-              <option value="all" selected>Toate</option>
-              <option value="30">Ultimele 30 zile</option>
-              <option value="90">Ultimele 90 zile</option>
-              <option value="year">Anul curent</option>
+              <option value="all" selected><?= v2_te('All') ?></option>
+              <option value="30"><?= v2_te('Last 30 days') ?></option>
+              <option value="90"><?= v2_te('Last 90 days') ?></option>
+              <option value="year"><?= v2_te('This year') ?></option>
             </select><?= v2_ic('caret-down') ?></span>
           </label>
-          <label class="acc-field"><span>Sortare</span>
+          <label class="acc-field"><span><?= v2_te('Sort by') ?></span>
             <span class="acc-select"><select id="od-sort">
-              <option value="newest" selected>Cele mai noi</option>
-              <option value="oldest">Cele mai vechi</option>
-              <option value="value_desc">Valoare desc.</option>
-              <option value="value_asc">Valoare asc.</option>
+              <option value="newest" selected><?= v2_te('Newest first') ?></option>
+              <option value="oldest"><?= v2_te('Oldest first') ?></option>
+              <option value="value_desc"><?= v2_te('Highest value') ?></option>
+              <option value="value_asc"><?= v2_te('Lowest value') ?></option>
             </select><?= v2_ic('caret-down') ?></span>
           </label>
-          <button class="btn btn-ghost acc-reset" type="button" id="od-reset">Reset</button>
+          <button class="btn btn-ghost acc-reset" type="button" id="od-reset"><?= v2_te('Reset') ?></button>
         </form>
-        <div class="acc-pills" role="group" aria-label="Filtre rapide">
-          <button class="acc-pill" type="button" data-status="all" aria-pressed="true">Toate</button>
-          <button class="acc-pill is-ok" type="button" data-status="confirmed" aria-pressed="false">Confirmate</button>
-          <button class="acc-pill is-warn" type="button" data-status="pending" aria-pressed="false">În așteptare</button>
-          <button class="acc-pill is-bad" type="button" data-status="refunded" aria-pressed="false">Retururi</button>
-          <button class="acc-pill is-danger" type="button" data-status="failed" aria-pressed="false">Eșuate</button>
+        <div class="acc-pills" role="group" aria-label="<?= v2_te('Quick filters') ?>">
+          <button class="acc-pill" type="button" data-status="all" aria-pressed="true"><?= v2_te('All') ?></button>
+          <button class="acc-pill is-ok" type="button" data-status="confirmed" aria-pressed="false"><?= v2_te('Confirmed') ?></button>
+          <button class="acc-pill is-warn" type="button" data-status="pending" aria-pressed="false"><?= v2_te('Pending') ?></button>
+          <button class="acc-pill is-bad" type="button" data-status="refunded" aria-pressed="false"><?= v2_te('Refunds') ?></button>
+          <button class="acc-pill is-danger" type="button" data-status="failed" aria-pressed="false"><?= v2_te('Failed') ?></button>
         </div>
       </section>
 
       <!-- ORDERS -->
       <section class="acc-results" id="comenzi" aria-labelledby="od-count">
         <div class="acc-results-head">
-          <div><p class="acc-k">Rezultate</p><h2 class="acc-count" id="od-count">0 comenzi</h2></div>
+          <div><p class="acc-k"><?= v2_te('Results') ?></p><h2 class="acc-count" id="od-count"><?= v2_e(v2_num(0, 'order', 'orders')) ?></h2></div>
           <div class="acc-bulk">
-            <button class="btn btn-ghost" type="button" id="od-csv" disabled>Export CSV</button>
-            <button class="btn btn-primary" type="button" id="od-history" disabled>Descarcă istoric</button>
+            <button class="btn btn-ghost" type="button" id="od-csv" disabled><?= v2_te('Export CSV') ?></button>
+            <button class="btn btn-primary" type="button" id="od-history" disabled><?= v2_te('Download history') ?></button>
           </div>
         </div>
         <p class="acc-status" id="od-status-line" role="status"></p>
@@ -121,15 +121,15 @@ include __DIR__ . '/../includes/v2/header.php';
         <ul class="od-list" id="od-list" hidden></ul>
         <div class="acc-empty" id="od-empty" hidden>
           <span class="acc-empty-ic" aria-hidden="true"><?= v2_ic('shopping-cart-simple') ?></span>
-          <b id="od-empty-h">Nu ai comenzi încă</b>
-          <p>Descoperă activități și rezervă online.</p>
-          <a class="btn btn-primary" id="od-empty-cta" href="/categorii">Descoperă activități</a>
-          <button class="btn btn-primary" id="od-empty-reset" type="button" hidden>Resetează filtrele</button>
+          <b id="od-empty-h"><?= v2_te('You have no orders yet') ?></b>
+          <p><?= v2_te('Find things to do and book online.') ?></p>
+          <a class="btn btn-primary" id="od-empty-cta" href="/categories"><?= v2_te('Find things to do') ?></a>
+          <button class="btn btn-primary" id="od-empty-reset" type="button" hidden><?= v2_te('Reset filters') ?></button>
         </div>
         <div class="acc-empty is-error" id="od-error" hidden>
-          <b>Nu am putut încărca comenzile.</b>
-          <p>Verifică conexiunea și încearcă din nou.</p>
-          <button class="btn btn-ghost" type="button" id="od-retry">Încearcă din nou</button>
+          <b><?= v2_te('We could not load your orders.') ?></b>
+          <p><?= v2_te('Check your connection and try again.') ?></p>
+          <button class="btn btn-ghost" type="button" id="od-retry"><?= v2_te('Try again') ?></button>
         </div>
       </section>
     </div>

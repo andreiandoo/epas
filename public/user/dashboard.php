@@ -21,9 +21,9 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/nav.php';
 require_once __DIR__ . '/../includes/v2/account.php';
 
-$pageTitleRaw = 'Dashboard client — ' . SITE_NAME;
-$pageDescription = 'Dashboard client viaqui.com: bilete, comenzi, puncte bonus, carduri cadou, recomandări personalizate, recenzii, suport și setări cont.';
-$canonicalUrl = SITE_URL . '/cont';
+$pageTitleRaw = v2_t('Your account: {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('Your Viaqui account: tickets, orders, bonus points, gift cards, personal recommendations, reviews, support and account settings.');
+$canonicalUrl = SITE_URL . '/account';
 $noindex = true;
 $skipPageCache = true;
 
@@ -43,88 +43,88 @@ include __DIR__ . '/../includes/v2/header.php';
     <!-- not signed in -->
     <section class="acc-guard" id="db-guard" hidden aria-labelledby="db-guard-h">
       <span class="acc-guard-ic" aria-hidden="true"><?= v2_ic('lock-simple') ?></span>
-      <h1 id="db-guard-h">Trebuie să fii autentificat</h1>
-      <p>Intră în cont pentru a vedea dashboardul.</p>
-      <a class="btn btn-primary" href="/autentificare?redirect=%2Fcont">Intră în cont<?= v2_ic('arrow-right') ?></a>
+      <h1 id="db-guard-h"><?= v2_te('You need to sign in') ?></h1>
+      <p><?= v2_te('Sign in to see your account.') ?></p>
+      <a class="btn btn-primary" href="/login?redirect=%2Faccount"><?= v2_te('Sign in') ?><?= v2_ic('arrow-right') ?></a>
     </section>
 
     <div id="db-content">
       <!-- HERO -->
       <section class="db-hero" aria-labelledby="db-greet">
         <div class="db-hero-copy">
-          <p class="db-kicker">Dashboard client</p>
-          <h1 class="db-h" id="db-greet">Salut, <span id="db-first">prieten</span>. <span id="db-greet-tail">Bine ai revenit.</span></h1>
-          <p class="db-lead">Aici vezi ce urmează, ce ai cumpărat, câte puncte ai, ce recomandări ți se potrivesc și ce mai ai de rezolvat înainte de următoarea activitate.</p>
+          <p class="db-kicker"><?= v2_te('Your account') ?></p>
+          <h1 class="db-h" id="db-greet"><?= v2_t('Hi, <span id="db-first">friend</span>. <span id="db-greet-tail">Welcome back.</span>') ?></h1>
+          <p class="db-lead"><?= v2_te('See what is coming up, what you have bought, how many points you have, which recommendations suit you and what is left to sort out before your next activity.') ?></p>
           <div class="db-cta">
-            <a class="btn btn-light" href="/cont/biletele-mele"><?= v2_ic('ticket') ?>Vezi biletele</a>
-            <a class="btn btn-outline-light" href="/cont/recomandari">Recomandări</a>
+            <a class="btn btn-light" href="/account/tickets"><?= v2_ic('ticket') ?><?= v2_te('View tickets') ?></a>
+            <a class="btn btn-outline-light" href="/cont/recomandari"><?= v2_te('Recommendations') ?></a>
           </div>
         </div>
         <div class="db-hero-card">
           <div class="db-skel is-card" id="db-hero-skel" aria-hidden="true"></div>
           <article class="db-next" id="db-next" hidden>
-            <p class="db-card-k">Next ticket</p>
+            <p class="db-card-k"><?= v2_te('Next ticket') ?></p>
             <h2 class="db-next-t" id="db-next-title"></h2>
             <p class="db-next-loc" id="db-next-loc"></p>
             <div class="db-next-when">
               <div><p class="db-next-wd" id="db-next-weekday"></p><p class="db-next-time" id="db-next-time"></p><p class="db-next-date" id="db-next-date"></p></div>
-              <span class="db-qr" aria-hidden="true"><?= v2_ic('qr-code') ?><small>QR ready</small></span>
+              <span class="db-qr" aria-hidden="true"><?= v2_ic('qr-code') ?><small><?= v2_te('QR ready') ?></small></span>
             </div>
             <div class="db-next-cta">
-              <a class="btn btn-primary" id="db-next-open" href="/cont/bilete">Deschide bilet</a>
-              <button class="btn btn-ghost" type="button" id="db-next-cal"><?= v2_ic('calendar-blank') ?>Calendar</button>
+              <a class="btn btn-primary" id="db-next-open" href="/account/tickets"><?= v2_te('Open ticket') ?></a>
+              <button class="btn btn-ghost" type="button" id="db-next-cal"><?= v2_ic('calendar-blank') ?><?= v2_te('Calendar') ?></button>
             </div>
           </article>
           <article class="db-pointscard" id="db-points-card" hidden>
-            <p class="db-card-k">Puncte bonus</p>
+            <p class="db-card-k"><?= v2_te('Bonus points') ?></p>
             <p class="db-points-big" id="db-points-big">0</p>
-            <p class="db-points-lei">≈ <span id="db-points-lei">0 lei</span> reducere</p>
-            <a class="btn btn-primary" href="/cont/punctele-mele">Folosește punctele</a>
+            <p class="db-points-lei"><?= v2_t('≈ <span id="db-points-lei">{amount}</span> off', ['amount' => v2_e(v2_money(0))]) ?></p>
+            <a class="btn btn-primary" href="/account/points"><?= v2_te('Use your points') ?></a>
           </article>
         </div>
       </section>
 
       <!-- STATS -->
-      <section class="db-stats" aria-label="Pe scurt">
-        <article class="db-stat"><p class="db-card-k">Bilete viitoare</p><p class="db-stat-v" id="db-stat-tickets">0</p><p class="db-stat-p" id="db-stat-activities">0 activități confirmate</p></article>
-        <article class="db-stat is-mint"><p class="db-card-k">Puncte bonus</p><p class="db-stat-v" id="db-stat-points">0</p><p class="db-stat-p">≈ <span id="db-stat-points-lei">0 lei</span> reducere</p></article>
-        <article class="db-stat"><p class="db-card-k">Comenzi</p><p class="db-stat-v" id="db-stat-orders">0</p><p class="db-stat-p" id="db-stat-orders-last">fără comenzi încă</p></article>
-        <article class="db-stat is-warm"><p class="db-card-k">Profil</p><p class="db-stat-v"><span id="db-stat-profile">0</span>%</p><p class="db-stat-p">completează preferințele</p></article>
+      <section class="db-stats" aria-label="<?= v2_te('At a glance') ?>">
+        <article class="db-stat"><p class="db-card-k"><?= v2_te('Upcoming tickets') ?></p><p class="db-stat-v" id="db-stat-tickets">0</p><p class="db-stat-p" id="db-stat-activities"><?= v2_e(v2_num(0, 'confirmed activity', 'confirmed activities')) ?></p></article>
+        <article class="db-stat is-mint"><p class="db-card-k"><?= v2_te('Bonus points') ?></p><p class="db-stat-v" id="db-stat-points">0</p><p class="db-stat-p"><?= v2_t('≈ <span id="db-stat-points-lei">{amount}</span> off', ['amount' => v2_e(v2_money(0))]) ?></p></article>
+        <article class="db-stat"><p class="db-card-k"><?= v2_te('Orders') ?></p><p class="db-stat-v" id="db-stat-orders">0</p><p class="db-stat-p" id="db-stat-orders-last"><?= v2_te('no orders yet') ?></p></article>
+        <article class="db-stat is-warm"><p class="db-card-k"><?= v2_te('Profile') ?></p><p class="db-stat-v"><span id="db-stat-profile">0</span>%</p><p class="db-stat-p"><?= v2_te('add your preferences') ?></p></article>
       </section>
 
       <!-- UPCOMING + PERSONALISATION + REFERRAL -->
       <section class="db-row is-main">
         <div class="db-panel">
           <div class="db-panel-head">
-            <div><p class="db-card-k">Urmează</p><h2>Bilete viitoare</h2></div>
-            <a class="btn btn-ghost" href="/cont/biletele-mele">Toate biletele</a>
+            <div><p class="db-card-k"><?= v2_te('Coming up') ?></p><h2><?= v2_te('Upcoming tickets') ?></h2></div>
+            <a class="btn btn-ghost" href="/account/tickets"><?= v2_te('All tickets') ?></a>
           </div>
           <div class="db-skel-list" id="db-upcoming-skel" aria-hidden="true"><i class="db-skel"></i><i class="db-skel"></i></div>
           <div class="db-empty" id="db-upcoming-empty" hidden>
             <span class="db-empty-ic" aria-hidden="true"><?= v2_ic('ticket') ?></span>
-            <b>Nu ai bilete viitoare</b>
-            <p>Descoperă activități și rezervă online.</p>
-            <a class="btn btn-primary" href="/categorii">Descoperă activități</a>
+            <b><?= v2_te('You have no upcoming tickets') ?></b>
+            <p><?= v2_te('Find things to do and book online.') ?></p>
+            <a class="btn btn-primary" href="/categories"><?= v2_te('Find things to do') ?></a>
           </div>
           <ul class="db-upcoming" id="db-upcoming" hidden></ul>
         </div>
 
         <aside class="db-side">
           <div class="db-panel">
-            <p class="db-card-k">Personalizare</p>
-            <h2>Recomandări mai bune în 3 pași</h2>
+            <p class="db-card-k"><?= v2_te('Personalisation') ?></p>
+            <h2><?= v2_te('Better recommendations in 3 steps') ?></h2>
             <ul class="db-tasks" id="db-tasks"></ul>
-            <a class="btn btn-primary db-mt" href="/cont/setari#profil-preferinte">Completează profilul</a>
+            <a class="btn btn-primary db-mt" href="/account/settings#profil-preferinte"><?= v2_te('Complete your profile') ?></a>
           </div>
           <div class="db-panel is-mint">
-            <p class="db-card-k">Afiliere</p>
-            <h2>Invită prieteni. Primești puncte.</h2>
-            <p class="db-p">Distribuie linkul tău și primești puncte bonus când prietenii cumpără prima activitate eligibilă.</p>
-            <label class="db-sr" for="db-ref-url">Linkul tău de invitație</label>
+            <p class="db-card-k"><?= v2_te('Referrals') ?></p>
+            <h2><?= v2_te('Invite friends. Earn points.') ?></h2>
+            <p class="db-p"><?= v2_te('Share your link and earn bonus points when your friends buy their first eligible activity.') ?></p>
+            <label class="db-sr" for="db-ref-url"><?= v2_te('Your invitation link') ?></label>
             <input class="db-ref" id="db-ref-url" type="text" readonly value="viaqui.com/r/—">
             <div class="db-ref-cta">
-              <button class="btn btn-primary" type="button" id="db-ref-copy">Copiază</button>
-              <a class="btn btn-ghost" href="/cont/punctele-mele#afiliere">Detalii</a>
+              <button class="btn btn-primary" type="button" id="db-ref-copy"><?= v2_te('Copy') ?></button>
+              <a class="btn btn-ghost" href="/account/points#afiliere"><?= v2_te('Details') ?></a>
             </div>
             <p class="db-ref-status" id="db-ref-status" role="status"></p>
           </div>
@@ -135,24 +135,24 @@ include __DIR__ . '/../includes/v2/header.php';
       <section class="db-row">
         <div class="db-panel">
           <div class="db-panel-head">
-            <div><p class="db-card-k">Pentru tine</p><h2>Recomandări</h2></div>
-            <a class="db-link" href="/cont/recomandari">Vezi tot<?= v2_ic('arrow-right') ?></a>
+            <div><p class="db-card-k"><?= v2_te('For you') ?></p><h2><?= v2_te('Recommendations') ?></h2></div>
+            <a class="db-link" href="/cont/recomandari"><?= v2_te('View all') ?><?= v2_ic('arrow-right') ?></a>
           </div>
           <div class="db-skel-grid" id="db-recos-skel" aria-hidden="true"><i class="db-skel is-tall"></i><i class="db-skel is-tall"></i></div>
-          <p class="db-empty is-inline" id="db-recos-empty" hidden>Adaugă preferințe în <a href="/cont/setari#profil-preferinte">Setări</a> ca să primești recomandări.</p>
+          <p class="db-empty is-inline" id="db-recos-empty" hidden><?= v2_t('Add your preferences in <a href="{url}">Settings</a> to get recommendations.', ['url' => '/account/settings#profil-preferinte']) ?></p>
           <ul class="db-recos" id="db-recos" hidden></ul>
         </div>
 
         <div class="db-panel">
           <div class="db-panel-head">
-            <div><p class="db-card-k">Istoric</p><h2>Comenzi recente</h2></div>
-            <a class="db-link" href="/cont/comenzile-mele">Toate comenzile<?= v2_ic('arrow-right') ?></a>
+            <div><p class="db-card-k"><?= v2_te('History') ?></p><h2><?= v2_te('Recent orders') ?></h2></div>
+            <a class="db-link" href="/account/orders"><?= v2_te('All orders') ?><?= v2_ic('arrow-right') ?></a>
           </div>
           <div class="db-skel-list is-thin" id="db-orders-skel" aria-hidden="true"><i class="db-skel"></i><i class="db-skel"></i></div>
-          <p class="db-empty is-inline" id="db-orders-empty" hidden>Nu ai comenzi încă.</p>
+          <p class="db-empty is-inline" id="db-orders-empty" hidden><?= v2_te('You have no orders yet.') ?></p>
           <div class="db-table-wrap" id="db-orders-table" hidden>
             <table class="db-table">
-              <thead><tr><th scope="col">Comandă</th><th scope="col" class="is-date">Data</th><th scope="col">Total</th><th scope="col">Status</th></tr></thead>
+              <thead><tr><th scope="col"><?= v2_te('Order') ?></th><th scope="col" class="is-date"><?= v2_te('Date') ?></th><th scope="col"><?= v2_te('Total') ?></th><th scope="col"><?= v2_te('Status') ?></th></tr></thead>
               <tbody id="db-orders"></tbody>
             </table>
           </div>
@@ -160,24 +160,24 @@ include __DIR__ . '/../includes/v2/header.php';
       </section>
 
       <!-- UTILITY -->
-      <section class="db-utility" aria-label="Alte lucruri de rezolvat">
+      <section class="db-utility" aria-label="<?= v2_te('Other things to sort out') ?>">
         <article class="db-panel">
-          <p class="db-card-k">Suport</p>
-          <h2 id="db-u-support-h">Niciun tichet activ</h2>
-          <p class="db-p" id="db-u-support-p">Deschide un tichet dacă ai nelămuriri.</p>
-          <a class="btn btn-ghost db-mt" href="/cont/tichete-support">Vezi tichete</a>
+          <p class="db-card-k"><?= v2_te('Support') ?></p>
+          <h2 id="db-u-support-h"><?= v2_te('No open tickets') ?></h2>
+          <p class="db-p" id="db-u-support-p"><?= v2_te('Open a ticket if you have a question.') ?></p>
+          <a class="btn btn-ghost db-mt" href="/account/support"><?= v2_te('View tickets') ?></a>
         </article>
         <article class="db-panel">
-          <p class="db-card-k">Recenzii</p>
-          <h2 id="db-u-reviews-h">Toate scrise</h2>
-          <p class="db-p" id="db-u-reviews-p">Mulțumim că împărtășești experiențele tale.</p>
-          <a class="btn btn-ghost db-mt" href="/cont/recenzii">Scrie recenzie</a>
+          <p class="db-card-k"><?= v2_te('Reviews') ?></p>
+          <h2 id="db-u-reviews-h"><?= v2_te('All written') ?></h2>
+          <p class="db-p" id="db-u-reviews-p"><?= v2_te('Thank you for sharing your experiences.') ?></p>
+          <a class="btn btn-ghost db-mt" href="/account/reviews"><?= v2_te('Write a review') ?></a>
         </article>
         <article class="db-panel is-gift" id="db-u-gift">
-          <p class="db-card-k">Card cadou</p>
-          <h2 id="db-u-gift-h">Verifică un card cadou</h2>
-          <p class="db-p" id="db-u-gift-p">Introdu codul cardului pentru a vedea soldul.</p>
-          <a class="btn btn-ghost db-mt" href="/voucher">Verifică sold</a>
+          <p class="db-card-k"><?= v2_te('Gift card') ?></p>
+          <h2 id="db-u-gift-h"><?= v2_te('Check a gift card') ?></h2>
+          <p class="db-p" id="db-u-gift-p"><?= v2_te('Enter the card code to see its balance.') ?></p>
+          <a class="btn btn-ghost db-mt" href="/voucher"><?= v2_te('Check balance') ?></a>
         </article>
       </section>
     </div>

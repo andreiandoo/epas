@@ -10,48 +10,44 @@
   if (!$('pt-content') || !window.BO_ACCOUNT) return;
   var account = window.BO_ACCOUNT;
 
-  var MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
-  var TYPE_LABEL = { earned: 'câștigate', spent: 'folosite', expired: 'expirate', affiliate: 'afiliere' };
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var TYPE_LABEL = { earned: VQ.t('earned'), spent: VQ.t('used'), expired: VQ.t('expired'), affiliate: VQ.t('referral') };
   var TYPE_TONE = { earned: 'is-ok', spent: 'is-bad', expired: 'is-muted', affiliate: 'is-wait' };
-  var TYPE_TITLE = { earned: 'Puncte câștigate', spent: 'Puncte folosite', expired: 'Puncte expirate', affiliate: 'Afiliere' };
+  var TYPE_TITLE = { earned: VQ.t('Points earned'), spent: VQ.t('Points used'), expired: VQ.t('Points expired'), affiliate: VQ.t('Referral') };
   var ACTIONS = {
-    order: 'Comandă', purchase: 'Comandă', refund: 'Puncte returnate', referral: 'Afiliere', referral_reward: 'Afiliere', referred: 'Bonus de bun venit',
-    signup: 'Bonus cont nou', birthday: 'Bonus zi de naștere', badge_bonus: 'Bonus insignă', redemption: 'Folosite la o comandă',
-    checkout: 'Folosite la o comandă', reward_redemption: 'Recompensă', expiration: 'Expirare', manual_adjustment: 'Ajustare',
-    purchase_reversal: 'Retur comandă'
+    order: VQ.t('Order'), purchase: VQ.t('Order'), refund: VQ.t('Points returned'), referral: VQ.t('Referral'), referral_reward: VQ.t('Referral'), referred: VQ.t('Welcome bonus'),
+    signup: VQ.t('New account bonus'), birthday: VQ.t('Birthday bonus'), badge_bonus: VQ.t('Badge bonus'), redemption: VQ.t('Used on an order'),
+    checkout: VQ.t('Used on an order'), reward_redemption: VQ.t('Reward'), expiration: VQ.t('Expiry'), manual_adjustment: VQ.t('Adjustment'),
+    purchase_reversal: VQ.t('Order refund')
   };
-  var SHARE_TEXT = 'Hei! Am descoperit viaqui.com — bilete pentru escape rooms, muzee, ateliere și multe altele. Folosește linkul meu: ';
-  var num = new Intl.NumberFormat('ro-RO');
-  var whole = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
-  var pct = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 });
+  var SHARE_TEXT = VQ.t('Hi! I found Viaqui: tickets for attractions, tours and experiences across Europe. Use my link: ');
+  var num = new Intl.NumberFormat(LOC);
+  var pct = new Intl.NumberFormat(LOC, { maximumFractionDigits: 1 });
   var config = null, earnRate = '', ladder = [], history = [], page = 0, lastPage = 1, historyBusy = false;
   var points = { balance: 0, earned: 0, spent: 0, pending: 0 }, referral = { code: '', link: '' }, statusTimer = 0;
 
   // ---------- helpers ----------
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
-  function strong(text) { return el('strong', null, text); }
-  function fill(node, parts) {
-    node.textContent = '';
-    parts.forEach(function (p) { node.appendChild(typeof p === 'string' ? document.createTextNode(p) : p); });
-  }
+  // A translated sentence that carries its own <strong>: `html` comes from VQ.t, and any value from the API put
+  // into it goes through esc() first.
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+  function rich(node, html) { node.innerHTML = html; }
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || v.name || Object.keys(v).map(function (k) { return v[k]; })[0];
     return v == null ? '' : String(v);
   }
   function amount(v) { var n = Number(v); return isFinite(n) ? n : 0; }
   function count(v) { return Math.max(0, Math.floor(amount(v))); }
-  function plural(n, one, many) {
-    n = count(n);
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
+  function pts(n) { return VQ.n(count(n), 'point', 'points'); }
+  function daysText(n) { return VQ.n(count(n), 'day', 'days'); }
+  // money is in the marketplace's currency
+  function money(n) { n = amount(n); return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(n) : '€' + n; }
   function show(id, on) { $(id).hidden = !on; }
   function obj(x) { return x && typeof x === 'object'; }
   function parseDate(v) { var d = v ? new Date(v) : null; return d && !isNaN(d.getTime()) ? d : null; }
-  function shortDate(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+  function shortDate(d) { return d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' }); }
   function perLei() { return config && amount(config.points_per_lei) > 0 ? amount(config.points_per_lei) : 100; }
-  function toLei(p) { return whole.format(Math.floor(count(p) / perLei())) + ' lei'; }
+  function toLei(p) { return money(Math.floor(count(p) / perLei())); }
   function guard() { show('pt-content', false); show('pt-guard', true); account.toLogin(); } // the message shows only while the login page loads
   function linkSay(message, tone) {
     var line = $('pt-link-status');
@@ -73,7 +69,7 @@
     var pending = $('pt-pending');
     if (pending) {
       pending.hidden = points.pending <= 0;
-      if (points.pending > 0) fill(pending, ['+ ', strong(plural(points.pending, 'punct', 'puncte')), ' în așteptare: intră în cont după activitățile rezervate.']);
+      if (points.pending > 0) rich(pending, VQ.t('+ <strong>{points}</strong> pending: they are added to your account after the activities you booked.', { points: pts(points.pending) }));
     }
     account.setBadges({ points: points.balance });
   }
@@ -84,7 +80,7 @@
       var perks = (Array.isArray(t.benefits) ? t.benefits : (Array.isArray(t.perks) ? t.perks : [])).map(function (p) {
         return typeof p === 'string' ? { label: p, active: true } : { label: txt(obj(p) ? (p.label || p.name) : p), active: !obj(p) || p.active !== false };
       }).filter(function (p) { return p.label; });
-      return { name: txt(t.name) || 'Nivel ' + (i + 1), description: txt(t.description), threshold: threshold, perks: perks };
+      return { name: txt(t.name) || VQ.t('Level {n}', { n: i + 1 }), description: txt(t.description), threshold: threshold, perks: perks };
     });
     ladder.forEach(function (t) { if (t.threshold == null) t.threshold = last + 500; last = t.threshold; });
     ladder.sort(function (a, b) { return a.threshold - b.threshold; });
@@ -104,8 +100,8 @@
     if (heroBar) heroBar.hidden = !ladder.length;
     if (!ladder.length) {
       $('pt-tier').textContent = '—';
-      $('pt-next-hero').textContent = config && config.auto_rewards ? '' : 'Nivelurile programului nu sunt disponibile acum.';
-      $('pt-next-tier').textContent = 'Nivelurile programului nu sunt disponibile acum.';
+      $('pt-next-hero').textContent = config && config.auto_rewards ? '' : VQ.t('The programme levels are not available right now.');
+      $('pt-next-tier').textContent = VQ.t('The programme levels are not available right now.');
       return;
     }
     var score = points.earned || points.balance, idx = 0;
@@ -121,18 +117,18 @@
     setBar('pt-bar-hero', progress);
     setBar('pt-bar-tier', progress);
     if (next) {
-      fill($('pt-next-hero'), ['Încă ', strong(num.format(toNext)), ' puncte până la nivelul ', strong(next.name), '.']);
-      fill($('pt-next-tier'), ['Mai ai nevoie de ', strong(num.format(toNext)), ' puncte pentru următorul nivel.']);
+      rich($('pt-next-hero'), VQ.t('<strong>{n}</strong> more points to reach the <strong>{level}</strong> level.', { n: num.format(toNext), level: esc(next.name) }));
+      rich($('pt-next-tier'), VQ.t('You need <strong>{n}</strong> more points for the next level.', { n: num.format(toNext) }));
     } else {
-      $('pt-next-hero').textContent = 'Ești la cel mai înalt nivel — felicitări!';
-      $('pt-next-tier').textContent = 'Cel mai înalt nivel atins.';
+      $('pt-next-hero').textContent = VQ.t('You are at the highest level. Well done!');
+      $('pt-next-tier').textContent = VQ.t('Highest level reached.');
     }
     var list = $('pt-perks');
     list.textContent = '';
     cur.perks.forEach(function (p) {
       var li = el('li');
       li.appendChild(el('span', null, p.label));
-      li.appendChild(el('span', 'acc-tag ' + (p.active ? 'is-ok' : 'is-wait'), p.active ? 'activ' : 'în curând'));
+      li.appendChild(el('span', 'acc-tag ' + (p.active ? 'is-ok' : 'is-wait'), p.active ? VQ.t('active') : VQ.t('coming soon')));
       list.appendChild(li);
     });
   }
@@ -140,36 +136,40 @@
     var list = $('pt-rate'), items = [], rule = $('pt-rule-exp');
     list.textContent = '';
     if (!config) {
-      items.push(['Regulile programului nu sunt disponibile acum.']);
+      items.push(VQ.t('The programme rules are not available right now.'));
     } else {
-      items.push([strong(num.format(perLei())), ' puncte = 1 leu reducere.']);
-      if (earnRate) items.push(['Câștigi ', strong(earnRate), ' la comenzile eligibile' + (config.auto_rewards && count(config.confirm_days) >= 0 ? ', în cont după activitate.' : '.')]);
-      if (count(config.birthday_bonus_points) > 0 && config.auto_rewards) items.push(['De ziua ta: ', strong(plural(config.birthday_bonus_points, 'punct', 'puncte')), ' (după prima comandă; completează data nașterii în setări).']);
-      if (count(config.min_redeem_points) > 0) items.push(['Poți folosi punctele de la minimum ', strong(plural(config.min_redeem_points, 'punct', 'puncte')), '.']);
-      if (amount(config.max_redeem_percentage) > 0) items.push(['Reducerea din puncte acoperă cel mult ', strong(pct.format(amount(config.max_redeem_percentage)) + '%'), ' din comandă.']);
-      if (count(config.max_redeem_points_per_order) > 0) items.push(['Maximum ', strong(plural(config.max_redeem_points_per_order, 'punct', 'puncte')), ' pe comandă (≈ ' + toLei(config.max_redeem_points_per_order) + ').']);
+      items.push(VQ.t('<strong>{n}</strong> points = {amount} off.', { n: num.format(perLei()), amount: money(1) }));
+      if (earnRate) {
+        items.push(config.auto_rewards && count(config.confirm_days) >= 0
+          ? VQ.t('You earn <strong>{rate}</strong> on eligible orders, added to your account after the activity.', { rate: esc(earnRate) })
+          : VQ.t('You earn <strong>{rate}</strong> on eligible orders.', { rate: esc(earnRate) }));
+      }
+      if (count(config.birthday_bonus_points) > 0 && config.auto_rewards) items.push(VQ.t('On your birthday: <strong>{points}</strong> (after your first order; add your date of birth in settings).', { points: pts(config.birthday_bonus_points) }));
+      if (count(config.min_redeem_points) > 0) items.push(VQ.t('You can use your points once you have at least <strong>{points}</strong>.', { points: pts(config.min_redeem_points) }));
+      if (amount(config.max_redeem_percentage) > 0) items.push(VQ.t('The discount from points covers at most <strong>{percent}%</strong> of an order.', { percent: pct.format(amount(config.max_redeem_percentage)) }));
+      if (count(config.max_redeem_points_per_order) > 0) items.push(VQ.t('At most <strong>{points}</strong> per order (≈ {amount}).', { points: pts(config.max_redeem_points_per_order), amount: toLei(config.max_redeem_points_per_order) }));
       var days = count(config.points_expire_days);
-      items.push(days ? ['Punctele expiră după ', strong(plural(days, 'zi', 'zile')), '.'] : ['Punctele nu expiră.']);
-      fill(rule, [strong('Expirare:'), days ? ' punctele expiră după ' + plural(days, 'zi', 'zile') + '.' : ' punctele nu expiră.']);
+      items.push(days ? VQ.t('Points expire after <strong>{days}</strong>.', { days: daysText(days) }) : VQ.t('Points do not expire.'));
+      rich(rule, days ? VQ.t('<strong>Expiry:</strong> points expire after {days}.', { days: daysText(days) }) : VQ.t('<strong>Expiry:</strong> points do not expire.'));
       if (config.auto_rewards) {
-        if (earnRate) fill($('pt-rule-earn'), [strong('Câștigare:'), ' ' + earnRate + ', în cont după activitate.']);
+        if (earnRate) rich($('pt-rule-earn'), VQ.t('<strong>Earning:</strong> {rate}, added to your account after the activity.', { rate: esc(earnRate) }));
         var bday = $('pt-rule-bday');
         if (bday && count(config.birthday_bonus_points) > 0) {
-          fill(bday, [strong('Zi de naștere:'), ' ' + plural(config.birthday_bonus_points, 'punct', 'puncte') + ' în fiecare an, dacă ai cumpărat cel puțin o dată.']);
+          rich(bday, VQ.t('<strong>Birthday:</strong> {points} every year, if you have bought at least once.', { points: pts(config.birthday_bonus_points) }));
           bday.hidden = false;
         }
       }
     }
-    items.forEach(function (parts) { var li = el('li'); fill(li, parts); list.appendChild(li); });
+    items.forEach(function (html) { var li = el('li'); rich(li, html); list.appendChild(li); });
   }
   function renderExpiring(soon, days, expires) {
     days = count(days) || 30;
     $('pt-s-expiring').textContent = num.format(soon);
-    $('pt-s-expiring-p').textContent = !expires ? 'punctele nu expiră' : (soon > 0 ? 'în ' + plural(days, 'zi', 'zile') : 'fără expirare imediată');
+    $('pt-s-expiring-p').textContent = !expires ? VQ.t('points do not expire') : (soon > 0 ? VQ.t('within {days}', { days: daysText(days) }) : VQ.t('nothing expiring soon'));
     $('pt-exp').classList.toggle('is-hot', soon > 0);
-    $('pt-exp-h').textContent = soon > 0 ? plural(soon, 'punct expiră curând', 'puncte expiră curând') : 'Niciun punct în expirare';
-    $('pt-exp-p').textContent = soon > 0 ? 'Folosește-le în următoarele ' + plural(days, 'zi', 'zile') + ' la o comandă eligibilă.'
-      : (expires ? 'Continuă să cumperi pentru a câștiga puncte noi.' : 'Punctele din programul viaqui.com nu expiră. Continuă să cumperi pentru a câștiga puncte noi.');
+    $('pt-exp-h').textContent = soon > 0 ? VQ.t('Expiring soon: {points}', { points: pts(soon) }) : VQ.t('No points about to expire');
+    $('pt-exp-p').textContent = soon > 0 ? VQ.t('Use them within {days} on an eligible order.', { days: daysText(days) })
+      : (expires ? VQ.t('Keep buying to earn new points.') : VQ.t('Points in the Viaqui programme do not expire. Keep buying to earn new points.'));
   }
   function loadExpiring() {
     BileteOnlineAPI.get('/customer/dashboard-bundle').then(function (resp) {
@@ -203,27 +203,32 @@
     $('pt-r-accounts').textContent = num.format(count(stats.registrations != null ? stats.registrations : stats.signups));
     $('pt-r-orders').textContent = num.format(count(stats.conversions != null ? stats.conversions : stats.qualified));
     var mine = count(rewards.referrer_reward), theirs = count(rewards.referred_reward), inPoints = !rewards.reward_type || rewards.reward_type === 'points';
-    var unit = function (n) { return inPoints ? plural(n, 'punct', 'puncte') : whole.format(n) + ' lei'; };
+    var unit = function (n) { return inPoints ? pts(n) : money(n); };
     if (mine) {
       var minOrder = amount(rewards.min_purchase);
-      var from = minOrder > 0 ? ' de cel puțin ' + whole.format(minOrder) + ' lei' : '';
-      $('pt-aff-reward').textContent = 'Primești ' + unit(mine) + ' pentru fiecare prieten care își face cont prin linkul tău și cumpără prima activitate' + from +
-        (theirs ? ', iar prietenul primește ' + unit(theirs) + ' la aceeași comandă.' : '.') +
-        (rewards.automatic ? ' Punctele intră singure în cont după activitate.' : '');
+      $('pt-aff-reward').textContent = (minOrder > 0
+        ? VQ.t('You get {reward} for every friend who creates an account through your link and buys their first activity of at least {min}.', { reward: unit(mine), min: money(minOrder) })
+        : VQ.t('You get {reward} for every friend who creates an account through your link and buys their first activity.', { reward: unit(mine) })) +
+        (theirs ? ' ' + VQ.t('Your friend gets {reward} on the same order.', { reward: unit(theirs) }) : '') +
+        (rewards.automatic ? ' ' + VQ.t('The points are added to your account automatically after the activity.') : '');
       show('pt-aff-reward', true);
       var refRule = $('pt-rule-ref');
-      if (refRule) fill(refRule, [strong('Afiliere:'), ' ' + unit(mine) + ' pentru tine' + (theirs ? ' și ' + unit(theirs) + ' pentru prieten' : '') + ', la prima lui comandă' + from + '.']);
+      if (refRule) {
+        var refVars = { mine: unit(mine), theirs: unit(theirs), min: money(minOrder) };
+        if (theirs) rich(refRule, minOrder > 0 ? VQ.t('<strong>Referrals:</strong> {mine} for you and {theirs} for your friend, on their first order of at least {min}.', refVars) : VQ.t('<strong>Referrals:</strong> {mine} for you and {theirs} for your friend, on their first order.', refVars));
+        else rich(refRule, minOrder > 0 ? VQ.t('<strong>Referrals:</strong> {mine} for you, on the first order of your friend, of at least {min}.', refVars) : VQ.t('<strong>Referrals:</strong> {mine} for you, on the first order of your friend.', refVars));
+      }
     }
   }
   $('pt-copy').addEventListener('click', function () {
     var btn = this;
     if (!referral.link) return;
-    var manual = function () { var input = $('pt-link'); input.focus(); input.select(); linkSay('Linkul e selectat. Copiază-l manual.'); };
+    var manual = function () { var input = $('pt-link'); input.focus(); input.select(); linkSay(VQ.t('The link is selected. Copy it by hand.')); };
     if (!(navigator.clipboard && navigator.clipboard.writeText)) { manual(); return; }
     navigator.clipboard.writeText(referral.link).then(function () {
-      linkSay('Link copiat în clipboard.');
-      btn.textContent = 'Copiat';
-      setTimeout(function () { btn.textContent = 'Copiază link'; }, 2000);
+      linkSay(VQ.t('Link copied to the clipboard.'));
+      btn.textContent = VQ.t('Copied');
+      setTimeout(function () { btn.textContent = VQ.t('Copy link'); }, 2000);
     }, manual);
   });
   $('pt-share').addEventListener('click', function () {
@@ -245,7 +250,7 @@
   $('pt-regen-yes').addEventListener('click', function () {
     var btn = this;
     btn.disabled = true;
-    btn.textContent = 'Se generează…';
+    btn.textContent = VQ.t('Making a new code…');
     BileteOnlineAPI.post('/customer/referrals/regenerate-code', {}).then(function (resp) {
       var d = resp && resp.data;
       if (!(resp && resp.success && obj(d) && (d.code || d.link))) throw { status: -1 };
@@ -254,12 +259,12 @@
       setLink();
       closeConfirm(false);
       $('pt-copy').focus();
-      linkSay('Ai un cod nou. Linkul vechi nu mai funcționează.');
+      linkSay(VQ.t('You have a new code. The old link no longer works.'));
     }).catch(function (err) {
-      linkSay(err && err.status === 401 ? 'Sesiunea a expirat. Intră din nou în cont.' : 'Nu am putut genera un cod nou. Încearcă din nou.', 'error');
+      linkSay(err && err.status === 401 ? VQ.t('Your session has expired. Sign in again.') : VQ.t('We could not make a new code. Try again.'), 'error');
     }).then(function () {
       btn.disabled = false;
-      btn.textContent = 'Da, generează cod nou';
+      btn.textContent = VQ.t('Yes, make a new code');
     });
   });
 
@@ -277,7 +282,7 @@
     var tr = el('tr'), d = parseDate(tx.created_at), desc = el('td'), tag = el('td', 'is-type');
     tr.appendChild(el('td', null, d ? shortDate(d) : '—'));
     desc.appendChild(el('b', null, txt(tx.description) || TYPE_TITLE[type]));
-    var meta = [ACTIONS[String(tx.action_type || '').toLowerCase()] || '', tx.balance_after != null ? 'sold ' + num.format(count(tx.balance_after)) : ''].filter(Boolean).join(' · ');
+    var meta = [ACTIONS[String(tx.action_type || '').toLowerCase()] || '', tx.balance_after != null ? VQ.t('balance {n}', { n: num.format(count(tx.balance_after)) }) : ''].filter(Boolean).join(' · ');
     if (meta) desc.appendChild(el('small', null, meta));
     tr.appendChild(desc);
     tag.appendChild(el('span', 'acc-tag ' + TYPE_TONE[type], TYPE_LABEL[type]));
@@ -300,7 +305,7 @@
     if (historyBusy) return;
     historyBusy = true;
     var more = $('pt-h-more');
-    if (page > 0) { more.disabled = true; more.textContent = 'Se încarcă…'; }
+    if (page > 0) { more.disabled = true; more.textContent = VQ.t('Loading…'); }
     else { show('pt-h-error', false); show('pt-h-skel', true); }
     BileteOnlineAPI.get('/customer/rewards/history', { per_page: 50, page: page + 1 }).then(function (resp) {
       var data = resp && resp.data;
@@ -308,12 +313,12 @@
       history = history.concat(list.filter(obj));
       page++;
       lastPage = resp && obj(resp.meta) ? Math.max(1, count(resp.meta.last_page)) : page;
-      more.textContent = 'Încarcă mai multe';
+      more.textContent = VQ.t('Load more');
       renderHistory();
     }, function (err) {
       if (err && err.status === 401) { guard(); return; }
       if (page === 0) { show('pt-h-skel', false); show('pt-h-error', true); }
-      else more.textContent = 'Nu s-a putut încărca. Încearcă din nou';
+      else more.textContent = VQ.t('It did not load. Try again');
     }).then(function () {
       historyBusy = false;
       more.disabled = false;
@@ -347,7 +352,7 @@
     renderPoints();
     renderTier();
     renderRules();
-    if (!p) $('pt-next-hero').textContent = 'Nu am putut încărca soldul punctelor. Reîncarcă pagina.';
+    if (!p) $('pt-next-hero').textContent = VQ.t('We could not load your points balance. Reload the page.');
     if (config) {
       if (count(config.points_expire_days) > 0) {
         if (config.auto_rewards && p && p.expiring_soon != null) renderExpiring(count(p.expiring_soon), config.expiring_warning_days, true);
@@ -359,7 +364,7 @@
   BileteOnlineAPI.get('/customer/referrals').then(function (r) { renderReferral(r && r.data); }, function (err) {
     if (err && err.status === 401) { guard(); return; }
     $('pt-regen').disabled = true;
-    linkSay('Nu am putut încărca linkul de afiliat. Reîncarcă pagina.', 'error');
+    linkSay(VQ.t('We could not load your referral link. Reload the page.'), 'error');
   });
   loadHistory();
 })();
