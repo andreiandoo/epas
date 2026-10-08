@@ -22,8 +22,8 @@ if ($svCode === '') {
     http_response_code(404);
 }
 
-$pageTitleRaw = ($svCode === '' ? 'Link invalid' : 'Monitorizare vânzări') . ' — ' . SITE_NAME;
-$pageDescription = 'Vânzările activităților urmărite, actualizate în timp real.';
+$pageTitleRaw = ($svCode === '' ? v2_t('Link not valid') : v2_t('Sales monitor')) . ' · ' . SITE_NAME;
+$pageDescription = v2_t('Sales of the tracked activities, updated in real time.');
 $canonicalUrl = SITE_URL . '/view' . ($svCode !== '' ? '/' . $svCode : '');
 $noindex = true;
 $skipPageCache = true;
@@ -36,9 +36,9 @@ include __DIR__ . '/includes/v2/header.php';
 <main id="main" class="sv" data-code="<?= v2_e($svCode) ?>">
   <section class="sv-hero" aria-labelledby="sv-title">
     <div class="wrap sv-hero-in">
-      <p class="kicker">Monitorizare vânzări</p>
-      <h1 id="sv-title">Vânzări în timp real</h1>
-      <p class="sv-sub" id="sv-sub">Activitățile distribuite de organizator, cu biletele vândute actualizate automat.</p>
+      <p class="kicker"><?= v2_te('Sales monitor') ?></p>
+      <h1 id="sv-title"><?= v2_te('Sales in real time') ?></h1>
+      <p class="sv-sub" id="sv-sub"><?= v2_te('The activities shared by the organiser, with tickets sold updated automatically.') ?></p>
       <p class="sv-live" id="sv-live" hidden><i aria-hidden="true"></i><span id="sv-live-t"></span></p>
     </div>
   </section>
@@ -47,32 +47,32 @@ include __DIR__ . '/includes/v2/header.php';
     <?php if ($svCode === ''): ?>
     <div class="sv-state is-bad" role="alert">
       <span class="sv-state-ic"><?= v2_ic('x') ?></span>
-      <h2>Linkul nu este valid</h2>
-      <p>Verifică linkul primit sau cere-i organizatorului unul nou.</p>
-      <a class="btn btn-ghost" href="/"><?= v2_ic('arrow-left') ?>Înapoi la viaqui.com</a>
+      <h2><?= v2_te('This link is not valid') ?></h2>
+      <p><?= v2_te('Check the link you received or ask the organiser for a new one.') ?></p>
+      <a class="btn btn-ghost" href="/"><?= v2_ic('arrow-left') ?><?= v2_te('Back to the homepage') ?></a>
     </div>
     <?php else: ?>
-    <div class="sv-state" id="sv-loading" aria-live="polite"><span class="sv-spin" aria-hidden="true"></span><p>Se încarcă datele…</p></div>
+    <div class="sv-state" id="sv-loading" aria-live="polite"><span class="sv-spin" aria-hidden="true"></span><p><?= v2_te('Loading the figures…') ?></p></div>
 
     <form class="sv-state sv-pass" id="sv-pass" novalidate hidden>
       <span class="sv-state-ic"><?= v2_ic('lock-simple') ?></span>
-      <h2>Link protejat cu parolă</h2>
-      <p>Introdu parola primită de la organizator ca să vezi datele.</p>
+      <h2><?= v2_te('This link is password protected') ?></h2>
+      <p><?= v2_te('Enter the password the organiser gave you to see the figures.') ?></p>
       <label class="sv-f">
-        <span class="sr">Parola</span>
-        <span class="sv-pass-in"><input id="sv-pw" type="password" autocomplete="off" maxlength="100" aria-describedby="sv-pw-err"><button class="sv-eye" type="button" id="sv-eye" aria-pressed="false">Arată</button></span>
+        <span class="sr"><?= v2_te('Password') ?></span>
+        <span class="sv-pass-in"><input id="sv-pw" type="password" autocomplete="off" maxlength="100" aria-describedby="sv-pw-err"><button class="sv-eye" type="button" id="sv-eye" aria-pressed="false"><?= v2_te('Show') ?></button></span>
       </label>
       <p class="sv-err" id="sv-pw-err" role="alert" hidden></p>
-      <button class="btn btn-primary" type="submit" id="sv-pw-go"><span data-label>Vezi datele</span></button>
+      <button class="btn btn-primary" type="submit" id="sv-pw-go"><span data-label><?= v2_te('See the figures') ?></span></button>
     </form>
 
     <div class="sv-state" id="sv-error" role="alert" hidden></div>
 
     <div class="sv-content" id="sv-content" hidden>
-      <section class="sv-stats" id="sv-stats" aria-label="Pe scurt"></section>
+      <section class="sv-stats" id="sv-stats" aria-label="<?= v2_te('At a glance') ?>"></section>
       <p class="sv-note" id="sv-note" aria-live="polite" hidden></p>
       <ol class="sv-events" id="sv-events"></ol>
-      <p class="sv-foot">Datele vin direct din sistemul de bilete al <?= v2_e(SITE_NAME) ?>. Biletele vândute includ doar comenzile plătite.</p>
+      <p class="sv-foot"><?= v2_te('The figures come straight from the {site} ticketing system. Tickets sold count paid orders only.', ['site' => SITE_NAME]) ?></p>
     </div>
     <?php endif; ?>
   </div>

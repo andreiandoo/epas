@@ -1,5 +1,5 @@
 /* viaqui.com v2: gift card balance check. Posts the code (and PIN) through the API proxy, then turns the check
-   card into the result: balance, validity, status, and why a card can't be used. Every error is said in Romanian. */
+   card into the result: balance, validity, status, and why a card can't be used. Every error is said in words. */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -9,9 +9,9 @@
   var formView = $('vc-form-view'), result = $('vc-result'), error = $('vc-error');
   var code = $('vc-code'), pin = $('vc-pin'), submit = $('vc-submit');
   var LABEL = submit.textContent, sending = false;
-  var MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-  var STATUS = { active: 'Activ', usable: 'Activ', pending: 'În așteptare', used: 'Folosit integral', depleted: 'Folosit integral', redeemed: 'Folosit integral', expired: 'Expirat', cancelled: 'Anulat', canceled: 'Anulat', suspended: 'Suspendat', blocked: 'Blocat' };
-  var money = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var LOCALE = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var STATUS = { active: VQ.t('Active'), usable: VQ.t('Active'), pending: VQ.t('Pending'), used: VQ.t('Fully used'), depleted: VQ.t('Fully used'), redeemed: VQ.t('Fully used'), expired: VQ.t('Expired'), cancelled: VQ.t('Cancelled'), canceled: VQ.t('Cancelled'), suspended: VQ.t('Suspended'), blocked: VQ.t('Blocked') };
+  var money = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   function showError(text, field) {
     error.textContent = text;
@@ -24,33 +24,31 @@
   }
   function formatDate(value) {
     var d = value ? new Date(value) : null;
-    return d && !isNaN(d) ? d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : '—';
+    return d && !isNaN(d) ? d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
   }
   function expiryLabel(days) {
     if (days == null) return '';
     days = Math.floor(Number(days));
-    if (days < 0) return 'expirat';
-    if (days === 0) return 'expiră astăzi';
-    if (days === 1) return 'mai e 1 zi';
-    if (days <= 30) return 'mai sunt ' + days + ' zile';
-    return days + ' zile rămase';
+    if (days < 0) return VQ.t('expired');
+    if (days === 0) return VQ.t('expires today');
+    return VQ.t('{days} left', { days: VQ.n(days, 'day', 'days') });
   }
   function statusLabel(data) {
     return STATUS[String(data.status || '').toLowerCase()] || data.status_label || data.status || '—';
   }
   function unusableReason(data) {
-    if (data.balance == null || Number(data.balance) <= 0) return 'Soldul cardului este 0 lei.';
-    if (data.days_until_expiry != null && Number(data.days_until_expiry) < 0) return 'Cardul a expirat.';
+    if (data.balance == null || Number(data.balance) <= 0) return VQ.t('The card has no balance left.');
+    if (data.days_until_expiry != null && Number(data.days_until_expiry) < 0) return VQ.t('The card has expired.');
     var status = String(data.status || '').toLowerCase();
-    if (status && status !== 'active' && status !== 'usable') return 'Status curent: ' + statusLabel(data) + '.';
-    return 'Contactează suportul pentru detalii.';
+    if (status && status !== 'active' && status !== 'usable') return VQ.t('Current status: {status}.', { status: statusLabel(data) });
+    return VQ.t('Contact support for details.');
   }
 
   function render(data) {
     var usable = !!data.is_usable;
-    var currency = data.currency || 'RON';
+    var currency = data.currency || 'EUR';
     result.setAttribute('data-state', usable ? 'ok' : 'bad');
-    $('vc-r-kicker').textContent = usable ? 'Card valabil' : 'Card indisponibil';
+    $('vc-r-kicker').textContent = usable ? VQ.t('Valid card') : VQ.t('Card unavailable');
     $('vc-r-code').textContent = data.code || code.value.trim().toUpperCase();
     $('vc-r-balance').textContent = formatMoney(data.balance);
     $('vc-r-currency').textContent = currency;
@@ -72,28 +70,28 @@
     error.hidden = true;
     var value = code.value.trim().toUpperCase();
     code.value = value;
-    if (!value) { showError('Introdu codul cardului.', code); return; }
-    if (typeof BileteOnlineAPI === 'undefined') { showError('Cardul nu poate fi verificat acum. Încearcă din nou.'); return; }
+    if (!value) { showError(VQ.t('Enter the card code.'), code); return; }
+    if (typeof BileteOnlineAPI === 'undefined') { showError(VQ.t('The card cannot be checked right now. Please try again.')); return; }
 
     var payload = { code: value };
     if (pin.value.trim()) payload.pin = pin.value.trim();
     sending = true;
     submit.disabled = true;
-    submit.textContent = 'Se verifică…';
+    submit.textContent = VQ.t('Checking…');
 
     BileteOnlineAPI.post('/customer/gift-cards/check-balance', payload)
       .then(function (resp) {
         if (resp && resp.success && resp.data) { render(resp.data); return; }
-        showError('Cardul nu poate fi verificat acum. Încearcă din nou.');
+        showError(VQ.t('The card cannot be checked right now. Please try again.'));
       })
       .catch(function (err) {
         var status = err && err.status;
-        if (status === 404) showError('Codul introdus nu este valid sau cardul nu există.', code);
-        else if (status === 403) showError(payload.pin ? 'PIN incorect. Verifică PIN-ul de pe cardul fizic.' : 'Cardul are PIN. Introdu PIN-ul de pe spatele cardului.', pin);
-        else if (status === 422) showError('Introdu codul cardului.', code);
-        else if (status === 429) showError('Prea multe încercări. Încearcă din nou peste un minut.');
-        else if (status === 0) showError('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
-        else showError('Cardul nu poate fi verificat acum. Încearcă din nou.');
+        if (status === 404) showError(VQ.t('The code is not valid or the card does not exist.'), code);
+        else if (status === 403) showError(payload.pin ? VQ.t('Wrong PIN. Check the PIN on the physical card.') : VQ.t('This card has a PIN. Enter the PIN from the back of the card.'), pin);
+        else if (status === 422) showError(VQ.t('Enter the card code.'), code);
+        else if (status === 429) showError(VQ.t('Too many attempts. Try again in a minute.'));
+        else if (status === 0) showError(VQ.t('We could not connect. Check your internet connection and try again.'));
+        else showError(VQ.t('The card cannot be checked right now. Please try again.'));
       })
       .then(function () {
         sending = false;

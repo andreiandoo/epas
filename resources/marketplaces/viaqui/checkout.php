@@ -27,8 +27,8 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
-$pageTitleRaw    = 'Secure checkout — ' . SITE_NAME;
-$pageDescription = 'Complete the order for the tickets in your basket. Pay securely by card, Apple Pay or Google Pay.';
+$pageTitleRaw    = v2_t('Secure checkout') . ' · ' . SITE_NAME;
+$pageDescription = v2_t('Complete the order for the tickets in your basket. Pay securely by card, Apple Pay or Google Pay.');
 $canonicalUrl    = SITE_URL . '/checkout';
 $noindex         = true;
 $currentPage     = 'checkout';
@@ -84,11 +84,11 @@ if ($ckEmbed) {
     readfile(__DIR__ . '/includes/v2/sprite.svg');
     ?>
 <header class="eck-head">
-  <a class="eck-back" href="#" data-emb-back target="_self"><?= v2_ic('arrow-left') ?>Back to tickets</a>
-  <p class="eck-by"><?= v2_ic('lock-simple') ?><span>Secure payment through <b><?= v2_e(SITE_NAME) ?></b> · sold by <?= v2_e(V2_LEGAL_COMPANY['name']) ?>, company no. <?= v2_e(V2_LEGAL_COMPANY['cui']) ?></span></p>
+  <a class="eck-back" href="#" data-emb-back target="_self"><?= v2_ic('arrow-left') ?><?= v2_te('Back to tickets') ?></a>
+  <p class="eck-by"><?= v2_ic('lock-simple') ?><span><?= v2_t('Secure payment through <b>{site}</b> · sold by {company}, company no. {number}', ['site' => v2_e(SITE_NAME), 'company' => v2_e(V2_LEGAL_COMPANY['name']), 'number' => v2_e(V2_LEGAL_COMPANY['cui'])]) ?></span></p>
 </header>
 <?php if (!empty($ckEmbed['cancelled'])): ?>
-<p class="eck-note" role="status"><?= v2_ic('info') ?><span>The payment was cancelled and nothing was charged. You can try again below.</span></p>
+<p class="eck-note" role="status"><?= v2_ic('info') ?><span><?= v2_te('The payment was cancelled and nothing was charged. You can try again below.') ?></span></p>
 <?php endif; ?>
 <?php
 } else {
@@ -101,17 +101,17 @@ if ($ckEmbed) {
     <div class="wrap">
       <div class="co-head-row">
         <div>
-          <p class="kicker">Step 2 · Checkout</p>
-          <h1 class="co-h" id="ck-h">Complete your order</h1>
-          <p class="co-lead">Fill in your details, pay by card and get your QR tickets by email straight away.</p>
+          <p class="kicker"><?= v2_te('Step 2 · Checkout') ?></p>
+          <h1 class="co-h" id="ck-h"><?= v2_te('Complete your order') ?></h1>
+          <p class="co-lead"><?= v2_te('Fill in your details, pay by card and get your QR tickets by email straight away.') ?></p>
         </div>
         <div class="co-head-side">
-          <ol class="steps" aria-label="Order steps">
-            <li class="is-done"><b><?= v2_ic('check') ?></b>Basket<span class="sr"> (done)</span></li>
-            <li aria-current="step"><b>2</b>Checkout</li>
-            <li><b>3</b>Confirmation</li>
+          <ol class="steps" aria-label="<?= v2_te('Order steps') ?>">
+            <li class="is-done"><b><?= v2_ic('check') ?></b><?= v2_t('Basket<span class="sr"> (done)</span>') ?></li>
+            <li aria-current="step"><b>2</b><?= v2_te('Checkout') ?></li>
+            <li><b>3</b><?= v2_te('Confirmation') ?></li>
           </ol>
-          <a class="ck-back" href="/cart"><?= v2_ic('arrow-left') ?>Back to basket</a>
+          <a class="ck-back" href="/cart"><?= v2_ic('arrow-left') ?><?= v2_te('Back to basket') ?></a>
         </div>
       </div>
     </div>
@@ -120,16 +120,14 @@ if ($ckEmbed) {
   <div id="timer-bar" class="co-timer hidden" role="timer" aria-live="off">
     <div class="wrap co-timer-in">
       <?= v2_ic('clock') ?>
-      <span>Complete your order within</span>
-      <span id="countdown" class="countdown">14:59</span>
-      <span>minutes</span>
+      <?= v2_t('<span>Complete your order within</span> {time} <span>minutes</span>', ['time' => '<span id="countdown" class="countdown">14:59</span>']) ?>
     </div>
   </div>
 
   <div class="wrap co-lay">
     <div class="co-main">
       <div id="checkout-loading" class="co-skel ck-skel">
-        <span class="sr" role="status">Preparing your order…</span>
+        <span class="sr" role="status"><?= v2_te('Preparing your order…') ?></span>
         <i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i>
       </div>
 
@@ -139,38 +137,38 @@ if ($ckEmbed) {
           <header class="ck-sec-head">
             <span class="ck-num" aria-hidden="true"></span>
             <div>
-              <h2 id="ck-s-contact">Account and contact details</h2>
-              <p>You can check out as a guest. Your details are used for this order only.</p>
+              <h2 id="ck-s-contact"><?= v2_te('Account and contact details') ?></h2>
+              <p><?= v2_te('You can check out as a guest. Your details are used for this order only.') ?></p>
             </div>
-            <button type="button" id="guest-login-btn" class="ck-login hidden" onclick="CheckoutPage.showLoginModal()" aria-haspopup="dialog" aria-controls="login-modal"><?= v2_ic('user-circle') ?>I have an account · Log in</button>
+            <button type="button" id="guest-login-btn" class="ck-login hidden" onclick="CheckoutPage.showLoginModal()" aria-haspopup="dialog" aria-controls="login-modal"><?= v2_ic('user-circle') ?><?= v2_te('I have an account · Log in') ?></button>
           </header>
           <div class="ck-sec-body ck-grid">
             <div class="ck-field">
-              <label for="buyer-last-name">Last name *</label>
-              <input type="text" id="buyer-last-name" placeholder="e.g. Smith" autocomplete="family-name" required>
+              <label for="buyer-last-name"><?= v2_te('Last name *') ?></label>
+              <input type="text" id="buyer-last-name" placeholder="<?= v2_te('e.g. Smith') ?>" autocomplete="family-name" required>
             </div>
             <div class="ck-field">
-              <label for="buyer-first-name">First name *</label>
-              <input type="text" id="buyer-first-name" placeholder="e.g. Anna" autocomplete="given-name" required>
+              <label for="buyer-first-name"><?= v2_te('First name *') ?></label>
+              <input type="text" id="buyer-first-name" placeholder="<?= v2_te('e.g. Anna') ?>" autocomplete="given-name" required>
             </div>
             <div class="ck-field">
-              <label for="buyer-email">Email *</label>
-              <input type="email" id="buyer-email" placeholder="you@example.com" autocomplete="email" inputmode="email" required>
+              <label for="buyer-email"><?= v2_te('Email *') ?></label>
+              <input type="email" id="buyer-email" placeholder="<?= v2_te('you@example.com') ?>" autocomplete="email" inputmode="email" required>
             </div>
             <div class="ck-field">
-              <label for="buyer-email-confirm">Confirm email *</label>
-              <input type="email" id="buyer-email-confirm" placeholder="you@example.com" autocomplete="new-password" inputmode="email" onpaste="return false;" ondrop="return false;" aria-describedby="email-mismatch-error" required>
-              <p id="email-mismatch-error" class="ck-err hidden" role="alert">The email addresses do not match</p>
+              <label for="buyer-email-confirm"><?= v2_te('Confirm email *') ?></label>
+              <input type="email" id="buyer-email-confirm" placeholder="<?= v2_te('you@example.com') ?>" autocomplete="new-password" inputmode="email" onpaste="return false;" ondrop="return false;" aria-describedby="email-mismatch-error" required>
+              <p id="email-mismatch-error" class="ck-err hidden" role="alert"><?= v2_te('The email addresses do not match') ?></p>
             </div>
             <div class="ck-field ck-wide">
-              <label for="buyer-phone">Phone *</label>
+              <label for="buyer-phone"><?= v2_te('Phone *') ?></label>
               <input type="tel" id="buyer-phone" placeholder="+44 20 7946 0000" autocomplete="tel" inputmode="tel" required>
             </div>
             <div id="create-account-row" class="ck-opt ck-wide hidden">
               <input type="checkbox" id="createAccountCheckbox" class="ck-cb">
               <div>
-                <label for="createAccountCheckbox">Create an account for me after this order</label>
-                <p>We email you a password and your tickets are always there in your account.</p>
+                <label for="createAccountCheckbox"><?= v2_te('Create an account for me after this order') ?></label>
+                <p><?= v2_te('We email you a password and your tickets are always there in your account.') ?></p>
               </div>
             </div>
           </div>
@@ -180,17 +178,17 @@ if ($ckEmbed) {
           <header class="ck-sec-head">
             <span class="ck-num" aria-hidden="true"></span>
             <div>
-              <h2 id="ck-s-bene">Ticket holders</h2>
-              <p>Put the same name on every ticket, or a different name for each person.</p>
+              <h2 id="ck-s-bene"><?= v2_te('Ticket holders') ?></h2>
+              <p><?= v2_te('Put the same name on every ticket, or a different name for each person.') ?></p>
             </div>
-            <span id="beneficiaries-count" class="ck-count">0 tickets</span>
+            <span id="beneficiaries-count" class="ck-count"><?= v2_e(v2_num(0, 'ticket', 'tickets')) ?></span>
           </header>
           <div class="ck-sec-body">
             <div class="ck-bene">
-              <div id="allTicketsToEmail" class="ck-bene-info"><?= v2_ic('check-circle') ?><p>All tickets will be sent to your email address</p></div>
+              <div id="allTicketsToEmail" class="ck-bene-info"><?= v2_ic('check-circle') ?><p><?= v2_te('All tickets will be sent to your email address') ?></p></div>
               <label class="ck-switch">
                 <input type="checkbox" id="differentBeneficiaries" class="cc-switch" onchange="CheckoutPage.toggleBeneficiaries()" aria-controls="beneficiariesList">
-                <span>Use different details for each ticket</span>
+                <span><?= v2_te('Use different details for each ticket') ?></span>
               </label>
             </div>
             <div id="beneficiariesList" class="ck-bene-list hidden"></div>
@@ -201,18 +199,18 @@ if ($ckEmbed) {
           <header class="ck-sec-head">
             <span class="ck-num" aria-hidden="true"></span>
             <div>
-              <h2 id="insurance-label">Ticket protection</h2>
-              <p id="insurance-description">Add protection for more flexibility: you can ask for a refund under the terms of the cover.</p>
+              <h2 id="insurance-label"><?= v2_te('Ticket protection') ?></h2>
+              <p id="insurance-description"><?= v2_te('Add protection for more flexibility: you can ask for a refund under the terms of the cover.') ?></p>
             </div>
           </header>
           <div class="ck-sec-body">
             <label id="insurance-option" class="ck-ins-opt" for="insuranceCheckbox">
               <input type="checkbox" id="insuranceCheckbox" class="ck-cb">
               <span class="ck-ins-text">
-                <b id="insurance-title">Ticket refund protection</b>
-                <span>You can ask for a refund of your tickets if the event is postponed or cancelled.</span>
+                <b id="insurance-title"><?= v2_te('Ticket refund protection') ?></b>
+                <span><?= v2_te('You can ask for a refund of your tickets if the event is postponed or cancelled.') ?></span>
                 <em id="insurance-partial-note" class="hidden"></em>
-                <a href="#" id="insurance-terms-link" class="hidden" target="_blank" rel="noopener">See the terms and conditions</a>
+                <a href="#" id="insurance-terms-link" class="hidden" target="_blank" rel="noopener"><?= v2_te('See the terms and conditions') ?></a>
               </span>
               <strong id="insurance-price"></strong>
             </label>
@@ -223,8 +221,8 @@ if ($ckEmbed) {
           <header class="ck-sec-head">
             <span class="ck-num" aria-hidden="true"></span>
             <div>
-              <h2 id="ck-s-pay">Payment method</h2>
-              <p>Card payments are processed securely<?= $ckPayLabel !== '' ? ' by ' . v2_e($ckPayLabel) : '' ?>. 3D Secure, PCI DSS Level 1.</p>
+              <h2 id="ck-s-pay"><?= v2_te('Payment method') ?></h2>
+              <p><?= $ckPayLabel !== '' ? v2_te('Card payments are processed securely by {provider}. 3D Secure, PCI DSS Level 1.', ['provider' => $ckPayLabel]) : v2_te('Card payments are processed securely. 3D Secure, PCI DSS Level 1.') ?></p>
             </div>
           </header>
           <div class="ck-sec-body ck-pay" role="radiogroup" aria-labelledby="ck-s-pay">
@@ -234,9 +232,9 @@ if ($ckEmbed) {
               <?php if ($ckPayLogo !== ''): ?>
               <img class="ck-pay-logo is-img" src="<?= v2_e($ckPayLogo) ?>" alt="<?= v2_e($ckPayLabel) ?>" width="418" height="75" loading="lazy" decoding="async">
               <?php else: ?>
-              <span class="ck-pay-logo is-<?= v2_e($ckPayKey ?: 'card') ?>" aria-hidden="true"><?= v2_e($ckPayLabel !== '' ? mb_strtoupper(mb_substr($ckPayLabel, 0, 7)) : 'CARD') ?></span>
+              <span class="ck-pay-logo is-<?= v2_e($ckPayKey ?: 'card') ?>" aria-hidden="true"><?= v2_e($ckPayLabel !== '' ? mb_strtoupper(mb_substr($ckPayLabel, 0, 7)) : mb_strtoupper(v2_t('Card'))) ?></span>
               <?php endif; ?>
-              <span class="ck-pay-text"><b>Card</b><small>Visa, Mastercard, Maestro, Apple Pay, Google Pay</small></span>
+              <span class="ck-pay-text"><b><?= v2_te('Card') ?></b><small>Visa, Mastercard, Maestro, Apple Pay, Google Pay</small></span>
               <span class="ck-pay-brands" aria-hidden="true"><i>Visa</i><i>Mastercard</i></span>
             </label>
 
@@ -244,11 +242,11 @@ if ($ckEmbed) {
               <input type="radio" name="payment" value="card_cultural" class="sr">
               <span class="payment-radio" aria-hidden="true"></span>
               <span class="ck-pay-logo is-cultural" aria-hidden="true"><?= $bookIcon ?></span>
-              <span class="ck-pay-text"><b>Culture card</b><small>Prepaid culture voucher cards</small></span>
+              <span class="ck-pay-text"><b><?= v2_te('Culture card') ?></b><small><?= v2_te('Prepaid culture voucher cards') ?></small></span>
             </label>
 
             <div class="ck-wallets">
-              <span>We also accept:</span>
+              <span><?= v2_te('We also accept:') ?></span>
               <span class="ck-wallet">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                 Google Pay
@@ -260,16 +258,16 @@ if ($ckEmbed) {
             </div>
 
             <div id="cardForm" class="ck-note">
-              <p>You will be taken to a secure payment page<?= $ckPayLabel !== '' ? ' provided by ' . v2_e($ckPayLabel) : '' ?> to enter your card details.</p>
-              <p class="ck-note-sec"><?= v2_ic('lock-simple') ?>Secure card payment · SSL 256-bit · 3D Secure</p>
+              <p><?= $ckPayLabel !== '' ? v2_te('You will be taken to a secure payment page provided by {provider} to enter your card details.', ['provider' => $ckPayLabel]) : v2_te('You will be taken to a secure payment page to enter your card details.') ?></p>
+              <p class="ck-note-sec"><?= v2_ic('lock-simple') ?><?= v2_te('Secure card payment · SSL 256-bit · 3D Secure') ?></p>
             </div>
 
             <div id="culturalCardForm" class="ck-note is-warn hidden">
               <?= $bookIcon ?>
               <div>
-                <p class="ck-note-h">Extra fee for culture cards</p>
-                <p id="cultural-card-surcharge-text">Payments by culture card carry an extra processing fee of <strong>4%</strong> of the total, because this type of card costs more to process.</p>
-                <p class="ck-note-small">You will be taken to a secure payment page to enter your culture card details.</p>
+                <p class="ck-note-h"><?= v2_te('Extra fee for culture cards') ?></p>
+                <p id="cultural-card-surcharge-text"><?= v2_t('Payments by culture card carry an extra processing fee of <strong>4%</strong> of the total, because this type of card costs more to process.') ?></p>
+                <p class="ck-note-small"><?= v2_te('You will be taken to a secure payment page to enter your culture card details.') ?></p>
               </div>
             </div>
           </div>
@@ -278,16 +276,16 @@ if ($ckEmbed) {
         <section class="ck-sec ck-terms" aria-labelledby="ck-s-terms">
           <header class="ck-sec-head">
             <span class="ck-num" aria-hidden="true"></span>
-            <div><h2 id="ck-s-terms">Agreements</h2></div>
+            <div><h2 id="ck-s-terms"><?= v2_te('Agreements') ?></h2></div>
           </header>
           <div class="ck-sec-body ck-checks">
             <label class="ck-check">
               <input type="checkbox" id="termsCheckbox" class="ck-cb" required>
-              <span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms and conditions</a>, the <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> and the <a href="/terms#anulare-rambursare" target="_blank" rel="noopener">Refund policy</a>.</span>
+              <span><?= v2_t('I have read and agree to the <a href="{terms}" target="_blank" rel="noopener">Terms and conditions</a>, the <a href="{privacy}" target="_blank" rel="noopener">Privacy policy</a> and the <a href="{refunds}" target="_blank" rel="noopener">Refund policy</a>.', ['terms' => '/terms', 'privacy' => '/privacy', 'refunds' => '/terms#anulare-rambursare']) ?></span>
             </label>
             <label class="ck-check">
               <input type="checkbox" id="newsletterCheckbox" class="ck-cb">
-              <span>I would like to receive recommendations, offers and new experiences in the <?= v2_e(SITE_NAME) ?> newsletter.</span>
+              <span><?= v2_te('I would like to receive recommendations, offers and new experiences in the {site} newsletter.', ['site' => SITE_NAME]) ?></span>
             </label>
           </div>
         </section>
@@ -295,58 +293,58 @@ if ($ckEmbed) {
 
       <div id="empty-cart" class="co-empty hidden">
         <div class="co-empty-art" aria-hidden="true"><?= v2_fallback('cos', 1) ?><?= v2_ic('ticket') ?></div>
-        <h2 tabindex="-1">Your basket is empty</h2>
-        <p>There are no tickets in your basket. See the experiences and attractions you can book.</p>
+        <h2 tabindex="-1"><?= v2_te('Your basket is empty') ?></h2>
+        <p><?= v2_te('There are no tickets in your basket. See the experiences and attractions you can book.') ?></p>
         <?php if ($ckEmbed): ?>
-        <a class="btn btn-primary" href="#" data-emb-back target="_self"><?= v2_ic('arrow-left') ?>Back to tickets</a>
+        <a class="btn btn-primary" href="#" data-emb-back target="_self"><?= v2_ic('arrow-left') ?><?= v2_te('Back to tickets') ?></a>
         <?php else: ?>
-        <a class="btn btn-primary" href="/categories">Explore experiences<?= v2_ic('arrow-right') ?></a>
-        <p class="co-empty-small">Already paid? <a href="/account/tickets">See your tickets</a> or <a href="/find-order">find your order</a>.</p>
+        <a class="btn btn-primary" href="/categories"><?= v2_te('Explore experiences') ?><?= v2_ic('arrow-right') ?></a>
+        <p class="co-empty-small"><?= v2_t('Already paid? <a href="{tickets}">See your tickets</a> or <a href="{order}">find your order</a>.', ['tickets' => '/account/tickets', 'order' => '/find-order']) ?></p>
         <?php endif; ?>
       </div>
     </div>
 
-    <aside class="co-side" aria-label="Checkout summary">
+    <aside class="co-side" aria-label="<?= v2_te('Checkout summary') ?>">
       <div class="cs-skel" aria-hidden="true"></div>
       <div id="summary-section" class="hidden">
         <section class="cs" aria-labelledby="ck-sum-h">
           <div class="cs-top">
-            <p class="cs-kicker">Checkout summary</p>
-            <h2 class="cs-h" id="ck-sum-h">To pay</h2>
+            <p class="cs-kicker"><?= v2_te('Checkout summary') ?></p>
+            <h2 class="cs-h" id="ck-sum-h"><?= v2_te('To pay') ?></h2>
           </div>
           <div class="cs-body">
             <div id="event-info" class="ck-event"></div>
             <div id="items-summary" class="cs-lines"></div>
             <div id="taxes-container" class="cs-lines"></div>
-            <div class="cs-line cs-sub"><span>Subtotal (<span id="summary-items">0</span> <span data-items-word>tickets</span>)</span><strong id="summary-subtotal"></strong></div>
-            <div id="platform-commission-row" class="cs-line hidden"><span id="platform-commission-label">Booking fee</span><strong id="platform-commission-amount"></strong></div>
-            <div id="discount-row" class="cs-line cs-disc hidden"><span id="discount-label">Discount</span><strong id="discount-amount"></strong></div>
-            <div id="points-row" class="cs-line cs-disc hidden"><span id="points-row-label">Paid with points</span><strong id="points-row-amount"></strong></div>
-            <div id="insurance-row" class="cs-line cs-ins hidden"><span id="insurance-row-label">Ticket protection</span><strong id="insurance-row-amount"></strong></div>
-            <div id="cultural-card-row" class="cs-line hidden"><span id="cultural-card-surcharge-label">Culture card fee (4%)</span><strong id="cultural-card-amount"></strong></div>
-            <div id="processing-fee-row" class="cs-line hidden"><span id="processing-fee-label">Payment processing fee</span><strong id="processing-fee-amount"></strong></div>
-            <div class="cs-line cs-total"><span>Total to pay</span><strong id="summary-total"></strong></div>
+            <div class="cs-line cs-sub"><span><?= v2_t('Subtotal ({count} {word})', ['count' => '<span id="summary-items">0</span>', 'word' => '<span data-items-word>' . v2_te('tickets') . '</span>']) ?></span><strong id="summary-subtotal"></strong></div>
+            <div id="platform-commission-row" class="cs-line hidden"><span id="platform-commission-label"><?= v2_te('Booking fee') ?></span><strong id="platform-commission-amount"></strong></div>
+            <div id="discount-row" class="cs-line cs-disc hidden"><span id="discount-label"><?= v2_te('Discount') ?></span><strong id="discount-amount"></strong></div>
+            <div id="points-row" class="cs-line cs-disc hidden"><span id="points-row-label"><?= v2_te('Paid with points') ?></span><strong id="points-row-amount"></strong></div>
+            <div id="insurance-row" class="cs-line cs-ins hidden"><span id="insurance-row-label"><?= v2_te('Ticket protection') ?></span><strong id="insurance-row-amount"></strong></div>
+            <div id="cultural-card-row" class="cs-line hidden"><span id="cultural-card-surcharge-label"><?= v2_te('Culture card fee (4%)') ?></span><strong id="cultural-card-amount"></strong></div>
+            <div id="processing-fee-row" class="cs-line hidden"><span id="processing-fee-label"><?= v2_te('Payment processing fee') ?></span><strong id="processing-fee-amount"></strong></div>
+            <div class="cs-line cs-total"><span><?= v2_te('Total to pay') ?></span><strong id="summary-total"></strong></div>
             <p id="savings-text" class="cs-save ck-save hidden"><?= v2_ic('check-circle') ?><span id="savings-amount"></span></p>
             <!-- loyalty points: pay with them (logged-in customer), shown only when the programme runs -->
             <div id="points-box" class="cs-usepts hidden">
               <div class="cs-usepts-row" id="points-use-row" hidden>
                 <input type="checkbox" id="use-points" class="ck-cb" aria-describedby="use-points-sub">
-                <label for="use-points"><b id="use-points-title">Use your points</b><small id="use-points-sub"></small></label>
+                <label for="use-points"><b id="use-points-title"><?= v2_te('Use your points') ?></b><small id="use-points-sub"></small></label>
               </div>
               <p id="points-note" class="cs-usepts-note" hidden></p>
-              <button type="button" id="points-login" class="link-btn cs-usepts-login" hidden>Log in</button>
+              <button type="button" id="points-login" class="link-btn cs-usepts-login" hidden><?= v2_te('Log in') ?></button>
             </div>
             <div class="cs-reward hidden" id="points-reward">
               <span class="cs-reward-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
-              <div class="cs-reward-t"><b>You will earn</b><span class="cs-tip"><button class="cs-tip-btn" id="points-rule-btn" type="button" aria-describedby="points-rule" aria-label="How points are earned"><?= v2_ic('info') ?></button><span class="cs-tip-box" id="points-rule" role="tooltip">points on every order</span></span></div>
-              <p class="cs-pts"><span id="points-earned">0 points</span></p>
+              <div class="cs-reward-t"><b><?= v2_te('You will earn') ?></b><span class="cs-tip"><button class="cs-tip-btn" id="points-rule-btn" type="button" aria-describedby="points-rule" aria-label="<?= v2_te('How points are earned') ?>"><?= v2_ic('info') ?></button><span class="cs-tip-box" id="points-rule" role="tooltip"><?= v2_te('points on every order') ?></span></span></div>
+              <p class="cs-pts"><span id="points-earned"><?= v2_e(v2_num(0, 'point', 'points')) ?></span></p>
             </div>
           </div>
           <div class="cs-foot">
-            <button type="button" id="payBtn" class="btn btn-primary cs-go" onclick="CheckoutPage.submit()" disabled><?= v2_ic('lock-simple') ?><span id="pay-btn-text">Place order</span></button>
-            <p class="ck-hint" id="pay-hint">Tick the box to agree to the terms and conditions before you pay.</p>
-            <p class="ck-foot-note">By placing the order you confirm that you have read and agree to the terms and conditions.</p>
-            <p class="ck-foot-note" id="ck-currency-note">You pay in <b id="ck-currency-code">EUR</b>. On the payment page you may be offered to pay in your own currency instead, at the payment provider's exchange rate.</p>
+            <button type="button" id="payBtn" class="btn btn-primary cs-go" onclick="CheckoutPage.submit()" disabled><?= v2_ic('lock-simple') ?><span id="pay-btn-text"><?= v2_te('Place order') ?></span></button>
+            <p class="ck-hint" id="pay-hint"><?= v2_te('Tick the box to agree to the terms and conditions before you pay.') ?></p>
+            <p class="ck-foot-note"><?= v2_te('By placing the order you confirm that you have read and agree to the terms and conditions.') ?></p>
+            <p class="ck-foot-note" id="ck-currency-note"><?= v2_t('You pay in {currency}. On the payment page you may be offered to pay in your own currency instead, at the payment provider\'s exchange rate.', ['currency' => '<b id="ck-currency-code">EUR</b>']) ?></p>
           </div>
           <ul class="ck-badges">
             <li><?= v2_ic('lock-simple') ?>SSL 256-bit</li>
@@ -359,32 +357,32 @@ if ($ckEmbed) {
   </div>
 
   <div class="co-mbar" id="co-mbar" aria-hidden="true" inert>
-    <div><small>Total to pay</small><b data-total></b></div>
-    <button class="btn btn-primary" type="button" data-pay><?= v2_ic('lock-simple') ?><span>Pay</span></button>
+    <div><small><?= v2_te('Total to pay') ?></small><b data-total></b></div>
+    <button class="btn btn-primary" type="button" data-pay><?= v2_ic('lock-simple') ?><span><?= v2_te('Pay') ?></span></button>
   </div>
 </main>
 
 <div id="login-modal" class="ck-modal hidden" role="dialog" aria-modal="true" aria-labelledby="login-h">
   <div class="ck-modal-panel">
     <div class="ck-modal-top">
-      <h2 id="login-h">Log in</h2>
-      <button type="button" class="icon-btn" onclick="CheckoutPage.hideLoginModal()" aria-label="Close the login window"><?= v2_ic('x') ?></button>
+      <h2 id="login-h"><?= v2_te('Log in') ?></h2>
+      <button type="button" class="icon-btn" onclick="CheckoutPage.hideLoginModal()" aria-label="<?= v2_te('Close the login window') ?>"><?= v2_ic('x') ?></button>
     </div>
-    <p>Log in to have your details filled in and finish the order faster.</p>
+    <p><?= v2_te('Log in to have your details filled in and finish the order faster.') ?></p>
     <form id="checkout-login-form" onsubmit="return CheckoutPage.handleLogin(event)">
       <div class="ck-field">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required>
+        <label for="login-email"><?= v2_te('Email') ?></label>
+        <input type="email" id="login-email" placeholder="<?= v2_te('you@example.com') ?>" autocomplete="email" required>
       </div>
       <div class="ck-field">
-        <label for="login-password">Password</label>
+        <label for="login-password"><?= v2_te('Password') ?></label>
         <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="login-submit-btn" class="btn btn-primary ck-modal-go"><span id="login-btn-text">Log in</span></button>
+      <button type="submit" id="login-submit-btn" class="btn btn-primary ck-modal-go"><span id="login-btn-text"><?= v2_te('Log in') ?></span></button>
     </form>
     <div class="ck-modal-links">
-      <a href="/forgot-password" target="_blank" rel="noopener">Forgot your password?</a>
-      <a href="/register" target="_blank" rel="noopener">Create an account</a>
+      <a href="/forgot-password" target="_blank" rel="noopener"><?= v2_te('Forgot your password?') ?></a>
+      <a href="/register" target="_blank" rel="noopener"><?= v2_te('Create an account') ?></a>
     </div>
   </div>
 </div>

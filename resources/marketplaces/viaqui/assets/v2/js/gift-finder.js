@@ -1,6 +1,6 @@
-/* viaqui.com v2: gift experience finder (/experiente-cadou). Scores the server-rendered activities on the answers,
+/* viaqui.com v2: gift experience finder (/gift-experiences). Scores the server-rendered activities on the answers,
    says why each one fits, keeps the pick in a bar at the bottom and hands it to the gift card configurator
-   (/card-cadou#cumpara) through localStorage. The answers survive a trip to an activity page (sessionStorage). */
+   (/gift-card#cumpara) through localStorage. The answers survive a trip to an activity page (sessionStorage). */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -29,13 +29,8 @@
   var state = { who: '', people: 2, budget: 0, likes: [], city: '', setting: '' };
   var picked = [];
 
-  var money = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
-  function lei(cents) { return money.format(Math.round(cents / 100)) + ' lei'; }
-  function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
-  }
+  var money = new Intl.NumberFormat(VQ.locale === 'en' ? 'en-GB' : VQ.locale, { maximumFractionDigits: 0 });
+  function lei(cents) { return '€' + money.format(Math.round(cents / 100)); }
   function el(tag, cls, text) {
     var node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -53,7 +48,7 @@
 
   /* What n people would pay, from the ticket variants [price, places each, min per order, max per order, min age,
      max age]: the cheapest variant that seats them within its order limits. Child tickets only count for the
-     children (one for "Un copil", half the group for "Familie"); without variants, the lowest price per person. */
+     children (one for "A child", half the group for "Family"); without variants, the lowest price per person. */
   function groupCost(it, n, forKids) {
     var best = null;
     (it.v || []).forEach(function (v) {
@@ -91,40 +86,40 @@
       var hit = state.likes.filter(function (k) { return likes(it, k); });
       if (!hit.length) return null;
       pts += 30 + 5 * (hit.length - 1);
-      why.push('Pe gustul lor: ' + hit.map(function (k) { return LIKES[k].label.toLowerCase(); }).join(', '));
+      why.push(VQ.t('To their taste: {list}', { list: hit.map(function (k) { return LIKES[k].label.toLowerCase(); }).join(', ') }));
     }
     switch (state.who) {
       case 'partener':
-        if (it.travelers.indexOf('cupluri') !== -1 || it.interests.indexOf('romantic') !== -1) { pts += 20; why.push('Recomandată pentru cupluri'); }
-        else if (it.cap === 0 || it.cap >= 2) { pts += 8; why.push('Se poate merge în doi'); }
+        if (it.travelers.indexOf('cupluri') !== -1 || it.interests.indexOf('romantic') !== -1) { pts += 20; why.push(VQ.t('Recommended for couples')); }
+        else if (it.cap === 0 || it.cap >= 2) { pts += 8; why.push(VQ.t('Works for two')); }
         break;
       case 'prieten':
-        if (has(it.travelers, ['prieteni', 'grupuri'])) { pts += 18; why.push('Recomandată pentru prieteni'); }
+        if (has(it.travelers, ['prieteni', 'grupuri'])) { pts += 18; why.push(VQ.t('Recommended for friends')); }
         break;
       case 'copil':
-        pts += 22; why.push('Potrivită pentru copii');
+        pts += 22; why.push(VQ.t('Suitable for children'));
         break;
       case 'familie':
-        if (it.kid) { pts += 20; why.push('Potrivită pentru familii cu copii'); }
+        if (it.kid) { pts += 20; why.push(VQ.t('Suitable for families with children')); }
         if (it.travelers.indexOf('familii') !== -1) { pts += 10; }
         break;
       case 'echipa':
-        if (has(it.travelers, ['grupuri', 'team-building'])) { pts += 20; why.push('Recomandată pentru grupuri'); }
+        if (has(it.travelers, ['grupuri', 'team-building'])) { pts += 20; why.push(VQ.t('Recommended for groups')); }
         break;
       case 'parinti':
-        if (it.travelers.indexOf('seniori') !== -1) { pts += 20; why.push('Recomandată pentru seniori'); }
-        if (it.accessible) { pts += 12; why.push('Accesibilă'); }
+        if (it.travelers.indexOf('seniori') !== -1) { pts += 20; why.push(VQ.t('Recommended for seniors')); }
+        if (it.accessible) { pts += 12; why.push(VQ.t('Accessible')); }
         if (it.cat === 'parcuri-de-aventura') pts -= 15;
         break;
     }
-    if (n > 2 && it.cap >= n) { pts += 6; why.push('Loc pentru ' + n + ' persoane în același interval'); }
+    if (n > 2 && it.cap >= n) { pts += 6; why.push(VQ.t('Room for {n} people in the same time slot', { n: n })); }
     if (state.budget && total != null) {
-      if (total <= state.budget * 100) { pts += 25; why.push('În buget: ' + lei(total) + (n > 1 ? ' pentru ' + n + ' pers.' : '')); }
-      else { pts += 5; why.push('Puțin peste buget: ' + lei(total) + (n > 1 ? ' pentru ' + n + ' pers.' : '')); }
+      if (total <= state.budget * 100) { pts += 25; why.push(n > 1 ? VQ.t('Within budget: {amount} for {n} people', { amount: lei(total), n: n }) : VQ.t('Within budget: {amount}', { amount: lei(total) })); }
+      else { pts += 5; why.push(n > 1 ? VQ.t('Slightly over budget: {amount} for {n} people', { amount: lei(total), n: n }) : VQ.t('Slightly over budget: {amount}', { amount: lei(total) })); }
     }
-    if (state.city) why.push('În ' + (CITY_NAMES[state.city] || it.city));
-    if (state.setting === 'indoor') why.push('În interior, indiferent de vreme');
-    if (state.setting === 'outdoor') why.push('În aer liber');
+    if (state.city) why.push(VQ.t('In {city}', { city: CITY_NAMES[state.city] || it.city }));
+    if (state.setting === 'indoor') why.push(VQ.t('Indoors, whatever the weather'));
+    if (state.setting === 'outdoor') why.push(VQ.t('Outdoors'));
     if (it.featured) pts += 5;
     return { pts: Math.max(0, Math.min(100, pts)), why: why, total: total };
   }
@@ -140,7 +135,7 @@
 
       var match = li.querySelector('[data-match]');
       match.hidden = !anyAnswer();
-      match.textContent = r.pts >= 70 ? 'Potrivire excelentă' : r.pts >= 50 ? 'Potrivire foarte bună' : 'Potrivire bună';
+      match.textContent = r.pts >= 70 ? VQ.t('Excellent match') : r.pts >= 50 ? VQ.t('Very good match') : VQ.t('Good match');
       match.className = 'gf-match' + (r.pts >= 70 ? ' is-top' : '');
 
       var why = li.querySelector('[data-why]');
@@ -149,12 +144,12 @@
 
       var total = li.querySelector('[data-total]');
       total.hidden = !(r.total && state.people > 1);
-      total.textContent = r.total ? lei(r.total) + ' pentru ' + state.people + ' pers.' : '';
+      total.textContent = r.total ? VQ.t('{amount} for {n} people', { amount: lei(r.total), n: state.people }) : '';
 
       var on = picked.indexOf(it.slug) !== -1;
       var pick = li.querySelector('[data-pick]');
       pick.setAttribute('aria-pressed', String(on));
-      pick.querySelector('span').textContent = on ? 'Adăugată la cadou' : 'Adaugă la cadou';
+      pick.querySelector('span').textContent = on ? VQ.t('Added to the gift') : VQ.t('Add to the gift');
       li.classList.toggle('is-picked', on);
     });
 
@@ -171,7 +166,7 @@
     }
 
     var total = rows.length;
-    count.textContent = anyAnswer() ? results.length + ' din ' + num(total, 'experiență', 'experiențe') + ' se potrivesc' : num(total, 'experiență', 'experiențe');
+    count.textContent = anyAnswer() ? VQ.t('{n} of {total} match', { n: results.length, total: VQ.n(total, 'experience', 'experiences') }) : VQ.n(total, 'experience', 'experiences');
     none.hidden = results.length > 0 || !total;
     none.querySelectorAll('[data-relax]').forEach(function (b) {
       var k = b.getAttribute('data-relax');
@@ -190,7 +185,7 @@
     people.textContent = state.people;
     $('gf-less').disabled = state.people <= MIN_PEOPLE;
     $('gf-more').disabled = state.people >= MAX_PEOPLE;
-    $('gf-people-note').textContent = state.people === 1 ? 'persoană' : 'persoane, cu tot cu cel care primește';
+    $('gf-people-note').textContent = state.people === 1 ? VQ.t('person') : VQ.t('people, including the recipient');
     if (city) city.value = state.city;
     setting.value = state.setting;
 
@@ -212,19 +207,19 @@
     var s = pickSummary();
     tray.hidden = !s.items.length;
     if (!s.items.length) return;
-    trayText.textContent = num(s.items.length, 'experiență', 'experiențe') + ' · ' + (s.cents ? lei(s.cents) + ' pentru ' + num(state.people, 'persoană', 'persoane') : 'preț de confirmat') + (s.over ? ' · peste cel mai mare card' : '');
+    trayText.textContent = VQ.n(s.items.length, 'experience', 'experiences') + ' · ' + (s.cents ? VQ.t('{amount} for {people}', { amount: lei(s.cents), people: VQ.n(state.people, 'person', 'people') }) : VQ.t('price to be confirmed')) + (s.over ? ' · ' + VQ.t('above the largest card') : '');
     trayList.textContent = '';
     s.items.forEach(function (it) {
       var li = el('li'), b = el('button', 'gf-tray-x');
       li.appendChild(el('span', null, it.title));
       b.type = 'button';
       b.setAttribute('data-unpick', it.slug);
-      b.setAttribute('aria-label', 'Scoate ' + it.title + ' din cadou');
+      b.setAttribute('aria-label', VQ.t('Remove {title} from the gift', { title: it.title }));
       b.textContent = '×';
       li.appendChild(b);
       trayList.appendChild(li);
     });
-    trayValue.textContent = money.format(s.value) + ' lei';
+    trayValue.textContent = '€' + money.format(s.value);
   }
 
   function save() {

@@ -1,7 +1,7 @@
 /* viaqui.com v2: gift card landing. The configurator drives both card previews (value, recipient, design,
-   message), shows the delivery date when it is needed, and the two buttons do something honest: "Previzualizează"
-   brings the preview into view, "Adaugă în coș" says buying online isn't available yet and opens the contact page
-   with the configuration written out. Experiences picked in the finder (/experiente-cadou, localStorage
+   message), shows the delivery date when it is needed, and the two buttons do something honest: "Preview"
+   brings the preview into view, "Add to cart" says buying online isn't available yet and opens the contact page
+   with the configuration written out. Experiences picked in the finder (/gift-experiences, localStorage
    bo_gift_pick) set the value, fill an empty message and are listed above the fields. */
 (function () {
   'use strict';
@@ -13,7 +13,7 @@
   var amount = $('gc-amount'), recipient = $('gc-recipient'), delivery = $('gc-delivery'), theme = $('gc-theme');
   var message = $('gc-message'), count = $('gc-count'), dateField = $('gc-date-field'), preview = $('gc-preview'), msg = $('gc-msg');
   var email = $('gc-email'), date = $('gc-date');
-  var money = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
+  var money = new Intl.NumberFormat(VQ.locale === 'en' ? 'en-GB' : VQ.locale, { maximumFractionDigits: 0 });
   var PICK_KEY = 'bo_gift_pick', PICK_TTL = 6 * 3600 * 1000;
   var pick = null, pickMessage = '';
 
@@ -23,10 +23,10 @@
     });
   }
   function update() {
-    fill('amount', money.format(Number(amount.value) || 0) + ' RON');
+    fill('amount', '€' + money.format(Number(amount.value) || 0));
     fill('recipient', recipient.value.trim());
     fill('message', message.value.trim());
-    count.textContent = message.value.length + '/180 caractere';
+    count.textContent = VQ.t('{n}/180 characters', { n: message.value.length });
     document.querySelectorAll('.gc-card[data-theme]').forEach(function (card) { card.setAttribute('data-theme', theme.value); });
     dateField.hidden = delivery.value !== 'scheduled';
   }
@@ -44,10 +44,10 @@
       return p.items.length ? p : null;
     } catch (e) { return null; }
   }
-  function lei(cents) { return money.format(Math.round(cents / 100)) + ' lei'; }
+  function lei(cents) { return '€' + money.format(Math.round(cents / 100)); }
   function titles(items) {
     var t = items.map(function (it) { return it.title; });
-    return t.length > 1 ? t.slice(0, -1).join(', ') + ' și ' + t[t.length - 1] : t[0];
+    return t.length > 1 ? VQ.t('{list} and {last}', { list: t.slice(0, -1).join(', '), last: t[t.length - 1] }) : t[0];
   }
   function showPick() {
     var box = $('gc-picked'), hint = $('gc-finder'), list = $('gc-picked-list');
@@ -56,13 +56,17 @@
     list.textContent = '';
     if (!pick) return;
     var people = Math.max(1, parseInt(pick.people, 10) || 1);
-    $('gc-picked-sum').textContent = (pick.who ? 'Pentru: ' + pick.who + ' · ' : '') + (people > 1 ? people + ' persoane · ' : '') + (pick.cents ? 'în jur de ' + lei(pick.cents) : 'preț de confirmat');
+    $('gc-picked-sum').textContent = [
+      pick.who ? VQ.t('For: {who}', { who: pick.who }) : '',
+      people > 1 ? VQ.n(people, 'person', 'people') : '',
+      pick.cents ? VQ.t('around {amount}', { amount: lei(pick.cents) }) : VQ.t('price to be confirmed')
+    ].filter(Boolean).join(' · ');
     pick.items.forEach(function (it) {
       var li = document.createElement('li'), a = document.createElement('a'), small = document.createElement('small');
       // only links inside the site
-      a.href = typeof it.href === 'string' && /^\/[a-z0-9-]/.test(it.href) ? it.href : '/experiente-cadou';
+      a.href = VQ.url(typeof it.href === 'string' && /^\/[a-z0-9-]/.test(it.href) ? it.href : '/gift-experiences');
       a.textContent = it.title;
-      small.textContent = [it.city, it.cents ? 'de la ' + lei(it.cents) + ' / pers.' : ''].filter(Boolean).join(' · ');
+      small.textContent = [it.city, it.cents ? VQ.t('from {price} per person', { price: lei(it.cents) }) : ''].filter(Boolean).join(' · ');
       li.appendChild(a);
       li.appendChild(small);
       list.appendChild(li);
@@ -75,8 +79,8 @@
     var value = String(pick.value);
     if ([].some.call(amount.options, function (o) { return o.value === value; })) amount.value = value;
     if (!message.value.trim()) {
-      pickMessage = 'Ți-am ales: ' + titles(pick.items) + '. Alege ziua care ți se potrivește!';
-      if (pickMessage.length > 180) pickMessage = 'Ți-am ales ' + pick.items.length + ' experiențe pe viaqui.com. Alege ziua care ți se potrivește!';
+      pickMessage = VQ.t('I picked these for you: {titles}. Choose the day that suits you!', { titles: titles(pick.items) });
+      if (pickMessage.length > 180) pickMessage = VQ.t('I picked {n} experiences for you on viaqui.com. Choose the day that suits you!', { n: pick.items.length });
       message.value = pickMessage;
     }
   }
@@ -102,31 +106,35 @@
 
   // the contact page picks this up (contact.js) so the request arrives with everything chosen here
   function contactPrefill() {
-    var lines = ['Aș dori un card cadou viaqui.com.', 'Valoare: ' + selectedText(amount)];
-    if (recipient.value.trim()) lines.push('Pentru: ' + recipient.value.trim());
-    if (email && email.value.trim()) lines.push('Email destinatar: ' + email.value.trim());
-    lines.push('Trimitere: ' + selectedText(delivery) + (delivery.value === 'scheduled' && date && date.value ? ' (' + date.value + ')' : ''));
-    lines.push('Design: ' + selectedText(theme));
-    if (message.value.trim()) lines.push('Mesaj pe card: ' + message.value.trim());
+    var lines = [VQ.t('I would like a viaqui.com gift card.'), VQ.t('Value: {value}', { value: selectedText(amount) })];
+    if (recipient.value.trim()) lines.push(VQ.t('For: {who}', { who: recipient.value.trim() }));
+    if (email && email.value.trim()) lines.push(VQ.t('Recipient email: {email}', { email: email.value.trim() }));
+    if (delivery.value === 'scheduled' && date && date.value) lines.push(VQ.t('Delivery: {when} ({date})', { when: selectedText(delivery), date: date.value }));
+    else lines.push(VQ.t('Delivery: {when}', { when: selectedText(delivery) }));
+    lines.push(VQ.t('Design: {design}', { design: selectedText(theme) }));
+    if (message.value.trim()) lines.push(VQ.t('Message on the card: {message}', { message: message.value.trim() }));
     if (pick) {
-      lines.push('Experiențe alese: ' + pick.items.map(function (it) { return it.title + (it.city ? ' (' + it.city + ')' : ''); }).join('; ') + (pick.people > 1 ? ' — ' + pick.people + ' persoane' : ''));
+      var chosen = pick.items.map(function (it) { return it.title + (it.city ? ' (' + it.city + ')' : ''); }).join('; ');
+      lines.push(pick.people > 1 ? VQ.t('Chosen experiences: {list}, {people}', { list: chosen, people: VQ.n(pick.people, 'person', 'people') }) : VQ.t('Chosen experiences: {list}', { list: chosen }));
     }
     try {
-      localStorage.setItem('bo_contact_prefill', JSON.stringify({ v: 1, ts: Date.now(), reason: 'gift', subject: 'Card cadou ' + selectedText(amount), message: lines.join('\n') }));
+      localStorage.setItem('bo_contact_prefill', JSON.stringify({ v: 1, ts: Date.now(), reason: 'gift', subject: VQ.t('Gift card {value}', { value: selectedText(amount) }), message: lines.join('\n') }));
     } catch (e) {}
   }
 
   $('gc-add').addEventListener('click', function () {
     msg.textContent = '';
     msg.className = 'gc-msg is-shown';
-    msg.appendChild(document.createTextNode('Comanda online a cardului cadou nu este disponibilă încă. '));
+    // one sentence for the translator; {link} marks where the link goes
+    var parts = VQ.t('Buying a gift card online is not available yet. {link}: we fill it in with the card you set up here.').split('{link}');
+    msg.appendChild(document.createTextNode(parts[0]));
     var link = document.createElement('a');
-    link.href = '/contact?motiv=card-cadou';
-    link.textContent = 'Trimite-ne cererea din pagina de contact';
+    link.href = VQ.url('/contact?motiv=card-cadou');
+    link.textContent = VQ.t('Send us your request from the contact page');
     link.addEventListener('click', contactPrefill);
     link.addEventListener('auxclick', contactPrefill); // opened in a new tab
     msg.appendChild(link);
-    msg.appendChild(document.createTextNode(' — o completăm cu cardul configurat aici.'));
+    msg.appendChild(document.createTextNode(parts[1] || ''));
   });
 
   applyPick();
