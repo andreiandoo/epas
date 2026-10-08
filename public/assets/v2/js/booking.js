@@ -4,12 +4,32 @@
      { mode: 'location'|'product', location: {slug,name,city}|null, product_slug, products: [...], categories: [...],
        today: 'Y-m-d', max_days: n, focus_product_id }
    Availability comes from the proxy (am.location.day / am.product.day and the .calendar actions); the choice goes to
-   BileteOnlineCart.addBookingItem (assets/js/cart.js), then to /cos or /finalizare. The server checks everything again
+   BileteOnlineCart.addBookingItem (assets/js/cart.js), then to /cart or /checkout. The server checks everything again
    at checkout; the rules here only spare the customer a refused order.
    In the booking widget on the operator's site (embed/locatie.php, cfg.embed) the frame cannot reach this site's
-   storage, so the same lines go to /finalizare#bo-import=… in a new tab, where cart.js adds them. */
+   storage, so the same lines go to /checkout#bo-import=… in a new tab, where cart.js adds them.
+   Prices are written in the product's own currency (variant.currency, else product.currency, else cfg.currency,
+   else the site's), the one the customer is charged in; the same code goes to the basket with each line. */
 (function () {
   'use strict';
+
+  /* One formatter for every price on the page. assets/js/utils.js is not loaded here, so the rules of
+     BileteOnlineUtils.formatCurrency are repeated (same table): [sign, sign before the amount?, decimals when not whole]. */
+  var CURRENCIES = {
+    EUR: ['€', true, 2], GBP: ['£', true, 2], CHF: ['CHF ', true, 2], CZK: [' Kč', false, 0], PLN: [' zł', false, 0],
+    HUF: [' Ft', false, 0], RON: [' lei', false, 2], SEK: [' kr', false, 0], NOK: [' kr', false, 0], DKK: [' kr', false, 0],
+    ISK: [' kr', false, 0]
+  };
+  function formatMoney(amount, currency) {
+    var code = String(currency || 'EUR').toUpperCase();
+    var utils = window.BileteOnlineUtils || (typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils : null);
+    if (utils && typeof utils.formatCurrency === 'function') return utils.formatCurrency(amount, code);
+    var style = CURRENCIES[code] || [' ' + code, false, 2];
+    var n = Number(amount) || 0;
+    var digits = style[2] === 0 ? 0 : (Math.abs(n - Math.round(n)) < 0.005 ? 0 : style[2]);
+    var formatted = new Intl.NumberFormat('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+    return style[1] ? style[0] + formatted : formatted + style[0];
+  }
 
   var $ = function (id) { return document.getElementById(id); };
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -19,21 +39,24 @@
   var root = $('bkx');
   if (!cfg || !root || !Array.isArray(cfg.products)) return;
 
-  var MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-  var DOW = ['dum', 'lun', 'mar', 'mie', 'joi', 'vin', 'sâm'];
-  var DOW_LONG = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var DOW_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // The currency of the page (from the PHP page), else the marketplace's, else euro.
+  var SITE_CUR = String(cfg.currency || (typeof BILETEONLINE_CONFIG !== 'undefined' && BILETEONLINE_CONFIG.CURRENCY) || 'EUR').toUpperCase();
+  /** The currency a product's variant is sold in. */
+  function curOf(p, v) { return String((v && v.currency) || (p && p.currency) || SITE_CUR).toUpperCase(); }
+  /** A price in cents, written in its currency. */
+  function money(cents, currency) { return formatMoney((cents || 0) / 100, currency || SITE_CUR); }
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function parse(s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
   function addDays(s, n) { var d = parse(s); d.setDate(d.getDate() + n); return iso(d); }
-  function lei(cents) {
-    var v = (cents || 0) / 100;
-    return new Intl.NumberFormat('ro-RO', { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(v) + ' lei';
-  }
   function hm(t) { return t ? String(t).slice(0, 5) : ''; }
   function dateLabel(s) { var d = parse(s); return DOW_LONG[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
-  function shortDate(s) { var d = parse(s); return DOW[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + '.'; }
+  function shortDate(s) { var d = parse(s); return DOW[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3); }
   function el(tag, attrs, kids) {
     var n = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
@@ -101,7 +124,7 @@
     return (by[v.id] || by[String(v.id)] || av.slots || []);
   };
   var dayBookable = function (p) { var av = state.day[p.id]; return !!(av && av.bookable); };
-  // rate in percent, floor in lei per ticket (the minimum viaqui.com charges); the server applies the same rule
+  // rate in percent, floor in the product's currency per ticket (the minimum viaqui.com charges); the server applies the same rule
   var commissionOf = function (p) { return p.commission || { rate: 0, mode: 'included', floor: 0 }; };
   var feeOf = function (c, valueCents, quantity) {
     if (c.mode !== 'added_on_top') return 0;
@@ -165,12 +188,12 @@
     ls.forEach(function (l) {
       var p = l.product, v = l.variant, q = l.quantity;
       var min = Math.max(1, v.min_per_order || 1), max = v.max_per_order || 0, step = v.step_qty || 1;
-      if (q < min) add('La „' + p.title + '” se cumpără minim ' + min + '.', 'p:' + p.id);
-      if (max && q > max) add('La „' + p.title + '” poți lua cel mult ' + max + '.', 'p:' + p.id);
-      if (step > 1 && (q - min) % step) add('La „' + p.title + '” se cumpără câte ' + step + '.', 'p:' + p.id);
-      if (p.booking_mode === 'slot' && p.type !== 'package' && !l.time) add('Alege ora pentru „' + p.title + ' — ' + v.name + '”.', 'time:' + key(p, v));
-      if (p.requires_vehicle_info && !l.plate) add('Scrie numărul de înmatriculare la „' + p.title + '”.', 'plate:' + key(p, v));
-      l.components.forEach(function (c) { if (c.booking_mode === 'slot' && !c.slot_start_time) add('Alege ora pentru „' + c.title + '” din pachet.', 'p:' + p.id); });
+      if (q < min) add('The minimum for “' + p.title + '” is ' + min + '.', 'p:' + p.id);
+      if (max && q > max) add('You can book at most ' + max + ' of “' + p.title + '”.', 'p:' + p.id);
+      if (step > 1 && (q - min) % step) add('“' + p.title + '” is sold ' + step + ' at a time.', 'p:' + p.id);
+      if (p.booking_mode === 'slot' && p.type !== 'package' && !l.time) add('Choose a time for “' + p.title + ' — ' + v.name + '”.', 'time:' + key(p, v));
+      if (p.requires_vehicle_info && !l.plate) add('Enter the vehicle registration number for “' + p.title + '”.', 'plate:' + key(p, v));
+      l.components.forEach(function (c) { if (c.booking_mode === 'slot' && !c.slot_start_time) add('Choose a time for “' + c.title + '” in the package.', 'p:' + p.id); });
       var persons = v.price_type === 'per_unit' ? q * Math.max(1, v.persons_max || 1) : q;
       if (p.type === 'access') { access.any += persons; if (!v.is_child) access.adult += persons; }
       if (p.type === 'package') (p.components || []).forEach(function (c) {
@@ -182,8 +205,8 @@
         titleNeeds[p.access_requirement] = p.title;
       }
     });
-    if (needs.adult > access.adult) add('Pentru „' + titleNeeds.adult + '” ai nevoie și de câte un bilet de acces pentru adult în aceeași zi.', 'access');
-    if (needs.any > access.any) add('Pentru „' + titleNeeds.any + '” ai nevoie și de bilete de acces în aceeași zi.', 'access');
+    if (needs.adult > access.adult) add('“' + titleNeeds.adult + '” also needs an adult entry ticket for each person, on the same day.', 'access');
+    if (needs.any > access.any) add('“' + titleNeeds.any + '” also needs entry tickets for the same day.', 'access');
     return errs;
   }
 
@@ -225,11 +248,11 @@
       var btn = el('button', {
         type: 'button', class: 'bkx-day' + (closed ? ' is-closed' : '') + (c.status === 'limited' ? ' is-limited' : ''),
         'aria-pressed': String(d === state.date), 'data-date': d,
-        'aria-label': dateLabel(d) + (c.status === 'closed' ? ', închis' : c.status === 'full' ? ', epuizat' : '')
+        'aria-label': dateLabel(d) + (c.status === 'closed' ? ', closed' : c.status === 'full' ? ', sold out' : '')
       }, [
-        el('span', { text: i === 0 ? 'azi' : i === 1 ? 'mâine' : DOW[parse(d).getDay()] }),
+        el('span', { text: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DOW[parse(d).getDay()] }),
         el('b', { text: String(parse(d).getDate()) }),
-        el('small', { text: c.min_price_cents ? lei(c.min_price_cents) : (c.status === 'closed' ? 'închis' : c.status === 'full' ? 'epuizat' : MONTHS[parse(d).getMonth()].slice(0, 3)) })
+        el('small', { text: c.min_price_cents ? money(c.min_price_cents, c.currency) : (c.status === 'closed' ? 'closed' : c.status === 'full' ? 'sold out' : MONTHS[parse(d).getMonth()].slice(0, 3)) })
       ]);
       elDays.appendChild(el('li', null, [btn]));
     }
@@ -248,21 +271,22 @@
       var btn = el('button', {
         type: 'button', class: 'bkx-cday' + (dt.getMonth() === state.calMonth ? '' : ' is-out') + (c.status === 'limited' ? ' is-limited' : ''),
         'data-date': v, disabled: !open, 'aria-current': v === state.date ? 'date' : null,
-        'aria-label': dt.getDate() + ' ' + MONTHS[dt.getMonth()] + (open ? '' : ', indisponibil')
-      }, [el('b', { text: String(dt.getDate()) }), c.min_price_cents && open ? el('small', { text: lei(c.min_price_cents).replace(' lei', '') }) : null]);
+        'aria-label': dt.getDate() + ' ' + MONTHS[dt.getMonth()] + (open ? '' : ', unavailable')
+      // the cell is narrow: the amount alone, without the currency sign (the day strip and the list carry it)
+      }, [el('b', { text: String(dt.getDate()) }), c.min_price_cents && open ? el('small', { text: money(c.min_price_cents, c.currency).replace(/^[^\d]+|[^\d]+$/g, '') }) : null]);
       elCalGrid.appendChild(btn);
     }
   }
 
   function renderHours() {
     var h = state.hours;
-    if (state.loading) { elHours.textContent = 'Se verifică disponibilitatea…'; return; }
+    if (state.loading) { elHours.textContent = 'Checking availability…'; return; }
     if (!state.date) { elHours.textContent = ''; return; }
     var any = products.some(dayBookable);
     if (h && h.open) {
-      elHours.textContent = dateLabel(state.date) + ': deschis ' + hm(h.open) + '–' + hm(h.close) + (h.last_entry ? ', ultima intrare ' + hm(h.last_entry) : '') + '.';
+      elHours.textContent = dateLabel(state.date) + ': open ' + hm(h.open) + '–' + hm(h.close) + (h.last_entry ? ', last entry ' + hm(h.last_entry) : '') + '.';
     } else {
-      elHours.textContent = dateLabel(state.date) + (any ? '' : ': nu se vând bilete în această zi. Alege altă dată.');
+      elHours.textContent = dateLabel(state.date) + (any ? '' : ': no tickets are sold on this day. Choose another date.');
     }
   }
 
@@ -271,16 +295,16 @@
     elTabs.textContent = '';
     elTabs.hidden = cats.length < 2;
     if (cats.length < 2) return;
-    [{ id: 'all', name: 'Toate' }].concat(cats).forEach(function (c) {
+    [{ id: 'all', name: 'All' }].concat(cats).forEach(function (c) {
       elTabs.appendChild(el('button', { type: 'button', class: 'bkx-tab', 'aria-pressed': String(state.tab === c.id), 'data-tab': c.id, text: c.name }));
     });
   }
 
   function stepper(label, value, onDec, onInc, disInc) {
     return el('div', { class: 'bkx-step' }, [
-      el('button', { type: 'button', 'aria-label': 'Scade: ' + label, disabled: value <= 0, on: { click: onDec } }, ['−']),
+      el('button', { type: 'button', 'aria-label': 'One fewer: ' + label, disabled: value <= 0, on: { click: onDec } }, ['−']),
       el('output', { 'aria-live': 'polite', text: String(value) }),
-      el('button', { type: 'button', 'aria-label': 'Adaugă: ' + label, disabled: !!disInc, on: { click: onInc } }, ['+'])
+      el('button', { type: 'button', 'aria-label': 'One more: ' + label, disabled: !!disInc, on: { click: onInc } }, ['+'])
     ]);
   }
 
@@ -288,11 +312,11 @@
     var av = state.day[p.id];
     if (state.loading || !av) return null;
     if (!av.bookable) {
-      var why = { closed: 'Închis în această zi', full: 'Epuizat în această zi', past: 'Data a trecut', too_late: 'Pentru azi nu se mai vând bilete', too_far: 'Prea departe în viitor' }[av.reason] || 'Indisponibil în această zi';
+      var why = { closed: 'Closed on this day', full: 'Sold out on this day', past: 'This date has passed', too_late: 'Tickets for today are no longer on sale', too_far: 'Too far ahead to book' }[av.reason] || 'Unavailable on this day';
       return el('p', { class: 'bkx-avail is-off', text: why + '.' });
     }
     if (av.mode === 'day' && av.remaining !== null && av.remaining !== undefined && av.remaining <= 20) {
-      return el('p', { class: 'bkx-avail is-low', text: av.remaining === 1 ? 'Mai e un loc' : 'Mai sunt ' + av.remaining + ' locuri' });
+      return el('p', { class: 'bkx-avail is-low', text: av.remaining === 1 ? '1 place left' : av.remaining + ' places left' });
     }
     return null;
   }
@@ -300,11 +324,11 @@
   function productRow(p) {
     var off = !dayBookable(p);
     var badges = [];
-    if (p.type === 'package') badges.push('Pachet');
-    if (p.booking_mode === 'day' && p.type !== 'package') badges.push('Valabil toată ziua');
-    if (p.booking_mode === 'slot') badges.push('Cu oră fixă');
-    if (p.type === 'experience' && p.access_requirement === 'adult') badges.push('Necesită acces pentru adult');
-    if (p.type === 'experience' && p.access_requirement === 'any') badges.push('Necesită bilet de acces');
+    if (p.type === 'package') badges.push('Package');
+    if (p.booking_mode === 'day' && p.type !== 'package') badges.push('Valid all day');
+    if (p.booking_mode === 'slot') badges.push('Fixed time');
+    if (p.type === 'experience' && p.access_requirement === 'adult') badges.push('Needs an adult entry ticket');
+    if (p.type === 'experience' && p.access_requirement === 'any') badges.push('Needs an entry ticket');
 
     var head = el('div', { class: 'bkx-p-head' }, [
       productIcon(p.icon) ? el('span', { class: 'bkx-p-ic', 'aria-hidden': 'true' }, [productIcon(p.icon)]) : null,
@@ -312,7 +336,7 @@
         el('h3', { text: p.title }),
         p.short_description ? el('p', { text: p.short_description }) : null,
         el('ul', { class: 'bkx-badges' }, badges.map(function (b) { return el('li', { text: b }); })),
-        p.type === 'experience' && cfg.mode === 'location' && p.slug ? el('a', { class: 'bkx-more', href: '/experienta/' + p.slug, text: 'Detalii despre experiență' }) : null
+        p.type === 'experience' && cfg.mode === 'location' && p.slug ? el('a', { class: 'bkx-more', href: '/experience/' + p.slug, text: 'See the experience' }) : null
       ])
     ]);
     var row = el('article', { class: 'bkx-p' + (off ? ' is-off' : ''), 'data-product': p.id, 'data-type': p.type }, [head, availabilityNote(p)]);
@@ -326,12 +350,12 @@
     variantsOf(p).forEach(function (v) {
       var k = key(p, v), q = state.qty[k] || 0;
       var max = v.max_per_order || 99;
-      var price = el('span', { class: 'bkx-v-price' }, [lei(v.price_cents), p.unit_label ? el('small', { text: ' / ' + p.unit_label }) : (v.price_type === 'per_unit' && v.persons_max ? el('small', { text: ' / până la ' + v.persons_max + ' pers.' }) : null)]);
+      var price = el('span', { class: 'bkx-v-price' }, [money(v.price_cents, curOf(p, v)), p.unit_label ? el('small', { text: ' / ' + p.unit_label }) : (v.price_type === 'per_unit' && v.persons_max ? el('small', { text: ' / up to ' + v.persons_max + ' people' }) : null)]);
       var meta = [];
       if (v.duration_minutes) meta.push(v.duration_minutes >= 60 && v.duration_minutes % 60 === 0 ? (v.duration_minutes / 60) + ' h' : v.duration_minutes + ' min');
-      if (v.validity_days > 1) meta.push('valabil ' + v.validity_days + ' zile');
-      if ((v.min_per_order || 0) > 1) meta.push('minim ' + v.min_per_order);
-      if (v.companion_label) meta.push('+ 1 ' + v.companion_label.toLowerCase() + ' gratuit');
+      if (v.validity_days > 1) meta.push('valid for ' + v.validity_days + ' days');
+      if ((v.min_per_order || 0) > 1) meta.push('minimum ' + v.min_per_order);
+      if (v.companion_label) meta.push('+ 1 ' + v.companion_label.toLowerCase() + ' free');
       var line = el('div', { class: 'bkx-v' }, [
         el('div', { class: 'bkx-v-t' }, [el('b', { text: v.name }), meta.length ? el('small', { text: meta.join(' · ') }) : null, v.description ? el('small', { text: v.description }) : null]),
         price,
@@ -347,8 +371,8 @@
       if (q > 0 && p.requires_vehicle_info) {
         var id = 'bkx-plate-' + p.id + '-' + v.id;
         row.appendChild(el('div', { class: 'bkx-plate', 'data-at': 'plate:' + k }, [
-          el('label', { for: id, text: 'Număr de înmatriculare' + (q > 1 ? ' (toate, separate prin virgulă)' : '') }),
-          el('input', { id: id, type: 'text', maxlength: '80', autocomplete: 'off', value: state.plate[k] || '', placeholder: 'ex: HV 12 ABC', on: { input: function (e) { state.plate[k] = e.target.value.toUpperCase(); renderSummary(); } } })
+          el('label', { for: id, text: 'Vehicle registration number' + (q > 1 ? ' (all of them, separated by commas)' : '') }),
+          el('input', { id: id, type: 'text', maxlength: '80', autocomplete: 'off', value: state.plate[k] || '', placeholder: 'e.g. AB12 CDE', on: { input: function (e) { state.plate[k] = e.target.value.toUpperCase(); renderSummary(); } } })
         ]));
       }
     });
@@ -360,7 +384,7 @@
         var comp = (p.components || []).filter(function (x) { return x.item_id === c.item_id; })[0];
         var ck = p.id + ':' + c.item_id;
         row.appendChild(el('div', { class: 'bkx-times' }, [
-          el('p', { class: 'bkx-label', text: 'Ora pentru „' + (comp ? comp.title : 'serviciu') + '”' }),
+          el('p', { class: 'bkx-label', text: 'Time for “' + (comp ? comp.title : 'service') + '”' }),
           el('div', { class: 'bkx-chips', role: 'group' }, (c.slots || []).map(function (s) {
             return el('button', { type: 'button', class: 'bkx-chip', 'aria-pressed': String(state.comp[ck] === s.start_time), disabled: !s.is_bookable,
               on: { click: function () { state.comp[ck] = s.start_time; render(); } } }, [el('b', { text: hm(s.start_time) })]);
@@ -374,21 +398,21 @@
   function timeChips(p, v, k) {
     var slots = slotsFor(p, v);
     return el('div', { class: 'bkx-times', 'data-at': 'time:' + k }, [
-      el('p', { class: 'bkx-label', text: 'Ora de start' + (v.duration_minutes ? ' (' + v.name + ')' : '') }),
-      slots.length ? el('div', { class: 'bkx-chips', role: 'group', 'aria-label': 'Ore pentru ' + v.name }, slots.map(function (s) {
+      el('p', { class: 'bkx-label', text: 'Start time' + (v.duration_minutes ? ' (' + v.name + ')' : '') }),
+      slots.length ? el('div', { class: 'bkx-chips', role: 'group', 'aria-label': 'Times for ' + v.name }, slots.map(function (s) {
         var left = s.capacity_remaining || 0;
         return el('button', {
           type: 'button', class: 'bkx-chip', 'aria-pressed': String(state.time[k] === s.start_time), disabled: !s.is_bookable,
           on: { click: function () { state.time[k] = s.start_time; render(); } }
-        }, [el('b', { text: hm(s.start_time) }), s.is_bookable ? el('small', { class: left <= 3 ? 'is-low' : null, text: left + ' loc.' }) : el('small', { text: 'ocupat' })]);
-      })) : el('p', { class: 'bkx-note', text: 'Nicio oră liberă în această zi.' })
+        }, [el('b', { text: hm(s.start_time) }), s.is_bookable ? el('small', { class: left <= 3 ? 'is-low' : null, text: left + ' left' }) : el('small', { text: 'full' })]);
+      })) : el('p', { class: 'bkx-note', text: 'No times left on this day.' })
     ]);
   }
 
   /* How many of an add-on a booking may take. The operator sets two numbers: how many come free
      with each unit (`included_qty`) and how many *paid* ones may be added on top (`max_per_unit`),
      and the server validates the sum. Two things were confusing about that:
-       - a free add-on (0 lei) with four included still offered four more "paid" ones at 0 lei,
+       - a free add-on (price 0) with four included still offered four more "paid" ones at 0,
          which is not something anyone meant to sell;
        - the ceiling was never written down, so a stepper that stopped at two looked arbitrary.
      So: a priced add-on keeps included + paid, a free one stops at what is included, and the
@@ -399,22 +423,22 @@
     return (inc + paid) * q;
   }
 
-  function addonNote(a, q, cap) {
+  function addonNote(a, q, cap, currency) {
     var bits = [];
-    if (a.included_qty) bits.push(a.included_qty + (a.included_qty === 1 ? ' inclusă' : ' incluse') + ' la fiecare');
-    if (a.price_cents) bits.push((a.included_qty ? 'apoi ' : '') + lei(a.price_cents) + ' bucata');
-    else if (!a.included_qty) bits.push('gratuit');
-    if (cap) bits.push('maximum ' + cap + (q > 1 ? ' la ' + q : ''));
+    if (a.included_qty) bits.push(a.included_qty + ' included with each');
+    if (a.price_cents) bits.push((a.included_qty ? 'then ' : '') + money(a.price_cents, currency) + ' each');
+    else if (!a.included_qty) bits.push('free');
+    if (cap) bits.push('maximum ' + cap + (q > 1 ? ' for ' + q : ''));
     return bits.join(' · ');
   }
 
   function addonList(p, v, k, q) {
-    return el('div', { class: 'bkx-addons' }, [el('p', { class: 'bkx-label', text: 'Suplimente' })].concat((p.addons || []).map(function (a) {
+    return el('div', { class: 'bkx-addons' }, [el('p', { class: 'bkx-label', text: 'Extras' })].concat((p.addons || []).map(function (a) {
       var ak = k + ':' + a.id, n = state.addons[ak] || 0;
       var cap = addonCap(a, q);
       if (n > cap) { state.addons[ak] = n = cap; }      // the quantity went down under a chosen add-on
       return el('div', { class: 'bkx-v bkx-addon' }, [
-        el('div', { class: 'bkx-v-t' }, [el('b', { text: a.name }), el('small', { text: addonNote(a, q, cap) })]),
+        el('div', { class: 'bkx-v-t' }, [el('b', { text: a.name }), el('small', { text: addonNote(a, q, cap, curOf(p, v)) })]),
         stepper(a.name, n, function () { state.addons[ak] = Math.max(0, n - 1); render(); }, function () { state.addons[ak] = Math.min(cap, n + 1); render(); }, n >= cap)
       ]);
     })));
@@ -432,7 +456,7 @@
     var shown = products.filter(function (p) { return state.tab === 'all' || p.display_category === state.tab; });
     var cats = cfg.categories || [];
     if (state.tab === 'all' && cats.length > 1) {
-      cats.concat([{ id: null, name: 'Altele' }]).forEach(function (c) {
+      cats.concat([{ id: null, name: 'Other' }]).forEach(function (c) {
         var group = shown.filter(function (p) { return c.id === null ? !cats.some(function (x) { return x.id === p.display_category; }) : p.display_category === c.id; });
         if (!group.length) return;
         elList.appendChild(el('h3', { class: 'bkx-cat', text: c.name }));
@@ -446,31 +470,33 @@
   function renderSummary() {
     var ls = lines(), t = totals(ls), errs = problems(ls);
     var count = ls.reduce(function (a, l) { return a + l.quantity; }, 0);
+    // an order is paid in one currency (the basket refuses a second one): the totals are in the first line's
+    var cur = ls.length ? curOf(ls[0].product, ls[0].variant) : SITE_CUR;
     elSum.hidden = !ls.length;
     elBar.hidden = !ls.length;
     elLines.textContent = '';
     ls.forEach(function (l) {
       elLines.appendChild(el('li', null, [
         el('span', { text: l.quantity + ' × ' + l.product.title + (l.product.variants.length > 1 || l.product.type === 'package' ? ' — ' + l.variant.name : '') + (l.time ? ', ' + hm(l.time) : '') }),
-        el('b', { text: lei(l.variant.price_cents * l.quantity) })
+        el('b', { text: money(l.variant.price_cents * l.quantity, curOf(l.product, l.variant)) })
       ]));
       /* Every add-on gets its own line. Folding them into the ticket's price made the subtotal
          move for no visible reason, which is the one thing a summary must never do. */
       l.addons.forEach(function (a) {
         elLines.appendChild(el('li', { class: 'bkx-line-sub' }, [
-          el('span', { text: a.qty + ' × ' + a.name + (a.included ? (a.paid_qty ? ' (' + a.included + ' incluse)' : ' (incluse)') : '') }),
-          el('b', { text: a.total > 0 ? lei(Math.round(a.total * 100)) : 'inclus' })
+          el('span', { text: a.qty + ' × ' + a.name + (a.included ? (a.paid_qty ? ' (' + a.included + ' included)' : ' (included)') : '') }),
+          el('b', { text: a.total > 0 ? money(Math.round(a.total * 100), curOf(l.product, l.variant)) : 'included' })
         ]));
       });
     });
-    elSub.textContent = lei(t.sub);
+    elSub.textContent = money(t.sub, cur);
     elFeeRow.hidden = !t.fee;
-    if (elFeeLabel) elFeeLabel.textContent = 'Comision ticketing';
-    elFee.textContent = lei(t.fee);
+    if (elFeeLabel) elFeeLabel.textContent = 'Booking fee';
+    elFee.textContent = money(t.fee, cur);
     if (elCardNote) elCardNote.hidden = !t.card;
-    elTotal.textContent = lei(t.total);
-    elBarTotal.textContent = lei(t.total);
-    elBarCount.textContent = count === 1 ? '1 bilet' : count + ' bilete';
+    elTotal.textContent = money(t.total, cur);
+    elBarTotal.textContent = money(t.total, cur);
+    elBarCount.textContent = count === 1 ? '1 ticket' : count + ' tickets';
     var first = errs[0] || null;
     var msg = state.error || (first ? first.msg : '');
     elErr.textContent = '';
@@ -478,7 +504,7 @@
       elErr.appendChild(document.createTextNode(msg));
       // The message names a section; make it the way there rather than a description of it.
       if (!state.error && first && first.at && wanted(first.at)) {
-        elErr.appendChild(el('button', { type: 'button', class: 'bkx-err-go', text: 'Arată-mi',
+        elErr.appendChild(el('button', { type: 'button', class: 'bkx-err-go', text: 'Show me',
           on: { click: function () { showWanted(first.at, true); } } }));
       }
     }
@@ -547,7 +573,7 @@
     }, function () {
       if (asked !== state.date) return;
       state.day = {};
-      state.error = 'Nu am putut verifica disponibilitatea. Încearcă din nou.';
+      state.error = 'We could not check availability. Please try again.';
     }).then(function () {
       if (asked !== state.date) return;
       state.loading = false;
@@ -565,7 +591,7 @@
         .then(function (d) { (d.days || []).forEach(function (x) { state.calendar[x.date] = x; }); }, function () {}));
     }
     /* An experience page must price the experience. Asking the location gives the cheapest thing
-       sold there — the parking, at 25 lei — under every date of a page whose own prices start at
+       sold there — the parking, at 25 — under every date of a page whose own prices start at
        40, so the product's own calendar is fetched too and wins wherever it has an answer. */
     if (cfg.product_slug && (!viaLocation || cfg.mode === 'product')) {
       jobs.push(api('am.product.calendar', { slug: cfg.product_slug, from: from, to: to })
@@ -591,7 +617,7 @@
     state.calOpen = !state.calOpen;
     elCal.hidden = !state.calOpen;
     elCalToggle.setAttribute('aria-expanded', String(state.calOpen));
-    elCalToggle.textContent = state.calOpen ? 'Ascunde calendarul' : 'Altă dată';
+    elCalToggle.textContent = state.calOpen ? 'Hide the calendar' : 'Another date';
     if (state.calOpen) renderCalendar();
   });
   $('bkx-cal-prev').addEventListener('click', function () {
@@ -618,18 +644,18 @@
     if (!ls.length || problems(ls).length) { renderSummary(); return; }
     if (cfg.embed) { openCheckout(ls.map(item)); return; }
     if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addBookingItem !== 'function') {
-      state.error = 'Coșul nu s-a încărcat. Reîncarcă pagina și încearcă din nou.';
+      state.error = 'The basket did not load. Reload the page and try again.';
       renderSummary();
       return;
     }
     var added = 0;
     ls.forEach(function (l) { if (BileteOnlineCart.addBookingItem(item(l))) added++; });
-    if (!added) { state.error = 'Nu am putut adăuga în coș. Încearcă din nou.'; renderSummary(); return; }
-    window.location.href = dest === 'checkout' ? '/finalizare' : '/cos';
+    if (!added) { state.error = 'We could not add this to your basket. Please try again.'; renderSummary(); return; }
+    window.location.href = dest === 'checkout' ? '/checkout' : '/cart';
   }
   /* Checkout inside the widget (embed code v2, embed/bo-widget.js on the operator's page). The page tells the frame
-     its address ({type: 'bo-embed-hello'}); when it comes from one of the operator's allowed sites, "Continuă spre
-     plată" opens the checkout in this same frame (/embed/finalizare) instead of a new tab on viaqui.com, and the
+     its address ({type: 'bo-embed-hello'}); when it comes from one of the operator's allowed sites, "Continue to
+     payment" opens the checkout in this same frame (/embed/finalizare) instead of a new tab on viaqui.com, and the
      customer comes back to that page after paying. Without the script (embed code v1) nothing changes. */
   var parentHref = null;
   function allowedOrigin(o) {
@@ -650,7 +676,7 @@
       if (href !== e.origin && href.indexOf(e.origin + '/') !== 0) return;
       parentHref = href;
       var note = document.getElementById('bkx-pay-note');
-      if (note) note.textContent = 'Plătești aici, securizat, cu cardul. Biletele ajung pe email imediat după plată.';
+      if (note) note.textContent = 'You pay here, securely, by card. Your tickets arrive by email straight after payment.';
     });
     try { window.parent.postMessage({ type: 'bo-embed-ready' }, '*'); } catch (e) {}
   }
@@ -672,13 +698,13 @@
   // A new tab on viaqui.com with the lines in the address (cart.js adds them); a blocked pop-up leaves a link.
   function openCheckout(items) {
     if (checkoutHere(items)) return;
-    var url = (cfg.site_url || '') + '/finalizare#bo-import=' + encodeURIComponent(JSON.stringify(items)) + (cfg.return_token ? '&bo-return=' + encodeURIComponent(cfg.return_token) : '');
+    var url = (cfg.site_url || '') + '/checkout#bo-import=' + encodeURIComponent(JSON.stringify(items)) + (cfg.return_token ? '&bo-return=' + encodeURIComponent(cfg.return_token) : '');
     var w = null;
     try { w = window.open(url, '_blank'); } catch (e) {}
     if (w) return;
     var box = $('bkx-err');
-    box.textContent = 'Browserul a blocat fila nouă. ';
-    box.appendChild(el('a', { href: url, target: '_blank', rel: 'noopener', text: 'Deschide plata pe viaqui.com' }));
+    box.textContent = 'Your browser blocked the new tab. ';
+    box.appendChild(el('a', { href: url, target: '_blank', rel: 'noopener', text: 'Open the payment page on viaqui.com' }));
     box.hidden = false;
   }
   function item(l) {
@@ -688,10 +714,12 @@
         id: p.id, slug: p.slug, title: p.title, image: p.image || (cfg.location && cfg.location.image) || null, product_type: p.type,
         booking_mode: p.booking_mode, location_slug: cfg.location ? cfg.location.slug : null,
         venue: cfg.location ? cfg.location.name : null, city: cfg.location ? cfg.location.city : null,
-        commission_rate: c.rate, commission_mode: c.mode, commission_floor: c.floor || 0
+        commission_rate: c.rate, commission_mode: c.mode, commission_floor: c.floor || 0,
+        currency: curOf(p, null)
       },
       variant: {
         id: l.variant.id, name: l.variant.name, price_cents: l.variant.price_cents, capacity_share: l.variant.capacity_share || 1,
+        currency: curOf(p, l.variant),   // the basket reads the line's currency from here; without it it assumes euro
         is_child: !!l.variant.is_child, persons_counted: l.variant.price_type === 'per_unit' ? l.quantity * Math.max(1, l.variant.persons_max || 1) : l.quantity
       },
       date: state.date,
