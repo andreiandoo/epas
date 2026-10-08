@@ -265,7 +265,7 @@ foreach ($activities as $ix => $a) {
         'reviews'       => $rev && isset($rev['count']) ? (int) $rev['count'] : 0,
         // the euro value: what the page's price filter and sort compare (the label is printed, see below)
         'price'         => isset($a['cheapest_price_cents']) ? (int) round(v2_own_price_eur($a['cheapest_price_cents'], $a['currency'] ?? null, $a['cheapest_price_eur_cents'] ?? null)) : 0,
-        'priceLabel'    => v2_own_price_label($a['cheapest_price_cents'] ?? 0, $a['currency'] ?? null),
+        'priceLabel'    => v2_own_price_label($a['cheapest_price_cents'] ?? 0, $a['currency'] ?? null, $a['cheapest_price_eur_cents'] ?? null),
         'duration'      => $dur > 0 ? ($dur < 60 ? 'short' : ($dur <= 90 ? 'medium' : 'long')) : '',
         'durationLabel' => $dur > 0 ? ($dur . ' min') : '',
         'languages'     => $langs,
@@ -660,7 +660,7 @@ include __DIR__ . '/includes/v2/header.php';
       <?php endif; ?>
       <div class="kchips" id="k-chips" aria-label="Active filters"></div>
 
-      <?php if ($partnerActs): ?><p class="cl-fx"><?= v2_ic('info') ?>Prices are shown in the currency of each country. The price filter and the sort use their value in euro. Listings marked “on WeGoTrip” are sold by our partner, which may pay Viaqui a commission.</p><?php endif; ?>
+      <?php if ($partnerActs): ?><p class="cl-fx"><?= v2_ic('info') ?><?= v2_display_currency() !== null ? v2_e(v2_fx_note('')) : 'Prices are shown in the currency of each country. The price filter and the sort use their value in euro.' ?> Listings marked “on WeGoTrip” are sold by our partner, which may pay Viaqui a commission.</p><?php endif; ?>
       <?php if ($acts): ?>
       <ul class="xp-grid" id="k-grid" data-reveal>
         <?php foreach ($acts as $i => $a): ?>

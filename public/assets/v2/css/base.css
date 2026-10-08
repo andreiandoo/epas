@@ -1039,3 +1039,17 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 .ptrip-intro{margin:0 0 var(--space-5);max-width:62ch;color:var(--muted)}
 .cl-fx{display:flex;align-items:flex-start;gap:8px;margin:0 0 var(--space-5);font-size:.8125rem;line-height:1.5;color:var(--muted)}
 .cl-fx .ic{flex:none;width:16px;height:16px;margin-top:2px;color:var(--green)}
+/* currency: the list in the header's language menu, the form in the footer */
+.lang-menu{max-height:min(78vh, 640px);overflow:auto}
+.lang-h-cur{margin-top:12px}
+.cur-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px;min-width:340px}
+.cur-list a{display:grid;gap:1px;padding:8px 10px;border-radius:12px;color:inherit;text-decoration:none;line-height:1.25}
+.cur-list a:hover{background:var(--surface-2)}
+.cur-list a[aria-current]{background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--green)}
+.cur-list b{font-size:.875rem;font-weight:700}
+.cur-list span{font-size:.75rem;color:var(--muted)}
+.vf-cur{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.875rem}
+.vf-cur label{font-weight:700}
+.vf-cur select,.vf-cur button{min-height:36px;padding:6px 10px;border:1px solid currentColor;border-radius:10px;background:transparent;color:inherit;font:inherit}
+.vf-cur select option{color:#1F2937}
+.vf-cur button{cursor:pointer;font-weight:700}

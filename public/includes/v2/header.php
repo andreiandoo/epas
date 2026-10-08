@@ -78,10 +78,17 @@ $v2IntentCities = array_values(array_filter(array_map(function ($s) use ($V2NAV)
     </form>
     <div class="hdr-tools">
       <div class="lang-wrap">
-        <button class="icon-btn lang" id="lang-btn" type="button" aria-expanded="false" aria-controls="lang-menu"><?= v2_ic('globe-simple') ?><span aria-hidden="true">EN</span><span class="sr">Site language: English</span></button>
+        <button class="icon-btn lang" id="lang-btn" type="button" aria-expanded="false" aria-controls="lang-menu"><?= v2_ic('globe-simple') ?><span aria-hidden="true">EN<?= ($hdrCur = v2_display_currency()) !== null ? ' · ' . v2_e($hdrCur) : '' ?></span><span class="sr">Language and currency: English, <?= $hdrCur !== null ? v2_e(v2_currency_choices()[$hdrCur] ?? $hdrCur) : 'local currency' ?></span></button>
         <div class="lang-menu" id="lang-menu" hidden>
           <p class="lang-h">Site language</p>
           <p class="lang-opt" aria-current="true" lang="en"><?= v2_ic('check') ?>English</p>
+          <p class="lang-h lang-h-cur">Currency</p>
+          <ul class="cur-list">
+            <li><a href="<?= v2_e(v2_currency_href('')) ?>" rel="nofollow"<?= $hdrCur === null ? ' aria-current="true"' : '' ?>><b>Local</b><span>Each country's own</span></a></li>
+            <?php foreach (v2_currency_choices() as $curCode => $curName): ?>
+            <li><a href="<?= v2_e(v2_currency_href($curCode)) ?>" rel="nofollow"<?= $hdrCur === $curCode ? ' aria-current="true"' : '' ?>><b><?= v2_e($curCode) ?></b><span><?= v2_e($curName) ?></span></a></li>
+            <?php endforeach; ?>
+          </ul>
         </div>
       </div>
       <a class="icon-btn" href="/cart" aria-label="Basket"><?= v2_ic('shopping-cart-simple') ?><span class="hdr-badge" data-cart-count hidden></span></a>

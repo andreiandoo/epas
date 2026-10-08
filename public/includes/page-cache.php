@@ -42,6 +42,10 @@ foreach (array_keys($cacheParams) as $_k) {
     }
 }
 ksort($cacheParams);
+// The visitor's chosen currency (includes/v2/currency.php) changes every price on the page: one copy per currency.
+if (isset($_COOKIE['vq_cur']) && is_string($_COOKIE['vq_cur']) && preg_match('/^[A-Z]{3}$/', $_COOKIE['vq_cur'])) {
+    $cacheParams['__cur'] = $_COOKIE['vq_cur'];
+}
 // Use just the path (strtok strips ?query) so tracking-laden URLs collapse
 // onto the canonical cache entry of the same path.
 $_cachePath = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
