@@ -208,6 +208,7 @@ $clientData = ['booking' => [
 </script>
 <script defer src="<?= asset('assets/js/config.js') ?>"></script>
 <script defer src="<?= asset('assets/js/cart.js') ?>"></script>
+<script defer src="<?= v2_asset('js/i18n.js') ?>"></script>
 <script defer src="<?= v2_asset('js/hdrag.js') ?>"></script>
 <script defer src="<?= v2_asset('js/booking.js') ?>"></script>
 </body>

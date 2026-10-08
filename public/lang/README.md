@@ -24,7 +24,7 @@ Rules that keep the catalogue usable:
 
 ## In a script (JS)
 
-`assets/v2/js/base.js` gives every script:
+`assets/v2/js/i18n.js` gives every script:
 
 ```js
 VQ.t('Loading…')                       // text

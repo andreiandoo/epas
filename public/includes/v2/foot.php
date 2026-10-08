@@ -46,6 +46,7 @@
 <?php foreach (($v2LegacyScripts ?? []) as $v2LegacyJs): ?>
 <script defer src="<?= asset($v2LegacyJs) ?>"></script>
 <?php endforeach; ?>
+<script defer src="<?= v2_asset('js/i18n.js') ?>"></script><?php /* VQ.t() and friends: before every other script */ ?>
 <script defer src="<?= v2_asset('js/base.js') ?>"></script>
 <?php foreach (($v2Scripts ?? []) as $v2Js): ?>
 <script defer src="<?= v2_asset('js/' . $v2Js) ?>"></script>

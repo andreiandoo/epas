@@ -13,7 +13,7 @@
  * A language's catalogue is lang/<code>.php, an array with three parts:
  *   'strings' => ['Sign in' => 'Anmelden', …]                    texts of PHP pages
  *   'plurals' => ['city|cities' => ['Stadt', 'Städte'], …]       the forms the language needs, in the order of its rule
- *   'js'      => ['Loading…' => 'Wird geladen…', …]              texts of the scripts (VQ.t in assets/v2/js/base.js)
+ *   'js'      => ['Loading…' => 'Wird geladen…', …]              texts of the scripts (VQ.t in assets/v2/js/i18n.js)
  * A text with no translation is shown in English, so a catalogue can be filled gradually.
  *
  * Which languages exist and which are open is said in includes/locales.php. The language of a request is its first

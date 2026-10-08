@@ -1,6 +1,6 @@
 <?php
 /**
- * Gift card balance check: /voucher and /verifica-card-cadou (v2 design).
+ * Gift card balance check: /voucher (and the old /verifica-card-cadou) (v2 design).
  *
  * Public page. The customer enters a gift card code (and the PIN when the card has one); voucher.js posts it to
  * `/customer/gift-cards/check-balance` through the API proxy and shows balance, validity and status. The backend does
@@ -24,15 +24,15 @@ foreach (['cod', 'code'] as $param) {
 }
 
 $faqs = [
-    ['Unde găsesc codul cardului cadou?', 'Pentru cardurile digitale, codul apare în emailul de cadou. Pentru cele fizice, este tipărit pe card. PIN-ul apare doar pe cardurile fizice, pe spate, sub o folie de răzuit.'],
-    ['Cum folosesc cardul la checkout?', 'La finalizarea unei comenzi, introdu codul în câmpul „Card cadou / voucher”. Soldul disponibil se scade automat. Dacă valoarea comenzii e mai mare, plătești diferența cu cardul bancar.'],
-    ['Cardul are expirare?', 'Cardurile cadou viaqui.com au valabilitate de 12 luni de la emitere. După această dată, soldul rămas nu mai poate fi folosit.'],
-    ['Pot folosi cardul în mai multe comenzi?', 'Da. Soldul scade pe fiecare folosire până la epuizare sau expirare. Verifică oricând balanța curentă aici.'],
-    ['Cardul nu este valid. Ce fac?', 'Verifică să fi tastat codul corect (atenție la 0 / O sau 1 / I). Dacă tot nu merge, scrie-ne la <a href="/contact">Contact</a> cu codul și emailul cu care a fost primit.'],
+    [v2_t('Where do I find the gift card code?'), v2_t('For digital cards, the code is in the gift email. For physical cards, it is printed on the card. The PIN appears only on physical cards, on the back, under a scratch-off strip.')],
+    [v2_t('How do I use the card at checkout?'), v2_t('When you complete an order, enter the code in the "Gift card / voucher" field. The available balance is deducted automatically. If the order value is higher, you pay the difference by bank card.')],
+    [v2_t('Does the card expire?'), v2_t('viaqui.com gift cards are valid for 12 months from the date of issue. After that date, the remaining balance can no longer be used.')],
+    [v2_t('Can I use the card for several orders?'), v2_t('Yes. The balance goes down with each use until it runs out or the card expires. You can check the current balance here at any time.')],
+    [v2_t('The card is not valid. What do I do?'), v2_t('Check that you typed the code correctly (watch out for 0 / O or 1 / I). If it still does not work, write to us through <a href="{url}">Contact</a> with the code and the email address it was sent to.', ['url' => '/contact'])],
 ];
 
-$pageTitleRaw = 'Verifică un card cadou — ' . SITE_NAME;
-$pageDescription = 'Verifică soldul disponibil și valabilitatea unui card cadou viaqui.com. Introdu codul și, dacă este necesar, PIN-ul.';
+$pageTitle = v2_t('Check a gift card');
+$pageDescription = v2_t('Check the available balance and the validity of a viaqui.com gift card. Enter the code and, if needed, the PIN.');
 $canonicalUrl = SITE_URL . '/voucher';
 $noindex = true;
 $skipPageCache = true;
@@ -48,7 +48,7 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
     'storageUrl' => STORAGE_URL,
     'env' => API_ENV,
     'locale' => SITE_LOCALE,
-    'currency' => 'RON',
+    'currency' => SITE_CURRENCY,
     'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 
@@ -61,59 +61,59 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="vc-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="vc-in">
       <div class="vc-copy">
-        <p class="vc-kicker">Card cadou · voucher · sold</p>
-        <h1 class="vc-h" id="vc-h">Verifică un card cadou.</h1>
-        <p class="vc-lead">Introdu codul cardului cadou ca să vezi cât mai are disponibil și până când poate fi folosit. Pentru cardurile cu PIN, ai nevoie și de PIN.</p>
+        <p class="vc-kicker"><?= v2_te('Gift card · voucher · balance') ?></p>
+        <h1 class="vc-h" id="vc-h"><?= v2_te('Check a gift card.') ?></h1>
+        <p class="vc-lead"><?= v2_te('Enter the gift card code to see how much is left on it and until when it can be used. For cards with a PIN, you need the PIN too.') ?></p>
         <ol class="vc-steps">
-          <li><small>Pasul 1</small><b>Cod</b></li>
-          <li><small>Pasul 2</small><b>Sold</b></li>
-          <li><small>Pasul 3</small><b>Folosește</b></li>
+          <li><small><?= v2_te('Step 1') ?></small><b><?= v2_te('Code') ?></b></li>
+          <li><small><?= v2_te('Step 2') ?></small><b><?= v2_te('Balance') ?></b></li>
+          <li><small><?= v2_te('Step 3') ?></small><b><?= v2_te('Use it') ?></b></li>
         </ol>
       </div>
 
-      <section class="vc-card" id="vc-card" aria-label="Formular verificare voucher">
+      <section class="vc-card" id="vc-card" aria-label="<?= v2_te('Gift card check form') ?>">
         <!-- the header turns solid when the white card reaches it (beside the text on desktop, under it on a phone),
              not after the whole hero: its light links would disappear over the card -->
         <div id="hdr-sentinel" aria-hidden="true"></div>
         <!-- FORM -->
         <div id="vc-form-view">
-          <p class="vc-card-k">Verifică codul</p>
-          <h2 class="vc-card-h">Card cadou</h2>
-          <p class="vc-card-p">Codul apare pe cardul fizic sau în emailul de cadou.</p>
+          <p class="vc-card-k"><?= v2_te('Check the code') ?></p>
+          <h2 class="vc-card-h"><?= v2_te('Gift card') ?></h2>
+          <p class="vc-card-p"><?= v2_te('The code is on the physical card or in the gift email.') ?></p>
           <p class="vc-error" id="vc-error" role="alert" hidden></p>
           <form id="vc-form" novalidate>
             <div class="vc-field">
-              <label for="vc-code">Cod card cadou</label>
-              <input id="vc-code" name="code" class="is-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" required placeholder="ex. GIFT-2026-XXXX" value="<?= v2_e($prefillCode) ?>">
+              <label for="vc-code"><?= v2_te('Gift card code') ?></label>
+              <input id="vc-code" name="code" class="is-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" required placeholder="<?= v2_te('e.g. GIFT-2026-XXXX') ?>" value="<?= v2_e($prefillCode) ?>">
             </div>
             <div class="vc-field">
-              <label for="vc-pin">PIN (dacă este necesar)</label>
-              <input id="vc-pin" name="pin" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="opțional" aria-describedby="vc-pin-hint">
-              <span class="vc-hint" id="vc-pin-hint">Doar cardurile fizice au PIN, tipărit pe spatele cardului.</span>
+              <label for="vc-pin"><?= v2_te('PIN (if needed)') ?></label>
+              <input id="vc-pin" name="pin" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="<?= v2_te('optional') ?>" aria-describedby="vc-pin-hint">
+              <span class="vc-hint" id="vc-pin-hint"><?= v2_te('Only physical cards have a PIN, printed on the back of the card.') ?></span>
             </div>
-            <button class="btn btn-primary vc-submit" id="vc-submit" type="submit">Verifică soldul</button>
+            <button class="btn btn-primary vc-submit" id="vc-submit" type="submit"><?= v2_te('Check the balance') ?></button>
           </form>
-          <p class="vc-card-foot">Nu ai încă un card cadou? <a href="/card-cadou">Cumpără unul</a></p>
+          <p class="vc-card-foot"><?= v2_t('No gift card yet? <a href="{url}">Buy one</a>', ['url' => '/gift-card']) ?></p>
         </div>
 
         <!-- RESULT -->
         <div class="vc-result" id="vc-result" data-state="ok" hidden>
           <span class="vc-badge" aria-hidden="true"><svg class="ic is-ok"><use href="#i-check"/></svg><svg class="ic is-bad"><use href="#i-x"/></svg></span>
-          <p class="vc-card-k" id="vc-r-kicker">Card valabil</p>
+          <p class="vc-card-k" id="vc-r-kicker"><?= v2_te('Valid card') ?></p>
           <h2 class="vc-card-h vc-code" id="vc-r-code" tabindex="-1"></h2>
           <dl class="vc-stats">
-            <div class="is-balance"><dt>Sold disponibil</dt><dd><b id="vc-r-balance">—</b><span id="vc-r-currency">RON</span></dd></div>
-            <div><dt>Valabil până la</dt><dd><b id="vc-r-expires">—</b><span id="vc-r-expiry-label"></span></dd></div>
+            <div class="is-balance"><dt><?= v2_te('Available balance') ?></dt><dd><b id="vc-r-balance">—</b><span id="vc-r-currency"><?= v2_e(SITE_CURRENCY) ?></span></dd></div>
+            <div><dt><?= v2_te('Valid until') ?></dt><dd><b id="vc-r-expires">—</b><span id="vc-r-expiry-label"></span></dd></div>
           </dl>
           <dl class="vc-meta">
-            <div><dt>Status</dt><dd id="vc-r-status">—</dd></div>
-            <div><dt>Valoare inițială</dt><dd id="vc-r-initial">—</dd></div>
+            <div><dt><?= v2_te('Status') ?></dt><dd id="vc-r-status">—</dd></div>
+            <div><dt><?= v2_te('Initial value') ?></dt><dd id="vc-r-initial">—</dd></div>
           </dl>
-          <div class="vc-note is-ok"><b>Cardul poate fi folosit la checkout</b><p>La finalizarea unei comenzi, introdu codul în câmpul „Card cadou / voucher” și soldul se scade automat.</p></div>
-          <div class="vc-note is-bad"><b>Cardul nu poate fi folosit acum</b><p id="vc-r-reason"></p></div>
+          <div class="vc-note is-ok"><b><?= v2_te('The card can be used at checkout') ?></b><p><?= v2_te('When you complete an order, enter the code in the "Gift card / voucher" field and the balance is deducted automatically.') ?></p></div>
+          <div class="vc-note is-bad"><b><?= v2_te('The card cannot be used right now') ?></b><p id="vc-r-reason"></p></div>
           <div class="vc-actions">
-            <a class="btn btn-primary" href="/categorii">Folosește la o comandă<?= v2_ic('arrow-right') ?></a>
-            <button class="btn btn-ghost" type="button" id="vc-again">Verifică alt card</button>
+            <a class="btn btn-primary" href="/categories"><?= v2_te('Use it on an order') ?><?= v2_ic('arrow-right') ?></a>
+            <button class="btn btn-ghost" type="button" id="vc-again"><?= v2_te('Check another card') ?></button>
           </div>
         </div>
       </section>
@@ -123,9 +123,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec vc-faq" aria-labelledby="vc-faq-h">
     <div class="wrap vc-faq-grid">
       <div>
-        <p class="kicker">Întrebări</p>
-        <h2 id="vc-faq-h">Cardul cadou viaqui.com</h2>
-        <a class="btn btn-primary vc-faq-cta" href="/card-cadou"><?= v2_ic('gift') ?>Cumpără un card cadou</a>
+        <p class="kicker"><?= v2_te('Questions') ?></p>
+        <h2 id="vc-faq-h"><?= v2_te('The viaqui.com gift card') ?></h2>
+        <a class="btn btn-primary vc-faq-cta" href="/gift-card"><?= v2_ic('gift') ?><?= v2_te('Buy a gift card') ?></a>
       </div>
       <div>
         <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
