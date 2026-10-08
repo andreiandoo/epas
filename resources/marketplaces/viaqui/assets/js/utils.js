@@ -11,23 +11,34 @@ const BileteOnlineUtils = {
      * @param {number} value - Number to format
      */
     formatNumber(value) {
-        return new Intl.NumberFormat(BILETEONLINE_CONFIG.CURRENCY_LOCALE || 'ro-RO').format(value);
+        return new Intl.NumberFormat(BILETEONLINE_CONFIG.CURRENCY_LOCALE || 'en-GB').format(value);
     },
 
     // ==================== CURRENCY FORMATTING ====================
 
-    /**
-     * Format currency value
-     * @param {number} value - Amount to format
-     * @param {boolean} showSymbol - Whether to show currency symbol
-     */
-    formatCurrency(value, showSymbol = true) {
-        const formatted = new Intl.NumberFormat(BILETEONLINE_CONFIG.CURRENCY_LOCALE, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(value);
+    /** How each currency is written: [sign, sign before the amount?, decimals when the amount is not whole]. Same table as includes/v2/currency.php. */
+    CURRENCIES: {
+        EUR: ['€', true, 2], GBP: ['£', true, 2], CHF: ['CHF ', true, 2], CZK: [' Kč', false, 0], PLN: [' zł', false, 0],
+        HUF: [' Ft', false, 0], RON: [' lei', false, 2], SEK: [' kr', false, 0], NOK: [' kr', false, 0], DKK: [' kr', false, 0],
+        ISK: [' kr', false, 0], RSD: [' RSD', false, 0], UAH: ['₴', true, 0], MDL: [' MDL', false, 0], ALL: [' L', false, 0],
+        MKD: [' den', false, 0], BAM: [' KM', false, 2]
+    },
 
-        return showSymbol ? `${formatted} ${BILETEONLINE_CONFIG.CURRENCY_SYMBOL}` : formatted;
+    /**
+     * An amount as it is written in its currency: "€35", "£12.50", "490 Kč".
+     * @param {number} value - the amount, in whole units of the currency
+     * @param {string|boolean} currency - the currency code (default: the marketplace's). For a basket pass
+     *        BileteOnlineCart.getCurrency(), for an order its `currency`. `false` returns the number without the sign.
+     */
+    formatCurrency(value, currency = true) {
+        const code = (typeof currency === 'string' && currency ? currency : BILETEONLINE_CONFIG.CURRENCY).toUpperCase();
+        const style = this.CURRENCIES[code] || [' ' + code, false, 2];
+        const n = Number(value) || 0;
+        // money paid at checkout keeps its cents; only currencies without a small unit in everyday use are whole
+        const digits = style[2] === 0 ? 0 : (Math.abs(n - Math.round(n)) < 0.005 ? 0 : style[2]);
+        const formatted = new Intl.NumberFormat('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+        if (currency === false) return formatted;
+        return style[1] ? style[0] + formatted : formatted + style[0];
     },
 
     /**
@@ -55,7 +66,7 @@ const BileteOnlineUtils = {
             full: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }
         };
 
-        return d.toLocaleDateString('ro-RO', options[format] || options.medium);
+        return d.toLocaleDateString('en-GB', options[format] || options.medium);
     },
 
     /**
@@ -80,7 +91,7 @@ const BileteOnlineUtils = {
     },
 
     /**
-     * Get relative time (e.g., "Ã®n 2 zile", "acum 3 ore")
+     * Get relative time (e.g., "in 2 days", "3 hours ago")
      */
     getRelativeTime(date) {
         const now = new Date();
@@ -93,17 +104,17 @@ const BileteOnlineUtils = {
         if (diffDays > 30) {
             return this.formatDate(date, 'medium');
         } else if (diffDays > 1) {
-            return `Ã®n ${diffDays} zile`;
+            return `in ${diffDays} days`;
         } else if (diffDays === 1) {
-            return 'mÃ¢ine';
+            return 'tomorrow';
         } else if (diffDays === 0 && diffHours > 0) {
-            return `Ã®n ${diffHours} ore`;
+            return `in ${diffHours} hours`;
         } else if (diffMinutes > 0) {
-            return `Ã®n ${diffMinutes} minute`;
+            return `in ${diffMinutes} minutes`;
         } else if (diffMinutes === 0) {
-            return 'acum';
+            return 'now';
         } else {
-            return 'trecut';
+            return 'past';
         }
     },
 
@@ -226,18 +237,18 @@ const BileteOnlineUtils = {
         const feedback = [];
 
         if (password.length >= 8) score++;
-        else feedback.push('Minim 8 caractere');
+        else feedback.push('At least 8 characters');
 
         if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-        else feedback.push('Litere mari È™i mici');
+        else feedback.push('Upper and lower case letters');
 
         if (/[0-9]/.test(password)) score++;
-        else feedback.push('Cel puÈ›in o cifrÄƒ');
+        else feedback.push('At least one digit');
 
         if (/[^a-zA-Z0-9]/.test(password)) score++;
-        else feedback.push('Un caracter special');
+        else feedback.push('One special character');
 
-        const labels = ['Foarte slabÄƒ', 'SlabÄƒ', 'Medie', 'BunÄƒ', 'ExcelentÄƒ'];
+        const labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Excellent'];
 
         return {
             score,

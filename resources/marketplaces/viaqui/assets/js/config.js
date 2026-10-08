@@ -21,9 +21,11 @@ const BILETEONLINE_CONFIG = {
     SUPPORT_EMAIL: 'contact@viaqui.com',
 
     // Currency
-    CURRENCY: 'RON',
-    CURRENCY_SYMBOL: 'lei',
-    CURRENCY_LOCALE: 'ro-RO',
+    // The marketplace's currency. An operator may sell in another one: a basket then carries its own currency
+    // (BileteOnlineCart.getCurrency()) and prices are written with BileteOnlineUtils.formatCurrency(amount, currency).
+    CURRENCY: 'EUR',
+    CURRENCY_SYMBOL: '€',
+    CURRENCY_LOCALE: 'en-GB',
 
     // Tax Configuration (Romanian specific)
     TAXES: {
@@ -32,7 +34,7 @@ const BILETEONLINE_CONFIG = {
     },
 
     // Points/Rewards
-    POINTS_PER_CURRENCY: 0.1,  // 1 point per 10 lei
+    POINTS_PER_CURRENCY: 0.1,  // 1 point per 10 units of the marketplace's currency
 
     // Cart Configuration
     CART_RESERVATION_MINUTES: 15,

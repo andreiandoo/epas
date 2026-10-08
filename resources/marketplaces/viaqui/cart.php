@@ -1,8 +1,8 @@
 <?php
 /**
- * viaqui.com — /cos (v2 "Arcada")
+ * viaqui.com — /cart (v2 "Arcada")
  *
- * Cart page. PHP scaffolds the containers; assets/js/pages/cart-page.js fills them from the cart that
+ * Basket page. PHP scaffolds the containers; assets/js/pages/cart-page.js fills them from the cart that
  * assets/js/cart.js keeps in localStorage. The element IDs are that script's contract and must stay:
  * timer-bar, countdown, totalItems, cart-loading, cartPageItems, emptyCart, promo-section, promoCode,
  * promoMessage, summary-section, taxesContainer, summaryItems, subtotal, platformCommissionRow,
@@ -21,9 +21,9 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
-$pageTitleRaw    = 'Coșul tău — ' . SITE_NAME;
-$pageDescription = 'Verifică biletele și activitățile selectate, aplică puncte bonus sau coduri promoționale și continuă spre checkout.';
-$canonicalUrl    = SITE_URL . '/cos';
+$pageTitleRaw    = 'Your basket — ' . SITE_NAME;
+$pageDescription = 'Check the tickets and activities you picked, add a promo code, see the points you earn and go on to checkout.';
+$canonicalUrl    = SITE_URL . '/cart';
 $noindex         = true;
 $currentPage     = 'cart';
 
@@ -41,7 +41,7 @@ $v2HeadExtra = '<script>window.BILETEONLINE = ' . json_encode([
     'storageUrl' => STORAGE_URL,
     'env' => API_ENV,
     'locale' => SITE_LOCALE,
-    'currency' => 'RON',
+    'currency' => SITE_CURRENCY,
     'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 
@@ -61,17 +61,17 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="co-head-row">
         <div>
-          <p class="kicker">Pasul 1 · Coș</p>
-          <h1 class="co-h" id="co-h">Coșul tău</h1>
-          <p class="co-lead">Verifică biletele și activitățile, comisioanele, punctele bonus, apoi continuă spre plata securizată.</p>
+          <p class="kicker">Step 1 · Basket</p>
+          <h1 class="co-h" id="co-h">Your basket</h1>
+          <p class="co-lead">Check your tickets and activities, the fees and the points you earn, then go on to secure payment.</p>
         </div>
         <div class="co-head-side">
-          <ol class="steps" aria-label="Pașii comenzii">
-            <li aria-current="step"><b>1</b>Coș</li>
+          <ol class="steps" aria-label="Order steps">
+            <li aria-current="step"><b>1</b>Basket</li>
             <li><b>2</b>Checkout</li>
-            <li><b>3</b>Confirmare</li>
+            <li><b>3</b>Confirmation</li>
           </ol>
-          <p class="co-count"><b id="totalItems">0</b> <span><span data-items-word>bilete</span> în coș</span></p>
+          <p class="co-count"><b id="totalItems">0</b> <span><span data-items-word>tickets</span> in your basket</span></p>
         </div>
       </div>
     </div>
@@ -80,16 +80,16 @@ include __DIR__ . '/includes/v2/header.php';
   <div id="timer-bar" class="co-timer hidden" role="timer" aria-live="off">
     <div class="wrap co-timer-in">
       <?= v2_ic('clock') ?>
-      <span>Biletele sunt rezervate<span class="co-long"> pentru tine</span> încă</span>
+      <span>Your tickets are held<span class="co-long"> for you</span> for another</span>
       <span id="countdown" class="countdown">14:59</span>
-      <span>minute</span>
+      <span>minutes</span>
     </div>
   </div>
 
   <div class="wrap co-lay">
     <div class="co-main">
       <div id="cart-loading" class="co-skel">
-        <span class="sr" role="status">Se încarcă coșul…</span>
+        <span class="sr" role="status">Loading your basket…</span>
         <i aria-hidden="true"></i><i aria-hidden="true"></i>
       </div>
 
@@ -97,21 +97,21 @@ include __DIR__ . '/includes/v2/header.php';
 
       <div id="emptyCart" class="co-empty hidden">
         <div class="co-empty-art" aria-hidden="true"><?= v2_fallback('cos', 1) ?><?= v2_ic('shopping-cart-simple') ?></div>
-        <h1 class="co-empty-h" tabindex="-1">Coșul tău e gol</h1>
-        <p>Nu ai nicio activitate sau eveniment în coș. Descoperă-le pe cele disponibile.</p>
-        <a class="btn btn-primary" href="/categorii"><?= v2_ic('magnifying-glass') ?>Explorează activități</a>
-        <p class="co-empty-small">Ai plătit deja? <a href="/cont/bilete">Vezi biletele tale</a> sau <a href="/recuperare-comanda">recuperează comanda</a>.</p>
+        <h1 class="co-empty-h" tabindex="-1">Your basket is empty</h1>
+        <p>There is no activity or event in your basket. See what you can book.</p>
+        <a class="btn btn-primary" href="/categories"><?= v2_ic('magnifying-glass') ?>Explore activities</a>
+        <p class="co-empty-small">Already paid? <a href="/account/tickets">See your tickets</a> or <a href="/find-order">find your order</a>.</p>
         <?php if ($emptyCities || $emptyCats): ?>
         <div class="co-empty-links">
           <?php if ($emptyCities): ?>
           <div>
-            <p class="flabel">Orașe populare</p>
+            <p class="flabel">Popular cities</p>
             <div class="chips-links"><?php foreach ($emptyCities as $c): ?><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a><?php endforeach; ?></div>
           </div>
           <?php endif; ?>
           <?php if ($emptyCats): ?>
           <div>
-            <p class="flabel">Categorii</p>
+            <p class="flabel">Categories</p>
             <div class="chips-links"><?php foreach ($emptyCats as $c): ?><a href="<?= v2_e($c['href']) ?>"><?= v2_e($c['name']) ?></a><?php endforeach; ?></div>
           </div>
           <?php endif; ?>
@@ -121,61 +121,61 @@ include __DIR__ . '/includes/v2/header.php';
 
       <section id="promo-section" class="co-promo hidden" aria-labelledby="promo-h">
         <div class="co-promo-text">
-          <h2 id="promo-h">Ai un cod promoțional?</h2>
-          <p>Reducerea se verifică pe loc și se vede imediat în total.</p>
+          <h2 id="promo-h">Have a promo code?</h2>
+          <p>The discount is checked on the spot and shows in the total straight away.</p>
         </div>
         <form class="co-promo-form" onsubmit="event.preventDefault(); CartPage.applyPromo();">
-          <label class="sr" for="promoCode">Cod promoțional</label>
-          <input id="promoCode" type="text" placeholder="ex. WEEKEND10" autocomplete="off" autocapitalize="characters" spellcheck="false">
-          <button class="btn" type="submit">Aplică</button>
+          <label class="sr" for="promoCode">Promo code</label>
+          <input id="promoCode" type="text" placeholder="e.g. WEEKEND10" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button class="btn" type="submit">Apply</button>
         </form>
         <p id="promoMessage" class="co-promo-msg hidden" role="status"></p>
       </section>
     </div>
 
-    <aside class="co-side" aria-label="Sumar comandă">
+    <aside class="co-side" aria-label="Order summary">
       <div class="cs-skel" aria-hidden="true"></div>
       <div id="summary-section" class="hidden">
         <section class="cs" aria-labelledby="cs-h">
           <div class="cs-top">
-            <p class="cs-kicker">Sumar comandă</p>
-            <h2 class="cs-h" id="cs-h">Total coș</h2>
+            <p class="cs-kicker">Order summary</p>
+            <h2 class="cs-h" id="cs-h">Basket total</h2>
           </div>
           <div class="cs-body">
             <div id="taxesContainer" class="cs-lines"></div>
-            <div class="cs-line cs-sub"><span>Subtotal (<span id="summaryItems">0</span> <span data-items-word>bilete</span>)</span><strong id="subtotal">0,00 lei</strong></div>
-            <div id="platformCommissionRow" class="cs-line hidden"><span id="platformCommissionLabel">Comision ticketing</span><strong id="platformCommissionAmount">0,00 lei</strong></div>
-            <div id="processingFeeRow" class="cs-line hidden"><span>Taxa procesare card</span><strong id="processingFeeAmount">0,00 lei</strong></div>
-            <div id="discountRow" class="cs-line cs-disc hidden"><span>Reducere aplicată</span><strong id="discountAmount">-0,00 lei</strong></div>
-            <div class="cs-line cs-total"><span>Total de plată</span><strong id="totalPrice">0,00 lei</strong></div>
-            <div id="savingsRow" class="cs-save hidden"><?= v2_ic('check-circle') ?><span id="savingsText">Economisești:</span><strong id="savings">0,00 lei</strong></div>
+            <div class="cs-line cs-sub"><span>Subtotal (<span id="summaryItems">0</span> <span data-items-word>tickets</span>)</span><strong id="subtotal"><?= v2_e(v2_money(0)) ?></strong></div>
+            <div id="platformCommissionRow" class="cs-line hidden"><span id="platformCommissionLabel">Booking fee</span><strong id="platformCommissionAmount"><?= v2_e(v2_money(0)) ?></strong></div>
+            <div id="processingFeeRow" class="cs-line hidden"><span>Card processing fee</span><strong id="processingFeeAmount"><?= v2_e(v2_money(0)) ?></strong></div>
+            <div id="discountRow" class="cs-line cs-disc hidden"><span>Discount applied</span><strong id="discountAmount">-<?= v2_e(v2_money(0)) ?></strong></div>
+            <div class="cs-line cs-total"><span>Total to pay</span><strong id="totalPrice"><?= v2_e(v2_money(0)) ?></strong></div>
+            <div id="savingsRow" class="cs-save hidden"><?= v2_ic('check-circle') ?><span id="savingsText">You save:</span><strong id="savings"><?= v2_e(v2_money(0)) ?></strong></div>
             <div class="cs-reward hidden" id="pointsReward">
               <span class="cs-reward-ic" aria-hidden="true"><?= v2_ic('gift') ?></span>
-              <div class="cs-reward-t"><b>Vei câștiga</b><span class="cs-tip"><button class="cs-tip-btn" id="pointsRuleBtn" type="button" aria-describedby="pointsRule" aria-label="Cum se câștigă punctele"><?= v2_ic('info') ?></button><span class="cs-tip-box" id="pointsRule" role="tooltip">puncte la fiecare comandă</span></span></div>
-              <p class="cs-pts"><span id="pointsEarned" class="points-animation">0</span><small>puncte</small></p>
+              <div class="cs-reward-t"><b>You will earn</b><span class="cs-tip"><button class="cs-tip-btn" id="pointsRuleBtn" type="button" aria-describedby="pointsRule" aria-label="How points are earned"><?= v2_ic('info') ?></button><span class="cs-tip-box" id="pointsRule" role="tooltip">points on every order</span></span></div>
+              <p class="cs-pts"><span id="pointsEarned" class="points-animation">0</span><small>points</small></p>
             </div>
-            <p class="cs-note">Taxa de procesare card se calculează la checkout, în funcție de metoda de plată.</p>
+            <p class="cs-note">The card processing fee is worked out at checkout, depending on how you pay.</p>
           </div>
           <div class="cs-foot">
-            <a id="checkoutBtn" class="btn btn-primary cs-go" href="/finalizare">Continuă spre plată<?= v2_ic('arrow-right') ?></a>
-            <a class="cs-more" href="/categorii">Mai adaugă activități</a>
+            <a id="checkoutBtn" class="btn btn-primary cs-go" href="/checkout">Go to payment<?= v2_ic('arrow-right') ?></a>
+            <a class="cs-more" href="/categories">Add more activities</a>
           </div>
           <div class="cs-pay">
-            <p>Metode de plată acceptate</p>
+            <p>Accepted payment methods</p>
             <ul><li>Visa</li><li>Mastercard</li><li>Apple Pay</li><li>Google Pay</li></ul>
           </div>
         </section>
         <ul class="co-trust">
-          <li><?= v2_ic('lock-simple') ?>Plată securizată</li>
-          <li><?= v2_ic('qr-code') ?>Bilet QR instant</li>
+          <li><?= v2_ic('lock-simple') ?>Secure payment</li>
+          <li><?= v2_ic('qr-code') ?>QR ticket straight away</li>
         </ul>
       </div>
     </aside>
   </div>
 
   <div class="co-mbar" id="co-mbar" aria-hidden="true" inert>
-    <div><small>Total de plată</small><b data-total>0,00 lei</b></div>
-    <a class="btn btn-primary" href="/finalizare">Continuă spre plată<?= v2_ic('arrow-right') ?></a>
+    <div><small>Total to pay</small><b data-total><?= v2_e(v2_money(0)) ?></b></div>
+    <a class="btn btn-primary" href="/checkout">Go to payment<?= v2_ic('arrow-right') ?></a>
   </div>
 </main>
 

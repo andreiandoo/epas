@@ -1,5 +1,5 @@
 /**
- * viaqui.com — order confirmation (/multumim, alias /thank-you).
+ * viaqui.com — order confirmation (/thank-you).
  *
  * Loads the order from the order-confirmation API and renders thank-you.php (v2 markup; assets/v2/css/thank-you.css).
  * The page state lives on #main.ty (loading, success, pending, failed, notfound) and thank-you.css shows the blocks of
@@ -52,7 +52,7 @@ const ThankYouPage = {
                 || (Array.isArray(order.items) && order.items[0]?.event_id)
                 || null;
             const total = parseFloat(order.total || order.total_amount || 0);
-            const currency = order.currency || 'RON';
+            const currency = order.currency || BILETEONLINE_CONFIG.CURRENCY;
             // Forward customer identity so the backend can link this visitor to their email (ROAS attribution).
             EPASTracking.trackPurchase(eventId, orderId, total, currency, {
                 client_event_id: 'purchase_' + orderId,
@@ -78,14 +78,13 @@ const ThankYouPage = {
     },
 
     money(value) {
-        return BileteOnlineUtils.formatCurrency(parseFloat(value) || 0);
+        // the order's own currency (an operator may sell in his own), else the marketplace's
+        return BileteOnlineUtils.formatCurrency(parseFloat(value) || 0, (this.order && this.order.currency) || BILETEONLINE_CONFIG.CURRENCY);
     },
 
-    /** Romanian counting: 1 bilet, 5 bilete, 20 de bilete, 101 bilete. */
+    /** 1 ticket, 5 tickets. */
     ticketsWord(n) {
-        if (n === 1) return 'bilet';
-        const rest = n % 100;
-        return n !== 0 && (rest === 0 || rest >= 20) ? 'de bilete' : 'bilete';
+        return n === 1 ? 'ticket' : 'tickets';
     },
 
     notify(type, message) {
@@ -125,7 +124,7 @@ const ThankYouPage = {
         if (typeof event.doors_open === 'string' && /^\d{2}:\d{2}/.test(event.doors_open)) return event.doors_open.substring(0, 5);
         if (event.date && String(event.date).includes('T')) {
             try {
-                const time = new Date(event.date).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' });
+                const time = new Date(event.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' });
                 return time === '00:00' ? '' : time; // a date without a start time
             } catch (e) {}
         }
@@ -140,7 +139,7 @@ const ThankYouPage = {
     /** Buttons that replace the "back home" link on the failed and not-found pages. */
     /**
      * Bought through an operator's booking widget: cart.js kept the widget's signed return address for this tab;
-     * once api/embed-return.php confirms it, the page offers "Înapoi la <site>" under the title and as the first
+     * once api/embed-return.php confirms it, the page offers "Back to <site>" under the title and as the first
      * button at the bottom.
      */
     async loadReturn() {
@@ -151,7 +150,7 @@ const ThankYouPage = {
             const res = await fetch('/api/embed-return.php?t=' + encodeURIComponent(token), { credentials: 'same-origin' });
             const data = await res.json();
             if (!data || !data.ok || !/^https?:\/\//.test(data.url || '')) return;
-            this.returnTo = { href: data.url, label: 'Înapoi la ' + (data.name || 'site'), name: data.name || 'site' };
+            this.returnTo = { href: data.url, label: 'Back to ' + (data.name || 'the site'), name: data.name || 'the site' };
         } catch (e) {
             return;
         }
@@ -212,7 +211,7 @@ const ThankYouPage = {
 
     async loadOrderData() {
         const urlParams = new URLSearchParams(window.location.search);
-        // Read from 'order' param (our param) or 'orderId' (Netopia adds this on redirect)
+        // Read from 'order' param (our param) or 'orderId' (some processors add this on redirect)
         const orderRef = urlParams.get('order') || urlParams.get('orderId');
 
         if (!orderRef) {
@@ -280,22 +279,22 @@ const ThankYouPage = {
     renderOrderNotFound() {
         this.setState('notfound');
         this.setHero(
-            'Comanda nu a fost găsită',
-            'Nu am putut găsi informații despre această comandă. Verifică numărul comenzii sau contactează suportul.'
+            'We could not find this order',
+            'We have no details for this order. Check the order number or contact support.'
         );
         this.renderBack([
-            { href: '/cont/comenzi', label: 'Comenzile mele', primary: true, icon: 'ticket' },
-            { href: '/', label: 'Pagina principală', icon: 'arrow-left' },
+            { href: '/account/orders', label: 'My orders', primary: true, icon: 'ticket' },
+            { href: '/', label: 'Homepage', icon: 'arrow-left' },
         ]);
     },
 
     renderFailedPayment() {
         this.setState('failed');
         this.setHero(
-            'Plata nu a fost procesată',
-            'Din păcate, plata nu a putut fi finalizată. Te rugăm să verifici datele cardului și să încerci din nou.'
+            'The payment did not go through',
+            'We could not complete the payment. Please check your card details and try again.'
         );
-        this.setStatus('Eșuată');
+        this.setStatus('Failed');
 
         // Still render order details (event info, payment info) so the customer sees what they tried to buy
         this.renderOrderDetails();
@@ -303,22 +302,22 @@ const ThankYouPage = {
         const eventSlug = this.order?.event?.slug;
         const retryUrl = eventSlug ? '/bilete/' + eventSlug : '/';
         this.renderBack([
-            { href: retryUrl, label: 'Încearcă din nou', primary: true },
-            { href: '/', label: 'Pagina principală', icon: 'arrow-left' },
+            { href: retryUrl, label: 'Try again', primary: true },
+            { href: '/', label: 'Homepage', icon: 'arrow-left' },
         ]);
     },
 
     renderPendingPayment() {
         this.setState('pending');
         this.setHero(
-            'Plata este în procesare',
-            'Plata ta este în curs de verificare. Vei primi biletele pe email imediat ce plata este confirmată.'
+            'Your payment is being processed',
+            'We are checking your payment. Your tickets will be emailed to you as soon as it is confirmed.'
         );
         const emailTitle = document.getElementById('emailCardTitle');
-        if (emailTitle) emailTitle.textContent = 'Vei primi biletele pe email după confirmarea plății';
+        if (emailTitle) emailTitle.textContent = 'Your tickets will be emailed once the payment is confirmed';
         const buyerEmail = document.getElementById('buyerEmail');
         if (buyerEmail) buyerEmail.textContent = this.order?.customer_email || '';
-        this.setStatus('În așteptare');
+        this.setStatus('Pending');
 
         this.renderOrderDetails();
         this.schedulePendingCheck();
@@ -328,19 +327,19 @@ const ThankYouPage = {
         const order = this.order;
 
         this.setState('success');
-        this.setHero('Biletele tale sunt gata.', 'Plata a fost confirmată și biletele au fost emise.');
+        this.setHero('Your tickets are ready.', 'Your payment is confirmed and your tickets have been issued.');
         const emailTitle = document.getElementById('emailCardTitle');
-        if (emailTitle) emailTitle.textContent = 'Biletele au fost trimise pe email';
-        document.getElementById('buyerEmail').textContent = order.customer_email || 'Email-ul tău';
-        this.setStatus('Confirmată');
+        if (emailTitle) emailTitle.textContent = 'Your tickets were sent by email';
+        document.getElementById('buyerEmail').textContent = order.customer_email || 'Your email address';
+        this.setStatus('Confirmed');
 
         this.renderEventInfo();
 
         const tickets = order.tickets || [];
         this.renderTickets(Array.isArray(tickets) ? tickets : Object.values(tickets));
 
-        this.renderTicketsSummary('Bilete achiziționate', true);
-        this.renderPaymentSummary('Total plătit');
+        this.renderTicketsSummary('Tickets bought', true);
+        this.renderPaymentSummary('Total paid');
         this.renderPaymentMethod();
         this.renderThankYouMessage();
 
@@ -350,9 +349,9 @@ const ThankYouPage = {
         if (pointsEl) {
             pointsEl.hidden = toEarn <= 0;
             if (toEarn > 0) {
-                const word = toEarn === 1 ? '1 punct' : new Intl.NumberFormat('ro-RO').format(toEarn) + (toEarn % 100 >= 20 || toEarn % 100 === 0 ? ' de puncte' : ' puncte');
-                document.getElementById('earnedPoints').textContent = '+' + new Intl.NumberFormat('ro-RO').format(toEarn);
-                document.getElementById('pointsTitle').textContent = 'Câștigi ' + word + ' cu această comandă';
+                const word = toEarn === 1 ? '1 point' : new Intl.NumberFormat('en-GB').format(toEarn) + ' points';
+                document.getElementById('earnedPoints').textContent = '+' + new Intl.NumberFormat('en-GB').format(toEarn);
+                document.getElementById('pointsTitle').textContent = 'You earn ' + word + ' with this order';
             }
         }
 
@@ -406,7 +405,7 @@ const ThankYouPage = {
     renderOrderDetails() {
         if (!this.order) return;
         this.renderEventInfo();
-        this.renderTicketsSummary('Bilete', false);
+        this.renderTicketsSummary('Tickets', false);
         this.renderPaymentSummary('Total');
         this.renderPaymentMethod();
         this.renderThankYouMessage();
@@ -437,14 +436,14 @@ const ThankYouPage = {
                     (actImg ? '<img src="' + this.esc(actImg) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
                 '</span>' +
                 '<div>' +
-                    '<h3>' + this.esc(act.title || 'Rezervare') + '</h3>' +
+                    '<h3>' + this.esc(act.title || 'Booking') + '</h3>' +
                     (act.date_label ? '<p>' + this.icon('calendar-blank') + '<span>' + this.esc(act.date_label) + '</span></p>' : '') +
                     (actPlace ? '<p>' + this.icon('map-pin') + '<span>' + this.esc(actPlace) + '</span></p>' : '') +
                 '</div>';
             return;
         }
 
-        const eventTitle = event.name || event.title || 'Eveniment';
+        const eventTitle = event.name || event.title || 'Event';
         const eventDate = event.date ? BileteOnlineUtils.formatDate(event.date) : '';
         const eventTime = this.eventTime(event);
         const place = [this.venueName(event), event.city].filter(Boolean).join(', ');
@@ -489,14 +488,14 @@ const ThankYouPage = {
             if (insuredTickets.length > 0) {
                 const n = insuredTickets.length;
                 html += '<div class="ty-extra"><p class="ty-insured">' + this.icon('check-circle') +
-                    n + ' ' + (n === 1 ? 'bilet asigurat' : 'bilete asigurate') + ' cu taxa de retur</p></div>';
+                    n + ' ' + (n === 1 ? 'ticket' : 'tickets') + ' covered by refund protection</p></div>';
             }
             const seatedTickets = tickets.filter(t => t.seat);
             if (seatedTickets.length > 0) {
-                html += '<div class="ty-extra"><p class="ty-sub-h">Locuri atribuite</p>' +
+                html += '<div class="ty-extra"><p class="ty-sub-h">Your seats</p>' +
                     seatedTickets.map(t => {
-                        const seat = [t.seat.section_name, t.seat.row_label ? 'Rând ' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ') || t.seat.label || '';
-                        return '<p class="ty-seat"><span>' + this.esc(t.type || 'Bilet') + '</span><b>' + this.esc(seat) + '</b></p>';
+                        const seat = [t.seat.section_name, t.seat.row_label ? 'Row ' + t.seat.row_label : '', t.seat.seat_number ? 'Seat ' + t.seat.seat_number : ''].filter(Boolean).join(', ') || t.seat.label || '';
+                        return '<p class="ty-seat"><span>' + this.esc(t.type || 'Ticket') + '</span><b>' + this.esc(seat) + '</b></p>';
                     }).join('') +
                 '</div>';
             }
@@ -515,33 +514,33 @@ const ThankYouPage = {
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
 
         // Split the "service fee" into the charges the cart showed separately when the order carries them
-        // (platform commission added on top, card processing fee); older orders keep one "Comision serviciu" line.
+        // (platform commission added on top, card processing fee); older orders keep one "Service fee" line.
         const meta = order.meta || {};
         const commissionAddedOnTop = parseFloat(meta.commission_added_on_top ?? order.commission_added_on_top ?? 0) || 0;
         const processingFee = (typeof order.processing_fee_cents === 'number')
             ? order.processing_fee_cents / 100
             : (parseFloat(order.processing_fee) || 0);
         const hasSplit = commissionAddedOnTop > 0 || processingFee > 0;
-        // Rounding or unaccounted fees stay visible under "Alte taxe" so the lines still add up to the total
+        // Rounding or unaccounted fees stay visible under "Other fees" so the lines still add up to the total
         const otherFees = Math.max(0, +(serviceFee - commissionAddedOnTop - processingFee).toFixed(2));
 
         const row = (label, amount, cls) => '<div class="ty-row' + (cls ? ' ' + cls : '') + '"><span>' + label + '</span><strong>' + amount + '</strong></div>';
         let rows = row('Subtotal', this.money(subtotal));
         if (hasSplit) {
-            if (commissionAddedOnTop > 0) rows += row('Comision platformă', this.money(commissionAddedOnTop));
-            if (processingFee > 0) rows += row('Taxă procesare card', this.money(processingFee));
-            if (otherFees > 0) rows += row('Alte taxe', this.money(otherFees));
+            if (commissionAddedOnTop > 0) rows += row('Booking fee', this.money(commissionAddedOnTop));
+            if (processingFee > 0) rows += row('Payment processing fee', this.money(processingFee));
+            if (otherFees > 0) rows += row('Other fees', this.money(otherFees));
         } else if (serviceFee > 0) {
-            rows += row('Comision serviciu', this.money(serviceFee));
+            rows += row('Service fee', this.money(serviceFee));
         }
-        if (insuranceAmount > 0) rows += row('Taxa de retur', this.money(insuranceAmount));
-        if (discount > 0) rows += row('Reducere', '-' + this.money(discount), 'is-disc');
+        if (insuranceAmount > 0) rows += row('Refund protection', this.money(insuranceAmount));
+        if (discount > 0) rows += row('Discount', '-' + this.money(discount), 'is-disc');
         const pointsDiscount = parseFloat(order.points_discount) || 0;
         const pointsUsed = parseInt(order.points_used, 10) || 0;
-        if (pointsDiscount > 0) rows += row('Plătit cu ' + new Intl.NumberFormat('ro-RO').format(pointsUsed) + ' puncte', '-' + this.money(pointsDiscount), 'is-disc');
+        if (pointsDiscount > 0) rows += row('Paid with ' + new Intl.NumberFormat('en-GB').format(pointsUsed) + (pointsUsed === 1 ? ' point' : ' points'),'-' + this.money(pointsDiscount), 'is-disc');
         rows += row(this.esc(totalLabel), this.money(total), 'is-total');
 
-        document.getElementById('paymentSummary').innerHTML = '<p class="ty-sub-h">Sumar plată</p><div class="ty-lines">' + rows + '</div>';
+        document.getElementById('paymentSummary').innerHTML = '<p class="ty-sub-h">Payment summary</p><div class="ty-lines">' + rows + '</div>';
     },
 
     renderPaymentMethod() {
@@ -589,7 +588,7 @@ const ThankYouPage = {
 
         const esc = (v) => this.esc(v);
         const event = order.event;
-        const eventTitle = event?.name || event?.title || 'Eveniment';
+        const eventTitle = event?.name || event?.title || 'Event';
         const eventDate = event?.date ? BileteOnlineUtils.formatDate(event.date) : '';
         const venue = this.venueName(event);
         const siteName = window.BILETEONLINE?.siteName || 'viaqui.com';
@@ -597,8 +596,8 @@ const ThankYouPage = {
         const ticketsHtml = order.tickets.map((ticket, idx) => {
             const seatInfo = ticket.seat ? [
                 ticket.seat.section_name,
-                ticket.seat.row_label ? 'Rând ' + ticket.seat.row_label : '',
-                ticket.seat.seat_number ? 'Loc ' + ticket.seat.seat_number : ''
+                ticket.seat.row_label ? 'Row ' + ticket.seat.row_label : '',
+                ticket.seat.seat_number ? 'Seat ' + ticket.seat.seat_number : ''
             ].filter(Boolean).join(' | ') : '';
             const code = ticket.code || ticket.barcode || '';
 
@@ -607,28 +606,28 @@ const ThankYouPage = {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px dashed #DEDED8;">
                         <div>
                             <div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${esc(siteName)}</div>
-                            <div style="font-size: 18px; font-weight: 700;">${esc(ticket.type || 'Bilet')}</div>
+                            <div style="font-size: 18px; font-weight: 700;">${esc(ticket.type || 'Ticket')}</div>
                         </div>
                         <div style="text-align: right; font-size: 12px; color: #5F6360;">${idx + 1} / ${order.tickets.length}</div>
                     </div>
                     <div style="margin-bottom: 12px;">
-                        <div style="font-size: 11px; color: #5F6360;">EVENIMENT</div>
+                        <div style="font-size: 11px; color: #5F6360;">EVENT</div>
                         <div style="font-size: 16px; font-weight: 600;">${esc(eventTitle)}</div>
                     </div>
                     <div style="display: flex; gap: 24px; margin-bottom: 12px;">
-                        <div><div style="font-size: 11px; color: #5F6360;">DATA</div><div style="font-weight: 600;">${esc(eventDate)}</div></div>
-                        <div><div style="font-size: 11px; color: #5F6360;">LOCAȚIE</div><div style="font-weight: 600;">${esc(venue)}${event?.city ? ', ' + esc(event.city) : ''}</div></div>
+                        <div><div style="font-size: 11px; color: #5F6360;">DATE</div><div style="font-weight: 600;">${esc(eventDate)}</div></div>
+                        <div><div style="font-size: 11px; color: #5F6360;">VENUE</div><div style="font-weight: 600;">${esc(venue)}${event?.city ? ', ' + esc(event.city) : ''}</div></div>
                     </div>
                     ${seatInfo ? `<div style="margin-bottom: 12px; padding: 8px 12px; background: #EDEDE9; border-radius: 8px; font-weight: 600;">${esc(seatInfo)}</div>` : ''}
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                        <div><div style="font-size: 11px; color: #5F6360;">PARTICIPANT</div><div style="font-weight: 500;">${esc(ticket.attendee_name || order.customer_name || '')}</div></div>
-                        <div style="text-align: right;"><div style="font-size: 11px; color: #5F6360;">PREȚ</div><div style="font-weight: 700; color: #1E5B48;">${BileteOnlineUtils.formatCurrency(ticket.price)}</div></div>
+                        <div><div style="font-size: 11px; color: #5F6360;">TICKET HOLDER</div><div style="font-weight: 500;">${esc(ticket.attendee_name || order.customer_name || '')}</div></div>
+                        <div style="text-align: right;"><div style="font-size: 11px; color: #5F6360;">PRICE</div><div style="font-weight: 700; color: #1E5B48;">${this.money(ticket.price)}</div></div>
                     </div>
                     <div style="text-align: center; padding-top: 12px; border-top: 1px solid #DEDED8;">
                         ${code ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}" style="width: 150px; height: 150px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
-                        <div style="display:none;padding:10px;border:2px solid #0E4837;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${esc(code)}</div>` : '<div style="padding:10px;color:#6B6F6C;font-size:12px;">Cod indisponibil</div>'}
+                        <div style="display:none;padding:10px;border:2px solid #0E4837;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${esc(code)}</div>` : '<div style="padding:10px;color:#6B6F6C;font-size:12px;">Code not available</div>'}
                         <div style="font-family: monospace; font-size: 11px; color: #5F6360; margin-top: 6px;">${esc(code)}</div>
-                        ${ticket.ticket_series ? `<div style="font-family: monospace; font-size: 10px; color: #6B6F6C; margin-top: 2px;">Serie: ${esc(ticket.ticket_series)}</div>` : ''}
+                        ${ticket.ticket_series ? `<div style="font-family: monospace; font-size: 10px; color: #6B6F6C; margin-top: 2px;">Series: ${esc(ticket.ticket_series)}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -636,7 +635,7 @@ const ThankYouPage = {
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
-        printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bilete - ${esc(order.order_number)}</title>
+        printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tickets - ${esc(order.order_number)}</title>
             <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; color: #212121; }
             @media print { body { padding: 0; } }</style></head>
             <body><div style="max-width: 500px; margin: 0 auto;">${ticketsHtml}</div>
@@ -666,13 +665,13 @@ const ThankYouPage = {
         const event = this.order?.event;
         if (!event) return;
 
-        const title = event.name || event.title || 'Eveniment';
+        const title = event.name || event.title || 'Event';
         const venue = this.venueName(event);
         const location = venue + (event.city ? ', ' + event.city : '');
         const startDate = event.date ? new Date(event.date) : null;
 
         if (!startDate || isNaN(startDate.getTime())) {
-            this.notify('info', 'Data evenimentului nu este disponibilă.');
+            this.notify('info', 'The date of the event is not available.');
             return;
         }
 
@@ -684,7 +683,7 @@ const ThankYouPage = {
             + '&text=' + encodeURIComponent(title)
             + '&dates=' + formatGCal(startDate) + '/' + formatGCal(endDate)
             + '&location=' + encodeURIComponent(location)
-            + '&details=' + encodeURIComponent('Bilete achiziționate pe ' + (window.BILETEONLINE?.siteName || 'viaqui.com'));
+            + '&details=' + encodeURIComponent('Tickets bought on ' +(window.BILETEONLINE?.siteName || 'viaqui.com'));
 
         window.open(gcalUrl, '_blank', 'noopener');
     },
@@ -697,7 +696,7 @@ const ThankYouPage = {
         const total = tickets.length;
 
         if (total === 0) {
-            document.getElementById('ticketsCount').textContent = 'Nu există bilete';
+            document.getElementById('ticketsCount').textContent = 'No tickets';
             container.innerHTML = '';
             indicators.innerHTML = '';
             return;
@@ -705,11 +704,11 @@ const ThankYouPage = {
 
         const eventName = this.order?.event?.name || this.order?.event?.title;
         document.getElementById('ticketsCount').textContent =
-            `${total} ${this.ticketsWord(total)} ${eventName ? 'pentru ' + eventName : 'în această comandă'}`;
+            `${total} ${this.ticketsWord(total)} ${eventName ? 'for ' + eventName : 'in this order'}`;
 
         container.innerHTML = tickets.map((ticket, idx) => this.renderTicketCard(ticket, idx, total)).join('');
         indicators.innerHTML = total > 1
-            ? tickets.map((_, idx) => `<button type="button" class="scroll-dot${idx === 0 ? ' active' : ''}" data-index="${idx}" aria-label="Biletul ${idx + 1} din ${total}"></button>`).join('')
+            ? tickets.map((_, idx) => `<button type="button" class="scroll-dot${idx === 0 ? ' active' : ''}" data-index="${idx}" aria-label="Ticket ${idx + 1} of ${total}"></button>`).join('')
             : '';
 
         const step = () => (container.querySelector('.tk')?.offsetWidth || 300) + 16;
@@ -789,38 +788,38 @@ const ThankYouPage = {
         const siteName = window.BILETEONLINE?.siteName || 'viaqui.com';
         const seat = ticket.seat;
         const code = ticket.code || ticket.barcode || '';
-        const attendee = ticket.attendee_name || this.order?.customer_name || 'Participant';
+        const attendee = ticket.attendee_name || this.order?.customer_name || 'Ticket holder';
         const field = (label, value) => `<p><small>${label}</small><b>${this.esc(value)}</b></p>`;
 
         const seatFields = seat
-            ? (seat.section_name ? field('Secțiune', seat.section_name) : '')
-                + (seat.row_label ? field('Rând', seat.row_label) : '')
-                + (seat.seat_number ? field('Loc', seat.seat_number) : '')
+            ? (seat.section_name ? field('Section', seat.section_name) : '')
+                + (seat.row_label ? field('Row', seat.row_label) : '')
+                + (seat.seat_number ? field('Seat', seat.seat_number) : '')
             : '';
 
         return `
-            <article class="tk" data-index="${idx}" aria-label="Biletul ${idx + 1} din ${total}">
+            <article class="tk" data-index="${idx}" aria-label="Ticket ${idx + 1} of ${total}">
                 <header class="tk-top">
-                    <p><span>${this.esc(siteName)} · bilet</span><span>${idx + 1} / ${total}</span></p>
-                    <h3>${this.esc(ticket.type || ticket.type_name || 'Bilet')}</h3>
+                    <p><span>${this.esc(siteName)} · ticket</span><span>${idx + 1} / ${total}</span></p>
+                    <h3>${this.esc(ticket.type || ticket.type_name || 'Ticket')}</h3>
                 </header>
                 <div class="tk-body">
                     <div class="tk-info">
-                        ${eventTitle ? field(act ? 'Activitate' : 'Eveniment', eventTitle) : ''}
-                        ${eventDate || eventTime ? `<div class="tk-pair">${eventDate ? field('Data', eventDate) : ''}${eventTime ? field('Ora', eventTime) : ''}</div>` : ''}
-                        ${place ? field('Locație', place) : ''}
+                        ${eventTitle ? field(act ? 'Experience' : 'Event', eventTitle) : ''}
+                        ${eventDate || eventTime ? `<div class="tk-pair">${eventDate ? field('Date', eventDate) : ''}${eventTime ? field('Time', eventTime) : ''}</div>` : ''}
+                        ${place ? field('Venue', place) : ''}
                         ${seatFields ? `<div class="tk-pair">${seatFields}</div>` : ''}
-                        ${act && act.plate ? field('Mașina', act.plate) : ''}
+                        ${act && act.plate ? field('Vehicle', act.plate) : ''}
                     </div>
                     <div class="tk-foot">
-                        <div><small>Participant</small><b>${this.esc(attendee)}</b></div>
-                        <div><small>Preț</small><b class="tk-price">${this.money(ticket.price)}</b></div>
+                        <div><small>Ticket holder</small><b>${this.esc(attendee)}</b></div>
+                        <div><small>Price</small><b class="tk-price">${this.money(ticket.price)}</b></div>
                     </div>
-                    ${ticket.has_insurance ? `<p class="tk-ins">${this.icon('check-circle')}Asigurat - Taxa de retur</p>` : ''}
+                    ${ticket.has_insurance ? `<p class="tk-ins">${this.icon('check-circle')}Covered by refund protection</p>` : ''}
                     <div class="tk-code">
                         <span class="tk-bars" aria-hidden="true">${bars}</span>
                         ${code ? `<p>${this.esc(code)}</p>` : ''}
-                        ${ticket.ticket_series ? `<p>Serie: ${this.esc(ticket.ticket_series)}</p>` : ''}
+                        ${ticket.ticket_series ? `<p>Series: ${this.esc(ticket.ticket_series)}</p>` : ''}
                     </div>
                 </div>
             </article>
@@ -829,13 +828,13 @@ const ThankYouPage = {
 
     copyLink() {
         const url = this.shareUrl();
-        const done = () => this.notify('success', 'Link copiat în clipboard!');
+        const done = () => this.notify('success', 'Link copied');
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(done).catch(() => {
-                window.prompt('Copiază linkul:', url);
+                window.prompt('Copy the link:', url);
             });
         } else {
-            window.prompt('Copiază linkul:', url);
+            window.prompt('Copy the link:', url);
         }
     }
 };

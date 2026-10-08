@@ -103,7 +103,7 @@ const BileteOnlineCart = {
         // Start/reset reservation timer when adding items
         this.startReservationTimer();
 
-        this.showNotification(`${ticketTypeData.name} adăugat în coș!`);
+        this.showNotification(`${ticketTypeData.name} added to your basket`);
 
         // CAPI AddToCart (Layer B bridge â€” backend forwards to Meta Graph API)
         try {
@@ -113,7 +113,7 @@ const BileteOnlineCart = {
                     ticketTypeId,
                     quantity,
                     ticketTypeData.price || 0,
-                    'RON',
+                    BILETEONLINE_CONFIG.CURRENCY,
                     {
                         marketplace_event_id: eventId,
                         content_name: ticketTypeData.name || null,
@@ -140,6 +140,29 @@ const BileteOnlineCart = {
      * @param {Object} slotData     {date, start_time, end_time}
      * @param {Number} participantsCount
      */
+    /**
+     * The currency of the basket: its products' (an operator may sell in his own), else the marketplace's.
+     * Every price on the basket and checkout pages is written with BileteOnlineUtils.formatCurrency(x, this).
+     */
+    getCurrency() {
+        const cart = this.getCart();
+        const line = (cart.items || []).find(it => it && it.currency);
+        return (line && String(line.currency).toUpperCase()) || BILETEONLINE_CONFIG.CURRENCY;
+    },
+
+    /**
+     * An order is paid in one currency, so a basket holds one. True (and a message is shown) when a product priced in
+     * `currency` cannot join what is already in the basket.
+     */
+    currencyClash(currency) {
+        const cart = this.getCart();
+        const next = String(currency || BILETEONLINE_CONFIG.CURRENCY).toUpperCase();
+        if (!(cart.items || []).length || next === this.getCurrency()) return false;
+        this.showNotification('Your basket holds products priced in ' + this.getCurrency() + ' and this one is priced in ' + next
+            + '. An order is paid in one currency: finish or empty the basket first, then add this.', 'warning');
+        return true;
+    },
+
     addActivityItem(activityData, variantData, slotData, participantsCount = 1) {
         const cart = this.getCart();
 
@@ -162,6 +185,9 @@ const BileteOnlineCart = {
             });
             return null;
         }
+
+        const lineCurrency = String(variantData.currency || activityData.currency || BILETEONLINE_CONFIG.CURRENCY).toUpperCase();
+        if (this.currencyClash(lineCurrency)) return null;
 
         const itemKey = `activity_${activityData.id}_${variantData.id}_${date}_${start}`;
         const priceRon = typeof variantData.price === 'number'
@@ -187,6 +213,7 @@ const BileteOnlineCart = {
                 // legacy alias so renderers / API parsers that read .quantity work
                 quantity: participantsCount,
                 price: priceRon,
+                currency: lineCurrency,
                 activity: {
                     id: activityData.id,
                     slug: activityData.slug || null,
@@ -205,7 +232,7 @@ const BileteOnlineCart = {
                 },
                 variant: {
                     id: variantData.id,
-                    name: variantData.name || 'Bilet',
+                    name: variantData.name || 'Ticket',
                     price: priceRon,
                     capacity_share: variantData.capacity_share || 1,
                 },
@@ -215,7 +242,7 @@ const BileteOnlineCart = {
 
         this.saveCart(cart);
         this.startReservationTimer();
-        this.showNotification(`${variantData.name || 'Bilet'} adăugat în coș!`);
+        this.showNotification(`${variantData.name || 'Ticket'} added to your basket`);
         return cart;
     },
 
@@ -232,6 +259,8 @@ const BileteOnlineCart = {
             console.warn('[BileteOnlineCart.addBookingItem] incomplete line; nothing saved', o);
             return null;
         }
+        const lineCurrency = String(v.currency || p.currency || BILETEONLINE_CONFIG.CURRENCY).toUpperCase();
+        if (this.currencyClash(lineCurrency)) return null;
         const cart = this.getCart();
         const addons = (o.addons || []).map(a => ({
             id: a.id, name: a.name, qty: a.qty, included: a.included || 0, paid_qty: a.paid_qty || 0,
@@ -257,6 +286,7 @@ const BileteOnlineCart = {
             participants_count: qty,
             quantity: qty,
             price: price,
+            currency: lineCurrency,
             addons: addons,
             addons_total: Math.round(addons.reduce((acc, a) => acc + (a.total || 0), 0) * 100) / 100,
             components: components,
@@ -264,7 +294,7 @@ const BileteOnlineCart = {
             meta: plate ? { vehicle_plate: plate } : {},
             labels: {
                 date: o.date_label || o.date,
-                time: o.start_time ? hm(o.start_time) + (o.end_time ? '–' + hm(o.end_time) : '') : (p.product_type === 'package' ? '' : 'Valabil toată ziua')
+                time: o.start_time ? hm(o.start_time) + (o.end_time ? '–' + hm(o.end_time) : '') : (p.product_type === 'package' ? '' : 'Valid all day')
             },
             activity: {
                 id: p.id, slug: p.slug || null, title: p.title || '', image: p.image || null,
@@ -275,7 +305,7 @@ const BileteOnlineCart = {
                 commission_floor: typeof p.commission_floor === 'number' ? p.commission_floor : 0
             },
             variant: {
-                id: v.id, name: v.name || 'Bilet', price: price, capacity_share: v.capacity_share || 1,
+                id: v.id, name: v.name || 'Ticket', price: price, capacity_share: v.capacity_share || 1,
                 is_child: !!v.is_child, persons_counted: v.persons_counted || qty
             },
             addedAt: new Date().toISOString()
@@ -302,7 +332,7 @@ const BileteOnlineCart = {
 
         this.saveCart(cart);
         this.startReservationTimer();
-        if (!o.quiet) this.showNotification(`${p.title || v.name || 'Bilet'} adăugat în coș!`);
+        if (!o.quiet) this.showNotification(`${p.title || v.name || 'Ticket'} added to your basket`);
         return cart;
     },
 
@@ -390,7 +420,7 @@ const BileteOnlineCart = {
             const removed = cart.items.splice(index, 1)[0];
             this._releaseItemSeats(removed);
             this.saveCart(cart);
-            this.showNotification(`${this._lineName(removed)} eliminat din coș`);
+            this.showNotification(`${this._lineName(removed)} removed from your basket`);
         }
 
         return cart;
@@ -458,7 +488,7 @@ const BileteOnlineCart = {
     },
 
     _lineName(item) {
-        return (item.type === 'activity' ? item.variant?.name : item.ticketType?.name) || item.ticket_type_name || 'Bilet';
+        return (item.type === 'activity' ? item.variant?.name : item.ticketType?.name) || item.ticket_type_name || 'Ticket';
     },
 
     /**
@@ -699,14 +729,14 @@ const BileteOnlineCart = {
     async applyPromoCode(code) {
         const cart = this.getCart();
         if (cart.items.length === 0) {
-            return { success: false, message: 'Coșul este gol' };
+            return { success: false, message: 'Your basket is empty' };
         }
 
         // Promo codes are validated against an event (the API requires event_id), so only event tickets count.
         // For a cart of event tickets only this is exactly what was sent before.
         const eventItems = cart.items.filter(item => item.type !== 'activity');
         if (eventItems.length === 0) {
-            return { success: false, message: 'Codurile promoționale se aplică doar biletelor la evenimente, nu și rezervărilor de activități.' };
+            return { success: false, message: 'Promo codes apply to event tickets only, not to bookings of experiences.' };
         }
 
         try {
@@ -752,11 +782,11 @@ const BileteOnlineCart = {
                     detail: { promo: promoData }
                 }));
 
-                this.showNotification(`Cod promoțional "${code}" aplicat cu succes!`, 'success');
+                this.showNotification(`Promo code "${code}" applied`, 'success');
                 return { success: true, promo: promoData };
             }
 
-            return { success: false, message: response.message || 'Cod invalid' };
+            return { success: false, message: response.message || 'This code is not valid' };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -772,7 +802,7 @@ const BileteOnlineCart = {
             detail: { promo: null }
         }));
 
-        this.showNotification('Cod promoțional eliminat');
+        this.showNotification('Promo code removed');
     },
 
     /**
@@ -1061,7 +1091,7 @@ const BileteOnlineCart = {
             percent_rate: p.percent_rate || 0,
             fixed: (p.fixed_cents || 0) / 100,
             provider: key,
-            label: p.label || 'Procesare card',
+            label: p.label || 'Card processing',
             pass_to_customer: true,
         };
     },
@@ -1117,7 +1147,7 @@ const BileteOnlineCart = {
 
         // Show notification to user
         if (hadItems) {
-            this.showNotification('Timpul de rezervare a expirat. Coșul a fost golit.', 'warning');
+            this.showNotification('The reservation time has run out. Your basket was emptied.', 'warning');
         }
 
         console.log('Cart reservation expired - cart cleared');

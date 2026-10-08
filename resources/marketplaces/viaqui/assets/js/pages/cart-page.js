@@ -1,5 +1,5 @@
 /**
- * viaqui.com — cart page (/cos).
+ * viaqui.com — basket page (/cart).
  *
  * Renders the cart kept by assets/js/cart.js (BileteOnlineCart) into the containers of cart.php and keeps the
  * summary, promo code and reservation timer in sync. Markup uses the v2 classes styled in assets/v2/css/cart.css.
@@ -76,15 +76,14 @@ const CartPage = {
         return '<svg class="ic" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
     },
 
+    /** Every amount on the page, written in the basket's currency ("€35", "£12.50", "490 Kč"). */
     money(value) {
-        return BileteOnlineUtils.formatCurrency(value);
+        return BileteOnlineUtils.formatCurrency(value, BileteOnlineCart.getCurrency());
     },
 
-    /** Romanian counting: 1 bilet, 5 bilete, 20 de bilete, 101 bilete. */
+    /** 1 ticket, 0 or 2+ tickets. */
     ticketsWord(n) {
-        if (n === 1) return 'bilet';
-        const rest = n % 100;
-        return n !== 0 && (rest === 0 || rest >= 20) ? 'de bilete' : 'bilete';
+        return n === 1 ? 'ticket' : 'tickets';
     },
 
     /** A bare YYYY-MM-DD parses as UTC midnight; adding a local time keeps it on the booked day in any time zone. */
@@ -171,7 +170,7 @@ const CartPage = {
                 localStorage.removeItem('cart_end_time');
                 this.render();
                 if (typeof BileteOnlineNotifications !== 'undefined') {
-                    BileteOnlineNotifications.warning('Timpul de rezervare a expirat. Locurile au fost eliberate.');
+                    BileteOnlineNotifications.warning('The reservation time has run out. Your places were released.');
                 }
             });
         } else if (remaining < 60000) {
@@ -185,7 +184,7 @@ const CartPage = {
             this.warningShown = true;
             if (timerBar) timerBar.classList.add('is-warn');
             if (typeof BileteOnlineNotifications !== 'undefined') {
-                BileteOnlineNotifications.warning('Mai ai doar 5 minute pentru a finaliza comanda! După expirare, locurile vor fi eliberate.');
+                BileteOnlineNotifications.warning('You have 5 minutes left to finish your order. After that, your places are released.');
             }
         }
     },
@@ -244,7 +243,7 @@ const CartPage = {
                 const heading = emptyState.querySelector('h1, h2');
                 if (heading) heading.focus();
             }
-            // Reset the counters so the page doesn't show e.g. "1 bilet" next to "Coșul tău e gol".
+            // Reset the counters so the page doesn't show e.g. "1 ticket" next to "Your basket is empty".
             const totalItemsEl = document.getElementById('totalItems');
             if (totalItemsEl) totalItemsEl.textContent = '0';
             const summaryItemsEl = document.getElementById('summaryItems');
@@ -296,24 +295,24 @@ const CartPage = {
         const isV3 = item.v === 3;
 
         const imgSrc = a.image ? (typeof getStorageUrl === 'function' ? getStorageUrl(a.image) : a.image) : '';
-        const title = a.title || 'Activitate';
-        const variantName = v.name || 'Bilet';
+        const title = a.title || 'Activity';
+        const variantName = v.name || 'Ticket';
         const slotStart = (item.slot_start_time || '').substring(0, 5);
         const slotEnd = (item.slot_end_time || '').substring(0, 5);
         const venueLine = [a.venue, a.city].filter(Boolean).join(' · ');
         // activities module: experiences have their page, access tickets and packages live on the location page
         const href = isV3
-            ? (a.product_type === 'experience' && a.slug ? '/experienta/' + encodeURIComponent(a.slug) : (a.location_slug ? '/locatie/' + encodeURIComponent(a.location_slug) : ''))
-            : (a.slug ? '/activitate/' + encodeURIComponent(a.slug) : '');
+            ? (a.product_type === 'experience' && a.slug ? '/experience/' + encodeURIComponent(a.slug) : (a.location_slug ? '/venue/' + encodeURIComponent(a.location_slug) : ''))
+            : (a.slug ? '/activity/' + encodeURIComponent(a.slug) : '');
 
         const formattedDate = this.formatDay(item.booking_date || '', 'long');
         const timeLabel = isV3 ? (item.labels && item.labels.time) || '' : (slotStart ? slotStart + (slotEnd ? '–' + slotEnd : '') : '');
         const slotLine = timeLabel ? `${formattedDate} · ${timeLabel}` : formattedDate;
-        const kicker = isV3 ? ({ access: 'Bilet de acces', experience: 'Experiență', package: 'Pachet' }[a.product_type] || 'Activitate') : 'Activitate';
+        const kicker = isV3 ? ({ access: 'Entry ticket', experience: 'Experience', package: 'Package' }[a.product_type] || 'Activity') : 'Activity';
         const extras = [];
-        (item.addons || []).forEach(x => extras.push(x.name + ' × ' + x.qty + (x.total ? ' (' + this.money(x.total) + ')' : x.included ? ' (inclus)' : '')));
+        (item.addons || []).forEach(x => extras.push(x.name + ' × ' + x.qty + (x.total ? ' (' + this.money(x.total) + ')' : x.included ? ' (included)' : '')));
         (item.component_labels || []).forEach(x => extras.push(x));
-        if (item.meta && item.meta.vehicle_plate) extras.push('Mașina: ' + item.meta.vehicle_plate);
+        if (item.meta && item.meta.vehicle_plate) extras.push('Vehicle: ' + item.meta.vehicle_plate);
         // quantity is fixed on lines whose extras depend on it (addons, package times): change it on the product page
         const fixedQty = isV3 && ((item.addons || []).length || (item.components || []).length);
 
@@ -327,12 +326,12 @@ const CartPage = {
                     (venueLine ? '<p class="ci-meta">' + this.icon('map-pin') + '<span>' + this.esc(venueLine) + '</span></p>' : '') +
                     (extras.length ? '<p class="ci-meta">' + this.icon('plus') + '<span>' + this.esc(extras.join(' · ')) + '</span></p>' : '') +
                 '</div>' +
-                '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge rezervarea: ' + this.esc(title) + '">' + this.icon('x') + '</button>' +
+                '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Remove booking: ' + this.esc(title) + '">' + this.icon('x') + '</button>' +
             '</div>' +
             '<div class="ci-bottom">' +
                 '<span class="ci-chip">' + this.icon('ticket') + this.esc(variantName) + '</span>' +
-                (fixedQty ? '<span class="ci-chip">' + quantity + ' ' + (quantity === 1 ? 'bucată' : 'bucăți') + '</span>' : this.stepper(index, 'Participanți', 'Scade nr. participanți', 'Crește nr. participanți', quantity)) +
-                '<div class="ci-price"><small>' + this.money(price) + ' × ' + quantity + (addonsTotal ? ' + suplimente' : '') + '</small> <b>' + this.money(lineTotal) + '</b></div>' +
+                (fixedQty ? '<span class="ci-chip">' + quantity + ' ' + (quantity === 1 ? 'item' : 'items') + '</span>' : this.stepper(index, 'Participants', 'Fewer participants', 'More participants', quantity)) +
+                '<div class="ci-price"><small>' + this.money(price) + ' × ' + quantity + (addonsTotal ? ' + extras' : '') + '</small> <b>' + this.money(lineTotal) + '</b></div>' +
             '</div>' +
         '</article>';
     },
@@ -347,10 +346,10 @@ const CartPage = {
         const itemKey = item.key || index;
         const imagePath = item.event?.image || item.event_image;
         const eventImage = imagePath ? getStorageUrl(imagePath) : '';
-        const eventTitle = item.event?.title || item.event_title || 'Eveniment';
+        const eventTitle = item.event?.title || item.event_title || 'Event';
         const eventDate = item.event?.performance_date || item.event?.date || item.event_date || '';
         const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
-        const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+        const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Ticket';
         const ticketDescription = item.ticketType?.description || '';
         const price = item.ticketType?.price || item.price || 0;
         const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
@@ -375,26 +374,26 @@ const CartPage = {
         }
         const totalWithCommission = price + commissionAmount;
 
-        let tip = '<b>Detalii preț bilet ' + this.esc(ticketTypeName) + '</b>' +
-            '<span><em>Preț bilet</em><strong>' + this.money(price) + '</strong></span>';
+        let tip = '<b>Price details: ' + this.esc(ticketTypeName) + '</b>' +
+            '<span><em>Ticket price</em><strong>' + this.money(price) + '</strong></span>';
         if (commissionMode === 'added_on_top' && commissionAmount > 0) {
-            let commissionLabel = 'Taxe procesare';
+            let commissionLabel = 'Booking fee';
             if (commission.type === 'percentage') {
                 commissionLabel += ' (' + commission.rate + '%)';
             } else if (commission.type === 'fixed') {
-                commissionLabel += ' (fix)';
+                commissionLabel += ' (fixed)';
             } else if (commission.type === 'both') {
                 commissionLabel += ' (' + commission.rate + '% + ' + this.money(commission.fixed) + ')';
             }
             tip += '<span><em>' + commissionLabel + '</em><strong>+' + this.money(commissionAmount) + '</strong></span>' +
-                '<span class="is-total"><em>Total la plată</em><strong>' + this.money(totalWithCommission) + '</strong></span>';
+                '<span class="is-total"><em>Total to pay</em><strong>' + this.money(totalWithCommission) + '</strong></span>';
         }
         const tipId = 'ci-tip-' + index;
 
         const quantityControl = hasSeats
             ? '<div class="ci-seated"><span class="ci-qty">' + quantity + ' ' + this.ticketsWord(quantity) + '</span> ' +
-                '<a class="ci-add" href="' + eventHref + '">' + this.icon('plus') + 'Adaugă locuri</a></div>'
-            : this.stepper(index, 'Cantitate', 'Scade cantitatea', 'Crește cantitatea', quantity);
+                '<a class="ci-add" href="' + eventHref + '">' + this.icon('plus') + 'Add seats</a></div>'
+            : this.stepper(index, 'Quantity', 'Decrease quantity', 'Increase quantity', quantity);
 
         const metaLine = [formattedDate, venueName].filter(Boolean).join(' · ');
 
@@ -402,18 +401,18 @@ const CartPage = {
             this.media(eventImage, eventSlug ? eventHref : '', eventTitle) +
             '<div class="ci-head">' +
                 '<div class="ci-text">' +
-                    '<p class="ci-kicker">Eveniment</p>' +
+                    '<p class="ci-kicker">Event</p>' +
                     '<h3 class="ci-title">' + (eventSlug ? '<a href="' + eventHref + '">' + this.esc(eventTitle) + '</a>' : this.esc(eventTitle)) + '</h3>' +
                     (metaLine ? '<p class="ci-meta">' + this.icon('calendar-blank') + '<span>' + this.esc(metaLine) + '</span></p>' : '') +
                     (ticketDescription ? '<p class="ci-notes">' + this.esc(ticketDescription) + '</p>' : '') +
                     (seats.length > 0 ? '<p class="ci-seats">' + this.icon('map-pin') + '<span>' + this.esc(this.formatSeats(seats)) + '</span></p>' : '') +
                 '</div>' +
-                '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge: ' + this.esc(eventTitle) + ', ' + this.esc(ticketTypeName) + '">' + this.icon('x') + '</button>' +
+                '<button class="ci-remove" type="button" data-focus="remove" onclick="CartPage.removeItem(' + index + ')" aria-label="Remove: ' + this.esc(eventTitle) + ', ' + this.esc(ticketTypeName) + '">' + this.icon('x') + '</button>' +
             '</div>' +
             '<div class="ci-bottom">' +
                 '<div class="ci-ticket">' +
                     '<span class="ci-chip">' + this.icon('ticket') + this.esc(ticketTypeName) + (hasDiscount ? '<em class="ci-off">-' + discountPercent + '%</em>' : '') + '</span>' +
-                    '<button class="ci-tip-btn" type="button" aria-label="Detalii preț" aria-describedby="' + tipId + '">' +
+                    '<button class="ci-tip-btn" type="button" aria-label="Price details" aria-describedby="' + tipId + '">' +
                         '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>' +
                     '</button>' +
                     '<span class="ci-tip-box" role="tooltip" id="' + tipId + '">' + tip + '</span>' +
@@ -441,7 +440,7 @@ const CartPage = {
         const hasHeldSeats = Array.isArray(item.seat_uids) && item.seat_uids.length > 0;
         if (hasHeldSeats) {
             if (typeof BileteOnlineNotifications !== 'undefined') {
-                BileteOnlineNotifications.warning('Pentru bilete cu locuri specifice, schimbă cantitatea din pagina evenimentului — alege/elimină locurile pe hartă.');
+                BileteOnlineNotifications.warning('For tickets with chosen seats, change the quantity on the event page: pick or remove seats on the map.');
             }
             return;
         }
@@ -455,7 +454,7 @@ const CartPage = {
 
         if (delta > 0 && newQty > maxQty) {
             if (typeof BileteOnlineNotifications !== 'undefined') {
-                BileteOnlineNotifications.warning(`Poți cumpăra maximum ${maxQty} bilete de acest tip`);
+                BileteOnlineNotifications.warning(`You can buy up to ${maxQty} tickets of this type`);
             }
             return;
         }
@@ -546,8 +545,8 @@ const CartPage = {
                 ? ('activity-' + (item.activity?.id || item.activity_id || 'unknown'))
                 : (item.eventId || item.event?.id || 'unknown');
             const eventTitle = isActivity
-                ? (item.activity?.title || item.activity?.name || 'Activitate')
-                : (item.event?.title || item.event?.name || 'Eveniment');
+                ? (item.activity?.title || item.activity?.name || 'Activity')
+                : (item.event?.title || item.event?.name || 'Event');
             const eventDate  = isActivity
                 ? (item.booking_date || '')
                 : (item.event?.performance_date || item.event?.date || item.event_date || '');
@@ -578,8 +577,8 @@ const CartPage = {
                 ? (item.variant?.originalPrice || item.original_price || 0)
                 : (item.ticketType?.originalPrice || item.original_price || 0);
             const ticketName = isActivity
-                ? (item.variant?.name || 'Bilet')
-                : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
+                ? (item.variant?.name || 'Ticket')
+                : (item.ticketType?.name || item.ticket_type_name || 'Ticket');
             const quantity = isActivity
                 ? (item.participants_count || item.quantity || 1)
                 : (item.quantity || 1);
@@ -680,10 +679,11 @@ const CartPage = {
                 if (lbl) {
                     // Effective % from the actual amount, so carts with different rates show an average that
                     // customers can still verify.
+                    // A percentage, not an amount of money: one decimal, written the en-GB way (2.5).
                     const ratePct = baseSubtotal > 0
-                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '').replace('.', ',')
+                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
                         : '';
-                    lbl.textContent = 'Comision ticketing' + (ratePct ? ' (' + ratePct + '%)' : '');
+                    lbl.textContent = 'Booking fee' + (ratePct ? ' (' + ratePct + '%)' : '');
                 }
             } else {
                 commRow.classList.add('hidden');
@@ -741,7 +741,7 @@ const CartPage = {
             const savingsTextEl = document.getElementById('savingsText');
             if (savingsTextEl && savingsTickets.length > 0) {
                 const ticketNames = [...new Set(savingsTickets)].join(', ');
-                savingsTextEl.textContent = `Alegând ${ticketNames} ai economisit:`;
+                savingsTextEl.textContent = `By choosing ${ticketNames} you save:`;
             }
         } else {
             document.getElementById('savingsRow').classList.add('hidden');
@@ -752,10 +752,10 @@ const CartPage = {
         if (rewardEl) rewardEl.classList.toggle('hidden', !loyalty || points <= 0);
         if (loyalty && points > 0) {
             const rule = document.getElementById('pointsRule');
-            if (rule) rule.textContent = (loyalty.earn_rate_label ? loyalty.earn_rate_label.charAt(0).toUpperCase() + loyalty.earn_rate_label.slice(1) + ', ' : '') + 'în cont după activitate';
+            if (rule) rule.textContent = (loyalty.earn_rate_label ? loyalty.earn_rate_label.charAt(0).toUpperCase() + loyalty.earn_rate_label.slice(1) + ', ' : '') + 'added to your account after the activity';
             const pointsEl = document.getElementById('pointsEarned');
             if (pointsEl.textContent !== String(points)) {
-                pointsEl.textContent = new Intl.NumberFormat('ro-RO').format(points);
+                pointsEl.textContent = new Intl.NumberFormat('en-GB').format(points);
                 pointsEl.classList.remove('points-animation');
                 void pointsEl.offsetWidth; // Force reflow
                 pointsEl.classList.add('points-animation');
@@ -771,14 +771,14 @@ const CartPage = {
 
         const grouped = {};
         seats.forEach(seat => {
-            const key = (seat.section || 'Secțiune') + ' - Rând ' + (seat.row || '?');
+            const key = (seat.section || 'Section') + ' - Row ' + (seat.row || '?');
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push(seat.seat || seat.label || '?');
         });
 
         const parts = [];
         Object.keys(grouped).forEach(key => {
-            parts.push(key + ': Loc ' + grouped[key].join(', '));
+            parts.push(key + ': Seat ' + grouped[key].join(', '));
         });
 
         return parts.join(' | ');
@@ -789,15 +789,15 @@ const CartPage = {
     // Markup for the applied-promo message, with a button that removes the code.
     renderAppliedPromoMessage(promo, prefix) {
         const label = promo.type === 'percentage'
-            ? `-${promo.value}% reducere`
-            : `-${this.money(promo.value)} reducere`;
+            ? `${promo.value}% off`
+            : `${this.money(promo.value)} off`;
         const appliedTo = promo.appliedToLabel
-            ? `<small>Aplicat pe: ${this.esc(promo.appliedToLabel)}</small>`
+            ? `<small>Applies to: ${this.esc(promo.appliedToLabel)}</small>`
             : '';
         const codeSuffix = prefix.includes(':') ? '' : ` (${this.esc(promo.code)})`;
         return '<span class="co-promo-applied">' + this.icon('check-circle') +
             `<span>${this.esc(prefix)} ${this.esc(label)}${codeSuffix}${appliedTo}</span>` +
-            '<button class="co-promo-x" type="button" onclick="CartPage.removePromo()" aria-label="Elimină codul promoțional" title="Elimină codul">' + this.icon('x') + '</button>' +
+            '<button class="co-promo-x" type="button" onclick="CartPage.removePromo()" aria-label="Remove the promo code" title="Remove the code">' + this.icon('x') + '</button>' +
         '</span>';
     },
 
@@ -809,13 +809,13 @@ const CartPage = {
         if (btn && btn.disabled) return;
 
         if (!code) {
-            messageEl.textContent = 'Te rugăm să introduci un cod promoțional';
+            messageEl.textContent = 'Please enter a promo code';
             messageEl.className = 'co-promo-msg';
             input.focus();
             return;
         }
 
-        if (btn) { btn.disabled = true; btn.textContent = 'Se verifică...'; }
+        if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
 
         const result = await BileteOnlineCart.applyPromoCode(code);
 
@@ -824,17 +824,17 @@ const CartPage = {
             this.discount = BileteOnlineCart.getPromoDiscount();
             this.appliedPromo = code;
 
-            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, 'Cod aplicat!');
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, 'Code applied!');
             messageEl.className = 'co-promo-msg is-ok';
 
             input.disabled = true;
-            if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
+            if (btn) { btn.textContent = 'Applied'; btn.disabled = true; }
 
             this.updateSummary();
         } else {
-            messageEl.textContent = '✗ ' + (result.message || 'Cod invalid sau expirat');
+            messageEl.textContent = '✗ ' + (result.message || 'This code is not valid or has expired');
             messageEl.className = 'co-promo-msg is-err';
-            if (btn) { btn.disabled = false; btn.textContent = 'Aplică'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
         }
     },
 
@@ -850,7 +850,7 @@ const CartPage = {
             messageEl.className = 'co-promo-msg hidden';
         }
         const btn = document.querySelector('#promo-section button');
-        if (btn) { btn.textContent = 'Aplică'; btn.disabled = false; }
+        if (btn) { btn.textContent = 'Apply'; btn.disabled = false; }
         const input = document.getElementById('promoCode');
         if (input) { input.value = ''; input.disabled = false; input.focus(); }
 
@@ -872,13 +872,13 @@ const CartPage = {
 
         const messageEl = document.getElementById('promoMessage');
         if (messageEl) {
-            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, `Cod aplicat: ${promo.code}`);
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, `Code applied: ${promo.code}`);
             messageEl.className = 'co-promo-msg is-ok';
         }
         const input = document.getElementById('promoCode');
         if (input) { input.value = promo.code; input.disabled = true; }
         const btn = document.querySelector('#promo-section button');
-        if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
+        if (btn) { btn.textContent = 'Applied'; btn.disabled = true; }
     }
 };
 

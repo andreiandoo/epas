@@ -1,9 +1,9 @@
 /**
- * viaqui.com — checkout page (/finalizare).
+ * viaqui.com — checkout page (/checkout).
  *
  * Runs the form scaffolded by checkout.php (v2 markup; styles in assets/v2/css/cart.css + checkout.css): buyer
  * details, beneficiaries, optional ticket insurance, payment method, terms and the order summary. Creates the order
- * through the checkout API, then hands off to the payment processor (a redirect, or a POST form for e.g. Netopia).
+ * through the checkout API, then hands off to the payment processor (a redirect such as Stripe Checkout, or a POST form for processors that need one).
  */
 const CheckoutPage = {
     items: [],
@@ -37,7 +37,7 @@ const CheckoutPage = {
                 );
                 const firstEventId = this.items[0]?.eventId || null;
                 if (firstEventId) {
-                    EPASTracking.trackBeginCheckout(firstEventId, totalValue, 'RON', {
+                    EPASTracking.trackBeginCheckout(firstEventId, totalValue, BileteOnlineCart.getCurrency(), {
                         marketplace_event_id: firstEventId,
                         num_items: this.items.reduce((s, i) => s + (i.quantity || 0), 0),
                     });
@@ -104,9 +104,8 @@ const CheckoutPage = {
 
     pointsWord(n) {
         n = Math.floor(n);
-        if (n === 1) return '1 punct';
-        const rem = n % 100;
-        return new Intl.NumberFormat('ro-RO').format(n) + (n >= 20 && !(rem >= 1 && rem <= 19) ? ' de puncte' : ' puncte');
+        if (n === 1) return '1 point';
+        return new Intl.NumberFormat('en-GB').format(n) + ' points';
     },
 
     /** How many points this order uses (0 when off), and what the box says. */
@@ -118,19 +117,19 @@ const CheckoutPage = {
         if (!loggedIn) {
             state.show = ticketValue > 0;
             state.login = true;
-            state.note = 'Ai puncte viaqui.com? Intră în cont ca să plătești o parte din bilete cu ele.';
+            state.note = 'Have viaqui.com points? Log in to pay part of your tickets with them.';
             return state;
         }
         const min = Math.floor(Number(c.min_redeem_points) || 0);
         if (this.pointsBalance <= 0) return state;
         state.show = ticketValue > 0;
         if (this.pointsBalance < min) {
-            state.note = 'Ai ' + this.pointsWord(this.pointsBalance) + '. Le poți folosi de la ' + this.pointsWord(min) + '.';
+            state.note = 'You have ' + this.pointsWord(this.pointsBalance) + '. You can use them once you have ' + this.pointsWord(min) + '.';
             return state;
         }
         const buyer = (document.getElementById('buyer-email')?.value || '').trim().toLowerCase();
         if (this.pointsEmail && buyer && buyer !== this.pointsEmail) {
-            state.note = 'Punctele se pot folosi doar la comenzile făcute cu adresa de email a contului tău.';
+            state.note = 'Points can only be used on orders placed with the email address of your account.';
             return state;
         }
         state.usable = BileteOnlineCart.maxRedeemablePoints(ticketValue, this.pointsBalance);
@@ -154,12 +153,12 @@ const CheckoutPage = {
         if (!state.canUse) this.usePoints = false;
         input.checked = this.usePoints; // the box always says what the total uses
         if (state.canUse) {
-            document.getElementById('use-points-title').textContent = 'Folosește ' + this.pointsWord(state.usable);
+            document.getElementById('use-points-title').textContent = 'Use ' + this.pointsWord(state.usable);
             document.getElementById('use-points-sub').textContent = '−' + this.money(BileteOnlineCart.pointsValue(state.usable)) +
-                ' din bilete · ai ' + this.pointsWord(this.pointsBalance);
+                ' off your tickets · you have ' + this.pointsWord(this.pointsBalance);
         } else if (!state.login) {
-            document.getElementById('use-points-title').textContent = 'Folosește punctele';
-            document.getElementById('use-points-sub').textContent = 'ai ' + this.pointsWord(this.pointsBalance);
+            document.getElementById('use-points-title').textContent = 'Use your points';
+            document.getElementById('use-points-sub').textContent = 'you have ' + this.pointsWord(this.pointsBalance);
         }
         const note = document.getElementById('points-note');
         note.hidden = !state.note;
@@ -169,7 +168,7 @@ const CheckoutPage = {
         const pointsRow = document.getElementById('points-row');
         if (state.used > 0) {
             pointsRow.classList.remove('hidden');
-            document.getElementById('points-row-label').textContent = 'Plătit cu ' + this.pointsWord(state.used);
+            document.getElementById('points-row-label').textContent = 'Paid with ' + this.pointsWord(state.used);
             document.getElementById('points-row-amount').textContent = '-' + this.money(BileteOnlineCart.pointsValue(state.used));
         } else {
             pointsRow.classList.add('hidden');
@@ -179,7 +178,7 @@ const CheckoutPage = {
         const earned = c ? BileteOnlineCart.estimatePoints(earnBase) : 0;
         reward.classList.toggle('hidden', !c || earned <= 0);
         if (c && earned > 0) {
-            document.getElementById('points-rule').textContent = (c.earn_rate_label ? c.earn_rate_label.charAt(0).toUpperCase() + c.earn_rate_label.slice(1) + ', ' : '') + 'în cont după activitate';
+            document.getElementById('points-rule').textContent = (c.earn_rate_label ? c.earn_rate_label.charAt(0).toUpperCase() + c.earn_rate_label.slice(1) + ', ' : '') + 'added to your account after the activity';
             document.getElementById('points-earned').textContent = this.pointsWord(earned);
         }
     },
@@ -195,14 +194,12 @@ const CheckoutPage = {
     },
 
     money(value) {
-        return BileteOnlineUtils.formatCurrency(value);
+        return BileteOnlineUtils.formatCurrency(value, BileteOnlineCart.getCurrency());
     },
 
-    /** Romanian counting: 1 bilet, 5 bilete, 20 de bilete, 101 bilete. */
+    /** 1 ticket, 5 tickets. */
     ticketsWord(n) {
-        if (n === 1) return 'bilet';
-        const rest = n % 100;
-        return n !== 0 && (rest === 0 || rest >= 20) ? 'de bilete' : 'bilete';
+        return n === 1 ? 'ticket' : 'tickets';
     },
 
     /** A bare YYYY-MM-DD parses as UTC midnight; adding a local time keeps it on the booked day in any time zone. */
@@ -232,8 +229,8 @@ const CheckoutPage = {
 
     itemName(item) {
         if (item.type === 'activity' && item.v === 3) {
-            // activities module: variant, then time or "valabil toată ziua", then the extras
-            const parts = [item.variant?.name || 'Bilet'];
+            // activities module: variant, then time or "valid all day", then the extras
+            const parts = [item.variant?.name || 'Ticket'];
             if (item.labels && item.labels.time) parts.push(item.labels.time);
             (item.addons || []).forEach(a => parts.push(a.name + ' × ' + a.qty));
             (item.component_labels || []).forEach(c => parts.push(c));
@@ -241,14 +238,14 @@ const CheckoutPage = {
             return parts.join(' · ');
         }
         return item.type === 'activity'
-            ? (item.variant?.name || 'Rezervare')
-            : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
+            ? (item.variant?.name || 'Booking')
+            : (item.ticketType?.name || item.ticket_type_name || 'Ticket');
     },
 
     itemTitle(item) {
         return item.type === 'activity'
-            ? (item.activity?.title || item.activity?.name || 'Activitate')
-            : (item.event?.title || item.event?.name || item.event_title || 'Eveniment');
+            ? (item.activity?.title || item.activity?.name || 'Experience')
+            : (item.event?.title || item.event?.name || item.event_title || 'Event');
     },
 
     /** Brand-line placeholder behind a photo (same segments as v2_fallback() in PHP). */
@@ -328,11 +325,11 @@ const CheckoutPage = {
         }
         const surchargeText = document.getElementById('cultural-card-surcharge-text');
         if (surchargeText) {
-            surchargeText.innerHTML = `Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>${this.esc(this.culturalCardSurchargeRate)}%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.`;
+            surchargeText.innerHTML = `Payments by culture card carry an extra processing fee of <strong>${this.esc(this.culturalCardSurchargeRate)}%</strong> of the total, because this type of card costs more to process.`;
         }
         const surchargeLabel = document.getElementById('cultural-card-surcharge-label');
         if (surchargeLabel) {
-            surchargeLabel.textContent = `Comision card cultural (${this.culturalCardSurchargeRate}%)`;
+            surchargeLabel.textContent = `Culture card fee (${this.culturalCardSurchargeRate}%)`;
         }
     },
 
@@ -344,8 +341,8 @@ const CheckoutPage = {
 
         section.classList.remove('hidden');
 
-        document.getElementById('insurance-label').textContent = this.insurance.label || 'Taxa de retur';
-        document.getElementById('insurance-title').textContent = this.insurance.label || 'Protecție returnare bilete';
+        document.getElementById('insurance-label').textContent = this.insurance.label || 'Refund protection';
+        document.getElementById('insurance-title').textContent = this.insurance.label || 'Ticket refund protection';
         document.getElementById('insurance-description').textContent = this.insurance.description || '';
 
         // Insurance always applies only to eligible (refundable) tickets
@@ -355,23 +352,23 @@ const CheckoutPage = {
 
         if (this.insurance.price_type === 'fixed') {
             const pricePerTicket = this.insurance.price || 0;
-            document.getElementById('insurance-price').textContent = this.money(pricePerTicket) + '/bilet';
+            document.getElementById('insurance-price').textContent = this.money(pricePerTicket) + ' per ticket';
         } else {
-            document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% din total';
+            document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% of the total';
         }
 
         // Show partial note for mixed carts (some eligible, some not)
         const partialNote = document.getElementById('insurance-partial-note');
         if (partialNote && isMixed) {
             const eligibleNames = refundableItems.map(item => {
-                const ticketName = item.ticketType?.name || 'Bilet';
+                const ticketName = item.ticketType?.name || 'Ticket';
                 const eventName = item.event?.title || item.event?.name || item.event_title || '';
                 const eventDate = item.event?.date || item.event_date || '';
                 const city = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
                 const details = [eventName, eventDate ? this.formatDay(eventDate, 'medium') : '', city].filter(Boolean).join(' · ');
                 return details ? ticketName + ' (' + details + ')' : ticketName;
             }).join(', ');
-            partialNote.textContent = 'Se aplică doar pentru biletele returnabile: ' + eligibleNames;
+            partialNote.textContent = 'Applies to refundable tickets only: ' + eligibleNames;
             partialNote.classList.remove('hidden');
         }
 
@@ -388,7 +385,7 @@ const CheckoutPage = {
         }
 
         document.getElementById('insurance-row-label').textContent =
-            (this.insurance.label || 'Taxa de retur') + ' (' + applicableTickets + ' ' + this.ticketsWord(applicableTickets) + ')';
+            (this.insurance.label || 'Refund protection') + ' (' + applicableTickets + ' ' + this.ticketsWord(applicableTickets) + ')';
     },
 
     setupInsuranceCheckbox() {
@@ -470,11 +467,11 @@ const CheckoutPage = {
             }
             BileteOnlineCart.clear();
             localStorage.removeItem('cart_end_time');
-            this.notify('warning', 'Timpul de rezervare a expirat. Biletele au fost eliberate.');
+            this.notify('warning', 'The reservation time has run out. Your tickets were released.');
             // Redirect to cart page after short delay (inside the widget: back to the widget, not the site's cart)
             setTimeout(() => {
                 if (window.BO_EMBED) history.back();
-                else window.location.href = '/cos';
+                else window.location.href = '/cart';
             }, 2000);
         } else if (remaining < 60000) {
             if (timerBar) {
@@ -617,12 +614,12 @@ const CheckoutPage = {
         const btnText = document.getElementById('login-btn-text');
 
         submitBtn.disabled = true;
-        btnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Se conectează...';
+        btnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Logging in...';
 
         try {
             const result = await BileteOnlineAuth.login(email, password, true);
             if (result.success) {
-                this.notify('success', 'Conectare reușită!');
+                this.notify('success', 'You are logged in.');
                 this.hideLoginModal();
 
                 const user = BileteOnlineAuth.getUser();
@@ -638,13 +635,13 @@ const CheckoutPage = {
                 // The login button is gone: continue from the first field still empty, or the terms
                 this.focusField(this.firstEmptyBuyerField() || document.getElementById('termsCheckbox'));
             } else {
-                this.notify('error', result.message || 'Email sau parola incorectă');
+                this.notify('error', result.message || 'Wrong email or password');
             }
         } catch (error) {
-            this.notify('error', 'Eroare la conectare. Încearcă din nou.');
+            this.notify('error', 'We could not log you in. Please try again.');
         } finally {
             submitBtn.disabled = false;
-            btnText.textContent = 'Conectează-te';
+            btnText.textContent = 'Log in';
         }
 
         return false;
@@ -682,19 +679,19 @@ const CheckoutPage = {
                 const id = `bene-${itemIndex}-${i}`;
                 html += `
                     <fieldset class="ck-bene-card">
-                        <legend class="sr">Beneficiar bilet ${ticketNum}</legend>
+                        <legend class="sr">Holder of ticket ${ticketNum}</legend>
                         <div class="ck-bene-head">
                             <span class="ck-bene-num" aria-hidden="true">${ticketNum}</span>
                             <div><b>${ticketTypeName}</b><small>${eventTitle}</small></div>
                         </div>
                         <div class="ck-grid">
                             <div class="ck-field">
-                                <label for="${id}-name">Nume beneficiar *</label>
-                                <input type="text" id="${id}-name" placeholder="Nume complet" autocomplete="off" class="beneficiary-input beneficiary-name" data-item="${itemIndex}" data-index="${i}">
+                                <label for="${id}-name">Ticket holder's name *</label>
+                                <input type="text" id="${id}-name" placeholder="Full name" autocomplete="off" class="beneficiary-input beneficiary-name" data-item="${itemIndex}" data-index="${i}">
                             </div>
                             <div class="ck-field">
-                                <label for="${id}-email">Email beneficiar *</label>
-                                <input type="email" id="${id}-email" placeholder="email@exemplu.com" autocomplete="off" inputmode="email" class="beneficiary-input beneficiary-email" data-item="${itemIndex}" data-index="${i}">
+                                <label for="${id}-email">Ticket holder's email *</label>
+                                <input type="email" id="${id}-email" placeholder="you@example.com" autocomplete="off" inputmode="email" class="beneficiary-input beneficiary-email" data-item="${itemIndex}" data-index="${i}">
                             </div>
                         </div>
                     </fieldset>
@@ -863,9 +860,9 @@ const CheckoutPage = {
             }
 
             group.tickets.forEach(ticket => {
-                const visitDateHtml = ticket.visitDate ? '<small>Data vizită: ' + this.esc(this.formatDay(ticket.visitDate, 'medium')) + '</small>' : '';
+                const visitDateHtml = ticket.visitDate ? '<small>Visit date: ' +this.esc(this.formatDay(ticket.visitDate, 'medium')) + '</small>' : '';
                 const vehiclePlates = ticket.vehicleInfo?.license_plates?.filter(p => p)?.join(', ') || '';
-                const vehicleHtml = vehiclePlates ? '<small>Nr. înmatriculare: ' + this.esc(vehiclePlates) + '</small>' : '';
+                const vehicleHtml = vehiclePlates ? '<small>Registration no.: ' +this.esc(vehiclePlates) + '</small>' : '';
                 itemsHtml += '<div class="cs-line ck-line">' +
                     '<span>' + ticket.qty + ' × ' + this.esc(ticket.name) + visitDateHtml + vehicleHtml + '</span>' +
                     '<strong>' + (ticket.hasDiscount ? '<s>' + this.money(ticket.originalPrice * ticket.qty) + '</s> ' : '') + this.money(ticket.lineTotal) + '</strong>' +
@@ -949,9 +946,9 @@ const CheckoutPage = {
                 const lbl = document.getElementById('platform-commission-label');
                 if (lbl) {
                     const ratePct = baseSubtotal > 0
-                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '').replace('.', ',')
+                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
                         : '';
-                    lbl.textContent = 'Comision ticketing' + (ratePct ? ' (' + ratePct + '%)' : '');
+                    lbl.textContent = 'Booking fee' + (ratePct ? ' (' + ratePct + '%)' : '');
                 }
             } else {
                 commRow.classList.add('hidden');
@@ -989,7 +986,7 @@ const CheckoutPage = {
             if (promoDiscount > 0) {
                 const promo = BileteOnlineCart.getPromoCode();
                 discountRow.classList.remove('hidden');
-                document.getElementById('discount-label').textContent = 'Reducere' + (promo ? ' (' + promo.code + ')' : '');
+                document.getElementById('discount-label').textContent = 'Discount' + (promo ? ' (' + promo.code + ')' : '');
                 document.getElementById('discount-amount').textContent = '-' + this.money(promoDiscount);
             } else {
                 discountRow.classList.add('hidden');
@@ -1008,15 +1005,17 @@ const CheckoutPage = {
         }
 
         document.getElementById('summary-total').textContent = this.money(total);
+        const currencyCode = document.getElementById('ck-currency-code');
+        if (currencyCode) currencyCode.textContent = BileteOnlineCart.getCurrency();
         if (!this.submitting) {
-            document.getElementById('pay-btn-text').textContent = `Plătește ${this.money(total)}`;
+            document.getElementById('pay-btn-text').textContent = `Pay ${this.money(total)}`;
         }
         this.renderPoints(pointsState, Math.max(0, ticketValue - pointsDiscount));
 
         const savingsText = document.getElementById('savings-text');
         if (savings > 0) {
             savingsText.classList.remove('hidden');
-            document.getElementById('savings-amount').textContent = `Economisești ${this.money(savings)}!`;
+            document.getElementById('savings-amount').textContent = `You save ${this.money(savings)}`;
         } else {
             savingsText.classList.add('hidden');
         }
@@ -1027,27 +1026,27 @@ const CheckoutPage = {
     validateForm() {
         const emptyField = this.firstEmptyBuyerField();
         if (emptyField) {
-            this.notify('error', 'Completează toate câmpurile obligatorii');
+            this.notify('error', 'Please fill in all the required fields');
             this.focusField(emptyField);
             return false;
         }
 
         const emailInput = document.getElementById('buyer-email');
         if (!emailInput.checkValidity()) {
-            this.notify('error', 'Adresa de email nu este validă');
+            this.notify('error', 'The email address is not valid');
             this.focusField(emailInput);
             return false;
         }
 
         if (!this.validateEmailMatch()) {
-            this.notify('error', 'Adresele de email nu coincid');
+            this.notify('error', 'The email addresses do not match');
             this.focusField(document.getElementById('buyer-email-confirm'));
             return false;
         }
 
         const terms = document.getElementById('termsCheckbox');
         if (!terms.checked) {
-            this.notify('error', 'Trebuie să accepți termenii și condițiile');
+            this.notify('error', 'Please accept the terms and conditions');
             this.focusField(terms);
             return false;
         }
@@ -1103,13 +1102,13 @@ const CheckoutPage = {
         try { window.parent.postMessage(msg, target); } catch (e) {}
         const payBtn = document.getElementById('payBtn');
         const payBtnText = document.getElementById('pay-btn-text');
-        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Se deschide pagina de plată...';
+        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Opening the payment page...';
         let manual = false;
         const offerButton = () => {
             if (manual || document.visibilityState === 'hidden') return;
             manual = true;
             payBtn.disabled = false;
-            payBtnText.textContent = 'Deschide pagina de plată';
+            payBtnText.textContent = 'Open the payment page';
             payBtn.onclick = (e) => {
                 e.preventDefault();
                 const form = document.createElement('form');
@@ -1147,7 +1146,7 @@ const CheckoutPage = {
         const payBtnText = document.getElementById('pay-btn-text');
 
         payBtn.disabled = true;
-        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Se procesează...';
+        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Processing...';
 
         // Build customer data (backend expects 'customer' not 'buyer')
         const customer = {
@@ -1216,12 +1215,12 @@ const CheckoutPage = {
             const response = await BileteOnlineAPI.post('/checkout', checkoutData);
 
             if (!response.success) {
-                throw new Error(response.message || 'Eroare la procesarea comenzii');
+                throw new Error(response.message || 'We could not process your order');
             }
 
             const order = response.data.orders?.[0];
             if (!order) {
-                throw new Error('Nu s-a putut crea comanda');
+                throw new Error('The order could not be created');
             }
 
             // Inside the booking widget on an operator's site (embed/finalizare.php): the processor comes back through
@@ -1229,16 +1228,16 @@ const CheckoutPage = {
             const emb = window.BO_EMBED || null;
             const thankYouUrl = emb
                 ? emb.return + encodeURIComponent(order.order_number)
-                : window.location.origin + '/multumim?order=' + encodeURIComponent(order.order_number);
+                : window.location.origin + '/thank-you?order=' + encodeURIComponent(order.order_number);
 
             // Step 2: Check if payment is required
             if (response.data.payment_required && order.total > 0) {
-                payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Se redirecționează către plată...';
+                payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Taking you to the payment page...';
 
                 const payResponse = await BileteOnlineAPI.post(`/orders/${order.id}/pay`, {
                     return_url: thankYouUrl,
-                    // Back to this page if the customer cancels at the processor (/checkout has no route here)
-                    cancel_url: emb ? emb.cancel : window.location.origin + '/finalizare'
+                    // Back to this page if the customer cancels at the processor
+                    cancel_url: emb ? emb.cancel : window.location.origin + '/checkout'
                 });
 
                 if (emb && payResponse.success && payResponse.data.payment_url) {
@@ -1252,7 +1251,7 @@ const CheckoutPage = {
                     BileteOnlineCart.clear({ skipRelease: true });
                     localStorage.removeItem('cart_end_time');
 
-                    // Payment that needs a POST form submission (e.g., Netopia)
+                    // Payment that needs a POST form submission (some processors)
                     if (payResponse.data.method === 'POST' && payResponse.data.form_data) {
                         const form = document.createElement('form');
                         form.method = 'POST';
@@ -1269,11 +1268,11 @@ const CheckoutPage = {
                         document.body.appendChild(form);
                         form.submit();
                     } else {
-                        // Standard redirect for other processors
+                        // Standard redirect (Stripe Checkout and other processors)
                         window.location.href = payResponse.data.payment_url;
                     }
                 } else {
-                    throw new Error(payResponse.message || 'Nu s-a putut iniția plata');
+                    throw new Error(payResponse.message || 'The payment could not be started');
                 }
             } else {
                 // No payment required (free tickets or zero total)
@@ -1289,10 +1288,10 @@ const CheckoutPage = {
                 await this.loadPointsBalance();
                 this.renderSummary();
             }
-            this.notify('error', error.message || 'Eroare la procesare. Încearcă din nou.');
+            this.notify('error', error.message || 'Something went wrong. Please try again.');
             this.submitting = false;
             payBtn.disabled = !document.getElementById('termsCheckbox').checked;
-            payBtnText.textContent = `Plătește ${this.money(this.totals.total)}`;
+            payBtnText.textContent = `Pay ${this.money(this.totals.total)}`;
         }
     }
 };
