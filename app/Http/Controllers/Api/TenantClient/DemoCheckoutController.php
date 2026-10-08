@@ -99,9 +99,18 @@ class DemoCheckoutController extends Controller
                     ]
                 );
 
-                // Creare cont automat: setează parola (dacă nu are deja una)
+                // Creare cont la comandă. Parola se pune direct doar pe un client creat chiar acum.
+                // Dacă adresa avea deja comenzi (client existent, fără parolă), oricine i-ar putea
+                // lua contul și biletele scriindu-i emailul la plată — așa că acolo trimitem un
+                // link de setare a parolei pe adresa respectivă.
+                $accountState = null;
                 if (! empty($validated['create_account']) && ! empty($validated['password']) && empty($customer->password)) {
-                    $customer->update(['password' => Hash::make($validated['password'])]);
+                    if ($customer->wasRecentlyCreated) {
+                        $customer->update(['password' => Hash::make($validated['password'])]);
+                        $accountState = 'created';
+                    } else {
+                        $accountState = 'link';
+                    }
                 }
 
                 // Tipuri de bilete active pentru maparea locurilor
@@ -295,10 +304,14 @@ class DemoCheckoutController extends Controller
                     $coupon->incrementUsage();
                 }
 
-                return ['order' => $order, 'total_cents' => $totalCents];
+                return ['order' => $order, 'total_cents' => $totalCents, 'customer' => $customer, 'account' => $accountState];
             });
 
             $order = $result['order'];
+
+            if (($result['account'] ?? null) === 'link') {
+                DemoStorefrontController::sendPasswordLink($tenant, $result['customer'], $resolved['domain_id'] ?? null);
+            }
 
             // Inițiază "plata" demo → URL pagină de plată
             $payment = PaymentProcessorFactory::makeFromArray('demo', [])->createPayment([
@@ -316,6 +329,8 @@ class DemoCheckoutController extends Controller
                 'redirect_url' => $payment['redirect_url'],
                 // Cu el se descarcă biletele după plată (vezi DemoStorefrontController::ticketsPdf)
                 'access_token' => DemoStorefrontController::orderToken($order),
+                // 'created' = contul există de acum; 'link' = am trimis pe email linkul de setare a parolei
+                'account'      => $result['account'] ?? null,
             ], 201);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);

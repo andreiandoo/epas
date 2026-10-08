@@ -6,16 +6,19 @@ use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerToken;
+use App\Models\Domain;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\TicketTemplate;
 use App\Services\TicketCustomizer\TicketPreviewGenerator;
+use App\Services\TenantMailService;
 use App\Services\TicketCustomizer\TicketVariableService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -139,6 +142,115 @@ class DemoStorefrontController extends Controller
         $pdf ??= $this->renderPlain($tenant, $event, $order, $tickets);
 
         return $pdf->download($name . '.pdf');
+    }
+
+    /**
+     * Trimite pe email linkul de setare a parolei. Servește și la „am uitat parola”, și la
+     * conturile fără parolă create de o comandă fără autentificare (altfel „cont nou” le refuză
+     * ca existente și clientul rămâne fără nicio cale de a intra). Răspunsul e același indiferent
+     * dacă adresa există, ca să nu se poată afla cine are cont.
+     */
+    public function passwordLink(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['email' => 'required|email|max:255']);
+
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (! $resolved) {
+            return response()->json(['success' => false, 'error' => 'Tenant not found'], 404);
+        }
+        $tenant = $resolved['tenant'];
+
+        $customer = Customer::where('tenant_id', $tenant->id)
+            ->where('email', strtolower(trim($validated['email'])))
+            ->first();
+        if ($customer) {
+            self::sendPasswordLink($tenant, $customer, $resolved['domain_id'] ?? null);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /** Setează parola pe baza linkului primit pe email: {c, e, s, password, password_confirmation}. */
+    public function passwordSet(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'c'        => 'required|integer',
+            'e'        => 'required|integer',
+            's'        => 'required|string|size:64',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (! $resolved) {
+            return response()->json(['success' => false, 'error' => 'Tenant not found'], 404);
+        }
+
+        $customer = Customer::where('tenant_id', $resolved['tenant']->id)->find($validated['c']);
+        $expired = (int) $validated['e'] < time();
+        if (! $customer || $expired || ! hash_equals(self::passwordSignature($customer, (int) $validated['e']), $validated['s'])) {
+            return response()->json([
+                'success' => false,
+                'error'   => 'Linkul a expirat sau a fost deja folosit. Cere unul nou.',
+            ], 422);
+        }
+
+        $customer->password = Hash::make($validated['password']);
+        // Linkul a ajuns pe adresa lui: emailul e confirmat
+        if (empty($customer->email_verified_at)) {
+            $customer->email_verified_at = now();
+        }
+        $customer->save();
+
+        return response()->json(['success' => true, 'data' => ['email' => $customer->email]]);
+    }
+
+    /** Linkul e legat de parola curentă: după ce parola se schimbă, nu mai e valabil. */
+    private static function passwordSignature(Customer $customer, int $expires): string
+    {
+        return hash_hmac(
+            'sha256',
+            'storefront-password:' . $customer->id . ':' . $expires . ':' . sha1((string) $customer->password),
+            (string) config('app.key')
+        );
+    }
+
+    public static function sendPasswordLink(Tenant $tenant, Customer $customer, ?int $domainId = null): void
+    {
+        try {
+            $domain = ($domainId ? Domain::find($domainId) : null)
+                ?: $tenant->domains()->where('is_active', true)->orderByDesc('is_primary')->first();
+            if (! $domain) {
+                return;
+            }
+
+            $expires = time() + 2 * 3600;
+            $url = 'https://' . $domain->domain . '/parola-noua?' . http_build_query([
+                'c' => $customer->id,
+                'e' => $expires,
+                's' => self::passwordSignature($customer, $expires),
+            ]);
+            $tenantName = e($tenant->public_name ?: $tenant->name);
+            $hello = e(trim((string) $customer->first_name) ?: 'Salut');
+            $safeUrl = e($url);
+
+            app(TenantMailService::class)->send($tenant, function ($message) use ($customer, $tenantName, $hello, $safeUrl) {
+                $message->to($customer->email)
+                    ->subject('Setează parola contului — ' . html_entity_decode($tenantName, ENT_QUOTES))
+                    ->html("
+                        <h2>{$hello},</h2>
+                        <p>Ai cerut setarea unei parole pentru contul tău de pe {$tenantName}.</p>
+                        <p><a href='{$safeUrl}' style='background-color:#1151D3;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:8px;display:inline-block;'>Setează parola</a></p>
+                        <p>Sau copiază acest link în browser:<br>{$safeUrl}</p>
+                        <p>Linkul este valabil 2 ore. Dacă nu ai cerut tu acest email, îl poți ignora: parola rămâne neschimbată.</p>
+                    ");
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Storefront password link failed', [
+                'customer_id' => $customer->id,
+                'tenant_id'   => $tenant->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
     }
 
     /* ------------------------------------------------------------------ */

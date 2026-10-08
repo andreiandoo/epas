@@ -35,6 +35,7 @@ include __DIR__ . '/includes/head.php';
     </section>
 
     <div class="wrap">
+        <div class="alert alert--ok no-print" data-account-note hidden style="margin-top:28px"></div>
         <section style="padding:44px 0 28px">
             <div class="tickets" data-reveal-group>
                 <?php foreach ($tickets as $t): ?>
@@ -73,6 +74,17 @@ include __DIR__ . '/includes/head.php';
 
     <script>
         try { localStorage.removeItem('wukf_cart'); } catch (e) {}
+        // Contul cerut la plată: creat pe loc, sau link de setare a parolei trimis pe email
+        (function () {
+            var note = null;
+            try { note = sessionStorage.getItem('wukf_account_note'); sessionStorage.removeItem('wukf_account_note'); } catch (e) {}
+            var box = document.querySelector('[data-account-note]');
+            if (!note || !box) { return; }
+            box.textContent = note === 'created'
+                ? 'Contul tău a fost creat. Te autentifici cu adresa de email și parola alese la plată.'
+                : 'Adresa ta avea deja comenzi, așa că ți-am trimis pe email un link cu care îți setezi parola contului.';
+            box.hidden = false;
+        })();
         // Butoanele de descărcare: tokenul comenzii e ținut în browserul din care s-a cumpărat
         (function () {
             var orderId = <?= (int) $summary['order_id'] ?>, token = window.WUKF && WUKF.Orders.token(orderId);

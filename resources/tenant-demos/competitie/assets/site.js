@@ -559,6 +559,7 @@
                         var d = await r.json().catch(function () { return {}; });
                         if (r.ok && d.success && d.redirect_url) {
                             Orders.remember(d.order_id, d.access_token);
+                            if (d.account) { try { sessionStorage.setItem('wukf_account_note', d.account); } catch (e) {} }
                             window.location.href = d.redirect_url;
                             return;
                         }
@@ -581,10 +582,10 @@
         // Autentificare / cont nou
         Alpine.data('authForm', function (mode) {
             return {
-                mode: mode, busy: false, error: '',
+                mode: mode, busy: false, error: '', exists: false,
                 form: { first_name: '', last_name: '', email: '', password: '' },
                 submit: async function () {
-                    this.error = ''; this.busy = true;
+                    this.error = ''; this.exists = false; this.busy = true;
                     var body = mode === 'login'
                         ? { email: this.form.email.trim(), password: this.form.password }
                         : { first_name: this.form.first_name.trim(), last_name: this.form.last_name.trim(), email: this.form.email.trim(), password: this.form.password };
@@ -599,10 +600,74 @@
                         }
                         var first = d.errors ? Object.values(d.errors)[0] : null;
                         this.error = (first && first[0]) || d.message || (mode === 'login' ? 'Email sau parolă greșită.' : 'Contul nu a putut fi creat.');
+                        // Adresa are deja un client (de obicei dintr-o comandă fără cont): îl trimitem spre setarea parolei
+                        this.exists = mode === 'register' && !!(d.errors && d.errors.email);
                     } catch (e) {
                         this.error = 'Conexiunea a eșuat. Încearcă din nou.';
                     }
                     this.busy = false;
+                }
+            };
+        });
+
+        // Cere pe email linkul de setare a parolei
+        Alpine.data('passwordLink', function () {
+            return {
+                email: '', busy: false, sent: false, error: '',
+                submit: async function () {
+                    this.error = '';
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.email.trim())) { this.error = 'Adresa de email nu pare corectă.'; return; }
+                    this.busy = true;
+                    try {
+                        var r = await fetch('/api/proxy.php?action=password-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: this.email.trim() }) });
+                        var d = await r.json().catch(function () { return {}; });
+                        if (r.ok && d.success) { this.sent = true; }
+                        else { this.error = r.status === 429 ? 'Prea multe încercări. Așteaptă un minut.' : 'Linkul nu a putut fi trimis. Încearcă din nou.'; }
+                    } catch (e) { this.error = 'Conexiunea a eșuat. Încearcă din nou.'; }
+                    this.busy = false;
+                }
+            };
+        });
+
+        // Setează parola din linkul primit pe email (?c=&e=&s=)
+        Alpine.data('passwordSet', function () {
+            var q = new URLSearchParams(window.location.search);
+            return {
+                c: q.get('c'), e: q.get('e'), s: q.get('s'),
+                password: '', password2: '', busy: false, done: false, error: '', expired: false, email: '',
+                get valid() { return !!(this.c && this.e && this.s); },
+                submit: async function () {
+                    this.error = ''; this.expired = false;
+                    if (this.password.length < 8) { this.error = 'Parola trebuie să aibă cel puțin 8 caractere.'; return; }
+                    if (this.password !== this.password2) { this.error = 'Cele două parole nu sunt identice.'; return; }
+                    this.busy = true;
+                    try {
+                        var r = await fetch('/api/proxy.php?action=password-set', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ c: Number(this.c), e: Number(this.e), s: this.s, password: this.password, password_confirmation: this.password2 })
+                        });
+                        var d = await r.json().catch(function () { return {}; });
+                        if (r.ok && d.success) { this.email = (d.data && d.data.email) || ''; this.done = true; }
+                        else { this.error = d.error || 'Parola nu a putut fi salvată.'; this.expired = r.status === 422 && !d.errors; }
+                    } catch (e) { this.error = 'Conexiunea a eșuat. Încearcă din nou.'; }
+                    this.busy = false;
+                }
+            };
+        });
+
+        // Confirmarea adresei de email din linkul trimis la înregistrare (?token=)
+        Alpine.data('verifyEmail', function () {
+            return {
+                state: 'busy', message: '',
+                init: async function () {
+                    var token = new URLSearchParams(window.location.search).get('token');
+                    if (!token) { this.state = 'bad'; this.message = 'Linkul de confirmare nu este complet.'; return; }
+                    try {
+                        var r = await fetch('/api/proxy.php?action=verify-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token }) });
+                        var d = await r.json().catch(function () { return {}; });
+                        this.state = (r.ok && d.success !== false) ? 'ok' : 'bad';
+                        this.message = d.message || (this.state === 'ok' ? 'Adresa de email a fost confirmată.' : 'Linkul nu mai este valabil.');
+                    } catch (e) { this.state = 'bad'; this.message = 'Conexiunea a eșuat. Reîncarcă pagina.'; }
                 }
             };
         });

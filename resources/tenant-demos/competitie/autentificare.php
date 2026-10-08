@@ -25,6 +25,7 @@ include __DIR__ . '/includes/head.php';
             <div class="field">
                 <label for="a-pass">Parolă</label>
                 <input id="a-pass" type="password" autocomplete="current-password" x-model="form.password" required>
+                <small><a class="link" href="/recuperare-parola" style="font-weight:600">Am uitat parola sau nu am setat una</a></small>
             </div>
             <div class="alert" x-show="error" x-cloak x-text="error" role="alert"></div>
             <button type="submit" class="btn btn--block" :disabled="busy">

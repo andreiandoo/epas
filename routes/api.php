@@ -97,6 +97,10 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->whereNumber('id')->name('api.tenant-client-public.storefront.order');
     Route::get('/storefront/tickets.pdf', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'ticketsPdf'])
         ->name('api.tenant-client-public.storefront.tickets-pdf');
+    Route::post('/storefront/password-link', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'passwordLink'])
+        ->middleware('throttle:6,1')->name('api.tenant-client-public.storefront.password-link');
+    Route::post('/storefront/password-set', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'passwordSet'])
+        ->middleware('throttle:10,1')->name('api.tenant-client-public.storefront.password-set');
 
     // Rezumat comandă pentru pagina de confirmare (thank-you)
     Route::get('/order-summary', [TenantClientController::class, 'orderSummary'])
