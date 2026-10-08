@@ -43,26 +43,31 @@
   }
 
   /* ---------- formatting ---------- */
-  var nf = new Intl.NumberFormat('ro-RO');
-  var nf2 = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var nf = new Intl.NumberFormat(LOC);
+  var nf2 = new Intl.NumberFormat(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   function toNum(v) { var n = typeof v === 'number' ? v : parseFloat(v); return isFinite(n) ? n : 0; }
   function num(v) { return nf.format(Math.round(toNum(v))); }
-  function money(v) {
+  /** An amount with its currency: the one given (what the data carries), else the operator's, else the site's (euro). */
+  function money(v, currency) {
     var n = Math.round(toNum(v) * 100) / 100;
-    return (n % 1 === 0 ? nf.format(n) : nf2.format(n)) + ' lei';
+    var code = (typeof currency === 'string' && currency) || (profile && typeof profile.currency === 'string' && profile.currency) || true;
+    try {
+      if (typeof BileteOnlineUtils !== 'undefined' && BileteOnlineUtils.formatCurrency) return BileteOnlineUtils.formatCurrency(n, code);
+    } catch (e) {}
+    return (n < 0 ? '-' : '') + '€' + (n % 1 === 0 ? nf.format(Math.abs(n)) : nf2.format(Math.abs(n)));
   }
   function pct(v, digits) {
-    return new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: digits == null ? 1 : digits }).format(toNum(v)) + '%';
+    return new Intl.NumberFormat(LOC, { minimumFractionDigits: 0, maximumFractionDigits: digits == null ? 1 : digits }).format(toNum(v)) + '%';
   }
-  /** "1 bilet", "5 bilete", "20 de bilete" (Romanian adds "de" when the last two digits are 00 or 20–99). */
+  /** "1 ticket", "5 tickets": the count and the noun in the plural form of the language. Page scripts should call
+   *  VQ.n(n, 'ticket', 'tickets') themselves, with literal nouns, so the texts can be collected for translation. */
   function count(n, one, many) {
     n = Math.round(toNum(n));
-    if (n === 1) return '1 ' + one;
-    var r = Math.abs(n) % 100;
-    return nf.format(n) + (n !== 0 && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
+    return nf.format(n) + ' ' + VQ.plural(n, one, many);
   }
   function flat(v) {
-    if (v && typeof v === 'object') return String(v.ro || v.en || Object.keys(v).map(function (k) { return v[k]; }).filter(Boolean)[0] || '');
+    if (v && typeof v === 'object') return String(v[VQ.locale] || v.en || v.ro || Object.keys(v).map(function (k) { return v[k]; }).filter(Boolean)[0] || '');
     return v == null ? '' : String(v);
   }
   function dateOf(v) {
@@ -70,7 +75,7 @@
     var d = /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? new Date(v + 'T12:00:00') : new Date(v);
     return isNaN(d.getTime()) ? null : d;
   }
-  function fmtDate(d, opts) { return new Intl.DateTimeFormat('ro-RO', Object.assign({ timeZone: TZ }, opts || {})).format(d); }
+  function fmtDate(d, opts) { return new Intl.DateTimeFormat(LOC, Object.assign({ timeZone: TZ }, opts || {})).format(d); }
   /** YYYY-MM-DD of a moment in Bucharest. */
   function ymd(d) {
     var p = {};
@@ -81,14 +86,14 @@
     var d = dateOf(v);
     if (!d) return '';
     var s = Math.round((Date.now() - d.getTime()) / 1000);
-    if (s < 45) return 'chiar acum';
+    if (s < 45) return VQ.t('just now');
     var m = Math.round(s / 60);
-    if (m < 60) return 'acum ' + count(m, 'minut', 'minute');
+    if (m < 60) return VQ.t('{time} ago', { time: VQ.n(m, 'minute', 'minutes') });
     var h = Math.round(m / 60);
-    if (h < 24) return 'acum ' + count(h, 'oră', 'ore');
+    if (h < 24) return VQ.t('{time} ago', { time: VQ.n(h, 'hour', 'hours') });
     var days = Math.round(h / 24);
-    if (days === 1) return 'ieri';
-    if (days < 7) return 'acum ' + count(days, 'zi', 'zile');
+    if (days === 1) return VQ.t('yesterday');
+    if (days < 7) return VQ.t('{time} ago', { time: VQ.n(days, 'day', 'days') });
     return fmtDate(d, { day: 'numeric', month: 'short', year: ymd(d).slice(0, 4) === ymd().slice(0, 4) ? undefined : 'numeric' });
   }
   /** Only links inside the site; anything else falls back. */
@@ -129,12 +134,12 @@
       if (a && a.clearOrganizerSession) a.clearOrganizerSession();
       if (a && a.requireOrganizerAuth) { a.requireOrganizerAuth(); return; }
     } catch (e) {}
-    window.location.href = '/autentificare?ca=venue';
+    window.location.href = VQ.url('/login?ca=venue');
   }
   /** GET by default, never from the client cache. {quiet: true}: a 401 doesn't end the session (secondary calls). */
   function api(path, opts) {
     opts = opts || {};
-    if (typeof BileteOnlineAPI === 'undefined') return Promise.reject({ status: 0, message: 'API indisponibil' });
+    if (typeof BileteOnlineAPI === 'undefined') return Promise.reject({ status: 0, message: VQ.t('The API is unavailable') });
     var o = { method: (opts.method || 'GET').toUpperCase(), noCache: true };
     if (opts.body !== undefined) o.body = JSON.stringify(opts.body);
     return BileteOnlineAPI.request(path, o).catch(function (err) {
@@ -145,7 +150,7 @@
 
   var allowed = false;
   try { var a0 = auth(); allowed = !!(a0 && a0.requireOrganizerAuth && a0.requireOrganizerAuth()); } catch (e) { allowed = false; }
-  if (!allowed && !auth()) flash('Nu am putut încărca contul. Reîncarcă pagina.', true);
+  if (!allowed && !auth()) flash(VQ.t('We could not load the account. Reload the page.'), true);
   var ready = Promise.resolve(allowed);
 
   /* ---------- organizer ---------- */
@@ -153,7 +158,7 @@
   function setProfile(o) {
     if (!o || typeof o !== 'object') return;
     profile = o;
-    var name = String(o.public_name || o.name || o.company_name || o.contact_name || '').trim() || 'Operator';
+    var name = String(o.public_name || o.name || o.company_name || o.contact_name || '').trim() || VQ.t('Operator');
     var words = name.split(/\s+/).map(function (w) { return w.replace(/[^\p{L}\p{N}]/gu, ''); }).filter(Boolean);
     var initials = (words.length > 1 ? words[0].charAt(0) + words[words.length - 1].charAt(0) : (words[0] || '').slice(0, 2)).toUpperCase() || '·';
     each('[data-org-initials]', function (n) { n.textContent = initials; });
@@ -182,8 +187,12 @@
   function setBadge(key, n) {
     each('[data-org-badge="' + key + '"]', function (b) {
       var v = Math.round(toNum(n)), show = n != null && v > 0;
-      b.textContent = show ? nf.format(v) : '';
-      if (show && b.getAttribute('data-sr')) b.appendChild(el('span', { class: 'sr', text: b.getAttribute('data-sr') }));
+      var sr = b.getAttribute('data-sr'); // a whole phrase with {n}, e.g. "Open support tickets: {n}"
+      b.textContent = '';
+      if (show && sr) {
+        b.appendChild(el('span', { 'aria-hidden': 'true', text: nf.format(v) }));
+        b.appendChild(el('span', { class: 'sr', text: sr.replace('{n}', nf.format(v)) }));
+      } else if (show) b.textContent = nf.format(v);
       b.hidden = !show;
     });
   }
@@ -199,23 +208,23 @@
     var list = $('org-notif-list'), n = notif.total;
     if (!list) return;
     $('org-dot').hidden = !(n > 0);
-    $('org-bell-t').textContent = n > 0 ? 'Notificări, ' + count(n, 'necitită', 'necitite') : 'Notificări';
-    $('org-notif-count').textContent = n > 0 ? count(n, 'nouă', 'noi') : '';
+    $('org-bell-t').textContent = n > 0 ? VQ.t('Notifications, {n} unread', { n: nf.format(n) }) : VQ.t('Notifications');
+    $('org-notif-count').textContent = n > 0 ? VQ.t('{n} new', { n: nf.format(n) }) : '';
     list.textContent = '';
     if (!notif.items.length) {
-      list.appendChild(el('p', { class: 'org-pop-empty', text: notif.error ? 'Nu am putut încărca notificările.' : 'Nu ai notificări noi.' }));
+      list.appendChild(el('p', { class: 'org-pop-empty', text: notif.error ? VQ.t('We could not load the notifications.') : VQ.t('You have no new notifications.') }));
       return;
     }
     notif.items.forEach(function (x) {
-      var href = safeHref(x.action_url, '/organizator/notificari');
+      var href = VQ.url(safeHref(x.action_url, '/organizator/notificari'));
       var link = el('a', { class: 'org-n', href: href }, [
         el('span', { class: 'org-n-ic ' + (N_TONE[x.color] || '') }, icon(N_TYPE[x.type] || 'bell')),
         el('span', { class: 'org-n-t' }, [
-          el('b', { text: flat(x.title) || 'Notificare' }),
+          el('b', { text: flat(x.title) || VQ.t('Notification') }),
           x.message ? el('span', { class: 'org-n-msg', text: flat(x.message) }) : null,
           el('time', { datetime: x.created_at || null, text: x.time_ago || ago(x.created_at) }),
         ]),
-        x.is_read ? null : el('span', { class: 'org-n-dot' }, el('span', { class: 'sr', text: 'necitită' })),
+        x.is_read ? null : el('span', { class: 'org-n-dot' }, el('span', { class: 'sr', text: VQ.t('unread') })),
       ]);
       link.addEventListener('click', function (e) {
         if (x.is_read || x.id == null) return;
@@ -280,7 +289,7 @@
     root.classList.toggle('is-folded', !!on);
     foldTemp = !!temp;
     each('[data-org-fold]', function (b) {
-      var t = on ? 'Extinde meniul' : 'Restrânge meniul';
+      var t = on ? VQ.t('Expand the menu') : VQ.t('Collapse the menu');
       b.setAttribute('aria-expanded', on ? 'false' : 'true');
       b.title = t;
       var sr = b.querySelector('.sr');
@@ -335,18 +344,18 @@
     btn.addEventListener('click', function () {
       each('[data-org-logout]', function (b) { b.disabled = true; });
       var label = btn.querySelector('span:not(.sr)');
-      if (label) label.textContent = 'Se deconectează…';
+      if (label) label.textContent = VQ.t('Signing out…');
       var a = auth();
       if (a && typeof a.logoutOrganizer === 'function') a.logoutOrganizer(); // ends the session and goes to /
-      else window.location.href = '/autentificare?ca=venue';
+      else window.location.href = VQ.url('/login?ca=venue');
     });
   });
 
   /* ---------- activity search ---------- */
   var search = $('org-search'), q = $('org-q'), qPop = $('org-q-pop'), qList = $('org-q-list'), qMsg = $('org-q-msg'), qOpen = $('org-q-open'), top = $('org-top');
   var catalog = null, results = [], active = -1, qTimer = 0;
-  var KIND = { access: 'Bilet de acces', experience: 'Experiență', package: 'Pachet' };
-  var REVIEW = { draft: ['Ciornă', 'is-muted'], pending: ['În verificare', 'is-wait'], rejected: ['Respins', 'is-bad'] };
+  var KIND = { access: VQ.t('Access ticket'), experience: VQ.t('Experience'), package: VQ.t('Package') };
+  var REVIEW = { draft: [VQ.t('Draft'), 'is-muted'], pending: [VQ.t('In review'), 'is-wait'], rejected: [VQ.t('Rejected'), 'is-bad'] };
   function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
   /** Locations and products as search rows: {kind, id, name, where, image, status}. */
   function loadCatalog() {
@@ -355,9 +364,9 @@
       var locName = {};
       c.locations.forEach(function (l) { locName[l.id] = flat(l.name); });
       catalog = c.locations.map(function (l) {
-        return { kind: 'location', id: l.id, name: flat(l.name), where: 'Locație', image: l.cover_image && l.cover_image.url, st: l.review_status };
+        return { kind: 'location', id: l.id, name: flat(l.name), where: VQ.t('Venue'), image: l.cover_image && l.cover_image.url, st: l.review_status };
       }).concat(c.products.map(function (p) {
-        return { kind: 'product', id: p.id, name: flat(p.title), where: [KIND[p.type] || 'Produs', locName[p.location_id]].filter(Boolean).join(' · '), image: p.image && p.image.url, st: p.review_status };
+        return { kind: 'product', id: p.id, name: flat(p.title), where: [KIND[p.type] || VQ.t('Product'), locName[p.location_id]].filter(Boolean).join(' · '), image: p.image && p.image.url, st: p.review_status };
       }));
       return catalog;
     });
@@ -386,7 +395,7 @@
   }
   function openResult(i) {
     var x = results[i];
-    if (x && x.e.id != null) window.location.href = (x.e.kind === 'location' ? '/organizator/locatii?id=' : '/organizator/produse?id=') + encodeURIComponent(x.e.id);
+    if (x && x.e.id != null) window.location.href = VQ.url(x.e.kind === 'location' ? '/organizator/locatii' : '/organizator/produse') + '?id=' + encodeURIComponent(x.e.id);
   }
   function renderResults(term) {
     qList.textContent = '';
@@ -411,13 +420,13 @@
       li.addEventListener('click', function () { openResult(i); });
       qList.appendChild(li);
     });
-    qMsg.textContent = results.length ? '' : 'Niciun produs și nicio locație nu se potrivesc cu „' + term + '”.';
+    qMsg.textContent = results.length ? '' : VQ.t('No product or venue matches “{term}”.', { term: term });
     setOpen(true);
   }
   function runSearch() {
     var term = q.value.trim();
     if (norm(term).length < 2) { setOpen(false); qList.textContent = ''; results = []; return; }
-    if (!catalog) { qList.textContent = ''; results = []; qMsg.textContent = 'Se caută…'; setOpen(true); }
+    if (!catalog) { qList.textContent = ''; results = []; qMsg.textContent = VQ.t('Searching…'); setOpen(true); }
     loadCatalog().then(function (rows) {
       if (q.value.trim() !== term) return;
       var t = norm(term);
@@ -430,7 +439,7 @@
       if (q.value.trim() !== term) return;
       results = [];
       qList.textContent = '';
-      qMsg.textContent = 'Nu am putut încărca produsele. Încearcă din nou.';
+      qMsg.textContent = VQ.t('We could not load the products. Try again.');
       setOpen(true);
     });
   }

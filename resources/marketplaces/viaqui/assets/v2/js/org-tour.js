@@ -14,46 +14,46 @@
   var el = O.el;
   var KEY = 'bo_org_tour_v1_';
   var M = 14, PAD = 6;
-  var SIDE = '#org-side .org-link[href="';
+  var SIDE = '#org-side .org-link[href$="'; // ends with: a language prefix may come before the address
 
   var STEPS = [
-    { title: 'Bun venit în panoul tău',
-      text: 'Îți arătăm în câțiva pași ce face fiecare pagină și în ce ordine să lucrezi ca să ajungi la prima vânzare. Mergi cu Înainte și Înapoi; ieși oricând cu Închide sau cu tasta Escape.' },
+    { title: VQ.t('Welcome to your dashboard'),
+      text: VQ.t('In a few steps we show you what each page does and in which order to work to reach your first sale. Move with Next and Back; leave at any time with Close or the Escape key.') },
     { sel: '#ob', tight: '#ob .org-panel-head',
-      title: 'Pașii tăi de pornire',
-      text: 'Aici vezi, punct cu punct, ce ai bifat deja și ce mai ai de făcut. Bifele le citim din contul tău, nu le completezi tu. Când toate cele șapte sunt gata, secțiunea dispare de pe panou.' },
+      title: VQ.t('Your first steps'),
+      text: VQ.t('Here you see, point by point, what is already done and what is left. We read the ticks from your account, you do not fill them in. When all seven are done, the section leaves the dashboard.') },
     { sel: SIDE + '/organizator/locatii"]', drawer: true,
-      title: 'Pasul 1: Locațiile mele',
-      text: 'Locația e locul în care vin clienții: adresă, hartă, program, poze și reguli. Tot ce vinzi stă sub o locație, așa că ea se face prima.' },
+      title: VQ.t('Step 1: My venues'),
+      text: VQ.t('The venue is where customers come: address, map, opening hours, photos and rules. Everything you sell sits under a venue, so it comes first.') },
     { sel: SIDE + '/organizator/produse"]', drawer: true,
-      title: 'Pasul 2: Produse',
-      text: 'Produsele sunt ce vinzi: bilete de acces, experiențe cu oră de start sau pachete. Fiecare cu prețul, capacitatea și programul lui, sub locația căreia îi aparține.' },
-    { title: 'Pasul 3: Aprobarea',
-      text: 'Când locația și produsele sunt complete, le trimiți spre aprobare. Le verificăm în 1–2 zile lucrătoare. După aprobare le publici tu, cu un buton — abia atunci se pot cumpăra.' },
+      title: VQ.t('Step 2: Products'),
+      text: VQ.t('Products are what you sell: access tickets, experiences with a start time, or packages. Each has its own price, capacity and schedule, under the venue it belongs to.') },
+    { title: VQ.t('Step 3: Approval'),
+      text: VQ.t('When the venue and the products are complete, you send them for approval. We check them within 1–2 working days. After approval you publish them yourself, with one button: only then can they be bought.') },
     { sel: SIDE + '/organizator/pos"]', drawer: true,
-      title: 'Pasul 4: Vinzi online și la casă',
-      text: 'Produsele publicate se vând singure pe viaqui.com. La fața locului deschizi casa din Casă & POS: vinzi pe loc, scanezi biletele și închizi tura cu raportul de casă.' },
+      title: VQ.t('Step 4: Sell online and at the desk'),
+      text: VQ.t('Published products sell by themselves on Viaqui. On site you open the desk from Desk & POS: you sell on the spot, scan the tickets and close the shift with the desk report.') },
     { sel: SIDE + '/organizator/widget-uri"]', drawer: true,
-      title: 'Pasul 5: Widget-uri embed',
-      text: 'Același coș, dar pe site-ul tău: copiezi un cod și îl lipești în pagina ta, iar clienții cumpără fără să plece de acolo. Adaugă întâi site-urile pe care ai voie să-l folosești.' },
+      title: VQ.t('Step 5: Embed widgets'),
+      text: VQ.t('The same basket, but on your own site: you copy a code and paste it into your page, and customers buy without leaving it. First add the sites where it is allowed to run.') },
     { sel: SIDE + '/organizator/rezervari"]', drawer: true,
-      title: 'Pasul 6: Rezervări',
-      text: 'Toate vânzările, așezate pe ziua vizitei: cine vine, la ce oră, cu ce cod de confirmare. De aici faci check-in-ul și marchezi cine nu s-a prezentat.' },
+      title: VQ.t('Step 6: Bookings'),
+      text: VQ.t('All sales, arranged by the day of the visit: who comes, at what time, with which confirmation code. From here you do the check-in and mark who did not show up.') },
     { sel: SIDE + '/organizator/raport"]', drawer: true,
-      title: 'Pasul 7: Raport',
-      text: 'Cât ai vândut într-o perioadă, pe zile și pe produse, cu comisionul viaqui.com scăzut ca să vezi cât îți rămâne. Îl poți descărca în CSV.' },
+      title: VQ.t('Step 7: Report'),
+      text: VQ.t('How much you sold in a period, by day and by product, with the Viaqui commission taken off so you see what you keep. You can download it as CSV.') },
     { sel: SIDE + '/organizator/sold"]', drawer: true,
-      title: 'Pasul 8: Sold',
-      text: 'Banii tăi: cât e disponibil, cât e încă în așteptare și ce ți-am virat până acum. Tot de aici ceri plata.' },
+      title: VQ.t('Step 8: Balance'),
+      text: VQ.t('Your money: how much is available, how much is still pending and what we have paid you so far. This is also where you request a payout.') },
     { sel: SIDE + '/organizator/setari"]', drawer: true,
-      title: 'Contul, contractul și banii',
-      text: 'În Cont & companie ai datele firmei, contractul de semnat și contul bancar pe care îți trimitem încasările. Alături ai Facturare, cu facturile de comision, și Echipa contului, unde adaugi colegi cu drepturi separate.' },
+      title: VQ.t('The account, the contract and the money'),
+      text: VQ.t('In Account & company you have the company details, the contract to sign and the bank account we pay you into. Next to it are Billing, with the commission invoices, and Account team, where you add colleagues with their own rights.') },
     { sel: '.od-stats',
-      title: 'Cifrele panoului',
-      text: 'Indicatorii lunii curente pentru contul tău, cu graficul de dedesubt. Pentru cifrele pe rezervări și pe produse mergi în Raport, iar pentru bani în Sold.' },
+      title: VQ.t('The dashboard figures'),
+      text: VQ.t('The figures of the current month for your account, with the chart below. For figures by booking and by product go to Report, and for money to Balance.') },
     { sel: '#ob-guide',
-      title: 'Gata — îl poți relua oricând',
-      text: 'Butonul ăsta pornește ghidul din nou, oricând ai nevoie. Dacă te blochezi, ai Centrul de ajutor și Tichetele de suport în meniu, iar din Servicii extra ne poți cere promovare sau poze.' },
+      title: VQ.t('Done: you can replay it at any time'),
+      text: VQ.t('This button starts the guide again, whenever you need it. If you get stuck, the Help centre and Support tickets are in the menu, and from Extra services you can ask us for promotion or photos.') },
   ];
 
   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -68,9 +68,9 @@
     elStep = el('p', { class: 'ot-count', id: 'ot-count' });
     elTitle = el('h2', { class: 'ot-t', id: 'ot-t' });
     elText = el('p', { class: 'ot-p' });
-    bClose = el('button', { class: 'ot-b', id: 'ot-close', type: 'button', text: 'Închide' });
-    bPrev = el('button', { class: 'ot-b', id: 'ot-prev', type: 'button', text: 'Înapoi' });
-    bNext = el('button', { class: 'ot-b is-primary', id: 'ot-next', type: 'button', text: 'Înainte' });
+    bClose = el('button', { class: 'ot-b', id: 'ot-close', type: 'button', text: VQ.t('Close') });
+    bPrev = el('button', { class: 'ot-b', id: 'ot-prev', type: 'button', text: VQ.t('Back') });
+    bNext = el('button', { class: 'ot-b is-primary', id: 'ot-next', type: 'button', text: VQ.t('Next') });
     bubble = el('div', { class: 'ot-bubble', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ot-t', 'aria-describedby': 'ot-count', tabindex: '-1' }, [
       elStep, elTitle, elText,
       el('div', { class: 'ot-nav' }, [bClose, el('span', { class: 'ot-sp' }), bPrev, bNext]),
@@ -226,11 +226,11 @@
     if (!s.drawer && drawered) { drawer(false); drawered = false; }
     anchor = n || null;
 
-    elStep.textContent = 'Pasul ' + (i + 1) + ' din ' + plan.length;
+    elStep.textContent = VQ.t('Step {n} of {total}', { n: i + 1, total: plan.length });
     elTitle.textContent = s.title;
     elText.textContent = s.text;
     bPrev.disabled = i === 0;
-    bNext.textContent = i >= plan.length - 1 ? 'Gata' : 'Înainte';
+    bNext.textContent = i >= plan.length - 1 ? VQ.t('Done') : VQ.t('Next');
 
     // the sidebar may still be sliding in: settle the position over the next frames
     sheetTop = false;
@@ -258,7 +258,7 @@
     place();
     window.setTimeout(place, 60);
     window.setTimeout(place, 320);
-    window.setTimeout(function () { liveRegion.textContent = 'Pasul ' + (at + 1) + ' din ' + plan.length + ': ' + s.title + '. ' + s.text; }, 80);
+    window.setTimeout(function () { liveRegion.textContent = VQ.t('Step {n} of {total}', { n: at + 1, total: plan.length }) + ': ' + s.title + '. ' + s.text; }, 80);
   }
 
   function start() {

@@ -40,25 +40,26 @@
     var ok = pick(items, live);
     if (ok) {
       var n = tally(items, live);
-      return { state: 'done', detail: n > 1 ? 'Ai ' + F.count(n, w.one + ' publicat' + w.a, w.many + ' publicate') + '.' : w.Cap + ' „' + (nameOf(ok) || w.one) + '” este publicat' + w.a + '.' };
+      return { state: 'done', detail: n > 1 ? w.doneMany(n) : w.doneOne(nameOf(ok) || w.unnamed) };
     }
     if (!items.length) return { state: 'todo', detail: w.first };
     var rej = pick(items, function (x) { return x.review_status === 'rejected'; });
     if (rej) {
-      return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(rej.id), cta: 'Corectează și retrimite',
-        detail: 'Am respins „' + (nameOf(rej) || w.one) + '”' + (txt(rej.rejection_reason) ? ': ' + txt(rej.rejection_reason) : '.') + ' Corectează și trimite din nou.' };
+      var why = txt(rej.rejection_reason);
+      return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(rej.id), cta: VQ.t('Fix and send again'),
+        detail: why
+          ? VQ.t('We rejected “{name}”: {reason} Fix it and send it again.', { name: nameOf(rej) || w.unnamed, reason: /[.!?]$/.test(why) ? why : why + '.' })
+          : VQ.t('We rejected “{name}”. Fix it and send it again.', { name: nameOf(rej) || w.unnamed }) };
     }
     var wait = pick(items, function (x) { return x.review_status === 'pending'; });
     if (wait) {
-      return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(wait.id), cta: 'Vezi ' + w.one,
-        detail: w.Cap + ' „' + (nameOf(wait) || w.one) + '” așteaptă aprobarea noastră. Îți dăm un răspuns în 1–2 zile lucrătoare.' };
+      return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(wait.id), cta: w.see, detail: w.waiting(nameOf(wait) || w.unnamed) };
     }
     var appr = pick(items, function (x) { return x.review_status === 'approved'; });
     if (appr) {
-      return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(appr.id), cta: 'Publică',
-        detail: w.Cap + ' „' + (nameOf(appr) || w.one) + '” e aprobat' + w.a + '. Mai apeși o dată pe Publică și apare pe viaqui.com.' };
+      return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(appr.id), cta: VQ.t('Publish'), detail: w.approved(nameOf(appr) || w.unnamed) };
     }
-    return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(items[0].id), cta: 'Trimite spre aprobare', detail: w.draft };
+    return { state: 'todo', href: w.base + '?id=' + encodeURIComponent(items[0].id), cta: VQ.t('Send for approval'), detail: w.draft };
   }
 
   function steps() {
@@ -66,81 +67,89 @@
     var out = [];
 
     /* 1. company data + signed contract — /organizer/me and /organizer/contract */
-    var s1 = { key: 'cont', title: 'Datele firmei și contractul', href: '/organizator/setari#company', cta: 'Deschide setările',
-      why: 'Le completezi o singură dată: fără ele nu putem emite bilete și facturi în numele tău.' };
+    var s1 = { key: 'cont', title: VQ.t('Company details and contract'), href: '/organizator/setari#company', cta: VQ.t('Open the settings'),
+      why: VQ.t('You fill them in only once: without them we cannot issue tickets and invoices on your behalf.') };
     var companyOk = p ? (has(p, 'company_name') && has(p, 'company_tax_id') && has(p, 'company_address') && has(p, 'company_city')) : null;
     var signOk = c ? (c.is_signed === true || c.signature_required === false) : null;
     if (companyOk === null || signOk === null) s1.state = 'unknown';
-    else if (!companyOk) { s1.state = 'todo'; s1.detail = 'Mai lipsesc datele firmei: denumire, CUI, adresă și oraș.'; s1.cta = 'Completează datele'; }
+    else if (!companyOk) { s1.state = 'todo'; s1.detail = VQ.t('Company details are still missing: name, tax ID, address and city.'); s1.cta = VQ.t('Fill in the details'); }
     else if (!signOk) {
       s1.state = 'todo';
       s1.href = '/organizator/setari#contract';
-      s1.cta = c.has_contract ? 'Semnează contractul' : 'Încarcă documentele';
-      s1.detail = c.has_contract ? 'Datele firmei sunt complete. Mai rămâne să semnezi contractul.' : 'Datele firmei sunt complete. Încarcă CI și certificatul CUI ca să-ți generăm contractul.';
-    } else { s1.state = 'done'; s1.detail = c.is_signed ? 'Datele firmei sunt complete și contractul e semnat.' : 'Datele firmei sunt complete, iar contractul tău nu cere semnătură.'; }
+      s1.cta = c.has_contract ? VQ.t('Sign the contract') : VQ.t('Upload the documents');
+      s1.detail = c.has_contract ? VQ.t('Company details are complete. All that is left is to sign the contract.') : VQ.t('Company details are complete. Upload your ID and the company registration certificate so we can generate your contract.');
+    } else { s1.state = 'done'; s1.detail = c.is_signed ? VQ.t('Company details are complete and the contract is signed.') : VQ.t('Company details are complete, and your contract needs no signature.'); }
     out.push(s1);
 
     /* 2. a location exists — /organizer/activities-module/locations */
-    var s2 = { key: 'loc', title: 'Prima ta locație', href: '/organizator/locatii?nou=1', cta: 'Adaugă locația',
-      why: 'Locația e locul în care vin clienții: adresă, program, poze. Toate produsele stau sub ea.' };
+    var s2 = { key: 'loc', title: VQ.t('Your first venue'), href: '/organizator/locatii?nou=1', cta: VQ.t('Add the venue'),
+      why: VQ.t('The venue is where customers come: address, opening hours, photos. Every product sits under it.') };
     if (!L) s2.state = 'unknown';
-    else if (!L.length) { s2.state = 'todo'; s2.detail = 'Nu ai nicio locație încă.'; }
-    else { s2.state = 'done'; s2.detail = 'Ai ' + F.count(L.length, 'locație', 'locații') + '.'; s2.href = '/organizator/locatii'; }
+    else if (!L.length) { s2.state = 'todo'; s2.detail = VQ.t('You have no venue yet.'); }
+    else { s2.state = 'done'; s2.detail = VQ.t('You have {n}.', { n: VQ.n(L.length, 'venue', 'venues') }); s2.href = '/organizator/locatii'; }
     out.push(s2);
 
     /* 3. that location approved and published */
-    var a3 = approval(L, { base: '/organizator/locatii', one: 'locație', many: 'locații', Cap: 'Locația', a: 'ă',
-      first: 'Întâi creează locația, apoi o trimiți spre aprobare.',
-      draft: 'Locația e încă ciornă. Deschide-o și apasă „Trimite spre aprobare”.' });
-    out.push({ key: 'loc-ok', title: 'Locația aprobată și publicată', state: a3.state, detail: a3.detail,
-      why: 'O verificăm înainte să apară pe viaqui.com; după aprobare o publici tu, cu un buton.',
-      href: a3.href || '/organizator/locatii', cta: a3.cta || 'Deschide locațiile' });
+    var a3 = approval(L, { base: '/organizator/locatii', unnamed: VQ.t('Untitled venue'), see: VQ.t('See the venue'),
+      doneMany: function (n) { return VQ.t('You have {n} published.', { n: VQ.n(n, 'venue', 'venues') }); },
+      doneOne: function (name) { return VQ.t('The venue “{name}” is published.', { name: name }); },
+      waiting: function (name) { return VQ.t('The venue “{name}” is waiting for our approval. We reply within 1–2 working days.', { name: name }); },
+      approved: function (name) { return VQ.t('The venue “{name}” is approved. Press Publish once more and it appears on Viaqui.', { name: name }); },
+      first: VQ.t('Create the venue first, then send it for approval.'),
+      draft: VQ.t('The venue is still a draft. Open it and press “Send for approval”.') });
+    out.push({ key: 'loc-ok', title: VQ.t('Venue approved and published'), state: a3.state, detail: a3.detail,
+      why: VQ.t('We check it before it appears on Viaqui; after approval you publish it yourself, with one button.'),
+      href: a3.href || '/organizator/locatii', cta: a3.cta || VQ.t('Open the venues') });
 
     /* 4. a product exists — /organizer/activities-module/products */
-    var s4 = { key: 'prod', title: 'Primul produs', href: '/organizator/produse?nou=1', cta: 'Adaugă un produs',
-      why: 'Produsele sunt ce vinzi: bilete de acces, experiențe sau pachete, fiecare cu prețul și programul lui.' };
+    var s4 = { key: 'prod', title: VQ.t('Your first product'), href: '/organizator/produse?nou=1', cta: VQ.t('Add a product'),
+      why: VQ.t('Products are what you sell: access tickets, experiences or packages, each with its own price and schedule.') };
     if (!P) s4.state = 'unknown';
     else if (!P.length) {
       s4.state = 'todo';
-      s4.detail = L && !L.length ? 'Întâi ai nevoie de o locație, apoi adaugi produsul sub ea.' : 'Nu ai niciun produs încă.';
-      if (L && !L.length) { s4.href = '/organizator/locatii?nou=1'; s4.cta = 'Adaugă locația'; }
-    } else { s4.state = 'done'; s4.detail = 'Ai ' + F.count(P.length, 'produs', 'produse') + '.'; s4.href = '/organizator/produse'; }
+      s4.detail = L && !L.length ? VQ.t('You need a venue first, then you add the product under it.') : VQ.t('You have no product yet.');
+      if (L && !L.length) { s4.href = '/organizator/locatii?nou=1'; s4.cta = VQ.t('Add the venue'); }
+    } else { s4.state = 'done'; s4.detail = VQ.t('You have {n}.', { n: VQ.n(P.length, 'product', 'products') }); s4.href = '/organizator/produse'; }
     out.push(s4);
 
     /* 5. that product approved and published */
-    var a5 = approval(P, { base: '/organizator/produse', one: 'produs', many: 'produse', Cap: 'Produsul', a: '',
-      first: 'Întâi creează produsul, apoi îl trimiți spre aprobare.',
-      draft: 'Produsul e încă ciornă. Deschide-l și apasă „Trimite spre aprobare”.' });
-    out.push({ key: 'prod-ok', title: 'Produsul aprobat și publicat', state: a5.state, detail: a5.detail,
-      why: 'Un produs publicat se poate cumpăra: pe viaqui.com, în widget-ul de pe site-ul tău și la casă.',
-      href: a5.href || '/organizator/produse', cta: a5.cta || 'Deschide produsele' });
+    var a5 = approval(P, { base: '/organizator/produse', unnamed: VQ.t('Untitled product'), see: VQ.t('See the product'),
+      doneMany: function (n) { return VQ.t('You have {n} published.', { n: VQ.n(n, 'product', 'products') }); },
+      doneOne: function (name) { return VQ.t('The product “{name}” is published.', { name: name }); },
+      waiting: function (name) { return VQ.t('The product “{name}” is waiting for our approval. We reply within 1–2 working days.', { name: name }); },
+      approved: function (name) { return VQ.t('The product “{name}” is approved. Press Publish once more and it appears on Viaqui.', { name: name }); },
+      first: VQ.t('Create the product first, then send it for approval.'),
+      draft: VQ.t('The product is still a draft. Open it and press “Send for approval”.') });
+    out.push({ key: 'prod-ok', title: VQ.t('Product approved and published'), state: a5.state, detail: a5.detail,
+      why: VQ.t('A published product can be bought: on Viaqui, in the widget on your own site and at the desk.'),
+      href: a5.href || '/organizator/produse', cta: a5.cta || VQ.t('Open the products') });
 
     /* 6. payout details — /organizer/me */
-    var s6 = { key: 'iban', title: 'Contul bancar pentru încasări', href: '/organizator/setari#bank', cta: 'Adaugă IBAN-ul',
-      why: 'Aici îți trimitem banii din vânzări, la fiecare decont.' };
+    var s6 = { key: 'iban', title: VQ.t('Bank account for payouts'), href: '/organizator/setari#bank', cta: VQ.t('Add the IBAN'),
+      why: VQ.t('This is where we send your sales money, with every payout.') };
     if (!p || typeof p.has_payout_details !== 'boolean') s6.state = 'unknown';
-    else if (p.has_payout_details) { s6.state = 'done'; s6.detail = 'Datele de plată sunt completate.'; }
-    else { s6.state = 'todo'; s6.detail = 'Nu ai încă un cont bancar salvat.'; }
+    else if (p.has_payout_details) { s6.state = 'done'; s6.detail = VQ.t('The payout details are filled in.'); }
+    else { s6.state = 'todo'; s6.detail = VQ.t('You have no bank account saved yet.'); }
     out.push(s6);
 
     /* 7. the widget on their own site, or a first sale — /organizer/me and .../summary */
-    var s7 = { key: 'sale', title: 'Prima vânzare', href: '/organizator/widget-uri', cta: 'Configurează widget-ul',
-      why: 'Vinzi în trei feluri: pe viaqui.com, cu widget-ul de pe site-ul tău și la casă, din Casă & POS.' };
+    var s7 = { key: 'sale', title: VQ.t('Your first sale'), href: '/organizator/widget-uri', cta: VQ.t('Set up the widget'),
+      why: VQ.t('You sell in three ways: on Viaqui, with the widget on your own site and at the desk, from Desk & POS.') };
     var sold = S ? Math.round(F.toNum(S.bookings)) : null;
     var set = p && p.settings && typeof p.settings === 'object' ? p.settings : null;
     var doms = set ? arr(set.embed_domains).length : 0;
     var widgetOk = set ? (set.widget_enabled === true && doms > 0) : null;
-    if (sold > 0) { s7.state = 'done'; s7.detail = 'Ai ' + F.count(sold, 'rezervare', 'rezervări') + ' în ultimul an.'; s7.href = '/organizator/rezervari'; s7.cta = 'Vezi rezervările'; }
-    else if (widgetOk) { s7.state = 'done'; s7.detail = 'Widget-ul e pornit pe ' + F.count(doms, 'site', 'site-uri') + '.'; }
+    if (sold > 0) { s7.state = 'done'; s7.detail = VQ.t('You have {n} in the last year.', { n: VQ.n(sold, 'booking', 'bookings') }); s7.href = '/organizator/rezervari'; s7.cta = VQ.t('See the bookings'); }
+    else if (widgetOk) { s7.state = 'done'; s7.detail = VQ.t('The widget is running on {n}.', { n: VQ.n(doms, 'site', 'sites') }); }
     else if (sold === null || widgetOk === null) s7.state = 'unknown';
-    else { s7.state = 'todo'; s7.detail = 'Nicio rezervare încă. Pune widget-ul pe site-ul tău sau trimite clienților linkul locației.'; }
+    else { s7.state = 'todo'; s7.detail = VQ.t('No booking yet. Put the widget on your site or send customers the link to your venue.'); }
     out.push(s7);
 
     return out;
   }
 
   /* ---------- drawing ---------- */
-  var STATE_LABEL = { done: 'Gata', todo: 'De făcut', unknown: 'De verificat' };
+  var STATE_LABEL = { done: VQ.t('Done'), todo: VQ.t('To do'), unknown: VQ.t('To check') };
 
   function row(s, i, isNext) {
     var mark = s.state === 'done' ? el('span', { class: 'ob-mark' }, icon('check'))
@@ -148,16 +157,16 @@
     var body = [el('h3', { class: 'ob-t', text: s.title })];
     if (s.state !== 'done') body.push(el('p', { class: 'ob-why', text: s.why }));
     if (s.detail) body.push(el('p', { class: 'ob-p', text: s.detail }));
-    if (s.state === 'unknown') body.push(el('p', { class: 'ob-p', text: 'Nu am putut verifica pasul ăsta acum.' }));
+    if (s.state === 'unknown') body.push(el('p', { class: 'ob-p', text: VQ.t('We could not check this step right now.') }));
     if (s.state !== 'done' && s.href) {
       body.push(isNext
-        ? el('a', { class: 'btn btn-primary ob-cta', href: s.href }, [el('span', { text: s.cta || 'Deschide' }), icon('arrow-right')])
-        : el('a', { class: 'ob-link', href: s.href }, [el('span', { text: s.cta || 'Deschide' }), icon('arrow-right')]));
+        ? el('a', { class: 'btn btn-primary ob-cta', href: VQ.url(s.href) }, [el('span', { text: s.cta || VQ.t('Open') }), icon('arrow-right')])
+        : el('a', { class: 'ob-link', href: VQ.url(s.href) }, [el('span', { text: s.cta || VQ.t('Open') }), icon('arrow-right')]));
     }
     return el('li', { class: 'ob-step is-' + s.state + (isNext ? ' is-next' : '') }, [
       mark,
       el('div', { class: 'ob-body' }, body),
-      el('span', { class: 'ob-state', text: isNext ? 'Urmează' : STATE_LABEL[s.state] }),
+      el('span', { class: 'ob-state', text: isNext ? VQ.t('Next') : STATE_LABEL[s.state] }),
     ]);
   }
 
@@ -168,7 +177,7 @@
       if (recall(doneKey()) === '1') { hideForGood(); return; }
     }
     if (!settled) { // nothing is shown until every source has answered: no flashing half-counts
-      if (shown) $('ob-sub').textContent = 'Verificăm unde ai ajuns…';
+      if (shown) $('ob-sub').textContent = VQ.t('Checking where you are…');
       return;
     }
     var list = steps(), done = tally(list, function (s) { return s.state === 'done'; });
@@ -177,7 +186,7 @@
     for (i = 0; i < list.length; i++) { if (list[i].state !== 'done') { nextIdx = i; break; } }
     if (done === TOTAL) { hideForGood(); return; }
 
-    $('ob-count').textContent = F.num(done) + ' din ' + TOTAL;
+    $('ob-count').textContent = VQ.t('{done} of {total}', { done: F.num(done), total: TOTAL });
     $('ob-count').hidden = false;
     $('ob-fill').style.width = Math.round(done / TOTAL * 100) + '%';
     $('ob-track').hidden = false;
@@ -185,18 +194,18 @@
     var sub = $('ob-sub');
     sub.textContent = '';
     if (unknown) {
-      sub.appendChild(document.createTextNode('Câțiva pași nu au putut fi verificați acum. '));
-      var again = el('button', { class: 'ob-retry', type: 'button', text: 'Reîncearcă' });
+      sub.appendChild(document.createTextNode(VQ.t('Some steps could not be checked right now.') + ' '));
+      var again = el('button', { class: 'ob-retry', type: 'button', text: VQ.t('Try again') });
       again.addEventListener('click', function () { again.disabled = true; load(); });
       sub.appendChild(again);
-    } else sub.appendChild(document.createTextNode(nextIdx < 0 ? 'Ai terminat tot.' : 'Urmează: ' + list[nextIdx].title + '.'));
+    } else sub.appendChild(document.createTextNode(nextIdx < 0 ? VQ.t('You have finished everything.') : VQ.t('Next: {step}.', { step: list[nextIdx].title })));
 
     var ul = $('ob-list');
     ul.textContent = '';
     list.forEach(function (s, n) { ul.appendChild(row(s, n, n === nextIdx)); });
     root.hidden = false;
     shown = true;
-    $('ob-live').textContent = 'Pașii de pornire: ' + F.num(done) + ' din ' + TOTAL + ' gata.' + (nextIdx < 0 ? '' : ' Urmează: ' + list[nextIdx].title + '.');
+    $('ob-live').textContent = VQ.t('Your first steps: {done} of {total} done.', { done: F.num(done), total: TOTAL }) + (nextIdx < 0 ? '' : ' ' + VQ.t('Next: {step}.', { step: list[nextIdx].title }));
   }
 
   function hideForGood() {

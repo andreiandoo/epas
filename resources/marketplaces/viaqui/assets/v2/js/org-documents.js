@@ -20,7 +20,7 @@
   }
   function meta(e) {
     var d = F.dateOf(naiveDay(e.starts_at));
-    return [d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric' }) : '', F.flat(e.venue_name), live(e) ? 'în desfășurare' : 'încheiată'].filter(Boolean).join(' · ');
+    return [d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric' }) : '', F.flat(e.venue_name), live(e) ? VQ.t('running') : VQ.t('ended')].filter(Boolean).join(' · ');
   }
   function load() {
     var box = $('od-list');
@@ -31,31 +31,31 @@
         if (al !== bl) return al ? -1 : 1;
         return al ? (ad < bd ? -1 : ad > bd ? 1 : 0) : (ad > bd ? -1 : ad < bd ? 1 : 0);
       });
-      $('od-pick-p').textContent = events.length ? F.count(events.length, 'activitate', 'activități') + '; cele în desfășurare apar primele.' : 'Nu ai activități.';
+      $('od-pick-p').textContent = events.length ? VQ.t('{n}. The running ones come first.', { n: VQ.n(events.length, 'activity', 'activities') }) : VQ.t('You have no activities.');
       var pre = new URLSearchParams(location.search).get('event');
       if (pre) picked = events.filter(function (e) { return String(e.id) === pre; })[0] || null;
       draw();
       show();
     }, function (err) {
       if (err && err.status === 401) return;
-      $('od-pick-p').textContent = 'Eroare la încărcarea activităților.';
-      var retry = el('button', { type: 'button', text: 'Reîncearcă' });
+      $('od-pick-p').textContent = VQ.t('Error loading the activities.');
+      var retry = el('button', { type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { box.textContent = ''; load(); });
       box.textContent = '';
-      box.appendChild(el('li', { class: 'od-msg' }, ['Nu am putut încărca activitățile.', retry]));
+      box.appendChild(el('li', { class: 'od-msg' }, [VQ.t('We could not load the activities.'), retry]));
     });
   }
   function draw() {
     var box = $('od-list'), q = norm($('od-q').value.trim()), a = document.activeElement, key = a && box.contains(a) ? a.getAttribute('data-id') : null;
     var shown = events.filter(function (e) { return !q || norm(F.flat(e.name) + ' ' + F.flat(e.venue_name)).indexOf(q) > -1; });
     box.textContent = '';
-    if (!events.length) { box.appendChild(el('li', { class: 'od-msg', text: 'Nu ai activități.' })); return; }
-    if (!shown.length) box.appendChild(el('li', { class: 'od-msg', text: 'Niciun rezultat.' }));
+    if (!events.length) { box.appendChild(el('li', { class: 'od-msg', text: VQ.t('You have no activities.') })); return; }
+    if (!shown.length) box.appendChild(el('li', { class: 'od-msg', text: VQ.t('No results.') }));
     shown.forEach(function (e) {
       var on = !!picked && String(picked.id) === String(e.id);
       var b = el('button', { class: 'od-ev', type: 'button', 'data-id': String(e.id), 'aria-pressed': String(on) }, [
         el('span', { class: 'od-dot' + (live(e) ? ' is-live' : ''), 'aria-hidden': 'true' }),
-        el('span', null, [el('b', { text: F.flat(e.name) || 'Activitate' }), el('small', { text: meta(e) })]),
+        el('span', null, [el('b', { text: F.flat(e.name) || VQ.t('Activity') }), el('small', { text: meta(e) })]),
         icon('check'),
       ]);
       b.addEventListener('click', function () { choose(e); });
@@ -71,7 +71,7 @@
   }
   function show() {
     $('od-notice').hidden = !picked;
-    $('od-picked').textContent = picked ? F.flat(picked.name) || 'Activitate' : '';
+    $('od-picked').textContent = picked ? F.flat(picked.name) || VQ.t('Activity') : '';
   }
   $('od-q').addEventListener('input', function () { if (events.length) draw(); });
   O.ready.then(function (ok) { if (ok) load(); });

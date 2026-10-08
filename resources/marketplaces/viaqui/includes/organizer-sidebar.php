@@ -26,6 +26,8 @@
  * Auth + data come from BileteOnlineAuth / BileteOnlineAPI (loaded in head.php).
  */
 
+require_once __DIR__ . '/v2/i18n.php'; // v2_t() / v2_te(): the legacy head does not load the language functions
+
 $currentPage = $currentPage ?? '';
 $bodyClass   = $bodyClass ?? '';
 
@@ -55,8 +57,8 @@ $navIcon = function (string $page) use ($currentPage): string {
                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
             </span>
             <span class="leading-none">
-                <span class="block font-display text-xl font-bold">bilete<span class="text-vermilion">.</span>online</span>
-                <span class="mt-0.5 block font-mono text-[10px] tracking-[.18em] text-paper/45">ORGANIZATOR</span>
+                <span class="block font-display text-xl font-bold">Viaqui</span>
+                <span class="mt-0.5 block font-mono text-[10px] tracking-[.18em] text-paper/45 uppercase"><?= v2_te('Operator') ?></span>
             </span>
         </a>
     </div>
@@ -65,67 +67,67 @@ $navIcon = function (string $page) use ($currentPage): string {
     <nav class="flex-1 overflow-y-auto py-2">
         <a href="/organizator/panou" class="<?= $navLink('dashboard') ?>">
             <svg class="<?= $navIcon('dashboard') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            Dashboard
+            <?= v2_te('Dashboard') ?>
         </a>
         <a href="/organizator/activities" class="<?= $navLink('events') ?>">
             <svg class="<?= $navIcon('events') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            Activități
+            <?= v2_te('Activities') ?>
             <span id="nav-events-count" class="ml-auto rounded-full bg-paper px-2 py-0.5 text-xs font-bold text-ink">0</span>
         </a>
         <a href="/organizator/participanti" class="<?= $navLink('participants') ?>">
             <svg class="<?= $navIcon('participants') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            Participanți
+            <?= v2_te('Participants') ?>
         </a>
         <a href="/organizator/vanzari" class="<?= $navLink('sales') ?>">
             <svg class="<?= $navIcon('sales') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            Vânzări
+            <?= v2_te('Sales') ?>
         </a>
         <a href="/organizator/sold" class="<?= $navLink('finance') ?>">
             <svg class="<?= $navIcon('finance') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Sold
+            <?= v2_te('Balance') ?>
         </a>
         <a href="/organizator/documente" class="<?= $navLink('documents') ?>">
             <svg class="<?= $navIcon('documents') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Documente
+            <?= v2_te('Documents') ?>
         </a>
 
         <!-- Marketing -->
         <div class="mt-4 border-t border-paper/10 pt-4">
-            <p class="px-5 mb-1 font-mono text-[10px] font-semibold uppercase tracking-[.18em] text-paper/40">Marketing</p>
+            <p class="px-5 mb-1 font-mono text-[10px] font-semibold uppercase tracking-[.18em] text-paper/40"><?= v2_te('Marketing') ?></p>
             <a href="/organizator/servicii" class="<?= $navLink('services') ?>">
                 <svg class="<?= $navIcon('services') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Servicii extra
-                <span class="ml-auto rounded-full bg-ochre/20 px-2 py-0.5 text-[10px] font-bold text-ochre">NOU</span>
+                <?= v2_te('Extra services') ?>
+                <span class="ml-auto rounded-full bg-ochre/20 px-2 py-0.5 text-[10px] font-bold text-ochre uppercase"><?= v2_te('new') ?></span>
             </a>
             <a href="/organizator/promo" class="<?= $navLink('promo') ?>">
                 <svg class="<?= $navIcon('promo') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                Coduri promoționale
+                <?= v2_te('Promo codes') ?>
             </a>
             <a href="/organizator/widget-uri" class="<?= $navLink('widgets') ?>">
                 <svg class="<?= $navIcon('widgets') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-                Widget-uri embed
+                <?= v2_te('Embed widgets') ?>
             </a>
         </div>
 
         <!-- Settings -->
         <div class="mt-4 border-t border-paper/10 pt-4">
-            <p class="px-5 mb-1 font-mono text-[10px] font-semibold uppercase tracking-[.18em] text-paper/40">Setări</p>
+            <p class="px-5 mb-1 font-mono text-[10px] font-semibold uppercase tracking-[.18em] text-paper/40"><?= v2_te('Settings') ?></p>
             <a href="/organizator/facturare" class="<?= $navLink('billing') ?>">
                 <svg class="<?= $navIcon('billing') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Facturare
+                <?= v2_te('Billing') ?>
             </a>
             <a href="/organizator/setari" class="<?= $navLink('settings') ?>">
                 <svg class="<?= $navIcon('settings') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Cont & companie
+                <?= v2_te('Account & company') ?>
             </a>
             <a href="/organizator/suport" class="<?= $navLink('support') ?>">
                 <svg class="<?= $navIcon('support') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                Tichete suport
+                <?= v2_te('Support tickets') ?>
                 <span id="nav-support-open-count" class="ml-auto hidden rounded-full bg-ochre px-2 py-0.5 text-xs font-bold text-ink">0</span>
             </a>
             <a href="/organizator/help" class="<?= $navLink('help') ?>">
                 <svg class="<?= $navIcon('help') ?>" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Centru de ajutor
+                <?= v2_te('Help centre') ?>
             </a>
         </div>
     </nav>
@@ -135,11 +137,11 @@ $navIcon = function (string $page) use ($currentPage): string {
         <div class="flex items-center gap-3 p-2">
             <span class="grid h-9 w-9 place-items-center rounded-full bg-paper text-xs font-bold text-ink" id="sidebar-org-initials">--</span>
             <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-bold" id="sidebar-org-name">Organizator</p>
+                <p class="truncate text-sm font-bold" id="sidebar-org-name"><?= v2_te('Operator') ?></p>
                 <p class="truncate text-xs text-paper/50" id="sidebar-org-plan">—</p>
             </div>
-            <button type="button" onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutOrganizer){BileteOnlineAuth.logoutOrganizer();}else{location.href='/autentificare?ca=venue';}"
-                    class="grid h-8 w-8 place-items-center rounded-lg text-paper/55 transition hover:bg-vermilion/15 hover:text-vermilion" title="Deconectare" aria-label="Deconectare">
+            <button type="button" onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutOrganizer){BileteOnlineAuth.logoutOrganizer();}else{location.href='<?= htmlspecialchars(v2_url('/login?ca=venue'), ENT_QUOTES, 'UTF-8') ?>';}"
+                    class="grid h-8 w-8 place-items-center rounded-lg text-paper/55 transition hover:bg-vermilion/15 hover:text-vermilion" title="<?= v2_te('Sign out') ?>" aria-label="<?= v2_te('Sign out') ?>">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             </button>
         </div>
@@ -170,10 +172,10 @@ window.addEventListener('load', async function () {
     const setText = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = v; };
     const applyOrg = (o) => {
         if (! o) return;
-        const name = o.public_name || o.name || o.company_name || 'Organizator';
+        const name = o.public_name || o.name || o.company_name || <?= json_encode(v2_t('Operator'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
         setText('sidebar-org-name', name);
         setText('sidebar-org-initials', (name || '?').trim().substring(0, 2).toUpperCase());
-        setText('sidebar-org-plan', o.plan_name || (o.organizer_type === 'leisure' ? 'Leisure venue' : '—'));
+        setText('sidebar-org-plan', o.plan_name || (o.organizer_type === 'leisure' ? <?= json_encode(v2_t('Leisure venue'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?> : '—'));
     };
 
     // Instant fill from cached organizer data.

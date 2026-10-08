@@ -17,8 +17,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Documente — ' . SITE_NAME;
-$pageDescription = 'Documentele fiscale ale activităților unui operator pe viaqui.com.';
+$pageTitle = v2_t('Documents');
+$pageDescription = v2_t('The fiscal documents for an operator\'s activities on Viaqui.');
 $canonicalUrl = SITE_URL . '/organizator/documente';
 $noindex = true;
 $skipPageCache = true;
@@ -33,14 +33,14 @@ v2_org_start('documents');
 ?>
 <div class="od" id="od">
   <header class="od-head">
-    <p class="org-k">Activități</p>
-    <h1 class="od-h">Documente</h1>
-    <p class="od-lead">Generează și descarcă documentele fiscale pentru activitățile tale.</p>
+    <p class="org-k"><?= v2_te('Activities') ?></p>
+    <h1 class="od-h"><?= v2_te('Documents') ?></h1>
+    <p class="od-lead"><?= v2_te('Generate and download the fiscal documents for your activities.') ?></p>
   </header>
 
   <section class="org-panel" aria-labelledby="od-pick-h">
-    <div class="org-panel-head"><div><h2 class="org-panel-h" id="od-pick-h">Selectează activitatea</h2><p class="org-panel-p" id="od-pick-p">Se încarcă activitățile…</p></div></div>
-    <label class="od-search"><?= v2_ic('magnifying-glass') ?><input id="od-q" type="search" autocomplete="off" placeholder="Caută activitate…" aria-label="Caută activitate" aria-controls="od-list"></label>
+    <div class="org-panel-head"><div><h2 class="org-panel-h" id="od-pick-h"><?= v2_te('Choose the activity') ?></h2><p class="org-panel-p" id="od-pick-p"><?= v2_te('Loading the activities…') ?></p></div></div>
+    <label class="od-search"><?= v2_ic('magnifying-glass') ?><input id="od-q" type="search" autocomplete="off" placeholder="<?= v2_te('Search for an activity…') ?>" aria-label="<?= v2_te('Search for an activity') ?>" aria-controls="od-list"></label>
     <ul class="od-list" id="od-list" aria-live="polite"><li class="od-sk"><span class="org-skel"></span></li><li class="od-sk"><span class="org-skel"></span></li></ul>
   </section>
 
@@ -48,8 +48,8 @@ v2_org_start('documents');
     <span class="od-notice-ic" aria-hidden="true"><?= v2_ic('warning-circle') ?></span>
     <div>
       <p class="od-notice-k" id="od-picked"></p>
-      <h2 class="od-notice-h">Serviciu indisponibil momentan</h2>
-      <p>Generarea documentelor fiscale va fi disponibilă în curând. Lucrăm la configurare.</p>
+      <h2 class="od-notice-h"><?= v2_te('Service unavailable for now') ?></h2>
+      <p><?= v2_te('Generating fiscal documents will be available soon. We are working on the setup.') ?></p>
     </div>
   </section>
 </div>

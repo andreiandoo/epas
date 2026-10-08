@@ -37,6 +37,7 @@
     return null;
   }
   function forget() { try { sessionStorage.removeItem(KEY); } catch (e) {} }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   /** GET with params or POST with a JSON body through the proxy; rejects with {status, data} (status 0: no connection). */
   function call(action, params, body) {
@@ -180,10 +181,14 @@
       var d = r.data || {}, reused = !!d.reused_existing_password;
       forget();
       pass.value = pass2.value = '';
-      $('ai-done-org').textContent = txt(d.organizer_name) || invite.org || VQ.t('the operator');
-      $('ai-done-email').textContent = invite.email;
+      // one whole sentence per case; the two names are escaped and set in bold
+      var who = { org: '<strong>' + esc(txt(d.organizer_name) || invite.org || VQ.t('the operator')) + '</strong>', email: '<strong>' + esc(invite.email) + '</strong>' };
       // core keeps the password this e-mail already has in another team, even when one was typed here
-      $('ai-done-pass').textContent = !reused ? VQ.t('the password you chose') : body.password ? VQ.t('the password you already had on Viaqui, not the one you chose now') : VQ.t('the password you already use on Viaqui');
+      $('ai-done-p').innerHTML = !reused
+        ? VQ.t('Sign in to the account of {org} with the email {email} and the password you chose.', who)
+        : body.password
+          ? VQ.t('Sign in to the account of {org} with the email {email} and the password you already had on Viaqui, not the one you chose now.', who)
+          : VQ.t('Sign in to the account of {org} with the email {email} and the password you already use on Viaqui.', who);
       $('ai-login').href = VQ.url('/login') + '?ca=venue&email=' + encodeURIComponent(invite.email);
       status.textContent = VQ.t('The account is active.');
       show('ai-done-view', 'ai-done-h');
