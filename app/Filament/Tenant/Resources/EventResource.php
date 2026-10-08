@@ -1434,6 +1434,82 @@ class EventResource extends Resource
                         }),
                 ]),
 
+            // Documente fiscale (doar pe un eveniment salvat): direcția fiscală + cele trei documente
+            SC\Tabs\Tab::make('Documente')
+                ->key('documente')
+                ->icon('heroicon-o-document-duplicate')
+                ->visible(fn (?Event $record) => (bool) $record?->exists && \App\Services\Tenant\TenantFiscalDocuments::available())
+                ->schema([
+                    SC\Section::make('Direcție fiscală')
+                        ->description('Primăria la care se depun cererea de vizare și declarația de impozit pe spectacole. Se alege automat după locația evenimentului; o poți schimba de aici.')
+                        ->icon('heroicon-o-building-library')
+                        ->schema([
+                            Forms\Components\Select::make('marketplace_tax_registry_id')
+                                ->label('Direcție fiscală')
+                                ->placeholder('Automat, după locație')
+                                ->options(function () use ($tenant) {
+                                    $clientId = \App\Services\Tenant\TenantFiscalDocuments::sourceClientId($tenant);
+                                    if (! $clientId) {
+                                        return [];
+                                    }
+
+                                    return \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $clientId)
+                                        ->where('is_active', true)
+                                        ->orderBy('name')
+                                        ->get()
+                                        ->mapWithKeys(fn ($r) => [$r->id => $r->name . ' — ' . implode(', ', array_filter([$r->city, $r->county]))]);
+                                })
+                                ->searchable()
+                                ->nullable()
+                                ->helperText(function (?Event $record) use ($tenant) {
+                                    if (! $record) {
+                                        return null;
+                                    }
+                                    $registry = \App\Services\Tenant\TenantFiscalDocuments::registryFor($record, $tenant);
+                                    if (! $registry) {
+                                        return 'Nicio direcție fiscală nu se potrivește cu locația. Alege una din listă, altfel documentele ies fără datele primăriei.';
+                                    }
+                                    $rate = ($registry->tax_rate !== null && $registry->tax_rate !== '')
+                                        ? ', cotă de impozit ' . rtrim(rtrim(number_format((float) $registry->tax_rate, 2, ',', '.'), '0'), ',') . '%'
+                                        : ', fără cotă de impozit completată';
+
+                                    return 'Folosită acum: ' . $registry->name . $rate . '.';
+                                }),
+                        ]),
+
+                    Forms\Components\Placeholder::make('fiscal_documents')
+                        ->hiddenLabel()
+                        ->columnSpanFull()
+                        ->content(function (?Event $record) use ($tenant) {
+                            if (! $record || ! $record->exists || ! $tenant) {
+                                return '';
+                            }
+                            try {
+                                $svc = \App\Services\Tenant\TenantFiscalDocuments::class;
+                                $templates = $svc::templates($tenant);
+                                $canGenerate = [];
+                                foreach (array_keys(\App\Models\TenantTaxTemplate::TYPES) as $type) {
+                                    $canGenerate[$type] = $svc::canGenerate($record, $type);
+                                }
+
+                                return new HtmlString(view('filament.tenant.resources.event-resource.documents-tab', [
+                                    'event'       => $record,
+                                    'ready'       => $templates->isNotEmpty(),
+                                    'types'       => \App\Models\TenantTaxTemplate::TYPES,
+                                    'templates'   => $templates,
+                                    'canGenerate' => $canGenerate,
+                                    'whenRules'   => $svc::WHEN,
+                                    'registry'    => $svc::registryFor($record, $tenant),
+                                    'documents'   => \App\Models\TenantEventDocument::where('event_id', $record->id)->latest()->get(),
+                                ])->render());
+                            } catch (\Throwable $e) {
+                                report($e);
+
+                                return new HtmlString('<div class="text-sm text-gray-500">Documentele nu au putut fi încărcate.</div>');
+                            }
+                        }),
+                ]),
+
             SC\Tabs\Tab::make('SEO')->icon('heroicon-o-magnifying-glass')->schema([
 
             // SEO Section

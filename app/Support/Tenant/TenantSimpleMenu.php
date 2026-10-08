@@ -48,6 +48,7 @@ class TenantSimpleMenu
         '/tenant/ticket-templates'   => ['Design bilet', self::TICKETS, 30, 'ticket-design'],
         '/tenant/ticket-customizer'  => ['Design bilet', self::TICKETS, 30, 'ticket-design'],
         '/tenant/seating-layouts'    => ['Hărți de sală', self::TICKETS, 31],
+        '/tenant/fiscal-templates'   => ['Șabloane documente', self::TICKETS, 32],
 
         '/tenant/settings'           => ['Setări', self::ACCOUNT, 40],
         '/tenant/microservices'      => ['Servicii active', self::ACCOUNT, 41],

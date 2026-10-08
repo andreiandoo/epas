@@ -295,6 +295,45 @@ Route::get('/politica-confidentialitate', function () {
 Route::get('/.well-known/apple-developer-merchantid-domain-association', ApplePayVerificationController::class)
     ->name('apple-pay.verification');
 
+// Tenant: documente fiscale pentru evenimentele proprii (cerere de avizare, impozit pe spectacole, PV de distrugere).
+// Fiecare apel verifică faptul că evenimentul aparține tenantului utilizatorului autentificat.
+Route::middleware(['web', 'auth'])->prefix('tenant/api')->group(function () {
+    $ownEvent = function (int $eventId): \App\Models\Event {
+        $tenant = auth()->user()?->tenant;
+        $event = \App\Models\Event::findOrFail($eventId);
+        abort_unless($tenant && (int) $event->tenant_id === (int) $tenant->id, 403);
+
+        return $event;
+    };
+
+    Route::post('/events/{eventId}/fiscal-documents', function (int $eventId) use ($ownEvent) {
+        $event = $ownEvent($eventId);
+        $type = (string) request()->input('type');
+        if (! isset(\App\Models\TenantTaxTemplate::TYPES[$type])) {
+            return response()->json(['success' => false, 'message' => 'Tip de document necunoscut.'], 422);
+        }
+        try {
+            $doc = \App\Services\Tenant\TenantFiscalDocuments::generate($event, $type, auth()->user());
+
+            return response()->json(['success' => true, 'message' => 'Document generat: ' . $doc->typeLabel() . '.']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['success' => false, 'message' => 'Documentul nu a putut fi generat.'], 500);
+        }
+    })->whereNumber('eventId')->name('tenant.events.fiscal-documents.generate');
+
+    Route::delete('/events/{eventId}/fiscal-documents/{docId}', function (int $eventId, int $docId) use ($ownEvent) {
+        $event = $ownEvent($eventId);
+        $doc = \App\Models\TenantEventDocument::where('event_id', $event->id)->findOrFail($docId);
+        \App\Services\Tenant\TenantFiscalDocuments::delete($doc);
+
+        return response()->json(['success' => true, 'message' => 'Document șters.']);
+    })->whereNumber('eventId')->whereNumber('docId')->name('tenant.events.fiscal-documents.delete');
+});
+
 // Marketplace Document Generation API
 Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace/api')->group(function () {
     Route::post('/events/{eventId}/generate-document', function (int $eventId) {
