@@ -67,7 +67,7 @@ html.js .gd-toc-toggle[aria-expanded="false"] + .gd-toc-list{display:none}
   .gd-prose > p:first-of-type::first-letter{float:left;margin:.08em .12em 0 0;font-size:3.6em;font-weight:700;line-height:.8;color:var(--green)}
 }
 .gd-prose h2{counter-increment:gd-sec;margin:2.4em 0 .7em;padding-top:1.1em;border-top:1px solid var(--line);font-size:clamp(1.625rem, 2.6vw, 2.125rem);font-weight:700;line-height:1.18;letter-spacing:-.03em;color:var(--ink);scroll-margin-top:calc(var(--hdr-h) + 24px);text-wrap:balance}
-.gd-prose h2::before{content:counter(gd-sec, decimal-leading-zero);display:block;margin-bottom:10px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;color:var(--action)}
+
 .gd-prose h3{margin:1.9em 0 .5em;font-size:1.3125rem;font-weight:700;line-height:1.3;letter-spacing:-.015em;color:var(--green);scroll-margin-top:calc(var(--hdr-h) + 24px)}
 .gd-prose h4{margin:1.5em 0 .4em;font-size:1.125rem;font-weight:700;color:var(--ink)}
 .gd-prose ul,.gd-prose ol{margin:0 0 1.3em;padding-left:1.4em}
@@ -177,3 +177,10 @@ html.js .gd-toc-toggle[aria-expanded="false"] + .gd-toc-list{display:none}
 .gd-rel:hover > .ic{transform:translateX(4px)}
 
 @media (prefers-reduced-motion: reduce){.gd-progress span{transition:none}}
+
+/* the place of the guide: experiences there, attractions around it */
+.gd-around .partner-note{margin-top:var(--space-3)}
+.gd-around-more{margin:var(--space-4) 0 0}
+.gd-around-second{margin-top:var(--space-8)}
+/* a photo of the text with its caption and credit */
+.gd-prose p > img + em,.gd-prose .gd-cap{display:block;margin:-1.2em 0 1.8em;font-size:.8125rem;font-style:normal;line-height:1.5;color:var(--muted)}

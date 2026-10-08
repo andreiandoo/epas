@@ -585,6 +585,7 @@ return [
         'Attractions map' => '',      // country.php
         'Attractions map <em>of {place}</em>' => '',      // map.php
         'Attractions map of {place}' => '',      // map.php
+        'Attractions near {place}' => '',      // ghid.php
         'Attractions nearby' => '',      // atractie.php
         'Attractions not to miss in {city}' => '',      // city.php
         'Attractions on the map' => '',      // map.php
@@ -697,6 +698,7 @@ return [
         'Book a transfer' => '',      // city.php
         'Book at least {n} hours before the time slot.' => '',      // activitate.php
         'Book each activity separately. All your tickets arrive by email, with a QR code.' => '',      // locatie.php
+        'Book for your trip' => '',      // ghid.php
         'Book now: straight to checkout' => '',      // single-activitate.php
         'Book on {partner}' => '',      // includes/v2/partners.php
         'Book online' => '',      // activitate.php
@@ -1583,7 +1585,7 @@ return [
         'Everything sold, from the start' => '',      // organizer/analytics.php
         'Everything the venue sells, online and at the register: prices, stock, variants, packages and how they look on the public page.' => '',      // organizer/venue-products.php
         'Everything this venue offers in one place: opening hours, prices, availability and digital tickets.' => '',      // locatie.php
-        'Everything to do in {city}' => '',      // includes/v2/header.php
+        'Everything to do in {city}' => '',      // ghid.php
         'Everything you need' => '',      // devino-partener.php
         'Everything you need to know' => '',      // activitate.php
         'Exactly as on the bank statement.' => '',      // organizer/settings.php
@@ -2596,6 +2598,7 @@ return [
         'Next attractions' => '',      // single-activitate.php
         'Next available days' => '',      // single-activitate.php
         'Next day' => '',      // organizer/am-bookings.php
+        'Next experiences' => '',      // ghid.php
         'Next invoice number' => '',      // organizer/venue-settings.php
         'Next month' => '',      // single-activitate.php
         'Next page' => '',      // cauta.php
@@ -3159,6 +3162,7 @@ return [
         'Previous activity' => '',      // user/reviews.php
         'Previous attractions' => '',      // single-activitate.php
         'Previous day' => '',      // organizer/am-bookings.php
+        'Previous experiences' => '',      // ghid.php
         'Previous month' => '',      // single-activitate.php
         'Previous page' => '',      // cauta.php
         'Previous photo' => '',      // single-activitate.php
@@ -3687,6 +3691,7 @@ return [
         'See the FAQ' => '',      // user/support.php
         'See the activities' => '',      // cum-functioneaza.php
         'See the answers' => '',      // ajutor.php
+        'See the attraction' => '',      // ghid.php
         'See the balance and validity of your gift card.' => '',      // ajutor.php
         'See the categories' => '',      // region.php
         'See the category' => '',      // includes/v2/header.php
@@ -3719,6 +3724,7 @@ return [
         'See what you can do here' => '',      // atractie.php
         'See what you earn and use the points you have.' => '',      // cum-functioneaza.php
         'See what you get' => '',      // pentru-locatii.php
+        'See while you are there' => '',      // ghid.php
         'See your bonus points balance, what it is worth, how you can use it, which points are about to expire and how many you earned from orders or referrals.' => '',      // user/rewards.php
         'See your booking' => '',      // experienta.php
         'See your full order history, payment status, issued tickets, fees, points earned, documents and refund options.' => '',      // user/orders.php
