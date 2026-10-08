@@ -2,21 +2,19 @@
 require_once __DIR__ . '/includes/boot.php';
 
 $events = tc_upcoming();
+// Previzualizare pentru prezentări: /?evenimente=1 arată pagina cu un singur eveniment în calendar
+$only = (int) ($_GET['evenimente'] ?? 0);
+if ($only > 0) { $events = array_slice($events, 0, $only); }
 $next   = $events[0] ?? null;
+$rest   = array_slice($events, 1);
 
-// Cifrele sezonului, din calendarul real
-$cities = array_unique(array_filter(array_map(fn ($e) => $e['venue']['city'] ?? null, $events)));
-$prices = array_filter(array_map(fn ($e) => $e['price_from'] ?? null, $events), fn ($p) => $p !== null);
-$minPrice = $prices ? min($prices) : null;
-
-// Tarifele, luate din tipurile de bilete ale următoarei competiții
-$tiers = [];
-if ($next && ($full = tc_event($next['slug']))) {
-    foreach (($full['ticket_types'] ?? []) as $t) {
-        if (($t['status'] ?? 'active') === 'active') { $tiers[] = $t; }
-    }
-    usort($tiers, fn ($a, $b) => $a['id'] <=> $b['id']);
+// Detaliile complete ale următoarei competiții (descriere + tipuri de bilete) pentru prim-plan
+$spot = $next ? (tc_event($next['slug']) ?: $next) : null;
+$spotTypes = [];
+foreach (($spot['ticket_types'] ?? []) as $t) {
+    if (($t['status'] ?? 'active') === 'active') { $spotTypes[] = $t; }
 }
+usort($spotTypes, fn ($a, $b) => $a['id'] <=> $b['id']);
 
 $activeNav = 'home';
 if ($next && !empty($next['poster_url'])) { $pageImage = $next['poster_url']; }
@@ -29,17 +27,21 @@ include __DIR__ . '/includes/head.php';
         <div class="hero__veil"></div>
         <div class="wrap hero__inner">
             <div>
-                <span class="label" data-enter="0">Sezonul competițional <?= date('Y') ?>–<?= date('Y') + 1 ?></span>
+                <span class="label" data-enter="0"><?= e(SITE_NAME) ?></span>
                 <h1 class="hero__title" data-split data-split-now>Karate <em>văzut din</em> <span class="hl">tribună</span></h1>
             </div>
             <div class="hero__foot">
                 <div data-enter="0.5">
-                    <p class="hero__lead">Biletele la cupele și campionatele naționale ale Federației Române de Karate WUKF, cumpărate online, direct de pe telefon.</p>
+                    <p class="hero__lead">Biletele la cupele și campionatele naționale ale federației, cumpărate online, direct de pe telefon.</p>
                     <div class="hero__cta">
-                        <?= part_btn('Vezi competițiile', '/competitii') ?>
-                        <?php if ($next): ?>
-                            <a class="btn btn--ghost" href="/competitii/<?= e($next['slug']) ?>">Bilete la următoarea</a>
+                        <?php if (count($events) > 1): ?>
+                            <?= part_btn('Vezi competițiile', '/competitii') ?>
+                        <?php elseif ($next): ?>
+                            <?= part_btn('Cumpără bilete', '/competitii/' . $next['slug']) ?>
+                        <?php else: ?>
+                            <?= part_btn('Mergi la wukf.ro', SITE_FEDERATION) ?>
                         <?php endif; ?>
+                        <a class="btn btn--ghost" href="#cum-functioneaza">Cum funcționează</a>
                     </div>
                 </div>
                 <?php if ($next): ?>
@@ -69,31 +71,60 @@ include __DIR__ . '/includes/head.php';
         </div>
     </div>
 
-<?php if ($events): ?>
-    <section class="sec">
+<?php if ($spot):
+    $spotDays = ev_days_count($spot);
+    $lead = trim(strip_tags((string) ($spot['short_description'] ?? '')));
+?>
+    <!-- Următoarea competiție, în prim-plan: secțiunea care ține pagina și când e un singur eveniment -->
+    <section class="sec sec--light">
         <div class="wrap">
-            <div class="stats" data-reveal-group>
-                <div class="stat"><b data-count="<?= count($events) ?>"><?= count($events) ?></b><span>competiții în calendar</span></div>
-                <div class="stat"><b data-count="<?= count($cities) ?>"><?= count($cities) ?></b><span>orașe gazdă</span></div>
-                <div class="stat"><b><span data-count="<?= (int) $minPrice ?>"><?= (int) $minPrice ?></span><small>lei</small></b><span>cel mai mic preț de bilet</span></div>
-                <div class="stat"><b><span data-count="100">100</span><small>%</small></b><span>bilete electronice, cu cod QR</span></div>
+            <div class="spot">
+                <div class="spot__poster" data-reveal>
+                    <a class="poster3d__in" href="/competitii/<?= e($spot['slug']) ?>" data-tilt="8" style="display:block">
+                        <?= part_poster($spot) ?>
+                        <span class="pcard__glare" aria-hidden="true"></span>
+                    </a>
+                </div>
+                <div>
+                    <span class="label" data-reveal><?= e(ev_kind($spot)) ?> · <?= $spotDays > 1 ? $spotDays . ' zile de concurs' : 'o zi de concurs' ?></span>
+                    <h2 data-split><?= e($spot['title']) ?></h2>
+                    <?php if ($lead !== ''): ?><p class="spot__lead" data-reveal><?= e($lead) ?></p><?php endif; ?>
+                    <ul class="spot__facts" data-reveal>
+                        <li><?= ICON_CAL ?><?= e(ev_date_label($spot)) ?><?= ev_time($spot) ? ' · ' . e(ev_time($spot)) : '' ?></li>
+                        <li><?= ICON_PIN ?><?= e(ev_place($spot)) ?></li>
+                    </ul>
+                    <?php if ($spotTypes): ?>
+                    <ul class="spot__prices" data-reveal>
+                        <?php foreach ($spotTypes as $t): ?>
+                        <li><span><?= e($t['name']) ?></span><b><?= e(lei($t['price'])) ?></b></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
+                    <div class="spot__cta" data-reveal>
+                        <?= part_btn(!empty($spot['is_sold_out']) ? 'Vezi competiția' : 'Alege biletele', '/competitii/' . $spot['slug'] . (empty($spot['is_sold_out']) ? '#bilete' : '')) ?>
+                        <?= part_countdown($spot) ?>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
+<?php endif; ?>
 
+<?php if (count($rest) >= 4): ?>
+    <!-- Sezon plin: galerie orizontală de afișe -->
     <section class="hs" data-hscroll>
         <div class="hs__pin">
             <div class="wrap">
                 <div class="sec__head">
                     <div>
                         <span class="label">Calendar</span>
-                        <h2 data-split>Următoarele competiții</h2>
+                        <h2 data-split>Mai departe în sezon</h2>
                     </div>
                     <a class="link" href="/competitii">Tot calendarul</a>
                 </div>
             </div>
             <div class="hs__track">
-                <?php foreach ($events as $ev): ?>
+                <?php foreach ($rest as $ev): ?>
                     <?= part_card($ev) ?>
                 <?php endforeach; ?>
                 <div class="hs__end">
@@ -104,34 +135,83 @@ include __DIR__ . '/includes/head.php';
             </div>
         </div>
     </section>
-<?php endif; ?>
-
-<?php if ($tiers): ?>
-    <section class="sec sec--light">
+<?php elseif ($rest): ?>
+    <!-- Două-trei competiții: o grilă simplă -->
+    <section class="sec">
         <div class="wrap">
             <div class="sec__head">
                 <div>
-                    <span class="label">Tarife</span>
-                    <h2 data-split>Un bilet pentru fiecare</h2>
+                    <span class="label">Calendar</span>
+                    <h2 data-split>Mai departe în sezon</h2>
                 </div>
-                <p>Prețurile de mai jos sunt cele de la <?= e($next['title']) ?>. Tarifele se pot schimba de la o competiție la alta.</p>
+                <a class="link" href="/competitii">Tot calendarul</a>
             </div>
-            <div class="tiers" data-reveal-group>
-                <?php foreach ($tiers as $i => $t): $hot = stripos($t['name'], 'ambele') !== false; ?>
-                <div class="tier<?= $hot ? ' tier--hot' : '' ?>">
-                    <?php if ($hot): ?><span class="tier__flag">Ambele zile</span><?php endif; ?>
-                    <div class="tier__price"><?= e(rtrim(rtrim(number_format((float) $t['price'], 2, ',', '.'), '0'), ',')) ?><small>lei</small></div>
-                    <div class="tier__name"><?= e($t['name']) ?></div>
-                    <?php if (!empty($t['description'])): ?><p class="tier__desc"><?= e(strip_tags($t['description'])) ?></p><?php endif; ?>
-                </div>
+            <div class="grid" data-reveal-group>
+                <?php foreach ($rest as $ev): ?>
+                <div class="grid__cell"><?= part_card($ev) ?></div>
                 <?php endforeach; ?>
             </div>
-            <p style="margin-top:36px" data-reveal><?= part_btn('Alege biletele', '/competitii/' . $next['slug'] . '#bilete') ?></p>
+        </div>
+    </section>
+<?php elseif ($next): ?>
+    <!-- O singură competiție în vânzare -->
+    <section class="sec" style="padding-bottom:0">
+        <div class="wrap">
+            <div class="soon" data-reveal>
+                <div>
+                    <span class="label">Calendar</span>
+                    <h3 style="margin-top:14px">Următoarele competiții se anunță în curând</h3>
+                    <p>Deocamdată sunt bilete în vânzare la o singură competiție. Calendarul complet al federației e publicat pe wukf.ro.</p>
+                </div>
+                <a class="btn btn--ghost" href="<?= e(SITE_FEDERATION) ?>/category/evenimente/nationale/" target="_blank" rel="noopener">Calendarul federației</a>
+            </div>
+        </div>
+    </section>
+<?php else: ?>
+    <section class="sec">
+        <div class="wrap">
+            <div class="soon" data-reveal>
+                <div>
+                    <span class="label">Calendar</span>
+                    <h3 style="margin-top:14px">Calendarul se anunță în curând</h3>
+                    <p>Momentan nu există competiții cu bilete puse în vânzare. Urmărește anunțurile federației.</p>
+                </div>
+                <a class="btn btn--ghost" href="<?= e(SITE_FEDERATION) ?>" target="_blank" rel="noopener">Mergi la wukf.ro</a>
+            </div>
         </div>
     </section>
 <?php endif; ?>
 
     <section class="sec">
+        <div class="wrap">
+            <div class="sec__head">
+                <div>
+                    <span class="label">Pentru spectatori</span>
+                    <h2 data-split>Ce vezi pe tatami</h2>
+                </div>
+                <p>Trei probe, trei feluri de a urmări karate. Programul exact al fiecărei competiții e anunțat de federație.</p>
+            </div>
+            <div class="discs" data-reveal-group>
+                <div class="disc">
+                    <span class="disc__kanji" aria-hidden="true">型</span>
+                    <h3>Kata</h3>
+                    <p>Succesiuni de tehnici executate fără adversar, individual sau în echipă. Arbitrii notează precizia, ritmul și forța.</p>
+                </div>
+                <div class="disc">
+                    <span class="disc__kanji" aria-hidden="true">組手</span>
+                    <h3>Kumite</h3>
+                    <p>Lupta dintre doi sportivi, unul cu centură roșie (aka) și unul cu centură albă (shiro). Punctează tehnica dusă curat și controlat.</p>
+                </div>
+                <div class="disc">
+                    <span class="disc__kanji" aria-hidden="true">古武道</span>
+                    <h3>Kobudo</h3>
+                    <p>Proba cu arme tradiționale din Okinawa, precum bō sau sai, executată tot sub formă de kata.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="sec sec--light" id="cum-functioneaza">
         <div class="wrap">
             <div class="sec__head">
                 <div>
@@ -143,14 +223,14 @@ include __DIR__ . '/includes/head.php';
                 <div class="step">
                     <span class="step__n">PASUL 01</span>
                     <span class="step__ghost" aria-hidden="true">1</span>
-                    <h3>Alegi competiția</h3>
-                    <p>Bilete de o zi sau pentru ambele zile, cu tarife separate pentru copii, elevi și familii.</p>
+                    <h3>Alegi biletele</h3>
+                    <p>Pe tipuri de bilet sau direct pe locul din tribună, acolo unde sala are locuri numerotate.</p>
                 </div>
                 <div class="step">
                     <span class="step__n">PASUL 02</span>
                     <span class="step__ghost" aria-hidden="true">2</span>
                     <h3>Plătești cu cardul</h3>
-                    <p>Nu ai nevoie de cont. Biletele îți rămân rezervate 15 minute, cât completezi datele.</p>
+                    <p>Nu ai nevoie de cont. Biletele îți rămân rezervate cât completezi datele.</p>
                 </div>
                 <div class="step">
                     <span class="step__n">PASUL 03</span>

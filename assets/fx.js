@@ -95,7 +95,21 @@
         });
     }
 
-    if (!hasGsap) { return; }
+    /* ---- Titlul mare din footer: fără GSAP alunecă singur, încet ---- */
+    var footBig = document.querySelector('.site-foot__big');
+    if (!hasGsap) {
+        if (footBig && !reduce) { footBig.classList.add('is-auto'); }
+        return;
+    }
+
+    /* Cu GSAP, titlul alunecă spre stânga pe măsură ce te apropii de footer, până se vede tot */
+    if (footBig && footBig.firstElementChild) {
+        var footText = footBig.firstElementChild;
+        gsap.fromTo(footText,
+            { x: function () { return footBig.clientWidth * 0.35; } },
+            { x: function () { return Math.min(0, footBig.clientWidth - footText.scrollWidth); }, ease: 'none',
+              scrollTrigger: { trigger: '.site-foot', start: 'top bottom', end: 'bottom bottom', scrub: .5, invalidateOnRefresh: true } });
+    }
 
     /* ---- Bara de progres (centurile, de la alb la negru) ---- */
     var bar = document.querySelector('.progress');

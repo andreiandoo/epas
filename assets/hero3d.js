@@ -1,6 +1,6 @@
 /* competitie.tixello.ro — scena 3D din hero, construită integral din cod (fără modele sau texturi
    descărcate): suprafața de concurs se asamblează placă cu placă, iar două centuri — aka (roșu)
-   și ao (albastru), culorile celor doi sportivi din kumite — se rotesc în jurul ei. */
+   și shiro (alb), culorile celor doi sportivi din kumite — se rotesc în jurul ei. */
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
 
 const canvas = document.querySelector('[data-hero3d]');
@@ -83,7 +83,7 @@ function start(canvas) {
 
     /* ---- Centurile: benzi construite vertex cu vertex, pe o orbită care unduiește ---- */
     const SEG = 150;
-    function makeBelt(color, radius, arc, phase, speed, height) {
+    function makeBelt(color, radius, arc, phase, speed, height, glow) {
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array((SEG + 1) * 2 * 3);
         const idx = [];
@@ -94,15 +94,15 @@ function start(canvas) {
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
         geo.setIndex(idx);
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-            color, roughness: 0.42, metalness: 0.15, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.35,
+            color, roughness: 0.42, metalness: 0.15, side: THREE.DoubleSide, emissive: color, emissiveIntensity: glow,
         }));
         mesh.frustumCulled = false;
         scene.add(mesh);
         return { geo, pos, mesh, radius, arc, phase, speed, height };
     }
     const belts = [
-        makeBelt(0xe01020, 7.3, Math.PI * 1.15, 0, 0.22, 1.7),
-        makeBelt(0x4b86ff, 8.2, Math.PI * 1.05, Math.PI, 0.22, 2.4),
+        makeBelt(0xe01020, 7.3, Math.PI * 1.15, 0, 0.22, 1.7, 0.35),
+        makeBelt(0xf4f7ff, 8.2, Math.PI * 1.05, Math.PI, 0.22, 2.4, 0.12),
     ];
     const vC = new THREE.Vector3(), vW = new THREE.Vector3(), vR = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
     function updateBelt(b, t, grow) {
