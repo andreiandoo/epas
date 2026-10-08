@@ -5,6 +5,7 @@
  *   /sitemap.xml                   the index: one entry for each file below
  *   /sitemap-pages.xml             hubs, maps, planner, routes, plus venues and experiences sold online
  *   /sitemap-places.xml            countries and cities
+ *   /sitemap-guides.xml            the published guides, each with the date it was published
  *   /sitemap-attractions-{cc}.xml  the attractions of one country (the largest holds about 17,000, under the 50,000 limit)
  *
  * Countries, cities, attractions and routes are read from the static data the map uses (assets/v2/data/map, written by
@@ -30,7 +31,7 @@ $smLoc = fn (string $path) => htmlspecialchars(SITE_URL . $path, ENT_XML1 | ENT_
 // ------------------------------------------------------------------ the index
 if ($smPart === '') {
     echo '<?xml version="1.0" encoding="UTF-8"?>', "\n", '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', "\n";
-    foreach (array_merge(['pages', 'places'], array_map(fn ($c) => 'attractions-' . strtolower($c['code']), array_values($smCountries))) as $part) {
+    foreach (array_merge(['pages', 'guides', 'places'], array_map(fn ($c) => 'attractions-' . strtolower($c['code']), array_values($smCountries))) as $part) {
         echo '  <sitemap><loc>', $smLoc('/sitemap-' . $part . '.xml'), "</loc></sitemap>\n";
     }
     echo '</sitemapindex>', "\n";
@@ -73,6 +74,21 @@ if ($smPart === 'pages') {
             $urls[] = ['/experience/' . $a['slug'], 'daily', '0.8'];
         }
     }
+} elseif ($smPart === 'guides') {
+    // Published guides (GET /blog-articles, paged by 50, cached an hour), newest first, with their date.
+    for ($page = 1; $page <= 40; $page++) {
+        $resp = api_cached("sitemap_guides_{$page}", fn () => api_get('/blog-articles', ['per_page' => 50, 'page' => $page, 'status' => 'published']), 3600);
+        $rows = is_array($resp['data'] ?? null) ? $resp['data'] : [];
+        foreach ($rows as $g) {
+            if (!empty($g['slug'])) {
+                $when = strtotime((string) ($g['updated_at'] ?? $g['published_at'] ?? ''));
+                $urls[] = ['/guides/' . $g['slug'], 'monthly', '0.7', $when ? date('Y-m-d', $when) : ''];
+            }
+        }
+        if (!$rows || (int) ($resp['meta']['last_page'] ?? 1) <= $page) {
+            break;
+        }
+    }
 } elseif ($smPart === 'places') {
     // Cities that have a page of their own (the small places an import created only have /{slug}/attractions).
     $cities = v2_map_file('places')['cities'] ?? [];
@@ -108,11 +124,13 @@ if ($smPart === 'pages') {
 
 echo '<?xml version="1.0" encoding="UTF-8"?>', "\n", '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', "\n";
 $seen = [];
-foreach ($urls as [$path, $freq, $prio]) {
+foreach ($urls as $row) {
+    [$path, $freq, $prio] = $row;
     if (isset($seen[$path])) {
         continue;
     }
     $seen[$path] = true;
-    echo '  <url><loc>', $smLoc($path), '</loc><changefreq>', $freq, '</changefreq><priority>', $prio, "</priority></url>\n";
+    $lastmod = !empty($row[3]) ? '<lastmod>' . $row[3] . '</lastmod>' : '';
+    echo '  <url><loc>', $smLoc($path), '</loc>', $lastmod, '<changefreq>', $freq, '</changefreq><priority>', $prio, "</priority></url>\n";
 }
 echo '</urlset>', "\n";
