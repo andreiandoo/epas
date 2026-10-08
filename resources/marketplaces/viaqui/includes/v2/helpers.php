@@ -3,6 +3,8 @@
  * viaqui.com v2: small helpers shared by the v2 partials and pages.
  * Prefixed v2_ so nothing collides with the rest of the site.
  */
+
+require_once __DIR__ . '/i18n.php';   // v2_t(), v2_te(), v2_plural(): every text a visitor reads goes through them
 require_once __DIR__ . '/currency.php';
 
 function v2_e($s): string
@@ -52,7 +54,7 @@ function v2_ic(string $name, string $cls = 'ic'): string
 /** Romanian counting: 1 experiență, 5 experiențe, 20 de experiențe, 101 experiențe. */
 function v2_num(int $n, string $one, string $many): string
 {
-    return number_format($n, 0, '.', ',') . ' ' . ($n === 1 ? $one : $many);
+    return number_format($n, 0, '.', ',') . ' ' . v2_plural($n, $one, $many);
 }
 
 function v2_exp(int $n): string
