@@ -30,11 +30,11 @@ require_once __DIR__ . '/includes/v2/nav.php';
 $hasLink = is_string($_GET['token'] ?? null) && $_GET['token'] !== ''
     && is_string($_GET['email'] ?? null) && filter_var($_GET['email'], FILTER_VALIDATE_EMAIL);
 $rpVenue = ($_GET['ca'] ?? '') === 'venue';
-$rpLogin = $rpVenue ? '/autentificare?ca=venue' : '/autentificare';
+$rpLogin = $rpVenue ? '/login?ca=venue' : '/login';
 
-$pageTitleRaw = 'Setează parola nouă — ' . SITE_NAME;
-$pageDescription = 'Setează o parolă nouă pentru contul tău viaqui.com.';
-$canonicalUrl = SITE_URL . '/resetare-parola';
+$pageTitleRaw = 'Set a new password | ' . SITE_NAME;
+$pageDescription = 'Set a new password for your Viaqui account.';
+$canonicalUrl = SITE_URL . '/reset-password';
 $noindex = true;
 $skipPageCache = true; // the URL carries a one-time token
 
@@ -59,7 +59,7 @@ $v2HeadExtra = '<meta name="referrer" content="no-referrer">'
         'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 
-$tips = ['Minim 8 caractere', 'Litere mari și mici', 'Cel puțin o cifră', 'Un caracter special (!@#$%)'];
+$tips = ['At least 8 characters', 'Upper and lower case letters', 'At least one number', 'A special character (!@#$%)'];
 
 include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
@@ -68,71 +68,71 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="af-hero" aria-labelledby="af-h">
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>    <div class="af-in">
       <div class="af-copy">
-        <p class="af-kicker"><?= $rpVenue ? 'Parolă nouă · operator' : 'Parolă nouă · client' ?></p>
-        <h1 class="af-h" id="af-h">Aproape gata!</h1>
-        <p class="af-lead">Setează o parolă nouă pentru contul tău și vei putea accesa din nou toate funcționalitățile.</p>
+        <p class="af-kicker"><?= $rpVenue ? 'New password · operator' : 'New password · customer' ?></p>
+        <h1 class="af-h" id="af-h">Almost there!</h1>
+        <p class="af-lead">Set a new password for your account and you will have access to everything again.</p>
         <div class="af-tips">
-          <b>Sfaturi pentru o parolă sigură:</b>
+          <b>Tips for a strong password:</b>
           <ul>
             <?php foreach ($tips as $tip): ?><li><?= v2_ic('check') ?><?= v2_e($tip) ?></li><?php endforeach; ?>
           </ul>
         </div>
       </div>
 
-      <section class="af-card" id="af-card" aria-label="Setează parola nouă">
+      <section class="af-card" id="af-card" aria-label="Set a new password">
         <!-- the header turns solid when the white card reaches it, not after the whole hero -->
         <div id="hdr-sentinel" aria-hidden="true"></div>
         <!-- FORM -->
         <div class="af-view" id="rp-form-view"<?= $hasLink ? '' : ' hidden' ?>>
-          <a class="af-back" href="<?= $rpLogin ?>"><?= v2_ic('arrow-left') ?>Înapoi la autentificare</a>
-          <p class="af-card-k">Resetare parolă</p>
-          <h2 class="af-card-h">Setează parolă nouă</h2>
-          <p class="af-card-p">Introdu noua parolă pentru contul tău<span id="rp-for" hidden>: <strong id="rp-email"></strong></span>.</p>
+          <a class="af-back" href="<?= $rpLogin ?>"><?= v2_ic('arrow-left') ?>Back to sign in</a>
+          <p class="af-card-k">Password reset</p>
+          <h2 class="af-card-h">Set a new password</h2>
+          <p class="af-card-p">Enter the new password for your account<span id="rp-for" hidden>: <strong id="rp-email"></strong></span>.</p>
           <p class="af-error" id="rp-error" role="alert" hidden></p>
           <form class="af-form" id="rp-form" data-type="<?= $rpVenue ? 'venue' : 'client' ?>" novalidate>
             <!-- lets password managers save the new password for the right account -->
             <input type="email" id="rp-username" name="email" autocomplete="username" hidden>
             <div class="af-field">
-              <label for="rp-pass">Parolă nouă</label>
+              <label for="rp-pass">New password</label>
               <div class="af-pass">
-                <input id="rp-pass" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="255" required placeholder="Minim 8 caractere" aria-describedby="rp-strength">
-                <button class="af-eye" type="button" data-toggle-pass aria-pressed="false" aria-label="Arată parola">arată</button>
+                <input id="rp-pass" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="255" required placeholder="At least 8 characters" aria-describedby="rp-strength">
+                <button class="af-eye" type="button" data-toggle-pass aria-pressed="false" aria-label="Show password">show</button>
               </div>
               <div class="af-meter" id="rp-meter" data-score="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
               <span class="af-hint" id="rp-strength" aria-live="polite"></span>
             </div>
             <div class="af-field">
-              <label for="rp-pass2">Confirmă parola nouă</label>
+              <label for="rp-pass2">Confirm new password</label>
               <div class="af-pass">
-                <input id="rp-pass2" name="password_confirmation" type="password" autocomplete="new-password" minlength="8" maxlength="255" required placeholder="Reintrodu parola" aria-describedby="rp-match">
-                <button class="af-eye" type="button" data-toggle-pass aria-pressed="false" aria-label="Arată parola">arată</button>
+                <input id="rp-pass2" name="password_confirmation" type="password" autocomplete="new-password" minlength="8" maxlength="255" required placeholder="Enter the password again" aria-describedby="rp-match">
+                <button class="af-eye" type="button" data-toggle-pass aria-pressed="false" aria-label="Show password">show</button>
               </div>
               <span class="af-hint" id="rp-match" aria-live="polite"></span>
             </div>
-            <button class="btn btn-primary af-wide" id="rp-submit" type="submit">Salvează parola nouă</button>
+            <button class="btn btn-primary af-wide" id="rp-submit" type="submit">Save new password</button>
           </form>
         </div>
 
         <!-- SUCCESS -->
         <div class="af-view" id="rp-done-view" hidden>
           <span class="af-badge" aria-hidden="true"><?= v2_ic('check') ?></span>
-          <p class="af-card-k is-ok">Gata</p>
-          <h2 class="af-card-h" id="rp-done-h" tabindex="-1">Parolă schimbată!</h2>
-          <p class="af-card-p">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
+          <p class="af-card-k is-ok">Done</p>
+          <h2 class="af-card-h" id="rp-done-h" tabindex="-1">Password changed!</h2>
+          <p class="af-card-p">Your password has been updated. You can now sign in with the new one.</p>
           <div class="af-actions">
-            <a class="btn btn-primary" id="rp-login" href="<?= $rpLogin ?>">Mergi la autentificare<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-primary" id="rp-login" href="<?= $rpLogin ?>">Go to sign in<?= v2_ic('arrow-right') ?></a>
           </div>
         </div>
 
         <!-- EXPIRED OR INCOMPLETE LINK -->
         <div class="af-view" id="rp-expired-view"<?= $hasLink ? ' hidden' : '' ?>>
           <span class="af-badge is-bad" aria-hidden="true"><?= v2_ic('x') ?></span>
-          <p class="af-card-k is-bad">Link invalid</p>
-          <h2 class="af-card-h" id="rp-expired-h" tabindex="-1">Link expirat</h2>
-          <p class="af-card-p">Linkul de resetare a expirat sau a fost deja folosit. Te rugăm să soliciți un nou link.</p>
+          <p class="af-card-k is-bad">Invalid link</p>
+          <h2 class="af-card-h" id="rp-expired-h" tabindex="-1">Link expired</h2>
+          <p class="af-card-p">This reset link has expired or has already been used. Please request a new one.</p>
           <div class="af-actions">
-            <a class="btn btn-primary" id="rp-new-link" href="<?= $rpVenue ? '/parola-uitata?ca=venue' : '/parola-uitata' ?>">Solicită link nou</a>
-            <a class="btn btn-ghost" href="<?= $rpLogin ?>">Înapoi la autentificare</a>
+            <a class="btn btn-primary" id="rp-new-link" href="<?= $rpVenue ? '/forgot-password?ca=venue' : '/forgot-password' ?>">Request a new link</a>
+            <a class="btn btn-ghost" href="<?= $rpLogin ?>">Back to sign in</a>
           </div>
         </div>
       </section>

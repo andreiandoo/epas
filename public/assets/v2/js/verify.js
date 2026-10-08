@@ -55,9 +55,9 @@
   }
 
   if (type === 'organizer') {
-    $('vf-kicker').textContent = 'Verificare email · cont operator';
-    [].forEach.call(document.querySelectorAll('[data-vf-account]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'Mergi la panou'; });
-    [].forEach.call(document.querySelectorAll('[data-vf-account-text]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'mergi la panou'; });
+    $('vf-kicker').textContent = 'Email verification · operator account';
+    [].forEach.call(document.querySelectorAll('[data-vf-account]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'Go to dashboard'; });
+    [].forEach.call(document.querySelectorAll('[data-vf-account-text]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'go to your dashboard'; });
   }
   $('vf-sent-to').hidden = !knownEmail;
   $('vf-sent-any').hidden = !!knownEmail;
@@ -77,13 +77,13 @@
   function verify(byUser) {
     if (verifying) return;
     if (!link.token || !link.email) {
-      $('vf-error-p').textContent = 'Linkul de verificare este incomplet. Solicită unul nou.';
+      $('vf-error-p').textContent = 'This verification link is incomplete. Request a new one.';
       $('vf-retry').hidden = true;
       show('error', byUser ? 'vf-error-h' : null);
       return;
     }
     if (typeof BileteOnlineAPI === 'undefined') {
-      $('vf-error-p').textContent = 'Nu am putut încărca sistemul de verificare. Reîncarcă pagina.';
+      $('vf-error-p').textContent = 'Verification could not load. Please reload the page.';
       show('error');
       return;
     }
@@ -97,13 +97,13 @@
       })
       .catch(function (err) {
         var status = err && err.status, message = String((err && err.message) || '');
-        var text = 'A apărut o eroare la verificare. Reîncearcă mai târziu.', canRetry = false;
-        if (status === 400 && /expired/i.test(message)) text = 'Linkul de verificare a expirat. Solicită unul nou.';
-        else if (status === 400) text = 'Linkul de verificare este invalid sau a fost deja folosit. Solicită unul nou.';
-        else if (status === 404) text = 'Nu am găsit un cont pentru acest email. Verifică linkul sau creează un cont.';
-        else if (status === 422) text = 'Linkul de verificare este incomplet. Solicită unul nou.';
-        else if (status === 429) { text = 'Prea multe încercări. Încearcă din nou peste un minut.'; canRetry = true; }
-        else if (status === 0) { text = 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.'; canRetry = true; }
+        var text = 'Something went wrong while verifying. Please try again later.', canRetry = false;
+        if (status === 400 && /expired/i.test(message)) text = 'This verification link has expired. Request a new one.';
+        else if (status === 400) text = 'This verification link is invalid or has already been used. Request a new one.';
+        else if (status === 404) text = 'We could not find an account for this email. Check the link or create an account.';
+        else if (status === 422) text = 'This verification link is incomplete. Request a new one.';
+        else if (status === 429) { text = 'Too many attempts. Try again in a minute.'; canRetry = true; }
+        else if (status === 0) { text = 'We could not connect. Check your internet connection and try again.'; canRetry = true; }
         else canRetry = true;
         $('vf-error-p').textContent = text;
         $('vf-retry').hidden = !canRetry;
@@ -129,9 +129,9 @@
       note.hidden = true;
       var typed = !field.hidden, email = typed ? input.value.trim() : knownEmail;
       if (typed) input.value = email;
-      if (!email) { say('Introdu emailul contului.', typed); return; }
-      if (typed && !input.checkValidity()) { say('Adresa de email nu pare corectă. Verific-o și încearcă din nou.', true); return; }
-      if (typeof BileteOnlineAPI === 'undefined') { say('Nu am putut retrimite emailul. Reîncearcă în câteva minute.'); return; }
+      if (!email) { say('Enter your account email.', typed); return; }
+      if (typed && !input.checkValidity()) { say('That email address does not look right. Check it and try again.', true); return; }
+      if (typeof BileteOnlineAPI === 'undefined') { say('We could not resend the email. Try again in a few minutes.'); return; }
 
       sending = true;
       btn.disabled = true;
@@ -155,20 +155,20 @@
         })
         .catch(function (err) {
           var status = err && err.status;
-          if (status === 429) say('Așteaptă un minut înainte să ceri alt email de verificare.');
-          else if (status === 422) say('Adresa de email nu pare corectă. Verific-o și încearcă din nou.', typed);
-          else if (status === 0) say('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
-          else say('Nu am putut retrimite emailul. Reîncearcă în câteva minute.');
+          if (status === 429) say('Please wait a minute before asking for another verification email.');
+          else if (status === 422) say('That email address does not look right. Check it and try again.', typed);
+          else if (status === 0) say('We could not connect. Check your internet connection and try again.');
+          else say('We could not resend the email. Try again in a few minutes.');
           btn.disabled = false;
           btn.textContent = idle;
         })
         .then(function () { sending = false; });
     });
   }
-  resender($('vf-pending-resend'), $('vf-pending-email'), $('vf-pending-field'), $('vf-pending-msg'), $('vf-pending-note'), 'Se trimite…',
-    function (left) { return 'Trimis ✓ — poți retrimite în ' + left + ' s'; });
-  resender($('vf-error-resend'), $('vf-error-email'), $('vf-error-field'), $('vf-error-msg'), $('vf-error-note'), 'Se trimite…',
-    function (left) { return '✓ Email retrimis · ' + left + ' s'; });
+  resender($('vf-pending-resend'), $('vf-pending-email'), $('vf-pending-field'), $('vf-pending-msg'), $('vf-pending-note'), 'Sending…',
+    function (left) { return 'Sent ✓ You can resend in ' + left + ' s'; });
+  resender($('vf-error-resend'), $('vf-error-email'), $('vf-error-field'), $('vf-error-msg'), $('vf-error-note'), 'Sending…',
+    function (left) { return '✓ Email sent again · ' + left + ' s'; });
 
   if (link) verify(false);
   else show('pending');

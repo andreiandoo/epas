@@ -11,7 +11,7 @@
   var data = {};
   try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
   var copy = data.copy || {};
-  var redirectAfter = data.redirectAfter || '/cont';
+  var redirectAfter = data.redirectAfter || '/account';
   var state = {
     type: data.accountType === 'venue' ? 'venue' : 'client',
     mode: data.mode === 'register' ? 'register' : 'login',
@@ -56,7 +56,7 @@
     root.setAttribute('data-mode', state.mode);
     $('au-title').textContent = textFor(state.type, state.mode, 'title');
     $('au-text').textContent = textFor(state.type, state.mode, 'text');
-    $('au-kind-text').textContent = state.type === 'venue' ? 'Cont locație' : 'Cont client';
+    $('au-kind-text').textContent = state.type === 'venue' ? 'Venue account' : 'Customer account';
 
     // tabs: hidden during the 2FA step, which belongs to signing in
     root.querySelector('.au-tabs').hidden = state.twofa;
@@ -65,7 +65,7 @@
       b.setAttribute('aria-selected', String(on));
       b.tabIndex = on ? 0 : -1;
     });
-    $('au-tab-register').textContent = state.type === 'venue' ? 'Cont nou de locație' : 'Cont nou';
+    $('au-tab-register').textContent = state.type === 'venue' ? 'New venue account' : 'New account';
 
     forms.login.hidden = !(state.mode === 'login' && !state.twofa);
     forms.twofa.hidden = !(state.mode === 'login' && state.twofa);
@@ -82,9 +82,9 @@
     var invite = $('au-invite'), inviteCopy = state.type === 'client' ? inviteText() : '';
     if (invite) { invite.textContent = inviteCopy; invite.hidden = !inviteCopy; }
 
-    $('au-login-email').placeholder = state.type === 'venue' ? 'email administrator / staff' : 'email@exemplu.ro';
-    if ($('au-forgot')) $('au-forgot').href = state.type === 'venue' ? '/parola-uitata?ca=venue' : '/parola-uitata';
-    $('au-reg-email').placeholder = state.type === 'venue' ? 'email@locatie.ro' : 'email@exemplu.ro';
+    $('au-login-email').placeholder = state.type === 'venue' ? 'administrator or staff email' : 'you@example.com';
+    if ($('au-forgot')) $('au-forgot').href = state.type === 'venue' ? '/forgot-password?ca=venue' : '/forgot-password';
+    $('au-reg-email').placeholder = state.type === 'venue' ? 'you@yourvenue.com' : 'you@example.com';
     setIdle($('au-login-submit'), textFor(state.type, 'login', 'submit'));
     setIdle($('au-register-submit'), textFor(state.type, 'register', 'submit'));
   }
@@ -108,12 +108,11 @@
     } catch (e) {}
     if (!code) return '';
     var name = info && typeof info.referrer_name === 'string' ? info.referrer_name.trim() : '';
-    var who = name && name !== 'Un prieten' ? 'Ai fost invitat de ' + name + '.' : 'Ai fost invitat de un prieten.';
+    var who = name && name !== 'Un prieten' ? 'You were invited by ' + name + '.' : 'You were invited by a friend.';
     var reward = info ? Math.floor(Number(info.referred_reward) || 0) : 0;
-    if (reward <= 0) return who + ' Creează contul ca invitația să fie înregistrată.';
-    var r = reward % 100;
-    var gift = info.reward_type && info.reward_type !== 'points' ? reward + ' lei' : (reward === 1 ? '1 punct' : reward + (r === 0 || r >= 20 ? ' de puncte' : ' puncte'));
-    return who + ' Creează contul și primești ' + gift + ' bonus.';
+    if (reward <= 0) return who + ' Create your account so the invitation is recorded.';
+    var gift = info.reward_type && info.reward_type !== 'points' ? '20AC' + reward : (reward === 1 ? '1 point' : reward + ' points');
+    return who + ' Create your account and get a ' + gift + ' bonus.';
   }
 
   // The organizer page the login guard came from (auth.js keeps it for this tab): only a page of the organizer area on
@@ -170,9 +169,9 @@
         if (input) input.type = state.showPassword ? 'text' : 'password';
       });
       root.querySelectorAll('[data-toggle-pass]').forEach(function (b) {
-        b.textContent = state.showPassword ? 'ascunde' : 'arată';
+        b.textContent = state.showPassword ? 'hide' : 'show';
         b.setAttribute('aria-pressed', String(state.showPassword));
-        b.setAttribute('aria-label', state.showPassword ? 'Ascunde parola' : 'Arată parola');
+        b.setAttribute('aria-label', state.showPassword ? 'Hide password' : 'Show password');
       });
     }
   });
@@ -196,7 +195,7 @@
     e.preventDefault();
     if (state.submitting) return;
     if (!hasAuth()) {
-      showMessage('Sistemul de autentificare nu este încărcat. Reîncarcă pagina.', 'error');
+      showMessage('Sign-in could not load. Please reload the page.', 'error');
       return;
     }
     showMessage('');
@@ -219,15 +218,15 @@
       }
 
       if (result && result.success) {
-        showMessage('Conectare reușită. Te redirecționăm…', 'success');
+        showMessage('Signed in. Redirecting…', 'success');
         var target = state.type === 'venue' ? organizerTarget() : redirectAfter;
         setTimeout(function () { window.location.href = target; }, 500);
       } else {
-        showMessage((result && result.message) || 'Email sau parolă incorecte.', 'error');
+        showMessage((result && result.message) || 'Incorrect email or password.', 'error');
         setSubmitting(false);
       }
     } catch (err) {
-      showMessage('Eroare la conectare. Încearcă din nou.', 'error');
+      showMessage('Something went wrong signing in. Please try again.', 'error');
       setSubmitting(false);
     }
   });
@@ -245,27 +244,27 @@
     e.preventDefault();
     if (state.submitting) return;
     if (!hasAuth() || !state.challenge) {
-      showMessage('Sesiunea a expirat. Reia autentificarea.', 'error');
+      showMessage('Your session has expired. Please sign in again.', 'error');
       cancel2fa();
       return;
     }
     var code = $('au-2fa-code').value.trim();
     if (!code) {
-      showMessage('Introdu codul.', 'error');
+      showMessage('Enter the code.', 'error');
       return;
     }
     setSubmitting(true);
     try {
       var r = await BileteOnlineAuth.finishCustomer2faLogin(state.challenge, code);
       if (r && r.success) {
-        showMessage('Cod corect. Te redirecționăm…', 'success');
+        showMessage('Code accepted. Redirecting…', 'success');
         setTimeout(function () { window.location.href = redirectAfter; }, 500);
       } else {
-        showMessage((r && r.message) || 'Codul nu este valid.', 'error');
+        showMessage((r && r.message) || 'That code is not valid.', 'error');
         setSubmitting(false);
       }
     } catch (err) {
-      showMessage('Eroare la verificare.', 'error');
+      showMessage('Something went wrong checking the code.', 'error');
       setSubmitting(false);
     }
   });
@@ -277,21 +276,21 @@
     e.preventDefault();
     if (state.submitting) return;
     if (!hasAuth()) {
-      showMessage('Sistemul de înregistrare nu este încărcat. Reîncarcă pagina.', 'error');
+      showMessage('Sign-up could not load. Please reload the page.', 'error');
       return;
     }
     var pass = $('au-reg-pass').value;
     var pass2 = $('au-reg-pass2').value;
     if (!$('au-terms').checked) {
-      showMessage('Trebuie să accepți termenii și condițiile.', 'error');
+      showMessage('You need to accept the terms and conditions.', 'error');
       return;
     }
     if (pass !== pass2) {
-      showMessage('Parolele nu coincid.', 'error');
+      showMessage('The passwords do not match.', 'error');
       return;
     }
     if (pass.length < 8) {
-      showMessage('Parola trebuie să aibă minim 8 caractere.', 'error');
+      showMessage('Your password must be at least 8 characters long.', 'error');
       return;
     }
 
@@ -327,7 +326,7 @@
       }
 
       if (result && result.success) {
-        showMessage('Cont creat cu succes. Te redirecționăm…', 'success');
+        showMessage('Account created. Redirecting…', 'success');
         try {
           if (window.EPASTracking && typeof EPASTracking.trackSignUp === 'function') {
             EPASTracking.trackSignUp(state.type === 'venue' ? 'organizer' : 'email', { email: payload.email });
@@ -336,11 +335,11 @@
         var target = state.type === 'venue' ? '/organizator/panou' : '/verify-email';
         setTimeout(function () { window.location.href = target; }, 1200);
       } else {
-        showMessage((result && result.message) || 'Înregistrarea a eșuat.', 'error');
+        showMessage((result && result.message) || 'We could not create your account.', 'error');
         setSubmitting(false);
       }
     } catch (err) {
-      showMessage('Eroare la înregistrare. Încearcă din nou.', 'error');
+      showMessage('Something went wrong creating your account. Please try again.', 'error');
       setSubmitting(false);
     }
   });

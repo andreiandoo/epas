@@ -20,11 +20,11 @@ require_once __DIR__ . '/includes/v2/nav.php';
 
 $prefillEmail = is_string($_GET['email'] ?? null) && filter_var($_GET['email'], FILTER_VALIDATE_EMAIL) ? $_GET['email'] : '';
 $fpVenue = ($_GET['ca'] ?? '') === 'venue';
-$fpLogin = $fpVenue ? '/autentificare?ca=venue' : '/autentificare';
+$fpLogin = $fpVenue ? '/login?ca=venue' : '/login';
 
-$pageTitleRaw = 'Ai uitat parola? — ' . SITE_NAME;
-$pageDescription = 'Resetează parola contului tău viaqui.com. Trimitem un link sigur pe emailul cu care te-ai înregistrat.';
-$canonicalUrl = SITE_URL . '/parola-uitata';
+$pageTitleRaw = 'Forgot your password? | ' . SITE_NAME;
+$pageDescription = 'Reset the password for your Viaqui account. We send a secure link to the email address you signed up with.';
+$canonicalUrl = SITE_URL . '/forgot-password';
 $noindex = true;
 $skipPageCache = true;
 
@@ -50,61 +50,61 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="af-hero" aria-labelledby="af-h">
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>    <div class="af-in">
       <div class="af-copy">
-        <p class="af-kicker"><?= $fpVenue ? 'Resetare parolă · operator' : 'Resetare parolă · client' ?></p>
-        <h1 class="af-h" id="af-h">Ai uitat parola?</h1>
-        <p class="af-lead">Nu-ți face griji — îți trimitem un link sigur pe emailul contului. Are valabilitate limitată din motive de securitate.</p>
+        <p class="af-kicker"><?= $fpVenue ? 'Password reset · operator' : 'Password reset · customer' ?></p>
+        <h1 class="af-h" id="af-h">Forgot your password?</h1>
+        <p class="af-lead">No need to worry: we will send a secure link to your account email. For security, the link is only valid for a limited time.</p>
         <ol class="af-steps">
-          <li><small>Pasul 1</small><b>Email</b></li>
-          <li><small>Pasul 2</small><b>Link</b></li>
-          <li><small>Pasul 3</small><b>Parolă nouă</b></li>
+          <li><small>Step 1</small><b>Email</b></li>
+          <li><small>Step 2</small><b>Link</b></li>
+          <li><small>Step 3</small><b>New password</b></li>
         </ol>
       </div>
 
-      <section class="af-card" id="af-card" aria-label="Trimite link de resetare">
+      <section class="af-card" id="af-card" aria-label="Send a reset link">
         <!-- the header turns solid when the white card reaches it, not after the whole hero -->
         <div id="hdr-sentinel" aria-hidden="true"></div>
         <!-- FORM -->
         <div class="af-view" id="fp-form-view">
-          <a class="af-back" href="<?= $fpLogin ?>"><?= v2_ic('arrow-left') ?>Înapoi la autentificare</a>
-          <h2 class="af-card-h">Trimite link</h2>
-          <p class="af-card-p">Introdu emailul contului<?= $fpVenue ? ' de operator sau staff' : '' ?>. Dacă există un cont asociat, vei primi un link de resetare în câteva minute.</p>
+          <a class="af-back" href="<?= $fpLogin ?>"><?= v2_ic('arrow-left') ?>Back to sign in</a>
+          <h2 class="af-card-h">Send a link</h2>
+          <p class="af-card-p">Enter the email for your<?= $fpVenue ? ' operator or staff' : '' ?> account. If an account is linked to it, you will get a reset link within a few minutes.</p>
           <p class="af-error" id="fp-error" role="alert" hidden></p>
           <form class="af-form" id="fp-form" data-type="<?= $fpVenue ? 'venue' : 'client' ?>" novalidate>
             <div class="af-field">
               <label for="fp-email">Email</label>
-              <input id="fp-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="255" required placeholder="email@exemplu.ro" value="<?= v2_e($prefillEmail) ?>">
+              <input id="fp-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="255" required placeholder="you@example.com" value="<?= v2_e($prefillEmail) ?>">
             </div>
-            <button class="btn btn-primary af-wide" id="fp-submit" type="submit">Trimite link de resetare</button>
+            <button class="btn btn-primary af-wide" id="fp-submit" type="submit">Send reset link</button>
           </form>
           <?php if ($fpVenue): ?>
-          <p class="af-card-foot">Nu mai știi emailul contului? <a href="/contact?motiv=locatie">Scrie-ne</a></p>
+          <p class="af-card-foot">Can't remember the account email? <a href="/contact?motiv=locatie">Contact us</a></p>
           <?php else: ?>
-          <p class="af-card-foot">Ai uitat și emailul folosit? <a href="/recuperare-comanda">Caută comanda după număr</a></p>
+          <p class="af-card-foot">Forgotten which email you used too? <a href="/find-order">Find your order by its number</a></p>
           <?php endif; ?>
         </div>
 
         <!-- SENT -->
         <div class="af-view" id="fp-sent-view" hidden>
           <span class="af-badge" aria-hidden="true"><?= v2_ic('envelope-simple') ?></span>
-          <p class="af-card-k is-ok">Email trimis</p>
-          <h2 class="af-card-h" id="fp-sent-h" tabindex="-1">Verifică inbox-ul</h2>
-          <p class="af-card-p">Am trimis instrucțiuni de resetare la:</p>
+          <p class="af-card-k is-ok">Email sent</p>
+          <h2 class="af-card-h" id="fp-sent-h" tabindex="-1">Check your inbox</h2>
+          <p class="af-card-p">We sent reset instructions to:</p>
           <p class="af-email" id="fp-sent-email"></p>
           <div class="af-help">
-            <b>Nu ai primit nimic?</b>
+            <b>Nothing arrived?</b>
             <ul>
-              <li><?= v2_ic('check') ?>Verifică folderul Spam / Junk.</li>
-              <li><?= v2_ic('check') ?>Confirmă că emailul scris este corect.</li>
-              <li><?= v2_ic('check') ?>Poate dura 1-2 minute să ajungă.</li>
+              <li><?= v2_ic('check') ?>Check your Spam or Junk folder.</li>
+              <li><?= v2_ic('check') ?>Make sure the email address is spelled correctly.</li>
+              <li><?= v2_ic('check') ?>It can take a minute or two to arrive.</li>
             </ul>
           </div>
           <p class="af-error" id="fp-resend-error" role="alert" hidden></p>
-          <p class="af-note" id="fp-resent" role="status" hidden>Email retrimis. Verifică inbox-ul în câteva minute.</p>
+          <p class="af-note" id="fp-resent" role="status" hidden>Email sent again. Check your inbox in a few minutes.</p>
           <div class="af-actions is-2">
-            <button class="btn btn-ghost" id="fp-resend" type="button">Retrimite emailul</button>
-            <a class="btn btn-primary" id="fp-login" href="<?= $fpLogin ?>">Înapoi la login</a>
+            <button class="btn btn-ghost" id="fp-resend" type="button">Resend email</button>
+            <a class="btn btn-primary" id="fp-login" href="<?= $fpLogin ?>">Back to sign in</a>
           </div>
-          <button class="af-link-btn" id="fp-change" type="button">Ai greșit emailul? Schimbă-l</button>
+          <button class="af-link-btn" id="fp-change" type="button">Wrong email? Change it</button>
         </div>
       </section>
     </div>
