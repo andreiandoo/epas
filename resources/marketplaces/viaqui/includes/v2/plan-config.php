@@ -198,3 +198,68 @@ const PLAN_STAY22 = [
     ],
     'note'       => 'Places to stay come from Booking, Expedia, Vrbo and others. If you book one of them, the website earns a commission.',
 ];
+
+/**
+ * The labels of the lists above, in the visitor's language.
+ *
+ * A constant cannot call a function, so the lists stay in English and every label is written here once more, as a
+ * literal, where the catalogue collector (plans/viaqui-data/extract_strings.py) can find it. A label added to a list
+ * above and not named here is shown in English.
+ */
+function plan_label(string $text): string
+{
+    static $map = null;
+    if ($map === null) {
+        $map = [
+            // PLAN_PACES
+            'Relaxed' => v2_t('Relaxed'),
+            'Normal' => v2_t('Normal'),
+            'Intense' => v2_t('Intense'),
+            'Three or four places a day, with time between them.' => v2_t('Three or four places a day, with time between them.'),
+            'A full day, with no rushing.' => v2_t('A full day, with no rushing.'),
+            'As much as fits in a long day.' => v2_t('As much as fits in a long day.'),
+            // PLAN_INTERESTS
+            'Castles and history' => v2_t('Castles and history'),
+            'Museums' => v2_t('Museums'),
+            'Churches and monasteries' => v2_t('Churches and monasteries'),
+            'Nature and views' => v2_t('Nature and views'),
+            'Old towns and squares' => v2_t('Old towns and squares'),
+            'Family fun' => v2_t('Family fun'),
+            'Theatre and wine' => v2_t('Theatre and wine'),
+            // PLAN_COMPANY
+            'With friends' => v2_t('With friends'),
+            'With family' => v2_t('With family'),
+            'With children' => v2_t('With children'),
+            'As a couple' => v2_t('As a couple'),
+            // PLAN_STOP_PRESETS
+            'Meal' => v2_t('Meal'),
+            'Coffee' => v2_t('Coffee'),
+            'Break' => v2_t('Break'),
+            'Free time' => v2_t('Free time'),
+            'Shopping' => v2_t('Shopping'),
+            'Check-in' => v2_t('Check-in'),
+            // PLAN_MODES
+            'Car' => v2_t('Car'),
+            'Motorcycle' => v2_t('Motorcycle'),
+            'Bicycle' => v2_t('Bicycle'),
+            // PLAN_STAY22 (Booking and Expedia are names and stay as they are)
+            'Holiday homes' => v2_t('Holiday homes'),
+            'Places to stay come from Booking, Expedia, Vrbo and others. If you book one of them, the website earns a commission.'
+                => v2_t('Places to stay come from Booking, Expedia, Vrbo and others. If you book one of them, the website earns a commission.'),
+        ];
+    }
+    return $map[$text] ?? $text;
+}
+
+/** One of the lists above with its labels translated: $at says which positions of each row hold a label. */
+function plan_labels(array $rows, array $at = [0]): array
+{
+    foreach ($rows as $key => $row) {
+        foreach ($at as $i) {
+            if (isset($row[$i]) && is_string($row[$i])) {
+                $rows[$key][$i] = plan_label($row[$i]);
+            }
+        }
+    }
+    return $rows;
+}

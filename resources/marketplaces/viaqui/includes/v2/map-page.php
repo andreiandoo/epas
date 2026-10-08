@@ -14,11 +14,13 @@
  * and a rail of places worth opening — and then the prose and the FAQ.
  *
  * The page file sets the usual head variables plus one $mapPage array:
- *   kicker, h1, h1em (second line, optional), lead, stats [[number, label]], total
+ *   kicker, h1, h1em (second line, optional) or h1html (the whole heading, already translated and marked up),
+ *   lead, stats [[number, label]], total
  *   breadcrumbs [[name, url]]
  *   config      EPMap config (see assets/v2/js/map.js); `dialog` is forced off here
  *   summary     v2_map_summary() output
  *   explorer    [[id, icon, label, sub, kind, rows, unit?, note?, presets?, more?, search?]]
+ *               unit: 'places' (default) or 'attractions', the noun counted on a tile; a key, not a text
  *               kind: type (multi-select) | region | zone | city — what a click sets on the map
  *               rows: [[key, emoji, name, count, href]]
  *               more: [text, href] — a link printed in the panel footer
@@ -57,14 +59,14 @@ include __DIR__ . '/header.php';
   <section class="mph" aria-labelledby="mph-h">
     <div class="wrap mph-in">
       <div class="mph-copy">
-      <nav class="crumbs" aria-label="Breadcrumb">
+      <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
         <?php foreach ($mapPage['breadcrumbs'] as $i => [$bcName, $bcUrl]): ?>
           <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
           <?php if ($i < count($mapPage['breadcrumbs']) - 1): ?><a href="<?= v2_e($bcUrl) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
         <?php endforeach; ?>
       </nav>
       <?php if (!empty($mapPage['kicker'])): ?><p class="kicker"><?= v2_e($mapPage['kicker']) ?></p><?php endif; ?>
-      <h1 id="mph-h"><?= v2_e($mapPage['h1']) ?><?php if (!empty($mapPage['h1em'])): ?> <em><?= v2_e($mapPage['h1em']) ?></em><?php endif; ?></h1>
+      <h1 id="mph-h"><?php if (!empty($mapPage['h1html'])): ?><?= $mapPage['h1html'] ?><?php else: ?><?= v2_e($mapPage['h1']) ?><?php if (!empty($mapPage['h1em'])): ?> <em><?= v2_e($mapPage['h1em']) ?></em><?php endif; ?><?php endif; ?></h1>
       <?php if (!empty($mapPage['lead'])): ?><p class="mph-lead"><?= v2_e($mapPage['lead']) ?></p><?php endif; ?>
       </div>
       <?php if (!empty($mapPage['stats'])): ?>
@@ -74,7 +76,7 @@ include __DIR__ . '/header.php';
   </section>
 
   <!-- ============================== MAP + EXPLORER ============================== -->
-  <section class="mp-band" aria-label="Interactive map">
+  <section class="mp-band" aria-label="<?= v2_te('Interactive map') ?>">
     <div class="wrap">
       <div class="mp-shell">
         <?php if ($mpExplorer): ?>
@@ -90,8 +92,8 @@ include __DIR__ . '/header.php';
               <?php endforeach; ?>
             </div>
             <div class="mpx-state">
-              <p class="mpx-count" data-mpx-count aria-live="polite"><b><?= v2_e(v2_thousands((int) ($mapPage['total'] ?? 0))) ?></b> <span>places on the map</span></p>
-              <button type="button" class="mpx-reset" data-mpx-reset hidden><?= v2_ic('x') ?>Reset</button>
+              <p class="mpx-count" data-mpx-count aria-live="polite"><b><?= v2_e(v2_thousands((int) ($mapPage['total'] ?? 0))) ?></b> <span><?= v2_e(v2_plural((int) ($mapPage['total'] ?? 0), 'place on the map', 'places on the map')) ?></span></p>
+              <button type="button" class="mpx-reset" data-mpx-reset hidden><?= v2_ic('x') ?><?= v2_te('Reset') ?></button>
             </div>
           </div>
 
@@ -103,12 +105,12 @@ include __DIR__ . '/header.php';
               <div class="mpx-top-end">
                 <?php if (!empty($px['presets'])): ?>
                 <span class="mpx-presets">
-                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="popular">Popular only</button>
-                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="all">All types</button>
+                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="popular"><?= v2_te('Popular only') ?></button>
+                  <button type="button" class="mpx-preset" data-mpx-set="preset" data-mpx-key="all"><?= v2_te('All types') ?></button>
                 </span>
                 <?php endif; ?>
                 <?php if (!empty($px['search'])): ?>
-                <label class="mpx-find"><?= v2_ic('magnifying-glass') ?><span class="sr">Search the list</span><input type="search" data-mpx-find="<?= v2_e($px['id']) ?>" placeholder="<?= v2_e($px['search']) ?>" autocomplete="off" spellcheck="false"></label>
+                <label class="mpx-find"><?= v2_ic('magnifying-glass') ?><span class="sr"><?= v2_te('Search the list') ?></span><input type="search" data-mpx-find="<?= v2_e($px['id']) ?>" placeholder="<?= v2_e($px['search']) ?>" autocomplete="off" spellcheck="false"></label>
                 <?php endif; ?>
               </div>
             </div>
@@ -121,7 +123,7 @@ include __DIR__ . '/header.php';
                    data-mpx-set="<?= v2_e($px['kind']) ?>" data-mpx-key="<?= v2_e($rKey) ?>" data-mpx-label="<?= v2_e($rName) ?>" aria-pressed="false">
                   <?php if ($pxTiles): ?>
                   <span class="mpx-tile-ic" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($rEmoji) ?? am_place_icon($rKey), 'ic-em') ?></span>
-                  <span class="mpx-tile-t"><b><?= v2_e($rName) ?></b><span><?= v2_e(v2_thousands((int) $rCount)) ?> <?= v2_e($px['unit'] ?? 'places') ?></span></span>
+                  <span class="mpx-tile-t"><b><?= v2_e($rName) ?></b><span><?= v2_e(($px['unit'] ?? 'places') === 'attractions' ? v2_num((int) $rCount, 'attraction', 'attractions') : v2_num((int) $rCount, 'place', 'places')) ?></span></span>
                   <span class="mpx-tile-on" aria-hidden="true"><?= v2_ic('check') ?></span>
                   <?php else: ?>
                   <span><?= !empty($px['flags']) && function_exists('v2_flag') ? v2_flag((string) $rEmoji) : '' ?><?= v2_e($rName) ?></span><b><?= v2_e(v2_thousands((int) $rCount)) ?></b>
@@ -131,7 +133,7 @@ include __DIR__ . '/header.php';
               <?php endforeach; ?>
             </ul>
 
-            <p class="mpx-empty" data-mpx-empty hidden>Nothing with this name in the list.</p>
+            <p class="mpx-empty" data-mpx-empty hidden><?= v2_te('Nothing with this name in the list.') ?></p>
             <?php if (!empty($px['more'])): ?>
             <p class="mpx-more"><a href="<?= v2_e($px['more'][1]) ?>"><?= v2_e($px['more'][0]) ?><?= v2_ic('arrow-right') ?></a></p>
             <?php endif; ?>
@@ -146,7 +148,7 @@ include __DIR__ . '/header.php';
         </div>
       </div>
       <noscript>
-        <p class="mp-noscript">The map needs JavaScript. The full list is on the <a href="/attractions">attractions page</a>, which you can filter by type and by country.</p>
+        <p class="mp-noscript"><?= v2_t('The map needs JavaScript. The full list is on the <a href="{url}">attractions page</a>, which you can filter by type and by country.', ['url' => '/attractions']) ?></p>
       </noscript>
     </div>
   </section>
@@ -156,16 +158,16 @@ include __DIR__ . '/header.php';
   <section class="pt-sec pt-dark mpd" aria-labelledby="mpd-h">
     <div class="wrap">
       <div class="pt-head">
-        <p class="pt-k"><?= v2_ic('target') ?><?= v2_e($mapPage['ideasKicker'] ?? 'Ideas') ?></p>
-        <h2 id="mpd-h"><?= v2_e($mapPage['ideasHeading'] ?? 'Not sure where to start?') ?></h2>
-        <p class="pt-sub"><?= v2_e($mapPage['ideasLead'] ?? 'The map shows everything at once. These are the places we would open first.') ?></p>
+        <p class="pt-k"><?= v2_ic('target') ?><?= v2_e($mapPage['ideasKicker'] ?? v2_t('Ideas')) ?></p>
+        <h2 id="mpd-h"><?= v2_e($mapPage['ideasHeading'] ?? v2_t('Not sure where to start?')) ?></h2>
+        <p class="pt-sub"><?= v2_e($mapPage['ideasLead'] ?? v2_t('The map shows everything at once. These are the places we would open first.')) ?></p>
       </div>
 
       <?php if (!empty($mapPage['routeCards'])): ?>
       <div class="mpd-block">
         <div class="mpd-h">
-          <h3><?= v2_e($mapPage['routesHeading'] ?? 'Ready-made routes') ?></h3>
-          <div class="mpd-h-end"><a class="mpd-link" href="/routes">All routes<?= v2_ic('arrow-right') ?></a></div>
+          <h3><?= v2_e($mapPage['routesHeading'] ?? v2_t('Ready-made routes')) ?></h3>
+          <div class="mpd-h-end"><a class="mpd-link" href="/routes"><?= v2_te('All routes') ?><?= v2_ic('arrow-right') ?></a></div>
         </div>
         <?php $routeCards = $mapPage['routeCards']; require __DIR__ . '/route-cards.php'; ?>
       </div>
@@ -174,12 +176,12 @@ include __DIR__ . '/header.php';
       <?php if ($mpPicks): ?>
       <div class="mpd-block">
         <div class="mpd-h">
-          <h3><?= v2_e($mapPage['picksHeading'] ?? 'Places worth opening') ?></h3>
+          <h3><?= v2_e($mapPage['picksHeading'] ?? v2_t('Places worth opening')) ?></h3>
           <div class="mpd-h-end">
-            <a class="mpd-link" href="<?= v2_e($mapPage['listHref'] ?? '/attractions') ?>">See the full list<?= v2_ic('arrow-right') ?></a>
+            <a class="mpd-link" href="<?= v2_e($mapPage['listHref'] ?? '/attractions') ?>"><?= v2_te('See the full list') ?><?= v2_ic('arrow-right') ?></a>
             <span class="mpd-arrows" data-mpr-arrows hidden>
-              <button type="button" class="mpd-arrow" data-mpr-prev aria-label="Scroll back"><?= v2_ic('arrow-left') ?></button>
-              <button type="button" class="mpd-arrow" data-mpr-next aria-label="Scroll forward"><?= v2_ic('arrow-right') ?></button>
+              <button type="button" class="mpd-arrow" data-mpr-prev aria-label="<?= v2_te('Scroll back') ?>"><?= v2_ic('arrow-left') ?></button>
+              <button type="button" class="mpd-arrow" data-mpr-next aria-label="<?= v2_te('Scroll forward') ?>"><?= v2_ic('arrow-right') ?></button>
             </span>
           </div>
         </div>
@@ -203,8 +205,8 @@ include __DIR__ . '/header.php';
       <?php if (!empty($mapPage['ideasCta'])): ?>
       <div class="mpd-cta">
         <div class="mpd-cta-t">
-          <b><?= v2_e($mapPage['ideasCtaTitle'] ?? 'Or plan your own trip') ?></b>
-          <span><?= v2_e($mapPage['ideasCtaLead'] ?? 'Tell us where you start, how many days you have and what you like. You get a day-by-day plan with the distances between stops.') ?></span>
+          <b><?= v2_e($mapPage['ideasCtaTitle'] ?? v2_t('Or plan your own trip')) ?></b>
+          <span><?= v2_e($mapPage['ideasCtaLead'] ?? v2_t('Tell us where you start, how many days you have and what you like. You get a day-by-day plan with the distances between stops.')) ?></span>
         </div>
         <a class="btn btn-light" href="<?= v2_e($mapPage['ideasCta'][1]) ?>"><?= v2_e($mapPage['ideasCta'][0]) ?><?= v2_ic('arrow-right') ?></a>
       </div>
@@ -218,7 +220,7 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="mp-text-h">
     <div class="wrap mp-text">
       <div class="mp-prose">
-        <h2 id="mp-text-h" class="sr">About the attractions map</h2>
+        <h2 id="mp-text-h" class="sr"><?= v2_te('About the attractions map') ?></h2>
         <?= implode("\n", $mapPage['prose'] ?? []) ?>
       </div>
       <?php if ($mpFaq): ?>

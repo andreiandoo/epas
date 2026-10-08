@@ -34,12 +34,12 @@ if (!$mpCountry && $mpCity !== '') {
     $mpCityRow = navGetCityBySlug($mpCity);
     $mpHref = is_array($mpCityRow) ? v2_map_href((string) ($mpCityRow['country'] ?? '')) : '/map';
     if ($mpHref !== '/map') {
-        header('Location: ' . $mpHref . '?city=' . rawurlencode($mpCity), true, 302);
+        header('Location: ' . v2_url($mpHref) . '?city=' . rawurlencode($mpCity), true, 302);
         exit;
     }
 }
 
-$mpName = $mpCountry ? (string) $summary['name'] : 'Europe';
+$mpName = $mpCountry ? (string) $summary['name'] : v2_t('Europe');
 $mpPath = $mpCountry ? '/map/' . $mpCountrySlug : '/map';
 $mpFile = $mpCountry ? strtolower($mpCountry['code']) : 'europe';
 $total = (int) $summary['total'];
@@ -57,8 +57,8 @@ foreach ($summary['cities'] ?? [] as [$ctSlug, $ctName, , , $ctCount]) {
 
 $explorer = [[
     'id' => 'types', 'icon' => 'squares-four', 'kind' => 'type',
-    'label' => 'Types of places', 'sub' => v2_num(count($exTypeRows), 'type', 'types'), 'unit' => 'places',
-    'note' => 'Choose as many types as you like; with none chosen, the map shows them all.',
+    'label' => v2_t('Types of places'), 'sub' => v2_num(count($exTypeRows), 'type', 'types'), 'unit' => 'places',
+    'note' => v2_t('Choose as many types as you like; with none chosen, the map shows them all.'),
     'presets' => true, 'rows' => $exTypeRows,
 ]];
 if ($mpCountry) {
@@ -69,8 +69,8 @@ if ($mpCountry) {
     if (count($exRegionRows) > 1) {
         $explorer[] = [
             'id' => 'regions', 'icon' => 'globe-simple', 'kind' => 'region',
-            'label' => 'Regions', 'sub' => v2_num(count($exRegionRows), 'region', 'regions'), 'unit' => 'attractions',
-            'pills' => count($exRegionRows) > 16, 'search' => count($exRegionRows) > 16 ? 'Search a region' : '',
+            'label' => v2_t('Regions'), 'sub' => v2_num(count($exRegionRows), 'region', 'regions'), 'unit' => 'attractions',
+            'pills' => count($exRegionRows) > 16, 'search' => count($exRegionRows) > 16 ? v2_t('Search a region') : '',
             'rows' => $exRegionRows,
         ];
     }
@@ -81,16 +81,16 @@ if ($mpCountry) {
     }
     $explorer[] = [
         'id' => 'countries', 'icon' => 'globe-simple', 'kind' => 'go', 'flags' => true,
-        'label' => 'Countries', 'sub' => v2_num(count($exCountryRows), 'country', 'countries'),
-        'note' => 'Pick a country and see everything worth the trip there, on one map.',
-        'search' => 'Search a country', 'rows' => $exCountryRows,
+        'label' => v2_t('Countries'), 'sub' => v2_num(count($exCountryRows), 'country', 'countries'),
+        'note' => v2_t('Pick a country and see everything worth the trip there, on one map.'),
+        'search' => v2_t('Search a country'), 'rows' => $exCountryRows,
     ];
 }
 $explorer[] = [
     'id' => 'cities', 'icon' => 'buildings', 'kind' => 'city',
-    'label' => 'Cities', 'sub' => v2_num((int) ($summary['citiesTotal'] ?? count($exCityRows)), 'city', 'cities'),
-    'search' => 'Search a city', 'rows' => $exCityRows,
-    'more' => $mpCountry ? ['All cities in ' . $mpName, '/' . $mpCountrySlug] : ['All destinations', '/cities'],
+    'label' => v2_t('Cities'), 'sub' => v2_num((int) ($summary['citiesTotal'] ?? count($exCityRows)), 'city', 'cities'),
+    'search' => v2_t('Search a city'), 'rows' => $exCityRows,
+    'more' => $mpCountry ? [v2_t('All cities in {country}', ['country' => $mpName]), '/' . $mpCountrySlug] : [v2_t('All destinations'), '/cities'],
 ];
 
 // ------------------------------------------------------------------ editorial
@@ -100,32 +100,42 @@ $mpTopTypes = implode(', ', array_map(fn ($t) => mb_strtolower($t[1]), array_sli
 
 if ($mpCountry) {
     $mpTopRegion = $summary['regions'][0] ?? null;
+    // One whole sentence for each case, so that a translation can order the words as its language asks.
+    $mpRegionVars = $mpTopRegion ? ['region' => v2_e($mpTopRegion[0]), 'regionCount' => v2_e(v2_thousands((int) $mpTopRegion[2]))] : [];
+    $mpCityVars = $mpTopCity ? ['city' => v2_e($mpTopCity[1]), 'cityCount' => v2_e(v2_thousands((int) $mpTopCity[4]))] : [];
+    if ($mpTopRegion && $mpTopCity) {
+        $mpMost = v2_t('The region with the most is {region} ({regionCount}), and the city with the most is {city}, with {cityCount}.', $mpRegionVars + $mpCityVars);
+    } elseif ($mpTopRegion) {
+        $mpMost = v2_t('The region with the most is {region} ({regionCount}).', $mpRegionVars);
+    } elseif ($mpTopCity) {
+        $mpMost = v2_t('They are spread across the whole country, and the city with the most is {city}, with {cityCount}.', $mpCityVars);
+    } else {
+        $mpMost = v2_t('They are spread across the whole country.');
+    }
     $prose = [
-        '<p>This map holds all ' . v2_e(v2_thousands($total)) . ' attractions we list in ' . v2_e($mpName) . ': ' . v2_e($mpTopTypes) . ' and more. Every pin opens the page of the place, with a description, the address and what else is nearby.</p>',
-        '<p>' . ($mpTopRegion ? 'The region with the most is ' . v2_e($mpTopRegion[0]) . ' (' . v2_e(v2_thousands((int) $mpTopRegion[2])) . ')' : 'They are spread across the whole country')
-            . ($mpTopCity ? ', and the city with the most is ' . v2_e($mpTopCity[1]) . ', with ' . v2_e(v2_thousands((int) $mpTopCity[4])) . '.' : '.')
-            . ' The buttons above the map filter it in place by type, by region or by city, and whatever you choose ends up in the address of the page, so a copied link opens exactly what you were looking at.</p>',
-        '<p>The map opens on the <strong>Popular</strong> selection, which leaves out churches, lakes and bridges; there are many of them and they would cover everything else. Turn them on at any time from <strong>Types of places</strong>. For a plain list, see <a href="/attractions?country=' . v2_e(strtolower($mpCountry['code'])) . '">the attractions of ' . v2_e($mpName) . '</a>; for the whole continent, <a href="/map">the map of Europe</a>.</p>',
+        '<p>' . v2_t('This map holds all {count} attractions we list in {country}: {types} and more. Every pin opens the page of the place, with a description, the address and what else is nearby.', ['count' => v2_e(v2_thousands($total)), 'country' => v2_e($mpName), 'types' => v2_e($mpTopTypes)]) . '</p>',
+        '<p>' . $mpMost . ' ' . v2_t('The buttons above the map filter it in place by type, by region or by city, and whatever you choose ends up in the address of the page, so a copied link opens exactly what you were looking at.') . '</p>',
+        '<p>' . v2_t('The map opens on the <strong>Popular</strong> selection, which leaves out churches, lakes and bridges; there are many of them and they would cover everything else. Turn them on at any time from <strong>Types of places</strong>. For a plain list, see <a href="{listUrl}">the attractions of {country}</a>; for the whole continent, <a href="{mapUrl}">the map of Europe</a>.', ['listUrl' => '/attractions?country=' . v2_e(strtolower($mpCountry['code'])), 'country' => v2_e($mpName), 'mapUrl' => '/map']) . '</p>',
     ];
     $faq = [
-        ['How many attractions does the map of ' . $mpName . ' show?', v2_thousands($total) . ' places, each with checked coordinates and its own page on Viaqui.'],
-        ['Can I see only the castles, or only the museums?', 'Yes. Open “Types of places” above the map and choose the ones you want; you can choose several at once, and the number next to each shows how many places it holds.'],
-        ['Why are the churches not shown from the start?', 'There are a great many of them and they would hide the rest of the map. The Popular selection leaves them out; open “Types of places” and choose “Churches” to bring them back.'],
+        [v2_t('How many attractions does the map of {country} show?', ['country' => $mpName]), v2_t('{count} places, each with checked coordinates and its own page on Viaqui.', ['count' => v2_thousands($total)])],
+        [v2_t('Can I see only the castles, or only the museums?'), v2_t('Yes. Open “Types of places” above the map and choose the ones you want; you can choose several at once, and the number next to each shows how many places it holds.')],
+        [v2_t('Why are the churches not shown from the start?'), v2_t('There are a great many of them and they would hide the rest of the map. The Popular selection leaves them out; open “Types of places” and choose “Churches” to bring them back.')],
     ];
 } else {
     $prose = [
-        '<p>The map of Europe shows the ' . v2_e(v2_thousands($total)) . ' best-known attractions out of the ' . v2_e(v2_thousands((int) ($summary['catalogue'] ?? $total))) . ' we list in ' . count($summary['countries'] ?? []) . ' countries: ' . v2_e($mpTopTypes) . ' and more. Every pin opens the page of the place.</p>',
-        '<p>Showing every attraction of the continent at once would make the map slow and unreadable, so each country has its own map with everything in it. Open <strong>Countries</strong> above the map and choose one, or start from a city.</p>',
-        '<p>Search works on names and cities, and <strong>Near me</strong> centres the map on where you are and sorts the list by distance. For plain lists, see <a href="/attractions">the attractions page</a> or <a href="/cities">all destinations</a>.</p>',
+        '<p>' . v2_t('The map of Europe shows the {count} best-known attractions out of the {catalogue} we list in {countries}: {types} and more. Every pin opens the page of the place.', ['count' => v2_e(v2_thousands($total)), 'catalogue' => v2_e(v2_thousands((int) ($summary['catalogue'] ?? $total))), 'countries' => v2_e(v2_num(count($summary['countries'] ?? []), 'country', 'countries')), 'types' => v2_e($mpTopTypes)]) . '</p>',
+        '<p>' . v2_t('Showing every attraction of the continent at once would make the map slow and unreadable, so each country has its own map with everything in it. Open <strong>Countries</strong> above the map and choose one, or start from a city.') . '</p>',
+        '<p>' . v2_t('Search works on names and cities, and <strong>Near me</strong> centres the map on where you are and sorts the list by distance. For plain lists, see <a href="{attractionsUrl}">the attractions page</a> or <a href="{citiesUrl}">all destinations</a>.', ['attractionsUrl' => '/attractions', 'citiesUrl' => '/cities']) . '</p>',
     ];
     $faq = [
-        ['Where do the places on the map come from?', 'From the Viaqui catalogue of attractions, built on open data from Wikidata and Wikimedia Commons: ' . v2_thousands((int) ($summary['catalogue'] ?? $total)) . ' places across Europe, each with its own page.'],
-        ['Why does the map of Europe not show everything?', 'It shows the ' . v2_thousands($total) . ' best-known places, so that it stays fast. The map of each country shows every attraction we list there.'],
-        ['Can I see only the castles, or only the museums?', 'Yes. Open “Types of places” above the map and choose the ones you want; you can choose several at once.'],
+        [v2_t('Where do the places on the map come from?'), v2_t('From the Viaqui catalogue of attractions, built on open data from Wikidata and Wikimedia Commons: {count} places across Europe, each with its own page.', ['count' => v2_thousands((int) ($summary['catalogue'] ?? $total))])],
+        [v2_t('Why does the map of Europe not show everything?'), v2_t('It shows the {count} best-known places, so that it stays fast. The map of each country shows every attraction we list there.', ['count' => v2_thousands($total)])],
+        [v2_t('Can I see only the castles, or only the museums?'), v2_t('Yes. Open “Types of places” above the map and choose the ones you want; you can choose several at once.')],
     ];
 }
-$faq[] = ['Can I book a ticket straight from the map?', 'Where a place has tickets or experiences on sale, its page has the booking button. The other attractions are places to visit, with no ticket sold here.'];
-$faq[] = ['Does it work on a phone?', 'Yes. On a phone the map fills the screen and the list of results slides up from the bottom; you can drag it to see more of the map or more of the list.'];
+$faq[] = [v2_t('Can I book a ticket straight from the map?'), v2_t('Where a place has tickets or experiences on sale, its page has the booking button. The other attractions are places to visit, with no ticket sold here.')];
+$faq[] = [v2_t('Does it work on a phone?'), v2_t('Yes. On a phone the map fills the screen and the list of results slides up from the bottom; you can drag it to see more of the map or more of the list.')];
 
 // ------------------------------------------------------------------ routes worth showing here
 // A country shows the routes that cross it; the map of Europe shows three, different on each rebuild of the page.
@@ -141,34 +151,36 @@ if (!$mpCountry) {
 $mpRouteCards = array_slice($mpRouteCards, 0, 6);
 
 // ------------------------------------------------------------------ page
-$breadcrumbs = [['Home', '/'], ['Attractions', '/attractions'], ['Map', '/map']];
+$breadcrumbs = [[v2_t('Home'), '/'], [v2_t('Attractions'), '/attractions'], [v2_t('Map'), '/map']];
 if ($mpCountry) {
     $breadcrumbs[] = [$mpName, $mpPath];
 }
 
 $mapPage = [
-    'h1' => 'Attractions map',
-    'h1em' => 'of ' . $mpName,
+    // the heading as one sentence, with its second line marked up: "Attractions map <em>of Italy</em>"
+    'h1html' => v2_t('Attractions map <em>of {place}</em>', ['place' => v2_e($mpName)]),
     'lead' => $mpCountry
-        ? 'Every attraction we list in ' . $mpName . ', on one map. Choose the types you care about, search a place or see what is near you.'
-        : 'The best-known places of the continent on one map. Choose a country to see everything in it, search a place or see what is near you.',
+        ? v2_t('Every attraction we list in {country}, on one map. Choose the types you care about, search a place or see what is near you.', ['country' => $mpName])
+        : v2_t('The best-known places of the continent on one map. Choose a country to see everything in it, search a place or see what is near you.'),
     'stats' => array_values(array_filter([
-        [v2_thousands($total), ' attractions'],
-        [(string) count($summary['types'] ?? []), ' types'],
-        $mpCountry ? [v2_thousands((int) ($summary['citiesTotal'] ?? 0)), ' cities and towns'] : [(string) count($summary['countries'] ?? []), ' countries'],
+        [v2_thousands($total), ' ' . v2_plural($total, 'attraction', 'attractions')],
+        [(string) count($summary['types'] ?? []), ' ' . v2_plural(count($summary['types'] ?? []), 'type', 'types')],
+        $mpCountry
+            ? [v2_thousands((int) ($summary['citiesTotal'] ?? 0)), ' ' . v2_plural((int) ($summary['citiesTotal'] ?? 0), 'city or town', 'cities and towns')]
+            : [(string) count($summary['countries'] ?? []), ' ' . v2_plural(count($summary['countries'] ?? []), 'country', 'countries')],
     ])),
     'breadcrumbs' => $breadcrumbs,
     'summary' => $summary,
     'total' => $total,
     'explorer' => $explorer,
     'picks' => $summary['picks'] ?? [],
-    'ideasHeading' => 'Not sure where to start?',
-    'ideasLead' => 'The map shows everything at once, which is a lot. These are the routes already drawn and the places we would open first.',
-    'ideasCta' => ['Start a plan', $mpCountry ? '/plan/' . $mpCountrySlug : '/plan'],
-    'picksHeading' => $mpCountry ? 'Places worth opening in ' . $mpName : 'Places worth opening',
+    'ideasHeading' => v2_t('Not sure where to start?'),
+    'ideasLead' => v2_t('The map shows everything at once, which is a lot. These are the routes already drawn and the places we would open first.'),
+    'ideasCta' => [v2_t('Start a plan'), $mpCountry ? '/plan/' . $mpCountrySlug : '/plan'],
+    'picksHeading' => $mpCountry ? v2_t('Places worth opening in {country}', ['country' => $mpName]) : v2_t('Places worth opening'),
     'listHref' => $mpCountry ? '/attractions?country=' . strtolower($mpCountry['code']) : '/attractions',
     'routeCards' => $mpRouteCards,
-    'routesHeading' => $mpCountry ? 'Routes through ' . $mpName : 'Ready-made routes',
+    'routesHeading' => $mpCountry ? v2_t('Routes through {country}', ['country' => $mpName]) : v2_t('Ready-made routes'),
     'config' => [
         'dataUrl' => '/assets/v2/data/map/' . $mpFile . '.json?v=' . rawurlencode((string) $summary['v']),
         'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
@@ -178,23 +190,25 @@ $mapPage = [
         'chips' => 'flags',
         'types' => [],
         'bounds' => $summary['bounds'] ?? null,
-        'title' => 'Attractions in ' . $mpName,
+        'title' => v2_t('Attractions in {place}', ['place' => $mpName]),
         'base' => '/attraction/',
     ],
     'prose' => $prose,
     'faq' => $faq,
 ];
 
-$pageTitle = 'Attractions map of ' . $mpName;
-$pageDescription = 'Interactive map with ' . v2_thousands($total) . ($mpCountry ? ' attractions in ' . $mpName : ' of the best-known attractions in Europe') . ': ' . $mpTopTypes . '. Filter by type, search a place or see what is near you.';
+$pageTitle = v2_t('Attractions map of {place}', ['place' => $mpName]);
+$pageDescription = $mpCountry
+    ? v2_t('Interactive map with {count} attractions in {country}: {types}. Filter by type, search a place or see what is near you.', ['count' => v2_thousands($total), 'country' => $mpName, 'types' => $mpTopTypes])
+    : v2_t('Interactive map with {count} of the best-known attractions in Europe: {types}. Filter by type, search a place or see what is near you.', ['count' => v2_thousands($total), 'types' => $mpTopTypes]);
 $canonicalUrl = SITE_URL . $mpPath;
 $ogImage = $mapPage['picks'][0][6] ?? (SITE_URL . '/assets/images/og-default.jpg');
 
 $structuredData = [[
     '@context' => 'https://schema.org', '@type' => 'CollectionPage',
-    'name' => $pageTitle, 'description' => $pageDescription, 'url' => $canonicalUrl, 'inLanguage' => 'en',
+    'name' => $pageTitle, 'description' => $pageDescription, 'url' => $canonicalUrl, 'inLanguage' => v2_locale(),
 ], [
-    '@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => 'Attractions on the map', 'numberOfItems' => $total,
+    '@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => v2_t('Attractions on the map'), 'numberOfItems' => $total,
     'itemListElement' => array_map(
         fn ($p, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'url' => SITE_URL . '/attraction/' . $p[0], 'name' => $p[1]],
         $mapPage['picks'],

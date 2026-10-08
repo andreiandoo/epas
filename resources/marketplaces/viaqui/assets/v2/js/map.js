@@ -89,12 +89,9 @@
     return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
   }
 
-  function nf(n) { return new Intl.NumberFormat('en-GB').format(n); }
-  /* Same rule as v2_num() in PHP. */
-  function count(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    return nf(n) + ' ' + many;
-  }
+  /* Numbers in the visitor's language (the texts go through VQ.t / VQ.n, assets/v2/js/i18n.js). */
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  function nf(n) { try { return new Intl.NumberFormat(LOC).format(n); } catch (e) { return String(n); } }
   function fold(s) {
     return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }
@@ -115,9 +112,10 @@
   function hm(min) {
     min = Math.round(min || 0);
     var h = Math.floor(min / 60), m = min % 60;
-    return h ? (h + ' h' + (m ? ' ' + m + ' min' : '')) : (m + ' min');
+    if (!h) return VQ.t('{m} min', { m: m });
+    return m ? VQ.t('{h} h {m} min', { h: h, m: m }) : VQ.t('{h} h', { h: h });
   }
-  function dist(d) { return d < 1 ? Math.round(d * 1000) + ' m' : d.toFixed(d < 10 ? 1 : 0) + ' km'; }
+  function dist(d) { return d < 1 ? VQ.t('{n} m', { n: Math.round(d * 1000) }) : VQ.t('{n} km', { n: d.toFixed(d < 10 ? 1 : 0) }); }
 
   /* Google's encoded polyline, precision 5 — how OSRM hands back the driving line. */
   function decodePolyline(str) {
@@ -294,7 +292,7 @@
     if (cfg.dialog) {
       container.setAttribute('role', 'dialog');
       container.setAttribute('aria-modal', 'true');
-      container.setAttribute('aria-label', cfg.title || 'Attractions map');
+      container.setAttribute('aria-label', cfg.title || VQ.t('Attractions map'));
       container.hidden = true;
     }
 
@@ -308,29 +306,29 @@
       search.appendChild(icon('magnifying-glass'));
       ui.input = el('input');
       ui.input.type = 'search';
-      ui.input.placeholder = 'Search an attraction or a city';
-      ui.input.setAttribute('aria-label', 'Search the map');
+      ui.input.placeholder = VQ.t('Search an attraction or a city');
+      ui.input.setAttribute('aria-label', VQ.t('Search the map'));
       ui.input.autocomplete = 'off';
       search.appendChild(ui.input);
       ui.clear = el('button', 'epm-search-clear');
       ui.clear.type = 'button';
       ui.clear.hidden = true;
       ui.clear.appendChild(icon('x'));
-      ui.clear.appendChild(el('span', 'sr', 'Clear the search'));
+      ui.clear.appendChild(el('span', 'sr', VQ.t('Clear the search')));
       search.appendChild(ui.clear);
       main.appendChild(search);
 
-      ui.locate = tool('target', 'Near me');
+      ui.locate = tool('target', VQ.t('Near me'));
       main.appendChild(ui.locate);
 
-      ui.theme = tool('sun', 'Aspect');
+      ui.theme = tool('sun', VQ.t('Appearance'));
       ui.theme.classList.add('epm-tool-icon');
       ui.theme.querySelector('.epm-tool-label').classList.add('sr');
       ui.theme.hidden = true;      // Viaqui shows one look of the map; the control stays in code, out of the bar
       main.appendChild(ui.theme);
 
       if (cfg.dialog) {
-        ui.close = tool('x', 'Close the map');
+        ui.close = tool('x', VQ.t('Close the map'));
         ui.close.classList.add('epm-tool-icon');
         ui.close.querySelector('.epm-tool-label').classList.add('sr');
         main.appendChild(ui.close);
@@ -342,11 +340,11 @@
       if (route) search.hidden = true;
 
       ui.chipbar = el('div', 'epm-chipbar');
-      ui.prev = chipNav('arrow-left', 'Previous types', -1);
+      ui.prev = chipNav('arrow-left', VQ.t('Previous types'), -1);
       ui.chips = el('div', 'epm-chips');
       ui.chips.setAttribute('role', 'group');
-      ui.chips.setAttribute('aria-label', 'Type of attraction');
-      ui.next = chipNav('arrow-right', 'More types', 1);
+      ui.chips.setAttribute('aria-label', VQ.t('Type of attraction'));
+      ui.next = chipNav('arrow-right', VQ.t('More types'), 1);
       ui.chipbar.appendChild(ui.prev);
       ui.chipbar.appendChild(ui.chips);
       ui.chipbar.appendChild(ui.next);
@@ -363,16 +361,16 @@
       var body = el('div', 'epm-body');
 
       ui.side = el('aside', 'epm-side');
-      ui.side.setAttribute('aria-label', 'Attractions in the area shown');
+      ui.side.setAttribute('aria-label', VQ.t('Attractions in the area shown'));
       ui.side.setAttribute('data-snap', 'half');
       ui.grab = el('button', 'epm-sheet-grab');
       ui.grab.type = 'button';
-      ui.grab.appendChild(el('span', '', 'Drag to make the list larger or smaller'));
+      ui.grab.appendChild(el('span', '', VQ.t('Drag to make the list larger or smaller')));
       ui.side.appendChild(ui.grab);
       var head = el('div', 'epm-side-head');
-      ui.inview = el('span', '', 'Loading…');
+      ui.inview = el('span', '', VQ.t('Loading…'));
       head.appendChild(ui.inview);
-      ui.all = el('button', 'link-btn', 'Show all');
+      ui.all = el('button', 'link-btn', VQ.t('Show all'));
       ui.all.type = 'button';
       head.appendChild(ui.all);
       ui.side.appendChild(head);
@@ -381,7 +379,7 @@
       body.appendChild(ui.side);
 
       ui.canvas = el('div', 'epm-map');
-      ui.loading = el('div', 'epm-loading', 'Loading the map…');
+      ui.loading = el('div', 'epm-loading', VQ.t('Loading the map…'));
       ui.canvas.appendChild(ui.loading);
       body.appendChild(ui.canvas);
 
@@ -491,7 +489,7 @@
         var b = el('button', 'epm-chip epm-chip-preset');
         b.type = 'button';
         b.dataset.preset = p;
-        b.textContent = p === 'popular' ? 'Popular' : 'All';
+        b.textContent = p === 'popular' ? VQ.t('Popular') : VQ.t('All');
         ui.chips.appendChild(b);
       });
       if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
@@ -519,8 +517,8 @@
       }
       if (anyPhoto || anyTicket) {
         if (!flagsOnly) ui.chips.appendChild(el('span', 'epm-chips-sep'));
-        if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', 'With tickets'));
-        if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', 'With a photo'));
+        if (anyTicket) ui.chips.appendChild(flagChip('ticket', 'ticket', VQ.t('With tickets')));
+        if (anyPhoto) ui.chips.appendChild(flagChip('photo', 'star', VQ.t('With a photo')));
         /* World Heritage Sites: a distinction, so it sits with the toggles, not among the types. */
         if (D.flags.unesco && D.rows.some(function (r) { return r[D.f.flags] & D.flags.unesco; })) ui.chips.appendChild(flagChip('unesco', 'globe-simple', 'UNESCO'));
       }
@@ -636,7 +634,8 @@
       return m;
     }
 
-    function href(i) { return (cfg.base || '/attraction/') + D.rows[i][D.f.slug]; }
+    /* The page of a place, with the language prefix of the visitor (VQ.url). */
+    function href(i) { return VQ.url((cfg.base || '/attraction/') + D.rows[i][D.f.slug]); }
 
     function drawMarkers() {
       if (!cluster) return;
@@ -699,7 +698,7 @@
 
     function busy(on) {
       ui.loading.hidden = !on;
-      if (on) ui.loading.textContent = 'Updating the map…';
+      if (on) ui.loading.textContent = VQ.t('Updating the map…');
     }
 
     /* ---------- map ---------- */
@@ -818,17 +817,17 @@
     function renderList() {
       ui.list.textContent = '';
       ui.inview.textContent = route
-        ? 'The stops of the route, in order'
+        ? VQ.t('The stops of the route, in order')
         : (inView.length
-          ? count(inView.length, 'attraction in the area shown', 'attractions in the area shown')
-          : 'No attraction in the area shown');
+          ? VQ.n(inView.length, 'attraction in the area shown', 'attractions in the area shown')
+          : VQ.t('No attraction in the area shown'));
 
       if (!inView.length) {
         var empty = el('li', 'epm-empty');
-        empty.appendChild(el('b', '', visible.length ? 'Nothing in this area' : 'No results'));
+        empty.appendChild(el('b', '', visible.length ? VQ.t('Nothing in this area') : VQ.t('No results')));
         empty.appendChild(el('p', '', visible.length
-          ? 'Zoom out or press “Show all”.'
-          : 'Try another type of attraction or another word.'));
+          ? VQ.t('Zoom out or press “Show all”.')
+          : VQ.t('Try another type of attraction or another word.')));
         ui.list.appendChild(empty);
         return;
       }
@@ -840,7 +839,7 @@
 
       if (inView.length > n) {
         var li = el('li');
-        var more = el('button', 'btn btn-light epm-more', nf(Math.min(LIST_PAGE, inView.length - n)) + ' more from this area');
+        var more = el('button', 'btn btn-light epm-more', VQ.t('{n} more from this area', { n: nf(Math.min(LIST_PAGE, inView.length - n)) }));
         more.type = 'button';
         more.addEventListener('click', function () { listShown += LIST_PAGE; renderList(); });
         li.appendChild(more);
@@ -909,15 +908,15 @@
       }
       ui.meta.textContent = '';
       if (route) {
-        var bits = count(D.rows.length, 'oprire', 'opriri');
-        if (cfg.routeKm) bits += ' · ' + nf(cfg.routeKm) + ' km' + (cfg.routeRoad ? ' by road' : ' in a straight line');
-        if (cfg.routeMin) bits += ' · ' + hm(cfg.routeMin) + ' de mers';
-        ui.meta.appendChild(el('span', '', bits));
+        var bits = [VQ.n(D.rows.length, 'stop', 'stops')];
+        if (cfg.routeKm) bits.push(cfg.routeRoad ? VQ.t('{n} km by road', { n: nf(cfg.routeKm) }) : VQ.t('{n} km in a straight line', { n: nf(cfg.routeKm) }));
+        if (cfg.routeMin) bits.push(VQ.t('{time} of driving', { time: hm(cfg.routeMin) }));
+        ui.meta.appendChild(el('span', '', bits.join(' · ')));
         return;
       }
-      ui.meta.appendChild(el('span', '', count(visible.length, 'attraction on the map', 'attractions on the map')));
+      ui.meta.appendChild(el('span', '', VQ.n(visible.length, 'attraction on the map', 'attractions on the map')));
       if (visible.length !== D.rows.length) {
-        var reset = el('button', 'link-btn', 'Clear the filters');
+        var reset = el('button', 'link-btn', VQ.t('Clear the filters'));
         reset.type = 'button';
         reset.addEventListener('click', function () {
           state.q = '';
@@ -1034,7 +1033,7 @@
       var close = el('button', 'epm-card-close');
       close.type = 'button';
       close.appendChild(icon('x'));
-      close.appendChild(el('span', 'sr', 'Close'));
+      close.appendChild(el('span', 'sr', VQ.t('Close')));
       close.addEventListener('click', function () { select(-1); });
       ui.card.appendChild(close);
 
@@ -1052,13 +1051,13 @@
       if (me) {
         var dd = el('span');
         dd.appendChild(icon('target'));
-        dd.appendChild(document.createTextNode(dist(km(me[0], me[1], D.lat[i], D.lng[i])) + ' de tine'));
+        dd.appendChild(document.createTextNode(VQ.t('{distance} from you', { distance: dist(km(me[0], me[1], D.lat[i], D.lng[i])) })));
         meta.appendChild(dd);
       }
       if (meta.childNodes.length) body.appendChild(meta);
 
       var actions = el('div', 'epm-card-actions');
-      var go = el('a', 'btn btn-primary', 'See the attraction');
+      var go = el('a', 'btn btn-primary', VQ.t('See the attraction'));
       go.href = url;
       go.target = '_blank';
       go.rel = 'noopener';
@@ -1215,7 +1214,7 @@
         syncView();
       }, function () {
         ui.locate.classList.remove('is-busy');
-        ui.inview.textContent = 'We could not find where you are.';
+        ui.inview.textContent = VQ.t('We could not find where you are.');
       }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
     }
 
@@ -1267,7 +1266,7 @@
         .catch(function (err) {
           booting = false;
           ui.loading.hidden = false;
-          ui.loading.textContent = 'The map could not be loaded. Reload the page.';
+          ui.loading.textContent = VQ.t('The map could not be loaded. Reload the page.');
           if (window.console) console.warn('[EPMap]', err);
         });
     }

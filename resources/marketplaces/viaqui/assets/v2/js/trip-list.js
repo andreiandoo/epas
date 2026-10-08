@@ -48,7 +48,6 @@
     if (name.indexOf('http') === 0 || name.charAt(0) === '/') return name;
     return '/api/img.php?c=' + encodeURIComponent(name) + '&w=240&h=240';
   }
-  function count(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 
   /* ---------------------------------------------------------------- the button on an attraction page */
   function paintButtons() {
@@ -58,12 +57,12 @@
       var on = !!entry.s && has(entry.s);
       b.setAttribute('aria-pressed', String(on));
       var label = b.querySelector('[data-trip-label]');
-      if (label) label.textContent = on ? 'In your trip' : 'Add to your trip';
+      if (label) label.textContent = on ? VQ.t('In your trip') : VQ.t('Add to your trip');
       var note = document.querySelector('[data-trip-note]');
       if (note) {
         note.hidden = !on;
         var n = all().length, a = note.querySelector('a');
-        if (a) a.textContent = 'See your trip list (' + count(n, 'place', 'places') + ')';
+        if (a) a.textContent = VQ.t('See your trip list ({count})', { count: VQ.n(n, 'place', 'places') });
       }
     });
   }
@@ -85,7 +84,7 @@
     if (!box) return;
     box.textContent = '';
     if (empty) empty.hidden = list.length > 0;
-    if (sum) sum.textContent = list.length ? count(list.length, 'place', 'places') + ' saved' : '';
+    if (sum) sum.textContent = list.length ? VQ.t('{count} saved', { count: VQ.n(list.length, 'place', 'places') }) : '';
     var groups = {}, order = [];
     list.forEach(function (e) {
       var k = e.c || '';
@@ -95,10 +94,10 @@
     order.forEach(function (k) {
       var items = groups[k], g = el('section', 'tl-group');
       var head = el('div', 'tl-head');
-      head.appendChild(el('h3', '', (items[0].cn || 'Other places') + ' · ' + count(items.length, 'place', 'places')));
+      head.appendChild(el('h3', '', (items[0].cn || VQ.t('Other places')) + ' · ' + VQ.n(items.length, 'place', 'places')));
       if (k) {
-        var go = el('a', 'btn btn-primary tl-go', 'Plan a trip with these');
-        go.href = '/plan/' + encodeURIComponent(k) + '?list=1';
+        var go = el('a', 'btn btn-primary tl-go', VQ.t('Plan a trip with these'));
+        go.href = VQ.url('/plan/' + encodeURIComponent(k) + '?list=1');
         head.appendChild(go);
       }
       g.appendChild(head);
@@ -106,7 +105,7 @@
       items.forEach(function (e) {
         var li = el('li', 'tl-item');
         var a = el('a', 'tl-link');
-        a.href = '/attraction/' + encodeURIComponent(e.s);
+        a.href = VQ.url('/attraction/' + encodeURIComponent(e.s));
         var media = el('span', 'tl-media');
         if (e.img) {
           var img = el('img');
@@ -124,7 +123,7 @@
         li.appendChild(a);
         var x = el('button', 'tl-x', '×');
         x.type = 'button';
-        x.setAttribute('aria-label', 'Remove ' + (e.n || 'this place') + ' from your trip list');
+        x.setAttribute('aria-label', e.n ? VQ.t('Remove {name} from your trip list', { name: e.n }) : VQ.t('Remove this place from your trip list'));
         x.addEventListener('click', function () { remove(e.s); });
         li.appendChild(x);
         ul.appendChild(li);
@@ -141,7 +140,7 @@
     var n = forCountry(host.getAttribute('data-trip-country')).length;
     host.hidden = n === 0;
     var t = host.querySelector('[data-trip-count]');
-    if (t) t.textContent = count(n, 'place', 'places');
+    if (t) t.textContent = VQ.n(n, 'place', 'places');
   }
 
   function paint() { paintButtons(); paintList(); paintCountry(); }
