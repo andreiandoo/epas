@@ -12,7 +12,7 @@
   var F = O.fmt, el = O.el;
   var $ = function (id) { return document.getElementById(id); };
   var qsa = function (sel, ctx) { return Array.prototype.slice.call((ctx || root).querySelectorAll(sel)); };
-  var CAT = { access: 'Acces', parking: 'Parcare', rental: 'Închiriere', activity: 'Activitate', extra: 'Extra', package: 'Pachet' };
+  var CAT = { access: VQ.t('Access'), parking: VQ.t('Parking'), rental: VQ.t('Rental'), activity: VQ.t('Activity'), extra: VQ.t('Extra'), package: VQ.t('Package') };
   var TR_FIELDS = ['name', 'description', 'unit_label', 'includes', 'usage_terms'];
   var MAX_IMAGE = 10 * 1024 * 1024;
   var eventId = null, products = [], cats = [], edit = null, delArmed = false, lastFocus = null;
@@ -38,14 +38,14 @@
     return b;
   }
   function upload(file) {
-    if (!file) return Promise.reject(new Error('Niciun fișier.'));
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return Promise.reject(new Error('Doar JPG, PNG sau WebP.'));
-    if (file.size > MAX_IMAGE) return Promise.reject(new Error('Imaginea depășește 10 MB.'));
+    if (!file) return Promise.reject(new Error(VQ.t('No file.')));
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return Promise.reject(new Error(VQ.t('JPG, PNG or WebP only.')));
+    if (file.size > MAX_IMAGE) return Promise.reject(new Error(VQ.t('The picture is larger than 10 MB.')));
     var fd = new FormData();
     fd.append('image', file);
     return BileteOnlineAPI._postMultipart('/organizer/events/' + eventId + '/leisure/upload-image', fd).then(function (r) {
       var d = (r && r.data) || {};
-      if (!d.url && !d.path) throw new Error('Încărcarea nu a întors imaginea.');
+      if (!d.url && !d.path) throw new Error(VQ.t('The upload did not return the picture.'));
       return d;
     });
   }
@@ -54,7 +54,7 @@
   function loadAll() {
     var list = $('vi-list');
     list.textContent = '';
-    list.appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    list.appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     return Promise.all([
       O.api('/organizer/events/' + eventId + '/leisure/products'),
       O.api('/organizer/events/' + eventId + '/leisure/config', { quiet: true }).then(null, function () { return null; }),
@@ -70,7 +70,7 @@
     }, function (err) {
       if (err && err.status === 401) return;
       list.textContent = '';
-      list.appendChild(el('p', { class: 've-state', text: 'Nu am putut încărca produsele.' }));
+      list.appendChild(el('p', { class: 've-state', text: VQ.t('We could not load the products.') }));
     });
   }
 
@@ -80,10 +80,10 @@
     var list = $('vi-cats');
     list.textContent = '';
     $('vi-cats-n').textContent = cats.length ? '(' + cats.length + ')' : '';
-    if (!cats.length) { list.appendChild(el('li', { class: 've-state', text: 'Nicio categorie încă.' })); return; }
+    if (!cats.length) { list.appendChild(el('li', { class: 've-state', text: VQ.t('No categories yet.') })); return; }
     cats.forEach(function (c, i) {
       var file = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', class: 've-sr', id: 'vi-cat-img-' + i });
-      var pic = el('label', { class: 've-thumb', for: 'vi-cat-img-' + i, title: 'Imaginea categoriei' });
+      var pic = el('label', { class: 've-thumb', for: 'vi-cat-img-' + i, title: VQ.t('Category picture') });
       var src = imgSrc(c.image_url || c.image);
       if (src) pic.appendChild(el('img', { src: src, alt: '' }));
       else pic.appendChild(O.icon('plus'));
@@ -95,40 +95,40 @@
           c.image = d.path || d.url;
           c.image_url = d.url || null;
           drawCats();
-          O.flash('Imaginea e pusă. Salvează categoriile ca să rămână.');
+          O.flash(VQ.t('The picture is in place. Save the categories to keep it.'));
         }, function (err) {
           pic.classList.remove('is-busy');
-          O.flash((err && err.message) || 'Nu am putut încărca imaginea.', true);
+          O.flash((err && err.message) || VQ.t('We could not upload the picture.'), true);
         });
       });
-      var ro = el('input', { class: 'po-input', value: c.ro, maxlength: 80, 'aria-label': 'Numele în română', placeholder: 'Română' });
-      var hu = el('input', { class: 'po-input', value: c.hu, maxlength: 80, 'aria-label': 'Numele în maghiară', placeholder: 'Maghiară' });
-      var en = el('input', { class: 'po-input', value: c.en, maxlength: 80, 'aria-label': 'Numele în engleză', placeholder: 'Engleză' });
+      var ro = el('input', { class: 'po-input', value: c.ro, maxlength: 80, 'aria-label': VQ.t('Name in Romanian'), placeholder: VQ.t('Romanian') });
+      var hu = el('input', { class: 'po-input', value: c.hu, maxlength: 80, 'aria-label': VQ.t('Name in Hungarian'), placeholder: VQ.t('Hungarian') });
+      var en = el('input', { class: 'po-input', value: c.en, maxlength: 80, 'aria-label': VQ.t('Name in English'), placeholder: VQ.t('English') });
       ro.addEventListener('input', function () { c.ro = ro.value; });
       hu.addEventListener('input', function () { c.hu = hu.value; });
       en.addEventListener('input', function () { c.en = en.value; });
-      var up = btn('caret-down', null, 've-icon-btn is-up', 'Mută mai sus'), down = btn('caret-down', null, 've-icon-btn', 'Mută mai jos');
+      var up = btn('caret-down', null, 've-icon-btn is-up', VQ.t('Move up')), down = btn('caret-down', null, 've-icon-btn', VQ.t('Move down'));
       up.disabled = i === 0;
       down.disabled = i === cats.length - 1;
       up.addEventListener('click', function () { cats.splice(i - 1, 0, cats.splice(i, 1)[0]); drawCats(); });
       down.addEventListener('click', function () { cats.splice(i + 1, 0, cats.splice(i, 1)[0]); drawCats(); });
-      var rm = btn('trash', null, 've-icon-btn', 'Șterge categoria');
+      var rm = btn('trash', null, 've-icon-btn', VQ.t('Delete the category'));
       rm.addEventListener('click', function () {
-        if (!rm.classList.contains('is-armed')) { rm.classList.add('is-armed'); rm.setAttribute('aria-label', 'Apasă din nou ca să ștergi'); O.flash('Apasă din nou ca să ștergi categoria. Produsele ei trec la „Alte produse”.'); return; }
+        if (!rm.classList.contains('is-armed')) { rm.classList.add('is-armed'); rm.setAttribute('aria-label', VQ.t('Press again to delete')); O.flash(VQ.t('Press again to delete the category. Its products move to "Other products".')); return; }
         cats.splice(i, 1);
         drawCats();
       });
       list.appendChild(el('li', { class: 've-cat' }, [
         pic, file,
         el('span', { class: 've-cat-names' }, [ro, hu, en]),
-        el('code', { class: 've-sub ve-mono', text: c.id, title: 'Codul intern al categoriei' }),
+        el('code', { class: 've-sub ve-mono', text: c.id, title: VQ.t('The category\'s internal code') }),
         el('span', { class: 've-cat-tools' }, [up, down, rm]),
       ]));
     });
   }
   function addCat() {
     var name = $('vi-cat-new').value.trim();
-    if (!name) { O.flash('Scrie numele categoriei.', true); $('vi-cat-new').focus(); return; }
+    if (!name) { O.flash(VQ.t('Enter the category name.'), true); $('vi-cat-new').focus(); return; }
     var base = slug(name) || 'categorie', id = base, n = 2;
     while (cats.some(function (c) { return c.id === id; })) { id = base + '-' + n; n++; }
     cats.push({ id: id, ro: name, hu: '', en: '', image: null, image_url: null });
@@ -145,10 +145,10 @@
     var b = $('vi-cats-save');
     b.disabled = true;
     O.api('/organizer/events/' + eventId + '/leisure/venue-config', { method: 'PUT', body: { venue_config: { ticket_categories: clean } } }).then(function () {
-      O.flash('Categoriile au fost salvate.');
+      O.flash(VQ.t('The categories were saved.'));
       loadAll();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut salva categoriile.', true);
+      O.flash((err && err.message) || VQ.t('We could not save the categories.'), true);
     }).then(function () { b.disabled = false; });
   }
 
@@ -161,13 +161,13 @@
       if (items.length) out.push({ id: c.id, name: catName(c), items: items });
     });
     var rest = products.filter(function (p) { return !used[p.id]; });
-    if (rest.length) out.push({ id: '', name: 'Alte produse', items: rest });
+    if (rest.length) out.push({ id: '', name: VQ.t('Other products'), items: rest });
     return out;
   }
   function drawProducts() {
     var list = $('vi-list');
     list.textContent = '';
-    if (!products.length) { list.appendChild(el('p', { class: 've-state', text: 'Niciun produs încă. Adaugă primul bilet.' })); return; }
+    if (!products.length) { list.appendChild(el('p', { class: 've-state', text: VQ.t('No products yet. Add the first ticket.') })); return; }
     groups().forEach(function (g) {
       var box = el('div', { class: 've-prod-group' }, el('p', { class: 've-sec-k', text: g.name + ' · ' + g.items.length }));
       g.items.forEach(function (p, i) { box.appendChild(productCard(p, g, i)); });
@@ -179,23 +179,23 @@
     if (src) media.appendChild(el('img', { src: src, alt: '' }));
     else media.appendChild(el('span', { text: txt(meta.icon) || '🎫' }));
     var tags = el('span', { class: 've-prod-tags' }, [
-      el('span', { class: 'org-tag is-info', text: CAT[p.service_category] || txt(p.service_category) || 'Acces' }),
-      el('span', { class: 'org-tag is-muted', text: p.issuing_company === 'secondary' ? 'Societatea secundară' : p.issuing_company === 'mix' ? 'Ambele societăți' : 'Societatea principală' }),
+      el('span', { class: 'org-tag is-info', text: CAT[p.service_category] || txt(p.service_category) || VQ.t('Access') }),
+      el('span', { class: 'org-tag is-muted', text: p.issuing_company === 'secondary' ? VQ.t('Second company') : p.issuing_company === 'mix' ? VQ.t('Both companies') : VQ.t('Main company') }),
     ]);
-    if (!p.is_active) tags.appendChild(el('span', { class: 'org-tag is-bad', text: 'Oprit' }));
-    if (p.pos_only) tags.appendChild(el('span', { class: 'org-tag is-wait', text: 'Doar la casă' }));
+    if (!p.is_active) tags.appendChild(el('span', { class: 'org-tag is-bad', text: VQ.t('Off') }));
+    if (p.pos_only) tags.appendChild(el('span', { class: 'org-tag is-wait', text: VQ.t('Register only') }));
     var facts = [];
-    if (p.daily_capacity) facts.push(F.num(p.daily_capacity) + ' pe zi');
-    facts.push(p.capacity ? 'stoc ' + F.num(p.capacity) : 'stoc nelimitat');
-    if (p.min_per_order > 1) facts.push('minim ' + F.num(p.min_per_order));
-    var up = btn('caret-down', null, 've-icon-btn is-up', 'Mută mai sus'), down = btn('caret-down', null, 've-icon-btn', 'Mută mai jos'), ed = btn('pencil-simple', 'Schimbă');
+    if (p.daily_capacity) facts.push(VQ.t('{n} per day', { n: F.num(p.daily_capacity) }));
+    facts.push(p.capacity ? VQ.t('stock {n}', { n: F.num(p.capacity) }) : VQ.t('unlimited stock'));
+    if (p.min_per_order > 1) facts.push(VQ.t('minimum {n}', { n: F.num(p.min_per_order) }));
+    var up = btn('caret-down', null, 've-icon-btn is-up', VQ.t('Move up')), down = btn('caret-down', null, 've-icon-btn', VQ.t('Move down')), ed = btn('pencil-simple', VQ.t('Edit'));
     up.disabled = i === 0;
     down.disabled = i === g.items.length - 1;
     up.addEventListener('click', function () { move(g, i, -1); });
     down.addEventListener('click', function () { move(g, i, 1); });
     ed.addEventListener('click', function () { openProduct(p); });
-    var price = el('span', { class: 've-prod-price' }, [el('b', { text: lei(p.price) }), el('small', { class: 've-sub', text: '/ ' + (txt(meta.unit_label) || 'bucată') })]);
-    if (p.pos_price != null) price.appendChild(el('small', { class: 've-sub', text: 'la casă ' + lei(p.pos_price) }));
+    var price = el('span', { class: 've-prod-price' }, [el('b', { text: lei(p.price) }), el('small', { class: 've-sub', text: '/ ' + (txt(meta.unit_label) || VQ.t('item')) })]);
+    if (p.pos_price != null) price.appendChild(el('small', { class: 've-sub', text: VQ.t('at the register {price}', { price: lei(p.pos_price) }) }));
     return el('article', { class: 've-prod' + (p.is_active ? '' : ' is-off'), 'data-id': String(p.id) }, [
       media,
       el('span', { class: 've-prod-t' }, [el('b', { text: txt(p.name) || '—' }), tags, txt(p.description) ? el('small', { class: 've-sub', text: txt(p.description) }) : null, el('small', { class: 've-sub', text: facts.join(' · ') })]),
@@ -213,14 +213,14 @@
     var ids = [];
     groups().forEach(function (gr) { gr.items.forEach(function (p) { ids.push(F.toNum(p.id)); }); });
     O.api('/organizer/events/' + eventId + '/leisure/products/reorder', { method: 'POST', body: { ids: ids } }).then(null, function (err) {
-      O.flash((err && err.message) || 'Nu am putut salva ordinea.', true);
+      O.flash((err && err.message) || VQ.t('We could not save the order.'), true);
       loadAll();
     });
   }
 
   /* =================== the dialog: repeatable rows =================== */
   function rowShell(kids, onRemove) {
-    var rm = btn('trash', null, 've-icon-btn', 'Scoate rândul');
+    var rm = btn('trash', null, 've-icon-btn', VQ.t('Remove the row'));
     var row = el('div', { class: 've-row' }, kids.concat([rm]));
     rm.addEventListener('click', function () { row.remove(); if (onRemove) onRemove(); });
     return row;
@@ -234,35 +234,35 @@
   function variantRow(v) {
     v = v || {};
     return rowShell([
-      field('Eticheta', mini({ 'data-k': 'label', maxlength: 80, placeholder: '30 de minute' }, v.label)),
-      field('Minute', mini({ 'data-k': 'duration_minutes', type: 'number', min: 0, inputmode: 'numeric' }, v.duration_minutes)),
-      field('Preț (lei)', mini({ 'data-k': 'price', type: 'number', min: 0, step: '0.01', inputmode: 'decimal' }, v.price)),
-      field('Cod', mini({ 'data-k': 'id', maxlength: 32, placeholder: 'automat', class: 'po-input ve-mono' }, v.id)),
+      field(VQ.t('Label'), mini({ 'data-k': 'label', maxlength: 80, placeholder: VQ.t('30 minutes') }, v.label)),
+      field(VQ.t('Minutes'), mini({ 'data-k': 'duration_minutes', type: 'number', min: 0, inputmode: 'numeric' }, v.duration_minutes)),
+      field(VQ.t('Price (€)'), mini({ 'data-k': 'price', type: 'number', min: 0, step: '0.01', inputmode: 'decimal' }, v.price)),
+      field(VQ.t('Code'), mini({ 'data-k': 'id', maxlength: 32, placeholder: VQ.t('automatic'), class: 'po-input ve-mono' }, v.id)),
     ]);
   }
   function addonRow(a) {
     a = a || {};
     return rowShell([
-      field('Eticheta', mini({ 'data-k': 'label', maxlength: 80, placeholder: 'Tractare extra' }, a.label)),
-      field('Preț (lei)', mini({ 'data-k': 'price', type: 'number', min: 0, step: '0.01', inputmode: 'decimal' }, a.price)),
-      field('Incluse', mini({ 'data-k': 'included_qty', type: 'number', min: 0, inputmode: 'numeric' }, a.included_qty != null ? a.included_qty : 0)),
-      field('Plătite maxim', mini({ 'data-k': 'max_per_unit', type: 'number', min: 0, inputmode: 'numeric' }, a.max_per_unit != null ? a.max_per_unit : 5)),
-      field('Cod', mini({ 'data-k': 'id', maxlength: 32, placeholder: 'automat', class: 'po-input ve-mono' }, a.id)),
+      field(VQ.t('Label'), mini({ 'data-k': 'label', maxlength: 80, placeholder: VQ.t('Extra towing') }, a.label)),
+      field(VQ.t('Price (€)'), mini({ 'data-k': 'price', type: 'number', min: 0, step: '0.01', inputmode: 'decimal' }, a.price)),
+      field(VQ.t('Included'), mini({ 'data-k': 'included_qty', type: 'number', min: 0, inputmode: 'numeric' }, a.included_qty != null ? a.included_qty : 0)),
+      field(VQ.t('Paid maximum'), mini({ 'data-k': 'max_per_unit', type: 'number', min: 0, inputmode: 'numeric' }, a.max_per_unit != null ? a.max_per_unit : 5)),
+      field(VQ.t('Code'), mini({ 'data-k': 'id', maxlength: 32, placeholder: VQ.t('automatic'), class: 'po-input ve-mono' }, a.id)),
     ]);
   }
   function blockRow(b) {
     b = b || {};
     return rowShell([
-      field('Ziua', mini({ 'data-k': 'date', type: 'date' }, b.date)),
-      field('De la', mini({ 'data-k': 'start_time', type: 'time' }, b.start_time)),
-      field('Până la', mini({ 'data-k': 'end_time', type: 'time' }, b.end_time)),
-      field('Motivul', mini({ 'data-k': 'reason', maxlength: 200, placeholder: 'Grup privat' }, b.reason)),
+      field(VQ.t('Day'), mini({ 'data-k': 'date', type: 'date' }, b.date)),
+      field(VQ.t('From'), mini({ 'data-k': 'start_time', type: 'time' }, b.start_time)),
+      field(VQ.t('To'), mini({ 'data-k': 'end_time', type: 'time' }, b.end_time)),
+      field(VQ.t('Reason'), mini({ 'data-k': 'reason', maxlength: 200, placeholder: VQ.t('Private group') }, b.reason)),
     ]);
   }
   function packageRow(o) {
     o = o || {};
     var comp = el('select', { 'data-k': 'ticket_type_id' });
-    comp.appendChild(new Option('Alege produsul', ''));
+    comp.appendChild(new Option(VQ.t('Choose the product'), ''));
     products.filter(function (p) { return p.service_category !== 'package' && (!edit || p.id !== edit.id); }).forEach(function (p) {
       comp.appendChild(new Option(txt(p.name) + ' · ' + (CAT[p.service_category] || ''), String(p.id)));
     });
@@ -270,7 +270,7 @@
     var variant = el('select', { 'data-k': 'variant_id' });
     var fillVariants = function (keep) {
       variant.textContent = '';
-      variant.appendChild(new Option('Fără variantă', ''));
+      variant.appendChild(new Option(VQ.t('No variant'), ''));
       var p = products.filter(function (x) { return String(x.id) === comp.value; })[0];
       (p && Array.isArray(p.variants) ? p.variants : []).forEach(function (v) { variant.appendChild(new Option(txt(v.label) + ' · ' + lei(v.price), String(v.id))); });
       variant.value = keep || '';
@@ -280,14 +280,14 @@
     comp.addEventListener('change', function () { fillVariants(''); pkgSummary(); });
     variant.addEventListener('change', pkgSummary);
     var qty = mini({ 'data-k': 'qty', type: 'number', min: 1, inputmode: 'numeric' }, o.qty != null ? o.qty : 1);
-    var alloc = mini({ 'data-k': 'price', type: 'number', min: 0, step: '0.01', inputmode: 'decimal', placeholder: 'opțional' }, o.price);
+    var alloc = mini({ 'data-k': 'price', type: 'number', min: 0, step: '0.01', inputmode: 'decimal', placeholder: VQ.t('optional') }, o.price);
     qty.addEventListener('input', pkgSummary);
     alloc.addEventListener('input', pkgSummary);
     return rowShell([
-      el('span', { class: 'po-field ve-row-wide' }, [el('label', { text: 'Produsul' }), el('span', { class: 'po-select' }, [comp, O.icon('caret-down')])]),
-      el('span', { class: 'po-field' }, [el('label', { text: 'Varianta' }), el('span', { class: 'po-select' }, [variant, O.icon('caret-down')])]),
-      field('Bucăți', qty),
-      field('Din preț (lei)', alloc),
+      el('span', { class: 'po-field ve-row-wide' }, [el('label', { text: VQ.t('Product') }), el('span', { class: 'po-select' }, [comp, O.icon('caret-down')])]),
+      el('span', { class: 'po-field' }, [el('label', { text: VQ.t('Variant') }), el('span', { class: 'po-select' }, [variant, O.icon('caret-down')])]),
+      field(VQ.t('Quantity'), qty),
+      field(VQ.t('Share of price (€)'), alloc),
     ], pkgSummary);
   }
   function collectRows(id, map) {
@@ -328,15 +328,20 @@
     var parts = [];
     if (sum > 0 && price > 0) {
       var save = Math.round((sum - price) * 100) / 100;
-      parts.push('Componentele valorează ' + lei(sum) + ' · ' + (save > 0 ? 'clientul economisește ' + lei(save) + ' (' + Math.round(save / sum * 100) + '%)' : save < 0 ? 'pachetul e cu ' + lei(-save) + ' mai scump decât componentele' : 'prețul e egal cu suma componentelor'));
+      parts.push(save > 0 ? VQ.t('The components are worth {sum} · the customer saves {save} ({pct}%)', { sum: lei(sum), save: lei(save), pct: Math.round(save / sum * 100) })
+        : save < 0 ? VQ.t('The components are worth {sum} · the package costs {more} more than its components', { sum: lei(sum), more: lei(-save) })
+        : VQ.t('The components are worth {sum} · the price equals the sum of the components', { sum: lei(sum) }));
     }
     var state = '';
     if (allocN > 0 || issuer === 'mix') {
       var delta = Math.round((allocSum - price) * 100) / 100;
       state = Math.abs(delta) < 0.01 ? (allocN === outs.length ? 'is-ok' : 'is-wait') : 'is-bad';
-      parts.push('Împărțit ' + lei(allocSum) + ' din ' + lei(price) + ' · ' + (Math.abs(delta) < 0.01
-        ? (allocN === outs.length ? 'corect' : F.count(outs.length - allocN, 'componentă fără sumă', 'componente fără sumă'))
-        : delta > 0 ? 'cu ' + lei(delta) + ' peste prețul pachetului' : 'mai sunt de împărțit ' + lei(-delta)));
+      var sp = { done: lei(allocSum), price: lei(price) };
+      parts.push(Math.abs(delta) < 0.01
+        ? (allocN === outs.length ? VQ.t('Split {done} of {price} · correct', sp)
+          : VQ.t('Split {done} of {price} · {missing}', { done: sp.done, price: sp.price, missing: VQ.n(outs.length - allocN, 'component without an amount', 'components without an amount') }))
+        : delta > 0 ? VQ.t('Split {done} of {price} · {over} above the package price', { done: sp.done, price: sp.price, over: lei(delta) })
+          : VQ.t('Split {done} of {price} · {left} still to split', { done: sp.done, price: sp.price, left: lei(-delta) }));
     }
     box.textContent = parts.join('. ');
     box.className = 've-note-line ve-pkg-sum ' + state;
@@ -345,14 +350,14 @@
   }
   function autoAllocate() {
     var price = num($('vi-price').value) || 0;
-    if (price <= 0) { O.flash('Pune întâi prețul pachetului.', true); return; }
+    if (price <= 0) { O.flash(VQ.t('Set the package price first.'), true); return; }
     var rows = qsa('.ve-row', $('vi-package')).map(function (row) {
       var o = { ticket_type_id: parseInt(row.querySelector('[data-k="ticket_type_id"]').value, 10), variant_id: row.querySelector('[data-k="variant_id"]').value, qty: Math.max(1, int(row.querySelector('[data-k="qty"]').value) || 1) };
       var u = unitPrice(o);
       return { row: row, ref: u == null ? 0 : u * o.qty };
     });
     var total = rows.reduce(function (s, r) { return s + r.ref; }, 0);
-    if (total <= 0) { O.flash('Componentele nu au preț de pornire.', true); return; }
+    if (total <= 0) { O.flash(VQ.t('The components have no starting price.'), true); return; }
     var given = 0;
     rows.forEach(function (r, k) {
       var v = k === rows.length - 1 ? Math.round((price - given) * 100) / 100 : Math.round(price * r.ref / total * 100) / 100;
@@ -379,12 +384,12 @@
     thumb.hidden = !src;
     show('vi-image-empty', !src);
     show('vi-image-rm', !!url);
-    $('vi-image-label').textContent = url ? 'Schimbă imaginea' : 'Alege o imagine';
+    $('vi-image-label').textContent = url ? VQ.t('Change the picture') : VQ.t('Choose a picture');
   }
   function fillGroups(value) {
     var s = $('vi-group');
     s.textContent = '';
-    s.appendChild(new Option('Alte produse', ''));
+    s.appendChild(new Option(VQ.t('Other products'), ''));
     cats.forEach(function (c) { s.appendChild(new Option(catName(c), c.id)); });
     s.value = cats.some(function (c) { return c.id === value; }) ? value : '';
   }
@@ -394,7 +399,7 @@
     delArmed = false;
     lastFocus = document.activeElement;
     var m = (p && p.meta) || {};
-    $('vi-modal-h').textContent = p ? 'Schimbă produsul' : 'Adaugă un produs';
+    $('vi-modal-h').textContent = p ? VQ.t('Edit the product') : VQ.t('Add a product');
     setVal('vi-name', p ? txt(p.name) : '');
     $('vi-cat').value = p && CAT[p.service_category] ? p.service_category : 'access';
     $('vi-issuer').value = p && ['primary', 'secondary', 'mix'].indexOf(p.issuing_company) > -1 ? p.issuing_company : 'primary';
@@ -451,7 +456,7 @@
     $('vi-pos-only').checked = !!(p && (p.pos_only || m.pos_only));
     $('vi-access-req').value = p && ['none', 'any', 'adult_only'].indexOf(p.access_requirement) > -1 ? p.access_requirement : 'none';
     show('vi-del', !!p);
-    $('vi-del').lastChild.textContent = 'Șterge produsul';
+    $('vi-del').lastChild.textContent = VQ.t('Delete the product');
     applyCategory();
     show('vi-modal', true);
     $('vi-modal').querySelector('.ve-modal-card').scrollTop = 0;
@@ -510,7 +515,7 @@
         step_qty: $('vi-step').value !== '' ? Math.max(1, int($('vi-step').value) || 1) : null,
         is_group_ticket: isGroup,
         group_includes_guide: guide,
-        group_guide_label: guide ? ($('vi-guide-label').value.trim() || 'Ghid grup') : null,
+        group_guide_label: guide ? ($('vi-guide-label').value.trim() || VQ.t('Group guide')) : null,
         includes: incl,
         variants: timed ? collectRows('vi-variants', function (it) {
           if (!it.label) return null;
@@ -542,36 +547,36 @@
   }
   function saveProduct() {
     var body = collect();
-    if (!body.name) { O.flash('Scrie numele produsului.', true); $('vi-name').focus(); return; }
-    if (body.price == null || body.price < 0) { O.flash('Pune prețul online.', true); $('vi-price').focus(); return; }
-    if (body.service_category === 'package' && !body.meta.package_outputs.length) { O.flash('Un pachet are nevoie de cel puțin o componentă.', true); return; }
+    if (!body.name) { O.flash(VQ.t('Enter the product name.'), true); $('vi-name').focus(); return; }
+    if (body.price == null || body.price < 0) { O.flash(VQ.t('Set the online price.'), true); $('vi-price').focus(); return; }
+    if (body.service_category === 'package' && !body.meta.package_outputs.length) { O.flash(VQ.t('A package needs at least one component.'), true); return; }
     var bad = body.meta.blocked_time_ranges.filter(function (b) { return b.end_time <= b.start_time; })[0];
-    if (bad) { O.flash('Un interval blocat se termină înainte să înceapă.', true); return; }
+    if (bad) { O.flash(VQ.t('A blocked time slot ends before it starts.'), true); return; }
     var b = $('vi-save'), base = '/organizer/events/' + eventId + '/leisure/products';
     b.disabled = true;
     var req = edit ? O.api(base + '/' + F.toNum(edit.id), { method: 'PUT', body: body }) : O.api(base, { method: 'POST', body: body });
     req.then(function () {
-      O.flash(edit ? 'Produsul a fost salvat.' : 'Produsul a fost adăugat.');
+      O.flash(edit ? VQ.t('The product was saved.') : VQ.t('The product was added.'));
       closeProduct();
       loadAll();
     }, function (err) {
       var first = err && err.errors && Object.keys(err.errors)[0];
-      O.flash((first && err.errors[first] && err.errors[first][0]) || (err && err.message) || 'Nu am putut salva produsul.', true);
+      O.flash((first && err.errors[first] && err.errors[first][0]) || (err && err.message) || VQ.t('We could not save the product.'), true);
     }).then(function () { b.disabled = false; });
   }
   function deleteProduct() {
     if (!edit) return;
     var b = $('vi-del');
-    if (!delArmed) { delArmed = true; b.lastChild.textContent = 'Apasă din nou ca să ștergi'; return; }
+    if (!delArmed) { delArmed = true; b.lastChild.textContent = VQ.t('Press again to delete'); return; }
     b.disabled = true;
     O.api('/organizer/events/' + eventId + '/leisure/products/' + F.toNum(edit.id), { method: 'DELETE' }).then(function () {
-      O.flash('Produsul a fost șters.');
+      O.flash(VQ.t('The product was deleted.'));
       closeProduct();
       loadAll();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut șterge produsul.', true);
+      O.flash((err && err.message) || VQ.t('We could not delete the product.'), true);
       delArmed = false;
-      b.lastChild.textContent = 'Șterge produsul';
+      b.lastChild.textContent = VQ.t('Delete the product');
     }).then(function () { b.disabled = false; });
   }
 
@@ -580,7 +585,7 @@
   $('vi-cats-btn').addEventListener('click', function () {
     var open = this.getAttribute('aria-expanded') !== 'true';
     this.setAttribute('aria-expanded', String(open));
-    this.firstChild.nodeValue = open ? 'Ascunde categoriile' : 'Arată categoriile';
+    this.firstChild.nodeValue = open ? VQ.t('Hide categories') : VQ.t('Show categories');
     show('vi-cats-body', open);
   });
   $('vi-cat-add').addEventListener('click', addCat);
@@ -613,9 +618,9 @@
   $('vi-image-file').addEventListener('change', function () {
     var f = this.files && this.files[0], input = this;
     if (!f) return;
-    $('vi-image-label').textContent = 'Se încarcă…';
+    $('vi-image-label').textContent = VQ.t('Loading…');
     upload(f).then(function (d) { setImage(d.url || d.path); }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut încărca imaginea.', true);
+      O.flash((err && err.message) || VQ.t('We could not upload the picture.'), true);
       setImage($('vi-image-box').getAttribute('data-value'));
     }).then(function () { input.value = ''; });
   });
@@ -653,7 +658,7 @@
       if (!venues.length) { show('ve-none', true); $('vi-add').disabled = true; return; }
       var s = $('ve-event');
       s.textContent = '';
-      venues.forEach(function (e) { s.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { s.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       s.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       show('ve-main', true);

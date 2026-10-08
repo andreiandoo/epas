@@ -217,8 +217,8 @@
         const issuerCui = issuer.tax_id || issuer.cui || '';
         const issuerReg = issuer.registration || issuer.reg_com || '';
         const idLine = [];
-        if (issuerCui) idLine.push('CUI: ' + issuerCui);
-        if (issuerReg) idLine.push('Reg: ' + issuerReg);
+        if (issuerCui) idLine.push(VQ.t('Tax ID: {id}', { id: issuerCui }));
+        if (issuerReg) idLine.push(VQ.t('Reg: {no}', { no: issuerReg }));
         if (idLine.length) {
             parts.push(SIZE_SMALL, lineOf(idLine.join('  ')), SIZE_NORMAL);
         }
@@ -243,7 +243,7 @@
         // Anterior afișam event_name aici; eliminat la cererea utilizatorului
         // (numele evenimentului apărea ca "Test Eveniment" la print test și
         // duplicate cu titlul biletului). Înlocuit cu un identifier constant.
-        parts.push(SIZE_SMALL, lineOf('Ticketing prin viaqui.com'), SIZE_NORMAL);
+        parts.push(SIZE_SMALL, lineOf(VQ.t('Ticketing by viaqui.com')), SIZE_NORMAL);
         parts.push(lineOf('--------------------------------'));
 
         // ===== TIP BILET =====
@@ -283,8 +283,8 @@
 
         // ===== FOOTER VANZARE (compact) =====
         const visitLine = [];
-        if (t.visit_date) visitLine.push('Vizita: ' + t.visit_date);
-        if (t.sold_at) visitLine.push('Vandut: ' + t.sold_at);
+        if (t.visit_date) visitLine.push(VQ.t('Visit: {date}', { date: t.visit_date }));
+        if (t.sold_at) visitLine.push(VQ.t('Sold: {date}', { date: t.sold_at }));
         if (visitLine.length) {
             parts.push(SIZE_SMALL, lineOf(visitLine.join('  ')), SIZE_NORMAL);
         }
@@ -356,18 +356,18 @@
         const parts = [INIT, ALIGN_CENTER];
 
         // ===== TITLU =====
-        parts.push(SIZE_2X2, BOLD_ON, lineOf('FACTURA FISCALA'), BOLD_OFF, SIZE_NORMAL);
+        parts.push(SIZE_2X2, BOLD_ON, lineOf(VQ.t('TAX INVOICE')), BOLD_OFF, SIZE_NORMAL);
         parts.push(lineOf('--------------------------------'));
 
         // ===== EMITENT =====
         const issuer = inv.issuer || {};
-        const issuerName = (issuer.name || issuer.company_name || 'BILETE.ONLINE').toString().trim();
+        const issuerName = (issuer.name || issuer.company_name || 'VIAQUI').toString().trim();
         parts.push(BOLD_ON, lineOf(issuerName.toUpperCase()), BOLD_OFF);
         const issuerCui = issuer.tax_id || issuer.cui || '';
         const issuerReg = issuer.registration || issuer.reg_com || '';
         const idLine = [];
-        if (issuerCui) idLine.push('CUI: ' + issuerCui);
-        if (issuerReg) idLine.push('Reg: ' + issuerReg);
+        if (issuerCui) idLine.push(VQ.t('Tax ID: {id}', { id: issuerCui }));
+        if (issuerReg) idLine.push(VQ.t('Reg: {no}', { no: issuerReg }));
         if (idLine.length) parts.push(SIZE_SMALL, lineOf(idLine.join('  ')), SIZE_NORMAL);
         const addrParts = [];
         if (issuer.address) addrParts.push(issuer.address);
@@ -385,7 +385,7 @@
         // Doar mesajul "in doua exemplare" (fara "Copia" — nu mai facem distinctie
         // originalul vs copia, ambele sunt exemplare identice).
         parts.push(FEED_N(1));
-        parts.push(SIZE_SMALL, lineOf('Factura tiparita in doua exemplare'), SIZE_NORMAL);
+        parts.push(SIZE_SMALL, lineOf(VQ.t('Invoice printed in two copies')), SIZE_NORMAL);
 
         // ===== SERIA (MARE) =====
         // Doar seria + numarul (fara eticheta "Seria:") — bold + mare pentru vizibilitate.
@@ -393,10 +393,10 @@
         parts.push(FEED_N(1));
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
         parts.push(SIZE_2X2, BOLD_ON, lineOf(series), BOLD_OFF, SIZE_NORMAL);
-        // Sub serie: linie centrata "Emis de ECOCENTRU - info@szentanna-to.ro"
-        // (hardcoded conform cerere Sf. Ana — NU dinamic din issuer). Spacing minim
+        // Under the series: a centred line "Issued by <issuer>"
+        // (the issuer of this invoice). Spacing minim
         // intre serie si linia asta (fara FEED_N, doar linia).
-        parts.push(SIZE_SMALL, lineOf('Emis de ECOCENTRU - info@szentanna-to.ro'), SIZE_NORMAL);
+        parts.push(SIZE_SMALL, lineOf(VQ.t('Issued by {name}', { name: issuerName })), SIZE_NORMAL);
         // Spacing minim inainte de continut (buyer/data/produse)
         parts.push(FEED_N(1));
 
@@ -407,12 +407,12 @@
         parts.push(ALIGN_LEFT);
         const buyer = inv.buyer_company || null;
         if (buyer && (buyer.name || buyer.cui)) {
-            parts.push(BOLD_ON, SIZE_SMALL, lineOf('CUMPARATOR (FIRMA)'), SIZE_NORMAL, BOLD_OFF);
+            parts.push(BOLD_ON, SIZE_SMALL, lineOf(VQ.t('BUYER (COMPANY)')), SIZE_NORMAL, BOLD_OFF);
             parts.push(lineOf('--------------------------------'));
             if (buyer.name) parts.push(lineOf(buyer.name));
             const buyerIds = [];
-            if (buyer.cui || buyer.tax_id) buyerIds.push('CUI: ' + (buyer.cui || buyer.tax_id));
-            if (buyer.reg_no || buyer.registration) buyerIds.push('Reg: ' + (buyer.reg_no || buyer.registration));
+            if (buyer.cui || buyer.tax_id) buyerIds.push(VQ.t('Tax ID: {id}', { id: buyer.cui || buyer.tax_id }));
+            if (buyer.reg_no || buyer.registration) buyerIds.push(VQ.t('Reg: {no}', { no: buyer.reg_no || buyer.registration }));
             if (buyerIds.length) parts.push(SIZE_SMALL, lineOf(buyerIds.join('  ')), SIZE_NORMAL);
             if (buyer.address) {
                 const ba = wrapText(String(buyer.address), 56).slice(0, 2);
@@ -429,16 +429,16 @@
             const pad = n => String(n).padStart(2, '0');
             return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         })();
-        parts.push(lineOf('Data emiterii: ' + issuedDate));
+        parts.push(lineOf(VQ.t('Issue date: {date}', { date: issuedDate })));
 
         // ===== PRODUSE =====
         parts.push(FEED_N(1));
-        parts.push(BOLD_ON, SIZE_SMALL, lineOf('PRODUSE'), SIZE_NORMAL, BOLD_OFF);
+        parts.push(BOLD_ON, SIZE_SMALL, lineOf(VQ.t('ITEMS')), SIZE_NORMAL, BOLD_OFF);
         parts.push(lineOf('--------------------------------'));
         const items = Array.isArray(inv.items) ? inv.items : [];
-        const currency = inv.currency || 'RON';
+        const currency = inv.currency || 'EUR';
         for (const it of items) {
-            const name = String(it.name || 'Produs').trim();
+            const name = String(it.name || VQ.t('Item')).trim();
             const qty = parseFloat(it.qty || 1);
             const unitPrice = parseFloat(it.unit_price || 0);
             const total = parseFloat(it.total ?? (qty * unitPrice));
@@ -463,13 +463,13 @@
             : 0;
 
         // Randul TVA e OBLIGATORIU pe factura (chiar 0). Etichetat cu rate-ul setat.
-        const vatLabel = 'TVA (' + (vatRate ? vatRate.toFixed(0) + '%' : '0%') + '):';
+        const vatLabel = VQ.t('VAT ({rate}):', { rate: vatRate ? vatRate.toFixed(0) + '%' : '0%' });
         const vatRight = vatAmount.toFixed(2) + ' ' + currency;
         const vatPad = Math.max(1, 32 - vatLabel.length - vatRight.length);
         parts.push(SIZE_SMALL, lineOf(vatLabel + ' '.repeat(vatPad) + vatRight), SIZE_NORMAL);
 
         // TOTAL bold
-        const totalLine = 'TOTAL:';
+        const totalLine = VQ.t('TOTAL:');
         const totalRight = totalAmount.toFixed(2) + ' ' + currency;
         const totalPad = Math.max(1, 32 - totalLine.length - totalRight.length);
         parts.push(BOLD_ON, lineOf(totalLine + ' '.repeat(totalPad) + totalRight), BOLD_OFF);
@@ -482,8 +482,8 @@
         parts.push(FEED_N(1));
         parts.push(lineOf('--------------------------------'));
         // Header rand: "Emitent" stanga, "Preluat" dreapta pe acelasi rand
-        const emitLabel = 'Emitent';
-        const preluatLabel = 'Preluat';
+        const emitLabel = VQ.t('Issued by');
+        const preluatLabel = VQ.t('Received by');
         const sigPad = Math.max(1, 32 - emitLabel.length - preluatLabel.length);
         parts.push(BOLD_ON, SIZE_SMALL, lineOf(emitLabel + ' '.repeat(sigPad) + preluatLabel), SIZE_NORMAL, BOLD_OFF);
 
@@ -502,7 +502,7 @@
         // ===== FOOTER =====
         parts.push(FEED_N(1));
         parts.push(ALIGN_CENTER);
-        parts.push(SIZE_SMALL, lineOf('Achitat cu bon fiscal'), SIZE_NORMAL);
+        parts.push(SIZE_SMALL, lineOf(VQ.t('Paid with fiscal receipt')), SIZE_NORMAL);
 
         // Footer note opțional (ex: avertisment cand exista produse SC2 nefacturate)
         if (inv.footer_note) {
@@ -559,18 +559,18 @@
         let out = '<div class="paper">';
 
         // ===== TITLU =====
-        out += '<h2>FACTURA FISCALA</h2>';
+        out += '<h2>' + esc(VQ.t('TAX INVOICE')) + '</h2>';
         out += sep;
 
         // ===== EMITENT =====
         const issuer = inv.issuer || {};
-        const issuerName = (issuer.name || issuer.company_name || 'BILETE.ONLINE').toString().trim();
+        const issuerName = (issuer.name || issuer.company_name || 'VIAQUI').toString().trim();
         out += '<div class="center bold">' + esc(issuerName.toUpperCase()) + '</div>';
         const issuerCui = issuer.tax_id || issuer.cui || '';
         const issuerReg = issuer.registration || issuer.reg_com || '';
         const idLine = [];
-        if (issuerCui) idLine.push('CUI: ' + issuerCui);
-        if (issuerReg) idLine.push('Reg: ' + issuerReg);
+        if (issuerCui) idLine.push(VQ.t('Tax ID: {id}', { id: issuerCui }));
+        if (issuerReg) idLine.push(VQ.t('Reg: {no}', { no: issuerReg }));
         if (idLine.length) out += '<div class="center small">' + esc(idLine.join('  ')) + '</div>';
         const addrParts = [];
         if (issuer.address) addrParts.push(issuer.address);
@@ -582,24 +582,24 @@
 
         // ===== EXEMPLAR (fara Copia) =====
         out += '<div style="height: 3mm;"></div>';
-        out += '<div class="center small">Factura tiparita in doua exemplare</div>';
+        out += '<div class="center small">' + esc(VQ.t('Invoice printed in two copies')) + '</div>';
 
         // ===== SERIA (MARE) =====
         // Doar serie + numar (fara eticheta "Seria:"). Spacing minim jos.
         const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
         out += '<div class="large" style="margin: 2mm 0 1mm;">' + esc(series) + '</div>';
-        // Linie centrata "Emis de ECOCENTRU - info@szentanna-to.ro" (hardcoded).
-        out += '<div class="center small" style="margin-bottom: 3mm;">Emis de ECOCENTRU - info@szentanna-to.ro</div>';
+        // Centred line "Issued by <issuer>".
+        out += '<div class="center small" style="margin-bottom: 3mm;">' + esc(VQ.t('Issued by {name}', { name: issuerName })) + '</div>';
 
         // ===== CUMPARATOR (firma) — doar cand exista date =====
         const buyer = inv.buyer_company || null;
         if (buyer && (buyer.name || buyer.cui)) {
-            out += '<div class="bold small">CUMPARATOR (FIRMA)</div>';
+            out += '<div class="bold small">' + esc(VQ.t('BUYER (COMPANY)')) + '</div>';
             out += sep;
             if (buyer.name) out += '<div>' + esc(buyer.name) + '</div>';
             const buyerIds = [];
-            if (buyer.cui || buyer.tax_id) buyerIds.push('CUI: ' + (buyer.cui || buyer.tax_id));
-            if (buyer.reg_no || buyer.registration) buyerIds.push('Reg: ' + (buyer.reg_no || buyer.registration));
+            if (buyer.cui || buyer.tax_id) buyerIds.push(VQ.t('Tax ID: {id}', { id: buyer.cui || buyer.tax_id }));
+            if (buyer.reg_no || buyer.registration) buyerIds.push(VQ.t('Reg: {no}', { no: buyer.reg_no || buyer.registration }));
             if (buyerIds.length) out += '<div class="small">' + esc(buyerIds.join('  ')) + '</div>';
             if (buyer.address) out += '<div class="small">' + esc(buyer.address) + '</div>';
         }
@@ -611,16 +611,16 @@
             const pad = n => String(n).padStart(2, '0');
             return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         })();
-        out += '<div>Data emiterii: ' + esc(issuedDate) + '</div>';
+        out += '<div>' + esc(VQ.t('Issue date: {date}', { date: issuedDate })) + '</div>';
 
         // ===== PRODUSE =====
         out += '<div style="height: 3mm;"></div>';
-        out += '<div class="bold small">PRODUSE</div>';
+        out += '<div class="bold small">' + esc(VQ.t('ITEMS')) + '</div>';
         out += sep;
         const items = Array.isArray(inv.items) ? inv.items : [];
-        const currency = inv.currency || 'RON';
+        const currency = inv.currency || 'EUR';
         for (const it of items) {
-            const name = String(it.name || 'Produs').trim();
+            const name = String(it.name || VQ.t('Item')).trim();
             const qty = parseFloat(it.qty || 1);
             const unitPrice = parseFloat(it.unit_price || 0);
             const total = parseFloat(it.total != null ? it.total : (qty * unitPrice));
@@ -636,15 +636,15 @@
         const vatAmount = (vatPayer && vatRate > 0)
             ? Math.round((totalAmount * vatRate / (100 + vatRate)) * 100) / 100
             : 0;
-        const vatLabel = 'TVA (' + (vatRate ? vatRate.toFixed(0) + '%' : '0%') + '):';
-        out += '<div class="row small"><span>' + vatLabel + '</span><span>' + vatAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
-        out += '<div class="row bold"><span>TOTAL:</span><span>' + totalAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
+        const vatLabel = VQ.t('VAT ({rate}):', { rate: vatRate ? vatRate.toFixed(0) + '%' : '0%' });
+        out += '<div class="row small"><span>' + esc(vatLabel) + '</span><span>' + vatAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
+        out += '<div class="row bold"><span>' + esc(VQ.t('TOTAL:')) + '</span><span>' + totalAmount.toFixed(2) + ' ' + esc(currency) + '</span></div>';
 
         // ===== SEMNATURI =====
         // Layout nou: labels + nume IMEDIAT dedesubt, ABIA APOI 2cm blank pentru semnaturi.
         out += '<div style="height: 3mm;"></div>';
         out += sep;
-        out += '<div class="row bold small"><span>Emitent</span><span>Preluat</span></div>';
+        out += '<div class="row bold small"><span>' + esc(VQ.t('Issued by')) + '</span><span>' + esc(VQ.t('Received by')) + '</span></div>';
 
         // Nume IMEDIAT sub labels
         const customer = inv.customer || {};
@@ -659,7 +659,7 @@
 
         // ===== FOOTER =====
         out += '<div style="height: 3mm;"></div>';
-        out += '<div class="center small">Achitat cu bon fiscal</div>';
+        out += '<div class="center small">' + esc(VQ.t('Paid with fiscal receipt')) + '</div>';
 
         if (inv.footer_note) {
             out += '<div class="center small" style="margin-top:2mm; font-style: italic;">' + esc(inv.footer_note) + '</div>';
@@ -714,7 +714,7 @@
                 }
             }
         }
-        throw new Error('Nu s-a găsit endpoint OUT pe imprimantă');
+        throw new Error(VQ.t('No OUT endpoint was found on the printer'));
     }
 
     async function ensureConnected() {
@@ -752,14 +752,14 @@
          */
         async connect() {
             if (!navigator.usb) {
-                throw new Error('WebUSB nu e suportat — foloseşte Chrome sau Edge.');
+                throw new Error(VQ.t('WebUSB is not supported: use Chrome or Edge.'));
             }
             const device = await navigator.usb.requestDevice({ filters: PRINTER_FILTERS });
             await openAndClaim(device);
             return {
                 vendorId: device.vendorId,
                 productId: device.productId,
-                productName: device.productName || 'Imprimantă ESC/POS',
+                productName: device.productName || VQ.t('ESC/POS printer'),
                 manufacturerName: device.manufacturerName || '',
                 serialNumber: device.serialNumber || '',
             };
@@ -790,7 +790,7 @@
         /** Trimite un buffer brut la imprimantă. */
         async printRaw(buffer) {
             const d = await ensureConnected();
-            if (!d || !_endpoint) throw new Error('Imprimantă neconectată');
+            if (!d || !_endpoint) throw new Error(VQ.t('Printer not connected'));
             return await d.transferOut(_endpoint, buffer);
         },
 
@@ -883,13 +883,14 @@
          */
         previewInvoice(invoice) {
             const html = buildInvoiceHtml(invoice);
+            const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
             const w = window.open('', 'invoice-preview', 'width=420,height=800,scrollbars=yes,resizable=yes');
             if (!w) {
-                alert('Popup blocat. Permite popup-uri pentru preview factura.');
+                alert(VQ.t('Pop-up blocked. Allow pop-ups to preview the invoice.'));
                 return;
             }
             w.document.open();
-            w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Preview factura</title>'
+            w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(VQ.t('Invoice preview')) + '</title>'
                 + '<style>'
                 + '  body { margin: 0; padding: 12px; background: #e5e7eb; font-family: system-ui, sans-serif; }'
                 + '  .header { text-align: center; margin-bottom: 12px; color: #64748b; font-size: 12px; }'
@@ -907,12 +908,12 @@
                 + '  .noprint button { padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }'
                 + '  @media print { body { background: white; padding: 0; } .noprint, .header, .exemplar-badge { display: none; } .paper { box-shadow: none; margin: 0; } }'
                 + '</style></head><body>'
-                + '<div class="header">🖨️ Preview factura — 80mm width · ' + new Date().toLocaleString('ro-RO') + '</div>'
-                + '<div class="exemplar-badge">Exemplar 1 (Cumparator)</div>'
+                + '<div class="header">🖨️ ' + esc(VQ.t('Invoice preview, 80 mm wide')) + ' · ' + new Date().toLocaleString(VQ.locale === 'en' ? 'en-GB' : VQ.locale) + '</div>'
+                + '<div class="exemplar-badge">' + esc(VQ.t('Copy 1 (buyer)')) + '</div>'
                 + html
-                + '<div class="exemplar-badge">Exemplar 2 (Emitent / Arhiva)</div>'
+                + '<div class="exemplar-badge">' + esc(VQ.t('Copy 2 (issuer, for the records)')) + '</div>'
                 + html
-                + '<div class="noprint"><button onclick="window.print()">🖨️ Print (opțional)</button> <button onclick="window.close()" style="background:#64748b">Închide</button></div>'
+                + '<div class="noprint"><button onclick="window.print()">🖨️ ' + esc(VQ.t('Print (optional)')) + '</button> <button onclick="window.close()" style="background:#64748b">' + esc(VQ.t('Close')) + '</button></div>'
                 + '</body></html>');
             w.document.close();
         },
@@ -922,33 +923,33 @@
             const now = new Date();
             const sample = Object.assign({
                 issuer: {
-                    name: 'LOCATIA TA SRL',
-                    tax_id: 'RO12345678',
-                    registration: 'J40/1234/2025',
-                    address: 'Str. Test Nr. 1',
-                    city: 'Bucuresti',
-                    county: 'Bucuresti',
+                    name: 'YOUR VENUE LTD',
+                    tax_id: 'EU123456789',
+                    registration: '12345678',
+                    address: '1 Test Street',
+                    city: 'Lisbon',
+                    county: '',
                 },
                 series: 'P1-' + now.getFullYear() + '/00000080',
                 customer: {
-                    name: 'Ion Popescu',
-                    email: 'ion.popescu@example.ro',
-                    phone: '0712345678',
+                    name: 'Alex Sample',
+                    email: 'alex.sample@example.com',
+                    phone: '+351 000 000 000',
                 },
                 buyer_company: {
-                    name: 'CSOMADCOM SRL',
-                    cui: 'RO28151402',
-                    reg_no: 'J14/123/2011',
-                    address: 'Str. Centrală Nr. 12, Lăzărești, Harghita',
+                    name: 'SAMPLE COMPANY LTD',
+                    cui: 'EU987654321',
+                    reg_no: '87654321',
+                    address: '12 Main Street, Vienna',
                 },
                 issued_at: now,
                 items: [
-                    { name: 'Bilet Adult', qty: 2, unit_price: 25.00, total: 50.00 },
-                    { name: 'Bilet Copil', qty: 1, unit_price: 15.00, total: 15.00 },
-                    { name: 'Ghidaj 09:00-11:00', qty: 1, unit_price: 80.00, total: 80.00 },
+                    { name: VQ.t('Adult ticket'), qty: 2, unit_price: 25.00, total: 50.00 },
+                    { name: VQ.t('Child ticket'), qty: 1, unit_price: 15.00, total: 15.00 },
+                    { name: VQ.t('Guided tour 09:00-11:00'), qty: 1, unit_price: 80.00, total: 80.00 },
                 ],
                 total: 145.00,
-                currency: 'RON',
+                currency: 'EUR',
             }, overrides || {});
             return await this.printInvoice(sample);
         },
@@ -964,13 +965,13 @@
             // încărcate din /leisure/config. Dacă apelezi fără overrides,
             // header-ul firmă va lipsi (acceptabil pentru un smoke test).
             const sample = Object.assign({
-                event_name: 'Test bilet',
-                ticket_type_name: 'Bilet Adult',
+                event_name: VQ.t('Test ticket'),
+                ticket_type_name: VQ.t('Adult ticket'),
                 code: 'TEST-X9K3PQ',
                 qr_data: 'TEST-X9K3PQ',
                 visit_date: dateStr,
                 sold_at: dateStr + ' ' + timeStr,
-                pos_name: 'POS Test',
+                pos_name: VQ.t('POS test'),
             }, overrides || {});
             return await this.printTicket(sample);
         },

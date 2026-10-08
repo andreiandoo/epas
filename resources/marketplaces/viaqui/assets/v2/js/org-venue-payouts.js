@@ -10,18 +10,19 @@
   if (!O || !root) return;
   var F = O.fmt, el = O.el;
   var $ = function (id) { return document.getElementById(id); };
-  var STATUS = { pending: ['În așteptare', 'is-wait'], approved: ['Aprobat', 'is-info'], processing: ['În plată', 'is-info'], completed: ['Plătit', 'is-ok'], rejected: ['Respins', 'is-bad'], cancelled: ['Anulat', 'is-muted'] };
-  var INV = { paid: ['Achitată', 'is-ok'], outstanding: ['Neachitată', 'is-wait'], pending: ['În așteptare', 'is-wait'], cancelled: ['Anulată', 'is-muted'], refunded: ['Rambursată', 'is-bad'] };
-  var STAGE = { fiscala: 'Fiscală', proforma: 'Proformă' };
-  var MONTHS = ['ian.', 'feb.', 'mar.', 'apr.', 'mai', 'iun.', 'iul.', 'aug.', 'sep.', 'oct.', 'nov.', 'dec.'];
-  var eventId = null, currency = 'RON', payouts = [], openKeys = {}, setSeq = 0;
+  var STATUS = { pending: [VQ.t('Pending'), 'is-wait'], approved: [VQ.t('Approved'), 'is-info'], processing: [VQ.t('Being paid'), 'is-info'], completed: [VQ.t('Paid'), 'is-ok'], rejected: [VQ.t('Rejected'), 'is-bad'], cancelled: [VQ.t('Cancelled'), 'is-muted'] };
+  var INV = { paid: [VQ.t('Paid'), 'is-ok'], outstanding: [VQ.t('Unpaid'), 'is-wait'], pending: [VQ.t('Pending'), 'is-wait'], cancelled: [VQ.t('Cancelled'), 'is-muted'], refunded: [VQ.t('Refunded'), 'is-bad'] };
+  var STAGE = { fiscala: VQ.t('Tax invoice'), proforma: VQ.t('Pro forma') };
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var eventId = null, currency = 'EUR', payouts = [], openKeys = {}, setSeq = 0;
 
   function txt(v) { return F.flat(v).trim(); }
   function show(id, on) { var e = $(id); if (e) e.hidden = !on; }
   function put(id, value) { var e = $(id); if (e) e.textContent = value; }
   function amount(v, cur) {
-    var c = String(cur || currency || '').toUpperCase(), lei = F.money(F.toNum(v));
-    return !c || c === 'RON' || c === 'LEI' ? lei : lei.replace(/ lei$/, '') + ' ' + c;
+    var c = String(cur || currency || '').toUpperCase();
+    if (c && window.BileteOnlineUtils && typeof BileteOnlineUtils.formatCurrency === 'function') return BileteOnlineUtils.formatCurrency(F.toNum(v), c);
+    return F.money(F.toNum(v));
   }
   function day(v, opts) { var d = F.dateOf(v); return d ? F.date(d, opts || { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
   function pad(n) { return String(n).padStart(2, '0'); }
@@ -64,7 +65,7 @@
       var d = (r && r.data) || {}, on = d.online || {}, pos = d.pos || {};
       currency = txt(d.currency) || currency;
       put('vd-days', F.num(F.toNum(d.days_count)));
-      put('vd-since', d.from ? 'de la ' + day(d.from) : '—');
+      put('vd-since', d.from ? VQ.t('since {date}', { date: day(d.from) }) : '—');
       put('vd-online', amount(on.gross));
       put('vd-pos', amount(pos.gross));
       put('vd-online-comm', amount(on.commission));
@@ -80,7 +81,9 @@
     var today = new Date(), out = [], y = today.getFullYear(), m = today.getMonth(), half = today.getDate() <= 15 ? 1 : 2;
     for (var i = 0; i < 24; i++) {
       var f = new Date(y, m, half === 1 ? 1 : 16), t = half === 1 ? new Date(y, m, 15) : new Date(y, m + 1, 0);
-      out.push({ from: localYmd(f), to: localYmd(t), label: f.getDate() + '–' + t.getDate() + ' ' + MONTHS[m] + ' ' + y + (i === 0 ? ' (în curs)' : '') });
+      out.push({ from: localYmd(f), to: localYmd(t), label: i === 0
+        ? VQ.t('{from}–{to} {month} {year} (current)', { from: f.getDate(), to: t.getDate(), month: f.toLocaleDateString(LOC, { month: 'short' }), year: y })
+        : VQ.t('{from}–{to} {month} {year}', { from: f.getDate(), to: t.getDate(), month: f.toLocaleDateString(LOC, { month: 'short' }), year: y }) });
       if (half === 2) { half = 1; } else { half = 2; m--; if (m < 0) { m = 11; y--; } }
     }
     return out;
@@ -104,7 +107,7 @@
       if (my !== setSeq) return;
       if (err && err.status === 401) return;
       box.textContent = '';
-      box.appendChild(el('p', { class: 've-state', text: 'Nu am putut calcula compensarea pentru această perioadă.' }));
+      box.appendChild(el('p', { class: 've-state', text: VQ.t('We could not work out the settlement for this period.') }));
     }).then(function () { if (my === setSeq) box.classList.remove('is-loading'); });
   }
   function line(label, value, cls) {
@@ -116,34 +119,35 @@
     box.textContent = '';
     var grid = el('div', { class: 've-settle' });
     grid.appendChild(el('article', { class: 've-sbox' }, [
-      el('p', { class: 've-sbox-k' }, [O.icon('globe-simple'), document.createTextNode('Online · încasat de viaqui.com')]),
+      el('p', { class: 've-sbox-k' }, [O.icon('globe-simple'), document.createTextNode(VQ.t('Online · collected by viaqui.com'))]),
       el('dl', { class: 've-lines' }, [
-        line('Vânzări', amount(on.gross, cur)),
-        line('Comision viaqui.com', amount(on.commission, cur)),
-        line('Net datorat locației', amount(on.net, cur), 'is-total'),
+        line(VQ.t('Sales'), amount(on.gross, cur)),
+        line(VQ.t('viaqui.com commission'), amount(on.commission, cur)),
+        line(VQ.t('Net owed to the venue'), amount(on.net, cur), 'is-total'),
       ]),
     ]));
     grid.appendChild(el('article', { class: 've-sbox' }, [
-      el('p', { class: 've-sbox-k' }, [O.icon('coins'), document.createTextNode('La casă · încasat de locație')]),
+      el('p', { class: 've-sbox-k' }, [O.icon('coins'), document.createTextNode(VQ.t('At the register · collected by the venue'))]),
       el('dl', { class: 've-lines' }, [
-        line('Vânzări', amount(pos.gross, cur)),
-        line('Numerar', amount(pos.cash, cur)),
-        line('Card', amount(pos.card, cur)),
-        line('Comision datorat de locație', amount(pos.commission, cur), 'is-total'),
+        line(VQ.t('Sales'), amount(pos.gross, cur)),
+        line(VQ.t('Cash'), amount(pos.cash, cur)),
+        line(VQ.t('Card'), amount(pos.card, cur)),
+        line(VQ.t('Commission owed by the venue'), amount(pos.commission, cur), 'is-total'),
       ]),
     ]));
-    var dir = bal.direction, who = dir === 'ambilet_to_venue' ? ['viaqui.com plătește locației', 'is-in']
-      : dir === 'venue_to_ambilet' ? ['Locația plătește viaqui.com', 'is-out'] : ['Nimic de plătit', 'is-even'];
+    var dir = bal.direction, who = dir === 'ambilet_to_venue' ? [VQ.t('viaqui.com pays the venue'), 'is-in']
+      : dir === 'venue_to_ambilet' ? [VQ.t('The venue pays viaqui.com'), 'is-out'] : [VQ.t('Nothing to pay'), 'is-even'];
     grid.appendChild(el('article', { class: 've-sbox ve-balance ' + who[1] }, [
-      el('p', { class: 've-sbox-k', text: 'Soldul perioadei, prin compensare' }),
+      el('p', { class: 've-sbox-k', text: VQ.t('Balance for the period, after offsetting') }),
       el('p', { class: 've-balance-who', text: who[0] }),
       el('p', { class: 've-balance-sum', text: amount(dir === 'settled' || !dir ? 0 : bal.amount, cur) }),
     ]));
     box.appendChild(grid);
-    box.appendChild(el('p', { class: 've-note-line', text: 'Perioada ' + day((d.period || {}).from) + ' – ' + day((d.period || {}).to) + ': '
-      + amount(bal.ambilet_owes_venue, cur) + ' datorat locației − ' + amount(bal.venue_owes_ambilet, cur) + ' datorat de locație = ' + amount(bal.net, cur) + '.' }));
+    box.appendChild(el('p', { class: 've-note-line', text: VQ.t('Period {from} to {to}: {owed} owed to the venue − {owes} owed by the venue = {net}.', {
+      from: day((d.period || {}).from), to: day((d.period || {}).to),
+      owed: amount(bal.ambilet_owes_venue, cur), owes: amount(bal.venue_owes_ambilet, cur), net: amount(bal.net, cur) }) }));
     var by = d.by_issuer || {}, cards = [];
-    [['primary', 'Societatea principală'], ['secondary', 'Societatea secundară']].forEach(function (pair) {
+    [['primary', VQ.t('Main company')], ['secondary', VQ.t('Second company')]].forEach(function (pair) {
       var s = by[pair[0]];
       if (!s || !txt(s.name)) return;
       if (!(F.toNum(s.online_gross) || F.toNum(s.pos_gross) || F.toNum(s.online_commission) || F.toNum(s.pos_commission))) return;
@@ -152,17 +156,17 @@
         el('p', { class: 've-issuer-k' }, [O.icon('buildings'), document.createTextNode(pair[1])]),
         el('h3', { class: 've-issuer-n', text: txt(s.name) }),
         el('dl', { class: 've-lines' }, [
-          line('Vânzări online', amount(s.online_gross, cur)),
-          line('Comision online', amount(s.online_commission, cur)),
-          line('Vânzări la casă', amount(s.pos_gross, cur)),
-          line('Comision la casă', amount(s.pos_commission, cur)),
-          line('Compensare', amount(comp, cur), 'is-total ' + (comp > 0 ? 'is-in' : comp < 0 ? 'is-out' : '')),
+          line(VQ.t('Online sales'), amount(s.online_gross, cur)),
+          line(VQ.t('Online commission'), amount(s.online_commission, cur)),
+          line(VQ.t('Sales at the register'), amount(s.pos_gross, cur)),
+          line(VQ.t('Register commission'), amount(s.pos_commission, cur)),
+          line(VQ.t('Settlement'), amount(comp, cur), 'is-total ' + (comp > 0 ? 'is-in' : comp < 0 ? 'is-out' : '')),
         ]),
-        el('p', { class: 've-sub', text: 'Compensare = vânzări online − toate comisioanele.' }),
+        el('p', { class: 've-sub', text: VQ.t('Settlement = online sales − all commissions.') }),
       ]));
     });
     if (cards.length) {
-      box.appendChild(el('h3', { class: 've-subh', text: 'Pe societăți' }));
+      box.appendChild(el('h3', { class: 've-subh', text: VQ.t('By company') }));
       box.appendChild(el('div', { class: 've-issuers' + (cards.length > 1 ? ' is-two' : '') }, cards));
     }
   }
@@ -178,18 +182,18 @@
     }, function (err) {
       if (err && err.status === 401) return;
       list.textContent = '';
-      list.appendChild(el('p', { class: 've-state', text: 'Nu am putut încărca deconturile.' }));
+      list.appendChild(el('p', { class: 've-state', text: VQ.t('We could not load the payouts.') }));
     });
   }
   function periodLabel(g) {
-    if (!g.start && !g.end) return 'Fără perioadă';
+    if (!g.start && !g.end) return VQ.t('No period');
     return day(g.start, { day: 'numeric', month: 'short' }) + ' – ' + day(g.end);
   }
   function drawPayouts() {
     var list = $('vd-list');
     list.textContent = '';
     if (!payouts.length) {
-      list.appendChild(el('p', { class: 've-state', text: 'Nu există încă deconturi emise pentru această locație.' }));
+      list.appendChild(el('p', { class: 've-state', text: VQ.t('No payouts have been issued for this venue yet.') }));
       return;
     }
     var groups = {}, order = [];
@@ -202,11 +206,11 @@
       var gross = 0, comm = 0, net = 0, inv = 0;
       g.items.forEach(function (p) { gross += F.toNum(p.gross_amount); comm += F.toNum(p.commission_amount); net += F.toNum(p.amount); inv += (p.invoices || []).length; });
       var head = [
-        el('span', { class: 've-fold-title' }, [el('b', { text: periodLabel(g) }), el('small', { class: 've-sub', text: F.count(g.items.length, 'decont', 'deconturi') + ' · ' + F.count(inv, 'factură', 'facturi') })]),
+        el('span', { class: 've-fold-title' }, [el('b', { text: periodLabel(g) }), el('small', { class: 've-sub', text: VQ.n(g.items.length, 'payout', 'payouts') + ' · ' + VQ.n(inv, 'invoice', 'invoices') })]),
         el('span', { class: 've-fold-nums' }, [
-          el('span', null, [el('small', { text: 'Vânzări' }), el('b', { text: amount(gross) })]),
-          el('span', null, [el('small', { text: 'Comision' }), el('b', { text: amount(comm) })]),
-          el('span', { class: 'is-net' }, [el('small', { text: 'De plată' }), el('b', { text: amount(net) })]),
+          el('span', null, [el('small', { text: VQ.t('Sales') }), el('b', { text: amount(gross) })]),
+          el('span', null, [el('small', { text: VQ.t('Commission') }), el('b', { text: amount(comm) })]),
+          el('span', { class: 'is-net' }, [el('small', { text: VQ.t('To pay') }), el('b', { text: amount(net) })]),
         ]),
       ];
       var body = [];
@@ -220,26 +224,26 @@
   function payoutFold(p) {
     var head = [
       el('span', { class: 've-fold-title' }, [
-        el('span', { class: 've-kind', text: 'Decont' }),
+        el('span', { class: 've-kind', text: VQ.t('Payout') }),
         el('b', { class: 've-mono', text: txt(p.decont_series) || txt(p.reference) || ('#' + F.toNum(p.id)) }),
         el('small', { class: 've-sub', text: [txt(p.reference), txt(p.society_name) !== '-' ? txt(p.society_name) : ''].filter(Boolean).join(' · ') }),
       ]),
       el('span', { class: 've-fold-nums' }, [
-        el('span', null, [el('small', { text: 'Vânzări' }), el('b', { text: amount(p.gross_amount, p.currency) })]),
-        el('span', null, [el('small', { text: 'Comision' }), el('b', { text: amount(p.commission_amount, p.currency) })]),
-        el('span', { class: 'is-net' }, [el('small', { text: 'De plată' }), el('b', { text: amount(p.amount, p.currency) })]),
+        el('span', null, [el('small', { text: VQ.t('Sales') }), el('b', { text: amount(p.gross_amount, p.currency) })]),
+        el('span', null, [el('small', { text: VQ.t('Commission') }), el('b', { text: amount(p.commission_amount, p.currency) })]),
+        el('span', { class: 'is-net' }, [el('small', { text: VQ.t('To pay') }), el('b', { text: amount(p.amount, p.currency) })]),
       ]),
       tag(STATUS, p.status),
     ];
-    var pdf = pdfLink(p.pdf_url, 'PDF decont');
+    var pdf = pdfLink(p.pdf_url, VQ.t('Payout PDF'));
     if (pdf) head.push(pdf);
     var rows = Array.isArray(p.breakdown) ? p.breakdown : [];
     var body = [];
-    var extras = [['Reduceri', p.discount_amount], ['Restituiri', p.refund_amount], ['Taxe', p.fees_amount]].filter(function (x) { return F.toNum(x[1]) > 0; });
+    var extras = [[VQ.t('Discounts'), p.discount_amount], [VQ.t('Refunds'), p.refund_amount], [VQ.t('Fees'), p.fees_amount]].filter(function (x) { return F.toNum(x[1]) > 0; });
     if (extras.length || p.completed_at) {
-      body.push(el('p', { class: 've-note-line', text: extras.map(function (x) { return x[0] + ': ' + amount(x[1], p.currency); }).concat(p.completed_at ? ['plătit pe ' + day(p.completed_at)] : []).join(' · ') }));
+      body.push(el('p', { class: 've-note-line', text: extras.map(function (x) { return x[0] + ': ' + amount(x[1], p.currency); }).concat(p.completed_at ? [VQ.t('paid on {date}', { date: day(p.completed_at) })] : []).join(' · ') }));
     }
-    if (!rows.length) body.push(el('p', { class: 've-state', text: 'Decontul nu are detaliu pe bilete.' }));
+    if (!rows.length) body.push(el('p', { class: 've-state', text: VQ.t('This payout has no ticket breakdown.') }));
     else {
       var tb = el('tbody');
       rows.forEach(function (b) {
@@ -254,7 +258,7 @@
         ]));
       });
       body.push(el('div', { class: 've-table-wrap' }, el('table', { class: 've-table ve-breakdown-table' }, [
-        el('thead', null, el('tr', null, ['Tip bilet', 'Bucăți', 'Preț', 'Brut', 'Comision', 'Reducere', 'Net'].map(function (h, i) { return el('th', { scope: 'col', class: i ? 've-r' : '', text: h }); }))),
+        el('thead', null, el('tr', null, [VQ.t('Ticket type'), VQ.t('Quantity'), VQ.t('Price'), VQ.t('Gross'), VQ.t('Commission'), VQ.t('Discount'), VQ.t('Net')].map(function (h, i) { return el('th', { scope: 'col', class: i ? 've-r' : '', text: h }); }))),
         tb,
       ])));
     }
@@ -263,21 +267,21 @@
   function invoiceFold(i, p) {
     var head = [
       el('span', { class: 've-fold-title' }, [
-        el('span', { class: 've-kind is-inv', text: 'Factură' }),
+        el('span', { class: 've-kind is-inv', text: VQ.t('Invoice') }),
         el('b', { class: 've-mono', text: txt(i.accounting_number) || txt(i.number) || ('#' + F.toNum(i.id)) }),
         el('small', { class: 've-sub', text: [txt(i.accounting_number) ? txt(i.number) : '', i.issue_date ? day(i.issue_date) : '', STAGE[i.accounting_stage] || '', txt(i.type_label)].filter(Boolean).join(' · ') }),
       ]),
       el('span', { class: 've-fold-nums' }, [
-        el('span', null, [el('small', { text: 'Fără TVA' }), el('b', { text: amount(i.subtotal, i.currency) })]),
-        el('span', null, [el('small', { text: 'TVA' }), el('b', { text: amount(i.vat_amount, i.currency) })]),
-        el('span', { class: 'is-net' }, [el('small', { text: 'Total' }), el('b', { text: amount(i.amount, i.currency) })]),
+        el('span', null, [el('small', { text: VQ.t('Excl. VAT') }), el('b', { text: amount(i.subtotal, i.currency) })]),
+        el('span', null, [el('small', { text: VQ.t('VAT') }), el('b', { text: amount(i.vat_amount, i.currency) })]),
+        el('span', { class: 'is-net' }, [el('small', { text: VQ.t('Total') }), el('b', { text: amount(i.amount, i.currency) })]),
       ]),
       tag(INV, i.status),
     ];
-    var pdf = pdfLink(i.accounting_pdf_url, 'PDF factură');
+    var pdf = pdfLink(i.accounting_pdf_url, VQ.t('Invoice PDF'));
     if (pdf) head.push(pdf);
     var items = Array.isArray(i.items) ? i.items : [], body = [];
-    if (!items.length) body.push(el('p', { class: 've-state', text: 'Factura nu are articole înregistrate.' }));
+    if (!items.length) body.push(el('p', { class: 've-state', text: VQ.t('This invoice has no lines recorded.') }));
     else {
       var tb = el('tbody');
       items.forEach(function (it) {
@@ -291,7 +295,7 @@
         ]));
       });
       body.push(el('div', { class: 've-table-wrap' }, el('table', { class: 've-table ve-items-table' }, [
-        el('thead', null, el('tr', null, ['Articol', 'Cantitate', 'Preț', 'Total'].map(function (h, k) { return el('th', { scope: 'col', class: k ? 've-r' : '', text: h }); }))),
+        el('thead', null, el('tr', null, [VQ.t('Item'), VQ.t('Quantity'), VQ.t('Price'), VQ.t('Total')].map(function (h, k) { return el('th', { scope: 'col', class: k ? 've-r' : '', text: h }); }))),
         tb,
       ])));
     }
@@ -341,7 +345,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       show('ve-main', true);

@@ -11,8 +11,8 @@
   var $ = function (id) { return document.getElementById(id); };
   var qsa = function (sel) { return Array.prototype.slice.call(root.querySelectorAll(sel)); };
   var PER = 100;
-  var STATUS = { valid: ['Valid', 'is-ok'], used: ['Folosit', 'is-muted'], cancelled: ['Anulat', 'is-bad'], refunded: ['Restituit', 'is-wait'] };
-  var CAT = { access: 'Acces', parking: 'Parcare', rental: 'Închiriere', activity: 'Activitate', extra: 'Extra', package: 'Pachet' };
+  var STATUS = { valid: [VQ.t('Valid'), 'is-ok'], used: [VQ.t('Used'), 'is-muted'], cancelled: [VQ.t('Cancelled'), 'is-bad'], refunded: [VQ.t('Refunded'), 'is-wait'] };
+  var CAT = { access: VQ.t('Access'), parking: VQ.t('Parking'), rental: VQ.t('Rental'), activity: VQ.t('Activity'), extra: VQ.t('Extra'), package: VQ.t('Package') };
   var events = [], eventId = null, range = '30', from = null, to = null;
   var rows = [], page = 1, lastPage = 1, total = 0, typesReady = false, loading = false, seq = 0, timer = null;
 
@@ -63,7 +63,7 @@
     if (reset) {
       var body = $('vp-rows');
       body.textContent = '';
-      body.appendChild(el('tr', null, el('td', { colspan: 8, class: 've-state', text: 'Se încarcă…' })));
+      body.appendChild(el('tr', null, el('td', { colspan: 8, class: 've-state', text: VQ.t('Loading…') })));
     }
     O.api('/organizer/events/' + eventId + '/leisure/participants?' + q.join('&')).then(function (r) {
       if (my !== seq) return;
@@ -72,7 +72,7 @@
       $('vp-s-checked').textContent = F.num(F.toNum(stats.checked_in));
       $('vp-s-rate').textContent = F.pct(F.toNum(stats.rate), 1);
       $('vp-s-noshow').textContent = F.num(F.toNum(stats.no_show));
-      $('vp-period').textContent = 'Plătite între ' + day(d.from) + ' și ' + day(d.to) + '.';
+      $('vp-period').textContent = VQ.t('Paid between {from} and {to}.', { from: day(d.from), to: day(d.to) });
       if (!typesReady && Array.isArray(d.ticket_types)) drawTypes(d.ticket_types);
       page = F.toNum(meta.current_page) || page;
       lastPage = F.toNum(meta.last_page) || 1;
@@ -84,7 +84,7 @@
       if (err && err.status === 401) return;
       var body = $('vp-rows');
       body.textContent = '';
-      body.appendChild(el('tr', null, el('td', { colspan: 8, class: 've-state', text: 'Nu am putut încărca participanții.' })));
+      body.appendChild(el('tr', null, el('td', { colspan: 8, class: 've-state', text: VQ.t('We could not load the participants.') })));
       $('vp-count').textContent = '';
       show('vp-more', false);
     }).then(function () {
@@ -106,24 +106,24 @@
         el('span', { class: 'org-tag is-muted', text: CAT[t.service_category] || txt(t.service_category) }),
       ])]));
     });
-    if (!list.length) box.appendChild(el('p', { class: 've-state', text: 'Niciun tip de bilet.' }));
+    if (!list.length) box.appendChild(el('p', { class: 've-state', text: VQ.t('No ticket types.') }));
     typesLabel();
   }
   function typesLabel() {
     var n = selectedTypes().length;
-    $('vp-types-label').textContent = n ? F.count(n, 'tip ales', 'tipuri alese') : 'Toate tipurile';
+    $('vp-types-label').textContent = n ? VQ.n(n, 'type chosen', 'types chosen') : VQ.t('All types');
   }
   function draw() {
     var body = $('vp-rows');
     body.textContent = '';
     if (!rows.length) {
-      body.appendChild(el('tr', null, el('td', { colspan: 8, class: 've-state', text: anyFilter() ? 'Niciun participant pentru filtrele alese.' : 'Niciun participant în perioada aleasă.' })));
+      body.appendChild(el('tr', null, el('td', { colspan: 8, class: 've-state', text: anyFilter() ? VQ.t('No participants for the chosen filters.') : VQ.t('No participants in the chosen period.') })));
       $('vp-count').textContent = '';
       show('vp-more', false);
       return;
     }
     rows.forEach(function (r) { body.appendChild(row(r)); });
-    $('vp-count').textContent = 'Afișați ' + F.num(rows.length) + ' din ' + F.count(total || rows.length, 'participant', 'participanți') + '.';
+    $('vp-count').textContent = VQ.t('Showing {shown} of {total}.', { shown: F.num(rows.length), total: VQ.n(total || rows.length, 'participant', 'participants') });
     show('vp-more', page < lastPage);
   }
   function row(r) {
@@ -152,7 +152,7 @@
     }
     var btn = el('button', { class: 've-checkin-btn', type: 'button' });
     btn.appendChild(O.icon('check-circle'));
-    btn.appendChild(document.createTextNode('Check-in manual'));
+    btn.appendChild(document.createTextNode(VQ.t('Manual check-in')));
     btn.addEventListener('click', function () { checkIn(r, btn, td); });
     td.appendChild(btn);
     return td;
@@ -165,12 +165,12 @@
       if (r.status === 'valid') r.status = 'used';
       td.textContent = '';
       td.appendChild(el('span', { class: 've-checkin', text: '✓ ' + stamp(at) }));
-      O.flash((res && res.data && res.data.was_already_checked_in) ? 'Biletul era deja validat.' : 'Check-in făcut pentru ' + (txt(r.code) || 'bilet') + '.');
+      O.flash((res && res.data && res.data.was_already_checked_in) ? VQ.t('The ticket was already checked in.') : (txt(r.code) ? VQ.t('Checked in: {code}.', { code: txt(r.code) }) : VQ.t('Ticket checked in.')));
       var checked = F.toNum($('vp-s-checked').textContent.replace(/\D/g, '')) + 1;
       $('vp-s-checked').textContent = F.num(checked);
     }, function (err) {
       btn.disabled = false;
-      O.flash((err && err.message) || 'Nu am putut face check-in.', true);
+      O.flash((err && err.message) || VQ.t('We could not check the ticket in.'), true);
     });
   }
   function reset() {
@@ -179,8 +179,8 @@
     $('vp-reset').hidden = !anyFilter();
   }
   function exportCsv() {
-    if (!rows.length) { O.flash('Nu e nimic de exportat.', true); return; }
-    var head = ['Comanda', 'Platita la', 'Cod bilet', 'Nume', 'Email', 'Nr. inmatriculare', 'Tip bilet', 'Categorie', 'Societate', 'Data vizitei', 'Status', 'Check-in'];
+    if (!rows.length) { O.flash(VQ.t('There is nothing to export.'), true); return; }
+    var head = [VQ.t('Order'), VQ.t('Paid on'), VQ.t('Ticket code'), VQ.t('Name'), VQ.t('Email'), VQ.t('Number plate'), VQ.t('Ticket type'), VQ.t('Category'), VQ.t('Company'), VQ.t('Visit date'), VQ.t('Status'), VQ.t('Check-in')];
     var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
     var lines = [head.map(cell).join(',')].concat(rows.map(function (r) {
       return [r.order_number, r.order_paid_at, r.code || r.barcode, r.customer_name, r.customer_email, r.vehicle_plate,
@@ -189,20 +189,20 @@
     var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a'), href = URL.createObjectURL(blob);
     a.href = href;
-    a.download = 'participanti-' + (from || ymd(new Date())) + '.csv';
+    a.download = 'participants-' + (from || ymd(new Date())) + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(href); }, 4000);
-    O.flash('Lista a fost descărcată.');
+    O.flash(VQ.t('The list was downloaded.'));
   }
 
   /* =================== wiring =================== */
   qsa('.ve-range').forEach(function (b) { b.addEventListener('click', function () { setRange(b.getAttribute('data-range')); }); });
   $('vp-apply').addEventListener('click', function () {
     var f = $('vp-from').value, t = $('vp-to').value;
-    if (!f || !t) { O.flash('Alege ambele date.', true); return; }
-    if (f > t) { O.flash('Data de început e după cea de sfârșit.', true); return; }
+    if (!f || !t) { O.flash(VQ.t('Choose both dates.'), true); return; }
+    if (f > t) { O.flash(VQ.t('The start date is after the end date.'), true); return; }
     from = f;
     to = t;
     load(true);
@@ -253,7 +253,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       show('ve-main', true);

@@ -12,12 +12,12 @@
   var qsa = function (sel) { return Array.prototype.slice.call(root.querySelectorAll(sel)); };
   var PER = 30, H_PER = 20;
   var STATUS = {
-    paid: ['Plătită', 'is-ok'], completed: ['Finalizată', 'is-ok'], pending: ['În așteptare', 'is-wait'],
-    refunded: ['Restituită', 'is-muted'], cancelled: ['Anulată', 'is-bad'],
-    valid: ['Valid', 'is-ok'], used: ['Folosit', 'is-muted'],
+    paid: [VQ.t('Paid'), 'is-ok'], completed: [VQ.t('Completed'), 'is-ok'], pending: [VQ.t('Pending'), 'is-wait'],
+    refunded: [VQ.t('Refunded'), 'is-muted'], cancelled: [VQ.t('Cancelled'), 'is-bad'],
+    valid: [VQ.t('Valid'), 'is-ok'], used: [VQ.t('Used'), 'is-muted'],
   };
-  var PAY = { cash: ['Numerar', 'coins'], card: ['Card', 'credit-card'], invoice: ['Link pe email', 'file-text'], online: ['Online', 'globe-simple'] };
-  var CAT = { access: 'Acces', parking: 'Parcare', rental: 'Închiriere', activity: 'Activitate', extra: 'Extra', package: 'Pachet' };
+  var PAY = { cash: [VQ.t('Cash'), 'coins'], card: [VQ.t('Card'), 'credit-card'], invoice: [VQ.t('Link by email'), 'file-text'], online: [VQ.t('Online'), 'globe-simple'] };
+  var CAT = { access: VQ.t('Access'), parking: VQ.t('Parking'), rental: VQ.t('Rental'), activity: VQ.t('Activity'), extra: VQ.t('Extra'), package: VQ.t('Package') };
   var eventId = null, range = '30', from = null, to = null, page = 1, lastPage = 1, loading = false, seq = 0, timer = null;
   var hPage = 1, hLast = 1, hLoaded = false, hTimer = null, hSeq = 0;
   var deleting = null, lastFocus = null;
@@ -28,10 +28,11 @@
   function show(id, on) { var e = $(id); if (e) e.hidden = !on; }
   function histOpen() { return $('vo-hist-btn').getAttribute('aria-expanded') === 'true'; }
   function tag(list) { var s = STATUS[list] || [txt(list) || '—', 'is-muted']; return el('span', { class: 'org-tag ' + s[1], text: s[0] }); }
-  /** "120,50 lei" — F.money already says lei; any other currency replaces that word instead of following it. */
+  /** The amount in the currency the order carries; without one, the shell's own money format. */
   function amount(v, cur) {
-    var c = txt(cur).toUpperCase(), lei = F.money(F.toNum(v));
-    return !c || c === 'RON' || c === 'LEI' ? lei : lei.replace(/ lei$/, '') + ' ' + c;
+    var c = txt(cur).toUpperCase();
+    if (c && window.BileteOnlineUtils && typeof BileteOnlineUtils.formatCurrency === 'function') return BileteOnlineUtils.formatCurrency(F.toNum(v), c);
+    return F.money(F.toNum(v));
   }
   function money(v, cur) {
     return el('span', { class: 've-total', text: amount(v, cur) });
@@ -65,19 +66,19 @@
     if (from) q.push('from=' + from);
     if (to) q.push('to=' + to);
     Object.keys(f).forEach(function (k) { if (f[k]) q.push(k + '=' + encodeURIComponent(f[k])); });
-    state('vo-rows', 11, 'Se încarcă…');
+    state('vo-rows', 11, VQ.t('Loading…'));
     O.api('/organizer/events/' + eventId + '/leisure/orders?' + q.join('&')).then(function (r) {
       if (my !== seq) return;
       var d = (r && r.data) || {}, pg = d.pagination || {}, rows = Array.isArray(d.orders) ? d.orders : [];
       lastPage = F.toNum(pg.last_page) || 1;
       page = F.toNum(pg.current_page) || page;
-      $('vo-period').textContent = 'Plătite între ' + day(d.from) + ' și ' + day(d.to) + '.';
+      $('vo-period').textContent = VQ.t('Paid between {from} and {to}.', { from: day(d.from), to: day(d.to) });
       draw(rows, F.toNum(pg.total));
       $('vo-reset').hidden = !anyFilter();
     }, function (err) {
       if (my !== seq) return;
       if (err && err.status === 401) return;
-      state('vo-rows', 11, 'Nu am putut încărca comenzile.');
+      state('vo-rows', 11, VQ.t('We could not load the orders.'));
       $('vo-count').textContent = '';
       $('vo-prev').disabled = true;
       $('vo-next').disabled = true;
@@ -87,7 +88,7 @@
     var body = $('vo-rows');
     body.textContent = '';
     if (!rows.length) {
-      state('vo-rows', 11, anyFilter() ? 'Nicio comandă pentru filtrele alese.' : 'Nicio comandă în perioada aleasă.');
+      state('vo-rows', 11, anyFilter() ? VQ.t('No orders for the chosen filters.') : VQ.t('No orders in the chosen period.'));
       $('vo-count').textContent = '';
       $('vo-prev').disabled = true;
       $('vo-next').disabled = true;
@@ -97,13 +98,13 @@
       body.appendChild(orderRow(o));
       body.appendChild(detailRow(o));
     });
-    $('vo-count').textContent = F.count(total || rows.length, 'comandă', 'comenzi') + ' · pagina ' + F.num(page) + ' din ' + F.num(lastPage);
+    $('vo-count').textContent = VQ.t('{count} · page {page} of {pages}', { count: VQ.n(total || rows.length, 'order', 'orders'), page: F.num(page), pages: F.num(lastPage) });
     $('vo-prev').disabled = page <= 1;
     $('vo-next').disabled = page >= lastPage;
   }
   function orderRow(o) {
     var id = F.toNum(o.id);
-    var caret = el('button', { class: 've-caret', type: 'button', 'aria-label': 'Vezi biletele comenzii' });
+    var caret = el('button', { class: 've-caret', type: 'button', 'aria-label': VQ.t('See the order\'s tickets') });
     caret.appendChild(O.icon('caret-down'));
     var pay = PAY[o.payment_method];
     var payCell = el('td');
@@ -115,7 +116,7 @@
     }
     var del = el('button', { class: 've-del-btn', type: 'button' });
     del.appendChild(O.icon('trash'));
-    del.appendChild(document.createTextNode('Șterge'));
+    del.appendChild(document.createTextNode(VQ.t('Delete')));
     del.addEventListener('click', function (ev) { ev.stopPropagation(); openDelete(o); });
 
     var tr = el('tr', { class: 've-orow', 'aria-expanded': 'false', 'data-order': String(id) }, [
@@ -123,7 +124,7 @@
       el('td', { class: 've-mono', text: txt(o.order_number) || '—' }),
       el('td', { text: stamp(o.paid_at) }),
       el('td', null, [el('b', { text: txt(o.customer_name) || '—' }), el('small', { class: 've-sub', text: txt(o.customer_email) })]),
-      el('td', null, el('span', { class: 'org-tag ' + (o.source === 'pos' ? 'is-wait' : 'is-info'), text: o.source === 'pos' ? 'La casă' : 'Pe site' })),
+      el('td', null, el('span', { class: 'org-tag ' + (o.source === 'pos' ? 'is-wait' : 'is-info'), text: o.source === 'pos' ? VQ.t('At the register') : VQ.t('On the site') })),
       payCell,
       el('td', { text: txt(o.operator_name) || '—' }),
       el('td', { class: 've-r', text: F.num(F.toNum(o.tickets_count)) }),
@@ -137,7 +138,7 @@
   function detailRow(o) {
     var id = F.toNum(o.id);
     return el('tr', { class: 've-drow', 'data-detail': String(id), hidden: true }, el('td', { colspan: 11 },
-      el('div', { class: 've-dbox', id: 'vo-d-' + id }, el('p', { class: 've-state', text: 'Se încarcă biletele…' }))));
+      el('div', { class: 've-dbox', id: 'vo-d-' + id }, el('p', { class: 've-state', text: VQ.t('Loading tickets…') }))));
   }
   function toggle(id) {
     var row = root.querySelector('.ve-orow[data-order="' + id + '"]');
@@ -155,38 +156,38 @@
     }, function () {
       box.removeAttribute('data-loaded');
       box.textContent = '';
-      box.appendChild(el('p', { class: 've-state', text: 'Nu am putut încărca biletele comenzii.' }));
+      box.appendChild(el('p', { class: 've-state', text: VQ.t('We could not load the order\'s tickets.') }));
     });
   }
   function drawTickets(box, d) {
     var tickets = Array.isArray(d.tickets) ? d.tickets : [];
     box.textContent = '';
     if (!tickets.length) {
-      box.appendChild(el('p', { class: 've-state', text: 'Comanda nu are bilete emise.' }));
+      box.appendChild(el('p', { class: 've-state', text: VQ.t('This order has no tickets issued.') }));
       return;
     }
-    box.appendChild(el('p', { text: F.count(tickets.length, 'bilet emis', 'bilete emise') }));
-    var head = el('tr', null, ['Cod', 'Tip bilet', 'Categorie', 'Preț', 'Data vizitei', 'Status', 'Check-in'].map(function (h, i) {
+    box.appendChild(el('p', { text: VQ.n(tickets.length, 'ticket issued', 'tickets issued') }));
+    var head = el('tr', null, [VQ.t('Code'), VQ.t('Ticket type'), VQ.t('Category'), VQ.t('Price'), VQ.t('Visit date'), VQ.t('Status'), VQ.t('Check-in')].map(function (h, i) {
       return el('th', { scope: 'col', class: i === 3 ? 've-r' : '', text: h });
     }));
     var body = el('tbody');
     tickets.forEach(function (t) {
       var type = el('td', null, el('span', { text: txt(t.ticket_type) || '—' }));
-      if (t.from_package) type.appendChild(el('small', { class: 've-sub', text: 'din pachet' }));
-      if (t.is_umbrella) type.appendChild(el('small', { class: 've-sub', text: 'pachet' }));
+      if (t.from_package) type.appendChild(el('small', { class: 've-sub', text: VQ.t('from a package') }));
+      if (t.is_umbrella) type.appendChild(el('small', { class: 've-sub', text: VQ.t('package') }));
       body.appendChild(el('tr', null, [
         el('td', { class: 've-mono', text: txt(t.code) || '—' }),
         type,
         el('td', { text: CAT[t.service_category] || txt(t.service_category) || '—' }),
-        el('td', { class: 've-r', text: F.money(F.toNum(t.price)) }),
+        el('td', { class: 've-r', text: amount(t.price, d.currency) }),
         el('td', { text: t.visit_date ? day(t.visit_date) : '—' }),
         el('td', null, tag(t.status)),
-        el('td', null, t.checked_in_at ? el('span', { class: 've-checkin', text: '✓ ' + stamp(t.checked_in_at) }) : document.createTextNode('— neefectuat')),
+        el('td', null, t.checked_in_at ? el('span', { class: 've-checkin', text: '✓ ' + stamp(t.checked_in_at) }) : document.createTextNode(VQ.t('Not checked in'))),
       ]));
     });
     box.appendChild(el('table', { class: 've-tt' }, [el('thead', null, head), body]));
     if (txt(d.customer_phone)) {
-      box.appendChild(el('p', { class: 've-note-line' }, [document.createTextNode('Telefon client: '), el('b', { text: txt(d.customer_phone) })]));
+      box.appendChild(el('p', { class: 've-note-line' }, [document.createTextNode(VQ.t('Customer phone: ')), el('b', { text: txt(d.customer_phone) })]));
     }
   }
 
@@ -197,8 +198,8 @@
     $('vo-del-nr').textContent = txt(o.order_number) || ('#' + F.toNum(o.id));
     var sum = $('vo-del-sum');
     sum.textContent = '';
-    [['Client', txt(o.customer_name) || '—'], ['Total', amount(o.total, o.currency)],
-      ['Bilete', F.num(F.toNum(o.tickets_count))], ['Sursă', o.source === 'pos' ? 'La casă' : 'Pe site']].forEach(function (pair) {
+    [[VQ.t('Customer'), txt(o.customer_name) || '—'], [VQ.t('Total'), amount(o.total, o.currency)],
+      [VQ.t('Tickets'), F.num(F.toNum(o.tickets_count))], [VQ.t('Source'), o.source === 'pos' ? VQ.t('At the register') : VQ.t('On the site')]].forEach(function (pair) {
       sum.appendChild(el('div', null, [el('dt', { text: pair[0] }), el('dd', { text: pair[1] })]));
     });
     $('vo-del-note').value = '';
@@ -214,7 +215,7 @@
     if (!deleting) return;
     var note = $('vo-del-note').value.trim();
     if (note.length < 3) {
-      O.flash('Scrie motivul ștergerii, cel puțin 3 caractere.', true);
+      O.flash(VQ.t('Write the reason for deleting, at least 3 characters.'), true);
       $('vo-del-note').focus();
       return;
     }
@@ -223,13 +224,14 @@
     O.api('/organizer/events/' + eventId + '/leisure/orders/' + F.toNum(o.id), { method: 'DELETE', body: { note: note } }).then(function (r) {
       var d = (r && r.data) || {};
       closeDelete();
-      O.flash('Comanda ' + (txt(o.order_number) || '') + ' a fost ștearsă.'
-        + (d.cashier_snapshot_regenerated ? ' Raportul sesiunii de casă a fost recalculat.' : ''));
+      O.flash(d.cashier_snapshot_regenerated
+        ? VQ.t('Order {number} was deleted. The register session report was recalculated.', { number: txt(o.order_number) || '' })
+        : VQ.t('Order {number} was deleted.', { number: txt(o.order_number) || '' }));
       hLoaded = false;
       if (histOpen()) loadHistory(1);
       load(page);
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut șterge comanda.', true);
+      O.flash((err && err.message) || VQ.t('We could not delete the order.'), true);
     }).then(function () { btn.disabled = false; });
   }
 
@@ -243,7 +245,7 @@
     if (s) q.push('search=' + encodeURIComponent(s));
     if (hf) q.push('from=' + hf);
     if (ht) q.push('to=' + ht);
-    state('vo-hrows', 7, 'Se încarcă…');
+    state('vo-hrows', 7, VQ.t('Loading…'));
     O.api('/organizer/events/' + eventId + '/leisure/orders/deletion-history?' + q.join('&'), { quiet: true }).then(function (r) {
       if (my !== hSeq) return;
       hLoaded = true;
@@ -253,7 +255,7 @@
       var body = $('vo-hrows');
       body.textContent = '';
       if (!items.length) {
-        state('vo-hrows', 7, s ? 'Nicio ștergere care să se potrivească.' : 'Nicio comandă ștearsă în perioada aleasă.');
+        state('vo-hrows', 7, s ? VQ.t('No matching deletions.') : VQ.t('No orders deleted in the chosen period.'));
         $('vo-hcount').textContent = '';
         $('vo-hprev').disabled = true;
         $('vo-hnext').disabled = true;
@@ -262,21 +264,21 @@
       items.forEach(function (l) {
         body.appendChild(el('tr', null, [
           el('td', null, [el('b', { class: 've-mono', text: txt(l.order_number) || '—' }),
-            el('small', { class: 've-sub', text: (l.order_source === 'pos' ? 'La casă' : 'Pe site') + (l.cashier_snapshot_regenerated ? ' · raport recalculat' : '') })]),
+            el('small', { class: 've-sub', text: (l.order_source === 'pos' ? VQ.t('At the register') : VQ.t('On the site')) + (l.cashier_snapshot_regenerated ? ' · ' + VQ.t('report recalculated') : '') })]),
           el('td', { text: stamp(l.deleted_at) }),
-          el('td', null, [el('span', { text: txt(l.deleted_by_name) || '—' }), el('small', { class: 've-sub', text: l.deleted_by_type === 'team_member' ? 'Din echipă' : 'Operator' })]),
+          el('td', null, [el('span', { text: txt(l.deleted_by_name) || '—' }), el('small', { class: 've-sub', text: l.deleted_by_type === 'team_member' ? VQ.t('Team member') : VQ.t('Operator') })]),
           el('td', null, [el('span', { text: txt(l.customer_name) || '—' }), el('small', { class: 've-sub', text: txt(l.customer_email) })]),
           el('td', { class: 've-r', text: F.num(F.toNum(l.tickets_count)) }),
           el('td', { class: 've-r' }, money(l.order_total, l.order_currency)),
           el('td', { class: 've-hist-note', text: txt(l.note) || '—' }),
         ]));
       });
-      $('vo-hcount').textContent = F.count(F.toNum(pg.total) || items.length, 'ștergere', 'ștergeri') + ' · pagina ' + F.num(hPage) + ' din ' + F.num(hLast);
+      $('vo-hcount').textContent = VQ.t('{count} · page {page} of {pages}', { count: VQ.n(F.toNum(pg.total) || items.length, 'deletion', 'deletions'), page: F.num(hPage), pages: F.num(hLast) });
       $('vo-hprev').disabled = hPage <= 1;
       $('vo-hnext').disabled = hPage >= hLast;
     }, function () {
       if (my !== hSeq) return;
-      state('vo-hrows', 7, 'Nu am putut încărca istoricul ștergerilor.');
+      state('vo-hrows', 7, VQ.t('We could not load the deletion history.'));
     });
   }
 
@@ -284,8 +286,8 @@
   qsa('.ve-range').forEach(function (b) { b.addEventListener('click', function () { setRange(b.getAttribute('data-range')); }); });
   $('vo-apply').addEventListener('click', function () {
     var f = $('vo-from').value, t = $('vo-to').value;
-    if (!f || !t) { O.flash('Alege ambele date.', true); return; }
-    if (f > t) { O.flash('Data de început e după cea de sfârșit.', true); return; }
+    if (!f || !t) { O.flash(VQ.t('Choose both dates.'), true); return; }
+    if (f > t) { O.flash(VQ.t('The start date is after the end date.'), true); return; }
     from = f;
     to = t;
     load(1);
@@ -308,7 +310,7 @@
   $('vo-hist-btn').addEventListener('click', function () {
     var open = !histOpen();
     this.setAttribute('aria-expanded', String(open));
-    this.firstChild.nodeValue = open ? 'Ascunde istoricul' : 'Arată istoricul';
+    this.firstChild.nodeValue = open ? VQ.t('Hide history') : VQ.t('Show history');
     show('vo-hist-body', open);
     if (open && !hLoaded) loadHistory(1);
   });
@@ -349,7 +351,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       show('ve-main', true);

@@ -10,19 +10,20 @@
   var F = O.fmt, el = O.el, SVGNS = 'http://www.w3.org/2000/svg';
   var $ = function (id) { return document.getElementById(id); };
   var qsa = function (sel) { return Array.prototype.slice.call(root.querySelectorAll(sel)); };
-  var CAT = { access: 'Acces', parking: 'Parcare', rental: 'Închiriere', activity: 'Activitate', extra: 'Extra', package: 'Pachet' };
-  var PAY = { cash: ['Numerar la casă', 'coins'], card: ['Card la casă', 'credit-card'], online: ['Online', 'globe-simple'] };
-  var SRC = { pos: ['La casă', 'coins'], online: ['Online', 'globe-simple'] };
-  var MODE = { included: 'inclus în preț', added_on_top: 'adăugat peste preț' };
-  var eventId = null, from = null, to = null, seq = 0, report = null, currency = 'RON';
+  var CAT = { access: VQ.t('Access'), parking: VQ.t('Parking'), rental: VQ.t('Rental'), activity: VQ.t('Activity'), extra: VQ.t('Extra'), package: VQ.t('Package') };
+  var PAY = { cash: [VQ.t('Cash at the register'), 'coins'], card: [VQ.t('Card at the register'), 'credit-card'], online: [VQ.t('Online'), 'globe-simple'] };
+  var SRC = { pos: [VQ.t('At the register'), 'coins'], online: [VQ.t('Online'), 'globe-simple'] };
+  var MODE = { included: VQ.t('included in the price'), added_on_top: VQ.t('added on top of the price') };
+  var eventId = null, from = null, to = null, seq = 0, report = null, currency = 'EUR';
   var scanOffset = 0, scanRows = [], scanSeq = 0, lastFocus = null;
 
   function txt(v) { return F.flat(v).trim(); }
   function show(id, on) { var e = $(id); if (e) e.hidden = !on; }
   function put(id, value) { var e = $(id); if (e) e.textContent = value; }
   function amount(v) {
-    var c = String(currency || '').toUpperCase(), lei = F.money(F.toNum(v));
-    return !c || c === 'RON' || c === 'LEI' ? lei : lei.replace(/ lei$/, '') + ' ' + c;
+    var c = String(currency || '').toUpperCase();
+    if (c && window.BileteOnlineUtils && typeof BileteOnlineUtils.formatCurrency === 'function') return BileteOnlineUtils.formatCurrency(F.toNum(v), c);
+    return F.money(F.toNum(v));
   }
   function share(part, total) { return total > 0 ? Math.round(part / total * 100) : 0; }
   function day(v, opts) { var d = F.dateOf(v); return d ? F.date(d, opts || { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
@@ -44,7 +45,7 @@
   function nameOf(v) { return txt(v) || '—'; }
   function issuerName(key) {
     var by = (report && report.by_issuer) || {}, row = key === 'secondary' ? by.secondary : by.primary;
-    return (row && txt(row.name)) || (key === 'secondary' ? 'Societatea secundară' : 'Societatea principală');
+    return (row && txt(row.name)) || (key === 'secondary' ? VQ.t('Second company') : VQ.t('Main company'));
   }
 
   /* =================== the period =================== */
@@ -64,7 +65,7 @@
     if (!eventId || !from || !to) return;
     var my = ++seq;
     $('ve-main').classList.add('is-loading');
-    put('vr-period', 'Plătite între ' + day(from) + ' și ' + day(to));
+    put('vr-period', VQ.t('Paid between {from} and {to}', { from: day(from), to: day(to) }));
     O.api('/organizer/events/' + eventId + '/leisure/raport?from=' + from + '&to=' + to).then(function (r) {
       if (my !== seq) return;
       report = (r && r.data) || {};
@@ -74,14 +75,14 @@
       if (err && err.status === 401) return;
       report = null;
       blank();
-      O.flash('Nu am putut încărca raportul. Reîncearcă.', true);
+      O.flash(VQ.t('We could not load the report. Try again.'), true);
     }).then(function () { if (my === seq) $('ve-main').classList.remove('is-loading'); });
   }
 
   /* =================== drawing the report =================== */
   function draw(d) {
     var t = d.totals || {}, cc = d.commission_config || {};
-    currency = txt(d.currency) || 'RON';
+    currency = txt(d.currency) || 'EUR';
     put('vr-revenue', amount(t.revenue));
     put('vr-commission', amount(t.commission));
     put('vr-net', amount(t.net_revenue));
@@ -89,8 +90,8 @@
     put('vr-tickets', F.num(F.toNum(t.tickets)));
     put('vr-physical-kpi', F.num(F.toNum(d.total_physical_tickets)));
     put('vr-avg', amount(t.avg_order));
-    put('vr-avg-line', 'Comision mediu pe comandă: ' + amount(t.avg_commission_per_order));
-    put('vr-formula', (txt(cc.formula) ? txt(cc.formula) + ' · ' : '') + (MODE[cc.mode] ? MODE[cc.mode] + ' · ' : '') + 'efectiv ' + F.pct(F.toNum(t.commission_pct_effective), 2));
+    put('vr-avg-line', VQ.t('Average commission per order: {amount}', { amount: amount(t.avg_commission_per_order) }));
+    put('vr-formula', (txt(cc.formula) ? txt(cc.formula) + ' · ' : '') + (MODE[cc.mode] ? MODE[cc.mode] + ' · ' : '') + VQ.t('effective {pct}', { pct: F.pct(F.toNum(t.commission_pct_effective), 2) }));
     drawIssuers(d.by_issuer || {});
     var total = F.toNum(t.revenue);
     drawBars('vr-pay', (d.by_payment_method || []).map(function (r) {
@@ -108,31 +109,31 @@
   function blank() {
     ['vr-revenue', 'vr-commission', 'vr-net', 'vr-orders', 'vr-tickets', 'vr-physical-kpi', 'vr-avg', 'vr-avg-line', 'vr-formula', 'vr-physical'].forEach(function (id) { put(id, '—'); });
     $('vr-issuers').textContent = '';
-    listState('vr-pay', 'Nu am putut încărca raportul.');
-    listState('vr-sources', 'Nu am putut încărca raportul.');
-    state('vr-cashiers', 5, 'Nu am putut încărca raportul.');
-    state('vr-types', 6, 'Nu am putut încărca raportul.');
-    state('vr-comps', 3, 'Nu am putut încărca raportul.');
+    listState('vr-pay', VQ.t('We could not load the report.'));
+    listState('vr-sources', VQ.t('We could not load the report.'));
+    state('vr-cashiers', 5, VQ.t('We could not load the report.'));
+    state('vr-types', 6, VQ.t('We could not load the report.'));
+    state('vr-comps', 3, VQ.t('We could not load the report.'));
   }
   function drawIssuers(by) {
     var box = $('vr-issuers');
     box.textContent = '';
-    [['primary', 'Societatea principală'], ['secondary', 'Societatea secundară']].forEach(function (pair) {
+    [['primary', VQ.t('Main company')], ['secondary', VQ.t('Second company')]].forEach(function (pair) {
       var row = by[pair[0]];
       if (!row) return;
       var gross = F.toNum(row.revenue), vat = F.toNum(row.vat_amount);
       var card = el('article', { class: 've-issuer' + (pair[0] === 'secondary' ? ' is-second' : ''), 'data-issuer': pair[0] });
       card.appendChild(el('p', { class: 've-issuer-k' }, [O.icon('buildings'), document.createTextNode(pair[1])]));
       card.appendChild(el('h2', { class: 've-issuer-n', text: nameOf(row.name) }));
-      card.appendChild(el('p', { class: 've-issuer-sum' }, [el('b', { text: amount(gross) }), el('span', { text: 'brut' })]));
-      var facts = [F.count(F.toNum(row.tickets), 'bilet', 'bilete'), 'net ' + amount(row.net_revenue != null ? row.net_revenue : gross)];
-      if (row.vat_payer && vat > 0) facts.push('TVA ' + F.pct(F.toNum(row.vat_rate), 0) + ': ' + amount(vat));
-      else facts.push('fără TVA');
-      facts.push('comision ' + amount(row.commission));
+      card.appendChild(el('p', { class: 've-issuer-sum' }, [el('b', { text: amount(gross) }), el('span', { text: VQ.t('gross') })]));
+      var facts = [VQ.n(F.toNum(row.tickets), 'ticket', 'tickets'), VQ.t('net {amount}', { amount: amount(row.net_revenue != null ? row.net_revenue : gross) })];
+      if (row.vat_payer && vat > 0) facts.push(VQ.t('VAT {rate}: {amount}', { rate: F.pct(F.toNum(row.vat_rate), 0), amount: amount(vat) }));
+      else facts.push(VQ.t('no VAT'));
+      facts.push(VQ.t('commission {amount}', { amount: amount(row.commission) }));
       card.appendChild(el('p', { class: 've-sub ve-issuer-facts', text: facts.join(' · ') }));
       var pay = row.by_payment || {}, sum = ['cash', 'card', 'online'].reduce(function (s, k) { return s + F.toNum(pay[k]); }, 0);
       var list = el('ul', { class: 've-issuer-pay' });
-      if (sum <= 0) list.appendChild(el('li', { class: 've-sub', text: 'Nicio încasare în perioadă.' }));
+      if (sum <= 0) list.appendChild(el('li', { class: 've-sub', text: VQ.t('No revenue in the period.') }));
       else ['cash', 'card', 'online'].forEach(function (k) {
         var v = F.toNum(pay[k]);
         list.appendChild(el('li', null, [el('span', null, [O.icon(PAY[k][1]), document.createTextNode(PAY[k][0])]), el('span', { class: 've-sub', text: share(v, sum) + '%' }), el('b', { text: amount(v) })]));
@@ -145,7 +146,7 @@
   function drawBars(id, items, total) {
     var list = $(id);
     list.textContent = '';
-    if (!items.length) { listState(id, 'Nicio vânzare în perioadă.'); return; }
+    if (!items.length) { listState(id, VQ.t('No sales in the period.')); return; }
     items.sort(function (a, b) { return F.toNum(b.row.revenue) - F.toNum(a.row.revenue); }).forEach(function (it) {
       var r = it.row, pct = share(F.toNum(r.revenue), total);
       var bar = el('i', { 'data-key': it.key });
@@ -156,14 +157,14 @@
           el('span', { text: amount(r.revenue) + ' · ' + pct + '%' }),
         ]),
         el('div', { class: 've-tb-bar' }, bar),
-        el('small', { class: 've-sub', text: F.count(F.toNum(r.orders), 'comandă', 'comenzi') + ' · ' + F.count(F.toNum(r.tickets), 'bilet', 'bilete') + ' · comision ' + amount(r.commission) }),
+        el('small', { class: 've-sub', text: VQ.n(F.toNum(r.orders), 'order', 'orders') + ' · ' + VQ.n(F.toNum(r.tickets), 'ticket', 'tickets') + ' · ' + VQ.t('commission {amount}', { amount: amount(r.commission) }) }),
       ]));
     });
   }
   function drawCashiers(rows) {
     var body = $('vr-cashiers');
     body.textContent = '';
-    if (!rows.length) { state('vr-cashiers', 5, 'Nicio vânzare la casă în perioadă.'); return; }
+    if (!rows.length) { state('vr-cashiers', 5, VQ.t('No sales at the register in the period.')); return; }
     rows.slice().sort(function (a, b) { return F.toNum(b.revenue) - F.toNum(a.revenue); }).forEach(function (r) {
       body.appendChild(el('tr', null, [
         el('td', null, el('b', { text: nameOf(r.cashier_label) })),
@@ -177,7 +178,7 @@
   function drawTypes(rows) {
     var body = $('vr-types');
     body.textContent = '';
-    if (!rows.length) { state('vr-types', 6, 'Nicio vânzare în perioadă.'); return; }
+    if (!rows.length) { state('vr-types', 6, VQ.t('No sales in the period.')); return; }
     rows.slice().sort(function (a, b) { return F.toNum(b.revenue) - F.toNum(a.revenue); }).forEach(function (r) {
       body.appendChild(el('tr', null, [
         el('td', null, el('b', { text: nameOf(r.name) })),
@@ -193,7 +194,7 @@
     put('vr-physical', F.num(total));
     var body = $('vr-comps');
     body.textContent = '';
-    if (!rows.length) { state('vr-comps', 3, 'Niciun bilet emis în perioadă.'); return; }
+    if (!rows.length) { state('vr-comps', 3, VQ.t('No tickets issued in the period.')); return; }
     rows.slice().sort(function (a, b) { return F.toNum(b.tickets) - F.toNum(a.tickets); }).forEach(function (r) {
       body.appendChild(el('tr', null, [
         el('td', { text: nameOf(r.name) }),
@@ -205,23 +206,23 @@
 
   /* =================== the CSV =================== */
   function exportCsv() {
-    if (!report) { O.flash('Încarcă mai întâi raportul.', true); return; }
+    if (!report) { O.flash(VQ.t('Load the report first.'), true); return; }
     var d = report, t = d.totals || {}, cc = d.commission_config || {}, rows = [];
     var n = function (v) { return String(Math.round(F.toNum(v) * 100) / 100).replace('.', ','); };
-    rows.push(['Raport', d.from || from, d.to || to]);
+    rows.push([VQ.t('Report'), d.from || from, d.to || to]);
     rows.push([]);
-    rows.push(['TOTALURI']);
-    rows.push(['Comenzi', t.orders || 0]);
-    rows.push(['Bilete vândute', t.tickets || 0]);
-    rows.push(['Bilete fizice emise', d.total_physical_tickets || 0]);
-    rows.push(['Venit brut (' + currency + ')', n(t.revenue)]);
-    rows.push(['Comision ticketing (' + currency + ')', n(t.commission)]);
-    rows.push(['Venit net (' + currency + ')', n(t.net_revenue)]);
-    rows.push(['Comision efectiv %', n(t.commission_pct_effective)]);
-    rows.push(['Coș mediu (' + currency + ')', n(t.avg_order)]);
-    rows.push(['Formula comisionului', txt(cc.formula), MODE[cc.mode] || txt(cc.mode)]);
+    rows.push([VQ.t('TOTALS')]);
+    rows.push([VQ.t('Orders'), t.orders || 0]);
+    rows.push([VQ.t('Tickets sold'), t.tickets || 0]);
+    rows.push([VQ.t('Physical tickets issued'), d.total_physical_tickets || 0]);
+    rows.push([VQ.t('Gross revenue ({currency})', { currency: currency }), n(t.revenue)]);
+    rows.push([VQ.t('Ticketing commission ({currency})', { currency: currency }), n(t.commission)]);
+    rows.push([VQ.t('Net revenue ({currency})', { currency: currency }), n(t.net_revenue)]);
+    rows.push([VQ.t('Effective commission %'), n(t.commission_pct_effective)]);
+    rows.push([VQ.t('Average basket ({currency})', { currency: currency }), n(t.avg_order)]);
+    rows.push([VQ.t('Commission formula'), txt(cc.formula), MODE[cc.mode] || txt(cc.mode)]);
     rows.push([]);
-    rows.push(['SOCIETATE', 'Bilete', 'Brut', 'Net', 'TVA', 'Comision', 'Numerar', 'Card', 'Online']);
+    rows.push([VQ.t('COMPANY'), VQ.t('Tickets'), VQ.t('Gross'), VQ.t('Net'), VQ.t('VAT'), VQ.t('Commission'), VQ.t('Cash'), VQ.t('Card'), VQ.t('Online')]);
     ['primary', 'secondary'].forEach(function (k) {
       var r = (d.by_issuer || {})[k];
       if (!r) return;
@@ -229,32 +230,32 @@
       rows.push([txt(r.name), r.tickets || 0, n(r.revenue), n(r.net_revenue), n(r.vat_amount), n(r.commission), n(p.cash), n(p.card), n(p.online)]);
     });
     rows.push([]);
-    rows.push(['METODĂ DE PLATĂ', 'Comenzi', 'Bilete', 'Venit', 'Comision']);
+    rows.push([VQ.t('PAYMENT METHOD'), VQ.t('Orders'), VQ.t('Tickets'), VQ.t('Revenue'), VQ.t('Commission')]);
     (d.by_payment_method || []).forEach(function (r) { rows.push([(PAY[r.method] || [r.method])[0], r.orders || 0, r.tickets || 0, n(r.revenue), n(r.commission)]); });
     rows.push([]);
-    rows.push(['SURSĂ', 'Comenzi', 'Bilete', 'Venit', 'Comision']);
+    rows.push([VQ.t('SOURCE'), VQ.t('Orders'), VQ.t('Tickets'), VQ.t('Revenue'), VQ.t('Commission')]);
     (d.by_source || []).forEach(function (r) { rows.push([(SRC[r.source] || [r.source])[0], r.orders || 0, r.tickets || 0, n(r.revenue), n(r.commission)]); });
     rows.push([]);
-    rows.push(['OPERATOR', 'Comenzi', 'Bilete', 'Venit', 'Comision']);
+    rows.push([VQ.t('STAFF'), VQ.t('Orders'), VQ.t('Tickets'), VQ.t('Revenue'), VQ.t('Commission')]);
     (d.by_cashier || []).forEach(function (r) { rows.push([txt(r.cashier_label), r.orders || 0, r.tickets || 0, n(r.revenue), n(r.commission)]); });
     rows.push([]);
-    rows.push(['TIP DE BILET', 'Categorie', 'Emitent', 'Bilete', 'Venit', 'Comision']);
+    rows.push([VQ.t('TICKET TYPE'), VQ.t('Category'), VQ.t('Issuer'), VQ.t('Tickets'), VQ.t('Revenue'), VQ.t('Commission')]);
     (d.by_ticket_type || []).forEach(function (r) {
       rows.push([txt(r.name), CAT[r.service_category] || txt(r.service_category), issuerName(r.issuing_company === 'secondary' ? 'secondary' : 'primary'), r.tickets || 0, n(r.revenue), n(r.commission)]);
     });
     rows.push([]);
-    rows.push(['BILETE FIZICE EMISE', 'Categorie', 'Bucăți']);
+    rows.push([VQ.t('PHYSICAL TICKETS ISSUED'), VQ.t('Category'), VQ.t('Quantity')]);
     (d.by_component_type || []).forEach(function (r) { rows.push([txt(r.name), CAT[r.service_category] || txt(r.service_category), r.tickets || 0]); });
     var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
     var blob = new Blob(['﻿' + rows.map(function (r) { return r.map(cell).join(';'); }).join('\r\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a'), href = URL.createObjectURL(blob);
     a.href = href;
-    a.download = 'raport-' + (d.from || from) + '_' + (d.to || to) + '.csv';
+    a.download = 'report-' + (d.from || from) + '_' + (d.to || to) + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(href); }, 4000);
-    O.flash('Raportul a fost descărcat.');
+    O.flash(VQ.t('The report was downloaded.'));
   }
 
   /* =================== scans =================== */
@@ -265,19 +266,21 @@
   function loadScans() {
     if (!eventId) return;
     var my = ++scanSeq, w = scanWindow();
-    put('vr-scan-range', day(w.from, { day: 'numeric', month: 'short' }) + ' – ' + day(w.to) + (scanOffset === 0 ? ', azi la mijloc' : ''));
+    put('vr-scan-range', scanOffset === 0
+      ? VQ.t('{from} to {to}, today in the middle', { from: day(w.from, { day: 'numeric', month: 'short' }), to: day(w.to) })
+      : VQ.t('{from} to {to}', { from: day(w.from, { day: 'numeric', month: 'short' }), to: day(w.to) }));
     O.api('/organizer/events/' + eventId + '/leisure/scans?from=' + w.from + '&to=' + w.to).then(function (r) {
       if (my !== scanSeq) return;
       var d = (r && r.data) || {}, tt = d.totals || {};
       scanRows = (Array.isArray(d.rows) ? d.rows : []).filter(function (x) { return x && x.date; });
-      put('vr-scan-totals', F.num(F.toNum(tt.valid)) + ' bilete valide din ' + F.num(F.toNum(tt.expected)) + ' așteptate · ' + F.num(F.toNum(tt.staff)) + ' angajați · ' + F.num(F.toNum(tt.invalid)) + ' refuzate');
+      put('vr-scan-totals', VQ.t('{valid} valid tickets of {expected} expected · {staff} staff · {refused} refused', { valid: F.num(F.toNum(tt.valid)), expected: F.num(F.toNum(tt.expected)), staff: F.num(F.toNum(tt.staff)), refused: F.num(F.toNum(tt.invalid)) }));
       drawScans();
     }, function (err) {
       if (my !== scanSeq) return;
       if (err && err.status === 401) return;
       scanRows = [];
       $('vr-scan-chart').textContent = '';
-      put('vr-scan-totals', 'Nu am putut încărca scanările.');
+      put('vr-scan-totals', VQ.t('We could not load the scans.'));
     });
   }
   function drawScans() {
@@ -290,7 +293,7 @@
     var max = rows.reduce(function (m, r) {
       return Math.max(m, F.toNum(r.expected), F.toNum(r.valid) + F.toNum(r.staff) + F.toNum(r.invalid));
     }, 1);
-    var node = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Scanări pe zile: așteptate, bilete valide, angajați și refuzate' });
+    var node = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': VQ.t('Scans per day: expected, valid tickets, staff and refused') });
     [0, 0.5, 1].forEach(function (t) {
       var y = padT + ih * t;
       node.appendChild(svg('line', { class: 've-grid-line', x1: padL, x2: W - padR, y1: y.toFixed(1), y2: y.toFixed(1) }));
@@ -319,9 +322,9 @@
       }
       var total = F.toNum(r.valid) + F.toNum(r.staff) + F.toNum(r.invalid);
       var hit = svg('rect', { class: 've-hit', x: x0.toFixed(1), y: padT, width: step.toFixed(1), height: ih, tabindex: 0, role: 'button', 'data-date': r.date,
-        'aria-label': day(r.date) + ': ' + F.num(F.toNum(r.valid)) + ' valide din ' + F.num(F.toNum(r.expected)) + ' așteptate, ' + F.num(F.toNum(r.staff)) + ' angajați, ' + F.num(F.toNum(r.invalid)) + ' refuzate' });
+        'aria-label': VQ.t('{date}: {valid} valid of {expected} expected, {staff} staff, {refused} refused', { date: day(r.date), valid: F.num(F.toNum(r.valid)), expected: F.num(F.toNum(r.expected)), staff: F.num(F.toNum(r.staff)), refused: F.num(F.toNum(r.invalid)) }) });
       var title = svg('title');
-      title.textContent = day(r.date) + ' · ' + F.num(total) + ' scanări';
+      title.textContent = day(r.date) + ' · ' + VQ.n(total, 'scan', 'scans');
       hit.appendChild(title);
       hit.addEventListener('click', function () { openDay(r.date); });
       hit.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openDay(r.date); } });
@@ -331,20 +334,20 @@
   }
   function openDay(date) {
     lastFocus = document.activeElement;
-    put('vr-modal-h', 'Scanările din ' + day(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
-    put('vr-modal-totals', 'Se încarcă…');
-    state('vr-modal-rows', 6, 'Se încarcă…');
+    put('vr-modal-h', VQ.t('Scans on {date}', { date: day(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }));
+    put('vr-modal-totals', VQ.t('Loading…'));
+    state('vr-modal-rows', 6, VQ.t('Loading…'));
     show('vr-modal', true);
     $('vr-modal-close').focus();
     O.api('/organizer/events/' + eventId + '/leisure/scans-detail?date=' + encodeURIComponent(date)).then(function (r) {
       var d = (r && r.data) || {}, items = Array.isArray(d.items) ? d.items : [], tt = d.totals || {};
-      put('vr-modal-totals', F.num(F.toNum(tt.valid)) + ' valide · ' + F.num(F.toNum(tt.staff)) + ' angajați · ' + F.num(F.toNum(tt.invalid)) + ' refuzate · ' + F.count(items.length, 'scanare', 'scanări') + ' în total');
+      put('vr-modal-totals', VQ.t('{valid} valid · {staff} staff · {refused} refused · {total} in total', { valid: F.num(F.toNum(tt.valid)), staff: F.num(F.toNum(tt.staff)), refused: F.num(F.toNum(tt.invalid)), total: VQ.n(items.length, 'scan', 'scans') }));
       var body = $('vr-modal-rows');
       body.textContent = '';
-      if (!items.length) { state('vr-modal-rows', 6, 'Nicio scanare în această zi.'); return; }
+      if (!items.length) { state('vr-modal-rows', 6, VQ.t('No scans on this day.')); return; }
       items.forEach(function (it) {
-        var tag = it.type === 'ticket_valid' ? ['Valid', 'is-ok'] : it.type === 'staff' ? ['Angajat', 'is-info']
-          : [it.status === 'duplicate' ? 'Deja folosit' : 'Refuzat', 'is-bad'];
+        var tag = it.type === 'ticket_valid' ? [VQ.t('Valid'), 'is-ok'] : it.type === 'staff' ? [VQ.t('Staff'), 'is-info']
+          : [it.status === 'duplicate' ? VQ.t('Already used') : VQ.t('Refused'), 'is-bad'];
         body.appendChild(el('tr', null, [
           el('td', { class: 've-mono', text: txt(it.time) || '—' }),
           el('td', { text: nameOf(it.name) }),
@@ -357,7 +360,7 @@
     }, function (err) {
       if (err && err.status === 401) return;
       put('vr-modal-totals', '');
-      state('vr-modal-rows', 6, 'Nu am putut încărca scanările zilei.');
+      state('vr-modal-rows', 6, VQ.t('We could not load the day\'s scans.'));
     });
   }
   function closeDay() {
@@ -374,8 +377,8 @@
   qsa('.ve-range').forEach(function (b) { b.addEventListener('click', function () { setRange(b.getAttribute('data-range')); }); });
   $('vr-apply').addEventListener('click', function () {
     var f = $('vr-from').value, t = $('vr-to').value;
-    if (!f || !t) { O.flash('Alege ambele date.', true); return; }
-    if (f > t) { O.flash('Data de început e după cea de sfârșit.', true); return; }
+    if (!f || !t) { O.flash(VQ.t('Choose both dates.'), true); return; }
+    if (f > t) { O.flash(VQ.t('The start date is after the end date.'), true); return; }
     from = f;
     to = t;
     load();
@@ -419,7 +422,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       show('ve-main', true);
