@@ -290,7 +290,7 @@ class WukfSeed extends Command
         ];
 
         if (! $tenant) {
-            $data['settings'] = $siteSettings + ['storefront' => $storefront];
+            $data['settings'] = $siteSettings + ['storefront' => $storefront, 'panel' => ['simple_menu' => true]];
             $data['onboarding_completed_at'] = now();
             $data['billing_starts_at'] = now();
             $data['next_billing_date'] = now()->addDays(30)->toDateString();
@@ -310,6 +310,8 @@ class WukfSeed extends Command
         // Re-rulare: nu resetăm ciclul de facturare și nu călcăm setările existente.
         $data['settings'] = array_merge($siteSettings, is_array($tenant->settings) ? $tenant->settings : []);
         $data['settings']['storefront'] = array_merge($storefront, is_array($data['settings']['storefront'] ?? null) ? $data['settings']['storefront'] : []);
+        // Meniul simplu al panoului + pagina „Primii pași” (o alegere deja făcută în setări nu e călcată)
+        $data['settings']['panel'] = array_merge(['simple_menu' => true], is_array($data['settings']['panel'] ?? null) ? $data['settings']['panel'] : []);
         if (empty($tenant->onboarding_completed_at)) {
             $data['onboarding_completed_at'] = now();
         }
