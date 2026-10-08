@@ -149,7 +149,7 @@
       if (countEl) {
         var n = st.visible;
         countEl.firstElementChild.textContent = nf(n);
-        countEl.lastElementChild.textContent = n === 1 ? 'place on the map' : 'places on the map';
+        countEl.lastElementChild.textContent = VQ.plural(n, 'place on the map', 'places on the map');
       }
       var chosen = {};
       [].forEach.call(root.querySelectorAll('[data-mpx-set]'), function (a) {
@@ -171,11 +171,11 @@
         var total = panel ? panel.querySelectorAll('[data-mpx-set]:not([data-mpx-set="preset"])').length : 0;
         if (!sub) return;
         if (!picked.length) {
-          sub.textContent = (kind === 'type' && st.types.length === 0) ? 'all types' : (kind === 'type' && st.preset === 'popular') ? 'popular types' : t.getAttribute('data-mpx-sub');
+          sub.textContent = (kind === 'type' && st.types.length === 0) ? VQ.t('all types') : (kind === 'type' && st.preset === 'popular') ? VQ.t('popular types') : t.getAttribute('data-mpx-sub');
           t.classList.remove('is-active');
         } else {
           sub.textContent = picked.length === 1 ? picked[0]
-            : (kind === 'type' ? picked.length + ' of ' + total + ' chosen' : picked.length + ' chosen');
+            : (kind === 'type' ? VQ.t('{n} of {total} chosen', { n: picked.length, total: total }) : VQ.t('{n} chosen', { n: picked.length }));
           t.classList.add('is-active');
         }
       });

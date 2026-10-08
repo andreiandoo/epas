@@ -19,8 +19,8 @@ $rcCards = $routeCards ?? ($routePage['others'] ?? []);
         <span class="rc-title"><?= v2_e($cTitle) ?></span>
         <span class="rc-lead"><?= v2_e($cLead) ?></span>
         <span class="rc-meta">
-          <span><?= v2_ic('map-pin') ?><?= (int) $cCount ?> stops</span>
-          <span><?= v2_ic('arrow-right') ?><?= v2_e(v2_thousands((int) $cKm)) ?> km</span>
+          <span><?= v2_ic('map-pin') ?><?= v2_e(v2_num((int) $cCount, 'stop', 'stops')) ?></span>
+          <span><?= v2_ic('arrow-right') ?><?= v2_te('{n} km', ['n' => v2_thousands((int) $cKm)]) ?></span>
           <span><?= v2_ic('clock') ?><?= $cMin > 0 ? v2_e(v2_hm($cMin)) : v2_e($cPace) ?></span>
         </span>
       </span>

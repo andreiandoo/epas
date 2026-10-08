@@ -38,7 +38,7 @@ include __DIR__ . '/header.php';
   <section class="mph" aria-labelledby="mph-h">
     <div class="wrap mph-in">
       <div class="mph-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($routePage['breadcrumbs'] as $i => [$bcName, $bcUrl]): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($routePage['breadcrumbs']) - 1): ?><a href="<?= v2_e($bcUrl) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
@@ -48,24 +48,24 @@ include __DIR__ . '/header.php';
         <p class="mph-lead"><?= v2_e($routePage['lead']) ?></p>
       </div>
       <ul class="mph-stats">
-        <li><b><?= count($rpStops) ?></b> stops</li>
-        <li><b><?= v2_e(v2_thousands((int) $routePage['km'])) ?></b> km<?= !empty($routePage['road']) ? ' by road' : ' in a straight line' ?></li>
-        <?php if (!empty($routePage['drive'])): ?><li><b><?= v2_e($routePage['drive']) ?></b> of driving</li><?php endif; ?>
+        <li><b><?= count($rpStops) ?></b> <?= v2_e(v2_plural(count($rpStops), 'stop', 'stops')) ?></li>
+        <li><?= !empty($routePage['road']) ? v2_t('<b>{n}</b> km by road', ['n' => v2_e(v2_thousands((int) $routePage['km']))]) : v2_t('<b>{n}</b> km in a straight line', ['n' => v2_e(v2_thousands((int) $routePage['km']))]) ?></li>
+        <?php if (!empty($routePage['drive'])): ?><li><?= v2_t('<b>{time}</b> of driving', ['time' => v2_e($routePage['drive'])]) ?></li><?php endif; ?>
         <li><b><?= v2_e($routePage['pace']) ?></b></li>
       </ul>
     </div>
   </section>
 
   <!-- ============================== MAP ============================== -->
-  <section class="mp-band" aria-label="Map of the route">
+  <section class="mp-band" aria-label="<?= v2_te('Map of the route') ?>">
     <div class="wrap">
       <div class="mp-frame">
         <div data-epm-root data-epm-config="<?= v2_e(json_encode($routePage['config'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"></div>
       </div>
-      <p class="rp-note"><?php if (!empty($routePage['road'])): ?>Distances and times are calculated on real roads (OpenStreetMap), with no stops and no traffic.<?php else: ?>For this route the distance is measured in a straight line between the stops, not by road.<?php endif; ?></p>
+      <p class="rp-note"><?php if (!empty($routePage['road'])): ?><?= v2_te('Distances and times are calculated on real roads (OpenStreetMap), with no stops and no traffic.') ?><?php else: ?><?= v2_te('For this route the distance is measured in a straight line between the stops, not by road.') ?><?php endif; ?></p>
       <div class="rdp-acts">
-        <a class="btn btn-primary rdp-go" href="/plan?route=<?= v2_e($routePage['slug']) ?>"><?= v2_ic('compass') ?>Open as a plan</a>
-        <p class="rdp-hint">The route goes into the planner with its stops, split over days: move, remove or add stops, see the times and look for a place to stay. Or <a href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">open the whole route in Google Maps</a>.</p>
+        <a class="btn btn-primary rdp-go" href="/plan?route=<?= v2_e($routePage['slug']) ?>"><?= v2_ic('compass') ?><?= v2_te('Open as a plan') ?></a>
+        <p class="rdp-hint"><?= v2_t('The route goes into the planner with its stops, split over days: move, remove or add stops, see the times and look for a place to stay. Or <a href="{url}" target="_blank" rel="noopener">open the whole route in Google Maps</a>.', ['url' => v2_e($rpGmaps)]) ?></p>
       </div>
     </div>
   </section>
@@ -74,8 +74,8 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="rp-stops-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="rp-stops-h">The stops, in order</h2>
-        <a class="sec-link" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener">Open in Google Maps<?= v2_ic('arrow-right') ?></a>
+        <h2 id="rp-stops-h"><?= v2_te('The stops, in order') ?></h2>
+        <a class="sec-link" href="<?= v2_e($rpGmaps) ?>" target="_blank" rel="noopener"><?= v2_te('Open in Google Maps') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <ol class="rp-stops">
         <?php foreach ($rpStops as $i => $stop): [$sSlug, $sName, $sCity, $sCitySlug, $sCounty, $sType, $sEmoji, $sLat, $sLng, $sImg, $sLeg] = $stop; $sMin = $stop[11] ?? 0; ?>
@@ -89,7 +89,7 @@ include __DIR__ . '/header.php';
                 <span class="rp-title"><?= v2_e($sName) ?></span>
                 <span class="rp-meta">
                   <?php if ($sCity !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($sCity) ?><?= $sCounty !== '' && $sCounty !== $sCity ? ', ' . v2_e($sCounty) : '' ?></span><?php endif; ?>
-                  <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= v2_e((string) $sLeg) ?> km<?php if (!empty($sMin)): ?> · <?= v2_e(v2_hm((int) $sMin)) ?><?php endif; ?> from the previous stop</span><?php endif; ?>
+                  <?php if ($i > 0 && $sLeg > 0): ?><span class="rp-leg"><?= v2_ic('arrow-right') ?><?= !empty($sMin) ? v2_te('{km} km · {time} from the previous stop', ['km' => (string) $sLeg, 'time' => v2_hm((int) $sMin)]) : v2_te('{km} km from the previous stop', ['km' => (string) $sLeg]) ?></span><?php endif; ?>
                 </span>
               </span>
               <?= v2_ic('caret-down', 'ic rp-car') ?>
@@ -97,8 +97,8 @@ include __DIR__ . '/header.php';
             <div class="rp-more"><div><div class="rp-in">
               <p class="rp-about" hidden></p>
               <div class="rp-acts">
-                <a class="rp-go" href="/attraction/<?= v2_e($sSlug) ?>">Details<?= v2_ic('arrow-right') ?></a>
-                <a class="rp-go is-quiet" href="https://www.google.com/maps/search/?api=1&amp;query=<?= v2_e($sLat . ',' . $sLng) ?>" target="_blank" rel="noopener">Show in Google Maps</a>
+                <a class="rp-go" href="/attraction/<?= v2_e($sSlug) ?>"><?= v2_te('Details') ?><?= v2_ic('arrow-right') ?></a>
+                <a class="rp-go is-quiet" href="https://www.google.com/maps/search/?api=1&amp;query=<?= v2_e($sLat . ',' . $sLng) ?>" target="_blank" rel="noopener"><?= v2_te('Show in Google Maps') ?></a>
               </div>
             </div></div></div>
           </div>
@@ -113,9 +113,9 @@ include __DIR__ . '/header.php';
   <section class="sec ptrip-sec" id="before-you-go" aria-labelledby="rp-trip-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">Before you set off</p><h2 id="rp-trip-h">A car for this route</h2></div>
+        <div><p class="kicker"><?= v2_te('Before you set off') ?></p><h2 id="rp-trip-h"><?= v2_te('A car for this route') ?></h2></div>
       </div>
-      <p class="ptrip-intro">Hire the car where you arrive, at the airport or in the first city, and check that it can be returned where the route ends.</p>
+      <p class="ptrip-intro"><?= v2_te('Hire the car where you arrive, at the airport or in the first city, and check that it can be returned where the route ends.') ?></p>
       <?= v2_trip_tiles($routePage['trip'], 'route-' . $routePage['slug']) ?>
     </div>
   </section>
@@ -125,7 +125,7 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="rp-text-h">
     <div class="wrap mp-text">
       <div class="mp-prose">
-        <h2 id="rp-text-h" class="sr">About the route</h2>
+        <h2 id="rp-text-h" class="sr"><?= v2_te('About the route') ?></h2>
         <?= implode("\n", $routePage['prose']) ?>
       </div>
       <?php if (!empty($routePage['faq'])): ?>
@@ -143,8 +143,8 @@ include __DIR__ . '/header.php';
   <section class="sec" aria-labelledby="rp-more-h">
     <div class="wrap">
       <div class="sec-head">
-        <h2 id="rp-more-h">Other routes</h2>
-        <a class="sec-link" href="/routes">All routes<?= v2_ic('arrow-right') ?></a>
+        <h2 id="rp-more-h"><?= v2_te('Other routes') ?></h2>
+        <a class="sec-link" href="/routes"><?= v2_te('All routes') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <?php require __DIR__ . '/route-cards.php'; ?>
     </div>

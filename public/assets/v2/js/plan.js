@@ -115,13 +115,28 @@
     return '/api/img.php?u=' + encodeURIComponent(url) + '&w=' + w + (h ? '&h=' + h : '');
   }
 
-  function nf(n) { return new Intl.NumberFormat('en-GB').format(Math.round(n)); }
+  /* Dates and numbers in the visitor's language (the texts go through VQ.t / VQ.n, assets/v2/js/i18n.js). */
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  function nf(n) { try { return new Intl.NumberFormat(LOC).format(Math.round(n)); } catch (e) { return String(Math.round(n)); } }
+  function dayName(n) { return VQ.t('Day {n}', { n: n }); }
+  /** A sentence with one name in bold: VQ.t() is given BOLD for that name, and the <b> goes where it lands. */
+  var BOLD = String.fromCharCode(1);
+  function withBold(p, text, name) {
+    var parts = text.split(BOLD);
+    p.appendChild(document.createTextNode(parts[0]));
+    if (parts.length > 1) {
+      p.appendChild(el('b', '', name));
+      p.appendChild(document.createTextNode(parts.slice(1).join('')));
+    }
+    return p;
+  }
   function km1(n) { return (Math.round(n * 10) / 10).toString(); }
   function lei(cents) { return '\u20AC' + nf(Math.round(cents / 100)); }
   function hm(min) {
     min = Math.round(min || 0);
     var h = Math.floor(min / 60), m = min % 60;
-    return h ? (h + ' h' + (m ? ' ' + m + ' min' : '')) : (m + ' min');
+    if (!h) return VQ.t('{m} min', { m: m });
+    return m ? VQ.t('{h} h {m} min', { h: h, m: m }) : VQ.t('{h} h', { h: h });
   }
   function clock(min) {
     var h = Math.floor(min / 60) % 24, m = Math.round(min) % 60;
@@ -145,11 +160,11 @@
   function estKm(distKm) { return Math.round(distKm * (modeDef().detour || CFG.travel.detour || 1.35) * 10) / 10; }
   function duration(typeSlug) { return CFG.durations[typeSlug] || CFG.durations.default || 45; }
   function dateLabel(iso, offset) {
-    if (!iso) return 'Day ' + (offset + 1);
+    if (!iso) return dayName(offset + 1);
     var d = new Date(iso + 'T12:00:00');
-    if (isNaN(d)) return 'Day ' + (offset + 1);
+    if (isNaN(d)) return dayName(offset + 1);
     d.setDate(d.getDate() + offset);
-    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    return d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' });
   }
   function debounce(fn, ms) {
     var t;
@@ -235,16 +250,16 @@
     if (!x) return null;
     var fixed = x.at === 'fix' && typeof x.lat === 'number' && typeof x.lng === 'number';
     return {
-      id: id, kind: 'own', slug: id, name: x.name || 'Stop', city: '', citySlug: '', county: '',
+      id: id, kind: 'own', slug: id, name: x.name || VQ.t('Stop'), city: '', citySlug: '', county: '',
       lat: fixed ? x.lat : null, lng: fixed ? x.lng : null, approx: false, price: 0,
       dur: x.minutes || 30, img: '', type: '', emoji: placeKey(x.emoji, 'clock'), typeSlug: '',
       bookable: false, href: '', own: true, at: x.at || 'none', place: x.place || ''
     };
   }
   function ownMeta(e) {
-    if (e.at === 'fix') return 'Your stop · ' + (e.place || 'another place');
-    if (e.at === 'prev') return 'Your stop · at the previous stop';
-    return 'Your stop · no particular place';
+    if (e.at === 'fix') return e.place ? VQ.t('Your stop · {place}', { place: e.place }) : VQ.t('Your stop · another place');
+    if (e.at === 'prev') return VQ.t('Your stop · at the previous stop');
+    return VQ.t('Your stop · no particular place');
   }
 
   function entry(id) {
@@ -255,9 +270,9 @@
       return {
         id: id, kind: b[0], slug: b[1], name: b[2], city: b[3], citySlug: b[4], county: b[5],
         lat: b[6], lng: b[7], approx: !!b[8], price: b[9] || 0, dur: b[10] || 90,
-        img: b[11] || '', type: b[12] || (b[0] === 'location' ? 'Venue' : 'Experience'),
+        img: b[11] || '', type: b[12] || (b[0] === 'location' ? VQ.t('Venue') : VQ.t('Experience')),
         emoji: b[0] === 'location' ? 'ticket' : 'sparkle', bookable: true, typeSlug: '',
-        href: (b[0] === 'location' ? '/venue/' : '/experience/') + b[1]
+        href: VQ.url((b[0] === 'location' ? '/venue/' : '/experience/') + b[1])
       };
     }
     var i = bySlug[id];
@@ -270,7 +285,7 @@
       county: c ? c[2] : '', lat: r[f.lat_e5] / 1e5, lng: r[f.lng_e5] / 1e5, approx: false,
       price: 0, dur: duration(t ? t[0] : ''), img: r[f.img] || '', type: t ? t[1] : '',
       emoji: t ? (TYPE_ICON[t[0]] || 'pin') : 'pin', typeSlug: t ? t[0] : '',
-      bookable: !!(r[f.flags] & (D.flags.activities || 4)), href: '/attraction/' + id
+      bookable: !!(r[f.flags] & (D.flags.activities || 4)), href: VQ.url('/attraction/' + id)
     };
   }
 
@@ -621,9 +636,10 @@
   }
   function partyLine(rooms) {
     var p = party();
-    var out = p.adults + (p.adults === 1 ? ' adult' : ' adults');
-    if (p.children > 0) out += ' · ' + p.children + (p.children === 1 ? ' child' : ' children');
-    return out + ' · ' + rooms + (rooms === 1 ? ' room' : ' rooms');
+    var out = [VQ.n(p.adults, 'adult', 'adults')];
+    if (p.children > 0) out.push(VQ.n(p.children, 'child', 'children'));
+    out.push(VQ.n(rooms, 'room', 'rooms'));
+    return out.join(' · ');
   }
   function nightCount() { return Math.max(0, plan.days - 1); }
 
@@ -741,8 +757,8 @@
   function nightTitle(i) {
     var d = dateOffset(i);
     return d
-      ? 'The night of ' + d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
-      : 'The night between day ' + (i + 1) + ' and day ' + (i + 2);
+      ? VQ.t('The night of {date}', { date: d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'short' }) })
+      : VQ.t('The night between day {a} and day {b}', { a: i + 1, b: i + 2 });
   }
 
   /**
@@ -773,7 +789,7 @@
     q.push('maincolor=' + encodeURIComponent(STAY.maincolor || '1E5B48'));
     q.push('markertype=' + encodeURIComponent(STAY.markertype || 'circle'));
     q.push('zoom=' + (STAY.zoom || 12));
-    q.push('ljs=en');
+    q.push('ljs=' + encodeURIComponent(VQ.locale));      // the language of the embed: the visitor's
     q.push('hidebrandlogo=true');
     var prov = (STAY.providers || {})[stayProv];
     if (prov && prov[1]) q.push(prov[1]);
@@ -952,8 +968,10 @@
         if (typeof r.lat === 'number' && typeof r.lng === 'number') lines.push('GEO:' + r.lat + ';' + r.lng);
         if (e.href) lines.push('URL:https://viaqui.com' + e.href);
         lines.push('DESCRIPTION:' + icsEscape(e.own
-          ? ownMeta(e) + '. You set the duration.'
-          : (e.type ? e.type + '. ' : '') + 'The duration is an estimate. https://viaqui.com' + e.href));
+          ? VQ.t('{what}. You set the duration.', { what: ownMeta(e) })
+          : (e.type
+            ? VQ.t('{type}. The duration is an estimate. {url}', { type: e.type, url: 'https://viaqui.com' + e.href })
+            : VQ.t('The duration is an estimate. {url}', { url: 'https://viaqui.com' + e.href }))));
         lines.push('END:VEVENT');
       });
     }
@@ -967,11 +985,11 @@
         'DTSTAMP:' + stamp,
         'DTSTART;VALUE=DATE:' + icsDate(nd),
         'DTEND;VALUE=DATE:' + icsDate(nd + 1),
-        'SUMMARY:' + icsEscape('Stay in ' + nt.name),
+        'SUMMARY:' + icsEscape(VQ.t('Stay in {town}', { town: nt.name })),
         'LOCATION:' + icsEscape([nt.name, nt.county].filter(Boolean).join(', ')),
         'GEO:' + (+nt.lat).toFixed(5) + ';' + (+nt.lng).toFixed(5),
-        'DESCRIPTION:' + icsEscape('The night suggested by the planner: ' + partyLine(nt.rooms) +
-          '. The list of places to stay opens from the plan, at https://viaqui.com/plan'),
+        'DESCRIPTION:' + icsEscape(VQ.t('The night suggested by the planner: {party}. The list of places to stay opens from the plan, at {url}',
+          { party: partyLine(nt.rooms), url: 'https://viaqui.com' + VQ.url('/plan') })),
         'END:VEVENT'
       );
     }
@@ -1027,12 +1045,12 @@
   function savePlan(b) {
     var label = b.querySelector('span');
     var total = plan.stops.reduce(function (n, day) { return n + day.length; }, 0);
-    label.textContent = 'Saving…';
+    label.textContent = VQ.t('Saving…');
     api('customer.plan.save', {
       method: 'POST',
       body: {
         token: plan.token || null,
-        title: (plan.name || ('Plan ' + plan.where.label)) + ' · ' + plan.days + (plan.days === 1 ? ' day' : ' days'),
+        title: (plan.name || VQ.t('Plan {place}', { place: plan.where.label })) + ' · ' + VQ.n(plan.days, 'day', 'days'),
         place: plan.where.label, days: plan.days, stops: total,
         starts_on: plan.from || null, payload: { v: 2, code: encode() }
       }
@@ -1040,12 +1058,12 @@
       plan.token = (d.plan || {}).token || plan.token;
       save();
       b.classList.add('is-done');
-      label.textContent = 'Saved to your account';
-      setTimeout(function () { b.classList.remove('is-done'); label.textContent = 'Save to my account'; }, 2500);
+      label.textContent = VQ.t('Saved to your account');
+      setTimeout(function () { b.classList.remove('is-done'); label.textContent = VQ.t('Save to my account'); }, 2500);
     }).catch(function (err) {
-      label.textContent = err.message === 'anonim' ? 'Sign in' : 'It did not work';
-      setTimeout(function () { label.textContent = 'Save to my account'; }, 2500);
-      if (err.message === 'anonim') window.location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.hash);
+      label.textContent = err.message === 'anonim' ? VQ.t('Sign in') : VQ.t('It did not work');
+      setTimeout(function () { label.textContent = VQ.t('Save to my account'); }, 2500);
+      if (err.message === 'anonim') window.location.href = VQ.url('/login') + '?redirect=' + encodeURIComponent(location.pathname + location.hash);
     });
   }
   function openSaved(b) {
@@ -1053,14 +1071,14 @@
     if (panel) { panel.remove(); return; }
     panel = el('div', 'pl-saved');
     panel.id = 'pl-saved';
-    panel.appendChild(el('p', 'pl-saved-h', 'Loading…'));
+    panel.appendChild(el('p', 'pl-saved-h', VQ.t('Loading…')));
     ui.bar.appendChild(panel);
     if (ui.scroller) ui.scroller.scrollTop = 0;
 
     api('customer.plans').then(function (d) {
       panel.textContent = '';
       var rows = d.plans || [];
-      panel.appendChild(el('p', 'pl-saved-h', rows.length ? 'Your plans' : 'You have no saved plan yet.'));
+      panel.appendChild(el('p', 'pl-saved-h', rows.length ? VQ.t('Your plans') : VQ.t('You have no saved plan yet.')));
       if (!rows.length) return;
       var ul = el('ul', 'pl-saved-list');
       rows.forEach(function (row) {
@@ -1068,7 +1086,7 @@
         var open = el('button', 'pl-saved-open');
         open.type = 'button';
         open.appendChild(el('b', '', row.title));
-        open.appendChild(el('small', '', (row.stops || 0) + ' stops · updated ' + String(row.updated_at || '').slice(0, 10)));
+        open.appendChild(el('small', '', VQ.t('{stops} · updated {date}', { stops: VQ.n(row.stops || 0, 'stop', 'stops'), date: String(row.updated_at || '').slice(0, 10) })));
         open.addEventListener('click', function () {
           api('customer.plan', { query: '&token=' + encodeURIComponent(row.token) }).then(function (r) {
             var loaded = decode(((r.plan || {}).payload || {}).code || '');
@@ -1084,9 +1102,9 @@
         li.appendChild(open);
         var del = el('button', 'pl-ib pl-ib-del');
         del.type = 'button';
-        del.title = 'Delete the plan';
+        del.title = VQ.t('Delete the plan');
         del.appendChild(icon('x'));
-        del.appendChild(el('span', 'sr', 'Delete the plan'));
+        del.appendChild(el('span', 'sr', VQ.t('Delete the plan')));
         del.addEventListener('click', function () {
           api('customer.plan.delete', { method: 'DELETE', query: '&token=' + encodeURIComponent(row.token) })
             .then(function () { li.remove(); });
@@ -1097,7 +1115,7 @@
       panel.appendChild(ul);
     }).catch(function (err) {
       panel.textContent = '';
-      panel.appendChild(el('p', 'pl-saved-h', err.message === 'anonim' ? 'Sign in to see your plans.' : 'We could not load the plans.'));
+      panel.appendChild(el('p', 'pl-saved-h', err.message === 'anonim' ? VQ.t('Sign in to see your plans.') : VQ.t('We could not load the plans.')));
     });
   }
 
@@ -1215,36 +1233,36 @@
     // Over the map: what the plan is, in two lines.
     ui.title.textContent = plan.name || ((plan.origin ? plan.origin.label + ' → ' : '') + plan.where.label);
     ui.sub.textContent = [
-      plan.days + (plan.days === 1 ? ' day' : ' days'),
-      totals.stops + (totals.stops === 1 ? ' stop' : ' stops'),
-      nf(totals.km) + ' km' + (totals.routed === plan.days ? ' by road' : ' (estimated)'),
-      (CFG.paces[plan.pace] || ['Normal'])[0]
+      VQ.n(plan.days, 'day', 'days'),
+      VQ.n(totals.stops, 'stop', 'stops'),
+      totals.routed === plan.days ? VQ.t('{n} km by road', { n: nf(totals.km) }) : VQ.t('{n} km (estimated)', { n: nf(totals.km) }),
+      (CFG.paces[plan.pace] || [VQ.t('Normal')])[0]
     ].join(' · ');
     ui.badge.textContent = '';
     ui.badge.appendChild(icon((MODES[modeKey()] || [])[1] || 'pi-car'));
-    ui.badge.title = (MODES[modeKey()] || ['Car'])[0];
+    ui.badge.title = (MODES[modeKey()] || [VQ.t('Car')])[0];
 
     // Everything you can do to the plan as a whole: behind the three dots, and again where the list ends.
     var fill = function (host, cls, shut) {
       if (!host) return;
       host.textContent = '';
       var item = function (ic, label, fn) { var b = btn(ic, label, fn, cls); host.appendChild(b); return b; };
-      item('link', 'Copy link', function (b) {
+      item('link', VQ.t('Copy link'), function (b) {
         save();
         var done = function () {
           b.classList.add('is-done');
-          b.querySelector('span').textContent = 'Copied';
-          setTimeout(function () { b.classList.remove('is-done'); b.querySelector('span').textContent = 'Copy link'; shut(); }, 1300);
+          b.querySelector('span').textContent = VQ.t('Copied');
+          setTimeout(function () { b.classList.remove('is-done'); b.querySelector('span').textContent = VQ.t('Copy link'); shut(); }, 1300);
         };
         if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done);
         else done();
       });
-      item('pl-regen', 'Regenerate', function () { shut(); generate(); render(); });
-      item('gear-six', 'Change the details', leave);
-      item('calendar-blank', 'Calendar (.ics)', function () { shut(); downloadIcs(); });
-      item('printer', 'Print', function () { shut(); window.print(); });
-      item('user-circle', 'Save to my account', savePlan);
-      if (token()) item('list', 'My plans', function (b) { shut(); openSaved(b); });
+      item('pl-regen', VQ.t('Regenerate'), function () { shut(); generate(); render(); });
+      item('gear-six', VQ.t('Change the details'), leave);
+      item('calendar-blank', VQ.t('Calendar (.ics)'), function () { shut(); downloadIcs(); });
+      item('printer', VQ.t('Print'), function () { shut(); window.print(); });
+      item('user-circle', VQ.t('Save to my account'), savePlan);
+      if (token()) item('list', VQ.t('My plans'), function (b) { shut(); openSaved(b); });
     };
     fill(ui.menu, 'plx-menu-i', closeMenuX);
     fill(ui.endActs, 'pl-btn', function () {});
@@ -1252,7 +1270,7 @@
     // At the head of the list: what it costs and where it sleeps.
     ui.bar.textContent = '';
     var box = el('div', 'pl-bar-in');
-    if (totals.cost > 0) box.appendChild(el('span', 'pl-bar-sell', 'tickets from ' + lei(totals.cost)));
+    if (totals.cost > 0) box.appendChild(el('span', 'pl-bar-sell', VQ.t('tickets from {price}', { price: lei(totals.cost) })));
     if (nightCount() > 0) {
       var towns = [], seenTown = {}, slept = 0;
       for (var ni = 0; ni < nightCount(); ni++) {
@@ -1270,8 +1288,8 @@
       nem.setAttribute('aria-hidden', 'true');
       nb.appendChild(nem);
       nb.appendChild(document.createTextNode(slept
-        ? slept + (slept === 1 ? ' night' : ' nights') + ' · ' + towns.join(', ')
-        : 'No night on the road'));
+        ? VQ.n(slept, 'night', 'nights') + ' · ' + towns.join(', ')
+        : VQ.t('No night on the road')));
       nb.addEventListener('click', jumpToNight);
       box.appendChild(nb);
     }
@@ -1279,16 +1297,16 @@
 
     // The days, as buttons on the map: where you are, and a way to jump.
     ui.rail.textContent = '';
-    var all = el('button', 'plx-day', 'Whole trip');
+    var all = el('button', 'plx-day', VQ.t('Whole trip'));
     all.type = 'button';
     all.dataset.day = '-1';
     ui.rail.appendChild(all);
     for (var k = 0; k < plan.days; k++) {
-      var pb = el('button', 'plx-day', 'Day ' + (k + 1));
+      var pb = el('button', 'plx-day', dayName(k + 1));
       pb.type = 'button';
       pb.dataset.day = String(k);
       var dt = dateOffset(k);
-      if (dt) pb.appendChild(el('small', '', dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })));
+      if (dt) pb.appendChild(el('small', '', dt.toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short' })));
       ui.rail.appendChild(pb);
     }
     paintRail();
@@ -1349,21 +1367,23 @@
     var head = el('header', 'pl-day-head'), tip = null;
     var hl = el('div', 'pl-day-headings');
     var num = el('span', 'pl-day-n');
-    num.appendChild(el('small', '', 'day'));
+    num.appendChild(el('small', '', VQ.t('day')));
     num.appendChild(el('b', '', String(d + 1)));
     num.setAttribute('aria-hidden', 'true');
     head.appendChild(num);
     hl.appendChild(el('h3', 'pl-day-h', dateLabel(plan.from, d)));
     var sub = el('p', 'pl-day-sub');
     sub.textContent = stops.length
-      ? stops.length + (stops.length === 1 ? ' stop · ' : ' stops · ') + nf(view.km) + ' km' +
-        (view.routed ? ' by road' : (view.pending ? ' (calculating…)' : ' (estimated)')) + ' · ' +
-        clock(DAY_START) + '–' + clock(view.end) + ' · ' + hm(view.travel) + ' on the road'
-      : 'A free day: add something or regenerate.';
+      ? [VQ.n(stops.length, 'stop', 'stops'),
+        view.routed ? VQ.t('{n} km by road', { n: nf(view.km) })
+          : (view.pending ? VQ.t('{n} km (calculating…)', { n: nf(view.km) }) : VQ.t('{n} km (estimated)', { n: nf(view.km) })),
+        clock(DAY_START) + '–' + clock(view.end),
+        VQ.t('{time} on the road', { time: hm(view.travel) })].join(' · ')
+      : VQ.t('A free day: add something or regenerate.');
     hl.appendChild(sub);
     if (d === 0 && stops.length > 1) {
       tip = el('p', 'pl-day-tip',
-        'Drag the number on the left to move a stop, within the day or to another day; the + between two places adds a stop of your own. The map follows the stop you have reached in the list.');
+        VQ.t('Drag the number on the left to move a stop, within the day or to another day; the + between two places adds a stop of your own. The map follows the stop you have reached in the list.'));
     }
     head.appendChild(hl);
 
@@ -1371,7 +1391,7 @@
     var mk = el('button', 'pl-day-act');
     mk.type = 'button';
     mk.appendChild(icon('plus'));
-    mk.appendChild(el('span', '', 'A stop of your own'));
+    mk.appendChild(el('span', '', VQ.t('A stop of your own')));
     mk.addEventListener('click', function () { openComposer(d, (plan.stops[d] || []).length); });
     acts.appendChild(mk);
 
@@ -1416,8 +1436,8 @@
     if (stops.length) {
       var free = dayBudget() - (view.visit + view.travel);
       foot.appendChild(el('p', 'pl-free', free > 20
-        ? hm(free) + ' left free: room for a meal, a coffee or whatever comes up on the way.'
-        : 'The day is full.'));
+        ? VQ.t('{time} left free: room for a meal, a coffee or whatever comes up on the way.', { time: hm(free) })
+        : VQ.t('The day is full.')));
     }
     foot.appendChild(addControl(d));
     box.appendChild(foot);
@@ -1431,10 +1451,10 @@
     dot.appendChild(icon(r.role === 'origin' ? 'map-pin' : 'check'));
     li.appendChild(dot);
     var txt = el('div', 'pl-edge-text');
-    txt.appendChild(el('b', '', (r.role === 'origin' ? 'Leaving from ' : 'Back to ') + r.name));
+    txt.appendChild(el('b', '', r.role === 'origin' ? VQ.t('Leaving from {place}', { place: r.name }) : VQ.t('Back to {place}', { place: r.name })));
     txt.appendChild(el('span', '', r.role === 'origin'
-      ? 'Setting off at ' + clock(r.start)
-      : km1(r.legKm) + ' km · ' + hm(r.legMin) + ' · arriving around ' + clock(r.start)));
+      ? VQ.t('Setting off at {time}', { time: clock(r.start) })
+      : VQ.t('{km} km · {time} · arriving around {clock}', { km: km1(r.legKm), time: hm(r.legMin), clock: clock(r.start) })));
     li.appendChild(txt);
     return li;
   }
@@ -1481,7 +1501,7 @@
     if (e.bookable || e.price > 0) {
       var tag = el('span', 'pl-sell');
       tag.appendChild(icon('ticket'));
-      tag.appendChild(document.createTextNode(e.price > 0 ? 'from ' + lei(e.price) : 'tickets available'));
+      tag.appendChild(document.createTextNode(e.price > 0 ? VQ.t('from {price}', { price: lei(e.price) }) : VQ.t('tickets available')));
       when.appendChild(tag);
     }
     text.appendChild(when);
@@ -1502,7 +1522,7 @@
     else if (aboutCache[e.id]) note.textContent = aboutCache[e.id];
     else note.hidden = true;
     inn.appendChild(note);
-    if (e.approx) inn.appendChild(el('p', 'pl-stop-note is-small', 'The position on the map is approximate.'));
+    if (e.approx) inn.appendChild(el('p', 'pl-stop-note is-small', VQ.t('The position on the map is approximate.')));
     if (open) about(e);
 
     var act = function (ic, label, fn, cls) {
@@ -1525,14 +1545,14 @@
     var row = el('div', 'pl-acts');
     var durs = el('span', 'pl-durs');
     durs.setAttribute('role', 'group');
-    durs.setAttribute('aria-label', 'How long you stay at ' + e.name);
+    durs.setAttribute('aria-label', VQ.t('How long you stay at {name}', { name: e.name }));
     var less = el('button', '', '−');
     less.type = 'button';
-    less.setAttribute('aria-label', '15 minutes less');
+    less.setAttribute('aria-label', VQ.t('15 minutes less'));
     less.addEventListener('click', function () { setDur(-15); });
     var plus = el('button', '', '+');
     plus.type = 'button';
-    plus.setAttribute('aria-label', '15 minutes more');
+    plus.setAttribute('aria-label', VQ.t('15 minutes more'));
     plus.addEventListener('click', function () { setDur(15); });
     durs.appendChild(less);
     durs.appendChild(el('output', '', hm(r.dur)));
@@ -1540,10 +1560,10 @@
     var tip = el('button', 'pl-tip');
     tip.type = 'button';
     tip.setAttribute('data-tip', e.own
-      ? 'The duration is the one you choose.'
-      : 'The duration is an estimate for this type of place. Check the opening hours before you go.');
+      ? VQ.t('The duration is the one you choose.')
+      : VQ.t('The duration is an estimate for this type of place. Check the opening hours before you go.'));
     tip.title = tip.getAttribute('data-tip');
-    tip.setAttribute('aria-label', 'About the duration');
+    tip.setAttribute('aria-label', VQ.t('About the duration'));
     tip.setAttribute('aria-expanded', 'false');
     tip.appendChild(icon('info'));
     var tipText = el('p', 'pl-stop-note is-small', tip.getAttribute('data-tip'));
@@ -1552,13 +1572,13 @@
     row.appendChild(tip);
     row.appendChild(durs);
     var count = (plan.stops[d] || []).length;
-    var up = act('arrow-right', 'Earlier', function () {
+    var up = act('arrow-right', VQ.t('Earlier'), function () {
       if (!relocate(d, r.pos, d, r.pos - 1)) return;
       focusId = e.id;
       after();
     }, 'is-sq is-up');
     up.disabled = r.pos === 0;
-    var down = act('arrow-right', 'Later', function () {
+    var down = act('arrow-right', VQ.t('Later'), function () {
       if (!relocate(d, r.pos, d, r.pos + 2)) return;
       focusId = e.id;
       after();
@@ -1572,17 +1592,17 @@
     var row2 = el('div', 'pl-acts');
     // A place out of the catalogue can be traded for another one nearby. A stop of your own is
     // not swapped but renamed: those are your words, and the catalogue has no opinion on them.
-    if (!e.own) row2.appendChild(act('pl-regen', 'Replace', function () { openSwap(d, r.pos); }));
+    if (!e.own) row2.appendChild(act('pl-regen', VQ.t('Replace'), function () { openSwap(d, r.pos); }));
     if (e.own && plan.extra[e.id]) {
-      row2.appendChild(act('', 'Rename', function () {
+      row2.appendChild(act('', VQ.t('Rename'), function () {
         var now = plan.extra[e.id].name || '';
-        var next = window.prompt('What is the stop called?', now);
+        var next = window.prompt(VQ.t('What is the stop called?'), now);
         if (next === null) return;
         next = next.replace(/\s+/g, ' ').trim().slice(0, 60);
         if (!next || next === now) return;
         plan.extra[e.id].name = next;
         focusId = e.id;
-        announce('The stop is now called ' + next + '.');
+        announce(VQ.t('The stop is now called {name}.', { name: next }));
         after();
       }));
     }
@@ -1590,14 +1610,14 @@
       var mv = el('label', 'pl-ab pl-move');
       mv.appendChild(icon('calendar-blank'));
       var ms = el('select');
-      ms.setAttribute('aria-label', 'Move ' + e.name + ' to another day');
-      var m0 = el('option', '', 'Move to day…');
+      ms.setAttribute('aria-label', VQ.t('Move {name} to another day', { name: e.name }));
+      var m0 = el('option', '', VQ.t('Move to day…'));
       m0.value = '';
       ms.appendChild(m0);
       for (var k = 0; k < plan.days; k++) {
         if (k === d) continue;
         var dk = dateOffset(k);
-        var mo = el('option', '', 'Day ' + (k + 1) + (dk ? ' · ' + dk.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : ''));
+        var mo = el('option', '', dayName(k + 1) + (dk ? ' · ' + dk.toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short' }) : ''));
         mo.value = String(k);
         ms.appendChild(mo);
       }
@@ -1605,20 +1625,20 @@
         var to = parseInt(ms.value, 10);
         if (isNaN(to) || !relocate(d, r.pos, to, (plan.stops[to] || []).length)) return;
         focusId = e.id;
-        announce(e.name + ' moved to day ' + (to + 1) + '.');
+        announce(VQ.t('{name} moved to day {n}.', { name: e.name, n: to + 1 }));
         after();
       });
       mv.appendChild(ms);
       row2.appendChild(mv);
     }
-    row2.appendChild(act('trash', 'Remove', function () { remove(d, r.pos); }, 'is-danger'));
+    row2.appendChild(act('trash', VQ.t('Remove'), function () { remove(d, r.pos); }, 'is-danger'));
     if (e.href) {
       var go = el('a', 'pl-ab' + (e.bookable || e.price > 0 ? ' is-go' : ''));
       go.href = e.href;
       go.target = '_blank';
       go.rel = 'noopener';
       go.appendChild(icon(e.bookable || e.price > 0 ? 'ticket' : 'arrow-right'));
-      go.appendChild(el('span', '', e.bookable || e.price > 0 ? 'See tickets' : 'Details'));
+      go.appendChild(el('span', '', e.bookable || e.price > 0 ? VQ.t('See tickets') : VQ.t('Details')));
       row2.appendChild(go);
     }
     inn.appendChild(row2);
@@ -1672,13 +1692,13 @@
     var e = r.e;
     var b = el('button', 'pl-grip');
     b.type = 'button';
-    b.title = 'Drag to move the stop';
+    b.title = VQ.t('Drag to move the stop');
     var face = el('span', 'pl-grip-n', e.own ? null : String(n));
     if (e.own) face.appendChild(placeIcon(e.emoji, 'clock'));
     face.setAttribute('aria-hidden', 'true');
     b.appendChild(face);
     b.appendChild(glyph('grip', 'ic pl-grip-ic'));
-    b.appendChild(el('span', 'sr', 'Move ' + e.name + '. Drag with the mouse, or press Enter and use the arrow keys.'));
+    b.appendChild(el('span', 'sr', VQ.t('Move {name}. Drag with the mouse, or press Enter and use the arrow keys.', { name: e.name })));
     b.addEventListener('pointerdown', function (ev) { dragStart(ev, stopLi(b)); });
     b.addEventListener('keydown', function (ev) { gripKey(ev, stopLi(b)); });
     return b;
@@ -1734,7 +1754,7 @@
     delete plan.locked[id];
     delete plan.custom[id];
     if (grab && grab.id === id) grab = null;
-    announce((e ? e.name : 'The stop') + ' is no longer in the plan.');
+    announce(e ? VQ.t('{name} is no longer in the plan.', { name: e.name }) : VQ.t('The stop is no longer in the plan.'));
     after();
   }
   function add(d, id) {
@@ -1757,7 +1777,7 @@
     plan.stops[d].splice(pos, 0, id);
     activeDay = d;
     focusId = id;
-    announce('Added ' + def.name + ' to day ' + (d + 1) + '.');
+    announce(VQ.t('Added {name} to day {n}.', { name: def.name, n: d + 1 }));
     after();
   }
 
@@ -1770,7 +1790,7 @@
   var scroller = null;  // the timer that scrolls the page near the edges
   var scrollBy = 0;
 
-  function stopName(id) { var e = entry(id); return e ? e.name : 'The stop'; }
+  function stopName(id) { var e = entry(id); return e ? e.name : VQ.t('The stop'); }
   function dayStops(d) { return plan.stops[d] || []; }
 
   function showMark(t) {
@@ -1881,7 +1901,7 @@
     if (cancel || !d.moved || !d.target) return;
     if (!relocate(d.day, d.pos, d.target.day, d.target.pos)) return;
     focusId = d.id;
-    announce(stopName(d.id) + ' is now in day ' + (d.target.day + 1) + '.');
+    announce(VQ.t('{name} is now in day {n}.', { name: stopName(d.id), n: d.target.day + 1 }));
     after();
   }
   window.addEventListener('pointermove', dragMove);
@@ -1895,16 +1915,16 @@
     grab.day0 = grab.day;
     grab.pos0 = grab.pos;
     item.classList.add('is-grabbed');
-    announce('Picked up ' + stopName(grab.id) +
-      '. Up and down arrows move it within the day, left and right to another day, Enter drops it there, Escape cancels.');
+    announce(VQ.t('Picked up {name}. Up and down arrows move it within the day, left and right to another day, Enter drops it there, Escape cancels.',
+      { name: stopName(grab.id) }));
   }
   function grabSay() {
-    announce(stopName(grab.id) + ': position ' + (grab.pos + 1) + ' of ' + dayStops(grab.day).length +
-      ', day ' + (grab.day + 1) + '.');
+    announce(VQ.t('{name}: position {pos} of {total}, day {day}.',
+      { name: stopName(grab.id), pos: grab.pos + 1, total: dayStops(grab.day).length, day: grab.day + 1 }));
   }
   function grabStep(dir) {
     var to = grab.pos + dir;
-    if (to < 0 || to >= dayStops(grab.day).length) { announce('No more room in that direction.'); return; }
+    if (to < 0 || to >= dayStops(grab.day).length) { announce(VQ.t('No more room in that direction.')); return; }
     if (!relocate(grab.day, grab.pos, grab.day, dir > 0 ? to + 1 : to)) return;
     grab.pos = to;
     after();
@@ -1912,7 +1932,7 @@
   }
   function grabDay(dir) {
     var to = grab.day + dir;
-    if (to < 0 || to >= plan.days) { announce('No more days in that direction.'); return; }
+    if (to < 0 || to >= plan.days) { announce(VQ.t('No more days in that direction.')); return; }
     if (!relocate(grab.day, grab.pos, to, dayStops(to).length)) return;
     grab.day = to;
     grab.pos = dayStops(to).length - 1;
@@ -1923,7 +1943,7 @@
     var was = grab;
     grab = null;
     focusId = was.id;
-    announce(stopName(was.id) + ' stays at position ' + (was.pos + 1) + ' of day ' + (was.day + 1) + '.');
+    announce(VQ.t('{name} stays at position {pos} of day {day}.', { name: stopName(was.id), pos: was.pos + 1, day: was.day + 1 }));
     after();
   }
   function grabCancel() {
@@ -1935,7 +1955,7 @@
       plan.stops[was.day0].splice(Math.min(was.pos0, plan.stops[was.day0].length), 0, id);
       activeDay = was.day0;
     }
-    announce('Move cancelled. ' + stopName(was.id) + ' is where it was.');
+    announce(VQ.t('Move cancelled. {name} is where it was.', { name: stopName(was.id) }));
     after();
   }
   function gripKey(ev, item) {
@@ -1974,25 +1994,25 @@
     li.dataset.pos = String(pos);
     var b = el('button', 'pl-ins-btn');
     b.type = 'button';
-    b.title = 'Add a stop of your own here';
+    b.title = VQ.t('Add a stop of your own here');
     b.appendChild(icon('plus'));
-    b.appendChild(el('span', 'sr', 'Add a stop of your own here, between stops'));
+    b.appendChild(el('span', 'sr', VQ.t('Add a stop of your own here, between stops')));
     b.addEventListener('click', function () { openComposer(d, pos); });
     li.appendChild(b);
     // the drive to the stop below, where there is one
     if (r && (r.legKm > 0 || r.legMin > 0)) {
       var leg = el('span', 'pl-ins-leg');
       leg.appendChild(icon((MODES[modeKey()] || [])[1] || 'pi-car'));
-      leg.appendChild(document.createTextNode(hm(r.legMin) + ' · ' + km1(r.legKm) + ' km'));
+      leg.appendChild(document.createTextNode(hm(r.legMin) + ' · ' + VQ.t('{n} km', { n: km1(r.legKm) })));
       li.appendChild(leg);
     } else if (r && r.off) {
-      li.appendChild(el('span', 'pl-ins-leg is-off', 'no extra driving'));
+      li.appendChild(el('span', 'pl-ins-leg is-off', VQ.t('no extra driving')));
     }
     return li;
   }
 
   function openComposer(d, pos) {
-    var first = PRESETS[0] || ['Break', 'clock', 30];
+    var first = PRESETS[0] || [VQ.t('Break'), 'clock', 30];
     swap = null;              // one panel at a time inside a day
     composer = {
       day: d, pos: pos, name: first[0], emoji: first[1], minutes: first[2],
@@ -2009,7 +2029,7 @@
     var c = composer;
     var li = el('li', 'pl-new');
     var box = el('div', 'pl-new-in');
-    box.appendChild(el('p', 'pl-new-h', 'A stop of your own'));
+    box.appendChild(el('p', 'pl-new-h', VQ.t('A stop of your own')));
 
     var name = el('input');
     var dur = el('select');
@@ -2042,17 +2062,17 @@
 
     var row = el('div', 'pl-new-row');
     var nameLab = el('label', 'pl-new-f');
-    nameLab.appendChild(el('span', '', 'What will you do?'));
+    nameLab.appendChild(el('span', '', VQ.t('What will you do?')));
     name.type = 'text';
     name.value = c.name;
     name.maxLength = 60;
-    name.placeholder = 'A meal, a coffee, a walk…';
+    name.placeholder = VQ.t('A meal, a coffee, a walk…');
     name.addEventListener('input', function () { c.name = name.value; });
     nameLab.appendChild(name);
     row.appendChild(nameLab);
 
     var durLab = el('label', 'pl-new-f pl-new-f-dur');
-    durLab.appendChild(el('span', '', 'How long?'));
+    durLab.appendChild(el('span', '', VQ.t('How long?')));
     MINUTES.forEach(function (m) {
       var o = el('option', '', hm(m));
       o.value = String(m);
@@ -2065,12 +2085,12 @@
     box.appendChild(row);
 
     var fs = el('fieldset', 'pl-new-where');
-    fs.appendChild(el('legend', '', 'Where does it go?'));
+    fs.appendChild(el('legend', '', VQ.t('Where does it go?')));
     var group = 'pl-at-' + Math.random().toString(36).slice(2, 8);
     [
-      ['prev', 'At the previous stop', 'Adds no driving, only time.'],
-      ['none', 'No particular place', 'Time in the day, with no point on the map.'],
-      ['fix', 'Another place', 'Pick a place from the catalogue and the drive is recalculated.']
+      ['prev', VQ.t('At the previous stop'), VQ.t('Adds no driving, only time.')],
+      ['none', VQ.t('No particular place'), VQ.t('Time in the day, with no point on the map.')],
+      ['fix', VQ.t('Another place'), VQ.t('Pick a place from the catalogue and the drive is recalculated.')]
     ].forEach(function (o) {
       var lab = el('label', 'pl-radio');
       var rd = el('input');
@@ -2096,8 +2116,8 @@
     pick.hidden = c.at !== 'fix';
     find.type = 'search';
     find.autocomplete = 'off';
-    find.placeholder = 'Search the place…';
-    find.setAttribute('aria-label', 'Search the place of the stop');
+    find.placeholder = VQ.t('Search the place…');
+    find.setAttribute('aria-label', VQ.t('Search the place of the stop'));
     find.value = c.query || c.place || '';
     var hits = el('ul', 'pl-add-list');
     hits.hidden = true;
@@ -2113,7 +2133,7 @@
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
         b.appendChild(el('b', '', h.name));
-        b.appendChild(el('small', '', (h.book ? 'bookable · ' : '') + (h.city || '')));
+        b.appendChild(el('small', '', [h.book ? VQ.t('bookable') : '', h.city || ''].filter(Boolean).join(' · ')));
         b.addEventListener('click', function () {
           var e = entry(h.id);
           if (!e) return;
@@ -2136,17 +2156,17 @@
     box.appendChild(msg);
 
     var acts = el('div', 'pl-new-acts');
-    var ok = el('button', 'btn btn-primary pl-new-ok', 'Add the stop');
+    var ok = el('button', 'btn btn-primary pl-new-ok', VQ.t('Add the stop'));
     ok.type = 'button';
     ok.addEventListener('click', function () {
       if (c.at === 'fix' && typeof c.lat !== 'number') {
-        msg.textContent = 'Choose the place from the list first.';
+        msg.textContent = VQ.t('Choose the place from the list first.');
         msg.hidden = false;
         find.focus();
         return;
       }
       var def = {
-        name: (c.name || '').trim() || 'Stop',
+        name: (c.name || '').trim() || VQ.t('Stop'),
         minutes: c.minutes || 30,
         emoji: placeKey(c.emoji, 'clock'),
         at: c.at,
@@ -2158,7 +2178,7 @@
       composer = null;
       addOwn(day, at, def);
     });
-    var no = el('button', 'pl-btn pl-new-no', 'Cancel');
+    var no = el('button', 'pl-btn pl-new-no', VQ.t('Cancel'));
     no.type = 'button';
     no.addEventListener('click', function () { closeComposer(); });
     acts.appendChild(ok);
@@ -2198,8 +2218,8 @@
     var wrap = el('div', 'pl-add');
     var inp = el('input');
     inp.type = 'search';
-    inp.placeholder = 'Add an attraction, an experience or a venue…';
-    inp.setAttribute('aria-label', 'Add something to day ' + (d + 1) + ': choose from the suggestions or search');
+    inp.placeholder = VQ.t('Add an attraction, an experience or a venue…');
+    inp.setAttribute('aria-label', VQ.t('Add something to day {n}: choose from the suggestions or search', { n: d + 1 }));
     inp.autocomplete = 'off';
     var list = el('ul', 'pl-add-list');
     list.hidden = true;
@@ -2213,7 +2233,7 @@
       rows.sort(function (x, y) { return x.d - y.d; });
       rows = rows.slice(0, 6);
       if (!rows.length) { list.hidden = true; return; }
-      list.appendChild(el('li', 'pl-add-h', 'Nearby, to your taste. Or type what you are looking for.'));
+      list.appendChild(el('li', 'pl-add-h', VQ.t('Nearby, to your taste. Or type what you are looking for.')));
       rows.forEach(function (c) { list.appendChild(swapOption(c, pick)); });
       list.hidden = false;
     };
@@ -2225,12 +2245,12 @@
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
         b.appendChild(el('b', '', h.name));
-        b.appendChild(el('small', '', (h.book ? 'bookable · ' : '') + (h.city || '')));
+        b.appendChild(el('small', '', [h.book ? VQ.t('bookable') : '', h.city || ''].filter(Boolean).join(' · ')));
         b.addEventListener('click', function () { pick(h.id); });
         li.appendChild(b);
         list.appendChild(li);
       });
-      if (!hits.length) list.appendChild(el('li', 'pl-add-h', 'Nothing with this name in the catalogue.'));
+      if (!hits.length) list.appendChild(el('li', 'pl-add-h', VQ.t('Nothing with this name in the catalogue.')));
       list.hidden = false;
     };
     var run = function () { if (inp.value.trim().length < 2) suggest(); else search(); };
@@ -2347,7 +2367,7 @@
     composer = null;
     swap = { day: d, pos: pos, id: id, query: '', focus: true };
     activeDay = d;
-    announce('Looking for what could replace ' + stopName(id) + '.');
+    announce(VQ.t('Looking for what could replace {name}.', { name: stopName(id) }));
     after();
   }
   function closeSwap(quiet) {
@@ -2355,7 +2375,7 @@
     var id = swap.id;
     swap = null;
     focusId = id;
-    if (!quiet) announce('Cancelled. ' + stopName(id) + ' stays in the plan, unchanged.');
+    if (!quiet) announce(VQ.t('Cancelled. {name} stays in the plan, unchanged.', { name: stopName(id) }));
     after();
   }
 
@@ -2389,8 +2409,8 @@
     activeDay = d;
     swap = null;
     focusId = newId;
-    announce(ne.name + ' replaces ' + oldName + ', in the same position in day ' + (d + 1) +
-      '. Times and distances have been recalculated.');
+    announce(VQ.t('{name} replaces {old}, in the same position in day {n}. Times and distances have been recalculated.',
+      { name: ne.name, old: oldName, n: d + 1 }));
     after();
   }
 
@@ -2424,15 +2444,15 @@
 
     var line = el('span', 'pl-swap-line');
     var away = estKm(c.d);      // corrected for real roads, like every other distance on the page
-    line.appendChild(el('span', 'pl-swap-km', away < 0.1 ? 'a few steps away' : km1(away) + ' km away'));
+    line.appendChild(el('span', 'pl-swap-km', away < 0.1 ? VQ.t('a few steps away') : VQ.t('{n} km away', { n: km1(away) })));
     line.appendChild(el('span', 'pl-swap-dur', hm(e.dur)));
     if (e.bookable || e.price > 0) {
       var tag = el('span', 'pl-sell');
       tag.appendChild(icon('ticket'));
-      tag.appendChild(document.createTextNode(e.price > 0 ? 'from ' + lei(e.price) : 'tickets available'));
+      tag.appendChild(document.createTextNode(e.price > 0 ? VQ.t('from {price}', { price: lei(e.price) }) : VQ.t('tickets available')));
       line.appendChild(tag);
     }
-    if (plan.removed[c.id]) line.appendChild(el('span', 'pl-swap-back', 'you removed it earlier'));
+    if (plan.removed[c.id]) line.appendChild(el('span', 'pl-swap-back', VQ.t('you removed it earlier')));
     text.appendChild(line);
     b.appendChild(text);
 
@@ -2450,16 +2470,16 @@
     li.appendChild(box);
     if (!e) return li;
 
-    box.appendChild(el('p', 'pl-swap-h', 'Instead of ' + e.name));
-    var bits = [e.type || 'Stop'];
+    box.appendChild(el('p', 'pl-swap-h', VQ.t('Instead of {name}', { name: e.name })));
+    var bits = [e.type || VQ.t('Stop')];
     if (e.city) bits.push(e.city);
-    box.appendChild(el('p', 'pl-swap-sub', bits.join(' · ') + ' · ' + hm(plan.custom[s.id] || e.dur) +
-      ' in the plan. Choose from nearby, or search for something else.'));
+    box.appendChild(el('p', 'pl-swap-sub', VQ.t('{what} · {time} in the plan. Choose from nearby, or search for something else.',
+      { what: bits.join(' · '), time: hm(plan.custom[s.id] || e.dur) })));
 
     var res = swapList(s.id);
     if (res.loose) {
       box.appendChild(el('p', 'pl-swap-loose',
-        'Nothing nearby matches the interests you chose, so here is what else is around.'));
+        VQ.t('Nothing nearby matches the interests you chose, so here is what else is around.')));
     }
     if (res.rows.length) {
       var ul = el('ul', 'pl-swap-list');
@@ -2467,15 +2487,15 @@
       box.appendChild(ul);
     } else {
       box.appendChild(el('p', 'pl-swap-empty',
-        'There is no other place near it in the catalogue. Search below: anywhere in the country works.'));
+        VQ.t('There is no other place near it in the catalogue. Search below: anywhere in the country works.')));
     }
 
     var find = el('div', 'pl-swap-find');
     var inp = el('input');
     inp.type = 'search';
     inp.autocomplete = 'off';
-    inp.placeholder = 'Or search for something else: an attraction, an experience, a venue…';
-    inp.setAttribute('aria-label', 'Search for something to replace ' + e.name);
+    inp.placeholder = VQ.t('Or search for something else: an attraction, an experience, a venue…');
+    inp.setAttribute('aria-label', VQ.t('Search for something to replace {name}', { name: e.name }));
     inp.value = s.query || '';
     var hits = el('ul', 'pl-swap-hits');
     hits.hidden = true;
@@ -2489,8 +2509,8 @@
         var hb = el('button', 'pl-add-hit');
         hb.type = 'button';
         hb.appendChild(el('b', '', h.name));
-        hb.appendChild(el('small', '', (h.book ? 'bookable · ' : '') + (h.city || '') +
-          (have[h.id] ? ' · already in the plan, it moves here' : '')));
+        hb.appendChild(el('small', '', [h.book ? VQ.t('bookable') : '', h.city || '',
+          have[h.id] ? VQ.t('already in the plan, it moves here') : ''].filter(Boolean).join(' · ')));
         hb.addEventListener('click', function () { applySwap(h.id); });
         row.appendChild(hb);
         hits.appendChild(row);
@@ -2502,7 +2522,7 @@
     box.appendChild(find);
 
     var acts = el('div', 'pl-swap-acts');
-    var no = el('button', 'pl-btn pl-swap-no', 'Cancel');
+    var no = el('button', 'pl-btn pl-swap-no', VQ.t('Cancel'));
     no.type = 'button';
     no.addEventListener('click', function () { closeSwap(); });
     acts.appendChild(no);
@@ -2559,20 +2579,21 @@
     em.setAttribute('aria-hidden', 'true');
     h.appendChild(em);
     var ht = el('span', 'pl-night-t');
-    ht.appendChild(el('b', '', n && !n.skip ? 'The night in ' + n.name : nightTitle(i)));
+    var between = VQ.t('between day {a} and day {b}', { a: i + 1, b: i + 2 });
+    ht.appendChild(el('b', '', n && !n.skip ? VQ.t('The night in {town}', { town: n.name }) : nightTitle(i)));
     ht.appendChild(el('small', '', n && !n.skip
-      ? (dateOffset(i) ? nightRange(i) : 'between day ' + (i + 1) + ' and day ' + (i + 2)) + ' · ' + partyLine(n.rooms)
-      : 'between day ' + (i + 1) + ' and day ' + (i + 2)));
+      ? (dateOffset(i) ? nightRange(i) : between) + ' · ' + partyLine(n.rooms)
+      : between));
     h.appendChild(ht);
     box.appendChild(h);
 
     if (n && n.skip) {
       setCls(box, 'is-skipped', true);
-      box.appendChild(el('p', 'pl-night-p', 'You said you are not sleeping on the road that night.'));
+      box.appendChild(el('p', 'pl-night-p', VQ.t('You said you are not sleeping on the road that night.')));
       var undo = el('div', 'pl-night-acts');
-      undo.appendChild(nightBtn('plus', 'Put the night back', function () {
+      undo.appendChild(nightBtn('plus', VQ.t('Put the night back'), function () {
         setNight(i, { skip: false });
-        announce('The night is back in the plan.');
+        announce(VQ.t('The night is back in the plan.'));
         afterNight(i);
       }));
       box.appendChild(undo);
@@ -2581,7 +2602,7 @@
 
     if (!n) {
       box.appendChild(el('p', 'pl-night-p',
-        'There is no town in the catalogue to suggest for this night. Choose one yourself.'));
+        VQ.t('There is no town in the catalogue to suggest for this night. Choose one yourself.')));
     } else {
       setCls(box, 'is-far', n.far);
       box.appendChild(nightLine(n));
@@ -2594,41 +2615,28 @@
 
   /** What we can honestly say about the town: the two drives it sits between, and nothing else. */
   function nightLine(n) {
-    var p = el('p', 'pl-night-p');
-    var town = el('b', '', n.name);
+    // One whole sentence for each case; the town's name is set in bold where the sentence puts it.
+    var p = el('p', 'pl-night-p'), text;
+    var v = { town: BOLD, a: km1(n.kA), b: km1(n.kB), next: n.toName };
     if (n.far) {
-      p.appendChild(document.createTextNode('There is no town from the catalogue close by. The nearest is '));
-      p.appendChild(town);
-      if (n.hasFrom) p.appendChild(document.createTextNode(', ' + km1(n.kA) + ' km from the last stop'));
-      if (n.toName) {
-        p.appendChild(document.createTextNode((n.hasFrom ? ' and ' : ', ') + km1(n.kB) +
-          ' km from ' + n.toName + ', where you start tomorrow.'));
-      } else {
-        p.appendChild(document.createTextNode('.'));
-      }
-      p.appendChild(document.createTextNode(' If you know somewhere closer, choose another town.'));
-      return p;
+      if (n.hasFrom && n.toName) text = VQ.t('There is no town from the catalogue close by. The nearest is {town}, {a} km from the last stop and {b} km from {next}, where you start tomorrow. If you know somewhere closer, choose another town.', v);
+      else if (n.hasFrom) text = VQ.t('There is no town from the catalogue close by. The nearest is {town}, {a} km from the last stop. If you know somewhere closer, choose another town.', v);
+      else if (n.toName) text = VQ.t('There is no town from the catalogue close by. The nearest is {town}, {b} km from {next}, where you start tomorrow. If you know somewhere closer, choose another town.', v);
+      else text = VQ.t('There is no town from the catalogue close by. The nearest is {town}. If you know somewhere closer, choose another town.', v);
+      return withBold(p, text, n.name);
     }
-    p.appendChild(document.createTextNode('We suggest sleeping in '));
-    p.appendChild(town);
-    if (n.hasFrom && n.toName) {
-      p.appendChild(document.createTextNode(': the last stop is ' + km1(n.kA) +
-        ' km away, and tomorrow you start towards ' + n.toName + ', ' + km1(n.kB) + ' km away.'));
-    } else if (n.hasFrom) {
-      p.appendChild(document.createTextNode(': the last stop is ' + km1(n.kA) + ' km away.'));
-    } else if (n.toName) {
-      p.appendChild(document.createTextNode(': tomorrow you start towards ' + n.toName + ', ' + km1(n.kB) + ' km away.'));
-    } else {
-      p.appendChild(document.createTextNode('.'));
-    }
-    return p;
+    if (n.hasFrom && n.toName) text = VQ.t('We suggest sleeping in {town}: the last stop is {a} km away, and tomorrow you start towards {next}, {b} km away.', v);
+    else if (n.hasFrom) text = VQ.t('We suggest sleeping in {town}: the last stop is {a} km away.', v);
+    else if (n.toName) text = VQ.t('We suggest sleeping in {town}: tomorrow you start towards {next}, {b} km away.', v);
+    else text = VQ.t('We suggest sleeping in {town}.', v);
+    return withBold(p, text, n.name);
   }
 
   function nightActs(i, n, pick) {
     var wrap = el('div', 'pl-night-acts');
-    if (n) wrap.appendChild(nightBtn('buildings', 'See places to stay', function () { openStay(i); }, 'is-primary'));
+    if (n) wrap.appendChild(nightBtn('buildings', VQ.t('See places to stay'), function () { openStay(i); }, 'is-primary'));
 
-    var other = nightBtn('magnifying-glass', n ? 'Another town' : 'Choose the town', function (b) {
+    var other = nightBtn('magnifying-glass', n ? VQ.t('Another town') : VQ.t('Choose the town'), function (b) {
       var show = pick.hidden;
       pick.hidden = !show;
       b.setAttribute('aria-expanded', String(show));
@@ -2640,16 +2648,16 @@
     other.setAttribute('aria-expanded', 'false');
     wrap.appendChild(other);
 
-    wrap.appendChild(nightBtn('x', 'Not sleeping here', function () {
+    wrap.appendChild(nightBtn('x', VQ.t('Not sleeping here'), function () {
       setNight(i, { skip: true });
-      announce('The night was removed from the plan.');
+      announce(VQ.t('The night was removed from the plan.'));
       afterNight(i);
     }));
 
     if (n) {
       wrap.appendChild(nightBudget(i, n));
       var rl = el('label', 'pl-night-rooms');
-      rl.appendChild(el('span', '', 'Rooms'));
+      rl.appendChild(el('span', '', VQ.t('Rooms')));
       var sel = el('select');
       for (var r = 1; r <= (PARTY.rooms_max || 8); r++) {
         var o = el('option', '', String(r));
@@ -2671,16 +2679,16 @@
   /** How much the night may cost at most. The accommodation list filters on it; "Any price" shows everything. */
   function nightBudget(i, n) {
     var lab = el('label', 'pl-night-rooms');
-    lab.appendChild(el('span', '', 'Budget'));
+    lab.appendChild(el('span', '', VQ.t('Budget')));
     var sel = el('select');
-    var any = el('option', '', 'Any price');
+    var any = el('option', '', VQ.t('Any price'));
     any.value = '0';
     if (!n.maxprice) any.selected = true;
     sel.appendChild(any);
     var budgets = CFG.budgets && CFG.budgets.length ? CFG.budgets.slice() : [200, 300, 500, 700, 1000];
     if (n.maxprice > 0 && budgets.indexOf(n.maxprice) === -1) budgets.push(n.maxprice);
     budgets.sort(function (x, y) { return x - y; }).forEach(function (v) {
-      var o = el('option', '', 'up to \u20AC' + nf(v));
+      var o = el('option', '', VQ.t('up to {price}', { price: '\u20AC' + nf(v) }));
       o.value = String(v);
       if (v === n.maxprice) o.selected = true;
       sel.appendChild(o);
@@ -2711,8 +2719,8 @@
     var inp = el('input');
     inp.type = 'search';
     inp.autocomplete = 'off';
-    inp.placeholder = 'Search the town you sleep in…';
-    inp.setAttribute('aria-label', 'Search the town you sleep in');
+    inp.placeholder = VQ.t('Search the town you sleep in…');
+    inp.setAttribute('aria-label', VQ.t('Search the town you sleep in'));
     var hits = el('ul', 'pl-night-hits');
     hits.hidden = true;
     inp.addEventListener('input', debounce(function () {
@@ -2723,7 +2731,7 @@
         var b = el('button', 'pl-add-hit');
         b.type = 'button';
         b.appendChild(el('b', '', pl.label));
-        b.appendChild(el('small', '', pl.hint + ' · ' + nf(pl.count) + ' attractions'));
+        b.appendChild(el('small', '', pl.hint + ' · ' + VQ.n(pl.count, 'attraction', 'attractions')));
         b.addEventListener('click', function () {
           var r = resolvePlace(pl);
           if (!r) return;
@@ -2731,7 +2739,7 @@
             city: pl.key, lat: r.lat, lng: r.lng, name: pl.label,
             county: cityCounty[pl.key] || '', skip: false
           });
-          announce('The night moves to ' + pl.label + '.');
+          announce(VQ.t('The night moves to {town}.', { town: pl.label }));
           afterNight(i);
         });
         li.appendChild(b);
@@ -2775,7 +2783,7 @@
     ui.stayBtn.hidden = i < 0 || mapTab === 'stay';
     if (i < 0) return;
     var atNight = /^n:/.test(focusKey || '') && !overview, n = nightOf(i);
-    ui.stayBtn.querySelector('span').textContent = (atNight && n) ? 'Show places to stay in ' + n.name : 'Show places to stay';
+    ui.stayBtn.querySelector('span').textContent = (atNight && n) ? VQ.t('Show places to stay in {town}', { town: n.name }) : VQ.t('Show places to stay');
     setCls(ui.stayBtn, 'is-hot', atNight);
   }
   /**
@@ -2793,7 +2801,7 @@
     stayButton();
     if (!wide()) snapMap(0.74);
     var n = nightOf(i);
-    announce(n ? 'Places to stay in ' + n.name + ' opened in place of the map.' : 'Places to stay opened.');
+    announce(n ? VQ.t('Places to stay in {town} opened in place of the map.', { town: n.name }) : VQ.t('Places to stay opened.'));
     if (ui.stayX) ui.stayX.focus();
   }
   function closeStay(quiet) {
@@ -2804,7 +2812,7 @@
     stayButton();
     if (!wide()) snapMap(0.46);
     else setTimeout(function () { var inst = window.EPMap.instance; if (inst && inst.resize) inst.resize(); applyFocus(); }, 60);
-    if (!quiet) { announce('The map of the trip is back.'); if (ui.stayBtn && !ui.stayBtn.hidden) ui.stayBtn.focus(); }
+    if (!quiet) { announce(VQ.t('The map of the trip is back.')); if (ui.stayBtn && !ui.stayBtn.hidden) ui.stayBtn.focus(); }
   }
 
   /**
@@ -2819,8 +2827,8 @@
       host.textContent = '';
       host.dataset.stayUrl = '-';
       host.appendChild(el('p', 'pl-stay-empty', nightCount()
-        ? 'Choose a night from the plan and the places to stay in its town open here.'
-        : 'The plan has a single day, so no night on the road: you are back the same day.'));
+        ? VQ.t('Choose a night from the plan and the places to stay in its town open here.')
+        : VQ.t('The plan has a single day, so no night on the road: you are back the same day.')));
       return;
     }
     var url = stayUrl(i);
@@ -2829,18 +2837,18 @@
     host.dataset.stayUrl = url;
 
     var box = el('div', 'pl-stay');
-    box.appendChild(el('p', 'pl-stay-h', 'Stay in ' + n.name));
+    box.appendChild(el('p', 'pl-stay-h', VQ.t('Stay in {town}', { town: n.name })));
     box.appendChild(el('p', 'pl-stay-sub', nightRange(i) + ' · ' + partyLine(n.rooms)
-      + (n.maxprice > 0 ? ' · at most \u20AC' + nf(n.maxprice) : '')));
+      + (n.maxprice > 0 ? ' · ' + VQ.t('at most {price}', { price: '\u20AC' + nf(n.maxprice) }) : '')));
 
     var frame = el('div', 'pl-stay-frame');
     var skel = el('div', 'pl-stay-skel');
     var spin = el('span', 'pl-stay-spin');
     spin.setAttribute('aria-hidden', 'true');
     skel.appendChild(spin);
-    skel.appendChild(el('span', '', 'Loading the list of places to stay…'));
+    skel.appendChild(el('span', '', VQ.t('Loading the list of places to stay…')));
     var fr = el('iframe');
-    fr.title = 'Places to stay in ' + n.name + ', on Stay22';
+    fr.title = VQ.t('Places to stay in {town}, on Stay22', { town: n.name });
     fr.loading = 'lazy';
     fr.referrerPolicy = 'origin';
     fr.setAttribute('allowtransparency', 'true');
@@ -2849,7 +2857,7 @@
     setTimeout(function () {
       if (arrived || !skel.parentNode) return;
       skel.textContent = '';
-      skel.appendChild(el('span', '', 'The list did not start. Open it on Stay22, from the link below.'));
+      skel.appendChild(el('span', '', VQ.t('The list did not start. Open it on Stay22, from the link below.')));
     }, 12000);
     fr.src = url;
     frame.appendChild(fr);
@@ -2861,20 +2869,20 @@
     out.href = stayLink(i);
     out.target = '_blank';
     out.rel = 'noopener nofollow sponsored';
-    out.appendChild(document.createTextNode('Open the list on Stay22'));
+    out.appendChild(document.createTextNode(VQ.t('Open the list on Stay22')));
     out.appendChild(icon('arrow-right'));
     foot.appendChild(out);
     box.appendChild(foot);
 
     box.appendChild(el('p', 'pl-stay-note', STAY.note ||
-      'Places to stay come from Booking, Expedia, Vrbo and others. If you book one of them, the website earns a commission.'));
+      VQ.t('Places to stay come from Booking, Expedia, Vrbo and others. If you book one of them, the website earns a commission.')));
     host.appendChild(box);
   }
   function nightRange(i) {
     var a = dateOffset(i), b = dateOffset(i + 1);
-    if (!a || !b) return 'one night';
+    if (!a || !b) return VQ.t('one night');
     var f = { day: 'numeric', month: 'short' };
-    return a.toLocaleDateString('en-GB', f) + ' → ' + b.toLocaleDateString('en-GB', f);
+    return a.toLocaleDateString(LOC, f) + ' → ' + b.toLocaleDateString(LOC, f);
   }
 
   if (ui.stayBtn) ui.stayBtn.addEventListener('click', function () { openStay(currentNight()); });
@@ -2887,7 +2895,7 @@
     stayProv = b.dataset.prov;
     [].forEach.call(provBox.querySelectorAll('[data-prov]'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
     syncStay();
-    announce('Showing places to stay from ' + b.textContent.trim() + '.');
+    announce(VQ.t('Showing places to stay from {source}.', { source: b.textContent.trim() }));
   });
 
   /* ---------------------------------------------------------------- the map */
@@ -2938,11 +2946,11 @@
     if (ui.note) {
       ui.note.textContent = rows.length
         ? (view.routed
-          ? 'Distances and driving times are calculated by road (OpenStreetMap), with no traffic and no stops.'
-          : (view.pending ? 'Calculating the road…' : 'The road could not be calculated: distances are estimated from the straight line.'))
+          ? VQ.t('Distances and driving times are calculated by road (OpenStreetMap), with no traffic and no stops.')
+          : (view.pending ? VQ.t('Calculating the road…') : VQ.t('The road could not be calculated: distances are estimated from the straight line.')))
         : (view.rows.some(function (x) { return x.role === 'stop'; })
-          ? 'Day ' + (activeDay + 1) + ' only has stops of your own; the map shows the places from the catalogue.'
-          : 'Day ' + (activeDay + 1) + ' is empty.');
+          ? VQ.t('Day {n} only has stops of your own; the map shows the places from the catalogue.', { n: activeDay + 1 })
+          : VQ.t('Day {n} is empty.', { n: activeDay + 1 }));
     }
     applyFocus();
     profile();
@@ -3271,13 +3279,13 @@
     var z = profNow.z, a = ui.prof.querySelector('.plx-prof-a'), b = ui.prof.querySelector('.plx-prof-b');
     var mark = ui.prof.querySelector('.plx-prof-x');
     if (i < 0) {
-      a.textContent = 'Profile of the day · climb ' + nf(climb(z)) + ' m';
-      b.textContent = 'max ' + nf(Math.max.apply(null, z)) + ' m';
+      a.textContent = VQ.t('Profile of the day · climb {n} m', { n: nf(climb(z)) });
+      b.textContent = VQ.t('max {n} m', { n: nf(Math.max.apply(null, z)) });
       mark.style.display = 'none';
       return;
     }
-    a.textContent = 'km ' + Math.round(profNow.pts[i][2]);
-    b.textContent = nf(z[i]) + ' m';
+    a.textContent = VQ.t('km {n}', { n: Math.round(profNow.pts[i][2]) });
+    b.textContent = VQ.t('{n} m', { n: nf(z[i]) });
     var x = i / (z.length - 1) * 300;
     mark.setAttribute('x1', x);
     mark.setAttribute('x2', x);
@@ -3319,7 +3327,7 @@
   function places() {
     var out = [];
     (CFG.regions || []).forEach(function (r) {
-      out.push({ kind: 'region', key: r[0], label: r[1], count: r[2], hint: 'region' });
+      out.push({ kind: 'region', key: r[0], label: r[1], count: r[2], hint: VQ.t('region') });
     });
     if (D) {
       var counts = {};
@@ -3329,12 +3337,12 @@
       }
       Object.keys(counts).forEach(function (ci) {
         var c = D.cities[ci];
-        if (c && c[0]) out.push({ kind: 'city', key: c[0], label: c[1], count: counts[ci], hint: c[2] ? 'city · ' + c[2] : 'city' });
+        if (c && c[0]) out.push({ kind: 'city', key: c[0], label: c[1], count: counts[ci], hint: VQ.t('city') + (c[2] ? ' · ' + c[2] : '') });
       });
       out.sort(function (a, b) { return b.count - a.count; });
     } else {
       (CFG.cities || []).forEach(function (c) {
-        out.push({ kind: 'city', key: c[0], label: c[1], count: c[2], hint: 'city' });
+        out.push({ kind: 'city', key: c[0], label: c[1], count: c[2], hint: VQ.t('city') });
       });
     }
     return out;
@@ -3361,7 +3369,7 @@
       var b = el('button', 'pl-sugg-hit');
       b.type = 'button';
       b.appendChild(el('b', '', p.label));
-      b.appendChild(el('small', '', p.hint + ' · ' + nf(p.count) + ' attractions'));
+      b.appendChild(el('small', '', p.hint + ' · ' + VQ.n(p.count, 'attraction', 'attractions')));
       b.addEventListener('click', function () {
         fld.picked = p;
         fld.input.value = p.label;
@@ -3373,7 +3381,7 @@
     });
     if (!hits.length) {
       var li2 = el('li', 'pl-sugg-empty');
-      li2.textContent = 'No attractions listed there yet. Try another city or a region.';
+      li2.textContent = VQ.t('No attractions listed there yet. Try another city or a region.');
       fld.sugg.appendChild(li2);
     }
     fld.sugg.hidden = false;
@@ -3477,7 +3485,7 @@
     if (tg && row) tg.addEventListener('click', function () {
       row.hidden = !row.hidden;
       tg.setAttribute('aria-expanded', String(!row.hidden));
-      tg.textContent = row.hidden ? 'I return somewhere else' : 'I return to where I started';
+      tg.textContent = row.hidden ? VQ.t('I return somewhere else') : VQ.t('I return to where I started');
       if (row.hidden) { fields.back.input.value = ''; fields.back.picked = null; } else fields.back.input.focus();
     });
     // One line that says what the folded preferences hold, so they do not have to be opened to be read.
@@ -3487,8 +3495,8 @@
       var who = [].map.call(document.querySelectorAll('#pl-company [aria-pressed="true"]'), function (b) { return b.textContent.trim(); });
       var what = document.querySelectorAll('#pl-interests [aria-pressed="true"]').length;
       var pace = document.querySelector('#pl-pace [aria-pressed="true"] b');
-      sum.textContent = [who.length ? who.join(', ') : 'anyone', what ? what + (what === 1 ? ' interest' : ' interests') : 'a bit of everything',
-        (pace ? pace.textContent.toLowerCase() : 'normal') + ' pace'].join(' · ');
+      sum.textContent = [who.length ? who.join(', ') : VQ.t('anyone'), what ? VQ.n(what, 'interest', 'interests') : VQ.t('a bit of everything'),
+        pace ? VQ.t('{pace} pace', { pace: pace.textContent.toLowerCase() }) : VQ.t('normal pace')].join(' · ');
     };
     var prefs = document.getElementById('pl-prefs');
     if (prefs) prefs.addEventListener('click', function () { setTimeout(say, 0); });
@@ -3638,7 +3646,7 @@
     var pts = ids.map(function (id) { var e = entry(id); return { id: id, lat: e.lat, lng: e.lng, city: e.city || e.name }; });
     var ordered = orderDay(pts);
     var p = blankPlan();
-    p.name = 'My saved places' + (CFG.countryName ? ' in ' + CFG.countryName : '');
+    p.name = CFG.countryName ? VQ.t('My saved places in {country}', { country: CFG.countryName }) : VQ.t('My saved places');
     p.days = Math.max(1, Math.min(7, Math.ceil(ordered.length / 4)));
     var first = ordered[0], last = ordered[ordered.length - 1], sLat = 0, sLng = 0;
     ordered.forEach(function (o) { sLat += o.lat; sLng += o.lng; });
