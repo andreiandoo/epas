@@ -53,7 +53,7 @@ if (defined('SITE_PRELAUNCH') && SITE_PRELAUNCH && !$force) {
 $secrets = $GLOBALS['viaquiSecrets'] ?? [];
 $stateFile = (is_file(dirname($root) . '/secrets.php') ? dirname($root) : $root . '/data') . '/viaqui-ping-state.json';
 $state = is_file($stateFile) ? (json_decode((string) file_get_contents($stateFile), true) ?: []) : [];
-$state += ['guides' => [], 'offset' => 0];
+$state += ['guides' => [], 'offset' => 0, 'indexnow_retry' => []];
 
 $http = function (string $method, string $url, array $headers = [], ?string $body = null): array {
     $ch = curl_init($url);
@@ -131,7 +131,9 @@ $say($total . ' addresses on the platform; today ' . count($slice) . ' of them, 
 
 // ------------------------------------------------------------------ IndexNow
 $indexNowKey = (string) ($secrets['indexnow_key'] ?? '');
-$toIndexNow = array_values(array_unique(array_merge($changed, $slice)));
+// with what IndexNow refused last time (it answers 403 until it has read the key file of a new site)
+$toIndexNow = array_values(array_unique(array_merge((array) $state['indexnow_retry'], $changed, $slice)));
+$indexNowFailed = false;
 if (!preg_match('/^[a-f0-9]{16,64}$/', $indexNowKey)) {
     $say('IndexNow: no key in the secrets file (indexnow_key), skipped.');
 } elseif ($dryRun) {
@@ -142,6 +144,10 @@ if (!preg_match('/^[a-f0-9]{16,64}$/', $indexNowKey)) {
         'host' => $host, 'key' => $indexNowKey, 'keyLocation' => SITE_URL . '/' . $indexNowKey . '.txt', 'urlList' => $toIndexNow,
     ], JSON_UNESCAPED_SLASHES));
     $say('IndexNow: ' . count($toIndexNow) . ' addresses sent, answer ' . $code . ($code >= 300 ? ' ' . substr($out, 0, 200) : '') . '.');
+    $indexNowFailed = $code < 200 || $code >= 300;
+    if ($indexNowFailed) {
+        $say('IndexNow: these addresses are kept and sent again at the next run.');
+    }
 }
 
 // ------------------------------------------------------------------ Google (service account)
@@ -222,6 +228,7 @@ if (!$dryRun) {
         $state['guides'] = $guides;
     }
     $state['offset'] = $total ? ($offset + $perDay) % $total : 0;
+    $state['indexnow_retry'] = $indexNowFailed ? array_slice($toIndexNow, 0, 5000) : [];
     $state['last_run'] = date('c');
     if (@file_put_contents($stateFile, json_encode($state, JSON_UNESCAPED_SLASHES)) === false) {
         $say('Could not write the state file ' . $stateFile . ': the same addresses will be sent again tomorrow.');
