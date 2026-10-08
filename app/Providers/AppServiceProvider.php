@@ -142,6 +142,16 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) $limit)->by($bucket);
         });
 
+        // Seating API limiters. They are also declared in bootstrap/app.php, but inside the
+        // routing `then:` callback, which Laravel skips when routes are cached (route:cache is
+        // part of the deploy) — every /api/public seating endpoint then failed with
+        // "Rate limiter [seating_query] is not defined". Declared here they always exist.
+        foreach (['query' => 60, 'hold' => 30, 'release' => 30, 'confirm' => 10] as $name => $fallback) {
+            RateLimiter::for('seating_' . $name, fn () => Limit::perMinute(
+                (int) (config("seating.rate_limits.{$name}_per_minute") ?: $fallback)
+            ));
+        }
+
         // Increase table search debounce to 2s across all panels
         Table::configureUsing(function (Table $table): void {
             $table->searchDebounce('2000ms');
