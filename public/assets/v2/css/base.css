@@ -1064,4 +1064,5 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 
 /* footer bottom: legal links left, currency centred, the tag line right; back to top after the payment marks */
 @media (min-width:1024px){.vf-legal-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}.vf-legal-row .vf-cur{justify-self:center}.vf-legal-row .vf-tags{justify-self:end;text-align:right}}
-@media (max-width:1023px){.vf-legal-row .vf-cur{flex:1 1 100
+@media (max-width:1023px){.vf-legal-row .vf-cur{flex:1 1 100%;justify-content:center}}
+.vf-marks .vf-up{margin-left:10px}
