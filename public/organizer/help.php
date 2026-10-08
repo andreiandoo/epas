@@ -26,8 +26,8 @@ if ($contactEmail === '') {
     $contactEmail = SUPPORT_EMAIL;
 }
 
-$pageTitleRaw = 'Centru de ajutor — ' . SITE_NAME;
-$pageDescription = 'Răspunsuri pentru operatorii viaqui.com: locații, produse, rezervări, verificarea biletelor, comisioane și plăți.';
+$pageTitle = v2_t('Help centre');
+$pageDescription = v2_t('Answers for Viaqui operators: venues, products, bookings, checking tickets, commissions and payouts.');
 $canonicalUrl = SITE_URL . '/organizator/help';
 $noindex = true;
 $skipPageCache = true;
@@ -53,101 +53,101 @@ v2_org_start('help');
 ?>
 <div class="ohp" id="ohp">
   <header class="ohp-head">
-    <p class="org-k">Ajutor</p>
-    <h1 class="ohp-h">Centru de ajutor</h1>
-    <p class="ohp-lead">Găsește răspunsuri rapide sau contactează-ne.</p>
+    <p class="org-k"><?= v2_te('Help') ?></p>
+    <h1 class="ohp-h"><?= v2_te('Help centre') ?></h1>
+    <p class="ohp-lead"><?= v2_te('Find quick answers or get in touch.') ?></p>
     <form class="ohp-search" id="ohp-search" role="search" action="#" novalidate>
-      <label class="sr" for="ohp-q">Caută în centrul de ajutor</label>
+      <label class="sr" for="ohp-q"><?= v2_te('Search the help centre') ?></label>
       <?= v2_ic('magnifying-glass', 'ic ohp-search-ic') ?>
-      <input type="search" id="ohp-q" autocomplete="off" spellcheck="false" enterkeyhint="search" maxlength="80" placeholder="Caută în centrul de ajutor…" aria-describedby="ohp-found">
-      <button class="ohp-clear" type="button" id="ohp-clear" hidden><?= v2_ic('x') ?><span class="sr">Șterge căutarea</span></button>
+      <input type="search" id="ohp-q" autocomplete="off" spellcheck="false" enterkeyhint="search" maxlength="80" placeholder="<?= v2_te('Search the help centre…') ?>" aria-describedby="ohp-found">
+      <button class="ohp-clear" type="button" id="ohp-clear" hidden><?= v2_ic('x') ?><span class="sr"><?= v2_te('Clear the search') ?></span></button>
     </form>
     <p class="ohp-found" id="ohp-found" role="status" aria-live="polite"></p>
   </header>
 
-  <nav class="ohp-topics" aria-label="Subiecte">
-    <?= $ohpTopic('#getting-started', 'lightning', 'Începe rapid', 'Ghid pentru prima locație și primul produs') ?>
-    <?= $ohpTopic('#activities', 'map-pin', 'Locații și produse', 'Tot despre locații, produse și rezervări') ?>
-    <?= $ohpTopic('#payments', 'wallet', 'Plăți și finanțe', 'Comisioane și deconturi') ?>
+  <nav class="ohp-topics" aria-label="<?= v2_te('Topics') ?>">
+    <?= $ohpTopic('#getting-started', 'lightning', v2_te('Quick start'), v2_te('A guide to your first venue and first product')) ?>
+    <?= $ohpTopic('#activities', 'map-pin', v2_te('Venues and products'), v2_te('All about venues, products and bookings')) ?>
+    <?= $ohpTopic('#payments', 'wallet', v2_te('Payments and finance'), v2_te('Commissions and payouts')) ?>
   </nav>
 
   <div class="ohp-secs">
     <section class="org-panel ohp-sec" id="getting-started" aria-labelledby="ohp-s1-h" tabindex="-1">
-      <div class="ohp-sec-head"><span class="ohp-sec-ic"><?= v2_ic('lightning') ?></span><h2 class="org-panel-h" id="ohp-s1-h">Începe rapid</h2></div>
+      <div class="ohp-sec-head"><span class="ohp-sec-ic"><?= v2_ic('lightning') ?></span><h2 class="org-panel-h" id="ohp-s1-h"><?= v2_te('Quick start') ?></h2></div>
       <div class="ohp-list">
-        <?= $ohpQ('Cum încep să vând pe ' . SITE_NAME . '?', '<ol>'
-            . '<li>Deschide <a href="/organizator/locatii">Locațiile mele</a> și apasă „Adaugă o locație”.</li>'
-            . '<li>Completează pagina locației: textele, orașul, adresa, pozele și programul.</li>'
-            . '<li>Trimite locația spre aprobare. Prima publicare așteaptă aprobarea echipei ' . $ohpSite . '.</li>'
-            . '<li>Deschide <a href="/organizator/produse">Produse</a>, apasă „Produs nou” și alege ce vinzi: bilet de acces, experiență sau pachet.</li>'
-            . '<li>Adaugă biletele, cu prețurile lor. Poza e opțională: fără ea, produsul folosește poza locației.</li>'
-            . '<li>Trimite produsul spre aprobare. După aprobare, apare pe site.</li>'
+        <?= $ohpQ(v2_t('How do I start selling on {site}?', ['site' => SITE_NAME]), '<ol>'
+            . '<li>' . v2_t('Open <a href="{url}">My venues</a> and press “Add a venue”.', ['url' => '/organizator/locatii']) . '</li>'
+            . '<li>' . v2_t('Fill in the venue page: the texts, the city, the address, the photos and the opening hours.') . '</li>'
+            . '<li>' . v2_t('Send the venue for approval. The first publication waits for the approval of the {site} team.', ['site' => $ohpSite]) . '</li>'
+            . '<li>' . v2_t('Open <a href="{url}">Products</a>, press “New product” and choose what you sell: access ticket, experience or package.', ['url' => '/organizator/produse']) . '</li>'
+            . '<li>' . v2_t('Add the tickets, with their prices. The photo is optional: without one, the product uses the photo of the venue.') . '</li>'
+            . '<li>' . v2_t('Send the product for approval. After approval, it appears on the site.') . '</li>'
             . '</ol>') ?>
-        <?= $ohpQ('Ce tipuri de produse pot crea?', '<p>Un produs poate fi de trei feluri:</p>'
+        <?= $ohpQ(v2_t('What types of products can I create?'), '<p>' . v2_t('A product can be one of three kinds:') . '</p>'
             . '<ul>'
-            . '<li><strong>Bilet de acces</strong>: intrarea pentru o zi sau mai multe, parcare, camping; bilete de adult, copil sau grup.</li>'
-            . '<li><strong>Experiență</strong>: închirieri, tururi, ateliere; cu ore de început sau pe toată ziua, la persoană sau la barcă / grup.</li>'
-            . '<li><strong>Pachet</strong>: bilete de acces și experiențe împreună, la un singur preț.</li>'
+            . '<li>' . v2_t('<strong>Access ticket</strong>: entry for one day or several, parking, camping; adult, child or group tickets.') . '</li>'
+            . '<li>' . v2_t('<strong>Experience</strong>: rentals, tours, workshops; with start times or for the whole day, per person or per boat / group.') . '</li>'
+            . '<li>' . v2_t('<strong>Package</strong>: access tickets and experiences together, at a single price.') . '</li>'
             . '</ul>'
-            . '<p>În fiecare produs pui câte bilete vrei, cu ce nume vrei. Numele biletului apare pe biletul clientului și la cumpărare, așa că alege-l clar și ușor de înțeles.</p>'
-            . '<p class="ohp-a-k">Exemple de nume:</p>'
+            . '<p>' . v2_t('In each product you add as many tickets as you want, with the names you want. The ticket name appears on the customer\'s ticket and at purchase, so choose one that is clear and easy to understand.') . '</p>'
+            . '<p class="ohp-a-k">' . v2_t('Examples of names:') . '</p>'
             . '<ul>'
-            . '<li><strong>Adult</strong> / <strong>Acces general</strong>: intrarea obișnuită</li>'
-            . '<li><strong>Copil</strong>: prețul pentru copii</li>'
-            . '<li><strong>Grup</strong>: un bilet pentru mai multe persoane</li>'
-            . '<li><strong>Bilet de o zi</strong> / <strong>Abonament</strong>: valabil într-o zi sau mai multe zile</li>'
-            . '<li><strong>Parcare</strong> / <strong>Camping</strong>: ce mai oferă locația, pe lângă intrare</li>'
+            . '<li>' . v2_t('<strong>Adult</strong> / <strong>General admission</strong>: the regular entry') . '</li>'
+            . '<li>' . v2_t('<strong>Child</strong>: the price for children') . '</li>'
+            . '<li>' . v2_t('<strong>Group</strong>: one ticket for several people') . '</li>'
+            . '<li>' . v2_t('<strong>Day ticket</strong> / <strong>Pass</strong>: valid for one day or several days') . '</li>'
+            . '<li>' . v2_t('<strong>Parking</strong> / <strong>Camping</strong>: what else the venue offers, besides entry') . '</li>'
             . '</ul>'
-            . '<p>Fiecare bilet are prețul și descrierea lui. Dacă ai un număr limitat de locuri pe zi, îl setezi în produs.</p>') ?>
-        <?= $ohpQ('Cum verific biletele la intrare?', '<p>Ai două variante:</p>'
+            . '<p>' . v2_t('Each ticket has its own price and description. If you have a limited number of places per day, you set it in the product.') . '</p>') ?>
+        <?= $ohpQ(v2_t('How do I check tickets at the entrance?'), '<p>' . v2_t('You have two options:') . '</p>'
             . '<ul>'
-            . '<li><strong>Scanare QR</strong>: biletele se validează la intrare cu aplicația de scanare, din camera telefonului.</li>'
-            . '<li><strong>Lista zilei</strong>: în <a href="/organizator/rezervari">Rezervări</a>, la „Pe zile”, vezi cine vine în fiecare zi, pe produs și pe oră. Tot acolo marchezi un vizitator care a plătit, dar nu a venit.</li>'
+            . '<li>' . v2_t('<strong>QR scanning</strong>: tickets are validated at the entrance with the scanning app, using the phone camera.') . '</li>'
+            . '<li>' . v2_t('<strong>The list of the day</strong>: in <a href="{url}">Bookings</a>, under “By day”, you see who comes each day, by product and by time. There you also mark a visitor who paid but did not come.', ['url' => '/organizator/rezervari']) . '</li>'
             . '</ul>') ?>
       </div>
     </section>
 
     <section class="org-panel ohp-sec" id="activities" aria-labelledby="ohp-s2-h" tabindex="-1">
-      <div class="ohp-sec-head"><span class="ohp-sec-ic"><?= v2_ic('map-pin') ?></span><h2 class="org-panel-h" id="ohp-s2-h">Locații și produse</h2></div>
+      <div class="ohp-sec-head"><span class="ohp-sec-ic"><?= v2_ic('map-pin') ?></span><h2 class="org-panel-h" id="ohp-s2-h"><?= v2_te('Venues and products') ?></h2></div>
       <div class="ohp-list">
-        <?= $ohpQ('Cum modific o locație sau un produs publicat?', '<p>Deschide-l din <a href="/organizator/locatii">Locațiile mele</a> sau din <a href="/organizator/produse">Produse</a>, schimbă ce vrei și apasă „Salvează”. După prima aprobare, modificările apar pe site imediat.</p>'
-            . '<p>Prețul rezervărilor deja plătite nu se modifică.</p>') ?>
-        <?= $ohpQ('Pot opri vânzarea sau anula o zi?', '<p>Da, în funcție de ce ai nevoie:</p>'
+        <?= $ohpQ(v2_t('How do I change a published venue or product?'), '<p>' . v2_t('Open it from <a href="{venues}">My venues</a> or from <a href="{products}">Products</a>, change what you want and press “Save”. After the first approval, changes appear on the site right away.', ['venues' => '/organizator/locatii', 'products' => '/organizator/produse']) . '</p>'
+            . '<p>' . v2_t('The price of bookings that are already paid does not change.') . '</p>') ?>
+        <?= $ohpQ(v2_t('Can I stop selling or cancel a day?'), '<p>' . v2_t('Yes, depending on what you need:') . '</p>'
             . '<ul>'
-            . '<li>Ca o locație sau un produs să nu mai apară pe site, apasă „Ascunde de pe site” în pagina lor. Îl pui la loc cu „Pune pe site”.</li>'
-            . '<li>Pentru o zi în care locația e închisă, adaug-o la „Zile în care e închis”, în programul locației.</li>'
-            . '<li>Pentru rezervări deja plătite care trebuie anulate, <a href="/organizator/suport">contactează suportul</a>. Clienții vor fi notificați și rambursați conform politicii.</li>'
+            . '<li>' . v2_t('To take a venue or a product off the site, press “Hide from the site” on its page. You put it back with “Put on the site”.') . '</li>'
+            . '<li>' . v2_t('For a day when the venue is closed, add it to “Days when it is closed”, in the opening hours of the venue.') . '</li>'
+            . '<li>' . v2_t('For bookings that are already paid and must be cancelled, <a href="{url}">contact support</a>. Customers will be notified and refunded according to the policy.', ['url' => '/organizator/suport']) . '</li>'
             . '</ul>') ?>
-        <?= $ohpQ('Pot face coduri promoționale sau reduceri?', '<p>Codurile promoționale nu sunt încă disponibile în contul de operator.</p>'
-            . '<p>Poți avea prețuri diferite pe bilete, de exemplu pentru adult, copil sau grup. Pentru o campanie cu reducere, <a href="/organizator/suport">deschide un tichet</a> și îți spunem ce opțiuni ai.</p>') ?>
+        <?= $ohpQ(v2_t('Can I create promo codes or discounts?'), '<p>' . v2_t('Promo codes are not available in the operator account yet.') . '</p>'
+            . '<p>' . v2_t('You can have different prices per ticket, for example for adult, child or group. For a discount campaign, <a href="{url}">open a ticket</a> and we will tell you what options you have.', ['url' => '/organizator/suport']) . '</p>') ?>
       </div>
     </section>
 
     <section class="org-panel ohp-sec" id="payments" aria-labelledby="ohp-s3-h" tabindex="-1">
-      <div class="ohp-sec-head"><span class="ohp-sec-ic"><?= v2_ic('wallet') ?></span><h2 class="org-panel-h" id="ohp-s3-h">Plăți și finanțe</h2></div>
+      <div class="ohp-sec-head"><span class="ohp-sec-ic"><?= v2_ic('wallet') ?></span><h2 class="org-panel-h" id="ohp-s3-h"><?= v2_te('Payments and finance') ?></h2></div>
       <div class="ohp-list">
-        <?= $ohpQ('Care sunt comisioanele ' . SITE_NAME . '?', '<p>Comisionul este cel negociat, trecut în contractul tău. Îl vezi oricând în <a href="/organizator/setari#contract">Cont & companie › Contract</a>. Pe lângă el se pot aplica taxele legale, acolo unde e cazul.</p>') ?>
-        <?= $ohpQ('Când primesc banii din vânzări?', '<p>Plata se face conform contractului, în contul bancar din <a href="/organizator/setari#bank">Cont & companie</a>. În <a href="/organizator/sold">Sold</a> vezi cât ai de primit și ce ți s-a plătit deja.</p>'
-            . '<p>La cerere, plata se poate face și când vânzările ating un prag minim agreat.</p>') ?>
-        <?= $ohpQ('Cum gestionez rambursările?', '<p>Rambursările pentru anulări se procesează automat. Pentru cereri individuale, <a href="/organizator/suport">contactează suportul</a>.</p>'
-            . '<p>Condițiile de anulare ale fiecărui produs le scrii în pagina produsului, la „Anulare”.</p>') ?>
+        <?= $ohpQ(v2_t('What are the {site} commissions?', ['site' => SITE_NAME]), '<p>' . v2_t('The commission is the one you negotiated, written in your contract. You can see it at any time in <a href="{url}">Account &amp; company › Contract</a>. Legal taxes may apply on top of it, where applicable.', ['url' => '/organizator/setari#contract']) . '</p>') ?>
+        <?= $ohpQ(v2_t('When do I receive my sales money?'), '<p>' . v2_t('Payouts are made according to the contract, into the bank account from <a href="{account}">Account &amp; company</a>. In <a href="{balance}">Balance</a> you see how much you are due and what has already been paid to you.', ['account' => '/organizator/setari#bank', 'balance' => '/organizator/sold']) . '</p>'
+            . '<p>' . v2_t('On request, a payout can also be made when sales reach an agreed minimum threshold.') . '</p>') ?>
+        <?= $ohpQ(v2_t('How do I handle refunds?'), '<p>' . v2_t('Refunds for cancellations are processed automatically. For individual requests, <a href="{url}">contact support</a>.', ['url' => '/organizator/suport']) . '</p>'
+            . '<p>' . v2_t('You write the cancellation terms of each product on the product page, under “Cancellation”.') . '</p>') ?>
       </div>
     </section>
   </div>
 
   <div class="org-empty ohp-empty" id="ohp-empty" hidden>
     <span class="org-empty-ic"><?= v2_ic('magnifying-glass') ?></span>
-    <b>Nicio întrebare nu se potrivește</b>
-    <p>Încearcă alte cuvinte sau scrie-ne din secțiunea de mai jos.</p>
-    <button class="btn btn-ghost" type="button" id="ohp-reset">Arată toate întrebările</button>
+    <b><?= v2_te('No question matches') ?></b>
+    <p><?= v2_te('Try other words or write to us from the section below.') ?></p>
+    <button class="btn btn-ghost" type="button" id="ohp-reset"><?= v2_te('Show all questions') ?></button>
   </div>
 
   <section class="ohp-contact" id="contact" aria-labelledby="ohp-contact-h" tabindex="-1">
     <span class="ohp-contact-ic"><?= v2_ic('headset') ?></span>
-    <h2 class="ohp-contact-h" id="ohp-contact-h">Nu ai găsit ce căutai?</h2>
-    <p class="ohp-contact-p">Echipa de suport e disponibilă L–V, 9:00–18:00.</p>
+    <h2 class="ohp-contact-h" id="ohp-contact-h"><?= v2_te('Did not find what you were looking for?') ?></h2>
+    <p class="ohp-contact-p"><?= v2_te('The support team is available Monday to Friday, 9:00–18:00.') ?></p>
     <div class="ohp-contact-act">
-      <a class="btn btn-light" href="/organizator/suport"><?= v2_ic('headset') ?>Deschide un tichet</a>
+      <a class="btn btn-light" href="/organizator/suport"><?= v2_ic('headset') ?><?= v2_te('Open a ticket') ?></a>
       <a class="btn btn-outline-light" href="mailto:<?= v2_e($contactEmail) ?>"><?= v2_ic('envelope-simple') ?><span class="ohp-ellip"><?= v2_e($contactEmail) ?></span></a>
       <?php if ($contactPhone !== ''): ?>
       <a class="btn btn-outline-light" href="tel:<?= v2_e(preg_replace('/[^0-9+]/', '', $contactPhone)) ?>"><?= v2_ic('phone') ?><?= v2_e($contactPhone) ?></a>

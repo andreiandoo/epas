@@ -12,10 +12,10 @@
   var ICONS = { ticket_sale: 'ticket', refund_request: 'arrow-counter-clockwise', document_generated: 'file-text', service_order_invoice: 'receipt', emergency_report: 'warning-circle' };
   var TONES = { success: 'is-ok', green: 'is-ok', warning: 'is-wait', amber: 'is-wait', danger: 'is-bad', red: 'is-bad', info: 'is-info', blue: 'is-info', primary: 'is-info' };
   var TYPES = {
-    ticket_sale: 'Vânzări bilete', refund_request: 'Cereri de rambursare', document_generated: 'Documente generate',
-    service_order: 'Comenzi servicii', service_order_started: 'Servicii pornite', service_order_completed: 'Servicii finalizate',
-    service_order_invoice: 'Facturi servicii', service_order_results: 'Rezultate servicii', payout_request: 'Cereri de plată',
-    payout_approved: 'Plăți aprobate', payout_processing: 'Plăți în procesare', payout_completed: 'Plăți finalizate', payout_rejected: 'Plăți respinse',
+    ticket_sale: VQ.t('Ticket sales'), refund_request: VQ.t('Refund requests'), document_generated: VQ.t('Generated documents'),
+    service_order: VQ.t('Service orders'), service_order_started: VQ.t('Services started'), service_order_completed: VQ.t('Services completed'),
+    service_order_invoice: VQ.t('Service invoices'), service_order_results: VQ.t('Service results'), payout_request: VQ.t('Payout requests'),
+    payout_approved: VQ.t('Payouts approved'), payout_processing: VQ.t('Payouts in progress'), payout_completed: VQ.t('Payouts completed'), payout_rejected: VQ.t('Payouts rejected'),
   };
   var items = [], page = 1, more = false, total = 0, seq = 0;
 
@@ -49,7 +49,7 @@
   }
   function load(append, wanted) {
     var my = ++seq, p = append ? page + 1 : 1, btn = $('on-more');
-    if (append) busyBtn(btn, true, 'Se încarcă…');
+    if (append) busyBtn(btn, true, VQ.t('Loading…'));
     return O.api(url(p, 20)).then(function (r) {
       if (my !== seq) return;
       var list = (Array.isArray(r && r.data) ? r.data : []).filter(function (n) { return n && n.id != null; }), meta = O.metaOf(r);
@@ -62,12 +62,12 @@
     }, function (err) {
       busyBtn(btn, false);
       if (my !== seq || (err && err.status === 401)) return;
-      if (append) { O.flash('Nu am putut încărca mai multe notificări. Încearcă din nou.', true); return; }
+      if (append) { O.flash(VQ.t('We could not load more notifications. Try again.'), true); return; }
       items = [];
-      var box = $('on-list'), retry = el('button', { type: 'button', text: 'Reîncearcă' });
+      var box = $('on-list'), retry = el('button', { type: 'button', text: VQ.t('Try again') });
       retry.addEventListener('click', function () { load(); });
       box.textContent = '';
-      box.appendChild(el('li', { class: 'on-empty' }, [el('span', { class: 'on-ic is-bad' }, icon('warning-circle')), el('b', { text: 'Nu am putut încărca notificările' }), el('p', { text: 'Verifică conexiunea și încearcă din nou.' }), retry]));
+      box.appendChild(el('li', { class: 'on-empty' }, [el('span', { class: 'on-ic is-bad' }, icon('warning-circle')), el('b', { text: VQ.t('We could not load the notifications') }), el('p', { text: VQ.t('Check your connection and try again.') }), retry]));
       $('on-more').hidden = true;
     });
   }
@@ -75,14 +75,16 @@
     var box = $('on-list'), a = document.activeElement, key = a && box.contains(a) ? a.getAttribute('data-focus') : null;
     key = key || wanted || null;
     box.textContent = '';
-    $('on-list-p').textContent = items.length ? F.count(total, 'notificare', 'notificări') + (filtered() ? ' pentru filtrele alese' : '') + '.' : '';
+    $('on-list-p').textContent = !items.length ? '' : filtered()
+      ? VQ.t('{n} for the chosen filters.', { n: VQ.n(total, 'notification', 'notifications') })
+      : VQ.n(total, 'notification', 'notifications') + '.';
     if (!items.length) {
       var kids = [el('span', { class: 'on-ic is-ok' }, icon('bell'))];
       if (filtered()) {
-        var reset = el('button', { type: 'button', text: 'Arată toate notificările' });
+        var reset = el('button', { type: 'button', text: VQ.t('Show all notifications') });
         reset.addEventListener('click', function () { $('on-type').value = ''; $('on-read').value = ''; load(); $('on-type').focus(); });
-        kids.push(el('b', { text: 'Nicio notificare pentru filtrele alese' }), reset);
-      } else kids.push(el('b', { text: 'Nu ai notificări' }), el('p', { text: 'Vei primi notificări când apar vânzări noi, documente sau alte evenimente importante.' }));
+        kids.push(el('b', { text: VQ.t('No notification for the chosen filters') }), reset);
+      } else kids.push(el('b', { text: VQ.t('You have no notifications') }), el('p', { text: VQ.t('You will get notifications about new sales, documents and other important updates.') }));
       box.appendChild(el('li', { class: 'on-empty' }, kids));
     }
     items.forEach(function (n) { box.appendChild(row(n)); });
@@ -90,24 +92,24 @@
     if (key) { var same = box.querySelector('[data-focus="' + key + '"]'); if (same) same.focus(); }
   }
   function row(n) {
-    var id = String(n.id), unread = !n.is_read, href = O.safeHref(n.action_url, null), when = F.ago(n.created_at), type = typeLabel(n);
+    var id = String(n.id), unread = !n.is_read, href = O.safeHref(n.action_url, null) ? VQ.url(O.safeHref(n.action_url, null)) : null, when = F.ago(n.created_at), type = typeLabel(n);
     var meta = [];
-    if (unread) meta.push(el('span', { class: 'on-dot', 'aria-label': 'Necitită', role: 'img' }));
+    if (unread) meta.push(el('span', { class: 'on-dot', 'aria-label': VQ.t('Unread'), role: 'img' }));
     if (when) meta.push(el('span', { text: when }));
     if (type) meta.push(el('span', { class: 'org-tag ' + (TONES[n.color] || 'is-muted'), text: type }));
     var acts = [];
-    if (href) acts.push(el('a', { class: 'on-pill', href: href, 'data-focus': 'n-open-' + id }, [icon('arrow-right'), 'Vezi detalii']));
+    if (href) acts.push(el('a', { class: 'on-pill', href: href, 'data-focus': 'n-open-' + id }, [icon('arrow-right'), VQ.t('See details')]));
     if (unread) {
-      var read = el('button', { class: 'on-pill', type: 'button', 'data-focus': 'n-read-' + id, 'aria-label': 'Marchează ca citită: ' + F.flat(n.title) }, [icon('check'), 'Marchează ca citită']);
+      var read = el('button', { class: 'on-pill', type: 'button', 'data-focus': 'n-read-' + id, 'aria-label': VQ.t('Mark as read: {title}', { title: F.flat(n.title) }) }, [icon('check'), VQ.t('Mark as read')]);
       read.addEventListener('click', function () { markRead(n, read); });
       acts.push(read);
     }
-    var del = el('button', { class: 'on-pill is-icon', type: 'button', 'data-focus': 'n-del-' + id, 'aria-label': 'Șterge notificarea: ' + F.flat(n.title), title: 'Șterge' }, icon('trash'));
+    var del = el('button', { class: 'on-pill is-icon', type: 'button', 'data-focus': 'n-del-' + id, 'aria-label': VQ.t('Delete the notification: {title}', { title: F.flat(n.title) }), title: VQ.t('Delete') }, icon('trash'));
     del.addEventListener('click', function () { remove(n, del); });
     acts.push(del);
     return el('li', { class: 'on-item' + (unread ? ' is-unread' : '') }, [
       el('span', { class: 'on-ic ' + (TONES[n.color] || ''), 'aria-hidden': 'true' }, icon(iconOf(n.type))),
-      el('div', { class: 'on-t' }, [el('b', { text: F.flat(n.title) || 'Notificare' }), F.flat(n.message) ? el('p', { text: F.flat(n.message) }) : null, el('div', { class: 'on-meta' }, meta)]),
+      el('div', { class: 'on-t' }, [el('b', { text: F.flat(n.title) || VQ.t('Notification') }), F.flat(n.message) ? el('p', { text: F.flat(n.message) }) : null, el('div', { class: 'on-meta' }, meta)]),
       el('div', { class: 'on-act' }, acts),
     ]);
   }
@@ -126,8 +128,8 @@
     }, function (err) {
       btn.disabled = false;
       if (err && err.status === 401) return;
-      if (err && err.status === 404) { O.flash('Notificarea nu mai există.', true); load(); stats(); return; }
-      O.flash('Nu am putut marca notificarea. Încearcă din nou.', true);
+      if (err && err.status === 404) { O.flash(VQ.t('The notification no longer exists.'), true); load(); stats(); return; }
+      O.flash(VQ.t('We could not mark the notification. Try again.'), true);
     });
   }
   function remove(n, btn) {
@@ -136,31 +138,31 @@
       var key = neighbour(n);
       items = items.filter(function (x) { return x !== n; });
       total = Math.max(0, total - 1);
-      O.flash('Notificarea a fost ștearsă.');
+      O.flash(VQ.t('The notification was deleted.'));
       draw(key);
       if (!key) $('on-type').focus();
       stats();
     }, function (err) {
       btn.disabled = false;
       if (err && err.status === 401) return;
-      if (err && err.status === 404) { O.flash('Notificarea fusese deja ștearsă.'); load(); stats(); return; }
-      O.flash('Nu am putut șterge notificarea. Încearcă din nou.', true);
+      if (err && err.status === 404) { O.flash(VQ.t('The notification had already been deleted.')); load(); stats(); return; }
+      O.flash(VQ.t('We could not delete the notification. Try again.'), true);
     });
   }
   $('on-all').addEventListener('click', function () {
     var btn = this;
     if (btn.getAttribute('aria-busy') === 'true') return;
-    busyBtn(btn, true, 'Se marchează…');
+    busyBtn(btn, true, VQ.t('Marking…'));
     O.api('/organizer/notifications/read-all', { method: 'POST', body: {} }).then(function () {
       busyBtn(btn, false);
-      O.flash('Toate notificările au fost marcate ca citite.');
+      O.flash(VQ.t('All notifications were marked as read.'));
       $('on-type').focus();
       load();
       stats();
     }, function (err) {
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      O.flash('Nu am putut marca notificările. Încearcă din nou.', true);
+      O.flash(VQ.t('We could not mark the notifications. Try again.'), true);
     });
   });
   $('on-type').addEventListener('change', function () { load(); });

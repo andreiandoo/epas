@@ -21,8 +21,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Notificări — ' . SITE_NAME;
-$pageDescription = 'Notificările unui operator pe viaqui.com: vânzări, documente, plăți și servicii.';
+$pageTitle = v2_t('Notifications');
+$pageDescription = v2_t('An operator\'s notifications on Viaqui: sales, documents, payouts and services.');
 $canonicalUrl = SITE_URL . '/organizator/notificari';
 $noindex = true;
 $skipPageCache = true;
@@ -42,30 +42,30 @@ v2_org_start('notifications');
 <div class="on" id="on">
   <header class="on-head">
     <div>
-      <p class="org-k">Cont</p>
-      <h1 class="on-h">Notificări</h1>
-      <p class="on-lead">Urmărește vânzările și evenimentele importante.</p>
+      <p class="org-k"><?= v2_te('Account') ?></p>
+      <h1 class="on-h"><?= v2_te('Notifications') ?></h1>
+      <p class="on-lead"><?= v2_te('Keep track of sales and important updates.') ?></p>
     </div>
-    <button class="btn btn-ghost" type="button" id="on-all" hidden><?= v2_ic('check') ?><span data-label>Marchează toate ca citite</span></button>
+    <button class="btn btn-ghost" type="button" id="on-all" hidden><?= v2_ic('check') ?><span data-label><?= v2_te('Mark all as read') ?></span></button>
   </header>
 
-  <section class="on-stats" aria-label="Pe scurt">
-    <?= $onStat('total', 'Total notificări', 'bell') ?>
-    <?= $onStat('unread', 'Necitite', 'warning-circle') ?>
-    <?= $onStat('sales', 'Vânzări', 'ticket') ?>
-    <?= $onStat('docs', 'Documente', 'file-text') ?>
+  <section class="on-stats" aria-label="<?= v2_te('At a glance') ?>">
+    <?= $onStat('total', v2_te('All notifications'), 'bell') ?>
+    <?= $onStat('unread', v2_te('Unread'), 'warning-circle') ?>
+    <?= $onStat('sales', v2_te('Sales'), 'ticket') ?>
+    <?= $onStat('docs', v2_te('Documents'), 'file-text') ?>
   </section>
 
   <section class="org-panel" aria-labelledby="on-list-h">
     <div class="org-panel-head">
-      <div><p class="org-k">Istoric</p><h2 class="org-panel-h" id="on-list-h">Notificările tale</h2><p class="org-panel-p" id="on-list-p"></p></div>
+      <div><p class="org-k"><?= v2_te('History') ?></p><h2 class="org-panel-h" id="on-list-h"><?= v2_te('Your notifications') ?></h2><p class="org-panel-p" id="on-list-p"></p></div>
       <div class="on-filters">
-        <span class="on-select"><select id="on-type" aria-label="Tipul notificării" aria-controls="on-list"><option value="">Toate tipurile</option></select><?= v2_ic('caret-down') ?></span>
-        <span class="on-select"><select id="on-read" aria-label="Citite sau necitite" aria-controls="on-list"><option value="">Toate notificările</option><option value="0">Necitite</option><option value="1">Citite</option></select><?= v2_ic('caret-down') ?></span>
+        <span class="on-select"><select id="on-type" aria-label="<?= v2_te('Notification type') ?>" aria-controls="on-list"><option value=""><?= v2_te('All types') ?></option></select><?= v2_ic('caret-down') ?></span>
+        <span class="on-select"><select id="on-read" aria-label="<?= v2_te('Read or unread') ?>" aria-controls="on-list"><option value=""><?= v2_te('All notifications') ?></option><option value="0"><?= v2_te('Unread') ?></option><option value="1"><?= v2_te('Read') ?></option></select><?= v2_ic('caret-down') ?></span>
       </div>
     </div>
     <ul class="on-list" id="on-list" aria-live="polite"><li class="on-sk-row"><span class="org-skel"></span></li><li class="on-sk-row"><span class="org-skel"></span></li></ul>
-    <div class="on-more-row"><button class="btn btn-ghost on-sm" type="button" id="on-more" hidden><span data-label>Încarcă mai multe</span></button></div>
+    <div class="on-more-row"><button class="btn btn-ghost on-sm" type="button" id="on-more" hidden><span data-label><?= v2_te('Load more') ?></span></button></div>
   </section>
 </div>
 <?php

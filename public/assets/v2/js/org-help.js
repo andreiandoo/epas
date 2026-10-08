@@ -17,7 +17,6 @@
       .replace(/[şș]/g, 's').replace(/[ţț]/g, 't').replace(/\s+/g, ' ').trim();
   }
   var blobs = items.map(function (d) { return norm(d.textContent); });
-  function plural(n) { return n === 1 ? '1 întrebare găsită' : n + (n % 100 === 0 || n % 100 >= 20 ? ' de întrebări găsite' : ' întrebări găsite'); }
 
   function apply() {
     var words = norm(q.value).split(' ').filter(Boolean), shown = 0;
@@ -31,7 +30,7 @@
     secs.forEach(function (s) { s.hidden = !s.querySelector('.ohp-q:not([hidden])'); });
     empty.hidden = shown > 0;
     clear.hidden = !q.value;
-    found.textContent = words.length ? (shown ? plural(shown) + '.' : 'Nicio întrebare găsită.') : '';
+    found.textContent = words.length ? (shown ? VQ.t('{n} found.', { n: VQ.n(shown, 'question', 'questions') }) : VQ.t('No question found.')) : '';
   }
 
   q.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(apply, 120); });
