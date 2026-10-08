@@ -28,7 +28,7 @@
     bar.setAttribute('aria-hidden', on ? 'false' : 'true');
     document.body.classList.toggle('has-cobar', on);
     go.disabled = busy();
-    label.textContent = busy() ? 'Se procesează…' : 'Plătește';
+    label.textContent = busy() ? 'Processing…' : 'Pay';
   }
 
   go.addEventListener('click', function () {
