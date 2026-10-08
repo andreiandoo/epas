@@ -95,6 +95,11 @@ class Settings extends Page
                 'mail_from_name' => $settings['mail']['from_name'] ?? '',
                 'mail_domain' => $settings['mail']['domain'] ?? '',
                 'mail_region' => $settings['mail']['region'] ?? '',
+
+                // Payment processing fee (settings.payment_fees)
+                'payment_fee_pass' => ! empty($settings['payment_fees']['pass_to_customer']),
+                'payment_fee_percent' => round((float) ($settings['payment_fees']['percent_rate'] ?? 0), 2),
+                'payment_fee_fixed' => round(((int) ($settings['payment_fees']['fixed_cents'] ?? 0)) / 100, 2),
             ]);
         }
     }
@@ -468,6 +473,55 @@ class Settings extends Page
                                     ])->columns(2),
                             ]),
 
+                        SC\Tabs\Tab::make('Plăți')
+                            ->icon('heroicon-o-credit-card')
+                            ->schema([
+                                SC\Section::make('Taxa de procesare a plății')
+                                    ->description('Alege cine suportă taxa percepută de procesatorul de plăți (Stripe, Netopia etc.) pentru fiecare comandă.')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('payment_fee_pass')
+                                            ->label('Mută taxa procesatorului la cumpărător')
+                                            ->helperText('Când este activă, taxa se adaugă la totalul comenzii ca o linie separată, pe care cumpărătorul o vede în coș și la checkout. Când este oprită, taxa rămâne în sarcina organizatorului, iar cumpărătorul plătește doar prețul biletelor.')
+                                            ->default(false)
+                                            ->onColor('success')
+                                            ->offColor('gray')
+                                            ->live()
+                                            ->columnSpanFull(),
+
+                                        Forms\Components\TextInput::make('payment_fee_percent')
+                                            ->label('Procent (%)')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(20)
+                                            ->step(0.01)
+                                            ->default(0)
+                                            ->suffix('%')
+                                            ->helperText('Procentul din contractul tău cu procesatorul (ex: 1.9). Se aplică la valoarea comenzii.')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('payment_fee_pass')),
+
+                                        Forms\Components\TextInput::make('payment_fee_fixed')
+                                            ->label('Sumă fixă (lei)')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(20)
+                                            ->step(0.01)
+                                            ->default(0)
+                                            ->suffix('lei')
+                                            ->helperText('Suma fixă per comandă din contractul tău cu procesatorul (ex: 1.00). Lasă 0 dacă nu ai una.')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('payment_fee_pass')),
+
+                                        Forms\Components\Placeholder::make('payment_fee_info')
+                                            ->label('')
+                                            ->content(new HtmlString('
+                                                <div class="p-3 text-sm text-gray-600 rounded-lg dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20">
+                                                    Introdu exact tarifele din contractul tău cu procesatorul de plăți. Taxa afișată cumpărătorului se calculează astfel: valoarea comenzii × procent, la care se adaugă suma fixă.
+                                                </div>
+                                            '))
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('payment_fee_pass'))
+                                            ->columnSpanFull(),
+                                    ])->columns(2),
+                            ]),
+
                         SC\Tabs\Tab::make('Domains')
                             ->icon('heroicon-o-globe-alt')
                             ->schema([
@@ -595,9 +649,40 @@ class Settings extends Page
 
         $settings['mail'] = $mailSettings;
 
+        // Payment processing fee: only the payment_fees key is touched, other keys inside it
+        // (e.g. provider) are preserved. Hidden rate fields are not dehydrated when the toggle
+        // is off, so the previously stored rates are kept in that case.
+        $existingFees = is_array($settings['payment_fees'] ?? null) ? $settings['payment_fees'] : [];
+        $feePercent = array_key_exists('payment_fee_percent', $data)
+            ? (float) ($data['payment_fee_percent'] ?? 0)
+            : (float) ($existingFees['percent_rate'] ?? 0);
+        $feeFixedCents = array_key_exists('payment_fee_fixed', $data)
+            ? (int) round(((float) ($data['payment_fee_fixed'] ?? 0)) * 100)
+            : (int) ($existingFees['fixed_cents'] ?? 0);
+
+        $settings['payment_fees'] = array_merge($existingFees, [
+            'pass_to_customer' => (bool) ($data['payment_fee_pass'] ?? false),
+            'percent_rate' => round(min(20, max(0, $feePercent)), 2),
+            'fixed_cents' => min(2000, max(0, $feeFixedCents)),
+        ]);
+
         $tenant->update([
             'settings' => $settings,
         ]);
+
+        // The public API caches the resolved tenant for 30 minutes (ResolvesTenant);
+        // drop those entries so the storefront picks the change up immediately.
+        try {
+            \Illuminate\Support\Facades\Cache::forget("tenant_{$tenant->id}");
+
+            foreach ($tenant->domains()->pluck('domain') as $domainName) {
+                if (filled($domainName)) {
+                    \Illuminate\Support\Facades\Cache::forget("domain_tenant_{$domainName}");
+                }
+            }
+        } catch (\Throwable $e) {
+            // A cache failure must never break saving the settings.
+        }
 
         Notification::make()
             ->success()

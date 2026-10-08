@@ -2,8 +2,8 @@
 /** Footer comun + închiderea documentului. */
 ?>
 <footer class="site-foot">
+    <div class="site-foot__big" aria-hidden="true"><span>Karate WUKF · Federația Română</span></div>
     <div class="wrap">
-        <div class="site-foot__big" aria-hidden="true">Karate WUKF</div>
         <div class="site-foot__grid">
             <div>
                 <div class="site-foot__brand">
@@ -21,11 +21,32 @@
                 </ul>
             </div>
             <div>
+                <h3>Informații</h3>
+                <ul>
+                    <li><a href="/termeni">Termeni și condiții</a></li>
+                    <li><a href="/confidentialitate">Confidențialitate</a></li>
+                    <li><a href="/cookies">Cookies</a></li>
+                    <li><a href="https://anpc.ro/" target="_blank" rel="nofollow noopener">ANPC</a></li>
+                </ul>
+            </div>
+            <div>
                 <h3>Federație</h3>
                 <ul>
                     <li><a href="<?= e(SITE_FEDERATION) ?>" target="_blank" rel="noopener">wukf.ro</a></li>
                     <li><a href="<?= e(SITE_FEDERATION) ?>/category/evenimente/nationale/" target="_blank" rel="noopener">Evenimente naționale</a></li>
                 </ul>
+            </div>
+        </div>
+        <div class="site-foot__trust">
+            <ul class="cards" aria-label="Carduri acceptate la plată">
+                <li class="cards__label">Plată cu cardul</li>
+                <li>VISA</li>
+                <li>Mastercard</li>
+                <li>Maestro</li>
+            </ul>
+            <div class="anpc">
+                <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="/assets/anpc-sal.png" alt="ANPC: Soluționarea alternativă a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
+                <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="/assets/anpc-sol.png" alt="Soluționarea online a litigiilor" width="250" height="62" loading="lazy" decoding="async"></a>
             </div>
         </div>
         <div class="site-foot__base">
