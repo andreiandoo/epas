@@ -17,7 +17,7 @@ const V2_ACCOUNT_NAV = [
     ['tickets', '/account/tickets', 'My tickets', 'ticket'],
     ['orders', '/account/orders', 'My orders', 'shopping-cart-simple'],
     ['points', '/account/points', 'My points', 'coins'],
-    ['recommendations', '/cont/recomandari', 'Recommendations', 'star'], // no English address yet
+    ['recommendations', '/account/recommendations', 'Recommendations', 'star'],
     ['reviews', '/account/reviews', 'My reviews', 'check-circle'],
     ['support', '/account/support', 'Support tickets', 'headset'],
     ['settings', '/account/settings', 'Settings', 'lock-simple'],

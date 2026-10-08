@@ -271,7 +271,7 @@ include __DIR__ . '/../includes/v2/header.php';
       <section class="acc-panel st-panel" id="<?= $stPanel('preferences') ?>" role="tabpanel" aria-labelledby="st-tab-preferences" hidden>
         <p class="acc-k"><?= v2_te('Recommendation preferences') ?></p>
         <h2><?= v2_te('What kind of activities would you like to see?') ?></h2>
-        <p class="st-lead"><?= v2_t('These fields matter most for your <a href="{url}">Recommendations</a> page. The clearer they are, the better the activities we can suggest.', ['url' => '/cont/recomandari']) ?></p>
+        <p class="st-lead"><?= v2_t('These fields matter most for your <a href="{url}">Recommendations</a> page. The clearer they are, the better the activities we can suggest.', ['url' => '/account/recommendations']) ?></p>
         <div class="st-two">
           <div class="st-stack">
             <div class="st-block">
