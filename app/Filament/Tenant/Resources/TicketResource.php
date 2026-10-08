@@ -13,6 +13,17 @@ use Illuminate\Database\Eloquent\Builder;
 class TicketResource extends Resource
 {
     protected static ?string $model = Ticket::class;
+
+    // Etichetele trec prin traduceri: panoul e folosit și în română, și în engleză
+    public static function getModelLabel(): string
+    {
+        return __('Ticket');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Tickets');
+    }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 2;

@@ -75,10 +75,10 @@ class SeatingLayoutResource extends Resource
                     Forms\Components\TextInput::make('name')->label('Nume model hartă')->required()->maxLength(255)->columnSpan(1),
 
                     Forms\Components\Select::make('status')->label('Status')
-                        ->options(['draft' => 'Draft', 'published' => 'Publicat'])
+                        ->options(['draft' => __('Draft'), 'published' => 'Publicat'])
                         ->default('draft')->required()->columnSpan(1),
 
-                    Forms\Components\Textarea::make('notes')->label('Note')->maxLength(1000)->rows(2)->columnSpanFull(),
+                    Forms\Components\Textarea::make('notes')->label(__('Note'))->maxLength(1000)->rows(2)->columnSpanFull(),
                 ])->columns(2),
 
             SC\Section::make('Setări hartă')
@@ -105,7 +105,7 @@ class SeatingLayoutResource extends Resource
                 Tables\Columns\TextColumn::make('updated_at')->label('Modificat')->since()->sortable()->toggleable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')->options(['draft' => 'Draft', 'published' => 'Publicat']),
+                Tables\Filters\SelectFilter::make('status')->options(['draft' => __('Draft'), 'published' => 'Publicat']),
             ])
             ->recordActions([
                 Action::make('designer')->label('Designer')->icon('heroicon-o-pencil-square')->color('primary')

@@ -15,6 +15,17 @@ use Illuminate\Database\Eloquent\Builder;
 class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
+
+    // Etichetele trec prin traduceri: panoul e folosit și în română, și în engleză
+    public static function getModelLabel(): string
+    {
+        return __('Customer');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Customers');
+    }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 3;
@@ -57,7 +68,7 @@ class CustomerResource extends Resource
                             ->label('Țară')
                             ->maxLength(100),
                         Forms\Components\Textarea::make('notes')
-                            ->label('Note')
+                            ->label(__('Note'))
                             ->rows(3),
                     ])->columns(2),
 
@@ -129,7 +140,7 @@ class CustomerResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('full_name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable(['first_name', 'last_name'])
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email')
@@ -139,7 +150,7 @@ class CustomerResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('orders_count')
                     ->counts('orders')
-                    ->label('Orders'),
+                    ->label(__('Orders')),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

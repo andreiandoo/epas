@@ -43,10 +43,10 @@ class Profile extends Page
     {
         return $form
             ->schema([
-                SC\Section::make('Personal Information')
+                SC\Section::make(__('Personal Information'))
                     ->schema([
                         Forms\Components\FileUpload::make('avatar')
-                            ->label('Profile Photo')
+                            ->label(__('Profile Photo'))
                             ->image()
                             ->avatar()
                             ->directory('avatars')
@@ -54,12 +54,12 @@ class Profile extends Page
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('first_name')
-                            ->label('First Name')
+                            ->label(__('First Name'))
                             ->required()
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('last_name')
-                            ->label('Last Name')
+                            ->label(__('Last Name'))
                             ->required()
                             ->maxLength(255),
 
@@ -71,36 +71,36 @@ class Profile extends Page
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Contact administrator to change email'),
 
                         Forms\Components\TextInput::make('phone')
-                            ->label('Phone')
+                            ->label(__('Phone'))
                             ->tel()
                             ->maxLength(50),
 
                         Forms\Components\TextInput::make('position')
-                            ->label('Position / Title')
+                            ->label(__('Position / Title'))
                             ->maxLength(255)
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your role in the organization'),
                     ])
                     ->columns(2),
 
-                SC\Section::make('Change Password')
-                    ->description('Leave blank to keep your current password')
+                SC\Section::make(__('Change Password'))
+                    ->description(__('Leave blank to keep your current password'))
                     ->schema([
                         Forms\Components\TextInput::make('current_password')
-                            ->label('Current Password')
+                            ->label(__('Current Password'))
                             ->password()
                             ->revealable()
                             ->currentPassword()
                             ->requiredWith('new_password'),
 
                         Forms\Components\TextInput::make('new_password')
-                            ->label('New Password')
+                            ->label(__('New Password'))
                             ->password()
                             ->revealable()
                             ->rule(Password::default())
                             ->confirmed(),
 
                         Forms\Components\TextInput::make('new_password_confirmation')
-                            ->label('Confirm New Password')
+                            ->label(__('Confirm New Password'))
                             ->password()
                             ->revealable()
                             ->requiredWith('new_password'),
@@ -133,14 +133,14 @@ class Profile extends Page
 
             Notification::make()
                 ->success()
-                ->title('Profile updated')
-                ->body('Your profile information has been saved.')
+                ->title(__('Profile updated'))
+                ->body(__('Your profile information has been saved.'))
                 ->send();
         }
     }
 
     public function getTitle(): string
     {
-        return 'Profile';
+        return __('Profile');
     }
 }

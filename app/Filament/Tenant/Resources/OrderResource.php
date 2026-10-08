@@ -16,6 +16,17 @@ use Illuminate\Support\HtmlString;
 class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
+
+    // Etichetele trec prin traduceri: panoul e folosit și în română, și în engleză
+    public static function getModelLabel(): string
+    {
+        return __('Order');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Orders');
+    }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shopping-cart';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 1;
@@ -231,7 +242,7 @@ class OrderResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Order Details')
+                SC\Section::make(__('Order Details'))
                     ->schema([
                         Forms\Components\TextInput::make('order_number')
                             ->disabled(),
@@ -241,10 +252,10 @@ class OrderResource extends Resource
                             ->preload(),
                         Forms\Components\Select::make('status')
                             ->options([
-                                'pending' => 'Pending',
-                                'confirmed' => 'Confirmed',
-                                'cancelled' => 'Cancelled',
-                                'refunded' => 'Refunded',
+                                'pending' => __('Pending'),
+                                'confirmed' => __('Confirmed'),
+                                'cancelled' => __('Cancelled'),
+                                'refunded' => __('Refunded'),
                             ])
                             ->required(),
                         Forms\Components\TextInput::make('total')

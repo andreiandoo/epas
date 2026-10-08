@@ -15,7 +15,7 @@ class Invoices extends Page
 
     public function getTitle(): string
     {
-        return 'Invoices';
+        return __('Invoices');
     }
 
     public function getViewData(): array

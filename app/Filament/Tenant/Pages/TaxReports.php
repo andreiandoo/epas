@@ -21,7 +21,7 @@ class TaxReports extends Page
 
     public function getTitle(): string
     {
-        return 'Tax Reports';
+        return __('Tax Reports');
     }
 
     public function getViewData(): array

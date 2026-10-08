@@ -24,6 +24,17 @@ class CouponCodeResource extends Resource
 {
     protected static ?string $model = CouponCode::class;
 
+    // Etichetele trec prin traduceri: panoul e folosit și în română, și în engleză
+    public static function getModelLabel(): string
+    {
+        return __('Coupon Code');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Coupon Codes');
+    }
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationLabel = 'Coupon Codes';
@@ -66,10 +77,10 @@ class CouponCodeResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Code Information')
+                SC\Section::make(__('Code Information'))
                     ->schema([
                         Forms\Components\TextInput::make('code')
-                            ->label('Code')
+                            ->label(__('Code'))
                             ->required()
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
@@ -77,7 +88,7 @@ class CouponCodeResource extends Resource
                             ->dehydrateStateUsing(fn ($state) => strtoupper((string) $state)),
 
                         Forms\Components\Select::make('campaign_id')
-                            ->label('Campaign')
+                            ->label(__('Campaign'))
                             ->relationship('campaign', 'name')
                             ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
                             ->searchable()
@@ -85,83 +96,83 @@ class CouponCodeResource extends Resource
 
                         Forms\Components\Select::make('status')
                             ->options([
-                                'active' => 'Active',
-                                'inactive' => 'Inactive',
-                                'exhausted' => 'Exhausted',
-                                'expired' => 'Expired',
+                                'active' => __('Active'),
+                                'inactive' => __('Inactive'),
+                                'exhausted' => __('Exhausted'),
+                                'expired' => __('Expired'),
                             ])
                             ->default('active')
                             ->required(),
                     ])->columns(3),
 
-                SC\Section::make('Discount')
+                SC\Section::make(__('Discount'))
                     ->schema([
                         Forms\Components\Select::make('discount_type')
                             ->options([
-                                'percentage' => 'Percentage',
-                                'fixed_amount' => 'Fixed Amount',
-                                'free_shipping' => 'Free Shipping',
+                                'percentage' => __('Percentage'),
+                                'fixed_amount' => __('Fixed Amount'),
+                                'free_shipping' => __('Free Shipping'),
                             ])
                             ->default('percentage')
                             ->required(),
 
                         Forms\Components\TextInput::make('discount_value')
-                            ->label('Discount Value')
+                            ->label(__('Discount Value'))
                             ->numeric()
                             ->required()
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage (10 = 10%) or fixed amount'),
 
                         Forms\Components\TextInput::make('max_discount_amount')
-                            ->label('Max Discount')
+                            ->label(__('Max Discount'))
                             ->numeric()
                             ->prefix('€')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Cap for percentage discounts'),
 
                         Forms\Components\TextInput::make('min_purchase_amount')
-                            ->label('Min. Purchase')
+                            ->label(__('Min. Purchase'))
                             ->numeric()
                             ->prefix('€'),
                     ])->columns(4),
 
-                SC\Section::make('Usage Limits')
+                SC\Section::make(__('Usage Limits'))
                     ->schema([
                         Forms\Components\TextInput::make('max_uses_total')
-                            ->label('Max Uses (Total)')
+                            ->label(__('Max Uses (Total)'))
                             ->numeric()
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty for unlimited'),
 
                         Forms\Components\TextInput::make('max_uses_per_user')
-                            ->label('Max Uses (Per User)')
+                            ->label(__('Max Uses (Per User)'))
                             ->numeric()
                             ->default(1),
 
                         Forms\Components\TextInput::make('current_uses')
-                            ->label('Current Uses')
+                            ->label(__('Current Uses'))
                             ->numeric()
                             ->default(0)
                             ->disabled(),
                     ])->columns(3),
 
-                SC\Section::make('Schedule')
+                SC\Section::make(__('Schedule'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('starts_at')
-                            ->label('Valid From'),
+                            ->label(__('Valid From')),
 
                         Forms\Components\DateTimePicker::make('expires_at')
-                            ->label('Expires At'),
+                            ->label(__('Expires At')),
                     ])->columns(2),
 
-                SC\Section::make('Options')
+                SC\Section::make(__('Options'))
                     ->schema([
                         Forms\Components\Toggle::make('is_public')
-                            ->label('Public Code')
+                            ->label(__('Public Code'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Show in public listings'),
 
                         Forms\Components\Toggle::make('first_purchase_only')
-                            ->label('First Purchase Only'),
+                            ->label(__('First Purchase Only')),
 
                         Forms\Components\Toggle::make('combinable')
-                            ->label('Combinable')
+                            ->label(__('Combinable'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Can be combined with other codes'),
                     ])->columns(3),
             ]);
@@ -172,22 +183,22 @@ class CouponCodeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
                     ->copyable(),
 
                 Tables\Columns\TextColumn::make('campaign.name')
-                    ->label('Campaign')
+                    ->label(__('Campaign'))
                     ->getStateUsing(fn ($record) => $record->campaign?->getTranslation('name', app()->getLocale()) ?? ($record->campaign?->name[app()->getLocale()] ?? ($record->campaign?->name['en'] ?? null)))
                     ->searchable()
                     ->sortable()
                     ->limit(20)
-                    ->placeholder('No campaign'),
+                    ->placeholder(__('No campaign')),
 
                 Tables\Columns\TextColumn::make('discount_display')
-                    ->label('Discount')
+                    ->label(__('Discount'))
                     ->getStateUsing(function ($record) {
                         if ($record->discount_type === 'percentage') {
                             return $record->discount_value . '%';
@@ -206,25 +217,25 @@ class CouponCodeResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('usage')
-                    ->label('Usage')
+                    ->label(__('Usage'))
                     ->getStateUsing(function ($record) {
                         $max = $record->max_uses_total ?? '∞';
                         return "{$record->current_uses}/{$max}";
                     }),
 
                 Tables\Columns\TextColumn::make('expires_at')
-                    ->label('Expires')
+                    ->label(__('Expires'))
                     ->dateTime('M d, Y')
                     ->sortable()
-                    ->placeholder('Never'),
+                    ->placeholder(__('Never')),
 
                 Tables\Columns\IconColumn::make('is_public')
-                    ->label('Public')
+                    ->label(__('Public'))
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label(__('Created'))
                     ->dateTime('M d, Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -232,25 +243,25 @@ class CouponCodeResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'active' => 'Active',
-                        'inactive' => 'Inactive',
-                        'exhausted' => 'Exhausted',
-                        'expired' => 'Expired',
+                        'active' => __('Active'),
+                        'inactive' => __('Inactive'),
+                        'exhausted' => __('Exhausted'),
+                        'expired' => __('Expired'),
                     ]),
                 Tables\Filters\SelectFilter::make('campaign_id')
-                    ->label('Campaign')
+                    ->label(__('Campaign'))
                     ->relationship('campaign', 'name')
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('discount_type')
                     ->options([
-                        'percentage' => 'Percentage',
-                        'fixed_amount' => 'Fixed Amount',
-                        'free_shipping' => 'Free Shipping',
+                        'percentage' => __('Percentage'),
+                        'fixed_amount' => __('Fixed Amount'),
+                        'free_shipping' => __('Free Shipping'),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_public')
-                    ->label('Public'),
+                    ->label(__('Public')),
             ])
             ->actions([
                 ViewAction::make(),
@@ -271,13 +282,13 @@ class CouponCodeResource extends Resource
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                     BulkAction::make('activate')
-                        ->label('Activate Selected')
+                        ->label(__('Activate Selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->action(fn (Collection $records) => $records->each->update(['status' => 'active']))
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('deactivate')
-                        ->label('Deactivate Selected')
+                        ->label(__('Deactivate Selected'))
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->action(fn (Collection $records) => $records->each->update(['status' => 'inactive']))

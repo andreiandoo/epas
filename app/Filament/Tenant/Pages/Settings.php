@@ -111,25 +111,25 @@ class Settings extends Page
             ->schema([
                 SC\Tabs::make('Settings')
                     ->tabs([
-                        SC\Tabs\Tab::make('Business Details')
+                        SC\Tabs\Tab::make(__('Business Details'))
                             ->icon('heroicon-o-building-office')
                             ->schema([
-                                SC\Section::make('Company Information')
+                                SC\Section::make(__('Company Information'))
                                     ->schema([
                                         Forms\Components\TextInput::make('company_name')
-                                            ->label('Legal Company Name')
+                                            ->label(__('Legal Company Name'))
                                             ->disabled()
                                             ->dehydrated(true)
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('cui')
-                                            ->label('CUI / VAT Number')
+                                            ->label(__('CUI / VAT Number'))
                                             ->disabled()
                                             ->dehydrated(true)
                                             ->maxLength(50),
 
                                         Forms\Components\TextInput::make('reg_com')
-                                            ->label('Trade Register')
+                                            ->label(__('Trade Register'))
                                             ->disabled()
                                             ->dehydrated(true)
                                             ->maxLength(50),
@@ -170,7 +170,7 @@ class Settings extends Page
                                             ->maxLength(50),
 
                                         Forms\Components\Select::make('currency')
-                                            ->label('Currency')
+                                            ->label(__('Currency'))
                                             ->options([
                                                 'RON' => 'RON - Romanian Leu',
                                                 'EUR' => 'EUR - Euro',
@@ -190,10 +190,10 @@ class Settings extends Page
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Se aplică la evenimentele create după setare.'),
                                     ])->columns(3),
 
-                                SC\Section::make('Address')
+                                SC\Section::make(__('Address'))
                                     ->schema([
                                         Forms\Components\TextInput::make('address')
-                                            ->label('Street Address')
+                                            ->label(__('Street Address'))
                                             ->maxLength(255)
                                             ->columnSpanFull(),
 
@@ -201,7 +201,7 @@ class Settings extends Page
                                             ->maxLength(100),
 
                                         Forms\Components\TextInput::make('state')
-                                            ->label('State / County')
+                                            ->label(__('State / County'))
                                             ->maxLength(100),
 
                                         Forms\Components\TextInput::make('country')
@@ -228,10 +228,10 @@ class Settings extends Page
                                     ])->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Personalization')
+                        SC\Tabs\Tab::make(__('Personalization'))
                             ->icon('heroicon-o-paint-brush')
                             ->schema([
-                                SC\Section::make('Branding')
+                                SC\Section::make(__('Branding'))
                                     ->schema([
                                         Forms\Components\FileUpload::make('logo')
                                             ->label('Logo')
@@ -252,19 +252,19 @@ class Settings extends Page
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Recommended: 32x32px or 64x64px, ICO or PNG'),
                                     ])->columns(2),
 
-                                SC\Section::make('Site Information')
+                                SC\Section::make(__('Site Information'))
                                     ->schema([
                                         Forms\Components\TextInput::make('site_title')
-                                            ->label('Site Title')
+                                            ->label(__('Site Title'))
                                             ->required()
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'The name of your site displayed in browser tab and header'),
 
                                         // Language is set in Core Admin (Tenant Edit page)
                                         // Forms\Components\Select::make('site_language')
-                                        //     ->label('Site Language')
+                                        //     ->label(__('Site Language'))
                                         //     ->options([
-                                        //         'en' => 'English',
+                                        //         'en' => __('English'),
                                         //         'ro' => 'Romanian (Română)',
                                         //     ])
                                         //     ->default('en')
@@ -272,18 +272,18 @@ class Settings extends Page
                                         //     ->hintIcon('heroicon-o-information-circle', tooltip: 'Primary language for your public site'),
 
                                         Forms\Components\Textarea::make('site_description')
-                                            ->label('Site Description')
+                                            ->label(__('Site Description'))
                                             ->rows(3)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Brief description for SEO and social sharing')
                                             ->maxLength(500),
 
                                         Forms\Components\TextInput::make('site_tagline')
-                                            ->label('Site Tagline')
+                                            ->label(__('Site Tagline'))
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Short tagline displayed on the site'),
 
                                         Forms\Components\RichEditor::make('ticket_terms')
-                                            ->label('Ticket Terms')
+                                            ->label(__('Ticket Terms'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -295,18 +295,18 @@ class Settings extends Page
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Terms displayed on tickets'),
                                     ]),
 
-                                SC\Section::make('Theme & Colors')
+                                SC\Section::make(__('Theme & Colors'))
                                     ->schema([
                                         Forms\Components\ColorPicker::make('primary_color')
-                                            ->label('Primary Color'),
+                                            ->label(__('Primary Color')),
 
                                         Forms\Components\ColorPicker::make('secondary_color')
-                                            ->label('Secondary Color'),
+                                            ->label(__('Secondary Color')),
 
                                         Forms\Components\Select::make('site_template')
-                                            ->label('Site Template')
+                                            ->label(__('Site Template'))
                                             ->options([
-                                                'default' => 'Default',
+                                                'default' => __('Default'),
                                                 'modern' => 'Modern',
                                                 'sleek' => 'Sleek (Minimalist)',
                                                 'theater' => 'Theater (Dark)',
@@ -316,20 +316,20 @@ class Settings extends Page
                                     ])->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Legal Pages')
+                        SC\Tabs\Tab::make(__('Legal Pages'))
                             ->icon('heroicon-o-document-text')
                             ->schema([
-                                SC\Section::make('Terms & Conditions')
-                                    ->description('Content displayed on your Terms & Conditions page')
+                                SC\Section::make(__('Terms & Conditions'))
+                                    ->description(__('Content displayed on your Terms & Conditions page'))
                                     ->schema([
                                         Forms\Components\TextInput::make('terms_title')
-                                            ->label('Page Title')
+                                            ->label(__('Page Title'))
                                             ->default('Terms & Conditions')
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'The title displayed on the Terms page'),
 
                                         Forms\Components\RichEditor::make('terms_content')
-                                            ->label('Content')
+                                            ->label(__('Content'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -347,17 +347,17 @@ class Settings extends Page
                                             ->columnSpanFull(),
                                     ]),
 
-                                SC\Section::make('Privacy Policy')
-                                    ->description('Content displayed on your Privacy Policy page')
+                                SC\Section::make(__('Privacy Policy'))
+                                    ->description(__('Content displayed on your Privacy Policy page'))
                                     ->schema([
                                         Forms\Components\TextInput::make('privacy_title')
-                                            ->label('Page Title')
+                                            ->label(__('Page Title'))
                                             ->default('Privacy Policy')
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'The title displayed on the Privacy page'),
 
                                         Forms\Components\RichEditor::make('privacy_content')
-                                            ->label('Content')
+                                            ->label(__('Content'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -376,11 +376,11 @@ class Settings extends Page
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Links')
+                        SC\Tabs\Tab::make(__('Links'))
                             ->icon('heroicon-o-link')
                             ->schema([
-                                SC\Section::make('Social Media Links')
-                                    ->description('Add links to your social media profiles. Icons will appear in the footer.')
+                                SC\Section::make(__('Social Media Links'))
+                                    ->description(__('Add links to your social media profiles. Icons will appear in the footer.'))
                                     ->schema([
                                         Forms\Components\TextInput::make('social_facebook')
                                             ->label('Facebook')
@@ -421,16 +421,16 @@ class Settings extends Page
                             ]),
 
 
-                        SC\Tabs\Tab::make('Emails')
+                        SC\Tabs\Tab::make(__('Emails'))
                             ->icon('heroicon-o-envelope')
                             ->schema([
-                                SC\Section::make('Email Configuration')
-                                    ->description('Configure custom mail settings for sending emails. Leave empty to use platform default.')
+                                SC\Section::make(__('Email Configuration'))
+                                    ->description(__('Configure custom mail settings for sending emails. Leave empty to use platform default.'))
                                     ->schema([
                                         Forms\Components\Select::make('mail_driver')
-                                            ->label('Mail Provider')
+                                            ->label(__('Mail Provider'))
                                             ->options([
-                                                '' => 'Use Platform Default',
+                                                '' => __('Use Platform Default'),
                                                 'smtp' => 'SMTP (Generic)',
                                                 'brevo' => 'Brevo (Sendinblue)',
                                                 'postmark' => 'Postmark',
@@ -440,7 +440,7 @@ class Settings extends Page
                                                 'gmail' => 'Gmail',
                                                 'outlook' => 'Microsoft 365 / Outlook',
                                             ])
-                                            ->placeholder('Select mail provider')
+                                            ->placeholder(__('Select mail provider'))
                                             ->live()
                                             ->afterStateUpdated(fn (Forms\Components\Select $component) => $component
                                                 ->getContainer()
@@ -469,15 +469,15 @@ class Settings extends Page
                                         // Test Connection Button (shown only when provider is selected)
                                         SC\Actions::make([
                                             \Filament\Actions\Action::make('testConnection')
-                                                ->label('Test Email Connection')
+                                                ->label(__('Test Email Connection'))
                                                 ->icon('heroicon-o-paper-airplane')
                                                 ->color('gray')
                                                 ->action(function () {
                                                     // TODO: Implement test email
                                                     \Filament\Notifications\Notification::make()
                                                         ->info()
-                                                        ->title('Test email feature')
-                                                        ->body('Test email functionality coming soon.')
+                                                        ->title(__('Test email feature'))
+                                                        ->body(__('Test email functionality coming soon.'))
                                                         ->send();
                                                 }),
                                         ])
@@ -535,7 +535,7 @@ class Settings extends Page
                                     ])->columns(2),
                             ]),
 
-                        SC\Tabs\Tab::make('Domains')
+                        SC\Tabs\Tab::make(__('Domains'))
                             ->icon('heroicon-o-globe-alt')
                             ->schema([
                                 Forms\Components\Placeholder::make('domains_list')
@@ -706,14 +706,14 @@ class Settings extends Page
 
         Notification::make()
             ->success()
-            ->title('Settings saved')
-            ->body('Your settings have been updated successfully.')
+            ->title(__('Settings saved'))
+            ->body(__('Your settings have been updated successfully.'))
             ->send();
     }
 
     public function getTitle(): string
     {
-        return 'Settings';
+        return __('Settings');
     }
 
     /**
@@ -739,13 +739,13 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually 587 for TLS, 465 for SSL'),
 
                 Forms\Components\TextInput::make('mail_username')
-                    ->label('Username')
+                    ->label(__('Username'))
                     ->maxLength(255)
                     ->placeholder('your-username')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SMTP authentication username'),
 
                 Forms\Components\TextInput::make('mail_password')
-                    ->label('Password')
+                    ->label(__('Password'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -754,17 +754,17 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\Select::make('mail_encryption')
-                    ->label('Encryption')
+                    ->label(__('Encryption'))
                     ->options([
-                        'tls' => 'TLS (Recommended)',
+                        'tls' => __('TLS (Recommended)'),
                         'ssl' => 'SSL',
-                        '' => 'None',
+                        '' => __('None'),
                     ])
                     ->default('tls')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Security protocol'),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
@@ -772,10 +772,10 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender email address'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -789,7 +789,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
-                    ->label('API Key')
+                    ->label(__('API Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -800,7 +800,7 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
@@ -808,10 +808,10 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified in Brevo'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -825,7 +825,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
-                    ->label('Server API Token')
+                    ->label(__('Server API Token'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -836,7 +836,7 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
@@ -844,10 +844,10 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender signature'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -861,7 +861,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
-                    ->label('API Key')
+                    ->label(__('API Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -871,14 +871,14 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_domain')
-                    ->label('Sending Domain')
+                    ->label(__('Sending Domain'))
                     ->maxLength(255)
                     ->placeholder('mg.yourdomain.com')
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified sending domain'),
 
                 Forms\Components\Select::make('mail_region')
-                    ->label('Region')
+                    ->label(__('Region'))
                     ->options([
                         'us' => 'US (api.mailgun.net)',
                         'eu' => 'EU (api.eu.mailgun.net)',
@@ -888,7 +888,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Mailgun API region'),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
@@ -896,10 +896,10 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must use verified domain'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -913,7 +913,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
-                    ->label('API Key')
+                    ->label(__('API Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -924,7 +924,7 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
@@ -932,10 +932,10 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -949,7 +949,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
-                    ->label('Access Key ID')
+                    ->label(__('Access Key ID'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -959,7 +959,7 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_api_secret')
-                    ->label('Secret Access Key')
+                    ->label(__('Secret Access Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -969,7 +969,7 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\Select::make('mail_region')
-                    ->label('AWS Region')
+                    ->label(__('AWS Region'))
                     ->options([
                         'us-east-1' => 'US East (N. Virginia)',
                         'us-east-2' => 'US East (Ohio)',
@@ -984,7 +984,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SES region'),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
@@ -992,10 +992,10 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified email or domain'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1019,7 +1019,7 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('mail_username')
-                    ->label('Gmail Address')
+                    ->label(__('Gmail Address'))
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@gmail.com')
@@ -1027,7 +1027,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Gmail address'),
 
                 Forms\Components\TextInput::make('mail_password')
-                    ->label('App Password')
+                    ->label(__('App Password'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1037,17 +1037,17 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@gmail.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as Gmail address'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1071,7 +1071,7 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('mail_username')
-                    ->label('Email Address')
+                    ->label(__('Email Address'))
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@outlook.com')
@@ -1079,7 +1079,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Microsoft 365 / Outlook email'),
 
                 Forms\Components\TextInput::make('mail_password')
-                    ->label('Password / App Password')
+                    ->label(__('Password / App Password'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1089,17 +1089,17 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@outlook.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as login email'),
 
                 Forms\Components\TextInput::make('mail_from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];

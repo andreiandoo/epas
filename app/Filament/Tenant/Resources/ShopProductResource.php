@@ -29,6 +29,17 @@ class ShopProductResource extends Resource
 {
     protected static ?string $model = ShopProduct::class;
 
+    // Etichetele trec prin traduceri: panoul e folosit și în română, și în engleză
+    public static function getModelLabel(): string
+    {
+        return __('Product');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Products');
+    }
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cube';
 
     protected static ?string $navigationLabel = 'Shop';
@@ -72,13 +83,13 @@ class ShopProductResource extends Resource
 
                 SC\Tabs::make('Product')
                     ->tabs([
-                        SC\Tabs\Tab::make('Basic Information')
+                        SC\Tabs\Tab::make(__('Basic Information'))
                             ->icon('heroicon-o-information-circle')
                             ->schema([
-                                SC\Section::make('Product Details')
+                                SC\Section::make(__('Product Details'))
                                     ->schema([
                                         Forms\Components\TextInput::make("title.{$tenantLanguage}")
-                                            ->label('Product Title')
+                                            ->label(__('Product Title'))
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -95,7 +106,7 @@ class ShopProductResource extends Resource
                                             ->rule('alpha_dash'),
 
                                         Forms\Components\Select::make('category_id')
-                                            ->label('Category')
+                                            ->label(__('Category'))
                                             ->options(function () {
                                                 $tenant = auth()->user()->tenant;
                                                 $lang = $tenant->language ?? $tenant->locale ?? 'en';
@@ -105,12 +116,12 @@ class ShopProductResource extends Resource
                                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                                             })
                                             ->searchable()
-                                            ->placeholder('Select category'),
+                                            ->placeholder(__('Select category')),
 
                                         Forms\Components\Select::make('type')
                                             ->options([
-                                                'physical' => 'Physical Product',
-                                                'digital' => 'Digital Product',
+                                                'physical' => __('Physical Product'),
+                                                'digital' => __('Digital Product'),
                                             ])
                                             ->default('physical')
                                             ->required()
@@ -119,39 +130,39 @@ class ShopProductResource extends Resource
                                         Forms\Components\TextInput::make('sku')
                                             ->label('SKU')
                                             ->maxLength(100)
-                                            ->placeholder('Leave empty for auto-generate'),
+                                            ->placeholder(__('Leave empty for auto-generate')),
 
                                         Forms\Components\Select::make('status')
                                             ->options([
-                                                'draft' => 'Draft',
-                                                'active' => 'Active',
-                                                'out_of_stock' => 'Out of Stock',
-                                                'discontinued' => 'Discontinued',
+                                                'draft' => __('Draft'),
+                                                'active' => __('Active'),
+                                                'out_of_stock' => __('Out of Stock'),
+                                                'discontinued' => __('Discontinued'),
                                             ])
                                             ->default('draft')
                                             ->required(),
                                     ])->columns(3),
 
-                                SC\Section::make('Description')
+                                SC\Section::make(__('Description'))
                                     ->schema([
                                         Forms\Components\Textarea::make("short_description.{$tenantLanguage}")
-                                            ->label('Short Description')
+                                            ->label(__('Short Description'))
                                             ->rows(2)
                                             ->maxLength(500),
 
                                         Forms\Components\RichEditor::make("description.{$tenantLanguage}")
-                                            ->label('Full Description')
+                                            ->label(__('Full Description'))
                                             ->columnSpanFull(),
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Pricing')
+                        SC\Tabs\Tab::make(__('Pricing'))
                             ->icon('heroicon-o-currency-euro')
                             ->schema([
-                                SC\Section::make('Prices')
+                                SC\Section::make(__('Prices'))
                                     ->schema([
                                         Forms\Components\TextInput::make('price')
-                                            ->label('Price')
+                                            ->label(__('Price'))
                                             ->required()
                                             ->numeric()
                                             ->step(0.01)
@@ -160,7 +171,7 @@ class ShopProductResource extends Resource
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Enter price (e.g., 19.99)'),
 
                                         Forms\Components\TextInput::make('sale_price')
-                                            ->label('Sale Price')
+                                            ->label(__('Sale Price'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->minValue(0)
@@ -168,7 +179,7 @@ class ShopProductResource extends Resource
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty if not on sale'),
 
                                         Forms\Components\TextInput::make('cost')
-                                            ->label('Cost')
+                                            ->label(__('Cost'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->minValue(0)
@@ -186,100 +197,100 @@ class ShopProductResource extends Resource
                                             ->live(),
                                     ])->columns(4),
 
-                                SC\Section::make('Tax Settings')
+                                SC\Section::make(__('Tax Settings'))
                                     ->schema([
                                         Forms\Components\TextInput::make('tax_rate')
-                                            ->label('Tax Rate (%)')
+                                            ->label(__('Tax Rate (%)'))
                                             ->numeric()
                                             ->minValue(0)
                                             ->maxValue(100)
                                             ->suffix('%')
-                                            ->placeholder('Use store default'),
+                                            ->placeholder(__('Use store default')),
 
                                         Forms\Components\Select::make('tax_mode')
-                                            ->label('Tax Mode')
+                                            ->label(__('Tax Mode'))
                                             ->options([
-                                                'included' => 'Tax Included in Price',
-                                                'added_on_top' => 'Tax Added on Top',
+                                                'included' => __('Tax Included in Price'),
+                                                'added_on_top' => __('Tax Added on Top'),
                                             ])
-                                            ->placeholder('Use store default'),
+                                            ->placeholder(__('Use store default')),
                                     ])->columns(2),
                             ]),
 
-                        SC\Tabs\Tab::make('Inventory')
+                        SC\Tabs\Tab::make(__('Inventory'))
                             ->icon('heroicon-o-archive-box')
                             ->schema([
-                                SC\Section::make('Stock Management')
+                                SC\Section::make(__('Stock Management'))
                                     ->schema([
                                         Forms\Components\Toggle::make('track_inventory')
-                                            ->label('Track Inventory')
+                                            ->label(__('Track Inventory'))
                                             ->default(true)
                                             ->live(),
 
                                         Forms\Components\TextInput::make('stock_quantity')
-                                            ->label('Stock Quantity')
+                                            ->label(__('Stock Quantity'))
                                             ->numeric()
                                             ->default(0)
                                             ->visible(fn ($get) => $get('track_inventory')),
 
                                         Forms\Components\TextInput::make('low_stock_threshold')
-                                            ->label('Low Stock Alert')
+                                            ->label(__('Low Stock Alert'))
                                             ->numeric()
                                             ->default(5)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Alert when stock falls below this number')
                                             ->visible(fn ($get) => $get('track_inventory')),
                                     ])->columns(3),
 
-                                SC\Section::make('Physical Product Details')
+                                SC\Section::make(__('Physical Product Details'))
                                     ->visible(fn ($get) => $get('type') === 'physical')
                                     ->schema([
                                         Forms\Components\TextInput::make('weight_grams')
-                                            ->label('Weight (grams)')
+                                            ->label(__('Weight (grams)'))
                                             ->numeric()
                                             ->suffix('g'),
 
                                         SC\Grid::make(3)
                                             ->schema([
                                                 Forms\Components\TextInput::make('dimensions.length')
-                                                    ->label('Length (cm)')
+                                                    ->label(__('Length (cm)'))
                                                     ->numeric(),
                                                 Forms\Components\TextInput::make('dimensions.width')
-                                                    ->label('Width (cm)')
+                                                    ->label(__('Width (cm)'))
                                                     ->numeric(),
                                                 Forms\Components\TextInput::make('dimensions.height')
-                                                    ->label('Height (cm)')
+                                                    ->label(__('Height (cm)'))
                                                     ->numeric(),
                                             ]),
                                     ])->columns(2),
 
-                                SC\Section::make('Digital Product Details')
+                                SC\Section::make(__('Digital Product Details'))
                                     ->visible(fn ($get) => $get('type') === 'digital')
                                     ->schema([
                                         Forms\Components\TextInput::make('digital_file_url')
-                                            ->label('File URL')
+                                            ->label(__('File URL'))
                                             ->url()
                                             ->maxLength(500)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'URL to the downloadable file'),
 
                                         Forms\Components\TextInput::make('digital_download_limit')
-                                            ->label('Download Limit')
+                                            ->label(__('Download Limit'))
                                             ->numeric()
-                                            ->placeholder('Unlimited'),
+                                            ->placeholder(__('Unlimited')),
 
                                         Forms\Components\TextInput::make('digital_download_expiry_days')
-                                            ->label('Download Expiry (days)')
+                                            ->label(__('Download Expiry (days)'))
                                             ->numeric()
-                                            ->placeholder('Never expires'),
+                                            ->placeholder(__('Never expires')),
                                     ])->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Images')
+                        SC\Tabs\Tab::make(__('Images'))
                             ->icon('heroicon-o-photo')
                             ->schema([
-                                SC\Section::make('Product Images')
+                                SC\Section::make(__('Product Images'))
                                     ->schema([
                                         Forms\Components\FileUpload::make('image_url')
-                                            ->label('Main Product Image')
+                                            ->label(__('Main Product Image'))
                                             ->image()
                                             ->imageEditor()
                                             ->imageResizeMode('cover')
@@ -291,10 +302,10 @@ class ShopProductResource extends Resource
                                             ->visibility('public')
                                             ->maxSize(5120)
                                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                            ->helperText('Drag & drop or click to upload. Recommended: 800x800px, max 5MB'),
+                                            ->helperText(__('Drag & drop or click to upload. Recommended: 800x800px, max 5MB')),
 
                                         Forms\Components\FileUpload::make('gallery')
-                                            ->label('Gallery Images')
+                                            ->label(__('Gallery Images'))
                                             ->image()
                                             ->multiple()
                                             ->reorderable()
@@ -308,15 +319,15 @@ class ShopProductResource extends Resource
                                             ->maxSize(5120)
                                             ->maxFiles(10)
                                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                            ->helperText('Drag & drop multiple images. Max 10 images, 5MB each'),
+                                            ->helperText(__('Drag & drop multiple images. Max 10 images, 5MB each')),
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Variants')
+                        SC\Tabs\Tab::make(__('Variants'))
                             ->icon('heroicon-o-swatch')
                             ->schema([
-                                SC\Section::make('Product Attributes')
-                                    ->description('Select which attributes this product uses for variants')
+                                SC\Section::make(__('Product Attributes'))
+                                    ->description(__('Select which attributes this product uses for variants'))
                                     ->schema([
                                         Forms\Components\CheckboxList::make('attributes')
                                             ->relationship('attributes', 'slug')
@@ -331,28 +342,28 @@ class ShopProductResource extends Resource
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Options')
+                        SC\Tabs\Tab::make(__('Options'))
                             ->icon('heroicon-o-cog-6-tooth')
                             ->schema([
-                                SC\Section::make('Visibility & Features')
+                                SC\Section::make(__('Visibility & Features'))
                                     ->schema([
                                         Forms\Components\Toggle::make('is_visible')
-                                            ->label('Visible on Store')
+                                            ->label(__('Visible on Store'))
                                             ->default(true),
 
                                         Forms\Components\Toggle::make('is_featured')
-                                            ->label('Featured Product')
+                                            ->label(__('Featured Product'))
                                             ->default(false),
 
                                         Forms\Components\Toggle::make('reviews_enabled')
-                                            ->label('Enable Reviews')
+                                            ->label(__('Enable Reviews'))
                                             ->default(true),
                                     ])->columns(3),
 
-                                SC\Section::make('Related Products')
+                                SC\Section::make(__('Related Products'))
                                     ->schema([
                                         Forms\Components\Select::make('related_product_ids')
-                                            ->label('Related Products')
+                                            ->label(__('Related Products'))
                                             ->multiple()
                                             ->options(function ($record) {
                                                 $tenant = auth()->user()->tenant;
@@ -370,16 +381,16 @@ class ShopProductResource extends Resource
                                     ->collapsed()
                                     ->schema([
                                         Forms\Components\TextInput::make('seo.meta_title')
-                                            ->label('Meta Title')
+                                            ->label(__('Meta Title'))
                                             ->maxLength(70),
 
                                         Forms\Components\Textarea::make('seo.meta_description')
-                                            ->label('Meta Description')
+                                            ->label(__('Meta Description'))
                                             ->rows(2)
                                             ->maxLength(160),
 
                                         Forms\Components\TagsInput::make('seo.keywords')
-                                            ->label('Keywords'),
+                                            ->label(__('Keywords')),
                                     ]),
                             ]),
                     ])->columnSpanFull(),
@@ -394,13 +405,13 @@ class ShopProductResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
-                    ->label('Image')
+                    ->label(__('Image'))
                     ->disk('public')
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://placehold.co/100x100/EEE/31343C?text=No+Image'),
 
                 Tables\Columns\TextColumn::make("title.{$tenantLanguage}")
-                    ->label('Title')
+                    ->label(__('Title'))
                     ->searchable()
                     ->sortable()
                     ->limit(30),
@@ -411,7 +422,7 @@ class ShopProductResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('category.name')
-                    ->label('Category')
+                    ->label(__('Category'))
                     ->formatStateUsing(function ($state) use ($tenantLanguage) {
                         if (is_array($state)) {
                             return $state[$tenantLanguage] ?? $state['en'] ?? '-';
@@ -427,18 +438,18 @@ class ShopProductResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('price')
-                    ->label('Price')
+                    ->label(__('Price'))
                     ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . $record->currency)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('sale_price')
-                    ->label('Sale')
+                    ->label(__('Sale'))
                     ->formatStateUsing(fn ($state, $record) => $state ? number_format($state, 2) . ' ' . $record->currency : '-')
                     ->color('success')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('stock_quantity')
-                    ->label('Stock')
+                    ->label(__('Stock'))
                     ->formatStateUsing(function ($state, $record) {
                         if (!$record->track_inventory) {
                             return '∞';
@@ -461,12 +472,12 @@ class ShopProductResource extends Resource
                     ]),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -478,18 +489,18 @@ class ShopProductResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'active' => 'Active',
-                        'out_of_stock' => 'Out of Stock',
-                        'discontinued' => 'Discontinued',
+                        'draft' => __('Draft'),
+                        'active' => __('Active'),
+                        'out_of_stock' => __('Out of Stock'),
+                        'discontinued' => __('Discontinued'),
                     ]),
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
-                        'physical' => 'Physical',
+                        'physical' => __('Physical'),
                         'digital' => 'Digital',
                     ]),
                 Tables\Filters\SelectFilter::make('category_id')
-                    ->label('Category')
+                    ->label(__('Category'))
                     ->options(function () {
                         $tenant = auth()->user()->tenant;
                         $lang = $tenant->language ?? $tenant->locale ?? 'en';
@@ -499,14 +510,14 @@ class ShopProductResource extends Resource
                     })
                     ->searchable(),
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
                 Tables\Filters\Filter::make('low_stock')
-                    ->label('Low Stock')
+                    ->label(__('Low Stock'))
                     ->query(fn (Builder $query): Builder => $query->lowStock()),
                 Tables\Filters\Filter::make('out_of_stock')
-                    ->label('Out of Stock')
+                    ->label(__('Out of Stock'))
                     ->query(fn (Builder $query): Builder => $query->outOfStock()),
             ])
             ->actions([
@@ -523,19 +534,19 @@ class ShopProductResource extends Resource
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                     BulkAction::make('activate')
-                        ->label('Activate Selected')
+                        ->label(__('Activate Selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->action(fn (Collection $records) => $records->each->update(['status' => 'active']))
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('hide')
-                        ->label('Hide Selected')
+                        ->label(__('Hide Selected'))
                         ->icon('heroicon-o-eye-slash')
                         ->color('gray')
                         ->action(fn (Collection $records) => $records->each->update(['is_visible' => false]))
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('show')
-                        ->label('Show Selected')
+                        ->label(__('Show Selected'))
                         ->icon('heroicon-o-eye')
                         ->color('primary')
                         ->action(fn (Collection $records) => $records->each->update(['is_visible' => true]))

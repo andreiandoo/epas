@@ -15,23 +15,23 @@ class ViewOrder extends ViewRecord
     {
         return [
             Actions\Action::make('change_status')
-                ->label('Change Status')
+                ->label(__('Change Status'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->form([
                     \Filament\Forms\Components\Select::make('status')
-                        ->label('New Status')
+                        ->label(__('New Status'))
                         ->options([
-                            'pending' => 'Pending',
-                            'paid' => 'Paid',
-                            'confirmed' => 'Confirmed',
-                            'cancelled' => 'Cancelled',
-                            'refunded' => 'Refunded',
+                            'pending' => __('Pending'),
+                            'paid' => __('Paid'),
+                            'confirmed' => __('Confirmed'),
+                            'cancelled' => __('Cancelled'),
+                            'refunded' => __('Refunded'),
                         ])
                         ->default(fn () => $this->record->status)
                         ->required(),
                     \Filament\Forms\Components\Textarea::make('reason')
-                        ->label('Reason for change (optional)')
+                        ->label(__('Reason for change (optional)'))
                         ->rows(2),
                 ])
                 ->action(function (array $data): void {
@@ -41,7 +41,7 @@ class ViewOrder extends ViewRecord
                     if ($oldStatus === $newStatus) {
                         Notification::make()
                             ->warning()
-                            ->title('No change')
+                            ->title(__('No change'))
                             ->body('Status is already ' . $newStatus)
                             ->send();
                         return;
@@ -62,7 +62,7 @@ class ViewOrder extends ViewRecord
 
                     Notification::make()
                         ->success()
-                        ->title('Status updated')
+                        ->title(__('Status updated'))
                         ->body("Order status changed from {$oldStatus} to {$newStatus}")
                         ->send();
                 }),

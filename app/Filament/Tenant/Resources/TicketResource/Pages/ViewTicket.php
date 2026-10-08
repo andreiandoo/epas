@@ -26,7 +26,7 @@ class ViewTicket extends ViewRecord
     {
         return [
             Actions\Action::make('download')
-                ->label('Download Ticket')
+                ->label(__('Download Ticket'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action(function () {
                     $ticket = $this->record;
@@ -62,20 +62,20 @@ class ViewTicket extends ViewRecord
                 }),
 
             Actions\Action::make('email')
-                ->label('Email Ticket')
+                ->label(__('Email Ticket'))
                 ->icon('heroicon-o-envelope')
                 ->form([
                     \Filament\Forms\Components\Radio::make('recipient_type')
-                        ->label('Send to')
+                        ->label(__('Send to'))
                         ->options([
-                            'customer' => 'Customer Email',
-                            'custom' => 'Custom Email',
+                            'customer' => __('Customer Email'),
+                            'custom' => __('Custom Email'),
                         ])
                         ->default('customer')
                         ->live()
                         ->required(),
                     \Filament\Forms\Components\TextInput::make('custom_email')
-                        ->label('Email Address')
+                        ->label(__('Email Address'))
                         ->email()
                         ->required()
                         ->visible(fn ($get) => $get('recipient_type') === 'custom'),
@@ -89,8 +89,8 @@ class ViewTicket extends ViewRecord
 
                     if (!$email) {
                         Notification::make()
-                            ->title('No Email Address')
-                            ->body('No email address available for this ticket.')
+                            ->title(__('No Email Address'))
+                            ->body(__('No email address available for this ticket.'))
                             ->danger()
                             ->send();
                         return;
@@ -100,7 +100,7 @@ class ViewTicket extends ViewRecord
                         Mail::to($email)->send(new TicketEmail($ticket));
 
                         Notification::make()
-                            ->title('Ticket Sent!')
+                            ->title(__('Ticket Sent!'))
                             ->body("Ticket has been sent to {$email}")
                             ->success()
                             ->send();
@@ -116,7 +116,7 @@ class ViewTicket extends ViewRecord
 
                     } catch (\Exception $e) {
                         Notification::make()
-                            ->title('Email Failed')
+                            ->title(__('Email Failed'))
                             ->body('Failed to send email: ' . $e->getMessage())
                             ->danger()
                             ->send();

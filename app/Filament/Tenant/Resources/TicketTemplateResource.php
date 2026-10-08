@@ -22,6 +22,17 @@ class TicketTemplateResource extends Resource
 {
     protected static ?string $model = TicketTemplate::class;
 
+    // Etichetele trec prin traduceri: panoul e folosit și în română, și în engleză
+    public static function getModelLabel(): string
+    {
+        return __('Ticket Template');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Ticket Templates');
+    }
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
 
     protected static ?string $navigationLabel = 'Ticket Templates';
@@ -62,39 +73,39 @@ class TicketTemplateResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Basic Information')
+                SC\Section::make(__('Basic Information'))
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Template Name')
+                            ->label(__('Template Name'))
                             ->required()
                             ->maxLength(255),
 
                         Forms\Components\Textarea::make('description')
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(3),
 
                         Forms\Components\Select::make('status')
                             ->options([
-                                'draft' => 'Draft',
-                                'active' => 'Active',
-                                'archived' => 'Archived',
+                                'draft' => __('Draft'),
+                                'active' => __('Active'),
+                                'archived' => __('Archived'),
                             ])
                             ->default('draft')
                             ->required(),
 
                         Forms\Components\Toggle::make('is_default')
-                            ->label('Set as Default')
+                            ->label(__('Set as Default'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Make this the default template'),
                     ])->columns(2),
 
-                SC\Section::make('Template Design')
-                    ->description('Canvas settings and dimensions')
+                SC\Section::make(__('Template Design'))
+                    ->description(__('Canvas settings and dimensions'))
                     ->schema([
                         Forms\Components\Select::make('template_data.meta.orientation')
-                            ->label('Orientation')
+                            ->label(__('Orientation'))
                             ->options([
-                                'portrait' => 'Portrait',
-                                'landscape' => 'Landscape',
+                                'portrait' => __('Portrait'),
+                                'landscape' => __('Landscape'),
                             ])
                             ->default('landscape')
                             ->required()
@@ -110,7 +121,7 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Print resolution (300 DPI recommended)'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.w')
-                            ->label('Width (mm)')
+                            ->label(__('Width (mm)'))
                             ->numeric()
                             ->default(200)
                             ->required()
@@ -118,7 +129,7 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Canvas width in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.h')
-                            ->label('Height (mm)')
+                            ->label(__('Height (mm)'))
                             ->numeric()
                             ->default(100)
                             ->required()
@@ -126,21 +137,21 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Canvas height in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.bleed_mm')
-                            ->label('Bleed (mm)')
+                            ->label(__('Bleed (mm)'))
                             ->numeric()
                             ->default(3)
                             ->minValue(0)
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Print bleed area in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.safe_area_mm')
-                            ->label('Safe Area (mm)')
+                            ->label(__('Safe Area (mm)'))
                             ->numeric()
                             ->default(5)
                             ->minValue(0)
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Safe area margin in millimeters'),
                     ])->columns(3),
 
-                SC\Section::make('Preview')
+                SC\Section::make(__('Preview'))
                     ->schema([
                         Forms\Components\Placeholder::make('preview_display')
                             ->label('')
@@ -188,7 +199,7 @@ class TicketTemplateResource extends Resource
             ->columns([
                 // Previzualizarea e salvată pe discul public; biletele sunt pe lat, deci nu o tăiem în pătrat
                 Tables\Columns\ImageColumn::make('preview_image')
-                    ->label('Preview')
+                    ->label(__('Preview'))
                     ->disk('public')
                     ->imageHeight(56)
                     ->imageWidth(140)
@@ -207,11 +218,11 @@ class TicketTemplateResource extends Resource
                     ]),
 
                 Tables\Columns\IconColumn::make('is_default')
-                    ->label('Default')
+                    ->label(__('Default'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('size_display')
-                    ->label('Size')
+                    ->label(__('Size'))
                     ->getStateUsing(function ($record) {
                         $meta = $record->template_data['meta'] ?? [];
                         $w = $meta['size_mm']['w'] ?? '?';
@@ -220,28 +231,28 @@ class TicketTemplateResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Modified')
+                    ->label(__('Modified'))
                     ->dateTime('M d, Y')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'active' => 'Active',
-                        'archived' => 'Archived',
+                        'draft' => __('Draft'),
+                        'active' => __('Active'),
+                        'archived' => __('Archived'),
                     ]),
             ])
             ->actions([
                 EditAction::make(),
                 Actions\Action::make('editor')
-                    ->label('Visual Editor')
+                    ->label(__('Visual Editor'))
                     ->icon('heroicon-o-pencil-square')
                     ->color('warning')
                     ->url(fn ($record) => "/tenant/ticket-customizer/{$record->id}/editor")
                     ->openUrlInNewTab(),
                 Actions\Action::make('set_default')
-                    ->label('Set Default')
+                    ->label(__('Set Default'))
                     ->icon('heroicon-o-star')
                     ->color('gray')
                     ->visible(fn ($record) => !$record->is_default)

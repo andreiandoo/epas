@@ -14,7 +14,7 @@ class EditTicketTemplate extends EditRecord
     {
         return [
             Actions\Action::make('visual_editor')
-                ->label('Open Visual Editor')
+                ->label(__('Open Visual Editor'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('warning')
                 ->url(fn () => "/tenant/ticket-customizer/{$this->record->id}/editor")

@@ -15,7 +15,7 @@ class Microservices extends Page
 
     public function getTitle(): string
     {
-        return 'Microservices';
+        return __('Microservices');
     }
 
     public function getViewData(): array

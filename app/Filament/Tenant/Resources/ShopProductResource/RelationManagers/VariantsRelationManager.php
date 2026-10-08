@@ -35,38 +35,38 @@ class VariantsRelationManager extends RelationManager
                     ->default(fn () => strtoupper(Str::random(8))),
 
                 Forms\Components\TextInput::make('name')
-                    ->label('Variant Name')
+                    ->label(__('Variant Name'))
                     ->maxLength(200)
-                    ->placeholder('Auto-generated from attributes'),
+                    ->placeholder(__('Auto-generated from attributes')),
 
                 Forms\Components\TextInput::make('price')
-                    ->label('Price')
+                    ->label(__('Price'))
                     ->numeric()
                     ->step(0.01)
                     ->minValue(0)
                     ->prefix('RON')
-                    ->placeholder('Use product price'),
+                    ->placeholder(__('Use product price')),
 
                 Forms\Components\TextInput::make('sale_price')
-                    ->label('Sale Price')
+                    ->label(__('Sale Price'))
                     ->numeric()
                     ->step(0.01)
                     ->minValue(0)
                     ->prefix('RON')
-                    ->placeholder('Leave empty if no sale'),
+                    ->placeholder(__('Leave empty if no sale')),
 
                 Forms\Components\TextInput::make('stock_quantity')
-                    ->label('Stock')
+                    ->label(__('Stock'))
                     ->numeric()
                     ->default(0),
 
                 Forms\Components\TextInput::make('weight_grams')
-                    ->label('Weight (g)')
+                    ->label(__('Weight (g)'))
                     ->numeric()
-                    ->placeholder('Use product weight'),
+                    ->placeholder(__('Use product weight')),
 
                 Forms\Components\FileUpload::make('image_url')
-                    ->label('Variant Image')
+                    ->label(__('Variant Image'))
                     ->image()
                     ->imageEditor()
                     ->imageResizeMode('cover')
@@ -78,19 +78,19 @@ class VariantsRelationManager extends RelationManager
                     ->visibility('public')
                     ->maxSize(5120)
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                    ->helperText('Drag & drop or click to upload. Max 5MB'),
+                    ->helperText(__('Drag & drop or click to upload. Max 5MB')),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->default(true),
 
                 Forms\Components\TextInput::make('sort_order')
-                    ->label('Sort Order')
+                    ->label(__('Sort Order'))
                     ->numeric()
                     ->default(0),
 
                 Forms\Components\Select::make('attributeValues')
-                    ->label('Attribute Values')
+                    ->label(__('Attribute Values'))
                     ->multiple()
                     ->relationship('attributeValues', 'slug')
                     ->options(function () use ($tenantLanguage) {
@@ -117,7 +117,7 @@ class VariantsRelationManager extends RelationManager
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
-                    ->label('Image')
+                    ->label(__('Image'))
                     ->disk('public')
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://placehold.co/50x50/EEE/31343C?text=-'),
@@ -128,11 +128,11 @@ class VariantsRelationManager extends RelationManager
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('attributeValues.value')
-                    ->label('Attributes')
+                    ->label(__('Attributes'))
                     ->formatStateUsing(function ($state, $record) use ($tenantLanguage) {
                         return $record->attributeValues
                             ->map(fn ($v) => $v->value[$tenantLanguage] ?? $v->slug)
@@ -140,28 +140,28 @@ class VariantsRelationManager extends RelationManager
                     }),
 
                 Tables\Columns\TextColumn::make('price')
-                    ->label('Price')
+                    ->label(__('Price'))
                     ->formatStateUsing(function ($state, $record) {
                         if (!$state) return '—';
                         return number_format($state, 2) . ' ' . ($record->product->currency ?? 'RON');
                     }),
 
                 Tables\Columns\TextColumn::make('stock_quantity')
-                    ->label('Stock')
+                    ->label(__('Stock'))
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
             ])
             ->headerActions([
                 CreateAction::make(),
