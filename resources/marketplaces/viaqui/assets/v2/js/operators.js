@@ -1,4 +1,4 @@
-/* viaqui.com v2: operators catalog (/operatori). Search (diacritics don't matter), city and "verified" filters over the
+/* viaqui.com v2: operators catalog (/operators). Search (diacritics don't matter), city and "verified" filters over the
    server-rendered operator cards (the hero's quick buttons drive the same "verified" filter), the first 12 cards then
    "show all", and the state kept in the URL (?q=, ?oras=, ?verificati=1). */
 (function () {
@@ -16,12 +16,7 @@
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
-  /* Romanian counting, as v2_num(): 1 operator, 5 operatori, 20 de operatori */
-  function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
-  }
+  /* counting in the visitor's language, as v2_num(): "1 operator found", "5 operators found" */
 
   var index = cards.map(function (card) {
     return {
@@ -50,14 +45,14 @@
       if (hit && q) found++;
     });
     quick.forEach(function (b) { b.setAttribute('aria-pressed', String((b.getAttribute('data-quick') === 'verified') === onlyVerified)); });
-    title.textContent = onlyVerified ? 'Operatori verificați' : (city !== 'all' ? 'Operatori în ' + citySel.options[citySel.selectedIndex].text : 'Operatori parteneri');
-    count.textContent = shown + ' din ' + total + ' operatori';
+    title.textContent = onlyVerified ? VQ.t('Verified operators') : (city !== 'all' ? VQ.t('Operators in {city}', { city: citySel.options[citySel.selectedIndex].text }) : VQ.t('Partner operators'));
+    count.textContent = VQ.t('{shown} of {total} operators', { shown: shown, total: total });
     none.hidden = shown > 0;
     // a search or a filter always shows every match; otherwise the first 12 until "show all"
     var filtering = !!q || city !== 'all' || onlyVerified;
     grid.classList.toggle('is-all', expanded || filtering);
     if (more) more.hidden = expanded || filtering;
-    status.textContent = q ? (found ? num(found, 'operator găsit', 'operatori găsiți') : 'Niciun operator găsit.') : '';
+    status.textContent = q ? (found ? VQ.n(found, 'operator found', 'operators found') : VQ.t('No operator found.')) : '';
     if (fromUser) sync();
   }
 
@@ -74,7 +69,7 @@
     b.addEventListener('click', function () {
       var onlyVerified = b.getAttribute('data-quick') === 'verified';
       verified.checked = onlyVerified;
-      if (!onlyVerified) citySel.value = 'all'; // "Toți operatorii" clears the filters, as before
+      if (!onlyVerified) citySel.value = 'all'; // "All operators" clears the filters, as before
       apply(true);
     });
   });

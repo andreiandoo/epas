@@ -8,7 +8,7 @@
  *
  * The demo form posted to /api/contact-locatii.php, which doesn't exist (404): every demo request was lost.
  * for-venues.js now sends it into the real lead pipeline (proxy leads.create → core LeadsController::create, the same
- * one /inregistrare-locatie uses), which requires the city. /pricing-locatii was a 404 too; the pricing links go to the
+ * one /list-your-venue uses), which requires the city. /pricing-locatii was a 404 too; the pricing links go to the
  * commission section of /devino-partener. Payment methods follow checkout; the SEO URL examples follow real routes.
  */
 
@@ -24,81 +24,81 @@ require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
 $fvWho = [
-    ['Escape rooms', 'Sloturi orare, capacitate per cameră, beneficiari diferiți, bilete de grup și check-in rapid.', ''],
-    ['Muzee & expoziții', 'Bilete de acces, expoziții temporare, tururi ghidate, copii/adulți, gratuități și program.', 'is-mint'],
-    ['Parcuri & agrement', 'Pachete, categorii de vârstă, acces pe zi, extra-opțiuni și capacitate.', ''],
-    ['Peșteri & rezervații', 'Tururi, reguli de acces, nivel de dificultate, echipament, ghid și sezonalitate.', ''],
-    ['Ateliere & educație', 'Locuri limitate, vârste recomandate, materiale incluse, grupuri școlare.', 'is-deep'],
-    ['Tururi & experiențe', 'City walks, tururi gastronomice, tururi istorice, experiențe turistice și private.', ''],
+    [v2_t('Escape rooms'), v2_t('Time slots, capacity per room, different ticket holders, group tickets and fast check-in.'), ''],
+    [v2_t('Museums & exhibitions'), v2_t('Admission tickets, temporary exhibitions, guided tours, child/adult prices, free entries and opening hours.'), 'is-mint'],
+    [v2_t('Parks & leisure'), v2_t('Packages, age groups, day access, extras and capacity.'), ''],
+    [v2_t('Caves & nature reserves'), v2_t('Tours, access rules, difficulty level, equipment, guide and seasons.'), ''],
+    [v2_t('Workshops & education'), v2_t('Limited places, recommended ages, materials included, school groups.'), 'is-deep'],
+    [v2_t('Tours & experiences'), v2_t('City walks, food tours, history tours, sightseeing and private experiences.'), ''],
 ];
 $fvGet = [
-    ['01 · SEO', 'Pagini care pot atrage trafic organic.', 'Pagină de locație, pagini pentru activități, categorii, orașe și intenții precum „activități copii”, „weekend”, „indoor”, „sub 50 lei”.', ''],
-    ['02 · Checkout', 'Cumpărare rapidă, clară, modernă.', 'Card (inclusiv Apple Pay și Google Pay), Card Cultural acolo unde este acceptat, beneficiari diferiți, cont automat, taxe afișate separat și opțiuni comerciale.', 'is-deep'],
-    ['03 · QR', 'Bilete digitale și check-in rapid.', 'Fiecare bilet are cod unic, status, beneficiar și poate fi scanat la intrare pentru control clar al accesului.', ''],
-    ['04 · Dashboard', 'Comenzi, clienți, scanări și rapoarte.', 'Vezi vânzările, biletele emise, participanții, disponibilitatea, statusurile și performanța activităților.', ''],
-    ['05 · Growth', 'Promoții, vouchere, carduri cadou.', 'Poți rula coduri promo, campanii sezoniere, carduri cadou, puncte bonus și oferte pentru audiențe specifice.', ''],
-    ['06 · Trust', 'O experiență mai bună pentru clienți.', 'Clientul vede clar ce cumpără, unde merge, cum intră, ce include biletul și ce se întâmplă după plată.', 'is-mint'],
+    [v2_t('01 · SEO'), v2_t('Pages that can bring organic traffic.'), v2_t('A venue page, pages for activities, categories, cities and intents such as “things to do with kids”, “weekend”, “indoor”, “under {amount}”.', ['amount' => v2_money(50)]), ''],
+    [v2_t('02 · Checkout'), v2_t('Fast, clear, modern buying.'), v2_t('Card (including Apple Pay and Google Pay), culture card where accepted, different ticket holders, automatic account, fees shown separately and commercial options.'), 'is-deep'],
+    [v2_t('03 · QR'), v2_t('Digital tickets and fast check-in.'), v2_t('Every ticket has a unique code, a status and a holder, and can be scanned at the entrance for clear access control.'), ''],
+    [v2_t('04 · Dashboard'), v2_t('Orders, customers, scans and reports.'), v2_t('You see sales, tickets issued, participants, availability, statuses and how your activities perform.'), ''],
+    [v2_t('05 · Growth'), v2_t('Promotions, vouchers, gift cards.'), v2_t('You can run promo codes, seasonal campaigns, gift cards, bonus points and offers for specific audiences.'), ''],
+    [v2_t('06 · Trust'), v2_t('A better experience for customers.'), v2_t('The customer sees clearly what they are buying, where they are going, how they get in, what the ticket includes and what happens after payment.'), 'is-mint'],
 ];
 $fvSeoUrls = [
-    ['/brasov/activitati-copii', 'oraș + intenție'],
-    ['/escape-rooms', 'categorie'],
-    ['/locatie/mystery-rooms', 'pagină locație'],
-    ['/activitate/camera-13', 'pagină activitate'],
+    ['/lisbon/with-kids', v2_t('city + intent')],
+    ['/escape-rooms', v2_t('category')],
+    ['/venue/mystery-rooms', v2_t('venue page')],
+    ['/activity/room-13', v2_t('activity page')],
 ];
 $fvAnatomy = [
-    ['Titlu + descriere clare', 'Ce este, unde este, pentru cine este.'],
-    ['Date structurate', 'Breadcrumbs, FAQ, local entity, activitate.'],
-    ['Întrebări practice', 'Program, acces, vârstă, durată, reguli, parcare.'],
-    ['Internal linking', 'Orașe, categorii, activități similare, ghiduri.'],
+    [v2_t('Clear title + description'), v2_t('What it is, where it is, who it is for.')],
+    [v2_t('Structured data'), v2_t('Breadcrumbs, FAQ, local entity, activity.')],
+    [v2_t('Practical questions'), v2_t('Opening hours, access, age, duration, rules, parking.')],
+    [v2_t('Internal linking'), v2_t('Cities, categories, similar activities, guides.')],
 ];
 $fvOps = [
-    ['Onboarding', 'Date locație, activități, bilete, politici.'],
-    ['Publicare', 'Pagini SEO și activități disponibile online.'],
-    ['Vânzare', 'Checkout, plăți, comisioane, bilete QR.'],
-    ['Scanare', 'Validare rapidă la intrare, statusuri clare.'],
-    ['Creștere', 'Rapoarte, recenzii, promoții, campanii.'],
+    [v2_t('Onboarding'), v2_t('Venue details, activities, tickets, policies.')],
+    [v2_t('Publishing'), v2_t('SEO pages and activities available online.')],
+    [v2_t('Selling'), v2_t('Checkout, payments, commissions, QR tickets.')],
+    [v2_t('Scanning'), v2_t('Fast validation at the entrance, clear statuses.')],
+    [v2_t('Growing'), v2_t('Reports, reviews, promotions, campaigns.')],
 ];
 $fvTiers = [
-    ['Start', 'Listare', 'Pagini, checkout, bilete QR.', ''],
-    ['Growth', 'Promovare', 'SEO, campanii, vizibilitate.', 'is-deep'],
-    ['Pro', 'Operațional', 'Rapoarte, staff, integrări.', ''],
+    [v2_t('Start'), v2_t('Listing'), v2_t('Pages, checkout, QR tickets.'), ''],
+    [v2_t('Growth'), v2_t('Promotion'), v2_t('SEO, campaigns, visibility.'), 'is-deep'],
+    [v2_t('Pro'), v2_t('Operations'), v2_t('Reports, staff, integrations.'), ''],
 ];
 // venue type → core category slug ('' = none fits: sent as category_other)
 $fvVenueTypes = [
-    'escape-rooms' => 'Escape room',
-    'muzee-expozitii' => 'Muzeu / expoziție',
-    'parcuri-de-distractii' => 'Parc de distracții',
-    'parcuri-de-aventura' => 'Parc de aventură',
-    'natura-outdoor' => 'Peșteră / rezervație',
-    'ateliere-experiente-creative' => 'Atelier / educație',
-    'tururi-experiente-turistice' => 'Tururi / experiențe',
-    'other' => 'Altceva',
+    'escape-rooms' => v2_t('Escape room'),
+    'muzee-expozitii' => v2_t('Museum / exhibition'),
+    'parcuri-de-distractii' => v2_t('Amusement park'),
+    'parcuri-de-aventura' => v2_t('Adventure park'),
+    'natura-outdoor' => v2_t('Cave / nature reserve'),
+    'ateliere-experiente-creative' => v2_t('Workshop / education'),
+    'tururi-experiente-turistice' => v2_t('Tours / experiences'),
+    'other' => v2_t('Something else'),
 ];
-$fvRoles = ['Owner / Administrator', 'Marketing', 'Operațional', 'Alt rol'];
-$fvCounts = ['1 activitate', '2-5 activități', '6-15 activități', '15+ activități'];
+$fvRoles = [v2_t('Owner / Administrator'), v2_t('Marketing'), v2_t('Operations'), v2_t('Another role')];
+$fvCounts = [v2_t('1 activity'), v2_t('2-5 activities'), v2_t('6-15 activities'), v2_t('15+ activities')];
 $fvFaqs = [
-    ['Ce tipuri de locații pot folosi platforma?', 'Platforma este potrivită pentru escape rooms, muzee, expoziții, parcuri de distracții, parcuri de aventură, peșteri, rezervații naturale, ateliere, tururi ghidate, ferme educative și alte experiențe care vând bilete sau rezervări.'],
-    ['Pot avea mai multe activități în aceeași locație?', 'Da. O locație poate avea o pagină principală și mai multe pagini pentru activități, camere, tururi, pachete sau tipuri de acces.'],
-    ['Cum se validează biletele?', 'Fiecare bilet este emis cu un cod QR unic. La intrare, personalul locației îl scanează din interfața de check-in, iar sistemul afișează statusul biletului.'],
-    ['Mă ajută cu SEO?', 'Da. Platforma este gândită pentru pagini indexabile: locație, activități, orașe, categorii și pagini de intenție precum activități pentru copii, weekend, indoor sau outdoor.'],
-    ['Pot crea promoții sau coduri de reducere?', 'Da, platforma poate include coduri promoționale, campanii sezoniere, vouchere, puncte bonus și carduri cadou, în funcție de configurare.'],
-    ['Ce se întâmplă după ce primesc o comandă?', 'Comanda apare în dashboard, biletele sunt emise automat, clientul primește confirmarea, iar tu poți vedea participanții și valida biletele la intrare.'],
+    [v2_t('What kinds of venues can use the platform?'), v2_t('The platform suits escape rooms, museums, exhibitions, amusement parks, adventure parks, caves, nature reserves, workshops, guided tours, educational farms and other experiences that sell tickets or bookings.')],
+    [v2_t('Can I have several activities at the same venue?'), v2_t('Yes. A venue can have a main page and several pages for activities, rooms, tours, packages or access types.')],
+    [v2_t('How are tickets validated?'), v2_t('Every ticket is issued with a unique QR code. At the entrance, the venue staff scan it from the check-in interface, and the system shows the status of the ticket.')],
+    [v2_t('Does it help with SEO?'), v2_t('Yes. The platform is designed for indexable pages: venue, activities, cities, categories and intent pages such as activities for kids, weekend, indoor or outdoor.')],
+    [v2_t('Can I create promotions or discount codes?'), v2_t('Yes, the platform can include promo codes, seasonal campaigns, vouchers, bonus points and gift cards, depending on the setup.')],
+    [v2_t('What happens after I receive an order?'), v2_t('The order appears in the dashboard, the tickets are issued automatically, the customer receives the confirmation, and you can see the participants and validate the tickets at the entrance.')],
 ];
 
-$pageTitleRaw = 'Pentru locații — vinde bilete online pentru activități pe viaqui.com';
-$pageDescription = 'Listează-ți locația pe viaqui.com și vinde bilete online pentru escape rooms, muzee, parcuri, ateliere, peșteri, rezervații și experiențe locale. Pagini SEO, checkout, QR, scanare, rapoarte și dashboard.';
+$pageTitleRaw = v2_t('For venues: sell tickets online for your activities on viaqui.com');
+$pageDescription = v2_t('List your venue on viaqui.com and sell tickets online for escape rooms, museums, parks, workshops, caves, nature reserves and local experiences. SEO pages, checkout, QR, scanning, reports and dashboard.');
 $canonicalUrl = SITE_URL . '/pentru-locatii';
-$noindex = true; // /parteneri is the page to find; this one stays for old links
+$noindex = true; // /partners is the page to find; this one stays for old links
 $structuredData = [
     [
         '@context' => 'https://schema.org',
         '@type' => 'Service',
-        'name' => 'viaqui.com pentru locații',
-        'serviceType' => 'Platformă de vânzare bilete online pentru activități și locații',
+        'name' => v2_t('viaqui.com for venues'),
+        'serviceType' => v2_t('Platform for selling tickets online for activities and venues'),
         'provider' => ['@type' => 'Organization', 'name' => 'viaqui.com', 'url' => SITE_URL . '/'],
-        'areaServed' => ['@type' => 'Country', 'name' => 'România'],
-        'description' => 'Platformă pentru locații care vând bilete online la activități: pagini SEO, checkout, bilete QR, scanare, dashboard, rapoarte, carduri cadou și puncte bonus.',
-        'audience' => ['@type' => 'BusinessAudience', 'audienceType' => 'Locații de agrement, muzee, escape rooms, parcuri, ateliere, operatori de tururi și experiențe'],
+        'areaServed' => ['@type' => 'Place', 'name' => 'Europe'],
+        'description' => v2_t('A platform for venues that sell tickets online to their activities: SEO pages, checkout, QR tickets, scanning, dashboard, reports, gift cards and bonus points.'),
+        'audience' => ['@type' => 'BusinessAudience', 'audienceType' => v2_t('Leisure venues, museums, escape rooms, parks, workshops, tour and experience operators')],
     ],
     [
         '@context' => 'https://schema.org',
@@ -111,7 +111,7 @@ $v2Styles = ['for-venues.css'];
 $v2Scripts = ['for-venues.js'];
 $v2HeaderOverlay = true;
 $v2ClientData = ['supportEmail' => SUPPORT_EMAIL];
-$v2HeadExtra = '<meta name="keywords" content="vânzare bilete activități, platformă bilete locații, bilete online escape room, bilete online muzeu, bilete QR activități, sistem ticketing locații, platformă rezervări activități">'
+$v2HeadExtra = '<meta name="keywords" content="' . v2_te('selling tickets for activities, ticket platform for venues, online tickets escape room, online tickets museum, QR tickets for activities, ticketing system for venues, booking platform for activities') . '">'
     // head.php strips utm_* from the address bar a moment later; keep them for the demo lead (read at runtime, so the
     // page cache, which ignores utm_* in its key, never bakes one visitor's campaign into the HTML)
     . '<script>(function(){try{var q=new URLSearchParams(location.search),u={};["utm_source","utm_medium","utm_campaign","utm_content","utm_term"].forEach(function(k){if(q.get(k))u[k]=q.get(k).slice(0,150)});window.BO_UTM=u;}catch(e){}})();</script>';
@@ -125,17 +125,17 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>
     <div class="fv-in">
       <div class="fv-copy">
-        <p class="fv-kicker">Platformă pentru locații · SEO · checkout · QR</p>
-        <h1 class="fv-h" id="fv-h">Transformă activitățile tale în bilete care se vând online.</h1>
-        <p class="fv-lead">viaqui.com ajută locațiile să fie descoperite organic, să vândă bilete rapid și să gestioneze accesul cu QR — fără să construiască de la zero o platformă de ticketing.</p>
+        <p class="fv-kicker"><?= v2_te('Platform for venues · SEO · checkout · QR') ?></p>
+        <h1 class="fv-h" id="fv-h"><?= v2_te('Turn your activities into tickets that sell online.') ?></h1>
+        <p class="fv-lead"><?= v2_te('viaqui.com helps venues get discovered organically, sell tickets fast and manage access with QR, without building a ticketing platform from scratch.') ?></p>
         <div class="fv-cta">
-          <a class="btn btn-light" href="#demo">Solicită demo<?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="#ce-primesti">Vezi ce primești</a>
+          <a class="btn btn-light" href="#demo"><?= v2_te('Request a demo') ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-outline-light" href="#ce-primesti"><?= v2_te('See what you get') ?></a>
         </div>
         <dl class="fv-stats">
-          <div><dt>Pagini</dt><dd>SEO</dd></div>
-          <div><dt>Acces</dt><dd>QR</dd></div>
-          <div><dt>Date</dt><dd>live</dd></div>
+          <div><dt><?= v2_te('Pages') ?></dt><dd><?= v2_te('SEO') ?></dd></div>
+          <div><dt><?= v2_te('Access') ?></dt><dd><?= v2_te('QR') ?></dd></div>
+          <div><dt><?= v2_te('Data') ?></dt><dd><?= v2_te('live') ?></dd></div>
         </dl>
       </div>
 
@@ -145,27 +145,27 @@ include __DIR__ . '/includes/v2/header.php';
         <div class="fv-mock" aria-hidden="true">
           <div class="fv-dash">
             <div class="fv-dash-top">
-              <div><small>Organizer dashboard</small><b>Mystery Rooms Brașov</b></div>
-              <span class="fv-live">Live</span>
+              <div><small><?= v2_te('Organizer dashboard') ?></small><b>Mystery Rooms Lisbon</b></div>
+              <span class="fv-live"><?= v2_te('Live') ?></span>
             </div>
             <div class="fv-dash-stats">
-              <div><small>Vânzări</small><b>18.4k</b></div>
-              <div class="is-mint"><small>Bilete</small><b>214</b></div>
-              <div><small>Scanate</small><b>38</b></div>
+              <div><small><?= v2_te('Sales') ?></small><b>18.4k</b></div>
+              <div class="is-mint"><small><?= v2_te('Tickets') ?></small><b>214</b></div>
+              <div><small><?= v2_te('Scanned') ?></small><b>38</b></div>
             </div>
             <div class="fv-dash-rows">
-              <div><p><span>Camera 13</span><span>9.200 lei</span></p><i><em class="is-pulse"></em></i></div>
-              <div><p><span>Laboratorul 7</span><span>6.140 lei</span></p><i><em style="width:54%"></em></i></div>
+              <div><p><span><?= v2_te('Room 13') ?></span><span><?= v2_money(9200) ?></span></p><i><em class="is-pulse"></em></i></div>
+              <div><p><span><?= v2_te('Lab 7') ?></span><span><?= v2_money(6140) ?></span></p><i><em style="width:54%"></em></i></div>
             </div>
           </div>
           <div class="fv-float is-checkin">
-            <small>Check-in</small>
-            <div class="fv-qr"><span>QR<br>valid</span><em class="fv-scan"></em></div>
+            <small><?= v2_te('Check-in') ?></small>
+            <div class="fv-qr"><span><?= v2_t('QR<br>valid') ?></span><em class="fv-scan"></em></div>
           </div>
           <div class="fv-float is-seo">
-            <small>SEO local</small>
-            <b>/brasov/activitati-copii</b>
-            <span>Pagini pentru oraș, categorie, locație și activități.</span>
+            <small><?= v2_te('Local SEO') ?></small>
+            <b>/lisbon/with-kids</b>
+            <span><?= v2_te('Pages for city, category, venue and activities.') ?></span>
           </div>
         </div>
       </div>
@@ -176,9 +176,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec fv-who" aria-labelledby="fv-who-h">
     <div class="wrap fv-split">
       <div class="fv-intro">
-        <p class="kicker">Pentru cine</p>
-        <h2 id="fv-who-h">Nu vinzi doar bilete. Vinzi o experiență care trebuie descoperită.</h2>
-        <p>Platforma este construită pentru activități diferite, cu modele diferite de acces: sloturi orare, bilete simple, pachete, tururi ghidate, acces pe zi, grupuri sau evenimente private.</p>
+        <p class="kicker"><?= v2_te('Who it\'s for') ?></p>
+        <h2 id="fv-who-h"><?= v2_te('You don\'t just sell tickets. You sell an experience that has to be discovered.') ?></h2>
+        <p><?= v2_te('The platform is built for different activities, with different access models: time slots, simple tickets, packages, guided tours, day access, groups or private events.') ?></p>
       </div>
       <div class="fv-who-grid">
         <?php foreach ($fvWho as [$whoTitle, $whoText, $whoTone]): ?>
@@ -192,9 +192,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="fv-band" id="ce-primesti" aria-labelledby="fv-get-h">
     <div class="wrap">
       <div class="fv-head">
-        <p class="kicker">Ce primești</p>
-        <h2 id="fv-get-h">Un stack complet pentru vânzarea activităților tale.</h2>
-        <p>viaqui.com combină pagini publice optimizate, flux de cumpărare, emitere bilete, operațiuni la intrare și instrumente de creștere.</p>
+        <p class="kicker"><?= v2_te('What you get') ?></p>
+        <h2 id="fv-get-h"><?= v2_te('A complete stack for selling your activities.') ?></h2>
+        <p><?= v2_te('viaqui.com combines optimised public pages, a buying flow, ticket issuing, operations at the entrance and growth tools.') ?></p>
       </div>
       <div class="fv-get-grid">
         <?php foreach ($fvGet as [$getK, $getTitle, $getText, $getTone]): ?>
@@ -208,9 +208,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec fv-seo" aria-labelledby="fv-seo-h">
     <div class="wrap fv-seo-grid">
       <div>
-        <p class="kicker">SEO engine</p>
-        <h2 id="fv-seo-h">Nu depinzi doar de reclame.</h2>
-        <p class="fv-p">Fiecare activitate poate deveni o pagină de vânzare optimizată. Locația ta poate apărea în pagini de oraș, categorie și intenție — nu doar într-o listă generică.</p>
+        <p class="kicker"><?= v2_te('SEO engine') ?></p>
+        <h2 id="fv-seo-h"><?= v2_te('You don\'t depend on ads alone.') ?></h2>
+        <p class="fv-p"><?= v2_te('Every activity can become an optimised sales page. Your venue can appear on city, category and intent pages, not just in a generic list.') ?></p>
         <div class="fv-urls">
           <?php foreach ($fvSeoUrls as [$urlPath, $urlLabel]): ?>
           <div><b><?= v2_e($urlPath) ?></b><span><?= v2_e($urlLabel) ?></span></div>
@@ -218,7 +218,7 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
       </div>
       <div class="fv-anatomy">
-        <div class="fv-anatomy-head"><p>Anatomia unei pagini SEO</p><h3>Activitatea ta devine găsibilă.</h3></div>
+        <div class="fv-anatomy-head"><p><?= v2_te('Anatomy of an SEO page') ?></p><h3><?= v2_te('Your activity becomes findable.') ?></h3></div>
         <div class="fv-anatomy-list">
           <?php foreach ($fvAnatomy as [$anaTitle, $anaText]): ?>
           <div><b><?= v2_e($anaTitle) ?></b><span><?= v2_e($anaText) ?></span></div>
@@ -232,9 +232,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="fv-ops" aria-labelledby="fv-ops-h">
     <div class="wrap">
       <div class="fv-head">
-        <p class="fv-dark-k">Operațional</p>
-        <h2 id="fv-ops-h">De la listare la check-in.</h2>
-        <p>Fluxul este construit pentru echipe mici: publici activitatea, vinzi bilete, scanezi la intrare și urmărești rezultatele.</p>
+        <p class="fv-dark-k"><?= v2_te('Operations') ?></p>
+        <h2 id="fv-ops-h"><?= v2_te('From listing to check-in.') ?></h2>
+        <p><?= v2_te('The flow is built for small teams: you publish the activity, sell tickets, scan at the entrance and follow the results.') ?></p>
       </div>
       <ol class="fv-ops-grid">
         <?php foreach ($fvOps as $oi => [$opTitle, $opText]): ?>
@@ -248,35 +248,35 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec fv-modules" aria-labelledby="fv-mod-h">
     <div class="wrap fv-split is-wide">
       <div class="fv-intro">
-        <p class="kicker">Module</p>
-        <h2 id="fv-mod-h">Alegi ce ai nevoie. Platforma poate crește cu tine.</h2>
+        <p class="kicker"><?= v2_te('Modules') ?></p>
+        <h2 id="fv-mod-h"><?= v2_te('Pick what you need. The platform can grow with you.') ?></h2>
       </div>
       <div>
-        <div class="fv-tabs" role="tablist" aria-label="Module" data-tabs>
-          <button type="button" role="tab" id="fv-tab-tickets" aria-controls="fv-panel-tickets" aria-selected="true">Bilete</button>
-          <button type="button" role="tab" id="fv-tab-calendar" aria-controls="fv-panel-calendar" aria-selected="false" tabindex="-1">Disponibilitate</button>
-          <button type="button" role="tab" id="fv-tab-growth" aria-controls="fv-panel-growth" aria-selected="false" tabindex="-1">Growth</button>
-          <button type="button" role="tab" id="fv-tab-reports" aria-controls="fv-panel-reports" aria-selected="false" tabindex="-1">Rapoarte</button>
+        <div class="fv-tabs" role="tablist" aria-label="<?= v2_te('Modules') ?>" data-tabs>
+          <button type="button" role="tab" id="fv-tab-tickets" aria-controls="fv-panel-tickets" aria-selected="true"><?= v2_te('Tickets') ?></button>
+          <button type="button" role="tab" id="fv-tab-calendar" aria-controls="fv-panel-calendar" aria-selected="false" tabindex="-1"><?= v2_te('Availability') ?></button>
+          <button type="button" role="tab" id="fv-tab-growth" aria-controls="fv-panel-growth" aria-selected="false" tabindex="-1"><?= v2_te('Growth') ?></button>
+          <button type="button" role="tab" id="fv-tab-reports" aria-controls="fv-panel-reports" aria-selected="false" tabindex="-1"><?= v2_te('Reports') ?></button>
         </div>
         <div class="fv-panel" role="tabpanel" id="fv-panel-tickets" aria-labelledby="fv-tab-tickets">
-          <h3>Tipuri de bilete și pachete</h3>
-          <p>Creezi bilete simple, bilete copil/adult, pachete de grup, bilete cu interval orar, extra-opțiuni sau bilete pentru tururi.</p>
-          <div class="fv-panel-grid"><div>Adult · 95 lei</div><div>Copil · 45 lei</div><div>Grup · 340 lei</div></div>
+          <h3><?= v2_te('Ticket types and packages') ?></h3>
+          <p><?= v2_te('Create simple tickets, child/adult tickets, group packages, tickets with a time slot, extras or tickets for tours.') ?></p>
+          <div class="fv-panel-grid"><div><?= v2_te('Adult · {price}', ['price' => v2_money(95)]) ?></div><div><?= v2_te('Child · {price}', ['price' => v2_money(45)]) ?></div><div><?= v2_te('Group · {price}', ['price' => v2_money(340)]) ?></div></div>
         </div>
         <div class="fv-panel" role="tabpanel" id="fv-panel-calendar" aria-labelledby="fv-tab-calendar" hidden>
-          <h3>Disponibilitate și sloturi</h3>
-          <p>Controlezi zile, ore, capacitate, închideri, excepții, sezonalitate și intervale cu disponibilitate limitată.</p>
+          <h3><?= v2_te('Availability and slots') ?></h3>
+          <p><?= v2_te('Control days, hours, capacity, closures, exceptions, seasons and time slots with limited availability.') ?></p>
           <div class="fv-days"><?php for ($day = 1; $day <= 14; $day++): ?><span<?= $day % 4 === 0 ? ' class="is-busy"' : '' ?>><?= $day ?></span><?php endfor; ?></div>
         </div>
         <div class="fv-panel" role="tabpanel" id="fv-panel-growth" aria-labelledby="fv-tab-growth" hidden>
-          <h3>Promoții, carduri cadou, puncte</h3>
-          <p>Rulezi coduri promo, campanii sezoniere, beneficii prin puncte bonus și eligibilitate pentru carduri cadou sau vouchere.</p>
-          <div class="fv-chips"><span class="is-on">WEEKEND10</span><span class="is-mint">Puncte duble</span><span>Card cadou</span></div>
+          <h3><?= v2_te('Promotions, gift cards, points') ?></h3>
+          <p><?= v2_te('Run promo codes, seasonal campaigns, benefits through bonus points and eligibility for gift cards or vouchers.') ?></p>
+          <div class="fv-chips"><span class="is-on">WEEKEND10</span><span class="is-mint"><?= v2_te('Double points') ?></span><span><?= v2_te('Gift card') ?></span></div>
         </div>
         <div class="fv-panel" role="tabpanel" id="fv-panel-reports" aria-labelledby="fv-tab-reports" hidden>
-          <h3>Rapoarte și date utile</h3>
-          <p>Vezi ce se vinde, când, pentru cine, care activități performează și ce intervale au conversie mai bună.</p>
-          <div class="fv-panel-grid is-stats"><div><small>Vânzări</small><b>18.4k</b></div><div><small>Comenzi</small><b>96</b></div><div><small>Conversie</small><b>4.2%</b></div></div>
+          <h3><?= v2_te('Reports and useful data') ?></h3>
+          <p><?= v2_te('See what sells, when, to whom, which activities perform and which time slots convert better.') ?></p>
+          <div class="fv-panel-grid is-stats"><div><small><?= v2_te('Sales') ?></small><b>18.4k</b></div><div><small><?= v2_te('Orders') ?></small><b>96</b></div><div><small><?= v2_te('Conversion') ?></small><b>4.2%</b></div></div>
         </div>
       </div>
     </div>
@@ -286,10 +286,10 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="fv-band" aria-labelledby="fv-price-h">
     <div class="wrap fv-price-grid">
       <div>
-        <p class="kicker">Model comercial</p>
-        <h2 id="fv-price-h">Costuri clare, fără infrastructură construită de la zero.</h2>
-        <p class="fv-p">Modelul poate include comision per bilet, servicii opționale sau pachete de promovare. Ideea este simplă: plătești pentru infrastructură care vinde, nu pentru promisiuni vagi.</p>
-        <a class="btn btn-primary fv-price-cta" href="/parteneri#bani">Vezi pricing locații<?= v2_ic('arrow-right') ?></a>
+        <p class="kicker"><?= v2_te('Commercial model') ?></p>
+        <h2 id="fv-price-h"><?= v2_te('Clear costs, with no infrastructure built from scratch.') ?></h2>
+        <p class="fv-p"><?= v2_te('The model can include a commission per ticket, optional services or promotion packages. The idea is simple: you pay for infrastructure that sells, not for vague promises.') ?></p>
+        <a class="btn btn-primary fv-price-cta" href="/partners#bani"><?= v2_te('See pricing for venues') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <div class="fv-tiers">
         <?php foreach ($fvTiers as [$tierK, $tierTitle, $tierText, $tierTone]): ?>
@@ -303,16 +303,16 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec fv-demo" id="demo" aria-labelledby="fv-demo-h">
     <div class="wrap fv-split">
       <div class="fv-intro">
-        <p class="kicker">Solicită demo</p>
-        <h2 id="fv-demo-h">Hai să vedem cum ar arăta locația ta pe viaqui.com.</h2>
-        <p>Trimite câteva detalii despre locație și activități. Răspunsul ideal îți arată ce pagini ar trebui create, ce tipuri de bilete se potrivesc și ce oportunități SEO ai.</p>
+        <p class="kicker"><?= v2_te('Request a demo') ?></p>
+        <h2 id="fv-demo-h"><?= v2_te('Let\'s see what your venue would look like on viaqui.com.') ?></h2>
+        <p><?= v2_te('Send a few details about your venue and activities. The ideal answer shows you which pages should be created, which ticket types fit and which SEO opportunities you have.') ?></p>
         <div class="fv-prep">
-          <b>Ce poți pregăti înainte:</b>
+          <b><?= v2_te('What you can prepare beforehand:') ?></b>
           <ul>
-            <li><?= v2_ic('check') ?>numele locației și orașul;</li>
-            <li><?= v2_ic('check') ?>tipurile de activități;</li>
-            <li><?= v2_ic('check') ?>prețuri și capacitate;</li>
-            <li><?= v2_ic('check') ?>program și reguli de acces.</li>
+            <li><?= v2_ic('check') ?><?= v2_te('the venue name and the city') ?></li>
+            <li><?= v2_ic('check') ?><?= v2_te('the types of activities') ?></li>
+            <li><?= v2_ic('check') ?><?= v2_te('prices and capacity') ?></li>
+            <li><?= v2_ic('check') ?><?= v2_te('opening hours and access rules') ?></li>
           </ul>
         </div>
       </div>
@@ -321,26 +321,26 @@ include __DIR__ . '/includes/v2/header.php';
         <form class="fv-form" id="fv-form" novalidate>
           <p class="fv-error" id="fv-error" role="alert" tabindex="-1" hidden></p>
           <!-- people never see or reach this; a bot that fills it gets a quiet "sent" -->
-          <div class="fv-trap" aria-hidden="true"><label for="fv-fax">Fax (nu completa)</label><input id="fv-fax" name="fax" type="text" tabindex="-1" autocomplete="off"></div>
+          <div class="fv-trap" aria-hidden="true"><label for="fv-fax"><?= v2_te('Fax (leave empty)') ?></label><input id="fv-fax" name="fax" type="text" tabindex="-1" autocomplete="off"></div>
           <div class="fv-fields">
-            <div class="fv-field"><label for="fv-name">Nume contact</label><input id="fv-name" name="contact_name" type="text" autocomplete="name" maxlength="160" required placeholder="Nume și prenume"></div>
-            <div class="fv-field"><label for="fv-email">Email</label><input id="fv-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="190" required placeholder="email@locatie.ro"></div>
-            <div class="fv-field"><label for="fv-phone">Telefon</label><input id="fv-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="+40..."></div>
-            <div class="fv-field"><label for="fv-role">Rol</label><select class="select" id="fv-role" name="role"><?php foreach ($fvRoles as $role): ?><option><?= v2_e($role) ?></option><?php endforeach; ?></select></div>
-            <div class="fv-field"><label for="fv-venue">Nume locație</label><input id="fv-venue" name="location_name" type="text" autocomplete="organization" maxlength="200" required placeholder="ex. Mystery Rooms Brașov"></div>
-            <div class="fv-field"><label for="fv-city">Oraș</label><input id="fv-city" name="city" type="text" autocomplete="address-level2" maxlength="120" required placeholder="ex. Brașov"></div>
-            <div class="fv-field"><label for="fv-type">Tip locație</label><select class="select" id="fv-type" name="venue_type"><?php foreach ($fvVenueTypes as $typeSlug => $typeLabel): ?><option value="<?= v2_e($typeSlug) ?>"><?= v2_e($typeLabel) ?></option><?php endforeach; ?></select></div>
-            <div class="fv-field"><label for="fv-count">Câte activități vinzi?</label><select class="select" id="fv-count" name="activities_count"><?php foreach ($fvCounts as $count): ?><option><?= v2_e($count) ?></option><?php endforeach; ?></select></div>
-            <div class="fv-field is-wide"><label for="fv-message">Ce vrei să vinzi online?</label><textarea id="fv-message" name="message" rows="5" maxlength="1800" placeholder="Descrie activitățile, tipurile de bilete, programul și ce probleme ai acum cu vânzarea sau rezervările."></textarea></div>
-            <label class="fv-check is-wide"><input id="fv-consent" name="consent" type="checkbox" required><span>Accept să fiu contactat pentru o discuție despre listarea locației pe viaqui.com.</span></label>
+            <div class="fv-field"><label for="fv-name"><?= v2_te('Contact name') ?></label><input id="fv-name" name="contact_name" type="text" autocomplete="name" maxlength="160" required placeholder="<?= v2_te('Full name') ?>"></div>
+            <div class="fv-field"><label for="fv-email"><?= v2_te('Email') ?></label><input id="fv-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="190" required placeholder="<?= v2_te('email@venue.com') ?>"></div>
+            <div class="fv-field"><label for="fv-phone"><?= v2_te('Phone') ?></label><input id="fv-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="+351..."></div>
+            <div class="fv-field"><label for="fv-role"><?= v2_te('Role') ?></label><select class="select" id="fv-role" name="role"><?php foreach ($fvRoles as $role): ?><option><?= v2_e($role) ?></option><?php endforeach; ?></select></div>
+            <div class="fv-field"><label for="fv-venue"><?= v2_te('Venue name') ?></label><input id="fv-venue" name="location_name" type="text" autocomplete="organization" maxlength="200" required placeholder="<?= v2_te('e.g. Mystery Rooms Lisbon') ?>"></div>
+            <div class="fv-field"><label for="fv-city"><?= v2_te('City') ?></label><input id="fv-city" name="city" type="text" autocomplete="address-level2" maxlength="120" required placeholder="<?= v2_te('e.g. Lisbon') ?>"></div>
+            <div class="fv-field"><label for="fv-type"><?= v2_te('Venue type') ?></label><select class="select" id="fv-type" name="venue_type"><?php foreach ($fvVenueTypes as $typeSlug => $typeLabel): ?><option value="<?= v2_e($typeSlug) ?>"><?= v2_e($typeLabel) ?></option><?php endforeach; ?></select></div>
+            <div class="fv-field"><label for="fv-count"><?= v2_te('How many activities do you sell?') ?></label><select class="select" id="fv-count" name="activities_count"><?php foreach ($fvCounts as $count): ?><option><?= v2_e($count) ?></option><?php endforeach; ?></select></div>
+            <div class="fv-field is-wide"><label for="fv-message"><?= v2_te('What do you want to sell online?') ?></label><textarea id="fv-message" name="message" rows="5" maxlength="1800" placeholder="<?= v2_te('Describe your activities, ticket types, opening hours and the problems you have now with sales or bookings.') ?>"></textarea></div>
+            <label class="fv-check is-wide"><input id="fv-consent" name="consent" type="checkbox" required><span><?= v2_te('I agree to be contacted for a conversation about listing my venue on viaqui.com.') ?></span></label>
           </div>
-          <button class="btn btn-primary fv-submit" id="fv-submit" type="submit">Trimite solicitarea</button>
+          <button class="btn btn-primary fv-submit" id="fv-submit" type="submit"><?= v2_te('Send the request') ?></button>
         </form>
         <div class="fv-done" id="fv-done" hidden>
           <span class="fv-done-ic" aria-hidden="true"><?= v2_ic('check') ?></span>
-          <h3 id="fv-done-h" tabindex="-1">Mulțumim!</h3>
-          <p>Cererea ta a ajuns la echipa viaqui.com. Te contactăm în următoarea zi lucrătoare pe <strong id="fv-done-email"></strong>.</p>
-          <a class="btn btn-ghost" href="/parteneri">Vezi cum funcționează parteneriatul</a>
+          <h3 id="fv-done-h" tabindex="-1"><?= v2_te('Thank you!') ?></h3>
+          <p><?= v2_t('Your request has reached the viaqui.com team. We will contact you on the next working day at {email}.', ['email' => '<strong id="fv-done-email"></strong>']) ?></p>
+          <a class="btn btn-ghost" href="/partners"><?= v2_te('See how the partnership works') ?></a>
         </div>
       </div>
     </div>
@@ -350,8 +350,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec fv-faq" aria-labelledby="fv-faq-h">
     <div class="wrap fv-faq-grid">
       <div>
-        <p class="kicker">FAQ</p>
-        <h2 id="fv-faq-h">Întrebări frecvente</h2>
+        <p class="kicker"><?= v2_te('FAQ') ?></p>
+        <h2 id="fv-faq-h"><?= v2_te('Frequently asked questions') ?></h2>
       </div>
       <div>
         <?php foreach ($fvFaqs as $fi => [$faqQ, $faqA]): ?>
@@ -366,13 +366,13 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="fv-final">
         <div>
-          <p class="fv-final-k">Ready to list?</p>
-          <h2>Locația ta poate deveni următoarea activitate descoperită online.</h2>
-          <p>Dacă ai o activitate pe care oamenii ar trebui să o descopere, viaqui.com poate fi infrastructura care o vinde.</p>
+          <p class="fv-final-k"><?= v2_te('Ready to list?') ?></p>
+          <h2><?= v2_te('Your venue can become the next activity discovered online.') ?></h2>
+          <p><?= v2_te('If you have an activity people should discover, viaqui.com can be the infrastructure that sells it.') ?></p>
         </div>
         <div class="fv-final-cta">
-          <a class="btn fv-btn-white" href="#demo">Solicită demo</a>
-          <a class="btn btn-outline-light" href="/parteneri#bani">Vezi pricing</a>
+          <a class="btn fv-btn-white" href="#demo"><?= v2_te('Request a demo') ?></a>
+          <a class="btn btn-outline-light" href="/partners#bani"><?= v2_te('See pricing') ?></a>
         </div>
       </div>
     </div>

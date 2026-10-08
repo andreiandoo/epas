@@ -1,6 +1,6 @@
 /* viaqui.com v2: become a partner. Replaces the page's Alpine code:
    - personalisation from ?tip=<type>&loc=<name>: profile copy in the hero, and every signup link carries tip/loc on to
-     /inregistrare-locatie (the location name is shown as text, never as markup);
+     /list-your-venue (the location name is shown as text, never as markup);
    - count-up numbers, the booking demo and the ANAF flow, which run only while in view and stand still under reduced
      motion (the page already shows their final state without JavaScript);
    - funnel tracking on the bo_lead_sid session: one page_view_landing ping and a cta_click ping for [data-track-cta]. */
@@ -25,20 +25,21 @@
   var profile = typeKey ? PROFILES[typeKey] : null;
 
   if (loc) {
-    var hello = $('dp-hello'), name = document.createElement('strong');
+    // the greeting is one sentence; the name goes in as text, in bold, where the sentence puts it
+    var hello = $('dp-hello'), name = document.createElement('strong'), greeting = VQ.t('Hi, {name}! Here is what we can do together.').split('{name}');
     name.textContent = loc;
-    hello.textContent = 'Salut, ';
+    hello.textContent = greeting[0];
     hello.appendChild(name);
-    hello.appendChild(document.createTextNode('! Iată ce putem face împreună.'));
+    hello.appendChild(document.createTextNode(greeting[1] || ''));
     hello.hidden = false;
   }
   if (profile) {
-    $('dp-chip-t').textContent = 'Ticketing & booking pentru ' + profile.label;
+    if (profile.chip) $('dp-chip-t').textContent = profile.chip;
     $('dp-h1a').textContent = profile.h1a;
     $('dp-h1b').textContent = profile.h1b;
     $('dp-h1c').textContent = profile.h1c;
     $('dp-sub').innerHTML = profile.sub; // the page's own copy (from the server), not anything from the URL
-    $('dp-cta-t').textContent = 'Pune ' + profile.label + ' online';
+    if (profile.cta) $('dp-cta-t').textContent = profile.cta;
   }
   var carry = [];
   if (typeKey) carry.push('tip=' + encodeURIComponent(typeKey));
@@ -52,7 +53,7 @@
   // ---------- count-up numbers ----------
   var counters = [].slice.call(document.querySelectorAll('[data-count]'));
   if (!reduce && canObserve && counters.length) {
-    var fmt = new Intl.NumberFormat('ro-RO');
+    var fmt = new Intl.NumberFormat((window.VQ && VQ.locale && VQ.locale !== 'en') ? VQ.locale : 'en-GB');
     var countIO = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (!en.isIntersecting) return;
@@ -92,7 +93,7 @@
   // booking demo
   var demo = $('dp-demo');
   if (demo) {
-    var TITLES = ['Alege ora', 'Tipul de bilet', 'Extra & rentals', 'Personalizează', 'Plată', 'Gata!'];
+    var TITLES = [VQ.t('Choose the time'), VQ.t('Ticket type'), VQ.t('Extras & rentals'), VQ.t('Personalise'), VQ.t('Payment'), VQ.t('Done!')];
     var steps = [].slice.call(demo.querySelectorAll('.dp-step'));
     var slots = [].slice.call(demo.querySelectorAll('.dp-slot')), tickets = [].slice.call(demo.querySelectorAll('.dp-tk'));
     var extras = [].slice.call(demo.querySelectorAll('.dp-extra')), msgs = [].slice.call(demo.querySelectorAll('.dp-msg'));
@@ -107,7 +108,7 @@
     var only = function (list, i) { list.forEach(function (el, j) { el.classList.toggle('is-on', j === i); }); };
     var bookingCycle = async function () {
       only(slots, -1); only(tickets, -1); only(extras, -1); only(msgs, -1);
-      typed.textContent = ''; gift.textContent = ''; pay.style.width = '0%'; payText.textContent = 'Se procesează plata…';
+      typed.textContent = ''; gift.textContent = ''; pay.style.width = '0%'; payText.textContent = VQ.t('Processing the payment…');
       show(0); await sleep(900); only(slots, 2); await sleep(1100);
       show(1); await sleep(900); only(tickets, 1); await sleep(1200);
       show(2); await sleep(800); extras[0].classList.add('is-on'); await sleep(750); extras[1].classList.add('is-on'); await sleep(1100);
@@ -116,7 +117,7 @@
       await sleep(400); gift.textContent = GIFT; await sleep(1300);
       show(4); await sleep(700);
       for (var w = 0; w <= 100; w += 8) { pay.style.width = w + '%'; await sleep(90); }
-      pay.style.width = '100%'; payText.textContent = 'Plată confirmată'; await sleep(800);
+      pay.style.width = '100%'; payText.textContent = VQ.t('Payment confirmed'); await sleep(800);
       show(5); await sleep(600);
       for (var m = 0; m < msgs.length; m++) { msgs[m].classList.add('is-on'); await sleep(650); }
       await sleep(2600);
