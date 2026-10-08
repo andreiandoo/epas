@@ -548,6 +548,15 @@ if ($sort !== 'recommended') $serverChips[] = [v2_t('Sorted: {order}', ['order' 
 $photoCat = $V2NAV['categoryBySlug'][$category['slug'] ?? $slug] ?? (($parent && !empty($parent['slug'])) ? ($V2NAV['categoryBySlug'][$parent['slug']] ?? null) : null);
 $heroImage = $photoCat['image'] ?? v2_media_url($catImage);
 $heroSrcset = $photoCat['srcset'] ?? '';
+// From 768px up the hero's right side previews the list itself: the first three listings of the first page, as small
+// ticket cards, the ones that have a photo. Fewer than two and there is no preview (the hero is then text only).
+// The category photo is only the phones' backdrop, so wider windows are handed an empty image in its place.
+$heroStack = $pageNum === 1 ? array_values(array_filter(array_slice($acts, 0, 3), fn ($a) => !empty($a['image']))) : [];
+if (count($heroStack) < 2) {
+    $heroStack = [];
+}
+$heroStackFront = count($heroStack) === 3 ? 1 : 0;   // the card on top: the middle one of three, the first of two
+$heroBlank = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
 $siblings = array_values(array_filter($V2NAV['categories'], fn ($c) => $c['slug'] !== $slug));
 $catLower = mb_strtolower($catName);
@@ -561,7 +570,7 @@ if (empty($V2NAV['categories'])) {
 $v2Styles = ['category.css'];
 $v2Scripts = ['category.js'];
 $v2HeaderOverlay = true;
-$v2HeadExtra = $heroImage ? '<link rel="preload" as="image" href="' . v2_e($heroImage) . '"' . ($heroSrcset ? ' imagesrcset="' . v2_e($heroSrcset) . '" imagesizes="(min-width: 768px) 36vw, 100vw"' : '') . ' fetchpriority="high">' : '';
+$v2HeadExtra = $heroImage ? '<link rel="preload" as="image" media="(max-width: 767px)" href="' . v2_e($heroImage) . '"' . ($heroSrcset ? ' imagesrcset="' . v2_e($heroSrcset) . '" imagesizes="100vw"' : '') . ' fetchpriority="high">' : '';
 $v2ClientData = [
     'activities' => $acts,
     'total'      => $resultsTotal,
@@ -581,15 +590,15 @@ include __DIR__ . '/includes/v2/header.php';
 ?>
 <main id="main" tabindex="-1">
   <!-- ============================== HERO ============================== -->
-  <?php /* The photo is a full-height panel on the right edge (a soft backdrop on phones); it is absolutely placed, so the
-           hero is exactly as tall as its copy, with or without a photo. */ ?>
-  <section class="kh<?= $heroImage ? ' kh-has-photo' : '' ?>" aria-labelledby="kh-h">
+  <?php /* Phones: the category photo is a soft backdrop under the copy. From 768px: no photo; beside the copy sits a
+           preview of the list (the first listings as small ticket cards), when at least two of them have a photo. */ ?>
+  <section class="kh<?= $heroImage ? ' kh-has-photo' : '' ?><?= $heroStack ? ' kh-has-pre' : '' ?>" aria-labelledby="kh-h">
     <?= $catArches ?>
     <svg class="kh-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <?php if ($heroImage): ?>
     <div class="kh-media">
       <div class="kh-photo">
-        <img src="<?= v2_e($heroImage) ?>"<?= $heroSrcset ? ' srcset="' . v2_e($heroSrcset) . '" sizes="(min-width: 768px) 36vw, 100vw"' : '' ?> width="640" height="800" alt="<?= v2_e($catName) ?>" fetchpriority="high" decoding="async">
+        <picture><source media="(min-width: 768px)" srcset="<?= $heroBlank ?>"><img src="<?= v2_e($heroImage) ?>"<?= $heroSrcset ? ' srcset="' . v2_e($heroSrcset) . '" sizes="100vw"' : '' ?> width="640" height="800" alt="<?= v2_e($catName) ?>" fetchpriority="high" decoding="async"></picture>
       </div>
     </div>
     <?php endif; ?>
@@ -611,6 +620,27 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if (!empty($featuredCities)): ?><li><?= v2_te('{n}+ cities', ['n' => count($featuredCities)]) ?></li><?php endif; ?>
         </ul>
       </div>
+      <?php if ($heroStack): ?>
+      <?php /* The same listings open the grid below, so these links repeat its first cards: the group says so, and
+               they stay out of the JSON-LD. Phones do not show it (and are handed an empty image for the front card). */ ?>
+      <div class="kh-pre" data-n="<?= count($heroStack) ?>" role="group" aria-label="<?= v2_te('Preview of the list below: the first experiences on it') ?>">
+        <p class="kh-pre-lab"><?= v2_te('First on the list') ?></p>
+        <ul class="kh-pre-list">
+          <?php foreach ($heroStack as $hi => $a): $ktSrc = v2_thumb($a['image'], 480, 320); $ktTag = $a['via'] !== '' ? v2_t('on {partner}', ['partner' => $a['via']]) : ($a['promoted'] ? v2_t('Promoted') : ''); ?>
+          <li class="kt<?= $hi === $heroStackFront ? ' is-front' : '' ?>">
+            <a class="kt-a" href="<?= v2_e($a['href']) ?>"<?= $a['ext'] ? ' target="_blank" rel="sponsored nofollow noopener"' : '' ?>>
+              <span class="kt-media"><?php if ($hi === $heroStackFront): ?><picture><source media="(max-width: 767px)" srcset="<?= $heroBlank ?>"><img src="<?= v2_e($ktSrc) ?>" width="480" height="320" alt="" loading="eager" fetchpriority="high" decoding="async"></picture><?php else: ?><img src="<?= v2_e($ktSrc) ?>" width="480" height="320" alt="" loading="lazy" decoding="async"><?php endif; ?><?php if ($ktTag !== ''): ?><span class="kt-tag"><?= v2_e($ktTag) ?></span><?php endif; ?></span>
+              <span class="kt-body">
+                <span class="kt-title"><?= v2_e($a['title']) ?></span>
+                <span class="kt-place"><?php if ($a['place']): ?><?= v2_ic('map-pin') ?><span><?= v2_e($a['place']) ?></span><?php endif; ?></span>
+                <?php if ($a['price']): ?><span class="kt-price"><?= v2_te('from') ?> <b><?= v2_e($a['priceLabel']) ?></b></span><?php else: ?><span class="kt-price is-na"><b><?= v2_te('See price') ?></b></span><?php endif; ?>
+              </span>
+            </a>
+          </li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <?php endif; ?>
     </div>
   </section>
   <div id="hdr-sentinel" aria-hidden="true"></div>

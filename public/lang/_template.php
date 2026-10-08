@@ -1718,6 +1718,7 @@ return [
         'First name' => '',      // contact.php
         'First name *' => '',      // checkout.php
         'First name Last name' => '',      // includes/v2/partner-testimonials.php
+        'First on the list' => '',      // category.php
         'Fishing' => '',      // includes/v2/product-icons.php
         'Fit the route again' => '',      // plan.php
         'Fit to screen' => '',      // organizer/invitatii.php
@@ -3146,6 +3147,7 @@ return [
         'Press release' => '',      // organizer/analytics.php
         'Press the chosen star again to clear a detailed rating.' => '',      // user/reviews.php
         'Preview' => '',      // card-cadou.php
+        'Preview of the list below: the first experiences on it' => '',      // category.php
         'Preview: {name}' => '',      // organizer/services.php
         'Previous' => '',      // single-activitate.php
         'Previous activities' => '',      // ghid.php
