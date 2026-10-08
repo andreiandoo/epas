@@ -1,3 +1,26 @@
-# Pre-launch: the site is not ready for search engines yet.
+# viaqui.com
 User-agent: *
-Disallow: /
+# private areas, the basket and payment, sign-in, internal search results
+Disallow: /account
+Disallow: /cont/
+Disallow: /organizator/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /thank-you
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /find-order
+Disallow: /search
+Disallow: /embed/
+# the way out to partners' sites
+Disallow: /go
+# the API (the photo thumbnails it serves stay open)
+Disallow: /api/
+Allow: /api/img.php
+# pages are reached by their addresses, never by file name
+Disallow: /*.php$
+
+Sitemap: https://viaqui.com/sitemap.xml
