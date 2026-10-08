@@ -40,7 +40,7 @@
       if (!hits.length) { close(); return; }
       hits.forEach(function (h, i) {
         var a = document.createElement('a');
-        a.href = h[2]; a.id = 'hs-sg-' + i; a.setAttribute('role', 'option');
+        a.href = VQ.url(h[2]); a.id = 'hs-sg-' + i; a.setAttribute('role', 'option');
         a.appendChild(document.createTextNode(h[0]));
         var s = document.createElement('small'); s.textContent = h[1]; a.appendChild(s);
         sug.appendChild(a);
@@ -158,7 +158,7 @@
 
       $$('[data-count]').forEach(function (el) {
         var o = { v: 0 }, end = +el.dataset.count;
-        ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { gsap.to(o, { v: end, duration: 1.6, ease: 'power2.out', onUpdate: function () { el.textContent = Math.round(o.v).toLocaleString('en-GB'); } }); } });
+        ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { gsap.to(o, { v: end, duration: 1.6, ease: 'power2.out', onUpdate: function () { el.textContent = Math.round(o.v).toLocaleString(VQ.locale === 'en' ? 'en-GB' : VQ.locale); } }); } });
       });
 
       // one Lenis instance, driven by the GSAP ticker; base.js pauses it while the mobile menu is open

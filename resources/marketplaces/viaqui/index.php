@@ -26,15 +26,15 @@ if (!empty($V2['seed'])) {
     $skipPageCache = true;
 }
 
-$pageTitleRaw = 'Viaqui · Tickets for attractions, museums, tours and experiences';
-$pageDescription = 'Tickets for attractions, museums, castles, parks and experiences. Pick a day, pay securely and walk in with the QR code on your phone.';
+$pageTitleRaw = v2_t('Viaqui · Tickets for attractions, museums, tours and experiences');
+$pageDescription = v2_t('Tickets for attractions, museums, castles, parks and experiences. Pick a day, pay securely and walk in with the QR code on your phone.');
 $canonicalUrl = SITE_URL . '/';
 $ogImage = SITE_URL . '/assets/v2/img/hero-bran-1440.webp';
 $structuredData = [[
     '@context' => 'https://schema.org', '@type' => 'FAQPage',
     'mainEntity' => array_map(function ($f) {
         return ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]];
-    }, V2_FAQ),
+    }, v2_home_faq()),
 ]];
 
 $v2Styles = ['home.css'];

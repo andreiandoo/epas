@@ -5,7 +5,11 @@
  * cached on its own TTL.
  *
  * Requires includes/config.php, api.php, nav-helpers.php and v2/helpers.php. Sets $V2NAV.
+ *
+ * Languages: $V2NAV is built on every request and is not stored anywhere, so the few labels made here (the counts of
+ * a venue, the alt text of a guide picture) are in the visitor's language. What IS cached is the raw API answer.
  */
+require_once __DIR__ . '/helpers.php';   // v2_t(), v2_num(), v2_asset(): loaded here too, in case a page forgot
 
 // Kept empty for the pages copied from bilete.online that still sort by Romanian regions (cities list).
 const V2_REGIONS = [];
@@ -240,7 +244,7 @@ foreach ((array) $v2Blog as $b) {
         'readTime' => (int) ($b['read_time'] ?? 0),
         'href' => '/guides/' . $b['slug'],
         'thumb' => $img ?: (isset(V2_GUIDE_THUMBS[$b['slug']]) ? v2_asset(V2_GUIDE_THUMBS[$b['slug']]) : null),
-        'cover' => $img ? [$img, 0, 0, 'Picture from the guide: ' . $title] : ($local ? [v2_asset($local[0]), $local[1], $local[2], $local[3]] : null),
+        'cover' => $img ? [$img, 0, 0, v2_t('Picture from the guide: {title}', ['title' => $title])] : ($local ? [v2_asset($local[0]), $local[1], $local[2], $local[3]] : null),
         'hasOwnImage' => (bool) $img,
     ];
 }

@@ -9,33 +9,33 @@
 <section class="cc" id="cc-banner" aria-labelledby="cc-h" hidden>
   <div class="cc-in">
     <div class="cc-text">
-      <h2 class="cc-h" id="cc-h">We use cookies so the site works well and to suggest things you might like.</h2>
-      <p>Essential cookies are needed for the basket, checkout, sign-in and security. With your consent we also use cookies for analytics, personalisation and marketing. <a href="/cookies">Cookie policy</a></p>
+      <h2 class="cc-h" id="cc-h"><?= v2_te('We use cookies so the site works well and to suggest things you might like.') ?></h2>
+      <p><?= v2_te('Essential cookies are needed for the basket, checkout, sign-in and security. With your consent we also use cookies for analytics, personalisation and marketing.') ?> <a href="/cookies"><?= v2_te('Cookie policy') ?></a></p>
     </div>
     <div class="cc-actions">
-      <button class="btn btn-primary" type="button" data-cc-action="accept">Accept all</button>
-      <button class="btn btn-ghost" type="button" data-cc-action="reject">Reject optional</button>
-      <button class="link-btn" type="button" data-cc-action="open">Customise</button>
+      <button class="btn btn-primary" type="button" data-cc-action="accept"><?= v2_te('Accept all') ?></button>
+      <button class="btn btn-ghost" type="button" data-cc-action="reject"><?= v2_te('Reject optional') ?></button>
+      <button class="link-btn" type="button" data-cc-action="open"><?= v2_te('Customise') ?></button>
     </div>
   </div>
 </section>
 <div class="cc-dialog" id="cc-dialog" role="dialog" aria-modal="true" aria-labelledby="cc-title" data-lenis-prevent hidden>
   <div class="cc-panel">
     <div class="cc-top">
-      <h2 id="cc-title">Cookie settings</h2>
-      <button class="icon-btn" type="button" data-cc-action="close"><?= v2_ic('x') ?><span class="sr">Close settings</span></button>
+      <h2 id="cc-title"><?= v2_te('Cookie settings') ?></h2>
+      <button class="icon-btn" type="button" data-cc-action="close"><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close settings') ?></span></button>
     </div>
-    <p>Choose which categories you allow. Essential cookies stay on so the platform can work.</p>
+    <p><?= v2_te('Choose which categories you allow. Essential cookies stay on so the platform can work.') ?></p>
     <ul class="cc-list">
-      <li><label><span><b>Essential</b><small>Basket, checkout, sign-in, security and strictly aggregated audience measurement.</small></span><input class="cc-switch" type="checkbox" checked disabled></label></li>
-      <li><label><span><b>Analytics</b><small>Traffic and error measurement with third-party tools such as Google Analytics.</small></span><input class="cc-switch" type="checkbox" data-cc="analytics"></label></li>
-      <li><label><span><b>Personalisation</b><small>Suggestions based on the cities and categories you visit, remembered filters.</small></span><input class="cc-switch" type="checkbox" data-cc="personalization"></label></li>
-      <li><label><span><b>Marketing</b><small>Pixels for campaigns and remarketing: Meta, Google Ads, TikTok.</small></span><input class="cc-switch" type="checkbox" data-cc="marketing"></label></li>
+      <li><label><span><b><?= v2_te('Essential') ?></b><small><?= v2_te('Basket, checkout, sign-in, security and strictly aggregated audience measurement.') ?></small></span><input class="cc-switch" type="checkbox" checked disabled></label></li>
+      <li><label><span><b><?= v2_te('Analytics') ?></b><small><?= v2_te('Traffic and error measurement with third-party tools such as Google Analytics.') ?></small></span><input class="cc-switch" type="checkbox" data-cc="analytics"></label></li>
+      <li><label><span><b><?= v2_te('Personalisation') ?></b><small><?= v2_te('Suggestions based on the cities and categories you visit, remembered filters.') ?></small></span><input class="cc-switch" type="checkbox" data-cc="personalization"></label></li>
+      <li><label><span><b><?= v2_te('Marketing') ?></b><small><?= v2_te('Pixels for campaigns and remarketing: Meta, Google Ads, TikTok.') ?></small></span><input class="cc-switch" type="checkbox" data-cc="marketing"></label></li>
     </ul>
     <div class="cc-foot">
-      <button class="btn btn-ghost" type="button" data-cc-action="reject">Reject optional</button>
-      <button class="btn btn-ghost" type="button" data-cc-action="save">Save preferences</button>
-      <button class="btn btn-primary" type="button" data-cc-action="accept">Accept all</button>
+      <button class="btn btn-ghost" type="button" data-cc-action="reject"><?= v2_te('Reject optional') ?></button>
+      <button class="btn btn-ghost" type="button" data-cc-action="save"><?= v2_te('Save preferences') ?></button>
+      <button class="btn btn-primary" type="button" data-cc-action="accept"><?= v2_te('Accept all') ?></button>
     </div>
   </div>
 </div>
