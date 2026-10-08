@@ -177,6 +177,9 @@ class DemoStorefrontController extends Controller
             if (trim($content) === '') {
                 return null;
             }
+            // Generatorul poziționează straturile cu position: fixed, iar DomPDF repetă elementele
+            // fixe pe fiecare pagină — la mai multe bilete s-ar suprapune. Le ancorăm de pagina lor.
+            $content = str_replace('position: fixed', 'position: absolute', $content);
             $break = $i > 0 ? 'page-break-before: always;' : '';
             $pages .= "<div class=\"ep-ticket-page\" style=\"{$break}\">{$content}</div>";
         }
