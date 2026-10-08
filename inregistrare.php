@@ -37,7 +37,10 @@ include __DIR__ . '/includes/head.php';
                 <input id="a-pass" type="password" autocomplete="new-password" x-model="form.password" required minlength="8">
                 <small>Minimum 8 caractere.</small>
             </div>
-            <div class="alert" x-show="error" x-cloak x-text="error" role="alert"></div>
+            <div class="alert" x-show="error" x-cloak role="alert">
+                <span x-text="error"></span>
+                <span x-show="exists"> Dacă ai cumpărat deja bilete cu această adresă, <a class="link" href="/recuperare-parola">setează-ți parola prin email</a>.</span>
+            </div>
             <button type="submit" class="btn btn--block" :disabled="busy">
                 <span x-text="busy ? 'Un moment…' : 'Creează contul'"></span>
             </button>
