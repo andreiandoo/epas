@@ -84,11 +84,11 @@
   function label(k, v) { return (labels[k] && labels[k][v]) || v; }
   function chipList() {
     var out = [];
-    if (hasValue('search')) out.push(['Search: ' + state.search, function () { state.search = ''; }]);
+    if (hasValue('search')) out.push([VQ.t('Search: {query}', { query: state.search }), function () { state.search = ''; }]);
     ['categories', 'interests', 'travelerTypes'].forEach(function (k) { state[k].forEach(function (v) { out.push([label(k, v), without(k, v)]); }); });
-    if (hasValue('maxPrice')) out.push(['Up to ' + lei(state.maxPrice), function () { state.maxPrice = cap; }]);
+    if (hasValue('maxPrice')) out.push([VQ.t('Up to {price}', { price: lei(state.maxPrice) }), function () { state.maxPrice = cap; }]);
     ['languages', 'durations', 'features'].forEach(function (k) { state[k].forEach(function (v) { out.push([label(k, v), without(k, v)]); }); });
-    if (hasValue('minRating')) out.push([String(state.minRating) + '+ stars', function () { state.minRating = 0; }]);
+    if (hasValue('minRating')) out.push([VQ.t('{rating}+ stars', { rating: String(state.minRating) }), function () { state.minRating = 0; }]);
     return out;
   }
 
@@ -114,7 +114,7 @@
       var b = node('button', 'achip', c[0]);
       b.type = 'button';
       b.appendChild(icon('x'));
-      b.appendChild(node('span', 'sr', ' (remove)'));
+      b.appendChild(node('span', 'sr', ' ' + VQ.t('(remove)')));
       b.addEventListener('click', function () { c[1](); apply(); });
       chipBox.appendChild(b);
     });
@@ -242,7 +242,7 @@
     close.type = 'button';
     close.setAttribute('data-unpin', '');
     close.appendChild(icon('x'));
-    close.appendChild(node('span', 'sr', 'Close'));
+    close.appendChild(node('span', 'sr', VQ.t('Close')));
     top.appendChild(text);
     top.appendChild(close);
     body.appendChild(top);
@@ -250,7 +250,7 @@
     row.appendChild(node('span', null, a.rating > 0 ? '★ ' + String(a.rating) : ''));
     row.appendChild(node('strong', null, a.price ? shown(a) : ''));
     body.appendChild(row);
-    var go = node('a', 'btn btn-primary', 'See the experience');
+    var go = node('a', 'btn btn-primary', VQ.t('See the experience'));
     go.href = a.href;
     if (a.ext) { go.target = '_blank'; go.rel = 'sponsored nofollow noopener'; }
     body.appendChild(go);
@@ -320,7 +320,7 @@
       var pin = node('button', 'kpin', a.price ? shown(a) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
-      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + shown(a) : ''));
+      pin.setAttribute('aria-label', a.price ? VQ.t('{title}, from {price}', { title: a.title, price: shown(a) }) : a.title);
       var m = L.marker([a.geo.lat, a.geo.lng], { icon: L.divIcon({ className: 'kpin-wrap', html: pin, iconSize: [0, 0] }), keyboard: false });
       m.on('click', function () { selected = String(a.id); markPins(); renderCard(); });
       lmarkers.addLayer(m);
@@ -341,7 +341,7 @@
     if (zoneBox) {
       var partial = zone && list.length < mapAll.length;
       zoneBox.hidden = !partial;
-      if (partial) $('k-map-zone-text').textContent = list.length + ' of ' + mapAll.length + ' in this area of the map · ';
+      if (partial) $('k-map-zone-text').textContent = VQ.t('{shown} of {total} in this area of the map', { shown: list.length, total: mapAll.length }) + ' · ';
     }
     var note = $('k-map-note');
     if (note) note.hidden = !mapAll.some(function (a) { return a.geo && a.geo.approx; });
@@ -355,8 +355,8 @@
     mapList.textContent = '';
     if (!list.length && zone) {
       var li = node('li', 'kmap-empty');
-      li.appendChild(node('b', null, 'Nothing in this area.'));
-      li.appendChild(node('span', null, 'Move the map or choose “Show all”.'));
+      li.appendChild(node('b', null, VQ.t('Nothing in this area.')));
+      li.appendChild(node('span', null, VQ.t('Move the map or choose “Show all”.')));
       mapList.appendChild(li);
     }
     list.forEach(function (a) {
@@ -367,7 +367,7 @@
       text.appendChild(node('b', null, a.title));
       if (metaLine(a)) text.appendChild(node('small', null, metaLine(a)));
       if (a.rating > 0) text.appendChild(node('small', 'kml-rating', '★ ' + String(a.rating)));
-      text.appendChild(node('span', 'kml-price', a.price ? 'from ' + shown(a) : 'See price'));
+      text.appendChild(node('span', 'kml-price', a.price ? VQ.t('from {price}', { price: shown(a) }) : VQ.t('See price')));
       b.appendChild(text);
       li.appendChild(b);
       mapList.appendChild(li);
@@ -389,7 +389,7 @@
       var pin = node('button', 'kpin', a.price ? shown(a) : '•');
       pin.type = 'button';
       pin.setAttribute('data-pin', String(a.id));
-      pin.setAttribute('aria-label', a.title + (a.price ? ', from ' + shown(a) : ''));
+      pin.setAttribute('aria-label', a.price ? VQ.t('{title}, from {price}', { title: a.title, price: shown(a) }) : a.title);
       pin.style.left = a.map.x + '%';
       pin.style.top = a.map.y + '%';
       mapPins.appendChild(pin);

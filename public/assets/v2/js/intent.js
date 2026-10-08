@@ -12,10 +12,6 @@
   var city = 'all';
   var total = cards.length;
 
-  /* Counting, as v2_num(): 1 result, 5 results, 1,250 results */
-  function num(n, one, many) {
-    return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many);
-  }
   function value(card, key) {
     var raw = card.getAttribute('data-' + key);
     return raw === '' || raw === null ? null : Number(raw);
@@ -43,7 +39,7 @@
     var key = sort ? sort.value : 'recommended';
     var order = cards.slice().sort(key === 'priceAsc' ? by('price') : key === 'duration' ? by('dur') : by('order'));
     order.forEach(function (card) { grid.appendChild(card); });
-    if (count && chips.length) count.textContent = city === 'all' ? num(total, 'result', 'results') : shown + ' of ' + num(total, 'result', 'results');
+    if (count && chips.length) count.textContent = city === 'all' ? VQ.n(total, 'result', 'results') : VQ.t('{shown} of {total}', { shown: shown, total: VQ.n(total, 'result', 'results') });
   }
 
   chips.forEach(function (chip) {

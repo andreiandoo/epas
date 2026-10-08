@@ -17,12 +17,6 @@
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
-  /* Romanian counting, as v2_num(): 1 oraș, 5 orașe, 20 de orașe */
-  function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
-  }
 
   var index = cards.map(function (card) {
     var link = card.querySelector('.ct-top');
@@ -30,8 +24,8 @@
       q: norm(card.getAttribute('data-q')),
       region: card.getAttribute('data-region-key'),
       name: card.querySelector('h3').textContent,
-      // the search also matches the county, so a suggestion says where it is ("Bran · jud. Brașov")
-      where: card.getAttribute('data-county') ? 'jud. ' + card.getAttribute('data-county') : card.querySelector('.ct-over small').textContent,
+      // the search also matches the region, so a suggestion says where it is ("Sintra · Lisbon")
+      where: card.getAttribute('data-county') ? card.getAttribute('data-county') : card.querySelector('.ct-over small').textContent,
       href: link.getAttribute('href'),
     };
   });
@@ -58,7 +52,7 @@
     var active = buttons.filter(function (b) { return b.getAttribute('data-region') === region; })[0] || buttons[0];
     buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b === active)); });
     title.textContent = active.getAttribute('data-label');
-    count.textContent = shown + ' din ' + total + ' orașe';
+    count.textContent = VQ.t('{shown} of {total}', { shown: shown, total: VQ.n(total, 'city', 'cities') });
     none.hidden = shown > 0;
     // a search or a region always shows every match; otherwise the first 12 until "show all"
     var filtering = !!q || region !== 'all';
@@ -78,7 +72,7 @@
       li.appendChild(a);
       suggest.appendChild(li);
     });
-    status.textContent = q ? (found.length ? num(found.length, 'oraș găsit', 'orașe găsite') : 'Niciun oraș găsit.') : '';
+    status.textContent = q ? (found.length ? VQ.n(found.length, 'city found', 'cities found') : VQ.t('No city found.')) : '';
 
     if (fromUser) sync();
   }

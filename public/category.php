@@ -51,8 +51,8 @@ $catDescription = navFlatName($category['description'] ?? '');
 $catImage = $category['image'] ?? null;
 $eventCount = (int) ($category['event_count'] ?? 0);
 
-$metaTitle = navFlatName($category['meta_title'] ?? '') ?: ($catName . ': tickets and experiences | Viaqui');
-$metaDescription = navFlatName($category['meta_description'] ?? '') ?: ($catDescription ?: ($catName . ' on Viaqui: experiences across Europe. Book online and walk in with a QR ticket on your phone.'));
+$metaTitle = navFlatName($category['meta_title'] ?? '') ?: (v2_t('{category}: tickets and experiences', ['category' => $catName]) . ' | Viaqui');
+$metaDescription = navFlatName($category['meta_description'] ?? '') ?: ($catDescription ?: v2_t('{category} on Viaqui: experiences across Europe. Book online and walk in with a QR ticket on your phone.', ['category' => $catName]));
 
 $parent = $category['parent'] ?? null;
 $children = $category['children'] ?? [];
@@ -80,7 +80,7 @@ $maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $pr
     : null;
 
 // Sort — whitelisted server-side values matching what MarketplaceEventsController supports
-$sortLabels = ['price_asc' => 'Price: low to high', 'price_desc' => 'Price: high to low', 'name_asc' => 'A to Z', 'date_asc' => 'Event date'];
+$sortLabels = ['price_asc' => v2_t('Price: low to high'), 'price_desc' => v2_t('Price: high to low'), 'name_asc' => v2_t('A to Z'), 'date_asc' => v2_t('Event date')];
 $sort = (isset($_GET['sort']) && is_string($_GET['sort']) && isset($sortLabels[$_GET['sort']])) ? $_GET['sort'] : 'recommended';
 
 // viaqui.com has no events: the page lists the activities of the category, plus the paid "Promoted in …"
@@ -113,7 +113,7 @@ $pagination = [
 
 // Featured cities: hero stat, city links, city filter label.
 $featuredCities = array_slice($V2NAV['citiesList'], 0, 30);
-$heroLocation = 'Europe';
+$heroLocation = v2_t('Europe');
 if ($cityFilter) {
     $heroLocation = $V2NAV['cities'][$cityFilter]['name'] ?? ucwords(str_replace('-', ' ', $cityFilter));
 }
@@ -125,8 +125,8 @@ if ($cityFilter) {
 // landing rather than indexing thin variants.
 // ============================================================
 if ($cityFilter) {
-    $pageTitleRaw = $catName . ' in ' . $heroLocation . ': tickets and experiences | Viaqui';
-    $pageDescription = $catName . ' in ' . $heroLocation . '. Book online and walk in with a QR ticket on your phone.';
+    $pageTitleRaw = v2_t('{category} in {city}: tickets and experiences', ['category' => $catName, 'city' => $heroLocation]) . ' | Viaqui';
+    $pageDescription = v2_t('{category} in {city}. Book online and walk in with a QR ticket on your phone.', ['category' => $catName, 'city' => $heroLocation]);
 } else {
     $pageTitleRaw = $metaTitle;
     $pageDescription = $metaDescription;
@@ -137,8 +137,8 @@ $canonicalUrl = SITE_URL . '/' . ($shortSlug ?: $slug);
 $ogImage = $catImage ? (str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/')) : (SITE_URL . '/assets/images/og-default.jpg');
 
 $breadcrumbs = [
-    ['name' => 'Home', 'url' => SITE_URL . '/'],
-    ['name' => 'Categories', 'url' => SITE_URL . '/categories'],
+    ['name' => v2_t('Home'), 'url' => SITE_URL . '/'],
+    ['name' => v2_t('Categories'), 'url' => SITE_URL . '/categories'],
 ];
 if ($parent && !empty($parent['slug'])) {
     $breadcrumbs[] = [
@@ -167,7 +167,7 @@ if (!empty($itemListElements)) {
         '@type' => 'CollectionPage',
         'name' => $metaTitle,
         'url' => $canonicalUrl,
-        'inLanguage' => 'en',
+        'inLanguage' => v2_locale(),
         'about' => $metaDescription,
         'mainEntity' => [
             '@type' => 'ItemList',
@@ -182,24 +182,24 @@ $faqItems = array_values(array_filter($adminFaqs, fn ($f) => !empty($f['q']) && 
 if (empty($faqItems)) {
     $faqItems = [
         [
-            'q' => 'How much do tickets for ' . mb_strtolower($catName) . ' cost?',
-            'a' => 'Prices start from the amount shown on each card and vary with the operator, the difficulty and the duration. You see the exact price on the experience page before you book.',
+            'q' => v2_t('How much do tickets for {category} cost?', ['category' => mb_strtolower($catName)]),
+            'a' => v2_t('Prices start from the amount shown on each card and vary with the operator, the difficulty and the duration. You see the exact price on the experience page before you book.'),
         ],
         [
-            'q' => 'How do I get my ticket after booking?',
-            'a' => 'As soon as you pay, your ticket with a QR code arrives by email and appears in your Viaqui account. Show the QR code on your phone at the entrance; you do not need to print it.',
+            'q' => v2_t('How do I get my ticket after booking?'),
+            'a' => v2_t('As soon as you pay, your ticket with a QR code arrives by email and appears in your Viaqui account. Show the QR code on your phone at the entrance; you do not need to print it.'),
         ],
         [
-            'q' => 'Can I cancel or change my booking?',
-            'a' => 'Each operator sets its own cancellation policy, and it is shown on the experience page before you pay. Check the terms of the experience you are booking.',
+            'q' => v2_t('Can I cancel or change my booking?'),
+            'a' => v2_t('Each operator sets its own cancellation policy, and it is shown on the experience page before you pay. Check the terms of the experience you are booking.'),
         ],
         [
-            'q' => 'Are ' . mb_strtolower($catName) . ' available all year?',
-            'a' => 'Most experiences run all year, with time slots every day. The exact opening times are on each venue page, before you choose a date.',
+            'q' => v2_t('Are {category} available all year?', ['category' => mb_strtolower($catName)]),
+            'a' => v2_t('Most experiences run all year, with time slots every day. The exact opening times are on each venue page, before you choose a date.'),
         ],
         [
-            'q' => 'Can I pay with a Viaqui gift card?',
-            'a' => 'Yes. Viaqui gift cards can be used for any experience on the platform, including those in ' . mb_strtolower($catName) . '.',
+            'q' => v2_t('Can I pay with a Viaqui gift card?'),
+            'a' => v2_t('Yes. Viaqui gift cards can be used for any experience on the platform, including those in {category}.', ['category' => mb_strtolower($catName)]),
         ],
     ];
 }
@@ -249,7 +249,7 @@ foreach ($activities as $ix => $a) {
     $rev = is_array($a['reviews'] ?? null) ? $a['reviews'] : null;
     // Paid promotion first (always labelled), then the editorial pick.
     $promotedA = !empty($flags['is_promoted']);
-    $badges = array_values(array_filter([$promotedA ? 'Promoted' : null, !empty($flags['is_featured']) ? 'Recommended' : null]));
+    $badges = array_values(array_filter([$promotedA ? v2_t('Promoted') : null, !empty($flags['is_featured']) ? v2_t('Recommended') : null]));
     $catLabel = navFlatName($a['category']['name'] ?? '') ?: $catName;
     $place = navFlatName($a['city']['name'] ?? '') ?: $heroLocation;
     $description = mb_substr(trim(strip_tags((string) navFlatName($a['short_description'] ?? ''))), 0, 160);
@@ -267,7 +267,7 @@ foreach ($activities as $ix => $a) {
         'price'         => isset($a['cheapest_price_cents']) ? (int) round(v2_own_price_eur($a['cheapest_price_cents'], $a['currency'] ?? null, $a['cheapest_price_eur_cents'] ?? null)) : 0,
         'priceLabel'    => v2_own_price_label($a['cheapest_price_cents'] ?? 0, $a['currency'] ?? null, $a['cheapest_price_eur_cents'] ?? null),
         'duration'      => $dur > 0 ? ($dur < 60 ? 'short' : ($dur <= 90 ? 'medium' : 'long')) : '',
-        'durationLabel' => $dur > 0 ? ($dur . ' min') : '',
+        'durationLabel' => $dur > 0 ? v2_t('{n} min', ['n' => $dur]) : '',
         'languages'     => $langs,
         'features'      => $features,
         'interests'     => array_values(array_filter(array_map(fn ($i) => $i['slug'] ?? '', (array) ($a['interests'] ?? [])))),
@@ -409,13 +409,13 @@ if (empty($catOptions)) {
     }
 }
 
-$langLabels = ['ro' => 'Romanian', 'en' => 'English', 'de' => 'German', 'fr' => 'French', 'es' => 'Spanish', 'it' => 'Italian', 'hu' => 'Hungarian'];
+$langLabels = ['ro' => v2_t('Romanian'), 'en' => v2_t('English'), 'de' => v2_t('German'), 'fr' => v2_t('French'), 'es' => v2_t('Spanish'), 'it' => v2_t('Italian'), 'hu' => v2_t('Hungarian')];
 $langPresent = [];
 foreach ($acts as $a) foreach ($a['languages'] as $l) $langPresent[$l] = true;
 $langOptions = [];
 foreach (array_keys($langPresent) as $l) $langOptions[] = ['value' => $l, 'label' => $langLabels[$l] ?? mb_strtoupper($l)];
 
-$featLabels = ['family' => 'Good for families', 'wheelchair' => 'Wheelchair accessible', 'indoor' => 'Indoors', 'outdoor' => 'Outdoors'];
+$featLabels = ['family' => v2_t('Good for families'), 'wheelchair' => v2_t('Wheelchair accessible'), 'indoor' => v2_t('Indoors'), 'outdoor' => v2_t('Outdoors')];
 $featPresent = [];
 foreach ($acts as $a) foreach ($a['features'] as $f) $featPresent[$f] = true;
 $featOptions = [];
@@ -437,8 +437,8 @@ foreach ($interestNames as $slugK => $nameK) $interestOptions[] = ['value' => $s
 $travelerOptions = [];
 foreach ($travelerNames as $slugK => $nameK) $travelerOptions[] = ['value' => $slugK, 'label' => $nameK];
 
-$durationOptions = [['value' => 'short', 'label' => 'Under 60 min'], ['value' => 'medium', 'label' => '60–90 min'], ['value' => 'long', 'label' => '90+ min']];
-$ratingOptions = [['value' => 0, 'label' => 'Any rating'], ['value' => 4, 'label' => '4.0+'], ['value' => 4.5, 'label' => '4.5+'], ['value' => 4.8, 'label' => '4.8+']];
+$durationOptions = [['value' => 'short', 'label' => v2_t('Under 60 min')], ['value' => 'medium', 'label' => v2_t('60–90 min')], ['value' => 'long', 'label' => v2_t('90+ min')]];
+$ratingOptions = [['value' => 0, 'label' => v2_t('Any rating')], ['value' => 4, 'label' => '4.0+'], ['value' => 4.5, 'label' => '4.5+'], ['value' => 4.8, 'label' => '4.8+']];
 
 $priceVals = array_filter(array_map(fn ($a) => $a['price'], $acts));
 $priceCap = $priceVals ? (int) (ceil(max($priceVals) / 10) * 10) : 100;   // euro
@@ -452,22 +452,22 @@ $optionLabels = function (array $options): array {
 };
 
 // Quick filters in the bar (key, kicker, popover title) and the tabs of the filters dialog.
-$quickFilters = [['search', 'Search', 'Search this category'], ['price', 'Price', 'Your budget'], ['duration', 'Duration', 'How long it takes']];
-if ($interestOptions) $quickFilters[] = ['interests', 'Interests', 'What you are into'];
-if ($travelerOptions) $quickFilters[] = ['traveler', 'Who it is for', 'Who it suits'];
-if ($langOptions) $quickFilters[] = ['languages', 'Language', 'Language of the experience'];
-if ($featOptions) $quickFilters[] = ['features', 'Features', 'Features'];
+$quickFilters = [['search', v2_t('Search'), v2_t('Search this category')], ['price', v2_t('Price'), v2_t('Your budget')], ['duration', v2_t('Duration'), v2_t('How long it takes')]];
+if ($interestOptions) $quickFilters[] = ['interests', v2_t('Interests'), v2_t('What you are into')];
+if ($travelerOptions) $quickFilters[] = ['traveler', v2_t('Who it is for'), v2_t('Who it suits')];
+if ($langOptions) $quickFilters[] = ['languages', v2_t('Language'), v2_t('Language of the experience')];
+if ($featOptions) $quickFilters[] = ['features', v2_t('Features'), v2_t('Features')];
 
 $filterTabs = [];
-if ($catOptions) $filterTabs[] = ['categories', 'Categories', ''];
-if ($interestOptions) $filterTabs[] = ['interests', 'Interests', 'Choose the mood or theme of the experience.'];
-if ($travelerOptions) $filterTabs[] = ['traveler', 'Who it is for', 'Who the experience suits.'];
-$filterTabs[] = ['price', 'Price', ''];
-if ($langOptions) $filterTabs[] = ['languages', 'Language', ''];
-$filterTabs[] = ['duration', 'Duration', ''];
-if ($featOptions) $filterTabs[] = ['features', 'Features', ''];
-if ($hasRatings) $filterTabs[] = ['rating', 'Minimum rating', ''];
-$filterTabTitles = ['rating' => 'Minimum rating'];
+if ($catOptions) $filterTabs[] = ['categories', v2_t('Categories'), ''];
+if ($interestOptions) $filterTabs[] = ['interests', v2_t('Interests'), v2_t('Choose the mood or theme of the experience.')];
+if ($travelerOptions) $filterTabs[] = ['traveler', v2_t('Who it is for'), v2_t('Who the experience suits.')];
+$filterTabs[] = ['price', v2_t('Price'), ''];
+if ($langOptions) $filterTabs[] = ['languages', v2_t('Language'), ''];
+$filterTabs[] = ['duration', v2_t('Duration'), ''];
+if ($featOptions) $filterTabs[] = ['features', v2_t('Features'), ''];
+if ($hasRatings) $filterTabs[] = ['rating', v2_t('Minimum rating'), ''];
+$filterTabTitles = ['rating' => v2_t('Minimum rating')];
 
 // ---- Controls shared by the popovers and the filters dialog (category.js keeps them in sync) ----
 $renderChecks = function (string $field, array $options) {
@@ -476,10 +476,10 @@ $renderChecks = function (string $field, array $options) {
 $renderControl = function (string $key) use ($renderChecks, $priceCap, $catOptions, $interestOptions, $travelerOptions, $langOptions, $durationOptions, $featOptions, $ratingOptions) {
     switch ($key) {
         case 'search':
-            ?><input class="ksearch" type="search" data-f="search" placeholder="Search by name, place or theme" aria-label="Search this category" autocomplete="off"><?php
+            ?><input class="ksearch" type="search" data-f="search" placeholder="<?= v2_te('Search by name, place or theme') ?>" aria-label="<?= v2_te('Search this category') ?>" autocomplete="off"><?php
             break;
         case 'price':
-            ?><div class="kprice"><div class="kprice-row"><span>Maximum price</span><strong data-out="maxPrice"><?= v2_e(v2_money($priceCap)) ?></strong></div><input class="krange" type="range" min="0" max="<?= $priceCap ?>" step="10" value="<?= $priceCap ?>" data-f="maxPrice" aria-label="Maximum price, in euro"><div class="kprice-ends"><span><?= v2_e(v2_money(0)) ?></span><span><?= v2_e(v2_money($priceCap)) ?></span></div></div><?php
+            ?><div class="kprice"><div class="kprice-row"><span><?= v2_te('Maximum price') ?></span><strong data-out="maxPrice"><?= v2_e(v2_money($priceCap)) ?></strong></div><input class="krange" type="range" min="0" max="<?= $priceCap ?>" step="10" value="<?= $priceCap ?>" data-f="maxPrice" aria-label="<?= v2_te('Maximum price, in euro') ?>"><div class="kprice-ends"><span><?= v2_e(v2_money(0)) ?></span><span><?= v2_e(v2_money($priceCap)) ?></span></div></div><?php
             break;
         case 'rating':
             ?><div class="krating"><?php foreach ($ratingOptions as $o): ?><button type="button" data-f="minRating" data-v="<?= $o['value'] ?>" aria-pressed="<?= $o['value'] === 0 ? 'true' : 'false' ?>"><span class="kstars" aria-hidden="true">★★★★★</span><span><?= v2_e($o['label']) ?></span></button><?php endforeach; ?></div><?php
@@ -504,8 +504,8 @@ $catUrl = function (array $over = []) use ($baseGet, $slug): string {
 $serverChips = [];
 if ($searchQuery !== '') $serverChips[] = ['“' . $searchQuery . '”',$catUrl(['q' => ''])];
 if ($cityFilter) $serverChips[] = [$heroLocation, $catUrl(['city' => ''])];
-if ($maxPrice !== null) $serverChips[] = ['Under ' . v2_money($maxPrice), $catUrl(['max_price' => ''])];
-if ($sort !== 'recommended') $serverChips[] = ['Sorted: ' .$sortLabels[$sort], $catUrl(['sort' => ''])];
+if ($maxPrice !== null) $serverChips[] = [v2_t('Under {price}', ['price' => v2_money($maxPrice)]), $catUrl(['max_price' => ''])];
+if ($sort !== 'recommended') $serverChips[] = [v2_t('Sorted: {order}', ['order' => $sortLabels[$sort]]), $catUrl(['sort' => ''])];
 
 // Hero photo: the platform photo of the category (or of its parent, for subcategories).
 $photoCat = $V2NAV['categoryBySlug'][$category['slug'] ?? $slug] ?? (($parent && !empty($parent['slug'])) ? ($V2NAV['categoryBySlug'][$parent['slug']] ?? null) : null);
@@ -548,19 +548,19 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="kh-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="kh-in">
       <div class="kh-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <p class="kh-kicker"><i aria-hidden="true"></i>Category · open all year</p>
-        <h1 class="kh-h" id="kh-h"><?= v2_e($catName) ?> <em>in <?= v2_e($heroLocation) ?></em></h1>
+        <p class="kh-kicker"><i aria-hidden="true"></i><?= v2_te('Category · open all year') ?></p>
+        <h1 class="kh-h" id="kh-h"><?= v2_t('{category} <em>in {place}</em>', ['category' => v2_e($catName), 'place' => v2_e($heroLocation)]) ?></h1>
         <?php if ($catDescription !== ''): ?><p class="kh-lead"><?= v2_e($catDescription) ?></p><?php endif; ?>
         <ul class="kh-stats">
-          <li><?= v2_num((int) ($pagination['total'] ?? $eventCount), 'experience', 'experiences') ?></li>
-          <?php if (!empty($children)): ?><li><?= v2_num(count($children), 'type', 'types') ?></li><?php endif; ?>
-          <?php if (!empty($featuredCities)): ?><li><?= count($featuredCities) ?>+ cities</li><?php endif; ?>
+          <li><?= v2_e(v2_num((int) ($pagination['total'] ?? $eventCount), 'experience', 'experiences')) ?></li>
+          <?php if (!empty($children)): ?><li><?= v2_e(v2_num(count($children), 'type', 'types')) ?></li><?php endif; ?>
+          <?php if (!empty($featuredCities)): ?><li><?= v2_te('{n}+ cities', ['n' => count($featuredCities)]) ?></li><?php endif; ?>
         </ul>
       </div>
       <div class="kh-media">
@@ -578,29 +578,29 @@ include __DIR__ . '/includes/v2/header.php';
 
   <?php v2_promoted_section($promoted, [
       'id' => 'promo-cat',
-      'kicker' => 'Promoted',
-      'title' => 'Promoted in ' . $catLower,
-      'intro' => 'Places and experiences in ' . $catLower . ' that their operators are promoting at the moment.',
+      'kicker' => v2_t('Promoted'),
+      'title' => v2_t('Promoted in {category}', ['category' => $catLower]),
+      'intro' => v2_t('Places and experiences in {category} that their operators are promoting at the moment.', ['category' => $catLower]),
   ]); ?>
 
   <!-- ============================== FILTER BAR ============================== -->
   <div class="kbar" id="k-bar">
     <div class="wrap kbar-in">
       <div class="kbar-pills">
-        <button class="kpill kpill-map" type="button" data-open-map aria-haspopup="dialog" aria-controls="k-map"><?= v2_ic('map-pin') ?>Map</button>
-        <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?>Filters<span class="kn" data-fcount hidden>0</span></button>
+        <button class="kpill kpill-map" type="button" data-open-map aria-haspopup="dialog" aria-controls="k-map"><?= v2_ic('map-pin') ?><?= v2_te('Map') ?></button>
+        <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?><?= v2_te('Filters') ?><span class="kn" data-fcount hidden>0</span></button>
         <?php if (!empty($children)): ?>
-        <button class="kpill" type="button" data-subcat aria-expanded="false" aria-controls="k-sub">Types of <?= v2_e($catLower) ?><?= v2_ic('caret-down', 'ic kcaret') ?></button>
+        <button class="kpill" type="button" data-subcat aria-expanded="false" aria-controls="k-sub"><?= v2_te('Types of {category}', ['category' => $catLower]) ?><?= v2_ic('caret-down', 'ic kcaret') ?></button>
         <?php endif; ?>
         <?php foreach ($quickFilters as [$key, $label]): ?>
         <button class="kpill" type="button" data-top="<?= $key ?>" aria-expanded="false" aria-controls="kp-<?= $key ?>"><?= v2_e($label) ?></button>
         <?php endforeach; ?>
-        <button class="kclear" type="button" data-reset data-reset-bar hidden>Clear all</button>
+        <button class="kclear" type="button" data-reset data-reset-bar hidden><?= v2_te('Clear all') ?></button>
       </div>
       <?php /* Where: a country, then one of its cities. A plain choice that reloads the list for that city (?city=). */ ?>
-      <label class="ksort kwhere"><span>Where</span>
+      <label class="ksort kwhere"><span><?= v2_te('Where') ?></span>
         <select class="select" id="k-where" onchange="if (this.value) window.location.href = this.value;">
-          <option value="<?= v2_e($catUrl(['city' => ''])) ?>"<?= $cityFilter ? '' : ' selected' ?>>Anywhere in Europe</option>
+          <option value="<?= v2_e($catUrl(['city' => ''])) ?>"<?= $cityFilter ? '' : ' selected' ?>><?= v2_te('Anywhere in Europe') ?></option>
           <?php foreach (($V2NAV['countriesFull'] ?? []) as $kwCountry): if (empty($kwCountry['featured'])) { continue; } ?>
           <optgroup label="<?= v2_e($kwCountry['name']) ?>">
             <?php foreach ($kwCountry['featured'] as $kwCity): $kwSlug = ltrim((string) ($kwCity['href'] ?? ''), '/'); if ($kwSlug === '') { continue; } ?>
@@ -613,25 +613,25 @@ include __DIR__ . '/includes/v2/header.php';
           <?php endif; ?>
         </select>
       </label>
-      <label class="ksort"><span>Sort</span>
+      <label class="ksort"><span><?= v2_te('Sort') ?></span>
         <select class="select" id="k-sort">
-          <option value="recommended">Recommended</option>
-          <?php if ($hasRatings): ?><option value="rating">Rating</option><?php endif; ?>
-          <option value="priceAsc">Price: low to high</option>
-          <option value="priceDesc">Price: high to low</option>
-          <option value="duration">Shortest first</option>
+          <option value="recommended"><?= v2_te('Recommended') ?></option>
+          <?php if ($hasRatings): ?><option value="rating"><?= v2_te('Rating') ?></option><?php endif; ?>
+          <option value="priceAsc"><?= v2_te('Price: low to high') ?></option>
+          <option value="priceDesc"><?= v2_te('Price: high to low') ?></option>
+          <option value="duration"><?= v2_te('Shortest first') ?></option>
         </select>
       </label>
       <?php foreach ($quickFilters as [$key, $label, $title]): ?>
       <div class="kpop" id="kp-<?= $key ?>" role="dialog" aria-labelledby="kp-<?= $key ?>-h" hidden>
         <div class="kpop-top">
           <div><p class="kicker"><?= v2_e($label) ?></p><h3 id="kp-<?= $key ?>-h"><?= v2_e($title) ?></h3></div>
-          <button class="icon-btn" type="button" data-pop-close><?= v2_ic('x') ?><span class="sr">Close</span></button>
+          <button class="icon-btn" type="button" data-pop-close><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close') ?></span></button>
         </div>
         <?php $renderControl($key); ?>
         <div class="kpop-foot">
-          <button class="btn btn-ghost" type="button" data-clear="<?= $key ?>">Clear</button>
-          <button class="btn btn-primary" type="button" data-pop-close>Apply</button>
+          <button class="btn btn-ghost" type="button" data-clear="<?= $key ?>"><?= v2_te('Clear') ?></button>
+          <button class="btn btn-primary" type="button" data-pop-close><?= v2_te('Apply') ?></button>
         </div>
       </div>
       <?php endforeach; ?>
@@ -645,8 +645,8 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ksub-in">
         <div class="wrap ksub-pad">
           <div class="ksub-head">
-            <h2 id="k-sub-h">Types of <?= v2_e($catLower) ?></h2>
-            <button class="link-btn" type="button" data-subcat><?= count($children) === 1 ? '1 option' : count($children) . ' options' ?> · close</button>
+            <h2 id="k-sub-h"><?= v2_te('Types of {category}', ['category' => $catLower]) ?></h2>
+            <button class="link-btn" type="button" data-subcat><?= v2_te('{options} · close', ['options' => v2_num(count($children), 'option', 'options')]) ?></button>
           </div>
           <ul class="ksub-grid">
             <?php foreach ($children as $child):
@@ -656,7 +656,7 @@ include __DIR__ . '/includes/v2/header.php';
                 $child['parent_slug'] = $category['slug'] ?? '';
                 $childCount = (int) ($child['event_count'] ?? 0);
             ?>
-            <li><a class="ksc" href="/<?= v2_e(bo_short_category_slug($child)) ?>"><span class="ksc-ic" aria-hidden="true"><?= v2_e(mb_substr($childName, 0, 1)) ?></span><span><b><?= v2_e($childName) ?></b><small><?= $childCount > 0 ? v2_num($childCount, 'experience', 'experiences') : 'coming soon' ?></small></span></a></li>
+            <li><a class="ksc" href="/<?= v2_e(bo_short_category_slug($child)) ?>"><span class="ksc-ic" aria-hidden="true"><?= v2_e(mb_substr($childName, 0, 1)) ?></span><span><b><?= v2_e($childName) ?></b><small><?= $childCount > 0 ? v2_e(v2_num($childCount, 'experience', 'experiences')) : v2_te('coming soon') ?></small></span></a></li>
             <?php endforeach; ?>
           </ul>
         </div>
@@ -668,40 +668,40 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ============================== RESULTS ============================== -->
   <section class="kres" aria-labelledby="kres-h">
     <div class="wrap">
-      <h2 class="sr" id="kres-h"><?= v2_e($catName) ?>: experiences</h2>
+      <h2 class="sr" id="kres-h"><?= v2_te('{category}: experiences', ['category' => $catName]) ?></h2>
       <?php if ($serverChips): ?>
-      <ul class="kactive" aria-label="Filters from the address">
-        <?php foreach ($serverChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> (remove)</span></a></li><?php endforeach; ?>
+      <ul class="kactive" aria-label="<?= v2_te('Filters from the address') ?>">
+        <?php foreach ($serverChips as [$label, $href]): ?><li><a class="achip" href="<?= v2_e($href) ?>"><?= v2_e($label) ?><?= v2_ic('x') ?><span class="sr"> <?= v2_te('(remove)') ?></span></a></li><?php endforeach; ?>
       </ul>
       <?php endif; ?>
-      <div class="kchips" id="k-chips" aria-label="Active filters"></div>
+      <div class="kchips" id="k-chips" aria-label="<?= v2_te('Active filters') ?>"></div>
 
-      <?php if ($partnerActs): ?><p class="cl-fx"><?= v2_ic('info') ?><?= v2_display_currency() !== null ? v2_e(v2_fx_note('')) : 'Prices are shown in the currency of each country. The price filter and the sort use their value in euro.' ?> Listings marked “on WeGoTrip” are sold by our partner, which may pay Viaqui a commission.</p><?php endif; ?>
+      <?php if ($partnerActs): ?><p class="cl-fx"><?= v2_ic('info') ?><?= v2_display_currency() !== null ? v2_e(v2_fx_note('')) : v2_te('Prices are shown in the currency of each country. The price filter and the sort use their value in euro.') ?> <?= v2_te('Listings marked “on WeGoTrip” are sold by our partner, which may pay Viaqui a commission.') ?></p><?php endif; ?>
       <?php if ($acts): ?>
       <ul class="xp-grid" id="k-grid" data-reveal>
         <?php foreach ($acts as $i => $a): ?>
         <li class="xp<?= $a['ext'] ? ' xp-partner' : '' ?>" data-id="<?= $a['id'] ?>">
           <a href="<?= v2_e($a['href']) ?>"<?= $a['ext'] ? ' target="_blank" rel="sponsored nofollow noopener"' : '' ?>>
-            <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?><?php if ($a['via'] !== ''): ?><span class="xp-via">on <?= v2_e($a['via']) ?></span><?php endif; ?><?php if ($a['badges']): ?><span class="xp-badges"><?php foreach ($a['badges'] as $b): ?><span><?= v2_e($b) ?></span><?php endforeach; ?></span><?php endif; ?></span>
+            <span class="xp-media"><?= $a['image'] ? v2_photo([$a['image'], 0, 0, '']) : v2_fallback($a['title'], $i) ?><?php if ($a['via'] !== ''): ?><span class="xp-via"><?= v2_te('on {partner}', ['partner' => $a['via']]) ?></span><?php endif; ?><?php if ($a['badges']): ?><span class="xp-badges"><?php foreach ($a['badges'] as $b): ?><span><?= v2_e($b) ?></span><?php endforeach; ?></span><?php endif; ?></span>
             <span class="xp-body">
               <span class="xp-cat"><?= v2_e($a['category']) ?></span>
               <span class="xp-title"><?= v2_e($a['title']) ?></span>
               <span class="xp-meta"><?php if ($a['rating'] > 0): ?><span class="xp-rating"><?= v2_ic('star') ?><?= (string) $a['rating'] ?><?php if ($a['reviews'] > 0): ?> (<?= v2_thousands($a['reviews']) ?>)<?php endif; ?></span><?php endif; ?><?php if ($a['durationLabel']): ?><span><?= v2_ic('clock') ?><?= v2_e($a['durationLabel']) ?></span><?php endif; ?><?php if ($a['place']): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['place']) ?></span><?php endif; ?></span>
-              <span class="xp-foot"><span class="xp-go">See<?= v2_ic('arrow-right') ?></span><?php if ($a['price']): ?><span class="xp-price">from<b><?= v2_e($a['priceLabel']) ?></b></span><?php else: ?><span class="xp-price is-na"><b>See price</b></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_te('See') ?><?= v2_ic('arrow-right') ?></span><?php if ($a['price']): ?><span class="xp-price"><?= v2_te('from') ?><b><?= v2_e($a['priceLabel']) ?></b></span><?php else: ?><span class="xp-price is-na"><b><?= v2_te('See price') ?></b></span><?php endif; ?></span>
             </span>
           </a>
-          <button class="xp-fav" type="button" data-fav aria-pressed="false"><?= v2_ic('heart', 'ic ic-off') ?><?= v2_ic('heart-fill', 'ic ic-on') ?><span class="sr">Save <?= v2_e($a['title']) ?></span></button>
+          <button class="xp-fav" type="button" data-fav aria-pressed="false"><?= v2_ic('heart', 'ic ic-off') ?><?= v2_ic('heart-fill', 'ic ic-on') ?><span class="sr"><?= v2_te('Save {title}', ['title' => $a['title']]) ?></span></button>
         </li>
         <?php endforeach; ?>
       </ul>
       <?php endif; ?>
 
       <div class="k-empty" id="k-empty"<?= $acts ? ' hidden' : '' ?>>
-        <h3>No experiences found.</h3>
-        <p>Change the filters or clear your search.</p>
+        <h3><?= v2_te('No experiences found.') ?></h3>
+        <p><?= v2_te('Change the filters or clear your search.') ?></p>
         <div class="k-empty-cta">
-          <button class="btn btn-light" type="button" data-reset>Reset the filters</button>
-          <?php if ($serverChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>">All experiences in this category</a><?php endif; ?>
+          <button class="btn btn-light" type="button" data-reset><?= v2_te('Reset the filters') ?></button>
+          <?php if ($serverChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>"><?= v2_te('All experiences in this category') ?></a><?php endif; ?>
         </div>
         <svg class="k-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
       </div>
@@ -714,12 +714,12 @@ include __DIR__ . '/includes/v2/header.php';
           $end = min($last, $start + 6);
           $start = max(1, $end - 6);
       ?>
-      <nav class="pager" aria-label="Pages">
-        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Previous</a><?php endif; ?>
+      <nav class="pager" aria-label="<?= v2_te('Pages') ?>">
+        <?php if ($current > 1): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current - 1 > 1 ? $current - 1 : ''])) ?>" rel="prev"><?= v2_ic('arrow-left') ?><?= v2_te('Previous') ?></a><?php endif; ?>
         <?php for ($p = $start; $p <= $end; $p++): ?>
           <?php if ($p === $current): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e($catUrl(['page' => $p > 1 ? $p : ''])) ?>"><?= $p ?></a><?php endif; ?>
         <?php endfor; ?>
-        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current + 1])) ?>" rel="next">Next<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($current < $last): ?><a class="pg-step" href="<?= v2_e($catUrl(['page' => $current + 1])) ?>" rel="next"><?= v2_te('Next') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </nav>
       <?php endif; ?>
     </div>
@@ -733,7 +733,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php if ($seoBodyTitle !== ''): ?>
             <?= v2_e($seoBodyTitle) ?>
           <?php else: ?>
-            What to know about <em><?= v2_e($catLower) ?></em>
+            <?= v2_t('What to know about <em>{category}</em>', ['category' => v2_e($catLower)]) ?>
           <?php endif; ?>
         </h2>
 
@@ -747,21 +747,21 @@ include __DIR__ . '/includes/v2/header.php';
             <?php endforeach; ?>
           </div>
         <?php else: ?>
-          <p>On Viaqui you will find a careful selection of <strong><?= v2_e($catLower) ?></strong> across Europe. Choose a date and time online, pay securely and walk in with the QR ticket on your phone.</p>
+          <p><?= v2_t('On Viaqui you will find a careful selection of <strong>{category}</strong> across Europe. Choose a date and time online, pay securely and walk in with the QR ticket on your phone.', ['category' => v2_e($catLower)]) ?></p>
         <?php endif; ?>
 
         <?php if (!empty($featuredCities)): ?>
         <div class="kx">
-          <h3 class="flabel"><?= v2_e($catName) ?> by city</h3>
+          <h3 class="flabel"><?= v2_te('{category} by city', ['category' => $catName]) ?></h3>
           <div class="chips-links">
-            <?php foreach (array_slice($featuredCities, 0, 8) as $c): ?><a href="/<?= v2_e($slug) ?>?city=<?= v2_e($c['slug']) ?>"><?= v2_e($catName) ?> in <?= v2_e($c['name']) ?></a><?php endforeach; ?>
+            <?php foreach (array_slice($featuredCities, 0, 8) as $c): ?><a href="/<?= v2_e($slug) ?>?city=<?= v2_e($c['slug']) ?>"><?= v2_te('{what} in {city}', ['what' => $catName, 'city' => $c['name']]) ?></a><?php endforeach; ?>
           </div>
         </div>
         <?php endif; ?>
 
         <?php if ($siblings): ?>
         <div class="kx">
-          <h3 class="flabel">Related categories</h3>
+          <h3 class="flabel"><?= v2_te('Related categories') ?></h3>
           <div class="chips-links">
             <?php foreach (array_slice($siblings, 0, 8) as $sib): ?><a href="<?= v2_e($sib['href']) ?>"><?= v2_e($sib['name']) ?></a><?php endforeach; ?>
           </div>
@@ -770,7 +770,7 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
 
       <div class="faq-col">
-        <h2 id="kfaq-h">Frequently asked questions</h2>
+        <h2 id="kfaq-h"><?= v2_te('Frequently asked questions') ?></h2>
         <?php foreach ($faqItems as $i => $f): ?>
         <details class="qa"<?= $i === 0 ? ' open' : '' ?>><summary><?= v2_e($f['q']) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($f['a']) ?></p></details>
         <?php endforeach; ?>
@@ -782,11 +782,11 @@ include __DIR__ . '/includes/v2/header.php';
   <div class="kdlg" id="k-filters" role="dialog" aria-modal="true" aria-labelledby="kf-h" hidden>
     <div class="kdlg-panel">
       <div class="kdlg-top">
-        <div><p class="kicker">Filters</p><h2 id="kf-h">Filter the experiences</h2></div>
-        <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Close filters</span></button>
+        <div><p class="kicker"><?= v2_te('Filters') ?></p><h2 id="kf-h"><?= v2_te('Filter the experiences') ?></h2></div>
+        <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close filters') ?></span></button>
       </div>
       <div class="kdlg-body">
-        <div class="kdlg-tabs" role="tablist" aria-orientation="vertical" aria-label="Filters" data-tabs>
+        <div class="kdlg-tabs" role="tablist" aria-orientation="vertical" aria-label="<?= v2_te('Filters') ?>" data-tabs>
           <?php foreach ($filterTabs as $t => [$key, $label]): ?>
           <button type="button" role="tab" id="kft-<?= $key ?>" aria-controls="kfp-<?= $key ?>" aria-selected="<?= $t === 0 ? 'true' : 'false' ?>" tabindex="<?= $t === 0 ? 0 : -1 ?>"><?= v2_e($label) ?><span class="kdot" data-tabdot="<?= $key ?>" hidden></span></button>
           <?php endforeach; ?>
@@ -802,8 +802,8 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
       </div>
       <div class="kdlg-foot">
-        <button class="btn btn-ghost" type="button" data-reset>Clear all</button>
-        <button class="btn btn-primary" type="button" data-dlg-close>Show <span data-count><?= count($acts) ?></span> results</button>
+        <button class="btn btn-ghost" type="button" data-reset><?= v2_te('Clear all') ?></button>
+        <button class="btn btn-primary" type="button" data-dlg-close><?= v2_t('Show <span data-count>{n}</span> results', ['n' => count($acts)]) ?></button>
       </div>
     </div>
   </div>
@@ -815,23 +815,23 @@ include __DIR__ . '/includes/v2/header.php';
         <div class="kmap-top">
           <div class="kmap-head">
             <div>
-              <p class="kicker">Map</p>
-              <h2 id="km-h"><?= v2_e($catName) ?><?= $cityFilter ? ' in ' . v2_e($heroLocation) : '' ?></h2>
-              <p class="kmap-n" id="k-map-n" aria-live="polite"><span data-count><?= count($acts) ?></span> results on the map</p>
-              <p class="kmap-zone" id="k-map-zone" hidden><span id="k-map-zone-text"></span><button class="link-btn" type="button" data-map-all>Show all</button></p>
-              <p class="kmap-note" id="k-map-note" hidden>Where the exact place is missing, an experience is shown in the centre of its city.</p>
+              <p class="kicker"><?= v2_te('Map') ?></p>
+              <h2 id="km-h"><?= $cityFilter ? v2_te('{what} in {city}', ['what' => $catName, 'city' => $heroLocation]) : v2_e($catName) ?></h2>
+              <p class="kmap-n" id="k-map-n" aria-live="polite"><?= v2_t('<span data-count>{n}</span> results on the map', ['n' => count($acts)]) ?></p>
+              <p class="kmap-zone" id="k-map-zone" hidden><span id="k-map-zone-text"></span><button class="link-btn" type="button" data-map-all><?= v2_te('Show all') ?></button></p>
+              <p class="kmap-note" id="k-map-note" hidden><?= v2_te('Where the exact place is missing, an experience is shown in the centre of its city.') ?></p>
             </div>
-            <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr">Close the map</span></button>
+            <button class="icon-btn" type="button" data-dlg-close><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close the map') ?></span></button>
           </div>
           <div class="kmap-quick">
-            <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?>Filters</button>
-            <button class="kpill" type="button" data-open-filters="price" aria-haspopup="dialog" aria-controls="k-filters">Price</button>
-            <button class="kpill" type="button" data-open-filters="duration" aria-haspopup="dialog" aria-controls="k-filters">Duration</button>
+            <button class="kpill" type="button" data-open-filters="" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_ic('list') ?><?= v2_te('Filters') ?></button>
+            <button class="kpill" type="button" data-open-filters="price" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_te('Price') ?></button>
+            <button class="kpill" type="button" data-open-filters="duration" aria-haspopup="dialog" aria-controls="k-filters"><?= v2_te('Duration') ?></button>
           </div>
         </div>
         <ul class="kmap-list" id="k-map-list"></ul>
       </aside>
-      <section class="kmap-view" aria-label="Map preview">
+      <section class="kmap-view" aria-label="<?= v2_te('Map preview') ?>">
         <div class="kmap-canvas" id="k-map-canvas" data-carto-key="<?= v2_e(defined('CARTO_API_KEY') ? CARTO_API_KEY : '') ?>"></div>
         <div id="k-map-pins"></div>
         <div class="kmap-card" id="k-map-card" hidden></div>
