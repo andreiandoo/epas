@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     @if(!$tenant)
         <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-            <p class="text-yellow-800 dark:text-yellow-200">No tenant account found. Please contact support.</p>
+            <p class="text-yellow-800 dark:text-yellow-200">{{ __('No tenant account found. Please contact support.') }}</p>
         </div>
     @else
         <!-- Welcome Section with Account Info -->
@@ -44,7 +44,7 @@
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['active_events']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Active Events</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Active Events') }}</p>
                     </div>
                 </div>
             </div>
@@ -57,7 +57,7 @@
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_sales'], 2) }} <span class="text-base font-medium text-gray-500 dark:text-gray-400">{{ $tenant->currency ?? 'EUR' }}</span></p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Sales</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Total Sales') }}</p>
                     </div>
                 </div>
             </div>
@@ -70,7 +70,7 @@
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_tickets']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tickets Sold</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Tickets Sold') }}</p>
                     </div>
                 </div>
             </div>
@@ -83,7 +83,7 @@
                     </div>
                     <div>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_customers']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Customers</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Customers') }}</p>
                     </div>
                 </div>
             </div>
@@ -98,7 +98,7 @@
                         <p class="text-2xl font-bold {{ $stats['unpaid_invoices_value'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white' }}">
                             {{ number_format($stats['unpaid_invoices_value'], 2) }} <span class="text-base font-medium {{ $stats['unpaid_invoices_value'] > 0 ? 'text-red-400 dark:text-red-500' : 'text-gray-500 dark:text-gray-400' }}">{{ $tenant->currency ?? 'EUR' }}</span>
                         </p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unpaid Invoices</p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Unpaid Invoices') }}</p>
                     </div>
                 </div>
             </div>
@@ -113,7 +113,7 @@
                             <x-heroicon-o-building-office-2 class="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 class="font-semibold text-lg">Venue Activity</h3>
+                            <h3 class="font-semibold text-lg">{{ __('Venue Activity') }}</h3>
                             <p class="text-white/80 text-sm">Events hosted by other organizers at your {{ $venueStats['venues_count'] }} venue{{ $venueStats['venues_count'] > 1 ? 's' : '' }}</p>
                         </div>
                     </div>
@@ -125,19 +125,19 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="bg-white/10 rounded-lg p-3">
                         <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_events']) }}</p>
-                        <p class="text-xs text-white/80 uppercase tracking-wide">Hosted Events</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">{{ __('Hosted Events') }}</p>
                     </div>
                     <div class="bg-white/10 rounded-lg p-3">
                         <p class="text-2xl font-bold">{{ number_format($venueStats['upcoming_hosted_events']) }}</p>
-                        <p class="text-xs text-white/80 uppercase tracking-wide">Upcoming</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">{{ __('Upcoming') }}</p>
                     </div>
                     <div class="bg-white/10 rounded-lg p-3">
                         <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_tickets_sold']) }}</p>
-                        <p class="text-xs text-white/80 uppercase tracking-wide">Tickets Sold</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">{{ __('Tickets Sold') }}</p>
                     </div>
                     <div class="bg-white/10 rounded-lg p-3">
                         <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_revenue'], 2) }} <span class="text-sm font-medium text-white/70">{{ $tenant->currency ?? 'EUR' }}</span></p>
-                        <p class="text-xs text-white/80 uppercase tracking-wide">Revenue</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">{{ __('Revenue') }}</p>
                     </div>
                 </div>
             </div>
@@ -148,8 +148,8 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Own Events vs Hosted Events</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Compare performance between your events and events hosted at your venues</p>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Own Events vs Hosted Events') }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Compare performance between your events and events hosted at your venues') }}</p>
                     </div>
                 </div>
 
@@ -158,28 +158,28 @@
                     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
                         <div class="flex items-center gap-2 mb-1">
                             <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase">Own Sales</span>
+                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase">{{ __('Own Sales') }}</span>
                         </div>
                         <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($comparisonData['sales']['own_total'], 2) }} <span class="text-sm font-medium">{{ $tenant->currency ?? 'EUR' }}</span></p>
                     </div>
                     <div class="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-3 border border-violet-200 dark:border-violet-800">
                         <div class="flex items-center gap-2 mb-1">
                             <div class="w-3 h-3 rounded-full bg-violet-500"></div>
-                            <span class="text-xs font-medium text-violet-700 dark:text-violet-400 uppercase">Hosted Sales</span>
+                            <span class="text-xs font-medium text-violet-700 dark:text-violet-400 uppercase">{{ __('Hosted Sales') }}</span>
                         </div>
                         <p class="text-xl font-bold text-violet-700 dark:text-violet-300">{{ number_format($comparisonData['sales']['hosted_total'], 2) }} <span class="text-sm font-medium">{{ $tenant->currency ?? 'EUR' }}</span></p>
                     </div>
                     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
                         <div class="flex items-center gap-2 mb-1">
                             <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase">Own Tickets</span>
+                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase">{{ __('Own Tickets') }}</span>
                         </div>
                         <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($comparisonData['tickets']['own_total']) }}</p>
                     </div>
                     <div class="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-3 border border-violet-200 dark:border-violet-800">
                         <div class="flex items-center gap-2 mb-1">
                             <div class="w-3 h-3 rounded-full bg-violet-500"></div>
-                            <span class="text-xs font-medium text-violet-700 dark:text-violet-400 uppercase">Hosted Tickets</span>
+                            <span class="text-xs font-medium text-violet-700 dark:text-violet-400 uppercase">{{ __('Hosted Tickets') }}</span>
                         </div>
                         <p class="text-xl font-bold text-violet-700 dark:text-violet-300">{{ number_format($comparisonData['tickets']['hosted_total']) }}</p>
                     </div>
@@ -189,7 +189,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Sales Comparison Chart -->
                     <div>
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Sales Comparison</h4>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ __('Sales Comparison') }}</h4>
                         <div class="h-48">
                             <canvas id="comparisonSalesChart" data-chart='@json($comparisonData)' data-currency="{{ $tenant->currency ?? 'EUR' }}"></canvas>
                         </div>
@@ -197,7 +197,7 @@
 
                     <!-- Tickets Comparison Chart -->
                     <div>
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Tickets Comparison</h4>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ __('Tickets Comparison') }}</h4>
                         <div class="h-48">
                             <canvas id="comparisonTicketsChart" data-chart='@json($comparisonData)'></canvas>
                         </div>
@@ -211,17 +211,17 @@
             <!-- Sales Chart -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Sales Overview</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Sales Overview') }}</h3>
                     <div class="flex items-center gap-2">
                         <select
                             wire:model.live="chartPeriod"
                             class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                         >
-                            <option value="7">Last 7 days</option>
-                            <option value="15">Last 15 days</option>
-                            <option value="30">Last 30 days</option>
-                            <option value="60">Last 60 days</option>
-                            <option value="90">Last 90 days</option>
+                            <option value="7">{{ __('Last 7 days') }}</option>
+                            <option value="15">{{ __('Last 15 days') }}</option>
+                            <option value="30">{{ __('Last 30 days') }}</option>
+                            <option value="60">{{ __('Last 60 days') }}</option>
+                            <option value="90">{{ __('Last 90 days') }}</option>
                         </select>
                     </div>
                 </div>
@@ -234,8 +234,8 @@
             <!-- Tickets Chart -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Tickets Sold</h3>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Hover for event details</span>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Tickets Sold') }}</h3>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Hover for event details') }}</span>
                 </div>
 
                 <div class="h-64">
@@ -298,7 +298,7 @@
                 data: {
                     labels: chartData.labels,
                     datasets: [{
-                        label: 'Sales',
+                        label: @js(__('Sales')),
                         data: chartData.data,
                         borderColor: isDark ? '#818cf8' : '#6366f1',
                         backgroundColor: isDark ? 'rgba(129, 140, 248, 0.1)' : 'rgba(99, 102, 241, 0.1)',
@@ -391,7 +391,7 @@
                 data: {
                     labels: ticketData.labels,
                     datasets: [{
-                        label: 'Tickets',
+                        label: @js(__('Tickets')),
                         data: ticketData.data,
                         backgroundColor: isDark ? 'rgba(168, 85, 247, 0.7)' : 'rgba(147, 51, 234, 0.7)',
                         borderColor: isDark ? '#a855f7' : '#9333ea',
@@ -505,7 +505,7 @@
                     labels: chartData.labels,
                     datasets: [
                         {
-                            label: 'Own Events',
+                            label: @js(__('Own Events')),
                             data: chartData.sales.own,
                             borderColor: '#10b981',
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -516,7 +516,7 @@
                             pointHoverRadius: 4,
                         },
                         {
-                            label: 'Hosted Events',
+                            label: @js(__('Hosted Events')),
                             data: chartData.sales.hosted,
                             borderColor: '#8b5cf6',
                             backgroundColor: 'rgba(139, 92, 246, 0.1)',
@@ -612,7 +612,7 @@
                     labels: chartData.labels,
                     datasets: [
                         {
-                            label: 'Own Events',
+                            label: @js(__('Own Events')),
                             data: chartData.tickets.own,
                             backgroundColor: isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(16, 185, 129, 0.7)',
                             borderColor: '#10b981',
@@ -620,7 +620,7 @@
                             borderRadius: 2,
                         },
                         {
-                            label: 'Hosted Events',
+                            label: @js(__('Hosted Events')),
                             data: chartData.tickets.hosted,
                             backgroundColor: isDark ? 'rgba(139, 92, 246, 0.7)' : 'rgba(139, 92, 246, 0.7)',
                             borderColor: '#8b5cf6',

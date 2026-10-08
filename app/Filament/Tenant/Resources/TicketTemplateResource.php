@@ -186,10 +186,13 @@ class TicketTemplateResource extends Resource
     {
         return $table
             ->columns([
+                // Previzualizarea e salvată pe discul public; biletele sunt pe lat, deci nu o tăiem în pătrat
                 Tables\Columns\ImageColumn::make('preview_image')
                     ->label('Preview')
-                    ->square()
-                    ->size(60),
+                    ->disk('public')
+                    ->imageHeight(56)
+                    ->imageWidth(140)
+                    ->extraImgAttributes(['style' => 'object-fit:contain;border-radius:6px;']),
 
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()

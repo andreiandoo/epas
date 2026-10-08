@@ -101,7 +101,10 @@ class Dashboard extends Page
         $ticketChartData = $this->getTicketChartData($tenantId, $startDate, $endDate, $days);
 
         // Venue activity stats (for tenants who own venues)
-        $venueStats = $this->getVenueActivityStats($tenant);
+        // Organizatorii cu meniul simplu nu închiriază săli altora: fără blocul „activitate locații”
+        $venueStats = \App\Support\Tenant\TenantSimpleMenu::configured($tenant)
+            ? null
+            : $this->getVenueActivityStats($tenant);
 
         // Analytics comparison (own vs hosted) - only for venue owners
         $comparisonData = $this->getComparisonAnalytics($tenant, $startDate, $endDate, $days);

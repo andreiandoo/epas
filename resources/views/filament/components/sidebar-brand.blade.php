@@ -30,6 +30,9 @@
     $logoDark = $getLogoUrl($logoDarkRaw);
 
     $brandName = 'Tixello';
+
+    // Panoul de tenant afișează numele întreg „Tixello” (wordmark), mai mic decât sigla scurtă
+    $isTenantPanel = request()->is('tenant*');
 @endphp
 <style>
     /* Light mode: show light logo, hide dark logo */
@@ -40,7 +43,10 @@
     .dark .ep-logo-light { display: none; }
     .dark .ep-logo-dark { display: block; }
 </style>
-@if($logoLight || $logoDark)
+@if($isTenantPanel)
+    <img src="{{ asset('images/tixello-wordmark-dark.svg') }}" alt="{{ $brandName }}" class="ep-logo-light" style="height:22px;width:auto;max-width:150px;">
+    <img src="{{ asset('images/tixello-wordmark-white.svg') }}" alt="{{ $brandName }}" class="ep-logo-dark" style="height:22px;width:auto;max-width:150px;">
+@elseif($logoLight || $logoDark)
     @if($logoLight && $logoDark)
         {{-- Both logos provided --}}
         <img

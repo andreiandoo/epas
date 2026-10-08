@@ -478,6 +478,21 @@ class EventResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('venue_id')
                         ->label('Locație')
+                        // Aceeași insignă ca în panoul de marketplace: apare doar când locația aleasă
+                        // este marcată ca monument istoric (deci se aplică taxa de monument).
+                        ->hint(function (SGet $get) {
+                            $venueId = $get('venue_id');
+                            if (! $venueId || ! Venue::where('id', $venueId)->value('has_historical_monument_tax')) {
+                                return null;
+                            }
+
+                            return new HtmlString(
+                                '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fef3c7;border:1px solid #fbbf24;border-radius:9999px;font-size:11px;color:#92400e;font-weight:500;">'
+                                . '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>'
+                                . 'Monument Istoric'
+                                . '</span>'
+                            );
+                        })
                         ->searchable()
                         ->preload()
                         ->live()
@@ -674,8 +689,8 @@ class EventResource extends Resource
                         ->multiple()
                         ->preload()
                         ->searchable()
-                        // La teatru distribuția se gestionează în tab-ul Distribuție
-                        ->visible(fn () => !$isTheater),
+                        // La teatru distribuția se gestionează în tab-ul Distribuție; competițiile sportive nu au artiști
+                        ->visible(fn () => !$isTheater && $tenant?->tenant_type !== \App\Enums\TenantType::Competition),
 
                     Forms\Components\Select::make('tags')
                         ->label('Etichete')
@@ -727,12 +742,20 @@ class EventResource extends Resource
 
                             $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">';
 
+                            // Taxa de monument istoric se aplică doar dacă locația e marcată astfel (ca la marketplace)
+                            $venue = $get('venue_id') ? Venue::find($get('venue_id')) : null;
+                            $venueHasMonumentTax = (bool) ($venue?->has_historical_monument_tax);
+
                             foreach ($allTaxes as $tax) {
                                 $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
                                             str_contains(strtolower($tax->name ?? ''), 'vat');
 
                                 // Skip VAT if tenant is not a VAT payer
                                 if ($isVatTax && !$isVatPayer) {
+                                    continue;
+                                }
+
+                                if (str_contains(strtolower($tax->name ?? ''), 'monument') && ! $venueHasMonumentTax) {
                                     continue;
                                 }
 
@@ -764,7 +787,67 @@ class EventResource extends Resource
                                 $html .= '</div>';
                             }
 
-                            $html .= '</div></div>';
+                            $html .= '</div>';
+
+                            // Taxe locale: cele configurate în platformă pentru orașul sau județul locației
+                            $html .= '<div class="mt-4 text-sm font-medium text-gray-900 dark:text-white">Taxe locale</div>';
+                            $city = trim((string) ($venue?->city ?? ''));
+                            $county = trim((string) ($venue?->state ?? ''));
+                            if (! $venue) {
+                                $html .= '<div class="mt-1 text-sm text-gray-500 italic">Alege o locație ca să vezi taxele locale ale orașului.</div>';
+                            } elseif ($city === '' && $county === '') {
+                                $html .= '<div class="mt-1 text-sm text-gray-500 italic">Locația nu are oraș sau județ completat, deci nu pot fi asociate taxe locale.</div>';
+                            } else {
+                                try {
+                                    $localTaxes = \App\Models\Tax\LocalTax::query()
+                                        ->where(fn ($q) => $q->whereNull('tenant_id')->orWhere('tenant_id', $tenant?->id))
+                                        ->active()
+                                        ->validOn(\Carbon\Carbon::today())
+                                        ->where(function ($q) use ($city, $county) {
+                                            if ($city !== '') {
+                                                $q->orWhereRaw('LOWER(city) = ?', [mb_strtolower($city)]);
+                                            }
+                                            if ($county !== '') {
+                                                // taxă la nivel de județ: fără oraș
+                                                $q->orWhere(fn ($w) => $w->whereNull('city')->whereRaw('LOWER(county) = ?', [mb_strtolower($county)]));
+                                            }
+                                        })
+                                        ->where(function ($q) use ($eventTypeIds) {
+                                            $q->whereDoesntHave('eventTypes')
+                                                ->orWhereHas('eventTypes', fn ($w) => $w->whereIn('event_types.id', $eventTypeIds));
+                                        })
+                                        ->orderByDesc('priority')
+                                        ->get();
+                                } catch (\Throwable $e) {
+                                    $localTaxes = collect();
+                                }
+
+                                $place = e(implode(', ', array_filter([$city, $county])));
+                                if ($localTaxes->isEmpty()) {
+                                    $html .= '<div class="mt-1 text-sm text-gray-500 italic">Nu există taxe locale configurate pentru ' . $place . '.</div>';
+                                } else {
+                                    $html .= '<div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">';
+                                    foreach ($localTaxes as $lt) {
+                                        $details = array_filter([
+                                            $lt->beneficiary ? 'Beneficiar: ' . e($lt->beneficiary) : null,
+                                            $lt->payment_term ? 'Termen: ' . e($lt->payment_term) : null,
+                                        ]);
+                                        $html .= '<div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">';
+                                        $html .= '<div><span class="font-medium text-sm text-gray-900 dark:text-white">' . e($lt->getLocationString()) . '</span>';
+                                        if ($lt->explanation) {
+                                            $html .= '<br><span class="text-xs text-gray-500">' . e(\Illuminate\Support\Str::limit(strip_tags((string) $lt->explanation), 120)) . '</span>';
+                                        }
+                                        if ($details) {
+                                            $html .= '<br><span class="text-xs text-gray-500">' . implode(' · ', $details) . '</span>';
+                                        }
+                                        $html .= '</div><div class="text-right"><span class="font-semibold text-primary">' . e($lt->getFormattedValue()) . '</span></div>';
+                                        $html .= '</div>';
+                                    }
+                                    $html .= '</div>';
+                                }
+                            }
+
+                            $html .= '</div>';
 
                             return new HtmlString($html);
                         }),
@@ -1698,13 +1781,7 @@ class EventResource extends Resource
             ->actions([])
             ->bulkActions([])
             ->recordActions([
-                Action::make('statistics')
-                    ->label('Statistici')
-                    ->icon('heroicon-o-chart-bar')
-                    ->color('info')
-                    ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                EditAction::make()
-                    ->visible(fn (Event $record) => $record->tenant_id === $tenant?->id),
+                // Evenimentele proprii se deschid cu click pe rând (în editare, unde e și butonul de statistici)
                 Action::make('view-guest')
                     ->label('Vezi detalii')
                     ->icon('heroicon-o-eye')
