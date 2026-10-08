@@ -12,33 +12,39 @@
   var $ = function (id) { return document.getElementById(id); };
   function qsa(sel, ctx) { return [].slice.call((ctx || document).querySelectorAll(sel)); }
   function has(obj, k) { return Object.prototype.hasOwnProperty.call(obj, k); }
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var SITE = document.title.lastIndexOf(' · ') > -1 ? document.title.slice(document.title.lastIndexOf(' · ')) : ''; // " · Viaqui", as head.php wrote it
+  var CFG = typeof BILETEONLINE_CONFIG !== 'undefined' && BILETEONLINE_CONFIG ? BILETEONLINE_CONFIG : {};
+  var CUR = CFG.CURRENCY_SYMBOL || '€', CUR_CODE = CFG.CURRENCY || 'EUR';
+  var nfLoc = new Intl.NumberFormat(LOC);
+  var DEC = new Intl.NumberFormat(LOC, { minimumFractionDigits: 1 }).format(1.5).charAt(1) === ',' ? ',' : '.'; // the decimal mark people type in this language
 
   var PERIODS = {
-    '7z': { api: '7d', label: 'Ultimele 7 zile', file: '7-zile' },
-    '30z': { api: '30d', label: 'Ultimele 30 de zile', file: '30-zile' },
-    '90z': { api: '90d', label: 'Ultimele 90 de zile', file: '90-zile' },
-    tot: { api: 'all', label: 'De la publicare', file: 'tot' },
+    '7z': { api: '7d', label: VQ.t('Last 7 days'), file: '7-days' },
+    '30z': { api: '30d', label: VQ.t('Last 30 days'), file: '30-days' },
+    '90z': { api: '90d', label: VQ.t('Last 90 days'), file: '90-days' },
+    tot: { api: 'all', label: VQ.t('Since publishing'), file: 'all' },
   };
   var COLORS = ['#1B7F4E', '#F2A900', '#2D6CCD', '#E4572E', '#7A5AC8', '#0E8C8C', '#8E958F', '#C2185B'];
-  var SOURCES = { Direct: 'Direct', Organic: 'Alte site-uri și căutări', Facebook: 'Facebook', Google: 'Google', Instagram: 'Instagram', TikTok: 'TikTok', Email: 'Email' };
+  var SOURCES = { Direct: VQ.t('Direct'), Organic: VQ.t('Other sites and searches'), Facebook: 'Facebook', Google: 'Google', Instagram: 'Instagram', TikTok: 'TikTok', Email: VQ.t('Email') };
   var GOALS = {
-    revenue: { label: 'Venituri nete', unit: 'lei', target: 'Ținta, în lei', example: '10.000', name: 'ex: Venituri de 10.000 lei', help: 'Ce îți revine din bilete după comision și reduceri, de la începutul vânzărilor.' },
-    tickets: { label: 'Bilete vândute', unit: 'bilete', target: 'Ținta, în bilete', example: '500', name: 'ex: 500 de bilete până la final de lună', help: 'Toate biletele valide: online, la ușă și invitații.' },
-    visitors: { label: 'Vizitatori', unit: 'vizitatori', target: 'Ținta, în vizitatori', example: '5.000', name: 'ex: 5.000 de vizitatori', help: 'Vizitatorii unici ai paginii activității, adunați pe zile.' },
-    conversion_rate: { label: 'Rată de conversie', unit: '%', target: 'Ținta, în procente', example: '3,5', name: 'ex: Conversie de 3,5%', help: 'Media zilnică a ratei de conversie a paginii: bilete la 100 de vizite.' },
+    revenue: { label: VQ.t('Net revenue'), unit: CUR, target: VQ.t('Target, in {currency}', { currency: CUR_CODE }), example: nfLoc.format(10000), name: VQ.t('e.g. {amount} in revenue', { amount: money(10000) }), help: VQ.t('What you get from tickets after commission and discounts, from the start of sales.') },
+    tickets: { label: VQ.t('Tickets sold'), unit: VQ.t('tickets'), target: VQ.t('Target, in tickets'), example: '500', name: VQ.t('e.g. 500 tickets by the end of the month'), help: VQ.t('All valid tickets: online, at the door and invitations.') },
+    visitors: { label: VQ.t('Visitors'), unit: VQ.t('visitors'), target: VQ.t('Target, in visitors'), example: nfLoc.format(5000), name: VQ.t('e.g. {n} visitors', { n: nfLoc.format(5000) }), help: VQ.t('Unique visitors of the activity page, added up by day.') },
+    conversion_rate: { label: VQ.t('Conversion rate'), unit: '%', target: VQ.t('Target, in percent'), example: nfLoc.format(3.5), name: VQ.t('e.g. Conversion of {n}%', { n: nfLoc.format(3.5) }), help: VQ.t('The daily average of the conversion rate of the page: tickets per 100 visits.') },
   };
   var CAMPS = {
     campaign_fb: { label: 'Facebook Ads', ad: true, source: 'facebook', medium: 'cpc' },
     campaign_instagram: { label: 'Instagram Ads', ad: true, source: 'facebook', medium: 'cpc' },
     campaign_google: { label: 'Google Ads', ad: true, source: 'google', medium: 'cpc' },
     campaign_tiktok: { label: 'TikTok Ads', ad: true, source: 'tiktok', medium: 'cpc' },
-    campaign_other: { label: 'Influencer sau alte reclame', ad: true, source: 'organic', medium: 'cpc' },
-    email: { label: 'Campanie email', ad: false },
-    price: { label: 'Schimbare de preț', ad: false },
-    announcement: { label: 'Anunț', ad: false },
-    press: { label: 'Comunicat de presă', ad: false },
-    lineup: { label: 'Program nou sau invitați noi', ad: false },
-    custom: { label: 'Altceva', ad: false },
+    campaign_other: { label: VQ.t('Influencer or other ads'), ad: true, source: 'organic', medium: 'cpc' },
+    email: { label: VQ.t('Email campaign'), ad: false },
+    price: { label: VQ.t('Price change'), ad: false },
+    announcement: { label: VQ.t('Announcement'), ad: false },
+    press: { label: VQ.t('Press release'), ad: false },
+    lineup: { label: VQ.t('New programme or new guests'), ad: false },
+    custom: { label: VQ.t('Something else'), ad: false },
   };
   var ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -59,7 +65,7 @@
   var chart = null, parts = null, activeDay = -1, show = { rev: true, tix: true }, redrawTimer = 0;
   var opener = null, openerKey = null, fallbackFocus = null, editGoal = null, editCamp = null, delTarget = null, formEvent = '';
   var geo = null;
-  try { geo = new Intl.DisplayNames(['ro'], { type: 'region' }); } catch (e) { geo = null; }
+  try { geo = new Intl.DisplayNames([LOC], { type: 'region' }); } catch (e) { geo = null; }
 
   /* =================== HELPERS =================== */
   function num(v) { return F.toNum(v); }
@@ -81,25 +87,32 @@
     return n;
   }
   function slug(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); }
-  var compact = new Intl.NumberFormat('ro-RO', { notation: 'compact', maximumFractionDigits: 1 });
-  var dec1 = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 });
-  var dec2 = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 2 });
-  var plainFmt = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 2, useGrouping: false });
+  var compact = new Intl.NumberFormat(LOC, { notation: 'compact', maximumFractionDigits: 1 });
+  var dec1 = new Intl.NumberFormat(LOC, { maximumFractionDigits: 1 });
+  var dec2 = new Intl.NumberFormat(LOC, { maximumFractionDigits: 2 });
+  var plainFmt = new Intl.NumberFormat(LOC, { maximumFractionDigits: 2, useGrouping: false });
   function niceNum(x) {
     if (!(x > 0)) return 1;
     var e = Math.pow(10, Math.floor(Math.log10(x))), f = x / e;
     return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
   }
-  /** "1.234,50", "1234,5", "12.5" and "500" all read as numbers; anything else is NaN. */
+  /** With a decimal comma: "1.234,50", "1234,5", "12.5" and "500". With a decimal point (English): "1,234.50", "1234.5",
+      "12,5" and "500". Anything else is NaN. */
   function parseAmount(v) {
-    var s = String(v == null ? '' : v).replace(/\s+/g, '').replace(/(lei|%)$/i, '');
+    var s = String(v == null ? '' : v).replace(/\s+/g, '').replace(/^[€$£]/, '').replace(/(lei|eur|€|%)$/i, '');
+    if (DEC === '.') {
+      if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) return parseFloat(s.replace(/,/g, ''));
+      if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+      if (/^\d+,\d{1,2}$/.test(s)) return parseFloat(s.replace(',', '.'));
+      return NaN;
+    }
     if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) return parseFloat(s.replace(/\./g, '').replace(',', '.'));
     if (/^\d+(,\d+)?$/.test(s)) return parseFloat(s.replace(',', '.'));
     if (/^\d+\.\d{1,2}$/.test(s)) return parseFloat(s);
     return NaN;
   }
-  function approx(v, one, many) { var r = Math.round(v); return '~' + (Math.abs(v - r) < 0.05 ? F.count(r, one, many) : dec1.format(v) + ' ' + many); }
-  function parseCount(v) { var s = String(v == null ? '' : v).replace(/[\s.]+/g, ''); return /^\d+$/.test(s) ? parseInt(s, 10) : NaN; }
+  function approxTickets(v) { var r = Math.round(v); return '~' + (Math.abs(v - r) < 0.05 ? VQ.n(r, 'ticket', 'tickets') : dec1.format(v) + ' ' + VQ.plural(2, 'ticket', 'tickets')); }
+  function parseCount(v) { var s = String(v == null ? '' : v).replace(DEC === '.' ? /[\s,]+/g : /[\s.]+/g, ''); return /^\d+$/.test(s) ? parseInt(s, 10) : NaN; }
   function initials(name) {
     var w = String(name || '').split(/\s+/).map(function (x) { return x.replace(/[^\p{L}\p{N}]/gu, ''); }).filter(Boolean);
     return ((w.length > 1 ? w[0].charAt(0) + w[w.length - 1].charAt(0) : (w[0] || '').slice(0, 2)) || '?').toUpperCase();
@@ -108,18 +121,23 @@
     code = String(code || '').toUpperCase();
     try { return geo && /^[A-Z]{2}$/.test(code) ? geo.of(code) : code; } catch (e) { return code; }
   }
-  /** Carbon's English "3 hours ago", in Romanian. Anything else passes through. */
-  function roAgo(s) {
+  /** Carbon's English "3 hours ago", in the visitor's language. Anything else passes through. */
+  function agoText(s) {
     s = String(s || '').trim();
-    if (/^just now$/i.test(s)) return 'chiar acum';
+    if (/^just now$/i.test(s)) return VQ.t('just now');
     var m = /^(\d+|an?|one)\s+(second|minute|hour|day|week|month|year)s?\s+ago$/i.exec(s);
     if (!m) return s;
-    var n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : 1, u = m[2].toLowerCase();
-    if (u === 'second') return 'chiar acum';
-    var W = { minute: ['un minut', 'minut', 'minute'], hour: ['o oră', 'oră', 'ore'], day: ['o zi', 'zi', 'zile'], week: ['o săptămână', 'săptămână', 'săptămâni'], month: ['o lună', 'lună', 'luni'], year: ['un an', 'an', 'ani'] }[u];
-    return 'acum ' + (n === 1 ? W[0] : F.count(n, W[1], W[2]));
+    var n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : 1, u = m[2].toLowerCase(), span;
+    if (u === 'second') return VQ.t('just now');
+    if (u === 'minute') span = VQ.n(n, 'minute', 'minutes');
+    else if (u === 'hour') span = VQ.n(n, 'hour', 'hours');
+    else if (u === 'day') span = VQ.n(n, 'day', 'days');
+    else if (u === 'week') span = VQ.n(n, 'week', 'weeks');
+    else if (u === 'month') span = VQ.n(n, 'month', 'months');
+    else span = VQ.n(n, 'year', 'years');
+    return VQ.t('{time} ago', { time: span });
   }
-  function evName(e) { return F.flat(e && (e.name || e.title)) || 'Activitatea #' + (e && e.id); }
+  function evName(e) { return F.flat(e && (e.name || e.title)) || VQ.t('Activity #{id}', { id: e && e.id }); }
   function evMeta(e) { var d = naiveDay(e.starts_at); return [d ? dayShort(d) : '', F.flat(e.venue_name), F.flat(e.venue_city)].filter(Boolean).join(' · '); }
   function isLive(ev) {
     if (ev.is_cancelled || ev.is_postponed || ev.is_past || ev.is_ended) return false;
@@ -144,7 +162,7 @@
     box.textContent = '';
     var p = el(tag || 'p', { class: 'oa-empty-p' }, [text]);
     if (retry) {
-      var b = el('button', { type: 'button', text: 'Reîncearcă' });
+      var b = el('button', { type: 'button', text: VQ.t('Try again') });
       b.addEventListener('click', retry);
       p.appendChild(b);
     }
@@ -158,23 +176,25 @@
   }
 
   /* =================== ADDRESS =================== */
+  /** The path without the language prefix (/de/organizator/… → /organizator/…). */
+  function barePath() { return VQ.locale === 'en' ? location.pathname : location.pathname.replace(new RegExp('^/' + VQ.locale + '(?=/)'), ''); }
   function readUrl(first) {
-    var m = /^\/organizator\/analytics\/(\d+)\/?$/.exec(location.pathname), p = new URLSearchParams(location.search), per = p.get('perioada') || '';
+    var m = /^\/organizator\/analytics\/(\d+)\/?$/.exec(barePath()), p = new URLSearchParams(location.search), per = p.get('perioada') || '';
     var attr = first && /^\d+$/.test(root.getAttribute('data-event') || '') ? root.getAttribute('data-event') : '';
     S.event = m ? m[1] : /^\d+$/.test(p.get('event') || '') ? p.get('event') : attr;
     S.period = has(PERIODS, per) ? per : 'tot';
   }
   function writeUrl(push) {
-    var pretty = /^\/organizator\/analytics(\/|$)/.test(location.pathname), p = new URLSearchParams(location.search);
+    var pretty = /^\/organizator\/analytics(\/|$)/.test(barePath()), p = new URLSearchParams(location.search);
     p.delete('perioada');
     if (!pretty) { if (S.event) p.set('event', S.event); else p.delete('event'); }
     if (S.period !== 'tot') p.set('perioada', S.period);
-    var qs = p.toString(), url = (pretty ? '/organizator/analytics' + (S.event ? '/' + S.event : '') : location.pathname) + (qs ? '?' + qs : '');
+    var qs = p.toString(), url = (pretty ? VQ.url('/organizator/analytics' + (S.event ? '/' + S.event : '')) : location.pathname) + (qs ? '?' + qs : '');
     if (url !== location.pathname + location.search) history[push ? 'pushState' : 'replaceState'](null, '', url);
   }
   function syncPeriod() {
     qsa('.oa-seg-b', root).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-period') === S.period)); });
-    $('oa-csv-p').textContent = PERIODS[S.period].label + ': zile, bilete, trafic și locații';
+    $('oa-csv-p').textContent = VQ.t('{period}: days, tickets, traffic and locations', { period: PERIODS[S.period].label });
   }
 
   /* =================== LOAD =================== */
@@ -193,8 +213,8 @@
     $('oa-none').hidden = true;
     $('oa-body').hidden = false;
     $('oa-actions').hidden = false;
-    $('oa-report').href = '/organizator/report/' + S.event;
-    $('oa-all-sales').href = '/organizator/vanzari?event=' + S.event;
+    $('oa-report').href = VQ.url('/organizator/report/' + S.event);
+    $('oa-all-sales').href = VQ.url('/organizator/vanzari?event=' + S.event);
     if (fresh) {
       data = null;
       prev = null;
@@ -217,15 +237,15 @@
       setBusy(false);
       if (err && err.status === 401) return;
       if (!fresh) {
-        O.flash('Nu am putut încărca perioada aleasă. Încearcă din nou.', true);
+        O.flash(VQ.t('We could not load the chosen period. Try again.'), true);
         S.period = loaded.period;
         syncPeriod();
         writeUrl(false);
         return;
       }
       loaded.event = '';
-      if (err && err.status === 404) showNone('Activitatea nu a fost găsită', 'Poate a fost ștearsă sau nu este în contul tău. Alege altă activitate mai sus.', false);
-      else showNone('Nu am putut încărca analiza', 'Verifică conexiunea și încearcă din nou.', true);
+      if (err && err.status === 404) showNone(VQ.t('The activity was not found'), VQ.t('It may have been deleted or is not in your account. Choose another activity above.'), false);
+      else showNone(VQ.t('We could not load the analytics'), VQ.t('Check your connection and try again.'), true);
     });
   }
   function setBusy(on) { qsa('.oa-dep', root).forEach(function (n) { n.setAttribute('aria-busy', on ? 'true' : 'false'); }); }
@@ -265,17 +285,17 @@
   function showNone(title, text, retry) {
     $('oa-body').hidden = true;
     $('oa-actions').hidden = true;
-    $('oa-title').textContent = 'Analiză activitate';
+    $('oa-title').textContent = VQ.t('Activity analytics');
     $('oa-info').textContent = '';
     $('oa-thumb').hidden = true;
-    document.title = 'Analiză activitate — viaqui.com';
+    document.title = VQ.t('Activity analytics') + SITE;
     var box = $('oa-none');
     box.textContent = '';
     box.classList.toggle('is-error', !!retry);
     box.appendChild(el('span', { class: 'org-empty-ic' }, icon(retry ? 'warning-circle' : 'chart-line-up')));
     box.appendChild(el('b', { text: title }));
     box.appendChild(el('p', { text: text }));
-    var cta = retry ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Reîncearcă' }) : el('a', { class: 'btn btn-ghost', href: '/organizator/activities', text: 'Vezi activitățile' });
+    var cta = retry ? el('button', { class: 'btn btn-primary', type: 'button', text: VQ.t('Try again') }) : el('a', { class: 'btn btn-ghost', href: VQ.url('/organizator/activities'), text: VQ.t('See the activities') });
     if (retry) cta.addEventListener('click', function () { load(); });
     box.appendChild(el('div', { class: 'oa-empty-cta' }, cta));
     box.hidden = false;
@@ -284,15 +304,15 @@
     $('oa-body').hidden = true;
     $('oa-none').hidden = true;
     $('oa-actions').hidden = true;
-    $('oa-title').textContent = 'Analiză activitate';
+    $('oa-title').textContent = VQ.t('Activity analytics');
     $('oa-info').textContent = '';
     $('oa-thumb').hidden = true;
-    document.title = 'Analiză activitate — viaqui.com';
+    document.title = VQ.t('Activity analytics') + SITE;
     if (document.activeElement !== input) input.value = '';
     $('oa-pickall').hidden = false;
     var my = seq;
     loadEvents().then(function () { if (my === seq) renderEvList(); }, function () {
-      if (my === seq) emptyBox($('oa-evlist'), 'li', 'Nu am putut încărca activitățile.', function () { skel($('oa-evlist'), 'li'); showPicker(); });
+      if (my === seq) emptyBox($('oa-evlist'), 'li', VQ.t('We could not load the activities.'), function () { skel($('oa-evlist'), 'li'); showPicker(); });
     });
   }
   function renderAll() {
@@ -333,9 +353,9 @@
 
   /* =================== HEAD + FIGURES =================== */
   function renderHead() {
-    var e = data.event || {}, title = F.flat(e.title) || 'Activitatea #' + S.event;
+    var e = data.event || {}, title = F.flat(e.title) || VQ.t('Activity #{id}', { id: S.event });
     $('oa-title').textContent = title;
-    document.title = 'Analiză: ' + title + ' — viaqui.com';
+    document.title = VQ.t('Analytics: {title}', { title: title }) + SITE;
     if (document.activeElement !== input) input.value = title;
     var thumb = $('oa-thumb'), src = typeof e.image === 'string' && /^https?:\/\//i.test(e.image) ? e.image : '';
     thumb.textContent = '';
@@ -350,9 +370,9 @@
     if (day) bits.push(dayLabel(day, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) + (time ? ', ' + time : ''));
     [F.flat(e.venue), F.flat(e.venue_city)].forEach(function (v) { if (v && bits.indexOf(v) < 0) bits.push(v); });
     if (bits.length) info.appendChild(el('span', { text: bits.join(' · ') }));
-    if (e.is_cancelled) info.appendChild(el('span', { class: 'org-tag is-bad', text: 'Anulată' }));
-    else if (du !== null) info.appendChild(el('span', { class: 'org-tag ' + (du < 0 ? 'is-muted' : 'is-ok'), text: du < 0 ? 'Încheiată' : du === 0 ? 'Azi' : du === 1 ? 'Mâine' : 'Peste ' + F.count(du, 'zi', 'zile') }));
-    if (e.is_sold_out) info.appendChild(el('span', { class: 'org-tag is-wait', text: 'Sold out' }));
+    if (e.is_cancelled) info.appendChild(el('span', { class: 'org-tag is-bad', text: VQ.t('Cancelled') }));
+    else if (du !== null) info.appendChild(el('span', { class: 'org-tag ' + (du < 0 ? 'is-muted' : 'is-ok'), text: du < 0 ? VQ.t('Ended') : du === 0 ? VQ.t('Today') : du === 1 ? VQ.t('Tomorrow') : VQ.t('In {count}', { count: VQ.n(du, 'day', 'days') }) }));
+    if (e.is_sold_out) info.appendChild(el('span', { class: 'org-tag is-wait', text: VQ.t('Sold out') }));
   }
   function stat(key, value, sub) { $('oa-s-' + key).textContent = value; $('oa-s-' + key + '-p').textContent = sub || ''; }
   function statTag(key, text, cls) {
@@ -372,27 +392,27 @@
   }
   function renderStats() {
     var o = data.overview || {}, e = data.event || {}, sold = num(o.tickets_sold), views = num(o.page_views), capacity = capacityOf(), du = daysUntil();
-    stat('revenue', money(o.net_revenue != null ? o.net_revenue : o.total_revenue), 'Ce îți revine din bilete, după comision și reduceri.');
-    stat('tickets', F.num(sold), capacity > 0 ? '' : 'Online, la ușă și invitații.');
-    statTag('tickets', num(o.tickets_today) > 0 ? '+' + F.num(o.tickets_today) + ' azi' : '', 'is-ok');
-    meter('tickets', capacity > 0 ? sold / capacity * 100 : null, capacity > 0 ? F.pct(sold / capacity * 100, 0) + ' din ' + F.count(capacity, 'loc', 'locuri') : '');
-    stat('views', F.num(views), 'Vizualizări ale paginii activității.');
-    if (views > 0) stat('conversion', F.pct(o.conversion_rate, 1), F.count(sold, 'bilet', 'bilete') + ' la ' + F.count(views, 'vizualizare', 'vizualizări') + '.');
-    else stat('conversion', '—', 'Nu avem vizualizări măsurate.');
+    stat('revenue', money(o.net_revenue != null ? o.net_revenue : o.total_revenue), VQ.t('What you get from tickets, after commission and discounts.'));
+    stat('tickets', F.num(sold), capacity > 0 ? '' : VQ.t('Online, at the door and invitations.'));
+    statTag('tickets', num(o.tickets_today) > 0 ? VQ.t('+{n} today', { n: F.num(o.tickets_today) }) : '', 'is-ok');
+    meter('tickets', capacity > 0 ? sold / capacity * 100 : null, capacity > 0 ? VQ.t('{pct} of {count}', { pct: F.pct(sold / capacity * 100, 0), count: VQ.n(capacity, 'place', 'places') }) : '');
+    stat('views', F.num(views), VQ.t('Views of the activity page.'));
+    if (views > 0) stat('conversion', F.pct(o.conversion_rate, 1), VQ.t('{tickets} per {views}.', { tickets: VQ.n(sold, 'ticket', 'tickets'), views: VQ.n(views, 'view', 'views') }));
+    else stat('conversion', '—', VQ.t('No views measured.'));
     var day = naiveDay(e.starts_at || e.date), when = day ? dayLabel(day) : '';
-    if (du === null) stat('days', '—', 'Data activității nu este stabilită.');
-    else if (du > 1) stat('days', F.count(du, 'zi', 'zile'), when ? 'Pe ' + when + '.' : '');
-    else if (du === 1) stat('days', 'Mâine', when);
-    else if (du === 0) stat('days', 'Azi', when);
-    else stat('days', 'Încheiată', (when ? 'Pe ' + when + ', ' : '') + 'acum ' + F.count(-du, 'zi', 'zile') + '.');
-    statTag('days', e.is_cancelled ? 'Anulată' : e.is_sold_out ? 'Sold out' : du !== null && du >= 0 ? 'Activă' : '', e.is_cancelled ? 'is-bad' : e.is_sold_out ? 'is-wait' : 'is-ok');
+    if (du === null) stat('days', '—', VQ.t('The date of the activity is not set.'));
+    else if (du > 1) stat('days', VQ.n(du, 'day', 'days'), when ? VQ.t('On {date}.', { date: when }) : '');
+    else if (du === 1) stat('days', VQ.t('Tomorrow'), when);
+    else if (du === 0) stat('days', VQ.t('Today'), when);
+    else stat('days', VQ.t('Ended'), when ? VQ.t('On {date}, {count} ago.', { date: when, count: VQ.n(-du, 'day', 'days') }) : VQ.t('{count} ago.', { count: VQ.n(-du, 'day', 'days') }));
+    statTag('days', e.is_cancelled ? VQ.t('Cancelled') : e.is_sold_out ? VQ.t('Sold out') : du !== null && du >= 0 ? VQ.t('Active') : '', e.is_cancelled ? 'is-bad' : e.is_sold_out ? 'is-wait' : 'is-ok');
   }
   function goalAmount(type, v) {
     v = num(v);
     if (type === 'revenue') return money(v / 100);
     if (type === 'conversion_rate') return F.pct(v / 100, 2);
-    if (type === 'tickets') return F.count(v, 'bilet', 'bilete');
-    if (type === 'visitors') return F.count(v, 'vizitator', 'vizitatori');
+    if (type === 'tickets') return VQ.n(v, 'ticket', 'tickets');
+    if (type === 'visitors') return VQ.n(v, 'visitor', 'visitors');
     return F.num(v);
   }
   function goalValue(type, v) { return type === 'tickets' || type === 'visitors' ? F.num(v) : goalAmount(type, v); }
@@ -407,14 +427,14 @@
     }
     set.hidden = true;
     var target = num(g.target_value), p = target > 0 ? num(g.current_value) / target * 100 : num(g.progress_percent);
-    meter('revenue', p, F.pct(p, 0) + ' din obiectivul de ' + goalAmount('revenue', target));
+    meter('revenue', p, VQ.t('{pct} of the goal of {amount}', { pct: F.pct(p, 0), amount: goalAmount('revenue', target) }));
   }
   function change(cur, before, fmt) {
     if (S.period === 'tot' || !prev || prev.none || prev.failed) return null;
-    var sr = el('span', { class: 'sr', text: ' față de perioada dinainte, ' + prev.label });
+    var sr = el('span', { class: 'sr', text: ' ' + VQ.t('compared with the period before, {period}', { period: prev.label }) });
     if (!(before > 0)) {
       if (!(cur > 0)) return el('span', { class: 'oa-chg is-flat', title: prev.label + ': 0' }, ['0%', sr]);
-      return el('span', { class: 'oa-chg is-up', title: prev.label + ': 0' }, [icon('trend-up'), 'nou', el('span', { class: 'sr', text: ', în perioada dinainte (' + prev.label + ') nu a fost nimic' })]);
+      return el('span', { class: 'oa-chg is-up', title: prev.label + ': 0' }, [icon('trend-up'), VQ.t('new'), el('span', { class: 'sr', text: ', ' + VQ.t('there was nothing in the period before ({period})', { period: prev.label }) })]);
     }
     var d = Math.round((cur - before) / before * 100), cls = d > 0 ? 'is-up' : d < 0 ? 'is-down' : 'is-flat';
     return el('span', { class: 'oa-chg ' + cls, title: prev.label + ': ' + fmt(before) }, [d ? icon(d > 0 ? 'trend-up' : 'trend-down') : null, (d > 0 ? '+' : d < 0 ? '−' : '') + F.num(Math.abs(d)) + '%', sr]);
@@ -430,12 +450,12 @@
     if (!data) return;
     var P = PERIODS[S.period], c = data.chart || {}, rev = sum(c.revenue), tix = sum(c.tickets), vis = visitorsOf(data), all = S.period === 'tot';
     periodLine('revenue', all ? '' : P.label + ': ' + money(rev), change(rev, prev && prev.rev, money));
-    periodLine('tickets', all ? '' : P.label + ': ' + F.count(tix, 'bilet', 'bilete'), change(tix, prev && prev.tix, F.num));
-    periodLine('views', P.label + ': ' + F.count(vis, 'vizitator', 'vizitatori'), change(vis, prev && prev.vis, F.num));
+    periodLine('tickets', all ? '' : P.label + ': ' + VQ.n(tix, 'ticket', 'tickets'), change(tix, prev && prev.tix, F.num));
+    periodLine('views', P.label + ': ' + VQ.n(vis, 'visitor', 'visitors'), change(vis, prev && prev.vis, F.num));
   }
   function renderLive() {
     var n = num((data.overview || {}).live_visitors);
-    $('oa-live-n').textContent = n > 0 ? F.num(n) + ' online acum' : '';
+    $('oa-live-n').textContent = n > 0 ? VQ.t('{n} online now', { n: F.num(n) }) : '';
     $('oa-live').hidden = !(n > 0);
   }
 
@@ -467,9 +487,9 @@
     if (!chart) return;
     var revSum = sum(chart.rev), tixSum = sum(chart.tix), saleDays = chart.tix.filter(Boolean).length, best = -1;
     chart.rev.forEach(function (v, i) { if (v > 0 && (best < 0 || v > chart.rev[best])) best = i; });
-    [['Venit net în perioadă', money(revSum)], ['Bilete în perioadă', F.num(tixSum)], ['Zile cu vânzări', F.num(saleDays)], ['Cea mai bună zi', best < 0 ? '—' : dayLabel(chart.dates[best], { day: 'numeric', month: 'short' }) + ' · ' + money(chart.rev[best])]]
+    [[VQ.t('Net revenue in the period'), money(revSum)], [VQ.t('Tickets in the period'), F.num(tixSum)], [VQ.t('Days with sales'), F.num(saleDays)], [VQ.t('Best day'), best < 0 ? '—' : dayLabel(chart.dates[best], { day: 'numeric', month: 'short' }) + ' · ' + money(chart.rev[best])]]
       .forEach(function (t) { box.appendChild(el('div', null, [el('dt', { text: t[0] }), el('dd', { text: t[1] })])); });
-    $('oa-plot').setAttribute('aria-label', 'Grafic vânzări, ' + $('oa-chart-p').textContent + ': venit net ' + money(revSum) + ', ' + F.count(tixSum, 'bilet vândut', 'bilete vândute') + '. Folosește săgețile pentru fiecare zi.');
+    $('oa-plot').setAttribute('aria-label', VQ.t('Sales chart, {period}: net revenue {revenue}, {tickets}. Use the arrow keys to move through the days.', { period: $('oa-chart-p').textContent, revenue: money(revSum), tickets: VQ.n(tixSum, 'ticket sold', 'tickets sold') }));
   }
   function campaignMarks() {
     if (!chart || !Array.isArray(camps)) return [];
@@ -485,7 +505,7 @@
     box.textContent = '';
     marks.forEach(function (m) {
       var t = CAMPS[m.camp.type];
-      box.appendChild(el('li', null, [el('span', { class: 'oa-mk-chip', 'aria-hidden': 'true', text: String(m.n) }), el('span', null, [el('b', { text: F.flat(m.camp.title) || 'Campanie' }), ' · ' + [t ? t.label : '', dayLabel(m.camp.start_date, { day: 'numeric', month: 'short' })].filter(Boolean).join(', ')])]));
+      box.appendChild(el('li', null, [el('span', { class: 'oa-mk-chip', 'aria-hidden': 'true', text: String(m.n) }), el('span', null, [el('b', { text: F.flat(m.camp.title) || VQ.t('Campaign') }), ' · ' + [t ? t.label : '', dayLabel(m.camp.start_date, { day: 'numeric', month: 'short' })].filter(Boolean).join(', ')])]));
     });
     box.hidden = !marks.length;
   }
@@ -564,17 +584,18 @@
     parts.dot.setAttribute('cy', parts.pts[i][1].toFixed(1));
     parts.dot.setAttribute('visibility', show.tix ? 'visible' : 'hidden');
     var title = cap(dayLabel(chart.dates[i], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })), tip = $('oa-tip');
-    var live = running(chart.dates[i]).map(function (c) { return F.flat(c.title) || 'Campanie'; });
-    var liveText = live.length ? live.slice(0, 3).join(', ') + (live.length > 3 ? ' și încă ' + (live.length - 3) : '') : '';
+    var live = running(chart.dates[i]).map(function (c) { return F.flat(c.title) || VQ.t('Campaign'); });
+    var liveNames = live.length > 3 ? VQ.t('{names} and {n} more', { names: live.slice(0, 3).join(', '), n: live.length - 3 }) : live.join(', ');
+    var liveText = !live.length ? '' : live.length === 1 ? VQ.t('Campaign: {names}', { names: liveNames }) : VQ.t('Campaigns: {names}', { names: liveNames });
     tip.textContent = '';
     tip.appendChild(el('b', { text: title }));
-    tip.appendChild(el('dl', null, [el('dt', { text: 'Venit net' }), el('dd', { text: money(chart.rev[i]) }), el('dt', { text: 'Bilete' }), el('dd', { text: F.num(chart.tix[i]) })]));
-    if (liveText) tip.appendChild(el('p', { class: 'oa-tip-c', text: (live.length === 1 ? 'Campanie: ' : 'Campanii: ') + liveText }));
+    tip.appendChild(el('dl', null, [el('dt', { text: VQ.t('Net revenue') }), el('dd', { text: money(chart.rev[i]) }), el('dt', { text: VQ.t('Tickets') }), el('dd', { text: F.num(chart.tix[i]) })]));
+    if (liveText) tip.appendChild(el('p', { class: 'oa-tip-c', text: liveText }));
     tip.hidden = false;
     var cx = parts.pts[i][0], tw = tip.offsetWidth, left = cx + 16;
     if (left + tw > parts.W - 2) left = cx - 16 - tw;
     tip.style.left = Math.max(0, Math.min(left, parts.W - tw)) + 'px';
-    if (announce) $('oa-plot-live').textContent = title + ': venit net ' + money(chart.rev[i]) + ', ' + F.count(chart.tix[i], 'bilet', 'bilete') + (liveText ? '; ' + (live.length === 1 ? 'campanie: ' : 'campanii: ') + liveText : '') + '.';
+    if (announce) $('oa-plot-live').textContent = VQ.t('{day}: net revenue {revenue}, {tickets}', { day: title, revenue: money(chart.rev[i]), tickets: VQ.n(chart.tix[i], 'ticket', 'tickets') }) + (liveText ? '; ' + liveText : '') + '.';
   }
   function hideDay() {
     activeDay = -1;
@@ -630,23 +651,23 @@
     var endBox = $('oa-fc-end'), note = $('oa-fc-note');
     function set(id, v) { $(id).textContent = v; }
     endBox.hidden = false;
-    $('oa-fc-end-k').textContent = 'La data activității';
+    $('oa-fc-end-k').textContent = VQ.t('On the day of the activity');
     if (e.is_cancelled) {
-      $('oa-fc-next-k').textContent = 'Activitatea a fost anulată';
+      $('oa-fc-next-k').textContent = VQ.t('The activity was cancelled');
       set('oa-fc-rev', '—');
       set('oa-fc-tix', '—');
       endBox.hidden = true;
-      note.textContent = 'Pentru o activitate anulată nu facem estimări.';
+      note.textContent = VQ.t('We make no estimates for a cancelled activity.');
       return;
     }
     if (du !== null && du < 0) {
-      $('oa-fc-next-k').textContent = 'Activitatea s-a încheiat';
+      $('oa-fc-next-k').textContent = VQ.t('The activity has ended');
       set('oa-fc-rev', '—');
       set('oa-fc-tix', '—');
-      $('oa-fc-end-k').textContent = 'Rezultatul final';
+      $('oa-fc-end-k').textContent = VQ.t('Final result');
       set('oa-fc-trev', money(net));
       set('oa-fc-ttix', F.num(sold));
-      note.textContent = 'Nu mai sunt zile de vânzare, așa că îți arătăm cifrele finale.';
+      note.textContent = VQ.t('There are no sales days left, so we show the final figures.');
       return;
     }
     var avgR = 0, avgT = 0;
@@ -660,17 +681,17 @@
       if (left !== Infinity && t >= left) { if (t > left) { r = t > 0 ? r * left / t : 0; t = left; } capped = true; } // reaches the seats left
       return { t: Math.round(t), r: Math.round(r * 100) / 100, capped: capped };
     }
-    $('oa-fc-next-k').textContent = du === null || du >= 7 ? 'Următoarele 7 zile' : du === 0 ? 'Azi este ziua activității' : 'Până la activitate · ' + F.count(du, 'zi', 'zile');
+    $('oa-fc-next-k').textContent = du === null || du >= 7 ? VQ.t('Next 7 days') : du === 0 ? VQ.t('Today is the day of the activity') : VQ.t('Until the activity · {count}', { count: VQ.n(du, 'day', 'days') });
     if (du === 0) { set('oa-fc-rev', '—'); set('oa-fc-tix', '—'); }
     else { var a = est(du === null ? 7 : Math.min(7, du)); set('oa-fc-rev', '+' + money(a.r)); set('oa-fc-tix', '+' + F.num(a.t)); }
     var end = du === null ? null : est(du);
     if (!end) endBox.hidden = true;
     else { set('oa-fc-trev', money(net + end.r)); set('oa-fc-ttix', F.num(sold + end.t)); }
     var bits = [];
-    if (!(avgT > 0) && !(avgR > 0)) bits.push('În perioada aleasă nu au fost vânzări, așa că estimarea nu adaugă nimic. O perioadă mai lungă dă un ritm mai sigur.');
-    else bits.push('Ritmul folosit: ' + approx(avgT, 'bilet', 'bilete') + ' și ~' + money(avgR) + ' pe zi.');
-    if (end && end.capped) bits.push('Estimarea se oprește la capacitatea de ' + F.count(capacity, 'loc', 'locuri') + '.');
-    if (du === null) bits.push('Activitatea nu are o dată, așa că nu estimăm totalul final.');
+    if (!(avgT > 0) && !(avgR > 0)) bits.push(VQ.t('There were no sales in the chosen period, so the estimate adds nothing. A longer period gives a more reliable pace.'));
+    else bits.push(VQ.t('Pace used: {tickets} and ~{revenue} per day.', { tickets: approxTickets(avgT), revenue: money(avgR) }));
+    if (end && end.capped) bits.push(VQ.t('The estimate stops at the capacity of {count}.', { count: VQ.n(capacity, 'place', 'places') }));
+    if (du === null) bits.push(VQ.t('The activity has no date, so we do not estimate the final total.'));
     note.textContent = bits.join(' ');
   }
 
@@ -679,22 +700,22 @@
     var list = (Array.isArray(data.ticket_performance) ? data.ticket_performance.slice() : []).sort(function (a, b) { return num(b.sold) - num(a.sold); });
     var body = $('oa-types'), foot = $('oa-types-foot'), views = num((data.overview || {}).page_views), all = S.period === 'tot';
     $('oa-table').classList.toggle('is-all', all);
-    $('oa-types-p').textContent = 'Conversia: bilete vândute la 100 de vizualizări ale paginii. ' + (all ? 'Alege 7, 30 sau 90 de zile ca să vezi și trendul.' : 'Trendul: biletele din ' + PERIODS[S.period].label.toLowerCase() + ', față de perioada dinainte.');
+    $('oa-types-p').textContent = all ? VQ.t('Conversion: tickets sold per 100 page views. Choose 7, 30 or 90 days to see the trend too.') : VQ.t('Conversion: tickets sold per 100 page views. Trend: tickets in the chosen period ({period}), compared with the period before.', { period: PERIODS[S.period].label });
     body.textContent = '';
     foot.textContent = '';
-    if (!list.length) { body.appendChild(el('tr', null, el('td', { colspan: '6', class: 'oa-empty-td' }, el('p', { class: 'oa-empty-p', text: 'Activitatea nu are tipuri de bilete.' })))); return; }
+    if (!list.length) { body.appendChild(el('tr', null, el('td', { colspan: '6', class: 'oa-empty-td' }, el('p', { class: 'oa-empty-p', text: VQ.t('The activity has no ticket types.') })))); return; }
     var totalRev = 0, totalSold = 0;
     list.forEach(function (t, i) {
       var sold = num(t.sold), rev = num(t.revenue), capq = t.capacity == null || t.capacity === '' ? -1 : num(t.capacity), color = COLORS[i % COLORS.length], tr = Math.round(num(t.trend));
       totalRev += rev;
       totalSold += sold;
-      var type = el('div', { class: 'oa-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || 'Bilet', t.is_invitation ? el('small', { text: 'titlu gratuit (invitație)' }) : t.is_entry_ticket ? el('small', { text: 'încasat de operator' }) : null])]);
+      var type = el('div', { class: 'oa-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || VQ.t('Ticket'), t.is_invitation ? el('small', { text: VQ.t('free of charge (invitation)') }) : t.is_entry_ticket ? el('small', { text: VQ.t('collected by the operator') }) : null])]);
       type.querySelector('i').style.setProperty('--c', color);
       var soldCell = el('td', { class: 'is-num' }, [F.num(sold)]);
       if (capq > 0) {
         var mini = el('span', { class: 'oa-mini', 'aria-hidden': 'true' }, el('i'));
         mini.firstChild.style.width = Math.min(100, sold / capq * 100).toFixed(1) + '%';
-        soldCell.appendChild(el('span', { class: 'oa-sub', text: 'din ' + F.num(capq) }));
+        soldCell.appendChild(el('span', { class: 'oa-sub', text: VQ.t('of {n}', { n: F.num(capq) }) }));
         soldCell.appendChild(mini);
       }
       var trend = tr > 0 ? el('span', { class: 'oa-trend is-up' }, [icon('trend-up'), '+' + F.num(tr) + '%'])
@@ -709,25 +730,25 @@
         el('td', { class: 'is-num is-trend' }, trend),
       ]));
     });
-    foot.appendChild(el('tr', null, [el('td', { text: 'Total' }), el('td'), el('td', { class: 'is-num', text: F.num(totalSold) }), el('td', { class: 'is-num', text: money(totalRev) }), el('td', { class: 'is-conv' }), el('td', { class: 'is-trend' })]));
+    foot.appendChild(el('tr', null, [el('td', { text: VQ.t('Total') }), el('td'), el('td', { class: 'is-num', text: F.num(totalSold) }), el('td', { class: 'is-num', text: money(totalRev) }), el('td', { class: 'is-conv' }), el('td', { class: 'is-trend' })]));
   }
 
   /* =================== TRAFFIC + LOCATIONS + SALES =================== */
   function renderTraffic() {
     var box = $('oa-traffic'), list = (Array.isArray(data.traffic_sources) ? data.traffic_sources : []).filter(function (s) { return num(s.visitors) > 0; });
-    $('oa-traffic-p').textContent = PERIODS[S.period].label + ' · vizitatori unici pe sursă.';
+    $('oa-traffic-p').textContent = VQ.t('{period} · unique visitors by source.', { period: PERIODS[S.period].label });
     box.textContent = '';
-    if (!list.length) { box.appendChild(el('li', { class: 'oa-empty-p', text: 'Nu există date despre trafic în perioada aleasă.' })); return; }
+    if (!list.length) { box.appendChild(el('li', { class: 'oa-empty-p', text: VQ.t('No traffic data in the chosen period.') })); return; }
     list.sort(function (a, b) { return num(b.visitors) - num(a.visitors); });
     var total = sum(list.map(function (s) { return s.visitors; }));
     list.forEach(function (s) {
       var pct = total ? num(s.visitors) / total * 100 : 0, bar = el('i');
       bar.style.width = pct.toFixed(2) + '%';
       box.appendChild(el('li', null, [
-        el('b', { text: SOURCES[s.source] || F.flat(s.source) || 'Direct' }),
-        el('span', { class: 'oa-bar-v' }, [F.count(s.visitors, 'vizitator', 'vizitatori'), el('small', { text: F.pct(pct, 0) })]),
+        el('b', { text: SOURCES[s.source] || F.flat(s.source) || VQ.t('Direct') }),
+        el('span', { class: 'oa-bar-v' }, [VQ.n(num(s.visitors), 'visitor', 'visitors'), el('small', { text: F.pct(pct, 0) })]),
         el('span', { class: 'oa-meter', 'aria-hidden': 'true' }, bar),
-        num(s.revenue) > 0 ? el('span', { class: 'oa-sub', text: 'Vânzări atribuite: ' + money(s.revenue) }) : null,
+        num(s.revenue) > 0 ? el('span', { class: 'oa-sub', text: VQ.t('Attributed sales: {amount}', { amount: money(s.revenue) }) }) : null,
       ]));
     });
   }
@@ -738,13 +759,13 @@
   }
   function renderLocations() {
     var box = $('oa-locations'), list = (Array.isArray(data.top_locations) ? data.top_locations : []).map(place).filter(function (p) { return p.visitors > 0; }).slice(0, 8);
-    $('oa-loc-p').textContent = PERIODS[S.period].label + ' · vizitatorii paginii, după oraș.';
+    $('oa-loc-p').textContent = VQ.t('{period} · visitors of the page, by city.', { period: PERIODS[S.period].label });
     box.textContent = '';
-    if (!list.length) { box.appendChild(el('li', { class: 'oa-empty-p', text: 'Nu există date despre locații în perioada aleasă.' })); return; }
+    if (!list.length) { box.appendChild(el('li', { class: 'oa-empty-p', text: VQ.t('No location data in the chosen period.') })); return; }
     list.forEach(function (p, i) {
       box.appendChild(el('li', null, [
         el('span', { class: 'oa-rank-n', text: String(i + 1) }),
-        el('span', null, [el('b', { text: p.city || p.country || 'Necunoscut' }), p.city && p.country ? el('small', { text: p.country }) : !p.city ? el('small', { text: 'oraș necunoscut' }) : null]),
+        el('span', null, [el('b', { text: p.city || p.country || VQ.t('Unknown') }), p.city && p.country ? el('small', { text: p.country }) : !p.city ? el('small', { text: VQ.t('unknown city') }) : null]),
         el('span', { class: 'oa-rank-v', text: F.num(p.visitors) }),
       ]));
     });
@@ -752,12 +773,12 @@
   function renderSales() {
     var box = $('oa-sales'), rows = Array.isArray(data.recent_sales) ? data.recent_sales.slice(0, 8) : [];
     box.textContent = '';
-    if (!rows.length) { box.appendChild(el('li', { class: 'oa-empty-p', text: 'Nicio vânzare încă.' })); return; }
+    if (!rows.length) { box.appendChild(el('li', { class: 'oa-empty-p', text: VQ.t('No sales yet.') })); return; }
     rows.forEach(function (s) {
-      var name = F.flat(s.buyer_name).trim() || 'Client';
+      var name = F.flat(s.buyer_name).trim() || VQ.t('Customer');
       box.appendChild(el('li', null, [
         el('span', { class: 'oa-av', 'aria-hidden': 'true', text: initials(name) }),
-        el('div', { class: 'oa-sale-t' }, [el('b', { text: name }), el('span', { class: 'oa-sub', text: [roAgo(s.time_ago), num(s.tickets) > 0 ? F.count(s.tickets, 'bilet', 'bilete') : ''].filter(Boolean).join(' · ') })]),
+        el('div', { class: 'oa-sale-t' }, [el('b', { text: name }), el('span', { class: 'oa-sub', text: [agoText(s.time_ago), num(s.tickets) > 0 ? VQ.n(num(s.tickets), 'ticket', 'tickets') : ''].filter(Boolean).join(' · ') })]),
         el('span', { class: 'oa-sale-v', text: '+' + money(s.amount) }),
       ]));
     });
@@ -770,21 +791,21 @@
     var dots = $('oa-map-dots'), side = $('oa-map-list'), total = sum(list.map(function (p) { return p.visitors; })), byCity = {}, rows = [];
     dots.textContent = '';
     side.textContent = '';
-    $('oa-map-p').textContent = 'De unde au venit vizitatorii paginii activității · ' + PERIODS[S.period].label.toLowerCase() + '.';
+    $('oa-map-p').textContent = VQ.t('Where the visitors of the activity page came from · {period}.', { period: PERIODS[S.period].label });
     list.forEach(function (p) {
       var c = p.city ? CITIES[norm(p.city)] : null;
       if (c && (!p.cc || p.cc === c.cc)) {
         if (!byCity[c.name]) { byCity[c.name] = { name: c.name, city: c, visitors: 0, sub: countryName(c.cc) }; rows.push(byCity[c.name]); }
         byCity[c.name].visitors += p.visitors;
       } else {
-        rows.push({ name: p.city || p.country || 'Necunoscut', visitors: p.visitors, sub: !p.city ? 'oraș necunoscut' : p.cc === 'RO' || p.cc === 'MD' ? p.country + ' · nu apare pe hartă' : p.country });
+        rows.push({ name: p.city || p.country || VQ.t('Unknown'), visitors: p.visitors, sub: !p.city ? VQ.t('unknown city') : p.cc === 'RO' || p.cc === 'MD' ? VQ.t('{country} · not on the map', { country: p.country }) : p.country });
       }
     });
     rows.sort(function (a, b) { return b.visitors - a.visitors; });
     var placed = rows.filter(function (r) { return r.city; }), max = Math.max.apply(null, placed.map(function (r) { return r.visitors; }).concat([1])), labels = [];
     placed.forEach(function (r, i) {
       var xy = project(r.city.lat, r.city.lng), rad = 6 + 22 * Math.sqrt(r.visitors / max), g = svgNode('g', null);
-      g.appendChild(svgNode('title', null, r.name + ': ' + F.count(r.visitors, 'vizitator', 'vizitatori')));
+      g.appendChild(svgNode('title', null, r.name + ': ' + VQ.n(r.visitors, 'visitor', 'visitors')));
       g.appendChild(svgNode('circle', { class: 'oa-city' + (i < 3 ? ' is-top' : ''), cx: xy[0].toFixed(1), cy: xy[1].toFixed(1), r: rad.toFixed(1) }));
       dots.appendChild(g);
       var ly = xy[1] - rad - 6;
@@ -804,11 +825,12 @@
         el('span', { class: 'oa-meter', 'aria-hidden': 'true' }, bar),
       ]));
     });
-    $('oa-map-sum').textContent = total ? F.count(total, 'vizitator', 'vizitatori') + ' din ' + F.count(rows.length, 'locație', 'locații') : 'Nu avem vizitatori cu locația cunoscută în perioada aleasă.';
-    $('oa-map-cap').textContent = placed.length
-      ? 'Harta României cu ' + F.count(placed.length, 'oraș', 'orașe') + ': ' + placed.slice(0, 3).map(function (r) { return r.name + ' ' + F.num(r.visitors); }).join(', ') + (placed.length > 3 ? ' și altele' : '') + '. Cercurile cresc cu numărul de vizitatori.'
-      : 'Harta României. Niciun oraș de pus pe hartă în perioada aleasă.';
-    $('oa-map-note').textContent = list.length >= 10 ? 'Sunt primele 10 locații după numărul de vizitatori.' : '';
+    $('oa-map-sum').textContent = total ? VQ.t('{visitors} from {locations}', { visitors: VQ.n(total, 'visitor', 'visitors'), locations: VQ.n(rows.length, 'location', 'locations') }) : VQ.t('No visitors with a known location in the chosen period.');
+    var capVars = { count: VQ.n(placed.length, 'city', 'cities'), cities: placed.slice(0, 3).map(function (r) { return r.name + ' ' + F.num(r.visitors); }).join(', ') };
+    $('oa-map-cap').textContent = !placed.length ? VQ.t('Map of Romania. No city to place on the map in the chosen period.')
+      : placed.length > 3 ? VQ.t('Map of Romania with {count}: {cities} and others. The circles grow with the number of visitors.', capVars)
+      : VQ.t('Map of Romania with {count}: {cities}. The circles grow with the number of visitors.', capVars);
+    $('oa-map-note').textContent = list.length >= 10 ? VQ.t('These are the top 10 locations by number of visitors.') : '';
   }
   function openMap(from) {
     if (!data) return;
@@ -834,11 +856,11 @@
     }, function () {
       if (my !== goalsSeq) return;
       goals = null;
-      emptyBox($('oa-goals'), 'p', 'Nu am putut încărca obiectivele.', function () { loadGoals(false); });
+      emptyBox($('oa-goals'), 'p', VQ.t('We could not load the goals.'), function () { loadGoals(false); });
       renderGoalMeter();
     });
   }
-  /** A list re-rendered under the focus (after a save or a delete) gives it back to the same button, or to "Adaugă". */
+  /** A list re-rendered under the focus (after a save or a delete) gives it back to the same button, or to "Add". */
   function focusKey(box) { var a = document.activeElement; return a && a !== document.body && box.contains(a) ? a.getAttribute('data-focus') || '' : null; }
   function restoreFocus(box, key, fallback) {
     if (key === null) return;
@@ -848,9 +870,11 @@
   }
   function cardActions(kind, item) {
     if (!/^\d+$/.test(String(item.id))) return null;
-    var what = kind === 'goal' ? 'obiectivul ' + (F.flat(item.name) || '') : 'campania ' + (F.flat(item.title) || '');
-    var edit = el('button', { class: 'oa-ib', type: 'button', 'aria-label': 'Modifică ' + what.trim(), title: 'Modifică', 'data-focus': kind + '-edit-' + item.id }, icon('pencil-simple'));
-    var del = el('button', { class: 'oa-ib is-del', type: 'button', 'aria-label': 'Șterge ' + what.trim(), title: 'Șterge', 'data-focus': kind + '-del-' + item.id }, icon('trash'));
+    var goal = kind === 'goal', vars = { name: (goal ? F.flat(item.name) : F.flat(item.title)) || '' };
+    var editLabel = (goal ? VQ.t('Edit the goal {name}', vars) : VQ.t('Edit the campaign {name}', vars)).trim();
+    var delLabel = (goal ? VQ.t('Delete the goal {name}', vars) : VQ.t('Delete the campaign {name}', vars)).trim();
+    var edit = el('button', { class: 'oa-ib', type: 'button', 'aria-label': editLabel, title: VQ.t('Edit'), 'data-focus': kind + '-edit-' + item.id }, icon('pencil-simple'));
+    var del = el('button', { class: 'oa-ib is-del', type: 'button', 'aria-label': delLabel, title: VQ.t('Delete'), 'data-focus': kind + '-del-' + item.id }, icon('trash'));
     edit.addEventListener('click', function () { if (kind === 'goal') openGoal(item, null, edit); else openCamp(item, edit); });
     del.addEventListener('click', function () { openDelete(kind, item, del); });
     return el('div', { class: 'oa-card-act' }, [edit, del]);
@@ -858,25 +882,27 @@
   function renderGoals() {
     var box = $('oa-goals');
     box.textContent = '';
-    if (!goals.length) { box.appendChild(el('p', { class: 'oa-empty-p', text: 'Niciun obiectiv setat. Un obiectiv îți arată cât mai ai până la țintă.' })); return; }
+    if (!goals.length) { box.appendChild(el('p', { class: 'oa-empty-p', text: VQ.t('No goal set. A goal shows how far you are from the target.') })); return; }
     goals.forEach(function (g) {
       var T = GOALS[g.type], target = num(g.target_value), cur = num(g.current_value);
       var real = Math.max(0, target > 0 ? cur / target * 100 : num(g.progress_percent)), p = Math.min(100, real);
       var done = g.status === 'achieved' || !!g.is_achieved || p >= 100, cancelled = g.status === 'cancelled', missed = !done && !cancelled && (g.status === 'missed' || !!g.is_overdue);
       var deadline = ISO.test(String(g.deadline || '').slice(0, 10)) ? String(g.deadline).slice(0, 10) : '';
-      var status = cancelled ? ['Obiectiv anulat.', '']
-        : done ? ['Obiectiv atins' + (g.achieved_at ? ' pe ' + dayLabel(naiveDay(g.achieved_at)) : '') + '.', 'is-done']
-        : missed ? ['Termenul a trecut' + (deadline ? ' (' + dayLabel(deadline) + ')' : '') + ' fără să atingi ținta.', 'is-late']
-        : ['Mai ai ' + goalAmount(g.type, Math.max(0, target - cur)) + ' până la țintă' + (deadline ? ' · termen ' + dayLabel(deadline) + (num(g.days_remaining) > 0 ? ', ' + F.count(g.days_remaining, 'zi rămasă', 'zile rămase') : '') : '') + '.', ''];
+      var daysLeft = num(g.days_remaining);
+      var dueText = !deadline ? '' : daysLeft > 0 ? VQ.t('deadline {date}, {count}', { date: dayLabel(deadline), count: VQ.n(daysLeft, 'day left', 'days left') }) : VQ.t('deadline {date}', { date: dayLabel(deadline) });
+      var status = cancelled ? [VQ.t('Goal cancelled.'), '']
+        : done ? [g.achieved_at ? VQ.t('Goal reached on {date}.', { date: dayLabel(naiveDay(g.achieved_at)) }) : VQ.t('Goal reached.'), 'is-done']
+        : missed ? [deadline ? VQ.t('The deadline ({date}) passed without reaching the target.', { date: dayLabel(deadline) }) : VQ.t('The deadline passed without reaching the target.'), 'is-late']
+        : [VQ.t('{amount} to go to the target', { amount: goalAmount(g.type, Math.max(0, target - cur)) }) + (dueText ? ' · ' + dueText : '') + '.', ''];
       var bar = el('i', { class: done ? null : p >= 50 ? 'is-mid' : 'is-low' });
       bar.style.width = p.toFixed(1) + '%';
       box.appendChild(el('article', { class: 'oa-card' + (done ? ' is-done' : '') }, [
         el('div', { class: 'oa-card-top' }, [
-          el('div', { class: 'oa-card-t' }, [el('b', { text: F.flat(g.name) || (T ? T.label : 'Obiectiv') }), el('span', { class: 'org-tag is-muted', text: T ? T.label : 'Obiectiv' })]),
+          el('div', { class: 'oa-card-t' }, [el('b', { text: F.flat(g.name) || (T ? T.label : VQ.t('Goal')) }), el('span', { class: 'org-tag is-muted', text: T ? T.label : VQ.t('Goal') })]),
           cardActions('goal', g),
         ]),
         el('p', { class: 'oa-goal-v' }, [el('strong', { text: goalValue(g.type, cur) }), el('span', { text: ' / ' + goalAmount(g.type, target) })]),
-        el('span', { class: 'oa-meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(p)), 'aria-label': 'Progres: ' + (F.flat(g.name) || 'obiectiv') }, bar),
+        el('span', { class: 'oa-meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(p)), 'aria-label': VQ.t('Progress: {name}', { name: F.flat(g.name) || VQ.t('goal') }) }, bar),
         el('p', { class: 'oa-goal-s ' + status[1] }, [el('b', { text: F.pct(real, 0) }), ' · ' + status[0]]),
       ]));
     });
@@ -897,15 +923,15 @@
     }, function () {
       if (my !== campsSeq) return;
       camps = null;
-      emptyBox($('oa-camps'), 'p', 'Nu am putut încărca campaniile.', function () { loadCamps(false); });
+      emptyBox($('oa-camps'), 'p', VQ.t('We could not load the campaigns.'), function () { loadCamps(false); });
     });
   }
   function campStatus(c) {
     var t = F.ymd(), s = String(c.start_date || ''), e = String(c.end_date || '');
-    if (c.is_active === false || c.is_active === 0 || c.is_active === '0') return ['Oprită', 'is-muted'];
-    if (s && s > t) return ['Programată', 'is-info'];
-    if (e && e < t) return ['Încheiată', 'is-muted'];
-    return ['În desfășurare', 'is-ok'];
+    if (c.is_active === false || c.is_active === 0 || c.is_active === '0') return [VQ.t('Paused'), 'is-muted'];
+    if (s && s > t) return [VQ.t('Scheduled'), 'is-info'];
+    if (e && e < t) return [VQ.t('Ended'), 'is-muted'];
+    return [VQ.t('Running'), 'is-ok'];
   }
   function utmString(c) {
     var p = new URLSearchParams();
@@ -928,26 +954,26 @@
   function renderCamps() {
     var box = $('oa-camps');
     box.textContent = '';
-    if (!camps.length) { box.appendChild(el('p', { class: 'oa-empty-p', text: 'Nicio campanie înregistrată. Adaugă reclamele, emailurile sau anunțurile ca să vezi ce au adus.' })); return; }
+    if (!camps.length) { box.appendChild(el('p', { class: 'oa-empty-p', text: VQ.t('No campaign recorded. Add your ads, emails or announcements to see what they brought.') })); return; }
     camps.forEach(function (c) {
-      var T = CAMPS[c.type] || { label: 'Campanie', ad: !!c.is_ad_campaign }, budget = num(c.budget), revenue = num(c.attributed_revenue), roi = budget > 0 ? Math.round((revenue - budget) / budget * 100) : null, st = campStatus(c);
+      var T = CAMPS[c.type] || { label: VQ.t('Campaign'), ad: !!c.is_ad_campaign }, budget = num(c.budget), revenue = num(c.attributed_revenue), roi = budget > 0 ? Math.round((revenue - budget) / budget * 100) : null, st = campStatus(c);
       var start = ISO.test(String(c.start_date || '')) ? c.start_date : '', end = ISO.test(String(c.end_date || '')) ? c.end_date : '';
-      var dates = start && end ? rangeLabel(start, end) : start ? 'din ' + dayShort(start) : '';
-      var figs = [['Buget', budget > 0 ? money(budget) : '—'], ['Venituri atribuite', money(revenue), 'is-net'], ['Conversii', F.num(c.conversions)]];
-      if (num(c.impressions) > 0) figs.push(['Afișări', F.num(c.impressions)]);
-      if (num(c.clicks) > 0) figs.push(['Clickuri', F.num(c.clicks)]);
+      var dates = start && end ? rangeLabel(start, end) : start ? VQ.t('from {date}', { date: dayShort(start) }) : '';
+      var figs = [[VQ.t('Budget'), budget > 0 ? money(budget) : '—'], [VQ.t('Attributed revenue'), money(revenue), 'is-net'], [VQ.t('Conversions'), F.num(c.conversions)]];
+      if (num(c.impressions) > 0) figs.push([VQ.t('Impressions'), F.num(c.impressions)]);
+      if (num(c.clicks) > 0) figs.push([VQ.t('Clicks'), F.num(c.clicks)]);
       if (num(c.roas) > 0) figs.push(['ROAS', dec2.format(num(c.roas)) + '×']);
       var utm = (T.ad || c.type === 'email') ? utmString(c) : '', utmRow = null;
       if (utm) {
-        var copy = el('button', { class: 'oa-copy', type: 'button', 'aria-label': 'Copiază parametrii UTM ai campaniei ' + (F.flat(c.title) || ''), 'data-focus': 'camp-copy-' + c.id }, [icon('copy'), 'Copiază']);
+        var copy = el('button', { class: 'oa-copy', type: 'button', 'aria-label': VQ.t('Copy the UTM parameters of the campaign {name}', { name: F.flat(c.title) || '' }).trim(), 'data-focus': 'camp-copy-' + c.id }, [icon('copy'), VQ.t('Copy')]);
         copy.addEventListener('click', function () {
-          copyText(utm).then(function () { O.flash('Parametrii UTM au fost copiați.'); }, function () { O.flash('Nu am putut copia. Selectează textul și copiază-l manual.', true); });
+          copyText(utm).then(function () { O.flash(VQ.t('The UTM parameters were copied.')); }, function () { O.flash(VQ.t('We could not copy. Select the text and copy it yourself.'), true); });
         });
         utmRow = el('div', { class: 'oa-utm' }, [el('code', { text: utm, title: utm }), copy]);
       }
       box.appendChild(el('article', { class: 'oa-card' }, [
         el('div', { class: 'oa-card-top' }, [
-          el('div', { class: 'oa-card-t' }, [el('b', { text: F.flat(c.title) || 'Campanie' }), el('span', { class: 'oa-sub', text: [T.label, dates].filter(Boolean).join(' · ') })]),
+          el('div', { class: 'oa-card-t' }, [el('b', { text: F.flat(c.title) || VQ.t('Campaign') }), el('span', { class: 'oa-sub', text: [T.label, dates].filter(Boolean).join(' · ') })]),
           cardActions('camp', c),
         ]),
         el('div', { class: 'oa-card-tags' }, [el('span', { class: 'org-tag ' + st[1], text: st[0] }), roi !== null ? el('span', { class: 'org-tag ' + (roi >= 0 ? 'is-ok' : 'is-bad'), text: (roi >= 0 ? '+' : '−') + F.num(Math.abs(roi)) + '% ROI' }) : null]),
@@ -977,7 +1003,7 @@
     });
     d.addEventListener('cancel', function (e) { if (d.hasAttribute('data-busy')) e.preventDefault(); });
     d.addEventListener('close', function () {
-      // the list may have been drawn again before the dialog closed: the same button, found by its key, or "Adaugă"
+      // the list may have been drawn again before the dialog closed: the same button, found by its key, or "Add"
       var back = opener && document.contains(opener) ? opener : (openerKey && root.querySelector('[data-focus="' + openerKey + '"]')) || fallbackFocus;
       opener = null;
       openerKey = null;
@@ -998,15 +1024,15 @@
   function saveError(err, notFound) {
     var s = err && err.status;
     if (s === 404) return notFound;
-    if (s === 422) return 'Unele câmpuri nu sunt completate corect. Verifică-le și încearcă din nou.';
-    if (s === 429) return 'Prea multe încercări într-un timp scurt. Așteaptă un minut și încearcă din nou.';
-    if (s === 0 || s == null) return 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.';
-    return 'Nu am putut salva. Încearcă din nou.';
+    if (s === 422) return VQ.t('Some fields are not filled in correctly. Check them and try again.');
+    if (s === 429) return VQ.t('Too many attempts in a short time. Wait a minute and try again.');
+    if (s === 0 || s == null) return VQ.t('We could not reach the server. Check your connection and try again.');
+    return VQ.t('We could not save. Try again.');
   }
   function markServerErrors(err, map) {
     var errors = (err && err.errors) || (err && err.data && err.data.errors) || null, first = null;
     if (!errors || typeof errors !== 'object') return;
-    Object.keys(errors).forEach(function (k) { if (map[k]) { fieldErr(map[k], 'Verifică această valoare.'); if (!first) first = map[k]; } });
+    Object.keys(errors).forEach(function (k) { if (map[k]) { fieldErr(map[k], VQ.t('Check this value.')); if (!first) first = map[k]; } });
     if (first && $(first)) $(first).focus();
   }
 
@@ -1014,10 +1040,10 @@
   var goalType = $('oa-goal-type');
   function syncGoalType() {
     var type = editGoal ? editGoal.type : goalType.value, T = GOALS[type] || GOALS.tickets;
-    $('oa-goal-type-help').textContent = editGoal ? T.help + ' Tipul unui obiectiv nu se mai poate schimba.' : T.help;
+    $('oa-goal-type-help').textContent = editGoal ? T.help + ' ' + VQ.t('The type of a goal cannot be changed afterwards.') : T.help;
     $('oa-goal-unit').textContent = T.unit;
     $('oa-goal-target-l').textContent = T.target;
-    $('oa-goal-target').placeholder = 'ex: ' + T.example;
+    $('oa-goal-target').placeholder = VQ.t('e.g. {example}', { example: T.example });
     $('oa-goal-target').setAttribute('inputmode', type === 'tickets' || type === 'visitors' ? 'numeric' : 'decimal');
     $('oa-goal-name').placeholder = T.name;
     $('oa-goal-target').parentNode.classList.toggle('is-long', T.unit.length > 3);
@@ -1027,7 +1053,7 @@
     if (!data) return;
     editGoal = g || null;
     formEvent = S.event;
-    $('oa-goal-h').textContent = g ? 'Modifică obiectivul' : 'Obiectiv nou';
+    $('oa-goal-h').textContent = g ? VQ.t('Edit the goal') : VQ.t('New goal');
     goalType.value = g && GOALS[g.type] ? g.type : preset && GOALS[preset] ? preset : 'tickets';
     goalType.disabled = !!g;
     $('oa-goal-name').value = g ? F.flat(g.name) : '';
@@ -1036,10 +1062,10 @@
     dl.value = g && ISO.test(String(g.deadline || '').slice(0, 10)) ? String(g.deadline).slice(0, 10) : '';
     dl.min = g ? '' : today;
     dl.max = day && day >= today ? day : '';
-    $('oa-goal-deadline-help').textContent = dl.max ? 'Cel târziu ' + dayLabel(dl.max) + ', ziua activității.' : '';
+    $('oa-goal-deadline-help').textContent = dl.max ? VQ.t('{date} at the latest, the day of the activity.', { date: dayLabel(dl.max) }) : '';
     ['oa-goal-name', 'oa-goal-target', 'oa-goal-deadline'].forEach(function (id) { fieldErr(id, ''); });
     formErr('oa-goal-err', '');
-    $('oa-goal-go').querySelector('[data-label]').textContent = g ? 'Salvează' : 'Adaugă obiectivul';
+    $('oa-goal-go').querySelector('[data-label]').textContent = g ? VQ.t('Save') : VQ.t('Add the goal');
     syncGoalType();
     fallbackFocus = $('oa-goal-add');
     openDialog($('oa-goal-d'), from);
@@ -1054,35 +1080,35 @@
     var g = editGoal, type = g ? g.type : goalType.value, T = GOALS[type] || GOALS.tickets, name = $('oa-goal-name').value.trim(), raw = $('oa-goal-target').value.trim(), target = parseAmount(raw);
     var dl = $('oa-goal-deadline'), deadline = dl.value, bad = null;
     function need(id, msg) { fieldErr(id, msg); if (msg && !bad) bad = id; }
-    need('oa-goal-name', name ? '' : 'Scrie un nume pentru obiectiv.');
-    need('oa-goal-target', !raw ? 'Scrie ținta, de exemplu ' + T.example + '.'
-      : !isFinite(target) ? 'Scrie un număr, de exemplu ' + T.example + '.'
-      : (type === 'tickets' || type === 'visitors') && Math.floor(target) !== target ? 'Scrie un număr întreg.'
-      : target < 1 ? 'Ținta trebuie să fie cel puțin 1.'
-      : type === 'conversion_rate' && target > 100 ? 'Rata de conversie nu poate trece de 100%.'
-      : target > 1e9 ? 'Ținta este prea mare.' : '');
+    need('oa-goal-name', name ? '' : VQ.t('Enter a name for the goal.'));
+    need('oa-goal-target', !raw ? VQ.t('Enter the target, for example {example}.', { example: T.example })
+      : !isFinite(target) ? VQ.t('Enter a number, for example {example}.', { example: T.example })
+      : (type === 'tickets' || type === 'visitors') && Math.floor(target) !== target ? VQ.t('Enter a whole number.')
+      : target < 1 ? VQ.t('The target must be at least 1.')
+      : type === 'conversion_rate' && target > 100 ? VQ.t('The conversion rate cannot go over 100%.')
+      : target > 1e9 ? VQ.t('The target is too large.') : '');
     var changed = !g || deadline !== String(g.deadline || '').slice(0, 10);
-    need('oa-goal-deadline', deadline && !ISO.test(deadline) ? 'Alege o dată validă.'
-      : deadline && changed && dl.min && deadline < dl.min ? 'Alege o dată de azi încolo.'
-      : deadline && changed && dl.max && deadline > dl.max ? 'Alege o dată până la ' + dayLabel(dl.max) + ', ziua activității.' : '');
+    need('oa-goal-deadline', deadline && !ISO.test(deadline) ? VQ.t('Choose a valid date.')
+      : deadline && changed && dl.min && deadline < dl.min ? VQ.t('Choose a date from today onwards.')
+      : deadline && changed && dl.max && deadline > dl.max ? VQ.t('Choose a date up to {date}, the day of the activity.', { date: dayLabel(dl.max) }) : '');
     formErr('oa-goal-err', '');
     if (bad) { $(bad).focus(); return; }
     var body = { name: name, target_value: Math.round(target * 100) / 100, deadline: deadline || null };
     if (!g) body.type = type;
     var id = formEvent;
-    busyBtn(btn, true, g ? 'Se salvează…' : 'Se adaugă…');
+    busyBtn(btn, true, g ? VQ.t('Saving…') : VQ.t('Adding…'));
     d.setAttribute('data-busy', '');
     O.api('/organizer/events/' + id + '/goals' + (g ? '/' + g.id : ''), { method: g ? 'PUT' : 'POST', body: body }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash(g ? 'Obiectivul a fost salvat.' : 'Obiectivul a fost adăugat.');
+      O.flash(g ? VQ.t('The goal was saved.') : VQ.t('The goal was added.'));
       if (id === S.event) loadGoals(true);
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      formErr('oa-goal-err', saveError(err, 'Nu am mai găsit obiectivul. Poate a fost șters între timp; reîncarcă pagina.'));
+      formErr('oa-goal-err', saveError(err, VQ.t('We could not find the goal any more. It may have been deleted in the meantime; reload the page.')));
       if (err && err.status === 422) markServerErrors(err, { type: 'oa-goal-type', name: 'oa-goal-name', target_value: 'oa-goal-target', deadline: 'oa-goal-deadline' });
     });
   });
@@ -1097,16 +1123,16 @@
     $('oa-camp-active-f').hidden = !edit;
     $('oa-camp-utm_source').placeholder = T.source || 'organic';
     $('oa-camp-utm_medium').placeholder = T.medium || 'cpc';
-    $('oa-camp-utm_campaign').placeholder = slug($('oa-camp-title').value) || 'din numele campaniei';
-    $('oa-camp-type-help').textContent = edit ? 'Tipul unei campanii nu se mai poate schimba.' : T.ad ? 'Reclamă plătită: vânzările se atribuie după parametrii UTM din link.' : 'Apare în grafic, ca să vezi ce s-a schimbat după ea.';
+    $('oa-camp-utm_campaign').placeholder = slug($('oa-camp-title').value) || VQ.t('from the campaign name');
+    $('oa-camp-type-help').textContent = edit ? VQ.t('The type of a campaign cannot be changed afterwards.') : T.ad ? VQ.t('Paid ad: sales are attributed by the UTM parameters in the link.') : VQ.t('It shows in the chart, so you can see what changed after it.');
   }
   campType.addEventListener('change', syncCampType);
-  $('oa-camp-title').addEventListener('input', function () { $('oa-camp-utm_campaign').placeholder = slug(this.value) || 'din numele campaniei'; });
+  $('oa-camp-title').addEventListener('input', function () { $('oa-camp-utm_campaign').placeholder = slug(this.value) || VQ.t('from the campaign name'); });
   function openCamp(c, from) {
     if (!data) return;
     editCamp = c || null;
     formEvent = S.event;
-    $('oa-campd-h').textContent = c ? 'Modifică campania' : 'Campanie nouă';
+    $('oa-campd-h').textContent = c ? VQ.t('Edit the campaign') : VQ.t('New campaign');
     campType.value = c ? (CAMPS[c.type] ? c.type : 'custom') : 'campaign_fb';
     campType.disabled = !!c;
     $('oa-camp-title').value = c ? F.flat(c.title) : '';
@@ -1122,10 +1148,10 @@
     var created = naiveDay(data.event && data.event.created_at), day = activityDay();
     $('oa-camp-start').min = c ? '' : created;
     $('oa-camp-end').max = day;
-    $('oa-camp-dates-help').textContent = [created && !c ? 'Activitatea a fost adăugată pe ' + dayLabel(created) + '.' : '', day ? 'Campania se poate termina cel târziu pe ' + dayLabel(day) + '.' : ''].filter(Boolean).join(' ');
+    $('oa-camp-dates-help').textContent = [created && !c ? VQ.t('The activity was added on {date}.', { date: dayLabel(created) }) : '', day ? VQ.t('The campaign can end on {date} at the latest.', { date: dayLabel(day) }) : ''].filter(Boolean).join(' ');
     ['oa-camp-title', 'oa-camp-start', 'oa-camp-end', 'oa-camp-budget', 'oa-camp-base', 'oa-camp-post', 'oa-camp-impr', 'oa-camp-clicks'].forEach(function (id) { fieldErr(id, ''); });
     formErr('oa-camp-err', '');
-    $('oa-camp-go').querySelector('[data-label]').textContent = c ? 'Salvează' : 'Adaugă campania';
+    $('oa-camp-go').querySelector('[data-label]').textContent = c ? VQ.t('Save') : VQ.t('Add the campaign');
     syncCampType();
     fallbackFocus = $('oa-camp-add');
     openDialog($('oa-camp-d'), from);
@@ -1140,14 +1166,14 @@
     function need(id, msg) { fieldErr(id, msg); if (msg && !bad) bad = id; }
     var title = $('oa-camp-title').value.trim(), startIn = $('oa-camp-start'), endIn = $('oa-camp-end'), start = startIn.value, end = endIn.value;
     var startChanged = !c || start !== String(c.start_date || ''), endChanged = !c || end !== String(c.end_date || '');
-    need('oa-camp-title', title ? '' : 'Scrie un nume pentru campanie.');
-    need('oa-camp-start', !start ? 'Alege ziua în care începe campania.' : !ISO.test(start) ? 'Alege o dată validă.'
-      : startChanged && startIn.min && start < startIn.min ? 'Alege o dată de pe ' + dayLabel(startIn.min) + ' încolo.' : '');
-    need('oa-camp-end', end && !ISO.test(end) ? 'Alege o dată validă.'
-      : end && ISO.test(start) && end < start ? 'Campania nu se poate termina înainte să înceapă.'
-      : end && endChanged && endIn.max && end > endIn.max ? 'Alege o dată până la ' + dayLabel(endIn.max) + '.' : '');
+    need('oa-camp-title', title ? '' : VQ.t('Enter a name for the campaign.'));
+    need('oa-camp-start', !start ? VQ.t('Choose the day the campaign starts.') : !ISO.test(start) ? VQ.t('Choose a valid date.')
+      : startChanged && startIn.min && start < startIn.min ? VQ.t('Choose a date from {date} onwards.', { date: dayLabel(startIn.min) }) : '');
+    need('oa-camp-end', end && !ISO.test(end) ? VQ.t('Choose a valid date.')
+      : end && ISO.test(start) && end < start ? VQ.t('A campaign cannot end before it starts.')
+      : end && endChanged && endIn.max && end > endIn.max ? VQ.t('Choose a date up to {date}.', { date: dayLabel(endIn.max) }) : '');
     var budgetRaw = $('oa-camp-budget').value.trim(), budget = budgetRaw ? parseAmount(budgetRaw) : null;
-    need('oa-camp-budget', budgetRaw && !isFinite(budget) ? 'Scrie suma în lei, de exemplu 500 sau 1.250,50.' : '');
+    need('oa-camp-budget', budgetRaw && !isFinite(budget) ? VQ.t('Enter the amount, for example {a} or {b}.', { a: nfLoc.format(500), b: new Intl.NumberFormat(LOC, { minimumFractionDigits: 2 }).format(1250.5) }) : '');
     var body = { title: title, start_date: start, end_date: end || null, budget: budgetRaw && isFinite(budget) ? Math.round(budget * 100) / 100 : null, description: $('oa-camp-desc').value.trim() || null };
     if (!c) {
       body.type = type;
@@ -1156,8 +1182,8 @@
         ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'].forEach(function (k) { body[k] = $('oa-camp-' + k).value.trim() || null; });
       } else {
         var baseRaw = $('oa-camp-base').value.trim(), postRaw = $('oa-camp-post').value.trim(), base = baseRaw ? parseAmount(baseRaw) : null, post = postRaw ? parseAmount(postRaw) : null;
-        need('oa-camp-base', baseRaw && !isFinite(base) ? 'Scrie un număr, de exemplu 120.' : '');
-        need('oa-camp-post', postRaw && !isFinite(post) ? 'Scrie un număr, de exemplu 180.' : '');
+        need('oa-camp-base', baseRaw && !isFinite(base) ? VQ.t('Enter a number, for example {example}.', { example: '120' }) : '');
+        need('oa-camp-post', postRaw && !isFinite(post) ? VQ.t('Enter a number, for example {example}.', { example: '180' }) : '');
         body.impact_metric = $('oa-camp-metric').value || null;
         body.baseline_value = baseRaw && isFinite(base) ? base : null;
         body.post_value = postRaw && isFinite(post) ? post : null;
@@ -1167,7 +1193,7 @@
       if (T.ad) {
         ['impr', 'clicks'].forEach(function (k) {
           var raw = $('oa-camp-' + k).value.trim(), v = raw ? parseCount(raw) : null;
-          need('oa-camp-' + k, raw && !isFinite(v) ? 'Scrie un număr întreg, de exemplu 12.500.' : '');
+          need('oa-camp-' + k, raw && !isFinite(v) ? VQ.t('Enter a whole number, for example {example}.', { example: nfLoc.format(12500) }) : '');
           body[k === 'impr' ? 'impressions' : 'clicks'] = raw && isFinite(v) ? v : null;
         });
       }
@@ -1175,19 +1201,19 @@
     formErr('oa-camp-err', '');
     if (bad) { $(bad).focus(); return; }
     var id = formEvent;
-    busyBtn(btn, true, c ? 'Se salvează…' : 'Se adaugă…');
+    busyBtn(btn, true, c ? VQ.t('Saving…') : VQ.t('Adding…'));
     d.setAttribute('data-busy', '');
     O.api('/organizer/events/' + id + '/milestones' + (c ? '/' + c.id : ''), { method: c ? 'PUT' : 'POST', body: body }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash(c ? 'Campania a fost salvată.' : 'Campania a fost adăugată.');
+      O.flash(c ? VQ.t('The campaign was saved.') : VQ.t('The campaign was added.'));
       if (id === S.event) loadCamps(true);
     }).catch(function (err) {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       if (err && err.status === 401) return;
-      formErr('oa-camp-err', saveError(err, 'Nu am mai găsit campania. Poate a fost ștearsă între timp; reîncarcă pagina.'));
+      formErr('oa-camp-err', saveError(err, VQ.t('We could not find the campaign any more. It may have been deleted in the meantime; reload the page.')));
       if (err && err.status === 422) markServerErrors(err, { title: 'oa-camp-title', start_date: 'oa-camp-start', end_date: 'oa-camp-end', budget: 'oa-camp-budget', baseline_value: 'oa-camp-base', post_value: 'oa-camp-post', impressions: 'oa-camp-impr', clicks: 'oa-camp-clicks' });
     });
   });
@@ -1196,9 +1222,11 @@
   function openDelete(kind, item, from) {
     delTarget = { kind: kind, item: item, event: S.event };
     var goal = kind === 'goal', name = goal ? F.flat(item.name) : F.flat(item.title);
-    $('oa-del-h').textContent = goal ? 'Ștergi obiectivul?' : 'Ștergi campania?';
-    $('oa-del-p').textContent = (name ? '„' + name + '” dispare' : (goal ? 'Obiectivul dispare' : 'Campania dispare')) + (goal ? ' din analiză și din raport.' : ' din grafic, din analiză și din raport, cu tot cu cifrele ei.') + ' Vânzările nu sunt afectate.';
-    $('oa-del-go').querySelector('[data-label]').textContent = goal ? 'Șterge obiectivul' : 'Șterge campania';
+    $('oa-del-h').textContent = goal ? VQ.t('Delete the goal?') : VQ.t('Delete the campaign?');
+    $('oa-del-p').textContent = goal
+      ? (name ? VQ.t('“{name}” disappears from the analytics and the report. Sales are not affected.', { name: name }) : VQ.t('The goal disappears from the analytics and the report. Sales are not affected.'))
+      : (name ? VQ.t('“{name}” disappears from the chart, the analytics and the report, with all its figures. Sales are not affected.', { name: name }) : VQ.t('The campaign disappears from the chart, the analytics and the report, with all its figures. Sales are not affected.'));
+    $('oa-del-go').querySelector('[data-label]').textContent = goal ? VQ.t('Delete the goal') : VQ.t('Delete the campaign');
     formErr('oa-del-err', '');
     fallbackFocus = goal ? $('oa-goal-add') : $('oa-camp-add');
     openDialog($('oa-del-d'), from);
@@ -1209,13 +1237,13 @@
     if (!t || btn.getAttribute('aria-busy') === 'true') return;
     var goal = t.kind === 'goal';
     function reload() { if (t.event === S.event) { if (goal) loadGoals(true); else loadCamps(true); } }
-    busyBtn(btn, true, 'Se șterge…');
+    busyBtn(btn, true, VQ.t('Deleting…'));
     d.setAttribute('data-busy', '');
     O.api('/organizer/events/' + t.event + (goal ? '/goals/' : '/milestones/') + t.item.id, { method: 'DELETE' }).then(function () {
       d.removeAttribute('data-busy');
       busyBtn(btn, false);
       closeDialog(d);
-      O.flash(goal ? 'Obiectivul a fost șters.' : 'Campania a fost ștearsă.');
+      O.flash(goal ? VQ.t('The goal was deleted.') : VQ.t('The campaign was deleted.'));
       reload();
     }).catch(function (err) {
       d.removeAttribute('data-busy');
@@ -1223,11 +1251,11 @@
       if (err && err.status === 401) return;
       if (err && err.status === 404) {
         closeDialog(d);
-        O.flash(goal ? 'Obiectivul fusese deja șters.' : 'Campania fusese deja ștearsă.');
+        O.flash(goal ? VQ.t('The goal had already been deleted.') : VQ.t('The campaign had already been deleted.'));
         reload();
         return;
       }
-      formErr('oa-del-err', err && err.status === 429 ? 'Prea multe încercări într-un timp scurt. Așteaptă un minut și încearcă din nou.' : err && (err.status === 0 || err.status == null) ? 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.' : 'Nu am putut șterge. Încearcă din nou.');
+      formErr('oa-del-err', err && err.status === 429 ? VQ.t('Too many attempts in a short time. Wait a minute and try again.') : err && (err.status === 0 || err.status == null) ? VQ.t('We could not reach the server. Check your connection and try again.') : VQ.t('We could not delete. Try again.'));
     });
   });
 
@@ -1275,46 +1303,47 @@
   }
   function exportCsv() {
     if (!data) return;
-    var e = data.event || {}, o = data.overview || {}, c = data.chart || {}, all = S.period === 'tot', title = F.flat(e.title) || 'Activitatea #' + S.event;
+    var e = data.event || {}, o = data.overview || {}, c = data.chart || {}, all = S.period === 'tot', title = F.flat(e.title) || VQ.t('Activity #{id}', { id: S.event });
     var dates = Array.isArray(c.raw_dates) ? c.raw_dates : [], rows = [];
-    rows.push(['Analiză activitate', title]);
-    rows.push(['Perioada', PERIODS[S.period].label + (dates.length ? ' (' + dates[0] + ' – ' + dates[dates.length - 1] + ')' : '')]);
-    rows.push(['Generat la', stamp(new Date().toISOString())]);
+    var cur = { currency: CUR_CODE };
+    rows.push([VQ.t('Activity analytics'), title]);
+    rows.push([VQ.t('Period'), PERIODS[S.period].label + (dates.length ? ' (' + dates[0] + ' – ' + dates[dates.length - 1] + ')' : '')]);
+    rows.push([VQ.t('Generated at'), stamp(new Date().toISOString())]);
     rows.push([]);
-    rows.push(['Totaluri de la începutul vânzărilor', '']);
-    rows.push(['Venituri nete (lei)', num(o.net_revenue != null ? o.net_revenue : o.total_revenue)]);
-    rows.push(['Bilete vândute', num(o.tickets_sold)]);
-    rows.push(['Vizualizări', num(o.page_views)]);
-    rows.push(['Rată conversie (%)', num(o.conversion_rate)]);
+    rows.push([VQ.t('Totals from the start of sales'), '']);
+    rows.push([VQ.t('Net revenue ({currency})', cur), num(o.net_revenue != null ? o.net_revenue : o.total_revenue)]);
+    rows.push([VQ.t('Tickets sold'), num(o.tickets_sold)]);
+    rows.push([VQ.t('Views'), num(o.page_views)]);
+    rows.push([VQ.t('Conversion rate (%)'), num(o.conversion_rate)]);
     rows.push([]);
-    rows.push(['Data', 'Venit net (lei)', 'Bilete vândute']);
+    rows.push([VQ.t('Date'), VQ.t('Net revenue ({currency})', cur), VQ.t('Tickets sold')]);
     dates.forEach(function (d, i) { rows.push([d, num((c.revenue || [])[i]), num((c.tickets || [])[i])]); });
     rows.push([]);
-    var head = ['Tip bilet', 'Preț (lei)', 'Vândute', 'Capacitate', 'Venituri nete (lei)', 'Conversie (%)'];
-    if (!all) head.push('Trend față de perioada dinainte (%)');
+    var head = [VQ.t('Ticket type'), VQ.t('Price ({currency})', cur), VQ.t('Sold'), VQ.t('Capacity'), VQ.t('Net revenue ({currency})', cur), VQ.t('Conversion (%)')];
+    if (!all) head.push(VQ.t('Trend compared with the period before (%)'));
     rows.push(head);
     (Array.isArray(data.ticket_performance) ? data.ticket_performance : []).forEach(function (t) {
-      var capq = t.capacity == null || t.capacity === '' ? '' : num(t.capacity) < 0 ? 'nelimitat' : num(t.capacity), row = [F.flat(t.name) || 'Bilet', num(t.price), num(t.sold), capq, num(t.revenue), num(t.conversion_rate)];
+      var capq = t.capacity == null || t.capacity === '' ? '' : num(t.capacity) < 0 ? VQ.t('unlimited') : num(t.capacity), row = [F.flat(t.name) || VQ.t('Ticket'), num(t.price), num(t.sold), capq, num(t.revenue), num(t.conversion_rate)];
       if (!all) row.push(num(t.trend));
       rows.push(row);
     });
     rows.push([]);
-    rows.push(['Sursă de trafic', 'Vizitatori', 'Vânzări atribuite (lei)']);
-    (Array.isArray(data.traffic_sources) ? data.traffic_sources : []).forEach(function (s) { rows.push([SOURCES[s.source] || F.flat(s.source) || 'Direct', num(s.visitors), num(s.revenue)]); });
+    rows.push([VQ.t('Traffic source'), VQ.t('Visitors'), VQ.t('Attributed sales ({currency})', cur)]);
+    (Array.isArray(data.traffic_sources) ? data.traffic_sources : []).forEach(function (s) { rows.push([SOURCES[s.source] || F.flat(s.source) || VQ.t('Direct'), num(s.visitors), num(s.revenue)]); });
     rows.push([]);
-    rows.push(['Oraș', 'Țară', 'Vizitatori']);
-    (Array.isArray(data.top_locations) ? data.top_locations : []).map(place).forEach(function (p) { rows.push([p.city || 'necunoscut', p.country, p.visitors]); });
+    rows.push([VQ.t('City'), VQ.t('Country'), VQ.t('Visitors')]);
+    (Array.isArray(data.top_locations) ? data.top_locations : []).map(place).forEach(function (p) { rows.push([p.city || VQ.t('unknown'), p.country, p.visitors]); });
     var csv = '﻿' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
-    download(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'analiza-' + (slug(title) || 'activitate') + '-' + PERIODS[S.period].file + '-' + F.ymd() + '.csv');
-    O.flash('Datele perioadei au fost descărcate (CSV).');
+    download(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'analytics-' + (slug(title) || 'activity') + '-' + PERIODS[S.period].file + '-' + F.ymd() + '.csv');
+    O.flash(VQ.t('The data for the period was downloaded (CSV).'));
   }
   function exportPdf() {
     var btn = menuBtn, id = S.event;
     if (!id || btn.getAttribute('aria-busy') === 'true') return;
     var token = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.getToken ? BileteOnlineAuth.getToken() : null;
-    if (!token) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return; }
-    var base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', name = 'raport-' + (slug($('oa-title').textContent) || 'activitate') + '-' + F.ymd() + '.pdf';
-    busyBtn(btn, true, 'Se generează…');
+    if (!token) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return; }
+    var base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', name = 'report-' + (slug($('oa-title').textContent) || 'activity') + '-' + F.ymd() + '.pdf';
+    busyBtn(btn, true, VQ.t('Generating…'));
     fetch(base + '?action=organizer.event.report.export&event_id=' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/pdf' } }).then(function (res) {
       if (!res.ok) { var e = new Error('pdf'); e.status = res.status; throw e; }
       return res.blob();
@@ -1323,16 +1352,16 @@
         // only core's PDF is saved; a refused token gets its sign-in page instead (200, the proxy follows the redirect)
         if (head !== '%PDF-') { var e = new Error('pdf'); e.html = true; throw e; }
         download(blob, name);
-        O.flash('Raportul PDF a fost descărcat.');
+        O.flash(VQ.t('The PDF report was downloaded.'));
       });
     }).catch(function (err) {
-      function failed() { O.flash('Nu am putut genera raportul PDF. Încearcă din nou.', true); }
+      function failed() { O.flash(VQ.t('We could not generate the PDF report. Try again.'), true); }
       function signOut() {
-        O.flash('Sesiunea a expirat. Te trimitem la autentificare.', true);
+        O.flash(VQ.t('Your session has expired. We are taking you to sign in.'), true);
         setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500);
       }
       if (err && err.status === 401) return signOut();
-      if (err && err.status === 404) { O.flash('Activitatea nu a fost găsită.', true); return; }
+      if (err && err.status === 404) { O.flash(VQ.t('The activity was not found.'), true); return; }
       if (err && err.html) return O.api('/organizer/me', { quiet: true }).then(failed, function (e) { if (e && e.status === 401) signOut(); else failed(); });
       failed();
     }).then(function () { busyBtn(btn, false); });
@@ -1364,19 +1393,19 @@
     });
     return eventsReq;
   }
-  function currentTitle() { return data && data.event && loaded.event === S.event ? F.flat(data.event.title) || 'Activitatea #' + S.event : ''; }
+  function currentTitle() { return data && data.event && loaded.event === S.event ? F.flat(data.event.title) || VQ.t('Activity #{id}', { id: S.event }) : ''; }
   function comboOpen() { return !list.hidden; }
   function renderOptions() {
     list.textContent = '';
     if (!events) {
-      list.appendChild(el('li', { class: 'oa-opt-empty', role: 'presentation', text: eventsFailed ? 'Nu am putut încărca activitățile. Închide lista și încearcă din nou.' : 'Se încarcă activitățile…' }));
+      list.appendChild(el('li', { class: 'oa-opt-empty', role: 'presentation', text: eventsFailed ? VQ.t('We could not load the activities. Close the list and try again.') : VQ.t('Loading the activities…') }));
       setActive(-1);
       return;
     }
     var q = combo.typed ? norm(input.value.trim()) : '';
     combo.items = events.filter(function (e) { return !q || norm(evName(e) + ' ' + evMeta(e)).indexOf(q) > -1; });
     if (!combo.items.length) {
-      list.appendChild(el('li', { class: 'oa-opt-empty', role: 'presentation', text: events.length ? 'Nicio activitate nu se potrivește căutării.' : 'Nu ai încă activități.' }));
+      list.appendChild(el('li', { class: 'oa-opt-empty', role: 'presentation', text: events.length ? VQ.t('No activity matches the search.') : VQ.t('You have no activities yet.') }));
       setActive(-1);
       return;
     }
@@ -1384,7 +1413,7 @@
       var live = isLive(e);
       list.appendChild(el('li', { class: 'oa-opt', id: 'oa-opt-' + e.id, role: 'option', 'aria-selected': String(String(e.id) === S.event), 'data-i': String(i) }, [
         el('span', { class: 'oa-evdot' + (live ? ' is-live' : ''), 'aria-hidden': 'true' }),
-        el('span', { class: 'oa-opt-t' }, [evName(e), el('span', { class: 'sr', text: live ? ' (în derulare)' : '' })]),
+        el('span', { class: 'oa-opt-t' }, [evName(e), el('span', { class: 'sr', text: live ? ' ' + VQ.t('(in progress)') : '' })]),
         el('span', { class: 'oa-opt-m', text: evMeta(e) }),
       ]));
     });
@@ -1489,13 +1518,13 @@
     var box = $('oa-evlist'), top = (events || []).slice(0, 8);
     box.textContent = '';
     if (!top.length) {
-      box.appendChild(el('li', { class: 'oa-empty-p' }, ['Nu ai încă activități. ', el('a', { href: '/organizator/activities', text: 'Adaugă prima activitate' })]));
+      box.appendChild(el('li', { class: 'oa-empty-p' }, [VQ.t('You have no activities yet.') + ' ', el('a', { href: VQ.url('/organizator/activities'), text: VQ.t('Add your first activity') })]));
       return;
     }
     top.forEach(function (e) {
-      var live = isLive(e), a = el('a', { href: '/organizator/analytics/' + e.id }, [
+      var live = isLive(e), a = el('a', { href: VQ.url('/organizator/analytics/' + e.id) }, [
         el('span', { class: 'oa-evdot' + (live ? ' is-live' : ''), 'aria-hidden': 'true' }),
-        el('span', { class: 'oa-ev-t' }, [el('b', { text: evName(e) }), el('small', { text: evMeta(e) || (live ? 'În desfășurare' : '') })]),
+        el('span', { class: 'oa-ev-t' }, [el('b', { text: evName(e) }), el('small', { text: evMeta(e) || (live ? VQ.t('In progress') : '') })]),
         icon('arrow-right'),
       ]);
       a.addEventListener('click', function (ev) {
