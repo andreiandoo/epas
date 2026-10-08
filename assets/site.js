@@ -672,16 +672,86 @@
             };
         });
 
+        // Bara de cookies: alegerea se ține în browser și se transmite prin Consent Mode
+        Alpine.data('cookieBar', function () {
+            return {
+                open: false, details: false, analytics: false, marketing: false,
+                init: function () {
+                    var c = read('wukf_consent');
+                    if (c && c.v === 1) { this.analytics = !!c.analytics; this.marketing = !!c.marketing; }
+                    else { this.open = true; }
+                },
+                reopen: function () { this.details = true; this.open = true; },
+                choose: function (all) { this.analytics = all; this.marketing = all; this.save(); },
+                save: function () {
+                    var c = { v: 1, analytics: !!this.analytics, marketing: !!this.marketing, ts: new Date().toISOString() };
+                    write('wukf_consent', c);
+                    var yes = function (on) { return on ? 'granted' : 'denied'; };
+                    if (typeof window.gtag === 'function') {
+                        window.gtag('consent', 'update', {
+                            ad_storage: yes(c.marketing), ad_user_data: yes(c.marketing), ad_personalization: yes(c.marketing),
+                            analytics_storage: yes(c.analytics)
+                        });
+                    }
+                    window.dispatchEvent(new CustomEvent('wukf:consent', { detail: c }));
+                    this.open = false; this.details = false;
+                }
+            };
+        });
+
+        // Contul meu → biletele din toate comenzile plătite
+        Alpine.data('ticketsList', function () {
+            return {
+                loading: true, tickets: [], error: '',
+                init: async function () {
+                    var a = Auth.get();
+                    if (!a) { window.location.href = '/autentificare?next=/biletele-mele'; return; }
+                    try {
+                        var r = await fetch('/api/proxy.php?action=tickets', { headers: { 'Authorization': 'Bearer ' + a.token } });
+                        if (r.status === 401) { Auth.set(null); window.location.href = '/autentificare?next=/biletele-mele'; return; }
+                        var d = await r.json().catch(function () { return {}; });
+                        if (!r.ok || !d.success) { throw new Error('răspuns neașteptat'); }
+                        this.tickets = Array.isArray(d.data) ? d.data : [];
+                    } catch (e) { this.error = 'Biletele nu au putut fi încărcate. Reîncarcă pagina.'; }
+                    this.loading = false;
+                    var self = this;
+                    this.$nextTick(function () {
+                        if (!window.QRCode) { return; }
+                        self.$root.querySelectorAll('[data-qr]').forEach(function (el) {
+                            if (!el.firstChild) { new QRCode(el, { text: el.getAttribute('data-qr'), width: 208, height: 208, correctLevel: QRCode.CorrectLevel.M }); }
+                        });
+                    });
+                },
+                get groups() {
+                    return [
+                        { key: 'next', title: 'Urmează', items: this.tickets.filter(function (t) { return t.is_upcoming; }) },
+                        { key: 'past', title: 'Competiții încheiate', items: this.tickets.filter(function (t) { return !t.is_upcoming; }) }
+                    ];
+                },
+                eventDate: function (t) {
+                    if (!t.event || !t.event.start_date) { return ''; }
+                    var s = String(t.event.start_date).slice(0, 10), e = t.event.end_date ? String(t.event.end_date).slice(0, 10) : s;
+                    var fmt = function (day, withYear) {
+                        var p = day.split('-');
+                        return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('ro-RO', withYear ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'long' });
+                    };
+                    return s === e ? fmt(s, true) : fmt(s, false) + ' – ' + fmt(e, true);
+                },
+                place: function (t) { return t.event ? [t.event.venue, t.event.city].filter(Boolean).join(', ') : ''; },
+                pdf: function (t) { return pdfUrl(t.order_id, t.access_token, t.code); }
+            };
+        });
+
         // Contul meu → comenzi și bilete
         Alpine.data('myTickets', function () {
             return {
                 loading: true, orders: [], error: '', open: null, detail: {}, lei: lei, ticketsLabel: ticketsLabel,
                 init: async function () {
                     var a = Auth.get();
-                    if (!a) { window.location.href = '/autentificare?next=/biletele-mele'; return; }
+                    if (!a) { window.location.href = '/autentificare?next=/comenzile-mele'; return; }
                     try {
                         var r = await fetch('/api/proxy.php?action=orders', { headers: { 'Authorization': 'Bearer ' + a.token } });
-                        if (r.status === 401) { Auth.set(null); window.location.href = '/autentificare?next=/biletele-mele'; return; }
+                        if (r.status === 401) { Auth.set(null); window.location.href = '/autentificare?next=/comenzile-mele'; return; }
                         var d = await r.json().catch(function () { return {}; });
                         if (!r.ok || !d.success) { throw new Error('răspuns neașteptat'); }
                         this.orders = Array.isArray(d.data) ? d.data : [];

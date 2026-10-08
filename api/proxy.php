@@ -33,6 +33,7 @@ $routes = [
     'logout'      => ['POST', '/tenant-client/auth/logout'],
     // Contul de client: adresele proprii ale site-urilor demo (vezi DemoStorefrontController)
     'orders'      => ['GET',  '/tenant-client/storefront/orders'],
+    'tickets'     => ['GET',  '/tenant-client/storefront/tickets'],
     'order'       => ['GET',  '/tenant-client/storefront/orders/' . (int) ($_GET['id'] ?? 0)],
     'password-link' => ['POST', '/tenant-client/storefront/password-link'],
     'password-set'  => ['POST', '/tenant-client/storefront/password-set'],

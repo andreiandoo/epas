@@ -74,9 +74,9 @@ function part_flow(int $on): string {
     return $out . '</ol>';
 }
 
-/** Antetul paginilor de cont: titlu, file și ieșirea din cont ($on = 'bilete' | 'profil'). */
+/** Antetul paginilor de cont: titlu, file și ieșirea din cont ($on = 'bilete' | 'comenzi' | 'profil'). */
 function part_account_head(string $title, string $on): string {
-    $tabs = ['bilete' => ['Biletele mele', '/biletele-mele'], 'profil' => ['Profilul meu', '/profil']];
+    $tabs = ['bilete' => ['Biletele mele', '/biletele-mele'], 'comenzi' => ['Comenzile mele', '/comenzile-mele'], 'profil' => ['Profilul meu', '/profil']];
     $nav = '';
     foreach ($tabs as $key => [$label, $href]) {
         $nav .= '<a class="tab' . ($key === $on ? ' is-on' : '') . '" href="' . $href . '"' . ($key === $on ? ' aria-current="page"' : '') . '>' . $label . '</a>';

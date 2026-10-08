@@ -87,8 +87,12 @@ include __DIR__ . '/head.php';
                     <li><b>Sesiunea de cont</b>: dacă te autentifici, un identificator care te ține conectat pe acest dispozitiv.</li>
                     <li><b>Rezervarea locurilor</b>: la competițiile cu locuri numerotate, un cookie tehnic care leagă locurile blocate de vizita ta.</li>
                 </ul>
-                <h2>Ce nu folosim</h2>
-                <p>În această versiune a site-ului nu rulează instrumente de publicitate sau de urmărire. Dacă organizatorul le va activa, ele vor porni doar cu acordul tău, cerut la prima vizită.</p>
+                <h2>Ce pornește doar cu acordul tău</h2>
+                <ul>
+                    <li><b>Analiză</b>: statistici despre folosirea site-ului.</li>
+                    <li><b>Marketing</b>: măsurarea reclamelor organizatorului (de exemplu Meta sau Google).</li>
+                </ul>
+                <p>La prima vizită alegi din bara de cookies; poți refuza tot ce nu e necesar la fel de ușor cum poți accepta. Alegerea se schimbă oricând din linkul „Setări cookies” din subsolul paginii.</p>
                 <h2>Cum le ștergi</h2>
                 <p>Poți șterge oricând datele stocate din setările browserului. Coșul și sesiunea de cont se pierd, dar biletele deja cumpărate rămân valabile și le găsești în emailul de confirmare.</p>
             <?php endif; ?>

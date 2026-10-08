@@ -53,16 +53,38 @@
         </div>
         <div class="foot-base">
             <span>© <?= date('Y') ?> <?= e(SITE_NAME) ?></span>
-            <nav class="foot-base__links" aria-label="Informații legale">
+            <nav class="foot-base__links" aria-label="Informații legale" x-data>
                 <a href="/termeni">Termeni și condiții</a>
                 <a href="/confidentialitate">Confidențialitate</a>
                 <a href="/cookies">Cookies</a>
+                <a href="#" @click.prevent="$dispatch('wukf:cookie-settings')">Setări cookies</a>
                 <a href="https://anpc.ro/" target="_blank" rel="nofollow noopener">ANPC</a>
             </nav>
             <a class="foot-base__by" href="https://tixello.ro" target="_blank" rel="noopener">Ticketing by <b>Tixello</b></a>
         </div>
     </div>
 </footer>
+
+<!-- Bara de cookies: alegere pe categorii, refuzul e la fel de ușor ca acceptul -->
+<div class="cookiebar" x-data="cookieBar" x-show="open" x-cloak role="dialog" aria-modal="false" aria-labelledby="cookiebar-title" @wukf:cookie-settings.window="reopen()">
+    <div class="cookiebar__in">
+        <div class="cookiebar__text">
+            <b id="cookiebar-title">Cookie-uri și date stocate în browser</b>
+            <p>Folosim strict ce e necesar ca site-ul să funcționeze (coșul, contul, rezervarea locurilor). Cu acordul tău, organizatorul poate măsura vizitele și eficiența reclamelor. <a class="link" href="/cookies">Detalii</a></p>
+        </div>
+        <div class="cookiebar__prefs" x-show="details" x-cloak>
+            <label class="check"><input type="checkbox" checked disabled><span><b>Necesare</b> — coș, autentificare, rezervarea locurilor. Nu pot fi oprite.</span></label>
+            <label class="check"><input type="checkbox" x-model="analytics"><span><b>Analiză</b> — statistici anonime despre folosirea site-ului.</span></label>
+            <label class="check"><input type="checkbox" x-model="marketing"><span><b>Marketing</b> — măsurarea reclamelor (de exemplu Meta sau Google).</span></label>
+        </div>
+        <div class="cookiebar__actions">
+            <button type="button" class="btn btn--sm btn--ghost" @click="details = !details" x-show="!details">Personalizează</button>
+            <button type="button" class="btn btn--sm btn--ghost" @click="save()" x-show="details" x-cloak>Salvează alegerea</button>
+            <button type="button" class="btn btn--sm btn--ghost" @click="choose(false)">Doar necesare</button>
+            <button type="button" class="btn btn--sm" @click="choose(true)">Accept toate</button>
+        </div>
+    </div>
+</div>
 
 <div class="toast" x-data="toastHost" x-show="show" x-cloak x-transition.opacity x-text="msg" role="status"></div>
 <?= $pageFootScripts ?? '' ?>
