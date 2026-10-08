@@ -102,15 +102,13 @@
         var big = document.querySelector('.site-foot__big'), foot = document.querySelector('.site-foot');
         var text = big && big.firstElementChild;
         if (!text) { return; }
-        var queued = false;
         function fit() {
             text.style.fontSize = '';
             var room = big.clientWidth - 2 * parseFloat(getComputedStyle(big).paddingLeft || 0);
             var size = parseFloat(getComputedStyle(text).fontSize), width = text.scrollWidth;
-            if (room > 0 && width > 0) { text.style.fontSize = Math.floor(size * room / width) + 'px'; }
+            if (room > 0 && width > 0) { text.style.fontSize = Math.min(340, Math.floor(size * room / width)) + 'px'; }
         }
         function place() {
-            queued = false;
             if (reduce) { text.style.transform = ''; return; }
             var r = foot.getBoundingClientRect(), vh = window.innerHeight;
             // 0 când footerul abia intră în ecran, 1 când se vede titlul întreg
@@ -118,10 +116,9 @@
             var eased = 1 - Math.pow(1 - p, 3);
             text.style.transform = 'translate3d(' + ((1 - eased) * big.clientWidth * 0.6).toFixed(1) + 'px,0,0)';
         }
-        function queue() { if (!queued) { queued = true; requestAnimationFrame(place); } }
         fit(); place();
-        window.addEventListener('scroll', queue, { passive: true });
-        window.addEventListener('resize', function () { fit(); queue(); });
+        window.addEventListener('scroll', place, { passive: true });
+        window.addEventListener('resize', function () { fit(); place(); });
         if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { fit(); place(); }); }
     })();
 

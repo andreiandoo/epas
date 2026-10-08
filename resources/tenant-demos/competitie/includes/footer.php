@@ -21,15 +21,6 @@
                 </ul>
             </div>
             <div>
-                <h3>Informații</h3>
-                <ul>
-                    <li><a href="/termeni">Termeni și condiții</a></li>
-                    <li><a href="/confidentialitate">Confidențialitate</a></li>
-                    <li><a href="/cookies">Cookies</a></li>
-                    <li><a href="https://anpc.ro/" target="_blank" rel="nofollow noopener">ANPC</a></li>
-                </ul>
-            </div>
-            <div>
                 <h3>Federație</h3>
                 <ul>
                     <li><a href="<?= e(SITE_FEDERATION) ?>" target="_blank" rel="noopener">wukf.ro</a></li>

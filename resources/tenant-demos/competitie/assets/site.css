@@ -592,7 +592,7 @@ html.lenis, html.lenis body { height: auto; }
 .site-foot__big span { display: inline-block; will-change: transform; }
 @media (min-width: 760px) { .site-foot__big { padding-left: 40px; padding-right: 40px; } }
 .site-foot__grid { grid-template-columns: 1fr; }
-@media (min-width: 800px) { .site-foot__grid { grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px; } }
+@media (min-width: 800px) { .site-foot__grid { grid-template-columns: 1.6fr 1fr 1fr; gap: 56px; } }
 
 /* ---- Pagini legale ---- */
 .legal { max-width: 780px; padding: 56px 0 96px; }
@@ -625,7 +625,7 @@ html.lenis, html.lenis body { height: auto; }
 .stand-view__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
 .stand-view__head h3 { font-size: 28px; }
 .stand-view__head span { font-size: 14px; color: var(--fg-2); }
-.stand-view__scroll { overflow-x: auto; padding: 22px; -webkit-overflow-scrolling: touch; }
+.stand-view__scroll { overflow-x: auto; padding: 22px 14px; -webkit-overflow-scrolling: touch; }
 .rows { display: grid; gap: 7px; width: max-content; margin: 0 auto; }
 .srow { display: flex; align-items: center; gap: 4px; }
 .srow__l { width: 22px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--fg-3); }
