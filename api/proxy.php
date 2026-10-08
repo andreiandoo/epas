@@ -12,8 +12,8 @@
  *   POST ?action=register   body: {first_name, last_name, email, password, …}
  *   GET  ?action=me         (Authorization: Bearer)
  *   POST ?action=logout     (Authorization: Bearer)
- *   GET  ?action=acc-orders (Authorization: Bearer)
- *   GET  ?action=acc-tickets(Authorization: Bearer)
+ *   GET  ?action=orders | order&id=N           (Authorization: Bearer)
+ *   POST ?action=profile | password            (Authorization: Bearer)
  */
 
 require_once __DIR__ . '/../includes/config.php';
@@ -31,8 +31,11 @@ $routes = [
     'register'    => ['POST', '/tenant-client/auth/register'],
     'me'          => ['GET',  '/tenant-client/auth/me'],
     'logout'      => ['POST', '/tenant-client/auth/logout'],
-    'acc-orders'  => ['GET',  '/tenant-client/account/orders'],
-    'acc-tickets' => ['GET',  '/tenant-client/account/tickets'],
+    // Contul de client: adresele proprii ale site-urilor demo (vezi DemoStorefrontController)
+    'orders'      => ['GET',  '/tenant-client/storefront/orders'],
+    'order'       => ['GET',  '/tenant-client/storefront/orders/' . (int) ($_GET['id'] ?? 0)],
+    'profile'     => ['POST', '/tenant-client/account/profile'],
+    'password'    => ['POST', '/tenant-client/account/password'],
 ];
 
 // --- Locuri numerotate: API-ul public de seating, cu o sesiune stabilă de hold-uri per vizitator ---

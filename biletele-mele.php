@@ -3,49 +3,65 @@ require_once __DIR__ . '/includes/boot.php';
 
 $pageTitle = 'Biletele mele — ' . SITE_SHORT;
 $bodyClass = 'is-light';
-$pageExtraHead = '<meta name="robots" content="noindex">';
+$pageExtraHead = '<meta name="robots" content="noindex"><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>';
 include __DIR__ . '/includes/head.php';
 ?>
 <main class="is-light" x-data="myTickets" style="min-height:80vh">
-    <section class="phead phead--slim">
-        <div class="wrap" style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px">
-            <div>
-                <span class="label">Contul meu</span>
-                <h1>Biletele mele</h1>
-            </div>
-            <button type="button" class="btn btn--ghost btn--sm" x-data="siteHead" @click="logout()">Ieși din cont</button>
-        </div>
-    </section>
+    <?= part_account_head('Biletele mele', 'bilete') ?>
 
     <div class="wrap">
         <section style="padding:36px 0 96px">
             <p x-show="loading" style="color:var(--fg-2)">Se încarcă comenzile…</p>
             <div class="alert" x-show="error" x-cloak x-text="error"></div>
 
-            <div class="panel" x-show="!loading && orders.length" x-cloak>
+            <div class="orders" x-show="!loading && orders.length" x-cloak>
                 <template x-for="o in orders" :key="o.id">
-                    <div class="line">
-                        <div>
-                            <div class="line__name" x-text="o.event || 'Comandă'"></div>
-                            <div class="line__unit">
-                                <span class="mono" x-text="'#' + o.id"></span> ·
-                                <span x-text="date(o.created_at)"></span> ·
-                                <span x-text="ticketsLabel(o.tickets_count)"></span> ·
-                                <span x-text="paid(o) ? 'plătită' : 'neplătită'" :style="paid(o) ? 'color:var(--ok);font-weight:700' : 'color:var(--red);font-weight:700'"></span>
+                    <article class="order panel" :data-order="o.id">
+                        <div class="order__head">
+                            <div>
+                                <span class="order__status" :class="o.is_paid ? 'is-paid' : 'is-off'" x-text="o.is_paid ? 'Plătită' : 'Neplătită'"></span>
+                                <h2 x-text="o.event ? o.event.title : 'Comandă'"></h2>
+                                <p class="order__meta">
+                                    <span x-show="eventDate(o)" x-text="eventDate(o)"></span>
+                                    <span x-show="place(o)" x-text="place(o)"></span>
+                                </p>
+                            </div>
+                            <div class="order__side">
+                                <b x-text="lei(o.total)"></b>
+                                <span class="mono" x-text="'#' + o.id + ' · ' + date(o.created_at)"></span>
+                                <span x-text="ticketsLabel(o.tickets_count)"></span>
                             </div>
                         </div>
-                        <div class="line__tools">
-                            <div class="line__sum" x-text="lei(o.total)"></div>
-                            <a class="btn btn--sm" x-show="paid(o)" :href="'/confirmare?order=' + o.id">Vezi biletele</a>
+                        <div class="order__actions" x-show="o.is_paid">
+                            <button type="button" class="btn btn--sm btn--ghost" @click="toggle(o)" :aria-expanded="open === o.id" x-text="open === o.id ? 'Ascunde biletele' : 'Vezi biletele'"></button>
+                            <a class="btn btn--sm" :href="pdf(o)" x-show="o.access_token">Descarcă PDF</a>
                         </div>
-                    </div>
+                        <div class="order__tickets" x-show="open === o.id" x-cloak>
+                            <p x-show="!detail[o.id]" style="color:var(--fg-2)">Se încarcă biletele…</p>
+                            <div class="tickets">
+                                <template x-for="t in (detail[o.id] || [])" :key="t.code">
+                                    <div class="ticket">
+                                        <div class="ticket__main">
+                                            <div class="ticket__type" x-text="t.type || 'Bilet'"></div>
+                                            <div class="ticket__title" x-text="o.event ? o.event.title : ''"></div>
+                                            <div class="ticket__meta" x-text="[t.seat_label, eventDate(o), place(o)].filter(Boolean).join(' · ')"></div>
+                                            <div class="ticket__code" x-text="t.code"></div>
+                                            <a class="link ticket__dl" :href="pdf(o, t.code)" x-show="o.access_token">Descarcă biletul</a>
+                                        </div>
+                                        <div class="ticket__qr"><div :data-qr="t.code"></div></div>
+                                        <div class="belt-bg"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </article>
                 </template>
             </div>
 
             <div class="panel empty" x-show="!loading && !orders.length && !error" x-cloak>
                 <h2>Încă nu ai bilete</h2>
-                <p>Comenzile făcute cu adresa ta de email apar aici.</p>
-                <a class="btn" href="/competitii">Vezi competițiile</a>
+                <p>Aici apar comenzile făcute cu adresa de email a contului tău, inclusiv cele plasate fără autentificare.</p>
+                <?= part_btn('Vezi competițiile', '/competitii') ?>
             </div>
         </section>
     </div>
