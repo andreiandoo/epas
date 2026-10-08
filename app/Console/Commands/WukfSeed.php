@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\TenantType;
+use App\Models\Coupon\CouponCode;
 use App\Models\Customer;
 use App\Models\Domain;
 use App\Models\Event;
@@ -39,7 +40,8 @@ class WukfSeed extends Command
     protected $signature = 'wukf:seed
         {--domain=competitie.tixello.ro : Hostname-ul site-ului public al tenantului}
         {--owner-email=wukf@tixello.ro : Emailul utilizatorului owner}
-        {--owner-password= : Parola ownerului (goală = generată la creare / păstrată la re-rulare)}';
+        {--owner-password= : Parola ownerului (goală = generată la creare / păstrată la re-rulare)}
+        {--pass-fee= : Mută taxa procesatorului de plăți la cumpărător: „procent” sau „procent,fix_în_bani” (ex. 1.9 sau 1.9,100); „off” o dezactivează}';
 
     protected $description = 'Seed demo complet pentru tenantul Federația Română de Karate WUKF';
 
@@ -135,6 +137,13 @@ class WukfSeed extends Command
             });
         }
 
+        $this->guarded('cod de reducere demo', fn () => $this->seedCoupon($tenant));
+
+        $passFee = $this->option('pass-fee');
+        if ($passFee !== null && $passFee !== '') {
+            $this->guarded('taxa de procesare', fn () => $this->seedPaymentFee($tenant, (string) $passFee));
+        }
+
         $this->guarded('cache', function () use ($tenant, $domain) {
             Cache::forget("domain_tenant_{$domain}");
             Cache::forget("tenant_{$tenant->id}");
@@ -157,6 +166,13 @@ class WukfSeed extends Command
         $this->line('  Client demo:      ' . $demoEmail . ' / ' . $demoPassword);
         $this->line('  API listă:        https://core.tixello.com/api/tenant-client/events?tenant=' . $tenant->id);
         $this->line('  Microservicii:    ' . ($activated ? implode(', ', $activated) : '(niciunul)'));
+        $fresh = $tenant->fresh();
+        $fees = is_array($fresh->settings) ? ($fresh->settings['payment_fees'] ?? null) : null;
+        $this->line('  Comision Tixello: ' . $fresh->commission_rate . '% (' . $fresh->commission_mode . ')');
+        $this->line('  Taxă procesare:   ' . (! empty($fees['pass_to_customer'])
+            ? 'mutată la cumpărător — ' . ($fees['percent_rate'] ?? 0) . '% + ' . number_format(($fees['fixed_cents'] ?? 0) / 100, 2) . ' lei'
+            : 'suportată de organizator (--pass-fee=1.9,100 o mută la cumpărător)'));
+        $this->line('  Cod reducere:     KARATE10 (10% din bilete, pentru test)');
         $this->line('  Evenimente (' . count($events) . '):');
         foreach ($events as $ev) {
             $this->line('    #' . $ev->id . '  ' . $ev->slug);
@@ -491,6 +507,69 @@ class WukfSeed extends Command
     }
 
     /* ------------------------------------------------------------------ */
+    /* Cod de reducere + taxa de procesare                                 */
+    /* ------------------------------------------------------------------ */
+
+    /** Un cod de test (10%), ca reducerea să poată fi încercată imediat pe site. */
+    private function seedCoupon(Tenant $tenant): void
+    {
+        if (! Schema::hasTable('coupon_codes')) {
+            $this->warn('  tabela coupon_codes lipsește — sar peste codul de reducere.');
+            return;
+        }
+
+        $coupon = CouponCode::withTrashed()->where('tenant_id', $tenant->id)->where('code', 'KARATE10')->first();
+        if ($coupon) {
+            if ($coupon->trashed()) {
+                $coupon->restore();
+            }
+            $this->line('  cod de reducere existent: KARATE10 (' . $coupon->status . ')');
+            return;
+        }
+
+        CouponCode::create($this->only('coupon_codes', [
+            'tenant_id'      => $tenant->id,
+            'code'           => 'KARATE10',
+            'code_type'      => 'multi_use',
+            'discount_type'  => 'percentage',
+            'discount_value' => 10,
+            'status'         => 'active',
+            'is_public'      => false,
+            'combinable'     => false,
+            'source'         => 'demo',
+        ]));
+        $this->line('  cod de reducere creat: KARATE10 (10%)');
+    }
+
+    /**
+     * settings.payment_fees = {pass_to_customer, percent_rate, fixed_cents}, citit de checkout-ul
+     * demo. $spec: „off” sau „procent[,fix_în_bani]”.
+     */
+    private function seedPaymentFee(Tenant $tenant, string $spec): void
+    {
+        $tenant = $tenant->fresh();
+        $settings = is_array($tenant->settings) ? $tenant->settings : [];
+        $spec = strtolower(trim($spec));
+
+        if (in_array($spec, ['off', '0', 'no', 'false'], true)) {
+            $settings['payment_fees'] = ['pass_to_customer' => false, 'percent_rate' => 0, 'fixed_cents' => 0];
+            $this->line('  taxa de procesare: suportată de organizator');
+        } else {
+            [$percent, $fixed] = array_pad(explode(',', $spec, 2), 2, '0');
+            $percent = (float) str_replace(',', '.', $percent);
+            $fixed = (int) $fixed;
+            if ($percent < 0 || $percent > 20 || $fixed < 0 || $fixed > 2000) {
+                $this->warn('  --pass-fee invalid (aștept ex. 1.9 sau 1.9,100) — sar peste.');
+                return;
+            }
+            $settings['payment_fees'] = ['pass_to_customer' => true, 'percent_rate' => $percent, 'fixed_cents' => $fixed];
+            $this->line("  taxa de procesare: mutată la cumpărător ({$percent}% + {$fixed} bani)");
+        }
+
+        $tenant->update(['settings' => $settings]);
+    }
+
+    /* ------------------------------------------------------------------ */
     /* Categorii                                                           */
     /* ------------------------------------------------------------------ */
 
@@ -729,6 +808,9 @@ class WukfSeed extends Command
             'event_website_url' => $e['src'],
             'is_indoor'         => true,
             'is_kid_friendly'   => true,
+            // Explicit pe eveniment: altfel API-ul public raportează comisionul implicit de 5%.
+            'commission_rate'   => 2.00,
+            'commission_mode'   => 'included',
         ];
 
         if ($isRange) {

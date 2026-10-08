@@ -212,14 +212,14 @@ function tc_order_summary(int $orderId): ?array {
 
 /** Un eveniment după slug (detaliu complet, cu tipuri de bilete). Null dacă nu există. */
 function tc_event(string $slug, ?int $cacheTtl = null): ?array {
-    $resp = api_get('/tenant-client/events/' . rawurlencode($slug), [], $cacheTtl);
+    $resp = api_get('/tenant-client/events/' . rawurlencode($slug), ['locale' => 'ro'], $cacheTtl);
     if (!($resp['success'] ?? false) || !is_array($resp['data'] ?? null) || empty($resp['data']['id'])) { return null; }
     return tc_norm_event($resp['data']);
 }
 
 /** Toate competițiile viitoare, în ordine cronologică. */
 function tc_upcoming(int $limit = 50): array {
-    $events = tc_events(api_get('/tenant-client/events', ['limit' => $limit]));
+    $events = tc_events(api_get('/tenant-client/events', ['limit' => $limit, 'per_page' => $limit, 'locale' => 'ro']));
     // API-ul ordonează după event_date, care e gol la competițiile pe mai multe zile
     usort($events, fn ($a, $b) => strcmp((string) ev_day($a['start_date'] ?? null), (string) ev_day($b['start_date'] ?? null)));
     return $events;
@@ -270,6 +270,34 @@ function ev_days_left(array $e): ?int {
     [$s] = ev_span($e);
     if (!$s) { return null; }
     return (int) round((strtotime($s . ' 00:00:00') - strtotime(date('Y-m-d') . ' 00:00:00')) / 86400);
+}
+
+/** Momentul de start ca dată locală ISO („2026-11-14T09:00:00”), pentru numărătoarea inversă. */
+function ev_start_iso(array $e): ?string {
+    [$s] = ev_span($e);
+    if (!$s) { return null; }
+    $time = !empty($e['start_time']) ? substr((string) $e['start_time'], 0, 5) : '09:00';
+    return $s . 'T' . $time . ':00';
+}
+
+/** Felul competiției, dedus din titlu (API-ul public nu expune categoriile tenantului). */
+function ev_kind(array $e): string {
+    $t = mb_strtolower((string) ($e['title'] ?? ''));
+    if (str_contains($t, 'campionat')) { return 'Campionat național'; }
+    if (str_contains($t, 'cupa româniei') || str_contains($t, 'cupa romaniei')) { return 'Cupa României'; }
+    return 'Cupă';
+}
+
+/** Cheie de filtrare pentru felul competiției. */
+function ev_kind_key(array $e): string {
+    return ['Campionat național' => 'campionat', 'Cupa României' => 'cupa-romaniei', 'Cupă' => 'cupa'][ev_kind($e)];
+}
+
+/** Numărul de zile de concurs. */
+function ev_days_count(array $e): int {
+    [$s, $f] = ev_span($e);
+    if (!$s || !$f) { return 1; }
+    return max(1, (int) round((strtotime($f) - strtotime($s)) / 86400) + 1);
 }
 
 /** „Sala X, Oraș” din venue. */

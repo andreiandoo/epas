@@ -86,6 +86,8 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     // Checkout DEMO (site-uri de test): creează comandă + inițiază plata simulată
     Route::post('/demo-checkout', [DemoCheckoutController::class, 'store'])
         ->name('api.tenant-client-public.demo-checkout');
+    Route::post('/demo-checkout/quote', [DemoCheckoutController::class, 'quote'])
+        ->name('api.tenant-client-public.demo-checkout.quote');
 
     // Rezumat comandă pentru pagina de confirmare (thank-you)
     Route::get('/order-summary', [TenantClientController::class, 'orderSummary'])
