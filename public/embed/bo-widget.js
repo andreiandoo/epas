@@ -73,7 +73,7 @@
     var id = String(d.order || '');
     if (!id) return;
     try { if (sessionStorage.getItem('bo_purchase_' + id)) return; sessionStorage.setItem('bo_purchase_' + id, '1'); } catch (e) {}
-    var value = Number(d.value) || 0, currency = String(d.currency || 'RON');
+    var value = Number(d.value) || 0, currency = String(d.currency || 'EUR');
     try { window.dispatchEvent(new CustomEvent('bileteonline:purchase', { detail: { order: id, value: value, currency: currency } })); } catch (e) {}
     try { if (typeof window.fbq === 'function') window.fbq('track', 'Purchase', { value: value, currency: currency }, { eventID: 'purchase_' + (d.order_id || id) }); } catch (e) {}
     try { if (typeof window.gtag === 'function') window.gtag('event', 'purchase', { transaction_id: id, value: value, currency: currency }); } catch (e) {}

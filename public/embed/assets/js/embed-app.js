@@ -10,6 +10,12 @@
 
     const CART_KEY = 'tixello_embed_cart_' + CONFIG.organizerSlug;
 
+    // A price as the visitor reads it: the currency the data carries, the euro otherwise.
+    window.EmbedMoney = function (amount, currency) {
+        const shown = (Number(amount) || 0).toFixed(2);
+        return currency && !/^eur$/i.test(currency) ? shown + ' ' + currency : '€' + shown;
+    };
+
     // ========== Iframe Auto-Resize ==========
 
     let lastSentHeight = 0;
@@ -147,19 +153,19 @@
             html += '<div style="font-weight:600;font-size:14px;">' + escHtml(item.ticketType.name) + '</div>';
             html += '<div style="font-size:12px;color:var(--muted-color, #64748b);">' + escHtml(item.event.title || item.event.name || '') + '</div>';
             if (item.meta?.visit_date) {
-                html += '<div style="font-size:11px;color:var(--muted-color, #64748b);">Data: ' + item.meta.visit_date + '</div>';
+                html += '<div style="font-size:11px;color:var(--muted-color, #64748b);">' + VQ.t('Date: {date}', { date: item.meta.visit_date }) + '</div>';
             }
             html += '</div>';
             html += '<div style="display:flex;align-items:center;gap:12px;">';
             html += '<span style="font-size:14px;">' + item.quantity + '×</span>';
-            html += '<span style="font-weight:600;">' + lineTotal.toFixed(2) + ' RON</span>';
-            html += '<button onclick="EmbedCart.removeItem(\'' + item.key + '\');renderCartPage();" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:18px;" title="Elimină">×</button>';
+            html += '<span style="font-weight:600;">' + EmbedMoney(lineTotal) + '</span>';
+            html += '<button onclick="EmbedCart.removeItem(\'' + item.key + '\');renderCartPage();" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:18px;" title="' + VQ.t('Remove') + '">×</button>';
             html += '</div></div>';
         });
         $list.innerHTML = html;
 
         if ($total) {
-            $total.textContent = EmbedCart.getTotal().toFixed(2) + ' RON';
+            $total.textContent = EmbedMoney(EmbedCart.getTotal());
         }
 
         sendResize();

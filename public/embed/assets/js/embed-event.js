@@ -51,13 +51,13 @@
 
     function render() {
         if (ticketTypes.length === 0) {
-            $container.innerHTML = '<p style="padding:20px;text-align:center;color:var(--muted-color);">Nu sunt bilete disponibile.</p>';
+            $container.innerHTML = '<p style="padding:20px;text-align:center;color:var(--muted-color);">' + VQ.t('No tickets available.') + '</p>';
             return;
         }
 
         const groups = {};
         ticketTypes.forEach(tt => {
-            const group = tt.ticket_group || 'Bilete';
+            const group = tt.ticket_group || VQ.t('Tickets');
             if (!groups[group]) groups[group] = [];
             groups[group].push(tt);
         });
@@ -85,23 +85,23 @@
                 html += '<div style="flex:1;min-width:0;">';
                 html += '<div style="font-weight:600;font-size:14px;">' + esc(tt.name) + '</div>';
                 if (tt.description) html += '<div style="font-size:11px;color:var(--muted-color);margin-top:1px;">' + esc(tt.description) + '</div>';
-                if (min > 1) html += '<div style="font-size:10px;color:#d97706;margin-top:1px;">Min. ' + min + ' buc</div>';
+                if (min > 1) html += '<div style="font-size:10px;color:#d97706;margin-top:1px;">' + VQ.t('Min. {n} per order', { n: min }) + '</div>';
                 html += '</div>';
 
                 // Price
                 html += '<div style="text-align:right;white-space:nowrap;margin-right:6px;">';
                 if (originalPrice && originalPrice > pricing.display) {
-                    html += '<div style="font-size:11px;color:var(--muted-color);text-decoration:line-through;">' + originalPrice.toFixed(2) + '</div>';
+                    html += '<div style="font-size:11px;color:var(--muted-color);text-decoration:line-through;">' + EmbedMoney(originalPrice, tt.currency) + '</div>';
                 }
-                html += '<div style="font-weight:700;font-size:15px;">' + pricing.display.toFixed(2) + ' ' + (tt.currency || 'RON') + '</div>';
+                html += '<div style="font-weight:700;font-size:15px;">' + EmbedMoney(pricing.display, tt.currency) + '</div>';
                 if (pricing.mode === 'added_on_top' || pricing.mode === 'on_top') {
-                    html += '<div style="font-size:9px;color:var(--muted-color);">incl. taxe ' + pricing.commission.toFixed(2) + '</div>';
+                    html += '<div style="font-size:9px;color:var(--muted-color);">' + VQ.t('incl. fees {amount}', { amount: EmbedMoney(pricing.commission, tt.currency) }) + '</div>';
                 }
                 html += '</div>';
 
                 // Qty selector
                 if (soldOut) {
-                    html += '<div style="font-size:12px;font-weight:600;color:#ef4444;white-space:nowrap;">Sold out</div>';
+                    html += '<div style="font-size:12px;font-weight:600;color:#ef4444;white-space:nowrap;">' + VQ.t('Sold out') + '</div>';
                 } else {
                     html += '<div style="display:flex;align-items:center;gap:4px;">';
                     html += '<button class="qty-btn" data-tt="' + tt.id + '" data-dir="-1" ' + (qty <= 0 ? 'disabled' : '') + ' style="width:28px;height:28px;border:1px solid var(--border-color);border-radius:6px;background:none;cursor:pointer;font-size:16px;line-height:1;">−</button>';
@@ -161,10 +161,10 @@
         $cartItems.innerHTML = items.map(i =>
             '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted-color);margin-bottom:4px;">' +
             '<span>' + i.qty + '× ' + esc(i.tt.name) + '</span>' +
-            '<span style="font-weight:500;">' + i.line.toFixed(2) + ' RON</span></div>'
+            '<span style="font-weight:500;">' + EmbedMoney(i.line, i.tt.currency) + '</span></div>'
         ).join('');
 
-        $cartTotal.textContent = total.toFixed(2) + ' RON';
+        $cartTotal.textContent = EmbedMoney(total, ticketTypes[0] && ticketTypes[0].currency);
         $addBtn.disabled = false;
     }
 

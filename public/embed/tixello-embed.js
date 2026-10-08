@@ -4,8 +4,8 @@
  * Usage:
  *   <div id="tixello-widget"></div>
  *   <script src="https://viaqui.com/embed/tixello-embed.js"
- *     data-organizer="slug-organizator"
- *     data-return-url="https://site-organizator.ro/multumesc"
+ *     data-organizer="organizer-slug"
+ *     data-return-url="https://organizer-site.com/thank-you"
  *     data-theme="light"
  *     data-accent-color="#6366f1">
  *   </script>
@@ -42,7 +42,7 @@
     iframe.setAttribute('allowpaymentrequest', '');
     iframe.setAttribute('allow', 'payment');
     iframe.setAttribute('loading', 'lazy');
-    iframe.setAttribute('title', 'Tixello — Bilete');
+    iframe.setAttribute('title', 'Tickets');
 
     container.appendChild(iframe);
 

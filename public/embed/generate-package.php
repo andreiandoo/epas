@@ -28,7 +28,7 @@ if (!$org) {
 
 // Read widget config — API returns it at top level or in settings
 $widgetConfig = $org['widget_config'] ?? $org['settings']['widget_config'] ?? [];
-$orgName = $org['name'] ?? 'Organizator';
+$orgName = $org['name'] ?? 'Operator';
 $logo = $widgetConfig['logo'] ?? $org['avatar'] ?? '';
 $bgImage = $widgetConfig['bg_image'] ?? '';
 $accent = $widgetConfig['accent'] ?? '#D4A843';
@@ -48,7 +48,7 @@ $replacements = [
     '{{API_KEY}}' => API_KEY,
     '{{ORG_SLUG}}' => $organizerSlug,
     '{{ORG_NAME}}' => $orgName,
-    '{{SITE_NAME}}' => $orgName . ' — Bilete',
+    '{{SITE_NAME}}' => $orgName . ' · Tickets',
     '{{MARKETPLACE_NAME}}' => SITE_NAME,
     '{{MARKETPLACE_URL}}' => SITE_URL,
     '{{LOGO_URL}}' => $logo,
@@ -74,7 +74,7 @@ if (!is_dir($templateDir)) {
 }
 
 // Create ZIP
-$zipFilename = 'bilete-' . $organizerSlug . '.zip';
+$zipFilename = 'tickets-' . $organizerSlug . '.zip';
 $zipPath = sys_get_temp_dir() . '/' . $zipFilename;
 
 $zip = new ZipArchive();
@@ -108,31 +108,32 @@ foreach ($iterator as $file) {
 }
 
 // Add a README
-$readme = "# {$orgName} — Site Bilete\n\n";
-$readme .= "## Instalare\n\n";
-$readme .= "1. Incarca continutul acestei arhive pe serverul tau web (Apache + PHP 7.4+)\n";
-$readme .= "2. Asigura-te ca mod_rewrite este activat\n";
-$readme .= "3. Seteaza DocumentRoot la directorul unde ai extras fisierele\n";
-$readme .= "4. Acceseaza site-ul in browser\n\n";
-$readme .= "## Cerinte server\n\n";
-$readme .= "- Apache cu mod_rewrite\n";
-$readme .= "- PHP 7.4+ cu extensia cURL\n";
-$readme .= "- Certificat SSL (HTTPS) recomandat\n\n";
-$readme .= "## Structura\n\n";
-$readme .= "- `index.php` — Lista evenimente\n";
-$readme .= "- `event.php` — Detalii eveniment + bilete\n";
-$readme .= "- `checkout.php` — Cos + finalizare comanda\n";
-$readme .= "- `thank-you.php` — Confirmare comanda\n";
-$readme .= "- `terms.php` — Termeni si conditii\n";
-$readme .= "- `privacy.php` — Politica confidentialitate\n";
-$readme .= "- `api/proxy.php` — Proxy API (tine cheia API server-side)\n";
-$readme .= "- `includes/config.php` — Configurare (NU modifica API_KEY!)\n\n";
-$readme .= "## Personalizare\n\n";
-$readme .= "- Logo: modifica LOGO_URL in includes/config.php\n";
-$readme .= "- Culori: modifica ACCENT_COLOR si THEME in includes/config.php\n";
-$readme .= "- Fundal: modifica BG_IMAGE_URL in includes/config.php\n";
-$readme .= "- Stiluri: editeaza assets/css/style.css\n\n";
-$readme .= "Generat automat de " . SITE_NAME . " (" . SITE_URL . ")\n";
+// A document for the operator's developer, not page text: written in English, outside the language catalogue.
+$readme = "# {$orgName}: ticket site\n\n";
+$readme .= "## Installation\n\n";
+$readme .= "1. Upload the contents of this archive to your web server (Apache + PHP 7.4+)\n";
+$readme .= "2. Make sure mod_rewrite is enabled\n";
+$readme .= "3. Set DocumentRoot to the folder where you extracted the files\n";
+$readme .= "4. Open the site in a browser\n\n";
+$readme .= "## Server requirements\n\n";
+$readme .= "- Apache with mod_rewrite\n";
+$readme .= "- PHP 7.4+ with the cURL extension\n";
+$readme .= "- An SSL certificate (HTTPS) is recommended\n\n";
+$readme .= "## Structure\n\n";
+$readme .= "- `index.php`: event list\n";
+$readme .= "- `event.php`: event details + tickets\n";
+$readme .= "- `checkout.php`: basket + checkout\n";
+$readme .= "- `thank-you.php`: order confirmation\n";
+$readme .= "- `terms.php`: terms and conditions\n";
+$readme .= "- `privacy.php`: privacy policy\n";
+$readme .= "- `api/proxy.php`: API proxy (keeps the API key on the server)\n";
+$readme .= "- `includes/config.php`: configuration (do not change API_KEY)\n\n";
+$readme .= "## Customisation\n\n";
+$readme .= "- Logo: change LOGO_URL in includes/config.php\n";
+$readme .= "- Colours: change ACCENT_COLOR and THEME in includes/config.php\n";
+$readme .= "- Background: change BG_IMAGE_URL in includes/config.php\n";
+$readme .= "- Styles: edit assets/css/style.css\n\n";
+$readme .= "Generated automatically by " . SITE_NAME . " (" . SITE_URL . ")\n";
 
 $zip->addFromString('README.md', $readme);
 

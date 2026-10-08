@@ -45,7 +45,7 @@ $gdCard = function (array $card, int $pos, string $extraClass = ''): string {
     $badge = $card['catName'] !== '' ? '<span class="xp-badges"><span>' . v2_e($card['catName']) . '</span></span>' : '';
     $meta = ($card['city'] !== '' ? '<span>' . v2_ic('map-pin') . v2_e($card['city']) . '</span>' : '')
         . ($card['dur'] !== '' ? '<span>' . v2_ic('clock') . v2_e($card['dur']) . '</span>' : '');
-    $price = $card['price'] > 0 ? '<span class="xp-price">from<b>' . v2_e($card['priceLabel']) . '</b></span>' : '';
+    $price = $card['price'] > 0 ? '<span class="xp-price">' . v2_te('from') . '<b>' . v2_e($card['priceLabel']) . '</b></span>' : '';
     return '<li class="xp' . $extraClass . '"><a href="' . v2_e($card['href']) . '"><span class="xp-media">' . $media . $badge . '</span>'
         . '<span class="xp-body"><span class="xp-title">' . v2_e($card['title']) . '</span><span class="xp-meta">' . $meta . '</span>'
         . '<span class="xp-foot"><span class="xp-go">' . v2_ic('arrow-right') . '</span>' . $price . '</span></span></a></li>';
@@ -117,13 +117,13 @@ $catName = $catRaw !== '' ? (V2_BLOG_CATEGORIES[$catRaw] ?? $catRaw) : '';
 // The topic is a blog category: a page of its own only when an activity category has the same slug, otherwise the
 // guides filtered by it (/ghiduri-de-oras, /aventura… don't exist).
 $topicHref = $catSlug === '' ? '' : (isset($V2NAV['categoryBySlug'][$catSlug]) ? '/' . $catSlug : '/guides?topic=' . rawurlencode($catSlug));
-$readTime = (int) ($article['read_time'] ?? 0) > 0 ? (int) $article['read_time'] . ' min' : '5 min';
+$readMinutes = (int) ($article['read_time'] ?? 0) > 0 ? (int) $article['read_time'] : 5;
 
 $publishedAt = (string) ($article['published_at'] ?? '') ?: (string) ($article['created_at'] ?? '');
 $ts = $publishedAt !== '' ? strtotime($publishedAt) : false;
-$gdMonths = [1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'];
+$gdMonths = [1 => v2_t('January'), 2 => v2_t('February'), 3 => v2_t('March'), 4 => v2_t('April'), 5 => v2_t('May'), 6 => v2_t('June'), 7 => v2_t('July'), 8 => v2_t('August'), 9 => v2_t('September'), 10 => v2_t('October'), 11 => v2_t('November'), 12 => v2_t('December')];
 $dateIso = $ts ? date('c', $ts) : null;
-$dateLabel = $ts ? (int) date('j', $ts) . ' ' . $gdMonths[(int) date('n', $ts)] . ' ' . date('Y', $ts) : '';
+$dateLabel = $ts ? v2_t('{day} {month} {year}', ['day' => (int) date('j', $ts), 'month' => $gdMonths[(int) date('n', $ts)], 'year' => date('Y', $ts)]) : '';
 
 // Only the guide's own image (uploaded in the admin) is shown: no stand-in photos.
 $coverUrl = v2_media_url($article['image_url'] ?? null);
@@ -144,7 +144,7 @@ if ($contentHtml !== '') {
             $id = $idm[1];
         } else {
             $id = trim(preg_replace('/[^a-z0-9]+/', '-', strtr(mb_strtolower($text), ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't'])), '-');
-            $id = mb_substr($id !== '' ? $id : 'sectiune', 0, 60);
+            $id = mb_substr($id !== '' ? $id : 'section', 0, 60);
             $baseId = $id;
             for ($n = 2; isset($gdUsed[$id]); $n++) {
                 $id = $baseId . '-' . $n;
@@ -180,9 +180,9 @@ foreach ((array) ($article['faqs'] ?? []) as $faq) {
 }
 if (!$faqs) {
     $faqs = [
-        ['How do I buy tickets for the activities in this guide?', 'Open the recommended activity, pick an available date and time, fill in your details and you get the ticket with a QR code by email.'],
-        ['Do I need to print the ticket?', 'No. You can show the QR code on your phone. If a venue asks for something else, it says so on the activity page.'],
-        ['Can I cancel or reschedule?', 'Each venue sets its own cancellation policy. You can read it on the activity page before you pay.'],
+        [v2_t('How do I buy tickets for the activities in this guide?'), v2_t('Open the recommended activity, pick an available date and time, fill in your details and you get the ticket with a QR code by email.')],
+        [v2_t('Do I need to print the ticket?'), v2_t('No. You can show the QR code on your phone. If a venue asks for something else, it says so on the activity page.')],
+        [v2_t('Can I cancel or reschedule?'), v2_t('Each venue sets its own cancellation policy. You can read it on the activity page before you pay.')],
     ];
 }
 
@@ -208,7 +208,7 @@ foreach ((array) ($relatedResp['data']['articles'] ?? $relatedResp['data'] ?? []
         'href' => '/guides/' . $rSlug,
         'excerpt' => trim((string) ($r['excerpt'] ?? '')),
         'photo' => $rImage ? [$rImage, 0, 0, ''] : (isset(V2_GUIDE_THUMBS[$rSlug]) ? [v2_asset(V2_GUIDE_THUMBS[$rSlug]), 0, 0, ''] : null),
-        'kicker' => $rCat !== '' ? (V2_BLOG_CATEGORIES[$rCat] ?? $rCat) : 'Guide',
+        'kicker' => $rCat !== '' ? (V2_BLOG_CATEGORIES[$rCat] ?? $rCat) : v2_t('Guide'),
     ];
     if (count($related) >= 3) {
         break;
@@ -228,16 +228,16 @@ foreach ((array) ($railResp['data']['items'] ?? []) as $a) {
 }
 
 // ------------------------------------------------------------------ page
-$breadcrumbs = [['name' => 'Home', 'url' => '/'], ['name' => 'Guides', 'url' => '/guides'], ['name' => $title, 'url' => '/guides/' . $slug]];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => '/'], ['name' => v2_t('Guides'), 'url' => '/guides'], ['name' => $title, 'url' => '/guides/' . $slug]];
 $canonicalUrl = SITE_URL . '/guides/' . $slug;
 $shareLinks = [
     ['Facebook', 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($canonicalUrl)],
     ['WhatsApp', 'https://wa.me/?text=' . rawurlencode($title . ' ' . $canonicalUrl)],
-    ['Email', 'mailto:?subject=' . rawurlencode($title) . '&body=' . rawurlencode($canonicalUrl)],
+    [v2_t('Email'), 'mailto:?subject=' . rawurlencode($title) . '&body=' . rawurlencode($canonicalUrl)],
 ];
 
-$pageTitleRaw = $title . ': guide | ' . SITE_NAME;
-$descSource = $excerpt !== '' ? $excerpt : 'Activity guide on ' . SITE_NAME . ': ' . $title;
+$pageTitleRaw = v2_t('{title}: guide', ['title' => $title]) . ' | ' . SITE_NAME;
+$descSource = $excerpt !== '' ? $excerpt : v2_t('Activity guide on {site}: {title}', ['site' => SITE_NAME, 'title' => $title]);
 if (mb_strlen($descSource) > 160) {
     $cut = mb_substr($descSource, 0, 160);
     $descSource = rtrim(mb_substr($cut, 0, mb_strrpos($cut, ' ') ?: 160), ' ,.;:–-') . '…';
@@ -266,7 +266,7 @@ $structuredData = [$gdClean([
     'image' => $coverUrl,
     'datePublished' => $dateIso,
     'articleSection' => $catName,
-    'inLanguage' => 'en',
+    'inLanguage' => v2_locale(),
     'author' => ['@type' => 'Organization', 'name' => SITE_NAME],
     'publisher' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL . '/'],
 ]), [
@@ -292,7 +292,7 @@ include __DIR__ . '/includes/v2/header.php';
     <!-- ===================== HEAD ===================== -->
     <header class="gd-head">
       <div class="wrap gd-head-in">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $bi => $bc): ?>
             <?php if ($bi > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($bi < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bc['url']) ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
@@ -302,8 +302,8 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($excerpt !== ''): ?><p class="gd-lead"><?= v2_e($excerpt) ?></p><?php endif; ?>
         <div class="gd-byline">
           <span class="gd-avatar" aria-hidden="true"><svg viewBox="24 53 148 150"><use href="#sym-g"/></svg></span>
-          <p class="gd-by"><b>Viaqui guide</b><span><?php if ($dateLabel !== ''): ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time><span aria-hidden="true">·</span><?php endif; ?><?= v2_e($readTime) ?> read</span></p>
-          <a class="gd-share-jump" href="#gd-share"><?= v2_ic('link') ?>Share this guide</a>
+          <p class="gd-by"><b><?= v2_te('Viaqui guide') ?></b><span><?php if ($dateLabel !== ''): ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time><span aria-hidden="true">·</span><?php endif; ?><?= v2_te('{n} min read', ['n' => $readMinutes]) ?></span></p>
+          <a class="gd-share-jump" href="#gd-share"><?= v2_ic('link') ?><?= v2_te('Share this guide') ?></a>
         </div>
       </div>
       <?php if ($coverUrl): ?>
@@ -318,7 +318,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="wrap gd-layout<?= $gdToc ? ' has-toc' : '' ?>">
         <?php if ($gdToc): ?>
         <nav class="gd-toc" aria-labelledby="gd-toc-h">
-          <button class="gd-toc-toggle" type="button" id="gd-toc-toggle" aria-expanded="false" aria-controls="gd-toc-list"><span id="gd-toc-h">In this guide</span><small><?= $gdTocCount ?> sections</small><?= v2_ic('caret-down') ?></button>
+          <button class="gd-toc-toggle" type="button" id="gd-toc-toggle" aria-expanded="false" aria-controls="gd-toc-list"><span id="gd-toc-h"><?= v2_te('In this guide') ?></span><small><?= v2_e(v2_num($gdTocCount, 'section', 'sections')) ?></small><?= v2_ic('caret-down') ?></button>
           <ol class="gd-toc-list" id="gd-toc-list">
             <?php foreach ($gdToc as $ti => $t): ?>
             <li><a href="#<?= v2_e($t['id']) ?>" data-toc="<?= v2_e($t['id']) ?>"><?php if ($t['level'] === 2): ?><span class="gd-toc-n" aria-hidden="true"><?= str_pad((string) (count(array_filter(array_slice($gdToc, 0, $ti + 1), fn ($x) => $x['level'] === 2))), 2, '0', STR_PAD_LEFT) ?></span><?php endif; ?><span><?= v2_e($t['text']) ?></span></a>
@@ -335,10 +335,10 @@ include __DIR__ . '/includes/v2/header.php';
 
         <div class="gd-main">
           <?php if ($event): ?>
-          <aside class="gd-event" aria-label="Event in this guide">
+          <aside class="gd-event" aria-label="<?= v2_te('Event in this guide') ?>">
             <span class="gd-event-ic" aria-hidden="true"><?= v2_ic('ticket') ?></span>
-            <p><small>Event in this guide</small><b><?= v2_e($eventTitle) ?></b></p>
-            <a class="btn btn-primary" href="/bilete/<?= v2_e($event['slug']) ?>">See tickets<?= v2_ic('arrow-right') ?></a>
+            <p><small><?= v2_te('Event in this guide') ?></small><b><?= v2_e($eventTitle) ?></b></p>
+            <a class="btn btn-primary" href="/bilete/<?= v2_e($event['slug']) ?>"><?= v2_te('See tickets') ?><?= v2_ic('arrow-right') ?></a>
           </aside>
           <?php endif; ?>
 
@@ -346,44 +346,44 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($contentHtml !== ''): ?>
             <?= $contentHtml /* authored in the admin RichEditor: trusted HTML */ ?>
             <?php else: ?>
-            <p class="gd-empty">This guide will be available soon.</p>
+            <p class="gd-empty"><?= v2_te('This guide will be available soon.') ?></p>
             <?php endif; ?>
           </div>
 
           <section class="gd-end" id="gd-share" aria-labelledby="gd-share-h">
-            <h2 class="gd-end-h" id="gd-share-h">Was it useful? Send it to someone you go out with.</h2>
+            <h2 class="gd-end-h" id="gd-share-h"><?= v2_te('Was it useful? Send it to someone you go out with.') ?></h2>
             <div class="gd-share">
-              <button class="is-native" type="button" data-native-share data-title="<?= v2_e($title) ?>" data-url="<?= v2_e($canonicalUrl) ?>" hidden>Share via apps</button>
+              <button class="is-native" type="button" data-native-share data-title="<?= v2_e($title) ?>" data-url="<?= v2_e($canonicalUrl) ?>" hidden><?= v2_te('Share via apps') ?></button>
               <?php foreach ($shareLinks as [$shareLabel, $shareUrl]): ?>
-              <a href="<?= v2_e($shareUrl) ?>"<?= $shareLabel !== 'Email' ? ' target="_blank" rel="noopener"' : '' ?> aria-label="Share this guide on <?= v2_e($shareLabel) ?>"><?= v2_e($shareLabel) ?></a>
+              <a href="<?= v2_e($shareUrl) ?>"<?= strncmp($shareUrl, 'mailto:', 7) !== 0 ? ' target="_blank" rel="noopener"' : '' ?> aria-label="<?= strncmp($shareUrl, 'mailto:', 7) !== 0 ? v2_te('Share this guide on {network}', ['network' => $shareLabel]) : v2_te('Share this guide by email') ?>"><?= v2_e($shareLabel) ?></a>
               <?php endforeach; ?>
-              <button type="button" data-copy="<?= v2_e($canonicalUrl) ?>"><?= v2_ic('link') ?>Copy link</button>
+              <button type="button" data-copy="<?= v2_e($canonicalUrl) ?>"><?= v2_ic('link') ?><?= v2_te('Copy link') ?></button>
             </div>
             <span class="sr" role="status" id="gd-copy-status"></span>
           </section>
 
           <section class="gd-faq" aria-labelledby="faq">
-            <h2 id="faq">Frequently asked questions</h2>
+            <h2 id="faq"><?= v2_te('Frequently asked questions') ?></h2>
             <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
             <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
             <?php endforeach; ?>
           </section>
 
           <section class="gd-next" aria-labelledby="gd-next-h">
-            <h2 class="sr" id="gd-next-h">Where to next</h2>
+            <h2 class="sr" id="gd-next-h"><?= v2_te('Where to next') ?></h2>
             <?php if ($topicHref !== ''): ?>
             <a class="gd-next-card is-topic" href="<?= v2_e($topicHref) ?>">
-              <small>Want to go straight to activities?</small>
-              <b>See activities related to this guide</b>
-              <span class="gd-next-go"><?= v2_e($catName ?: 'See activities') ?><?= v2_ic('arrow-right') ?></span>
+              <small><?= v2_te('Want to go straight to activities?') ?></small>
+              <b><?= v2_te('See activities related to this guide') ?></b>
+              <span class="gd-next-go"><?= $catName !== '' ? v2_e($catName) : v2_te('See activities') ?><?= v2_ic('arrow-right') ?></span>
             </a>
             <?php endif; ?>
             <a class="gd-next-card is-gift" href="/gift-card">
-              <small>Gift card</small>
-              <b>Not sure what to pick? Send a gift card and let them choose the experience.</b>
-              <span class="gd-next-go"><?= v2_ic('gift') ?>Buy a gift card</span>
+              <small><?= v2_te('Gift card') ?></small>
+              <b><?= v2_te('Not sure what to pick? Send a gift card and let them choose the experience.') ?></b>
+              <span class="gd-next-go"><?= v2_ic('gift') ?><?= v2_te('Buy a gift card') ?></span>
             </a>
-            <p class="gd-next-more"><a href="/categories">All categories<?= v2_ic('arrow-right') ?></a></p>
+            <p class="gd-next-more"><a href="/categories"><?= v2_te('All categories') ?><?= v2_ic('arrow-right') ?></a></p>
           </section>
         </div>
       </div>
@@ -395,10 +395,10 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-rail" aria-labelledby="gd-rail-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">After reading</p><h2 id="gd-rail-h">Recommended activities</h2></div>
+        <div><p class="kicker"><?= v2_te('After reading') ?></p><h2 id="gd-rail-h"><?= v2_te('Recommended activities') ?></h2></div>
         <div class="rail-btns" data-for="gd-rail-list">
-          <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous activities"><?= v2_ic('arrow-left') ?></button>
-          <button class="rail-btn" type="button" data-dir="1" aria-label="Next activities"><?= v2_ic('arrow-right') ?></button>
+          <button class="rail-btn" type="button" data-dir="-1" aria-label="<?= v2_te('Previous activities') ?>"><?= v2_ic('arrow-left') ?></button>
+          <button class="rail-btn" type="button" data-dir="1" aria-label="<?= v2_te('Next activities') ?>"><?= v2_ic('arrow-right') ?></button>
         </div>
       </div>
       <ul class="rail" id="gd-rail-list">
@@ -413,9 +413,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-related" aria-labelledby="gd-related-h">
     <div class="wrap gd-related-in">
       <div class="gd-related-head">
-        <p class="kicker">Read next</p>
-        <h2 id="gd-related-h">Related guides</h2>
-        <a class="sec-link" href="/guides">All guides<?= v2_ic('arrow-right') ?></a>
+        <p class="kicker"><?= v2_te('Read next') ?></p>
+        <h2 id="gd-related-h"><?= v2_te('Related guides') ?></h2>
+        <a class="sec-link" href="/guides"><?= v2_te('All guides') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <ol class="gd-rel-list">
         <?php foreach ($related as $rgi => $rg): ?>

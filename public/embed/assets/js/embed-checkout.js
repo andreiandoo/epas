@@ -40,7 +40,7 @@ const EmbedCheckout = {
             html += '<div style="font-weight:600;font-size:14px;">' + this.esc(item.ticketType.name) + '</div>';
             html += '<div style="font-size:12px;color:var(--muted-color);">' + this.esc(item.event?.title || item.event?.name || '') + '</div>';
             if (item.meta?.visit_date) {
-                html += '<div style="font-size:11px;color:var(--muted-color);">Data: ' + item.meta.visit_date + '</div>';
+                html += '<div style="font-size:11px;color:var(--muted-color);">' + VQ.t('Date: {date}', { date: item.meta.visit_date }) + '</div>';
             }
             html += '</div>';
 
@@ -52,10 +52,10 @@ const EmbedCheckout = {
             html += '</div>';
 
             // Line total
-            html += '<div style="width:80px;text-align:right;font-weight:600;font-size:14px;">' + line.toFixed(2) + ' RON</div>';
+            html += '<div style="width:80px;text-align:right;font-weight:600;font-size:14px;">' + EmbedMoney(line) + '</div>';
 
             // Remove
-            html += '<button onclick="EmbedCheckout.removeItem(\'' + item.key + '\')" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:16px;padding:4px;" title="Elimină">×</button>';
+            html += '<button onclick="EmbedCheckout.removeItem(\'' + item.key + '\')" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:16px;padding:4px;" title="' + VQ.t('Remove') + '">×</button>';
 
             html += '</div>';
         });
@@ -91,13 +91,13 @@ const EmbedCheckout = {
             total = Math.max(0, subtotal - this.promoDiscount);
             if ($discountLine) {
                 $discountLine.style.display = 'flex';
-                $discountLine.innerHTML = '<span>Reducere (' + this.esc(this.promoCode) + ')</span><span>-' + this.promoDiscount.toFixed(2) + ' RON</span>';
+                $discountLine.innerHTML = '<span>' + VQ.t('Discount ({code})', { code: this.esc(this.promoCode) }) + '</span><span>-' + EmbedMoney(this.promoDiscount) + '</span>';
             }
         } else if ($discountLine) {
             $discountLine.style.display = 'none';
         }
 
-        if ($total) $total.textContent = total.toFixed(2) + ' RON';
+        if ($total) $total.textContent = EmbedMoney(total);
         if ($payBtn) $payBtn.disabled = cart.items.length === 0;
     },
 
@@ -129,7 +129,7 @@ const EmbedCheckout = {
 
         $msg.style.display = '';
         $msg.style.color = 'var(--muted-color)';
-        $msg.textContent = 'Se verifică...';
+        $msg.textContent = VQ.t('Checking…');
 
         try {
             const cart = EmbedCart.getCart();
@@ -155,18 +155,18 @@ const EmbedCheckout = {
                 }
 
                 $msg.style.color = '#16a34a';
-                $msg.textContent = 'Cod aplicat! Reducere: ' + this.promoDiscount.toFixed(2) + ' RON';
+                $msg.textContent = VQ.t('Code applied! Discount: {amount}', { amount: EmbedMoney(this.promoDiscount) });
                 this.renderSummary();
             } else {
                 $msg.style.color = '#dc2626';
-                $msg.textContent = result.data?.message || result.message || 'Cod invalid.';
+                $msg.textContent = result.data?.message || result.message || VQ.t('That code is not valid.');
                 this.promoCode = null;
                 this.promoDiscount = 0;
                 this.renderSummary();
             }
         } catch (e) {
             $msg.style.color = '#dc2626';
-            $msg.textContent = 'Eroare la verificare.';
+            $msg.textContent = VQ.t('We could not check the code. Please try again.');
         }
     },
 
@@ -176,11 +176,11 @@ const EmbedCheckout = {
         const $btn = document.getElementById('emb-pay-btn');
         $error.style.display = 'none';
         $btn.disabled = true;
-        $btn.textContent = 'Se procesează...';
+        $btn.textContent = VQ.t('Processing…');
 
         const cart = EmbedCart.getCart();
         if (cart.items.length === 0) {
-            this.showError('Coșul este gol.');
+            this.showError(VQ.t('Your basket is empty.'));
             return;
         }
 
@@ -192,11 +192,11 @@ const EmbedCheckout = {
         const terms = document.getElementById('emb-terms')?.checked;
 
         if (!firstName || !lastName || !email || !phone) {
-            this.showError('Completează toate câmpurile obligatorii.');
+            this.showError(VQ.t('Fill in all the required fields.'));
             return;
         }
         if (!terms) {
-            this.showError('Trebuie să accepți termenii și condițiile.');
+            this.showError(VQ.t('You need to accept the terms and conditions.'));
             return;
         }
 
@@ -233,14 +233,14 @@ const EmbedCheckout = {
             const result = await response.json();
 
             if (!result.success) {
-                this.showError(result.message || result.error || 'Eroare la procesarea comenzii.');
+                this.showError(result.message || result.error || VQ.t('We could not process your order.'));
                 return;
             }
 
             // Extract order from response
             const order = result.data?.order || (result.data?.orders ? result.data.orders[0] : null);
             if (!order) {
-                this.showError('Comanda nu a putut fi creată.');
+                this.showError(VQ.t('The order could not be created.'));
                 return;
             }
 
@@ -263,7 +263,7 @@ const EmbedCheckout = {
 
         } catch (err) {
             console.error('Checkout error:', err);
-            this.showError('Eroare de rețea. Încearcă din nou.');
+            this.showError(VQ.t('Network error. Please try again.'));
         }
     },
 
@@ -273,7 +273,7 @@ const EmbedCheckout = {
         $error.textContent = msg;
         $error.style.display = '';
         $btn.disabled = false;
-        $btn.textContent = 'Plătește cu cardul';
+        $btn.textContent = VQ.t('Pay by card');
     },
 
     esc(str) {

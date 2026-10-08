@@ -19,7 +19,7 @@
     if (email) parts.push('email=' + encodeURIComponent(email));
     return parts.length ? '?' + parts.join('&') : '';
   }
-  var STRENGTH = { 1: ['Weak', 'bad'], 2: ['Fair', 'mid'], 3: ['Strong', 'ok'], 4: ['Very strong', 'ok'] };
+  var STRENGTH = { 1: [VQ.t('Weak'), 'bad'], 2: [VQ.t('Fair'), 'mid'], 3: [VQ.t('Strong'), 'ok'], 4: [VQ.t('Very strong'), 'ok'] };
 
   function readLink() {
     var fromUrl = window.BO_RESET_LINK;
@@ -40,7 +40,7 @@
   function expired(focus) {
     forget();
     var email = link && link.email;
-    $('rp-new-link').href = '/forgot-password' + query(email);
+    $('rp-new-link').href = VQ.url('/forgot-password') + query(email);
     show('rp-expired-view', focus ? 'rp-expired-h' : null);
   }
   function say(text, field) {
@@ -75,14 +75,14 @@
   }
   function checkMatch() {
     if (!pass2.value) hint(match, '');
-    else if (pass.value === pass2.value) hint(match, '✓ Passwords match', 'ok');
-    else hint(match, 'The passwords do not match', 'bad');
+    else if (pass.value === pass2.value) hint(match, VQ.t('✓ Passwords match'), 'ok');
+    else hint(match, VQ.t('The passwords do not match'), 'bad');
   }
   pass.addEventListener('input', function () {
     var p = pass.value, s = score(p);
     meter.setAttribute('data-score', String(s));
     if (!p) hint(strength, '');
-    else if (p.length < 8) hint(strength, 'Too short · at least 8 characters', 'bad');
+    else if (p.length < 8) hint(strength, VQ.t('Too short · at least 8 characters'), 'bad');
     else hint(strength, STRENGTH[s][0], STRENGTH[s][1]);
     checkMatch();
   });
@@ -93,9 +93,9 @@
       visible = !visible;
       [pass, pass2].forEach(function (el) { el.type = visible ? 'text' : 'password'; });
       [].forEach.call(document.querySelectorAll('[data-toggle-pass]'), function (b) {
-        b.textContent = visible ? 'hide' : 'show';
+        b.textContent = visible ? VQ.t('hide') : VQ.t('show');
         b.setAttribute('aria-pressed', String(visible));
-        b.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+        b.setAttribute('aria-label', visible ? VQ.t('Hide password') : VQ.t('Show password'));
       });
     });
   });
@@ -117,20 +117,20 @@
     e.preventDefault();
     if (busy || !link) return;
     error.hidden = true;
-    if (pass.value.length < 8) { say('Your password must be at least 8 characters long.', pass); return; }
-    if (pass.value !== pass2.value) { say('The passwords do not match.', pass2); return; }
-    if (typeof BileteOnlineAPI === 'undefined') { say('We could not save your password just now. Try again in a few moments.'); return; }
+    if (pass.value.length < 8) { say(VQ.t('Your password must be at least 8 characters long.'), pass); return; }
+    if (pass.value !== pass2.value) { say(VQ.t('The passwords do not match.'), pass2); return; }
+    if (typeof BileteOnlineAPI === 'undefined') { say(VQ.t('We could not save your password just now. Try again in a few moments.')); return; }
 
     busy = true;
     submit.disabled = true;
-    submit.textContent = 'Saving…';
+    submit.textContent = VQ.t('Saving…');
     BileteOnlineAPI.post(venue ? '/organizer/reset-password' : '/customer/reset-password', { token: link.token, email: link.email, password: pass.value, password_confirmation: pass2.value })
       .then(function (resp) {
         if (!(resp && resp.success !== false)) throw { status: -1 };
         forget();
         signOutLocally(link.email);
         pass.value = pass2.value = '';
-        $('rp-login').href = '/login' + query(link.email);
+        $('rp-login').href = VQ.url('/login') + query(link.email);
         show('rp-done-view', 'rp-done-h');
       })
       .catch(function (err) {
@@ -138,12 +138,12 @@
         if (status === 400 || status === 404 || (status === 422 && (errors.token || errors.email))) { expired(true); return; }
         if (status === 422 && errors.password) {
           var text = String(errors.password[0] || '');
-          if (/confirm/i.test(text)) say('The passwords do not match.', pass2);
-          else say('Your password must be at least 8 characters long.', pass);
+          if (/confirm/i.test(text)) say(VQ.t('The passwords do not match.'), pass2);
+          else say(VQ.t('Your password must be at least 8 characters long.'), pass);
         }
-        else if (status === 429) say('Too many attempts. Try again in a minute.');
-        else if (status === 0) say('We could not connect. Check your internet connection and try again.');
-        else say('We could not save your password just now. Try again in a few moments.');
+        else if (status === 429) say(VQ.t('Too many attempts. Try again in a minute.'));
+        else if (status === 0) say(VQ.t('We could not connect. Check your internet connection and try again.'));
+        else say(VQ.t('We could not save your password just now. Try again in a few moments.'));
       })
       .then(function () {
         busy = false;

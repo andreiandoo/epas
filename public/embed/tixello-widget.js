@@ -1,21 +1,22 @@
 /**
  * Tixello Widget — self-contained embeddable event cards (Widget B).
- * No dependencies. Fetches data via CORS, renders with scoped CSS.
+ * No dependencies. Fetches data via CORS, renders with scoped CSS. It runs on the operator's own page, where the
+ * site's language layer (VQ) does not exist: its few texts are plain English.
  *
  * Usage (single event):
  *   <div id="tixello-event"></div>
- *   <script src="https://ambilet.ro/embed/tixello-widget.js"
+ *   <script src="https://viaqui.com/embed/tixello-widget.js"
  *     data-type="single"
- *     data-event="slug-eveniment"
- *     data-organizer="slug-organizator"
+ *     data-event="event-slug"
+ *     data-organizer="organizer-slug"
  *     data-theme="light">
  *   </script>
  *
  * Usage (event list):
  *   <div id="tixello-events"></div>
- *   <script src="https://ambilet.ro/embed/tixello-widget.js"
+ *   <script src="https://viaqui.com/embed/tixello-widget.js"
  *     data-type="list"
- *     data-organizer="slug-organizator"
+ *     data-organizer="organizer-slug"
  *     data-limit="6"
  *     data-theme="light">
  *   </script>
@@ -66,14 +67,14 @@
     }
 
     // Show loading
-    container.innerHTML = '<div class="txw-loading">Se încarcă...</div>';
+    container.innerHTML = '<div class="txw-loading">Loading…</div>';
 
     if (type === 'single' && eventSlug) {
         fetchSingleEvent();
     } else if (type === 'list' && organizer) {
         fetchEventList();
     } else {
-        container.innerHTML = '<div class="txw-loading">Configurare incompletă.</div>';
+        container.innerHTML = '<div class="txw-loading">The widget setup is incomplete.</div>';
     }
 
     function fetchSingleEvent() {
@@ -92,7 +93,7 @@
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var events = data.data?.upcomingEvents || [];
-                if (events.length === 0) { container.innerHTML = '<div class="txw-loading">Nu sunt evenimente disponibile.</div>'; return; }
+                if (events.length === 0) { container.innerHTML = '<div class="txw-loading">No events available.</div>'; return; }
                 events = events.slice(0, limit);
                 var html = '<div class="txw-grid">';
                 events.forEach(function (ev) { html += renderCard(ev); });
@@ -119,8 +120,8 @@
         if (image) {
             html += '<div style="position:relative;">';
             html += '<img class="txw-img" src="' + esc(image) + '" alt="' + esc(title) + '" loading="lazy">';
-            if (soldOut) html += '<div class="txw-sold-out">SOLD OUT</div>';
-            else if (price != null) html += '<div class="txw-price">de la ' + Math.round(price) + ' RON</div>';
+            if (soldOut) html += '<div class="txw-sold-out">Sold out</div>';
+            else if (price != null) html += '<div class="txw-price">from ' + (ev.currency && !/^eur$/i.test(ev.currency) ? Math.round(price) + ' ' + esc(ev.currency) : '€' + Math.round(price)) + '</div>';
             html += '</div>';
         }
         html += '<div class="txw-body">';
@@ -140,7 +141,7 @@
             else if (host.includes('ambilet')) marketplaceName = 'AmBilet';
             else marketplaceName = host.replace(/^www\./, '');
         } catch(e) {}
-        return '<div class="txw-badge">Bilete prin <a href="' + baseUrl + '" target="_blank" rel="noopener">' + esc(marketplaceName) + '</a></div>';
+        return '<div class="txw-badge">Tickets by <a href="' + baseUrl + '" target="_blank" rel="noopener">' + esc(marketplaceName) + '</a></div>';
     }
 
     function formatDate(dateStr) {

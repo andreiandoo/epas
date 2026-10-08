@@ -12,6 +12,7 @@
 
 require_once dirname(__DIR__) . '/includes/config.php';
 require_once dirname(__DIR__) . '/includes/embed-return.php';
+require_once dirname(__DIR__) . '/includes/v2/i18n.php'; // v2_te() for the message below; checkout.php loads the rest
 
 $ckAllowRaw = isset($_GET['a']) && is_string($_GET['a']) ? $_GET['a'] : '';
 $ckAllow = $ckAllowRaw !== '' ? bo_embed_allow_verify($ckAllowRaw) : null;
@@ -24,9 +25,9 @@ header('Cache-Control: no-store');
 if (!$ckAllow || !$ckPage) {
     http_response_code(403);
     header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Sesiune expirată</title>'
+    echo '<!DOCTYPE html><html lang="' . htmlspecialchars(v2_locale(), ENT_QUOTES) . '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>' . v2_te('Session expired') . '</title>'
         . '<style>body{margin:0;font:16px/1.5 system-ui,sans-serif;color:#1B1F1D;background:transparent}div{max-width:520px;margin:24px auto;padding:24px;border:1px solid #E4E2DA;border-radius:16px;background:#fff}h1{margin:0 0 6px;font-size:1.125rem}p{margin:0;color:#5F6461}</style></head>'
-        . '<body><div><h1>Sesiunea de cumpărare a expirat</h1><p>Reîncarcă pagina și alege din nou biletele.</p></div></body></html>';
+        . '<body><div><h1>' . v2_te('Your booking session has expired') . '</h1><p>' . v2_te('Reload the page and choose your tickets again.') . '</p></div></body></html>';
     exit;
 }
 

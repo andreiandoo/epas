@@ -24,7 +24,7 @@ function emb_stop(int $code, string $title, string $text): void
     http_response_code($code);
     header('Content-Type: text/html; charset=utf-8');
     header('X-Robots-Tag: noindex');
-    echo '<!DOCTYPE html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">'
+    echo '<!DOCTYPE html><html lang="' . v2_e(v2_locale()) . '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">'
         . '<title>' . v2_e($title) . '</title><style>body{margin:0;font:16px/1.5 system-ui,sans-serif;color:#1B1F1D;background:#F7F6F2}div{max-width:520px;margin:40px auto;padding:24px;border:1px solid #E4E2DA;border-radius:16px;background:#fff}h1{margin:0 0 6px;font-size:1.125rem}p{margin:0;color:#5F6461}</style></head>'
         . '<body><div><h1>' . v2_e($title) . '</h1><p>' . v2_e($text) . '</p></div></body></html>';
     exit;
@@ -32,20 +32,20 @@ function emb_stop(int $code, string $title, string $text): void
 
 $slug = $_GET['slug'] ?? '';
 if (!is_string($slug) || !preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
-    emb_stop(404, 'Locația nu există', 'Verifică adresa widget-ului în contul de operator.');
+    emb_stop(404, v2_t('This venue does not exist'), v2_t('Check the widget address in your operator account.'));
 }
 
 $amLocation = api_cached("am_location_{$slug}", fn () => api_get('/activities-module/locations/' . $slug), 60);
 $location = (!empty($amLocation['success']) && is_array($amLocation['data'] ?? null) && ($amLocation['data']['slug'] ?? '') === $slug) ? $amLocation['data'] : null;
 if (!$location) {
-    emb_stop(404, 'Locația nu există', 'Locația nu e publicată pe viaqui.com sau adresa widget-ului e greșită.');
+    emb_stop(404, v2_t('This venue does not exist'), v2_t('The venue is not published on viaqui.com or the widget address is wrong.'));
 }
 
 $orgSlug = is_array($location['organizer'] ?? null) ? (string) ($location['organizer']['slug'] ?? '') : '';
 $org = $orgSlug !== '' ? api_cached('embed_am_org_' . $orgSlug, fn () => api_get('/marketplace-events/organizers/' . urlencode($orgSlug)), 60) : null;
 $orgData = is_array($org['data'] ?? null) ? $org['data'] : [];
 if (empty($orgData['widget_enabled'])) {
-    emb_stop(403, 'Widget-ul nu e activ', 'Widget-urile embed nu sunt activate pentru acest operator. Biletele se pot cumpăra pe viaqui.com.');
+    emb_stop(403, v2_t('This widget is not active'), v2_t('Embedded widgets are not turned on for this operator. Tickets can be bought on viaqui.com.'));
 }
 
 // Who may frame the widget: viaqui.com and the operator's domains (site.ro also allows www.site.ro and back).
@@ -71,7 +71,7 @@ foreach ((array) ($orgData['embed_domains'] ?? []) as $d) {
 header('Content-Security-Policy: frame-ancestors ' . implode(' ', $ancestors));
 header('X-Robots-Tag: noindex');
 
-$lcName     = navFlatName($location['name'] ?? '') ?: 'Locație';
+$lcName     = navFlatName($location['name'] ?? '') ?: v2_t('Venue');
 $lcCity     = is_array($location['city'] ?? null) ? $location['city'] : [];
 $lcCityName = navFlatName($lcCity['name'] ?? '');
 $lcCover    = v2_media_url($location['cover_image'] ?? null) ?? '';
@@ -84,7 +84,7 @@ if ($only) {
     $needsAccess = ($only[0]['access_requirement'] ?? 'none') !== 'none';
     $lcProducts = array_values(array_filter($lcProducts, fn ($p) => (int) $p['id'] === $onlyId || ($needsAccess && ($p['type'] ?? '') === 'access')));
 }
-$heading = $only ? (navFlatName($only[0]['title'] ?? '') ?: $lcName) : 'Bilete și experiențe';
+$heading = $only ? (navFlatName($only[0]['title'] ?? '') ?: $lcName) : v2_t('Tickets and experiences');
 
 $bookingProducts = array_map(fn ($p) => [
     'id' => $p['id'], 'slug' => $p['slug'] ?? null, 'type' => $p['type'] ?? 'access', 'title' => navFlatName($p['title'] ?? ''),
@@ -109,7 +109,7 @@ $clientData = ['booking' => [
     'today' => (new DateTimeImmutable('now', $lcTz))->format('Y-m-d'),
     'max_days' => max(1, (int) ($location['max_advance_days'] ?? 0) ?: 90),
     'focus_product_id' => null,
-    // "Înapoi la <site>" on the thank-you page: a signed address of the operator's page framing the widget
+    // "Back to <site>" on the thank-you page: a signed address of the operator's page framing the widget
     'return_token' => bo_return_token($ancestors),
     // Checkout inside the widget (embed code v2): the operator's allowed sites, and the same list signed for the
     // embedded checkout, confirmation and return pages (includes/embed-return.php)
@@ -117,13 +117,13 @@ $clientData = ['booking' => [
     'embed_allow' => count($ancestors) > 1 ? bo_embed_allow_token($slug, array_slice($ancestors, 1)) : null,
 ]];
 ?><!DOCTYPE html>
-<html lang="ro">
+<html lang="<?= v2_e(v2_locale()) ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title><?= v2_e($lcName) ?> · viaqui.com</title>
-<link rel="canonical" href="<?= v2_e(SITE_URL . '/locatie/' . $slug) ?>">
+<link rel="canonical" href="<?= v2_e(SITE_URL . '/venue/' . $slug) ?>">
 <link rel="preconnect" href="<?= v2_e(CORE_URL) ?>" crossorigin>
 <link rel="preload" href="/assets/v2/fonts/Geist-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="<?= v2_asset('css/base.css') ?>">
@@ -140,54 +140,54 @@ $clientData = ['booking' => [
       <?php if ($lcCover): ?><img class="emb-img" src="<?= v2_e($lcCover) ?>" alt="" width="48" height="48" loading="lazy"><?php endif; ?>
       <div><p class="emb-name"><?= v2_e($lcName) ?></p><?php if ($lcCityName !== ''): ?><p class="emb-city"><?= v2_e($lcCityName) ?></p><?php endif; ?></div>
     </div>
-    <a class="emb-by" href="<?= v2_e(SITE_URL . '/locatie/' . $slug) ?>" rel="noopener">Bilete oficiale prin <b>viaqui.com</b></a>
+    <a class="emb-by" href="<?= v2_e(SITE_URL . '/venue/' . $slug) ?>" rel="noopener"><?= v2_t('Official tickets by <b>viaqui.com</b>') ?></a>
   </header>
 
   <?php if (!$lcProducts): ?>
-  <p class="emb-empty">Momentan nu sunt bilete de vânzare aici. Revino în curând.</p>
+  <p class="emb-empty"><?= v2_te('There are no tickets on sale here right now. Check back soon.') ?></p>
   <?php else: ?>
   <section class="bkx-sec" id="bilete" aria-labelledby="bkx-h">
     <div class="bkx-grid" id="bkx">
       <div>
         <div class="bkx-head">
           <div><h2 id="bkx-h"><?= v2_e($heading) ?></h2></div>
-          <button class="bkx-link" type="button" id="bkx-cal-toggle" aria-expanded="false" aria-controls="bkx-cal">Altă dată</button>
+          <button class="bkx-link" type="button" id="bkx-cal-toggle" aria-expanded="false" aria-controls="bkx-cal"><?= v2_te('Another date') ?></button>
         </div>
-        <ul class="bkx-days" id="bkx-days" aria-label="Alege ziua vizitei"></ul>
+        <ul class="bkx-days" id="bkx-days" aria-label="<?= v2_te('Choose the day of your visit') ?>"></ul>
         <div class="bkx-cal" id="bkx-cal" hidden>
           <div class="bkx-cal-head">
-            <button class="rail-btn" type="button" id="bkx-cal-prev" aria-label="Luna anterioară"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" id="bkx-cal-prev" aria-label="<?= v2_te('Previous month') ?>"><?= v2_ic('arrow-left') ?></button>
             <p id="bkx-cal-title" aria-live="polite"></p>
-            <button class="rail-btn" type="button" id="bkx-cal-next" aria-label="Luna următoare"><?= v2_ic('arrow-right') ?></button>
+            <button class="rail-btn" type="button" id="bkx-cal-next" aria-label="<?= v2_te('Next month') ?>"><?= v2_ic('arrow-right') ?></button>
           </div>
-          <div class="bkx-cal-dow" aria-hidden="true"><span>L</span><span>Ma</span><span>Mi</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+          <div class="bkx-cal-dow" aria-hidden="true"><span><?= v2_te('Mo') ?></span><span><?= v2_te('Tu') ?></span><span><?= v2_te('We') ?></span><span><?= v2_te('Th') ?></span><span><?= v2_te('Fr') ?></span><span><?= v2_te('Sa') ?></span><span><?= v2_te('Su') ?></span></div>
           <div class="bkx-cal-grid" id="bkx-cal-grid"></div>
         </div>
         <p class="bkx-hours" id="bkx-hours" aria-live="polite"></p>
-        <div class="bkx-tabs" id="bkx-tabs" role="group" aria-label="Categorii de bilete" hidden></div>
+        <div class="bkx-tabs" id="bkx-tabs" role="group" aria-label="<?= v2_te('Ticket categories') ?>" hidden></div>
         <div class="bkx-list" id="bkx-list"></div>
       </div>
 
-      <aside class="bkx-side" aria-label="Rezervarea ta">
+      <aside class="bkx-side" aria-label="<?= v2_te('Your booking') ?>">
         <div class="bkx-sum" id="bkx-sum" hidden>
-          <h3>Rezervarea ta</h3>
+          <h3><?= v2_te('Your booking') ?></h3>
           <ul class="bkx-lines" id="bkx-lines"></ul>
-          <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub">0 lei</strong></div>
-          <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label">Comision ticketing</span><strong id="bkx-fee">0 lei</strong></div>
-          <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total">0 lei</strong></div>
+          <div class="bkx-row"><span><?= v2_te('Subtotal') ?></span><strong id="bkx-sub"><?= v2_e(v2_money(0)) ?></strong></div>
+          <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label"><?= v2_te('Ticketing fee') ?></span><strong id="bkx-fee"><?= v2_e(v2_money(0)) ?></strong></div>
+          <div class="bkx-row bkx-total"><span><?= v2_te('Total') ?></span><strong id="bkx-total"><?= v2_e(v2_money(0)) ?></strong></div>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
-            <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continuă spre plată<?= v2_ic('arrow-right') ?></button>
-            <button class="btn btn-ghost" type="button" id="bkx-cart" disabled hidden>Adaugă în coș</button>
+            <button class="btn btn-primary" type="button" id="bkx-go" disabled><?= v2_te('Continue to payment') ?><?= v2_ic('arrow-right') ?></button>
+            <button class="btn btn-ghost" type="button" id="bkx-cart" disabled hidden><?= v2_te('Add to basket') ?></button>
           </div>
-          <p class="bkx-small"><span id="bkx-card-note" hidden>Comisionul de tranzacționare a plății se calculează în checkout, în funcție de metoda de plată aleasă. </span><span id="bkx-pay-note">Plata se face pe viaqui.com, într-o filă nouă. Biletele ajung pe email imediat după plată.</span></p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden><?= v2_te('The payment processing fee is calculated at checkout, depending on the payment method you choose.') ?> </span><span id="bkx-pay-note"><?= v2_te('You pay on viaqui.com, in a new tab. Your tickets arrive by email right after payment.') ?></span></p>
         </div>
-        <p class="emb-safe"><?= v2_ic('lock-simple') ?><span>Plată securizată cu cardul. Operator: <?= v2_e(navFlatName($orgData['name'] ?? '') ?: $lcName) ?></span></p>
+        <p class="emb-safe"><?= v2_ic('lock-simple') ?><span><?= v2_te('Secure card payment. Operator: {name}', ['name' => navFlatName($orgData['name'] ?? '') ?: $lcName]) ?></span></p>
       </aside>
     </div>
     <div class="bkx-bar" id="bkx-bar" hidden>
-      <div><b id="bkx-bar-total">0 lei</b><span id="bkx-bar-count"></span></div>
-      <button class="btn btn-primary" type="button" id="bkx-bar-go">Vezi rezervarea</button>
+      <div><b id="bkx-bar-total"><?= v2_e(v2_money(0)) ?></b><span id="bkx-bar-count"></span></div>
+      <button class="btn btn-primary" type="button" id="bkx-bar-go"><?= v2_te('See your booking') ?></button>
     </div>
   </section>
   <?php endif; ?>
@@ -206,7 +206,7 @@ $clientData = ['booking' => [
   setInterval(post, 1500);
 })();
 </script>
-<script defer src="<?= asset('assets/js/config.js') ?>"></script>
+<?= v2_i18n_script() ?><script defer src="<?= asset('assets/js/config.js') ?>"></script>
 <script defer src="<?= asset('assets/js/cart.js') ?>"></script>
 <script defer src="<?= v2_asset('js/i18n.js') ?>"></script>
 <script defer src="<?= v2_asset('js/hdrag.js') ?>"></script>

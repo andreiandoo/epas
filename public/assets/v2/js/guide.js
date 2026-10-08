@@ -100,8 +100,8 @@
     var label = copy.textContent, timer = null;
     copy.addEventListener('click', function () {
       copyText(copy.getAttribute('data-copy')).then(function (ok) {
-        copy.textContent = ok ? 'Copied ✓' : 'Could not copy';
-        if (status) status.textContent = ok ? 'The guide link was copied.' : 'The link could not be copied.';
+        copy.textContent = ok ? VQ.t('Copied ✓') : VQ.t('Could not copy');
+        if (status) status.textContent = ok ? VQ.t('The guide link was copied.') : VQ.t('The link could not be copied.');
         clearTimeout(timer);
         timer = setTimeout(function () { copy.textContent = label; }, 2500);
       });

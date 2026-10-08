@@ -8,12 +8,14 @@
  * - $authFeatures: Array of features to display (optional)
  */
 
-$authTitle = $authTitle ?? 'Bine ai venit!';
-$authSubtitle = $authSubtitle ?? 'Accesează contul tău pentru a vedea biletele, a descoperi evenimente noi și a folosi punctele acumulate.';
+require_once __DIR__ . '/v2/i18n.php';
+
+$authTitle = $authTitle ?? v2_t('Welcome!');
+$authSubtitle = $authSubtitle ?? v2_t('Sign in to your account to see your tickets, discover new things to do and use the points you have collected.');
 $authFeatures = $authFeatures ?? [
-    ['icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', 'text' => 'Bilete digitale cu cod QR'],
-    ['icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'text' => 'Acumulează puncte la fiecare achiziție'],
-    ['icon' => 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', 'text' => 'Salvează evenimentele preferate'],
+    ['icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', 'text' => v2_t('Digital tickets with a QR code')],
+    ['icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'text' => v2_t('Collect points with every purchase')],
+    ['icon' => 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', 'text' => v2_t('Save your favourites')],
 ];
 ?>
 
@@ -54,8 +56,8 @@ $authFeatures = $authFeatures ?? [
         </div>
 
         <div class="flex items-center gap-6">
-            <a href="/ajutor" class="transition-colors text-white/90 hover:text-white">
-                Ajutor
+            <a href="/help" class="transition-colors text-white/90 hover:text-white">
+                <?= v2_te('Help') ?>
             </a>
         </div>
     </div>
