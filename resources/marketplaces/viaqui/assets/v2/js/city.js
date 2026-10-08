@@ -329,3 +329,123 @@
     });
   }
 })();
+
+/* Flights: "Flying from". The select of large European cities becomes a field that finds any city or airport
+   (Travelpayouts' public place search); the choice is remembered for the next city page. Without this script, or
+   when the place search does not answer, the select keeps working. */
+(function () {
+  'use strict';
+  var form = document.getElementById('fl-form');
+  var select = document.getElementById('fl-from');
+  if (!form || !select || !window.fetch) return;
+  var KEY = 'vq_flight_from';
+  var to = form.getAttribute('data-to') || '';
+  var tpl = form.getAttribute('data-tpl') || '';
+  var anyUrl = form.getAttribute('data-any') || '';
+  var T = window.VQ ? VQ.t : function (s) { return s; };
+  var locale = (window.VQ && VQ.locale) || 'en';
+
+  var box = select.parentNode;
+  var hidden = document.createElement('input');
+  hidden.type = 'hidden'; hidden.name = 'u'; hidden.value = anyUrl;
+  var input = document.createElement('input');
+  input.type = 'text'; input.id = 'fl-from'; input.className = 'fl-from-in';
+  input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-expanded', 'false'); input.setAttribute('aria-controls', 'fl-from-list');
+  input.setAttribute('autocomplete', 'off'); input.setAttribute('spellcheck', 'false');
+  input.placeholder = T('City or airport');
+  var list = document.createElement('ul');
+  list.id = 'fl-from-list'; list.className = 'fl-from-list'; list.setAttribute('role', 'listbox'); list.hidden = true;
+
+  // what the select offered: the suggestions before anything is typed
+  var starters = [].map.call(select.options, function (o) {
+    return o.getAttribute('data-code') ? { code: o.getAttribute('data-code'), name: o.textContent, sub: '' } : null;
+  }).filter(Boolean);
+
+  select.removeAttribute('name'); select.removeAttribute('id'); select.hidden = true;
+  box.appendChild(input); box.appendChild(list); form.appendChild(hidden);
+
+  var items = [], active = -1, chosen = null, timer = null, seq = 0;
+
+  function urlFor(code) { return tpl.replace('__FROM__', encodeURIComponent(code)); }
+  function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); active = -1; }
+  function choose(place, keep) {
+    chosen = place;
+    input.value = place ? place.name : '';
+    hidden.value = place ? urlFor(place.code) : anyUrl;
+    close();
+    if (keep !== false) {
+      try {
+        if (place) localStorage.setItem(KEY, JSON.stringify({ code: place.code, name: place.name }));
+        else localStorage.removeItem(KEY);
+      } catch (e) {}
+    }
+  }
+  function render(rows) {
+    items = rows.filter(function (r) { return r.code && r.code !== to; }).slice(0, 7);
+    list.textContent = '';
+    items.forEach(function (r, i) {
+      var li = document.createElement('li');
+      li.id = 'fl-from-o' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+      var b = document.createElement('b'); b.textContent = r.name;
+      var code = document.createElement('span'); code.className = 'fl-from-code'; code.textContent = r.code;
+      li.appendChild(b);
+      if (r.sub) { var s = document.createElement('small'); s.textContent = r.sub; li.appendChild(s); }
+      li.appendChild(code);
+      li.addEventListener('mousedown', function (e) { e.preventDefault(); choose(r); });
+      list.appendChild(li);
+    });
+    list.hidden = !items.length;
+    input.setAttribute('aria-expanded', items.length ? 'true' : 'false');
+    active = -1;
+  }
+  function mark(i) {
+    if (!items.length) return;
+    active = (i + items.length) % items.length;
+    [].forEach.call(list.children, function (li, n) { li.setAttribute('aria-selected', n === active ? 'true' : 'false'); });
+    input.setAttribute('aria-activedescendant', 'fl-from-o' + active);
+    list.children[active].scrollIntoView({ block: 'nearest' });
+  }
+  function search(term) {
+    var mine = ++seq;
+    fetch('https://autocomplete.travelpayouts.com/places2?locale=' + encodeURIComponent(locale) + '&types[]=city&types[]=airport&term=' + encodeURIComponent(term))
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        if (mine !== seq || document.activeElement !== input) return;
+        render((rows || []).map(function (r) {
+          return { code: r.code, name: r.name, sub: r.type === 'airport' ? [r.city_name, r.country_name].filter(Boolean).join(', ') : (r.country_name || '') };
+        }));
+      })
+      .catch(function () {
+        if (mine === seq) render(starters.filter(function (s) { return s.name.toLowerCase().indexOf(term.toLowerCase()) === 0; }));
+      });
+  }
+
+  input.addEventListener('focus', function () { if (!input.value) render(starters); else input.select(); });
+  input.addEventListener('input', function () {
+    chosen = null; hidden.value = anyUrl;
+    var term = input.value.trim();
+    clearTimeout(timer);
+    if (term.length < 2) { seq++; render(term ? [] : starters); return; }
+    timer = setTimeout(function () { search(term); }, 180);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) render(items.length ? items : starters); mark(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); mark(active - 1); }
+    else if (e.key === 'Enter' && !list.hidden && items.length) { e.preventDefault(); choose(items[active < 0 ? 0 : active]); }
+    else if (e.key === 'Escape' && !list.hidden) { e.preventDefault(); close(); }
+  });
+  input.addEventListener('blur', function () {
+    // typed but not chosen: take the first suggestion, or search from anywhere
+    if (!chosen && input.value.trim() && items.length) choose(items[0]);
+    else if (!chosen) { input.value = ''; hidden.value = anyUrl; close(); }
+    else close();
+  });
+
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && /^[A-Z]{3}$/.test(saved.code || '') && saved.code !== to && typeof saved.name === 'string') {
+      choose({ code: saved.code, name: saved.name.slice(0, 60), sub: '' }, false);
+    }
+  } catch (e) {}
+})();

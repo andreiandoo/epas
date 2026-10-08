@@ -1724,6 +1724,7 @@ return [
         'Fixed amount' => '',      // organizer/promo.php
         'Flags: <a href="{url}" target="_blank" rel="noopener">flag-icons</a> (MIT).' => '',      // photo-credits.php
         'Flower' => '',      // includes/v2/product-icons.php
+        'Flying from' => '',      // city.php
         'Follow conversion from visit to sale, in real time' => '',      // parteneri.php
         'Follow the line from the capital to the sea. Every stop is a city with places you can book before you get there.' => '',      // includes/v2/home/sections.php
         'Food & drink' => '',      // experiente-cadou.php
@@ -2822,7 +2823,7 @@ return [
         'Opening hours, address & access' => '',      // locatie.php
         'Opening hours, exhibitions, tours, adult and child tickets, access.' => '',      // locatii.php
         'Opening hours, roads and driving distances: © <a href="{url}" target="_blank" rel="noopener">OpenStreetMap</a> contributors (ODbL).' => '',      // photo-credits.php
-        'Opens the search on Aviasales, with {city} already filled in.' => '',      // city.php
+        'Opens the search on Aviasales, with your route already filled in.' => '',      // city.php
         'Operated by {company}' => '',      // includes/v2/legal.php
         'Operations' => '',      // pentru-locatii.php
         'Operations / ticket office' => '',      // parteneri.php
@@ -3587,6 +3588,7 @@ return [
         'Search categories' => '',      // categorii.php
         'Search codes…' => '',      // organizer/promo.php
         'Search everywhere' => '',      // region.php
+        'Search flights to {city}' => '',      // city.php
         'Search for a city' => '',      // hub-experiente.php
         'Search for a city in {region}' => '',      // region.php
         'Search for a city in {region}…' => '',      // region.php
