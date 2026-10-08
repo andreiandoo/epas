@@ -5,7 +5,7 @@
    and send. Only the steps that fit the kind are shown; every step can be reopened from the list of steps or from the
    summary. Suggestions (ticket names, what is included, add-ons…) come from the product's category, never from one
    kind of operator. A draft saves itself when moving between steps; an approved product is live, so its changes wait
-   for "Salvează". The product object is sent whole, exactly as the core validates it (OrganizerCatalog::validateProduct).
+   for "Save". The product object is sent whole, exactly as the core validates it (OrganizerCatalog::validateProduct).
    Product icons are keys of includes/v2/product-icons.php (SVG, never emoji). Uses window.BO_ORG and window.BO_AM. */
 (function () {
   'use strict';
@@ -13,7 +13,7 @@
   if (!O || !A || !root) return;
   var el = O.el, F = O.fmt, L = A.L;
   var $ = function (id) { return document.getElementById(id); };
-  var TYPES = L.product_types || { access: 'Bilet de acces', experience: 'Experiență', package: 'Pachet' };
+  var TYPES = L.product_types || { access: 'Entry ticket', experience: 'Experience', package: 'Package' };
   var TYPE_ICON = L.product_type_icons || { access: 'ticket', experience: 'lightning', package: 'gift' };
   var ICONS = L.product_icons || [];
   var ICON = {};
@@ -22,13 +22,14 @@
   var details = {}; // product id → full product (package components need their variants)
   var W = null;     // the open editor
 
+  var PROD_URL = VQ.url('/organizator/produse'), LOC_NEW_URL = VQ.url('/organizator/locatii?nou=1');
   function params() { return new URLSearchParams(window.location.search); }
   function go(url, replace) {
     if (replace) history.replaceState(null, '', url); else history.pushState(null, '', url);
     route();
   }
   function locById(id) { return locations.filter(function (l) { return l.id === id; })[0] || null; }
-  function lei(v) { return F.money(v || 0); }
+  function lei(v) { return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(v || 0) : F.money(v || 0); }
 
   /* =================== data =================== */
   function loadBase() {
@@ -49,8 +50,8 @@
   function fillLocFilter() {
     var s = $('am-f-loc'), keep = s.value || params().get('locatie') || '';
     s.textContent = '';
-    s.appendChild(el('option', { value: '', text: 'Toate locațiile' }));
-    locations.forEach(function (l) { s.appendChild(el('option', { value: String(l.id), text: l.name || ('Locația ' + l.id) })); });
+    s.appendChild(el('option', { value: '', text: VQ.t('All venues') }));
+    locations.forEach(function (l) { s.appendChild(el('option', { value: String(l.id), text: l.name || VQ.t('Venue {id}', { id: l.id }) })); });
     s.value = keep;
     if (s.value !== keep) s.value = '';
   }
@@ -62,7 +63,7 @@
     $('am-prod-filters').hidden = false;
     var box = $('am-prod-list');
     box.textContent = '';
-    box.appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    box.appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     Promise.all([loadBase(), loadProducts()]).then(function () { fillLocFilter(); drawList(); }, function (err) {
       if (err && err.status === 401) return;
       box.hidden = true;
@@ -75,10 +76,10 @@
     if (!locations.length) {
       box.appendChild(el('div', { class: 'org-empty' }, [
         el('span', { class: 'org-empty-ic' }, [O.icon('map-pin')]),
-        el('b', { text: 'Întâi, locația' }),
-        el('p', { text: 'Biletele de acces și pachetele țin de o locație. Adaug-o, apoi revino aici. O experiență poate fi și fără locație.' }),
-        el('a', { class: 'btn btn-primary', href: '/organizator/locatii?nou=1' }, [O.icon('plus'), el('span', { text: 'Adaugă locația' })]),
-        el('a', { class: 'btn btn-ghost', href: '/organizator/produse?nou=1' }, [O.icon('lightning'), el('span', { text: 'Experiență fără locație' })]),
+        el('b', { text: VQ.t('First, the venue') }),
+        el('p', { text: VQ.t('Access tickets and packages belong to a venue. Add it, then come back here. An experience can also have no venue.') }),
+        el('a', { class: 'btn btn-primary', href: LOC_NEW_URL }, [O.icon('plus'), el('span', { text: VQ.t('Add the venue') })]),
+        el('a', { class: 'btn btn-ghost', href: PROD_URL + '?nou=1' }, [O.icon('lightning'), el('span', { text: VQ.t('Experience without a venue') })]),
       ]));
       return;
     }
@@ -87,9 +88,9 @@
     if (!shown.length) {
       box.appendChild(el('div', { class: 'org-empty' }, [
         el('span', { class: 'org-empty-ic' }, [O.icon('ticket')]),
-        el('b', { text: products.length ? 'Niciun produs pentru filtrele alese' : 'Niciun produs încă' }),
-        el('p', { text: 'Un bilet de acces pentru intrare, o experiență (un tur, un atelier, o activitate) sau un pachet cu amândouă.' }),
-        el('a', { class: 'btn btn-primary', href: '/organizator/produse?nou=1' + (loc ? '&locatie=' + loc : '') }, [O.icon('plus'), el('span', { text: 'Adaugă un produs' })]),
+        el('b', { text: products.length ? VQ.t('No products for the chosen filters') : VQ.t('No products yet') }),
+        el('p', { text: VQ.t('An access ticket for entry, an experience (a tour, a workshop, an activity) or a package with both.') }),
+        el('a', { class: 'btn btn-primary', href: PROD_URL + '?nou=1' + (loc ? '&locatie=' + loc : '') }, [O.icon('plus'), el('span', { text: VQ.t('Add a product') })]),
       ]));
       return;
     }
@@ -97,7 +98,7 @@
     ['access', 'experience', 'package'].forEach(function (t) {
       var group = shown.filter(function (p) { return p.type === t; });
       if (!group.length) return;
-      var g = el('div', { class: 've-prod-group' }, [el('p', { class: 've-sec-k', text: { access: 'Bilete de acces', experience: 'Experiențe', package: 'Pachete' }[t] })]);
+      var g = el('div', { class: 've-prod-group' }, [el('p', { class: 've-sec-k', text: { access: VQ.t('Access tickets'), experience: VQ.t('Experiences'), package: VQ.t('Packages') }[t] })]);
       group.forEach(function (p) { g.appendChild(prodRow(p)); });
       list.appendChild(g);
     });
@@ -109,32 +110,32 @@
     var media = el('span', { class: 've-prod-media' }, src ? [el('img', { src: src, alt: '' })] : [O.icon('pi-' + (TYPE_ICON[p.type] || 'ticket'))]);
     var hint = A.statusHint(p);
     var t = el('div', { class: 've-prod-t' }, [
-      el('b', { text: p.title || 'Produs fără titlu' }),
-      el('small', { text: [TYPES[p.type] || '', l ? l.name : '', p.booking_mode === 'slot' ? 'cu oră' : (p.type === 'package' ? '' : 'toată ziua'), p.variants_count ? p.variants_count + (p.variants_count === 1 ? ' bilet' : ' bilete') : ''].filter(Boolean).join(' · ') }),
+      el('b', { text: p.title || VQ.t('Untitled product') }),
+      el('small', { text: [TYPES[p.type] || '', l ? l.name : '', p.booking_mode === 'slot' ? VQ.t('timed') : (p.type === 'package' ? '' : VQ.t('all day')), p.variants_count ? VQ.n(p.variants_count, 'ticket', 'tickets') : ''].filter(Boolean).join(' · ') }),
       el('span', { class: 've-prod-tags' }, A.statusTags(p)),
       hint ? el('small', { class: 'am-hint', text: hint }) : null,
     ]);
-    var price = el('div', { class: 've-prod-price' }, p.min_price != null ? [el('small', { text: 'de la' }), el('b', { text: lei(p.min_price) })] : []);
+    var price = el('div', { class: 've-prod-price' }, p.min_price != null ? [el('small', { text: VQ.t('from') }), el('b', { text: lei(p.min_price) })] : []);
     var tools = el('div', { class: 've-prod-tools' });
-    tools.appendChild(el('a', { class: 'btn btn-ghost', href: '/organizator/produse?id=' + p.id }, [O.icon('gear-six'), el('span', { text: 'Editează' })]));
-    var dup = A.button('copy', 'Copiază', 'btn btn-ghost');
+    tools.appendChild(el('a', { class: 'btn btn-ghost', href: PROD_URL + '?id=' + p.id }, [O.icon('gear-six'), el('span', { text: VQ.t('Edit') })]));
+    var dup = A.button('copy', VQ.t('Copy'), 'btn btn-ghost');
     dup.addEventListener('click', function () { duplicate(p.id); });
     tools.appendChild(dup);
     if (p.is_published && p.public_path && (!p.review_status || p.review_status === 'approved')) {
-      tools.appendChild(el('a', { class: 've-icon-btn', href: p.public_path, target: '_blank', rel: 'noopener', 'aria-label': 'Vezi pe site' }, [O.icon('arrow-right')]));
+      tools.appendChild(el('a', { class: 've-icon-btn', href: p.public_path, target: '_blank', rel: 'noopener', 'aria-label': VQ.t('View on the site') }, [O.icon('arrow-right')]));
     }
     return el('article', { class: 've-prod' + (p.is_published ? '' : ' is-off') }, [media, t, price, tools]);
   }
   function duplicate(id) {
     return A.api('/products/' + id + '/duplicate', { method: 'POST', body: {} }).then(function (r) {
-      O.flash((r && r.message) || 'Copia a fost creată.');
+      O.flash((r && r.message) || VQ.t('The copy was created.'));
       var copy = r && r.data && r.data.product;
       if (copy) {
         products = products.filter(function (x) { return x.id !== copy.id; }).concat([copy]);
         if (W) W.dirty = false;
-        go('/organizator/produse?id=' + copy.id);
+        go(PROD_URL + '?id=' + copy.id);
       }
-    }, function (err) { O.flash(A.errText(err, 'Nu am putut copia produsul.'), true); });
+    }, function (err) { O.flash(A.errText(err, VQ.t('We could not copy the product.')), true); });
   }
   function hideListBits() {
     $('am-prod-list').hidden = true;
@@ -153,7 +154,7 @@
   function num(v) { return v == null || v === '' || isNaN(v) ? null : Number(v); }
   function mins(t) { if (!t || !/^\d{2}:\d{2}$/.test(t)) return null; var a = t.split(':'); return +a[0] * 60 + +a[1]; }
   function hhmm(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
-  function durTxt(m) { if (!m) return ''; if (m < 60) return m + ' min'; var h = Math.floor(m / 60), r = m % 60; return h + (h === 1 ? ' oră' : ' ore') + (r ? ' ' + r + ' min' : ''); }
+  function durTxt(m) { if (!m) return ''; if (m < 60) return VQ.t('{n} min', { n: m }); var h = Math.floor(m / 60), r = m % 60; return r ? VQ.t('{hours} {n} min', { hours: VQ.n(h, 'hour', 'hours'), n: r }) : VQ.n(h, 'hour', 'hours'); }
   function reduced() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
   function getP(path) { return path.split('.').reduce(function (o, k) { return o == null ? o : o[k]; }, W.p); }
   function setP(path, val) {
@@ -163,119 +164,121 @@
   }
   function idOf(path) { return 'wz-' + path.replace(/\./g, '-'); }
 
-  var DAYS = [[1, 'Luni', 'mon'], [2, 'Marți', 'tue'], [3, 'Miercuri', 'wed'], [4, 'Joi', 'thu'], [5, 'Vineri', 'fri'], [6, 'Sâmbătă', 'sat'], [7, 'Duminică', 'sun']];
-  var MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
-  var MONTHS_LONG = (L.months && L.months.length === 12) ? L.months : ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-  var LANGS = [['ro', 'Română'], ['en', 'Engleză'], ['hu', 'Maghiară'], ['de', 'Germană'], ['fr', 'Franceză']];
-  var CANCEL = [['Anulare gratuită cu 24 de ore înainte.', '24 de ore'], ['Anulare gratuită cu 48 de ore înainte.', '48 de ore'], ['Anulare gratuită cu 7 zile înainte.', '7 zile'], ['Biletul nu se returnează.', 'Nereturnabil']];
+  var DAY_NAMES = L.days || {};
+  var DAYS = [[1, DAY_NAMES.mon || 'Monday', 'mon'], [2, DAY_NAMES.tue || 'Tuesday', 'tue'], [3, DAY_NAMES.wed || 'Wednesday', 'wed'], [4, DAY_NAMES.thu || 'Thursday', 'thu'], [5, DAY_NAMES.fri || 'Friday', 'fri'], [6, DAY_NAMES.sat || 'Saturday', 'sat'], [7, DAY_NAMES.sun || 'Sunday', 'sun']];
+  var DATE_LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var MONTHS = Array.from({ length: 12 }, function (_, i) { try { return new Date(2020, i, 1).toLocaleDateString(DATE_LOC, { month: 'short' }); } catch (e) { return String(i + 1); } });
+  var MONTHS_LONG = (L.months && L.months.length === 12) ? L.months : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var LANGS = [['ro', VQ.t('Romanian')], ['en', VQ.t('English')], ['hu', VQ.t('Hungarian')], ['de', VQ.t('German')], ['fr', VQ.t('French')]];
+  var CANCEL = [[VQ.t('Free cancellation up to 24 hours before.'), VQ.t('24 hours')], [VQ.t('Free cancellation up to 48 hours before.'), VQ.t('48 hours')], [VQ.t('Free cancellation up to 7 days before.'), VQ.t('7 days')], [VQ.t('The ticket is non-refundable.'), VQ.t('Non-refundable')]];
   function mdText(md) { if (!md || !/^\d{2}-\d{2}$/.test(md)) return ''; return (+md.slice(3)) + ' ' + MONTHS_LONG[+md.slice(0, 2) - 1]; }
 
   /* =================== suggestions, by category ===================
      KIT_BASE fits any operator; a category only overrides what is different for it. They are one-tap shortcuts:
      nothing here is required and the operator can write anything else. */
   var KIT_BASE = {
-    titles: { access: ['Intrare', 'Bilet de zi', 'Abonament'], experience: ['Tur ghidat', 'Atelier', 'Închiriere'], package: ['Intrare + experiență', 'Pachet de familie'] },
-    vt: { access: [['Adult', {}], ['Copil', { is_child: true }], ['Elev / student', { description: 'Cu legitimație valabilă' }], ['Pensionar', {}], ['Grup', { min_per_order: 8, description: 'Minimum 8 persoane' }], ['Familie 2+2', { price_type: 'per_unit', persons_max: 4 }]],
-      experience: [['Persoană', {}], ['Copil', {}], ['Grup privat', { price_type: 'per_unit', persons_max: 10 }]] },
-    incl: { access: ['Acces toată ziua'], experience: ['Instructaj'], package: ['Toate biletele din pachet'] },
-    notIncl: ['Transport', 'Mâncare și băuturi'],
-    req: ['Vino cu 15 minute mai devreme'],
-    terms: ['Biletul se arată la intrare, de pe telefon.'],
-    addons: ['Pachet foto', 'Parcare'],
+    titles: { access: [VQ.t('Entry'), VQ.t('Day ticket'), VQ.t('Season pass')], experience: [VQ.t('Guided tour'), VQ.t('Workshop'), VQ.t('Rental')], package: [VQ.t('Entry + experience'), VQ.t('Family package')] },
+    vt: { access: [[VQ.t('Adult'), {}], [VQ.t('Child'), { is_child: true }], [VQ.t('Pupil / student'), { description: VQ.t('With a valid student card') }], [VQ.t('Senior'), {}], [VQ.t('Group'), { min_per_order: 8, description: VQ.t('Minimum 8 people') }], [VQ.t('Family 2+2'), { price_type: 'per_unit', persons_max: 4 }]],
+      experience: [[VQ.t('Person'), {}], [VQ.t('Child'), {}], [VQ.t('Private group'), { price_type: 'per_unit', persons_max: 10 }]] },
+    incl: { access: [VQ.t('All-day access')], experience: [VQ.t('Briefing')], package: [VQ.t('All the tickets in the package')] },
+    notIncl: [VQ.t('Transport'), VQ.t('Food and drinks')],
+    req: [VQ.t('Arrive 15 minutes early')],
+    terms: [VQ.t('Show the ticket at the entrance, on your phone.')],
+    addons: [VQ.t('Photo package'), VQ.t('Parking')],
     icons: ['ticket', 'star', 'group', 'lightning', 'gift', 'camera', 'parking', 'compass'],
-    unit: { many: 'unități', eg: 'Ai 10 unități. Una plecată la 10:00 pentru o oră e iar liberă la 11:00.' },
-    perUnit: 'O echipă, o mașină, un loc de cort: un bilet, oricâți ar fi.',
-    personsHint: 'Câte persoane intră pe un singur bilet.',
-    ph: { short: { access: 'Intrarea, valabilă toată ziua.', experience: 'Ce face clientul, cât durează și ce e inclus.', package: 'Ce primește clientul, într-o frază.' }, desc: 'Ce face clientul, cât durează, ce vede sau ce ia acasă…', meet: 'Recepția, la intrarea principală', unit: { access: 'persoană / zi', experience: 'persoană', package: 'pachet' } },
+    unit: { many: VQ.t('units'), eg: VQ.t('You have 10 units. One that left at 10:00 for an hour is free again at 11:00.') },
+    perUnit: VQ.t('A team, a car, a tent pitch: one ticket, however many people.'),
+    personsHint: VQ.t('How many people one ticket lets in.'),
+    ph: { short: { access: VQ.t('Entry, valid all day.'), experience: VQ.t('What the customer does, how long it takes and what is included.'), package: VQ.t('What the customer gets, in one sentence.') }, desc: VQ.t('What the customer does, how long it takes, what they see or take home…'), meet: VQ.t('The reception, at the main entrance'), unit: { access: VQ.t('person / day'), experience: VQ.t('person'), package: VQ.t('package') } },
     langs: false,
   };
   var KITS = {
     fun: {
-      titles: { access: ['Bilet de zi, toate atracțiile', 'Pass sezon', 'Bilet de seară'], experience: ['Karting', 'Tur cu roata panoramică', 'Petrecere de aniversare'], package: ['Ziua familiei', 'Bilet de zi + fast pass'] },
-      vt: { access: [['Adult', {}], ['Copil sub 1,20 m', { is_child: true, description: 'Copiii sub 1 m intră gratuit' }], ['Familie 2+2', { price_type: 'per_unit', persons_max: 4 }], ['Pass 2 zile', { validity_days: 2 }], ['Grup', { min_per_order: 15, description: 'Minimum 15 persoane' }]],
-        experience: [['10 minute', { duration_minutes: 10 }], ['O tură', {}], ['Petrecere, până la 15 copii', { price_type: 'per_unit', persons_max: 15 }]] },
-      incl: { access: ['Acces nelimitat la atracții', 'Locul de joacă'], experience: ['Echipament de protecție', 'Instructaj'] },
-      req: ['Înălțime minimă la unele atracții', 'Copiii sub 12 ani intră însoțiți'],
-      terms: ['Biletul se arată la intrare, de pe telefon.', 'Brățara de acces se păstrează toată ziua.', 'Unele atracții se închid pe vreme rea.'],
-      addons: ['Fast pass', 'Locker', 'Pachet foto', 'Parcare'],
+      titles: { access: [VQ.t('Day ticket, all attractions'), VQ.t('Season pass'), VQ.t('Evening ticket')], experience: [VQ.t('Karting'), VQ.t('Ferris wheel ride'), VQ.t('Birthday party')], package: [VQ.t('Family day'), VQ.t('Day ticket + fast pass')] },
+      vt: { access: [[VQ.t('Adult'), {}], [VQ.t('Child under 1.20 m'), { is_child: true, description: VQ.t('Children under 1 m enter free') }], [VQ.t('Family 2+2'), { price_type: 'per_unit', persons_max: 4 }], [VQ.t('2-day pass'), { validity_days: 2 }], [VQ.t('Group'), { min_per_order: 15, description: VQ.t('Minimum 15 people') }]],
+        experience: [[VQ.t('10 minutes'), { duration_minutes: 10 }], [VQ.t('One round'), {}], [VQ.t('Party, up to 15 children'), { price_type: 'per_unit', persons_max: 15 }]] },
+      incl: { access: [VQ.t('Unlimited access to the attractions'), VQ.t('The playground')], experience: [VQ.t('Protective equipment'), VQ.t('Briefing')] },
+      req: [VQ.t('Minimum height on some attractions'), VQ.t('Children under 12 must be accompanied')],
+      terms: [VQ.t('Show the ticket at the entrance, on your phone.'), VQ.t('Keep the access wristband on all day.'), VQ.t('Some attractions close in bad weather.')],
+      addons: [VQ.t('Fast pass'), VQ.t('Locker'), VQ.t('Photo package'), VQ.t('Parking')],
       icons: ['balloon', 'ticket', 'rocket', 'group', 'popcorn', 'camera', 'parking', 'gift'],
-      unit: { many: 'karturi / mașinuțe', eg: 'Ai 8 karturi. Unul plecat la 10:00 pentru 10 minute e iar liber la 10:10.' },
-      perUnit: 'O familie, un grup la petrecere: un bilet, oricâți ar fi.',
-      personsHint: 'La biletul de familie: 4.',
-      ph: { short: { access: 'O zi întreagă în parc, cu acces la toate atracțiile.', experience: 'Cursă pe pistă, cu cască și instructaj incluse.' }, desc: 'Ce atracții sunt incluse, pentru ce vârste, ce se întâmplă pe vreme rea…', meet: 'Casa de bilete de la intrare', unit: { experience: 'tură' } } },
+      unit: { many: VQ.t('karts / cars'), eg: VQ.t('You have 8 karts. One that left at 10:00 for 10 minutes is free again at 10:10.') },
+      perUnit: VQ.t('A family, a party group: one ticket, however many people.'),
+      personsHint: VQ.t('For the family ticket: 4.'),
+      ph: { short: { access: VQ.t('A whole day in the park, with access to all the attractions.'), experience: VQ.t('A race on the track, helmet and briefing included.') }, desc: VQ.t('Which attractions are included, for what ages, what happens in bad weather…'), meet: VQ.t('The ticket office at the entrance'), unit: { experience: VQ.t('round') } } },
     museum: {
-      titles: { access: ['Intrare, expoziția permanentă', 'Intrare, expoziția temporară', 'Bilet combinat'], experience: ['Tur ghidat al expoziției', 'Atelier pentru copii', 'Vizită în culise'], package: ['Intrare + tur ghidat', 'Bilet de familie'] },
-      vt: { access: [['Adult', {}], ['Elev / student', { description: 'Cu legitimație valabilă' }], ['Pensionar', {}], ['Copil', { is_child: true }], ['Grup școlar', { min_per_order: 15, description: 'Minimum 15 elevi', companion_label: 'Profesor însoțitor' }]],
-        experience: [['Persoană', {}], ['Elev / student', {}], ['Grup privat', { price_type: 'per_unit', persons_max: 25 }]] },
-      incl: { access: ['Acces la toate sălile', 'Broșura expoziției'], experience: ['Muzeograf', 'Materialele atelierului'] },
-      req: ['Bagajele mari rămân la garderobă'],
-      terms: ['Biletul se arată la intrare, de pe telefon.', 'Fotografiatul e permis fără bliț.'],
-      addons: ['Audioghid', 'Permis de fotografiere', 'Catalogul expoziției'],
+      titles: { access: [VQ.t('Entry, permanent exhibition'), VQ.t('Entry, temporary exhibition'), VQ.t('Combined ticket')], experience: [VQ.t('Guided tour of the exhibition'), VQ.t('Workshop for children'), VQ.t('Behind the scenes visit')], package: [VQ.t('Entry + guided tour'), VQ.t('Family ticket')] },
+      vt: { access: [[VQ.t('Adult'), {}], [VQ.t('Pupil / student'), { description: VQ.t('With a valid student card') }], [VQ.t('Senior'), {}], [VQ.t('Child'), { is_child: true }], [VQ.t('School group'), { min_per_order: 15, description: VQ.t('Minimum 15 pupils'), companion_label: VQ.t('Accompanying teacher') }]],
+        experience: [[VQ.t('Person'), {}], [VQ.t('Pupil / student'), {}], [VQ.t('Private group'), { price_type: 'per_unit', persons_max: 25 }]] },
+      incl: { access: [VQ.t('Access to all the rooms'), VQ.t('The exhibition leaflet')], experience: [VQ.t('Museum guide'), VQ.t('Workshop materials')] },
+      req: [VQ.t('Large bags stay in the cloakroom')],
+      terms: [VQ.t('Show the ticket at the entrance, on your phone.'), VQ.t('Photography is allowed without flash.')],
+      addons: [VQ.t('Audio guide'), VQ.t('Photography permit'), VQ.t('Exhibition catalogue')],
       icons: ['museum', 'columns', 'castle', 'theatre', 'compass', 'brush', 'ticket', 'group'],
       langs: true,
-      ph: { short: { access: 'Acces la expoziția permanentă, în ziua aleasă.', experience: 'O oră prin sălile principale, cu povestea fiecărui obiect.' }, desc: 'Ce vede vizitatorul, cât durează vizita, ce e nou…', meet: 'Holul de la intrare, lângă garderobă' } },
+      ph: { short: { access: VQ.t('Access to the permanent exhibition, on the chosen day.'), experience: VQ.t('An hour through the main rooms, with the story of each object.') }, desc: VQ.t('What the visitor sees, how long the visit takes, what is new…'), meet: VQ.t('The entrance hall, next to the cloakroom') } },
     nature: {
-      titles: { access: ['Acces în rezervație', 'Intrare în parc', 'Loc de camping'], experience: ['Închiriere biciclete', 'Traseu ghidat', 'Închiriere barcă'], package: ['Ziua în natură', 'Familie 2+2 cu o activitate'] },
-      incl: { access: ['Acces toată ziua', 'Harta traseelor'], experience: ['Echipament', 'Instructaj'] },
-      req: ['Încălțăminte comodă', 'Haine potrivite pentru vreme'],
-      terms: ['Biletul se arată la intrare, de pe telefon.', 'Animalele de companie sunt acceptate în lesă.', 'Focul e permis doar în locurile amenajate.'],
-      addons: ['Închiriere echipament', 'Parcare', 'Pachet foto'],
+      titles: { access: [VQ.t('Access to the reserve'), VQ.t('Park entry'), VQ.t('Camping pitch')], experience: [VQ.t('Bicycle rental'), VQ.t('Guided trail'), VQ.t('Boat rental')], package: [VQ.t('A day in nature'), VQ.t('Family 2+2 with one activity')] },
+      incl: { access: [VQ.t('All-day access'), VQ.t('The trail map')], experience: [VQ.t('Equipment'), VQ.t('Briefing')] },
+      req: [VQ.t('Comfortable footwear'), VQ.t('Clothes suited to the weather')],
+      terms: [VQ.t('Show the ticket at the entrance, on your phone.'), VQ.t('Pets are welcome on a lead.'), VQ.t('Fires are allowed only in the designated places.')],
+      addons: [VQ.t('Equipment rental'), VQ.t('Parking'), VQ.t('Photo package')],
       icons: ['tree', 'mountains', 'boat', 'bicycle', 'tent', 'hike', 'parking', 'ticket'],
-      unit: { many: 'bărci / biciclete', eg: 'Ai 10 biciclete. Una plecată la 10:00 pentru o oră e iar liberă la 11:00.' },
-      perUnit: 'O barcă, o mașină, un loc de cort: un bilet, oricâți ar fi.',
-      personsHint: 'La o barcă de 4 persoane: 4.',
-      ph: { short: { access: 'Intrarea, valabilă toată ziua.', experience: 'Bicicletă pentru o oră, cu cască inclusă.' }, desc: 'Traseele, ce se poate vedea, cât durează o tură…', meet: 'Punctul de închirieri de la intrare' } },
+      unit: { many: VQ.t('boats / bicycles'), eg: VQ.t('You have 10 bicycles. One that left at 10:00 for an hour is free again at 11:00.') },
+      perUnit: VQ.t('A boat, a car, a tent pitch: one ticket, however many people.'),
+      personsHint: VQ.t('For a 4-person boat: 4.'),
+      ph: { short: { access: VQ.t('Entry, valid all day.'), experience: VQ.t('A bicycle for one hour, helmet included.') }, desc: VQ.t('The trails, what there is to see, how long a round takes…'), meet: VQ.t('The rental point at the entrance') } },
     adventure: {
-      titles: { access: ['Acces în parc'], experience: ['Traseu pentru copii', 'Traseu pentru adulți', 'Tiroliana mare'], package: ['Toate traseele'] },
-      vt: { experience: [['Traseu copii', { description: 'Pentru copii peste 1,10 m' }], ['Traseu adulți', {}], ['O coborâre pe tiroliană', {}], ['Toate traseele', {}]] },
-      incl: { experience: ['Echipament de siguranță', 'Instructaj'] },
-      req: ['Înălțime minimă 1,10 m', 'Încălțăminte sport', 'Greutate maximă 110 kg'],
-      addons: ['Pachet foto', 'Mănuși'],
+      titles: { access: [VQ.t('Park access')], experience: [VQ.t('Course for children'), VQ.t('Course for adults'), VQ.t('The big zip line')], package: [VQ.t('All the courses')] },
+      vt: { experience: [[VQ.t('Children course'), { description: VQ.t('For children taller than 1.10 m') }], [VQ.t('Adult course'), {}], [VQ.t('One zip line ride'), {}], [VQ.t('All the courses'), {}]] },
+      incl: { experience: [VQ.t('Safety equipment'), VQ.t('Briefing')] },
+      req: [VQ.t('Minimum height 1.10 m'), VQ.t('Sports shoes'), VQ.t('Maximum weight 110 kg')],
+      addons: [VQ.t('Photo package'), VQ.t('Gloves')],
       icons: ['mountains', 'tree', 'rocket', 'hike', 'group', 'camera', 'ticket', 'star'],
-      ph: { short: { experience: 'Un traseu prin copaci, cu instructaj și echipament incluse.' }, meet: 'Cabana de echipare' } },
+      ph: { short: { experience: VQ.t('A course through the trees, briefing and equipment included.') }, meet: VQ.t('The equipment cabin') } },
     tours: {
-      titles: { experience: ['Tur ghidat prin centrul vechi', 'Tur cu bicicleta', 'Plimbare cu barca'], package: ['Două tururi, o zi'] },
-      vt: { experience: [['Persoană', {}], ['Copil', {}], ['Tur privat', { price_type: 'per_unit', persons_max: 10 }]] },
-      incl: { experience: ['Ghid', 'Intrările din traseu'] },
-      req: ['Încălțăminte comodă'],
-      addons: ['Degustare', 'Transport de la hotel'],
+      titles: { experience: [VQ.t('Guided tour of the old town'), VQ.t('Bicycle tour'), VQ.t('Boat trip')], package: [VQ.t('Two tours, one day')] },
+      vt: { experience: [[VQ.t('Person'), {}], [VQ.t('Child'), {}], [VQ.t('Private tour'), { price_type: 'per_unit', persons_max: 10 }]] },
+      incl: { experience: [VQ.t('Guide'), VQ.t('Entry fees along the route')] },
+      req: [VQ.t('Comfortable footwear')],
+      addons: [VQ.t('Tasting'), VQ.t('Hotel pick-up')],
       icons: ['compass', 'map', 'boat', 'bicycle', 'museum', 'camera', 'group', 'star'],
       langs: true,
-      ph: { short: { experience: 'Două ore prin locurile care nu apar în ghiduri.' }, meet: 'În fața intrării principale' } },
+      ph: { short: { experience: VQ.t('Two hours through the places the guidebooks leave out.') }, meet: VQ.t('In front of the main entrance') } },
     workshops: {
-      titles: { experience: ['Atelier de olărit', 'Atelier de pictură', 'Curs de gătit'], package: ['Două ateliere'] },
-      vt: { experience: [['Participant', {}], ['Copil + părinte', { price_type: 'per_unit', persons_max: 2 }], ['Grup privat', { price_type: 'per_unit', persons_max: 12 }]] },
-      incl: { experience: ['Toate materialele', 'Obiectul realizat îl iei acasă'] },
-      req: ['Haine pe care nu te temi să le pătezi'],
-      addons: ['Ambalaj cadou'],
+      titles: { experience: [VQ.t('Pottery workshop'), VQ.t('Painting workshop'), VQ.t('Cooking class')], package: [VQ.t('Two workshops')] },
+      vt: { experience: [[VQ.t('Participant'), {}], [VQ.t('Child + parent'), { price_type: 'per_unit', persons_max: 2 }], [VQ.t('Private group'), { price_type: 'per_unit', persons_max: 12 }]] },
+      incl: { experience: [VQ.t('All the materials'), VQ.t('You take home what you make')] },
+      req: [VQ.t('Clothes you do not mind staining')],
+      addons: [VQ.t('Gift wrapping')],
       icons: ['brush', 'palette', 'scissors', 'chef', 'cake', 'group', 'gift', 'star'],
       langs: true,
-      ph: { short: { experience: 'Două ore de lucru, cu toate materialele incluse.' }, meet: 'Atelierul, la intrarea principală' } },
+      ph: { short: { experience: VQ.t('Two hours of work, all the materials included.') }, meet: VQ.t('The workshop, at the main entrance') } },
     escape: {
-      titles: { access: ['Card cadou'], experience: ['Camera „Laboratorul”', 'Camera „Seiful”'], package: ['Două camere, o seară'] },
-      vt: { access: [['Echipă, 2–6 jucători', { price_type: 'per_unit', persons_max: 6 }]], experience: [['Echipă, 2–6 jucători', { price_type: 'per_unit', persons_max: 6 }], ['Echipă mare, 7–10 jucători', { price_type: 'per_unit', persons_max: 10 }]] },
-      incl: { experience: ['Game master', 'Instructaj'] },
-      req: ['Vino cu 10 minute mai devreme', 'Sub 14 ani, doar cu un adult'],
-      addons: ['Poză de echipă printată', 'Timp în plus'],
+      titles: { access: [VQ.t('Gift card')], experience: [VQ.t('The "Laboratory" room'), VQ.t('The "Vault" room')], package: [VQ.t('Two rooms, one evening')] },
+      vt: { access: [[VQ.t('Team, 2–6 players'), { price_type: 'per_unit', persons_max: 6 }]], experience: [[VQ.t('Team, 2–6 players'), { price_type: 'per_unit', persons_max: 6 }], [VQ.t('Large team, 7–10 players'), { price_type: 'per_unit', persons_max: 10 }]] },
+      incl: { experience: [VQ.t('Game master'), VQ.t('Briefing')] },
+      req: [VQ.t('Arrive 10 minutes early'), VQ.t('Under 14 only with an adult')],
+      addons: [VQ.t('Printed team photo'), VQ.t('Extra time')],
       icons: ['key', 'puzzle', 'group', 'lightning', 'gift', 'camera', 'theatre', 'star'],
-      unit: { many: 'camere', eg: 'Ai 3 camere. O cameră începută la 18:00 pentru o oră e iar liberă la 19:00.' },
-      perUnit: 'O echipă întreagă: un bilet, oricâți jucători ar fi.',
-      personsHint: 'Câți jucători intră într-o cameră.',
+      unit: { many: VQ.t('rooms'), eg: VQ.t('You have 3 rooms. A room started at 18:00 for an hour is free again at 19:00.') },
+      perUnit: VQ.t('A whole team: one ticket, however many players.'),
+      personsHint: VQ.t('How many players fit in a room.'),
       langs: true,
-      ph: { short: { experience: 'Aveți o oră să ieșiți. Pentru 2–6 jucători.' }, desc: 'Povestea camerei, dificultatea, pentru ce vârste e…', meet: 'Recepția', unit: { experience: 'echipă' } } },
+      ph: { short: { experience: VQ.t('You have one hour to get out. For 2–6 players.') }, desc: VQ.t('The story of the room, the difficulty, what ages it is for…'), meet: VQ.t('The reception'), unit: { experience: VQ.t('team') } } },
     zoo: {
-      titles: { access: ['Intrare la grădina zoologică', 'Intrare acvariu'], experience: ['Hrănirea animalelor', 'Tur cu îngrijitorul'], package: ['Intrare + hrănire'] },
-      incl: { access: ['Acces în toate zonele'], experience: ['Îngrijitor'] },
-      req: ['Animalele se hrănesc doar cu îngrijitorul'],
-      terms: ['Biletul se arată la intrare, de pe telefon.', 'Animalele de companie nu au acces.'],
-      addons: ['Hrană pentru animale', 'Pachet foto'],
+      titles: { access: [VQ.t('Zoo entry'), VQ.t('Aquarium entry')], experience: [VQ.t('Feeding the animals'), VQ.t('Tour with the keeper')], package: [VQ.t('Entry + feeding')] },
+      incl: { access: [VQ.t('Access to all the areas')], experience: [VQ.t('Keeper')] },
+      req: [VQ.t('The animals are fed only with the keeper')],
+      terms: [VQ.t('Show the ticket at the entrance, on your phone.'), VQ.t('Pets are not allowed.')],
+      addons: [VQ.t('Animal feed'), VQ.t('Photo package')],
       icons: ['paw', 'bird', 'fish', 'tree', 'ticket', 'group', 'camera', 'gift'] },
     family: {
-      titles: { access: ['Intrare loc de joacă', 'Abonament 10 intrări'], experience: ['Petrecere de aniversare', 'Atelier pentru copii'], package: ['Ziua familiei'] },
-      vt: { access: [['Copil', { is_child: true }], ['Adult însoțitor', {}], ['Abonament 10 intrări', { validity_days: 60 }]], experience: [['Copil', {}], ['Petrecere, până la 15 copii', { price_type: 'per_unit', persons_max: 15 }]] },
-      incl: { access: ['Acces 2 ore'], experience: ['Animator', 'Materiale'] },
-      req: ['Șosete obligatorii', 'Copiii rămân sub supravegherea unui adult'],
-      addons: ['Tort', 'Pachet foto', 'Invitații'],
+      titles: { access: [VQ.t('Playground entry'), VQ.t('10-entry pass')], experience: [VQ.t('Birthday party'), VQ.t('Workshop for children')], package: [VQ.t('Family day')] },
+      vt: { access: [[VQ.t('Child'), { is_child: true }], [VQ.t('Accompanying adult'), {}], [VQ.t('10-entry pass'), { validity_days: 60 }]], experience: [[VQ.t('Child'), {}], [VQ.t('Party, up to 15 children'), { price_type: 'per_unit', persons_max: 15 }]] },
+      incl: { access: [VQ.t('2 hours of access')], experience: [VQ.t('Entertainer'), VQ.t('Materials')] },
+      req: [VQ.t('Socks are required'), VQ.t('Children stay under the supervision of an adult')],
+      addons: [VQ.t('Cake'), VQ.t('Photo package'), VQ.t('Invitations')],
       icons: ['group', 'baby', 'balloon', 'cake', 'confetti', 'game', 'ticket', 'star'] },
   };
   /** The kit of a category (by its slug or name), or null. */
@@ -283,15 +286,15 @@
     var c = catById(catId);
     if (!c) return null;
     var s = fold((c.slug || '') + ' ' + (c.name || ''));
-    if (/distrac/.test(s)) return 'fun';
-    if (/muze|expozit/.test(s)) return 'museum';
-    if (/aventur/.test(s)) return 'adventure';
+    if (/distrac|amusement|theme.park/.test(s)) return 'fun';
+    if (/muze|expozit|museum|exhibit/.test(s)) return 'museum';
+    if (/aventur|adventur/.test(s)) return 'adventure';
     if (/escape/.test(s)) return 'escape';
-    if (/zoo|acvar|animal/.test(s)) return 'zoo';
-    if (/atelier|creativ/.test(s)) return 'workshops';
-    if (/(^|[\s-])tur(uri)?([\s-]|$)|turist/.test(s)) return 'tours';
+    if (/zoo|acvar|aquar|animal/.test(s)) return 'zoo';
+    if (/atelier|creativ|workshop|craft/.test(s)) return 'workshops';
+    if (/(^|[\s-])tur(uri)?([\s-]|$)|turist|(^|[\s-])tours?([\s-]|$)|sightseeing/.test(s)) return 'tours';
     if (/natur|outdoor/.test(s)) return 'nature';
-    if (/famil|copii/.test(s)) return 'family';
+    if (/famil|copii|kids|children/.test(s)) return 'family';
     return null;
   }
   function kit() {
@@ -400,7 +403,7 @@
     p.cover_image = src.cover_image || null;
     p.gallery = Array.isArray(src.gallery) ? src.gallery.filter(Boolean) : [];
     p.variants = (src.variants || []).map(function (v) { var o = blankVariant(p.product_type, v.name, v); o._open = false; return o; });
-    if (!p.variants.length) p.variants = [blankVariant(p.product_type, p.product_type === 'package' ? 'Pachet' : null)];
+    if (!p.variants.length) p.variants = [blankVariant(p.product_type, p.product_type === 'package' ? VQ.t('Package') : null)];
     p.periods = fromSchedules(src.schedules);
     p.exceptions = (src.exceptions || []).map(function (x) { return { date: x.date, is_closed: !!x.is_closed, open: x.open || null, close: x.close || null, reason: x.reason || null }; });
     p.addons = (src.addons || []).map(function (a) { return { id: a.id, name: a.name, price: a.price, included_qty: a.included_qty, max_per_unit: a.max_per_unit, is_active: a.is_active !== false }; });
@@ -436,7 +439,7 @@
       ['id', 'name', 'description', 'price', 'price_type', 'persons_min', 'persons_max', 'is_child', 'min_age', 'max_age', 'duration_minutes',
         'validity_days', 'min_per_order', 'max_per_order', 'step_qty', 'companion_label', 'pos_price', 'pos_only', 'capacity_share', 'is_active', 'is_refundable']
         .forEach(function (k) { o[k] = v[k] === undefined ? null : v[k]; });
-      if (t === 'package' && !o.name) o.name = 'Pachet';
+      if (t === 'package' && !o.name) o.name = VQ.t('Package');
       if (o.validity_days == null) o.validity_days = 1;
       return o;
     });
@@ -454,20 +457,20 @@
   }
 
   /* =================== steps =================== */
-  var PHASES = ['Bazele', 'Ce vinzi, concret', 'Prezentarea', 'Final'];
+  var PHASES = [VQ.t('The basics'), VQ.t('What you sell, exactly'), VQ.t('The presentation'), VQ.t('Finish')];
   var ALL_STEPS = [
-    { id: 'tip', ph: 0, t: 'Ce vinzi' },
-    { id: 'unde', ph: 0, t: 'Unde' },
-    { id: 'nume', ph: 0, t: 'Nume și descriere' },
-    { id: 'bilete', ph: 1, t: 'Bilete și prețuri', only: ['access', 'experience'] },
-    { id: 'continut', ph: 1, t: 'Ce conține', only: ['package'] },
-    { id: 'pret', ph: 1, t: 'Prețul pachetului', only: ['package'] },
-    { id: 'cand', ph: 1, t: 'Când', only: ['access', 'experience'] },
-    { id: 'extra', ph: 1, t: 'Suplimente', only: ['access', 'experience'], opt: true },
-    { id: 'info', ph: 2, t: 'De știut' },
-    { id: 'poze', ph: 2, t: 'Poze' },
-    { id: 'setari', ph: 3, t: 'Setări finale', opt: true },
-    { id: 'gata', ph: 3, t: 'Verifică și trimite' },
+    { id: 'tip', ph: 0, t: VQ.t('What you sell') },
+    { id: 'unde', ph: 0, t: VQ.t('Where') },
+    { id: 'nume', ph: 0, t: VQ.t('Name and description') },
+    { id: 'bilete', ph: 1, t: VQ.t('Tickets and prices'), only: ['access', 'experience'] },
+    { id: 'continut', ph: 1, t: VQ.t('What it contains'), only: ['package'] },
+    { id: 'pret', ph: 1, t: VQ.t('Package price'), only: ['package'] },
+    { id: 'cand', ph: 1, t: VQ.t('When'), only: ['access', 'experience'] },
+    { id: 'extra', ph: 1, t: VQ.t('Add-ons'), only: ['access', 'experience'], opt: true },
+    { id: 'info', ph: 2, t: VQ.t('Good to know') },
+    { id: 'poze', ph: 2, t: VQ.t('Photos') },
+    { id: 'setari', ph: 3, t: VQ.t('Final settings'), opt: true },
+    { id: 'gata', ph: 3, t: VQ.t('Check and send') },
   ];
   function steps() {
     var t = W.p.product_type || 'access';
@@ -485,49 +488,49 @@
    */
   function problems() {
     var p = W.p, t = p.product_type, out = [];
-    function add(step, msg, save) { out.push({ step: step, msg: msg, save: !!save }); }
-    if (!t) { add('tip', 'Alege ce vinzi', true); return out; }
-    if (t !== 'experience' && !p.location_id) add('unde', 'Alege locația', true);
-    if (needsCategory() && !p.category_id) add('unde', 'Alege categoria de pe viaqui.com');
-    if (!p.title) add('nume', 'Scrie titlul', true);
+    function add(step, msg, save, sched) { out.push({ step: step, msg: msg, save: !!save, sched: !!sched }); }
+    if (!t) { add('tip', VQ.t('Choose what you sell'), true); return out; }
+    if (t !== 'experience' && !p.location_id) add('unde', VQ.t('Choose the venue'), true);
+    if (needsCategory() && !p.category_id) add('unde', VQ.t('Choose the Viaqui category'));
+    if (!p.title) add('nume', VQ.t('Enter the title'), true);
     var vs = t === 'package' ? 'pret' : 'bilete';
-    if (!p.variants.length) add(vs, 'Adaugă cel puțin un bilet', true);
+    if (!p.variants.length) add(vs, VQ.t('Add at least one ticket'), true);
     p.variants.forEach(function (v, i) {
-      var who = t === 'package' ? 'Pachetul' : (v.name || 'Biletul ' + (i + 1));
-      if (t !== 'package' && !v.name) add(vs, 'Biletul ' + (i + 1) + ' nu are nume', true);
-      if (v.price == null) add(vs, who + ': lipsește prețul', true);
-      else if (v.price > 100000) add(vs, who + ': prețul e prea mare', true);
-      if (v.min_per_order && v.max_per_order && v.min_per_order > v.max_per_order) add(vs, who + ': maximul pe comandă e sub minim', true);
-      if (v.persons_min && v.persons_max && v.persons_min > v.persons_max) add(vs, who + ': numărul maxim de persoane e sub minim', true);
+      var who = t === 'package' ? VQ.t('The package') : (v.name || VQ.t('Ticket {n}', { n: i + 1 }));
+      if (t !== 'package' && !v.name) add(vs, VQ.t('Ticket {n} has no name', { n: i + 1 }), true);
+      if (v.price == null) add(vs, VQ.t('{name}: the price is missing', { name: who }), true);
+      else if (v.price > 100000) add(vs, VQ.t('{name}: the price is too high', { name: who }), true);
+      if (v.min_per_order && v.max_per_order && v.min_per_order > v.max_per_order) add(vs, VQ.t('{name}: the maximum per order is below the minimum', { name: who }), true);
+      if (v.persons_min && v.persons_max && v.persons_min > v.persons_max) add(vs, VQ.t('{name}: the maximum number of people is below the minimum', { name: who }), true);
     });
-    if (!p.variants.some(function (v) { return v.is_active; })) add(vs, 'Cel puțin un bilet trebuie să se vândă');
+    if (!p.variants.some(function (v) { return v.is_active; })) add(vs, VQ.t('At least one ticket must be on sale'));
     if (t === 'package') {
-      if (!p.package_items.length) add('continut', 'Pune cel puțin un produs în pachet', true);
-      p.package_items.forEach(function (it) { if (!it.variant_id) add('continut', 'Alege biletul pentru „' + (it._title || 'produs') + '”'); });
+      if (!p.package_items.length) add('continut', VQ.t('Put at least one product in the package'), true);
+      p.package_items.forEach(function (it) { if (!it.variant_id) add('continut', VQ.t('Choose the ticket for "{name}"', { name: it._title || VQ.t('product') })); });
     } else {
       var own = !p.use_location_schedule;
       if (p.booking_mode === 'slot') {
-        if (!p.capacity_per_slot) add('cand', 'Câte locuri ai la fiecare oră', true);
-        if (!p.duration_minutes || p.duration_minutes < 5) add('cand', 'Cât durează (cel puțin 5 minute)', true);
-        if (!p.slot_interval_minutes || p.slot_interval_minutes < 5) add('cand', 'La câte minute pleacă o tură (cel puțin 5)', true);
-        if (own && !toSchedules(p.periods).length) add('cand', 'Adaugă programul în care se pot rezerva orele', true);
+        if (!p.capacity_per_slot) add('cand', VQ.t('How many seats you have at each start time'), true);
+        if (!p.duration_minutes || p.duration_minutes < 5) add('cand', VQ.t('How long it lasts (at least 5 minutes)'), true);
+        if (!p.slot_interval_minutes || p.slot_interval_minutes < 5) add('cand', VQ.t('How many minutes between starts (at least 5)'), true);
+        if (own && !toSchedules(p.periods).length) add('cand', VQ.t('Add the opening hours in which the start times can be booked'), true, true);
       }
       if (own) {
         p.periods.forEach(function (per, pi) {
           DAYS.forEach(function (x) {
             var d = per.days[x[0]];
-            var who = x[1] + (p.periods.length > 1 ? ' (perioada ' + (pi + 1) + ')' : '');
+            var who = p.periods.length > 1 ? VQ.t('{day} (period {n})', { day: x[1], n: pi + 1 }) : x[1];
             if (d && d.on) d.slots.forEach(function (s) {
-              if (!s.open || !s.close) add('cand', who + ': completează orele programului', true);
-              else if (s.open >= s.close) add('cand', who + ': ora de închidere trebuie să fie după cea de deschidere', true);
+              if (!s.open || !s.close) add('cand', VQ.t('{name}: fill in the opening hours', { name: who }), true, true);
+              else if (s.open >= s.close) add('cand', VQ.t('{name}: the closing time must be after the opening time', { name: who }), true, true);
             });
           });
         });
       }
-      p.exceptions.forEach(function (x) { if (x.date && !x.is_closed && x.open && x.close && x.open >= x.close) add('cand', 'Ziua specială ' + x.date + ': ora de închidere trebuie să fie după cea de deschidere', true); });
+      p.exceptions.forEach(function (x) { if (x.date && !x.is_closed && x.open && x.close && x.open >= x.close) add('cand', VQ.t('Special day {date}: the closing time must be after the opening time', { date: x.date }), true, true); });
     }
-    if (p.age_min != null && p.age_max != null && p.age_min > p.age_max) add('info', 'Vârsta minimă e peste cea maximă', true);
-    if (!hasPhoto()) add('poze', 'Adaugă o poză (locația nu are nici ea)');
+    if (p.age_min != null && p.age_max != null && p.age_min > p.age_max) add('info', VQ.t('The minimum age is above the maximum'), true);
+    if (!hasPhoto()) add('poze', VQ.t('Add a photo (the venue has none either)'));
     return out;
   }
   function problemsOf(step, saveOnly) { return problems().filter(function (x) { return x.step === step && (!saveOnly || x.save); }); }
@@ -541,7 +544,7 @@
   function field(label, ctl, o) {
     o = o || {};
     return '<div class="wz-fl' + (o.bad ? ' is-bad' : '') + (o.cls ? ' ' + o.cls : '') + '">' +
-      (label ? '<label class="wz-lbl"' + (o.for ? ' for="' + o.for + '"' : '') + '>' + label + (o.req ? ' <span class="wz-req" aria-hidden="true">*</span>' : '') + (o.opt ? ' <small>opțional</small>' : '') +
+      (label ? '<label class="wz-lbl"' + (o.for ? ' for="' + o.for + '"' : '') + '>' + label + (o.req ? ' <span class="wz-req" aria-hidden="true">*</span>' : '') + (o.opt ? ' <small>' + VQ.t('optional') + '</small>' : '') +
         (o.count ? '<span class="wz-count" data-count="' + o.count[0] + '">' + ((getP(o.count[0]) || '').length) + ' / ' + o.count[1] + '</span>' : '') + '</label>' : '') +
       ctl + (o.err ? '<p class="wz-err">' + o.err + '</p>' : '') + (o.hint ? '<p class="wz-hint">' + o.hint + '</p>' : '') + '</div>';
   }
@@ -552,17 +555,17 @@
       (o.re ? ' data-re="1"' : '') + ' value="' + esc(getP(path)) + '" autocomplete="off">';
     return o.suffix ? '<div class="wz-affix">' + h + '<span>' + o.suffix + '</span></div>' : h;
   }
-  function money(path, o) { return inp(path, Object.assign({ t: 'num', mode: 'decimal', suffix: 'lei', ph: '0' }, o || {})); }
+  function money(path, o) { return inp(path, Object.assign({ t: 'num', mode: 'decimal', suffix: '€', ph: '0' }, o || {})); }
   function ta(path, o) {
     o = o || {};
     return '<textarea class="wz-inp wz-ta" id="' + idOf(path) + '" data-bind="' + path + '" data-t="text" rows="' + (o.rows || 3) + '"' + (o.max ? ' maxlength="' + o.max + '"' : '') + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + '>' + esc(getP(path)) + '</textarea>';
   }
   function stepper(path, o) {
     o = o || {};
-    return '<div class="wz-num"><button type="button" data-act="step" data-path="' + path + '" data-d="-' + (o.step || 1) + '" data-min="' + (o.min == null ? 0 : o.min) + '"' + (o.re ? ' data-re="1"' : '') + ' aria-label="Mai puțin">' + ic('minus') + '</button>' +
+    return '<div class="wz-num"><button type="button" data-act="step" data-path="' + path + '" data-d="-' + (o.step || 1) + '" data-min="' + (o.min == null ? 0 : o.min) + '"' + (o.re ? ' data-re="1"' : '') + ' aria-label="' + VQ.t('Less') + '">' + ic('minus') + '</button>' +
       '<input id="' + idOf(path) + '" data-bind="' + path + '" data-t="int" data-min="' + (o.min == null ? 0 : o.min) + '" data-max="' + (o.max || 100000) + '" inputmode="numeric" value="' + esc(getP(path)) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + (o.re ? ' data-re="1"' : '') + ' aria-label="' + esc(o.label || '') + '" autocomplete="off">' +
       (o.u ? '<span class="wz-u">' + o.u + '</span>' : '') +
-      '<button type="button" data-act="step" data-path="' + path + '" data-d="' + (o.step || 1) + '" data-max="' + (o.max || 100000) + '" data-start="' + (o.start == null ? (o.min || 0) : o.start) + '"' + (o.re ? ' data-re="1"' : '') + ' aria-label="Mai mult">' + ic('plus') + '</button></div>';
+      '<button type="button" data-act="step" data-path="' + path + '" data-d="' + (o.step || 1) + '" data-max="' + (o.max || 100000) + '" data-start="' + (o.start == null ? (o.min || 0) : o.start) + '"' + (o.re ? ' data-re="1"' : '') + ' aria-label="' + VQ.t('More') + '">' + ic('plus') + '</button></div>';
   }
   function seg(path, opts) {
     var v = getP(path);
@@ -585,13 +588,13 @@
     var arr = getP(path) || [];
     var left = (sugg || []).filter(function (s) { return arr.indexOf(s) < 0; });
     return '<div class="wz-tags">' + arr.map(function (t, i) {
-      return '<span class="wz-tag">' + esc(t) + '<button type="button" data-act="untag" data-path="' + path + '" data-i="' + i + '" aria-label="Scoate ' + esc(t) + '">' + ic('x') + '</button></span>';
-    }).join('') + (arr.length < (limit || 20) ? '<input id="' + idOf(path) + '" data-tagin="' + path + '" maxlength="200" placeholder="' + esc(ph || 'Scrie și apasă Enter') + '" enterkeyhint="done" autocomplete="off">' : '') + '</div>' +
-      (left.length && arr.length < (limit || 20) ? '<div class="wz-sugg"><span>Sugestii:</span>' + left.map(function (s) { return '<button type="button" data-act="tag" data-path="' + path + '" data-val="' + jv(s) + '">+ ' + esc(s) + '</button>'; }).join('') + '</div>' : '');
+      return '<span class="wz-tag">' + esc(t) + '<button type="button" data-act="untag" data-path="' + path + '" data-i="' + i + '" aria-label="' + esc(VQ.t('Remove {name}', { name: t })) + '">' + ic('x') + '</button></span>';
+    }).join('') + (arr.length < (limit || 20) ? '<input id="' + idOf(path) + '" data-tagin="' + path + '" maxlength="200" placeholder="' + esc(ph || VQ.t('Type and press Enter')) + '" enterkeyhint="done" autocomplete="off">' : '') + '</div>' +
+      (left.length && arr.length < (limit || 20) ? '<div class="wz-sugg"><span>' + VQ.t('Suggestions:') + '</span>' + left.map(function (s) { return '<button type="button" data-act="tag" data-path="' + path + '" data-val="' + jv(s) + '">+ ' + esc(s) + '</button>'; }).join('') + '</div>' : '');
   }
   function block(title, lead, body, o) {
     o = o || {};
-    return '<section class="wz-block">' + (title ? '<div class="wz-block-h"><h3>' + title + (o.opt ? '<span class="wz-opt">opțional</span>' : '') + '</h3>' + (lead ? '<p>' + lead + '</p>' : '') + '</div>' : '') + body + '</section>';
+    return '<section class="wz-block">' + (title ? '<div class="wz-block-h"><h3>' + title + (o.opt ? '<span class="wz-opt">' + VQ.t('optional') + '</span>' : '') + '</h3>' + (lead ? '<p>' + lead + '</p>' : '') + '</div>' : '') + body + '</section>';
   }
   function choice(act, val, pressed, icon, title, desc, o) {
     o = o || {};
@@ -601,7 +604,7 @@
   function head(id, title, lead) {
     var a = steps(), i = stepIdx(id);
     var errs = W.serverErr && W.serverErr.step === id ? '<div class="wz-alert is-bad" role="alert">' + ic('warning-circle') + '<span>' + esc(W.serverErr.msg) + '</span></div>' : '';
-    return '<header class="wz-head"><p class="wz-k">' + esc(PHASES[stepById(id).ph]) + ' <i>·</i> <i>pasul ' + (i + 1) + ' din ' + a.length + '</i></p><h1 class="wz-h">' + title + '</h1>' + (lead ? '<p class="wz-lead">' + lead + '</p>' : '') + '</header>' + errs;
+    return '<header class="wz-head"><p class="wz-k">' + esc(PHASES[stepById(id).ph]) + ' <i>·</i> <i>' + VQ.t('step {n} of {total}', { n: i + 1, total: a.length }) + '</i></p><h1 class="wz-h">' + title + '</h1>' + (lead ? '<p class="wz-lead">' + lead + '</p>' : '') + '</header>' + errs;
   }
   function tried(step) { return !!W.tried[step]; }
   function mount(name) { return '<div class="wz-mount" data-mount="' + name + '"></div>'; }
@@ -615,32 +618,32 @@
   function stTip() {
     var p = W.p, locked = !!p.id;
     var K = [
-      ['access', 'Bilet de acces', 'Intrarea în locație, pe o zi sau mai multe.', 'Bilet de zi, adult / copil, abonament, parcare'],
-      ['experience', 'Experiență', 'Ceva de făcut, de obicei la o oră anume.', 'Tur ghidat, atelier, joc, închiriere, activitate'],
-      ['package', 'Pachet', 'Bilete și experiențe împreună, la un singur preț.', 'De pildă intrarea + o experiență, pentru o familie'],
+      ['access', VQ.t('Access ticket'), VQ.t('Entry to the venue, for one day or several.'), VQ.t('Day ticket, adult / child, pass, parking')],
+      ['experience', VQ.t('Experience'), VQ.t('Something to do, usually at a set time.'), VQ.t('Guided tour, workshop, game, rental, activity')],
+      ['package', VQ.t('Package'), VQ.t('Tickets and experiences together, at one price.'), VQ.t('For example entry + one experience, for a family')],
     ];
-    var h = head('tip', locked ? 'Ce vinzi' : 'Ce vrei să vinzi?', locked ? 'Tipul nu se mai schimbă după prima salvare. Pentru alt tip, fă un produs nou.' : 'Alege tipul, iar noi îți arătăm doar pașii care contează pentru el. Până la prima salvare îl poți schimba.');
+    var h = head('tip', locked ? VQ.t('What you sell') : VQ.t('What do you want to sell?'), locked ? VQ.t('The type can no longer be changed after the first save. For another type, make a new product.') : VQ.t('Choose the type and we show you only the steps that matter for it. You can change it until the first save.'));
     h += '<div class="wz-cards is-3">' + K.map(function (k) {
       return '<button type="button" class="wz-card wz-kind" data-act="type" data-val="' + jv(k[0]) + '" aria-pressed="' + (p.product_type === k[0]) + '"' + (locked && p.product_type !== k[0] ? ' disabled' : '') + '><span class="wz-art">' + ART[k[0]] + '</span><span class="wz-kind-t"><b>' + k[1] + '</b><small>' + k[2] + '</small><span class="wz-eg">' + k[3] + '</span></span></button>';
     }).join('') + '</div>';
     if (p.product_type === 'access') {
-      h += '<div class="wz-in">' + block('Ce fel de acces?', 'Ne ajută să punem întrebările potrivite. La parcare, de pildă, îți propunem să ceri numărul mașinii.',
-        '<div class="wz-cards is-2">' + [['person', 'group', 'Persoane', 'Intrare pentru oameni'], ['vehicle', 'car', 'Vehicul', 'Parcare, acces cu mașina'], ['camping', 'tent', 'Camping', 'Loc de cort sau rulotă'], ['other', 'sparkle', 'Altceva', 'Orice alt fel de acces']].map(function (o) {
+      h += '<div class="wz-in">' + block(VQ.t('What kind of access?'), VQ.t('It helps us ask the right questions. For parking, for example, we suggest asking for the number plate.'),
+        '<div class="wz-cards is-2">' + [['person', 'group', VQ.t('People'), VQ.t('Entry for people')], ['vehicle', 'car', VQ.t('Vehicle'), VQ.t('Parking, access by car')], ['camping', 'tent', VQ.t('Camping'), VQ.t('A pitch for a tent or a caravan')], ['other', 'sparkle', VQ.t('Something else'), VQ.t('Any other kind of access')]].map(function (o) {
           return choice('set', o[0], p.access_kind === o[0], pic(o[1]), o[2], o[3], { path: 'access_kind' });
         }).join('') + '</div>') + '</div>';
     } else if (p.product_type === 'experience') {
-      h += '<div class="wz-in">' + block('Ce fel de experiență?', null,
-        '<div class="wz-cards is-2">' + [['rental', 'key', 'Închiriere', 'Ceva ce clientul folosește o vreme: echipament, vehicul, spațiu'], ['guided', 'compass', 'Tur ghidat', 'Cu un ghid, la o oră fixă'], ['workshop', 'brush', 'Atelier', 'Cursuri, activități creative'], ['other', 'lightning', 'Altceva', 'Joc, atracție, spectacol, orice altceva']].map(function (o) {
+      h += '<div class="wz-in">' + block(VQ.t('What kind of experience?'), null,
+        '<div class="wz-cards is-2">' + [['rental', 'key', VQ.t('Rental'), VQ.t('Something the customer uses for a while: equipment, a vehicle, a space')], ['guided', 'compass', VQ.t('Guided tour'), VQ.t('With a guide, at a fixed time')], ['workshop', 'brush', VQ.t('Workshop'), VQ.t('Classes, creative activities')], ['other', 'lightning', VQ.t('Something else'), VQ.t('A game, an attraction, a show, anything else')]].map(function (o) {
           return choice('set', o[0], p.service_type === o[0], pic(o[1]), o[2], o[3], { path: 'service_type' });
         }).join('') + '</div>') + '</div>';
     } else if (p.product_type === 'package') {
       var own = products.filter(function (x) { return x.type !== 'package' && x.id !== p.id; }).length;
       h += '<div class="wz-in"><div class="wz-alert' + (own ? '' : ' is-warn') + '">' + ic('info') + '<span>' + (own
-        ? 'Un pachet se face din biletele și experiențele pe care le ai deja: ai ' + own + (own === 1 ? ' produs' : ' produse') + ' din care să alegi.'
-        : 'Un pachet se face din bilete și experiențe pe care le ai deja, iar acum nu ai niciunul. Adaugă întâi un bilet de acces sau o experiență.') + '</span></div></div>';
+        ? VQ.t('A package is made from the tickets and experiences you already have: you have {products} to choose from.', { products: VQ.n(own, 'product', 'products') })
+        : VQ.t('A package is made from tickets and experiences you already have, and right now you have none. Add an access ticket or an experience first.')) + '</span></div></div>';
     }
     if (!locations.length && p.product_type && p.product_type !== 'experience') {
-      h += '<div class="wz-alert is-warn">' + ic('map-pin') + '<span>Biletele de acces și pachetele țin de o locație, iar tu nu ai încă una. <a href="/organizator/locatii?nou=1">Adaugă locația</a>, apoi revino aici.</span></div>';
+      h += '<div class="wz-alert is-warn">' + ic('map-pin') + '<span>' + VQ.t('Access tickets and packages belong to a venue, and you do not have one yet. <a href="{url}">Add the venue</a>, then come back here.', { url: LOC_NEW_URL }) + '</span></div>';
     }
     return h;
   }
@@ -649,46 +652,46 @@
   function locSeasonsText(l) {
     return (l.seasons || []).map(function (s) {
       var rows = [];
-      DAYS.forEach(function (x) { var hh = s.schedule && s.schedule[x[2]]; rows.push(hh && hh.open && hh.close ? hh.open + '–' + hh.close : 'închis'); });
+      DAYS.forEach(function (x) { var hh = s.schedule && s.schedule[x[2]]; rows.push(hh && hh.open && hh.close ? hh.open + '–' + hh.close : VQ.t('closed')); });
       var groups = [], start = 0;
       for (var i = 1; i <= 7; i++) {
         if (i === 7 || rows[i] !== rows[start]) {
-          groups.push((i - 1 > start ? DAYS[start][1].toLowerCase() + ' – ' + DAYS[i - 1][1].toLowerCase() : DAYS[start][1].toLowerCase()) + ' ' + rows[start]);
+          groups.push((i - 1 > start ? DAYS[start][1] + ' – ' + DAYS[i - 1][1] : DAYS[start][1]) + ' ' + rows[start]);
           start = i;
         }
       }
       var allSame = rows.every(function (r) { return r === rows[0]; });
-      return { label: (s.name ? s.name + ': ' : '') + mdText(s.start) + ' – ' + mdText(s.end), rows: allSame ? ['zilnic ' + rows[0]] : groups };
+      return { label: (s.name ? s.name + ': ' : '') + mdText(s.start) + ' – ' + mdText(s.end), rows: allSame ? [VQ.t('daily {hours}', { hours: rows[0] })] : groups };
     });
   }
   function stUnde() {
     var p = W.p, t = p.product_type, bad = tried('unde');
-    var h = head('unde', t === 'experience' ? 'Unde are loc experiența?' : 'Unde se folosește?', 'Două lucruri: locul unde vine clientul și raftul de pe viaqui.com pe care îl găsește.');
+    var h = head('unde', t === 'experience' ? VQ.t('Where does the experience take place?') : VQ.t('Where is it used?'), VQ.t('Two things: the place the customer comes to and the shelf on Viaqui where they find it.'));
     var cards = locations.map(function (l) {
-      var st = l.review_status === 'approved' || !l.review_status ? '' : (l.review_status === 'pending' ? ' · locația e în verificare' : ' · locația e ciornă');
-      return choice('loc', l.id, p.location_id === l.id, ic('map-pin'), esc(l.name || 'Locația ' + l.id), ((l.seasons || []).length ? 'Are program pe sezoane' : 'Fără program încă') + st);
+      var st = l.review_status === 'approved' || !l.review_status ? '' : (' · ' + (l.review_status === 'pending' ? VQ.t('the venue is in review') : VQ.t('the venue is a draft')));
+      return choice('loc', l.id, p.location_id === l.id, ic('map-pin'), esc(l.name || VQ.t('Venue {id}', { id: l.id })), ((l.seasons || []).length ? VQ.t('It has opening hours by season') : VQ.t('No opening hours yet')) + st);
     });
-    if (t === 'experience') cards.push(choice('loc', null, p.location_id === null && W.visited.unde_loc, pic('compass'), 'Fără locație', 'Un tur care pleacă din alt loc, un atelier la client'));
-    h += block('Locația', t === 'experience' ? 'Opțional pentru experiențe. Cu locație, experiența apare pe pagina ei și îi poate folosi programul.' : 'Biletul ține de o locație: de acolo își poate lua programul și pe pagina ei apare.',
-      '<div class="wz-cards">' + cards.join('') + '</div>' + (bad && t !== 'experience' && !p.location_id ? '<p class="wz-err">Alege locația ca să poți merge mai departe.</p>' : '') +
-      '<p class="wz-hint">Nu e în listă? <a href="/organizator/locatii?nou=1" target="_blank" rel="noopener">Adaugă o locație nouă</a> (se deschide alături), apoi <button type="button" class="wz-link" data-act="reloadloc">reîncarcă lista</button>.</p>');
+    if (t === 'experience') cards.push(choice('loc', null, p.location_id === null && W.visited.unde_loc, pic('compass'), VQ.t('No venue'), VQ.t('A tour that starts somewhere else, a workshop at the customer')));
+    h += block(VQ.t('The venue'), t === 'experience' ? VQ.t('Optional for experiences. With a venue, the experience appears on its page and can use its opening hours.') : VQ.t('The ticket belongs to a venue: it can take its opening hours from there and it appears on its page.'),
+      '<div class="wz-cards">' + cards.join('') + '</div>' + (bad && t !== 'experience' && !p.location_id ? '<p class="wz-err">' + VQ.t('Choose the venue to be able to continue.') + '</p>' : '') +
+      '<p class="wz-hint">' + VQ.t('Not in the list? <a href="{url}" target="_blank" rel="noopener">Add a new venue</a> (it opens alongside), then <button type="button" class="wz-link" data-act="reloadloc">reload the list</button>.', { url: LOC_NEW_URL }) + '</p>');
     var parents = parentCats();
     if (parents.length) {
       var subs = subCats(p.category_id);
-      h += block('Unde te găsesc clienții pe viaqui.com', 'Categoria decide în ce liste, pagini de oraș și filtre apare produsul. Aleg-o după ce face clientul, nu după locație: un atelier ținut într-un muzeu e tot la „Ateliere”.',
+      h += block(VQ.t('Where customers find you on Viaqui'), VQ.t('The category decides in which lists, city pages and filters the product appears. Choose it by what the customer does, not by the venue: a workshop held in a museum still belongs under "Workshops".'),
         '<div class="wz-cats">' + parents.map(function (c, i) {
           return '<button type="button" class="wz-cat" data-act="cat" data-val="' + jv(c.id) + '" aria-pressed="' + (String(p.category_id) === String(c.id)) + '"><i style="background:' + CAT_COLORS[i % CAT_COLORS.length] + '"></i>' + esc(c.name) + '</button>';
         }).join('') + '</div>' +
-        (subs.length ? '<div class="wz-fl wz-in"><span class="wz-lbl">Mai precis <small>opțional</small></span><div class="wz-chips">' + subs.map(function (c) {
+        (subs.length ? '<div class="wz-fl wz-in"><span class="wz-lbl">' + VQ.t('More precisely') + ' <small>' + VQ.t('optional') + '</small></span><div class="wz-chips">' + subs.map(function (c) {
           var on = String(p.subcategory_id) === String(c.id);
           return '<button type="button" class="wz-chip" data-act="set" data-path="subcategory_id" data-val="' + jv(on ? null : c.id) + '" aria-pressed="' + on + '">' + esc(c.name) + '</button>';
         }).join('') + '</div></div>' : '') +
-        (bad && !p.category_id ? '<p class="wz-err is-soft">Poți continua și fără, dar categoria e obligatorie când trimiți produsul spre aprobare.</p>' : ''));
+        (bad && !p.category_id ? '<p class="wz-err is-soft">' + VQ.t('You can continue without it, but the category is required when you send the product for approval.') + '</p>' : ''));
     }
     var l = locById(p.location_id), groups = l ? (l.display_categories || []) : [];
     if (groups.length) {
-      h += block('Grupa pe pagina locației', 'Pe pagina „' + esc(l.name) + '”, biletele stau pe grupele pe care le-ai făcut tu la locație. E doar ordinea ta de acolo; nu schimbă nimic în rest pe site.',
-        '<div class="wz-chips">' + [[null, 'Fără grupă']].concat(groups.map(function (g) { return [g.id, g.name]; })).map(function (g) {
+      h += block(VQ.t('The group on the venue page'), VQ.t('On the page "{name}", the tickets sit in the groups you made at the venue. It is only your order there; it changes nothing else on the site.', { name: esc(l.name) }),
+        '<div class="wz-chips">' + [[null, VQ.t('No group')]].concat(groups.map(function (g) { return [g.id, g.name]; })).map(function (g) {
           return '<button type="button" class="wz-chip" data-act="set" data-path="display_category" data-val="' + jv(g[0]) + '" aria-pressed="' + (p.display_category === g[0]) + '">' + esc(g[1]) + '</button>';
         }).join('') + '</div>', { opt: true });
     }
@@ -698,14 +701,14 @@
   /* =================== step: name =================== */
   function stNume() {
     var p = W.p, t = p.product_type, bad = tried('nume') && !p.title, K = kit(), eg = K.titles[t] || KIT_BASE.titles[t];
-    var h = head('nume', 'Cum se numește?', 'Scrie ca pentru un prieten: ce primește și unde. Titlul apare peste tot; restul e opțional, dar ajută clientul să aleagă.');
+    var h = head('nume', VQ.t('What is it called?'), VQ.t('Write as you would to a friend: what they get and where. The title appears everywhere; the rest is optional, but helps the customer choose.'));
     var icons = W.allIcons ? null : K.icons.slice(0);
     if (icons && p.icon && icons.indexOf(p.icon) < 0) icons.push(p.icon);
     var iconHtml;
     if (icons) {
       iconHtml = '<div class="wz-icons">' + icons.map(function (k) {
         return '<button type="button" data-act="set" data-path="icon" data-val="' + jv(k) + '" aria-pressed="' + (p.icon === k) + '" aria-label="' + esc(ICON[k][1]) + '" title="' + esc(ICON[k][1]) + '">' + pic(k) + '</button>';
-      }).join('') + '<button type="button" class="is-text" data-act="set" data-path="icon" data-val="null" aria-pressed="' + (!p.icon) + '">Fără</button><button type="button" class="is-text" data-act="allicons">Toate</button></div>';
+      }).join('') + '<button type="button" class="is-text" data-act="set" data-path="icon" data-val="null" aria-pressed="' + (!p.icon) + '">' + VQ.t('None') + '</button><button type="button" class="is-text" data-act="allicons">' + VQ.t('All') + '</button></div>';
     } else {
       var byGroup = {}, order = [];
       ICONS.forEach(function (x) { if (!byGroup[x[2]]) { byGroup[x[2]] = []; order.push(x[2]); } byGroup[x[2]].push(x); });
@@ -713,65 +716,65 @@
         return '<div><span class="wz-icon-g">' + esc(g) + '</span><div class="wz-icons">' + byGroup[g].map(function (x) {
           return '<button type="button" data-act="set" data-path="icon" data-val="' + jv(x[0]) + '" aria-pressed="' + (p.icon === x[0]) + '" aria-label="' + esc(x[1]) + '" title="' + esc(x[1]) + '">' + pic(x[0]) + '</button>';
         }).join('') + '</div></div>';
-      }).join('') + '<div class="wz-icons"><button type="button" class="is-text" data-act="set" data-path="icon" data-val="null" aria-pressed="' + (!p.icon) + '">Fără iconiță</button><button type="button" class="is-text" data-act="fewicons">Mai puține</button></div></div>';
+      }).join('') + '<div class="wz-icons"><button type="button" class="is-text" data-act="set" data-path="icon" data-val="null" aria-pressed="' + (!p.icon) + '">' + VQ.t('No icon') + '</button><button type="button" class="is-text" data-act="fewicons">' + VQ.t('Fewer') + '</button></div></div>';
     }
     h += block(null, null,
-      field('Titlul', inp('title', { max: 190, ph: eg[0], big: true }), { req: true, for: 'wz-title', bad: bad, err: bad ? 'Titlul e singurul lucru fără de care nu putem salva.' : null, count: ['title', 190] }) +
-      '<div class="wz-sugg"><span>Idei:</span>' + eg.map(function (e) { return '<button type="button" data-act="set" data-path="title" data-val="' + jv(e) + '">' + esc(e) + '</button>'; }).join('') + '</div>' +
-      '<div class="wz-fl"><span class="wz-lbl">Iconița <small>apare lângă titlu, în lista de bilete</small></span>' + iconHtml + '</div>');
-    h += block('Pe scurt', 'Ce vede clientul înainte să deschidă produsul. Două fraze bune fac mai mult decât o pagină.',
-      field('Subtitlu', inp('subtitle', { max: 190, ph: t === 'experience' ? 'Pentru toată familia' : 'Deschis tot anul' }), { opt: true, for: 'wz-subtitle' }) +
-      field('Descrierea scurtă', ta('short_description', { max: 280, rows: 2, ph: K.ph.short[t] }), { opt: true, for: 'wz-short_description', count: ['short_description', 280], hint: 'Apare sub titlu, în lista de bilete a locației.' }));
-    h += block('Povestea completă', 'Pentru pagina produsului: ce face clientul, cât durează, ce vede. Paragrafe scurte.', mount('description'), { opt: true });
+      field(VQ.t('Title'), inp('title', { max: 190, ph: eg[0], big: true }), { req: true, for: 'wz-title', bad: bad, err: bad ? VQ.t('The title is the one thing we cannot save without.') : null, count: ['title', 190] }) +
+      '<div class="wz-sugg"><span>' + VQ.t('Ideas:') + '</span>' + eg.map(function (e) { return '<button type="button" data-act="set" data-path="title" data-val="' + jv(e) + '">' + esc(e) + '</button>'; }).join('') + '</div>' +
+      '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('Icon') + ' <small>' + VQ.t('appears next to the title, in the list of tickets') + '</small></span>' + iconHtml + '</div>');
+    h += block(VQ.t('In short'), VQ.t('What the customer sees before opening the product. Two good sentences do more than a page.'),
+      field(VQ.t('Subtitle'), inp('subtitle', { max: 190, ph: t === 'experience' ? VQ.t('For the whole family') : VQ.t('Open all year') }), { opt: true, for: 'wz-subtitle' }) +
+      field(VQ.t('Short description'), ta('short_description', { max: 280, rows: 2, ph: K.ph.short[t] }), { opt: true, for: 'wz-short_description', count: ['short_description', 280], hint: VQ.t('It appears under the title, in the list of tickets of the venue.') }));
+    h += block(VQ.t('The full story'), VQ.t('For the product page: what the customer does, how long it takes, what they see. Short paragraphs.'), mount('description'), { opt: true });
     return h;
   }
 
   /* =================== step: tickets =================== */
   function varCard(v, i) {
     var p = W.p, t = p.product_type, day = p.booking_mode === 'day', base = 'variants.' + i, K = kit();
-    var subt = [v.price_type === 'per_unit' ? 'pe unitate' + (v.persons_max ? ', până la ' + v.persons_max + ' pers.' : '') : 'pe persoană', v.is_child ? 'copil' : '', !v.is_active ? 'nu se vinde' : '', v.pos_only ? 'doar la casă' : ''].filter(Boolean).join(' · ');
+    var subt = [v.price_type === 'per_unit' ? (v.persons_max ? VQ.t('per unit, up to {n} people', { n: v.persons_max }) : VQ.t('per unit')) : VQ.t('per person'), v.is_child ? VQ.t('child') : '', !v.is_active ? VQ.t('not on sale') : '', v.pos_only ? VQ.t('counter only') : ''].filter(Boolean).join(' · ');
     var bn = tried('bilete') && !v.name, bp = tried('bilete') && v.price == null;
     var h = '<div class="wz-var' + (v._open ? ' is-open' : '') + (bn || bp ? ' is-bad' : '') + '">' +
-      '<button type="button" class="wz-var-h" data-act="vopen" data-i="' + i + '" aria-expanded="' + !!v._open + '"><span class="wz-var-n">' + (i + 1) + '</span><span class="wz-var-t"><b data-live="' + base + '.name">' + esc(v.name || 'Bilet fără nume') + '</b><small>' + esc(subt) + '</small></span><span class="wz-var-p" data-live-price="' + i + '">' + (v.price != null ? esc(lei(v.price)) : '<span class="wz-ph">preț?</span>') + '</span>' + ic('caret-down') + '</button>';
+      '<button type="button" class="wz-var-h" data-act="vopen" data-i="' + i + '" aria-expanded="' + !!v._open + '"><span class="wz-var-n">' + (i + 1) + '</span><span class="wz-var-t"><b data-live="' + base + '.name">' + esc(v.name || VQ.t('Unnamed ticket')) + '</b><small>' + esc(subt) + '</small></span><span class="wz-var-p" data-live-price="' + i + '">' + (v.price != null ? esc(lei(v.price)) : '<span class="wz-ph">' + VQ.t('price?') + '</span>') + '</span>' + ic('caret-down') + '</button>';
     if (v._open) {
       h += '<div class="wz-var-b"><div class="wz-g2">' +
-        field('Numele biletului', inp(base + '.name', { max: 120, ph: ((K.vt[t] || [])[0] || ['Adult'])[0] }), { req: true, for: idOf(base + '.name'), bad: bn }) +
-        field('Prețul', money(base + '.price', { ph: '50' }), { req: true, for: idOf(base + '.price'), bad: bp, hint: 'Cât primești tu. Comisionul viaqui.com se adaugă peste, la client.' }) + '</div>' +
-        '<div class="wz-fl"><span class="wz-lbl">Cum se vinde</span>' + seg(base + '.price_type', [['per_person', 'Pe persoană'], ['per_unit', 'Pe unitate']]) +
-        '<div class="wz-xp"><div class="' + (v.price_type !== 'per_unit' ? 'is-on' : '') + '"><b>Pe persoană</b><span class="wz-peeps"><i></i><i></i><i></i><i></i> = <em>×4</em></span>4 oameni cumpără 4 bilete.</div>' +
-        '<div class="' + (v.price_type === 'per_unit' ? 'is-on' : '') + '"><b>Pe unitate</b><span class="wz-peeps"><i></i><i></i><i></i><i></i> = <em>×1</em></span>' + esc(K.perUnit) + '</div></div></div>' +
-        (v.price_type === 'per_unit' ? field('Câte persoane încap', stepper(base + '.persons_max', { min: 1, max: 500, ph: 'oricâte', label: 'Persoane', u: 'pers.', start: 4 }), { hint: esc(K.personsHint) }) : '') +
-        (t === 'access' ? toggle(base + '.is_child', 'E bilet de copil', 'Îl punem lângă biletul de adult și îl numărăm separat în rapoarte.') : '') +
-        '<details class="wz-more" data-more="v' + i + '"' + (W.openMore['v' + i] ? ' open' : '') + '><summary>' + ic('caret-down') + 'Mai multe pentru acest bilet<small>limite, casă, returnare</small></summary><div class="wz-more-b"><div class="wz-g2">' +
-        (day ? field('Valabil câte zile', stepper(base + '.validity_days', { min: 1, max: 60, label: 'Zile', u: 'zile', start: 1 }), { hint: 'Un abonament de 3 zile: 3.' }) : '') +
-        (!day ? field('Durata acestui bilet', stepper(base + '.duration_minutes', { min: 5, max: 1440, step: 5, ph: 'ca la produs', label: 'Minute', u: 'min', start: p.duration_minutes || 60 }), { hint: 'Doar dacă diferă de durata produsului.' }) : '') +
-        field('Preț la casă', money(base + '.pos_price', { ph: 'ca online' }), { opt: true, hint: 'Dacă la casa de bilete ceri altceva.' }) +
-        field('Minim pe comandă', stepper(base + '.min_per_order', { min: 0, max: 500, label: 'Minim', start: 1 }), { hint: 'La un bilet de grup: 8.' }) +
-        field('Maxim pe comandă', stepper(base + '.max_per_order', { min: 1, max: 500, label: 'Maxim', start: 20 })) +
-        field('Se adaugă câte', stepper(base + '.step_qty', { min: 1, max: 100, ph: '1', label: 'Pas', start: 1 }), { hint: 'La bilete care se vând doar în perechi: 2.' }) +
-        field('Însoțitor gratuit', inp(base + '.companion_label', { max: 80, ph: 'Însoțitor' }), { opt: true, hint: 'Un bilet gratuit în plus pe comandă, de pildă pentru profesorul unui grup.' }) +
+        field(VQ.t('Ticket name'), inp(base + '.name', { max: 120, ph: ((K.vt[t] || [])[0] || [VQ.t('Adult')])[0] }), { req: true, for: idOf(base + '.name'), bad: bn }) +
+        field(VQ.t('Price'), money(base + '.price', { ph: '50' }), { req: true, for: idOf(base + '.price'), bad: bp, hint: VQ.t('What you receive. The Viaqui commission is added on top, for the customer.') }) + '</div>' +
+        '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('How it is sold') + '</span>' + seg(base + '.price_type', [['per_person', VQ.t('Per person')], ['per_unit', VQ.t('Per unit')]]) +
+        '<div class="wz-xp"><div class="' + (v.price_type !== 'per_unit' ? 'is-on' : '') + '"><b>' + VQ.t('Per person') + '</b><span class="wz-peeps"><i></i><i></i><i></i><i></i> = <em>×4</em></span>' + VQ.t('4 people buy 4 tickets.') + '</div>' +
+        '<div class="' + (v.price_type === 'per_unit' ? 'is-on' : '') + '"><b>' + VQ.t('Per unit') + '</b><span class="wz-peeps"><i></i><i></i><i></i><i></i> = <em>×1</em></span>' + esc(K.perUnit) + '</div></div></div>' +
+        (v.price_type === 'per_unit' ? field(VQ.t('How many people fit'), stepper(base + '.persons_max', { min: 1, max: 500, ph: VQ.t('any number'), label: VQ.t('People'), u: VQ.t('people'), start: 4 }), { hint: esc(K.personsHint) }) : '') +
+        (t === 'access' ? toggle(base + '.is_child', VQ.t('It is a child ticket'), VQ.t('We place it next to the adult ticket and count it separately in reports.')) : '') +
+        '<details class="wz-more" data-more="v' + i + '"' + (W.openMore['v' + i] ? ' open' : '') + '><summary>' + ic('caret-down') + VQ.t('More for this ticket') + '<small>' + VQ.t('limits, counter, refunds') + '</small></summary><div class="wz-more-b"><div class="wz-g2">' +
+        (day ? field(VQ.t('Valid for how many days'), stepper(base + '.validity_days', { min: 1, max: 60, label: VQ.t('Days'), u: VQ.t('days'), start: 1 }), { hint: VQ.t('A 3-day pass: 3.') }) : '') +
+        (!day ? field(VQ.t('Duration of this ticket'), stepper(base + '.duration_minutes', { min: 5, max: 1440, step: 5, ph: VQ.t('same as the product'), label: VQ.t('Minutes'), u: VQ.t('min'), start: p.duration_minutes || 60 }), { hint: VQ.t('Only if it differs from the duration of the product.') }) : '') +
+        field(VQ.t('Price at the counter'), money(base + '.pos_price', { ph: VQ.t('same as online') }), { opt: true, hint: VQ.t('If you charge something else at the ticket office.') }) +
+        field(VQ.t('Minimum per order'), stepper(base + '.min_per_order', { min: 0, max: 500, label: VQ.t('Minimum'), start: 1 }), { hint: VQ.t('For a group ticket: 8.') }) +
+        field(VQ.t('Maximum per order'), stepper(base + '.max_per_order', { min: 1, max: 500, label: VQ.t('Maximum'), start: 20 })) +
+        field(VQ.t('Added in steps of'), stepper(base + '.step_qty', { min: 1, max: 100, ph: '1', label: VQ.t('Step'), start: 1 }), { hint: VQ.t('For tickets sold only in pairs: 2.') }) +
+        field(VQ.t('Free companion'), inp(base + '.companion_label', { max: 80, ph: VQ.t('Companion') }), { opt: true, hint: VQ.t('One extra free ticket per order, for example for the teacher of a group.') }) +
         '</div>' +
-        field('Descriere scurtă a biletului', inp(base + '.description', { max: 280, ph: v.is_child ? 'Pentru ce vârste sau înălțimi e' : 'Cine îl poate folosi' }), { opt: true }) +
-        toggle(base + '.is_active', 'Se vinde', 'Oprește-l fără să-l ștergi; biletele deja vândute rămân valabile.') +
-        toggle(base + '.is_refundable', 'Se poate returna', 'Clientul poate cere banii înapoi, după regulile de anulare.') +
-        toggle(base + '.pos_only', 'Doar la casă', 'Nu apare online; îl vinzi doar de la casă (POS).') +
+        field(VQ.t('Short description of the ticket'), inp(base + '.description', { max: 280, ph: v.is_child ? VQ.t('What ages or heights it is for') : VQ.t('Who can use it') }), { opt: true }) +
+        toggle(base + '.is_active', VQ.t('On sale'), VQ.t('Stop it without deleting it; tickets already sold stay valid.')) +
+        toggle(base + '.is_refundable', VQ.t('Refundable'), VQ.t('The customer can ask for the money back, under the cancellation rules.')) +
+        toggle(base + '.pos_only', VQ.t('Counter only'), VQ.t('It does not appear online; you sell it only at the counter (POS).')) +
         '</div></details>' +
-        (p.variants.length > 1 ? '<div class="wz-var-foot"><button type="button" class="ve-danger wz-del" data-act="vdel" data-i="' + i + '">' + ic('trash') + '<span>Scoate biletul</span></button></div>' : '') +
+        (p.variants.length > 1 ? '<div class="wz-var-foot"><button type="button" class="ve-danger wz-del" data-act="vdel" data-i="' + i + '">' + ic('trash') + '<span>' + VQ.t('Remove the ticket') + '</span></button></div>' : '') +
         '</div>';
     }
     return h + '</div>';
   }
   function stBilete() {
     var p = W.p, t = p.product_type, K = kit();
-    var h = head('bilete', t === 'experience' ? 'Ce variante are?' : 'Ce bilete vinzi?',
-      t === 'experience' ? 'Câte o variantă pentru fiecare fel de a cumpăra: de persoană, pentru un grup întreg sau pe durate diferite.' : 'Câte un bilet pentru fiecare fel de client: adult, copil, elev, grup. Toate apar împreună, clientul le pune în același coș.');
+    var h = head('bilete', t === 'experience' ? VQ.t('What options does it have?') : VQ.t('What tickets do you sell?'),
+      t === 'experience' ? VQ.t('One option for each way of buying: per person, for a whole group or for different durations.') : VQ.t('One ticket for each kind of customer: adult, child, student, group. They all appear together and the customer puts them in the same basket.'));
     var names = p.variants.map(function (v) { return fold(v.name); });
     var tpl = (K.vt[t] || []).filter(function (x) { return names.indexOf(fold(x[0])) < 0; });
     h += '<div class="wz-vars">' + p.variants.map(varCard).join('') + '</div>';
     if (p.variants.length < 30) {
-      h += '<div class="wz-fl"><span class="wz-lbl">Adaugă rapid</span><div class="wz-chips">' + tpl.map(function (x) {
+      h += '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('Quick add') + '</span><div class="wz-chips">' + tpl.map(function (x) {
         return '<button type="button" class="wz-chip is-add" data-act="vadd" data-val="' + jv(x[0]) + '">' + ic('plus') + esc(x[0]) + '</button>';
-      }).join('') + '<button type="button" class="wz-chip is-add" data-act="vadd" data-val="null">' + ic('plus') + 'Alt bilet</button></div></div>';
+      }).join('') + '<button type="button" class="wz-chip is-add" data-act="vadd" data-val="null">' + ic('plus') + VQ.t('Another ticket') + '</button></div></div>';
     }
     return h;
   }
@@ -799,129 +802,132 @@
   }
   function whenSentence() {
     var p = W.p, w = schedWindow();
+    var k2 = '<span class="wz-k2">' + VQ.t('What the customer sees') + '</span>';
     if (p.booking_mode === 'day') {
-      return '<span class="wz-k2">Ce vede clientul</span>Alege <b>ziua</b>; biletul e valabil ' + (w ? 'între <b>' + esc(w[0]) + '</b> și <b>' + esc(w[1]) + '</b>' : 'în programul zilei') + '. ' +
-        (p.daily_capacity ? 'Se vând cel mult <b>' + esc(p.daily_capacity) + '</b> bilete pe zi.' : 'Nu e o limită de bilete pe zi.');
+      return k2 + (w ? VQ.t('They choose <b>the day</b>; the ticket is valid between <b>{from}</b> and <b>{to}</b>.', { from: esc(w[0]), to: esc(w[1]) }) : VQ.t('They choose <b>the day</b>; the ticket is valid during the opening hours of the day.')) + ' ' +
+        (p.daily_capacity ? VQ.t('At most <b>{n}</b> tickets are sold per day.', { n: esc(p.daily_capacity) }) : VQ.t('There is no limit of tickets per day.'));
     }
     var sl = slotList();
     var cap = p.capacity_mode === 'concurrent'
-      ? 'Poți avea <b>' + esc(p.capacity_per_slot || '?') + '</b> rezervări în același timp (' + esc(kit().unit.many) + '); o rezervare de la ' + esc(sl[0] || '10:00') + ' eliberează locul după <b>' + esc(durTxt(p.duration_minutes)) + '</b>.'
-      : 'La fiecare oră de plecare sunt <b>' + esc(p.capacity_per_slot || '?') + '</b> locuri.';
-    return '<span class="wz-k2">Ce vede clientul</span>Alege <b>ziua și ora</b>. Durează <b>' + esc(durTxt(p.duration_minutes) || '?') + '</b>. ' + cap +
+      ? VQ.t('You can have <b>{n}</b> bookings at the same time ({units}); a booking from {time} frees its place after <b>{duration}</b>.', { n: esc(p.capacity_per_slot || '?'), units: esc(kit().unit.many), time: esc(sl[0] || '10:00'), duration: esc(durTxt(p.duration_minutes)) })
+      : VQ.t('Each start time has <b>{n}</b> seats.', { n: esc(p.capacity_per_slot || '?') });
+    return k2 + VQ.t('They choose <b>the day and the time</b>. It lasts <b>{duration}</b>.', { duration: esc(durTxt(p.duration_minutes) || '?') }) + ' ' + cap +
       (sl.length ? '<div class="wz-slots">' + sl.slice(0, 14).map(function (s, i) { return '<span style="animation-delay:' + (i * 30) + 'ms">' + s + '</span>'; }).join('') + (sl.length > 14 ? '<span>+' + (sl.length - 14) + '</span>' : '') + '</div>'
-        : (w ? '' : '<div class="wz-slots"><span>Orele apar după ce pui programul, mai jos.</span></div>'));
+        : (w ? '' : '<div class="wz-slots"><span>' + VQ.t('The times appear once you set the opening hours, below.') + '</span></div>'));
   }
   function mdSel(path) {
     var v = getP(path) || '01-01', mm = +v.split('-')[0], dd = +v.split('-')[1];
-    var d = '<span class="wz-sel-w is-sm"><select class="wz-inp wz-sel" data-md="' + path + '" data-part="d" aria-label="Ziua">' + Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === dd ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select>' + ic('caret-down') + '</span>';
-    var m = '<span class="wz-sel-w is-sm"><select class="wz-inp wz-sel" data-md="' + path + '" data-part="m" aria-label="Luna">' + MONTHS.map(function (x, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === mm ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' + ic('caret-down') + '</span>';
+    var d = '<span class="wz-sel-w is-sm"><select class="wz-inp wz-sel" data-md="' + path + '" data-part="d" aria-label="' + VQ.t('Day') + '">' + Array.from({ length: 31 }, function (_, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === dd ? ' selected' : '') + '>' + (i + 1) + '</option>'; }).join('') + '</select>' + ic('caret-down') + '</span>';
+    var m = '<span class="wz-sel-w is-sm"><select class="wz-inp wz-sel" data-md="' + path + '" data-part="m" aria-label="' + VQ.t('Month') + '">' + MONTHS.map(function (x, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === mm ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' + ic('caret-down') + '</span>';
     return d + m;
   }
   function periodHtml(per, pi) {
     var p = W.p, b = 'periods.' + pi;
-    return '<div class="wz-period"><div class="wz-period-h"><b>' + (p.periods.length > 1 ? 'Perioada ' + (pi + 1) : 'Programul produsului') + '</b>' +
-      (per.season ? '' : '<span class="wz-pill is-g">tot anul</span>') + '<span class="wz-sp"></span>' +
-      (p.periods.length > 1 || p.booking_mode === 'day' ? '<button type="button" class="ve-danger wz-del" data-act="perdel" data-i="' + pi + '">' + ic('trash') + '<span>Șterge</span></button>' : '') + '</div>' +
+    return '<div class="wz-period"><div class="wz-period-h"><b>' + (p.periods.length > 1 ? VQ.t('Period {n}', { n: pi + 1 }) : VQ.t('Opening hours of the product')) + '</b>' +
+      (per.season ? '' : '<span class="wz-pill is-g">' + VQ.t('all year') + '</span>') + '<span class="wz-sp"></span>' +
+      (p.periods.length > 1 || p.booking_mode === 'day' ? '<button type="button" class="ve-danger wz-del" data-act="perdel" data-i="' + pi + '">' + ic('trash') + '<span>' + VQ.t('Delete') + '</span></button>' : '') + '</div>' +
       '<div class="wz-week">' + DAYS.map(function (x) {
         var d = per.days[x[0]];
-        return '<div class="wz-day' + (d.on ? ' is-on' : '') + '"><button type="button" class="wz-day-t" data-act="day" data-pi="' + pi + '" data-d="' + x[0] + '" aria-pressed="' + d.on + '"><span class="wz-box">' + ic('check') + '</span>' + x[1] + '</button>' +
+        return '<div class="wz-day' + (d.on ? ' is-on' : '') + '"><button type="button" class="wz-day-t" data-act="day" data-pi="' + pi + '" data-d="' + x[0] + '" aria-pressed="' + d.on + '"><span class="wz-box">' + ic('check') + '</span>' + esc(x[1]) + '</button>' +
           (d.on ? '<div class="wz-day-hs">' + d.slots.map(function (s, si) {
             var sb = b + '.days.' + x[0] + '.slots.' + si;
             var badT = s.open && s.close && s.open >= s.close;
-            return '<div class="wz-day-h' + (badT ? ' is-bad' : '') + '"><input class="wz-inp" type="time" data-bind="' + sb + '.open" data-t="text" value="' + esc(s.open) + '" aria-label="' + x[1] + ' de la"><span>–</span><input class="wz-inp" type="time" data-bind="' + sb + '.close" data-t="text" value="' + esc(s.close) + '" aria-label="' + x[1] + ' până la">' +
-              (si > 0 ? '<button type="button" class="ve-icon-btn" data-act="slotdel" data-pi="' + pi + '" data-d="' + x[0] + '" data-si="' + si + '" aria-label="Scoate intervalul">' + ic('x') + '</button>' : '') + '</div>';
-          }).join('') + (d.slots.length < 3 ? '<button type="button" class="wz-link is-sm" data-act="slotadd" data-pi="' + pi + '" data-d="' + x[0] + '">+ încă un interval (de pildă după pauza de prânz)</button>' : '') + '</div>'
-            : '<span class="wz-closed">Închis</span>') + '</div>';
+            return '<div class="wz-day-h' + (badT ? ' is-bad' : '') + '"><input class="wz-inp" type="time" data-bind="' + sb + '.open" data-t="text" value="' + esc(s.open) + '" aria-label="' + esc(VQ.t('{day} from', { day: x[1] })) + '"><span>–</span><input class="wz-inp" type="time" data-bind="' + sb + '.close" data-t="text" value="' + esc(s.close) + '" aria-label="' + esc(VQ.t('{day} until', { day: x[1] })) + '">' +
+              (si > 0 ? '<button type="button" class="ve-icon-btn" data-act="slotdel" data-pi="' + pi + '" data-d="' + x[0] + '" data-si="' + si + '" aria-label="' + VQ.t('Remove the interval') + '">' + ic('x') + '</button>' : '') + '</div>';
+          }).join('') + (d.slots.length < 3 ? '<button type="button" class="wz-link is-sm" data-act="slotadd" data-pi="' + pi + '" data-d="' + x[0] + '">' + VQ.t('+ one more interval (for example after the lunch break)') + '</button>' : '') + '</div>'
+            : '<span class="wz-closed">' + VQ.t('Closed') + '</span>') + '</div>';
       }).join('') + '</div>' +
-      '<div class="wz-chips"><button type="button" class="wz-chip is-ghost" data-act="copymon" data-i="' + pi + '">' + ic('copy') + 'Orele de luni pe toate zilele</button></div>' +
+      '<div class="wz-chips"><button type="button" class="wz-chip is-ghost" data-act="copymon" data-i="' + pi + '">' + ic('copy') + VQ.t('Monday hours on every day') + '</button></div>' +
       (per.season
-        ? '<div class="wz-fl"><span class="wz-lbl">Doar în sezon</span><div class="wz-season">de la ' + mdSel(b + '.season.start') + ' până la ' + mdSel(b + '.season.end') + '<button type="button" class="ve-danger wz-del" data-act="noseason" data-i="' + pi + '">' + ic('x') + '<span>Tot anul</span></button></div></div>'
-        : '<button type="button" class="wz-link" data-act="season" data-i="' + pi + '">+ Doar într-un sezon (de pildă mai – septembrie)</button>') +
+        ? '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('Only in season') + '</span><div class="wz-season">' + VQ.t('from {start} until {end}', { start: mdSel(b + '.season.start'), end: mdSel(b + '.season.end') }) + '<button type="button" class="ve-danger wz-del" data-act="noseason" data-i="' + pi + '">' + ic('x') + '<span>' + VQ.t('All year') + '</span></button></div></div>'
+        : '<button type="button" class="wz-link" data-act="season" data-i="' + pi + '">' + VQ.t('+ Only in one season (for example May to September)') + '</button>') +
       '</div>';
   }
   function stCand() {
     var p = W.p, l = locById(p.location_id), hasSeasons = !!(l && l.seasons && l.seasons.length), K = kit();
-    var h = head('cand', 'Când se poate folosi?', 'Alege cum rezervă clientul, apoi câte locuri ai. Vezi imediat ce va vedea el.');
-    h += block('Cum rezervă clientul', null,
+    var h = head('cand', VQ.t('When can it be used?'), VQ.t('Choose how the customer books, then how many seats you have. You see at once what they will see.'));
+    h += block(VQ.t('How the customer books'), null,
       '<div class="wz-cards is-2">' +
-      '<button type="button" class="wz-card" data-act="mode" data-val="&quot;day&quot;" aria-pressed="' + (p.booking_mode === 'day') + '"><span class="wz-m-art"><svg viewBox="0 0 120 74" aria-hidden="true" focusable="false"><path d="M10 70a50 50 0 01100 0" fill="none" stroke="#C9CEC6" stroke-width="2" stroke-dasharray="4 5"/><g class="wz-sun"><circle cx="60" cy="24" r="9" fill="#F2A900"/></g><rect x="0" y="70" width="120" height="4" fill="#1B7F4E" opacity=".4"/></svg></span><b>Toată ziua</b><small>Alege doar ziua și vine oricând e deschis. Potrivit pentru intrări, abonamente, parcare.</small></button>' +
-      '<button type="button" class="wz-card" data-act="mode" data-val="&quot;slot&quot;" aria-pressed="' + (p.booking_mode === 'slot') + '"><span class="wz-m-art"><svg viewBox="0 0 120 74" aria-hidden="true" focusable="false"><circle cx="60" cy="37" r="26" fill="#fff" stroke="#1B7F4E" stroke-width="3"/><g stroke="#C9CEC6" stroke-width="2"><path d="M60 15v5M60 54v5M38 37h5M77 37h5"/></g><path class="wz-hand" d="M60 37V20" stroke="#E43A33" stroke-width="3" stroke-linecap="round"/><path d="M60 37l9 6" stroke="#212121" stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="37" r="3" fill="#212121"/></svg></span><b>La o oră fixă</b><small>Alege ziua și ora de început. Potrivit pentru tururi, ateliere, jocuri, închirieri.</small></button>' +
+      '<button type="button" class="wz-card" data-act="mode" data-val="&quot;day&quot;" aria-pressed="' + (p.booking_mode === 'day') + '"><span class="wz-m-art"><svg viewBox="0 0 120 74" aria-hidden="true" focusable="false"><path d="M10 70a50 50 0 01100 0" fill="none" stroke="#C9CEC6" stroke-width="2" stroke-dasharray="4 5"/><g class="wz-sun"><circle cx="60" cy="24" r="9" fill="#F2A900"/></g><rect x="0" y="70" width="120" height="4" fill="#1B7F4E" opacity=".4"/></svg></span><b>' + VQ.t('All day') + '</b><small>' + VQ.t('They choose only the day and come any time it is open. Good for entry tickets, passes, parking.') + '</small></button>' +
+      '<button type="button" class="wz-card" data-act="mode" data-val="&quot;slot&quot;" aria-pressed="' + (p.booking_mode === 'slot') + '"><span class="wz-m-art"><svg viewBox="0 0 120 74" aria-hidden="true" focusable="false"><circle cx="60" cy="37" r="26" fill="#fff" stroke="#1B7F4E" stroke-width="3"/><g stroke="#C9CEC6" stroke-width="2"><path d="M60 15v5M60 54v5M38 37h5M77 37h5"/></g><path class="wz-hand" d="M60 37V20" stroke="#E43A33" stroke-width="3" stroke-linecap="round"/><path d="M60 37l9 6" stroke="#212121" stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="37" r="3" fill="#212121"/></svg></span><b>' + VQ.t('At a fixed time') + '</b><small>' + VQ.t('They choose the day and the start time. Good for tours, workshops, games, rentals.') + '</small></button>' +
       '</div>');
     if (p.booking_mode === 'day') {
-      h += block('Câte bilete pe zi', 'Gol dacă nu ai o limită. Când se termină, ziua apare „Epuizat” în calendar.',
-        '<div class="wz-g2">' + field(null, stepper('daily_capacity', { min: 1, max: 1000000, step: 10, ph: 'fără limită', label: 'Locuri pe zi', start: 100 })) + '</div>', { opt: true });
+      h += block(VQ.t('How many tickets per day'), VQ.t('Empty if you have no limit. When they run out, the day shows "Sold out" in the calendar.'),
+        '<div class="wz-g2">' + field(null, stepper('daily_capacity', { min: 1, max: 1000000, step: 10, ph: VQ.t('no limit'), label: VQ.t('Seats per day'), start: 100 })) + '</div>', { opt: true });
     } else {
-      h += block('Cât durează și cât de des pleacă', null,
+      h += block(VQ.t('How long it lasts and how often it starts'), null,
         '<div class="wz-g2 is-keep">' +
-        field('Durata', stepper('duration_minutes', { min: 5, max: 1440, step: 5, re: true, label: 'Durata', u: 'min', start: 60 }), { req: true, hint: esc(durTxt(p.duration_minutes)) }) +
-        field('O plecare la fiecare', stepper('slot_interval_minutes', { min: 5, max: 1440, step: 5, re: true, label: 'Interval', u: 'min', start: 60 }), { req: true, hint: slotList().length ? 'Ore de plecare: ' + esc(slotList().slice(0, 3).join(', ')) + '…' : '' }) +
+        field(VQ.t('Duration'), stepper('duration_minutes', { min: 5, max: 1440, step: 5, re: true, label: VQ.t('Duration'), u: VQ.t('min'), start: 60 }), { req: true, hint: esc(durTxt(p.duration_minutes)) }) +
+        field(VQ.t('One start every'), stepper('slot_interval_minutes', { min: 5, max: 1440, step: 5, re: true, label: VQ.t('Interval'), u: VQ.t('min'), start: 60 }), { req: true, hint: slotList().length ? VQ.t('Start times: {times}…', { times: esc(slotList().slice(0, 3).join(', ')) }) : '' }) +
         '</div>');
-      h += block('Cum se numără locurile', null,
+      h += block(VQ.t('How seats are counted'), null,
         '<div class="wz-cards is-2">' +
-        '<button type="button" class="wz-card" data-act="set" data-path="capacity_mode" data-val="&quot;per_slot&quot;" aria-pressed="' + (p.capacity_mode !== 'concurrent') + '"><span class="wz-hours" aria-hidden="true">' + [70, 90, 60, 100, 80].map(function (x, i) { return '<i style="height:' + x + '%;animation-delay:' + i * 80 + 'ms"></i>'; }).join('') + '</span><b>Locuri la fiecare oră</b><small>Un tur cu 20 de locuri la 10:00 și încă 20 la 12:00. Fiecare oră are locurile ei.</small></button>' +
-        '<button type="button" class="wz-card" data-act="set" data-path="capacity_mode" data-val="&quot;concurrent&quot;" aria-pressed="' + (p.capacity_mode === 'concurrent') + '"><span class="wz-lanes" aria-hidden="true"><i></i><i></i><i></i></span><b>Unități în același timp</b><small>' + esc(K.unit.eg) + '</small></button>' +
+        '<button type="button" class="wz-card" data-act="set" data-path="capacity_mode" data-val="&quot;per_slot&quot;" aria-pressed="' + (p.capacity_mode !== 'concurrent') + '"><span class="wz-hours" aria-hidden="true">' + [70, 90, 60, 100, 80].map(function (x, i) { return '<i style="height:' + x + '%;animation-delay:' + i * 80 + 'ms"></i>'; }).join('') + '</span><b>' + VQ.t('Seats at each start time') + '</b><small>' + VQ.t('A tour with 20 seats at 10:00 and another 20 at 12:00. Each start time has its own seats.') + '</small></button>' +
+        '<button type="button" class="wz-card" data-act="set" data-path="capacity_mode" data-val="&quot;concurrent&quot;" aria-pressed="' + (p.capacity_mode === 'concurrent') + '"><span class="wz-lanes" aria-hidden="true"><i></i><i></i><i></i></span><b>' + VQ.t('Units at the same time') + '</b><small>' + esc(K.unit.eg) + '</small></button>' +
         '</div>' +
-        '<div class="wz-g2">' + field(p.capacity_mode === 'concurrent' ? 'Câte ' + esc(K.unit.many) + ' ai' : 'Locuri la fiecare oră', stepper('capacity_per_slot', { min: 1, max: 10000, label: 'Capacitate', u: p.capacity_mode === 'concurrent' ? 'buc.' : 'locuri', start: 10 }), { req: true }) + '</div>');
+        '<div class="wz-g2">' + field(p.capacity_mode === 'concurrent' ? VQ.t('How many {units} you have', { units: esc(K.unit.many) }) : VQ.t('Seats at each start time'), stepper('capacity_per_slot', { min: 1, max: 10000, label: VQ.t('Capacity'), u: p.capacity_mode === 'concurrent' ? VQ.t('units') : VQ.t('seats'), start: 10 }), { req: true }) + '</div>');
     }
     h += '<div class="wz-sentence" id="wz-when" aria-live="polite">' + whenSentence() + '</div>';
 
     var sch = '';
     if (hasSeasons) {
-      sch += toggle('use_location_schedule', 'Folosește programul locației', 'Sezoanele și zilele închise ale locației „' + esc(l.name) + '”. Le schimbi o dată, la locație, și se aplică tuturor produselor care îl folosesc.');
+      sch += toggle('use_location_schedule', VQ.t('Use the opening hours of the venue'), VQ.t('The seasons and closed days of the venue "{name}". You change them once, at the venue, and they apply to every product that uses them.', { name: esc(l.name) }));
       if (p.use_location_schedule) {
         sch += '<div class="wz-loc-sum">' + locSeasonsText(l).map(function (s) { return '<div><b>' + esc(s.label) + '</b> · ' + esc(s.rows.join(', ')) + '</div>'; }).join('') + '</div>';
       }
     } else if (l) {
-      sch += '<p class="wz-hint">Locația „' + esc(l.name) + '” nu are încă program pe sezoane. Îl poți pune la locație, pentru toate produsele, sau aici, doar pentru acesta.</p>';
+      sch += '<p class="wz-hint">' + VQ.t('The venue "{name}" has no opening hours by season yet. You can set them at the venue, for all products, or here, only for this one.', { name: esc(l.name) }) + '</p>';
     }
     if (!p.use_location_schedule) {
       if (!p.periods.length) {
         sch += p.booking_mode === 'day'
-          ? '<div class="wz-alert">' + ic('info') + '<span>Fără program propriu, biletul se poate folosi în orice zi.</span></div><button type="button" class="wz-add" data-act="peradd">' + ic('calendar-blank') + 'Pune zilele și orele în care se poate folosi</button>'
-          : '<button type="button" class="wz-add" data-act="peradd">' + ic('calendar-blank') + 'Pune programul în care se pot rezerva orele</button>';
+          ? '<div class="wz-alert">' + ic('info') + '<span>' + VQ.t('Without its own opening hours, the ticket can be used on any day.') + '</span></div><button type="button" class="wz-add" data-act="peradd">' + ic('calendar-blank') + VQ.t('Set the days and hours when it can be used') + '</button>'
+          : '<button type="button" class="wz-add" data-act="peradd">' + ic('calendar-blank') + VQ.t('Set the opening hours in which the start times can be booked') + '</button>';
       } else {
         sch += p.periods.map(periodHtml).join('');
-        sch += '<button type="button" class="wz-add" data-act="peradd">' + ic('plus') + 'Alt program pentru altă perioadă (iarna, vara)</button>';
+        sch += '<button type="button" class="wz-add" data-act="peradd">' + ic('plus') + VQ.t('Other opening hours for another period (winter, summer)') + '</button>';
       }
     }
-    var schErr = tried('cand') ? problemsOf('cand', true).filter(function (x) { return /program|închidere/.test(x.msg); }) : [];
-    h += block('Programul', p.booking_mode === 'slot' ? 'Orele între care pleacă rezervările, pe fiecare zi.' : 'Zilele și orele în care se poate folosi biletul.',
+    var schErr = tried('cand') ? problemsOf('cand', true).filter(function (x) { return x.sched; }) : [];
+    h += block(VQ.t('Opening hours'), p.booking_mode === 'slot' ? VQ.t('The hours between which bookings start, on each day.') : VQ.t('The days and hours when the ticket can be used.'),
       sch + schErr.map(function (x) { return '<p class="wz-err">' + esc(x.msg) + '</p>'; }).join(''));
 
-    h += block('Zile speciale', 'O zi închisă sau cu alt program decât de obicei, doar pentru acest produs.',
+    h += block(VQ.t('Special days'), VQ.t('A day that is closed or has different hours than usual, only for this product.'),
       p.exceptions.map(function (x, i) {
         var b = 'exceptions.' + i;
-        return '<div class="wz-row"><div class="wz-row-h"><b>' + (x.date ? esc(x.date.split('-').reverse().join('.')) : 'Zi nouă') + '</b><button type="button" class="ve-icon-btn" data-act="exdel" data-i="' + i + '" aria-label="Șterge ziua specială">' + ic('trash') + '</button></div>' +
-          '<div class="wz-g2">' + field('Data', '<input class="wz-inp" type="date" id="' + idOf(b + '.date') + '" data-bind="' + b + '.date" data-t="text" data-re="1" value="' + esc(x.date) + '">', { for: idOf(b + '.date') }) + field('Motivul', inp(b + '.reason', { max: 190, ph: 'Sărbătoare' }), { opt: true }) + '</div>' +
-          seg(b + '.is_closed', [[true, 'Închis'], [false, 'Alt program']]) +
-          (!x.is_closed ? '<div class="wz-day-h"><input class="wz-inp" type="time" data-bind="' + b + '.open" data-t="text" value="' + esc(x.open) + '" aria-label="De la"><span>–</span><input class="wz-inp" type="time" data-bind="' + b + '.close" data-t="text" value="' + esc(x.close) + '" aria-label="Până la"></div>' : '') + '</div>';
-      }).join('') + (p.exceptions.length < 200 ? '<button type="button" class="wz-add" data-act="exadd">' + ic('calendar-blank') + 'Adaugă o zi specială</button>' : ''), { opt: true });
+        return '<div class="wz-row"><div class="wz-row-h"><b>' + (x.date ? esc(x.date.split('-').reverse().join('.')) : VQ.t('New day')) + '</b><button type="button" class="ve-icon-btn" data-act="exdel" data-i="' + i + '" aria-label="' + VQ.t('Delete the special day') + '">' + ic('trash') + '</button></div>' +
+          '<div class="wz-g2">' + field(VQ.t('Date'), '<input class="wz-inp" type="date" id="' + idOf(b + '.date') + '" data-bind="' + b + '.date" data-t="text" data-re="1" value="' + esc(x.date) + '">', { for: idOf(b + '.date') }) + field(VQ.t('Reason'), inp(b + '.reason', { max: 190, ph: VQ.t('Public holiday') }), { opt: true }) + '</div>' +
+          seg(b + '.is_closed', [[true, VQ.t('Closed')], [false, VQ.t('Different hours')]]) +
+          (!x.is_closed ? '<div class="wz-day-h"><input class="wz-inp" type="time" data-bind="' + b + '.open" data-t="text" value="' + esc(x.open) + '" aria-label="' + VQ.t('From') + '"><span>–</span><input class="wz-inp" type="time" data-bind="' + b + '.close" data-t="text" value="' + esc(x.close) + '" aria-label="' + VQ.t('Until') + '"></div>' : '') + '</div>';
+      }).join('') + (p.exceptions.length < 200 ? '<button type="button" class="wz-add" data-act="exadd">' + ic('calendar-blank') + VQ.t('Add a special day') + '</button>' : ''), { opt: true });
 
-    h += block('Când se vinde', null, '<div class="wz-g2">' +
-      field('Vânzarea online se oprește cu', stepper('booking_lead_time_hours', { min: 0, max: 720, label: 'Ore înainte', u: 'ore înainte', start: 0 }), { hint: '0 = se poate cumpăra până în ultimul moment.' }) +
-      field('Se poate rezerva cu cel mult', stepper('booking_max_advance_days', { min: 1, max: 365, step: 7, ph: 'ca la locație', label: 'Zile', u: 'zile înainte', start: 30 }), { hint: 'Gol = cât permite locația.' }) + '</div>', { opt: true });
+    h += block(VQ.t('When it is sold'), null, '<div class="wz-g2">' +
+      field(VQ.t('Online sales stop'), stepper('booking_lead_time_hours', { min: 0, max: 720, label: VQ.t('Hours before'), u: VQ.t('hours before'), start: 0 }), { hint: VQ.t('0 = it can be bought up to the last moment.') }) +
+      field(VQ.t('It can be booked at most'), stepper('booking_max_advance_days', { min: 1, max: 365, step: 7, ph: VQ.t('same as the venue'), label: VQ.t('Days'), u: VQ.t('days before'), start: 30 }), { hint: VQ.t('Empty = as far ahead as the venue allows.') }) + '</div>', { opt: true });
     return h;
   }
 
   /* =================== step: add-ons =================== */
   function stExtra() {
     var p = W.p;
-    var h = head('extra', 'Vrei să oferi ceva în plus?', 'Suplimentele se aleg la fiecare bilet: o poză, un locker, timp în plus. Poți sări peste pas; nu e obligatoriu.');
+    var h = head('extra', VQ.t('Do you want to offer something extra?'), VQ.t('Add-ons are chosen with each ticket: a photo, a locker, extra time. You can skip this step; it is not required.'));
     h += p.addons.map(function (a, i) {
       var b = 'addons.' + i, mx = a.max_per_unit == null ? 1 : a.max_per_unit, tot = (a.included_qty || 0) + mx;
-      return '<div class="wz-row is-card"><div class="wz-row-h"><b>' + esc(a.name || 'Supliment nou') + '</b><button type="button" class="ve-icon-btn" data-act="addel" data-i="' + i + '" aria-label="Șterge suplimentul">' + ic('trash') + '</button></div>' +
-        '<div class="wz-g2">' + field('Numele', inp(b + '.name', { max: 120, ph: kit().addons[0] }), { req: true }) + field('Prețul', money(b + '.price', { ph: '0' })) +
-        field('Incluse gratuit la un bilet', stepper(b + '.included_qty', { min: 0, max: 50, re: true, label: 'Incluse', start: 0 })) +
-        field('Maxim plătite la un bilet', stepper(b + '.max_per_unit', { min: 0, max: 50, re: true, label: 'Maxim plătite', start: 1 })) + '</div>' +
-        '<div class="wz-sentence is-sm"><span class="wz-k2">La fiecare bilet</span>' + (a.included_qty ? '<b>' + a.included_qty + '</b> ' + (a.included_qty > 1 ? 'gratuite' : 'gratuit') + ' + ' : '') + 'până la <b>' + mx + '</b> plătite' + (a.price ? ' (câte ' + esc(lei(a.price)) + ')' : '') + ' = cel mult <b>' + tot + '</b>. Pagina îi scrie clientului limita.</div>' +
-        toggle(b + '.is_active', 'Se vinde', null) + '</div>';
+      return '<div class="wz-row is-card"><div class="wz-row-h"><b>' + esc(a.name || VQ.t('New add-on')) + '</b><button type="button" class="ve-icon-btn" data-act="addel" data-i="' + i + '" aria-label="' + VQ.t('Delete the add-on') + '">' + ic('trash') + '</button></div>' +
+        '<div class="wz-g2">' + field(VQ.t('Name'), inp(b + '.name', { max: 120, ph: kit().addons[0] }), { req: true }) + field(VQ.t('Price'), money(b + '.price', { ph: '0' })) +
+        field(VQ.t('Included free with one ticket'), stepper(b + '.included_qty', { min: 0, max: 50, re: true, label: VQ.t('Included'), start: 0 })) +
+        field(VQ.t('Maximum paid with one ticket'), stepper(b + '.max_per_unit', { min: 0, max: 50, re: true, label: VQ.t('Maximum paid'), start: 1 })) + '</div>' +
+        '<div class="wz-sentence is-sm"><span class="wz-k2">' + VQ.t('With each ticket') + '</span>' + (a.included_qty
+          ? (a.price ? VQ.t('<b>{free}</b> free + up to <b>{max}</b> paid ({price} each) = at most <b>{total}</b>. The page tells the customer the limit.', { free: a.included_qty, max: mx, price: esc(lei(a.price)), total: tot }) : VQ.t('<b>{free}</b> free + up to <b>{max}</b> paid = at most <b>{total}</b>. The page tells the customer the limit.', { free: a.included_qty, max: mx, total: tot }))
+          : (a.price ? VQ.t('Up to <b>{max}</b> paid ({price} each) = at most <b>{total}</b>. The page tells the customer the limit.', { max: mx, price: esc(lei(a.price)), total: tot }) : VQ.t('Up to <b>{max}</b> paid = at most <b>{total}</b>. The page tells the customer the limit.', { max: mx, total: tot }))) + '</div>' +
+        toggle(b + '.is_active', VQ.t('On sale'), null) + '</div>';
     }).join('');
     if (p.addons.length < 20) {
       var left = kit().addons.filter(function (s) { return !p.addons.some(function (a) { return a.name === s; }); });
-      h += '<div class="wz-fl"><span class="wz-lbl">Adaugă un supliment</span><div class="wz-chips">' + left.map(function (s) { return '<button type="button" class="wz-chip is-add" data-act="adadd" data-val="' + jv(s) + '">' + ic('plus') + esc(s) + '</button>'; }).join('') +
-        '<button type="button" class="wz-chip is-add" data-act="adadd" data-val="null">' + ic('plus') + 'Altul</button></div></div>';
+      h += '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('Add an add-on') + '</span><div class="wz-chips">' + left.map(function (s) { return '<button type="button" class="wz-chip is-add" data-act="adadd" data-val="' + jv(s) + '">' + ic('plus') + esc(s) + '</button>'; }).join('') +
+        '<button type="button" class="wz-chip is-add" data-act="adadd" data-val="null">' + ic('plus') + VQ.t('Another one') + '</button></div></div>';
     }
-    if (!p.addons.length) h += '<p class="wz-hint">Fără suplimente, pagina arată doar biletele. Poți adăuga oricând mai târziu.</p>';
+    if (!p.addons.length) h += '<p class="wz-hint">' + VQ.t('Without add-ons, the page shows only the tickets. You can add some any time later.') + '</p>';
     return h;
   }
 
@@ -945,122 +951,122 @@
   }
   function stContinut() {
     var p = W.p;
-    var h = head('continut', 'Ce pui în pachet?', 'Alege din produsele pe care le ai deja. La cumpărare, pachetul emite câte un bilet pentru fiecare parte; experiențele cu oră își aleg ora la rezervare.');
+    var h = head('continut', VQ.t('What goes in the package?'), VQ.t('Choose from the products you already have. On purchase, the package issues one ticket for each part; timed experiences get their time chosen at booking.'));
     h += '<div class="wz-pk-items">' + p.package_items.map(function (it, i) {
       var pr = products.filter(function (x) { return x.id === it.product_id; })[0], d = details[it.product_id], b = 'package_items.' + i;
-      var title = (pr && pr.title) || it._title || 'Produsul ' + it.product_id;
+      var title = (pr && pr.title) || it._title || VQ.t('Product {id}', { id: it.product_id });
       var vs = d ? (d.variants || []).filter(function (v) { return v.is_active || v.id === it.variant_id; }) : null;
-      return '<div class="wz-pk"><span class="wz-pk-ic">' + pic(pr ? TYPE_ICON[pr.type] : 'ticket') + '</span><div class="wz-pk-b"><div class="wz-pk-top"><div><b>' + esc(title) + '</b><small>' + esc(pr ? TYPES[pr.type] : '') + '</small></div><button type="button" class="ve-icon-btn" data-act="pkdel" data-i="' + i + '" aria-label="Scoate din pachet">' + ic('x') + '</button></div>' +
-        '<div class="wz-pk-row">' + (vs ? field('Biletul', sel(b + '.variant_id', [[null, 'Alege biletul']].concat(vs.map(function (v) { return [v.id, (v.name || 'Bilet') + ' · ' + lei(v.price)]; })), { re: true }), { bad: tried('continut') && !it.variant_id }) : '<p class="wz-hint">Se încarcă biletele…</p>') +
-        field('Câte', stepper(b + '.quantity', { min: 1, max: 50, re: true, label: 'Cantitate', start: 1 })) + '</div></div></div>';
+      return '<div class="wz-pk"><span class="wz-pk-ic">' + pic(pr ? TYPE_ICON[pr.type] : 'ticket') + '</span><div class="wz-pk-b"><div class="wz-pk-top"><div><b>' + esc(title) + '</b><small>' + esc(pr ? TYPES[pr.type] : '') + '</small></div><button type="button" class="ve-icon-btn" data-act="pkdel" data-i="' + i + '" aria-label="' + VQ.t('Remove from the package') + '">' + ic('x') + '</button></div>' +
+        '<div class="wz-pk-row">' + (vs ? field(VQ.t('Ticket'), sel(b + '.variant_id', [[null, VQ.t('Choose the ticket')]].concat(vs.map(function (v) { return [v.id, (v.name || VQ.t('Ticket')) + ' · ' + lei(v.price)]; })), { re: true }), { bad: tried('continut') && !it.variant_id }) : '<p class="wz-hint">' + VQ.t('Loading the tickets…') + '</p>') +
+        field(VQ.t('How many'), stepper(b + '.quantity', { min: 1, max: 50, re: true, label: VQ.t('Quantity'), start: 1 })) + '</div></div></div>';
     }).join('') + '</div>';
     var avail = componentChoices();
-    h += block('Produsele tale', avail.length ? (p.package_items.length ? 'Poți pune același produs de mai multe ori, cu bilete diferite (de pildă 2 adulți + 2 copii).' : 'Apasă pe un produs ca să-l pui în pachet.') : 'Nu ai încă bilete de acces sau experiențe' + (p.location_id ? ' la această locație' : '') + '. Adaugă întâi unul, apoi fă pachetul.',
+    h += block(VQ.t('Your products'), avail.length ? (p.package_items.length ? VQ.t('You can add the same product several times, with different tickets (for example 2 adults + 2 children).') : VQ.t('Press a product to put it in the package.')) : (p.location_id ? VQ.t('You have no access tickets or experiences at this venue yet. Add one first, then make the package.') : VQ.t('You have no access tickets or experiences yet. Add one first, then make the package.')),
       '<div class="wz-shelf">' + avail.map(function (x) {
-        return '<button type="button" data-act="pkadd" data-val="' + jv(x.id) + '"' + (p.package_items.length >= 20 ? ' disabled' : '') + '><span class="wz-shelf-ic">' + pic(TYPE_ICON[x.type]) + '</span><b>' + esc(x.title || 'Produs') + '</b><small>' + (x.min_price != null ? 'de la ' + esc(lei(x.min_price)) : '') + '</small>' + ic('plus') + '</button>';
+        return '<button type="button" data-act="pkadd" data-val="' + jv(x.id) + '"' + (p.package_items.length >= 20 ? ' disabled' : '') + '><span class="wz-shelf-ic">' + pic(TYPE_ICON[x.type]) + '</span><b>' + esc(x.title || VQ.t('Product')) + '</b><small>' + (x.min_price != null ? VQ.t('from {price}', { price: esc(lei(x.min_price)) }) : '') + '</small>' + ic('plus') + '</button>';
       }).join('') + '</div>');
     var t = pkgTotals();
-    if (t.known) h += '<div class="wz-sentence"><span class="wz-k2">Separat, clientul ar plăti</span><b class="is-big">' + esc(lei(t.total)) + '</b>. La pasul următor pui prețul pachetului.</div>';
+    if (t.known) h += '<div class="wz-sentence"><span class="wz-k2">' + VQ.t('Separately, the customer would pay') + '</span>' + VQ.t('<b class="is-big">{amount}</b>. At the next step you set the price of the package.', { amount: esc(lei(t.total)) }) + '</div>';
     return h;
   }
   function stPret() {
     var p = W.p, v = p.variants[0], t = pkgTotals(), price = v.price, save = t.known && price != null ? t.total - price : null;
-    var h = head('pret', 'Cât costă pachetul?', 'Un singur preț pentru tot. Un pachet bun e puțin mai ieftin decât biletele luate separat.');
-    h += block(null, null, field('Prețul pachetului', money('variants.0.price', { ph: t.known ? String(Math.round(t.total * 0.9)) : '0', big: true }), { req: true, for: 'wz-variants-0-price', bad: tried('pret') && price == null, hint: 'Cât primești tu. Comisionul viaqui.com se adaugă peste, la client.' }) +
-      (t.known ? '<div class="wz-sugg"><span>Reducere rapidă:</span>' + [5, 10, 15, 20].map(function (pc) { var val = Math.round(t.total * (1 - pc / 100)); return '<button type="button" data-act="set" data-path="variants.0.price" data-val="' + val + '">−' + pc + '% · ' + esc(lei(val)) + '</button>'; }).join('') + '</div>' : ''));
+    var h = head('pret', VQ.t('How much does the package cost?'), VQ.t('One price for everything. A good package is a little cheaper than the tickets bought separately.'));
+    h += block(null, null, field(VQ.t('Package price'), money('variants.0.price', { ph: t.known ? String(Math.round(t.total * 0.9)) : '0', big: true }), { req: true, for: 'wz-variants-0-price', bad: tried('pret') && price == null, hint: VQ.t('What you receive. The Viaqui commission is added on top, for the customer.') }) +
+      (t.known ? '<div class="wz-sugg"><span>' + VQ.t('Quick discount:') + '</span>' + [5, 10, 15, 20].map(function (pc) { var val = Math.round(t.total * (1 - pc / 100)); return '<button type="button" data-act="set" data-path="variants.0.price" data-val="' + val + '">−' + pc + '% · ' + esc(lei(val)) + '</button>'; }).join('') + '</div>' : ''));
     if (t.known) {
       var mx = Math.max(t.total, price || 0) || 1;
-      h += '<div class="wz-save" aria-live="polite"><span class="wz-k2">' + (save != null && save < 0 ? 'Atenție' : 'Clientul economisește') + '</span>' +
-        '<span class="wz-big' + (save != null && save < 0 ? ' is-bad' : '') + '" id="wz-save-big">' + (save == null ? '—' : esc(save < 0 ? 'Mai scump cu ' + lei(-save) : lei(save))) + '</span>' +
-        '<div class="wz-bars"><div>Separat<span><i style="width:' + (t.total / mx * 100) + '%"></i></span><b>' + esc(lei(t.total)) + '</b></div><div>Cu pachetul<span><i id="wz-bar-pk" style="width:' + ((price || 0) / mx * 100) + '%"></i></span><b id="wz-bar-pk-t">' + (price != null ? esc(lei(price)) : '—') + '</b></div></div></div>';
-      h += block('Cum se împarte încasarea', 'Pentru rapoarte și deconturi: cât din preț revine fiecărei părți. Gol = împărțim automat, proporțional cu prețurile separate.',
+      h += '<div class="wz-save" aria-live="polite"><span class="wz-k2">' + (save != null && save < 0 ? VQ.t('Careful') : VQ.t('The customer saves')) + '</span>' +
+        '<span class="wz-big' + (save != null && save < 0 ? ' is-bad' : '') + '" id="wz-save-big">' + (save == null ? '—' : esc(save < 0 ? VQ.t('{amount} more expensive', { amount: lei(-save) }) : lei(save))) + '</span>' +
+        '<div class="wz-bars"><div>' + VQ.t('Separately') + '<span><i style="width:' + (t.total / mx * 100) + '%"></i></span><b>' + esc(lei(t.total)) + '</b></div><div>' + VQ.t('With the package') + '<span><i id="wz-bar-pk" style="width:' + ((price || 0) / mx * 100) + '%"></i></span><b id="wz-bar-pk-t">' + (price != null ? esc(lei(price)) : '—') + '</b></div></div></div>';
+      h += block(VQ.t('How the revenue is split'), VQ.t('For reports and payouts: how much of the price goes to each part. Empty = we split it automatically, in proportion to the separate prices.'),
         '<div class="wz-alloc">' + p.package_items.map(function (it, i) {
           var pr = products.filter(function (x) { return x.id === it.product_id; })[0], vv = variantOf(it);
           var auto = vv && price != null && t.total ? Math.round(price * (vv.price * (it.quantity || 1)) / t.total * 100) / 100 : null;
-          return '<div class="wz-alloc-r"><div><b>' + esc((pr && pr.title) || it._title || '') + '</b><small>' + esc(vv ? vv.name : '') + ' × ' + (it.quantity || 1) + '</small></div>' + money('package_items.' + i + '.allocated_price', { ph: auto != null ? String(auto).replace('.', ',') + ' (auto)' : 'automat' }) + '</div>';
+          return '<div class="wz-alloc-r"><div><b>' + esc((pr && pr.title) || it._title || '') + '</b><small>' + esc(vv ? vv.name : '') + ' × ' + (it.quantity || 1) + '</small></div>' + money('package_items.' + i + '.allocated_price', { ph: auto != null ? VQ.t('{amount} (auto)', { amount: String(auto) }) : VQ.t('automatic') }) + '</div>';
         }).join('') + '</div>', { opt: true });
     }
-    h += '<details class="wz-more" data-more="pk"' + (W.openMore.pk ? ' open' : '') + '><summary>' + ic('caret-down') + 'Mai multe pentru pachet<small>limite, casă, returnare</small></summary><div class="wz-more-b"><div class="wz-g2">' +
-      field('Minim pe comandă', stepper('variants.0.min_per_order', { min: 0, max: 500, label: 'Minim', start: 1 })) +
-      field('Maxim pe comandă', stepper('variants.0.max_per_order', { min: 1, max: 500, label: 'Maxim', start: 20 })) +
-      field('Preț la casă', money('variants.0.pos_price', { ph: 'ca online' }), { opt: true }) +
-      field('Însoțitor gratuit', inp('variants.0.companion_label', { max: 80, ph: 'Însoțitor' }), { opt: true }) + '</div>' +
-      toggle('variants.0.is_active', 'Se vinde', 'Oprește pachetul fără să-l ștergi.') + toggle('variants.0.is_refundable', 'Se poate returna', null) + toggle('variants.0.pos_only', 'Doar la casă', null) + '</div></details>';
+    h += '<details class="wz-more" data-more="pk"' + (W.openMore.pk ? ' open' : '') + '><summary>' + ic('caret-down') + VQ.t('More for the package') + '<small>' + VQ.t('limits, counter, refunds') + '</small></summary><div class="wz-more-b"><div class="wz-g2">' +
+      field(VQ.t('Minimum per order'), stepper('variants.0.min_per_order', { min: 0, max: 500, label: VQ.t('Minimum'), start: 1 })) +
+      field(VQ.t('Maximum per order'), stepper('variants.0.max_per_order', { min: 1, max: 500, label: VQ.t('Maximum'), start: 20 })) +
+      field(VQ.t('Price at the counter'), money('variants.0.pos_price', { ph: VQ.t('same as online') }), { opt: true }) +
+      field(VQ.t('Free companion'), inp('variants.0.companion_label', { max: 80, ph: VQ.t('Companion') }), { opt: true }) + '</div>' +
+      toggle('variants.0.is_active', VQ.t('On sale'), VQ.t('Stop the package without deleting it.')) + toggle('variants.0.is_refundable', VQ.t('Refundable'), null) + toggle('variants.0.pos_only', VQ.t('Counter only'), null) + '</div></details>';
     return h;
   }
 
   /* =================== step: what to know =================== */
   function langBlock(p, K) {
     var chips = '<div class="wz-chips">' + LANGS.map(function (l) {
-      return '<button type="button" class="wz-chip" data-act="lang" data-val="' + jv(l[0]) + '" aria-pressed="' + (p.languages.indexOf(l[0]) >= 0) + '">' + l[1] + '</button>';
+      return '<button type="button" class="wz-chip" data-act="lang" data-val="' + jv(l[0]) + '" aria-pressed="' + (p.languages.indexOf(l[0]) >= 0) + '">' + esc(l[1]) + '</button>';
     }).join('') + '</div>';
     // Languages matter when someone speaks to the client (a tour, a workshop, a game master).
     var talks = K.langs || p.service_type === 'guided' || p.service_type === 'workshop' || p.languages.length;
-    if (talks) return '<div class="wz-fl"><span class="wz-lbl">În ce limbi se vorbește <small>opțional</small></span>' + chips + '</div>';
-    return '<details class="wz-more" data-more="lang"' + (W.openMore.lang ? ' open' : '') + '><summary>' + ic('caret-down') + 'În ce limbi se vorbește<small>doar dacă e cineva care explică</small></summary><div class="wz-more-b">' + chips + '</div></details>';
+    if (talks) return '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('Languages spoken') + ' <small>' + VQ.t('optional') + '</small></span>' + chips + '</div>';
+    return '<details class="wz-more" data-more="lang"' + (W.openMore.lang ? ' open' : '') + '><summary>' + ic('caret-down') + VQ.t('Languages spoken') + '<small>' + VQ.t('only if someone explains things') + '</small></summary><div class="wz-more-b">' + chips + '</div></details>';
   }
   function stInfo() {
     var p = W.p, t = p.product_type, v = p.variants[0], K = kit();
-    var h = head('info', 'Ce trebuie să știe clientul?', 'Răspunde acum la întrebările pe care altfel le primești la telefon. Tot ce e aici apare pe pagina produsului.');
-    var unitEx = (v && v.price != null ? lei(v.price) : '50 lei') + ' / ' + (p.unit_label || K.ph.unit[t]);
-    h += block('Prețul, pe înțeles', null, field('Unitatea de preț', inp('unit_label', { max: 60, ph: K.ph.unit[t] }), { opt: true, hint: 'Apare după preț. Acum: <b id="wz-unit-ex">' + esc(unitEx) + '</b>' }));
-    h += block('Ce include', 'Scrie ce e inclus la tine. Sugestiile țin de categoria aleasă; ignoră-le dacă nu se potrivesc.', field(null, tags('included_items', K.incl[t] || [], 'Scrie și apasă Enter')) +
-      (t === 'experience' ? field('Ce nu include', tags('not_included', K.notIncl, 'Scrie și apasă Enter'), { opt: true }) +
-        field('De știut înainte', tags('requirements', K.req, 'Scrie și apasă Enter'), { opt: true }) : ''));
+    var h = head('info', VQ.t('What does the customer need to know?'), VQ.t('Answer now the questions you would otherwise get on the phone. Everything here appears on the product page.'));
+    var unitEx = (v && v.price != null ? lei(v.price) : lei(50)) + ' / ' + (p.unit_label || K.ph.unit[t]);
+    h += block(VQ.t('The price, made clear'), null, field(VQ.t('Price unit'), inp('unit_label', { max: 60, ph: K.ph.unit[t] }), { opt: true, hint: VQ.t('It appears after the price. Now: {example}', { example: '<b id="wz-unit-ex">' + esc(unitEx) + '</b>' }) }));
+    h += block(VQ.t('What is included'), VQ.t('Write what is included with you. The suggestions depend on the chosen category; ignore them if they do not fit.'), field(null, tags('included_items', K.incl[t] || [], VQ.t('Type and press Enter'))) +
+      (t === 'experience' ? field(VQ.t('What is not included'), tags('not_included', K.notIncl, VQ.t('Type and press Enter')), { opt: true }) +
+        field(VQ.t('Good to know beforehand'), tags('requirements', K.req, VQ.t('Type and press Enter')), { opt: true }) : ''));
     if (t === 'experience') {
       var ageBad = p.age_min != null && p.age_max != null && p.age_min > p.age_max;
-      h += block('Pentru cine e', null,
-        '<div class="wz-g2 is-keep">' + field('Vârsta minimă', stepper('age_min', { min: 0, max: 99, ph: 'oricare', label: 'Vârsta minimă', u: 'ani', start: 6 }), { bad: ageBad }) + field('Vârsta maximă', stepper('age_max', { min: 0, max: 99, ph: 'oricare', label: 'Vârsta maximă', u: 'ani', start: 70 }), { bad: ageBad }) + '</div>' +
-        (ageBad ? '<p class="wz-err">Vârsta minimă e peste cea maximă.</p>' : '') +
-        field('Punctul de întâlnire', inp('meeting_point', { max: 500, ph: K.ph.meet }), { opt: true, hint: 'Unde vine clientul. Apare pe bilet.' }) + langBlock(p, K));
+      h += block(VQ.t('Who it is for'), null,
+        '<div class="wz-g2 is-keep">' + field(VQ.t('Minimum age'), stepper('age_min', { min: 0, max: 99, ph: VQ.t('any'), label: VQ.t('Minimum age'), u: VQ.t('years'), start: 6 }), { bad: ageBad }) + field(VQ.t('Maximum age'), stepper('age_max', { min: 0, max: 99, ph: VQ.t('any'), label: VQ.t('Maximum age'), u: VQ.t('years'), start: 70 }), { bad: ageBad }) + '</div>' +
+        (ageBad ? '<p class="wz-err">' + VQ.t('The minimum age is above the maximum.') + '</p>' : '') +
+        field(VQ.t('Meeting point'), inp('meeting_point', { max: 500, ph: K.ph.meet }), { opt: true, hint: VQ.t('Where the customer comes. It appears on the ticket.') }) + langBlock(p, K));
     }
-    h += block('Reguli', null,
-      '<div class="wz-fl"><span class="wz-lbl">Anulare <small>opțional</small></span><div class="wz-chips">' + CANCEL.map(function (c) {
-        return '<button type="button" class="wz-chip" data-act="set" data-path="cancellation_policy" data-val="' + jv(c[0]) + '" aria-pressed="' + (p.cancellation_policy === c[0]) + '">' + c[1] + '</button>';
-      }).join('') + '</div>' + ta('cancellation_policy', { max: 2000, rows: 2, ph: 'Alege mai sus sau scrie regula ta.' }) + '</div>' +
-      field('Condiții de folosire', ta('usage_terms', { max: 2000, rows: 2, ph: 'Biletul se arată la intrare, de pe telefon.' }), { opt: true }) +
-      (K.terms.filter(function (s) { return (p.usage_terms || '').indexOf(s) < 0; }).length ? '<div class="wz-sugg"><span>Adaugă:</span>' + K.terms.filter(function (s) { return (p.usage_terms || '').indexOf(s) < 0; }).map(function (s) { return '<button type="button" data-act="terms" data-val="' + jv(s) + '">+ ' + esc(s) + '</button>'; }).join('') + '</div>' : ''));
+    h += block(VQ.t('Rules'), null,
+      '<div class="wz-fl"><span class="wz-lbl">' + VQ.t('Cancellation') + ' <small>' + VQ.t('optional') + '</small></span><div class="wz-chips">' + CANCEL.map(function (c) {
+        return '<button type="button" class="wz-chip" data-act="set" data-path="cancellation_policy" data-val="' + jv(c[0]) + '" aria-pressed="' + (p.cancellation_policy === c[0]) + '">' + esc(c[1]) + '</button>';
+      }).join('') + '</div>' + ta('cancellation_policy', { max: 2000, rows: 2, ph: VQ.t('Choose above or write your own rule.') }) + '</div>' +
+      field(VQ.t('Terms of use'), ta('usage_terms', { max: 2000, rows: 2, ph: VQ.t('Show the ticket at the entrance, on your phone.') }), { opt: true }) +
+      (K.terms.filter(function (s) { return (p.usage_terms || '').indexOf(s) < 0; }).length ? '<div class="wz-sugg"><span>' + VQ.t('Add:') + '</span>' + K.terms.filter(function (s) { return (p.usage_terms || '').indexOf(s) < 0; }).map(function (s) { return '<button type="button" data-act="terms" data-val="' + jv(s) + '">+ ' + esc(s) + '</button>'; }).join('') + '</div>' : ''));
     return h;
   }
 
   /* =================== step: pictures =================== */
   function stPoze() {
     var p = W.p, t = p.product_type, l = locById(p.location_id), lcov = l && l.cover_image;
-    var h = head('poze', 'Arată-le cum e acolo', lcov ? 'Fără poză proprie, produsul folosește poza locației „' + esc(l.name) + '”. Dar o poză a produsului vinde mai bine.' : 'O poză e obligatorie la trimiterea spre aprobare' + (l ? ', pentru că locația nu are nici ea' : '') + '.');
-    h += block('Poza principală', 'JPG, PNG sau WebP, cel mult 10 MB. Recomandat 1200 × 900 sau mai mare, pe orizontală.', mount('cover') +
-      (tried('poze') && !hasPhoto() ? '<p class="wz-err">Adaugă o poză ca să poți trimite produsul spre aprobare.</p>' : '') +
-      '<div class="wz-ph-tips"><div><b>Oameni în cadru</b>Clienții se văd pe ei acolo.</div><div><b>Lumină de zi</b>Fără filtre puternice.</div><div><b>Fără text pe poză</b>Titlul îl punem noi.</div></div>', lcov ? { opt: true } : null);
-    if (t === 'experience') h += block('Galeria', 'Până la 20 de poze pe pagina experienței.', mount('gallery'), { opt: true });
+    var h = head('poze', VQ.t('Show them what it is like there'), lcov ? VQ.t('Without its own photo, the product uses the photo of the venue "{name}". But a photo of the product sells better.', { name: esc(l.name) }) : (l ? VQ.t('A photo is required when sending for approval, because the venue has none either.') : VQ.t('A photo is required when sending for approval.')));
+    h += block(VQ.t('Main photo'), VQ.t('JPG, PNG or WebP, 10 MB at most. Recommended: 1200 × 900 or larger, landscape.'), mount('cover') +
+      (tried('poze') && !hasPhoto() ? '<p class="wz-err">' + VQ.t('Add a photo to be able to send the product for approval.') + '</p>' : '') +
+      '<div class="wz-ph-tips"><div><b>' + VQ.t('People in the frame') + '</b>' + VQ.t('Customers picture themselves there.') + '</div><div><b>' + VQ.t('Daylight') + '</b>' + VQ.t('No strong filters.') + '</div><div><b>' + VQ.t('No text on the photo') + '</b>' + VQ.t('We add the title ourselves.') + '</div></div>', lcov ? { opt: true } : null);
+    if (t === 'experience') h += block(VQ.t('Gallery'), VQ.t('Up to 20 photos on the experience page.'), mount('gallery'), { opt: true });
     return h;
   }
 
   /* =================== step: last settings =================== */
   function stSetari() {
     var p = W.p, t = p.product_type;
-    var h = head('setari', 'Ultimele setări', 'Majoritatea produselor merg bine cu ce e deja ales aici. Verifică doar dacă ceva se aplică la tine.');
+    var h = head('setari', VQ.t('The last settings'), VQ.t('Most products work well with what is already chosen here. Just check whether anything applies to you.'));
     if (t === 'experience') {
-      h += block('Cere și bilet de intrare?', 'Dacă experiența are loc în interiorul locației, clientul are nevoie și de acces. Pe pagina experienței, biletele de acces apar lângă ea.',
-        '<div class="wz-cards">' + [['none', 'x', 'Nu', 'Experiența se cumpără singură.'], ['any', 'ticket', 'Da, câte unul pentru fiecare', 'Fiecare participant are nevoie de bilet de acces în aceeași zi.'], ['adult', 'ticket', 'Da, un bilet de adult', 'De pildă unul pe grup: cine cumpără pentru grup are nevoie de acces.']].map(function (o) {
+      h += block(VQ.t('Does it also need an entry ticket?'), VQ.t('If the experience takes place inside the venue, the customer needs access too. On the experience page, the access tickets appear next to it.'),
+        '<div class="wz-cards">' + [['none', 'x', VQ.t('No'), VQ.t('The experience is bought on its own.')], ['any', 'ticket', VQ.t('Yes, one for each person'), VQ.t('Every participant needs an access ticket on the same day.')], ['adult', 'ticket', VQ.t('Yes, one adult ticket'), VQ.t('For example one per group: whoever buys for the group needs access.')]].map(function (o) {
           return choice('set', o[0], p.access_requirement === o[0], o[1] === 'x' ? ic('x') : pic('ticket'), o[2], o[3], { path: 'access_requirement' });
         }).join('') + '</div>');
     }
-    h += block('Vânzarea', null,
-      toggle('pos_only', 'Doar la casă', 'Nu se vinde online, doar de la casă (POS). Bun pentru bilete de protocol sau reduceri locale.') +
-      toggle('requires_vehicle_info', 'Cere numărul de înmatriculare', 'Clientul îl scrie la cumpărare; apare pe bilet și în lista de la intrare.' + (p.access_kind === 'vehicle' && t === 'access' ? ' <b>Recomandat pentru parcare.</b>' : '')));
+    h += block(VQ.t('Sales'), null,
+      toggle('pos_only', VQ.t('Counter only'), VQ.t('Not sold online, only at the counter (POS). Good for complimentary tickets or local discounts.')) +
+      toggle('requires_vehicle_info', VQ.t('Ask for the number plate'), p.access_kind === 'vehicle' && t === 'access' ? VQ.t('The customer enters it when buying; it appears on the ticket and in the list at the entrance. <b>Recommended for parking.</b>') : VQ.t('The customer enters it when buying; it appears on the ticket and in the list at the entrance.')));
     if (meta && meta.has_secondary_issuer) {
-      h += block('Firma care emite biletul', 'Ai două firme în cont. Alege pe care se emit biletele și documentele fiscale pentru acest produs.',
-        seg('issuing_company', [['primary', 'Firma principală'], ['secondary', 'A doua firmă']]));
+      h += block(VQ.t('The company that issues the ticket'), VQ.t('You have two companies in your account. Choose which one issues the tickets and the tax documents for this product.'),
+        seg('issuing_company', [['primary', VQ.t('Main company')], ['secondary', VQ.t('Second company')]]));
     }
     return h;
   }
 
   /* =================== step: check and send =================== */
   var STATUS = {
-    draft: ['is-muted', 'file-text', 'Ciornă — doar tu o vezi', 'Completează ce lipsește și trimite-o spre aprobare: echipa viaqui.com se uită peste ea și, dacă e în regulă, apare pe site.'],
-    pending: ['is-wait', 'hourglass', 'Trimis spre aprobare', 'Nu mai trebuie să faci nimic. Te anunțăm pe e-mail când primește răspuns. Până atunci poți modifica în continuare; verificăm ultima variantă.'],
-    rejected: ['is-bad', 'warning-circle', 'Respins', 'Corectează ce scrie mai jos și trimite din nou. Nu se pierde nimic din ce ai scris.'],
-    approvedOn: ['is-ok', 'check-circle', 'Aprobat și pe site', 'Modificările pe care le salvezi de acum apar direct pe site, fără o nouă aprobare.'],
-    approvedOff: ['is-muted', 'eye-slash', 'Aprobat, dar ascuns de pe site', 'Nu îl vede nimeni până nu apeși „Pune pe site”. Modificările apar direct, fără o nouă aprobare.'],
+    draft: ['is-muted', 'file-text', VQ.t('Draft: only you can see it'), VQ.t('Fill in what is missing and send it for approval: the Viaqui team looks it over and, if all is well, it appears on the site.')],
+    pending: ['is-wait', 'hourglass', VQ.t('Sent for approval'), VQ.t('There is nothing more you need to do. We email you when it gets an answer. Until then you can keep editing; we check the latest version.')],
+    rejected: ['is-bad', 'warning-circle', VQ.t('Rejected'), VQ.t('Fix what is written below and send it again. Nothing you wrote is lost.')],
+    approvedOn: ['is-ok', 'check-circle', VQ.t('Approved and on the site'), VQ.t('The changes you save from now on appear on the site straight away, with no new approval.')],
+    approvedOff: ['is-muted', 'eye-slash', VQ.t('Approved, but hidden from the site'), VQ.t('Nobody sees it until you press "Put on the site". Changes appear straight away, with no new approval.')],
   };
   function statusKey(p) {
     if (!p.id || p.review_status === 'draft') return 'draft';
@@ -1070,98 +1076,98 @@
   function sumCard(step, title, rows) {
     rows = rows.filter(function (r) { return r[1] !== '' && r[1] != null; });
     var warn = problemsOf(step).length;
-    return '<div class="wz-sum-c' + (warn ? ' is-warn' : '') + '"><div class="wz-sum-h"><b>' + title + '</b>' + (warn ? '<span class="wz-pill is-y">de completat</span>' : '') + '<button type="button" class="wz-link-btn" data-act="edit" data-val="' + jv(step) + '">' + ic('pencil-simple') + 'Modifică</button></div>' +
-      (rows.length ? '<dl>' + rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('') + '</dl>' : '<p class="wz-hint">Nimic completat încă.</p>') + '</div>';
+    return '<div class="wz-sum-c' + (warn ? ' is-warn' : '') + '"><div class="wz-sum-h"><b>' + title + '</b>' + (warn ? '<span class="wz-pill is-y">' + VQ.t('to fill in') + '</span>' : '') + '<button type="button" class="wz-link-btn" data-act="edit" data-val="' + jv(step) + '">' + ic('pencil-simple') + VQ.t('Edit') + '</button></div>' +
+      (rows.length ? '<dl>' + rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('') + '</dl>' : '<p class="wz-hint">' + VQ.t('Nothing filled in yet.') + '</p>') + '</div>';
   }
   function stGata() {
     var p = W.p, t = p.product_type, l = locById(p.location_id), c = catById(p.category_id), sc = catById(p.subcategory_id);
     var probs = problems(), draftish = isDraft();
     var st = STATUS[statusKey(p)];
-    var h = head('gata', draftish ? (probs.length ? 'Aproape gata' : 'Totul arată bine') : 'Rezumatul produsului',
-      draftish ? (probs.length ? 'Mai sunt ' + probs.length + ' lucruri de completat înainte de trimitere. Apasă pe oricare ca să mergi direct acolo.' : 'Verifică rezumatul. Poți modifica orice secțiune; te aducem înapoi aici după.')
-        : 'Apasă „Modifică” pe orice secțiune. ' + (p.review_status === 'pending' ? 'Salvează când termini.' : 'Salvează când termini; modificările apar direct pe site.'));
+    var h = head('gata', draftish ? (probs.length ? VQ.t('Almost done') : VQ.t('Everything looks good')) : VQ.t('Product summary'),
+      draftish ? (probs.length ? VQ.t('Still to fill in before sending: {n}. Press any item to go straight there.', { n: probs.length }) : VQ.t('Check the summary. You can edit any section; we bring you back here afterwards.'))
+        : (p.review_status === 'pending' ? VQ.t('Press "Edit" on any section. Save when you finish.') : VQ.t('Press "Edit" on any section. Save when you finish; the changes appear on the site straight away.')));
     if (p.id) {
       h += '<div class="wz-state ' + st[0] + '" role="status"><span class="wz-state-ic">' + ic(st[1]) + '</span><div><b>' + st[2] + '</b><p>' + st[3] + '</p>' +
-        (p.review_status === 'rejected' && p.rejection_reason ? '<p class="wz-state-why"><b>Motivul:</b> ' + esc(p.rejection_reason) + '</p>' : '') +
-        (p.review_status === 'pending' && p.submitted_at ? '<p class="wz-hint">Trimis pe ' + esc(A.when(p.submitted_at)) + '</p>' : '') + '</div></div>';
+        (p.review_status === 'rejected' && p.rejection_reason ? '<p class="wz-state-why"><b>' + VQ.t('Reason:') + '</b> ' + esc(p.rejection_reason) + '</p>' : '') +
+        (p.review_status === 'pending' && p.submitted_at ? '<p class="wz-hint">' + VQ.t('Sent on {date}', { date: esc(A.when(p.submitted_at)) }) + '</p>' : '') + '</div></div>';
     }
     var cks = [];
-    cks.push([!!p.title, 'Titlul', 'nume']);
-    if (t !== 'experience') cks.push([!!p.location_id, 'Locația', 'unde']);
-    if (needsCategory()) cks.push([!!p.category_id, 'Categoria de pe viaqui.com', 'unde']);
+    cks.push([!!p.title, VQ.t('The title'), 'nume']);
+    if (t !== 'experience') cks.push([!!p.location_id, VQ.t('The venue'), 'unde']);
+    if (needsCategory()) cks.push([!!p.category_id, VQ.t('The Viaqui category'), 'unde']);
     if (t === 'package') {
-      cks.push([p.package_items.length > 0 && !problemsOf('continut').length, 'Conținutul pachetului, cu biletul ales pe fiecare rând', 'continut']);
-      cks.push([!problemsOf('pret').length, 'Prețul pachetului', 'pret']);
+      cks.push([p.package_items.length > 0 && !problemsOf('continut').length, VQ.t('The contents of the package, with the ticket chosen on each row'), 'continut']);
+      cks.push([!problemsOf('pret').length, VQ.t('The price of the package'), 'pret']);
     } else {
-      cks.push([!problemsOf('bilete').length, 'Cel puțin un bilet de vânzare, cu nume și preț', 'bilete']);
-      if (p.booking_mode === 'slot') cks.push([!problemsOf('cand').length, 'Programul în care se pot rezerva orele', 'cand']);
-      else if (problemsOf('cand').length) cks.push([false, 'Programul', 'cand']);
+      cks.push([!problemsOf('bilete').length, VQ.t('At least one ticket on sale, with a name and a price'), 'bilete']);
+      if (p.booking_mode === 'slot') cks.push([!problemsOf('cand').length, VQ.t('The opening hours in which the start times can be booked'), 'cand']);
+      else if (problemsOf('cand').length) cks.push([false, VQ.t('The opening hours'), 'cand']);
     }
-    cks.push([hasPhoto(), 'O poză' + (l && l.cover_image && !p.cover_image ? ' (folosim poza locației)' : ''), 'poze']);
+    cks.push([hasPhoto(), (l && l.cover_image && !p.cover_image ? VQ.t('A photo (we use the photo of the venue)') : VQ.t('A photo')), 'poze']);
     if (draftish) {
-      h += block('Înainte de trimitere', null, '<div class="wz-checks">' + cks.map(function (x) {
-        return '<div class="wz-ck ' + (x[0] ? 'is-ok' : 'is-no') + '"><span class="wz-dot">' + (x[0] ? ic('check') : '!') + '</span><div>' + x[1] + '</div>' + (x[0] ? '' : '<button type="button" class="wz-link-btn" data-act="edit" data-val="' + jv(x[2]) + '">Completează</button>') + '</div>';
+      h += block(VQ.t('Before sending'), null, '<div class="wz-checks">' + cks.map(function (x) {
+        return '<div class="wz-ck ' + (x[0] ? 'is-ok' : 'is-no') + '"><span class="wz-dot">' + (x[0] ? ic('check') : '!') + '</span><div>' + x[1] + '</div>' + (x[0] ? '' : '<button type="button" class="wz-link-btn" data-act="edit" data-val="' + jv(x[2]) + '">' + VQ.t('Fill in') + '</button>') + '</div>';
       }).join('') + '</div>');
     } else if (probs.filter(function (x) { return x.save; }).length) {
-      h += '<div class="wz-alert is-warn">' + ic('warning-circle') + '<span>Nu se poate salva încă: ' + esc(probs.filter(function (x) { return x.save; }).map(function (x) { return x.msg.toLowerCase(); }).join('; ')) + '.</span></div>';
+      h += '<div class="wz-alert is-warn">' + ic('warning-circle') + '<span>' + VQ.t('It cannot be saved yet: {what}.', { what: esc(probs.filter(function (x) { return x.save; }).map(function (x) { return x.msg; }).join('; ')) }) + '</span></div>';
     }
     var sums = [];
-    var kindTxt = t === 'access' ? { person: 'Persoane', vehicle: 'Vehicul', camping: 'Camping', other: 'Altceva' }[p.access_kind] : t === 'experience' ? { rental: 'Închiriere', guided: 'Tur ghidat', workshop: 'Atelier', other: 'Altceva' }[p.service_type] : '';
-    sums.push(sumCard('tip', 'Ce vinzi', [['Tipul', esc(TYPES[t])], ['Felul', esc(kindTxt || '')]]));
+    var kindTxt = t === 'access' ? { person: VQ.t('People'), vehicle: VQ.t('Vehicle'), camping: VQ.t('Camping'), other: VQ.t('Something else') }[p.access_kind] : t === 'experience' ? { rental: VQ.t('Rental'), guided: VQ.t('Guided tour'), workshop: VQ.t('Workshop'), other: VQ.t('Something else') }[p.service_type] : '';
+    sums.push(sumCard('tip', VQ.t('What you sell'), [[VQ.t('Type'), esc(TYPES[t])], [VQ.t('Kind'), esc(kindTxt || '')]]));
     var grp = l && p.display_category ? (l.display_categories || []).filter(function (g) { return g.id === p.display_category; })[0] : null;
-    sums.push(sumCard('unde', 'Unde', [['Locația', l ? esc(l.name) : (t === 'experience' ? 'Fără locație' : '<span class="wz-ph">lipsește</span>')], ['Categoria', c ? esc(c.name) + (sc ? ' › ' + esc(sc.name) : '') : (needsCategory() ? '<span class="wz-ph">lipsește</span>' : '')], ['Grupa', grp ? esc(grp.name) : '']]));
-    sums.push(sumCard('nume', 'Nume și descriere', [['Titlul', p.title ? (p.icon ? pic(p.icon) : '') + esc(p.title) : '<span class="wz-ph">lipsește</span>'], ['Subtitlu', esc(p.subtitle || '')], ['Pe scurt', esc(p.short_description || '')], ['Descrierea', p.description ? 'scrisă' : '']]));
+    sums.push(sumCard('unde', VQ.t('Where'), [[VQ.t('Venue'), l ? esc(l.name) : (t === 'experience' ? VQ.t('No venue') : '<span class="wz-ph">' + VQ.t('missing') + '</span>')], [VQ.t('Category'), c ? esc(c.name) + (sc ? ' › ' + esc(sc.name) : '') : (needsCategory() ? '<span class="wz-ph">' + VQ.t('missing') + '</span>' : '')], [VQ.t('Group'), grp ? esc(grp.name) : '']]));
+    sums.push(sumCard('nume', VQ.t('Name and description'), [[VQ.t('Title'), p.title ? (p.icon ? pic(p.icon) : '') + esc(p.title) : '<span class="wz-ph">' + VQ.t('missing') + '</span>'], [VQ.t('Subtitle'), esc(p.subtitle || '')], [VQ.t('In short'), esc(p.short_description || '')], [VQ.t('Description'), p.description ? VQ.t('written') : '']]));
     if (t === 'package') {
-      sums.push(sumCard('continut', 'Ce conține', p.package_items.map(function (it) {
+      sums.push(sumCard('continut', VQ.t('What it contains'), p.package_items.map(function (it) {
         var pr = products.filter(function (x) { return x.id === it.product_id; })[0], v = variantOf(it);
-        return [(it.quantity || 1) + ' ×', esc((pr && pr.title) || it._title || '') + (v ? ' · ' + esc(v.name) : (it._vname ? ' · ' + esc(it._vname) : ' · <span class="wz-ph">bilet neales</span>'))];
+        return [(it.quantity || 1) + ' ×', esc((pr && pr.title) || it._title || '') + (v ? ' · ' + esc(v.name) : (it._vname ? ' · ' + esc(it._vname) : ' · <span class="wz-ph">' + VQ.t('ticket not chosen') + '</span>'))];
       })));
       var tt = pkgTotals();
-      sums.push(sumCard('pret', 'Prețul', [['Pachetul', p.variants[0].price != null ? esc(lei(p.variants[0].price)) : '<span class="wz-ph">lipsește</span>'], ['Separat', tt.known ? esc(lei(tt.total)) : '']]));
+      sums.push(sumCard('pret', VQ.t('Price'), [[VQ.t('Package'), p.variants[0].price != null ? esc(lei(p.variants[0].price)) : '<span class="wz-ph">' + VQ.t('missing') + '</span>'], [VQ.t('Separately'), tt.known ? esc(lei(tt.total)) : '']]));
     } else {
-      sums.push(sumCard('bilete', 'Bilete și prețuri', p.variants.map(function (v) { return [esc(v.name || 'Fără nume'), (v.price != null ? esc(lei(v.price)) : '<span class="wz-ph">fără preț</span>') + ' / ' + (v.price_type === 'per_unit' ? 'unitate' : 'persoană') + (v.is_active ? '' : ' · nu se vinde')]; })));
+      sums.push(sumCard('bilete', VQ.t('Tickets and prices'), p.variants.map(function (v) { return [esc(v.name || VQ.t('No name')), (v.price != null ? esc(lei(v.price)) : '<span class="wz-ph">' + VQ.t('no price') + '</span>') + ' / ' + (v.price_type === 'per_unit' ? VQ.t('unit') : VQ.t('person')) + (v.is_active ? '' : ' · ' + VQ.t('not on sale'))]; })));
       var hasLoc = p.use_location_schedule && l && l.seasons && l.seasons.length;
-      sums.push(sumCard('cand', 'Când', [['Rezervare', p.booking_mode === 'day' ? 'Toată ziua' : 'La oră fixă, ' + esc(durTxt(p.duration_minutes)) + ', o plecare la ' + esc(p.slot_interval_minutes) + ' min'],
-        ['Locuri', p.booking_mode === 'day' ? (p.daily_capacity ? esc(p.daily_capacity) + ' pe zi' : 'fără limită') : esc(p.capacity_per_slot) + (p.capacity_mode === 'concurrent' ? ' ' + esc(kit().unit.many) + ' în același timp' : ' la fiecare oră')],
-        ['Program', hasLoc ? 'ca la locație' : (p.periods.length ? 'propriu, ' + p.periods.length + (p.periods.length === 1 ? ' perioadă' : ' perioade') : (p.booking_mode === 'day' ? 'în orice zi' : '<span class="wz-ph">lipsește</span>'))],
-        ['Zile speciale', p.exceptions.length ? String(p.exceptions.length) : '']]));
-      sums.push(sumCard('extra', 'Suplimente', p.addons.map(function (a) { return [esc(a.name || 'Fără nume'), esc(lei(a.price))]; })));
+      sums.push(sumCard('cand', VQ.t('When'), [[VQ.t('Booking'), p.booking_mode === 'day' ? VQ.t('All day') : VQ.t('At a fixed time, {duration}, one start every {n} min', { duration: esc(durTxt(p.duration_minutes)), n: esc(p.slot_interval_minutes) })],
+        [VQ.t('Seats'), p.booking_mode === 'day' ? (p.daily_capacity ? VQ.t('{n} per day', { n: esc(p.daily_capacity) }) : VQ.t('no limit')) : (p.capacity_mode === 'concurrent' ? VQ.t('{n} {units} at the same time', { n: esc(p.capacity_per_slot), units: esc(kit().unit.many) }) : VQ.t('{n} at each start time', { n: esc(p.capacity_per_slot) }))],
+        [VQ.t('Opening hours'), hasLoc ? VQ.t('same as the venue') : (p.periods.length ? VQ.t('its own, {periods}', { periods: VQ.n(p.periods.length, 'period', 'periods') }) : (p.booking_mode === 'day' ? VQ.t('on any day') : '<span class="wz-ph">' + VQ.t('missing') + '</span>'))],
+        [VQ.t('Special days'), p.exceptions.length ? String(p.exceptions.length) : '']]));
+      sums.push(sumCard('extra', VQ.t('Add-ons'), p.addons.map(function (a) { return [esc(a.name || VQ.t('No name')), esc(lei(a.price))]; })));
     }
-    sums.push(sumCard('info', 'De știut', [['Include', esc(p.included_items.join(', '))], ['Anulare', esc(p.cancellation_policy || '')], ['Condiții', esc(p.usage_terms || '')],
-      ['Limbi', esc(p.languages.map(function (k) { return (LANGS.filter(function (x) { return x[0] === k; })[0] || [k, k])[1]; }).join(', '))]]));
-    sums.push(sumCard('poze', 'Poze', [['Poza principală', p.cover_image ? 'aleasă' : (l && l.cover_image ? 'a locației' : '<span class="wz-ph">lipsește</span>')], ['Galeria', p.gallery.length ? p.gallery.length + ' poze' : '']]));
-    sums.push(sumCard('setari', 'Setări finale', [['Vânzare', p.pos_only ? 'doar la casă' : 'online și la casă'], ['Nr. înmatriculare', p.requires_vehicle_info ? 'se cere' : ''], ['Firma', meta && meta.has_secondary_issuer ? (p.issuing_company === 'secondary' ? 'a doua firmă' : 'principală') : '']]));
+    sums.push(sumCard('info', VQ.t('Good to know'), [[VQ.t('Includes'), esc(p.included_items.join(', '))], [VQ.t('Cancellation'), esc(p.cancellation_policy || '')], [VQ.t('Terms'), esc(p.usage_terms || '')],
+      [VQ.t('Languages'), esc(p.languages.map(function (k) { return (LANGS.filter(function (x) { return x[0] === k; })[0] || [k, k])[1]; }).join(', '))]]));
+    sums.push(sumCard('poze', VQ.t('Photos'), [[VQ.t('Main photo'), p.cover_image ? VQ.t('chosen') : (l && l.cover_image ? VQ.t('the one of the venue') : '<span class="wz-ph">' + VQ.t('missing') + '</span>')], [VQ.t('Gallery'), p.gallery.length ? VQ.n(p.gallery.length, 'photo', 'photos') : '']]));
+    sums.push(sumCard('setari', VQ.t('Final settings'), [[VQ.t('Sales'), p.pos_only ? VQ.t('counter only') : VQ.t('online and at the counter')], [VQ.t('Number plate'), p.requires_vehicle_info ? VQ.t('asked for') : ''], [VQ.t('Company'), meta && meta.has_secondary_issuer ? (p.issuing_company === 'secondary' ? VQ.t('second company') : VQ.t('main company')) : '']]));
     h += '<div class="wz-sum">' + sums.join('') + '</div>';
     if (draftish) {
-      h += block('Ce urmează', null, '<div class="wz-flow"><div class="is-on"><i>' + ic('file-text') + '</i><b>Ciornă</b>Doar tu o vezi</div><div' + (p.review_status === 'pending' ? ' class="is-on"' : '') + '><i>' + ic('eye') + '</i><b>Verificare</b>Echipa viaqui.com se uită peste ea</div><div><i>' + ic('check') + '</i><b>Pe site</b>Clienții o pot cumpăra</div></div>' +
-        '<p class="wz-hint">Doar prima publicare așteaptă aprobarea. După aceea, modificările tale apar imediat pe site.</p>');
+      h += block(VQ.t('What comes next'), null, '<div class="wz-flow"><div class="is-on"><i>' + ic('file-text') + '</i><b>' + VQ.t('Draft') + '</b>' + VQ.t('Only you can see it') + '</div><div' + (p.review_status === 'pending' ? ' class="is-on"' : '') + '><i>' + ic('eye') + '</i><b>' + VQ.t('Review') + '</b>' + VQ.t('The Viaqui team looks it over') + '</div><div><i>' + ic('check') + '</i><b>' + VQ.t('On the site') + '</b>' + VQ.t('Customers can buy it') + '</div></div>' +
+        '<p class="wz-hint">' + VQ.t('Only the first publication waits for approval. After that, your changes appear on the site at once.') + '</p>');
     }
     if (p.id) {
       var canPub = p.review_status === 'approved' || !p.review_status;
-      h += block('Alte acțiuni', null, '<div class="wz-actions">' +
-        (canPub ? '<button type="button" class="btn btn-ghost" data-act="publish">' + ic(p.is_published ? 'eye-slash' : 'eye') + '<span>' + (p.is_published ? 'Ascunde de pe site' : 'Pune pe site') + '</span></button>' : '') +
-        (canPub && p.is_published && p.public_path ? '<a class="btn btn-ghost" href="' + esc(p.public_path) + '" target="_blank" rel="noopener">' + ic('arrow-up-right') + '<span>Vezi pe site</span></a>' : '') +
-        '<button type="button" class="btn btn-ghost" data-act="dup">' + ic('copy') + '<span>Copiază produsul</span></button>' +
-        '<button type="button" class="ve-danger wz-del" data-act="delete">' + ic('trash') + '<span>' + (W.armDelete ? 'Apasă din nou ca să ștergi' : 'Șterge produsul') + '</span></button>' +
-        '</div><p class="wz-hint">Ștergerea merge doar pentru un produs fără vânzări și care nu face parte dintr-un pachet. Altfel, ascunde-l de pe site.</p>');
+      h += block(VQ.t('Other actions'), null, '<div class="wz-actions">' +
+        (canPub ? '<button type="button" class="btn btn-ghost" data-act="publish">' + ic(p.is_published ? 'eye-slash' : 'eye') + '<span>' + (p.is_published ? VQ.t('Hide from the site') : VQ.t('Put on the site')) + '</span></button>' : '') +
+        (canPub && p.is_published && p.public_path ? '<a class="btn btn-ghost" href="' + esc(p.public_path) + '" target="_blank" rel="noopener">' + ic('arrow-up-right') + '<span>' + VQ.t('View on the site') + '</span></a>' : '') +
+        '<button type="button" class="btn btn-ghost" data-act="dup">' + ic('copy') + '<span>' + VQ.t('Copy the product') + '</span></button>' +
+        '<button type="button" class="ve-danger wz-del" data-act="delete">' + ic('trash') + '<span>' + (W.armDelete ? VQ.t('Press again to delete') : VQ.t('Delete the product')) + '</span></button>' +
+        '</div><p class="wz-hint">' + VQ.t('Deleting works only for a product with no sales that is not part of a package. Otherwise, hide it from the site.') + '</p>');
     }
     return h;
   }
 
   var RENDER = { tip: stTip, unde: stUnde, nume: stNume, bilete: stBilete, continut: stContinut, pret: stPret, cand: stCand, extra: stExtra, info: stInfo, poze: stPoze, setari: stSetari, gata: stGata };
   var TIPS = {
-    tip: ['Nu știi ce să alegi?', 'Dacă clientul „intră”, e bilet de acces. Dacă „face ceva” acolo, e experiență. Dacă vrei să le vinzi împreună, mai ieftin, e pachet.'],
-    unde: ['Categoria contează mult', 'Clienții care nu te cunosc ajung la tine din listele pe categorii și din paginile de oraș. Alege categoria în care ai căuta tu.'],
-    nume: ['Titluri care vând', 'Scurt și concret: spune ce primește clientul, nu cât de frumos va fi. Păstrează emoțiile pentru descriere.'],
-    bilete: ['Prețul tău, fără surprize', 'Scrii suma pe care o primești. Comisionul viaqui.com se adaugă peste, la client, așa că nu pierzi nimic din preț.'],
-    continut: ['Un pachet clar', 'Un pachet se înțelege dintr-o privire: intrarea și o experiență, pentru un număr clar de persoane.'],
-    pret: ['Cât de mare să fie reducerea?', 'O reducere de 10–15% față de prețul separat face de obicei pachetul să pară o afacere bună.'],
-    cand: ['Ai lucruri care se închiriază?', 'Karturi, biciclete, camere, bărci: alege „Unități în același timp”. Numărăm câte sunt folosite în fiecare minut, nu câte au pornit la o anumită oră.'],
-    extra: ['Suplimentele cresc coșul', 'Un pachet foto sau timp în plus, oferite la momentul potrivit, sunt alese des. Nu pune mai mult de 3–4.'],
-    info: ['Mai puține telefoane', 'Tot ce scrii aici e o întrebare la care nu mai răspunzi la telefon: ce e inclus, pentru ce vârste, ce să aducă.'],
-    poze: ['Poza e primul lucru văzut', 'În liste, clienții se uită întâi la poză, apoi la preț, abia apoi la titlu.'],
-    setari: ['Poți lăsa totul așa', 'Setările de aici sunt pentru cazuri speciale. Dacă nu te regăsești în ele, mergi mai departe.'],
-    gata: ['Nu e nimic definitiv', 'După aprobare poți schimba orice: prețuri, program, poze. Modificările apar imediat.'],
+    tip: [VQ.t('Not sure what to choose?'), VQ.t('If the customer "gets in", it is an access ticket. If they "do something" there, it is an experience. If you want to sell them together, for less, it is a package.')],
+    unde: [VQ.t('The category matters a lot'), VQ.t('Customers who do not know you find you through the category lists and the city pages. Choose the category you would look in yourself.')],
+    nume: [VQ.t('Titles that sell'), VQ.t('Short and concrete: say what the customer gets, not how lovely it will be. Keep the emotion for the description.')],
+    bilete: [VQ.t('Your price, no surprises'), VQ.t('You enter the amount you receive. The Viaqui commission is added on top, for the customer, so you lose nothing from the price.')],
+    continut: [VQ.t('A clear package'), VQ.t('A package is understood at a glance: entry and one experience, for a clear number of people.')],
+    pret: [VQ.t('How big should the discount be?'), VQ.t('A discount of 10–15% off the separate price usually makes the package look like a good deal.')],
+    cand: [VQ.t('Do you rent things out?'), VQ.t('Karts, bicycles, rooms, boats: choose "Units at the same time". We count how many are in use each minute, not how many started at a given time.')],
+    extra: [VQ.t('Add-ons grow the basket'), VQ.t('A photo package or extra time, offered at the right moment, are chosen often. Do not offer more than 3–4.')],
+    info: [VQ.t('Fewer phone calls'), VQ.t('Everything you write here is a question you no longer answer on the phone: what is included, for what ages, what to bring.')],
+    poze: [VQ.t('The photo is seen first'), VQ.t('In lists, customers look at the photo first, then at the price, and only then at the title.')],
+    setari: [VQ.t('You can leave everything as it is'), VQ.t('The settings here are for special cases. If none of them fits you, move on.')],
+    gata: [VQ.t('Nothing is final'), VQ.t('After approval you can change anything: prices, opening hours, photos. The changes appear straight away.')],
   };
 
   /* =================== preview =================== */
@@ -1171,20 +1177,20 @@
     var prices = vars.map(function (v) { return v.price; }).filter(function (x) { return x != null; });
     var min = prices.length ? Math.min.apply(null, prices) : null;
     var K = kit();
-    var unit = p.unit_label || (t === 'experience' && vars[0] && vars[0].price_type === 'per_unit' ? 'unitate' : K.ph.unit[t || 'access']);
+    var unit = p.unit_label || (t === 'experience' && vars[0] && vars[0].price_type === 'per_unit' ? VQ.t('unit') : K.ph.unit[t || 'access']);
     var tg = [];
-    if (t && t !== 'package') tg.push(p.booking_mode === 'slot' ? '<span class="wz-pill">' + ic('clock') + esc(p.duration_minutes ? durTxt(p.duration_minutes) : 'cu oră') + '</span>' : '<span class="wz-pill">Toată ziua</span>');
-    if (p.cancellation_policy && /gratuit/i.test(p.cancellation_policy)) tg.push('<span class="wz-pill is-g">Anulare gratuită</span>');
+    if (t && t !== 'package') tg.push(p.booking_mode === 'slot' ? '<span class="wz-pill">' + ic('clock') + esc(p.duration_minutes ? durTxt(p.duration_minutes) : VQ.t('timed')) + '</span>' : '<span class="wz-pill">' + VQ.t('All day') + '</span>');
+    if (p.cancellation_policy && /free|gratuit/i.test(p.cancellation_policy)) tg.push('<span class="wz-pill is-g">' + VQ.t('Free cancellation') + '</span>');
     if (p.languages.length) tg.push('<span class="wz-pill">' + esc(p.languages.join(' · ').toUpperCase()) + '</span>');
-    if (p.age_min) tg.push('<span class="wz-pill">' + esc(p.age_min) + '+ ani</span>');
+    if (p.age_min) tg.push('<span class="wz-pill">' + VQ.t('{n}+ years', { n: esc(p.age_min) }) + '</span>');
     var cover = A.imgUrl(p.cover_image) || (l ? A.imgUrl(l.cover_image) : null);
     var media = cover ? '<img src="' + esc(cover) + '" alt="">' : '<span class="wz-pv-ic">' + pic(p.icon || (t ? TYPE_ICON[t] : 'sparkle')) + '</span>';
-    var stTxt = { draft: 'Ciornă', pending: 'În verificare', rejected: 'Respins', approvedOn: 'Pe site', approvedOff: 'Ascuns' }[statusKey(p)];
-    var h = '<div class="wz-pv"><div class="wz-pv-m">' + media + '<span class="wz-pv-st">' + stTxt + '</span>' + (cover && !p.cover_image ? '<span class="wz-pv-fb">poza locației</span>' : '') + '</div><div class="wz-pv-b">' +
-      '<span class="wz-pv-k">' + esc([t ? TYPES[t] : 'Produs', l ? l.name : ''].filter(Boolean).join(' · ')) + '</span>' +
-      '<h3 class="wz-pv-t">' + (p.title ? (p.icon ? pic(p.icon) : '') + esc(p.title) : '<span class="wz-ph">Titlul produsului</span>') + '</h3>' +
+    var stTxt = { draft: VQ.t('Draft'), pending: VQ.t('In review'), rejected: VQ.t('Rejected'), approvedOn: VQ.t('On the site'), approvedOff: VQ.t('Hidden') }[statusKey(p)];
+    var h = '<div class="wz-pv"><div class="wz-pv-m">' + media + '<span class="wz-pv-st">' + stTxt + '</span>' + (cover && !p.cover_image ? '<span class="wz-pv-fb">' + VQ.t('photo of the venue') + '</span>' : '') + '</div><div class="wz-pv-b">' +
+      '<span class="wz-pv-k">' + esc([t ? TYPES[t] : VQ.t('Product'), l ? l.name : ''].filter(Boolean).join(' · ')) + '</span>' +
+      '<h3 class="wz-pv-t">' + (p.title ? (p.icon ? pic(p.icon) : '') + esc(p.title) : '<span class="wz-ph">' + VQ.t('Product title') + '</span>') + '</h3>' +
       (p.subtitle ? '<p class="wz-pv-s is-strong">' + esc(p.subtitle) + '</p>' : '') +
-      (p.short_description ? '<p class="wz-pv-s">' + esc(p.short_description) + '</p>' : (!p.title ? '<p class="wz-pv-s wz-ph">Descrierea scurtă apare aici.</p>' : '')) +
+      (p.short_description ? '<p class="wz-pv-s">' + esc(p.short_description) + '</p>' : (!p.title ? '<p class="wz-pv-s wz-ph">' + VQ.t('The short description appears here.') + '</p>' : '')) +
       (tg.length ? '<div class="wz-pv-tags">' + tg.join('') + '</div>' : '');
     if (t === 'package') {
       h += p.package_items.length ? '<ul class="wz-pv-vars">' + p.package_items.map(function (it) {
@@ -1192,15 +1198,15 @@
         return '<li><span>' + (it.quantity || 1) + ' × ' + esc((pr && pr.title) || it._title || '') + (v ? ' · ' + esc(v.name) : '') + '</span></li>';
       }).join('') + '</ul>' : '';
       var pk = pkgTotals();
-      if (pk.known && p.variants[0].price != null && pk.total > p.variants[0].price) h += '<span class="wz-pv-save">Economisești ' + esc(lei(pk.total - p.variants[0].price)) + '</span>';
+      if (pk.known && p.variants[0].price != null && pk.total > p.variants[0].price) h += '<span class="wz-pv-save">' + VQ.t('You save {amount}', { amount: esc(lei(pk.total - p.variants[0].price)) }) + '</span>';
     } else if (vars.length) {
       h += '<ul class="wz-pv-vars">' + vars.map(function (v) {
-        return '<li><span>' + esc(v.name || 'Bilet') + (v.price_type === 'per_unit' && v.persons_max ? ' <small>· până la ' + esc(v.persons_max) + ' pers.</small>' : '') + '</span><b>' + (v.price != null ? esc(lei(v.price)) : '—') + '</b><span class="wz-pv-q" aria-hidden="true"><i>−</i><i>+</i></span></li>';
+        return '<li><span>' + esc(v.name || VQ.t('Ticket')) + (v.price_type === 'per_unit' && v.persons_max ? ' <small>· ' + VQ.t('up to {n} people', { n: esc(v.persons_max) }) + '</small>' : '') + '</span><b>' + (v.price != null ? esc(lei(v.price)) : '—') + '</b><span class="wz-pv-q" aria-hidden="true"><i>−</i><i>+</i></span></li>';
       }).join('') + '</ul>';
     }
     var ad = p.addons.filter(function (a) { return a.name && a.is_active !== false; });
     if (ad.length && t !== 'package') h += '<p class="wz-pv-s">+ ' + esc(ad.map(function (a) { return a.name; }).join(', ')) + '</p>';
-    h += '<div class="wz-pv-f"><div><small>de la</small><b>' + (min != null ? esc(lei(min)) : '—') + '</b> <span class="wz-pv-u">/ ' + esc(unit) + '</span></div><span class="wz-pv-cta">Rezervă</span></div></div></div>';
+    h += '<div class="wz-pv-f"><div><small>' + VQ.t('from') + '</small><b>' + (min != null ? esc(lei(min)) : '—') + '</b> <span class="wz-pv-u">/ ' + esc(unit) + '</span></div><span class="wz-pv-cta">' + VQ.t('Book') + '</span></div></div></div>';
     return h;
   }
   var pvTimer = 0;
@@ -1226,7 +1232,7 @@
       var ss = a.filter(function (s) { return s.ph === pi; });
       html += '<div class="wz-rail-ph"><span>' + ph + '</span>' + ss.map(function (s) {
         var st = stepState(s), n = a.indexOf(s) + 1;
-        return '<button type="button" class="wz-rail-s' + (st ? ' is-' + st : '') + '" data-act="go" data-val="' + jv(s.id) + '"' + (locked && s.id !== 'tip' ? ' disabled' : '') + (st === 'cur' ? ' aria-current="step"' : '') + '><span class="wz-dot">' + (st === 'done' ? ic('check') : st === 'warn' ? '!' : n) + '</span><span>' + s.t + '</span>' + (s.opt ? '<em>opțional</em>' : '') + '</button>';
+        return '<button type="button" class="wz-rail-s' + (st ? ' is-' + st : '') + '" data-act="go" data-val="' + jv(s.id) + '"' + (locked && s.id !== 'tip' ? ' disabled' : '') + (st === 'cur' ? ' aria-current="step"' : '') + '><span class="wz-dot">' + (st === 'done' ? ic('check') : st === 'warn' ? '!' : n) + '</span><span>' + s.t + '</span>' + (s.opt ? '<em>' + VQ.t('optional') + '</em>' : '') + '</button>';
       }).join('') + '</div>';
     });
     return html;
@@ -1235,7 +1241,7 @@
     var a = steps(), i = stepIdx(W.step), s = stepById(W.step);
     $('wz-rail').innerHTML = railHtml();
     $('wz-steps-sheet').innerHTML = '<div class="wz-rail is-sheet">' + railHtml() + '</div>';
-    $('wz-top-k').textContent = 'Pasul ' + (i + 1) + ' din ' + a.length + ' · ' + PHASES[s.ph];
+    $('wz-top-k').textContent = VQ.t('Step {n} of {total}', { n: i + 1, total: a.length }) + ' · ' + PHASES[s.ph];
     $('wz-top-t').textContent = s.t;
     $('wz-prog').style.width = ((i + 1) / a.length * 100) + '%';
     var tp = TIPS[W.step];
@@ -1243,38 +1249,38 @@
     drawBar(nudge);
   }
   function saveLabel() {
-    if (W.saving) return 'Se salvează…';
-    if (W.saveErr) return 'Nesalvat';
+    if (W.saving) return VQ.t('Saving…');
+    if (W.saveErr) return VQ.t('Not saved');
     if (W.dirty && isDraft()) {
       var hard = problems().filter(function (x) { return x.save; })[0];
-      if (hard) return 'Se salvează după ce completezi: ' + hard.msg.toLowerCase();
+      if (hard) return VQ.t('It saves once this is done: {what}', { what: hard.msg });
     }
-    if (!W.p.id) return W.dirty ? 'Nesalvat încă' : '';
-    if (W.dirty) return 'Modificări nesalvate';
-    return W.savedAt ? 'Salvat ' + W.savedAt : 'Salvat';
+    if (!W.p.id) return W.dirty ? VQ.t('Not saved yet') : '';
+    if (W.dirty) return VQ.t('Unsaved changes');
+    return W.savedAt ? VQ.t('Saved at {time}', { time: W.savedAt }) : VQ.t('Saved');
   }
   function drawBar(nudge) {
     var a = steps(), i = stepIdx(W.step), next = a[i + 1], h = '';
     if (nudge) h += '<div class="wz-nudge">' + ic('warning-circle') + '<span>' + esc(nudge) + '</span></div>';
     h += '<div class="wz-bar-in">';
-    if (i > 0) h += '<button type="button" class="btn btn-ghost wz-back" data-act="back" aria-label="Înapoi">' + ic('arrow-left') + '<span>Înapoi</span></button>';
+    if (i > 0) h += '<button type="button" class="btn btn-ghost wz-back" data-act="back" aria-label="' + VQ.t('Back') + '">' + ic('arrow-left') + '<span>' + VQ.t('Back') + '</span></button>';
     h += '<span class="wz-saved' + (W.dirty || W.saveErr ? ' is-dirty' : '') + '" id="wz-saved">' + esc(saveLabel()) + '</span><span class="wz-sp"></span>';
-    if (W.p.product_type) h += '<button type="button" class="btn btn-ghost wz-pv-btn" data-act="pv" aria-label="Previzualizare">' + ic('eye') + '<span>Previzualizare</span></button>';
+    if (W.p.product_type) h += '<button type="button" class="btn btn-ghost wz-pv-btn" data-act="pv" aria-label="' + VQ.t('Preview') + '">' + ic('eye') + '<span>' + VQ.t('Preview') + '</span></button>';
     var liveEdit = W.p.id && !isDraft();
     if (W.step === 'gata') {
       if (isDraft()) {
-        h += '<button type="button" class="btn btn-ghost" data-act="save">' + ic('check') + '<span>Salvează ciorna</span></button>';
-        h += '<button type="button" class="btn btn-primary" data-act="submit">' + ic('arrow-right') + '<span>Trimite spre aprobare</span></button>';
+        h += '<button type="button" class="btn btn-ghost" data-act="save">' + ic('check') + '<span>' + VQ.t('Save the draft') + '</span></button>';
+        h += '<button type="button" class="btn btn-primary" data-act="submit">' + ic('arrow-right') + '<span>' + VQ.t('Send for approval') + '</span></button>';
       } else {
-        h += '<button type="button" class="btn btn-primary" data-act="save"' + (W.dirty ? '' : ' disabled') + '>' + ic('check') + '<span>Salvează modificările</span></button>';
+        h += '<button type="button" class="btn btn-primary" data-act="save"' + (W.dirty ? '' : ' disabled') + '>' + ic('check') + '<span>' + VQ.t('Save the changes') + '</span></button>';
       }
     } else {
-      if (liveEdit && W.dirty) h += '<button type="button" class="btn btn-ghost wz-save-btn" data-act="save">' + ic('check') + '<span>Salvează</span></button>';
-      if (W.returnTo) h += '<button type="button" class="btn btn-primary" data-act="return">' + ic('arrow-counter-clockwise') + '<span>Înapoi la rezumat</span></button>';
-      else if (W.step === 'tip' && !W.p.product_type) h += '<button type="button" class="btn btn-primary" disabled><span>Alege un tip</span>' + ic('arrow-right') + '</button>';
+      if (liveEdit && W.dirty) h += '<button type="button" class="btn btn-ghost wz-save-btn" data-act="save">' + ic('check') + '<span>' + VQ.t('Save') + '</span></button>';
+      if (W.returnTo) h += '<button type="button" class="btn btn-primary" data-act="return">' + ic('arrow-counter-clockwise') + '<span>' + VQ.t('Back to the summary') + '</span></button>';
+      else if (W.step === 'tip' && !W.p.product_type) h += '<button type="button" class="btn btn-primary" disabled><span>' + VQ.t('Choose a type') + '</span>' + ic('arrow-right') + '</button>';
       else if (next) {
         var skip = stepById(W.step).opt && isEmptyOpt(W.step);
-        h += '<button type="button" class="btn btn-primary wz-next" data-act="next"><span>' + (skip ? 'Sari peste' : 'Continuă') + '<span class="wz-nx">: ' + esc(next.t) + '</span></span>' + ic('arrow-right') + '</button>';
+        h += '<button type="button" class="btn btn-primary wz-next" data-act="next"><span>' + (skip ? VQ.t('Skip') : VQ.t('Continue')) + '<span class="wz-nx">: ' + esc(next.t) + '</span></span>' + ic('arrow-right') + '</button>';
       }
     }
     $('wz-bar').innerHTML = h + '</div>';
@@ -1292,9 +1298,9 @@
     st.querySelectorAll('[data-mount]').forEach(function (m) {
       var k = m.getAttribute('data-mount');
       if (k === 'description') {
-        m.appendChild(A.rich(W.p, 'description', { label: 'Descrierea produsului', max: 20000, ph: kit().ph.desc, min: 160, on: function () { changed(); } }));
+        m.appendChild(A.rich(W.p, 'description', { label: VQ.t('Product description'), max: 20000, ph: kit().ph.desc, min: 160, on: function () { changed(); } }));
       } else if (k === 'cover') {
-        m.appendChild(A.image(W.p, 'cover_image', 'product', { on: function () { changed(); bump(); drawChrome(); }, hint: 'Poți trage poza direct peste chenar.' }));
+        m.appendChild(A.image(W.p, 'cover_image', 'product', { on: function () { changed(); bump(); drawChrome(); }, hint: VQ.t('You can drop the photo straight onto the box.') }));
       } else if (k === 'gallery') {
         m.appendChild(A.gallery(W.p, 'gallery', 'product-gallery', 20, function () { changed(); }));
       }
@@ -1343,9 +1349,9 @@
   }
   function blocker() {
     var p = W.p;
-    if (W.step === 'unde' && p.product_type !== 'experience' && !p.location_id) return 'Alege locația ca să mergi mai departe.';
-    if (W.step === 'nume' && !p.title) return 'Scrie titlul; e singurul câmp fără de care nu putem salva.';
-    if (W.step === 'tip' && p.product_type === 'package' && !componentChoices().length && !p.package_items.length) return 'Pentru un pachet ai nevoie întâi de bilete sau experiențe.';
+    if (W.step === 'unde' && p.product_type !== 'experience' && !p.location_id) return VQ.t('Choose the venue to continue.');
+    if (W.step === 'nume' && !p.title) return VQ.t('Enter the title; it is the one field we cannot save without.');
+    if (W.step === 'tip' && p.product_type === 'package' && !componentChoices().length && !p.package_items.length) return VQ.t('For a package you first need tickets or experiences.');
     return null;
   }
   function next() {
@@ -1409,7 +1415,7 @@
       if (!quiet) {
         W.tried[hard[0].step] = true;
         if (W.step !== hard[0].step) goStep(hard[0].step, -1); else rerender();
-        drawBar('Nu se poate salva încă: ' + hard[0].msg.toLowerCase() + '.');
+        drawBar(VQ.t('It cannot be saved yet: {what}.', { what: hard[0].msg }));
       }
       return Promise.resolve(false);
     }
@@ -1426,18 +1432,18 @@
       var saved = r && r.data && r.data.product;
       if (saved) {
         applySaved(saved, sent);
-        if (isNew) history.replaceState(null, '', '/organizator/produse?id=' + saved.id);
+        if (isNew) history.replaceState(null, '', PROD_URL + '?id=' + saved.id);
       }
       if (W.rev === rev) W.dirty = false;
       var d = new Date();
-      W.savedAt = 'la ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      W.savedAt = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       W.serverErr = null;
-      if (!quiet) O.flash((r && r.message) || 'Salvat.');
+      if (!quiet) O.flash((r && r.message) || VQ.t('Saved.'));
       return true;
     }, function (err) {
       if (w !== W) return false;
       if (err && err.status === 401) return false;
-      var se = serverError(err, 'Nu am putut salva produsul.');
+      var se = serverError(err, VQ.t('We could not save the product.'));
       W.saveErr = se.msg;
       W.serverErr = se.step ? se : null;
       if (!quiet) {
@@ -1454,7 +1460,7 @@
       return ok;
     });
   }
-  /** A draft saves itself between steps; a product already on the site (or in review) waits for "Salvează". */
+  /** A draft saves itself between steps; a product already on the site (or in review) waits for "Save". */
   function autosave() {
     if (!W || !W.dirty || !isDraft() || !W.p.product_type) return;
     if (problems().some(function (x) { return x.save && (x.step === 'unde' || x.step === 'nume' || x.step === 'tip'); })) return;
@@ -1464,7 +1470,7 @@
     var must = problems();
     if (must.length) {
       W.tried[must[0].step] = true;
-      drawBar('Mai ai de completat: ' + must.map(function (x) { return x.msg.toLowerCase(); }).filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 4).join(', ') + '.');
+      drawBar(VQ.t('Still to fill in: {what}.', { what: must.map(function (x) { return x.msg; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 4).join('; ') }));
       var ck = $('wz-stage').querySelector('.wz-ck.is-no');
       if (ck) { ck.classList.add('wz-shake'); ck.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); }
       return;
@@ -1477,7 +1483,7 @@
         celebrate();
         rerender();
       }, function (err) {
-        var se = serverError(err, 'Nu am putut trimite produsul.');
+        var se = serverError(err, VQ.t('We could not send the product.'));
         O.flash(se.msg, true);
         drawBar(se.msg);
       });
@@ -1491,9 +1497,9 @@
       return A.api('/products/' + W.p.id + '/publish', { method: 'POST', body: { published: want } }).then(function (r) {
         var saved = r && r.data && r.data.product;
         if (saved) applySaved(saved, { variants: [], addons: [] });
-        O.flash((r && r.message) || 'Gata.');
+        O.flash((r && r.message) || VQ.t('Done.'));
         rerender();
-      }, function (err) { O.flash(A.errText(err, 'Nu am putut schimba vizibilitatea.'), true); });
+      }, function (err) { O.flash(A.errText(err, VQ.t('We could not change the visibility.')), true); });
     });
   }
   function removeProduct() {
@@ -1507,18 +1513,18 @@
       var id = W.p.id;
       W.dirty = false;
       products = products.filter(function (x) { return x.id !== id; });
-      O.flash((r && r.message) || 'Produsul a fost șters.');
-      go('/organizator/produse', true);
-    }, function (err) { W.armDelete = false; rerender(); O.flash(A.errText(err, 'Nu am putut șterge produsul.'), true); });
+      O.flash((r && r.message) || VQ.t('The product was deleted.'));
+      go(PROD_URL, true);
+    }, function (err) { W.armDelete = false; rerender(); O.flash(A.errText(err, VQ.t('We could not delete the product.')), true); });
   }
 
   /* =================== celebration =================== */
   function celebrate() {
     var box = $('wz-done');
-    box.querySelector('.wz-done-c').innerHTML = '<div class="wz-done-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2 id="wz-done-t">Trimis spre aprobare</h2>' +
-      '<p>„' + esc(W.p.title) + '” e acum la echipa viaqui.com. Te anunțăm pe e-mail când e aprobat și apare pe site.</p>' +
-      '<div class="wz-flow"><div class="is-on"><i>' + ic('file-text') + '</i><b>Ciornă</b></div><div class="is-on"><i>' + ic('eye') + '</i><b>Verificare</b>acum</div><div><i>' + ic('check') + '</i><b>Pe site</b></div></div>' +
-      '<div class="wz-done-btns"><a class="btn btn-primary" href="/organizator/produse?nou=1">' + ic('plus') + '<span>Adaugă alt produs</span></a><a class="btn btn-ghost" href="/organizator/produse">' + ic('list') + '<span>Toate produsele</span></a><button type="button" class="wz-link" data-act="closedone">Rămân aici</button></div>';
+    box.querySelector('.wz-done-c').innerHTML = '<div class="wz-done-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h2 id="wz-done-t">' + VQ.t('Sent for approval') + '</h2>' +
+      '<p>' + VQ.t('"{title}" is now with the Viaqui team. We email you when it is approved and appears on the site.', { title: esc(W.p.title) }) + '</p>' +
+      '<div class="wz-flow"><div class="is-on"><i>' + ic('file-text') + '</i><b>' + VQ.t('Draft') + '</b></div><div class="is-on"><i>' + ic('eye') + '</i><b>' + VQ.t('Review') + '</b>' + VQ.t('now') + '</div><div><i>' + ic('check') + '</i><b>' + VQ.t('On the site') + '</b></div></div>' +
+      '<div class="wz-done-btns"><a class="btn btn-primary" href="' + PROD_URL + '?nou=1">' + ic('plus') + '<span>' + VQ.t('Add another product') + '</span></a><a class="btn btn-ghost" href="' + PROD_URL + '">' + ic('list') + '<span>' + VQ.t('All products') + '</span></a><button type="button" class="wz-link" data-act="closedone">' + VQ.t('Stay here') + '</button></div>';
     box.hidden = false;
     requestAnimationFrame(function () { box.classList.add('is-on'); });
     var b = box.querySelector('.btn');
@@ -1560,15 +1566,15 @@
   /* =================== open / close =================== */
   function shell() {
     return '<div class="wz" id="wz">' +
-      '<div class="wz-top" id="wz-top"><div class="wz-top-in"><a class="wz-top-x" href="/organizator/produse" aria-label="Înapoi la toate produsele">' + ic('arrow-left') + '</a>' +
+      '<div class="wz-top" id="wz-top"><div class="wz-top-in"><a class="wz-top-x" href="' + PROD_URL + '" aria-label="' + VQ.t('Back to all products') + '">' + ic('arrow-left') + '</a>' +
       '<button type="button" class="wz-top-step" data-act="steps" aria-haspopup="dialog"><small id="wz-top-k"></small><b><span id="wz-top-t"></span>' + ic('caret-down') + '</b></button></div><div class="wz-prog"><i id="wz-prog"></i></div></div>' +
-      '<div class="wz-app"><nav class="wz-rail" id="wz-rail" aria-label="Pașii produsului"></nav>' +
-      '<div class="wz-main"><a class="am-back wz-back-link" href="/organizator/produse">' + ic('arrow-left') + '<span>Toate produsele</span></a><div class="wz-stage" id="wz-stage"></div></div>' +
-      '<aside class="wz-side" aria-label="Previzualizare"><div class="wz-side-h"><b>Așa îl văd clienții</b></div><div id="wz-pv"></div><div class="wz-tip" id="wz-tip"></div></aside></div>' +
+      '<div class="wz-app"><nav class="wz-rail" id="wz-rail" aria-label="' + VQ.t('Steps of the product') + '"></nav>' +
+      '<div class="wz-main"><a class="am-back wz-back-link" href="' + PROD_URL + '">' + ic('arrow-left') + '<span>' + VQ.t('All products') + '</span></a><div class="wz-stage" id="wz-stage"></div></div>' +
+      '<aside class="wz-side" aria-label="' + VQ.t('Preview') + '"><div class="wz-side-h"><b>' + VQ.t('This is how customers see it') + '</b></div><div id="wz-pv"></div><div class="wz-tip" id="wz-tip"></div></aside></div>' +
       '<div class="wz-bar" id="wz-bar"></div>' +
       '<div class="wz-scrim" id="wz-scrim" data-act="closesheet" hidden></div>' +
-      '<div class="wz-sheet" id="wz-sheet-pv" role="dialog" aria-modal="true" aria-labelledby="wz-sheet-pv-t" hidden><div class="wz-sheet-h"><b id="wz-sheet-pv-t">Așa îl văd clienții</b><button type="button" class="ve-icon-btn" data-act="closesheet" aria-label="Închide">' + ic('x') + '</button></div><div class="wz-sheet-b" id="wz-pv-sheet"></div></div>' +
-      '<div class="wz-sheet" id="wz-sheet-steps" role="dialog" aria-modal="true" aria-labelledby="wz-sheet-steps-t" hidden><div class="wz-sheet-h"><b id="wz-sheet-steps-t">Toți pașii</b><button type="button" class="ve-icon-btn" data-act="closesheet" aria-label="Închide">' + ic('x') + '</button></div><div class="wz-sheet-b" id="wz-steps-sheet"></div></div>' +
+      '<div class="wz-sheet" id="wz-sheet-pv" role="dialog" aria-modal="true" aria-labelledby="wz-sheet-pv-t" hidden><div class="wz-sheet-h"><b id="wz-sheet-pv-t">' + VQ.t('This is how customers see it') + '</b><button type="button" class="ve-icon-btn" data-act="closesheet" aria-label="' + VQ.t('Close') + '">' + ic('x') + '</button></div><div class="wz-sheet-b" id="wz-pv-sheet"></div></div>' +
+      '<div class="wz-sheet" id="wz-sheet-steps" role="dialog" aria-modal="true" aria-labelledby="wz-sheet-steps-t" hidden><div class="wz-sheet-h"><b id="wz-sheet-steps-t">' + VQ.t('All the steps') + '</b><button type="button" class="ve-icon-btn" data-act="closesheet" aria-label="' + VQ.t('Close') + '">' + ic('x') + '</button></div><div class="wz-sheet-b" id="wz-steps-sheet"></div></div>' +
       '<div class="wz-done" id="wz-done" role="dialog" aria-modal="true" aria-labelledby="wz-done-t" hidden><div class="wz-done-c"></div></div>' +
       '<canvas class="wz-confetti" id="wz-confetti" hidden></canvas>' +
       '</div>';
@@ -1600,7 +1606,7 @@
     hideListBits();
     box.hidden = false;
     box.textContent = '';
-    box.appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    box.appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     Promise.all([loadBase(), loadProducts()]).then(function () {
       var loc = pre && locById(pre) ? pre : (locations.length === 1 ? locations[0].id : null);
       var p = blank(loc);
@@ -1608,7 +1614,7 @@
     }, function (err) {
       if (err && err.status === 401) return;
       box.textContent = '';
-      box.appendChild(el('div', { class: 'org-empty is-error' }, [el('b', { text: 'Nu am putut deschide formularul' }), el('p', { text: A.errText(err, 'Reîncearcă în câteva secunde.') })]));
+      box.appendChild(el('div', { class: 'org-empty is-error' }, [el('b', { text: VQ.t('We could not open the form') }), el('p', { text: A.errText(err, VQ.t('Try again in a few seconds.')) })]));
     });
   }
   function openEditor(id) {
@@ -1616,16 +1622,16 @@
     var box = $('am-prod-edit');
     box.hidden = false;
     box.textContent = '';
-    box.appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    box.appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     Promise.all([loadBase(), A.api('/products/' + id), products.length ? Promise.resolve(products) : loadProducts()]).then(function (res) {
       var p = res[1] && res[1].data && res[1].data.product;
-      if (!p) { O.flash('Produsul nu există.', true); go('/organizator/produse', true); return; }
+      if (!p) { O.flash(VQ.t('This product does not exist.'), true); go(PROD_URL, true); return; }
       details[p.id] = p;
       openWizard(fromApi(clone(p)), 'gata', true);
     }, function (err) {
       if (err && err.status === 401) return;
       box.textContent = '';
-      box.appendChild(el('div', { class: 'org-empty is-error' }, [el('b', { text: 'Nu am putut încărca produsul' }), el('p', { text: A.errText(err, 'Reîncearcă.') })]));
+      box.appendChild(el('div', { class: 'org-empty is-error' }, [el('b', { text: VQ.t('We could not load the product') }), el('p', { text: A.errText(err, VQ.t('Try again.')) })]));
     });
   }
 
@@ -1635,10 +1641,10 @@
     if (was === t || p.id) return;
     p.product_type = t;
     if (t === 'package') {
-      p.variants = [blankVariant('package', 'Pachet')];
+      p.variants = [blankVariant('package', VQ.t('Package'))];
       p.booking_mode = 'day';
     } else {
-      if (was === 'package' || !p.variants.length) p.variants = [blankVariant(t, t === 'experience' ? null : 'Adult')];
+      if (was === 'package' || !p.variants.length) p.variants = [blankVariant(t, t === 'experience' ? null : VQ.t('Adult'))];
       p.booking_mode = t === 'experience' ? 'slot' : 'day';
       if (t === 'experience' && !p.use_location_schedule && !p.periods.length) p.periods = [{ season: null, days: blankWeek('10:00', '18:00') }];
     }
@@ -1646,7 +1652,7 @@
     applyLocationDefaults();
     changed();
     rerender();
-    if (was) O.flash('Tipul s-a schimbat în „' + TYPES[t] + '”. Ce ai completat rămâne.');
+    if (was) O.flash(VQ.t('The type changed to "{type}". What you filled in stays.', { type: TYPES[t] }));
   }
   /** A location brings its schedule and, when the product has none yet, its category. */
   function applyLocationDefaults() {
@@ -1691,7 +1697,7 @@
       var vs = ((d && d.variants) || []).filter(function (v) { return v.is_active; });
       if (vs.length === 1 && !it.variant_id) it.variant_id = vs[0].id;
       rerender();
-    }, function () { O.flash('Nu am putut încărca biletele produsului.', true); });
+    }, function () { O.flash(VQ.t('We could not load the tickets of the product.'), true); });
   }
 
   root.addEventListener('click', function (e) {
@@ -1721,7 +1727,7 @@
         applyLocationDefaults();
         changed(); rerender(); break;
       case 'reloadloc':
-        A.api('/locations').then(function (r) { locations = ((r && r.data && r.data.locations) || []); rerender(); O.flash('Lista de locații e la zi.'); }, function (err) { O.flash(A.errText(err, 'Nu am putut reîncărca locațiile.'), true); });
+        A.api('/locations').then(function (r) { locations = ((r && r.data && r.data.locations) || []); rerender(); O.flash(VQ.t('The list of venues is up to date.')); }, function (err) { O.flash(A.errText(err, VQ.t('We could not reload the venues.')), true); });
         break;
       case 'cat':
         p.category_id = String(p.category_id) === String(val) ? null : val;
@@ -1752,7 +1758,7 @@
       }
       case 'vopen': p.variants[i]._open = !p.variants[i]._open; rerender(); break;
       case 'vadd': addVariant(val); break;
-      case 'vdel': p.variants.splice(i, 1); changed(); rerender(); O.flash('Biletul a fost scos. Cele deja vândute rămân valabile.'); break;
+      case 'vdel': p.variants.splice(i, 1); changed(); rerender(); O.flash(VQ.t('The ticket was removed. Those already sold stay valid.')); break;
       case 'tag': { var arr = getP(b.getAttribute('data-path')); if (arr.length < 20 && arr.indexOf(val) < 0) arr.push(val); changed(); rerender(); break; }
       case 'untag': getP(b.getAttribute('data-path')).splice(i, 1); changed(); rerender(); break;
       case 'lang': { var li = p.languages.indexOf(val); if (li >= 0) p.languages.splice(li, 1); else p.languages.push(val); changed(); rerender(); break; }
@@ -1768,7 +1774,7 @@
       case 'copymon': {
         var per = p.periods[i], m = per.days[1];
         DAYS.forEach(function (x) { if (x[0] !== 1 && per.days[x[0]].on) per.days[x[0]].slots = clone(m.slots); });
-        changed(); rerender(); O.flash('Orele de luni sunt acum pe toate zilele deschise.'); break;
+        changed(); rerender(); O.flash(VQ.t('Monday hours are now on every open day.')); break;
       }
       case 'season': p.periods[i].season = { start: '05-01', end: '09-30' }; changed(); rerender(); break;
       case 'noseason': p.periods[i].season = null; changed(); rerender(); break;
@@ -1811,8 +1817,8 @@
     var m = path.match(/^variants\.(\d+)\.(name|price)$/);
     if (m) {
       var v = p.variants[+m[1]];
-      var nm = root.querySelector('[data-live="variants.' + m[1] + '.name"]'); if (nm) nm.textContent = v.name || 'Bilet fără nume';
-      var pr = root.querySelector('[data-live-price="' + m[1] + '"]'); if (pr) pr.innerHTML = v.price != null ? esc(lei(v.price)) : '<span class="wz-ph">preț?</span>';
+      var nm = root.querySelector('[data-live="variants.' + m[1] + '.name"]'); if (nm) nm.textContent = v.name || VQ.t('Unnamed ticket');
+      var pr = root.querySelector('[data-live-price="' + m[1] + '"]'); if (pr) pr.innerHTML = v.price != null ? esc(lei(v.price)) : '<span class="wz-ph">' + VQ.t('price?') + '</span>';
     }
     var cnt = root.querySelector('[data-count="' + path + '"]');
     if (cnt) cnt.textContent = (getP(path) || '').length + ' / ' + cnt.textContent.split('/ ')[1];
@@ -1821,13 +1827,13 @@
       var t = pkgTotals(), price = p.variants[0].price, sb = $('wz-save-big');
       if (sb && t.known) {
         var sv = price == null ? null : t.total - price, mx = Math.max(t.total, price || 0) || 1;
-        sb.textContent = sv == null ? '—' : sv < 0 ? 'Mai scump cu ' + lei(-sv) : lei(sv);
+        sb.textContent = sv == null ? '—' : sv < 0 ? VQ.t('{amount} more expensive', { amount: lei(-sv) }) : lei(sv);
         sb.classList.toggle('is-bad', sv != null && sv < 0);
         $('wz-bar-pk').style.width = ((price || 0) / mx * 100) + '%';
         $('wz-bar-pk-t').textContent = price != null ? lei(price) : '—';
       }
     }
-    if (path === 'unit_label' && $('wz-unit-ex')) { var v0 = p.variants[0]; $('wz-unit-ex').textContent = (v0 && v0.price != null ? lei(v0.price) : '50 lei') + ' / ' + (p.unit_label || kit().ph.unit[p.product_type]); }
+    if (path === 'unit_label' && $('wz-unit-ex')) { var v0 = p.variants[0]; $('wz-unit-ex').textContent = (v0 && v0.price != null ? lei(v0.price) : lei(50)) + ' / ' + (p.unit_label || kit().ph.unit[p.product_type]); }
   }
   root.addEventListener('input', function (e) {
     var n = e.target;
@@ -1917,7 +1923,7 @@
     window.scrollTo(0, 0);
   }
   window.addEventListener('popstate', function () {
-    if (W && W.dirty && !window.confirm('Ai modificări nesalvate. Pleci fără să le salvezi?')) { history.pushState(null, '', W.p.id ? '/organizator/produse?id=' + W.p.id : '/organizator/produse?nou=1'); return; }
+    if (W && W.dirty && !window.confirm(VQ.t('You have unsaved changes. Leave without saving them?'))) { history.pushState(null, '', W.p.id ? PROD_URL + '?id=' + W.p.id : PROD_URL + '?nou=1'); return; }
     route();
   });
   window.addEventListener('beforeunload', function (e) { if (W && (W.dirty || W.saving)) { e.preventDefault(); e.returnValue = ''; } });
@@ -1925,15 +1931,15 @@
     var a = e.target.closest('a[href]');
     if (!a || e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey || a.target === '_blank') return;
     var href = a.getAttribute('href');
-    if (!/^\/organizator\/produse/.test(href)) return;
+    if (href.indexOf(PROD_URL) !== 0) return;
     if (W && W.dirty) {
       // a draft can save itself on the way out
       if (isDraft() && !problems().some(function (x) { return x.save; })) {
         e.preventDefault();
-        save(true).then(function (ok) { if (ok || window.confirm('Nu am putut salva ciorna. Pleci fără să o salvezi?')) { if (W) W.dirty = false; go(href); } });
+        save(true).then(function (ok) { if (ok || window.confirm(VQ.t('We could not save the draft. Leave without saving it?'))) { if (W) W.dirty = false; go(href); } });
         return;
       }
-      if (!window.confirm('Ai modificări nesalvate. Pleci fără să le salvezi?')) { e.preventDefault(); return; }
+      if (!window.confirm(VQ.t('You have unsaved changes. Leave without saving them?'))) { e.preventDefault(); return; }
       W.dirty = false;
     }
     e.preventDefault();
@@ -1941,7 +1947,7 @@
   });
   $('am-f-loc').addEventListener('change', function () {
     var v = $('am-f-loc').value;
-    history.replaceState(null, '', '/organizator/produse' + (v ? '?locatie=' + v : ''));
+    history.replaceState(null, '', PROD_URL + (v ? '?locatie=' + v : ''));
     drawList();
   });
   $('am-f-type').addEventListener('change', drawList);

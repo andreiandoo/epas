@@ -24,7 +24,7 @@
   function errText(err, fallback) {
     if (!err) return fallback;
     var e = err.errors || (err.data && err.data.errors);
-    // "Mai completează: …" lists everything in its message; the missing keys come along only for the page
+    // "Still to fill in: …" lists everything in its message; the missing keys come along only for the page
     if (e && typeof e === 'object' && !Array.isArray(e) && e.missing && err.message) return err.message;
     if (e && typeof e === 'object') {
       var k = Object.keys(e)[0];
@@ -35,15 +35,15 @@
     return (err.message && err.message !== 'An error occurred') ? err.message : fallback;
   }
   function upload(file, kind) {
-    if (!file) return Promise.reject(new Error('Niciun fișier.'));
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return Promise.reject(new Error('Doar poze JPG, PNG sau WebP.'));
-    if (file.size > MAX_IMAGE) return Promise.reject(new Error('Poza depășește 10 MB.'));
+    if (!file) return Promise.reject(new Error(VQ.t('No file.')));
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return Promise.reject(new Error(VQ.t('Only JPG, PNG or WebP photos.')));
+    if (file.size > MAX_IMAGE) return Promise.reject(new Error(VQ.t('The photo is larger than 10 MB.')));
     var fd = new FormData();
     fd.append('file', file);
     fd.append('kind', kind);
     return BileteOnlineAPI._postMultipart(BASE + '/uploads', fd).then(function (r) {
       var d = (r && r.data) || {};
-      if (!d.path) throw new Error('Încărcarea nu a întors poza.');
+      if (!d.path) throw new Error(VQ.t('The upload did not return the photo.'));
       return { path: d.path, url: d.url || null };
     });
   }
@@ -68,7 +68,7 @@
   function slug(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48);
   }
-  /** "Băile Tușnad" → "baile tusnad": what a search in a list compares. */
+  /** "São João" → "sao joao": what a search in a list compares. */
   function fold(s) {
     return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
@@ -148,9 +148,9 @@
     var input = el('input', {
       class: 'po-input po-combo-in', id: id, type: 'text', autocomplete: 'off', spellcheck: 'false',
       role: 'combobox', 'aria-expanded': 'false', 'aria-controls': listId, 'aria-autocomplete': 'list',
-      placeholder: opts.ph || 'Caută în listă…',
+      placeholder: opts.ph || VQ.t('Search the list…'),
     });
-    var caret = el('button', { class: 'po-combo-btn', type: 'button', tabindex: '-1', 'aria-label': 'Deschide lista' }, [O.icon('caret-down')]);
+    var caret = el('button', { class: 'po-combo-btn', type: 'button', tabindex: '-1', 'aria-label': VQ.t('Open the list') }, [O.icon('caret-down')]);
     var list = el('ul', { class: 'po-combo-list', id: listId, role: 'listbox', hidden: true });
     var wrap = el('span', { class: 'po-combo', 'data-for': id }, [input, caret, list]);
     var all = [], shown = [], active = -1, open = false;
@@ -167,7 +167,7 @@
     function draw() {
       list.textContent = '';
       if (!shown.length) {
-        list.appendChild(el('li', { class: 'po-combo-none', text: 'Nimic găsit. Șterge din text și încearcă altfel.' }));
+        list.appendChild(el('li', { class: 'po-combo-none', text: VQ.t('Nothing found. Delete some of the text and try again.') }));
         return;
       }
       shown.forEach(function (o, i) {
@@ -345,14 +345,14 @@
     var max = opts.max || 20000;
     var ed = el('div', {
       class: 'po-rich-ed', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true',
-      'aria-label': opts.label || null, 'data-ph': opts.ph || 'Scrie aici…', spellcheck: 'true',
+      'aria-label': opts.label || null, 'data-ph': opts.ph || VQ.t('Write here…'), spellcheck: 'true',
     });
     if (opts.min) ed.style.minHeight = opts.min + 'px';
     var count = el('span', { class: 'po-rich-count' });
     var foot = el('span', { class: 'po-rich-foot' }, [
-      el('small', { text: 'Îngroșat, cursiv, liste și linkuri. Restul formatării se pierde la salvare.' }), count,
+      el('small', { text: VQ.t('Bold, italic, lists and links. Any other formatting is lost on save.') }), count,
     ]);
-    var bar = el('span', { class: 'po-rich-bar', role: 'group', 'aria-label': 'Formatare' });
+    var bar = el('span', { class: 'po-rich-bar', role: 'group', 'aria-label': VQ.t('Formatting') });
     var box = el('div', { class: 'po-rich' }, [bar, ed, foot]);
 
     // quiet: the first read, while the form is being built — nothing counts as an edit yet.
@@ -389,11 +389,11 @@
       return b;
     }
     function linkIt() {
-      var url = window.prompt('Adresa linkului (https://…)', 'https://');
+      var url = window.prompt(VQ.t('Link address (https://…)'), 'https://');
       if (url === null) return;
       url = String(url).trim();
       if (!url) { cmd('unlink'); return; }
-      if (!RICH_HREF.test(url)) { O.flash('Linkul trebuie să înceapă cu https:// sau mailto:.', true); return; }
+      if (!RICH_HREF.test(url)) { O.flash(VQ.t('The link must start with https:// or mailto:.'), true); return; }
       var sel = window.getSelection();
       if (!sel || sel.isCollapsed) { ed.focus(); richInsert('<a href="' + esc(url) + '">' + esc(url) + '</a>'); sync(); return; }
       cmd('createLink', url);
@@ -405,14 +405,14 @@
         buttons[i][0].setAttribute('aria-pressed', ok ? 'true' : 'false');
       }
     }
-    tool('<b>B</b>', 'Îngroșat', 'bold');
-    tool('<i>I</i>', 'Cursiv', 'italic');
-    tool('<u>U</u>', 'Subliniat', 'underline');
-    tool('<b>H</b>', 'Subtitlu', 'formatBlock', '<h3>');
-    tool('&bull;&nbsp;&mdash;', 'Listă cu puncte', 'insertUnorderedList');
-    tool('1.&nbsp;&mdash;', 'Listă numerotată', 'insertOrderedList');
-    tool('&#128279;', 'Link', 'createLink');
-    tool('&#10005;', 'Curăță formatarea', 'clear');
+    tool('<b>B</b>', VQ.t('Bold'), 'bold');
+    tool('<i>I</i>', VQ.t('Italic'), 'italic');
+    tool('<u>U</u>', VQ.t('Underline'), 'underline');
+    tool('<b>H</b>', VQ.t('Subheading'), 'formatBlock', '<h3>');
+    tool('&bull;&nbsp;&mdash;', VQ.t('Bulleted list'), 'insertUnorderedList');
+    tool('1.&nbsp;&mdash;', VQ.t('Numbered list'), 'insertOrderedList');
+    tool('&#128279;', VQ.t('Link'), 'createLink');
+    tool('&#10005;', VQ.t('Clear formatting'), 'clear');
 
     ed.innerHTML = obj[key] == null ? '' : String(obj[key]);
     richClean(ed);
@@ -474,7 +474,7 @@
     function toggle(k, on) {
       var set = obj[key].filter(function (x) { return x !== k; });
       if (on) {
-        if (set.length >= limit) { O.flash('Cel mult ' + limit + ' facilități.', true); return false; }
+        if (set.length >= limit) { O.flash(VQ.t('At most {n} facilities.', { n: limit }), true); return false; }
         set.push(k);
       }
       obj[key] = set;
@@ -504,14 +504,14 @@
 
     var prefix = opts.custom;
     var chips = el('ul', { class: 'am-chips' });
-    var add = el('input', { class: 'po-input', type: 'text', maxlength: 40, id: nid(key + '-custom'), placeholder: 'Ex. Rampă pentru barcă', autocomplete: 'off' });
-    var addBtn = button('plus', 'Adaugă', 'btn btn-ghost');
+    var add = el('input', { class: 'po-input', type: 'text', maxlength: 40, id: nid(key + '-custom'), placeholder: VQ.t('E.g. Boat ramp'), autocomplete: 'off' });
+    var addBtn = button('plus', VQ.t('Add'), 'btn btn-ghost');
     function drawChips() {
       chips.textContent = '';
       var own = obj[key].filter(function (x) { return String(x).indexOf(prefix) === 0; });
       own.forEach(function (k) {
         var li = el('li', { class: 'am-chip' }, [el('span', { text: String(k).slice(prefix.length) })]);
-        var rm = button('x', null, 've-icon-btn', { 'aria-label': 'Scoate ' + String(k).slice(prefix.length) });
+        var rm = button('x', null, 've-icon-btn', { 'aria-label': VQ.t('Remove {name}', { name: String(k).slice(prefix.length) }) });
         rm.addEventListener('click', function () { toggle(k, false); drawChips(); });
         li.appendChild(rm);
         chips.appendChild(li);
@@ -522,7 +522,7 @@
       var label = add.value.replace(/\s+/g, ' ').trim().slice(0, 40);
       if (!label) { add.focus(); return; }
       var k = prefix + label;
-      if (obj[key].indexOf(k) >= 0) { O.flash('E deja în listă.', true); add.value = ''; return; }
+      if (obj[key].indexOf(k) >= 0) { O.flash(VQ.t('It is already in the list.'), true); add.value = ''; return; }
       if (!toggle(k, true)) return;
       add.value = '';
       drawChips();
@@ -532,10 +532,10 @@
     add.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addOne(); } });
     drawChips();
     box.appendChild(el('div', { class: 've-checkgroup' }, [
-      el('p', { class: 've-sec-k', text: opts.customLabel || 'Ale tale' }),
+      el('p', { class: 've-sec-k', text: opts.customLabel || VQ.t('Your own') }),
       chips,
       el('div', { class: 'am-chip-add' }, [
-        el('span', { class: 'po-field' }, [el('label', { for: add.id, text: opts.customHint || 'Adaugă o facilitate care nu e în listă' }), add]),
+        el('span', { class: 'po-field' }, [el('label', { for: add.id, text: opts.customHint || VQ.t('Add a facility that is not in the list') }), add]),
         addBtn,
       ]),
     ]));
@@ -559,16 +559,16 @@
       list.forEach(function (item, i) {
         var row = el('div', { class: 've-row' + (opts.rowCls ? ' ' + opts.rowCls : '') });
         [].concat(build(item, i, redraw)).forEach(function (n) { if (n) row.appendChild(n); });
-        var rm = button('trash', null, 've-icon-btn', { 'aria-label': (opts.removeLabel || 'Șterge rândul') + ' ' + (i + 1) });
+        var rm = button('trash', null, 've-icon-btn', { 'aria-label': (opts.removeLabel || VQ.t('Remove row')) + ' ' + (i + 1) });
         rm.addEventListener('click', function () { list.splice(i, 1); redraw(); if (opts.on) opts.on(); });
         row.appendChild(rm);
         box.appendChild(row);
       });
       if (opts.empty && !list.length) box.appendChild(el('p', { class: 've-sub', text: opts.empty }));
     }
-    var add = button('plus', opts.addLabel || 'Adaugă');
+    var add = button('plus', opts.addLabel || VQ.t('Add'));
     add.addEventListener('click', function () {
-      if (opts.limit && list.length >= opts.limit) { O.flash('Cel mult ' + opts.limit + '.', true); return; }
+      if (opts.limit && list.length >= opts.limit) { O.flash(VQ.t('At most {n}.', { n: opts.limit }), true); return; }
       list.push(blank());
       redraw();
       if (opts.on) opts.on();
@@ -608,7 +608,7 @@
       depth = 0;
       box.classList.remove('is-over');
       var files = imagesOf(e.dataTransfer);
-      if (!files.length) { O.flash('Trage o poză JPG, PNG sau WebP.', true); return; }
+      if (!files.length) { O.flash(VQ.t('Drop a JPG, PNG or WebP photo.'), true); return; }
       onFiles(files);
     });
     return box;
@@ -620,20 +620,20 @@
     var shot = el('div', { class: 'am-shot' });
     var thumb = el('img', { class: 'am-shot-img', alt: '' });
     var file = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', class: 've-sr', id: nid(key + '-file') });
-    var pickEmpty = el('label', { class: 'btn btn-ghost am-shot-btn', for: file.id }, [O.icon('plus'), el('span', { text: 'Alege o poză' })]);
-    var pickOver = el('label', { class: 'btn btn-ghost am-shot-btn', for: file.id }, [O.icon('image'), el('span', { text: 'Schimbă poza' })]);
-    var rm = button('trash', 'Scoate poza', 'btn btn-ghost am-shot-btn');
+    var pickEmpty = el('label', { class: 'btn btn-ghost am-shot-btn', for: file.id }, [O.icon('plus'), el('span', { text: VQ.t('Choose a photo') })]);
+    var pickOver = el('label', { class: 'btn btn-ghost am-shot-btn', for: file.id }, [O.icon('image'), el('span', { text: VQ.t('Change the photo') })]);
+    var rm = button('trash', VQ.t('Remove the photo'), 'btn btn-ghost am-shot-btn');
     var empty = el('div', { class: 'am-shot-empty' }, [
-      O.icon('image'), el('b', { text: 'Trage poza aici' }), el('small', { text: 'sau' }), pickEmpty,
+      O.icon('image'), el('b', { text: VQ.t('Drop the photo here') }), el('small', { text: VQ.t('or') }), pickEmpty,
     ]);
     var tools = el('div', { class: 'am-shot-tools' }, [pickOver, rm]);
-    var hint = el('span', { class: 've-sub', text: opts.hint || 'JPG, PNG sau WebP, cel mult 10 MB. Poți trage poza direct peste chenar.' });
+    var hint = el('span', { class: 've-sub', text: opts.hint || VQ.t('JPG, PNG or WebP, 10 MB at most. You can drop the photo straight onto the box.') });
 
     function put(f) {
       if (!f) return;
       box.classList.add('is-busy');
       upload(f, kind).then(function (img) { obj[key] = img; draw(); if (opts.on) opts.on(img); },
-        function (err) { O.flash(errText(err, 'Nu am putut încărca poza.'), true); })
+        function (err) { O.flash(errText(err, VQ.t('We could not upload the photo.')), true); })
         .then(function () { box.classList.remove('is-busy'); file.value = ''; });
     }
     function draw() {
@@ -662,18 +662,18 @@
     var box = el('div', { class: 'am-gal am-drop' });
     var list = el('ul', { class: 'am-gal-list' });
     var file = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: true, class: 've-sr', id: nid(key + '-files') });
-    var pick = el('label', { class: 'btn btn-ghost', for: file.id }, [O.icon('plus'), el('span', { text: 'Adaugă poze' })]);
-    var full = el('p', { class: 've-sub', text: 'Ai ajuns la ' + limit + ' de poze.' });
+    var pick = el('label', { class: 'btn btn-ghost', for: file.id }, [O.icon('plus'), el('span', { text: VQ.t('Add photos') })]);
+    var full = el('p', { class: 've-sub', text: VQ.t('You have reached {n} photos.', { n: limit }) });
     var zone = el('div', { class: 'am-gal-zone' }, [
-      O.icon('image'), el('b', { text: 'Trage pozele aici' }), el('small', { text: 'sau' }), pick, full,
+      O.icon('image'), el('b', { text: VQ.t('Drop the photos here') }), el('small', { text: VQ.t('or') }), pick, full,
     ]);
     function put(files) {
       files = files.slice(0, limit - obj[key].length);
-      if (!files.length) { O.flash('Cel mult ' + limit + ' de poze.', true); return; }
+      if (!files.length) { O.flash(VQ.t('At most {n} photos.', { n: limit }), true); return; }
       box.classList.add('is-busy');
       files.reduce(function (p, f) {
         return p.then(function () {
-          return upload(f, kind).then(function (img) { obj[key].push(img); draw(); if (on) on(); }, function (err) { O.flash(errText(err, 'O poză nu s-a încărcat.'), true); });
+          return upload(f, kind).then(function (img) { obj[key].push(img); draw(); if (on) on(); }, function (err) { O.flash(errText(err, VQ.t('One photo did not upload.')), true); });
         });
       }, Promise.resolve()).then(function () { box.classList.remove('is-busy'); file.value = ''; });
     }
@@ -683,7 +683,7 @@
         var li = el('li', { class: 'am-gal-item' });
         var src = imgUrl(img);
         if (src) li.appendChild(el('img', { src: src, alt: '' }));
-        var rm = button('x', null, 've-icon-btn', { 'aria-label': 'Scoate poza ' + (i + 1) });
+        var rm = button('x', null, 've-icon-btn', { 'aria-label': VQ.t('Remove photo {n}', { n: i + 1 }) });
         rm.addEventListener('click', function () { obj[key].splice(i, 1); draw(); if (on) on(); });
         li.appendChild(rm);
         list.appendChild(li);
@@ -718,68 +718,81 @@
 
   /* ---------- review state ---------- */
   var REVIEW = {
-    draft: ['Ciornă', 'is-muted'], pending: ['În verificare', 'is-wait'], rejected: ['Respins', 'is-bad'], approved: ['Aprobat', 'is-ok'],
+    draft: [VQ.t('Draft'), 'is-muted'], pending: [VQ.t('In review'), 'is-wait'], rejected: [VQ.t('Rejected'), 'is-bad'], approved: [VQ.t('Approved'), 'is-ok'],
   };
   /** Tags for a location or product: its review step and whether it is on the site. */
   function statusTags(item) {
     var out = [];
-    var r = item.review_status ? REVIEW[item.review_status] : ['Adăugat de viaqui.com', 'is-ok'];
+    var r = item.review_status ? REVIEW[item.review_status] : [VQ.t('Added by Viaqui'), 'is-ok'];
     if (r) out.push(el('span', { class: 'org-tag ' + r[1], text: r[0] }));
     if (!item.review_status || item.review_status === 'approved') {
-      out.push(el('span', { class: 'org-tag ' + (item.is_published ? 'is-ok' : 'is-muted'), text: item.is_published ? 'Pe site' : 'Ascuns' }));
+      out.push(el('span', { class: 'org-tag ' + (item.is_published ? 'is-ok' : 'is-muted'), text: item.is_published ? VQ.t('On the site') : VQ.t('Hidden') }));
     }
-    if (item.pos_only) out.push(el('span', { class: 'org-tag is-muted', text: 'Doar la casă' }));
+    if (item.pos_only) out.push(el('span', { class: 'org-tag is-muted', text: VQ.t('Counter only') }));
     return out;
   }
   /** What the operator can do next, as text under the tags. */
   function statusHint(item) {
-    if (item.review_status === 'rejected') return 'Respins' + (item.rejection_reason ? ': ' + item.rejection_reason : '') + '. Corectează și trimite din nou.';
-    if (item.review_status === 'pending') return 'Echipa viaqui.com verifică și îți scrie. Modificările se pot face în continuare.';
-    if (item.review_status === 'draft') return 'Ciornă. Când e gata, trimite-o spre aprobare.';
-    if (!item.is_published) return 'Aprobat, dar ascuns de pe site.';
+    if (item.review_status === 'rejected') return item.rejection_reason ? VQ.t('Rejected: {reason}. Fix it and send it again.', { reason: item.rejection_reason }) : VQ.t('Rejected. Fix it and send it again.');
+    if (item.review_status === 'pending') return VQ.t('The Viaqui team is checking it and will write to you. You can keep making changes.');
+    if (item.review_status === 'draft') return VQ.t('Draft. When it is ready, send it for approval.');
+    if (!item.is_published) return VQ.t('Approved, but hidden from the site.');
     return '';
   }
-  /** "21 septembrie 2026, 14:30" from an ISO date, '' when there isn't one. */
+  /** "21 September 2026, 14:30" from an ISO date, '' when there isn't one. */
   function when(iso) {
     if (!iso) return '';
     var d = new Date(iso);
     if (isNaN(d.getTime())) return '';
     try {
-      return d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })
-        + ', ' + d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+      var loc = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+      return d.toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
+        + ', ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
     } catch (e) { return ''; }
   }
-  var WHY = 'viaqui.com verifică o dată fiecare loc nou: numele, adresa, pozele și prețurile. Așa nu ajung pe site pagini goale sau greșite, iar vizitatorii au încredere în ce cumpără. Verificarea se face o singură dată — după aprobare, modificările tale intră direct pe site.';
+  var WHY = VQ.t('Viaqui checks every new place once: the name, the address, the photos and the prices. This keeps empty or wrong pages off the site, and visitors trust what they buy. The check is done only once: after approval, your changes go straight to the site.');
   /**
    * The big "where is this at" panel of an editor: the state, what it means,
-   * and what happens next. kind is the word for the thing ("locația").
+   * and what happens next. kind says what the thing is: 'venue' (the default) or 'product'.
    */
   function statusPanel(item, kind) {
-    kind = kind || 'locația';
-    var Kind = kind.charAt(0).toUpperCase() + kind.slice(1);
     var st = item.review_status || 'approved';
+    // one whole sentence per kind: the headings are not built from a noun and a tail
+    var H = kind === 'product' ? {
+      draft: VQ.t('This product is a draft: nobody sees it yet'),
+      pending: VQ.t('This product has been sent. It is waiting for Viaqui to approve it'),
+      rejected: VQ.t('This product was rejected'),
+      live: VQ.t('This product is approved and on the site'),
+      hidden: VQ.t('This product is approved, but hidden from the site'),
+    } : {
+      draft: VQ.t('This venue is a draft: nobody sees it yet'),
+      pending: VQ.t('This venue has been sent. It is waiting for Viaqui to approve it'),
+      rejected: VQ.t('This venue was rejected'),
+      live: VQ.t('This venue is approved and on the site'),
+      hidden: VQ.t('This venue is approved, but hidden from the site'),
+    };
     var map = {
-      draft: ['is-draft', 'file-text', Kind + ' e ciornă — nu o vede nimeni încă',
-        'O vezi doar tu. Completează ce lipsește și apasă „Trimite spre aprobare”: echipa viaqui.com se uită peste ea și, dacă e în regulă, apare pe site.'],
-      pending: ['is-wait', 'hourglass', Kind + ' a fost trimisă. Așteaptă aprobarea viaqui.com',
-        'Nu mai trebuie să faci nimic. Te anunțăm pe email când primește răspuns, de obicei într-o zi lucrătoare. Până atunci poți modifica în continuare — verificăm ultima variantă.'],
-      rejected: ['is-bad', 'warning-circle', Kind + ' a fost respinsă',
-        'Corectează ce scrie mai jos și trimite din nou. Nu se pierde nimic din ce ai scris.'],
-      approved: ['is-ok', 'check-circle', item.is_published ? Kind + ' e aprobată și e pe site' : Kind + ' e aprobată, dar e ascunsă de pe site',
+      draft: ['is-draft', 'file-text', H.draft,
+        VQ.t('Only you can see it. Fill in what is missing and press "Send for approval": the Viaqui team looks it over and, if all is well, it appears on the site.')],
+      pending: ['is-wait', 'hourglass', H.pending,
+        VQ.t('There is nothing more you need to do. We email you when it gets an answer, usually within one working day. Until then you can keep editing: we check the latest version.')],
+      rejected: ['is-bad', 'warning-circle', H.rejected,
+        VQ.t('Fix what is written below and send it again. Nothing you wrote is lost.')],
+      approved: ['is-ok', 'check-circle', item.is_published ? H.live : H.hidden,
         item.is_published
-          ? 'Modificările pe care le faci de acum intră direct pe site, fără o nouă aprobare.'
-          : 'Nu o vede nimeni până nu apeși „Pune pe site”. Modificările intră direct, fără o nouă aprobare.'],
+          ? VQ.t('The changes you make from now on go straight to the site, with no new approval.')
+          : VQ.t('Nobody sees it until you press "Put on the site". Changes go straight in, with no new approval.')],
     };
     var m = map[st] || map.approved;
     var body = [el('b', { text: m[2] }), el('p', { text: m[3] })];
     if (st === 'rejected' && item.rejection_reason) {
-      body.push(el('p', { class: 'am-state-why' }, [el('b', { text: 'Motivul: ' }), document.createTextNode(item.rejection_reason)]));
+      body.push(el('p', { class: 'am-state-why' }, [el('b', { text: VQ.t('Reason:') + ' ' }), document.createTextNode(item.rejection_reason)]));
     }
     var stamp = st === 'pending' ? when(item.submitted_at) : (st === 'approved' || st === 'rejected' ? when(item.reviewed_at) : '');
-    if (stamp) body.push(el('p', { class: 'am-state-when', text: (st === 'pending' ? 'Trimisă pe ' : 'Răspuns pe ') + stamp }));
+    if (stamp) body.push(el('p', { class: 'am-state-when', text: st === 'pending' ? VQ.t('Sent on {date}', { date: stamp }) : VQ.t('Answered on {date}', { date: stamp }) }));
     if (st === 'draft' || st === 'pending' || st === 'rejected') {
       body.push(el('details', { class: 'am-state-more' }, [
-        el('summary', { text: 'De ce e nevoie de aprobare?' }), el('p', { text: WHY }),
+        el('summary', { text: VQ.t('Why is approval needed?') }), el('p', { text: WHY }),
       ]));
     }
     return el('div', { class: 'am-state ' + m[0], role: st === 'rejected' ? 'alert' : 'status' }, [

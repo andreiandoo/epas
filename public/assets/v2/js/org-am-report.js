@@ -10,11 +10,13 @@
   var $ = function (id) { return document.getElementById(id); };
   var today = F.ymd(new Date()), seq = 0;
 
+  function money(v) { return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(v || 0) : F.money(v || 0); }
+  function fdate(d, opts) { try { return d.toLocaleDateString(VQ.locale === 'en' ? 'en-GB' : VQ.locale, opts); } catch (e) { return F.date(d, opts); } }
   function addDays(ymd, n) { var d = new Date(ymd + 'T12:00:00'); d.setDate(d.getDate() + n); return F.ymd(d); }
   function monthStart(ymd, back) { var d = new Date(ymd.slice(0, 7) + '-01T12:00:00'); d.setMonth(d.getMonth() - (back || 0)); return F.ymd(d); }
   function monthEnd(ymd) { var d = new Date(ymd.slice(0, 7) + '-01T12:00:00'); d.setMonth(d.getMonth() + 1); d.setDate(0); return F.ymd(d); }
   function qs(o) { return Object.keys(o).filter(function (k) { return o[k] !== '' && o[k] != null; }).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(o[k]); }).join('&'); }
-  function dayLabel(ymd) { return F.date(new Date(ymd + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function dayLabel(ymd) { return fdate(new Date(ymd + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'short' }); }
   function kpi(label, value) { return el('div', { class: 'am-kpi' }, [el('small', { text: label }), el('b', { text: value })]); }
 
   var PRESETS = {
@@ -36,21 +38,21 @@
     if (to < from) { var t = from; from = to; to = t; setRange([from, to]); }
     var mine = ++seq, kp = $('rep-kpis');
     kp.textContent = '';
-    kp.appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    kp.appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     A.api('/summary?' + qs({ from: from, to: to, location_id: $('rep-loc').value })).then(function (r) {
       if (mine !== seq) return;
       draw((r && r.data) || {});
     }, function (e) {
       if (mine !== seq || (e && e.status === 401)) return;
       kp.textContent = '';
-      kp.appendChild(el('p', { class: 've-state', text: A.errText(e, 'Nu am putut încărca raportul.') }));
+      kp.appendChild(el('p', { class: 've-state', text: A.errText(e, VQ.t('We could not load the report.')) }));
     });
   }
   function draw(d) {
     var t = d.totals || {}, kp = $('rep-kpis');
     kp.textContent = '';
-    [kpi('Rezervări', F.num(t.bookings || 0)), kpi('Persoane', F.num(t.persons || 0)), kpi('Vânzări', F.money(t.value || 0)),
-      kpi('Comision viaqui.com', F.money(t.commission || 0)), kpi('Îți rămân', F.money(t.net || 0))].forEach(function (n) { kp.appendChild(n); });
+    [kpi(VQ.t('Bookings'), F.num(t.bookings || 0)), kpi(VQ.t('People'), F.num(t.persons || 0)), kpi(VQ.t('Sales'), money(t.value || 0)),
+      kpi(VQ.t('Viaqui commission'), money(t.commission || 0)), kpi(VQ.t('You keep'), money(t.net || 0))].forEach(function (n) { kp.appendChild(n); });
 
     // every day of the period, the empty ones too
     var byDay = {};
@@ -62,22 +64,22 @@
     bars.textContent = '';
     bars.hidden = days.length < 2;
     days.forEach(function (x) {
-      bars.appendChild(el('span', { class: 'rep-bar' + (x.value ? '' : ' is-zero'), style: 'height:' + (max ? Math.max(2, Math.round((x.value || 0) / max * 100)) : 2) + '%', title: dayLabel(x.date) + ': ' + F.money(x.value || 0) }));
+      bars.appendChild(el('span', { class: 'rep-bar' + (x.value ? '' : ' is-zero'), style: 'height:' + (max ? Math.max(2, Math.round((x.value || 0) / max * 100)) : 2) + '%', title: dayLabel(x.date) + ': ' + money(x.value || 0) }));
     });
-    $('rep-days-p').textContent = F.date(new Date(d.from + 'T12:00:00'), { day: 'numeric', month: 'long', year: 'numeric' }) + ' – ' + F.date(new Date(d.to + 'T12:00:00'), { day: 'numeric', month: 'long', year: 'numeric' });
+    $('rep-days-p').textContent = fdate(new Date(d.from + 'T12:00:00'), { day: 'numeric', month: 'long', year: 'numeric' }) + ' – ' + fdate(new Date(d.to + 'T12:00:00'), { day: 'numeric', month: 'long', year: 'numeric' });
     var tb = $('rep-days');
     tb.textContent = '';
     var withSales = days.filter(function (x) { return x.bookings; }).reverse();
-    if (!withSales.length) tb.appendChild(el('tr', null, [el('td', { colspan: 4, class: 've-state', text: 'Nicio vânzare în perioada aleasă.' })]));
+    if (!withSales.length) tb.appendChild(el('tr', null, [el('td', { colspan: 4, class: 've-state', text: VQ.t('No sales in the chosen period.') })]));
     withSales.forEach(function (x) {
-      tb.appendChild(el('tr', null, [el('td', { text: dayLabel(x.date) }), el('td', { text: F.num(x.bookings) }), el('td', { text: F.money(x.value) }), el('td', { text: F.money(x.net) })]));
+      tb.appendChild(el('tr', null, [el('td', { text: dayLabel(x.date) }), el('td', { text: F.num(x.bookings) }), el('td', { text: money(x.value) }), el('td', { text: money(x.net) })]));
     });
 
     var pb = $('rep-products');
     pb.textContent = '';
-    if (!(d.by_product || []).length) pb.appendChild(el('tr', null, [el('td', { colspan: 5, class: 've-state', text: 'Nimic vândut în perioada aleasă.' })]));
+    if (!(d.by_product || []).length) pb.appendChild(el('tr', null, [el('td', { colspan: 5, class: 've-state', text: VQ.t('Nothing sold in the chosen period.') })]));
     (d.by_product || []).forEach(function (x) {
-      pb.appendChild(el('tr', null, [el('td', { text: x.title }), el('td', { text: F.num(x.bookings) }), el('td', { text: F.num(x.persons) }), el('td', { text: F.money(x.value) }), el('td', { text: F.money(x.net) })]));
+      pb.appendChild(el('tr', null, [el('td', { text: x.title }), el('td', { text: F.num(x.bookings) }), el('td', { text: F.num(x.persons) }), el('td', { text: money(x.value) }), el('td', { text: money(x.net) })]));
     });
   }
 
@@ -88,11 +90,11 @@
     fetch('/api/proxy.php?action=organizer.am.bookings.export&' + qs({ from: from, to: to, location_id: $('rep-loc').value }), { headers: token ? { Authorization: 'Bearer ' + token } : {} })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
       .then(function (blob) {
-        var a = el('a', { href: URL.createObjectURL(blob), download: 'rezervari-' + from + '-' + to + '.csv' });
+        var a = el('a', { href: URL.createObjectURL(blob), download: 'bookings-' + from + '-' + to + '.csv' });
         document.body.appendChild(a);
         a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-      }, function () { O.flash('Nu am putut descărca exportul.', true); })
+      }, function () { O.flash(VQ.t('We could not download the export.'), true); })
       .then(function () { b.disabled = false; });
   }
 
@@ -110,7 +112,7 @@
     if (!ok) return;
     setRange(PRESETS[30](), '30');
     A.api('/locations').then(function (r) {
-      ((r && r.data && r.data.locations) || []).forEach(function (l) { $('rep-loc').appendChild(el('option', { value: String(l.id), text: l.name || ('Locația ' + l.id) })); });
+      ((r && r.data && r.data.locations) || []).forEach(function (l) { $('rep-loc').appendChild(el('option', { value: String(l.id), text: l.name || VQ.t('Venue {id}', { id: l.id }) })); });
     }, function () {});
     load();
   });

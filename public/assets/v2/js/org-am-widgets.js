@@ -24,12 +24,12 @@
     var ul = $('wg-domains');
     ul.textContent = '';
     if (!domains.length) {
-      ul.appendChild(el('li', { class: 'wg-dom-none', text: 'Niciun site încă. Până adaugi unul, widget-ul se vede doar în previzualizarea de mai jos.' }));
+      ul.appendChild(el('li', { class: 'wg-dom-none', text: VQ.t('No sites yet. Until you add one, the widget shows only in the preview below.') }));
       return;
     }
     domains.forEach(function (d, i) {
-      var rm = el('button', { class: 've-icon-btn', type: 'button', 'aria-label': 'Șterge ' + d }, [O.icon('trash')]);
-      rm.addEventListener('click', function () { update(domains.filter(function (_, j) { return j !== i; }), rm, 'Site-ul a fost scos din listă.'); });
+      var rm = el('button', { class: 've-icon-btn', type: 'button', 'aria-label': VQ.t('Delete {name}', { name: d }) }, [O.icon('trash')]);
+      rm.addEventListener('click', function () { update(domains.filter(function (_, j) { return j !== i; }), rm, VQ.t('The site was removed from the list.')); });
       ul.appendChild(el('li', { class: 'wg-dom' }, [O.icon('globe-simple'), el('span', { text: d }), rm]));
     });
   }
@@ -53,13 +53,13 @@
     if (btn.disabled) return Promise.resolve(false);
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
-    status('Se salvează lista de site-uri…', true);
-    var slow = setTimeout(function () { status('Încă se salvează… durează uneori câteva secunde, nu închide pagina.', true); }, 3000);
+    status(VQ.t('Saving the list of sites…'), true);
+    var slow = setTimeout(function () { status(VQ.t('Still saving… it sometimes takes a few seconds, do not close the page.'), true); }, 3000);
     return save(list).then(function () {
       clearTimeout(slow);
       domains = list;
       drawDomains();
-      status('Se actualizează widget-ul…', true);
+      status(VQ.t('Updating the widget…'), true);
       return refreshWidget().then(function () {
         status('');
         O.flash(ok);
@@ -68,7 +68,7 @@
     }, function (e) {
       clearTimeout(slow);
       status('');
-      if (!(e && e.status === 401)) O.flash('Nu am putut salva lista de site-uri. Încearcă din nou.', true);
+      if (!(e && e.status === 401)) O.flash(VQ.t('We could not save the list of sites. Try again.'), true);
       return false;
     }).then(function (r) { btn.disabled = false; btn.removeAttribute('aria-busy'); return r; });
   }
@@ -83,14 +83,14 @@
     e.preventDefault();
     var input = $('wg-dom-in'), err = $('wg-dom-err'), d = clean(input.value);
     var bare = function (x) { return x.replace(/^https?:\/\//, '').replace(/^www\./, ''); };
-    var msg = !d ? 'Scrie adresa site-ului.'
-      : !DOMAIN.test(d) ? 'Scrie o adresă validă, de exemplu site-meu.ro sau *.site-meu.ro.'
-      : domains.some(function (x) { return bare(x) === bare(d); }) ? 'Site-ul e deja în listă.' : '';
+    var msg = !d ? VQ.t('Enter the address of the site.')
+      : !DOMAIN.test(d) ? VQ.t('Enter a valid address, for example my-site.com or *.my-site.com.')
+      : domains.some(function (x) { return bare(x) === bare(d); }) ? VQ.t('The site is already in the list.') : '';
     err.textContent = msg;
     err.hidden = !msg;
     if (msg) { input.setAttribute('aria-invalid', 'true'); input.focus(); return; }
     input.removeAttribute('aria-invalid');
-    update(domains.concat([d]), $('wg-dom-go'), 'Site-ul a fost adăugat.').then(function (ok) { if (ok) input.value = ''; });
+    update(domains.concat([d]), $('wg-dom-go'), VQ.t('The site was added.')).then(function (ok) { if (ok) input.value = ''; });
   });
   $('wg-dom-in').addEventListener('input', function () { $('wg-dom-err').hidden = true; this.removeAttribute('aria-invalid'); });
 
@@ -100,9 +100,9 @@
   function fillProducts() {
     var l = loc(), sel = $('wg-prod'), keep = sel.value;
     sel.textContent = '';
-    sel.appendChild(el('option', { value: '', text: 'Toate biletele locației' }));
+    sel.appendChild(el('option', { value: '', text: VQ.t('All the tickets of the venue') }));
     products.filter(function (p) { return l && p.location_id === l.id && isPublic(p); }).forEach(function (p) {
-      sel.appendChild(el('option', { value: String(p.id), text: F.flat(p.title) || ('Produsul ' + p.id) }));
+      sel.appendChild(el('option', { value: String(p.id), text: F.flat(p.title) || VQ.t('Product {id}', { id: p.id }) }));
     });
     sel.value = keep;
     if (sel.value !== keep) sel.value = '';
@@ -111,17 +111,17 @@
     var l = loc(), p = prod(), note = $('wg-loc-note');
     var ready = isPublic(l);
     note.hidden = !l || ready;
-    note.textContent = l && !ready ? 'Locația nu e încă pe site (aprobată și publicată). Codul e gata de pus, dar widget-ul arată biletele doar după ce locația apare pe viaqui.com.' : '';
+    note.textContent = l && !ready ? VQ.t('The venue is not on the site yet (approved and published). The code is ready to paste, but the widget shows the tickets only once the venue appears on Viaqui.') : '';
     if (!l) return;
     var src = SITE + '/embed/locatie/' + encodeURIComponent(l.slug) + (p ? '?produs=' + p.id : '');
     var name = F.flat(p ? p.title : l.name) || 'viaqui.com';
     // Embed code v2: the iframe plus embed/bo-widget.js, which sizes it and keeps the whole purchase on the operator's
     // site (checkout in the widget, back to this page after paying). Pages with the v1 code keep working as before.
     $('wg-code').value =
-      '<iframe src="' + src + '" title="Bilete ' + attr(name) + '" loading="lazy" style="display:block;width:100%;height:720px;border:0"></iframe>\n' +
+      '<iframe src="' + src + '" title="' + attr(VQ.t('Tickets: {name}', { name: name })) + '" loading="lazy" style="display:block;width:100%;height:720px;border:0"></iframe>\n' +
       '<script src="' + SITE + '/embed/bo-widget.js" async></' + 'script>';
-    var page = SITE + ((p && p.public_path) || l.public_path || ('/locatie/' + l.slug)) + '#bilete';
-    $('wg-link').value = '<a href="' + page + '" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;border-radius:999px;background:#1E5B48;color:#fff;font:600 16px/1.2 system-ui,sans-serif;text-decoration:none">Cumpără bilete</a>';
+    var page = SITE + ((p && p.public_path) || l.public_path || ('/venue/' + l.slug)) + '#bilete';
+    $('wg-link').value = '<a href="' + page + '" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;border-radius:999px;background:#1E5B48;color:#fff;font:600 16px/1.2 system-ui,sans-serif;text-decoration:none">' + attr(VQ.t('Buy tickets')) + '</a>';
     var fr = $('wg-preview');
     $('wg-prev-box').hidden = !ready;
     var local = '/embed/locatie/' + encodeURIComponent(l.slug) + (p ? '?produs=' + p.id : '');
@@ -139,12 +139,12 @@
   root.querySelectorAll('[data-copy]').forEach(function (b) {
     b.addEventListener('click', function () {
       var ta = $(b.getAttribute('data-copy'));
-      var done = function () { O.flash('Codul a fost copiat.'); };
+      var done = function () { O.flash(VQ.t('The code was copied.')); };
       var fallback = function () {
         ta.focus();
         ta.select();
         try { if (document.execCommand('copy')) { done(); return; } } catch (e) {}
-        O.flash('Nu am putut copia. Selectează codul și copiază-l manual.', true);
+        O.flash(VQ.t('We could not copy it. Select the code and copy it by hand.'), true);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, fallback);
       else fallback();
@@ -168,24 +168,24 @@
         var sel = $('wg-loc');
         sel.textContent = '';
         if (!locations.length) {
-          sel.appendChild(el('option', { value: '', text: 'Nicio locație încă' }));
+          sel.appendChild(el('option', { value: '', text: VQ.t('No venues yet') }));
           sel.disabled = $('wg-prod').disabled = true;
           $('wg-code-box').hidden = $('wg-prev-box').hidden = true;
           var note = $('wg-loc-note');
-          note.textContent = 'Adaugă întâi o locație în „Locațiile mele”; widget-ul vinde biletele ei.';
+          note.textContent = VQ.t('Add a venue first, under "My venues"; the widget sells its tickets.');
           note.hidden = false;
           return;
         }
         // the ones already on the site first
         locations.sort(function (a, b) { return (isPublic(b) ? 1 : 0) - (isPublic(a) ? 1 : 0); });
-        locations.forEach(function (l) { sel.appendChild(el('option', { value: String(l.id), text: (F.flat(l.name) || ('Locația ' + l.id)) + (isPublic(l) ? '' : ' (nu e încă pe site)') })); });
+        locations.forEach(function (l) { sel.appendChild(el('option', { value: String(l.id), text: isPublic(l) ? (F.flat(l.name) || VQ.t('Venue {id}', { id: l.id })) : VQ.t('{name} (not on the site yet)', { name: F.flat(l.name) || VQ.t('Venue {id}', { id: l.id }) }) })); });
         fillProducts();
         draw();
       });
     }).catch(function (e) {
       if (e && e.status === 401) return;
       $('wg-loading').hidden = false;
-      $('wg-loading').textContent = A.errText(e, 'Nu am putut încărca widget-urile. Reîncarcă pagina.');
+      $('wg-loading').textContent = A.errText(e, VQ.t('We could not load the widgets. Reload the page.'));
     });
   });
 })();
