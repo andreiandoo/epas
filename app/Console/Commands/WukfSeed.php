@@ -876,6 +876,11 @@ class WukfSeed extends Command
 
     private function seedTicketTypes(Event $event, bool $isRange): void
     {
+        // Eveniment cu sală pe locuri (wukf:seed-seating): biletele de acces general nu se mai vând — nu le recrea / reactiva.
+        if (! empty($event->seating_layout_id)) {
+            return;
+        }
+
         $defs = [
             ['name' => 'Spectator – 1 zi', 'price' => 25, 'cap' => 400, 'range_only' => false,
                 'desc' => 'Acces în tribună pentru o singură zi de concurs.'],

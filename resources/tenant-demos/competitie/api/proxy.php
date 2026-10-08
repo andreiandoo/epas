@@ -35,6 +35,45 @@ $routes = [
     'acc-tickets' => ['GET',  '/tenant-client/account/tickets'],
 ];
 
+// --- Locuri numerotate: API-ul public de seating, cu o sesiune stabilă de hold-uri per vizitator ---
+$seatActions = ['seating', 'seats', 'hold', 'release', 'holds'];
+$sid = null;
+if (in_array($action, $seatActions, true)) {
+    $cookieName = 'wukf_seat_sid';
+    $sid = preg_replace('/[^a-f0-9]/', '', (string) ($_COOKIE[$cookieName] ?? ''));
+    if (strlen($sid) !== 32) {
+        $sid = bin2hex(random_bytes(16));
+        setcookie($cookieName, $sid, [
+            'expires'  => time() + 7200,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
+
+    $eventId = (int) ($_GET['event'] ?? 0);
+    $query   = [];
+    switch ($action) {
+        case 'seating':
+        case 'seats':
+            if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'event lipsă']); exit; }
+            $routes[$action] = ['GET', "/public/events/{$eventId}/{$action}"];
+            if ($action === 'seats') { $query = ['limit' => 5000]; }
+            break;
+        case 'hold':
+            $routes[$action] = ['POST', '/public/seats/hold'];
+            break;
+        case 'release':
+            $routes[$action] = ['DELETE', '/public/seats/hold'];
+            break;
+        case 'holds':
+            $routes[$action] = ['GET', '/public/seats/holds'];
+            $query = ['event_seating_id' => (int) ($_GET['event_seating_id'] ?? 0)];
+            break;
+    }
+}
+
 if (!isset($routes[$action])) {
     http_response_code(400);
     echo json_encode(['error' => 'acțiune necunoscută']);
@@ -42,12 +81,15 @@ if (!isset($routes[$action])) {
 }
 
 [$method, $path] = $routes[$action];
-$body = $method === 'POST' ? (json_decode(file_get_contents('php://input'), true) ?: []) : null;
+$body = $method !== 'GET' ? (json_decode(file_get_contents('php://input'), true) ?: []) : null;
 
-$url = API_BASE . $path . '?' . http_build_query(['hostname' => TENANT_HOST]);
+$url = API_BASE . $path . '?' . http_build_query($sid !== null ? $query : ['hostname' => TENANT_HOST]);
 
 // --- Forward cURL ---
 $headers = ['Accept: application/json'];
+// Sesiunea de locuri merge și la checkout, ca serverul să recunoască locurile blocate de acest vizitator
+$seatSid = $sid ?? preg_replace('/[^a-f0-9]/', '', (string) ($_COOKIE['wukf_seat_sid'] ?? ''));
+if (strlen((string) $seatSid) === 32) { $headers[] = 'X-Session-Id: ' . $seatSid; }
 if ($body !== null) { $headers[] = 'Content-Type: application/json'; }
 // Forward token-ul de autentificare al clientului
 $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');

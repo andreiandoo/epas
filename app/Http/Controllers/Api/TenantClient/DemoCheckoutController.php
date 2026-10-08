@@ -329,9 +329,13 @@ class DemoCheckoutController extends Controller
     {
         $validated = $request->validate([
             'event_id'               => 'required|integer',
-            'items'                  => 'required|array|min:1',
-            'items.*.ticket_type_id' => 'required|integer',
-            'items.*.quantity'       => 'required|integer|min:1|max:50',
+            'items'                  => 'nullable|array',
+            'items.*.ticket_type_id' => 'required_with:items|integer',
+            'items.*.quantity'       => 'required_with:items|integer|min:1|max:50',
+            // Locuri numerotate: prețul vine din hartă, la fel ca în store()
+            'seats'                  => 'nullable|array|max:50',
+            'seats.*.seat_uid'       => 'required_with:seats|string|max:64',
+            'seats.*.price'          => 'nullable|numeric|min:0',
             'coupon_code'            => 'nullable|string|max:50',
         ]);
 
@@ -349,7 +353,17 @@ class DemoCheckoutController extends Controller
         $ticketTypes = TicketType::where('event_id', $event->id)->where('status', 'active')->get()->keyBy('id');
         $rows = [];
         $subtotalCents = 0;
-        foreach ($validated['items'] as $item) {
+        if (empty($validated['items']) && empty($validated['seats'])) {
+            return response()->json(['success' => false, 'error' => 'Coș gol'], 422);
+        }
+        foreach (($validated['seats'] ?? []) as $seat) {
+            $priceCents = (int) round(((float) ($seat['price'] ?? 0)) * 100);
+            // Același tip de bilet pe care îl va primi locul la comandă: cel cu prețul cel mai apropiat
+            $tt = $ticketTypes->sortBy(fn ($t) => abs(((int) ($t->price_cents ?: (($t->price_max ?? 0) * 100))) - $priceCents))->first();
+            $subtotalCents += $priceCents;
+            $rows[] = ['ticket_type_id' => $tt?->id, 'price_cents' => $priceCents];
+        }
+        foreach (($validated['items'] ?? []) as $item) {
             $tt = $ticketTypes->get($item['ticket_type_id']);
             if (! $tt) {
                 return response()->json(['success' => false, 'error' => 'Un tip de bilet din coș nu mai este disponibil.'], 422);

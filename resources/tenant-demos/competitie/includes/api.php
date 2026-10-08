@@ -293,6 +293,25 @@ function ev_kind_key(array $e): string {
     return ['Campionat național' => 'campionat', 'Cupa României' => 'cupa-romaniei', 'Cupă' => 'cupa'][ev_kind($e)];
 }
 
+/** Competiție cu locuri numerotate (bilete pe loc), după semnalele din API-ul public. */
+function ev_is_seated(array $e): bool {
+    // Dacă API-ul de eveniment spune explicit, îl credem
+    if (array_key_exists('has_seating', $e)) { return !empty($e['has_seating']); }
+    if (!empty($e['seating_layout_id'])) { return true; }
+
+    // Altfel întrebăm API-ul public de seating, cu răspunsul (și cel negativ) ținut 10 minute
+    $id = (int) ($e['id'] ?? 0);
+    if (!$id) { return false; }
+    $file = CACHE_DIR . '/seated_' . $id . '.txt';
+    if (is_file($file) && (time() - filemtime($file)) < 600) {
+        return trim((string) @file_get_contents($file)) === '1';
+    }
+    $resp = api_request('GET', API_BASE . '/public/events/' . $id . '/seating');
+    $seated = ($resp['success'] ?? false) && !empty($resp['raw']['event_seating_id']);
+    @file_put_contents($file, $seated ? '1' : '0', LOCK_EX);
+    return $seated;
+}
+
 /** Numărul de zile de concurs. */
 function ev_days_count(array $e): int {
     [$s, $f] = ev_span($e);

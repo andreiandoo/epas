@@ -48,8 +48,22 @@ include __DIR__ . '/includes/head.php';
                                 </div>
                             </div>
                         </template>
+                        <template x-for="seat in cart.seats" :key="seat.seat_uid">
+                            <div class="line">
+                                <div>
+                                    <div class="line__name" x-text="seat.section"></div>
+                                    <div class="line__unit" x-text="'Rând ' + seat.row + ' · Loc ' + seat.seat"></div>
+                                </div>
+                                <div class="line__tools">
+                                    <div class="line__sum" x-text="lei(seat.price)"></div>
+                                    <button type="button" class="line__del" @click="removeSeat(seat)" :aria-label="'Scoate ' + seat.label">
+                                        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2m-6 0l1 12h6l1-12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                         <div class="panel__body">
-                            <a class="link" :href="'/competitii/' + cart.event.slug + '#bilete'">Adaugă alte tipuri de bilete</a>
+                            <a class="link" :href="'/competitii/' + cart.event.slug + '#bilete'" x-text="cart.seats.length ? 'Alege alte locuri' : 'Adaugă alte tipuri de bilete'"></a>
                         </div>
                     </div>
                 </div>

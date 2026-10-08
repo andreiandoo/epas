@@ -609,3 +609,39 @@ html.lenis, html.lenis body { height: auto; }
 .legal ul { padding-left: 22px; margin: 0 0 14px; }
 .legal a { color: var(--blue); font-weight: 600; }
 .sec--light .step__n { color: var(--blue); }
+
+/* ---- Locuri numerotate: tribunele din jurul suprafeței + locurile din tribuna aleasă ---- */
+.seatmap { margin-bottom: 64px; }
+.seatmap__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 24px; }
+.seatmap__head h2 { font-size: clamp(32px, 4vw, 48px); margin-top: 12px; }
+.seatmap__legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: 14px; color: var(--fg-2); }
+.seatmap__legend li { display: flex; align-items: center; gap: 8px; }
+.seatmap__legend .seat { width: 18px; height: 18px; min-width: 0; border-radius: 5px; pointer-events: none; }
+.seatmap__state { color: var(--fg-2); }
+.arena { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr) minmax(0, 1fr); grid-template-areas: ". n ." "w mat e" ". s ."; gap: 10px; margin-bottom: 22px; }
+.stand { display: grid; align-content: center; justify-items: center; gap: 3px; min-height: 76px; padding: 12px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--fg); text-align: center; transition: background .2s, border-color .2s, transform .25s var(--ease); }
+.stand:hover { border-color: var(--blue-hi); transform: translateY(-2px); }
+.stand.is-on { background: var(--blue); border-color: var(--blue-hi); box-shadow: 0 18px 40px -22px rgba(17, 81, 211, 1); }
+.stand b { font-family: var(--display); font-weight: 800; font-size: 21px; text-transform: uppercase; line-height: 1; }
+.stand span { font-size: 13px; color: var(--fg-2); }
+.stand small { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--fg-2); }
+.stand.is-on span, .stand.is-on small { color: rgba(255, 255, 255, .86); }
+.stand--n { grid-area: n; } .stand--s { grid-area: s; } .stand--e { grid-area: e; } .stand--w { grid-area: w; }
+.arena__mat { grid-area: mat; display: grid; place-items: center; min-height: 150px; border-radius: 10px; background: var(--blue); border: 10px solid var(--red); }
+.arena__mat span { font-family: var(--mono); font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
+.stand-view { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.stand-view__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.stand-view__head h3 { font-size: 28px; }
+.stand-view__head span { font-size: 14px; color: var(--fg-2); }
+.stand-view__scroll { overflow-x: auto; padding: 22px; -webkit-overflow-scrolling: touch; }
+.rows { display: grid; gap: 7px; width: max-content; margin: 0 auto; }
+.srow { display: flex; align-items: center; gap: 5px; }
+.srow__l { width: 22px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--fg-3); }
+.seat { display: grid; place-items: center; width: 30px; height: 30px; min-width: 30px; padding: 0; border: 1px solid rgba(255, 255, 255, .22); border-radius: 8px; background: rgba(255, 255, 255, .1); color: var(--fg); font-family: var(--mono); font-size: 11px; font-weight: 700; line-height: 1; transition: background .15s, border-color .15s, transform .15s; }
+.seat:hover:not([disabled]) { background: rgba(255, 255, 255, .28); transform: translateY(-2px); }
+.seat.is-top { background: rgba(17, 81, 211, .75); border-color: var(--blue-hi); }
+.seat.is-on { background: #fff; border-color: #fff; color: var(--ink); transform: scale(1.08); }
+.seat.is-taken { background: transparent; border-style: dashed; border-color: rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .22); cursor: not-allowed; }
+.rows__mat { margin-top: 12px; padding: 9px; border-radius: 8px; background: var(--blue); border-bottom: 5px solid var(--red); text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: .26em; text-transform: uppercase; color: rgba(255, 255, 255, .86); }
+.buy .line__del { width: 36px; height: 36px; color: rgba(10, 15, 51, .45); }
+@media (max-width: 560px) { .arena { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 6px; } .stand { padding: 10px 4px; } .stand b { font-size: 16px; } .stand span { font-size: 11px; } .arena__mat { min-height: 110px; border-width: 6px; } .stand-view__scroll { padding: 16px 12px; } }
