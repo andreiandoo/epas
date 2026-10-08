@@ -175,6 +175,8 @@ RewriteRule ^locatii/?$ hub-locatii.php [L,QSA]
 
 # Sitemap: hubs, locations and experiences (activities module)
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+# IndexNow key file: /<key>.txt (see bin/ping-search.php)
+RewriteRule ^([a-f0-9]{16,64})\.txt$ indexnow-key.php?k=$1 [L]
 RewriteRule ^sitemap-([a-z][a-z-]{1,40})\.xml$ sitemap.php?part=$1 [L]
 
 # Venue type pages (internal — still reachable, e.g. activity venue links)
