@@ -36,6 +36,7 @@ $headSolid       = $headSolid       ?? false;
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/site.css?v=<?= ASSET_V ?>">
+    <script>window.WUKF_CFG = <?= json_encode(['api' => API_BASE, 'host' => TENANT_HOST], JSON_UNESCAPED_SLASHES) ?>;</script>
     <script src="/assets/site.js?v=<?= ASSET_V ?>"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -83,6 +84,7 @@ $headSolid       = $headSolid       ?? false;
             <a href="/cos">Coșul meu</a>
             <a x-show="!user" href="/autentificare">Contul meu</a>
             <a x-show="user" href="/biletele-mele">Biletele mele</a>
+            <a x-show="user" href="/profil">Profilul meu</a>
             <button type="button" x-show="user" @click="logout()">Ieși din cont</button>
         </div>
     </div>

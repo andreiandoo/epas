@@ -44,6 +44,7 @@ include __DIR__ . '/includes/head.php';
                         <div class="ticket__title"><?= e($oev['title'] ?? '') ?></div>
                         <div class="ticket__meta"><?= e(implode(' · ', array_filter([$when, $where]))) ?></div>
                         <div class="ticket__code"><?= e($t['code'] ?? '') ?></div>
+                        <a class="link ticket__dl no-print" data-dl="<?= e($t['code'] ?? '') ?>" href="#" hidden>Descarcă biletul</a>
                     </div>
                     <div class="ticket__qr"><div data-qr="<?= e($t['code'] ?? '') ?>"></div></div>
                     <div class="belt-bg"></div>
@@ -61,8 +62,10 @@ include __DIR__ . '/includes/head.php';
                     <div class="sum__total"><span>Total plătit</span><b><?= e(lei($summary['total'] ?? 0)) ?></b></div>
                 </div>
                 <div class="panel__body" style="display:flex;flex-wrap:wrap;gap:12px">
-                    <button type="button" class="btn" onclick="window.print()">Tipărește biletele</button>
+                    <a class="btn" data-dl="" href="#" hidden><?= count($tickets) === 1 ? 'Descarcă biletul (PDF)' : 'Descarcă biletele (PDF)' ?></a>
+                    <button type="button" class="btn btn--ghost" onclick="window.print()">Tipărește</button>
                     <a class="btn btn--ghost" href="/competitii">Alte competiții</a>
+                    <p class="fine" data-dl-missing hidden style="flex-basis:100%;margin:0">Descărcarea în PDF e disponibilă din browserul în care ai plasat comanda sau din <a class="link" href="/biletele-mele">Biletele mele</a>, după autentificare.</p>
                 </div>
             </div>
         </section>
@@ -70,6 +73,15 @@ include __DIR__ . '/includes/head.php';
 
     <script>
         try { localStorage.removeItem('wukf_cart'); } catch (e) {}
+        // Butoanele de descărcare: tokenul comenzii e ținut în browserul din care s-a cumpărat
+        (function () {
+            var orderId = <?= (int) $summary['order_id'] ?>, token = window.WUKF && WUKF.Orders.token(orderId);
+            if (!token) { var note = document.querySelector('[data-dl-missing]'); if (note) { note.hidden = false; } return; }
+            document.querySelectorAll('[data-dl]').forEach(function (a) {
+                a.href = WUKF.pdfUrl(orderId, token, a.getAttribute('data-dl') || '');
+                a.hidden = false;
+            });
+        })();
         window.addEventListener('load', function () {
             if (!window.QRCode) { return; }
             document.querySelectorAll('[data-qr]').forEach(function (el) {

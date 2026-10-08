@@ -314,6 +314,8 @@ class DemoCheckoutController extends Controller
                 'order_id'     => $order->id,
                 'total'        => $result['total_cents'] / 100,
                 'redirect_url' => $payment['redirect_url'],
+                // Cu el se descarcă biletele după plată (vezi DemoStorefrontController::ticketsPdf)
+                'access_token' => DemoStorefrontController::orderToken($order),
             ], 201);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 400);

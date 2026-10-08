@@ -28,7 +28,11 @@ include __DIR__ . '/includes/head.php';
                     <?php endif; ?>
 
                     <div class="panel">
-                        <div class="panel__head"><h2>Datele tale</h2></div>
+                        <div class="panel__head">
+                            <h2>Datele tale</h2>
+                            <a class="link" href="/autentificare?next=/finalizare" x-show="!user" style="font-size:15px">Am deja cont</a>
+                            <span x-show="user" x-cloak style="font-size:14px;color:var(--fg-2)">Conectat ca <b x-text="user ? (user.name || user.email) : ''"></b></span>
+                        </div>
                         <div class="panel__body">
                             <div class="fields fields--2">
                                 <div class="field">
@@ -44,9 +48,9 @@ include __DIR__ . '/includes/head.php';
                                     <input id="f-email" type="email" autocomplete="email" inputmode="email" spellcheck="false" autocapitalize="off"
                                            x-model="form.email" :class="bad('email') && 'is-bad'"
                                            @paste="noPaste($event)" @drop="noPaste($event)" @copy.prevent @cut.prevent required>
-                                    <small>Aici trimitem biletele.</small>
+                                    <small x-text="usesAccountEmail() ? 'Adresa contului tău. Aici trimitem biletele.' : 'Aici trimitem biletele.'">Aici trimitem biletele.</small>
                                 </div>
-                                <div class="field">
+                                <div class="field" x-show="!usesAccountEmail()">
                                     <label for="f-email2">Confirmă emailul</label>
                                     <input id="f-email2" type="email" autocomplete="off" inputmode="email" spellcheck="false" autocapitalize="off"
                                            x-model="form.email2" :class="{ 'is-bad': confirmState() === 'bad', 'is-good': confirmState() === 'good' }"
@@ -58,6 +62,17 @@ include __DIR__ . '/includes/head.php';
                                     <label for="f-phone">Telefon <em>(opțional)</em></label>
                                     <input id="f-phone" type="tel" autocomplete="tel" inputmode="tel" x-model="form.phone">
                                     <small>Doar pentru anunțuri despre competiție.</small>
+                                </div>
+                            </div>
+                            <div class="account-opt" x-show="!user">
+                                <label class="check">
+                                    <input type="checkbox" x-model="form.create_account">
+                                    <span><b>Creează-mi și un cont cu aceste date.</b> Găsești oricând biletele în „Biletele mele”, fără să cauți prin email.</span>
+                                </label>
+                                <div class="field" x-show="form.create_account" x-cloak style="margin-top:14px;max-width:340px">
+                                    <label for="f-pass">Parolă pentru cont</label>
+                                    <input id="f-pass" type="password" autocomplete="new-password" x-model="form.password" minlength="8" :class="tried && !passwordOk() && 'is-bad'">
+                                    <small>Minimum 8 caractere. Te autentifici cu adresa de email de mai sus.</small>
                                 </div>
                             </div>
                             <div class="note" style="margin-top:18px" x-show="pasteWarn" x-cloak role="status">

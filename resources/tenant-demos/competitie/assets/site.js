@@ -95,6 +95,28 @@
     function ticketsLabel(n) { return n === 1 ? '1 bilet' : (n < 20 ? n + ' bilete' : n + ' de bilete'); }
     function toast(msg) { window.dispatchEvent(new CustomEvent('wukf:toast', { detail: msg })); }
 
+    /* Tokenurile comenzilor plasate din acest browser: cu ele se descarcă biletele după plată,
+       fără cont. Se păstrează ultimele 20. */
+    var Orders = {
+        KEY: 'wukf_orders',
+        all: function () { var o = read(Orders.KEY); return (o && typeof o === 'object') ? o : {}; },
+        remember: function (id, token) {
+            if (!id || !token) { return; }
+            var o = Orders.all(); o[id] = token;
+            var keys = Object.keys(o);
+            keys.slice(0, Math.max(0, keys.length - 20)).forEach(function (k) { delete o[k]; });
+            write(Orders.KEY, o);
+        },
+        token: function (id) { return Orders.all()[id] || null; }
+    };
+    // Adresa PDF-ului cu biletele unei comenzi (toate, sau doar cel cu codul dat)
+    function pdfUrl(orderId, token, code) {
+        var cfg = window.WUKF_CFG || {};
+        var q = 'hostname=' + encodeURIComponent(cfg.host || location.hostname) + '&order=' + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token);
+        if (code) { q += '&code=' + encodeURIComponent(code); }
+        return (cfg.api || '') + '/tenant-client/storefront/tickets.pdf?' + q;
+    }
+
     /* Sumele reale ale coșului, calculate pe server (reducere din cod + taxa de procesare).
        Dacă serverul nu răspunde, cade pe subtotalul local, ca pagina să rămână utilizabilă. */
     async function quote(cart, couponCode) {
@@ -112,7 +134,7 @@
         return local;
     }
 
-    window.WUKF = { Cart: Cart, Auth: Auth, lei: lei, toast: toast, quote: quote, ticketsLabel: ticketsLabel, MAX_PER_TYPE: MAX_PER_TYPE, HOLD_MS: HOLD_MS, SEAT_HOLD_MS: SEAT_HOLD_MS };
+    window.WUKF = { Orders: Orders, pdfUrl: pdfUrl, Cart: Cart, Auth: Auth, lei: lei, toast: toast, quote: quote, ticketsLabel: ticketsLabel, MAX_PER_TYPE: MAX_PER_TYPE, HOLD_MS: HOLD_MS, SEAT_HOLD_MS: SEAT_HOLD_MS };
 
     /* Comportament comun coșului și paginii de plată: sume, cod de reducere. */
     function pricing() {
@@ -462,22 +484,33 @@
         Alpine.data('checkoutPage', function () {
             return Object.assign(pricing(), {
                 cart: null, lei: lei, busy: false, error: '', tried: false, pasteWarn: false,
-                form: { first_name: '', last_name: '', email: '', email2: '', phone: '', terms: false, newsletter: false },
+                user: null, accountEmail: '',
+                form: { first_name: '', last_name: '', email: '', email2: '', phone: '', terms: false, newsletter: false, create_account: false, password: '' },
                 init: function () {
                     this.cart = Cart.get();
                     this.refreshQuote();
                     var a = Auth.get();
                     if (a) {
                         var u = a.user, parts = Auth.name(u).split(/\s+/);
+                        this.user = u;
                         this.form.first_name = u.first_name || parts[0] || '';
                         this.form.last_name = u.last_name || parts.slice(1).join(' ') || '';
                         this.form.phone = u.phone || '';
+                        // Adresa contului e deja verificată: nu mai cerem s-o scrie de două ori
+                        this.accountEmail = (u.email || '').trim().toLowerCase();
+                        this.form.email = u.email || '';
                     }
+                },
+                // Biletele merg pe adresa contului cât timp cumpărătorul nu o schimbă
+                usesAccountEmail: function () {
+                    return this.accountEmail !== '' && this.form.email.trim().toLowerCase() === this.accountEmail;
                 },
                 emailOk: function () { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.form.email.trim()); },
                 emailsMatch: function () {
+                    if (this.usesAccountEmail()) { return true; }
                     return this.form.email2.trim() !== '' && this.form.email.trim().toLowerCase() === this.form.email2.trim().toLowerCase();
                 },
+                passwordOk: function () { return !this.form.create_account || this.form.password.length >= 8; },
                 // Starea câmpului de confirmare: '' (încă nu se știe), 'good' sau 'bad'
                 confirmState: function () {
                     var a = this.form.email.trim().toLowerCase(), b = this.form.email2.trim().toLowerCase();
@@ -503,6 +536,7 @@
                     if (this.bad('first_name') || this.bad('last_name')) { this.error = 'Completează prenumele și numele.'; return this.focusFirstBad(); }
                     if (!this.emailOk()) { this.error = 'Adresa de email nu pare corectă.'; return this.focusFirstBad(); }
                     if (!this.emailsMatch()) { this.error = 'Cele două adrese de email nu sunt identice. Verifică-le literă cu literă.'; return this.focusFirstBad(); }
+                    if (!this.passwordOk()) { this.error = 'Parola contului trebuie să aibă cel puțin 8 caractere.'; return this.focusFirstBad(); }
                     if (!this.form.terms) { this.error = 'Trebuie să accepți termenii pentru a continua.'; return; }
                     this.busy = true;
                     try {
@@ -514,6 +548,8 @@
                                     email: this.form.email.trim(), phone: this.form.phone.trim() || null
                                 },
                                 coupon_code: this.cart.coupon_code || null,
+                                create_account: !this.user && this.form.create_account,
+                                password: (!this.user && this.form.create_account) ? this.form.password : null,
                                 newsletter: this.form.newsletter,
                                 payment_method: 'card',
                                 success_url: window.location.origin + '/confirmare',
@@ -521,7 +557,11 @@
                             }))
                         });
                         var d = await r.json().catch(function () { return {}; });
-                        if (r.ok && d.success && d.redirect_url) { window.location.href = d.redirect_url; return; }
+                        if (r.ok && d.success && d.redirect_url) {
+                            Orders.remember(d.order_id, d.access_token);
+                            window.location.href = d.redirect_url;
+                            return;
+                        }
                         this.error = d.error || d.message || 'Comanda nu a putut fi plasată. Încearcă din nou.';
                     } catch (e) {
                         this.error = 'Conexiunea a eșuat. Verifică internetul și încearcă din nou.';
@@ -567,19 +607,20 @@
             };
         });
 
-        // Biletele mele (client autentificat)
+        // Contul meu → comenzi și bilete
         Alpine.data('myTickets', function () {
             return {
-                loading: true, orders: [], error: '', lei: lei, ticketsLabel: ticketsLabel,
+                loading: true, orders: [], error: '', open: null, detail: {}, lei: lei, ticketsLabel: ticketsLabel,
                 init: async function () {
                     var a = Auth.get();
                     if (!a) { window.location.href = '/autentificare?next=/biletele-mele'; return; }
                     try {
-                        var r = await fetch('/api/proxy.php?action=acc-orders', { headers: { 'Authorization': 'Bearer ' + a.token } });
+                        var r = await fetch('/api/proxy.php?action=orders', { headers: { 'Authorization': 'Bearer ' + a.token } });
                         if (r.status === 401) { Auth.set(null); window.location.href = '/autentificare?next=/biletele-mele'; return; }
                         var d = await r.json().catch(function () { return {}; });
+                        if (!r.ok || !d.success) { throw new Error('răspuns neașteptat'); }
                         this.orders = Array.isArray(d.data) ? d.data : [];
-                    } catch (e) { this.error = 'Comenzile nu au putut fi încărcate.'; }
+                    } catch (e) { this.error = 'Comenzile nu au putut fi încărcate. Reîncarcă pagina.'; }
                     this.loading = false;
                 },
                 date: function (iso) {
@@ -587,7 +628,105 @@
                     var d = new Date(iso);
                     return isNaN(d) ? '' : d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
                 },
-                paid: function (o) { return ['paid', 'confirmed', 'completed'].indexOf(o.status) !== -1; }
+                eventDate: function (o) {
+                    if (!o.event || !o.event.start_date) { return ''; }
+                    var s = String(o.event.start_date).slice(0, 10), e = o.event.end_date ? String(o.event.end_date).slice(0, 10) : s;
+                    var fmt = function (day, withYear) {
+                        var p = day.split('-');
+                        return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('ro-RO', withYear ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'long' });
+                    };
+                    return s === e ? fmt(s, true) : fmt(s, false) + ' – ' + fmt(e, true);
+                },
+                place: function (o) { return o.event ? [o.event.venue, o.event.city].filter(Boolean).join(', ') : ''; },
+                pdf: function (o, code) { return pdfUrl(o.id, o.access_token, code); },
+                toggle: async function (o) {
+                    if (this.open === o.id) { this.open = null; return; }
+                    this.open = o.id;
+                    if (this.detail[o.id]) { this.drawQr(o.id); return; }
+                    var a = Auth.get();
+                    try {
+                        var r = await fetch('/api/proxy.php?action=order&id=' + o.id, { headers: { 'Authorization': 'Bearer ' + (a ? a.token : '') } });
+                        var d = await r.json().catch(function () { return {}; });
+                        this.detail[o.id] = (r.ok && d.success && d.data) ? (d.data.tickets || []) : [];
+                    } catch (e) { this.detail[o.id] = []; }
+                    this.drawQr(o.id);
+                },
+                drawQr: function (id) {
+                    var self = this;
+                    this.$nextTick(function () {
+                        if (!window.QRCode) { return; }
+                        self.$root.querySelectorAll('[data-order="' + id + '"] [data-qr]').forEach(function (el) {
+                            if (el.firstChild) { return; }
+                            new QRCode(el, { text: el.getAttribute('data-qr'), width: 208, height: 208, correctLevel: QRCode.CorrectLevel.M });
+                        });
+                    });
+                }
+            };
+        });
+
+        // Contul meu → profil și parolă
+        Alpine.data('profilePage', function () {
+            return {
+                loading: true, email: '',
+                form: { first_name: '', last_name: '', phone: '' }, saving: false, msg: '', err: '',
+                pw: { current_password: '', password: '', password_confirmation: '' }, pwSaving: false, pwMsg: '', pwErr: '',
+                init: async function () {
+                    var a = Auth.get();
+                    if (!a) { window.location.href = '/autentificare?next=/profil'; return; }
+                    var u = a.user, parts = Auth.name(u).split(/\s+/);
+                    this.email = u.email || '';
+                    this.form.first_name = u.first_name || parts[0] || '';
+                    this.form.last_name = u.last_name || parts.slice(1).join(' ') || '';
+                    try {
+                        var r = await fetch('/api/proxy.php?action=me', { headers: { 'Authorization': 'Bearer ' + a.token } });
+                        if (r.status === 401) { Auth.set(null); window.location.href = '/autentificare?next=/profil'; return; }
+                        var d = await r.json().catch(function () { return {}; });
+                        if (d.data) { this.form.phone = d.data.phone || ''; this.email = d.data.email || this.email; }
+                    } catch (e) {}
+                    this.loading = false;
+                },
+                save: async function () {
+                    this.msg = ''; this.err = '';
+                    if (!this.form.first_name.trim() || !this.form.last_name.trim()) { this.err = 'Completează prenumele și numele.'; return; }
+                    this.saving = true;
+                    var a = Auth.get();
+                    try {
+                        var r = await fetch('/api/proxy.php?action=profile', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.token },
+                            body: JSON.stringify({ first_name: this.form.first_name.trim(), last_name: this.form.last_name.trim(), phone: this.form.phone.trim() || null })
+                        });
+                        var d = await r.json().catch(function () { return {}; });
+                        if (r.ok && d.success) {
+                            a.user = Object.assign({}, a.user, { name: (d.data && d.data.name) || (this.form.first_name + ' ' + this.form.last_name), phone: this.form.phone });
+                            Auth.set(a);
+                            window.dispatchEvent(new CustomEvent('wukf:cart'));   // actualizează numele din header
+                            this.msg = 'Datele au fost salvate.';
+                        } else { this.err = d.error || d.message || 'Datele nu au putut fi salvate.'; }
+                    } catch (e) { this.err = 'Conexiunea a eșuat. Încearcă din nou.'; }
+                    this.saving = false;
+                },
+                changePassword: async function () {
+                    this.pwMsg = ''; this.pwErr = '';
+                    if (this.pw.password.length < 8) { this.pwErr = 'Parola nouă trebuie să aibă cel puțin 8 caractere.'; return; }
+                    if (this.pw.password !== this.pw.password_confirmation) { this.pwErr = 'Cele două parole noi nu sunt identice.'; return; }
+                    this.pwSaving = true;
+                    var a = Auth.get();
+                    try {
+                        var r = await fetch('/api/proxy.php?action=password', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + a.token },
+                            body: JSON.stringify(this.pw)
+                        });
+                        var d = await r.json().catch(function () { return {}; });
+                        if (r.ok && d.success) {
+                            this.pw = { current_password: '', password: '', password_confirmation: '' };
+                            this.pwMsg = 'Parola a fost schimbată.';
+                        } else {
+                            var first = d.errors ? Object.values(d.errors)[0] : null;
+                            this.pwErr = d.error || (first && first[0]) || d.message || 'Parola nu a putut fi schimbată.';
+                        }
+                    } catch (e) { this.pwErr = 'Conexiunea a eșuat. Încearcă din nou.'; }
+                    this.pwSaving = false;
+                }
             };
         });
     });

@@ -89,6 +89,15 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::post('/demo-checkout/quote', [DemoCheckoutController::class, 'quote'])
         ->name('api.tenant-client-public.demo-checkout.quote');
 
+    // Contul de client + descărcarea biletelor pentru site-urile demo (adrese proprii:
+    // /account/orders și /account/tickets există de două ori mai jos, cu răspunsuri diferite)
+    Route::get('/storefront/orders', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'orders'])
+        ->name('api.tenant-client-public.storefront.orders');
+    Route::get('/storefront/orders/{id}', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'order'])
+        ->whereNumber('id')->name('api.tenant-client-public.storefront.order');
+    Route::get('/storefront/tickets.pdf', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'ticketsPdf'])
+        ->name('api.tenant-client-public.storefront.tickets-pdf');
+
     // Rezumat comandă pentru pagina de confirmare (thank-you)
     Route::get('/order-summary', [TenantClientController::class, 'orderSummary'])
         ->name('api.tenant-client-public.order-summary');
