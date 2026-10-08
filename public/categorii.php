@@ -88,14 +88,10 @@ usort($categories, fn ($a, $b) => $a['sort'] <=> $b['sort']);
 // [kicker, title, text, the intent's slug in the API, the page's address]. Four intents have an English address in
 // .htaccess; the other four are still served under the API slug.
 $intentHubs = [
-    [v2_t('Time'), v2_t('Things to do today'), v2_t('For quick decisions and activities you can book right away.'), 'activitati-azi', '/activitati-azi'],
     [v2_t('Time'), v2_t('Weekend ideas'), v2_t('Ideas for the weekend: families, groups, couples.'), 'activitati-weekend', '/weekend-ideas'],
     [v2_t('Weather'), v2_t('Rainy days'), v2_t('Indoors: museums, escape rooms, workshops and exhibitions.'), 'activitati-zile-ploioase', '/rainy-days'],
-    [v2_t('Weather'), v2_t('Hot days'), v2_t('Cool places, indoor activities and things to do in the evening.'), 'activitati-zile-caniculare', '/activitati-zile-caniculare'],
-    [v2_t('Budget'), v2_t('On a budget'), v2_t('Affordable experiences, good for a spontaneous outing.'), 'activitati-sub-50-lei', '/activitati-sub-50-lei'],
     [v2_t('Who'), v2_t('With kids'), v2_t('Ideas for children and families: museums, workshops, parks.'), 'activitati-copii', '/with-kids'],
     [v2_t('Who'), v2_t('For couples'), v2_t('Experiences for two: tours, workshops, date nights.'), 'activitati-cuplu', '/for-couples'],
-    [v2_t('Occasion'), v2_t('Birthdays'), v2_t('Ideas for groups, children, couples and gifts.'), 'activitati-zi-de-nastere', '/activitati-zi-de-nastere'],
 ];
 $hubJobs = [];
 foreach ($intentHubs as [, , , $hubSlug]) {
@@ -329,7 +325,7 @@ include __DIR__ . '/includes/v2/header.php';
         </div>
         <div class="ct-final-cta">
           <a class="btn btn-light" href="/cities"><?= v2_te('Choose a city') ?><?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="/activitati-azi"><?= v2_te('Things to do today') ?></a>
+          <a class="btn btn-outline-light" href="/weekend-ideas"><?= v2_te('Weekend ideas') ?></a>
         </div>
       </div>
     </div>

@@ -84,7 +84,11 @@ function v2_hm(int $minutes): string
     $h = intdiv($minutes, 60);
     $m = $minutes % 60;
 
-    return $h > 0 ? $h . ' h' . ($m ? ' ' . $m . ' min' : '') : $m . ' min';
+    if ($h > 0) {
+        return $m ? v2_t('{h} h {m} min', ['h' => $h, 'm' => $m]) : v2_t('{h} h', ['h' => $h]);
+    }
+
+    return v2_t('{m} min', ['m' => $m]);
 }
 
 function v2_asset(string $path): string
@@ -269,9 +273,9 @@ function v2_duration(int $minutes): string
         return '';
     }
     if ($minutes >= 120 && $minutes % 60 === 0) {
-        return ($minutes / 60) . ' hours';
+        return v2_t('{n} hours', ['n' => $minutes / 60]);
     }
-    return $minutes . ' min';
+    return v2_t('{m} min', ['m' => $minutes]);
 }
 
 /**

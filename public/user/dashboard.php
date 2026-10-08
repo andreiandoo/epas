@@ -57,7 +57,7 @@ include __DIR__ . '/../includes/v2/header.php';
           <p class="db-lead"><?= v2_te('See what is coming up, what you have bought, how many points you have, which recommendations suit you and what is left to sort out before your next activity.') ?></p>
           <div class="db-cta">
             <a class="btn btn-light" href="/account/tickets"><?= v2_ic('ticket') ?><?= v2_te('View tickets') ?></a>
-            <a class="btn btn-outline-light" href="/cont/recomandari"><?= v2_te('Recommendations') ?></a>
+            <a class="btn btn-outline-light" href="/account/recommendations"><?= v2_te('Recommendations') ?></a>
           </div>
         </div>
         <div class="db-hero-card">
@@ -136,7 +136,7 @@ include __DIR__ . '/../includes/v2/header.php';
         <div class="db-panel">
           <div class="db-panel-head">
             <div><p class="db-card-k"><?= v2_te('For you') ?></p><h2><?= v2_te('Recommendations') ?></h2></div>
-            <a class="db-link" href="/cont/recomandari"><?= v2_te('View all') ?><?= v2_ic('arrow-right') ?></a>
+            <a class="db-link" href="/account/recommendations"><?= v2_te('View all') ?><?= v2_ic('arrow-right') ?></a>
           </div>
           <div class="db-skel-grid" id="db-recos-skel" aria-hidden="true"><i class="db-skel is-tall"></i><i class="db-skel is-tall"></i></div>
           <p class="db-empty is-inline" id="db-recos-empty" hidden><?= v2_t('Add your preferences in <a href="{url}">Settings</a> to get recommendations.', ['url' => '/account/settings#profil-preferinte']) ?></p>

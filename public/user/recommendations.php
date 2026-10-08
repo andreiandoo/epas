@@ -1,6 +1,6 @@
 <?php
 /**
- * Customer recommendations: /cont/recomandari (v2 design).
+ * Customer recommendations: /account/recommendations (v2 design).
  *
  * Inside the v2 account shell (includes/v2/account.php). Hero with the profile signals behind the list, four counters,
  * filters (search, reason, city, budget, quick pills; kept in the URL), the recommendation cards (match, points,
@@ -24,7 +24,7 @@ require_once __DIR__ . '/../includes/v2/account.php';
 
 $pageTitleRaw = v2_t('Recommended for you: {site}', ['site' => SITE_NAME]);
 $pageDescription = v2_t('Personal recommendations on Viaqui: activities picked from your favourite cities, orders, reviews, points and family profile.');
-$canonicalUrl = SITE_URL . '/cont/recomandari';
+$canonicalUrl = SITE_URL . '/account/recommendations';
 $noindex = true;
 $skipPageCache = true;
 

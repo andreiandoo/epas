@@ -74,7 +74,7 @@ include __DIR__ . '/../includes/v2/header.php';
           <p class="acc-lead"><?= v2_te('Write reviews for the activities you went to, see what you have published, edit drafts and help us recommend experiences that suit you better.') ?></p>
           <div class="rv-cta">
             <a class="btn btn-light" href="#de-evaluat"><?= v2_ic('star') ?><?= v2_te('Write a review') ?></a>
-            <a class="btn btn-outline-light" href="/cont/recomandari"><?= v2_te('View recommendations') ?></a>
+            <a class="btn btn-outline-light" href="/account/recommendations"><?= v2_te('View recommendations') ?></a>
           </div>
         </div>
         <article class="rv-score" aria-labelledby="rv-score-k">

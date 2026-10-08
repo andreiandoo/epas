@@ -37,7 +37,7 @@ $navItems = [
     ['key' => 'tickets',         'url' => '/account/tickets',       'label' => v2_t('My tickets'),       'badge' => 'badgeFor("tickets")'],
     ['key' => 'orders',          'url' => '/account/orders',        'label' => v2_t('My orders'),        'badge' => 'badgeFor("orders")'],
     ['key' => 'points',          'url' => '/account/points',        'label' => v2_t('My points'),        'badge' => 'badgeFor("points")'],
-    ['key' => 'recommendations', 'url' => '/cont/recomandari',      'label' => v2_t('Recommendations'),  'badge' => json_encode(v2_t('new'))],
+    ['key' => 'recommendations', 'url' => '/account/recommendations',      'label' => v2_t('Recommendations'),  'badge' => json_encode(v2_t('new'))],
     ['key' => 'support',         'url' => '/account/support',       'label' => v2_t('Support tickets'),  'badge' => 'badgeFor("support")'],
     ['key' => 'settings',        'url' => '/account/settings',      'label' => v2_t('Settings'),         'badge' => '"⚙"'],
 ];

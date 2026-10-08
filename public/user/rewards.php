@@ -58,7 +58,7 @@ include __DIR__ . '/../includes/v2/header.php';
           <h1 class="acc-h" id="pt-h"><?= v2_te('My points') ?></h1>
           <p class="acc-lead"><?= v2_te('See your bonus points balance, what it is worth, how you can use it, which points are about to expire and how many you earned from orders or referrals.') ?></p>
           <div class="pt-cta">
-            <a class="btn btn-light" href="/cont/recomandari"><?= v2_ic('coins') ?><?= v2_te('Use points') ?></a>
+            <a class="btn btn-light" href="/account/recommendations"><?= v2_ic('coins') ?><?= v2_te('Use points') ?></a>
             <a class="btn btn-outline-light" href="#afiliere"><?= v2_te('Invite friends') ?></a>
           </div>
         </div>
@@ -179,7 +179,7 @@ include __DIR__ . '/../includes/v2/header.php';
             <p class="acc-k"><?= v2_te('Expiry') ?></p>
             <h2 id="pt-exp-h"><?= v2_te('No points about to expire') ?></h2>
             <p class="pt-p" id="pt-exp-p"><?= v2_te('Keep buying to earn new points.') ?></p>
-            <a class="btn btn-primary" href="/cont/recomandari"><?= v2_te('View recommendations') ?></a>
+            <a class="btn btn-primary" href="/account/recommendations"><?= v2_te('View recommendations') ?></a>
           </div>
           <div class="acc-panel">
             <p class="acc-k"><?= v2_te('Rules') ?></p>

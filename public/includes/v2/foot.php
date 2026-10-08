@@ -43,10 +43,10 @@
 <?php if (!empty($v2ClientData)): ?>
 <script type="application/json" id="v2-data"><?= json_encode($v2ClientData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
 <?php endif; ?>
+<script defer src="<?= v2_asset('js/i18n.js') ?>"></script><?php /* VQ.t() and friends: before every other script */ ?>
 <?php foreach (($v2LegacyScripts ?? []) as $v2LegacyJs): ?>
 <script defer src="<?= asset($v2LegacyJs) ?>"></script>
 <?php endforeach; ?>
-<script defer src="<?= v2_asset('js/i18n.js') ?>"></script><?php /* VQ.t() and friends: before every other script */ ?>
 <script defer src="<?= v2_asset('js/base.js') ?>"></script>
 <?php foreach (($v2Scripts ?? []) as $v2Js): ?>
 <script defer src="<?= v2_asset('js/' . $v2Js) ?>"></script>
