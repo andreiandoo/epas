@@ -733,6 +733,7 @@ return [
         'Brother / sister' => '',      // user/settings.php
         'Browse activities by category, audience, weather, budget or occasion. From escape rooms and museums to adventure parks, caves, nature reserves, workshops and family experiences.' => '',      // categorii.php
         'Browse all the categories or search for activities in your city yourself.' => '',      // user/recommendations.php
+        'Browse attractions' => '',      // category.php
         'Browse by city' => '',      // city-intent.php
         'Browse by interest' => '',      // city.php
         'Browse by type' => '',      // includes/v2/home/sections.php
@@ -1385,6 +1386,7 @@ return [
         'Do you run a venue or organise activities?' => '',      // login.php
         'Do you run a venue with activities? You can have your own page, your activities listed, QR tickets and a dashboard.' => '',      // locatii.php
         'Do you run a venue? Sell tickets here' => '',      // hub-locatii.php
+        'Do you run experiences of this kind? <a href="/partners">List them on Viaqui</a>.' => '',      // category.php
         'Do you run experiences? Sell them here' => '',      // hub-experiente.php
         'Do you run something in {city}?' => '',      // city.php
         'Do you sell, or will you sell, tickets through another channel too? *' => '',      // inregistrare-locatie.php
@@ -1576,6 +1578,7 @@ return [
         'Every ticket is issued with a unique QR code. Staff scan it with the scanning app, on a phone or a tablet; if a code cannot be read, they can type it. The app shows at once whether the ticket is valid, was already scanned or is not recognised, with vibration and sound, and it works offline too, syncing later.' => '',      // parteneri.php
         'Everything a venue gets on viaqui.com: booking by time slot, operator panel, ticket office with receipts, offline scanning app, SEO, analytics and tracking, payouts and tax documents. 2%* commission that doesn\'t touch your price, and no subscription.' => '',      // parteneri.php
         'Everything at {place}' => '',      // experienta.php
+        'Everything in {city}' => '',      // category.php
         'Everything nearby on one map, with filters for what you feel like.' => '',      // includes/v2/home/sections.php
         'Everything sold, from the start' => '',      // organizer/analytics.php
         'Everything the venue sells, online and at the register: prices, stock, variants, packages and how they look on the public page.' => '',      // organizer/venue-products.php
@@ -2701,6 +2704,8 @@ return [
         'Nothing in this category in {city} yet.' => '',      // city.php
         'Nothing is listed here yet.' => '',      // city.php
         'Nothing leaves your phone: the plan lives in the address of the page and in your browser.' => '',      // plan.php
+        'Nothing listed under {category} in {city} yet.' => '',      // category.php
+        'Nothing listed under {category} yet.' => '',      // category.php
         'Nothing matches these filters yet. Try another type or another country.' => '',      // attractions.php
         'Nothing matches these filters yet. Try another type.' => '',      // attractions.php
         'Nothing saved yet. Open an attraction and press <b>Add to your trip</b>: it shows up here, and the planner turns what you saved in a country into a plan, day by day. The list is kept in this browser, with no account needed.' => '',      // plan.php
@@ -4865,6 +4870,8 @@ return [
         'Waves' => '',      // includes/v2/product-icons.php
         'We' => '',      // single-activitate.php
         'We also accept:' => '',      // checkout.php
+        'We are adding operators across Europe, and this category is still waiting for its first one.' => '',      // category.php
+        'We are adding operators across Europe, and this category is still waiting for its first one. Until then, these have plenty to choose from:' => '',      // category.php
         'We are checking your link. It only takes a second.' => '',      // verify-email.php
         'We are checking your link. Please keep this page open.' => '',      // verify-email.php
         'We are working on them. Orders already paid and tickets already issued stay valid.' => '',      // status.php
@@ -5789,6 +5796,7 @@ return [
         '{amount} start-up cost. 2%* commission on every ticket sold, without touching your price.' => '',      // parteneri.php
         '{amount} · processing' => '',      // parteneri.php
         '{category} <em>in {place}</em>' => '',      // category.php
+        '{category} across Europe' => '',      // category.php
         '{category} by city' => '',      // category.php
         '{category} in {city}' => '',      // activitate.php
         '{category} in {city}. Book online and walk in with a QR ticket on your phone.' => '',      // category.php

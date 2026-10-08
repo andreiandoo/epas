@@ -538,6 +538,20 @@ $catUrl = function (array $over = []) use ($baseGet, $slug): string {
     $p = array_filter(array_merge($baseGet, $over), fn ($v) => $v !== '' && $v !== null);
     return '/' . $slug . ($p ? '?' . http_build_query($p) : '');
 };
+// A category (or a category in a city) with nothing to list yet: no filters to offer, another message, not indexed.
+$catEmpty = !$acts && $pageNum === 1 && $searchQuery === '' && $maxPrice === null;
+if ($catEmpty) {
+    $noindex = true;
+}
+// where to send the visitor meanwhile: the main categories that do have listings (ours or a partner's)
+$catElsewhere = [];
+if ($catEmpty) {
+    foreach ($V2NAV['categories'] as $navCat) {
+        if ($navCat['slug'] !== ($category['slug'] ?? $slug) && ($navCat['count'] > 0 || isset(V2_WEGOTRIP_CATEGORY_IDS[$navCat['slug']])) && count($catElsewhere) < 4) {
+            $catElsewhere[] = ['name' => $navCat['name'], 'href' => '/' . $navCat['slug'] . ($cityFilter ? '?city=' . rawurlencode($cityFilter) : '')];
+        }
+    }
+}
 $serverChips = [];
 if ($searchQuery !== '') $serverChips[] = ['“' . $searchQuery . '”',$catUrl(['q' => ''])];
 if ($cityFilter) $serverChips[] = [$heroLocation, $catUrl(['city' => ''])];
@@ -614,7 +628,7 @@ include __DIR__ . '/includes/v2/header.php';
         <h1 class="kh-h" id="kh-h"><?= v2_t('{category} <em>in {place}</em>', ['category' => v2_e($catName), 'place' => v2_e($heroLocation)]) ?></h1>
         <?php if ($catDescription !== ''): ?><p class="kh-lead"><?= v2_e($catDescription) ?></p><?php endif; ?>
         <?php /* No "0 experiences": the number is what the page lists (see $resultsTotal); with nothing to list it is left out. */ ?>
-        <ul class="kh-stats">
+        <ul class="kh-stats"<?= $catEmpty ? ' hidden' : '' ?>>
           <?php if ($resultsTotal > 0): ?><li><?= v2_e(v2_num($resultsTotal, 'experience', 'experiences')) ?></li><?php endif; ?>
           <?php if (!empty($children)): ?><li><?= v2_e(v2_num(count($children), 'type', 'types')) ?></li><?php endif; ?>
           <?php if (!empty($featuredCities)): ?><li><?= v2_te('{n}+ cities', ['n' => count($featuredCities)]) ?></li><?php endif; ?>
@@ -653,7 +667,7 @@ include __DIR__ . '/includes/v2/header.php';
   ]); ?>
 
   <!-- ============================== FILTER BAR ============================== -->
-  <div class="kbar" id="k-bar">
+  <div class="kbar" id="k-bar"<?= $catEmpty && !$cityFilter ? ' hidden' : '' ?>>
     <div class="wrap kbar-in">
       <div class="kbar-pills">
         <button class="kpill kpill-map" type="button" data-open-map aria-haspopup="dialog" aria-controls="k-map"><?= v2_ic('map-pin') ?><?= v2_te('Map') ?></button>
@@ -722,7 +736,7 @@ include __DIR__ . '/includes/v2/header.php';
 
   <!-- ============================== SUBCATEGORIES ============================== -->
   <?php if (!empty($children)): ?>
-  <section class="ksub" id="k-sub" aria-labelledby="k-sub-h">
+  <section class="ksub" id="k-sub" aria-labelledby="k-sub-h"<?= $catEmpty ? ' hidden' : '' ?>>
     <div class="ksub-clip">
       <div class="ksub-in">
         <div class="wrap ksub-pad">
@@ -797,13 +811,28 @@ include __DIR__ . '/includes/v2/header.php';
       </ul>
       <?php endif; ?>
 
-      <div class="k-empty" id="k-empty"<?= $acts ? ' hidden' : '' ?>>
+      <div class="k-empty<?= $catEmpty ? ' k-empty-yet' : '' ?>" id="k-empty"<?= $acts ? ' hidden' : '' ?>>
+        <?php if ($catEmpty): ?>
+        <h3><?= $cityFilter ? v2_te('Nothing listed under {category} in {city} yet.', ['category' => $catName, 'city' => $heroLocation]) : v2_te('Nothing listed under {category} yet.', ['category' => $catName]) ?></h3>
+        <p><?= $catElsewhere ? v2_te('We are adding operators across Europe, and this category is still waiting for its first one. Until then, these have plenty to choose from:') : v2_te('We are adding operators across Europe, and this category is still waiting for its first one.') ?></p>
+        <div class="k-empty-cta">
+          <?php foreach ($catElsewhere as $ce): ?><a class="btn btn-light" href="<?= v2_e($ce['href']) ?>"><?= v2_e($ce['name']) ?></a><?php endforeach; ?>
+          <?php if ($cityFilter): ?>
+          <a class="btn btn-ghost" href="/<?= v2_e($cityFilter) ?>"><?= v2_te('Everything in {city}', ['city' => $heroLocation]) ?></a>
+          <a class="btn btn-ghost" href="/<?= v2_e($slug) ?>"><?= v2_te('{category} across Europe', ['category' => $catName]) ?></a>
+          <?php else: ?>
+          <a class="btn btn-ghost" href="/attractions"><?= v2_te('Browse attractions') ?></a>
+          <?php endif; ?>
+        </div>
+        <p class="k-empty-op"><?= v2_t('Do you run experiences of this kind? <a href="/partners">List them on Viaqui</a>.') ?></p>
+        <?php else: ?>
         <h3><?= v2_te('No experiences found.') ?></h3>
         <p><?= v2_te('Change the filters or clear your search.') ?></p>
         <div class="k-empty-cta">
           <button class="btn btn-light" type="button" data-reset><?= v2_te('Reset the filters') ?></button>
           <?php if ($serverChips): ?><a class="btn btn-ghost" href="/<?= v2_e($slug) ?>"><?= v2_te('All experiences in this category') ?></a><?php endif; ?>
         </div>
+        <?php endif; ?>
         <svg class="k-empty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
       </div>
 
