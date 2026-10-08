@@ -1,0 +1,43 @@
+# competitie.tixello.ro — Apache + PHP 8.2+
+
+DirectoryIndex index.php
+Options -Indexes
+AddDefaultCharset UTF-8
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Token-ul clientului trebuie să ajungă la PHP (proxy → core)
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect .php -> rută curată (301) — doar cereri directe
+    RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.php[?\s]
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteCond %{REQUEST_URI} !_webhook-deploy\.php
+    RewriteRule ^ /%1 [R=301,L,NE]
+
+    # Pagina unei competiții
+    RewriteRule ^competitii/([a-z0-9-]+)/?$ competitie.php?slug=$1 [L,QSA,NC]
+
+    # Fallback: /pagina -> pagina.php (dacă fișierul .php există)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+    RewriteRule ^([a-z0-9-]+)/?$ $1.php [L,QSA]
+</IfModule>
+
+ErrorDocument 404 /404.php
+
+# Securitate: blochează include-urile, cache-ul, logurile
+<FilesMatch "\.(log|md|lock)$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/includes/
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>
