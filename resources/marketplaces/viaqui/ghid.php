@@ -37,6 +37,7 @@ if (!is_array($article) || empty($article['title'])) {
 
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 // ------------------------------------------------------------------ activity cards (rail + shortcodes)
 // One card (base.css .xp) for the recommendations rail and every shortcode layout; "long" only changes the CSS.
@@ -94,7 +95,63 @@ $gdShortcode = function (string $shortcode) use ($gdCard): string {
     return $html === '' ? '' : '<ul class="gd-acts is-' . $style . '">' . $html . '</ul>';
 };
 
-$gdRenderShortcodes = function (string $html) use ($gdShortcode): string {
+// [partner attraction="eiffel-tower" match="eiffel" limit="4"]: what our partner (WeGoTrip) sells for one of our
+// attractions; or city="paris"; or q="vatican museums" (the partner's own search). `match` keeps only the products
+// whose title has one of the words. Prices and ratings are read when the page is shown, never written in the text.
+$gdPartnerShortcode = function (string $shortcode) use ($slug): string {
+    $sc = html_entity_decode($shortcode, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $sc = str_replace(['“', '”', '„', '‟', '″', '＂', '«', '»'], '"', $sc);
+    preg_match_all('/([a-z_]+)\s*=\s*["\']([^"\']*)["\']/i', $sc, $found, PREG_SET_ORDER);
+    $attr = [];
+    foreach ($found as $pair) {
+        $attr[strtolower($pair[1])] = trim($pair[2]);
+    }
+    $limit = max(1, min(12, (int) ($attr['limit'] ?? 3)));
+    $place = preg_match('/^[a-z0-9-]+$/', $attr['attraction'] ?? '') ? $attr['attraction'] : '';
+    $city = preg_match('/^[a-z0-9-]+$/', $attr['city'] ?? '') ? $attr['city'] : '';
+    $match = $attr['match'] ?? '';
+    if ($place !== '') {
+        $items = v2_wegotrip_products('attraction', $place, 40, $match)['items'];
+    } elseif ($city !== '') {
+        $items = v2_wegotrip_products('city', $city, 40, $match)['items'];
+    } elseif (($attr['q'] ?? '') !== '') {
+        $items = v2_wegotrip_search(mb_substr($attr['q'], 0, 80), 40);
+    } else {
+        return '';
+    }
+    $words = array_filter(preg_split('/[^a-z0-9]+/', strtolower(v2_partner_ascii($match))), fn ($w) => strlen($w) >= 3);
+    $seen = [];
+    $keep = [];
+    foreach ($items as $p) {
+        $title = strtolower(v2_partner_ascii($p['title']));
+        if ($words && !array_filter($words, fn ($w) => strpos($title, $w) !== false)) {
+            continue;
+        }
+        if (isset($seen[$title]) || !($p['price'] > 0)) {      // the same product listed twice, or one that cannot be priced
+            continue;
+        }
+        $seen[$title] = true;
+        $keep[] = $p;
+        if (count($keep) >= $limit) {
+            break;
+        }
+    }
+    if (!$keep) {
+        return '';
+    }
+    return '<ul class="gd-acts is-small gd-partner">' . v2_partner_cards($keep, 'wegotrip', 'guide-' . $slug) . '</ul>' . v2_partner_note('wegotrip');
+};
+
+$gdRenderShortcodes = function (string $html) use ($gdShortcode, $gdPartnerShortcode): string {
+    if (stripos($html, '[partner') !== false) {
+        // like the activities block: wrapped in a paragraph by the editor; with nothing to show, the line that
+        // announces it (the paragraph before it, when it ends in a colon) goes too
+        $html = preg_replace_callback('#(<p>(?:(?!</p>).)*:\s*</p>\s*)?<p>\s*(\[partner[^\]]*\])\s*</p>#is', function ($m) use ($gdPartnerShortcode) {
+            $cards = $gdPartnerShortcode($m[2]);
+            return $cards === '' ? '' : $m[1] . $cards;
+        }, $html);
+        $html = preg_replace_callback('#\[partner[^\]]*\]#i', fn ($m) => $gdPartnerShortcode($m[0]), $html);
+    }
     if (stripos($html, '[activities') === false) {
         return $html;
     }

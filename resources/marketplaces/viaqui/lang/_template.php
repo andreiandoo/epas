@@ -414,7 +414,7 @@ return [
         'All attractions' => '',      // hub-atractii.php
         'All attractions in {city}' => '',      // atractie.php
         'All bookings' => '',      // organizer/am-bookings.php
-        'All categories' => '',      // ghid.php
+        'All categories' => '',      // city.php
         'All categories · activities · online tickets' => '',      // categorii.php
         'All channels' => '',      // parteneri.php
         'All cities' => '',      // locatii.php
@@ -424,7 +424,7 @@ return [
         'All events' => '',      // embed/event.php
         'All experiences' => '',      // hub-experiente.php
         'All experiences in this category' => '',      // category.php
-        'All guides' => '',      // ghid.php
+        'All guides' => '',      // ghiduri.php
         'All notifications' => '',      // organizer/notifications.php
         'All of Europe, by city and by category.' => '',      // region.php
         'All of {name}' => '',      // country.php
@@ -1923,7 +1923,7 @@ return [
         'Guided tours' => '',      // includes/v2/partner-testimonials.php
         'Guided tours, trails and outdoor activities with slots by day and hour, plus offline scanning where there is no signal. The commission of {accent} doesn\'t touch your price: you keep the price you set.' => '',      // includes/v2/partner-profiles.php
         'Guided tours, workshops, boat trips, tastings and other things to do, at the venues that run them.' => '',      // hub-experiente.php
-        'Guides' => '',      // ghid.php
+        'Guides' => '',      // ghiduri.php
         'Guides and ideas' => '',      // city.php
         'Guides and weekend ideas' => '',      // includes/v2/header.php
         'Guides · ideas for going out' => '',      // ghiduri.php

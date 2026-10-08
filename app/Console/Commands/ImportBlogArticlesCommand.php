@@ -161,7 +161,7 @@ class ImportBlogArticlesCommand extends Command
 
             $cover = $this->storeImage($path, (string) ($row['featured_image']['file'] ?? ''), $dryRun);
             $content = $this->prepareContent((string) $row['content_html'], $path, $dryRun);
-            $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags(preg_replace('/\[activities\b[^\]]*\]/i', '', $content)), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+            $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags(preg_replace('/\[(?:activities|partner)\b[^\]]*\]/i', '', $content)), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
             $words = $text === '' ? 0 : count(preg_split('/\s+/u', $text));
 
             $data = [
