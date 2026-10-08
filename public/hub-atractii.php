@@ -1,11 +1,11 @@
 <?php
 /**
- * Attractions (points of interest): /atractii and /{oras}/atractii (v2 design, includes/v2/am-hub.php).
+ * Attractions (points of interest): /attractions and /{city}/attractions (v2 design, includes/v2/am-hub.php).
  *
- * Reads GET /attractions (?city=, ?tip= → type, ?search=, ?sort=, ?pagina=). Cards open /atractie/{slug}.
+ * Reads GET /attractions (?city=, ?tip= → type, ?search=, ?sort=, ?pagina=). Cards open /attraction/{slug}.
  *
- * The city lives in the path, so the filter's Oraș field submits ?oras= and this file sends the browser on to
- * the canonical /{oras}/atractii. That happens before the page cache, so no redirect is ever cached.
+ * The city lives in the path, so the filter's City field submits ?oras= and this file sends the browser on to
+ * the canonical /{city}/attractions. That happens before the page cache, so no redirect is ever cached.
  */
 
 if (isset($_GET['oras'])) {
@@ -13,7 +13,7 @@ if (isset($_GET['oras'])) {
     $boRest = $_GET;
     unset($boRest['oras'], $boRest['city'], $boRest['pagina']);
     $boQs = http_build_query(array_filter($boRest, fn ($v) => is_string($v) && $v !== ''));
-    header('Location: ' . (preg_match('/^[a-z][a-z0-9-]{1,50}$/', $boTo) ? '/' . $boTo . '/atractii' : '/atractii')
+    header('Location: ' . (preg_match('/^[a-z][a-z0-9-]{1,50}$/', $boTo) ? '/' . $boTo . '/attractions' : '/attractions')
         . ($boQs !== '' ? '?' . $boQs : ''), true, 302);
     exit;
 }
@@ -55,18 +55,19 @@ $q = trim((string) ($_GET['q'] ?? ''));
 if (mb_strlen($q) > 80) {
     $q = mb_substr($q, 0, 80);
 }
-$sorts = ['' => 'Recomandate', 'nume' => 'Alfabetic', 'activitati' => 'Cu bilete și activități'];
+$sorts = ['' => v2_t('Recommended'), 'nume' => v2_t('A to Z'), 'activitati' => v2_t('With tickets and activities')];
+$typeNames = am_attraction_types_t();   // AM_ATTRACTION_TYPES in the visitor's language
 $sort = (string) ($_GET['sort'] ?? '');
 if (!isset($sorts[$sort])) {
     $sort = '';
 }
 $hasFilter = $q !== '' || $type !== '' || $citySlug !== '';
 
-$base = $citySlug !== '' ? '/' . $citySlug . '/atractii' : '/atractii';
+$base = $citySlug !== '' ? '/' . $citySlug . '/attractions' : '/attractions';
 /** The same list with some of the filters swapped; null clears one. Page numbers never carry over. */
 $url = function (array $over = [], ?string $forCity = null) use ($base, $q, $type, $sort) {
     $args = array_merge(['q' => $q, 'tip' => $type, 'sort' => $sort], $over);
-    $path = $forCity === null ? $base : ($forCity !== '' ? '/' . $forCity . '/atractii' : '/atractii');
+    $path = $forCity === null ? $base : ($forCity !== '' ? '/' . $forCity . '/attractions' : '/attractions');
     $qs = http_build_query(array_filter($args, fn ($v) => $v !== '' && $v !== null));
 
     return $path . ($qs !== '' ? '?' . $qs : '');
@@ -94,12 +95,12 @@ foreach ($rows as $row) {
     $items[] = [
         'href' => $a['href'],
         'image' => $a['image'],
-        'kicker' => $a['type'] ?: 'Atracție',
+        'kicker' => $a['type'] ?: v2_t('Attraction'),
         'title' => $a['name'],
-        'aria' => $a['name'] . ($a['city'] !== '' ? ', în ' . $a['city'] : ''),
+        'aria' => $a['city'] !== '' ? v2_t('{name}, in {city}', ['name' => $a['name'], 'city' => $a['city']]) : $a['name'],
         'meta' => array_values(array_filter([$a['city'] !== '' ? ['map-pin', $a['city']] : null])),
         'price' => null,
-        'badges' => $n > 0 ? [v2_num($n, 'activitate', 'activități')] : [],
+        'badges' => $n > 0 ? [v2_num($n, 'activity', 'activities')] : [],
     ];
 }
 
@@ -130,11 +131,11 @@ if ($q !== '' && $items) {
     }
 }
 
-$breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => SITE_URL . '/']];
 if ($citySlug !== '') {
     $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . $citySlug];
 }
-$breadcrumbs[] = ['name' => 'Atracții', 'url' => SITE_URL . $base];
+$breadcrumbs[] = ['name' => v2_t('Attractions'), 'url' => SITE_URL . $base];
 
 // ---------------------------------------------------------------- what the filter can offer
 // The pin dataset's own summary already counts every attraction per type and per city, so the filter can offer
@@ -147,7 +148,7 @@ foreach ((array) ($summary['types'] ?? []) as $t) {
         $typeCounts[(string) $t[0]] = (int) ($t[3] ?? 0);
     }
 }
-$cityOptions = [['', 'Toată țara']];
+$cityOptions = [['', v2_t('Anywhere')]];
 $seenCity = [];
 foreach ((array) ($summary['cities'] ?? []) as $c) {
     if (!is_array($c) || empty($c[0])) {
@@ -160,8 +161,8 @@ if ($citySlug !== '' && empty($seenCity[$citySlug])) {
     $cityOptions[] = [$citySlug, $cityName];
 }
 
-$typeChips = [['Toate', $url(['tip' => '']), $type === '']];
-foreach (AM_ATTRACTION_TYPES as $ts => $tn) {
+$typeChips = [[v2_t('All'), $url(['tip' => '']), $type === '']];
+foreach ($typeNames as $ts => $tn) {
     $typeChips[] = [$tn . (!empty($typeCounts[$ts]) ? ' · ' . v2_thousands($typeCounts[$ts]) : ''), $url(['tip' => $ts]), $ts === $type];
 }
 
@@ -170,17 +171,24 @@ if ($citySlug !== '') {
     $active[] = [$cityName, $url([], '')];
 }
 if ($q !== '') {
-    $active[] = ['„' . $q . '”', $url(['q' => ''])];
+    $active[] = ['“' . $q . '”', $url(['q' => ''])];
 }
 if ($type !== '') {
-    $active[] = [AM_ATTRACTION_TYPES[$type], $url(['tip' => ''])];
+    $active[] = [$typeNames[$type], $url(['tip' => ''])];
 }
 
 $total = (int) ($pag['total'] ?? count($items));
-$typeName = $type !== '' ? AM_ATTRACTION_TYPES[$type] : '';
-$countLine = $total > 0
-    ? v2_num($total, 'atracție', 'atracții') . ($hasFilter ? ($citySlug !== '' && count($active) === 1 ? ' în ' . $cityName : ', după filtrele tale') : ' în toată țara')
-    : 'Niciun rezultat pentru filtrele alese';
+$typeName = $type !== '' ? $typeNames[$type] : '';
+$totalText = v2_num($total, 'attraction', 'attractions');
+if ($total <= 0) {
+    $countLine = v2_t('No results for these filters');
+} elseif (!$hasFilter) {
+    $countLine = v2_t('{count} across Europe', ['count' => $totalText]);
+} elseif ($citySlug !== '' && count($active) === 1) {
+    $countLine = v2_t('{count} in {city}', ['count' => $totalText, 'city' => $cityName]);
+} else {
+    $countLine = v2_t('{count} matching your filters', ['count' => $totalText]);
+}
 
 $sortOptions = [];
 foreach ($sorts as $sv => $sl) {
@@ -188,14 +196,14 @@ foreach ($sorts as $sv => $sl) {
 }
 
 // Interactive map over the list. The pin dataset is static (bin/build-map-data.php); when it has
-// not been built the helper returns null and no map button is printed at all. The page's own Tip
-// and city filters carry into the map, where Tip becomes multi-select.
+// not been built the helper returns null and no map button is printed at all. The page's own Type
+// and city filters carry into the map, where Type becomes multi-select.
 $hubMap = null;
 if ($mapData) {
     $hubMap = [
-        'heading' => 'Harta atracțiilor din România',
-        'note'    => v2_thousands($mapData['total']) . ' de atracții pe hartă. Alege ce vrei să vezi din filtrul Tip și apasă pe un punct.',
-        'cta'     => 'Deschide harta',
+        'heading' => v2_t('The map of attractions'),
+        'note'    => v2_t('{n} attractions on the map. Pick what you want to see with the Type filter and tap a point.', ['n' => v2_thousands($mapData['total'])]),
+        'cta'     => v2_t('Open the map'),
         'config'  => [
             'dataUrl'  => $mapData['url'],
             'cartoKey' => defined('CARTO_API_KEY') ? CARTO_API_KEY : '',
@@ -204,44 +212,68 @@ if ($mapData) {
             'preset'   => 'popular',
             'types'    => $type !== '' ? [$type] : [],
             'city'     => $citySlug,
-            'title'    => 'Atracții' . ($cityName !== '' ? ' în ' . $cityName : ' din România'),
-            'base'     => '/atractie/',
+            'title'    => $cityName !== '' ? v2_t('Attractions in {city}', ['city' => $cityName]) : v2_t('Attractions in Europe'),
+            'base'     => '/attraction/',
         ],
     ];
 }
 $hub = [
     'tight' => true,
-    'kicker' => $typeName !== '' ? $typeName : 'Locuri de văzut',
-    'title' => 'Atracții',
-    'titleEm' => $cityName !== '' ? 'în ' . $cityName : 'din România',
-    'lead' => 'Castele, muzee, mănăstiri, parcuri și priveliști. Pe fiecare pagină vezi unde se află și ce poți face în jur.',
-    'stats' => array_values(array_filter([$total ? v2_num($total, 'atracție', 'atracții') : ''])),
+    'kicker' => $typeName !== '' ? $typeName : v2_t('Places to see'),
+    'title' => v2_t('Attractions'),
+    'titleHtml' => $cityName !== ''
+        ? v2_t('Attractions <em>in {city}</em>', ['city' => v2_e($cityName)])
+        : v2_t('Attractions <em>across Europe</em>'),
+    'lead' => v2_t('Castles, museums, monasteries, parks and viewpoints. Each page shows where the place is and what you can do around it.'),
+    'stats' => array_values(array_filter([$total ? $totalText : ''])),
     'image' => $items[0]['image'] ?? null,
     'breadcrumbs' => $breadcrumbs,
     'map' => $hubMap,
     'filter' => [
         'action' => $base,
-        'search' => ['name' => 'q', 'value' => $q, 'placeholder' => 'Caută o atracție după nume', 'clear' => $url(['q' => ''])],
+        'search' => ['name' => 'q', 'value' => $q, 'placeholder' => v2_t('Search for an attraction by name'), 'clear' => $url(['q' => ''])],
         'fields' => [
-            ['name' => 'oras', 'label' => 'Oraș', 'value' => $citySlug, 'options' => $cityOptions, 'find' => 'Caută orașul'],
-            ['name' => 'sort', 'label' => 'Sortare', 'value' => $sort, 'options' => $sortOptions],
+            ['name' => 'oras', 'label' => v2_t('City'), 'value' => $citySlug, 'options' => $cityOptions, 'find' => v2_t('Search for a city')],
+            ['name' => 'sort', 'label' => v2_t('Sort by'), 'value' => $sort, 'options' => $sortOptions],
         ],
-        'chips' => ['label' => 'Tip', 'items' => $typeChips],
+        'chips' => ['label' => v2_t('Type'), 'items' => $typeChips],
         'hidden' => ['tip' => $type],
         'active' => $active,
-        'reset' => $hasFilter ? '/atractii' : null,
+        'reset' => $hasFilter ? '/attractions' : null,
         'count' => $countLine,
     ],
     'items' => $items,
-    'heading' => 'Atracții' . ($typeName !== '' ? ': ' . $typeName : '') . ($cityName !== '' ? ' în ' . $cityName : ''),
+    'heading' => $typeName !== ''
+        ? ($cityName !== '' ? v2_t('Attractions: {type} in {city}', ['type' => $typeName, 'city' => $cityName]) : v2_t('Attractions: {type}', ['type' => $typeName]))
+        : ($cityName !== '' ? v2_t('Attractions in {city}', ['city' => $cityName]) : v2_t('Attractions')),
     'page' => (int) ($pag['current_page'] ?? $page),
     'last' => (int) ($pag['last_page'] ?? 1),
     'pageUrl' => fn (int $p) => $url(['pagina' => $p > 1 ? $p : '']),
-    'empty' => ['Nu am găsit atracții' . ($typeName !== '' ? ' de tipul „' . $typeName . '”' : '') . ($q !== '' ? ' după „' . $q . '”' : '') . ($cityName !== '' ? ' în ' . $cityName : '') . '.', 'Încearcă alt tip, alt oraș sau alt cuvânt.', ['Toate atracțiile', '/atractii']],
+    // What was asked for is named as a list (type, words, city), so the sentence stays whole in every language.
+    'empty' => [
+        ($emptyFor = implode(', ', array_filter([$typeName, $q !== '' ? '“' . $q . '”' : '', $cityName]))) !== ''
+            ? v2_t('We found no attractions for: {filters}.', ['filters' => $emptyFor])
+            : v2_t('We found no attractions.'),
+        v2_t('Try another type, another city or another word.'),
+        [v2_t('All attractions'), '/attractions'],
+    ],
 ];
 
-$pageTitleRaw = ($typeName !== '' ? $typeName . ': atracții' : 'Atracții') . ($cityName !== '' ? ' în ' . $cityName : ' din România') . ($page > 1 ? ' (pagina ' . $page . ')' : '') . ' | viaqui.com';
-$pageDescription = 'Atracții' . ($cityName !== '' ? ' în ' . $cityName : ' din România') . ($typeName !== '' ? ' (' . mb_strtolower($typeName) . ')' : '') . ': castele, muzee, mănăstiri, parcuri și priveliști, cu hartă și lucruri de făcut în apropiere.';
+if ($typeName !== '') {
+    $pageTitleRaw = $cityName !== '' ? v2_t('{type}: attractions in {city}', ['type' => $typeName, 'city' => $cityName]) : v2_t('{type}: attractions in Europe', ['type' => $typeName]);
+    $pageDescription = $cityName !== ''
+        ? v2_t('Attractions in {city} ({type}): castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.', ['city' => $cityName, 'type' => mb_strtolower($typeName)])
+        : v2_t('Attractions across Europe ({type}): castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.', ['type' => mb_strtolower($typeName)]);
+} else {
+    $pageTitleRaw = $cityName !== '' ? v2_t('Attractions in {city}', ['city' => $cityName]) : v2_t('Attractions in Europe');
+    $pageDescription = $cityName !== ''
+        ? v2_t('Attractions in {city}: castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.', ['city' => $cityName])
+        : v2_t('Attractions across Europe: castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.');
+}
+if ($page > 1) {
+    $pageTitleRaw = v2_t('{title} (page {n})', ['title' => $pageTitleRaw, 'n' => $page]);
+}
+$pageTitleRaw .= ' | Viaqui';
 // The canonical list is the plain one for this city and type: a search or a re-sort is only a view of it.
 $canonicalQs = http_build_query(array_filter(['tip' => $type, 'pagina' => $page > 1 ? $page : null]));
 $canonicalUrl = SITE_URL . $base . ($canonicalQs !== '' ? '?' . $canonicalQs : '');

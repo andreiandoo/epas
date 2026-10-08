@@ -15,12 +15,6 @@
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
-  /* Romanian counting, as v2_num(): 1 oraș, 5 orașe, 20 de orașe */
-  function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
-  }
   var index = items.map(function (li) { return norm(li.getAttribute('data-q')); });
 
   function apply() {
@@ -33,10 +27,10 @@
     counties.forEach(function (county) {
       county.hidden = !county.querySelector('li[data-q]:not([hidden])');
     });
-    count.textContent = shown + ' din ' + total + ' orașe';
+    count.textContent = VQ.t('{shown} of {total} cities', { shown: shown, total: total });
     none.hidden = shown > 0;
-    elsewhere.href = '/orase' + (q ? '?q=' + encodeURIComponent(input.value.trim()) : '');
-    status.textContent = q ? (shown ? num(shown, 'oraș găsit', 'orașe găsite') + ' în lista de mai jos' : 'Niciun oraș cu acest nume în regiune.') : '';
+    elsewhere.href = VQ.url('/cities') + (q ? '?q=' + encodeURIComponent(input.value.trim()) : '');
+    status.textContent = q ? (shown ? VQ.t('{found} in the list below', { found: VQ.n(shown, 'city found', 'cities found') }) : VQ.t('No city with this name in the region.')) : '';
   }
 
   input.addEventListener('input', apply);

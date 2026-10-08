@@ -5,18 +5,23 @@
  * The page file fetches its data and sets, besides the usual head variables ($pageTitleRaw, $pageDescription,
  * $canonicalUrl, $ogImage, $structuredData), one $hub array:
  *   kicker, title, titleEm (second line, optional), lead, stats [text], image (hero, optional), breadcrumbs,
+ *   titleHtml optional: the whole heading as one translated sentence with its own <em> (data already escaped);
+ *             printed instead of title + titleEm, which stay for the fallback picture and for older callers.
  *   tight     true for the short hero: one band with the crumbs, the heading, one line of lead and the counters,
  *             no picture. Listing pages use it — the list is what people came for.
  *   filter    the real filter bar (see v2/hub-filter.php). Replaces `filters` where both are set.
  *   filters   [[label, [[text, href, active]]]]            links, so every filtered list has its own URL
- *   items     [[href, image, kicker, title, meta [[icon, text]], price (lei, optional), badges [text],
- *             where [lead, place, tail] (optional: reads under the title as one sentence with it, e.g.
- *             "Închiriere barcă cu vâsle" + "la Lacul Sfânta Ana, în Băile Tușnad"),
+ *   items     [[href, image, kicker, title, meta [[icon, text]], price (whole units of the site currency, optional),
+ *             priceLabel (optional: the price already formatted in its own currency; wins over price),
+ *             badges [text],
+ *             where (optional: reads under the title as one sentence with it, e.g. "Rowing boat hire" +
+ *             "at Lake Bled, in Bled"). Either one translated sentence as HTML, the place in <b> and the data
+ *             already escaped, or the older [lead, place, tail],
  *             aria (optional: that whole sentence, as the link's accessible name)]]
  *   heading   screen-reader title of the results
  *   page, last, pageUrl (fn int → href)
  *   empty     [title, text, [cta text, href] | null]
- *   map       optional EPMap config (see assets/v2/js/map.js): adds a "Vezi pe hartă" button that
+ *   map       optional EPMap config (see assets/v2/js/map.js): adds an "Open the map" button that
  *             opens the full-screen map over the list. Absent = no map on this hub.
  * Top to bottom: hero, map button, filters, results grid, pager.
  */
@@ -53,14 +58,14 @@ include __DIR__ . '/header.php';
     <?php if (!$hubTight): ?><svg class="kh-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg><?php endif; ?>
     <div class="kh-in">
       <div class="kh-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($hub['breadcrumbs'] as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($hub['breadcrumbs']) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
         <p class="kh-kicker"><?php if (!$hubTight): ?><i aria-hidden="true"></i><?php endif; ?><?= v2_e($hub['kicker']) ?></p>
-        <h1 class="kh-h" id="kh-h"><?= v2_e($hub['title']) ?><?php if (!empty($hub['titleEm'])): ?> <em><?= v2_e($hub['titleEm']) ?></em><?php endif; ?></h1>
+        <h1 class="kh-h" id="kh-h"><?php if (!empty($hub['titleHtml'])): ?><?= $hub['titleHtml'] ?><?php else: ?><?= v2_e($hub['title']) ?><?php if (!empty($hub['titleEm'])): ?> <em><?= v2_e($hub['titleEm']) ?></em><?php endif; ?><?php endif; ?></h1>
         <?php if (!empty($hub['lead'])): ?><p class="kh-lead"><?= v2_e($hub['lead']) ?></p><?php endif; ?>
         <?php if (!empty($hub['stats'])): ?>
         <ul class="kh-stats"><?php foreach ($hub['stats'] as $s): ?><li><?= v2_e($s) ?></li><?php endforeach; ?></ul>
@@ -87,10 +92,10 @@ include __DIR__ . '/header.php';
       <?php if ($hubMap): ?>
       <div class="hub-maprow">
         <div class="hub-maprow-text">
-          <p class="hub-maprow-h"><?= v2_e($hubMap['heading'] ?? 'Vezi totul pe hartă') ?></p>
+          <p class="hub-maprow-h"><?= v2_e($hubMap['heading'] ?? v2_t('See it all on the map')) ?></p>
           <p class="hub-maprow-p"><?= v2_e($hubMap['note'] ?? '') ?></p>
         </div>
-        <button class="btn btn-primary hub-maprow-btn" type="button" data-epm-open aria-haspopup="dialog"><?= v2_ic('map-pin') ?><?= v2_e($hubMap['cta'] ?? 'Deschide harta') ?></button>
+        <button class="btn btn-primary hub-maprow-btn" type="button" data-epm-open aria-haspopup="dialog"><?= v2_ic('map-pin') ?><?= v2_e($hubMap['cta'] ?? v2_t('Open the map')) ?></button>
       </div>
       <?php endif; ?>
 
@@ -122,10 +127,10 @@ include __DIR__ . '/header.php';
               <?php if (empty($it['where']) && !empty($it['kicker'])): ?><span class="xp-cat"><?= v2_e($it['kicker']) ?></span><?php endif; ?>
               <span class="xp-title"><?= v2_e($it['title']) ?></span>
               <?php if (!empty($it['where'])): ?>
-              <span class="xp-where"><?= v2_ic('map-pin') ?><span><?= v2_e($it['where'][0]) ?> <b><?= v2_e($it['where'][1]) ?></b><?= v2_e($it['where'][2] ?? '') ?></span></span>
+              <span class="xp-where"><?= v2_ic('map-pin') ?><span><?php if (is_array($it['where'])): ?><?= v2_e($it['where'][0]) ?> <b><?= v2_e($it['where'][1]) ?></b><?= v2_e($it['where'][2] ?? '') ?><?php else: ?><?= $it['where'] ?><?php endif; ?></span></span>
               <?php endif; ?>
               <?php if (!empty($it['meta'])): ?><span class="xp-meta"><?php foreach ($it['meta'] as [$mi, $mt]): ?><span><?= $mi ? v2_ic($mi) : '' ?><?= v2_e($mt) ?></span><?php endforeach; ?></span><?php endif; ?>
-              <span class="xp-foot"><span class="xp-go">Vezi<?= v2_ic('arrow-right') ?></span><?php if (!empty($it['price'])): ?><span class="xp-price">de la<b><?= v2_e(v2_thousands((int) $it['price'])) ?> lei</b></span><?php endif; ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_te('View') ?><?= v2_ic('arrow-right') ?></span><?php if (!empty($it['priceLabel']) || !empty($it['price'])): ?><span class="xp-price"><?= v2_t('from<b>{price}</b>', ['price' => v2_e(!empty($it['priceLabel']) ? $it['priceLabel'] : v2_money((int) $it['price']))]) ?></span><?php endif; ?></span>
             </span>
           </a>
         </li>
@@ -145,12 +150,12 @@ include __DIR__ . '/header.php';
           $end = min($hubLast, $start + 6);
           $start = max(1, $end - 6);
       ?>
-      <nav class="pager" aria-label="Pagini">
-        <?php if ($hubPage > 1): ?><a class="pg-step" href="<?= v2_e(($hub['pageUrl'])($hubPage - 1)) ?>" rel="prev"><?= v2_ic('arrow-left') ?>Anterior</a><?php endif; ?>
+      <nav class="pager" aria-label="<?= v2_te('Pages') ?>">
+        <?php if ($hubPage > 1): ?><a class="pg-step" href="<?= v2_e(($hub['pageUrl'])($hubPage - 1)) ?>" rel="prev"><?= v2_ic('arrow-left') ?><?= v2_te('Previous') ?></a><?php endif; ?>
         <?php for ($p = $start; $p <= $end; $p++): ?>
           <?php if ($p === $hubPage): ?><span aria-current="page"><?= $p ?></span><?php else: ?><a href="<?= v2_e(($hub['pageUrl'])($p)) ?>"><?= $p ?></a><?php endif; ?>
         <?php endfor; ?>
-        <?php if ($hubPage < $hubLast): ?><a class="pg-step" href="<?= v2_e(($hub['pageUrl'])($hubPage + 1)) ?>" rel="next">Următor<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <?php if ($hubPage < $hubLast): ?><a class="pg-step" href="<?= v2_e(($hub['pageUrl'])($hubPage + 1)) ?>" rel="next"><?= v2_te('Next') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </nav>
       <?php endif; ?>
     </div>

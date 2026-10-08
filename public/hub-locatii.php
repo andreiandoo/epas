@@ -1,6 +1,6 @@
 <?php
 /**
- * Locations with online tickets: /locatii and /{oras}/locatii (v2 design, includes/v2/am-hub.php).
+ * Locations with online tickets: /venues and /{city}/venues (v2 design, includes/v2/am-hub.php).
  *
  * Reads GET /activities-module/locations (?city=, ?pagina=). The city chips come from every published location.
  */
@@ -46,21 +46,22 @@ foreach ($rows as $l) {
     }
     $counts = is_array($l['counts'] ?? null) ? $l['counts'] : [];
     $offer = array_filter([
-        !empty($counts['access']) ? v2_num((int) $counts['access'], 'bilet', 'bilete') : '',
+        !empty($counts['access']) ? v2_num((int) $counts['access'], 'ticket', 'tickets') : '',
         !empty($counts['experience']) ? v2_exp((int) $counts['experience']) : '',
-        !empty($counts['package']) ? v2_num((int) $counts['package'], 'pachet', 'pachete') : '',
+        !empty($counts['package']) ? v2_num((int) $counts['package'], 'package', 'packages') : '',
     ]);
     $items[] = [
-        'href' => '/locatie/' . $l['slug'],
+        'href' => '/venue/' . $l['slug'],
         'image' => v2_media_url($l['cover_image'] ?? null),
-        'kicker' => navFlatName($l['category']['name'] ?? '') ?: 'Locație',
+        'kicker' => navFlatName($l['category']['name'] ?? '') ?: v2_t('Venue'),
         'title' => navFlatName($l['name'] ?? ''),
         'meta' => array_values(array_filter([
             !empty($l['city']['name']) ? ['map-pin', navFlatName($l['city']['name'])] : null,
             $offer ? ['ticket', implode(' · ', $offer)] : null,
         ])),
         'price' => !empty($l['min_price_cents']) ? (int) round($l['min_price_cents'] / 100) : null,
-        'badges' => array_values(array_filter([!empty($l['is_promoted']) ? 'Promovat' : null, !empty($l['has_lodging']) ? 'Cazare' : null])),
+        'priceLabel' => !empty($l['min_price_cents']) ? am_lei((int) $l['min_price_cents'], $l['currency'] ?? null) : '',
+        'badges' => array_values(array_filter([!empty($l['is_promoted']) ? v2_t('Promoted') : null, !empty($l['has_lodging']) ? v2_t('Accommodation') : null])),
     ];
 }
 
@@ -71,15 +72,15 @@ if ($page > 1 && !$items) {
     exit;
 }
 
-$base = $citySlug !== '' ? '/' . $citySlug . '/locatii' : '/locatii';
-$breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/'], ['name' => 'Locații', 'url' => SITE_URL . '/locatii']];
+$base = $citySlug !== '' ? '/' . $citySlug . '/venues' : '/venues';
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => SITE_URL . '/'], ['name' => v2_t('Venues'), 'url' => SITE_URL . '/venues']];
 if ($citySlug !== '') {
     $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . $base];
 }
 
-$cityChips = [['Toate', '/locatii', $citySlug === '']];
+$cityChips = [[v2_t('All'), '/venues', $citySlug === '']];
 foreach ($cities as $cs => [$cn]) {
-    $cityChips[] = [$cn, '/' . $cs . '/locatii', $cs === $citySlug];
+    $cityChips[] = [$cn, '/' . $cs . '/venues', $cs === $citySlug];
 }
 if ($citySlug !== '' && !isset($cities[$citySlug])) {
     $cityChips[] = [$cityName, $base, true];
@@ -88,29 +89,37 @@ if ($citySlug !== '' && !isset($cities[$citySlug])) {
 $total = (int) ($pag['total'] ?? count($items));
 $hub = [
     'tight' => true,
-    'kicker' => 'Bilete online la intrare',
-    'title' => 'Locații',
-    'titleEm' => $cityName !== '' ? 'în ' . $cityName : 'cu bilete online',
-    'lead' => 'Rezervații naturale, parcuri, muzee și alte locuri unde îți iei online biletul de intrare și experiențele de acolo, într-o singură comandă.',
+    'kicker' => v2_t('Entry tickets online'),
+    'title' => v2_t('Venues'),
+    'titleHtml' => $cityName !== ''
+        ? v2_t('Venues <em>in {city}</em>', ['city' => v2_e($cityName)])
+        : v2_t('Venues <em>with online tickets</em>'),
+    'lead' => v2_t('Nature reserves, parks, museums and other places where you buy your entry ticket and the experiences there online, in a single order.'),
     'stats' => array_values(array_filter([
-        $total ? v2_num($total, 'locație', 'locații') : '',
-        $citySlug === '' && count($cities) > 1 ? v2_num(count($cities), 'oraș', 'orașe') : '',
+        $total ? v2_num($total, 'venue', 'venues') : '',
+        $citySlug === '' && count($cities) > 1 ? v2_num(count($cities), 'city', 'cities') : '',
     ])),
     'image' => $items[0]['image'] ?? null,
     'breadcrumbs' => $breadcrumbs,
-    'filters' => count($cityChips) > 2 || $citySlug !== '' ? [['Oraș', $cityChips]] : [],
+    'filters' => count($cityChips) > 2 || $citySlug !== '' ? [[v2_t('City'), $cityChips]] : [],
     'items' => $items,
-    'heading' => 'Locații' . ($cityName !== '' ? ' în ' . $cityName : ''),
+    'heading' => $cityName !== '' ? v2_t('Venues in {city}', ['city' => $cityName]) : v2_t('Venues'),
     'page' => (int) ($pag['current_page'] ?? $page),
     'last' => (int) ($pag['last_page'] ?? 1),
     'pageUrl' => fn (int $p) => $base . ($p > 1 ? '?pagina=' . $p : ''),
     'empty' => $citySlug !== ''
-        ? ['Încă nu avem locații în ' . $cityName . '.', 'Vezi locațiile din celelalte orașe sau experiențele de aici.', ['Toate locațiile', '/locatii']]
-        : ['Primele locații apar în curând.', 'Aici vei găsi rezervații, parcuri, muzee și alte locuri în care intri cu biletul luat online.', ['Ai o locație? Vinde bilete aici', '/parteneri']],
+        ? [v2_t('We have no venues in {city} yet.', ['city' => $cityName]), v2_t('See the venues in other cities, or the experiences here.'), [v2_t('All venues'), '/venues']]
+        : [v2_t('The first venues are coming soon.'), v2_t('This is where you will find reserves, parks, museums and other places you enter with a ticket bought online.'), [v2_t('Do you run a venue? Sell tickets here'), '/partners']],
 ];
 
-$pageTitleRaw = 'Locații' . ($cityName !== '' ? ' în ' . $cityName : '') . ': bilete online la intrare' . ($page > 1 ? ' (pagina ' . $page . ')' : '') . ' | viaqui.com';
-$pageDescription = 'Locații' . ($cityName !== '' ? ' din ' . $cityName : ' din România') . ' unde îți iei online biletul de intrare, parcarea și experiențele de acolo: rezervații naturale, parcuri, muzee.';
+$pageTitleRaw = $cityName !== '' ? v2_t('Venues in {city}: entry tickets online', ['city' => $cityName]) : v2_t('Venues: entry tickets online');
+if ($page > 1) {
+    $pageTitleRaw = v2_t('{title} (page {n})', ['title' => $pageTitleRaw, 'n' => $page]);
+}
+$pageTitleRaw .= ' | Viaqui';
+$pageDescription = $cityName !== ''
+    ? v2_t('Venues in {city} where you buy your entry ticket, parking and the experiences there online: nature reserves, parks, museums.', ['city' => $cityName])
+    : v2_t('Venues across Europe where you buy your entry ticket, parking and the experiences there online: nature reserves, parks, museums.');
 $canonicalUrl = SITE_URL . $base . ($page > 1 ? '?pagina=' . $page : '');
 $ogImage = $hub['image'] ?: (SITE_URL . '/assets/images/og-default.jpg');
 $structuredData = [[

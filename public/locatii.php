@@ -1,11 +1,10 @@
 <?php
 /**
- * viaqui.com — /locatii  (v2 design)
+ * viaqui.com: the older catalogue of venues (first design, Alpine + the legacy head).
  *
- * Full catalog of locations / operators that sell activities on the
- * platform. Pulls real venues from the marketplace API and falls back
- * to a curated static list if the API is empty (so /locatii never
- * shows an empty page).
+ * Not routed any more: /venues is served by hub-locatii.php. Kept in step with the language layer in case it is
+ * linked again. It lists the venues the marketplace API returns; with none, it says so (the page used to fall back
+ * to six invented Romanian venues with invented ratings, whose links were 404s).
  */
 
 $pageCacheTTL = 600;
@@ -13,6 +12,7 @@ require_once __DIR__ . '/includes/page-cache.php';
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
+require_once __DIR__ . '/includes/v2/helpers.php';   // v2_t(), v2_te(), v2_own_price_label()
 
 // =========================================================================
 // DATA — fetch venues
@@ -31,19 +31,19 @@ $rawVenues = $venuesResp['data']['venues']
 if (! is_array($rawVenues)) $rawVenues = [];
 
 $typeLabels = [
-    'escape_room' => 'Escape room',
-    'escape-room' => 'Escape room',
-    'museum'      => 'Muzeu',
-    'muzeu'       => 'Muzeu',
-    'park'        => 'Parc',
-    'parc'        => 'Parc',
-    'adventure_park' => 'Parc aventură',
-    'workshop'    => 'Atelier',
-    'tour'        => 'Tur ghidat',
-    'aquarium'    => 'Acvariu',
-    'zoo'         => 'Grădină zoologică',
-    'cave'        => 'Peșteră',
-    'leisure_venue' => 'Centru de agrement',
+    'escape_room' => v2_t('Escape room'),
+    'escape-room' => v2_t('Escape room'),
+    'museum'      => v2_t('Museum'),
+    'muzeu'       => v2_t('Museum'),
+    'park'        => v2_t('Park'),
+    'parc'        => v2_t('Park'),
+    'adventure_park' => v2_t('Adventure park'),
+    'workshop'    => v2_t('Workshop'),
+    'tour'        => v2_t('Guided tour'),
+    'aquarium'    => v2_t('Aquarium'),
+    'zoo'         => v2_t('Zoo'),
+    'cave'        => v2_t('Cave'),
+    'leisure_venue' => v2_t('Leisure centre'),
 ];
 
 $locations = [];
@@ -53,7 +53,7 @@ foreach ($rawVenues as $v) {
     if (! $name || ! $slug) continue;
 
     $type = $v['type'] ?? $v['venue_type'] ?? '';
-    $typeLabel = $typeLabels[$type] ?? ucfirst(str_replace('_', ' ', (string) $type)) ?: 'Locație';
+    $typeLabel = $typeLabels[$type] ?? ucfirst(str_replace('_', ' ', (string) $type)) ?: v2_t('Venue');
     $cityName = navFlatName($v['city']['name'] ?? $v['city_name'] ?? '');
     $citySlug = $v['city']['slug'] ?? $v['city_slug'] ?? '';
 
@@ -62,40 +62,29 @@ foreach ($rawVenues as $v) {
         'slug'        => $slug,
         'type'        => $type ?: 'all',
         'typeLabel'   => $typeLabel,
-        'city'        => $cityName ?: 'România',
+        'city'        => $cityName ?: v2_t('Europe'),
         'citySlug'    => $citySlug ?: '',
         'image'       => $v['cover_image_url'] ?? $v['image'] ?? null,
         'rating'      => isset($v['rating']) && $v['rating'] ? (number_format((float) $v['rating'], 1) . ' ★') : '—',
-        'description' => navFlatName($v['description'] ?? $v['short_description'] ?? '') ?: 'Locație listată pe viaqui.com cu activități disponibile online.',
+        'description' => navFlatName($v['description'] ?? $v['short_description'] ?? '') ?: v2_t('A venue listed on Viaqui, with activities you can book online.'),
         'tags'        => array_slice(is_array($v['tags'] ?? null) ? $v['tags'] : (is_array($v['amenities'] ?? null) ? $v['amenities'] : []), 0, 4),
         'activities'  => array_map(fn ($a) => [
             'name'  => navFlatName($a['title'] ?? $a['name'] ?? ''),
             'price' => isset($a['cheapest_price_cents']) && $a['cheapest_price_cents'] > 0
-                ? 'de la ' . (int) round($a['cheapest_price_cents'] / 100) . ' lei'
+                ? v2_t('from {price}', ['price' => v2_own_price_label((int) $a['cheapest_price_cents'], $a['currency'] ?? $v['currency'] ?? null)])
                 : (isset($a['price']) ? $a['price'] : ''),
-            'url'   => '/activitate/' . ($a['slug'] ?? ''),
+            'url'   => '/activity/' . ($a['slug'] ?? ''),
         ], array_slice($v['activities'] ?? [], 0, 3)),
     ];
 }
 
-// Static fallback if no venues yet
-if (empty($locations)) {
-    $locations = [
-        ['name' => 'Mystery Rooms Brașov', 'slug' => 'mystery-rooms-brasov', 'type' => 'escape_room', 'typeLabel' => 'Escape room', 'city' => 'Brașov', 'citySlug' => 'brasov', 'image' => null, 'rating' => '4.9 ★', 'description' => 'Operator de escape rooms cu camere tematice pentru grupuri mici și mari.', 'tags' => ['mister', 'grupuri', 'indoor'], 'activities' => []],
-        ['name' => 'Muzeul Național de Artă', 'slug' => 'muzeul-national-de-arta', 'type' => 'museum', 'typeLabel' => 'Muzeu', 'city' => 'București', 'citySlug' => 'bucuresti', 'image' => null, 'rating' => '4.7 ★', 'description' => 'Galerii de artă românească și expoziții temporare.', 'tags' => ['artă', 'cultură', 'indoor'], 'activities' => []],
-        ['name' => 'Parc Aventura Brașov', 'slug' => 'parc-aventura-brasov', 'type' => 'adventure_park', 'typeLabel' => 'Parc aventură', 'city' => 'Brașov', 'citySlug' => 'brasov', 'image' => null, 'rating' => '4.8 ★', 'description' => 'Trasee în copaci, tiroliene, escaladă pentru toate vârstele.', 'tags' => ['outdoor', 'aventură', 'familie'], 'activities' => []],
-        ['name' => 'Atelier Ceramică Cluj', 'slug' => 'atelier-ceramica-cluj', 'type' => 'workshop', 'typeLabel' => 'Atelier', 'city' => 'Cluj-Napoca', 'citySlug' => 'cluj-napoca', 'image' => null, 'rating' => '5.0 ★', 'description' => 'Ateliere de ceramică pentru începători și avansați.', 'tags' => ['ateliere', 'creativ', 'indoor'], 'activities' => []],
-        ['name' => 'Peștera Valea Cetății', 'slug' => 'pestera-valea-cetatii', 'type' => 'cave', 'typeLabel' => 'Peșteră', 'city' => 'Brașov', 'citySlug' => 'brasov', 'image' => null, 'rating' => '4.6 ★', 'description' => 'Tur ghidat în una dintre cele mai vechi peșteri din zonă.', 'tags' => ['natură', 'tur', 'outdoor'], 'activities' => []],
-        ['name' => 'Acvariul Constanța', 'slug' => 'acvariul-constanta', 'type' => 'aquarium', 'typeLabel' => 'Acvariu', 'city' => 'Constanța', 'citySlug' => 'constanta', 'image' => null, 'rating' => '4.5 ★', 'description' => 'Specii marine din toată lumea și expoziții interactive.', 'tags' => ['copii', 'familie', 'indoor'], 'activities' => []],
-    ];
-}
 
 // Type filters with counts
 $typeCounts = [];
 foreach ($locations as $l) {
     $typeCounts[$l['type']] = ($typeCounts[$l['type']] ?? 0) + 1;
 }
-$typeFilters = [['key' => 'all', 'label' => 'Toate locațiile', 'count' => count($locations)]];
+$typeFilters = [['key' => 'all', 'label' => v2_t('All venues'), 'count' => count($locations)]];
 $seen = ['all' => true];
 foreach ($locations as $l) {
     if (isset($seen[$l['type']])) continue;
@@ -111,15 +100,15 @@ sort($citiesList);
 $quickChips = array_slice($typeFilters, 0, 6);
 
 // SEO
-$pageTitleRaw    = 'Locații și operatori — ' . SITE_NAME;
-$pageDescription = 'Descoperă locațiile partenere viaqui.com: escape rooms, muzee, parcuri, ateliere, peșteri, rezervații și centre de agrement. Bilete cu QR, instant pe email.';
-$canonicalUrl    = SITE_URL . '/locatii';
+$pageTitleRaw    = v2_t('Venues and operators') . ' | ' . SITE_NAME;
+$pageDescription = v2_t('Discover the venues on Viaqui: escape rooms, museums, parks, workshops, caves, nature reserves and leisure centres. QR tickets, by email straight away.');
+$canonicalUrl    = SITE_URL . '/venues';
 $currentPage     = 'locatii';
 $cssBundle       = 'listing';
 
 $breadcrumbs = [
-    ['name' => 'Acasă', 'url' => SITE_URL . '/'],
-    ['name' => 'Locații', 'url' => $canonicalUrl],
+    ['name' => v2_t('Home'), 'url' => SITE_URL . '/'],
+    ['name' => v2_t('Venues'), 'url' => $canonicalUrl],
 ];
 
 $structuredData = [[
@@ -128,7 +117,7 @@ $structuredData = [[
     'name' => $pageTitleRaw,
     'description' => $pageDescription,
     'url' => $canonicalUrl,
-    'inLanguage' => 'ro-RO',
+    'inLanguage' => v2_locale(),
 ]];
 
 include __DIR__ . '/includes/head.php';
@@ -142,26 +131,32 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
     'typeFilters' => $typeFilters,
     'cities'      => $citiesList,
     'quickChips'  => $quickChips,
+    // texts the script below prints
+    'labels'      => [
+        'all'   => v2_t('All venues'),
+        'count' => v2_t('{shown} of {total} venues'),
+        'photo' => v2_t('Photo of {name}'),
+    ],
 ]), ENT_QUOTES) ?>)">
 
 <!-- HERO -->
 <section class="relative overflow-hidden border-b-2 border-ink">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_82%_14%,rgba(232,69,39,.24),transparent_30%),radial-gradient(circle_at_16%_72%,rgba(30,74,61,.22),transparent_34%),radial-gradient(circle_at_50%_44%,rgba(218,154,51,.18),transparent_30%)]"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
-        <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
-            <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Locații</span>
+        <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="<?= v2_te('Breadcrumb') ?>">
+            <a href="/" class="hover:text-vermilion"><?= v2_te('Home') ?></a><span>/</span><span class="text-ink"><?= v2_te('Venues') ?></span>
         </nav>
         <div class="mt-8 grid lg:grid-cols-[1fr_.92fr] gap-12 items-center">
             <div>
-                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">LOCAȚII · OPERATORI · ACTIVITĂȚI</p>
-                <h1 class="mt-6 font-display text-6xl sm:text-8xl font-bold leading-[.82]">Locuri unde mergi să faci ceva.</h1>
+                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70"><?= v2_te('Venues · Operators · Activities') ?></p>
+                <h1 class="mt-6 font-display text-6xl sm:text-8xl font-bold leading-[.82]"><?= v2_te('Places you go to do something.') ?></h1>
                 <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
-                    Descoperă locații și operatori de activități: escape rooms, muzee, parcuri, ateliere, peșteri, rezervații, centre de agrement și spații care vând experiențe online.
+                    <?= v2_te('Discover venues and activity operators: escape rooms, museums, parks, workshops, caves, nature reserves, leisure centres and places that sell experiences online.') ?>
                 </p>
                 <div class="mt-8 max-w-2xl">
-                    <label class="sr-only" for="location-search">Caută locație</label>
+                    <label class="sr-only" for="location-search"><?= v2_te('Search for a venue') ?></label>
                     <div class="relative">
-                        <input id="location-search" type="text" class="field text-lg pr-14" x-model="search" placeholder="Caută: escape room, muzeu, Brașov, copii...">
+                        <input id="location-search" type="text" class="field text-lg pr-14" x-model="search" placeholder="<?= v2_te('Search: escape room, museum, Lisbon, kids…') ?>">
                         <span class="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft">
                             <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                         </span>
@@ -177,20 +172,20 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
                 <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[-2deg] shadow-deep"></div>
                 <div class="absolute top-0 left-0 right-0 mx-auto max-w-[540px] ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep rotate-[2deg]" style="--perf:100%">
                     <div class="p-6 sm:p-8">
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LOCATION GRAPH</p>
-                        <h2 class="mt-3 font-display text-3xl font-bold leading-none">O locație poate avea mai multe activități.</h2>
+                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft"><?= v2_te('How a venue is listed') ?></p>
+                        <h2 class="mt-3 font-display text-3xl font-bold leading-none"><?= v2_te('One venue can have several activities.') ?></h2>
                         <div class="mt-7 rounded-3xl bg-paper-2 border border-ink/10 p-5">
                             <div class="flex items-center gap-3">
                                 <span class="grid place-items-center w-12 h-12 rounded-2xl bg-vermilion text-paper"><?= am_product_icon_svg('pin', 'w-6 h-6') ?></span>
                                 <div>
                                     <p class="font-display text-2xl font-bold"><?= htmlspecialchars($locations[0]['name'] ?? 'Mystery Rooms') ?></p>
-                                    <p class="text-sm text-ink-soft"><?= htmlspecialchars($locations[0]['typeLabel'] ?? 'Operator') ?> · <?= htmlspecialchars($locations[0]['city'] ?? '') ?></p>
+                                    <p class="text-sm text-ink-soft"><?= htmlspecialchars($locations[0]['typeLabel'] ?? v2_t('Operator')) ?> · <?= htmlspecialchars($locations[0]['city'] ?? '') ?></p>
                                 </div>
                             </div>
                             <div class="mt-5 grid gap-3">
-                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Camera 13</span><span class="text-forest font-bold">bilete</span></div>
-                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Laboratorul 7</span><span class="text-forest font-bold">bilete</span></div>
-                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Misiunea Alpha</span><span class="text-ochre font-bold">soon</span></div>
+                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold"><?= v2_te('Room 13') ?></span><span class="text-forest font-bold"><?= v2_te('tickets') ?></span></div>
+                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold"><?= v2_te('Lab 7') ?></span><span class="text-forest font-bold"><?= v2_te('tickets') ?></span></div>
+                                <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold"><?= v2_te('Mission Alpha') ?></span><span class="text-ochre font-bold"><?= v2_te('soon') ?></span></div>
                             </div>
                         </div>
                     </div>
@@ -205,7 +200,7 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
     <div class="grid lg:grid-cols-[300px_1fr] gap-8 items-start">
         <aside class="lg:sticky lg:top-28">
             <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRARE LOCAȚII</p>
+                <p class="font-mono text-xs tracking-[.18em] text-ink-soft"><?= v2_te('Filter venues') ?></p>
                 <div class="mt-4 space-y-2">
                     <template x-for="filter in typeFilters" :key="filter.key">
                         <button @click="activeType=filter.key" :class="activeType===filter.key ? 'bg-ink text-paper' : 'bg-paper-2 text-ink hover:bg-ink/5'" class="w-full rounded-2xl px-4 py-3 text-left font-bold transition flex items-center justify-between gap-3">
@@ -215,18 +210,18 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
                     </template>
                 </div>
                 <label class="block mt-5">
-                    <span class="block mb-1.5 text-sm font-bold">Oraș</span>
+                    <span class="block mb-1.5 text-sm font-bold"><?= v2_te('City') ?></span>
                     <select class="field" x-model="activeCity">
-                        <option value="all">Toate orașele</option>
+                        <option value="all"><?= v2_te('All cities') ?></option>
                         <template x-for="city in cities" :key="city">
                             <option :value="city" x-text="city"></option>
                         </template>
                     </select>
                 </label>
                 <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
-                    <p class="font-bold text-forest">Pentru locații</p>
-                    <p class="mt-1 text-sm text-ink-soft">Ai o locație cu activități? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
-                    <a href="/parteneri" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi detalii</a>
+                    <p class="font-bold text-forest"><?= v2_te('For venues') ?></p>
+                    <p class="mt-1 text-sm text-ink-soft"><?= v2_te('Do you run a venue with activities? You can have your own page, your activities listed, QR tickets and a dashboard.') ?></p>
+                    <a href="/partners" class="mt-3 inline-flex font-bold text-forest underline-wobble"><?= v2_te('See details') ?></a>
                 </div>
             </div>
         </aside>
@@ -234,18 +229,19 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
         <section>
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LOCAȚII</p>
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft"><?= v2_te('Venues') ?></p>
                     <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="currentTypeTitle()"></h2>
                 </div>
-                <p class="text-ink-soft" x-text="filteredLocations().length + ' din <?= count($locations) ?> locații'"></p>
+                <p class="text-ink-soft" x-text="labels.count.replace('{shown}', filteredLocations().length).replace('{total}', <?= count($locations) ?>)"></p>
             </div>
 
+            <?php if (!$locations): ?><p class="mt-6 text-lg text-ink-soft"><?= v2_te('No venues are listed yet. Come back soon.') ?></p><?php endif; ?>
             <div class="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-5">
                 <template x-for="location in filteredLocations()" :key="location.slug">
                     <article class="group rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
-                        <a :href="'/locatie/' + location.slug" class="block">
+                        <a :href="'/venue/' + location.slug" class="block">
                             <div class="relative h-52 overflow-hidden bg-ink">
-                                <img x-show="location.image" :src="location.image" :alt="'Imagine pentru ' + location.name" class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500" loading="lazy" onerror="this.style.display='none'">
+                                <img x-show="location.image" :src="location.image" :alt="labels.photo.replace('{name}', location.name)" class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500" loading="lazy" onerror="this.style.display='none'">
                                 <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
                                 <div class="absolute inset-0 grid place-items-center" x-show="!location.image">
                                     <span class="opacity-30"><?= am_product_icon_svg('pin', 'w-16 h-16') ?></span>
@@ -267,7 +263,7 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
                             </div>
                             <div class="mt-5 rounded-2xl bg-paper-2 border border-ink/10 p-4" x-show="location.activities.length > 0">
                                 <div class="flex items-center justify-between gap-3">
-                                    <span class="font-bold">Activități disponibile</span>
+                                    <span class="font-bold"><?= v2_te('Activities available') ?></span>
                                     <span class="text-sm text-ink-soft" x-text="location.activities.length"></span>
                                 </div>
                                 <div class="mt-3 space-y-2">
@@ -280,7 +276,7 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
                                 </div>
                             </div>
                             <div class="mt-5 flex items-center justify-between gap-3">
-                                <a :href="'/locatie/' + location.slug" class="font-bold text-vermilion underline-wobble">Vezi locația</a>
+                                <a :href="'/venue/' + location.slug" class="font-bold text-vermilion underline-wobble"><?= v2_te('View venue') ?></a>
                                 <a x-show="location.citySlug" :href="'/' + location.citySlug" class="text-sm font-bold text-ink-soft hover:text-ink" x-text="location.city"></a>
                             </div>
                         </div>
@@ -296,30 +292,30 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10 items-start">
             <div class="lg:sticky lg:top-28">
-                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">PAGINĂ LOCAȚIE</p>
-                <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">O locație bună nu este doar o adresă.</h2>
-                <p class="mt-5 text-lg text-ink-soft leading-relaxed">Pagina unei locații explică ce experiențe oferă, ce activități poți cumpăra, unde este, cum ajungi și ce reguli există.</p>
+                <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion"><?= v2_te('The venue page') ?></p>
+                <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]"><?= v2_te('A good venue is more than an address.') ?></h2>
+                <p class="mt-5 text-lg text-ink-soft leading-relaxed"><?= v2_te('A venue page explains what experiences it offers, which activities you can buy, where it is, how to get there and what the rules are.') ?></p>
             </div>
             <div class="grid sm:grid-cols-2 gap-4">
                 <article class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6">
                     <p class="font-mono text-xs tracking-[.18em] text-vermilion">01</p>
-                    <h3 class="mt-2 font-display text-3xl font-bold">Identitate</h3>
-                    <p class="mt-2 text-ink-soft">Nume, descriere, tip locație, galerie, atmosferă.</p>
+                    <h3 class="mt-2 font-display text-3xl font-bold"><?= v2_te('Identity') ?></h3>
+                    <p class="mt-2 text-ink-soft"><?= v2_te('Name, description, type of venue, gallery, atmosphere.') ?></p>
                 </article>
                 <article class="rounded-3xl border-2 border-ink/15 bg-mint p-6">
                     <p class="font-mono text-xs tracking-[.18em] text-forest">02</p>
-                    <h3 class="mt-2 font-display text-3xl font-bold">Activități</h3>
-                    <p class="mt-2 text-ink-soft">Lista activităților, bilete, prețuri, disponibilitate.</p>
+                    <h3 class="mt-2 font-display text-3xl font-bold"><?= v2_te('Activities') ?></h3>
+                    <p class="mt-2 text-ink-soft"><?= v2_te('The list of activities, tickets, prices, availability.') ?></p>
                 </article>
                 <article class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6">
                     <p class="font-mono text-xs tracking-[.18em] text-vermilion">03</p>
-                    <h3 class="mt-2 font-display text-3xl font-bold">Acces</h3>
-                    <p class="mt-2 text-ink-soft">Adresă, hartă, parcare, transport, program și reguli.</p>
+                    <h3 class="mt-2 font-display text-3xl font-bold"><?= v2_te('Access') ?></h3>
+                    <p class="mt-2 text-ink-soft"><?= v2_te('Address, map, parking, transport, opening hours and rules.') ?></p>
                 </article>
                 <article class="rounded-3xl border-2 border-ink/15 bg-ink text-paper p-6">
                     <p class="font-mono text-xs tracking-[.18em] text-ochre">04</p>
-                    <h3 class="mt-2 font-display text-3xl font-bold">Trust</h3>
-                    <p class="mt-2 text-paper/60">Recenzii, FAQ, informații pentru familii și grupuri.</p>
+                    <h3 class="mt-2 font-display text-3xl font-bold"><?= v2_te('Trust') ?></h3>
+                    <p class="mt-2 text-paper/60"><?= v2_te('Reviews, FAQ, information for families and groups.') ?></p>
                 </article>
             </div>
         </div>
@@ -330,18 +326,18 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
 <section class="border-y-2 border-ink bg-ink text-paper">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
         <div class="max-w-3xl">
-            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">TIPURI DE LOCAȚII</p>
-            <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Același marketplace, modele diferite.</h2>
-            <p class="mt-5 text-lg text-paper/60 leading-relaxed">Fiecare tip de locație are nevoie de altă structură: sloturi, bilete pe zi, tururi, pachete.</p>
+            <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre"><?= v2_te('Types of venue') ?></p>
+            <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]"><?= v2_te('One marketplace, different models.') ?></h2>
+            <p class="mt-5 text-lg text-paper/60 leading-relaxed"><?= v2_te('Each type of venue needs a different structure: time slots, day tickets, tours, packages.') ?></p>
         </div>
         <div class="mt-10 grid md:grid-cols-3 gap-5">
             <?php $types = [
-                ['key', 'Escape rooms',  'Sloturi orare, camere, dificultate, jucători, check-in.'],
-                ['museum', 'Muzee',          'Program, expoziții, tururi, bilete adult/copil, acces.'],
-                ['evergreen', 'Natură',         'Reguli, echipament, tururi, ghid, nivel, sezon.'],
-                ['balloon', 'Parcuri',        'Acces pe zi, atracții, pachete, vârste, facilități.'],
-                ['palette', 'Ateliere',       'Locuri limitate, materiale, vârstă, durată.'],
-                ['walk', 'Tururi',         'Punct de întâlnire, limbă, durată, ghid, traseu.'],
+                ['key', v2_t('Escape rooms'), v2_t('Time slots, rooms, difficulty, players, check-in.')],
+                ['museum', v2_t('Museums'), v2_t('Opening hours, exhibitions, tours, adult and child tickets, access.')],
+                ['evergreen', v2_t('Nature'), v2_t('Rules, equipment, tours, guide, level, season.')],
+                ['balloon', v2_t('Parks'), v2_t('Day access, attractions, packages, ages, facilities.')],
+                ['palette', v2_t('Workshops'), v2_t('Limited places, materials, age, duration.')],
+                ['walk', v2_t('Tours'), v2_t('Meeting point, language, duration, guide, route.')],
             ]; foreach ($types as $t): ?>
                 <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6">
                     <p aria-hidden="true"><?= am_product_icon_svg($t[0], 'w-9 h-9') ?></p>
@@ -356,15 +352,15 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
 <!-- FAQ -->
 <section class="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20" x-data="{open:0}">
     <div class="text-center max-w-3xl mx-auto">
-        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">FAQ</p>
-        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Cum aleg o locație?</h2>
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion"><?= v2_te('FAQ') ?></p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]"><?= v2_te('How do I choose a venue?') ?></h2>
     </div>
     <div class="mt-10 space-y-3">
         <?php $faqs = [
-            ['Sunt toate locațiile verificate?', 'Da. Locațiile listate trec printr-un proces de validare înainte de publicare. Echipa noastră verifică legitimitatea, contactele și conformitatea cu condițiile platformei.'],
-            ['Ce activități găsesc într-o locație?', 'În funcție de tipul locației: escape rooms au camere și sloturi, muzeele au programe și tururi, parcurile au acces pe zi, atelierele au sesiuni cu locuri limitate.'],
-            ['Cum cumpăr bilete pentru o locație?', 'De pe pagina locației sau direct din pagina activității. La final primești QR pe email și în cont.'],
-            ['Pot adăuga locația mea pe viaqui.com?', 'Da. Vezi pagina Pentru locații pentru detalii despre listare, comisioane, dashboard și instrumentele platformei.'],
+            [v2_t('Are all venues checked?'), v2_t('Yes. Listed venues go through a validation process before they are published. Our team checks that they are genuine, their contact details and that they meet the platform terms.')],
+            [v2_t('What activities will I find at a venue?'), v2_t('It depends on the type of venue: escape rooms have rooms and time slots, museums have opening hours and tours, parks have day access, workshops have sessions with limited places.')],
+            [v2_t('How do I buy tickets for a venue?'), v2_t('From the venue page or straight from the activity page. At the end you get your QR code by email and in your account.')],
+            [v2_t('Can I add my venue to Viaqui?'), v2_t('Yes. See the page for venues for details about listing, commission, the dashboard and the tools of the platform.')],
         ]; foreach ($faqs as $i => $faq): ?>
             <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
                 <button @click="open=open===<?= $i ?>?null:<?= $i ?>" class="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4">
@@ -383,13 +379,13 @@ echo am_product_icon_sprite(['pin', 'key', 'museum', 'evergreen', 'balloon', 'pa
         <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
         <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
             <div>
-                <p class="font-mono text-xs tracking-[.2em] text-paper/60">LOCAȚII</p>
-                <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Listează locația ta și vinde bilete online.</h2>
-                <p class="mt-4 max-w-2xl text-paper/75 text-lg">Pagina dedicată, activități, bilete QR, dashboard, scanner check-in și rapoarte.</p>
+                <p class="font-mono text-xs tracking-[.2em] text-paper/60"><?= v2_te('Venues') ?></p>
+                <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]"><?= v2_te('List your venue and sell tickets online.') ?></h2>
+                <p class="mt-4 max-w-2xl text-paper/75 text-lg"><?= v2_te('Your own page, activities, QR tickets, a dashboard, a check-in scanner and reports.') ?></p>
             </div>
             <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
-                <a href="/parteneri" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Pentru locații</a>
-                <a href="/autentificare?ca=venue&mode=register" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Solicită cont</a>
+                <a href="/partners" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition"><?= v2_te('For venues') ?></a>
+                <a href="/login?ca=venue&amp;mode=register" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition"><?= v2_te('Request an account') ?></a>
             </div>
         </div>
     </div>
@@ -407,6 +403,7 @@ function locationsPage(data) {
         typeFilters: data.typeFilters || [],
         cities: data.cities || [],
         quickChips: data.quickChips || [],
+        labels: data.labels || {},
         norm(s) {
             return (s || '').toString().toLowerCase().normalize('NFD')
                 .replace(/[̀-ͯ]/g, '')
@@ -415,7 +412,7 @@ function locationsPage(data) {
         },
         currentTypeTitle() {
             const found = this.typeFilters.find(f => f.key === this.activeType);
-            return found ? found.label : 'Toate locațiile';
+            return found ? found.label : (this.labels.all || '');
         },
         filteredLocations() {
             const q = this.norm(this.search);

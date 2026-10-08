@@ -1,7 +1,9 @@
 <?php
 /**
- * /activitate/{slug} — single Activity detail + booking sidebar.
+ * Single activity detail + booking sidebar: the first design (Alpine + the legacy head).
  *
+ * Not routed any more: /activity/{slug} and /{city}/{slug} are served by single-activitate.php. Kept in step with
+ * the language layer in case it is linked again.
  * Server-rendered shell built from the v2 single-activity.html design.
  * Alpine.js handles the sidebar date+slot+variants picker and the gallery
  * modal. Booking submission is wired up to a placeholder until A5 lands
@@ -10,6 +12,7 @@
 
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
+require_once __DIR__ . '/includes/v2/helpers.php';   // v2_t(), v2_te(), v2_money_in()
 
 // 10-minute page cache — activity content rarely changes; staff push a
 // change via /admin/activities/{id}/edit which already busts the API cache
@@ -44,17 +47,17 @@ $activity = $activityResp['data']['activity'];
 // PAGE METADATA
 // ============================================================
 $pageTitleRaw = ($activity['seo']['title'] ?? null)
-    ?: ($activity['title'] . ' — ' . SITE_NAME);
+    ?: ($activity['title'] . ' | ' . SITE_NAME);
 $pageDescription = $activity['seo']['description']
     ?? $activity['short_description']
-    ?? ($activity['title'] . ' pe ' . SITE_NAME);
+    ?? v2_t('{title} on {site}', ['title' => $activity['title'], 'site' => SITE_NAME]);
 
-$canonicalUrl = SITE_URL . '/activitate/' . $activity['slug'];
+$canonicalUrl = SITE_URL . '/activity/' . $activity['slug'];
 $currentPage = 'activitate';
 $cssBundle = 'single';
 
 $breadcrumbs = [
-    ['name' => 'Acasă', 'url' => SITE_URL . '/'],
+    ['name' => v2_t('Home'), 'url' => SITE_URL . '/'],
 ];
 if (! empty($activity['category'])) {
     $breadcrumbs[] = [
@@ -69,6 +72,8 @@ $variantPrices = array_filter(array_column($activity['variants'] ?? [], 'price_c
 $lowPriceCents = $variantPrices ? min($variantPrices) : null;
 $highPriceCents = $variantPrices ? max($variantPrices) : null;
 $heroImage = $activity['hero_image_url'] ?? $activity['cover_image_url'] ?? null;
+// The currency the activity is sold (and charged) in: its own when the API sends it, else its variants', else the site's.
+$actCurrency = strtoupper((string) ($activity['currency'] ?? (array_values(array_filter(array_column((array) ($activity['variants'] ?? []), 'currency')))[0] ?? ''))) ?: SITE_CURRENCY;
 
 $structuredData = [
     [
@@ -81,7 +86,7 @@ $structuredData = [
         'url'         => $canonicalUrl,
         'offers'      => $lowPriceCents ? [
             '@type'         => 'AggregateOffer',
-            'priceCurrency' => 'RON',
+            'priceCurrency' => $actCurrency,
             'lowPrice'      => number_format($lowPriceCents / 100, 2, '.', ''),
             'highPrice'     => number_format($highPriceCents / 100, 2, '.', ''),
             'offerCount'    => count($activity['variants'] ?? []),
@@ -104,18 +109,18 @@ if (! empty($activity['faqs']) && is_array($activity['faqs'])) {
 // ============================================================
 // HELPERS (page-local)
 // ============================================================
-$pricedFromCents = function (?int $cents): string {
+$pricedFromCents = function (?int $cents, $currency = null) use ($actCurrency): string {
     if (! $cents || $cents <= 0) return '—';
-    return number_format($cents / 100, 0, ',', '.') . ' lei';
+    return v2_money_in($cents / 100, is_string($currency) && $currency !== '' ? strtoupper($currency) : $actCurrency);
 };
 
 $dayLabels = [
-    1 => 'Luni', 2 => 'Marți', 3 => 'Miercuri', 4 => 'Joi',
-    5 => 'Vineri', 6 => 'Sâmbătă', 7 => 'Duminică',
+    1 => v2_t('Monday'), 2 => v2_t('Tuesday'), 3 => v2_t('Wednesday'), 4 => v2_t('Thursday'),
+    5 => v2_t('Friday'), 6 => v2_t('Saturday'), 7 => v2_t('Sunday'),
 ];
 
 $difficultyLabels = [
-    'easy' => 'Ușor', 'medium' => 'Mediu', 'hard' => 'Greu', 'expert' => 'Expert',
+    'easy' => v2_t('Easy'), 'medium' => v2_t('Medium'), 'hard' => v2_t('Hard'), 'expert' => v2_t('Expert'),
 ];
 
 // Bootstrap Alpine state.
@@ -135,6 +140,7 @@ $bookingBootstrap = [
         'name'           => $v['name'],
         'description'    => $v['description'] ?? null,
         'price_cents'    => (int) $v['price_cents'],
+        'currency'       => $v['currency'] ?? null,
         'capacity_share' => (int) $v['capacity_share'],
         'min_per_order'  => (int) $v['min_per_order'],
         'max_per_order'  => (int) $v['max_per_order'],
@@ -148,15 +154,28 @@ $bookingBootstrap = [
         'max_participants' => 10,
     ],
     'gallery' => array_map(fn ($url) => ['src' => $url, 'alt' => $activity['title']], $activity['gallery'] ?? []),
+    'currency' => $actCurrency,
+    'locale' => v2_locale() === 'en' ? 'en-GB' : v2_locale(),
+    'cartUrl' => v2_url('/cart'),
+    // texts the script at the end of the page prints
+    'labels' => [
+        'choose' => v2_t('Choose your tickets'),
+        'min' => v2_t('Minimum {n} participants'),
+        'max' => v2_t('Maximum {n} participants'),
+        'one' => v2_t('1 participant'),
+        'many' => v2_t('{n} participants'),
+        'noCart' => v2_t('The basket did not load. Reload the page and try again.'),
+        'notAdded' => v2_t('We could not add this to your basket. Check the date and time you chose, then try again.'),
+    ],
 ];
 
 // Three independent recommendation rails — only rendered when ≥1 card each.
-// Admin-managed Conexiuni (`related`) is shown first as its own section if set.
+// Admin-managed connections (`related`) is shown first as its own section if set.
 $rails = [];
 if (! empty($activity['related'])) {
     $rails[] = [
-        'kicker' => 'CONEXIUNI MANUALE',
-        'title'  => 'Te-ar putea interesa',
+        'kicker' => v2_t('Hand-picked'),
+        'title'  => v2_t('You might also like'),
         'subtitle' => null,
         'cards'  => $activity['related'],
     ];
@@ -168,26 +187,26 @@ $categoryName = $activity['category']['name'] ?? null;
 
 if (! empty($recs['same_organizer'])) {
     $rails[] = [
-        'kicker' => 'DE LA ACEEAȘI LOCAȚIE',
-        'title'  => $organizerName ? 'Alte experiențe de la ' . $organizerName : 'Alte experiențe ale acestui organizator',
+        'kicker' => v2_t('From the same venue'),
+        'title'  => $organizerName ? v2_t('More experiences from {operator}', ['operator' => $organizerName]) : v2_t('More experiences from this operator'),
         'subtitle' => null,
         'cards'  => $recs['same_organizer'],
     ];
 }
 if (! empty($recs['same_city_same_cat'])) {
     $rails[] = [
-        'kicker' => 'ACTIVITĂȚI SIMILARE',
+        'kicker' => v2_t('Similar activities'),
         'title'  => $cityName && $categoryName
-            ? "{$categoryName} în {$cityName}"
-            : 'Activități similare în acest oraș',
+            ? v2_t('{category} in {city}', ['category' => $categoryName, 'city' => $cityName])
+            : v2_t('Similar activities in this city'),
         'subtitle' => null,
         'cards'  => $recs['same_city_same_cat'],
     ];
 }
 if (! empty($recs['same_city'])) {
     $rails[] = [
-        'kicker' => 'ÎN ACELAȘI ORAȘ',
-        'title'  => $cityName ? "Alte experiențe în {$cityName}" : 'Alte experiențe în acest oraș',
+        'kicker' => v2_t('In the same city'),
+        'title'  => $cityName ? v2_t('More experiences in {city}', ['city' => $cityName]) : v2_t('More experiences in this city'),
         'subtitle' => null,
         'cards'  => $recs['same_city'],
     ];
@@ -210,9 +229,9 @@ include __DIR__ . '/includes/header.php';
     <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-10 lg:pt-14 pb-8">
 
         <!-- Breadcrumbs -->
-        <nav aria-label="Breadcrumb" class="mb-7 font-mono text-[11px] tracking-wide text-ink-soft">
+        <nav aria-label="<?= v2_te('Breadcrumb') ?>" class="mb-7 font-mono text-[11px] tracking-wide text-ink-soft">
             <ol class="flex flex-wrap items-center gap-2">
-                <li><a href="/" class="hover:text-vermilion">Acasă</a></li>
+                <li><a href="/" class="hover:text-vermilion"><?= v2_te('Home') ?></a></li>
                 <?php if (! empty($activity['category'])): ?>
                     <li class="text-ink/30">/</li>
                     <li><a href="/<?= htmlspecialchars($activity['category']['slug']) ?>" class="hover:text-vermilion"><?= htmlspecialchars($activity['category']['name']) ?></a></li>
@@ -232,7 +251,7 @@ include __DIR__ . '/includes/header.php';
                     <?php if (! empty($activity['city'])): ?>
                         <span class="px-3 py-1 rounded-full bg-forest/10 text-forest text-xs font-700"><?= htmlspecialchars($activity['city']['name']) ?></span>
                     <?php endif; ?>
-                    <span class="px-3 py-1 rounded-full bg-ink/5 text-ink-soft text-xs font-700">Confirmare instant</span>
+                    <span class="px-3 py-1 rounded-full bg-ink/5 text-ink-soft text-xs font-700"><?= v2_te('Instant confirmation') ?></span>
                 </div>
 
                 <h1 class="font-display text-[clamp(2.6rem,7vw,6.4rem)] leading-[.88] font-700 tracking-tight max-w-4xl">
@@ -250,34 +269,34 @@ include __DIR__ . '/includes/header.php';
 
                 <div class="mt-7 flex flex-wrap gap-3">
                     <a href="#rezerva" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-vermilion text-paper font-700 hover:bg-vermilion-d transition-colors">
-                        Rezervă bilete
+                        <?= v2_te('Book tickets') ?>
                         <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
                     </a>
-                    <a href="#despre" class="inline-flex items-center justify-center px-6 py-3.5 rounded-full border-2 border-ink font-700 hover:bg-ink hover:text-paper transition-colors">Vezi detalii</a>
+                    <a href="#despre" class="inline-flex items-center justify-center px-6 py-3.5 rounded-full border-2 border-ink font-700 hover:bg-ink hover:text-paper transition-colors"><?= v2_te('See details') ?></a>
                 </div>
 
                 <dl class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl">
                     <?php if ($activity['duration_minutes']): ?>
                         <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
-                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft">DURATĂ</dt>
+                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft"><?= v2_te('Duration') ?></dt>
                             <dd class="mt-1 font-display text-2xl font-700"><?= (int) $activity['duration_minutes'] ?> min</dd>
                         </div>
                     <?php endif; ?>
                     <?php if ($activity['capacity_per_slot']): ?>
                         <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
-                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft">GRUP</dt>
-                            <dd class="mt-1 font-display text-2xl font-700">până la <?= (int) $activity['capacity_per_slot'] ?></dd>
+                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft"><?= v2_te('Group') ?></dt>
+                            <dd class="mt-1 font-display text-2xl font-700"><?= v2_te('up to {n}', ['n' => (int) $activity['capacity_per_slot']]) ?></dd>
                         </div>
                     <?php endif; ?>
                     <?php if ($activity['age_min'] !== null): ?>
                         <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
-                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft">VÂRSTĂ</dt>
+                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft"><?= v2_te('Age') ?></dt>
                             <dd class="mt-1 font-display text-2xl font-700"><?= (int) $activity['age_min'] ?>+</dd>
                         </div>
                     <?php endif; ?>
                     <?php if (! empty($activity['difficulty_level'])): ?>
                         <div class="bg-paper/75 border border-ink/10 rounded-2xl p-4">
-                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft">DIFICULTATE</dt>
+                            <dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft"><?= v2_te('Difficulty') ?></dt>
                             <dd class="mt-1 font-display text-2xl font-700"><?= htmlspecialchars($difficultyLabels[$activity['difficulty_level']] ?? '—') ?></dd>
                         </div>
                     <?php endif; ?>
@@ -297,23 +316,23 @@ include __DIR__ . '/includes/header.php';
                                      loading="eager">
                             <?php endif; ?>
                             <?php if (! empty($bookingBootstrap['gallery'])): ?>
-                                <button @click="openGallery(0)" class="absolute inset-0 group" aria-label="Deschide galeria foto">
+                                <button @click="openGallery(0)" class="absolute inset-0 group" aria-label="<?= v2_te('Open the photo gallery') ?>">
                                     <span class="absolute bottom-5 left-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-paper text-ink text-sm font-700 group-hover:bg-vermilion group-hover:text-paper transition-colors">
-                                        Vezi galeria
+                                        <?= v2_te('See the gallery') ?>
                                         <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
                                     </span>
                                 </button>
                             <?php endif; ?>
-                            <span class="stamp absolute top-5 left-5 text-paper/85 px-3 py-1 text-[10px] font-mono -rotate-6">ADMIT ONE</span>
+                            <span class="stamp absolute top-5 left-5 text-paper/85 px-3 py-1 text-[10px] font-mono -rotate-6"><?= v2_te('Admit one') ?></span>
                         </div>
                         <div class="p-5 sm:p-6">
-                            <p class="font-mono text-[10px] text-paper/50 tracking-[.18em]">REZERVARE RAPIDĂ</p>
+                            <p class="font-mono text-[10px] text-paper/50 tracking-[.18em]"><?= v2_te('Quick booking') ?></p>
                             <div class="mt-3 flex items-end justify-between gap-3">
                                 <div>
-                                    <p class="text-paper/60 text-sm">de la</p>
-                                    <p class="font-display text-4xl font-700"><?= $pricedFromCents($activity['cheapest_price_cents'] ?? null) ?></p>
+                                    <p class="text-paper/60 text-sm"><?= v2_te('from') ?></p>
+                                    <p class="font-display text-4xl font-700"><?= v2_e($pricedFromCents($activity['cheapest_price_cents'] ?? null)) ?></p>
                                 </div>
-                                <a href="#rezerva" class="px-5 py-3 rounded-full bg-vermilion text-paper font-700 hover:bg-vermilion-d transition-colors">Alege ora</a>
+                                <a href="#rezerva" class="px-5 py-3 rounded-full bg-vermilion text-paper font-700 hover:bg-vermilion-d transition-colors"><?= v2_te('Choose a time') ?></a>
                             </div>
                         </div>
                         <div class="notch top"></div><div class="notch bot"></div><div class="perf hidden sm:block"></div>
@@ -321,7 +340,7 @@ include __DIR__ . '/includes/header.php';
 
                     <?php if (! empty($activity['organizer'])): ?>
                         <div class="absolute -bottom-5 -left-3 sm:-left-8 bg-paper border-2 border-ink rounded-2xl p-4 shadow-ticket rotate-[-3deg] max-w-[220px]">
-                            <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft">ORGANIZATOR</p>
+                            <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft"><?= v2_te('Operator') ?></p>
                             <p class="mt-1 font-display text-xl font-700 leading-tight"><?= htmlspecialchars($activity['organizer']['name']) ?></p>
                         </div>
                     <?php endif; ?>
@@ -337,16 +356,16 @@ include __DIR__ . '/includes/header.php';
 <section class="sticky top-24 z-40 bg-paper/90 backdrop-blur-md border-y border-ink/10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="no-bar flex items-center gap-2 overflow-x-auto py-3 text-sm font-700">
-            <a href="#despre" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Despre</a>
-            <a href="#rezerva" class="shrink-0 px-4 py-2 rounded-full bg-vermilion text-paper hover:bg-vermilion-d transition-colors">Bilete</a>
+            <a href="#despre" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors"><?= v2_te('About') ?></a>
+            <a href="#rezerva" class="shrink-0 px-4 py-2 rounded-full bg-vermilion text-paper hover:bg-vermilion-d transition-colors"><?= v2_te('Tickets') ?></a>
             <?php if (! empty($activity['schedule'])): ?>
-                <a href="#program" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Program</a>
+                <a href="#program" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors"><?= v2_te('Opening hours') ?></a>
             <?php endif; ?>
             <?php if (! empty($activity['venue'])): ?>
-                <a href="#locatie" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">Locație</a>
+                <a href="#locatie" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors"><?= v2_te('Venue') ?></a>
             <?php endif; ?>
             <?php if (! empty($activity['faqs'])): ?>
-                <a href="#faq" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors">FAQ</a>
+                <a href="#faq" class="shrink-0 px-4 py-2 rounded-full hover:bg-ink hover:text-paper transition-colors"><?= v2_te('FAQ') ?></a>
             <?php endif; ?>
         </div>
     </div>
@@ -364,16 +383,16 @@ include __DIR__ . '/includes/header.php';
             <!-- trust strip -->
             <div class="grid sm:grid-cols-3 gap-3">
                 <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5">
-                    <p class="font-display text-2xl font-700">QR instant</p>
-                    <p class="mt-1 text-ink-soft">Primești biletul imediat pe email.</p>
+                    <p class="font-display text-2xl font-700"><?= v2_te('Instant QR') ?></p>
+                    <p class="mt-1 text-ink-soft"><?= v2_te('You get your ticket by email straight away.') ?></p>
                 </div>
                 <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5">
-                    <p class="font-display text-2xl font-700">Plată sigură</p>
-                    <p class="mt-1 text-ink-soft">Confirmare rapidă și rezervare clară.</p>
+                    <p class="font-display text-2xl font-700"><?= v2_te('Secure payment') ?></p>
+                    <p class="mt-1 text-ink-soft"><?= v2_te('Quick confirmation and a clear booking.') ?></p>
                 </div>
                 <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5">
-                    <p class="font-display text-2xl font-700">Suport</p>
-                    <p class="mt-1 text-ink-soft">Ai toate detaliile înainte să ajungi.</p>
+                    <p class="font-display text-2xl font-700"><?= v2_te('Support') ?></p>
+                    <p class="mt-1 text-ink-soft"><?= v2_te('You have all the details before you arrive.') ?></p>
                 </div>
             </div>
 
@@ -381,7 +400,7 @@ include __DIR__ . '/includes/header.php';
             <section id="despre" class="scroll-mt-40">
                 <div class="flex items-end justify-between gap-4 mb-6">
                     <div>
-                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Ce te așteaptă</h2>
+                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2"><?= v2_te('What to expect') ?></h2>
                     </div>
                 </div>
 
@@ -398,42 +417,42 @@ include __DIR__ . '/includes/header.php';
 
                     <div class="md:col-span-2">
                         <div class="bg-paper-2 rounded-3xl border border-ink/10 p-5">
-                            <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft">PE SCURT</p>
+                            <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft"><?= v2_te('At a glance') ?></p>
                             <dl class="mt-4 space-y-3 text-sm">
                                 <?php if (! empty($activity['category'])): ?>
-                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Categorie</dt><dd class="font-700"><?= htmlspecialchars($activity['category']['name']) ?></dd></div>
+                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft"><?= v2_te('Category') ?></dt><dd class="font-700"><?= htmlspecialchars($activity['category']['name']) ?></dd></div>
                                 <?php endif; ?>
                                 <?php if (! empty($activity['difficulty_level'])): ?>
-                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Dificultate</dt><dd class="font-700"><?= htmlspecialchars($difficultyLabels[$activity['difficulty_level']] ?? $activity['difficulty_level']) ?></dd></div>
+                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft"><?= v2_te('Difficulty') ?></dt><dd class="font-700"><?= htmlspecialchars($difficultyLabels[$activity['difficulty_level']] ?? $activity['difficulty_level']) ?></dd></div>
                                 <?php endif; ?>
                                 <?php
                                 $envFlags = [];
-                                if (! empty($activity['flags']['is_indoor'])) $envFlags[] = 'Indoor';
-                                if (! empty($activity['flags']['is_outdoor'])) $envFlags[] = 'Outdoor';
+                                if (! empty($activity['flags']['is_indoor'])) $envFlags[] = v2_t('Indoor');
+                                if (! empty($activity['flags']['is_outdoor'])) $envFlags[] = v2_t('Outdoor');
                                 if (! empty($envFlags)):
                                     ?>
-                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Mediu</dt><dd class="font-700"><?= htmlspecialchars(implode(' / ', $envFlags)) ?></dd></div>
+                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft"><?= v2_te('Setting') ?></dt><dd class="font-700"><?= htmlspecialchars(implode(' / ', $envFlags)) ?></dd></div>
                                 <?php endif; ?>
                                 <?php if ($activity['age_min'] !== null || $activity['age_max'] !== null): ?>
                                     <div class="flex justify-between gap-4 border-b border-ink/10 pb-3">
-                                        <dt class="text-ink-soft">Vârstă</dt>
+                                        <dt class="text-ink-soft"><?= v2_te('Age') ?></dt>
                                         <dd class="font-700">
                                             <?php
                                             if ($activity['age_min'] !== null && $activity['age_max'] !== null) {
-                                                echo (int) $activity['age_min'] . '–' . (int) $activity['age_max'] . ' ani';
+                                                echo v2_te('{min}–{max} years', ['min' => (int) $activity['age_min'], 'max' => (int) $activity['age_max']]);
                                             } elseif ($activity['age_min'] !== null) {
-                                                echo '≥ ' . (int) $activity['age_min'] . ' ani';
+                                                echo v2_te('from {age} years', ['age' => (int) $activity['age_min']]);
                                             } else {
-                                                echo '≤ ' . (int) $activity['age_max'] . ' ani';
+                                                echo v2_te('up to {age} years', ['age' => (int) $activity['age_max']]);
                                             }
                                             ?>
                                         </dd>
                                     </div>
                                 <?php endif; ?>
                                 <?php if (! empty($activity['languages_offered'])): ?>
-                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft">Limbi</dt><dd class="font-700 uppercase"><?= htmlspecialchars(implode(' · ', (array) $activity['languages_offered'])) ?></dd></div>
+                                    <div class="flex justify-between gap-4 border-b border-ink/10 pb-3"><dt class="text-ink-soft"><?= v2_te('Languages') ?></dt><dd class="font-700 uppercase"><?= htmlspecialchars(implode(' · ', (array) $activity['languages_offered'])) ?></dd></div>
                                 <?php endif; ?>
-                                <div class="flex justify-between gap-4"><dt class="text-ink-soft">Acces</dt><dd class="font-700">Cu rezervare</dd></div>
+                                <div class="flex justify-between gap-4"><dt class="text-ink-soft"><?= v2_te('Access') ?></dt><dd class="font-700"><?= v2_te('By booking') ?></dd></div>
                             </dl>
                         </div>
                     </div>
@@ -445,10 +464,10 @@ include __DIR__ . '/includes/header.php';
                 <section id="galerie" class="scroll-mt-40">
                     <div class="flex items-end justify-between gap-4 mb-6">
                         <div>
-                            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">GALERIE</p>
-                            <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Vezi atmosfera înainte să rezervi</h2>
+                            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion"><?= v2_te('Gallery') ?></p>
+                            <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2"><?= v2_te('Get a feel for it before you book') ?></h2>
                         </div>
-                        <button @click="openGallery(0)" class="hidden sm:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-700 hover:bg-ink hover:text-paper transition-colors">Deschide galeria</button>
+                        <button @click="openGallery(0)" class="hidden sm:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-700 hover:bg-ink hover:text-paper transition-colors"><?= v2_te('Open the gallery') ?></button>
                     </div>
 
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -466,13 +485,13 @@ include __DIR__ . '/includes/header.php';
             <?php if (! empty($activity['included_items']) || ! empty($activity['not_included']) || ! empty($activity['requirements'])): ?>
                 <section class="scroll-mt-40">
                     <div class="mb-6">
-                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">CE INCLUDE</p>
-                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Detalii practice</h2>
+                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion"><?= v2_te('What is included') ?></p>
+                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2"><?= v2_te('Practical details') ?></h2>
                     </div>
                     <div class="grid sm:grid-cols-3 gap-4">
                         <?php if (! empty($activity['included_items'])): ?>
                             <div class="soft-card p-5">
-                                <h3 class="font-display text-xl font-700">Inclus</h3>
+                                <h3 class="font-display text-xl font-700"><?= v2_te('Included') ?></h3>
                                 <ul class="mt-3 space-y-1 text-sm text-ink-soft">
                                     <?php foreach ($activity['included_items'] as $item): ?>
                                         <li>✓ <?= htmlspecialchars($item) ?></li>
@@ -482,7 +501,7 @@ include __DIR__ . '/includes/header.php';
                         <?php endif; ?>
                         <?php if (! empty($activity['not_included'])): ?>
                             <div class="soft-card p-5">
-                                <h3 class="font-display text-xl font-700">Neinclus</h3>
+                                <h3 class="font-display text-xl font-700"><?= v2_te('Not included') ?></h3>
                                 <ul class="mt-3 space-y-1 text-sm text-ink-soft">
                                     <?php foreach ($activity['not_included'] as $item): ?>
                                         <li>× <?= htmlspecialchars($item) ?></li>
@@ -492,7 +511,7 @@ include __DIR__ . '/includes/header.php';
                         <?php endif; ?>
                         <?php if (! empty($activity['requirements'])): ?>
                             <div class="soft-card p-5">
-                                <h3 class="font-display text-xl font-700">Cerințe</h3>
+                                <h3 class="font-display text-xl font-700"><?= v2_te('Requirements') ?></h3>
                                 <ul class="mt-3 space-y-1 text-sm text-ink-soft">
                                     <?php foreach ($activity['requirements'] as $item): ?>
                                         <li>• <?= htmlspecialchars($item) ?></li>
@@ -511,8 +530,8 @@ include __DIR__ . '/includes/header.php';
                         <div class="bg-forest text-paper rounded-[2rem] p-6 sm:p-8 overflow-hidden relative">
                             <div class="absolute inset-0 opacity-10 bg-dotgrid-light"></div>
                             <div class="relative">
-                                <p class="font-mono text-[11px] tracking-[.22em] text-paper/60">PROGRAM</p>
-                                <h2 class="font-display text-4xl font-700 leading-none mt-2">Intervale disponibile</h2>
+                                <p class="font-mono text-[11px] tracking-[.22em] text-paper/60"><?= v2_te('Opening hours') ?></p>
+                                <h2 class="font-display text-4xl font-700 leading-none mt-2"><?= v2_te('Available times') ?></h2>
                                 <dl class="mt-6 space-y-3">
                                     <?php
                                     $byDay = [];
@@ -523,23 +542,23 @@ include __DIR__ . '/includes/header.php';
                                         $intervals = $byDay[$d] ?? null;
                                         ?>
                                         <div class="flex items-center justify-between gap-4 border-b border-paper/15 pb-3 <?= $intervals ? '' : 'opacity-50' ?>">
-                                            <dt><?= $dayLabels[$d] ?></dt>
-                                            <dd class="font-mono font-700"><?= $intervals ? implode(' · ', $intervals) : 'Închis' ?></dd>
+                                            <dt><?= v2_e($dayLabels[$d]) ?></dt>
+                                            <dd class="font-mono font-700"><?= $intervals ? implode(' · ', $intervals) : v2_te('Closed') ?></dd>
                                         </div>
                                     <?php endfor; ?>
                                 </dl>
-                                <p class="mt-5 text-paper/70 text-sm leading-6">Verifică sloturile exacte disponibile în zona de rezervare.</p>
+                                <p class="mt-5 text-paper/70 text-sm leading-6"><?= v2_te('Check the exact times available in the booking panel.') ?></p>
                             </div>
                         </div>
 
                         <div class="bg-paper-2 rounded-[2rem] p-6 sm:p-8 border border-ink/10">
-                            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">BINE DE ȘTIUT</p>
-                            <h2 class="font-display text-4xl font-700 leading-none mt-2">Reguli & recomandări</h2>
+                            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion"><?= v2_te('Good to know') ?></p>
+                            <h2 class="font-display text-4xl font-700 leading-none mt-2"><?= v2_te('Rules & tips') ?></h2>
                             <ul class="mt-6 space-y-3">
                                 <?php if ($activity['booking_window']['lead_time_hours'] ?? null): ?>
-                                    <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-700">✓</span><span>Rezervă cu minim <?= (int) $activity['booking_window']['lead_time_hours'] ?> ore înainte de slot.</span></li>
+                                    <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-700">✓</span><span><?= v2_te('Book at least {n} hours before the time slot.', ['n' => (int) $activity['booking_window']['lead_time_hours']]) ?></span></li>
                                 <?php endif; ?>
-                                <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-700">✓</span><span>Nu este nevoie să tipărești biletul; codul QR de pe telefon e suficient.</span></li>
+                                <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-700">✓</span><span><?= v2_te('There is no need to print the ticket: the QR code on your phone is enough.') ?></span></li>
                                 <?php if (! empty($activity['cancellation_policy'])): ?>
                                     <li class="flex gap-3"><span class="mt-1 w-5 h-5 rounded-full bg-vermilion text-paper grid place-items-center text-[11px] font-700">✓</span><span><?= htmlspecialchars($activity['cancellation_policy']) ?></span></li>
                                 <?php endif; ?>
@@ -555,7 +574,7 @@ include __DIR__ . '/includes/header.php';
             <!-- SEO body -->
             <?php if (! empty($activity['seo']['body'])): ?>
                 <section class="proseish max-w-none scroll-mt-40" id="ghid">
-                    <p class="font-mono text-[11px] tracking-[.22em] text-vermilion uppercase mb-3">GHID</p>
+                    <p class="font-mono text-[11px] tracking-[.22em] text-vermilion uppercase mb-3"><?= v2_te('Guide') ?></p>
                     <?php if (! empty($activity['seo']['body_title'])): ?>
                         <h2><?= htmlspecialchars($activity['seo']['body_title']) ?></h2>
                     <?php endif; ?>
@@ -567,8 +586,8 @@ include __DIR__ . '/includes/header.php';
             <?php if (! empty($activity['venue'])): ?>
                 <section id="locatie" class="scroll-mt-40">
                     <div class="mb-6">
-                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">LOCAȚIE</p>
-                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Unde are loc experiența</h2>
+                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion"><?= v2_te('Venue') ?></p>
+                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2"><?= v2_te('Where the experience takes place') ?></h2>
                     </div>
 
                     <div class="grid lg:grid-cols-5 gap-5">
@@ -579,22 +598,22 @@ include __DIR__ . '/includes/header.php';
                                     class="w-full h-full min-h-[360px] border-0"
                                     loading="lazy"
                                     referrerpolicy="no-referrer-when-downgrade"
-                                    title="Hartă <?= htmlspecialchars($activity['venue']['name']) ?>"></iframe>
+                                    title="<?= v2_te('Map of {name}', ['name' => $activity['venue']['name']]) ?>"></iframe>
                             <?php else: ?>
                                 <div class="absolute inset-0 grid place-items-center text-center p-8">
                                     <div>
                                         <div class="mx-auto w-16 h-16 rounded-2xl bg-vermilion text-paper grid place-items-center rotate-[-4deg]">
                                             <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11Z"/><circle cx="12" cy="11" r="2.5"/></svg>
                                         </div>
-                                        <p class="mt-4 font-display text-2xl font-700">Hartă indisponibilă</p>
-                                        <p class="mt-2 text-ink-soft max-w-sm">Coordonatele locației nu sunt configurate.</p>
+                                        <p class="mt-4 font-display text-2xl font-700"><?= v2_te('Map unavailable') ?></p>
+                                        <p class="mt-2 text-ink-soft max-w-sm"><?= v2_te('The coordinates of the venue are not set.') ?></p>
                                     </div>
                                 </div>
                             <?php endif; ?>
                         </div>
 
                         <div class="lg:col-span-2 bg-paper border-2 border-ink rounded-[2rem] p-6">
-                            <p class="font-mono text-[11px] tracking-[.22em] text-ink-soft">ADRESĂ</p>
+                            <p class="font-mono text-[11px] tracking-[.22em] text-ink-soft"><?= v2_te('Address') ?></p>
                             <h3 class="font-display text-2xl font-700 mt-2"><?= htmlspecialchars($activity['venue']['name'] ?? '') ?></h3>
                             <?php if (! empty($activity['venue']['address'])): ?>
                                 <p class="mt-3 text-ink-soft leading-7">
@@ -607,7 +626,7 @@ include __DIR__ . '/includes/header.php';
                             <?php endif; ?>
                             <div class="mt-5 space-y-2 text-sm">
                                 <?php if (! empty($activity['venue']['lat']) && ! empty($activity['venue']['lng'])): ?>
-                                    <a href="https://maps.google.com/?q=<?= urlencode($activity['venue']['lat'] . ',' . $activity['venue']['lng']) ?>" target="_blank" class="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-paper-2 hover:bg-ink hover:text-paper transition-colors font-700">Deschide în Maps <span>→</span></a>
+                                    <a href="https://maps.google.com/?q=<?= urlencode($activity['venue']['lat'] . ',' . $activity['venue']['lng']) ?>" target="_blank" class="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-paper-2 hover:bg-ink hover:text-paper transition-colors font-700"><?= v2_te('Open in Maps') ?> <span>→</span></a>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -619,8 +638,8 @@ include __DIR__ . '/includes/header.php';
             <?php if (! empty($activity['faqs'])): ?>
                 <section id="faq" class="scroll-mt-40" x-data="{ openFaq: 0 }">
                     <div class="mb-6">
-                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">ÎNTREBĂRI FRECVENTE</p>
-                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Tot ce trebuie să știi</h2>
+                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion"><?= v2_te('Frequently asked questions') ?></p>
+                        <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2"><?= v2_te('Everything you need to know') ?></h2>
                     </div>
                     <div class="space-y-3">
                         <?php foreach ($activity['faqs'] as $idx => $faq): ?>
@@ -647,13 +666,13 @@ include __DIR__ . '/includes/header.php';
                             <h2 class="font-display text-3xl sm:text-4xl font-700 leading-tight mt-2"><?= htmlspecialchars($rail['title']) ?></h2>
                         </div>
                         <?php if (! empty($activity['city'])): ?>
-                            <a href="/<?= htmlspecialchars($activity['city']['slug']) ?>" class="hidden sm:inline-flex text-vermilion font-700 underline-wobble">Vezi toate din <?= htmlspecialchars($activity['city']['name']) ?> →</a>
+                            <a href="/<?= htmlspecialchars($activity['city']['slug']) ?>" class="hidden sm:inline-flex text-vermilion font-700 underline-wobble"><?= v2_te('See everything in {city} →', ['city' => $activity['city']['name']]) ?></a>
                         <?php endif; ?>
                     </div>
 
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <?php foreach ($rail['cards'] as $rel): ?>
-                            <a href="/activitate/<?= htmlspecialchars($rel['slug']) ?>"
+                            <a href="/activity/<?= htmlspecialchars($rel['slug']) ?>"
                                class="ticket ticket-lift bg-paper border-2 border-ink rounded-3xl overflow-hidden group">
                                 <div class="h-40 relative overflow-hidden bg-paper-2">
                                     <?php if (! empty($rel['cover_image_url'])): ?>
@@ -671,7 +690,7 @@ include __DIR__ . '/includes/header.php';
                                         <?php if (! empty($rel['city'])): ?><?= htmlspecialchars($rel['city']['name']) ?> ·<?php endif; ?>
                                         <?= (int) $rel['duration_minutes'] ?> min
                                     </p>
-                                    <p class="mt-3 font-700 text-vermilion"><?= ! empty($rel['cheapest_price_cents']) ? 'de la ' . $pricedFromCents($rel['cheapest_price_cents']) : 'rezervă online' ?></p>
+                                    <p class="mt-3 font-700 text-vermilion"><?= ! empty($rel['cheapest_price_cents']) ? v2_te('from {price}', ['price' => v2_own_price_label($rel['cheapest_price_cents'], $rel['currency'] ?? null, $rel['cheapest_price_eur_cents'] ?? null)]) : v2_te('book online') ?></p>
                                 </div>
                             </a>
                         <?php endforeach; ?>
@@ -686,16 +705,16 @@ include __DIR__ . '/includes/header.php';
                 <div class="bg-ink text-paper p-6 relative">
                     <div class="absolute inset-0 opacity-10 bg-dotgrid-light"></div>
                     <div class="relative">
-                        <p class="font-mono text-[10px] tracking-[.2em] text-paper/60">REZERVARE ONLINE</p>
-                        <h2 class="font-display text-4xl font-700 mt-2">Alege biletele</h2>
-                        <p class="mt-2 text-paper/65">Confirmare instantă. Bilet cu QR pe email.</p>
+                        <p class="font-mono text-[10px] tracking-[.2em] text-paper/60"><?= v2_te('Book online') ?></p>
+                        <h2 class="font-display text-4xl font-700 mt-2"><?= v2_te('Choose your tickets') ?></h2>
+                        <p class="mt-2 text-paper/65"><?= v2_te('Instant confirmation. QR ticket by email.') ?></p>
                     </div>
                 </div>
 
                 <div class="p-5 sm:p-6">
                     <!-- Date picker -->
                     <label class="block">
-                        <span class="font-700 text-sm">Data</span>
+                        <span class="font-700 text-sm"><?= v2_te('Date') ?></span>
                         <input type="date" class="mt-2 w-full bg-paper-2 border-2 border-ink/15 focus:border-ink rounded-2xl px-4 py-3 focus:outline-none"
                                x-model="selectedDate" @change="loadSlots()"
                                :min="minDate" :max="maxDate">
@@ -703,10 +722,10 @@ include __DIR__ . '/includes/header.php';
 
                     <!-- Slot picker -->
                     <div class="mt-5">
-                        <p class="font-700 text-sm mb-2">Ora</p>
-                        <div x-show="loadingSlots" class="text-ink-soft text-sm py-3">Se încarcă sloturile…</div>
+                        <p class="font-700 text-sm mb-2"><?= v2_te('Time') ?></p>
+                        <div x-show="loadingSlots" class="text-ink-soft text-sm py-3"><?= v2_te('Loading the available times…') ?></div>
                         <div x-show="! loadingSlots && slots.length === 0 && selectedDate" class="text-ink-soft text-sm py-3">
-                            Nu sunt sloturi disponibile în această zi.
+                            <?= v2_te('There are no times available on this day.') ?>
                         </div>
                         <div x-show="! loadingSlots && slots.length > 0" class="grid grid-cols-3 gap-2">
                             <template x-for="slot in slots" :key="slot.start_time">
@@ -727,7 +746,7 @@ include __DIR__ . '/includes/header.php';
 
                     <!-- Variants -->
                     <div class="mt-5" x-show="selectedSlot" x-collapse>
-                        <p class="font-700 text-sm mb-2">Tip bilet</p>
+                        <p class="font-700 text-sm mb-2"><?= v2_te('Ticket type') ?></p>
                         <div class="space-y-2">
                             <template x-for="variant in variants" :key="variant.id">
                                 <div class="flex items-center justify-between gap-3 bg-paper-2 rounded-2xl p-3 border border-ink/10">
@@ -746,7 +765,7 @@ include __DIR__ . '/includes/header.php';
 
                         <div class="mt-5 border-t-2 border-dashed border-ink/15 pt-5">
                             <div class="flex items-center justify-between gap-4">
-                                <span class="text-ink-soft">Subtotal</span>
+                                <span class="text-ink-soft"><?= v2_te('Subtotal') ?></span>
                                 <strong class="font-display text-3xl" x-text="money(totalCents)"></strong>
                             </div>
                             <p class="mt-1 text-xs text-ink-soft" x-text="participantsLabel"></p>
@@ -755,23 +774,23 @@ include __DIR__ . '/includes/header.php';
                                     :disabled="! canSubmit"
                                     :class="canSubmit ? 'bg-vermilion text-paper hover:bg-vermilion-d' : 'bg-paper-2 text-ink-soft cursor-not-allowed'"
                                     class="mt-5 w-full flex items-center justify-center gap-2 px-5 py-4 rounded-full font-700 transition-colors">
-                                Continuă rezervarea
+                                <?= v2_te('Continue booking') ?>
                                 <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
                             </button>
                         </div>
 
                         <div class="mt-5 grid grid-cols-3 gap-2 text-center">
                             <div class="rounded-2xl bg-paper-2 p-3">
-                                <p class="font-mono text-[9px] text-ink-soft tracking-widest">DURATĂ</p>
+                                <p class="font-mono text-[9px] text-ink-soft tracking-widest"><?= v2_te('Duration') ?></p>
                                 <p class="font-700"><?= (int) $activity['duration_minutes'] ?>m</p>
                             </div>
                             <div class="rounded-2xl bg-paper-2 p-3">
-                                <p class="font-mono text-[9px] text-ink-soft tracking-widest">GRUP</p>
+                                <p class="font-mono text-[9px] text-ink-soft tracking-widest"><?= v2_te('Group') ?></p>
                                 <p class="font-700"><?= (int) ($activity['booking_window']['min_participants'] ?? 1) ?>–<?= (int) ($activity['booking_window']['max_participants'] ?? 10) ?></p>
                             </div>
                             <div class="rounded-2xl bg-paper-2 p-3">
                                 <p class="font-mono text-[9px] text-ink-soft tracking-widest">QR</p>
-                                <p class="font-700">Instant</p>
+                                <p class="font-700"><?= v2_te('Instant') ?></p>
                             </div>
                         </div>
                     </div>
@@ -779,9 +798,9 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <div class="mt-4 bg-paper-2 rounded-3xl border border-ink/10 p-5">
-                <p class="font-display text-2xl font-700">Vrei să faci cadou experiența?</p>
-                <p class="mt-2 text-ink-soft leading-7">Trimite un card cadou valabil pentru această activitate sau pentru orice altă experiență de pe <?= htmlspecialchars(SITE_NAME) ?>.</p>
-                <a href="/card-cadou" class="mt-4 inline-flex text-vermilion font-700 underline-wobble">Cumpără card cadou →</a>
+                <p class="font-display text-2xl font-700"><?= v2_te('Want to give this experience as a gift?') ?></p>
+                <p class="mt-2 text-ink-soft leading-7"><?= v2_te('Send a gift card valid for this activity or for any other experience on {site}.', ['site' => SITE_NAME]) ?></p>
+                <a href="/gift-card" class="mt-4 inline-flex text-vermilion font-700 underline-wobble"><?= v2_te('Buy a gift card →') ?></a>
             </div>
         </aside>
     </div>
@@ -793,10 +812,10 @@ include __DIR__ . '/includes/header.php';
 <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-paper/95 backdrop-blur border-t border-ink/10 p-3">
     <div class="flex items-center justify-between gap-3">
         <div>
-            <p class="text-xs text-ink-soft">de la</p>
-            <p class="font-display text-2xl font-700 leading-none"><?= $pricedFromCents($activity['cheapest_price_cents'] ?? null) ?></p>
+            <p class="text-xs text-ink-soft"><?= v2_te('from') ?></p>
+            <p class="font-display text-2xl font-700 leading-none"><?= v2_e($pricedFromCents($activity['cheapest_price_cents'] ?? null)) ?></p>
         </div>
-        <a href="#rezerva" class="px-6 py-3 rounded-full bg-vermilion text-paper font-700">Rezervă</a>
+        <a href="#rezerva" class="px-6 py-3 rounded-full bg-vermilion text-paper font-700"><?= v2_te('Book') ?></a>
     </div>
 </div>
 
@@ -806,7 +825,7 @@ include __DIR__ . '/includes/header.php';
 <div x-show="galleryOpen" x-cloak class="fixed inset-0 z-[70] bg-ink/95 text-paper p-4 sm:p-8" @keydown.escape.window="galleryOpen=false">
     <div class="max-w-6xl mx-auto h-full flex flex-col">
         <div class="flex items-center justify-between gap-4 mb-4">
-            <p class="font-mono text-xs tracking-[.2em] text-paper/50">GALERIE FOTO</p>
+            <p class="font-mono text-xs tracking-[.2em] text-paper/50"><?= v2_te('Photo gallery') ?></p>
             <button @click="galleryOpen=false" class="w-11 h-11 rounded-full bg-paper text-ink grid place-items-center font-700">×</button>
         </div>
         <div class="relative flex-1 rounded-[2rem] overflow-hidden bg-paper/5 border border-paper/10" x-show="gallery.length > 0">
@@ -850,6 +869,9 @@ function activityPage(bootstrap) {
         variants: bootstrap.variants,
         window: bootstrap.window,
         gallery: bootstrap.gallery || [],
+        currency: bootstrap.currency || 'EUR',
+        locale: bootstrap.locale || 'en-GB',
+        labels: bootstrap.labels || {},
 
         selectedDate: todayStr,
         selectedSlot: null,
@@ -907,12 +929,12 @@ function activityPage(bootstrap) {
 
         get participantsLabel() {
             const n = this.totalSeatsUsed;
-            if (! n) return 'Selectează biletele';
+            if (! n) return this.labels.choose || '';
             const min = this.window.min_participants || 1;
             const max = this.window.max_participants || 99;
-            if (n < min) return `Minim ${min} participanți`;
-            if (n > max) return `Maxim ${max} participanți`;
-            return `${n} ${n === 1 ? 'participant' : 'participanți'}`;
+            if (n < min) return (this.labels.min || '').replace('{n}', min);
+            if (n > max) return (this.labels.max || '').replace('{n}', max);
+            return n === 1 ? (this.labels.one || '') : (this.labels.many || '').replace('{n}', n);
         },
 
         get canSubmit() {
@@ -927,7 +949,7 @@ function activityPage(bootstrap) {
 
         money(cents) {
             const v = (cents || 0) / 100;
-            return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', maximumFractionDigits: 0 }).format(v);
+            return new Intl.NumberFormat(this.locale, { style: 'currency', currency: this.currency, maximumFractionDigits: Number.isInteger(v) ? 0 : 2 }).format(v);
         },
 
         openGallery(index) {
@@ -942,7 +964,7 @@ function activityPage(bootstrap) {
             if (! this.canSubmit) return;
             if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addActivityItem !== 'function') {
                 // Hard fallback if cart.js isn't loaded yet — page reload usually fixes this
-                alert('Coșul nu este încărcat. Reîncarcă pagina și încearcă din nou.');
+                alert(this.labels.noCart || '');
                 return;
             }
 
@@ -965,6 +987,7 @@ function activityPage(bootstrap) {
                 // missing.
                 commission_rate: this.commissionRate,
                 commission_mode: this.commissionMode,
+                currency: this.currency,
             };
 
             // Push one cart line per variant that has at least one participant.
@@ -973,7 +996,7 @@ function activityPage(bootstrap) {
             // Only increment `pushed` if addActivityItem actually persisted
             // (returns the saved cart). When its guard rejects (missing id,
             // empty date, etc.) it now returns `null` — we must NOT redirect
-            // to /cos in that case, otherwise the user lands on an empty
+            // to /cart in that case, otherwise the user lands on an empty
             // cart page and can't tell why.
             let pushed = 0;
             for (const variant of this.variants) {
@@ -987,6 +1010,8 @@ function activityPage(bootstrap) {
                         name: variant.name,
                         price_cents: variant.price_cents,
                         capacity_share: variant.capacity_share || 1,
+                        // the basket reads the line's currency from the variant; without it it assumes euro
+                        currency: variant.currency || this.currency,
                     },
                     {
                         date: this.selectedDate,
@@ -1004,12 +1029,12 @@ function activityPage(bootstrap) {
                 // both cases the user needs to see something instead of a
                 // silent no-op. The console.warn from addActivityItem already
                 // explains WHY for the second case.
-                alert('Nu am putut adăuga în coș. Verifică data și ora alese, apoi încearcă din nou.');
+                alert(this.labels.notAdded || '');
                 return;
             }
 
             // Redirect to cart so the user can review + continue to checkout.
-            window.location.href = '/cos';
+            window.location.href = bootstrap.cartUrl || '/cart';
         },
     };
 }

@@ -29,8 +29,10 @@
   var data = {};
   try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
   var b = data.booking;
-  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  /* Month and weekday names come from the browser, in the language of the page. */
+  var LOCALE = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  function fmtDate(d, opts) { try { return d.toLocaleDateString(LOCALE, opts); } catch (e) { return d.toLocaleDateString('en-GB', opts); } }
+  function fmtNumber(n) { try { return new Intl.NumberFormat(LOCALE).format(n); } catch (e) { return String(n); } }
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   // local calendar date, never toISOString (that is UTC and shifts the day east of Greenwich)
@@ -98,17 +100,14 @@
     var pointsEstimate = function () {
       return loyalty() ? Math.max(0, BileteOnlineCart.estimatePoints(totalCents() / 100)) : 0;
     };
-    var pointsWord = function (n) {
-      if (n === 1) return '1 point';
-      return new Intl.NumberFormat('en-GB').format(n) + ' points';
-    };
+    var pointsWord = function (n) { return VQ.n(n, 'point', 'points'); };
     var participantsLabel = function () {
       var n = seatsUsed();
-      if (!n) return 'Choose your tickets';
+      if (!n) return VQ.t('Choose your tickets');
       var min = win.min_participants || 1, max = win.max_participants || 99;
-      if (n < min) return 'Minimum ' + min + ' ' + (min === 1 ? 'participant' : 'participants');
-      if (n > max) return 'Maximum ' + max + ' ' + (max === 1 ? 'participant' : 'participants');
-      return n + ' ' + (n === 1 ? 'participant' : 'participants');
+      if (n < min) return VQ.t('Minimum {count}', { count: VQ.n(min, 'participant', 'participants') });
+      if (n > max) return VQ.t('Maximum {count}', { count: VQ.n(max, 'participant', 'participants') });
+      return VQ.n(n, 'participant', 'participants');
     };
     var canSubmit = function () {
       var min = win.min_participants || 1, max = win.max_participants || 99, n = seatsUsed();
@@ -135,8 +134,8 @@
       el.fee.textContent = money(feeCents(), cur);
       el.total.textContent = money(mode === 'added_on_top' ? totalCents() + feeCents() : totalCents(), cur);
       el.points.textContent = '+' + pointsWord(pts);
-      el.rewardN.textContent = new Intl.NumberFormat('en-GB').format(pts);
-      el.rewardBig.textContent = '+' + new Intl.NumberFormat('en-GB').format(pts);
+      el.rewardN.textContent = fmtNumber(pts);
+      el.rewardBig.textContent = '+' + fmtNumber(pts);
       var ok = canSubmit();
       el.cart.disabled = !ok;
       el.checkout.disabled = !ok;
@@ -153,7 +152,7 @@
         btn.setAttribute('aria-pressed', String(state.slot === s.start_time));
         btn.appendChild(node('b', null, (s.start_time || '').toString().slice(0, 5)));
         var left = s.capacity_remaining || 0;
-        btn.appendChild(node('span', left <= 3 ? 'is-low' : null, left + (left === 1 ? ' place' : ' places')));
+        btn.appendChild(node('span', left <= 3 ? 'is-low' : null, VQ.n(left, 'place', 'places')));
         btn.addEventListener('click', function () {
           state.slot = s.start_time;
           Object.keys(state.qty).forEach(function (k) { state.qty[k] = 0; });
@@ -184,7 +183,7 @@
     };
 
     var renderCalendar = function () {
-      el.calTitle.textContent = MONTHS[state.calMonth] + ' ' + state.calYear;
+      el.calTitle.textContent = fmtDate(new Date(state.calYear, state.calMonth, 1), { month: 'long', year: 'numeric' });
       el.calGrid.textContent = '';
       var first = new Date(state.calYear, state.calMonth, 1);
       var offset = (first.getDay() + 6) % 7;
@@ -197,7 +196,8 @@
         var btn = node('button', 'bk-cal-day' + (d.getMonth() === state.calMonth ? '' : ' is-out'), String(d.getDate()));
         btn.type = 'button';
         btn.disabled = !selectable;
-        btn.setAttribute('aria-label', d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + (selectable ? '' : ', unavailable'));
+        var dayLabel = fmtDate(d, { day: 'numeric', month: 'long', year: 'numeric' });
+        btn.setAttribute('aria-label', selectable ? dayLabel : VQ.t('{date}, unavailable', { date: dayLabel }));
         if (value === state.date) btn.setAttribute('aria-current', 'date');
         btn.setAttribute('data-date', value);
         el.calGrid.appendChild(btn);
@@ -213,9 +213,9 @@
         btn.type = 'button';
         btn.setAttribute('data-date', v);
         btn.setAttribute('aria-pressed', String(v === state.date));
-        btn.appendChild(node('span', null, v === b.today ? 'Today' : DOW[d.getDay()]));
+        btn.appendChild(node('span', null, v === b.today ? VQ.t('Today') : fmtDate(d, { weekday: 'short' })));
         btn.appendChild(node('b', null, String(d.getDate())));
-        btn.appendChild(node('small', null, MONTHS[d.getMonth()].slice(0, 3)));
+        btn.appendChild(node('small', null, fmtDate(d, { month: 'short' })));
         li.appendChild(btn);
         el.days.appendChild(li);
       });
@@ -237,7 +237,7 @@
       state.calOpen = !state.calOpen;
       el.cal.hidden = !state.calOpen;
       el.calToggle.setAttribute('aria-expanded', String(state.calOpen));
-      el.calToggle.textContent = state.calOpen ? 'Hide the calendar' : 'Choose from the calendar';
+      el.calToggle.textContent = state.calOpen ? VQ.t('Hide the calendar') : VQ.t('Choose from the calendar');
       if (state.calOpen) renderCalendar();
     });
     $('bk-cal-prev').addEventListener('click', function () {
@@ -284,7 +284,7 @@
     var submit = function (dest) {
       if (!canSubmit()) return;
       if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addActivityItem !== 'function') {
-        alert('The basket did not load. Reload the page and try again.');
+        alert(VQ.t('The basket did not load. Reload the page and try again.'));
         return;
       }
       var slot = currentSlot();
@@ -309,8 +309,8 @@
         );
         if (result) pushed++;
       });
-      if (pushed === 0) { alert('We could not add this to your basket. Check the date and time you chose, then try again.'); return; }
-      window.location.href = dest === 'checkout' ? '/checkout' : '/cart';
+      if (pushed === 0) { alert(VQ.t('We could not add this to your basket. Check the date and time you chose, then try again.')); return; }
+      window.location.href = dest === 'checkout' ? VQ.url('/checkout') : VQ.url('/cart');
     };
     el.cart.addEventListener('click', function () { submit('cart'); });
     el.checkout.addEventListener('click', function () { submit('checkout'); });
@@ -334,7 +334,7 @@
       at = (i + gallery.length) % gallery.length;
       img.src = gallery[at].src;
       img.alt = gallery[at].alt || '';
-      title.textContent = gallery[at].alt || 'Gallery';
+      title.textContent = gallery[at].alt || VQ.t('Gallery');
       count.textContent = (at + 1) + ' / ' + gallery.length;
     };
     var close = function () {

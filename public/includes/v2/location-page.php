@@ -15,7 +15,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/nav.php';
 require_once __DIR__ . '/am-labels.php';
 
-$lcName     = navFlatName($location['name'] ?? '') ?: 'Venue';
+$lcName     = navFlatName($location['name'] ?? '') ?: v2_t('Venue');
 $lcSubtitle = trim((string) ($location['subtitle'] ?? ''));
 $lcShort    = trim((string) ($location['short_description'] ?? ''));
 $lcDescHtml = am_rich($location['description'] ?? '');
@@ -65,18 +65,26 @@ $countBits = array_filter([
     !empty($lcCounts['package']) ? v2_num((int) $lcCounts['package'], 'package', 'packages') : '',
 ]);
 
-$breadcrumbs = [['name' => 'Home', 'url' => SITE_URL . '/'], ['name' => 'Venues', 'url' => SITE_URL . '/venues']];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => SITE_URL . '/'], ['name' => v2_t('Venues'), 'url' => SITE_URL . '/venues']];
 if ($lcCityName !== '' && $lcCitySlug !== '') {
     $breadcrumbs[] = ['name' => $lcCityName, 'url' => SITE_URL . '/' . $lcCitySlug];
 }
 $breadcrumbs[] = ['name' => $lcName, 'url' => SITE_URL . '/venue/' . $slug];
 
-$kicker = trim($lcCatName . ($lcCityName !== '' ? ' · ' . $lcCityName : ''), ' ·') ?: 'Venue';
+$kicker = trim($lcCatName . ($lcCityName !== '' ? ' · ' . $lcCityName : ''), ' ·') ?: v2_t('Venue');
 $seo = is_array($location['seo'] ?? null) ? $location['seo'] : [];
-$pageTitleRaw = trim((string) ($seo['meta_title'] ?? '')) ?: ($lcName . ($lcProducts ? ': tickets online' : '') . ($lcCityName !== '' ? ', ' . $lcCityName : '') . ' | Viaqui');
+// "Name: tickets online, City | Viaqui": one sentence per case, so a language can order it its own way
+if ($lcProducts) {
+    $lcTitle = $lcCityName !== '' ? v2_t('{name}: tickets online, {city}', ['name' => $lcName, 'city' => $lcCityName]) : v2_t('{name}: tickets online', ['name' => $lcName]);
+} else {
+    $lcTitle = $lcCityName !== '' ? v2_t('{name}, {city}', ['name' => $lcName, 'city' => $lcCityName]) : $lcName;
+}
+$pageTitleRaw = trim((string) ($seo['meta_title'] ?? '')) ?: ($lcTitle . ' | Viaqui');
 $pageDescription = trim((string) ($seo['meta_description'] ?? ''))
     ?: mb_substr($lcShort !== '' ? $lcShort : trim(preg_replace('/\s+/u', ' ', strip_tags($lcDescHtml))), 0, 160)
-    ?: ('Tickets and experiences at ' . $lcName . ($lcCityName !== '' ? ', ' . $lcCityName : '') . '. Book online and walk in with the ticket on your phone.');
+    ?: ($lcCityName !== ''
+        ? v2_t('Tickets and experiences at {name}, {city}. Book online and walk in with the ticket on your phone.', ['name' => $lcName, 'city' => $lcCityName])
+        : v2_t('Tickets and experiences at {name}. Book online and walk in with the ticket on your phone.', ['name' => $lcName]));
 $canonicalUrl = SITE_URL . '/venue/' . $slug;
 $ogImage = $heroImage ?: (SITE_URL . '/assets/images/og-default.jpg');
 
@@ -160,9 +168,10 @@ $v2ClientData = [
 
 $lcArches = '<svg class="deco-arches" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><path d="M40 400V200a160 160 0 0 1 320 0v200"/><path d="M90 400V200a110 110 0 0 1 220 0v200"/><path d="M140 400V200a60 60 0 0 1 120 0v200"/></svg>';
 $lcLodgingType = $lcLodging ? ([
-    'pensiune' => 'Guest house', 'hotel' => 'Hotel', 'cabana' => 'Mountain lodge', 'vila' => 'Villa', 'apartamente' => 'Apartments',
-    'camping' => 'Campsite', 'glamping' => 'Glamping', 'altele' => 'Accommodation',
-][$lcLodging['type'] ?? ''] ?? 'Accommodation') : '';
+    'pensiune' => v2_t('Guest house'), 'hotel' => v2_t('Hotel'), 'cabana' => v2_t('Mountain lodge'), 'vila' => v2_t('Villa'), 'apartamente' => v2_t('Apartments'),
+    'camping' => v2_t('Campsite'), 'glamping' => v2_t('Glamping'), 'altele' => v2_t('Accommodation'),
+][$lcLodging['type'] ?? ''] ?? v2_t('Accommodation')) : '';
+$lcLinkLabels = am_link_platforms_t();
 
 $v2HeadExtra .= v2_track_organizer($location['organizer_id'] ?? null);
 include __DIR__ . '/head.php';
@@ -176,7 +185,7 @@ include __DIR__ . '/header.php';
     <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="th-in">
       <div class="th-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
@@ -188,27 +197,27 @@ include __DIR__ . '/header.php';
         <?php if ($lcAddress !== '' || $lcMinPrice || $countBits): ?>
         <ul class="th-chips">
           <?php if ($lcAddress !== ''): ?><li><?= v2_ic('map-pin') ?><?= v2_e($lcAddress) ?></li><?php endif; ?>
-          <?php if ($lcMinPrice): ?><li><?= v2_ic('ticket') ?>from <?= v2_e(v2_money_in($lcMinPrice / 100, $lcCurrency)) ?></li><?php endif; ?>
+          <?php if ($lcMinPrice): ?><li><?= v2_ic('ticket') ?><?= v2_te('from {price}', ['price' => v2_money_in($lcMinPrice / 100, $lcCurrency)]) ?></li><?php endif; ?>
           <?php if ($countBits): ?><li><?= v2_e(implode(' · ', $countBits)) ?></li><?php endif; ?>
         </ul>
         <?php endif; ?>
         <div class="th-cta">
           <?php if ($lcProducts): ?>
-            <a class="btn btn-light" href="#bilete">Choose your tickets<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="#bilete"><?= v2_te('Choose your tickets') ?><?= v2_ic('arrow-right') ?></a>
           <?php elseif ($lcCitySlug !== ''): ?>
-            <a class="btn btn-light" href="/<?= v2_e($lcCitySlug) ?>">Things to do in <?= v2_e($lcCityName) ?><?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="/<?= v2_e($lcCitySlug) ?>"><?= v2_te('Things to do in {city}', ['city' => $lcCityName]) ?><?= v2_ic('arrow-right') ?></a>
           <?php endif; ?>
           <?php if ($mapsUrl): ?>
-            <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Maps</a>
+            <a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?><?= v2_te('Open in Maps') ?></a>
           <?php endif; ?>
         </div>
       </div>
 
       <div class="th-media">
         <?php if ($lightbox): ?>
-        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Open the gallery: <?= v2_e($lcName) ?>">
+        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="<?= v2_te('Open the gallery: {name}', ['name' => $lcName]) ?>">
           <img src="<?= v2_e($heroImage) ?>" alt="<?= v2_e($lcName) ?>" fetchpriority="high" decoding="async">
-          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>See the gallery (<?= count($lightbox) ?>)</span><?php endif; ?>
+          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?><?= v2_te('See the gallery ({n})', ['n' => count($lightbox)]) ?></span><?php endif; ?>
         </button>
         <?php else: ?>
         <div class="th-arch is-empty"><?= v2_fallback($lcName) ?><?php if ($lcCityName !== ''): ?><span class="th-arch-name" aria-hidden="true"><?php if ($lcCatName !== ''): ?><small><?= v2_e($lcCatName) ?></small><?php endif; ?><?= v2_e($lcCityName) ?></span><?php endif; ?></div>
@@ -224,52 +233,52 @@ include __DIR__ . '/header.php';
     <div class="wrap bkx-grid" id="bkx">
       <div>
         <div class="bkx-head">
-          <div><p class="kicker">Book online</p><h2 id="bkx-h">Tickets and experiences</h2></div>
-          <button class="bkx-link" type="button" id="bkx-cal-toggle" aria-expanded="false" aria-controls="bkx-cal">Another date</button>
+          <div><p class="kicker"><?= v2_te('Book online') ?></p><h2 id="bkx-h"><?= v2_te('Tickets and experiences') ?></h2></div>
+          <button class="bkx-link" type="button" id="bkx-cal-toggle" aria-expanded="false" aria-controls="bkx-cal"><?= v2_te('Another date') ?></button>
         </div>
-        <ul class="bkx-days" id="bkx-days" aria-label="Choose the day of your visit"></ul>
+        <ul class="bkx-days" id="bkx-days" aria-label="<?= v2_te('Choose the day of your visit') ?>"></ul>
         <div class="bkx-cal" id="bkx-cal" hidden>
           <div class="bkx-cal-head">
-            <button class="rail-btn" type="button" id="bkx-cal-prev" aria-label="Previous month"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" id="bkx-cal-prev" aria-label="<?= v2_te('Previous month') ?>"><?= v2_ic('arrow-left') ?></button>
             <p id="bkx-cal-title" aria-live="polite"></p>
-            <button class="rail-btn" type="button" id="bkx-cal-next" aria-label="Next month"><?= v2_ic('arrow-right') ?></button>
+            <button class="rail-btn" type="button" id="bkx-cal-next" aria-label="<?= v2_te('Next month') ?>"><?= v2_ic('arrow-right') ?></button>
           </div>
-          <div class="bkx-cal-dow" aria-hidden="true"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div>
+          <div class="bkx-cal-dow" aria-hidden="true"><span><?= v2_te('Mo') ?></span><span><?= v2_te('Tu') ?></span><span><?= v2_te('We') ?></span><span><?= v2_te('Th') ?></span><span><?= v2_te('Fr') ?></span><span><?= v2_te('Sa') ?></span><span><?= v2_te('Su') ?></span></div>
           <div class="bkx-cal-grid" id="bkx-cal-grid"></div>
         </div>
         <p class="bkx-hours" id="bkx-hours" aria-live="polite"></p>
-        <div class="bkx-tabs" id="bkx-tabs" role="group" aria-label="Ticket categories" hidden></div>
+        <div class="bkx-tabs" id="bkx-tabs" role="group" aria-label="<?= v2_te('Ticket categories') ?>" hidden></div>
         <div class="bkx-list" id="bkx-list"></div>
       </div>
 
-      <aside class="bkx-side" aria-label="Your booking">
+      <aside class="bkx-side" aria-label="<?= v2_te('Your booking') ?>">
         <div class="bkx-sum" id="bkx-sum" hidden>
-          <h3>Your booking</h3>
+          <h3><?= v2_te('Your booking') ?></h3>
           <ul class="bkx-lines" id="bkx-lines"></ul>
-          <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></strong></div>
-          <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label">Booking fee</span><strong id="bkx-fee"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></strong></div>
-          <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></strong></div>
+          <div class="bkx-row"><span><?= v2_te('Subtotal') ?></span><strong id="bkx-sub"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></strong></div>
+          <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label"><?= v2_te('Booking fee') ?></span><strong id="bkx-fee"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></strong></div>
+          <div class="bkx-row bkx-total"><span><?= v2_te('Total') ?></span><strong id="bkx-total"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></strong></div>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
-            <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continue to payment<?= v2_ic('arrow-right') ?></button>
-            <button class="btn btn-ghost" type="button" id="bkx-cart" disabled><?= v2_ic('shopping-cart-simple') ?>Add to basket</button>
+            <button class="btn btn-primary" type="button" id="bkx-go" disabled><?= v2_te('Continue to payment') ?><?= v2_ic('arrow-right') ?></button>
+            <button class="btn btn-ghost" type="button" id="bkx-cart" disabled><?= v2_ic('shopping-cart-simple') ?><?= v2_te('Add to basket') ?></button>
           </div>
-          <p class="bkx-small"><span id="bkx-card-note" hidden>The card processing fee is worked out at checkout and depends on the payment method you choose. </span>Your tickets arrive by email straight after payment. Show them on your phone at the entrance.</p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden><?= v2_te('The card processing fee is worked out at checkout and depends on the payment method you choose.') ?> </span><?= v2_te('Your tickets arrive by email straight after payment. Show them on your phone at the entrance.') ?></p>
         </div>
         <div class="lcp-card">
-          <h3>Good to know</h3>
+          <h3><?= v2_te('Good to know') ?></h3>
           <ul class="lcp-facts">
-            <?php if ($lcHasDay): ?><li><?= v2_ic('calendar-blank') ?><span>Tickets without a time are valid on the day you choose, during the venue's opening hours.</span></li><?php endif; ?>
-            <?php if ($lcHasSlot): ?><li><?= v2_ic('clock') ?><span>Experiences at a fixed time have limited places: you choose your time right here.</span></li><?php endif; ?>
-            <li><?= v2_ic('lock-simple') ?><span>Secure card payment. One basket can hold tickets from several venues.</span></li>
-            <?php if ($lcOrganizer !== ''): ?><li><?= v2_ic('buildings') ?><span>Operator: <?= v2_e($lcOrganizer) ?></span></li><?php endif; ?>
+            <?php if ($lcHasDay): ?><li><?= v2_ic('calendar-blank') ?><span><?= v2_te('Tickets without a time are valid on the day you choose, during the venue\'s opening hours.') ?></span></li><?php endif; ?>
+            <?php if ($lcHasSlot): ?><li><?= v2_ic('clock') ?><span><?= v2_te('Experiences at a fixed time have limited places: you choose your time right here.') ?></span></li><?php endif; ?>
+            <li><?= v2_ic('lock-simple') ?><span><?= v2_te('Secure card payment. One basket can hold tickets from several venues.') ?></span></li>
+            <?php if ($lcOrganizer !== ''): ?><li><?= v2_ic('buildings') ?><span><?= v2_te('Operator: {name}', ['name' => $lcOrganizer]) ?></span></li><?php endif; ?>
           </ul>
         </div>
       </aside>
     </div>
     <div class="bkx-bar" id="bkx-bar" hidden>
       <div><b id="bkx-bar-total"><?= v2_e(v2_money_in(0, $lcCurrency)) ?></b><span id="bkx-bar-count"></span></div>
-      <button class="btn btn-primary" type="button" id="bkx-bar-go">See your booking</button>
+      <button class="btn btn-primary" type="button" id="bkx-bar-go"><?= v2_te('See your booking') ?></button>
     </div>
   </section>
   <?php endif; ?>
@@ -279,8 +288,8 @@ include __DIR__ . '/header.php';
   <section class="sec tabout" id="despre" aria-labelledby="tabout-h">
     <div class="wrap tabout-grid">
       <div>
-        <p class="kicker">About</p>
-        <h2 id="tabout-h">About <?= v2_e($lcName) ?></h2>
+        <p class="kicker"><?= v2_te('About') ?></p>
+        <h2 id="tabout-h"><?= v2_te('About {name}', ['name' => $lcName]) ?></h2>
         <div class="tabout-body lcp-body"><?= $lcDescHtml !== '' ? $lcDescHtml : '<p>' . v2_e($lcShort) . '</p>' ?></div>
 
         <?php if (count($lightbox) > 1): ?>
@@ -295,9 +304,9 @@ include __DIR__ . '/header.php';
       <?php if ($mapsUrl): ?>
       <div class="tmap">
         <?php if ($lcLat && $lcLng): ?>
-        <iframe title="Map of <?= v2_e($lcName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($lcLat . ',' . $lcLng) ?>&z=14&output=embed"></iframe>
+        <iframe title="<?= v2_te('Map of {name}', ['name' => $lcName]) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($lcLat . ',' . $lcLng) ?>&z=14&output=embed"></iframe>
         <?php endif; ?>
-        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Google Maps<?= v2_ic('arrow-right') ?></a>
+        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?><?= v2_te('Open in Google Maps') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <?php endif; ?>
     </div>
@@ -308,28 +317,28 @@ include __DIR__ . '/header.php';
   <?php if ($lcSeasons || $lcFacilities || $lcClosed || array_filter($lcContact)): ?>
   <section class="lcp-sec" id="program" aria-labelledby="lcp-prog-h">
     <div class="wrap">
-      <div class="sec-head"><div><p class="kicker">Opening hours</p><h2 id="lcp-prog-h">When it is open</h2></div></div>
+      <div class="sec-head"><div><p class="kicker"><?= v2_te('Opening hours') ?></p><h2 id="lcp-prog-h"><?= v2_te('When it is open') ?></h2></div></div>
       <div class="lcp-grid">
         <div class="lcp-card">
           <?php if ($lcSeasons): ?>
             <?php foreach ($lcSeasons as $s): $range = trim(am_month_day($s['start'] ?? null) . ' – ' . am_month_day($s['end'] ?? null), ' –'); ?>
             <div class="lcp-season">
-              <b><?= v2_e(trim((string) ($s['name'] ?? '')) ?: 'Opening hours') ?></b>
+              <b><?= v2_e(trim((string) ($s['name'] ?? '')) ?: v2_t('Opening hours')) ?></b>
               <?php if ($range !== ''): ?><small><?= v2_e($range) ?></small><?php endif; ?>
               <dl class="lcp-hours">
                 <?php foreach (am_week_rows($s['schedule'] ?? []) as [$days, $hours]): ?>
                 <dt><?= v2_e($days) ?></dt><dd><?= v2_e($hours) ?></dd>
                 <?php endforeach; ?>
-                <?php if (!empty($s['last_entry'])): ?><dt>last entry</dt><dd><?= v2_e(substr((string) $s['last_entry'], 0, 5)) ?></dd><?php endif; ?>
+                <?php if (!empty($s['last_entry'])): ?><dt><?= v2_te('last entry') ?></dt><dd><?= v2_e(substr((string) $s['last_entry'], 0, 5)) ?></dd><?php endif; ?>
               </dl>
             </div>
             <?php endforeach; ?>
           <?php else: ?>
-            <p class="bkx-note">The day's opening hours appear with the tickets, once you choose a date.</p>
+            <p class="bkx-note"><?= v2_te('The day\'s opening hours appear with the tickets, once you choose a date.') ?></p>
           <?php endif; ?>
           <?php if ($lcClosed): ?>
             <div class="lcp-season">
-              <b>Days it is closed</b>
+              <b><?= v2_te('Days it is closed') ?></b>
               <small><?= v2_e(implode(', ', array_filter(array_map('am_date', $lcClosed)))) ?></small>
             </div>
           <?php endif; ?>
@@ -337,11 +346,11 @@ include __DIR__ . '/header.php';
 
         <div class="lcp-card">
           <?php if ($lcFacilities): ?>
-            <h3>Facilities</h3>
+            <h3><?= v2_te('Facilities') ?></h3>
             <ul class="lcp-chips"><?php foreach ($lcFacilities as $f): ?><li><?= v2_e($f) ?></li><?php endforeach; ?></ul>
           <?php endif; ?>
           <?php if (array_filter($lcContact) || $lcAddress !== ''): ?>
-            <h3>Contact</h3>
+            <h3><?= v2_te('Contact') ?></h3>
             <ul class="lcp-facts">
               <?php if ($lcAddress !== ''): ?><li><?= v2_ic('map-pin') ?><span><?= v2_e($lcAddress) ?></span></li><?php endif; ?>
               <?php if (!empty($lcContact['phone'])): ?><li><?= v2_ic('phone') ?><a href="tel:<?= v2_e(preg_replace('/[^0-9+]/', '', $lcContact['phone'])) ?>"><?= v2_e($lcContact['phone']) ?></a></li><?php endif; ?>
@@ -360,14 +369,16 @@ include __DIR__ . '/header.php';
   <section class="lcp-sec" id="cazare" aria-labelledby="lcp-lodge-h">
     <div class="wrap lcp-lodging">
       <div class="sec-head">
-        <div><p class="kicker"><?= v2_e($lcLodgingType . (!empty($lcLodging['classification']) ? ' · ' . $lcLodging['classification'] : '')) ?></p><h2 id="lcp-lodge-h">Staying at <?= v2_e($lcName) ?></h2></div>
+        <div><p class="kicker"><?= v2_e($lcLodgingType . (!empty($lcLodging['classification']) ? ' · ' . $lcLodging['classification'] : '')) ?></p><h2 id="lcp-lodge-h"><?= v2_te('Staying at {name}', ['name' => $lcName]) ?></h2></div>
       </div>
       <div class="lcp-grid">
         <div class="lcp-body">
           <?php if (!empty($lcLodging['description'])): ?><?= am_rich($lcLodging['description']) ?><?php endif; ?>
           <ul class="lcp-facts">
-            <?php if (!empty($lcLodging['check_in']) || !empty($lcLodging['check_out'])): ?><li><?= v2_ic('clock') ?><span><?= v2_e(trim((!empty($lcLodging['check_in']) ? 'Check-in from ' . $lcLodging['check_in'] : '') . (!empty($lcLodging['check_out']) ? (!empty($lcLodging['check_in']) ? ', check-out by ' : 'Check-out by ') . $lcLodging['check_out'] : ''))) ?></span></li><?php endif; ?>
-            <?php if (!empty($lcLodging['price_from'])): ?><li><?= v2_ic('coins') ?><span>From <?= v2_e(v2_money_in(round((float) $lcLodging['price_from']), strtoupper((string) ($lcLodging['currency'] ?? '')) ?: $lcCurrency)) ?> / night</span></li><?php endif; ?>
+            <?php if (!empty($lcLodging['check_in']) || !empty($lcLodging['check_out'])): ?><li><?= v2_ic('clock') ?><span><?= !empty($lcLodging['check_in']) && !empty($lcLodging['check_out'])
+                ? v2_te('Check-in from {in}, check-out by {out}', ['in' => $lcLodging['check_in'], 'out' => $lcLodging['check_out']])
+                : (!empty($lcLodging['check_in']) ? v2_te('Check-in from {in}', ['in' => $lcLodging['check_in']]) : v2_te('Check-out by {out}', ['out' => $lcLodging['check_out']])) ?></span></li><?php endif; ?>
+            <?php if (!empty($lcLodging['price_from'])): ?><li><?= v2_ic('coins') ?><span><?= v2_te('From {price} / night', ['price' => v2_money_in(round((float) $lcLodging['price_from']), strtoupper((string) ($lcLodging['currency'] ?? '')) ?: $lcCurrency)]) ?></span></li><?php endif; ?>
             <?php if (!empty($lcLodging['phone'])): ?><li><?= v2_ic('phone') ?><a href="tel:<?= v2_e(preg_replace('/[^0-9+]/', '', $lcLodging['phone'])) ?>"><?= v2_e($lcLodging['phone']) ?></a></li><?php endif; ?>
             <?php if (!empty($lcLodging['email'])): ?><li><?= v2_ic('envelope-simple') ?><a href="mailto:<?= v2_e($lcLodging['email']) ?>"><?= v2_e($lcLodging['email']) ?></a></li><?php endif; ?>
           </ul>
@@ -376,29 +387,29 @@ include __DIR__ . '/header.php';
         <div class="lcp-card">
           <?php $lgFac = am_facility_labels($lcLodging['facilities'] ?? [], AM_LODGING_FACILITIES); ?>
           <?php if ($lgFac): ?>
-            <h3>Amenities</h3>
+            <h3><?= v2_te('Amenities') ?></h3>
             <ul class="lcp-chips"><?php foreach ($lgFac as $f): ?><li><?= v2_e($f) ?></li><?php endforeach; ?></ul>
           <?php endif; ?>
           <?php if ($lgLinks): ?>
-            <h3>Book your stay</h3>
+            <h3><?= v2_te('Book your stay') ?></h3>
             <div class="lcp-links">
               <?php foreach ($lgLinks as $l): ?>
-              <a class="btn btn-ghost" href="<?= v2_e($l['url']) ?>" target="_blank" rel="nofollow noopener"><?= v2_e(trim((string) ($l['label'] ?? '')) ?: (['booking' => 'Booking.com', 'airbnb' => 'Airbnb', 'travelminit' => 'Travelminit', 'website' => 'Official website', 'other' => 'Book your stay'][$l['platform'] ?? 'other'] ?? 'Book')) ?><?= v2_ic('arrow-right') ?></a>
+              <a class="btn btn-ghost" href="<?= v2_e($l['url']) ?>" target="_blank" rel="nofollow noopener"><?= v2_e(trim((string) ($l['label'] ?? '')) ?: ($lcLinkLabels[$l['platform'] ?? 'other'] ?? v2_t('Book'))) ?><?= v2_ic('arrow-right') ?></a>
               <?php endforeach; ?>
             </div>
-            <p class="bkx-small">You book the stay directly with the host, on the platform the host has chosen. viaqui.com does not handle payment for accommodation.</p>
+            <p class="bkx-small"><?= v2_te('You book the stay directly with the host, on the platform the host has chosen. Viaqui does not handle payment for accommodation.') ?></p>
           <?php endif; ?>
         </div>
       </div>
       <?php $lgRooms = array_values(array_filter((array) ($lcLodging['rooms'] ?? []), fn ($r) => is_array($r) && trim((string) ($r['name'] ?? '')) !== '')); ?>
       <?php if ($lgRooms): ?>
-      <ul class="lcp-rooms" aria-label="Rooms">
-        <?php foreach ($lgRooms as $r): $rMeta = array_filter([!empty($r['capacity']) ? v2_num((int) $r['capacity'], 'person', 'people') : '', trim((string) ($r['beds'] ?? '')), !empty($r['count']) ? v2_num((int) $r['count'], 'room', 'rooms') . ' of this type' : '']); ?>
+      <ul class="lcp-rooms" aria-label="<?= v2_te('Rooms') ?>">
+        <?php foreach ($lgRooms as $r): $rMeta = array_filter([!empty($r['capacity']) ? v2_num((int) $r['capacity'], 'person', 'people') : '', trim((string) ($r['beds'] ?? '')), !empty($r['count']) ? v2_num((int) $r['count'], 'room of this type', 'rooms of this type') : '']); ?>
         <li class="lcp-room">
           <b><?= v2_e($r['name']) ?></b>
           <?php if ($rMeta): ?><small><?= v2_e(implode(' · ', $rMeta)) ?></small><?php endif; ?>
           <?php if (!empty($r['description'])): ?><small><?= v2_e($r['description']) ?></small><?php endif; ?>
-          <?php if (!empty($r['price_from'])): ?><p class="lcp-price">from <?= v2_e(v2_money_in(round((float) $r['price_from']), strtoupper((string) ($r['currency'] ?? $lcLodging['currency'] ?? '')) ?: $lcCurrency)) ?> / night</p><?php endif; ?>
+          <?php if (!empty($r['price_from'])): ?><p class="lcp-price"><?= v2_te('from {price} / night', ['price' => v2_money_in(round((float) $r['price_from']), strtoupper((string) ($r['currency'] ?? $lcLodging['currency'] ?? '')) ?: $lcCurrency)]) ?></p><?php endif; ?>
         </li>
         <?php endforeach; ?>
       </ul>
@@ -412,7 +423,7 @@ include __DIR__ . '/header.php';
   <section class="lcp-sec" id="reguli" aria-labelledby="lcp-rules-h">
     <div class="wrap">
       <div class="lcp-card">
-        <h3 id="lcp-rules-h">Visiting rules</h3>
+        <h3 id="lcp-rules-h"><?= v2_te('Visiting rules') ?></h3>
         <div class="lcp-body"><?= am_rich($lcRules) ?></div>
       </div>
     </div>
@@ -423,7 +434,7 @@ include __DIR__ . '/header.php';
   <?php if ($lcNearby): ?>
   <section class="lcp-sec" id="atractii" aria-labelledby="lcp-near-h">
     <div class="wrap">
-      <div class="sec-head"><div><p class="kicker">Nearby</p><h2 id="lcp-near-h">Attractions in the area</h2></div></div>
+      <div class="sec-head"><div><p class="kicker"><?= v2_te('Nearby') ?></p><h2 id="lcp-near-h"><?= v2_te('Attractions in the area') ?></h2></div></div>
       <ul class="lcp-near">
         <?php foreach ($lcNearby as $ni => $a): $aImg = v2_media_url($a['image'] ?? null); $aName = navFlatName($a['name'] ?? ''); ?>
         <li><a href="/attraction/<?= v2_e($a['slug']) ?>">
@@ -440,7 +451,7 @@ include __DIR__ . '/header.php';
   <?php if ($lcFaqs): ?>
   <section class="lcp-sec" id="intrebari" aria-labelledby="lcp-faq-h">
     <div class="wrap">
-      <div class="sec-head"><div><p class="kicker">Questions</p><h2 id="lcp-faq-h">Frequently asked questions</h2></div></div>
+      <div class="sec-head"><div><p class="kicker"><?= v2_te('Questions') ?></p><h2 id="lcp-faq-h"><?= v2_te('Frequently asked questions') ?></h2></div></div>
       <div class="lcp-faq">
         <?php foreach ($lcFaqs as $f): ?>
         <details><summary><?= v2_e($f['q']) ?></summary><p><?= nl2br(v2_e($f['a'])) ?></p></details>
@@ -456,12 +467,12 @@ include __DIR__ . '/header.php';
     <div class="lb-top">
       <p class="lb-title" id="lb-title"><?= v2_e($lcName) ?></p>
       <span class="lb-count" id="lb-count">1 / <?= count($lightbox) ?></span>
-      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Close the gallery</span></button>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close the gallery') ?></span></button>
     </div>
     <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
     <div class="lb-nav"<?= count($lightbox) < 2 ? ' hidden' : '' ?>>
-      <button class="rail-btn" type="button" data-lb="prev" aria-label="Previous photo"><?= v2_ic('arrow-left') ?></button>
-      <button class="rail-btn" type="button" data-lb="next" aria-label="Next photo"><?= v2_ic('arrow-right') ?></button>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="<?= v2_te('Previous photo') ?>"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="<?= v2_te('Next photo') ?>"><?= v2_ic('arrow-right') ?></button>
     </div>
   </div>
   <?php endif; ?>
