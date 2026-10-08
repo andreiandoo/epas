@@ -11,11 +11,8 @@
   if (!$('db-content') || !window.BO_ACCOUNT) return;
   var account = window.BO_ACCOUNT;
 
-  var MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-  var WEEKDAYS = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
-  var num = new Intl.NumberFormat('ro-RO');
-  var whole = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 });
-  var cents = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var num = new Intl.NumberFormat(LOC);
   var PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><rect width="160" height="120" fill="#E6F4EC"/><path d="M58 44h44a6 6 0 0 1 6 6v6a8 8 0 0 0 0 16v6a6 6 0 0 1-6 6H58a6 6 0 0 1-6-6v-6a8 8 0 0 0 0-16v-6a6 6 0 0 1 6-6z" fill="none" stroke="#1B7F4E" stroke-width="4" stroke-linejoin="round"/></svg>');
   var pointsPerLei = 100, next = null, refReady = false;
 
@@ -27,7 +24,7 @@
     return svg;
   }
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || Object.keys(v).map(function (k) { return v[k]; })[0];
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || Object.keys(v).map(function (k) { return v[k]; })[0];
     return v == null ? '' : String(v);
   }
   function safeUrl(u, fallback) { u = typeof u === 'string' ? u.trim() : ''; return /^(\/(?![\/\\])|https?:\/\/)/i.test(u) ? u : fallback; }
@@ -40,24 +37,19 @@
   }
   function show(id, on) { $(id).hidden = !on; }
   function count(n) { n = Number(n); return isFinite(n) && n > 0 ? Math.floor(n) : 0; }
-  function toLei(points) { return whole.format(Math.floor(count(points) / (pointsPerLei || 100))) + ' lei'; }
-  function money(n) { n = Number(n) || 0; return (Math.round(n * 100) % 100 ? cents : whole).format(n) + ' lei'; }
-  function plural(n, one, many) {
-    n = count(n);
-    if (n === 1) return '1 ' + one;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
-  function longDate(d) { return d ? d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : ''; }
-  function shortDate(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear(); }
+  // an amount is in the marketplace's currency unless the data names another one
+  function money(n, cur) { n = Number(n) || 0; return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(n, cur || true) : '€' + n; }
+  function toLei(points) { return money(Math.floor(count(points) / (pointsPerLei || 100))); }
+  function longDate(d) { return d ? d.toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' }) : ''; }
+  function shortDate(d) { return d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' }); }
   function relTime(iso) {
     var d = new Date(iso);
     if (!iso || isNaN(d.getTime())) return '';
     var s = Math.max(0, (Date.now() - d.getTime()) / 1000);
-    if (s < 3600) return 'acum ' + Math.max(1, Math.floor(s / 60)) + ' min';
-    if (s < 86400) return 'acum ' + plural(Math.floor(s / 3600), 'oră', 'ore');
-    if (s < 86400 * 30) return 'acum ' + plural(Math.floor(s / 86400), 'zi', 'zile');
-    return 'pe ' + longDate(d);
+    if (s < 3600) return VQ.t('{n} min ago', { n: Math.max(1, Math.floor(s / 60)) });
+    if (s < 86400) return VQ.t('{time} ago', { time: VQ.n(Math.floor(s / 3600), 'hour', 'hours') });
+    if (s < 86400 * 30) return VQ.t('{time} ago', { time: VQ.n(Math.floor(s / 86400), 'day', 'days') });
+    return VQ.t('on {date}', { date: longDate(d) });
   }
   function guard() { show('db-content', false); show('db-guard', true); account.toLogin(); } // the message shows only while the login page loads
 
@@ -75,7 +67,7 @@
     var when = isNaN(d.getTime()) ? null : d;
     var venue = ev.venue && typeof ev.venue === 'object' ? ev.venue : null;
     return {
-      title: txt(ev.name || ev.title) || 'Activitate',
+      title: txt(ev.name || ev.title) || VQ.t('Activity'),
       venue: venue ? txt(venue.name) : txt(ev.venue || ev.location),
       city: txt(ev.city || (venue && venue.city)),
       date: when,
@@ -103,9 +95,9 @@
     var fields = (pc && pc.fields) || {};
     $('db-stat-profile').textContent = count(pc && pc.percentage);
     var tasks = [
-      ['Adaugă orașul preferat', 'recomandări locale mai bune', !!fields.city, '/cont/setari#profil-preferinte'],
-      ['Alege tipuri de activități', 'copii, muzee, natură, escape rooms', !!fields.interests, '/cont/setari#profil-preferinte'],
-      ['Adaugă vârstele copiilor', 'filtrare activități potrivite', !!fields.family || !!fields.beneficiaries, '/cont/setari#familie']
+      [VQ.t('Add your favourite city'), VQ.t('better local recommendations'), !!fields.city, VQ.url('/account/settings') + '#profil-preferinte'],
+      [VQ.t('Choose types of activities'), VQ.t('kids, museums, nature, escape rooms'), !!fields.interests, VQ.url('/account/settings') + '#profil-preferinte'],
+      [VQ.t('Add the ages of your children'), VQ.t('to filter activities that suit them'), !!fields.family || !!fields.beneficiaries, VQ.url('/account/settings') + '#familie']
     ];
     var list = $('db-tasks');
     list.textContent = '';
@@ -115,7 +107,7 @@
       mark.appendChild(ic(t[2] ? 'check' : 'plus'));
       label.appendChild(el('b', null, t[0]));
       label.appendChild(el('small', null, t[1]));
-      a.appendChild(mark); a.appendChild(label); a.appendChild(el('span', 'db-sr', t[2] ? ' (făcut)' : ' (de făcut)'));
+      a.appendChild(mark); a.appendChild(label); a.appendChild(el('span', 'db-sr', t[2] ? VQ.t(' (done)') : VQ.t(' (to do)')));
       li.appendChild(a); list.appendChild(li);
     });
   }
@@ -131,10 +123,10 @@
     var activities = s.upcoming_activities_count != null ? count(s.upcoming_activities_count) : (s.upcoming_events_count != null ? count(s.upcoming_events_count) : tickets);
     var orders = count(s.orders_count != null ? s.orders_count : s.total_orders);
     $('db-stat-tickets').textContent = num.format(tickets);
-    $('db-stat-activities').textContent = plural(activities, 'activitate confirmată', 'activități confirmate');
+    $('db-stat-activities').textContent = VQ.n(activities, 'confirmed activity', 'confirmed activities');
     $('db-stat-orders').textContent = num.format(orders);
-    $('db-stat-orders-last').textContent = relTime(s.last_order_at) ? 'ultima ' + relTime(s.last_order_at) : 'fără comenzi încă';
-    $('db-greet-tail').textContent = tickets > 0 ? 'Ai ' + plural(tickets, 'bilet viitor.', 'bilete viitoare.') : 'Bine ai revenit.';
+    $('db-stat-orders-last').textContent = relTime(s.last_order_at) ? VQ.t('last order {when}', { when: relTime(s.last_order_at) }) : VQ.t('no orders yet');
+    $('db-greet-tail').textContent = tickets > 0 ? VQ.t('You have {tickets}.', { tickets: VQ.n(tickets, 'upcoming ticket', 'upcoming tickets') }) : VQ.t('Welcome back.');
     account.setBadges({ tickets: tickets, orders: orders });
   }
   function renderUpcoming(raw) {
@@ -147,20 +139,20 @@
     items.forEach(function (t) {
       var li = el('li', 'db-tk'), body = el('div', 'db-tk-body'), tags = el('div', 'db-tk-tags'), actions = el('div', 'db-tk-cta');
       li.appendChild(img(t.image));
-      tags.appendChild(el('span', 'db-pill is-ok', 'confirmat'));
+      tags.appendChild(el('span', 'db-pill is-ok', VQ.t('confirmed')));
       if (t.city) tags.appendChild(el('span', 'db-pill', t.city));
       body.appendChild(tags);
       body.appendChild(el('h3', null, t.title));
-      body.appendChild(el('p', null, [longDate(t.date), t.time, t.tickets > 1 ? t.tickets + ' beneficiari' : ''].filter(Boolean).join(' · ')));
+      body.appendChild(el('p', null, [longDate(t.date), t.time, t.tickets > 1 ? VQ.n(t.tickets, 'guest', 'guests') : ''].filter(Boolean).join(' · ')));
       li.appendChild(body);
-      var open = el('a', 'btn btn-primary', 'Deschide');
-      open.href = '/cont/bilete';
-      open.setAttribute('aria-label', 'Deschide biletul: ' + t.title);
+      var open = el('a', 'btn btn-primary', VQ.t('Open'));
+      open.href = VQ.url('/account/tickets');
+      open.setAttribute('aria-label', VQ.t('Open ticket: {title}', { title: t.title }));
       var cal = el('button', 'btn btn-ghost');
       cal.type = 'button';
       cal.appendChild(ic('calendar-blank'));
-      cal.appendChild(document.createTextNode('Calendar'));
-      cal.setAttribute('aria-label', 'Adaugă în calendar: ' + t.title);
+      cal.appendChild(document.createTextNode(VQ.t('Calendar')));
+      cal.setAttribute('aria-label', VQ.t('Add to calendar: {title}', { title: t.title }));
       cal.hidden = !t.date;
       cal.addEventListener('click', function () { downloadIcs(t); });
       actions.appendChild(open); actions.appendChild(cal); li.appendChild(actions);
@@ -172,9 +164,9 @@
     if (next) {
       $('db-next-title').textContent = next.title;
       $('db-next-loc').textContent = [next.venue, next.city].filter(Boolean).join(', ');
-      $('db-next-weekday').textContent = next.date ? WEEKDAYS[next.date.getDay()] : '';
+      $('db-next-weekday').textContent = next.date ? next.date.toLocaleDateString(LOC, { weekday: 'long' }) : '';
       $('db-next-time').textContent = next.time;
-      $('db-next-date').textContent = longDate(next.date) + (next.tickets > 1 ? ' · ' + next.tickets + ' beneficiari' : '');
+      $('db-next-date').textContent = longDate(next.date) + (next.tickets > 1 ? ' · ' + VQ.n(next.tickets, 'guest', 'guests') : '');
       $('db-next-cal').hidden = !next.date;
     }
     show('db-next', !!next);
@@ -188,13 +180,13 @@
     list.textContent = '';
     items.forEach(function (it) {
       var li = el('li', 'db-reco'), a = el('a', 'db-reco-a'), media = el('span', 'db-reco-media'), body = el('div', 'db-reco-body');
-      a.href = safeUrl(it.url, '/categorii');
+      a.href = safeUrl(it.url, VQ.url('/categories'));
       media.appendChild(img(it.image));
       a.appendChild(media);
-      body.appendChild(el('span', 'db-pill', txt((it.reasons && it.reasons[0]) || it.reason_primary || it.reason) || 'recomandare'));
+      body.appendChild(el('span', 'db-pill', txt((it.reasons && it.reasons[0]) || it.reason_primary || it.reason) || VQ.t('recommended')));
       body.appendChild(el('h3', null, txt(it.title)));
       if (it.price_label || it.meta) body.appendChild(el('p', null, txt(it.price_label || it.meta)));
-      var cta = el('span', 'db-reco-cta', 'Vezi activitatea');
+      var cta = el('span', 'db-reco-cta', VQ.t('View activity'));
       cta.appendChild(ic('arrow-right'));
       body.appendChild(cta);
       a.appendChild(body); li.appendChild(a); list.appendChild(li);
@@ -215,7 +207,7 @@
     body.textContent = '';
     orders.forEach(function (o) {
       var tr = el('tr'), first = el('td'), link = el('a', 'db-order-link', txt(o.id)), status = el('td');
-      link.href = safeUrl(o.url, '/cont/comenzile-mele');
+      link.href = safeUrl(o.url, VQ.url('/account/orders'));
       first.appendChild(link);
       first.appendChild(el('small', 'db-order-date', txt(o.date)));
       tr.appendChild(first);
@@ -230,13 +222,13 @@
   function renderUtility(u) {
     u = u && typeof u === 'object' ? u : {};
     var support = count(u.supportActive), reviews = count(u.reviewsPending), gift = Number(u.giftBalance) > 0 ? Number(u.giftBalance) : 0;
-    $('db-u-support-h').textContent = support ? plural(support, 'tichet activ', 'tichete active') : 'Niciun tichet activ';
-    $('db-u-support-p').textContent = support ? 'Vezi statusul răspunsurilor de la echipa noastră.' : 'Deschide un tichet dacă ai nelămuriri.';
-    $('db-u-reviews-h').textContent = reviews ? plural(reviews, 'recenzie de scris', 'recenzii de scris') : 'Toate scrise';
-    $('db-u-reviews-p').textContent = reviews ? 'Scrie despre activitățile la care ai participat.' : 'Mulțumim că împărtășești experiențele tale.';
+    $('db-u-support-h').textContent = support ? VQ.n(support, 'open ticket', 'open tickets') : VQ.t('No open tickets');
+    $('db-u-support-p').textContent = support ? VQ.t('See where the replies from our team stand.') : VQ.t('Open a ticket if you have a question.');
+    $('db-u-reviews-h').textContent = reviews ? VQ.n(reviews, 'review to write', 'reviews to write') : VQ.t('All written');
+    $('db-u-reviews-p').textContent = reviews ? VQ.t('Write about the activities you went to.') : VQ.t('Thank you for sharing your experiences.');
     $('db-u-gift').classList.toggle('is-hot', gift > 0);
-    $('db-u-gift-h').textContent = gift ? 'Ai ' + money(gift) + ' disponibili' : 'Verifică un card cadou';
-    $('db-u-gift-p').textContent = gift ? 'Card activ — folosește-l la următoarea comandă.' : 'Introdu codul cardului pentru a vedea soldul.';
+    $('db-u-gift-h').textContent = gift ? VQ.t('You have {amount} available', { amount: money(gift) }) : VQ.t('Check a gift card');
+    $('db-u-gift-p').textContent = gift ? VQ.t('Active card: use it on your next order.') : VQ.t('Enter the card code to see its balance.');
     account.setBadges({ support: support });
   }
   function renderReferral(ref, legacyCode) {
@@ -252,14 +244,14 @@
   var copyBtn = $('db-ref-copy'), copyTimer = 0;
   copyBtn.addEventListener('click', function () {
     var input = $('db-ref-url'), status = $('db-ref-status');
-    if (!refReady) { status.textContent = 'Linkul tău apare imediat ce se încarcă datele contului.'; return; }
-    var manual = function () { input.focus(); input.select(); status.textContent = 'Linkul e selectat. Copiază-l manual.'; };
+    if (!refReady) { status.textContent = VQ.t('Your link appears as soon as your account details load.'); return; }
+    var manual = function () { input.focus(); input.select(); status.textContent = VQ.t('The link is selected. Copy it by hand.'); };
     if (!(navigator.clipboard && navigator.clipboard.writeText)) { manual(); return; }
     navigator.clipboard.writeText(window.location.protocol + '//' + input.value).then(function () {
-      status.textContent = 'Link copiat în clipboard.';
-      copyBtn.textContent = 'Copiat';
+      status.textContent = VQ.t('Link copied to the clipboard.');
+      copyBtn.textContent = VQ.t('Copied');
       clearTimeout(copyTimer);
-      copyTimer = setTimeout(function () { copyBtn.textContent = 'Copiază'; }, 2000);
+      copyTimer = setTimeout(function () { copyBtn.textContent = VQ.t('Copy'); }, 2000);
     }, manual);
   });
 
@@ -328,15 +320,15 @@
       renderStats(stats);
       renderUpcoming(data(4));
       renderRecos(list(data(5), ['items', 'recommendations']));
-      var labels = { paid: 'confirmată', confirmed: 'confirmată', completed: 'finalizată', refunded: 'retur', cancelled: 'anulată', pending: 'în așteptare' };
+      var labels = { paid: VQ.t('confirmed'), confirmed: VQ.t('confirmed'), completed: VQ.t('completed'), refunded: VQ.t('refunded'), cancelled: VQ.t('cancelled'), pending: VQ.t('pending') };
       renderOrders(list(data(6), ['orders', 'items', 'data']).filter(function (o) { return o && typeof o === 'object'; }).map(function (o) {
         var s = String(o.status || '').toLowerCase(), d = new Date(o.created_at), ref = txt(o.order_number) || 'BO-' + txt(o.id);
         return {
           id: '#' + ref.replace(/^#/, ''),
           date: isNaN(d.getTime()) ? '' : shortDate(d),
-          total: money(o.total_amount != null ? o.total_amount : o.total),
+          total: money(o.total_amount != null ? o.total_amount : o.total, o.currency),
           status: labels[s] || s,
-          url: '/cont/comenzile-mele#' + encodeURIComponent(txt(o.order_number) || txt(o.id))
+          url: VQ.url('/account/orders') + '#' + encodeURIComponent(txt(o.order_number) || txt(o.id))
         };
       }));
       var support = data(7);

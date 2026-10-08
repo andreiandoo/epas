@@ -15,10 +15,10 @@
   var account = window.BO_ACCOUNT, API = BileteOnlineAPI;
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  var MONTHS = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
-  var WORDS = ['', 'Slab', 'Sub așteptări', 'OK', 'Foarte bun', 'Excelent'];
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var WORDS = ['', VQ.t('Poor'), VQ.t('Below expectations'), VQ.t('OK'), VQ.t('Very good'), VQ.t('Excellent')];
   var ASPECTS = ['show', 'venue', 'organization', 'value'];
-  var STATUS = { published: ['publicată', 'is-ok'], moderation: ['în moderare', 'is-wait'], rejected: ['respinsă', 'is-bad'], draft: ['draft', 'is-muted'] };
+  var STATUS = { published: [VQ.t('published'), 'is-ok'], moderation: [VQ.t('in moderation'), 'is-wait'], rejected: [VQ.t('rejected'), 'is-bad'], draft: [VQ.t('draft'), 'is-muted'] };
   var STATUS_FILTERS = ['all', 'published', 'draft', 'moderation', 'rejected'];
   var RATING_FILTERS = ['all', '5', '4', '3', '2', '1'];
   var TYPES = /^image\/(jpeg|png|webp|gif)$/;
@@ -26,7 +26,7 @@
   var STAR_PATH = 'M12 2.6l2.84 5.93 6.53.86-4.78 4.53 1.2 6.47L12 17.25l-5.79 3.15 1.2-6.47L2.63 9.39l6.53-.86z';
   var PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88"><rect width="88" height="88" fill="#E6F4EC"/><path d="M44 24l5.7 11.9 13 1.7-9.5 9 2.4 12.9L44 53.3l-11.6 6.2 2.4-12.9-9.5-9 13-1.7z" fill="none" stroke="#1B7F4E" stroke-width="3" stroke-linejoin="round"/></svg>');
   var limits = { minText: 20, maxText: 2000, photos: 5, mb: 5 };
-  var num = new Intl.NumberFormat('ro-RO'), one = new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  var num = new Intl.NumberFormat(LOC), one = new Intl.NumberFormat(LOC, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   var todo = [], todoOk = false, todoFailed = false, idx = 0, shownId = null;
   var reviews = [], reviewsOk = false, photos = [], dirty = false, drafts = {};
@@ -50,17 +50,12 @@
   function obj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
   function txt(v) {
     if (typeof v === 'string' && /^\s*\{/.test(v)) { try { var parsed = JSON.parse(v); if (obj(parsed)) v = parsed; } catch (e) {} }
-    if (obj(v)) v = v.ro || v.en || Object.keys(v).map(function (k) { return v[k]; }).filter(function (x) { return typeof x === 'string'; })[0];
+    if (obj(v)) v = v[VQ.locale] || v.en || v.ro || Object.keys(v).map(function (k) { return v[k]; }).filter(function (x) { return typeof x === 'string'; })[0];
     return v == null || typeof v === 'object' ? '' : String(v).trim();
   }
   function count(v) { var n = Number(v); return isFinite(n) && n > 0 ? Math.floor(n) : 0; }
   function stars5(v) { var n = Math.round(Number(v)); return n >= 1 && n <= 5 ? n : 0; }
-  function plural(n, oneWord, many) {
-    n = count(n);
-    if (n === 1) return '1 ' + oneWord;
-    var r = n % 100;
-    return num.format(n) + (n && (r === 0 || r >= 20) ? ' de ' : ' ') + many;
-  }
+
   function pad(n) { return String(n).padStart(2, '0'); }
   function toDate(v) {
     if (!v) return null;
@@ -68,7 +63,7 @@
     var d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(/^\d{4}-\d{2}-\d{2} \d/.test(s) ? s.replace(' ', 'T') : s);
     return isNaN(d.getTime()) ? null : d;
   }
-  function day(v) { var d = v instanceof Date ? v : toDate(v); return d ? d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : ''; }
+  function day(v) { var d = v instanceof Date ? v : toDate(v); return d ? d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
   function dayTime(v) { var d = v instanceof Date ? v : toDate(v); return d ? day(d) + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) : ''; }
   function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); }
   function fresh(path) { return API.request(path, { method: 'GET', noCache: true }); }
@@ -125,11 +120,12 @@
   }
   function isRo(m) { return /[ăâîșțşţ]/i.test(m) || /\b(nu|este|sau|pentru|recenzia|activitatea)\b/i.test(m); }
   function errMessage(err, fallback) {
-    if (!err || !err.status) return 'Nu am putut contacta serverul. Verifică conexiunea și încearcă din nou.';
-    if (err.status === 401) return 'Sesiunea a expirat. Intră din nou în cont și reîncearcă.';
-    if (err.status === 429) return 'Prea multe încercări într-un timp scurt. Mai încearcă peste un minut.';
+    if (!err || !err.status) return VQ.t('We could not reach the server. Check your connection and try again.');
+    if (err.status === 401) return VQ.t('Your session has expired. Sign in again and retry.');
+    if (err.status === 429) return VQ.t('Too many attempts in a short time. Try again in a minute.');
     var m = String(err.message || '').trim();
-    return m && m.length < 300 && isRo(m) ? m : fallback;
+    // core's own messages for customers are Romanian: they are shown only on the Romanian version of the site
+    return m && m.length < 300 && isRo(m) && VQ.locale === 'ro' ? m : fallback;
   }
   function say(message, tone) {
     var f = $('rv-flash');
@@ -163,7 +159,7 @@
   /** Swaps a row's buttons for "question [yes] [Renunță]"; run(done) performs the action, done(false) brings the row back. */
   function confirmRow(box, question, yesLabel, run) {
     var kept = [].slice.call(box.childNodes), opener = document.activeElement;
-    var q = el('span', 'rv-confirm-q', question), yes = button(yesLabel, 'rv-danger'), no = button('Renunță', 'btn-ghost');
+    var q = el('span', 'rv-confirm-q', question), yes = button(yesLabel, 'rv-danger'), no = button(VQ.t('Cancel'), 'btn-ghost');
     function restore() {
       box.textContent = '';
       kept.forEach(function (n) { box.appendChild(n); });
@@ -175,7 +171,7 @@
     box.appendChild(no);
     no.addEventListener('click', restore);
     yes.addEventListener('click', function () {
-      busy(yes, true, 'Se șterge…');
+      busy(yes, true, VQ.t('Deleting…'));
       no.disabled = true;
       run(function (ok) { if (!ok && box.isConnected) restore(); });
     });
@@ -200,7 +196,7 @@
       localStorage.setItem(DRAFT_KEY, JSON.stringify(all));
       return true;
     } catch (e) {
-      if (!quiet) say('Nu am putut salva draftul în acest browser (spațiu plin sau navigare privată).', 'error');
+      if (!quiet) say(VQ.t('We could not save the draft in this browser (storage is full or you are browsing privately).'), 'error');
       return false;
     }
   }
@@ -213,7 +209,7 @@
   function saveDraft(ev, quiet) {
     var f = readForm();
     if (!hasContent(f)) {
-      if (!quiet) say('Scrie ceva sau alege un rating înainte să salvezi draftul.', 'error');
+      if (!quiet) say(VQ.t('Write something or choose a rating before you save the draft.'), 'error');
       return false;
     }
     drafts[ev.id] = Object.assign(f, {
@@ -234,7 +230,7 @@
   function paint(g, preview) {
     var v = preview || starValue(g.dataset.stars), out = $(g.dataset.stars + '-t');
     [].forEach.call(g.querySelectorAll('.rv-star'), function (l, i) { l.classList.toggle('is-on', i < v); });
-    if (out && !preview) out.textContent = v ? v + ' din 5 · ' + WORDS[v] : 'Alege de la 1 la 5 stele';
+    if (out && !preview) out.textContent = v ? VQ.t('{n} out of 5 · {word}', { n: v, word: WORDS[v] }) : VQ.t('Choose from 1 to 5 stars');
   }
   function setStars(name, v) {
     [].forEach.call(group(name).querySelectorAll('input'), function (i) { i.checked = +i.value === v; });
@@ -281,11 +277,13 @@
   }
   function counter(inputId, outId) {
     var input = $(inputId), out = $(outId), left = limits.minText - input.value.trim().length;
-    out.textContent = num.format(input.value.length) + ' / ' + num.format(limits.maxText) + (left > 0 ? ' · mai scrie ' + plural(left, 'caracter', 'caractere') : ' · gata de publicare');
+    out.textContent = left > 0
+      ? VQ.t('{count} / {max} · write {more}', { count: num.format(input.value.length), max: num.format(limits.maxText), more: VQ.n(left, 'more character', 'more characters') })
+      : VQ.t('{count} / {max} · ready to publish', { count: num.format(input.value.length), max: num.format(limits.maxText) });
     out.classList.toggle('is-ok', left <= 0);
   }
   function draftNote(saved) {
-    $('rv-draft-note').textContent = (saved && toDate(saved) ? 'Draft salvat pe acest dispozitiv pe ' + dayTime(saved) + '. ' : '') + 'Recenziile apar pe site după o scurtă verificare.';
+    $('rv-draft-note').textContent = (saved && toDate(saved) ? VQ.t('Draft saved on this device on {date}.', { date: dayTime(saved) }) + ' ' : '') + VQ.t('Reviews appear on the site after a short check.');
   }
   function fillForm(d) {
     d = obj(d) ? d : {};
@@ -314,7 +312,7 @@
     if (!todo.length) { shownId = null; return; }
     idx = Math.max(0, Math.min(idx, todo.length - 1));
     var ev = todo[idx];
-    $('rv-pos').textContent = (idx + 1) + ' din ' + todo.length;
+    $('rv-pos').textContent = VQ.t('{n} of {total}', { n: idx + 1, total: todo.length });
     $('rv-prev').disabled = idx === 0;
     $('rv-next').disabled = idx === todo.length - 1;
     var slot = $('rv-ev-media'), box = mediaBox('rv-write-media', ev.image);
@@ -329,7 +327,7 @@
   function go(step) {
     var next = idx + step;
     if (next < 0 || next >= todo.length) return;
-    if (dirty && todo[idx] && saveDraft(todo[idx], true)) say('Am păstrat ce ai scris pentru „' + todo[idx].name + '” ca draft pe acest dispozitiv.');
+    if (dirty && todo[idx] && saveDraft(todo[idx], true)) say(VQ.t('What you wrote for “{name}” was kept as a draft on this device.', { name: todo[idx].name }));
     idx = next;
     renderTodo(true);
     var b = step < 0 ? $('rv-prev') : $('rv-next');
@@ -355,9 +353,9 @@
     photos.forEach(function (p, i) {
       var li = el('li'), img = el('img'), x = el('button', 'rv-thumb-x');
       img.src = p.url;
-      img.alt = 'Poza ' + (i + 1);
+      img.alt = VQ.t('Photo {n}', { n: i + 1 });
       x.type = 'button';
-      x.setAttribute('aria-label', 'Elimină poza ' + (i + 1));
+      x.setAttribute('aria-label', VQ.t('Remove photo {n}', { n: i + 1 }));
       x.appendChild(icon('x'));
       x.addEventListener('click', function () {
         try { URL.revokeObjectURL(p.url); } catch (e) {}
@@ -371,8 +369,8 @@
     });
     show(ul, photos.length > 0);
     $('rv-attach').disabled = photos.length >= limits.photos;
-    $('rv-photo-note').textContent = (photos.length ? plural(photos.length, 'poză atașată', 'poze atașate') + ' din ' + limits.photos + '. ' : '')
-      + 'Până la ' + limits.photos + ' poze JPG, PNG, WebP sau GIF, maximum ' + limits.mb + ' MB fiecare.';
+    $('rv-photo-note').textContent = (photos.length ? VQ.t('{photos} of {max} attached.', { photos: VQ.n(photos.length, 'photo', 'photos'), max: limits.photos }) + ' ' : '')
+      + VQ.t('Up to {max} photos, JPG, PNG, WebP or GIF, no more than {mb} MB each.', { max: limits.photos, mb: limits.mb });
     if (focusIndex != null) {
       var xs = ul.querySelectorAll('.rv-thumb-x');
       (xs[Math.min(focusIndex, xs.length - 1)] || $('rv-attach')).focus();
@@ -393,7 +391,7 @@
       if (bmp.close) bmp.close();
       return new Promise(function (resolve) {
         canvas.toBlob(function (blob) {
-          resolve(blob && blob.size < file.size ? new File([blob], (file.name || 'poza').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : file);
+          resolve(blob && blob.size < file.size ? new File([blob], (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : file);
         }, 'image/jpeg', 0.85);
       });
     }).catch(function () { return file; });
@@ -416,10 +414,10 @@
       if (list.length > big) dirty = true;
       renderThumbs();
       var problems = [];
-      if (wrong) problems.push(plural(wrong, 'fișier nu este o poză acceptată', 'fișiere nu sunt poze acceptate') + ' (JPG, PNG, WebP, GIF)');
-      if (big) problems.push(plural(big, 'poză depășește', 'poze depășesc') + ' ' + limits.mb + ' MB');
-      if (extra) problems.push('poți atașa cel mult ' + limits.photos + ' poze, așa că ' + plural(extra, 'poză nu a fost adăugată', 'poze nu au fost adăugate'));
-      if (problems.length) formError('rv-form-error', problems.join('; ').replace(/^./, function (c) { return c.toUpperCase(); }) + '.');
+      if (wrong) problems.push(VQ.t('Not an accepted photo (JPG, PNG, WebP, GIF): {files}.', { files: VQ.n(wrong, 'file', 'files') }));
+      if (big) problems.push(VQ.t('Larger than {mb} MB: {photos}.', { mb: limits.mb, photos: VQ.n(big, 'photo', 'photos') }));
+      if (extra) problems.push(VQ.t('You can attach at most {max} photos. Not added: {photos}.', { max: limits.photos, photos: VQ.n(extra, 'photo', 'photos') }));
+      if (problems.length) formError('rv-form-error', problems.join(' '));
     });
   });
 
@@ -439,7 +437,7 @@
       if (k === 'detailed_ratings') Object.keys(v).forEach(function (a) { fd.append('detailed_ratings[' + a + ']', String(v[a])); });
       else fd.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v));
     });
-    photos.forEach(function (p, i) { fd.append('photos[]', p.file, p.file.name || 'poza-' + (i + 1) + '.jpg'); });
+    photos.forEach(function (p, i) { fd.append('photos[]', p.file, p.file.name || 'photo-' + (i + 1) + '.jpg'); });
     return fetch(apiUrl() + '?action=customer.review.store', {
       method: 'POST', body: fd, credentials: 'same-origin', headers: { Authorization: 'Bearer ' + token(), Accept: 'application/json' }
     }).then(function (res) {
@@ -460,20 +458,20 @@
     var f = readForm();
     clearInvalid(form);
     formError('rv-form-error', '');
-    if (!f.rating) return formError('rv-form-error', 'Alege un rating de la 1 la 5 stele.', firstStar('rv-rating'));
+    if (!f.rating) return formError('rv-form-error', VQ.t('Choose a rating from 1 to 5 stars.'), firstStar('rv-rating'));
     if (f.text.length < limits.minText) {
-      return formError('rv-form-error', 'Scrie cel puțin ' + plural(limits.minText, 'caracter', 'caractere') + ', ca recenzia să fie utilă (acum ' + f.text.length + ').', $('rv-text'));
+      return formError('rv-form-error', VQ.t('Write at least {min} so the review is useful (now {now}).', { min: VQ.n(limits.minText, 'character', 'characters'), now: f.text.length }), $('rv-text'));
     }
-    busy(submit, true, photos.length ? 'Se încarcă pozele…' : 'Se publică…');
+    busy(submit, true, photos.length ? VQ.t('Uploading photos…') : VQ.t('Publishing…'));
     draftBtn.disabled = true;
     send(ev, f).then(function (resp) {
-      if (!(resp && obj(resp.data) && resp.data.review_id)) throw { custom: 'Nu am putut trimite recenzia. Încearcă din nou.' };
+      if (!(resp && obj(resp.data) && resp.data.review_id)) throw { custom: VQ.t('We could not send the review. Try again.') };
       delete drafts[ev.id];
       persistDrafts(true);
       clearPhotos();
       dirty = false;
       shownId = null;
-      say('Mulțumim! Recenzia pentru „' + ev.name + '” a fost trimisă și apare pe site după verificare.');
+      say(VQ.t('Thank you! Your review for “{name}” was sent and will appear on the site after a check.', { name: ev.name }));
       return Promise.all([loadTodo(true), loadReviews(true)]).then(function () {
         var target = todo.length ? $('rv-ev-title') : $('rv-todo-empty-h');
         if (target) target.focus();
@@ -481,18 +479,18 @@
     }).catch(function (err) {
       var status = err && err.status, message = String((err && err.message) || ''), keys = err && obj(err.errors) ? Object.keys(err.errors) : [];
       if (err && err.custom) formError('rv-form-error', err.custom);
-      else if (status === 403) formError('rv-form-error', 'Poți scrie recenzii doar pentru activitățile la care ai participat, după ce au avut loc.');
+      else if (status === 403) formError('rv-form-error', VQ.t('You can only review activities you went to, after they have taken place.'));
       else if (status === 422 && /already reviewed/i.test(message)) {
         delete drafts[ev.id];
         persistDrafts(true);
-        formError('rv-form-error', 'Ai trimis deja o recenzie pentru această activitate. O găsești în istoric.');
+        formError('rv-form-error', VQ.t('You have already sent a review for this activity. You will find it in your history.'));
         loadTodo(true);
         loadReviews(true);
-      } else if (status === 413) formError('rv-form-error', 'Pozele sunt prea mari pentru încărcare. Încearcă mai puține poze sau poze mai mici.', $('rv-attach'));
-      else if (status === 422 && keys.some(function (k) { return /^photos/.test(k); })) formError('rv-form-error', 'Pozele trebuie să fie imagini JPG, PNG, WebP sau GIF de cel mult ' + limits.mb + ' MB, maximum ' + limits.photos + '.', $('rv-attach'));
-      else if (status === 422 && keys.indexOf('text') !== -1) formError('rv-form-error', 'Textul trebuie să aibă între ' + limits.minText + ' și ' + num.format(limits.maxText) + ' de caractere.', $('rv-text'));
-      else if (status === 422 && keys.indexOf('rating') !== -1) formError('rv-form-error', 'Alege un rating de la 1 la 5 stele.', firstStar('rv-rating'));
-      else formError('rv-form-error', errMessage(err, 'Nu am putut trimite recenzia. Încearcă din nou.'));
+      } else if (status === 413) formError('rv-form-error', VQ.t('The photos are too large to upload. Try fewer or smaller photos.'), $('rv-attach'));
+      else if (status === 422 && keys.some(function (k) { return /^photos/.test(k); })) formError('rv-form-error', VQ.t('Photos must be JPG, PNG, WebP or GIF images of {mb} MB at most, and no more than {max} of them.', { mb: limits.mb, max: limits.photos }), $('rv-attach'));
+      else if (status === 422 && keys.indexOf('text') !== -1) formError('rv-form-error', VQ.t('The text must be between {min} and {max} characters long.', { min: limits.minText, max: num.format(limits.maxText) }), $('rv-text'));
+      else if (status === 422 && keys.indexOf('rating') !== -1) formError('rv-form-error', VQ.t('Choose a rating from 1 to 5 stars.'), firstStar('rv-rating'));
+      else formError('rv-form-error', errMessage(err, VQ.t('We could not send the review. Try again.')));
     }).then(function () {
       busy(submit, false);
       draftBtn.disabled = false;
@@ -502,7 +500,7 @@
     var ev = todo[idx];
     if (!ev) return;
     var hadPhotos = photos.length > 0;
-    if (saveDraft(ev, false)) say(hadPhotos ? 'Draft salvat pe acest dispozitiv. Pozele nu se păstrează în draft: le atașezi când publici.' : 'Draft salvat pe acest dispozitiv.');
+    if (saveDraft(ev, false)) say(hadPhotos ? VQ.t('Draft saved on this device. Photos are not kept in a draft: attach them when you publish.') : VQ.t('Draft saved on this device.'));
   });
 
   // ---------- history ----------
@@ -519,16 +517,16 @@
       id: r.id, rating: stars5(r.rating), text: txt(r.text), aspects: aspects,
       photos: (Array.isArray(r.photos) ? r.photos : []).map(imgUrl).filter(Boolean),
       recommend: r.recommend !== false && r.recommend !== 0, anonymous: !!r.is_anonymous, status: statusKey(r.status),
-      created: toDate(r.created_at), event: { id: ev.id, name: txt(ev.name) || 'Activitate', date: toDate(ev.date), image: imgUrl(ev.image) }
+      created: toDate(r.created_at), event: { id: ev.id, name: txt(ev.name) || VQ.t('Activity'), date: toDate(ev.date), image: imgUrl(ev.image) }
     };
   }
   function normEvent(e) {
-    return { id: e.id, name: txt(e.name) || 'Activitate', date: toDate(e.date), venue: txt(e.venue), city: txt(e.city), image: imgUrl(e.image) };
+    return { id: e.id, name: txt(e.name) || VQ.t('Activity'), date: toDate(e.date), venue: txt(e.venue), city: txt(e.city), image: imgUrl(e.image) };
   }
   function items() {
     var list = reviews.map(function (r) { return { kind: 'review', r: r, status: r.status, rating: r.rating, name: r.event.name, text: r.text, date: r.created }; });
     activeDrafts().forEach(function (d) {
-      list.push({ kind: 'draft', d: d, status: 'draft', rating: stars5(d.rating), name: txt(d.event.name) || 'Activitate', text: txt(d.text), date: toDate(d.saved) });
+      list.push({ kind: 'draft', d: d, status: 'draft', rating: stars5(d.rating), name: txt(d.event.name) || VQ.t('Activity'), text: txt(d.text), date: toDate(d.saved) });
     });
     return list.sort(function (a, b) { return (b.date ? b.date.getTime() : 0) - (a.date ? a.date.getTime() : 0); });
   }
@@ -543,15 +541,15 @@
     list.forEach(function (it) { frag.appendChild(it.kind === 'draft' ? draftCard(it) : reviewCard(it)); });
     ul.textContent = '';
     ul.appendChild(frag);
-    $('rv-list-count').textContent = filtering() ? num.format(list.length) + ' din ' + plural(all.length, 'recenzie', 'recenzii') : plural(all.length, 'recenzie', 'recenzii');
+    $('rv-list-count').textContent = filtering() ? VQ.t('{shown} of {total}', { shown: num.format(list.length), total: VQ.n(all.length, 'review', 'reviews') }) : VQ.n(all.length, 'review', 'reviews');
     show('rv-reset', filtering());
     show('rv-list-skel', false);
     show('rv-list-error', false);
     show(ul, list.length > 0);
     show('rv-list-empty', !list.length);
     if (!list.length) {
-      $('rv-list-empty-h').textContent = all.length ? 'Nu am găsit recenzii pentru filtre' : 'Încă nu ai recenzii';
-      $('rv-list-empty-p').textContent = all.length ? 'Schimbă filtrele sau caută după alt termen.' : 'Recenziile pe care le scrii apar aici, împreună cu drafturile.';
+      $('rv-list-empty-h').textContent = all.length ? VQ.t('No reviews match these filters') : VQ.t('You have no reviews yet');
+      $('rv-list-empty-p').textContent = all.length ? VQ.t('Change the filters or search for something else.') : VQ.t('The reviews you write appear here, together with your drafts.');
       show('rv-list-empty-reset', all.length > 0);
     }
   }
@@ -569,12 +567,12 @@
     c.li.id = 'rv-r-' + r.id;
     if (r.created) c.tags.appendChild(el('span', 'acc-tag', day(r.created)));
     c.body.appendChild(el('h3', null, r.event.name));
-    if (r.event.date) c.body.appendChild(el('p', 'rv-card-meta', 'Activitatea din ' + day(r.event.date)));
-    if (r.rating) c.body.appendChild(starsRow(r.rating, 'Rating ' + r.rating + ' din 5'));
+    if (r.event.date) c.body.appendChild(el('p', 'rv-card-meta', VQ.t('Activity on {date}', { date: day(r.event.date) })));
+    if (r.rating) c.body.appendChild(starsRow(r.rating, VQ.t('Rating {n} out of 5', { n: r.rating })));
     if (r.text) c.body.appendChild(el('p', 'rv-card-text', r.text));
-    if (r.anonymous) extras.push('publicată fără nume');
-    if (!r.recommend) extras.push('nu o recomanzi');
-    if (Object.keys(r.aspects).length) extras.push('cu evaluare detaliată');
+    if (r.anonymous) extras.push(VQ.t('published without your name'));
+    if (!r.recommend) extras.push(VQ.t('you do not recommend it'));
+    if (Object.keys(r.aspects).length) extras.push(VQ.t('with a detailed rating'));
     if (extras.length) c.body.appendChild(el('p', 'rv-card-meta', extras.join(' · ')));
     if (r.photos.length) {
       var gallery = el('div', 'rv-card-photos');
@@ -583,21 +581,21 @@
         a.href = src;
         a.target = '_blank';
         a.rel = 'noopener';
-        a.setAttribute('aria-label', 'Poza ' + (i + 1) + ' din recenzie (se deschide într-o filă nouă)');
+        a.setAttribute('aria-label', VQ.t('Photo {n} of the review (opens in a new tab)', { n: i + 1 }));
         a.appendChild(image(src));
         gallery.appendChild(a);
       });
       c.body.appendChild(gallery);
     }
-    if (r.status === 'moderation') c.body.appendChild(el('p', 'rv-card-note', 'O verificăm înainte să apară pe site.'));
-    if (r.status === 'rejected') c.body.appendChild(el('p', 'rv-card-note is-bad', 'Recenzia nu a fost aprobată. O poți edita și retrimite la verificare.'));
-    var edit = button('Editează', 'btn-ghost rv-edit-btn'), search = el('a', 'btn btn-ghost', 'Caută activitatea'), del = button('Șterge', 'rv-danger');
-    edit.setAttribute('aria-label', 'Editează recenzia pentru ' + r.event.name);
-    del.setAttribute('aria-label', 'Șterge recenzia pentru ' + r.event.name);
-    search.href = '/cauta?q=' + encodeURIComponent(r.event.name);
+    if (r.status === 'moderation') c.body.appendChild(el('p', 'rv-card-note', VQ.t('We check it before it appears on the site.')));
+    if (r.status === 'rejected') c.body.appendChild(el('p', 'rv-card-note is-bad', VQ.t('The review was not approved. You can edit it and send it for checking again.')));
+    var edit = button(VQ.t('Edit'), 'btn-ghost rv-edit-btn'), search = el('a', 'btn btn-ghost', VQ.t('Find the activity')), del = button(VQ.t('Delete'), 'rv-danger');
+    edit.setAttribute('aria-label', VQ.t('Edit the review for {name}', { name: r.event.name }));
+    del.setAttribute('aria-label', VQ.t('Delete the review for {name}', { name: r.event.name }));
+    search.href = VQ.url('/search') + '?q=' + encodeURIComponent(r.event.name);
     edit.addEventListener('click', function () { openEdit(r, edit); });
     del.addEventListener('click', function () {
-      confirmRow(actions, 'Ștergi recenzia?', 'Da, șterge', function (done) { deleteReview(r, done); });
+      confirmRow(actions, VQ.t('Delete this review?'), VQ.t('Yes, delete'), function (done) { deleteReview(r, done); });
     });
     actions.appendChild(edit);
     actions.appendChild(search);
@@ -607,22 +605,22 @@
   }
   function draftCard(it) {
     var d = it.d, c = cardShell(it, 'is-draft'), actions = el('div', 'rv-row-actions');
-    if (it.date) c.tags.appendChild(el('span', 'acc-tag', 'salvat ' + day(it.date)));
+    if (it.date) c.tags.appendChild(el('span', 'acc-tag', VQ.t('saved {date}', { date: day(it.date) })));
     c.body.appendChild(el('h3', null, it.name));
-    if (it.rating) c.body.appendChild(starsRow(it.rating, 'Rating ' + it.rating + ' din 5'));
+    if (it.rating) c.body.appendChild(starsRow(it.rating, VQ.t('Rating {n} out of 5', { n: it.rating })));
     if (it.text) c.body.appendChild(el('p', 'rv-card-text', it.text));
-    c.body.appendChild(el('p', 'rv-card-note is-muted', 'Draftul este salvat doar pe acest dispozitiv și nu a fost trimis.'));
-    var go = button('Continuă recenzia', 'btn-ghost'), del = button('Șterge draftul', 'rv-danger');
-    go.setAttribute('aria-label', 'Continuă recenzia pentru ' + it.name);
-    del.setAttribute('aria-label', 'Șterge draftul pentru ' + it.name);
+    c.body.appendChild(el('p', 'rv-card-note is-muted', VQ.t('The draft is saved only on this device and has not been sent.')));
+    var go = button(VQ.t('Continue the review'), 'btn-ghost'), del = button(VQ.t('Delete draft'), 'rv-danger');
+    go.setAttribute('aria-label', VQ.t('Continue the review for {name}', { name: it.name }));
+    del.setAttribute('aria-label', VQ.t('Delete the draft for {name}', { name: it.name }));
     go.addEventListener('click', function () { continueDraft(d); });
     del.addEventListener('click', function () {
-      confirmRow(actions, 'Ștergi draftul?', 'Da, șterge', function (done) {
+      confirmRow(actions, VQ.t('Delete this draft?'), VQ.t('Yes, delete'), function (done) {
         delete drafts[d.event.id];
         if (!persistDrafts(false)) { done(false); return; }
         done(true);
         if (todo[idx] && String(todo[idx].id) === String(d.event.id)) fillForm(null);
-        say('Am șters draftul pentru „' + it.name + '”.');
+        say(VQ.t('The draft for “{name}” was deleted.', { name: it.name }));
         renderStats();
         renderList();
         $('rv-list-h').focus();
@@ -646,12 +644,12 @@
   function deleteReview(r, done) {
     API.delete('/customer/reviews/' + encodeURIComponent(r.id), {}).then(function () {
       done(true);
-      say('Am șters recenzia pentru „' + r.event.name + '”.');
+      say(VQ.t('The review for “{name}” was deleted.', { name: r.event.name }));
       Promise.all([loadReviews(true), loadTodo(true)]).then(function () { $('rv-list-h').focus(); });
     }, function (err) {
-      if (err && err.status === 404) { done(true); say('Recenzia fusese deja ștearsă.'); loadReviews(true); loadTodo(true); return; }
+      if (err && err.status === 404) { done(true); say(VQ.t('The review had already been deleted.')); loadReviews(true); loadTodo(true); return; }
       done(false);
-      say(errMessage(err, 'Nu am putut șterge recenzia. Încearcă din nou.'), 'error');
+      say(errMessage(err, VQ.t('We could not delete the review. Try again.')), 'error');
     });
   }
 
@@ -693,7 +691,7 @@
     $('rv-e-recommend').checked = r.recommend;
     $('rv-e-anonymous').checked = r.anonymous;
     $('rv-e-more').open = Object.keys(r.aspects).length > 0;
-    $('rv-e-photos').textContent = r.photos.length ? 'Pozele încărcate (' + r.photos.length + ') rămân neschimbate.' : '';
+    $('rv-e-photos').textContent = r.photos.length ? VQ.t('The uploaded photos ({n}) stay as they are.', { n: r.photos.length }) : '';
     show('rv-e-photos', r.photos.length > 0);
     clearInvalid(dialog);
     formError('rv-edit-error', '');
@@ -725,21 +723,21 @@
     var f = { rating: starValue('rv-e-rating'), text: $('rv-e-text').value.trim(), aspects: readAspects('rv-e-a-'), recommend: $('rv-e-recommend').checked, anonymous: $('rv-e-anonymous').checked };
     clearInvalid(dialog);
     formError('rv-edit-error', '');
-    if (!f.rating) return formError('rv-edit-error', 'Alege un rating de la 1 la 5 stele.', firstStar('rv-e-rating'));
-    if (f.text.length < limits.minText) return formError('rv-edit-error', 'Scrie cel puțin ' + plural(limits.minText, 'caracter', 'caractere') + ' (acum ' + f.text.length + ').', $('rv-e-text'));
+    if (!f.rating) return formError('rv-edit-error', VQ.t('Choose a rating from 1 to 5 stars.'), firstStar('rv-e-rating'));
+    if (f.text.length < limits.minText) return formError('rv-edit-error', VQ.t('Write at least {min} (now {now}).', { min: VQ.n(limits.minText, 'character', 'characters'), now: f.text.length }), $('rv-e-text'));
     var data = {};
     if (f.rating !== r.rating) data.rating = f.rating;
     if (f.text !== r.text) data.text = f.text;
     if (!sameAspects(f.aspects, r.aspects)) data.detailed_ratings = f.aspects;
     if (f.recommend !== r.recommend) data.recommend = f.recommend;
     if (f.anonymous !== r.anonymous) data.anonymous = f.anonymous;
-    if (!Object.keys(data).length) { closeEdit(); say('Nu ai modificat nimic.'); return; }
+    if (!Object.keys(data).length) { closeEdit(); say(VQ.t('You changed nothing.')); return; }
     var remoderate = data.rating != null || data.text != null;
-    busy(save, true, 'Se salvează…');
+    busy(save, true, VQ.t('Saving…'));
     API.put('/customer/reviews/' + encodeURIComponent(r.id), data).then(function () {
       busy(save, false);
       closeEdit();
-      say(remoderate ? 'Recenzia a fost actualizată și trece din nou prin verificare.' : 'Recenzia a fost actualizată.');
+      say(remoderate ? VQ.t('The review was updated and is being checked again.') : VQ.t('The review was updated.'));
       loadReviews(true).then(function () {
         var card = $('rv-r-' + r.id);
         if (card) card.querySelector('.rv-edit-btn').focus();
@@ -747,10 +745,10 @@
     }, function (err) {
       busy(save, false);
       var keys = err && obj(err.errors) ? Object.keys(err.errors) : [];
-      if (err && err.status === 404) { closeEdit(); say('Recenzia nu mai există.', 'error'); loadReviews(true); loadTodo(true); return; }
-      if (err && err.status === 422 && keys.indexOf('text') !== -1) formError('rv-edit-error', 'Textul trebuie să aibă între ' + limits.minText + ' și ' + num.format(limits.maxText) + ' de caractere.', $('rv-e-text'));
-      else if (err && err.status === 422 && keys.indexOf('rating') !== -1) formError('rv-edit-error', 'Alege un rating de la 1 la 5 stele.', firstStar('rv-e-rating'));
-      else formError('rv-edit-error', errMessage(err, 'Nu am putut salva modificările. Încearcă din nou.'));
+      if (err && err.status === 404) { closeEdit(); say(VQ.t('The review no longer exists.'), 'error'); loadReviews(true); loadTodo(true); return; }
+      if (err && err.status === 422 && keys.indexOf('text') !== -1) formError('rv-edit-error', VQ.t('The text must be between {min} and {max} characters long.', { min: limits.minText, max: num.format(limits.maxText) }), $('rv-e-text'));
+      else if (err && err.status === 422 && keys.indexOf('rating') !== -1) formError('rv-edit-error', VQ.t('Choose a rating from 1 to 5 stars.'), firstStar('rv-e-rating'));
+      else formError('rv-edit-error', errMessage(err, VQ.t('We could not save the changes. Try again.')));
     });
   });
 
@@ -763,14 +761,14 @@
     $('rv-s-mod').textContent = reviewsOk ? num.format(moderation) : '—';
     $('rv-s-draft').textContent = num.format(activeDrafts().length);
     $('rv-s-todo').textContent = todoOk ? num.format(todo.length) : '—';
-    $('rv-s-todo-p').textContent = todoOk ? (todo.length ? 'experiențe recente' : 'toate scrise') : todoFailed ? 'nu am putut verifica' : 'se verifică…';
+    $('rv-s-todo-p').textContent = todoOk ? (todo.length ? VQ.t('recent experiences') : VQ.t('all written')) : todoFailed ? VQ.t('could not check') : VQ.t('checking…');
     $('rv-avg').textContent = one.format(avg);
-    $('rv-pub-label').textContent = plural(published.length, 'recenzie publicată', 'recenzii publicate');
+    $('rv-pub-label').textContent = VQ.n(published.length, 'published review', 'published reviews');
     [].forEach.call($('rv-avg-stars').querySelectorAll('svg'), function (s, i) { s.classList.toggle('is-on', i < Math.round(avg)); });
-    $('rv-avg-stars').setAttribute('aria-label', 'Rating mediu ' + one.format(avg) + ' din 5');
+    $('rv-avg-stars').setAttribute('aria-label', VQ.t('Average rating {rating} out of 5', { rating: one.format(avg) }));
     $('rv-score-hint').textContent = todoOk
-      ? (todo.length ? plural(todo.length, 'recenzie așteaptă să fie scrisă.', 'recenzii așteaptă să fie scrise.') : 'Felicitări! Toate sunt scrise.')
-      : todoFailed ? 'Nu am putut verifica activitățile de evaluat.' : 'Se verifică activitățile de evaluat…';
+      ? (todo.length ? VQ.t('Waiting to be written: {reviews}.', { reviews: VQ.n(todo.length, 'review', 'reviews') }) : VQ.t('Well done! All written.'))
+      : todoFailed ? VQ.t('We could not check for activities to review.') : VQ.t('Checking for activities to review…');
     account.setBadges({ reviews: todoOk ? todo.length : 0 });
   }
 
@@ -820,7 +818,7 @@
       if (err && err.status === 401) { guard(); return; }
       todoFailed = true;
       if (!todoOk) { show('rv-todo-skel', false); show('rv-todo', false); show('rv-todo-empty', false); show('rv-todo-error', true); }
-      else say('Nu am putut reîmprospăta activitățile de evaluat.', 'error');
+      else say(VQ.t('We could not refresh the activities to review.'), 'error');
       renderStats();
     });
   }
@@ -843,7 +841,7 @@
     }, function (err) {
       if (err && err.status === 401) { guard(); return; }
       if (!reviewsOk) { show('rv-list-skel', false); show('rv-list', false); show('rv-list-empty', false); show('rv-list-error', true); }
-      else say('Nu am putut reîmprospăta lista de recenzii.', 'error');
+      else say(VQ.t('We could not refresh the list of reviews.'), 'error');
     });
   }
   $('rv-todo-retry').addEventListener('click', function () { loadTodo(false); });

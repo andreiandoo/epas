@@ -11,16 +11,33 @@
  * account navigation). account.js fills in name / initials / email from the session and the badges.
  */
 
+// The labels here are plain English; v2_account_nav_label() gives the translated one where a link is printed.
 const V2_ACCOUNT_NAV = [
-    ['dashboard', '/cont', 'Dashboard', 'user-circle'],
-    ['tickets', '/cont/bilete', 'Biletele mele', 'ticket'],
-    ['orders', '/cont/comenzi', 'Comenzile mele', 'shopping-cart-simple'],
-    ['points', '/cont/puncte', 'Punctele mele', 'coins'],
-    ['recommendations', '/cont/recomandari', 'Recomandări', 'star'],
-    ['reviews', '/cont/recenzii', 'Recenziile mele', 'check-circle'],
-    ['support', '/cont/tichete-support', 'Tichete support', 'headset'],
-    ['settings', '/cont/setari', 'Setări', 'lock-simple'],
+    ['dashboard', '/account', 'Overview', 'user-circle'],
+    ['tickets', '/account/tickets', 'My tickets', 'ticket'],
+    ['orders', '/account/orders', 'My orders', 'shopping-cart-simple'],
+    ['points', '/account/points', 'My points', 'coins'],
+    ['recommendations', '/cont/recomandari', 'Recommendations', 'star'], // no English address yet
+    ['reviews', '/account/reviews', 'My reviews', 'check-circle'],
+    ['support', '/account/support', 'Support tickets', 'headset'],
+    ['settings', '/account/settings', 'Settings', 'lock-simple'],
 ];
+
+/** The translated label of a V2_ACCOUNT_NAV section (a constant cannot call v2_t). */
+function v2_account_nav_label(string $key, string $fallback = ''): string
+{
+    switch ($key) {
+        case 'dashboard': return v2_t('Overview');
+        case 'tickets': return v2_t('My tickets');
+        case 'orders': return v2_t('My orders');
+        case 'points': return v2_t('My points');
+        case 'recommendations': return v2_t('Recommendations');
+        case 'reviews': return v2_t('My reviews');
+        case 'support': return v2_t('Support tickets');
+        case 'settings': return v2_t('Settings');
+    }
+    return $fallback;
+}
 
 /**
  * The window.BILETEONLINE settings the legacy api.js / auth.js read; account pages put it in $v2HeadExtra.
@@ -35,9 +52,9 @@ function v2_account_client_config(string $session = 'customer'): string
 {
     $guard = $session === 'organizer'
         ? 'ok = /[?&]_admin_token=/.test(location.search) || (!!localStorage.getItem(\'bileteonline_organizer_token\') && localStorage.getItem(\'bileteonline_user_type\') === \'organizer\'); } catch (e) {} '
-            . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; try { sessionStorage.setItem(\'bileteonline_redirect_after_login\', location.href); } catch (e) {} location.replace(\'/autentificare?ca=venue\'); } })();</script>'
+            . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; try { sessionStorage.setItem(\'bileteonline_redirect_after_login\', location.href); } catch (e) {} location.replace(\'/login?ca=venue\'); } })();</script>'
         : 'var type = localStorage.getItem(\'bileteonline_user_type\'); ok = !!localStorage.getItem(\'bileteonline_customer_token\') && (!type || type === \'customer\'); } catch (e) {} '
-            . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; location.replace(\'/autentificare?redirect=\' + encodeURIComponent(location.pathname + location.search + location.hash)); } })();</script>';
+            . 'if (!ok) { document.documentElement.style.visibility = \'hidden\'; location.replace(\'/login?redirect=\' + encodeURIComponent(location.pathname + location.search + location.hash)); } })();</script>';
 
     return '<script>(function () { var ok = false; try { ' . $guard
         . '<script>window.BILETEONLINE = ' . json_encode([
@@ -47,7 +64,7 @@ function v2_account_client_config(string $session = 'customer'): string
         'storageUrl' => STORAGE_URL,
         'env' => API_ENV,
         'locale' => SITE_LOCALE,
-        'currency' => 'RON',
+        'currency' => defined('SITE_CURRENCY') ? SITE_CURRENCY : 'EUR',
         'supportEmail' => defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '',
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ';</script>';
 }
@@ -56,29 +73,29 @@ function v2_account_start(string $active): void
 {
     ?>
 <div class="acc">
-  <aside class="acc-side" aria-label="Contul meu">
+  <aside class="acc-side" aria-label="<?= v2_te('My account') ?>">
     <div class="acc-user">
       <span class="acc-avatar" data-acc-initials aria-hidden="true">?</span>
-      <div class="acc-user-t"><p class="acc-name" data-acc-name>Client</p><p class="acc-email" data-acc-email>—</p></div>
+      <div class="acc-user-t"><p class="acc-name" data-acc-name><?= v2_te('Customer') ?></p><p class="acc-email" data-acc-email>—</p></div>
     </div>
-    <nav class="acc-nav" aria-label="Secțiuni cont">
+    <nav class="acc-nav" aria-label="<?= v2_te('Account sections') ?>">
       <?php foreach (V2_ACCOUNT_NAV as [$key, $url, $label, $icon]): ?>
-      <a class="acc-link" href="<?= v2_e($url) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= v2_ic($icon) ?><span class="acc-link-t"><?= v2_e($label) ?></span><?php if ($key === 'recommendations'): ?><span class="acc-badge is-new">nou</span><?php else: ?><span class="acc-badge" data-acc-badge="<?= v2_e($key) ?>" hidden></span><?php endif; ?></a>
+      <a class="acc-link" href="<?= v2_e($url) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= v2_ic($icon) ?><span class="acc-link-t"><?= v2_e(v2_account_nav_label($key, $label)) ?></span><?php if ($key === 'recommendations'): ?><span class="acc-badge is-new"><?= v2_te('new') ?></span><?php else: ?><span class="acc-badge" data-acc-badge="<?= v2_e($key) ?>" hidden></span><?php endif; ?></a>
       <?php endforeach; ?>
     </nav>
-    <button class="acc-logout" type="button" data-acc-logout><?= v2_ic('arrow-left') ?><span>Deconectare</span></button>
+    <button class="acc-logout" type="button" data-acc-logout><?= v2_ic('arrow-left') ?><span><?= v2_te('Sign out') ?></span></button>
     <div class="acc-tip">
-      <b>Tip</b>
-      <p>Activează notificările push pentru a primi reminder înainte de evenimentele tale.</p>
+      <b><?= v2_te('Tip') ?></b>
+      <p><?= v2_te('Turn on push notifications to get a reminder before your activities.') ?></p>
     </div>
   </aside>
 
-  <nav class="acc-mnav" aria-label="Secțiuni cont">
+  <nav class="acc-mnav" aria-label="<?= v2_te('Account sections') ?>">
     <div class="acc-mnav-track">
       <?php foreach (V2_ACCOUNT_NAV as [$key, $url, $label, $icon]): ?>
-      <a class="acc-chip" href="<?= v2_e($url) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= v2_ic($icon) ?><span><?= v2_e($label) ?></span></a>
+      <a class="acc-chip" href="<?= v2_e($url) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= v2_ic($icon) ?><span><?= v2_e(v2_account_nav_label($key, $label)) ?></span></a>
       <?php endforeach; ?>
-      <button class="acc-chip is-logout" type="button" data-acc-logout><?= v2_ic('arrow-left') ?><span>Deconectare</span></button>
+      <button class="acc-chip is-logout" type="button" data-acc-logout><?= v2_ic('arrow-left') ?><span><?= v2_te('Sign out') ?></span></button>
     </div>
   </nav>
 

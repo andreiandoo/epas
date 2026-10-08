@@ -12,19 +12,19 @@
   var KEY = 'bo_invite_link', TTL = 7 * 24 * 60 * 60 * 1000;
   var API = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php';
   var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  var ROLES = { admin: 'Administrator', manager: 'Manager', staff: 'Staff' };
-  var STRENGTH = { 1: ['Slabă', 'bad'], 2: ['Medie', 'mid'], 3: ['Puternică', 'ok'], 4: ['Foarte puternică', 'ok'] };
+  var ROLES = { admin: VQ.t('Administrator'), manager: VQ.t('Manager'), staff: VQ.t('Staff') };
+  var STRENGTH = { 1: [VQ.t('Weak'), 'bad'], 2: [VQ.t('Fair'), 'mid'], 3: [VQ.t('Strong'), 'ok'], 4: [VQ.t('Very strong'), 'ok'] };
   var BAD = {
-    invalid: ['Link invalid', 'Invitația nu mai e valabilă', 'Invitația a expirat, a fost deja folosită sau linkul e incomplet. Cere-i operatorului să ți-o retrimită: o invitație e valabilă 7 zile.'],
-    busy: ['Prea multe încercări', 'Încearcă din nou peste un minut', 'Am primit prea multe verificări într-un timp scurt. Linkul nu s-a schimbat, îl poți folosi în continuare.'],
-    error: ['Eroare de conexiune', 'Nu am putut verifica invitația', 'Verifică conexiunea la internet și încearcă din nou.'],
+    invalid: [VQ.t('Invalid link'), VQ.t('The invitation is no longer valid'), VQ.t('The invitation has expired, was already used, or the link is incomplete. Ask the operator to send it again: an invitation is valid for 7 days.')],
+    busy: [VQ.t('Too many attempts'), VQ.t('Try again in a minute'), VQ.t('We received too many checks in a short time. The link has not changed, you can still use it.')],
+    error: [VQ.t('Connection error'), VQ.t('We could not check the invitation'), VQ.t('Check your internet connection and try again.')],
   };
   var pass = $('ai-pass'), pass2 = $('ai-pass2'), phone = $('ai-phone'), submit = $('ai-submit'), error = $('ai-error');
   var meter = $('ai-meter'), strength = $('ai-strength'), match = $('ai-match'), status = $('ai-status');
   var LABEL = submit.textContent, busy = false, visible = false, reuse = false, invite = null, link = readLink();
 
   function txt(v) {
-    if (v && typeof v === 'object') v = v.ro || v.en || '';
+    if (v && typeof v === 'object') v = v[VQ.locale] || v.en || v.ro || '';
     return v == null ? '' : String(v).trim();
   }
   function readLink() {
@@ -74,31 +74,34 @@
     $('ai-pass-f').hidden = !on;
     $('ai-pass2-f').hidden = !on;
     $('ai-existing').hidden = on;
-    $('ai-form-p').textContent = on ? 'Alege parola cu care vei intra în cont, pe site și în aplicația mobilă.' : 'Folosești parola pe care o ai deja pe viaqui.com.';
+    $('ai-form-p').textContent = on ? VQ.t('Choose the password you will sign in with, on the site and in the mobile app.') : VQ.t('You use the password you already have on Viaqui.');
   }
 
   // ---------- the invitation ----------
   function check(focus) {
     if (!link || !link.token || !EMAIL.test(link.email || '')) { bad('invalid', focus); return; }
     show('ai-loading-view', focus ? 'ai-loading-h' : null);
-    status.textContent = 'Se verifică invitația…';
+    status.textContent = VQ.t('Checking the invitation…');
     call('organizer.validate-invite', { token: link.token, email: link.email }).then(function (r) {
       var d = r.data || {}, m = d.member || {}, o = d.organizer || {};
       var org = txt(o.name) || txt(o.company_name), company = txt(o.company_name), name = txt(m.name), email = txt(m.email) || link.email, role = ROLES[m.role] || '';
       reuse = !!d.has_existing_password;
       invite = { org: org, email: email };
-      $('ai-org').textContent = org || 'Operator viaqui.com';
+      $('ai-org').textContent = org || VQ.t('Viaqui operator');
       $('ai-company').textContent = company;
       $('ai-company').hidden = !company || company === org;
       $('ai-name').textContent = name;
       $('ai-name-row').hidden = !name;
       $('ai-email').textContent = email;
-      $('ai-role').textContent = role || 'Membru al echipei';
+      $('ai-role').textContent = role || VQ.t('Team member');
       $('ai-username').value = email;
-      $('ai-lead').textContent = (org || 'Un operator') + ' te-a adăugat în echipă' + (role ? ', cu rolul ' + role : '') + '. ' + (reuse ? 'Confirmă și contul devine activ pe loc.' : 'Alege o parolă și contul devine activ pe loc.');
+      $('ai-lead').textContent = (role
+        ? VQ.t('{org} added you to the team, as {role}.', { org: org || VQ.t('An operator'), role: role })
+        : VQ.t('{org} added you to the team.', { org: org || VQ.t('An operator') }))
+        + ' ' + (reuse ? VQ.t('Confirm and the account is active right away.') : VQ.t('Choose a password and the account is active right away.'));
       usePassword(!reuse);
       show('ai-form-view', focus ? 'ai-form-h' : null);
-      status.textContent = 'Invitația e valabilă.';
+      status.textContent = VQ.t('The invitation is valid.');
     }).catch(function (err) {
       var s = err && err.status;
       bad(s === 400 || s === 404 || s === 422 ? 'invalid' : s === 429 ? 'busy' : 'error', focus);
@@ -122,14 +125,14 @@
   }
   function checkMatch() {
     if (!pass2.value) hint(match, '');
-    else if (pass.value === pass2.value) hint(match, '✓ Parolele coincid', 'ok');
-    else hint(match, 'Parolele nu coincid', 'bad');
+    else if (pass.value === pass2.value) hint(match, VQ.t('✓ The passwords match'), 'ok');
+    else hint(match, VQ.t('The passwords do not match'), 'bad');
   }
   pass.addEventListener('input', function () {
     var p = pass.value, s = score(p);
     meter.setAttribute('data-score', String(s));
     if (!p) hint(strength, '');
-    else if (p.length < 8) hint(strength, 'Prea scurtă · minim 8 caractere', 'bad');
+    else if (p.length < 8) hint(strength, VQ.t('Too short · at least 8 characters'), 'bad');
     else hint(strength, STRENGTH[s][0], STRENGTH[s][1]);
     checkMatch();
   });
@@ -140,9 +143,9 @@
       visible = !visible;
       [pass, pass2].forEach(function (el) { el.type = visible ? 'text' : 'password'; });
       [].forEach.call(document.querySelectorAll('[data-toggle-pass]'), function (b) {
-        b.textContent = visible ? 'ascunde' : 'arată';
+        b.textContent = visible ? VQ.t('hide') : VQ.t('show');
         b.setAttribute('aria-pressed', String(visible));
-        b.setAttribute('aria-label', visible ? 'Ascunde parola' : 'Arată parola');
+        b.setAttribute('aria-label', visible ? VQ.t('Hide password') : VQ.t('Show password'));
       });
     });
   });
@@ -161,43 +164,43 @@
     [pass, pass2, phone].forEach(function (el) { el.removeAttribute('aria-invalid'); });
     var body = { token: link.token, email: link.email }, ph = phone.value.trim();
     if (!reuse) {
-      if (!pass.value) { say('Alege o parolă pentru cont.', pass); return; }
-      if (pass.value.length < 8) { say('Parola trebuie să aibă minim 8 caractere.', pass); return; }
-      if (pass.value !== pass2.value) { say('Parolele nu coincid.', pass2); return; }
+      if (!pass.value) { say(VQ.t('Choose a password for the account.'), pass); return; }
+      if (pass.value.length < 8) { say(VQ.t('The password must have at least 8 characters.'), pass); return; }
+      if (pass.value !== pass2.value) { say(VQ.t('The passwords do not match.'), pass2); return; }
       body.password = pass.value;
       body.password_confirmation = pass2.value;
     }
-    if (ph && (!/^\+?[\d\s().\/-]+$/.test(ph) || ph.replace(/\D/g, '').length < 6)) { say('Scrie un număr de telefon valid sau lasă câmpul gol.', phone); return; }
+    if (ph && (!/^\+?[\d\s().\/-]+$/.test(ph) || ph.replace(/\D/g, '').length < 6)) { say(VQ.t('Enter a valid phone number or leave the field empty.'), phone); return; }
     if (ph) body.phone = ph;
 
     busy = true;
     submit.disabled = true;
-    submit.textContent = 'Se activează…';
+    submit.textContent = VQ.t('Activating…');
     call('organizer.accept-invite', null, body).then(function (r) {
       var d = r.data || {}, reused = !!d.reused_existing_password;
       forget();
       pass.value = pass2.value = '';
-      $('ai-done-org').textContent = txt(d.organizer_name) || invite.org || 'operatorului';
+      $('ai-done-org').textContent = txt(d.organizer_name) || invite.org || VQ.t('the operator');
       $('ai-done-email').textContent = invite.email;
       // core keeps the password this e-mail already has in another team, even when one was typed here
-      $('ai-done-pass').textContent = !reused ? 'parola aleasă' : body.password ? 'parola pe care o aveai deja pe viaqui.com, nu cea aleasă acum' : 'parola pe care o folosești deja pe viaqui.com';
-      $('ai-login').href = '/autentificare?ca=venue&email=' + encodeURIComponent(invite.email);
-      status.textContent = 'Contul e activ.';
+      $('ai-done-pass').textContent = !reused ? VQ.t('the password you chose') : body.password ? VQ.t('the password you already had on Viaqui, not the one you chose now') : VQ.t('the password you already use on Viaqui');
+      $('ai-login').href = VQ.url('/login') + '?ca=venue&email=' + encodeURIComponent(invite.email);
+      status.textContent = VQ.t('The account is active.');
       show('ai-done-view', 'ai-done-h');
     }).catch(function (err) {
       var s = err && err.status, errors = (err && err.data && err.data.errors) || {};
       if (s === 400 || s === 404 || (s === 422 && (errors.token || errors.email))) { bad('invalid', true); return; }
       if (s === 422 && errors.password) {
         // the password this e-mail had elsewhere is gone since the check: ask for one
-        if (reuse) { reuse = false; usePassword(true); say('Alege o parolă pentru cont: nu am mai găsit parola ta de pe viaqui.com.', pass); return; }
-        if (/confirm/i.test(String(errors.password[0] || ''))) say('Parolele nu coincid.', pass2);
-        else say('Parola trebuie să aibă minim 8 caractere.', pass);
+        if (reuse) { reuse = false; usePassword(true); say(VQ.t('Choose a password for the account: we could not find your Viaqui password any more.'), pass); return; }
+        if (/confirm/i.test(String(errors.password[0] || ''))) say(VQ.t('The passwords do not match.'), pass2);
+        else say(VQ.t('The password must have at least 8 characters.'), pass);
         return;
       }
-      if (s === 422 && errors.phone) { say('Numărul de telefon poate avea cel mult 30 de caractere.', phone); return; }
-      if (s === 429) say('Prea multe încercări. Încearcă din nou peste un minut.');
-      else if (s === 0) say('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.');
-      else say('Nu am putut activa contul acum. Încearcă din nou în câteva momente.');
+      if (s === 422 && errors.phone) { say(VQ.t('The phone number can have at most 30 characters.'), phone); return; }
+      if (s === 429) say(VQ.t('Too many attempts. Try again in a minute.'));
+      else if (s === 0) say(VQ.t('We could not connect. Check your internet and try again.'));
+      else say(VQ.t('We could not activate the account right now. Try again in a few moments.'));
     }).then(function () {
       busy = false;
       submit.disabled = false;

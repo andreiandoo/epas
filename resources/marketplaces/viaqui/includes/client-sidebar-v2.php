@@ -28,14 +28,18 @@
 $currentClientPage = $currentClientPage ?? 'dashboard';
 $sidebarCounts     = $sidebarCounts ?? [];
 
+if (!function_exists('v2_t')) {
+    require_once __DIR__ . '/v2/i18n.php';
+}
+
 $navItems = [
-    ['key' => 'dashboard',       'url' => '/cont',                  'label' => 'Dashboard',        'badge' => 'badgeFor("dashboard")'],
-    ['key' => 'tickets',         'url' => '/cont/bilete',           'label' => 'Biletele mele',    'badge' => 'badgeFor("tickets")'],
-    ['key' => 'orders',          'url' => '/cont/comenzi',          'label' => 'Comenzile mele',   'badge' => 'badgeFor("orders")'],
-    ['key' => 'points',          'url' => '/cont/puncte',           'label' => 'Punctele mele',    'badge' => 'badgeFor("points")'],
-    ['key' => 'recommendations', 'url' => '/cont/recomandari',      'label' => 'Recomandări',      'badge' => '"nou"'],
-    ['key' => 'support',         'url' => '/cont/tichete-support',  'label' => 'Tichete support',  'badge' => 'badgeFor("support")'],
-    ['key' => 'settings',        'url' => '/cont/setari',           'label' => 'Setări',           'badge' => '"⚙"'],
+    ['key' => 'dashboard',       'url' => '/account',               'label' => v2_t('Overview'),         'badge' => 'badgeFor("dashboard")'],
+    ['key' => 'tickets',         'url' => '/account/tickets',       'label' => v2_t('My tickets'),       'badge' => 'badgeFor("tickets")'],
+    ['key' => 'orders',          'url' => '/account/orders',        'label' => v2_t('My orders'),        'badge' => 'badgeFor("orders")'],
+    ['key' => 'points',          'url' => '/account/points',        'label' => v2_t('My points'),        'badge' => 'badgeFor("points")'],
+    ['key' => 'recommendations', 'url' => '/cont/recomandari',      'label' => v2_t('Recommendations'),  'badge' => json_encode(v2_t('new'))],
+    ['key' => 'support',         'url' => '/account/support',       'label' => v2_t('Support tickets'),  'badge' => 'badgeFor("support")'],
+    ['key' => 'settings',        'url' => '/account/settings',      'label' => v2_t('Settings'),         'badge' => '"⚙"'],
 ];
 ?>
 
@@ -46,7 +50,7 @@ $navItems = [
         <div class="flex items-center gap-3 p-3 rounded-2xl bg-paper-2 border border-ink/10">
             <span data-user-initials class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper font-display text-2xl font-bold">?</span>
             <div class="min-w-0">
-                <p data-user-name class="font-display text-2xl font-bold leading-none truncate">Client</p>
+                <p data-user-name class="font-display text-2xl font-bold leading-none truncate"><?= v2_te('Customer') ?></p>
                 <p data-user-email class="text-sm text-ink-soft truncate">—</p>
             </div>
         </div>
@@ -60,7 +64,7 @@ $navItems = [
             ?>
                 <a href="<?= htmlspecialchars($item['url'], ENT_QUOTES) ?>"<?= $aria ?> class="<?= $activeCls ?> flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition">
                     <span><?= htmlspecialchars($item['label']) ?></span>
-                    <span class="text-xs opacity-70" x-text="<?= $item['badge'] ?>"></span>
+                    <span class="text-xs opacity-70" x-text="<?= htmlspecialchars($item['badge'], ENT_QUOTES) ?>"></span>
                 </a>
             <?php endforeach; ?>
         </nav>
@@ -69,13 +73,13 @@ $navItems = [
         <button onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutCustomer){BileteOnlineAuth.logoutCustomer();}else if(window.BileteOnlineAuth&&BileteOnlineAuth.logout){BileteOnlineAuth.logout();}else{location.href='/';}"
                 class="mt-4 w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-ink/15 px-4 py-3 font-bold text-vermilion hover:border-vermilion hover:bg-vermilion/5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Deconectare
+            <?= v2_te('Sign out') ?>
         </button>
 
         <!-- Tip card -->
         <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4 text-sm">
-            <p class="font-bold text-forest">💡 Tip</p>
-            <p class="mt-1 text-ink-soft">Activează notificările push pentru a primi reminder înainte de evenimentele tale.</p>
+            <p class="font-bold text-forest">💡 <?= v2_te('Tip') ?></p>
+            <p class="mt-1 text-ink-soft"><?= v2_te('Turn on push notifications to get a reminder before your activities.') ?></p>
         </div>
     </div>
 </aside>
@@ -86,7 +90,7 @@ $navItems = [
         <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
                 <span data-user-initials class="grid place-items-center w-10 h-10 rounded-full bg-vermilion text-paper font-bold">?</span>
-                <div class="min-w-0"><p data-user-name class="font-bold truncate">Client</p><p data-user-email class="text-xs text-ink-soft truncate">—</p></div>
+                <div class="min-w-0"><p data-user-name class="font-bold truncate"><?= v2_te('Customer') ?></p><p data-user-email class="text-xs text-ink-soft truncate">—</p></div>
             </div>
             <button onclick="document.getElementById('client-mobile-drawer').classList.add('hidden')" class="grid place-items-center w-10 h-10 rounded-full bg-ink text-paper font-bold">×</button>
         </div>
@@ -95,10 +99,10 @@ $navItems = [
                 $isActive = $currentClientPage === $item['key'];
                 $activeCls = $isActive ? 'bg-ink text-paper' : 'bg-paper-2';
             ?>
-                <a href="<?= htmlspecialchars($item['url'], ENT_QUOTES) ?>" class="<?= $activeCls ?> flex items-center justify-between gap-3 rounded-2xl px-4 py-3"><?= htmlspecialchars($item['label']) ?><span class="text-xs opacity-70" x-text="<?= $item['badge'] ?>"></span></a>
+                <a href="<?= htmlspecialchars($item['url'], ENT_QUOTES) ?>" class="<?= $activeCls ?> flex items-center justify-between gap-3 rounded-2xl px-4 py-3"><?= htmlspecialchars($item['label']) ?><span class="text-xs opacity-70" x-text="<?= htmlspecialchars($item['badge'], ENT_QUOTES) ?>"></span></a>
             <?php endforeach; ?>
         </nav>
-        <button onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutCustomer){BileteOnlineAuth.logoutCustomer();}else if(window.BileteOnlineAuth&&BileteOnlineAuth.logout){BileteOnlineAuth.logout();}else{location.href='/';}" class="mt-5 w-full rounded-2xl border-2 border-vermilion px-4 py-3 font-bold text-vermilion">Deconectare</button>
+        <button onclick="if(window.BileteOnlineAuth&&BileteOnlineAuth.logoutCustomer){BileteOnlineAuth.logoutCustomer();}else if(window.BileteOnlineAuth&&BileteOnlineAuth.logout){BileteOnlineAuth.logout();}else{location.href='/';}" class="mt-5 w-full rounded-2xl border-2 border-vermilion px-4 py-3 font-bold text-vermilion"><?= v2_te('Sign out') ?></button>
     </div>
 </aside>
 
@@ -111,7 +115,7 @@ $navItems = [
     function applyUser(user) {
         if (! user) return;
         const name = (user.first_name || '') + (user.last_name ? ' ' + user.last_name : '');
-        const fallback = user.name || name || user.email || 'Client';
+        const fallback = user.name || name || user.email || <?= json_encode(v2_t('Customer'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
         const initials = (fallback || '?').split(/\s+/).filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '?';
         document.querySelectorAll('[data-user-initials]').forEach(el => el.textContent = initials);
         document.querySelectorAll('[data-user-name]').forEach(el => el.textContent = name.trim() || fallback);
