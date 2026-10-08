@@ -335,7 +335,7 @@ setTimeout(function(){
     "name": "<?= addslashes(SITE_NAME) ?>",
     "url": "<?= addslashes(SITE_URL) ?>",
     "inLanguage": "ro-RO",
-    "publisher": {"@type": "Organization", "name": "Tixello", "url": "https://tixello.ro/"},
+    "publisher": {"@type": "Organization", "name": "Tixello", "url": "https://tixello.com/"},
     "potentialAction": {
         "@type": "SearchAction",
         "target": {"@type": "EntryPoint", "urlTemplate": "<?= addslashes(SITE_URL) ?>/cauta?q={search_term_string}"},

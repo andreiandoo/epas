@@ -34,7 +34,7 @@ if (!empty($v2FooterCompact) || $v2FooterSwitch) {
       <a class="ftr-mark ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="<?= v2_te('Payments processed by {provider}', ['provider' => $ftrMiniPay['label']]) ?>"><img src="<?= v2_e($ftrMiniLogo) ?>" alt="<?= v2_e($ftrMiniPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async"></a>
       <?php endif; ?>
     </div>
-    <p class="ftr-mini-copy"><?= v2_t('© {year} Viaqui · operated by <a href="https://tixello.ro" rel="noopener">Tixello</a>', ['year' => date('Y')]) ?></p>
+    <p class="ftr-mini-copy"><?= v2_t('© {year} Viaqui · operated by <a href="https://tixello.com" rel="noopener">Tixello</a>', ['year' => date('Y')]) ?></p>
   </div>
 </footer>
 <?php
@@ -127,7 +127,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
       <a class="vf-up" href="#"><?= v2_ic('arrow-right') ?><?= v2_te('Back to top') ?></a>
     </div>
     <div class="vf-fine-row">
-      <p class="vf-copy"><?= v2_t('© {year} Viaqui · platform operated by <a href="https://tixello.ro" rel="noopener">Tixello</a> (SC TIXELLO SRL)', ['year' => date('Y')]) ?></p>
+      <p class="vf-copy"><?= v2_t('© {year} Viaqui · platform operated by <a href="https://tixello.com" rel="noopener">Tixello</a> (SC TIXELLO SRL)', ['year' => date('Y')]) ?></p>
       <div class="vf-marks">
         <?php $ftrPay = v2_payment_provider(); $ftrPayLogo = v2_payment_logo($ftrPay); ?>
         <?php if ($ftrPayLogo): ?>

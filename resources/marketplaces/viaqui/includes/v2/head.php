@@ -142,7 +142,7 @@ $v2Ld = array_merge([
     ],
     [
         '@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => SITE_NAME, 'url' => SITE_URL, 'inLanguage' => 'en',
-        'publisher' => ['@type' => 'Organization', 'name' => 'Tixello', 'url' => 'https://tixello.ro/'],
+        'publisher' => ['@type' => 'Organization', 'name' => 'Tixello', 'url' => 'https://tixello.com/'],
         'potentialAction' => ['@type' => 'SearchAction', 'target' => ['@type' => 'EntryPoint', 'urlTemplate' => SITE_URL . '/search?q={search_term_string}'], 'query-input' => 'required name=search_term_string'],
     ],
 ], $structuredData ?? []);

@@ -39,6 +39,6 @@ require_once __DIR__ . '/v2/i18n.php'; // v2_t() / v2_te(): the legacy head does
         </span>
 
         <!-- Powered by -->
-        <span class="text-[10px] text-paper/40"><?= v2_t('© {year} Viaqui · operated by {company}', ['year' => date('Y'), 'company' => '<a href="https://tixello.ro" target="_blank" rel="noopener" class="font-semibold text-ochre transition hover:text-paper">Tixello</a>']) ?></span>
+        <span class="text-[10px] text-paper/40"><?= v2_t('© {year} Viaqui · operated by {company}', ['year' => date('Y'), 'company' => '<a href="https://tixello.com" target="_blank" rel="noopener" class="font-semibold text-ochre transition hover:text-paper">Tixello</a>']) ?></span>
     </div>
 </footer>
