@@ -249,3 +249,21 @@ button.th-arch:focus-visible{outline:2px solid var(--online);outline-offset:4px}
 .tfacts dd a{color:var(--green);font-weight:600}
 .tfacts dd small{display:block;font-size:.75rem;color:var(--muted)}
 @media (max-width:559px){.tfacts dl > div{grid-template-columns:1fr;gap:2px}}
+
+/* guides written about the attraction */
+.tguides{background:var(--bg)}
+.tguides-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-5)}
+@media (min-width:900px){.tguides-list{grid-template-columns:repeat(2, minmax(0,1fr))}.tguides-list li:only-child{grid-column:1 / -1}}
+.tguide{display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden;border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-micro) var(--ease-out)}
+.tguide:hover{border-color:var(--green)}
+@media (min-width:640px){.tguide{grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr)}}
+.tguide-media{position:relative;display:block;min-height:200px;background:var(--tint-green)}
+.tguide-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tguide-body{display:grid;align-content:center;gap:8px;padding:clamp(20px, 3vw, 32px)}
+.tguide-body small{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--action)}
+.tguide-body b{font-size:clamp(1.25rem, 2vw, 1.625rem);font-weight:700;line-height:1.2;letter-spacing:-.02em;color:var(--green)}
+.tguide-body span{color:var(--muted);line-height:1.55}
+.tguide-body i{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-style:normal;font-weight:600;color:var(--green)}
+.tguide-body i .ic{width:18px;height:18px;transition:transform var(--dur-micro) var(--ease-out)}
+.tguide:hover .tguide-body i .ic{transform:translateX(3px)}
+@media (prefers-reduced-motion:reduce){.tguide,.tguide-body i .ic{transition:none}}

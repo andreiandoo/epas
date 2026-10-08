@@ -308,7 +308,8 @@ if ($gdPlace['attraction'] !== '') {
     if ($gdPlace['city'] === '' && !empty($gdAt['city']['slug'])) {
         $gdPlace['city'] = (string) $gdAt['city']['slug'];
     }
-    $gdCityName = is_array($gdAt['city'] ?? null) ? navFlatName($gdAt['city']['name'] ?? '') : '';
+    // the attraction's own city may be a district ("Paris 16 Passy"): a city named by the guide keeps its own name
+    $gdCityName = ($gdPlace['city'] === '' || $gdPlace['city'] === ($gdAt['city']['slug'] ?? '')) && is_array($gdAt['city'] ?? null) ? navFlatName($gdAt['city']['name'] ?? '') : '';
     foreach (array_merge((array) ($gdAt['nearby'] ?? []), (array) ($gdAt['city_attractions'] ?? [])) as $gdN) {
         if (is_array($gdN) && ($gdS = v2_attraction($gdN)) && $gdS['slug'] !== $gdPlace['attraction'] && !isset($gdSights[$gdS['slug']])) {
             $gdSights[$gdS['slug']] = $gdS;
@@ -329,7 +330,7 @@ if ($gdPlace['city'] !== '') {
     }
     $gdThere = array_slice(v2_wegotrip_city_all($gdPlace['city']), 0, 10);
 }
-$gdSights = array_slice(array_values($gdSights), 0, 10);
+$gdSights = array_slice(array_values($gdSights), 0, 14);
 
 // Every guide ends with a few bookable activities, whatever its shortcodes.
 $railResp = api_cached('guide_rail_' . $slug, fn () => api_get('/activities', ['per_page' => 16, 'sort' => 'recent']), 300);
@@ -396,7 +397,7 @@ $structuredData = [$gdClean([
 ]];
 
 $v2Styles = ['guide.css'];
-$v2Scripts = ['guide.js'];
+$v2Scripts = ['hdrag.js', 'guide.js'];
 $v2HeadExtra = $coverUrl ? '<link rel="preload" as="image" href="' . v2_e($coverUrl) . '" fetchpriority="high">' : '';
 
 include __DIR__ . '/includes/v2/head.php';
@@ -550,16 +551,11 @@ include __DIR__ . '/includes/v2/header.php';
           <button class="rail-btn" type="button" data-dir="1" aria-label="<?= v2_te('Next attractions') ?>"><?= v2_ic('arrow-right') ?></button>
         </div>
       </div>
-      <ul class="rail" id="gd-sights-list">
+      <ul class="rail gd-sights" id="gd-sights-list">
         <?php foreach ($gdSights as $gi => $gs): ?>
-        <li class="xp"><a href="<?= v2_e($gs['href']) ?>">
-          <span class="xp-media"><?= $gs['image'] ? v2_photo([v2_thumb($gs['image'], 480, 320), 480, 320, '']) : v2_fallback($gs['name'], $gi) ?></span>
-          <span class="xp-body">
-            <?php if ($gs['type'] !== ''): ?><span class="xp-cat"><?= v2_e($gs['type']) ?></span><?php endif; ?>
-            <span class="xp-title"><?= v2_e($gs['name']) ?></span>
-            <span class="xp-meta"><?php if ($gs['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($gs['city']) ?></span><?php endif; ?></span>
-            <span class="xp-foot"><span class="xp-go"><?= v2_te('See the attraction') ?><?= v2_ic('arrow-right') ?></span></span>
-          </span>
+        <li><a class="gd-sight" href="<?= v2_e($gs['href']) ?>">
+          <span class="gd-sight-media"><?= $gs['image'] ? v2_photo([v2_thumb($gs['image'], 360, 270), 360, 270, '']) : v2_fallback($gs['name'], $gi) ?></span>
+          <span class="gd-sight-body"><?php if ($gs['type'] !== ''): ?><small><?= v2_e($gs['type']) ?></small><?php endif; ?><b><?= v2_e($gs['name']) ?></b></span>
         </a></li>
         <?php endforeach; ?>
       </ul>

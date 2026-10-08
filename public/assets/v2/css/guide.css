@@ -184,3 +184,16 @@ html.js .gd-toc-toggle[aria-expanded="false"] + .gd-toc-list{display:none}
 .gd-around-second{margin-top:var(--space-8)}
 /* a photo of the text with its caption and credit */
 .gd-prose p > img + em,.gd-prose .gd-cap{display:block;margin:-1.2em 0 1.8em;font-size:.8125rem;font-style:normal;line-height:1.5;color:var(--muted)}
+
+/* attractions around the place of the guide: small cards, many to a row */
+.rail.gd-sights{grid-auto-columns:min(44vw, 188px);gap:var(--space-4)}
+.gd-sight{display:block;color:var(--ink);text-decoration:none}
+.gd-sight-media{position:relative;display:block;aspect-ratio:4 / 3;overflow:hidden;border-radius:var(--r-m);background:var(--tint-green)}
+.gd-sight-media img{width:100%;height:100%;object-fit:cover;transition:transform var(--dur-micro) var(--ease-out)}
+.gd-sight:hover .gd-sight-media img{transform:scale(1.04)}
+.gd-sight-body{display:grid;gap:2px;padding:10px 2px 0}
+.gd-sight-body small{font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--action)}
+.gd-sight-body b{font-size:.9375rem;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gd-sight:hover .gd-sight-body b{text-decoration:underline;text-underline-offset:3px}
+.gd-around .rail{cursor:grab}
+@media (prefers-reduced-motion:reduce){.gd-sight-media img{transition:none}}
