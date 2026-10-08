@@ -120,20 +120,23 @@ $gdPartnerShortcode = function (string $shortcode) use ($slug): string {
         return '';
     }
     $words = array_filter(preg_split('/[^a-z0-9]+/', strtolower(v2_partner_ascii($match))), fn ($w) => strlen($w) >= 3);
+    // First the products whose title has one of the words, then, if there is room left, the others of the place.
     $seen = [];
     $keep = [];
-    foreach ($items as $p) {
-        $title = strtolower(v2_partner_ascii($p['title']));
-        if ($words && !array_filter($words, fn ($w) => strpos($title, $w) !== false)) {
-            continue;
-        }
-        if (isset($seen[$title]) || !($p['price'] > 0)) {      // the same product listed twice, or one that cannot be priced
-            continue;
-        }
-        $seen[$title] = true;
-        $keep[] = $p;
-        if (count($keep) >= $limit) {
-            break;
+    foreach ($words ? [true, false] : [false] as $named) {
+        foreach ($items as $p) {
+            if (count($keep) >= $limit) {
+                break 2;
+            }
+            $title = strtolower(v2_partner_ascii($p['title']));
+            if ($named && !array_filter($words, fn ($w) => strpos($title, $w) !== false)) {
+                continue;
+            }
+            if (isset($seen[$title]) || !($p['price'] > 0)) {      // the same product listed twice, or one that cannot be priced
+                continue;
+            }
+            $seen[$title] = true;
+            $keep[] = $p;
         }
     }
     if (!$keep) {
