@@ -110,6 +110,10 @@ class BlogController extends Controller
         $article = BlogArticle::where('marketplace_client_id', $client->id)
             ->where('slug', $slug)
             ->where('status', 'published')
+            // an article dated in the future is not out yet (the list hides it the same way)
+            ->where(function ($q) {
+                $q->whereNull('published_at')->orWhere('published_at', '<=', now());
+            })
             ->with(['category', 'event'])
             ->first();
 

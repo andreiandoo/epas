@@ -24,6 +24,10 @@ use Illuminate\Support\Facades\Storage;
  *     [--update]            also overwrite articles that already exist
  *     [--dry-run]           report what would happen, write nothing
  *
+ * An article may carry its own "published_at" ("2026-10-12 09:30"). With --status=published a new article then
+ * gets that date instead of today's; a date in the future keeps it out of the public list until that day, so a
+ * batch can be imported once and come out a few articles a day.
+ *
  * Safety: articles are matched on (marketplace, slug). An existing
  * article is skipped unless --update is passed, so edits made in the
  * admin are never overwritten by a re-run; --update keeps its status,
@@ -201,12 +205,14 @@ class ImportBlogArticlesCommand extends Command
             }
 
             $counts['created']++;
-            $this->line("  create  #{$row['nr']} {$slug} [{$status}]" . ($cover ? '' : ' (no cover image)'));
+            $own = $status === 'published' ? $this->ownDate($row) : null;
+            $this->line("  create  #{$row['nr']} {$slug} [{$status}" . ($own ? ', ' . $own->format('Y-m-d H:i') : '') . ']' . ($cover ? '' : ' (no cover image)'));
             if (! $dryRun) {
                 BlogArticle::create($data + [
                     'status' => $status,
-                    // A minute apart, first article newest, so the list keeps the batch order.
-                    'published_at' => $status === 'published' ? $now->copy()->subMinutes($index) : null,
+                    // The article's own date when it has one; else a minute apart, first article newest,
+                    // so the list keeps the batch order.
+                    'published_at' => $status === 'published' ? ($this->ownDate($row) ?? $now->copy()->subMinutes($index)) : null,
                     'visibility' => 'public',
                     'is_featured' => false,
                     'no_index' => false,
@@ -217,6 +223,20 @@ class ImportBlogArticlesCommand extends Command
         $this->info("Created {$counts['created']}, updated {$counts['updated']}, skipped {$counts['skipped']}.");
 
         return self::SUCCESS;
+    }
+
+    /** The "published_at" an article carries in its batch, or null when it has none or it cannot be read. */
+    private function ownDate(array $row): ?\Illuminate\Support\Carbon
+    {
+        $value = trim((string) ($row['published_at'] ?? ''));
+        if ($value === '') {
+            return null;
+        }
+        try {
+            return \Illuminate\Support\Carbon::parse($value);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     private function resolveMarketplace(string $value): ?MarketplaceClient
