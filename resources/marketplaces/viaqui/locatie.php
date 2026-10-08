@@ -52,7 +52,7 @@ $vnText = function ($v): string {
         $v = $v['name'];
     }
     if (is_array($v)) {
-        $v = $v['en'] ?? $v['ro'] ?? reset($v); // the site is in English: that translation first
+        $v = $v[v2_locale()] ?? $v['en'] ?? $v['ro'] ?? reset($v); // the visitor's language, then English
     }
     return is_scalar($v) ? trim((string) $v) : '';
 };
@@ -127,10 +127,10 @@ $rating = is_numeric($venue['rating'] ?? null) && $venue['rating'] > 0 ? (float)
 $reviewsCount = (int) ($venue['reviews_count'] ?? 0);
 
 $typeLabels = [
-    'escape_room' => 'Escape room', 'museum' => 'Museum', 'park' => 'Park',
-    'adventure_park' => 'Adventure park', 'workshop' => 'Workshop', 'tour' => 'Guided tour',
-    'aquarium' => 'Aquarium', 'zoo' => 'Zoo', 'cave' => 'Cave',
-    'leisure_venue' => 'Leisure centre',
+    'escape_room' => v2_t('Escape room'), 'museum' => v2_t('Museum'), 'park' => v2_t('Park'),
+    'adventure_park' => v2_t('Adventure park'), 'workshop' => v2_t('Workshop'), 'tour' => v2_t('Guided tour'),
+    'aquarium' => v2_t('Aquarium'), 'zoo' => v2_t('Zoo'), 'cave' => v2_t('Cave'),
+    'leisure_venue' => v2_t('Leisure centre'),
 ];
 $vnType = function (array $v) use ($typeLabels, $vnText): string {
     $raw = $v['type'] ?? $v['venue_type'] ?? '';
@@ -138,7 +138,7 @@ $vnType = function (array $v) use ($typeLabels, $vnText): string {
         return $typeLabels[$raw] ?? ucfirst(str_replace('_', ' ', $raw));
     }
     $cats = is_array($v['categories'] ?? null) ? array_values($v['categories']) : [];
-    return $vnText($raw) ?: ($cats ? $vnText($cats[0]) : '') ?: 'Venue';
+    return $vnText($raw) ?: ($cats ? $vnText($cats[0]) : '') ?: v2_t('Venue');
 };
 $typeLabel = $vnType($venue);
 
@@ -252,43 +252,45 @@ foreach ((array) $similarRaw as $sv) {
 // ------------------------------------------------------------------ page
 $stats = [];
 if ($rating) {
-    $stats[] = ['star', number_format($rating, 1, '.', ''), 'average rating'];
+    $stats[] = ['star', number_format($rating, 1, '.', ''), v2_t('average rating')];
 }
 if ($reviewsCount > 0) {
-    $stats[] = ['users-three', v2_thousands($reviewsCount), 'reviews'];
+    $stats[] = ['users-three', v2_thousands($reviewsCount), v2_plural($reviewsCount, 'review', 'reviews')];
 }
 if ($cheapestCents !== null) {
-    $stats[] = ['coins', $vnPrice($cheapestCents, $cheapestCurrency), 'from / ticket'];
+    $stats[] = ['coins', $vnPrice($cheapestCents, $cheapestCurrency), v2_t('from / ticket')];
 }
-$stats[] = ['qr-code', 'QR', 'quick entry'];
+$stats[] = ['qr-code', 'QR', v2_t('quick entry')];
 
-$navLinks = [['activitati', 'Activities']];
+$navLinks = [['activitati', v2_t('Activities')]];
 if ($hasAbout) {
-    $navLinks[] = ['despre', 'About'];
+    $navLinks[] = ['despre', v2_t('About')];
 }
-$navLinks[] = ['program', 'Opening hours & address'];
-$navLinks[] = ['faq', 'FAQ'];
+$navLinks[] = ['program', v2_t('Opening hours & address')];
+$navLinks[] = ['faq', v2_t('FAQ')];
 if ($similarVenues) {
-    $navLinks[] = ['similare', 'Similar venues'];
+    $navLinks[] = ['similare', v2_t('Similar venues')];
 }
 
 $faqs = [
-    ['How do I buy tickets for ' . $name . '?', 'Choose an activity above, pick the date and time, fill in your details and you get your QR ticket by email.'],
-    ['Can I cancel or rebook my ticket?', 'Each venue sets its own cancellation policy. It is shown on the activity page before you pay.'],
-    ['Do I need to create an account?', 'No, you can buy as a guest. An account does make it easier to find your tickets and past bookings.'],
-    ['How do I get in with my ticket?', 'Show the QR code on your ticket, from the email or from your account. Staff scan it and you are in.'],
+    [v2_t('How do I buy tickets for {name}?', ['name' => $name]), v2_t('Choose an activity above, pick the date and time, fill in your details and you get your QR ticket by email.')],
+    [v2_t('Can I cancel or rebook my ticket?'), v2_t('Each venue sets its own cancellation policy. It is shown on the activity page before you pay.')],
+    [v2_t('Do I need to create an account?'), v2_t('No, you can buy as a guest. An account does make it easier to find your tickets and past bookings.')],
+    [v2_t('How do I get in with my ticket?'), v2_t('Show the QR code on your ticket, from the email or from your account. Staff scan it and you are in.')],
 ];
 
-$breadcrumbs = [['name' => 'Home', 'url' => '/']];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => '/']];
 if ($cityName !== '' && $citySlug !== '') {
     $breadcrumbs[] = ['name' => $cityName, 'url' => '/' . $citySlug];
 }
-$breadcrumbs[] = ['name' => 'Venues', 'url' => '/operators'];
+$breadcrumbs[] = ['name' => v2_t('Venues'), 'url' => '/operators'];
 $breadcrumbs[] = ['name' => $name, 'url' => '/venue/' . $slug];
 
-$pageTitleRaw = $name . ' — ' . ($cityName ?: 'Europe') . ' · ' . SITE_NAME;
+$pageTitleRaw = ($cityName !== '' ? v2_t('{name}, {city}', ['name' => $name, 'city' => $cityName]) : $name) . ' | ' . SITE_NAME;
 $pageDescription = $shortDescription !== '' ? $vnExcerpt($shortDescription, 160)
-    : ($descRaw !== '' ? $vnExcerpt($descRaw, 160) : "Tickets for activities at {$name}" . ($cityName ? " in {$cityName}" : '') . '. Book online and get your QR ticket by email.');
+    : ($descRaw !== '' ? $vnExcerpt($descRaw, 160) : ($cityName !== ''
+        ? v2_t('Tickets for activities at {name} in {city}. Book online and get your QR ticket by email.', ['name' => $name, 'city' => $cityName])
+        : v2_t('Tickets for activities at {name}. Book online and get your QR ticket by email.', ['name' => $name])));
 $canonicalUrl = SITE_URL . '/venue/' . $slug;
 $ogImage = $photos[0] ?? (SITE_URL . '/assets/images/og-default.jpg');
 
@@ -350,7 +352,7 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="th-in">
       <div class="th-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $bi => $bc): ?>
             <?php if ($bi > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($bi < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bc['url']) ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
@@ -366,9 +368,9 @@ include __DIR__ . '/includes/v2/header.php';
         </ul>
         <?php endif; ?>
         <div class="th-cta">
-          <?php if ($activityCount): ?><a class="btn btn-light" href="#activitati">See the activities<?= v2_ic('arrow-right') ?></a><?php endif; ?>
-          <a class="btn btn-outline-light" href="#program"><?= v2_ic('map-pin') ?>Opening hours &amp; address</a>
-          <a class="btn btn-outline-light" href="#faq">Questions</a>
+          <?php if ($activityCount): ?><a class="btn btn-light" href="#activitati"><?= v2_te('See the activities') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
+          <a class="btn btn-outline-light" href="#program"><?= v2_ic('map-pin') ?><?= v2_te('Opening hours & address') ?></a>
+          <a class="btn btn-outline-light" href="#faq"><?= v2_te('Questions') ?></a>
         </div>
         <dl class="vn-stats">
           <?php foreach ($stats as [$statIcon, $statValue, $statLabel]): ?>
@@ -380,19 +382,19 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="th-media vn-media">
         <?php if ($heroPhotos): ?>
         <div class="vn-frame">
-          <button class="th-arch" id="vn-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Open the gallery: <?= v2_e($name) ?>">
+          <button class="th-arch" id="vn-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="<?= v2_te('Open the gallery: {name}', ['name' => $name]) ?>">
             <?php foreach ($heroPhotos as $pi => $photo): ?>
             <img class="vn-slide<?= $pi === 0 ? ' is-on' : '' ?>" src="<?= v2_e($photo) ?>" alt="" <?= $pi === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?> decoding="async">
             <?php endforeach; ?>
-            <?php if (count($photos) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>See the gallery (<?= count($photos) ?>)</span><?php endif; ?>
+            <?php if (count($photos) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?><?= v2_te('See the gallery ({n})', ['n' => count($photos)]) ?></span><?php endif; ?>
           </button>
         </div>
         <div class="vn-cap">
-          <p><small>Venue gallery</small><b><?= v2_e($typeLabel) ?></b></p>
+          <p><small><?= v2_te('Venue gallery') ?></small><b><?= v2_e($typeLabel) ?></b></p>
           <?php if (count($heroPhotos) > 1): ?>
-          <div class="vn-dots" role="group" aria-label="Photos">
+          <div class="vn-dots" role="group" aria-label="<?= v2_te('Photos') ?>">
             <?php foreach ($heroPhotos as $pi => $photo): ?>
-            <button type="button" data-slide="<?= $pi ?>" aria-pressed="<?= $pi === 0 ? 'true' : 'false' ?>"><span class="sr">Photo <?= $pi + 1 ?> of <?= count($heroPhotos) ?></span></button>
+            <button type="button" data-slide="<?= $pi ?>" aria-pressed="<?= $pi === 0 ? 'true' : 'false' ?>"><span class="sr"><?= v2_te('Photo {n} of {total}', ['n' => $pi + 1, 'total' => count($heroPhotos)]) ?></span></button>
             <?php endforeach; ?>
           </div>
           <?php endif; ?>
@@ -406,7 +408,7 @@ include __DIR__ . '/includes/v2/header.php';
   <div id="hdr-sentinel" aria-hidden="true"></div>
 
   <!-- ===================== SECTION NAV ===================== -->
-  <nav class="vn-nav" aria-label="Sections of this page">
+  <nav class="vn-nav" aria-label="<?= v2_te('Sections of this page') ?>">
     <div class="wrap">
       <ul id="vn-nav">
         <?php foreach ($navLinks as $ni => [$navId, $navLabel]): ?>
@@ -421,13 +423,13 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="vn-acts-head">
         <div>
-          <p class="kicker">Activities at this venue</p>
-          <h2 id="vn-acts-h">Choose the experience that suits you</h2>
-          <p class="vn-lead">One venue can sell several kinds of ticket: general entry, guided tours, time slots, themed rooms, workshops or passes.</p>
+          <p class="kicker"><?= v2_te('Activities at this venue') ?></p>
+          <h2 id="vn-acts-h"><?= v2_te('Choose the experience that suits you') ?></h2>
+          <p class="vn-lead"><?= v2_te('One venue can sell several kinds of ticket: general entry, guided tours, time slots, themed rooms, workshops or passes.') ?></p>
         </div>
         <div class="vn-note">
           <span class="vn-note-ic"><?= v2_ic('ticket') ?></span>
-          <p><b>Buying more than one activity?</b>Book each activity separately. All your tickets arrive by email, with a QR code.</p>
+          <p><b><?= v2_te('Buying more than one activity?') ?></b><?= v2_te('Book each activity separately. All your tickets arrive by email, with a QR code.') ?></p>
         </div>
       </div>
 
@@ -451,29 +453,29 @@ include __DIR__ . '/includes/v2/header.php';
                 <?php endif; ?>
               </div>
               <div class="vn-act-buy">
-                <?php if ($a['price'] !== ''): ?><p class="vn-price">from<b><?= v2_e($a['price']) ?></b></p><?php endif; ?>
-                <span class="btn btn-primary" aria-hidden="true">Book<?= v2_ic('arrow-right') ?></span>
+                <?php if ($a['price'] !== ''): ?><p class="vn-price"><?= v2_t('from<b>{price}</b>', ['price' => v2_e($a['price'])]) ?></p><?php endif; ?>
+                <span class="btn btn-primary" aria-hidden="true"><?= v2_te('Book') ?><?= v2_ic('arrow-right') ?></span>
               </div>
             </li>
             <?php endforeach; ?>
           </ul>
           <?php else: ?>
           <div class="tempty">
-            <h3>No activities are listed for this venue yet.</h3>
-            <p>Come back soon, or look at other venues nearby.</p>
+            <h3><?= v2_te('No activities are listed for this venue yet.') ?></h3>
+            <p><?= v2_te('Come back soon, or look at other venues nearby.') ?></p>
             <?php if ($citySlug !== ''): ?>
-            <a class="btn btn-light" href="/<?= v2_e($citySlug) ?>">Things to do in <?= v2_e($cityName) ?><?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="/<?= v2_e($citySlug) ?>"><?= v2_te('Things to do in {city}', ['city' => $cityName]) ?><?= v2_ic('arrow-right') ?></a>
             <?php else: ?>
-            <a class="btn btn-light" href="/categories">Browse categories<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-light" href="/categories"><?= v2_te('Browse categories') ?><?= v2_ic('arrow-right') ?></a>
             <?php endif; ?>
             <svg class="tempty-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
           </div>
           <?php endif; ?>
         </div>
 
-        <aside class="vn-side" aria-label="Venue details">
+        <aside class="vn-side" aria-label="<?= v2_te('Venue details') ?>">
           <div class="vn-card">
-            <p class="vn-card-k">Venue details</p>
+            <p class="vn-card-k"><?= v2_te('Venue details') ?></p>
             <h3><?= v2_e($name) ?></h3>
             <?php if ($address !== '' || $hours || $activityCount): ?>
             <ul class="vn-facts">
@@ -483,17 +485,17 @@ include __DIR__ . '/includes/v2/header.php';
             </ul>
             <?php endif; ?>
             <div class="vn-card-cta">
-              <a class="btn btn-outline-light" href="#program">Address</a>
-              <a class="btn btn-light" href="#activitati">Tickets</a>
+              <a class="btn btn-outline-light" href="#program"><?= v2_te('Address') ?></a>
+              <a class="btn btn-light" href="#activitati"><?= v2_te('Tickets') ?></a>
             </div>
           </div>
           <?php if ($citySlug !== ''): ?>
           <div class="vn-search">
-            <h3>Useful searches</h3>
+            <h3><?= v2_te('Useful searches') ?></h3>
             <div class="chips-links">
-              <a href="/<?= v2_e($citySlug) ?>">things to do in <?= v2_e($cityName) ?></a>
-              <a href="/<?= v2_e($citySlug) ?>/with-kids"><?= v2_e($cityName) ?> with kids</a>
-              <a href="/<?= v2_e($citySlug) ?>/weekend-ideas">a weekend in <?= v2_e($cityName) ?></a>
+              <a href="/<?= v2_e($citySlug) ?>"><?= v2_te('things to do in {city}', ['city' => $cityName]) ?></a>
+              <a href="/<?= v2_e($citySlug) ?>/with-kids"><?= v2_te('{city} with kids', ['city' => $cityName]) ?></a>
+              <a href="/<?= v2_e($citySlug) ?>/weekend-ideas"><?= v2_te('a weekend in {city}', ['city' => $cityName]) ?></a>
             </div>
           </div>
           <?php endif; ?>
@@ -507,8 +509,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec vn-about" id="despre" aria-labelledby="vn-about-h">
     <div class="wrap vn-about-grid">
       <div>
-        <p class="kicker">About the venue</p>
-        <h2 id="vn-about-h"><?= v2_e($name) ?> — <span>about</span></h2>
+        <p class="kicker"><?= v2_te('About the venue') ?></p>
+        <h2 id="vn-about-h"><?= v2_t('{name}: <span>about</span>', ['name' => v2_e($name)]) ?></h2>
       </div>
       <div class="vn-prose"><?= $descHtml ?></div>
     </div>
@@ -519,48 +521,48 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec vn-prog" id="program" aria-labelledby="vn-prog-h">
     <div class="wrap vn-prog-grid">
       <div>
-        <p class="kicker">Opening hours, address &amp; access</p>
-        <h2 id="vn-prog-h">How to get to <?= v2_e($name) ?></h2>
+        <p class="kicker"><?= v2_te('Opening hours, address & access') ?></p>
+        <h2 id="vn-prog-h"><?= v2_te('How to get to {name}', ['name' => $name]) ?></h2>
         <ul class="vn-info">
           <?php if ($address !== ''): ?>
           <li>
             <span class="vn-info-ic"><?= v2_ic('map-pin') ?></span>
-            <h3>Address</h3>
+            <h3><?= v2_te('Address') ?></h3>
             <p><?= v2_e($address) ?><?php if ($cityName !== ''): ?><br><?= v2_e($cityName) ?><?php endif; ?></p>
-            <?php if ($mapsUrl): ?><a href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener">Open in Maps<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+            <?php if ($mapsUrl): ?><a href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_te('Open in Maps') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
           </li>
           <?php endif; ?>
           <?php if ($hours): ?>
           <li>
             <span class="vn-info-ic"><?= v2_ic('clock') ?></span>
-            <h3>Opening hours</h3>
+            <h3><?= v2_te('Opening hours') ?></h3>
             <p><?= implode('<br>', array_map('v2_e', $hours)) ?></p>
           </li>
           <?php endif; ?>
           <li>
             <span class="vn-info-ic"><?= v2_ic('users-three') ?></span>
-            <h3>Our tip</h3>
-            <p>Arrive 10–15 minutes before the time you booked, especially for group activities.</p>
+            <h3><?= v2_te('Our tip') ?></h3>
+            <p><?= v2_te('Arrive 10–15 minutes before the time you booked, especially for group activities.') ?></p>
           </li>
           <li>
             <span class="vn-info-ic"><?= v2_ic('qr-code') ?></span>
-            <h3>QR ticket</h3>
-            <p>After payment you get your QR ticket by email and in your account. There is no need to print it.</p>
+            <h3><?= v2_te('QR ticket') ?></h3>
+            <p><?= v2_te('After payment you get your QR ticket by email and in your account. There is no need to print it.') ?></p>
           </li>
         </ul>
       </div>
 
       <?php if ($hasGeo): ?>
       <div class="tmap vn-map">
-        <iframe title="Map of <?= v2_e($name) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= rawurlencode($lat . ',' . $lng) ?>&amp;z=15&amp;output=embed"></iframe>
-        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Google Maps<?= v2_ic('arrow-right') ?></a>
+        <iframe title="<?= v2_te('Map of {name}', ['name' => $name]) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= rawurlencode($lat . ',' . $lng) ?>&amp;z=15&amp;output=embed"></iframe>
+        <a class="tmap-link" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?><?= v2_te('Open in Google Maps') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <?php else: ?>
       <div class="vn-mapart">
         <span class="vn-pin"><?= v2_ic('map-pin') ?></span>
-        <p class="vn-mapart-city"><?= v2_e($cityName ?: 'Europe') ?></p>
-        <p class="vn-mapart-addr"><?= v2_e($address !== '' ? $address : 'See the venue\'s own page for details of where it is.') ?></p>
-        <?php if ($mapsUrl): ?><a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener">Open in Maps<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <p class="vn-mapart-city"><?= v2_e($cityName ?: v2_t('Europe')) ?></p>
+        <p class="vn-mapart-addr"><?= v2_e($address !== '' ? $address : v2_t('See the venue\'s own page for details of where it is.')) ?></p>
+        <?php if ($mapsUrl): ?><a class="btn btn-outline-light" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_te('Open in Maps') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
       <?php endif; ?>
     </div>
@@ -570,8 +572,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec vn-faq" id="faq" aria-labelledby="vn-faq-h">
     <div class="wrap vn-faq-grid">
       <div>
-        <p class="kicker">FAQ</p>
-        <h2 id="vn-faq-h">Frequently asked questions</h2>
+        <p class="kicker"><?= v2_te('FAQ') ?></p>
+        <h2 id="vn-faq-h"><?= v2_te('Frequently asked questions') ?></h2>
       </div>
       <div>
         <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
@@ -587,8 +589,8 @@ include __DIR__ . '/includes/v2/header.php';
     <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">Similar venues</p><h2 id="vn-sim-h">More places to visit<?= $cityName !== '' ? ' in ' . v2_e($cityName) : '' ?></h2></div>
-        <?php if ($citySlug !== ''): ?><a class="sec-link" href="/<?= v2_e($citySlug) ?>">See all venues<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+        <div><p class="kicker"><?= v2_te('Similar venues') ?></p><h2 id="vn-sim-h"><?= $cityName !== '' ? v2_te('More places to visit in {city}', ['city' => $cityName]) : v2_te('More places to visit') ?></h2></div>
+        <?php if ($citySlug !== ''): ?><a class="sec-link" href="/<?= v2_e($citySlug) ?>"><?= v2_te('See all venues') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
       </div>
       <ul class="vn-sim-grid">
         <?php foreach ($similarVenues as $svi => $sv): ?>
@@ -613,14 +615,14 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="vn-final-in">
         <?= $vnArches ?>
         <p class="kicker"><?= v2_e($name) ?></p>
-        <h2 id="vn-final-h">Choose an activity, book online, walk in with your QR code.</h2>
-        <p class="vn-final-text">Everything this venue offers in one place: opening hours, prices, availability and digital tickets.</p>
+        <h2 id="vn-final-h"><?= v2_te('Choose an activity, book online, walk in with your QR code.') ?></h2>
+        <p class="vn-final-text"><?= v2_te('Everything this venue offers in one place: opening hours, prices, availability and digital tickets.') ?></p>
         <div class="vn-final-cta">
-          <?php if ($activityCount): ?><a class="btn btn-light" href="#activitati">See the activities<?= v2_ic('arrow-right') ?></a><?php endif; ?>
+          <?php if ($activityCount): ?><a class="btn btn-light" href="#activitati"><?= v2_te('See the activities') ?><?= v2_ic('arrow-right') ?></a><?php endif; ?>
           <?php if ($citySlug !== ''): ?>
-          <a class="btn btn-outline-light" href="/<?= v2_e($citySlug) ?>">Explore <?= v2_e($cityName) ?></a>
+          <a class="btn btn-outline-light" href="/<?= v2_e($citySlug) ?>"><?= v2_te('Explore {city}', ['city' => $cityName]) ?></a>
           <?php else: ?>
-          <a class="btn btn-outline-light" href="/categories">Browse categories</a>
+          <a class="btn btn-outline-light" href="/categories"><?= v2_te('Browse categories') ?></a>
           <?php endif; ?>
         </div>
         <svg class="vn-final-line" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
@@ -634,12 +636,12 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="lb-top">
       <p class="lb-title" id="lb-title"><?= v2_e($name) ?></p>
       <span class="lb-count" id="lb-count">1 / <?= count($photos) ?></span>
-      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Close the gallery</span></button>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close the gallery') ?></span></button>
     </div>
     <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
     <div class="lb-nav"<?= count($photos) < 2 ? ' hidden' : '' ?>>
-      <button class="rail-btn" type="button" data-lb="prev" aria-label="Previous photo"><?= v2_ic('arrow-left') ?></button>
-      <button class="rail-btn" type="button" data-lb="next" aria-label="Next photo"><?= v2_ic('arrow-right') ?></button>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="<?= v2_te('Previous photo') ?>"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="<?= v2_te('Next photo') ?>"><?= v2_ic('arrow-right') ?></button>
     </div>
   </div>
   <?php endif; ?>

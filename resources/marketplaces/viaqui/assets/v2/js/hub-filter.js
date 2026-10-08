@@ -1,11 +1,11 @@
 /* viaqui.com v2: the filter bar of a listing hub (/experiente, /atractii and their /{oras}/… versions).
    Progressive enhancement only — the form is plain GET and every state has its own URL, so with this file missing
-   the filter still works, just with native selects and an "Arată rezultatele" button.
+   the filter still works, just with native selects and a "Show results" button.
 
    What it adds:
      · a change to any field applies straight away (the submit button hides itself on wide screens)
-     · the long lists (Oraș) become a dropdown you type into, diacritics and all
-     · under 768px the fields fold behind the "Filtre" button, which counts what is in force */
+     · the long lists (City) become a dropdown you type into, diacritics and all
+     · under 768px the fields fold behind the "Filters" button, which counts what is in force */
 (function () {
   'use strict';
   var form = document.querySelector('[data-hub-filter]');
@@ -82,7 +82,7 @@
     input.id = id;
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.placeholder = ctl.getAttribute('data-hf-find') || 'Caută în listă…';
+    input.placeholder = ctl.getAttribute('data-hf-find') || VQ.t('Search the list…');
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-expanded', 'false');
     input.setAttribute('aria-controls', listId);
@@ -112,7 +112,7 @@
     function draw() {
       list.textContent = '';
       if (!shown.length) {
-        list.appendChild(el('li', 'hf-find-none', 'Nimic găsit. Șterge din text și încearcă altfel.'));
+        list.appendChild(el('li', 'hf-find-none', VQ.t('Nothing found. Shorten the text and try again.')));
         return;
       }
       var group = null;

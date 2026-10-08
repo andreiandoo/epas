@@ -1,6 +1,6 @@
 <?php
 /**
- * Categories catalog: /categorii (v2 design).
+ * Categories catalog: /categories (v2 design).
  *
  * Parent categories from the shell's cached `/events/categories` (local WebP photos where the site has them) with
  * all their subcategories. The search filters the server-rendered cards (categories.js). Intent hubs link only to
@@ -85,15 +85,17 @@ foreach ($V2NAV['categories'] as $ci => $cat) {
 usort($categories, fn ($a, $b) => $a['sort'] <=> $b['sort']);
 
 // ------------------------------------------------------------------ intent hubs that exist
+// [kicker, title, text, the intent's slug in the API, the page's address]. Four intents have an English address in
+// .htaccess; the other four are still served under the API slug.
 $intentHubs = [
-    ['Timp', 'Activități azi', 'Pentru decizii rapide și activități disponibile imediat.', 'activitati-azi'],
-    ['Timp', 'Activități weekend', 'Idei pentru weekend: familie, grupuri, cupluri.', 'activitati-weekend'],
-    ['Vreme', 'Zile ploioase', 'Indoor: muzee, escape rooms, ateliere și expoziții.', 'activitati-zile-ploioase'],
-    ['Vreme', 'Zile caniculare', 'Activități răcoroase, indoor sau de seară.', 'activitati-zile-caniculare'],
-    ['Buget', 'Sub 50 lei', 'Experiențe accesibile, potrivite pentru ieșiri spontane.', 'activitati-sub-50-lei'],
-    ['Public', 'Activități pentru copii', 'Idei pentru copii și familie: muzee, ateliere, parcuri.', 'activitati-copii'],
-    ['Public', 'Activități pentru cupluri', 'Experiențe pentru doi: tururi, ateliere, date nights.', 'activitati-cuplu'],
-    ['Ocazie', 'Zi de naștere', 'Idei pentru grupuri, copii, cupluri și cadouri.', 'activitati-zi-de-nastere'],
+    [v2_t('Time'), v2_t('Things to do today'), v2_t('For quick decisions and activities you can book right away.'), 'activitati-azi', '/activitati-azi'],
+    [v2_t('Time'), v2_t('Weekend ideas'), v2_t('Ideas for the weekend: families, groups, couples.'), 'activitati-weekend', '/weekend-ideas'],
+    [v2_t('Weather'), v2_t('Rainy days'), v2_t('Indoors: museums, escape rooms, workshops and exhibitions.'), 'activitati-zile-ploioase', '/rainy-days'],
+    [v2_t('Weather'), v2_t('Hot days'), v2_t('Cool places, indoor activities and things to do in the evening.'), 'activitati-zile-caniculare', '/activitati-zile-caniculare'],
+    [v2_t('Budget'), v2_t('On a budget'), v2_t('Affordable experiences, good for a spontaneous outing.'), 'activitati-sub-50-lei', '/activitati-sub-50-lei'],
+    [v2_t('Who'), v2_t('With kids'), v2_t('Ideas for children and families: museums, workshops, parks.'), 'activitati-copii', '/with-kids'],
+    [v2_t('Who'), v2_t('For couples'), v2_t('Experiences for two: tours, workshops, date nights.'), 'activitati-cuplu', '/for-couples'],
+    [v2_t('Occasion'), v2_t('Birthdays'), v2_t('Ideas for groups, children, couples and gifts.'), 'activitati-zi-de-nastere', '/activitati-zi-de-nastere'],
 ];
 $hubJobs = [];
 foreach ($intentHubs as [, , , $hubSlug]) {
@@ -108,20 +110,20 @@ if (!$liveHubs) {
 
 $exampleCities = array_slice($V2NAV['citiesList'], 0, 4);
 $faqs = [
-    ['Care este diferența dintre categorie și intenție?', 'Categoria descrie ce este activitatea: escape room, muzeu, parc, atelier. Intenția descrie de ce o cauți: pentru copii, pentru weekend, când plouă, sub 50 lei sau pentru o zi de naștere.'],
-    ['O activitate poate apărea în mai multe pagini?', 'Da. O activitate are o categorie principală, dar poate apărea în pagini după public, oraș, vreme, buget sau ocazie.'],
-    ['Cum aleg rapid o activitate potrivită?', 'Începe cu orașul, apoi alege contextul: copii, indoor, outdoor, azi, weekend sau buget. Dacă știi exact ce vrei, mergi direct la categoria principală.'],
-    ['De ce sunt importante paginile oraș + categorie?', 'Utilizatorii caută local: escape rooms Brașov, muzee București, activități copii Cluj. Aceste combinații ajută la SEO și la descoperire rapidă.'],
-    ['Pot cumpăra bilete direct din categorie?', 'Da. Paginile de categorie afișează activitățile disponibile, prețurile și butoanele directe către pagina activității sau coș.'],
+    [v2_t('What is the difference between a category and an intent?'), v2_t('The category says what the activity is: escape room, museum, park, workshop. The intent says why you are looking for it: for children, for the weekend, for a rainy day, on a budget or for a birthday.')],
+    [v2_t('Can an activity appear on more than one page?'), v2_t('Yes. An activity has one main category, but it can also appear on pages by audience, city, weather, budget or occasion.')],
+    [v2_t('How do I quickly choose the right activity?'), v2_t('Start with the city, then pick the context: kids, indoor, outdoor, today, weekend or budget. If you know exactly what you want, go straight to the main category.')],
+    [v2_t('Why do city and category pages matter?'), v2_t('People search locally: escape rooms in Lisbon, museums in Vienna, things to do with kids in Prague. These pages take you straight to what is on in one place.')],
+    [v2_t('Can I buy tickets straight from a category?'), v2_t('Yes. Category pages show the activities available, their prices and direct buttons to the activity page or the basket.')],
 ];
 
 // ------------------------------------------------------------------ page
 $searchQuery = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 60) : '';
 $supportEmail = defined('SUPPORT_EMAIL') ? (string) SUPPORT_EMAIL : '';
 
-$pageTitleRaw = 'Toate categoriile de activități — ' . SITE_NAME;
-$pageDescription = 'Explorează toate categoriile de activități disponibile pe viaqui.com: escape rooms, muzee, parcuri de distracții, parcuri de aventură, natură, peșteri, ateliere, copii, familie, cupluri și grupuri.';
-$canonicalUrl = SITE_URL . '/categorii';
+$pageTitleRaw = v2_t('All activity categories') . ' | ' . SITE_NAME;
+$pageDescription = v2_t('Browse every category of activities on Viaqui: escape rooms, museums, amusement parks, adventure parks, nature, caves, workshops, and ideas for children, families, couples and groups.');
+$canonicalUrl = SITE_URL . '/categories';
 $ogImage = v2_asset('img/cat-escape-rooms.webp');
 $structuredData = [];
 if ($categories) {
@@ -131,7 +133,7 @@ if ($categories) {
         'name' => $pageTitleRaw,
         'description' => $pageDescription,
         'url' => $canonicalUrl,
-        'inLanguage' => 'ro-RO',
+        'inLanguage' => v2_locale(),
         'mainEntity' => [
             '@type' => 'ItemList',
             'numberOfItems' => count($categories),
@@ -159,26 +161,26 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <p class="ct-kicker">Toate categoriile · activități · bilete online</p>
-        <h1 class="ct-h" id="ct-h">Ce vrei să faci?</h1>
-        <p class="ct-lead">Explorează activități după categorie, public, vreme, buget sau ocazie. De la escape rooms și muzee până la parcuri de aventură, peșteri, rezervații, ateliere și experiențe pentru familie.</p>
+        <p class="ct-kicker"><?= v2_te('All categories · activities · online tickets') ?></p>
+        <h1 class="ct-h" id="ct-h"><?= v2_te('What would you like to do?') ?></h1>
+        <p class="ct-lead"><?= v2_te('Browse activities by category, audience, weather, budget or occasion. From escape rooms and museums to adventure parks, caves, nature reserves, workshops and family experiences.') ?></p>
 
-        <form class="ct-search" id="ct-form" action="/categorii" method="get" role="search">
-          <label class="sr" for="ct-q">Caută categorii</label>
-          <input id="ct-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Caută: escape room, muzeu, copii, indoor, weekend..." value="<?= v2_e($searchQuery) ?>">
-          <button type="submit" aria-label="Arată categoriile găsite"><?= v2_ic('magnifying-glass') ?></button>
+        <form class="ct-search" id="ct-form" action="/categories" method="get" role="search">
+          <label class="sr" for="ct-q"><?= v2_te('Search categories') ?></label>
+          <input id="ct-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="<?= v2_te('Search: escape room, museum, kids, indoor, weekend…') ?>" value="<?= v2_e($searchQuery) ?>">
+          <button type="submit" aria-label="<?= v2_te('Show the categories found') ?>"><?= v2_ic('magnifying-glass') ?></button>
         </form>
         <p class="ct-status" id="ct-status" role="status"></p>
-        <ul class="ct-chips" aria-label="Caută după intenție">
-          <?php foreach ($liveHubs as [, $hubTitle, , $hubSlug]): ?><li><a href="/<?= v2_e($hubSlug) ?>"><?= v2_e($hubTitle) ?></a></li><?php endforeach; ?>
+        <ul class="ct-chips" aria-label="<?= v2_te('Search by intent') ?>">
+          <?php foreach ($liveHubs as [, $hubTitle, , , $hubHref]): ?><li><a href="<?= v2_e($hubHref) ?>"><?= v2_e($hubTitle) ?></a></li><?php endforeach; ?>
         </ul>
       </div>
 
       <?php if ($categories): ?>
       <div class="ct-art" aria-hidden="true">
         <div class="ct-art-card">
-          <p class="kicker">Category map</p>
-          <p class="ct-art-h">Dintr-o idee vagă într-o activitate concretă.</p>
+          <p class="kicker"><?= v2_te('Category map') ?></p>
+          <p class="ct-art-h"><?= v2_te('From a vague idea to an actual activity.') ?></p>
           <div class="cg-map">
             <?php foreach (array_slice($categories, 0, 4) as $cat): ?>
             <a class="cg-tile" href="<?= v2_e($cat['href']) ?>" tabindex="-1"><span><?= v2_e($cat['emoji']) ?></span><b><?= v2_e($cat['name']) ?></b></a>
@@ -195,15 +197,15 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec cg-main" id="lista" aria-labelledby="ct-title">
     <div class="wrap">
       <div class="ct-head">
-        <div><p class="kicker">Rezultate</p><h2 id="ct-title" tabindex="-1">Categorii principale</h2></div>
-        <?php if ($categories): ?><p id="ct-count" aria-live="polite"><?= count($categories) ?> din <?= count($categories) ?> categorii afișate</p><?php endif; ?>
+        <div><p class="kicker"><?= v2_te('Results') ?></p><h2 id="ct-title" tabindex="-1"><?= v2_te('Main categories') ?></h2></div>
+        <?php if ($categories): ?><p id="ct-count" aria-live="polite"><?= v2_te('{shown} of {total} categories shown', ['shown' => count($categories), 'total' => count($categories)]) ?></p><?php endif; ?>
       </div>
 
       <?php if (!$categories): ?>
       <div class="ct-none">
         <span class="ct-none-ic"><?= v2_ic('list') ?></span>
-        <p>Categoriile încă nu sunt configurate.</p>
-        <?php if ($supportEmail !== ''): ?><p class="cg-none-mail">Reveniți în curând sau scrie-ne la <a href="mailto:<?= v2_e($supportEmail) ?>"><?= v2_e($supportEmail) ?></a>.</p><?php endif; ?>
+        <p><?= v2_te('The categories are not set up yet.') ?></p>
+        <?php if ($supportEmail !== ''): ?><p class="cg-none-mail"><?= v2_t('Come back soon, or write to us at <a href="mailto:{email}">{email}</a>.', ['email' => v2_e($supportEmail)]) ?></p><?php endif; ?>
       </div>
       <?php else: ?>
       <ul class="cg-grid" id="cg-grid">
@@ -215,26 +217,26 @@ include __DIR__ . '/includes/v2/header.php';
             <?php else: ?>
             <span class="cg-emoji"><?= v2_e($cat['emoji']) ?></span>
             <?php endif; ?>
-            <span class="cg-badges"><span>Categorie</span><span><?= $cat['count'] > 0 ? v2_e(v2_num($cat['count'], 'activitate', 'activități')) : 'în curând' ?></span></span>
+            <span class="cg-badges"><span><?= v2_te('Category') ?></span><span><?= $cat['count'] > 0 ? v2_e(v2_num($cat['count'], 'activity', 'activities')) : v2_te('coming soon') ?></span></span>
           </a>
           <div class="cg-body">
             <h3><a href="<?= v2_e($cat['href']) ?>"><?= v2_e($cat['name']) ?></a></h3>
             <?php if ($cat['desc'] !== ''): ?><p class="cg-desc"><?= v2_e($cat['desc']) ?></p><?php endif; ?>
             <?php if ($cat['subs']): ?>
-            <ul class="cg-subs" aria-label="Subcategorii <?= v2_e($cat['name']) ?>">
+            <ul class="cg-subs" aria-label="<?= v2_te('Subcategories of {category}', ['category' => $cat['name']]) ?>">
               <?php foreach (array_slice($cat['subs'], 0, 6) as $sub): ?><li><a href="<?= v2_e($sub['href']) ?>"><?= v2_e($sub['name']) ?></a></li><?php endforeach; ?>
-              <?php if (count($cat['subs']) > 6): ?><li><a class="is-more" href="<?= v2_e($cat['href']) ?>" aria-label="Încă <?= count($cat['subs']) - 6 ?> subcategorii în <?= v2_e($cat['name']) ?>">+<?= count($cat['subs']) - 6 ?></a></li><?php endif; ?>
+              <?php if (count($cat['subs']) > 6): ?><li><a class="is-more" href="<?= v2_e($cat['href']) ?>" aria-label="<?= v2_te('{n} more subcategories in {category}', ['n' => count($cat['subs']) - 6, 'category' => $cat['name']]) ?>">+<?= count($cat['subs']) - 6 ?></a></li><?php endif; ?>
             </ul>
             <?php endif; ?>
-            <div class="cg-foot"><a href="<?= v2_e($cat['href']) ?>">Vezi categoria<?= v2_ic('arrow-right') ?></a></div>
+            <div class="cg-foot"><a href="<?= v2_e($cat['href']) ?>"><?= v2_te('View category') ?><?= v2_ic('arrow-right') ?></a></div>
           </div>
         </li>
         <?php endforeach; ?>
       </ul>
       <div class="ct-none" id="ct-none" hidden>
         <span class="ct-none-ic"><?= v2_ic('magnifying-glass') ?></span>
-        <p>Nicio categorie nu se potrivește căutării.</p>
-        <button class="btn btn-ghost" type="button" id="ct-reset">Arată toate categoriile</button>
+        <p><?= v2_te('No category matches your search.') ?></p>
+        <button class="btn btn-ghost" type="button" id="ct-reset"><?= v2_te('Show all categories') ?></button>
       </div>
       <?php endif; ?>
     </div>
@@ -244,15 +246,15 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec cg-tax" aria-labelledby="cg-tax-h">
     <div class="wrap">
       <div class="cg-tax-intro">
-        <p class="kicker">Taxonomie</p>
-        <h2 id="cg-tax-h">Cum sunt organizate activitățile.</h2>
-        <p>O activitate are o categorie reală, dar și un public, un context, un buget și o vreme — toate folosite pentru a o găsi rapid.</p>
+        <p class="kicker"><?= v2_te('How it is organised') ?></p>
+        <h2 id="cg-tax-h"><?= v2_te('How activities are organised.') ?></h2>
+        <p><?= v2_te('An activity has a category, and also an audience, a context, a budget and a kind of weather. All of them help you find it quickly.') ?></p>
       </div>
       <ul class="cg-tax-grid">
         <?php foreach ([
-            ['Category', 'Ce este activitatea?', ['Escape room', 'Muzeu / expoziție', 'Parc de aventură', 'Peșteră / natură', 'Atelier creativ'], false],
-            ['Audience', 'Pentru cine este?', ['Copii', 'Familie', 'Cupluri', 'Grupuri', 'Corporate'], true],
-            ['Context', 'Când / de ce o alegi?', ['Weekend', 'Azi / mâine', 'Zi ploioasă', 'Sub 50 lei', 'Zi de naștere'], false],
+            [v2_t('Category'), v2_t('What is the activity?'), [v2_t('Escape room'), v2_t('Museum / exhibition'), v2_t('Adventure park'), v2_t('Cave / nature'), v2_t('Creative workshop')], false],
+            [v2_t('Audience'), v2_t('Who is it for?'), [v2_t('Children'), v2_t('Families'), v2_t('Couples'), v2_t('Groups'), v2_t('Companies')], true],
+            [v2_t('Context'), v2_t('When or why do you pick it?'), [v2_t('Weekend'), v2_t('Today / tomorrow'), v2_t('Rainy day'), v2_t('On a budget'), v2_t('Birthday')], false],
         ] as [$taxKicker, $taxTitle, $taxItems, $taxDark]): ?>
         <li class="cg-tax-card<?= $taxDark ? ' is-dark' : '' ?>">
           <small><?= v2_e($taxKicker) ?></small>
@@ -268,13 +270,13 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec ct-hubs cg-hubs" aria-labelledby="ct-hubs-h">
     <div class="wrap ct-hubs-grid">
       <div class="ct-hubs-intro">
-        <p class="kicker">Huburi SEO</p>
-        <h2 id="ct-hubs-h">Caută după intenție, nu doar după tip.</h2>
-        <p>Mulți utilizatori nu știu exact ce categorie vor. Caută „ceva pentru copii”, „ce facem azi”, „activități când plouă” sau „ceva ieftin”.</p>
+        <p class="kicker"><?= v2_te('By intent') ?></p>
+        <h2 id="ct-hubs-h"><?= v2_te('Search by intent, not only by type.') ?></h2>
+        <p><?= v2_te('Many people do not know which category they want. They look for “something for the kids”, “what shall we do today”, “things to do when it rains” or “something cheap”.') ?></p>
       </div>
       <ul class="ct-hub-list">
-        <?php foreach ($liveHubs as [$hubKicker, $hubTitle, $hubText, $hubSlug]): ?>
-        <li><a class="ct-hub" href="/<?= v2_e($hubSlug) ?>"><small><?= v2_e($hubKicker) ?></small><b><?= v2_e($hubTitle) ?></b><span><?= v2_e($hubText) ?></span><?= v2_ic('arrow-right') ?></a></li>
+        <?php foreach ($liveHubs as [$hubKicker, $hubTitle, $hubText, , $hubHref]): ?>
+        <li><a class="ct-hub" href="<?= v2_e($hubHref) ?>"><small><?= v2_e($hubKicker) ?></small><b><?= v2_e($hubTitle) ?></b><span><?= v2_e($hubText) ?></span><?= v2_ic('arrow-right') ?></a></li>
         <?php endforeach; ?>
       </ul>
     </div>
@@ -285,17 +287,17 @@ include __DIR__ . '/includes/v2/header.php';
     <?php readfile(__DIR__ . '/includes/v2/topo.svg'); ?>
     <div class="wrap cg-local-grid">
       <div>
-        <p class="kicker">SEO local</p>
-        <h2 id="cg-local-h">Categorii × Orașe.</h2>
-        <p>Combinațiile generează pagini relevante pentru căutări locale: „escape rooms Brașov”, „muzee Cluj”, „activități copii București”.</p>
-        <a class="btn btn-light" href="/orase">Vezi toate orașele<?= v2_ic('arrow-right') ?></a>
+        <p class="kicker"><?= v2_te('Near you') ?></p>
+        <h2 id="cg-local-h"><?= v2_te('Categories × Cities.') ?></h2>
+        <p><?= v2_te('Each combination has its own page for local searches: “escape rooms in Lisbon”, “museums in Vienna”, “things to do with kids in Prague”.') ?></p>
+        <a class="btn btn-light" href="/cities"><?= v2_te('See all cities') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <?php if ($exampleCities): ?>
       <div class="cg-links">
-        <div class="cg-links-top"><small>Exemple</small><h3>Linkuri interne</h3></div>
+        <div class="cg-links-top"><small><?= v2_te('Examples') ?></small><h3><?= v2_te('City pages') ?></h3></div>
         <ul>
           <?php foreach ($exampleCities as $city): ?>
-          <li><a href="<?= v2_e($city['href']) ?>"><strong><?= v2_e($city['href']) ?></strong><span>activități în <?= v2_e($city['name']) ?></span><?= v2_ic('arrow-right') ?></a></li>
+          <li><a href="<?= v2_e($city['href']) ?>"><strong><?= v2_e($city['href']) ?></strong><span><?= v2_te('things to do in {city}', ['city' => $city['name']]) ?></span><?= v2_ic('arrow-right') ?></a></li>
           <?php endforeach; ?>
         </ul>
       </div>
@@ -306,7 +308,7 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== FAQ ===================== -->
   <section class="sec ct-faq" aria-labelledby="ct-faq-h">
     <div class="wrap ct-faq-grid">
-      <div><p class="kicker">FAQ</p><h2 id="ct-faq-h">Cum alegi categoria potrivită?</h2></div>
+      <div><p class="kicker"><?= v2_te('FAQ') ?></p><h2 id="ct-faq-h"><?= v2_te('How do you choose the right category?') ?></h2></div>
       <div>
         <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
         <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
@@ -321,13 +323,13 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ct-final-in">
         <?= $cgArches ?>
         <div>
-          <p class="kicker">Descoperă</p>
-          <h2 id="ct-final-h">Alege categoria. Găsește activitatea.</h2>
-          <p>Începe cu un tip sau cu o intenție: copii, weekend, indoor, outdoor, buget sau oraș.</p>
+          <p class="kicker"><?= v2_te('Discover') ?></p>
+          <h2 id="ct-final-h"><?= v2_te('Pick the category. Find the activity.') ?></h2>
+          <p><?= v2_te('Start with a type or with an intent: kids, weekend, indoor, outdoor, budget or city.') ?></p>
         </div>
         <div class="ct-final-cta">
-          <a class="btn btn-light" href="/orase">Alege orașul<?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="/activitati-azi">Activități azi</a>
+          <a class="btn btn-light" href="/cities"><?= v2_te('Choose a city') ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-outline-light" href="/activitati-azi"><?= v2_te('Things to do today') ?></a>
         </div>
       </div>
     </div>

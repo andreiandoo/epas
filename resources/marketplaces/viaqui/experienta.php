@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/am-labels.php';
 
-$xpTitle     = navFlatName($product['title'] ?? '') ?: 'Experience';
+$xpTitle     = navFlatName($product['title'] ?? '') ?: v2_t('Experience');
 $xpSubtitle  = trim((string) ($product['subtitle'] ?? ''));
 $xpShort     = trim((string) ($product['short_description'] ?? ''));
 $xpDescHtml  = am_rich($product['description'] ?? '');
@@ -63,7 +63,7 @@ $xpMinPrice  = min(array_map(fn ($v) => (int) ($v['price_cents'] ?? 0), $xpVaria
 // the product too. Every price on this page is written in it.
 $xpCurrency  = strtoupper((string) (array_values(array_filter(array_column($xpVariants, 'currency')))[0] ?? $product['currency'] ?? '')) ?: SITE_CURRENCY;
 $xpDurations = array_values(array_unique(array_filter(array_map(fn ($v) => (int) ($v['duration_minutes'] ?? 0), $xpVariants)))) ?: array_filter([(int) ($product['duration_minutes'] ?? 0)]);
-$xpLangs     = ['ro' => 'Romanian', 'en' => 'English', 'hu' => 'Hungarian', 'de' => 'German', 'fr' => 'French', 'es' => 'Spanish', 'it' => 'Italian'];
+$xpLangs     = ['ro' => v2_t('Romanian'), 'en' => v2_t('English'), 'hu' => v2_t('Hungarian'), 'de' => v2_t('German'), 'fr' => v2_t('French'), 'es' => v2_t('Spanish'), 'it' => v2_t('Italian')];
 $xpLanguages = array_values(array_filter(array_map(fn ($l) => $xpLangs[$l] ?? null, (array) ($product['languages'] ?? []))));
 $xpIncluded  = array_values(array_filter(array_map('strval', (array) ($product['included_items'] ?? []))));
 $xpExcluded  = array_values(array_filter(array_map('strval', (array) ($product['not_included'] ?? []))));
@@ -107,27 +107,29 @@ $xpWhere = trim($xpCityName . (!empty($xpLocation['city']['county']) ? ', ' . $x
 // The facts that used to be a bulleted list in a side card, as tiles that fill the width.
 $xpFacts = [];
 if ($durationText !== '') {
-    $xpFacts[] = ['clock', 'Duration', $durationText];
+    $xpFacts[] = ['clock', v2_t('Duration'), $durationText];
 }
 if (($product['booking_mode'] ?? '') === 'slot') {
-    $xpFacts[] = ['calendar-blank', 'Booking', 'By time slot, with limited places'];
+    $xpFacts[] = ['calendar-blank', v2_t('Booking'), v2_t('By time slot, with limited places')];
 } else {
-    $xpFacts[] = ['calendar-blank', 'Booking', 'By day: you choose the date'];
+    $xpFacts[] = ['calendar-blank', v2_t('Booking'), v2_t('By day: you choose the date')];
 }
 if ($xpLanguages) {
-    $xpFacts[] = ['globe-simple', 'Languages', implode(', ', $xpLanguages)];
+    $xpFacts[] = ['globe-simple', v2_t('Languages'), implode(', ', $xpLanguages)];
 }
 if ($xpAgeMin || $xpAgeMax) {
-    $xpFacts[] = ['users-three', 'Age', $xpAgeMin && $xpAgeMax ? $xpAgeMin . '–' . $xpAgeMax . ' years' : ($xpAgeMin ? 'from ' . $xpAgeMin . ' years' : 'up to ' . $xpAgeMax . ' years')];
+    $xpFacts[] = ['users-three', v2_t('Age'), $xpAgeMin && $xpAgeMax
+        ? v2_t('{min}–{max} years', ['min' => $xpAgeMin, 'max' => $xpAgeMax])
+        : ($xpAgeMin ? v2_t('from {age} years', ['age' => $xpAgeMin]) : v2_t('up to {age} years', ['age' => $xpAgeMax]))];
 }
 if ($xpRequires !== 'none') {
-    $xpFacts[] = ['ticket', 'Entry', $xpRequires === 'adult' ? 'Also needs an adult entry ticket, on the same day' : 'Also needs an entry ticket, on the same day'];
+    $xpFacts[] = ['ticket', v2_t('Entry'), $xpRequires === 'adult' ? v2_t('Also needs an adult entry ticket, on the same day') : v2_t('Also needs an entry ticket, on the same day')];
 }
 if ($xpCancel !== '') {
-    $xpFacts[] = ['check-circle', 'Cancellation', $xpCancel];
+    $xpFacts[] = ['check-circle', v2_t('Cancellation'), $xpCancel];
 }
 if ($xpWhere !== '') {
-    $xpFacts[] = ['map-pin', 'City', $xpWhere];
+    $xpFacts[] = ['map-pin', v2_t('City'), $xpWhere];
 }
 
 // How much else is sold here, counted from what came back rather than from the location's own
@@ -138,23 +140,30 @@ foreach ($xpSiblings as $s) {
     $xpByType[$s['type'] ?? 'access'] = ($xpByType[$s['type'] ?? 'access'] ?? 0) + 1;
 }
 $xpByType['experience'] = ($xpByType['experience'] ?? 0) + 1;   // this page counts too
-foreach (['experience' => ['experience', 'experiences'], 'access' => ['entry ticket', 'entry tickets'], 'package' => ['package', 'packages']] as $ck => [$one, $many]) {
+$xpTypeNoun = [   // the noun for a count, in the visitor's language
+    'experience' => fn (int $n) => v2_plural($n, 'experience', 'experiences'),
+    'access' => fn (int $n) => v2_plural($n, 'entry ticket', 'entry tickets'),
+    'package' => fn (int $n) => v2_plural($n, 'package', 'packages'),
+];
+foreach ($xpTypeNoun as $ck => $noun) {
     $cv = (int) ($xpByType[$ck] ?? 0);
     if ($cv > 0) {
-        $xpLocCounts[] = [(string) $cv, $cv === 1 ? $one : $many];
+        $xpLocCounts[] = [(string) $cv, $noun($cv)];
     }
 }
 
-$breadcrumbs = [['name' => 'Home', 'url' => SITE_URL . '/'], ['name' => 'Experiences', 'url' => SITE_URL . '/experiences']];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => SITE_URL . '/'], ['name' => v2_t('Experiences'), 'url' => SITE_URL . '/experiences']];
 if ($xpLocName !== '' && $xpLocSlug !== '') {
     $breadcrumbs[] = ['name' => $xpLocName, 'url' => SITE_URL . '/venue/' . $xpLocSlug];
 }
 $breadcrumbs[] = ['name' => $xpTitle, 'url' => SITE_URL . '/experience/' . $slug];
 
-$kicker = trim($xpLocName . ($xpCityName !== '' ? ' · ' . $xpCityName : ''), ' ·') ?: 'Experience';
-$pageTitleRaw = $xpTitle . ($xpLocName !== '' ? ' at ' . $xpLocName : '') . ' | Viaqui';
+$kicker = trim($xpLocName . ($xpCityName !== '' ? ' · ' . $xpCityName : ''), ' ·') ?: v2_t('Experience');
+$pageTitleRaw = ($xpLocName !== '' ? v2_t('{title} at {place}', ['title' => $xpTitle, 'place' => $xpLocName]) : $xpTitle) . ' | Viaqui';
 $pageDescription = mb_substr($xpShort !== '' ? $xpShort : trim(preg_replace('/\s+/u', ' ', strip_tags($xpDescHtml))), 0, 160)
-    ?: ($xpTitle . ($xpLocName !== '' ? ' at ' . $xpLocName : '') . '. Book online, choose your time and get your ticket by email.');
+    ?: ($xpLocName !== ''
+        ? v2_t('{title} at {place}. Book online, choose your time and get your ticket by email.', ['title' => $xpTitle, 'place' => $xpLocName])
+        : v2_t('{title}. Book online, choose your time and get your ticket by email.', ['title' => $xpTitle]));
 $canonicalUrl = SITE_URL . '/experience/' . $slug;
 $ogImage = $heroImage ?: (SITE_URL . '/assets/images/og-default.jpg');
 
@@ -165,7 +174,7 @@ $structuredData = [array_filter([
     'description' => $pageDescription,
     'url' => $canonicalUrl,
     'image' => $lightbox ?: null,
-    'category' => 'Experience',
+    'category' => v2_t('Experience'),
     'offers' => ['@type' => 'AggregateOffer', 'lowPrice' => number_format($xpMinPrice / 100, 2, '.', ''),
         'highPrice' => number_format(max(array_map(fn ($v) => (int) ($v['price_cents'] ?? 0), $xpVariants)) / 100, 2, '.', ''),
         'offerCount' => count($xpVariants), 'priceCurrency' => $xpCurrency, 'availability' => 'https://schema.org/InStock', 'url' => $canonicalUrl . '#bilete'],
@@ -221,7 +230,7 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="th-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="th-in">
       <div class="th-copy">
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $i => $bc): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e(substr($bc['url'], strlen(SITE_URL)) ?: '/') ?>"><?= v2_e($bc['name']) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bc['name']) ?></span><?php endif; ?>
@@ -232,20 +241,20 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($xpSubtitle !== '' || $xpShort !== ''): ?><p class="th-sub"><?= v2_e($xpSubtitle !== '' ? $xpSubtitle : $xpShort) ?></p><?php endif; ?>
         <ul class="th-chips">
           <?php if ($durationText !== ''): ?><li><?= v2_ic('clock') ?><?= v2_e($durationText) ?></li><?php endif; ?>
-          <li class="is-price"><?= v2_ic('ticket') ?>from <b><?= v2_e(v2_money_in($xpMinPrice / 100, $xpCurrency)) ?></b></li>
+          <li class="is-price"><?= v2_ic('ticket') ?><?= v2_t('from <b>{price}</b>', ['price' => v2_e(v2_money_in($xpMinPrice / 100, $xpCurrency))]) ?></li>
           <?php if ($xpLanguages): ?><li><?= v2_ic('globe-simple') ?><?= v2_e(implode(', ', $xpLanguages)) ?></li><?php endif; ?>
         </ul>
         <div class="th-cta">
-          <a class="btn btn-light" href="#bilete"><?= ($product['booking_mode'] ?? '') === 'slot' ? 'Choose a date and time' : 'Choose a date' ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-light" href="#bilete"><?= ($product['booking_mode'] ?? '') === 'slot' ? v2_te('Choose a date and time') : v2_te('Choose a date') ?><?= v2_ic('arrow-right') ?></a>
           <?php if ($xpLocSlug !== ''): ?><a class="btn btn-outline-light" href="/venue/<?= v2_e($xpLocSlug) ?>"><?= v2_ic('map-pin') ?><?= v2_e($xpLocName) ?></a><?php endif; ?>
         </div>
       </div>
 
       <div class="th-media">
         <?php if ($lightbox): ?>
-        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="Open the gallery: <?= v2_e($xpTitle) ?>">
+        <button class="th-arch" type="button" data-gallery="0" aria-haspopup="dialog" aria-controls="lb" aria-label="<?= v2_te('Open the gallery: {name}', ['name' => $xpTitle]) ?>">
           <img src="<?= v2_e(v2_thumb($heroImage, 960, 600)) ?>" alt="<?= v2_e($xpTitle) ?>" fetchpriority="high" decoding="async">
-          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?>See the gallery (<?= count($lightbox) ?>)</span><?php endif; ?>
+          <?php if (count($lightbox) > 1): ?><span class="th-gal"><?= v2_ic('magnifying-glass') ?><?= v2_te('See the gallery ({n})', ['n' => count($lightbox)]) ?></span><?php endif; ?>
         </button>
         <?php else: ?>
         <div class="th-arch is-empty"><?= v2_fallback($xpTitle) ?><?php if ($xpLocName !== ''): ?><span class="th-arch-name" aria-hidden="true"><?php if ($xpCityName !== ''): ?><small><?= v2_e($xpCityName) ?></small><?php endif; ?><?= v2_e($xpLocName) ?></span><?php endif; ?></div>
@@ -260,54 +269,54 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap bkx-grid" id="bkx">
       <div>
         <div class="bkx-head">
-          <div><p class="kicker">Book online</p><h2 id="bkx-h"><?= $xpAccess ? 'The experience and entry tickets' : 'Choose a date' . (($product['booking_mode'] ?? '') === 'slot' ? ' and time' : '') ?></h2></div>
-          <button class="bkx-link" type="button" id="bkx-cal-toggle" aria-expanded="false" aria-controls="bkx-cal">Another date</button>
+          <div><p class="kicker"><?= v2_te('Book online') ?></p><h2 id="bkx-h"><?= $xpAccess ? v2_te('The experience and entry tickets') : (($product['booking_mode'] ?? '') === 'slot' ? v2_te('Choose a date and time') : v2_te('Choose a date')) ?></h2></div>
+          <button class="bkx-link" type="button" id="bkx-cal-toggle" aria-expanded="false" aria-controls="bkx-cal"><?= v2_te('Another date') ?></button>
         </div>
         <?php if ($xpAccess): ?>
-        <p class="bkx-hours"><?= $xpRequires === 'adult' ? 'The experience also needs an adult entry ticket for the same day.' : 'The experience also needs an entry ticket for the same day.' ?> You can book them together, below.</p>
+        <p class="bkx-hours"><?= $xpRequires === 'adult' ? v2_te('The experience also needs an adult entry ticket for the same day. You can book them together, below.') : v2_te('The experience also needs an entry ticket for the same day. You can book them together, below.') ?></p>
         <?php endif; ?>
-        <ul class="bkx-days" id="bkx-days" aria-label="Choose a day"></ul>
+        <ul class="bkx-days" id="bkx-days" aria-label="<?= v2_te('Choose a day') ?>"></ul>
         <div class="bkx-cal" id="bkx-cal" hidden>
           <div class="bkx-cal-head">
-            <button class="rail-btn" type="button" id="bkx-cal-prev" aria-label="Previous month"><?= v2_ic('arrow-left') ?></button>
+            <button class="rail-btn" type="button" id="bkx-cal-prev" aria-label="<?= v2_te('Previous month') ?>"><?= v2_ic('arrow-left') ?></button>
             <p id="bkx-cal-title" aria-live="polite"></p>
-            <button class="rail-btn" type="button" id="bkx-cal-next" aria-label="Next month"><?= v2_ic('arrow-right') ?></button>
+            <button class="rail-btn" type="button" id="bkx-cal-next" aria-label="<?= v2_te('Next month') ?>"><?= v2_ic('arrow-right') ?></button>
           </div>
-          <div class="bkx-cal-dow" aria-hidden="true"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div>
+          <div class="bkx-cal-dow" aria-hidden="true"><span><?= v2_te('Mo') ?></span><span><?= v2_te('Tu') ?></span><span><?= v2_te('We') ?></span><span><?= v2_te('Th') ?></span><span><?= v2_te('Fr') ?></span><span><?= v2_te('Sa') ?></span><span><?= v2_te('Su') ?></span></div>
           <div class="bkx-cal-grid" id="bkx-cal-grid"></div>
         </div>
         <p class="bkx-hours" id="bkx-hours" aria-live="polite"></p>
-        <div class="bkx-tabs" id="bkx-tabs" role="group" aria-label="Categories" hidden></div>
+        <div class="bkx-tabs" id="bkx-tabs" role="group" aria-label="<?= v2_te('Categories') ?>" hidden></div>
         <div class="bkx-list" id="bkx-list"></div>
       </div>
 
-      <aside class="bkx-side" aria-label="Your booking">
+      <aside class="bkx-side" aria-label="<?= v2_te('Your booking') ?>">
         <div class="bkx-sum" id="bkx-sum" hidden>
-          <h3>Your booking</h3>
+          <h3><?= v2_te('Your booking') ?></h3>
           <ul class="bkx-lines" id="bkx-lines"></ul>
-          <div class="bkx-row"><span>Subtotal</span><strong id="bkx-sub"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></strong></div>
-          <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label">Booking fee</span><strong id="bkx-fee"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></strong></div>
-          <div class="bkx-row bkx-total"><span>Total</span><strong id="bkx-total"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></strong></div>
+          <div class="bkx-row"><span><?= v2_te('Subtotal') ?></span><strong id="bkx-sub"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></strong></div>
+          <div class="bkx-row" id="bkx-fee-row" hidden><span id="bkx-fee-label"><?= v2_te('Booking fee') ?></span><strong id="bkx-fee"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></strong></div>
+          <div class="bkx-row bkx-total"><span><?= v2_te('Total') ?></span><strong id="bkx-total"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></strong></div>
           <p class="bkx-err" id="bkx-err" role="alert" hidden></p>
           <div class="bkx-cta">
-            <button class="btn btn-primary" type="button" id="bkx-go" disabled>Continue to payment<?= v2_ic('arrow-right') ?></button>
-            <button class="btn btn-ghost" type="button" id="bkx-cart" disabled><?= v2_ic('shopping-cart-simple') ?>Add to basket</button>
+            <button class="btn btn-primary" type="button" id="bkx-go" disabled><?= v2_te('Continue to payment') ?><?= v2_ic('arrow-right') ?></button>
+            <button class="btn btn-ghost" type="button" id="bkx-cart" disabled><?= v2_ic('shopping-cart-simple') ?><?= v2_te('Add to basket') ?></button>
           </div>
-          <p class="bkx-small"><span id="bkx-card-note" hidden>The card processing fee is worked out at checkout and depends on the payment method you choose. </span>Your ticket arrives by email straight after payment. Show it on your phone.</p>
+          <p class="bkx-small"><span id="bkx-card-note" hidden><?= v2_te('The card processing fee is worked out at checkout and depends on the payment method you choose.') ?> </span><?= v2_te('Your ticket arrives by email straight after payment. Show it on your phone.') ?></p>
         </div>
         <div class="lcp-card">
-          <h3>Good to know</h3>
+          <h3><?= v2_te('Good to know') ?></h3>
           <ul class="lcp-facts">
-            <?php if (($product['booking_mode'] ?? '') === 'slot'): ?><li><?= v2_ic('clock') ?><span>Places are limited for each time slot: you book your time right here.</span></li><?php endif; ?>
+            <?php if (($product['booking_mode'] ?? '') === 'slot'): ?><li><?= v2_ic('clock') ?><span><?= v2_te('Places are limited for each time slot: you book your time right here.') ?></span></li><?php endif; ?>
             <?php if ($xpCancel !== ''): ?><li><?= v2_ic('check-circle') ?><span><?= v2_e($xpCancel) ?></span></li><?php endif; ?>
-            <li><?= v2_ic('lock-simple') ?><span>Secure card payment. One basket can hold tickets from several venues.</span></li>
+            <li><?= v2_ic('lock-simple') ?><span><?= v2_te('Secure card payment. One basket can hold tickets from several venues.') ?></span></li>
           </ul>
         </div>
       </aside>
     </div>
     <div class="bkx-bar" id="bkx-bar" hidden>
       <div><b id="bkx-bar-total"><?= v2_e(v2_money_in(0, $xpCurrency)) ?></b><span id="bkx-bar-count"></span></div>
-      <button class="btn btn-primary" type="button" id="bkx-bar-go">See your booking</button>
+      <button class="btn btn-primary" type="button" id="bkx-bar-go"><?= v2_te('See your booking') ?></button>
     </div>
   </section>
 
@@ -315,8 +324,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="xpd" id="detalii" aria-labelledby="xp-about-h">
     <div class="wrap">
       <div class="xpd-head">
-        <p class="kicker">About</p>
-        <h2 id="xp-about-h">What to expect</h2>
+        <p class="kicker"><?= v2_te('About') ?></p>
+        <h2 id="xp-about-h"><?= v2_te('What to expect') ?></h2>
       </div>
       <div class="xpd-body<?= $xpLeadBig ? ' is-lead' : '' ?>"><?= $xpDescHtml !== '' ? $xpDescHtml : '<p>' . v2_e($xpShort !== '' ? $xpShort : $xpTitle) . '</p>' ?></div>
 
@@ -332,19 +341,19 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="xpd-two">
         <?php if ($xpIncluded): ?>
         <div class="xpd-col is-in">
-          <h3><?= v2_ic('check-circle') ?>Included in the price</h3>
+          <h3><?= v2_ic('check-circle') ?><?= v2_te('Included in the price') ?></h3>
           <ul><?php foreach ($xpIncluded as $x): ?><li><?= v2_ic('check') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
         </div>
         <?php endif; ?>
         <?php if ($xpExcluded): ?>
         <div class="xpd-col is-out">
-          <h3><?= v2_ic('x') ?>Not included</h3>
+          <h3><?= v2_ic('x') ?><?= v2_te('Not included') ?></h3>
           <ul><?php foreach ($xpExcluded as $x): ?><li><?= v2_ic('x') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
         </div>
         <?php endif; ?>
         <?php if ($xpNeeds): ?>
         <div class="xpd-col is-need">
-          <h3><?= v2_ic('info') ?>What to bring</h3>
+          <h3><?= v2_ic('info') ?><?= v2_te('What to bring') ?></h3>
           <ul><?php foreach ($xpNeeds as $x): ?><li><?= v2_ic('check') ?><span><?= v2_e($x) ?></span></li><?php endforeach; ?></ul>
         </div>
         <?php endif; ?>
@@ -352,7 +361,7 @@ include __DIR__ . '/includes/v2/header.php';
       <?php endif; ?>
 
       <?php if ($xpTerms !== ''): ?>
-      <details class="xpd-terms"><summary><?= v2_ic('file-text') ?>Terms of use<?= v2_ic('caret-down') ?></summary><div class="lcp-body"><?= am_rich($xpTerms) ?></div></details>
+      <details class="xpd-terms"><summary><?= v2_ic('file-text') ?><?= v2_te('Terms of use') ?><?= v2_ic('caret-down') ?></summary><div class="lcp-body"><?= am_rich($xpTerms) ?></div></details>
       <?php endif; ?>
 
       <?php if (count($lightbox) > 1): ?>
@@ -371,19 +380,19 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="xpl-card">
         <div class="xpl-copy">
-          <p class="kicker">Where it takes place</p>
+          <p class="kicker"><?= v2_te('Where it takes place') ?></p>
           <h2 id="xp-loc-h"><?= v2_e($xpLocName) ?></h2>
           <?php if ($xpWhere !== ''): ?><p class="xpl-where"><?= v2_ic('map-pin') ?><?= v2_e($xpWhere) ?></p><?php endif; ?>
           <?php if (!empty($xpLocation['short_description'])): ?><p class="xpl-desc"><?= v2_e($xpLocation['short_description']) ?></p><?php endif; ?>
-          <?php if ($xpMeeting !== ''): ?><p class="xpl-meet"><?= v2_ic('target') ?><span><b>Meeting point</b><?= v2_e($xpMeeting) ?></span></p><?php endif; ?>
+          <?php if ($xpMeeting !== ''): ?><p class="xpl-meet"><?= v2_ic('target') ?><span><b><?= v2_te('Meeting point') ?></b><?= v2_e($xpMeeting) ?></span></p><?php endif; ?>
           <?php if ($xpLocCounts): ?>
           <ul class="xpl-counts">
             <?php foreach ($xpLocCounts as [$cN, $cLabel]): ?><li><b><?= v2_e($cN) ?></b><?= v2_e($cLabel) ?></li><?php endforeach; ?>
           </ul>
           <?php endif; ?>
           <div class="xpl-cta">
-            <a class="btn btn-primary" href="/venue/<?= v2_e($xpLocSlug) ?>">Everything at <?= v2_e($xpLocName) ?><?= v2_ic('arrow-right') ?></a>
-            <?php if ($mapsUrl): ?><a class="btn btn-ghost" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?>Open in Maps</a><?php endif; ?>
+            <a class="btn btn-primary" href="/venue/<?= v2_e($xpLocSlug) ?>"><?= v2_te('Everything at {place}', ['place' => $xpLocName]) ?><?= v2_ic('arrow-right') ?></a>
+            <?php if ($mapsUrl): ?><a class="btn btn-ghost" href="<?= v2_e($mapsUrl) ?>" target="_blank" rel="noopener"><?= v2_ic('map-pin') ?><?= v2_te('Open in Maps') ?></a><?php endif; ?>
           </div>
         </div>
         <div class="xpl-media">
@@ -392,7 +401,7 @@ include __DIR__ . '/includes/v2/header.php';
           <?php endif; ?>
           <?php if ($mapsUrl): ?>
           <div class="xpl-map">
-            <iframe title="Map of <?= v2_e($xpLocName) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($xpLat . ',' . $xpLng) ?>&z=14&output=embed"></iframe>
+            <iframe title="<?= v2_te('Map of {name}', ['name' => $xpLocName]) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($xpLat . ',' . $xpLng) ?>&z=14&output=embed"></iframe>
           </div>
           <?php endif; ?>
         </div>
@@ -401,15 +410,15 @@ include __DIR__ . '/includes/v2/header.php';
       <?php if ($xpSiblings): ?>
       <div class="xpl-more">
         <div class="xpl-more-h">
-          <h3>Also on sale here</h3>
-          <a class="mpd-link xpl-all" href="/venue/<?= v2_e($xpLocSlug) ?>#bilete">All tickets for this venue<?= v2_ic('arrow-right') ?></a>
+          <h3><?= v2_te('Also on sale here') ?></h3>
+          <a class="mpd-link xpl-all" href="/venue/<?= v2_e($xpLocSlug) ?>#bilete"><?= v2_te('All tickets for this venue') ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <ul class="xpl-grid">
           <?php foreach ($xpSiblings as $si => $s): ?>
           <?php
             $sImg   = v2_media_url($s['image'] ?? null);
             $isXp   = ($s['type'] ?? '') === 'experience';
-            $sType  = ['access' => 'Entry ticket', 'experience' => 'Experience', 'package' => 'Package'][$s['type'] ?? ''] ?? 'Ticket';
+            $sType  = am_product_types_t()[$s['type'] ?? ''] ?? v2_t('Ticket');
             $sHref  = $isXp && !empty($s['slug']) ? '/experience/' . $s['slug'] : '/venue/' . $xpLocSlug . '#bilete';
             $sLine  = trim((string) ($s['subtitle'] ?? ''));
             $sMin   = (int) ($s['duration_minutes'] ?? 0);
@@ -427,7 +436,7 @@ include __DIR__ . '/includes/v2/header.php';
                 <b><?= v2_e(navFlatName($s['title'] ?? '')) ?></b>
                 <?php if ($sLine !== ''): ?><small><?= v2_e($sLine) ?></small><?php endif; ?>
                 <span class="xpl-item-foot">
-                  <?php if (!empty($s['min_price_cents'])): ?><span class="xpl-item-price">from <b><?= v2_e(v2_money_in((int) $s['min_price_cents'] / 100, strtoupper((string) ($s['currency'] ?? '')) ?: $xpCurrency)) ?></b></span><?php endif; ?>
+                  <?php if (!empty($s['min_price_cents'])): ?><span class="xpl-item-price"><?= v2_t('from <b>{price}</b>', ['price' => v2_e(v2_money_in((int) $s['min_price_cents'] / 100, strtoupper((string) ($s['currency'] ?? '')) ?: $xpCurrency))]) ?></span><?php endif; ?>
                   <span class="xp-go"><?= v2_ic('arrow-right') ?></span>
                 </span>
               </span>
@@ -447,12 +456,12 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="lb-top">
       <p class="lb-title" id="lb-title"><?= v2_e($xpTitle) ?></p>
       <span class="lb-count" id="lb-count">1 / <?= count($lightbox) ?></span>
-      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr">Close the gallery</span></button>
+      <button class="icon-btn" type="button" data-lb="close"><?= v2_ic('x') ?><span class="sr"><?= v2_te('Close the gallery') ?></span></button>
     </div>
     <figure class="lb-fig"><img id="lb-img" src="" alt=""></figure>
     <div class="lb-nav"<?= count($lightbox) < 2 ? ' hidden' : '' ?>>
-      <button class="rail-btn" type="button" data-lb="prev" aria-label="Previous photo"><?= v2_ic('arrow-left') ?></button>
-      <button class="rail-btn" type="button" data-lb="next" aria-label="Next photo"><?= v2_ic('arrow-right') ?></button>
+      <button class="rail-btn" type="button" data-lb="prev" aria-label="<?= v2_te('Previous photo') ?>"><?= v2_ic('arrow-left') ?></button>
+      <button class="rail-btn" type="button" data-lb="next" aria-label="<?= v2_te('Next photo') ?>"><?= v2_ic('arrow-right') ?></button>
     </div>
   </div>
   <?php endif; ?>

@@ -1,13 +1,14 @@
 <?php
 /**
- * Experiences: /experiente and /{oras}/experiente (v2 design, includes/v2/am-hub.php).
+ * Experiences: /experiences and /{city}/experiences (v2 design, includes/v2/am-hub.php).
  *
  * Reads GET /activities (?city=, ?search=, ?category=, ?date=, ?max_price_ron=, ?sort=, ?pagina=); with the
  * activities module that list holds only experiences sold online (access tickets and packages are on their
- * location's page). Cards open /experienta/{slug}.
+ * location's page). Cards open /experience/{slug}.
  *
- * The city lives in the path, so the filter's Oraș field submits ?oras= and this file sends the browser on to
- * the canonical /{oras}/experiente. That happens before the page cache, so no redirect is ever cached.
+ * The city lives in the path, so the filter's City field submits ?oras= and this file sends the browser on to
+ * the canonical /{city}/experiences. The query names (oras, categorie, data, pret, pagina) and the sort values are
+ * the ones the page has always used: they are addresses, not texts. That happens before the page cache, so no redirect is ever cached.
  */
 
 if (isset($_GET['oras'])) {
@@ -15,7 +16,7 @@ if (isset($_GET['oras'])) {
     $boRest = $_GET;
     unset($boRest['oras'], $boRest['city'], $boRest['pagina']);
     $boQs = http_build_query(array_filter($boRest, fn ($v) => is_string($v) && $v !== ''));
-    header('Location: ' . (preg_match('/^[a-z][a-z0-9-]{1,50}$/', $boTo) ? '/' . $boTo . '/experiente' : '/experiente')
+    header('Location: ' . (preg_match('/^[a-z][a-z0-9-]{1,50}$/', $boTo) ? '/' . $boTo . '/experiences' : '/experiences')
         . ($boQs !== '' ? '?' . $boQs : ''), true, 302);
     exit;
 }
@@ -56,18 +57,18 @@ $priceSteps = [50, 100, 150, 250, 500];
 if (!in_array($maxPrice, $priceSteps, true)) {
     $maxPrice = 0;
 }
-$sorts = ['' => 'Recomandate', 'ieftin' => 'Cele mai ieftine', 'curand' => 'Începe curând'];
+$sorts = ['' => v2_t('Recommended'), 'ieftin' => v2_t('Cheapest first'), 'curand' => v2_t('Starting soon')];
 $sort = (string) ($_GET['sort'] ?? '');
 if (!isset($sorts[$sort])) {
     $sort = '';
 }
 $hasFilter = $q !== '' || $cat !== '' || $date !== '' || $maxPrice > 0 || $citySlug !== '';
 
-$base = $citySlug !== '' ? '/' . $citySlug . '/experiente' : '/experiente';
+$base = $citySlug !== '' ? '/' . $citySlug . '/experiences' : '/experiences';
 /** The same list with some of the filters swapped; null clears one. Page numbers never carry over. */
 $url = function (array $over = [], ?string $forCity = null) use ($base, $citySlug, $q, $cat, $date, $maxPrice, $sort) {
     $args = array_merge(['q' => $q, 'categorie' => $cat, 'data' => $date, 'pret' => $maxPrice ?: '', 'sort' => $sort], $over);
-    $path = $forCity === null ? $base : ($forCity !== '' ? '/' . $forCity . '/experiente' : '/experiente');
+    $path = $forCity === null ? $base : ($forCity !== '' ? '/' . $forCity . '/experiences' : '/experiences');
     $qs = http_build_query(array_filter($args, fn ($v) => $v !== '' && $v !== null));
 
     return $path . ($qs !== '' ? '?' . $qs : '');
@@ -90,26 +91,37 @@ foreach ($rows as $row) {
     if (!$a) {
         continue;
     }
-    // Where it happens comes first: "Închiriere barcă cu vâsle" only means something once you know it is at
-    // Parcul Bucov, în Ploiești. Without a location on the product we fall back to the city.
-    $where = $a['loc'] !== ''
-        ? ['la', $a['loc'], $a['locCity'] !== '' ? ', în ' . $a['locCity'] : '']
-        : ($a['city'] !== '' ? ['în', $a['city'], ''] : null);
-    $aria = $a['title'] . ($a['loc'] !== '' ? ' la ' . $a['loc'] . ($a['locCity'] !== '' ? ', în ' . $a['locCity'] : '') : ($a['city'] !== '' ? ' în ' . $a['city'] : ''));
+    // Where it happens comes first: "Rowing boat hire" only means something once you know it is at Lake Bled,
+    // in Bled. Without a location on the product we fall back to the city. One sentence per case, so a language
+    // can order it its own way; the place is in <b>.
+    if ($a['loc'] !== '' && $a['locCity'] !== '') {
+        $where = v2_t('at <b>{place}</b>, in {city}', ['place' => v2_e($a['loc']), 'city' => v2_e($a['locCity'])]);
+        $aria = v2_t('{title} at {place}, in {city}', ['title' => $a['title'], 'place' => $a['loc'], 'city' => $a['locCity']]);
+    } elseif ($a['loc'] !== '') {
+        $where = v2_t('at <b>{place}</b>', ['place' => v2_e($a['loc'])]);
+        $aria = v2_t('{title} at {place}', ['title' => $a['title'], 'place' => $a['loc']]);
+    } elseif ($a['city'] !== '') {
+        $where = v2_t('in <b>{city}</b>', ['city' => v2_e($a['city'])]);
+        $aria = v2_t('{title} in {city}', ['title' => $a['title'], 'city' => $a['city']]);
+    } else {
+        $where = null;
+        $aria = $a['title'];
+    }
     $items[] = [
-        'href' => '/experienta/' . $a['slug'],
+        'href' => '/experience/' . $a['slug'],
         'image' => $a['image'],
-        'kicker' => $a['catName'] ?: 'Experiență',
+        'kicker' => $a['catName'] ?: v2_t('Experience'),
         'title' => $a['title'],
         'where' => $where,
         'aria' => $aria,
         'meta' => array_values(array_filter([
-            $a['rating'] > 0 ? ['star', str_replace('.', ',', (string) $a['rating']) . ($a['reviews'] > 0 ? ' (' . v2_thousands($a['reviews']) . ')' : '')] : null,
+            $a['rating'] > 0 ? ['star', (string) $a['rating'] . ($a['reviews'] > 0 ? ' (' . v2_thousands($a['reviews']) . ')' : '')] : null,
             $a['dur'] !== '' ? ['clock', $a['dur']] : null,
             $a['catName'] !== '' ? ['tag', $a['catName']] : null,
         ])),
         'price' => $a['price'] ?: null,
-        'badges' => $a['promoted'] ? ['Promovat'] : [],
+        'priceLabel' => $a['priceLabel'],   // in the operator's own currency (or the one the visitor chose)
+        'badges' => $a['promoted'] ? [v2_t('Promoted')] : [],
     ];
 }
 
@@ -145,11 +157,11 @@ if ($citySlug !== '' && !isset($facetCities[$citySlug])) {
     $facetCities[$citySlug] = [$cityName, 0];
 }
 
-$cityOptions = [['', 'Toată țara']];
+$cityOptions = [['', v2_t('Anywhere')]];
 foreach ($facetCities as $cs => [$cn, $cc]) {
     $cityOptions[] = [$cs, $cn . ($facetExact && $cc > 0 ? ' (' . $cc . ')' : '')];
 }
-$catChips = [['Toate', $url(['categorie' => '']), $cat === '']];
+$catChips = [[v2_t('All'), $url(['categorie' => '']), $cat === '']];
 foreach ($facetCats as $ks => [$kn]) {
     $catChips[] = [$kn, $url(['categorie' => $ks]), $ks === $cat];
 }
@@ -159,7 +171,7 @@ if ($citySlug !== '') {
     $active[] = [$cityName, $url([], '')];
 }
 if ($q !== '') {
-    $active[] = ['„' . $q . '”', $url(['q' => ''])];
+    $active[] = ['“' . $q . '”', $url(['q' => ''])];
 }
 if ($cat !== '') {
     $active[] = [$facetCats[$cat][0] ?? $cat, $url(['categorie' => ''])];
@@ -168,66 +180,80 @@ if ($date !== '') {
     $active[] = [am_date($date), $url(['data' => ''])];
 }
 if ($maxPrice > 0) {
-    $active[] = ['până în ' . $maxPrice . ' lei', $url(['pret' => ''])];
+    $active[] = [v2_t('up to {price}', ['price' => v2_money($maxPrice)]), $url(['pret' => ''])];
 }
 
 $total = (int) ($pag['total'] ?? count($items));
-$countLine = $total > 0
-    ? v2_exp($total) . ($hasFilter ? ($citySlug !== '' && count($active) === 1 ? ' în ' . $cityName : ', după filtrele tale') : ' pe viaqui.com')
-    : 'Niciun rezultat pentru filtrele alese';
+if ($total <= 0) {
+    $countLine = v2_t('No results for these filters');
+} elseif (!$hasFilter) {
+    $countLine = v2_t('{count} on Viaqui', ['count' => v2_exp($total)]);
+} elseif ($citySlug !== '' && count($active) === 1) {
+    $countLine = v2_t('{count} in {city}', ['count' => v2_exp($total), 'city' => $cityName]);
+} else {
+    $countLine = v2_t('{count} matching your filters', ['count' => v2_exp($total)]);
+}
 
-$priceOptions = [['', 'Oricât']];
+$priceOptions = [['', v2_t('Any price')]];
 foreach ($priceSteps as $p) {
-    $priceOptions[] = [(string) $p, 'până în ' . $p . ' lei'];
+    $priceOptions[] = [(string) $p, v2_t('up to {price}', ['price' => v2_money($p)])];
 }
 $sortOptions = [];
 foreach ($sorts as $sv => $sl) {
     $sortOptions[] = [$sv, $sl];
 }
 
-$breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/'], ['name' => 'Experiențe', 'url' => SITE_URL . '/experiente']];
+$breadcrumbs = [['name' => v2_t('Home'), 'url' => SITE_URL . '/'], ['name' => v2_t('Experiences'), 'url' => SITE_URL . '/experiences']];
 if ($citySlug !== '') {
     $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . $base];
 }
 
 $hub = [
     'tight' => true,
-    'kicker' => 'Alegi ziua și ora, biletul vine pe email',
-    'title' => 'Experiențe',
-    'titleEm' => $cityName !== '' ? 'în ' . $cityName : 'de trăit în România',
-    'lead' => 'Tururi ghidate, ateliere, plimbări cu barca, degustări și alte lucruri de făcut, la locațiile care le organizează.',
+    'kicker' => v2_t('Pick the day and time, the ticket arrives by email'),
+    'title' => v2_t('Experiences'),
+    'titleHtml' => $cityName !== ''
+        ? v2_t('Experiences <em>in {city}</em>', ['city' => v2_e($cityName)])
+        : v2_t('Experiences <em>across Europe</em>'),
+    'lead' => v2_t('Guided tours, workshops, boat trips, tastings and other things to do, at the venues that run them.'),
     'stats' => array_values(array_filter([$total ? v2_exp($total) : ''])),
     'image' => $items[0]['image'] ?? null,
     'breadcrumbs' => $breadcrumbs,
     'filter' => [
         'action' => $base,
-        'search' => ['name' => 'q', 'value' => $q, 'placeholder' => 'Caută o experiență', 'clear' => $url(['q' => ''])],
+        'search' => ['name' => 'q', 'value' => $q, 'placeholder' => v2_t('Search for an experience'), 'clear' => $url(['q' => ''])],
         'fields' => [
-            ['name' => 'oras', 'label' => 'Oraș', 'value' => $citySlug, 'options' => $cityOptions, 'find' => 'Caută orașul'],
-            ['name' => 'data', 'label' => 'Disponibil pe', 'value' => $date, 'type' => 'date', 'min' => $today],
-            ['name' => 'pret', 'label' => 'Preț maxim', 'value' => $maxPrice ?: '', 'options' => $priceOptions],
-            ['name' => 'sort', 'label' => 'Sortare', 'value' => $sort, 'options' => $sortOptions],
+            ['name' => 'oras', 'label' => v2_t('City'), 'value' => $citySlug, 'options' => $cityOptions, 'find' => v2_t('Search for a city')],
+            ['name' => 'data', 'label' => v2_t('Available on'), 'value' => $date, 'type' => 'date', 'min' => $today],
+            ['name' => 'pret', 'label' => v2_t('Maximum price'), 'value' => $maxPrice ?: '', 'options' => $priceOptions],
+            ['name' => 'sort', 'label' => v2_t('Sort by'), 'value' => $sort, 'options' => $sortOptions],
         ],
-        'chips' => count($catChips) > 2 ? ['label' => 'Categorie', 'items' => $catChips] : null,
+        'chips' => count($catChips) > 2 ? ['label' => v2_t('Category'), 'items' => $catChips] : null,
         'hidden' => ['categorie' => $cat],
         'active' => $active,
-        'reset' => $hasFilter ? '/experiente' : null,
+        'reset' => $hasFilter ? '/experiences' : null,
         'count' => $countLine,
     ],
     'items' => $items,
-    'heading' => 'Experiențe' . ($cityName !== '' ? ' în ' . $cityName : ''),
+    'heading' => $cityName !== '' ? v2_t('Experiences in {city}', ['city' => $cityName]) : v2_t('Experiences'),
     'page' => (int) ($pag['current_page'] ?? $page),
     'last' => (int) ($pag['last_page'] ?? 1),
     'pageUrl' => fn (int $p) => $url(['pagina' => $p > 1 ? $p : '']),
     'empty' => $hasFilter && ($q !== '' || $cat !== '' || $date !== '' || $maxPrice > 0)
-        ? ['Nicio experiență pentru filtrele alese.', 'Încearcă fără o parte dintre ele sau caută în toată țara.', ['Toate experiențele', '/experiente']]
+        ? [v2_t('No experiences for these filters.'), v2_t('Try without some of them, or search everywhere.'), [v2_t('All experiences'), '/experiences']]
         : ($citySlug !== ''
-            ? ['Încă nu avem experiențe în ' . $cityName . '.', 'Uită-te la experiențele din alte orașe sau la ce se întâmplă în ' . $cityName . '.', ['Ce faci în ' . $cityName, '/' . $citySlug]]
-            : ['Primele experiențe apar în curând.', 'Aici vei găsi tururi, ateliere și alte lucruri de făcut, cu rezervare online.', ['Organizezi experiențe? Vinde-le aici', '/parteneri']]),
+            ? [v2_t('We have no experiences in {city} yet.', ['city' => $cityName]), v2_t('Look at experiences in other cities, or at what else there is in {city}.', ['city' => $cityName]), [v2_t('Things to do in {city}', ['city' => $cityName]), '/' . $citySlug]]
+            : [v2_t('The first experiences are coming soon.'), v2_t('This is where you will find tours, workshops and other things to do, with online booking.'), [v2_t('Do you run experiences? Sell them here'), '/partners']]),
 ];
 
-$pageTitleRaw = 'Experiențe' . ($cityName !== '' ? ' în ' . $cityName : '') . ': rezervă online' . ($page > 1 ? ' (pagina ' . $page . ')' : '') . ' | viaqui.com';
-$pageDescription = 'Experiențe' . ($cityName !== '' ? ' în ' . $cityName : ' în România') . ': tururi ghidate, ateliere, plimbări și degustări. Alegi ziua și ora, plătești online, primești biletul pe email.';
+$pageTitleRaw = $cityName !== '' ? v2_t('Experiences in {city}: book online', ['city' => $cityName]) : v2_t('Experiences: book online');
+if ($page > 1) {
+    $pageTitleRaw = v2_t('{title} (page {n})', ['title' => $pageTitleRaw, 'n' => $page]);
+}
+$pageTitleRaw .= ' | Viaqui';
+$pageDescription = $cityName !== ''
+    ? v2_t('Experiences in {city}: guided tours, workshops, walks and tastings. Pick the day and time, pay online, get your ticket by email.', ['city' => $cityName])
+    : v2_t('Experiences across Europe: guided tours, workshops, walks and tastings. Pick the day and time, pay online, get your ticket by email.');
 $canonicalUrl = SITE_URL . $base . ($page > 1 ? '?pagina=' . $page : '');
 // A filtered list is a slice of the plain one: it stays out of the index and points at the canonical page.
 if ($q !== '' || $cat !== '' || $date !== '' || $maxPrice > 0 || $sort !== '') {

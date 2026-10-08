@@ -14,12 +14,6 @@
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
-  /* Romanian counting, as v2_num(): 1 categorie, 5 categorii, 20 de categorii */
-  function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
-  }
   var index = cards.map(function (card) { return norm(card.getAttribute('data-q')); });
 
   function apply(fromUser) {
@@ -29,9 +23,9 @@
       card.hidden = !hit;
       if (hit) shown++;
     });
-    count.textContent = shown + ' din ' + total + ' categorii afișate';
+    count.textContent = VQ.t('{shown} of {total} categories shown', { shown: shown, total: total });
     none.hidden = shown > 0;
-    status.textContent = q ? (shown ? num(shown, 'categorie găsită', 'categorii găsite') : 'Nicio categorie găsită.') : '';
+    status.textContent = q ? (shown ? VQ.n(shown, 'category found', 'categories found') : VQ.t('No category found.')) : '';
     if (fromUser) {
       var params = new URLSearchParams(window.location.search);
       if (input.value.trim()) params.set('q', input.value.trim()); else params.delete('q');

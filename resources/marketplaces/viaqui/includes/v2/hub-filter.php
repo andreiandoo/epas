@@ -12,12 +12,12 @@
  *   fields   [['name','label','value','type' => 'select'|'date','options','find','hint']]
  *            options: [[value, label]] or ['group' => 'Label', 'items' => [[value, label]]]
  *            find:    placeholder of the search box inside the dropdown; marks the list as long
- *   chips    ['label' => 'Tip', 'items' => [[text, href, active]]]  the one facet that stays crawlable
+ *   chips    ['label' => 'Type', 'items' => [[text, href, active]]]  the one facet that stays crawlable
  *   hidden   ['tip' => 'muzeu']  what the chips hold: it has no field of its own, so it travels as a hidden
  *            input and a change to any other control does not drop it
  *   active   [[text, href]]   the filters in force; the href is the same list without that one
  *   reset    href of the unfiltered list, or null when nothing is filtered
- *   count    "12 experiențe în Ploiești"
+ *   count    "12 experiences in Lisbon"
  */
 
 $hf = $hub['filter'];
@@ -36,10 +36,10 @@ $hfCount = count($hfActive);
       <?= v2_ic('magnifying-glass') ?>
       <label class="sr" for="hf-q"><?= v2_e($hf['search']['placeholder']) ?></label>
       <input id="hf-q" type="search" name="<?= v2_e($hf['search']['name']) ?>" value="<?= v2_e($hf['search']['value']) ?>" placeholder="<?= v2_e($hf['search']['placeholder']) ?>" autocomplete="off" enterkeyhint="search">
-      <?php if ($hf['search']['value'] !== ''): ?><a class="hf-q-x" href="<?= v2_e($hf['search']['clear']) ?>" aria-label="Șterge căutarea"><?= v2_ic('x') ?></a><?php endif; ?>
+      <?php if ($hf['search']['value'] !== ''): ?><a class="hf-q-x" href="<?= v2_e($hf['search']['clear']) ?>" aria-label="<?= v2_te('Clear search') ?>"><?= v2_ic('x') ?></a><?php endif; ?>
     </div>
     <?php endif; ?>
-    <button class="hf-toggle" type="button" data-hf-toggle aria-expanded="false" aria-controls="hf-fields"><?= v2_ic('list') ?>Filtre<?php if ($hfCount): ?><span class="hf-n"><?= $hfCount ?></span><?php endif; ?></button>
+    <button class="hf-toggle" type="button" data-hf-toggle aria-expanded="false" aria-controls="hf-fields"><?= v2_ic('list') ?><?= v2_te('Filters') ?><?php if ($hfCount): ?><span class="hf-n"><?= $hfCount ?></span><?php endif; ?></button>
   </div>
 
   <div class="hf-fields" id="hf-fields">
@@ -67,7 +67,7 @@ $hfCount = count($hfActive);
     </p>
     <?php endforeach; ?>
     <p class="hf-acts">
-      <button class="btn btn-primary hf-go" type="submit">Arată rezultatele</button>
+      <button class="btn btn-primary hf-go" type="submit"><?= v2_te('Show results') ?></button>
     </p>
   </div>
 
@@ -85,11 +85,11 @@ $hfCount = count($hfActive);
   <div class="hf-foot">
     <p class="hf-count"><?= v2_e($hf['count']) ?></p>
     <?php if ($hfActive): ?>
-    <ul class="hf-active" aria-label="Filtre active">
+    <ul class="hf-active" aria-label="<?= v2_te('Active filters') ?>">
       <?php foreach ($hfActive as [$atext, $ahref]): ?>
-      <li><a href="<?= v2_e($ahref) ?>" aria-label="Elimină filtrul <?= v2_e($atext) ?>"><?= v2_e($atext) ?><?= v2_ic('x') ?></a></li>
+      <li><a href="<?= v2_e($ahref) ?>" aria-label="<?= v2_te('Remove the filter {name}', ['name' => $atext]) ?>"><?= v2_e($atext) ?><?= v2_ic('x') ?></a></li>
       <?php endforeach; ?>
-      <?php if (!empty($hf['reset'])): ?><li class="hf-active-all"><a href="<?= v2_e($hf['reset']) ?>">Șterge tot</a></li><?php endif; ?>
+      <?php if (!empty($hf['reset'])): ?><li class="hf-active-all"><a href="<?= v2_e($hf['reset']) ?>"><?= v2_te('Clear all') ?></a></li><?php endif; ?>
     </ul>
     <?php endif; ?>
   </div>

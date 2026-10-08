@@ -1,9 +1,11 @@
 <?php
 /**
- * Region page: /{regiune}, e.g. /muntenia (v2 design).
+ * Region page (v2 design), from the Romanian site this one was copied from, where /{region} listed the cities of
+ * a historical region by county.
  *
- * slug.php includes this file when a single-segment slug names a region; /regiune/{slug} and /region/{slug}
- * redirect here. Called directly (region.php?slug=), it looks the region up itself.
+ * On Viaqui slug.php no longer includes this file (a slug is a category, a country or a city; regions are reached
+ * through the country page), so it only answers when called directly (region.php?slug=) and core knows the region.
+ * The "regions" of the shell ($V2NAV['regions']) are countries here.
  *
  * Data: the region and its visible cities (/locations/regions/{slug}); every listed activity whose city belongs to the
  * region (the activity list has no region filter, so the site's activities are read and matched by city); the shell's
@@ -128,67 +130,76 @@ $actCount = count($activities);
 $activeCities = array_values(array_filter($cities, fn ($c) => $c['acts'] > 0));
 $namesList = function (array $list): string {
     $names = array_column($list, 'name');
-    return count($names) > 1 ? implode(', ', array_slice($names, 0, -1)) . ' și ' . end($names) : (string) ($names[0] ?? '');
+    return count($names) > 1 ? v2_t('{list} and {last}', ['list' => implode(', ', array_slice($names, 0, -1)), 'last' => end($names)]) : (string) ($names[0] ?? '');
 };
 $leadCities = array_slice($cities, 0, 3);
 $lead = $regionDescription !== ''
     ? $regionDescription
     : ($cityCount > 3
-        ? 'Orașele din ' . $regionName . ' într-un singur loc: ' . implode(', ', array_column($leadCities, 'name')) . ' și alte ' . v2_num($cityCount - 3, 'oraș', 'orașe') . '. Alege orașul și vezi activitățile, atracțiile și ideile de weekend de acolo.'
-        : 'Alege orașul din ' . $regionName . ' și vezi activitățile, atracțiile și ideile de weekend de acolo.');
+        ? v2_t('The cities of {region} in one place: {cities} and {n} more. Choose a city to see its activities, attractions and weekend ideas.', ['region' => $regionName, 'cities' => implode(', ', array_column($leadCities, 'name')), 'n' => $cityCount - 3])
+        : v2_t('Choose a city in {region} to see its activities, attractions and weekend ideas.', ['region' => $regionName]));
+// The lowest price, compared in euro (operators sell in their own currencies) and shown as its own label.
 $fromPrice = null;
+$fromPriceLabel = '';
 foreach ($activities as $a) {
-    if ($a['cents'] !== null && $a['cents'] > 0) {
-        $fromPrice = $fromPrice === null ? $a['cents'] : min($fromPrice, $a['cents']);
+    if ($a['cents'] !== null && $a['cents'] > 0 && ($fromPrice === null || $a['priceEur'] < $fromPrice)) {
+        $fromPrice = $a['priceEur'];
+        $fromPriceLabel = $a['priceLabel'];
     }
 }
-$priceHtml = function (?int $cents): string {
+$priceHtml = function (?int $cents, string $label): string {
     if ($cents === null) {
         return '';
     }
     if ($cents === 0) {
-        return '<span class="xp-price"><b>Gratuit</b></span>';
+        return '<span class="xp-price"><b>' . v2_te('Free') . '</b></span>';
     }
-    return '<span class="xp-price">de la<b>' . v2_e(v2_thousands((int) round($cents / 100))) . ' lei</b></span>';
+    return '<span class="xp-price">' . v2_t('from<b>{price}</b>', ['price' => v2_e($label)]) . '</span>';
 };
 
 $hubs = [];
 if ($mainCity) {
     $mc = $mainCity['name'];
     $hubs = [
-        ['Copii', "Activități cu copiii în {$mc}", 'Muzee interactive, parcuri, ateliere și experiențe pentru familie.', "/{$mainCity['slug']}/activitati-copii"],
-        ['Weekend', "Weekend în {$mc}", 'Idei pentru sâmbătă și duminică: copii, grupuri, cupluri.', "/{$mainCity['slug']}/activitati-weekend"],
-        ['Indoor', "Indoor în {$mc}", 'Activități la adăpost, pentru zile reci sau ploioase.', "/{$mainCity['slug']}/activitati-indoor"],
-        ['Buget', "Sub 50 lei în {$mc}", 'Activități accesibile, fără să golești portofelul.', "/{$mainCity['slug']}/activitati-sub-50-lei"],
+        [v2_t('Kids'), v2_t('Things to do with kids in {city}', ['city' => $mc]), v2_t('Hands-on museums, parks, workshops and family experiences.'), "/{$mainCity['slug']}/with-kids"],
+        [v2_t('Weekend'), v2_t('A weekend in {city}', ['city' => $mc]), v2_t('Ideas for Saturday and Sunday: kids, groups, couples.'), "/{$mainCity['slug']}/weekend-ideas"],
+        [v2_t('Indoor'), v2_t('Indoors in {city}', ['city' => $mc]), v2_t('Activities under a roof, for cold or rainy days.'), "/{$mainCity['slug']}/activitati-indoor"],
+        [v2_t('Budget'), v2_t('On a budget in {city}', ['city' => $mc]), v2_t('Affordable activities that go easy on your wallet.'), "/{$mainCity['slug']}/activitati-sub-50-lei"],
     ];
 }
 
 $faqs = [
     [
-        'Ce orașe din ' . $regionName . ' au activități pe viaqui.com?',
+        v2_t('Which cities in {region} have activities on Viaqui?', ['region' => $regionName]),
         $activeCities
-            ? 'Acum: ' . implode(', ', array_map(fn ($c) => $c['name'] . ' (' . v2_num($c['acts'], 'activitate', 'activități') . ')', $activeCities)) . '. Lista se actualizează singură când o locație din regiune își publică activitățile.'
-            : 'Încă nicio activitate nu este listată în ' . $regionName . '. Lista se actualizează singură când o locație din regiune își publică activitățile.',
+            ? v2_t('Right now: {cities}. The list updates itself when a venue in the region publishes its activities.', ['cities' => implode(', ', array_map(fn ($c) => $c['name'] . ' (' . v2_num($c['acts'], 'activity', 'activities') . ')', $activeCities))])
+            : v2_t('No activity is listed in {region} yet. The list updates itself when a venue in the region publishes its activities.', ['region' => $regionName]),
     ],
-    ['Cum găsesc ce e de făcut într-un oraș din ' . $regionName . '?', 'Scrie numele orașului în căutarea de sus sau alege-l din lista pe județe. Pagina orașului strânge activitățile, atracțiile și ideile pentru copii, weekend sau zile ploioase.'],
-    ['Pot rezerva online?', 'Da. Alegi data și ora, plătești online și primești biletul cu cod QR pe email; la intrare arăți codul de pe telefon.'],
-    ['Am o locație în ' . $regionName . '. Cum apar aici?', 'Îți creezi contul de locație, adaugi activitățile și programul, iar după publicare apar automat pe pagina orașului și pe această pagină.'],
+    [v2_t('How do I find things to do in a city in {region}?', ['region' => $regionName]), v2_t('Type the name of the city in the search at the top, or pick it from the list by county. The city page gathers the activities, the attractions and ideas for kids, weekends or rainy days.')],
+    [v2_t('Can I book online?'), v2_t('Yes. You pick the date and time, pay online and get your ticket with a QR code by email. At the entrance you show the code on your phone.')],
+    [v2_t('I run a venue in {region}. How do I appear here?', ['region' => $regionName]), v2_t('Create your venue account, add your activities and opening hours, and once published they appear automatically on the city page and on this page.')],
 ];
 
 // ------------------------------------------------------------------ SEO
-$pageTitleRaw = 'Activități în ' . $regionName . ': ' . v2_num($cityCount, 'oraș', 'orașe') . ' — ' . SITE_NAME;
-$pageDescription = 'Activități, experiențe și bilete în ' . $regionName . ($leadCities ? ': ' . ($cityCount > 3 ? implode(', ', array_column($leadCities, 'name')) . ' și alte ' . v2_num($cityCount - 3, 'oraș', 'orașe') : $namesList($leadCities)) : '') . '. Alege orașul și rezervă online.';
+$pageTitleRaw = v2_t('Things to do in {region}: {cities}', ['region' => $regionName, 'cities' => v2_num($cityCount, 'city', 'cities')]) . ' | ' . SITE_NAME;
+if (!$leadCities) {
+    $pageDescription = v2_t('Activities, experiences and tickets in {region}. Choose a city and book online.', ['region' => $regionName]);
+} elseif ($cityCount > 3) {
+    $pageDescription = v2_t('Activities, experiences and tickets in {region}: {cities} and {n} more. Choose a city and book online.', ['region' => $regionName, 'cities' => implode(', ', array_column($leadCities, 'name')), 'n' => $cityCount - 3]);
+} else {
+    $pageDescription = v2_t('Activities, experiences and tickets in {region}: {cities}. Choose a city and book online.', ['region' => $regionName, 'cities' => $namesList($leadCities)]);
+}
 $canonicalUrl = SITE_URL . '/' . $regionSlug;
 $ogImage = v2_media_url($region['image'] ?? null) ?: ($topCities && $topCities[0]['photo'] ? $topCities[0]['photo'][0] : v2_asset('img/dest-brasov.webp'));
-$breadcrumbs = [['Acasă', '/'], ['Orașe', '/orase'], [$regionName, '/' . $regionSlug]];
+$breadcrumbs = [[v2_t('Home'), '/'], [v2_t('Cities'), '/cities'], [$regionName, '/' . $regionSlug]];
 $structuredData = [[
     '@context' => 'https://schema.org',
     '@type' => 'CollectionPage',
-    'name' => 'Activități în ' . $regionName,
+    'name' => v2_t('Things to do in {region}', ['region' => $regionName]),
     'description' => $pageDescription,
     'url' => $canonicalUrl,
-    'inLanguage' => 'ro-RO',
-    'about' => ['@type' => 'Place', 'name' => $regionName, 'containedInPlace' => ['@type' => 'Country', 'name' => 'România']],
+    'inLanguage' => v2_locale(),
+    'about' => ['@type' => 'Place', 'name' => $regionName],
     'mainEntity' => [
         '@type' => 'ItemList',
         'numberOfItems' => $cityCount,
@@ -224,36 +235,36 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in rg-in">
       <div>
-        <nav class="crumbs" aria-label="Breadcrumb">
+        <nav class="crumbs" aria-label="<?= v2_te('Breadcrumb') ?>">
           <?php foreach ($breadcrumbs as $i => [$bcName, $bcHref]): ?>
             <?php if ($i > 0): ?><span aria-hidden="true">/</span><?php endif; ?>
             <?php if ($i < count($breadcrumbs) - 1): ?><a href="<?= v2_e($bcHref) ?>"><?= v2_e($bcName) ?></a><?php else: ?><span aria-current="page"><?= v2_e($bcName) ?></span><?php endif; ?>
           <?php endforeach; ?>
         </nav>
-        <p class="ct-kicker">Regiune · România</p>
-        <h1 class="ct-h rg-h" id="rg-h">Activități în <?= v2_e($regionName) ?></h1>
+        <p class="ct-kicker"><?= v2_te('Region') ?></p>
+        <h1 class="ct-h rg-h" id="rg-h"><?= v2_te('Things to do in {region}', ['region' => $regionName]) ?></h1>
         <p class="ct-lead"><?= v2_e($lead) ?></p>
-        <ul class="rg-facts" aria-label="Pe scurt">
-          <li><?= v2_e(v2_num($cityCount, 'oraș', 'orașe')) ?></li>
-          <?php if ($countyCount > 0): ?><li><?= v2_e(v2_num($countyCount, 'județ', 'județe')) ?></li><?php endif; ?>
-          <?php if ($actCount > 0): ?><li><?= v2_e(v2_num($actCount, 'activitate', 'activități')) ?></li><?php endif; ?>
-          <?php if ($fromPrice !== null): ?><li>de la <?= v2_e(v2_thousands((int) round($fromPrice / 100))) ?> lei</li><?php endif; ?>
+        <ul class="rg-facts" aria-label="<?= v2_te('At a glance') ?>">
+          <li><?= v2_e(v2_num($cityCount, 'city', 'cities')) ?></li>
+          <?php if ($countyCount > 0): ?><li><?= v2_e(v2_num($countyCount, 'county', 'counties')) ?></li><?php endif; ?>
+          <?php if ($actCount > 0): ?><li><?= v2_e(v2_num($actCount, 'activity', 'activities')) ?></li><?php endif; ?>
+          <?php if ($fromPrice !== null && $fromPriceLabel !== ''): ?><li><?= v2_te('from {price}', ['price' => $fromPriceLabel]) ?></li><?php endif; ?>
         </ul>
         <?php if ($cityCount > 0): ?>
         <form class="ct-search rg-search" id="rg-form" action="#toate-orasele" role="search">
-          <label class="sr" for="rg-q">Caută un oraș din <?= v2_e($regionName) ?></label>
-          <input id="rg-q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Caută un oraș din <?= v2_e($regionName) ?>..." aria-controls="rg-counties">
-          <button type="submit" aria-label="Arată orașele găsite"><?= v2_ic('magnifying-glass') ?></button>
+          <label class="sr" for="rg-q"><?= v2_te('Search for a city in {region}', ['region' => $regionName]) ?></label>
+          <input id="rg-q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="<?= v2_te('Search for a city in {region}…', ['region' => $regionName]) ?>" aria-controls="rg-counties">
+          <button type="submit" aria-label="<?= v2_te('Show the cities found') ?>"><?= v2_ic('magnifying-glass') ?></button>
         </form>
         <p class="ct-status rg-status" id="rg-status" role="status"></p>
         <?php endif; ?>
       </div>
 
       <nav class="rg-switch" aria-labelledby="rg-switch-h">
-        <p class="rg-switch-h" id="rg-switch-h">Toate regiunile</p>
+        <p class="rg-switch-h" id="rg-switch-h"><?= v2_te('Countries') ?></p>
         <ul>
           <?php foreach ($V2NAV['regions'] as $r): $isHere = $r['slug'] === $regionSlug; ?>
-          <li><a href="/<?= v2_e($r['slug']) ?>"<?= $isHere ? ' aria-current="page"' : '' ?>><?= v2_e($r['name']) ?><small><?= v2_e(v2_num($r['citiesCount'], 'oraș', 'orașe')) ?></small></a></li>
+          <li><a href="/<?= v2_e($r['slug']) ?>"<?= $isHere ? ' aria-current="page"' : '' ?>><?= v2_e($r['name']) ?><small><?= v2_e(v2_num($r['citiesCount'], 'city', 'cities')) ?></small></a></li>
           <?php endforeach; ?>
         </ul>
       </nav>
@@ -267,13 +278,13 @@ include __DIR__ . '/includes/v2/header.php';
       <?php if ($activities): ?>
       <div class="sec-head">
         <div>
-          <p class="kicker"><?= v2_e(v2_num($actCount, 'activitate', 'activități')) ?><?= $activeCities ? ' · ' . v2_e(v2_num(count($activeCities), 'oraș', 'orașe')) : '' ?></p>
-          <h2 id="rg-acts-h">Ce poți face în <?= v2_e($regionName) ?></h2>
+          <p class="kicker"><?= v2_e(v2_num($actCount, 'activity', 'activities')) ?><?= $activeCities ? ' · ' . v2_e(v2_num(count($activeCities), 'city', 'cities')) : '' ?></p>
+          <h2 id="rg-acts-h"><?= v2_te('What you can do in {region}', ['region' => $regionName]) ?></h2>
         </div>
-        <a class="sec-link" href="/cauta">Caută în toată țara<?= v2_ic('arrow-right') ?></a>
+        <a class="sec-link" href="/search"><?= v2_te('Search everywhere') ?><?= v2_ic('arrow-right') ?></a>
       </div>
       <?php if (count($actCats) > 1): ?>
-      <ul class="rg-cats" aria-label="Categorii în <?= v2_e($regionName) ?>">
+      <ul class="rg-cats" aria-label="<?= v2_te('Categories in {region}', ['region' => $regionName]) ?>">
         <?php foreach ($actCats as $catSlug => $catName): ?><li><a href="/<?= v2_e($catSlug) ?>"><?= v2_e($catName) ?></a></li><?php endforeach; ?>
       </ul>
       <?php endif; ?>
@@ -289,26 +300,26 @@ include __DIR__ . '/includes/v2/header.php';
                 <?php if ($a['city'] !== ''): ?><span><?= v2_ic('map-pin') ?><?= v2_e($a['city']) ?></span><?php endif; ?>
                 <?php if ($a['dur'] !== ''): ?><span><?= v2_ic('clock') ?><?= v2_e($a['dur']) ?></span><?php endif; ?>
               </span>
-              <span class="xp-foot"><span class="xp-go">Vezi activitatea<?= v2_ic('arrow-right') ?></span><?= $priceHtml($a['cents']) ?></span>
+              <span class="xp-foot"><span class="xp-go"><?= v2_te('View activity') ?><?= v2_ic('arrow-right') ?></span><?= $priceHtml($a['cents'], $a['priceLabel']) ?></span>
             </span>
           </a>
         </li>
         <?php endforeach; ?>
       </ul>
       <?php if ($actCount > 8 && $mainCity): ?>
-      <p class="rg-more-acts">Încă <?= v2_e(v2_num($actCount - 8, 'activitate', 'activități')) ?> în <?= v2_e($regionName) ?>: le găsești pe paginile orașelor de mai jos.</p>
+      <p class="rg-more-acts"><?= v2_te('{more} in {region}: you will find them on the city pages below.', ['more' => v2_num($actCount - 8, 'more activity', 'more activities'), 'region' => $regionName]) ?></p>
       <?php endif; ?>
       <?php else: ?>
       <div class="rg-empty">
         <span class="rg-empty-ic"><?= v2_ic('map-pin') ?></span>
         <div>
-          <p class="kicker">Activități</p>
-          <h2 id="rg-acts-h">Încă nu sunt activități listate în <?= v2_e($regionName) ?>.</h2>
-          <p>Orașele de mai jos au deja pagini proprii și se umplu pe măsură ce locațiile din regiune își publică activitățile. Până atunci, vezi ce e disponibil în alte regiuni.</p>
+          <p class="kicker"><?= v2_te('Activities') ?></p>
+          <h2 id="rg-acts-h"><?= v2_te('No activities are listed in {region} yet.', ['region' => $regionName]) ?></h2>
+          <p><?= v2_te('The cities below already have their own pages, and they fill up as venues in the region publish their activities. Until then, see what is available elsewhere.') ?></p>
         </div>
         <div class="rg-empty-cta">
-          <a class="btn btn-primary" href="/cauta"><?= v2_ic('magnifying-glass') ?>Caută activități</a>
-          <a class="btn btn-ghost" href="/parteneri">Ai o locație aici?</a>
+          <a class="btn btn-primary" href="/search"><?= v2_ic('magnifying-glass') ?><?= v2_te('Search activities') ?></a>
+          <a class="btn btn-ghost" href="/partners"><?= v2_te('Do you run a venue here?') ?></a>
         </div>
       </div>
       <?php endif; ?>
@@ -320,23 +331,23 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec rg-top" aria-labelledby="rg-top-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">De unde să începi</p><h2 id="rg-top-h">Orașe recomandate în <?= v2_e($regionName) ?></h2></div>
-        <a class="sec-link" href="#toate-orasele">Toate cele <?= v2_e(v2_num($cityCount, 'oraș', 'orașe')) ?><?= v2_ic('caret-down') ?></a>
+        <div><p class="kicker"><?= v2_te('Where to start') ?></p><h2 id="rg-top-h"><?= v2_te('Recommended cities in {region}', ['region' => $regionName]) ?></h2></div>
+        <a class="sec-link" href="#toate-orasele"><?= v2_te('All {cities}', ['cities' => v2_num($cityCount, 'city', 'cities')]) ?><?= v2_ic('caret-down') ?></a>
       </div>
       <ul class="ct-grid rg-top-grid is-n<?= min(4, count($topCities)) ?>">
         <?php foreach ($topCities as $ci => $city): ?>
         <li class="ct-card">
           <a class="ct-top" href="<?= v2_e($city['href']) ?>">
             <span class="ct-media"><?= $city['photo'] ? v2_photo([$city['photo'][0], 0, 0, $city['photo'][3] ?? '']) : v2_fallback($city['name'], $ci) ?></span>
-            <span class="ct-over"><small><?= v2_e($city['county'] !== '' && $city['county'] !== $city['name'] ? 'jud. ' . $city['county'] : $regionName) ?></small><h3><?= v2_e($city['name']) ?></h3></span>
-            <?php if ($city['acts'] > 0): ?><span class="ct-badge"><?= v2_e(v2_num($city['acts'], 'activitate', 'activități')) ?></span><?php endif; ?>
+            <span class="ct-over"><small><?= v2_e($city['county'] !== '' && $city['county'] !== $city['name'] ? $city['county'] : $regionName) ?></small><h3><?= v2_e($city['name']) ?></h3></span>
+            <?php if ($city['acts'] > 0): ?><span class="ct-badge"><?= v2_e(v2_num($city['acts'], 'activity', 'activities')) ?></span><?php endif; ?>
           </a>
           <div class="ct-body">
-            <ul class="ct-links" aria-label="<?= v2_e($city['name']) ?>: pagini locale">
-              <li><a class="is-kids" href="<?= v2_e($city['href']) ?>/activitati-copii">Copii</a></li>
-              <li><a href="<?= v2_e($city['href']) ?>/activitati-weekend">Weekend</a></li>
-              <li><a href="<?= v2_e($city['href']) ?>/activitati-indoor">Indoor</a></li>
-              <li><a class="is-main" href="<?= v2_e($city['href']) ?>">Vezi orașul<?= v2_ic('arrow-right') ?></a></li>
+            <ul class="ct-links" aria-label="<?= v2_te('{city}: local pages', ['city' => $city['name']]) ?>">
+              <li><a class="is-kids" href="<?= v2_e($city['href']) ?>/with-kids"><?= v2_te('Kids') ?></a></li>
+              <li><a href="<?= v2_e($city['href']) ?>/weekend-ideas"><?= v2_te('Weekend') ?></a></li>
+              <li><a href="<?= v2_e($city['href']) ?>/activitati-indoor"><?= v2_te('Indoor') ?></a></li>
+              <li><a class="is-main" href="<?= v2_e($city['href']) ?>"><?= v2_te('View city') ?><?= v2_ic('arrow-right') ?></a></li>
             </ul>
           </div>
         </li>
@@ -353,28 +364,28 @@ include __DIR__ . '/includes/v2/header.php';
     <div class="wrap">
       <div class="rg-all-head">
         <div class="ct-az-intro">
-          <p class="kicker"><?= $countyCount > 0 ? 'Pe județe' : 'Index' ?></p>
-          <h2 id="rg-all-h">Toate cele <?= v2_e(v2_num($cityCount, 'oraș', 'orașe')) ?> din <?= v2_e($regionName) ?></h2>
+          <p class="kicker"><?= $countyCount > 0 ? v2_te('By county') : v2_te('Index') ?></p>
+          <h2 id="rg-all-h"><?= v2_te('All {cities} in {region}', ['cities' => v2_num($cityCount, 'city', 'cities'), 'region' => $regionName]) ?></h2>
         </div>
-        <p class="rg-all-count" id="rg-count" aria-live="polite"><?= $cityCount ?> din <?= $cityCount ?> orașe</p>
+        <p class="rg-all-count" id="rg-count" aria-live="polite"><?= v2_te('{shown} of {total} cities', ['shown' => $cityCount, 'total' => $cityCount]) ?></p>
       </div>
       <ul class="rg-counties" id="rg-counties">
         <?php foreach ($counties as $countyName => $countyCities): ?>
         <li class="ct-letter rg-county">
-          <h3><?= v2_e($countyName !== '' ? $countyName : 'Alte localități') ?><small><?= count($countyCities) ?></small></h3>
+          <h3><?= v2_e($countyName !== '' ? $countyName : v2_t('Other places')) ?><small><?= count($countyCities) ?></small></h3>
           <ul>
             <?php foreach ($countyCities as $city): ?>
-            <li data-q="<?= v2_e(implode(' ', [$city['name'], $countyName])) ?>"><a href="<?= v2_e($city['href']) ?>"><?= v2_e($city['name']) ?><?php if ($city['acts'] > 0): ?><span class="rg-n"><?= v2_e(v2_num($city['acts'], 'activitate', 'activități')) ?></span><?php endif; ?></a></li>
+            <li data-q="<?= v2_e(implode(' ', [$city['name'], $countyName])) ?>"><a href="<?= v2_e($city['href']) ?>"><?= v2_e($city['name']) ?><?php if ($city['acts'] > 0): ?><span class="rg-n"><?= v2_e(v2_num($city['acts'], 'activity', 'activities')) ?></span><?php endif; ?></a></li>
             <?php endforeach; ?>
           </ul>
         </li>
         <?php endforeach; ?>
       </ul>
       <div class="rg-none" id="rg-none" hidden>
-        <p>Niciun oraș din <?= v2_e($regionName) ?> nu se potrivește căutării.</p>
+        <p><?= v2_te('No city in {region} matches your search.', ['region' => $regionName]) ?></p>
         <div class="rg-none-cta">
-          <button class="btn btn-outline-light" type="button" id="rg-reset">Arată toate orașele</button>
-          <a class="btn btn-light" id="rg-elsewhere" href="/orase">Caută în toate regiunile<?= v2_ic('arrow-right') ?></a>
+          <button class="btn btn-outline-light" type="button" id="rg-reset"><?= v2_te('Show all cities') ?></button>
+          <a class="btn btn-light" id="rg-elsewhere" href="/cities"><?= v2_te('Search all cities') ?><?= v2_ic('arrow-right') ?></a>
         </div>
       </div>
     </div>
@@ -386,9 +397,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec ct-hubs" aria-labelledby="rg-hubs-h">
     <div class="wrap ct-hubs-grid">
       <div class="ct-hubs-intro">
-        <p class="kicker">Idei în <?= v2_e($mainCity['name']) ?></p>
-        <h2 id="rg-hubs-h">Știi deja cu cine ieși? Începe de aici.</h2>
-        <p>Pagini gata filtrate pentru cel mai căutat oraș din <?= v2_e($regionName) ?>: cu copiii, în weekend, la adăpost sau cu buget mic.</p>
+        <p class="kicker"><?= v2_te('Ideas in {city}', ['city' => $mainCity['name']]) ?></p>
+        <h2 id="rg-hubs-h"><?= v2_te('Already know who you are going with? Start here.') ?></h2>
+        <p><?= v2_te('Ready-filtered pages for the most searched city in {region}: with kids, at the weekend, indoors or on a small budget.', ['region' => $regionName]) ?></p>
       </div>
       <ul class="ct-hub-list">
         <?php foreach ($hubs as [$hubKicker, $hubTitle, $hubText, $hubUrl]): ?>
@@ -402,7 +413,7 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== FAQ ===================== -->
   <section class="sec ct-faq" aria-labelledby="rg-faq-h">
     <div class="wrap ct-faq-grid">
-      <div><p class="kicker">FAQ</p><h2 id="rg-faq-h">Despre <?= v2_e($regionName) ?> pe viaqui.com</h2></div>
+      <div><p class="kicker"><?= v2_te('FAQ') ?></p><h2 id="rg-faq-h"><?= v2_te('About {region} on Viaqui', ['region' => $regionName]) ?></h2></div>
       <div>
         <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
         <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
@@ -417,13 +428,13 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ct-final-in">
         <?= $rgArches ?>
         <div>
-          <p class="kicker">Altă regiune?</p>
-          <h2 id="rg-final-h">Toată țara, pe orașe și pe categorii.</h2>
-          <p>Vezi toate orașele cu activități sau pornește de la tipul de experiență: escape rooms, muzee, parcuri, ateliere, natură.</p>
+          <p class="kicker"><?= v2_te('Somewhere else?') ?></p>
+          <h2 id="rg-final-h"><?= v2_te('All of Europe, by city and by category.') ?></h2>
+          <p><?= v2_te('See every city with activities, or start from the kind of experience: escape rooms, museums, parks, workshops, nature.') ?></p>
         </div>
         <div class="ct-final-cta">
-          <a class="btn btn-light" href="/orase">Toate orașele<?= v2_ic('arrow-right') ?></a>
-          <a class="btn btn-outline-light" href="/categorii">Vezi categoriile</a>
+          <a class="btn btn-light" href="/cities"><?= v2_te('All cities') ?><?= v2_ic('arrow-right') ?></a>
+          <a class="btn btn-outline-light" href="/categories"><?= v2_te('See the categories') ?></a>
         </div>
       </div>
     </div>

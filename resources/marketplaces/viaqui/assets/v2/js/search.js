@@ -1,6 +1,6 @@
-/* viaqui.com v2: /cauta. The filters are checkboxes: on large screens a change applies at once, on phones they
-   wait for "Arată rezultatele" (city, category and price keep one value each). The city list has its own search.
-   "Alte date" opens a month calendar of links (today to +90 days); phones sort from a select next to "Filtre". */
+/* viaqui.com v2: /search. The filters are checkboxes: on large screens a change applies at once, on phones they
+   wait for "Show results" (city, category and price keep one value each). The city list has its own search.
+   "Other dates" opens a month calendar of links (today to +90 days); phones sort from a select next to "Filters". */
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -14,7 +14,7 @@
     Object.keys(params).forEach(function (k) {
       if (params[k] !== '' && params[k] != null) q.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]).replace(/%2C/g, ','));
     });
-    window.location.href = '/cauta' + (q.length ? '?' + q.join('&') : '');
+    window.location.href = VQ.url('/search') + (q.length ? '?' + q.join('&') : '');
   }
 
   /* ---------- phones: the filter panel and the sort select ---------- */
@@ -92,10 +92,11 @@
     showCities();
   }
 
-  /* ---------- "Alte date": month calendar ---------- */
+  /* ---------- "Other dates": month calendar ---------- */
   var calBtn = $('sr-cal-btn'), cal = $('sr-cal'), grid = $('sr-cal-grid');
   if (calBtn && cal && grid) {
-    var MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
+    /* month and day names come from the browser, in the language of the page */
+    var LOCALE = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
     var parse = function (iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
     var iso = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     var min = parse(cal.getAttribute('data-min')), max = parse(cal.getAttribute('data-max'));
@@ -107,7 +108,7 @@
 
     var render = function () {
       var y = view.getFullYear(), m = view.getMonth();
-      $('sr-cal-title').textContent = MONTHS[m] + ' ' + y;
+      $('sr-cal-title').textContent = view.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' });
       var prev = cal.querySelector('[data-cal-step="-1"]'), next = cal.querySelector('[data-cal-step="1"]');
       prev.disabled = y * 12 + m <= min.getFullYear() * 12 + min.getMonth();
       next.disabled = y * 12 + m >= max.getFullYear() * 12 + max.getMonth();
@@ -120,7 +121,7 @@
       var days = new Date(y, m + 1, 0).getDate(), todayIso = iso(min);
       for (var d = 1; d <= days; d++) {
         var date = new Date(y, m, d), key = iso(date), cell;
-        var label = d + ' ' + MONTHS[m] + ' ' + y;
+        var label = date.toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
         if (date < min || date > max) {
           cell = document.createElement('span');
           cell.className = 'sr-cal-day is-off';
@@ -131,7 +132,7 @@
           cell.href = href.replace('0000-00-00', key);
           cell.setAttribute('data-date', key);
           if (key === selected) cell.setAttribute('aria-current', 'date');
-          if (key === todayIso) { cell.classList.add('is-today'); label = 'azi, ' + label; }
+          if (key === todayIso) { cell.classList.add('is-today'); label = VQ.t('today, {date}', { date: label }); }
         }
         cell.textContent = d;
         cell.setAttribute('aria-label', label);
