@@ -95,6 +95,43 @@ class DemoStorefrontController extends Controller
         ]);
     }
 
+    /** Toate biletele clientului din comenzile plătite, cu datele competiției și tokenul de descărcare. */
+    public function tickets(Request $request): JsonResponse
+    {
+        $ctx = $this->ctx($request);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        [$tenant, $customer] = $ctx;
+
+        $orders = $this->ordersQuery($tenant, $customer)->whereIn('status', self::PAID)->latest()->get()->keyBy('id');
+        $events = Event::with('venue')
+            ->whereIn('id', $orders->pluck('meta.event_id')->filter()->unique()->all())
+            ->get()->keyBy('id');
+
+        $tickets = Ticket::with('ticketType')->whereIn('order_id', $orders->keys())->orderByDesc('id')->get();
+
+        $today = now()->toDateString();
+        $data = $tickets->map(function (Ticket $t) use ($orders, $events, $today) {
+            $order = $orders[$t->order_id];
+            $ev = $events[$order->meta['event_id'] ?? 0] ?? null;
+            $last = $ev ? ($ev->end_date ?: $ev->start_date) : null;
+
+            return [
+                'code'         => $t->code,
+                'type'         => $t->ticketType?->name,
+                'seat_label'   => $t->meta['seat_label'] ?? null,
+                'status'       => $t->status,
+                'order_id'     => $order->id,
+                'access_token' => self::orderToken($order),
+                'is_upcoming'  => $last ? $last->toDateString() >= $today : true,
+                'event'        => $this->formatEvent($ev),
+            ];
+        })->values();
+
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
     /**
      * Biletele unei comenzi plătite, ca PDF: ?order=ID&token=…[&code=COD pentru un singur bilet].
      * Folosește șablonul din Ticket Customizer al evenimentului sau al tenantului; fără șablon
@@ -130,6 +167,12 @@ class DemoStorefrontController extends Controller
 
         $name = $tickets->count() === 1 ? 'bilet-' . $tickets->first()->code : 'bilete-comanda-' . $order->id;
 
+        return $this->buildPdf($tenant, $event, $order, $tickets)->download($name . '.pdf');
+    }
+
+    /** PDF-ul biletelor: șablonul din Ticket Customizer, cu biletul simplu ca rezervă. */
+    private function buildPdf(Tenant $tenant, ?Event $event, Order $order, $tickets)
+    {
         try {
             $pdf = $this->renderWithTemplate($tenant, $event, $tickets);
         } catch (\Throwable $e) {
@@ -139,9 +182,152 @@ class DemoStorefrontController extends Controller
             ]);
             $pdf = null;
         }
-        $pdf ??= $this->renderPlain($tenant, $event, $order, $tickets);
 
-        return $pdf->download($name . '.pdf');
+        return $pdf ?? $this->renderPlain($tenant, $event, $order, $tickets);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Emailuri                                                            */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Emailul de confirmare cu biletele atașate, trimis o singură dată când comanda devine plătită.
+     * Activ doar pentru tenanții cu settings.storefront.order_emails = true, ca celelalte site-uri
+     * demo să rămână neschimbate. Nu aruncă niciodată: plata nu trebuie să depindă de email.
+     */
+    public static function sendOrderEmail(Order $order): void
+    {
+        try {
+            $tenant = Tenant::find($order->tenant_id);
+            $cfg = $tenant && is_array($tenant->settings) ? ($tenant->settings['storefront'] ?? []) : [];
+            if (! $tenant || empty($cfg['order_emails']) || empty($order->customer_email)) {
+                return;
+            }
+            $meta = $order->meta ?? [];
+            if (! empty($meta['confirmation_email_sent_at']) || ! in_array($order->status, self::PAID, true)) {
+                return;
+            }
+
+            $tickets = $order->tickets()->with(['ticketType.event.venue', 'order'])->get();
+            if ($tickets->isEmpty()) {
+                return;
+            }
+            $event = $tickets->first()->ticketType?->event
+                ?: (! empty($meta['event_id']) ? Event::with('venue')->find($meta['event_id']) : null);
+
+            $self = app(self::class);
+            $site = self::siteUrl($tenant);
+            $e = fn ($v) => e((string) $v);
+
+            $title = $event ? ($event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en')) : 'Comanda ta';
+            $when = '';
+            try {
+                $start = $event?->start_date;
+                $end = $event?->end_date;
+                if ($start) {
+                    $when = $start->format('d.m.Y') . ($end && $end->toDateString() !== $start->toDateString() ? ' – ' . $end->format('d.m.Y') : '');
+                }
+            } catch (\Throwable $ex) {
+                $when = '';
+            }
+            $where = implode(', ', array_filter([$event?->venue?->getTranslation('name', 'ro'), $event?->venue?->city]));
+
+            $rows = '';
+            foreach ($tickets as $t) {
+                $rows .= '<tr><td style="padding:10px 0;border-bottom:1px solid #E3E9F5;font-size:15px;color:#0A0F33;">'
+                    . $e($t->ticketType?->name ?: 'Bilet')
+                    . (! empty($t->meta['seat_label']) ? '<br><span style="font-size:13px;color:#5B6488;">' . $e($t->meta['seat_label']) . '</span>' : '')
+                    . '</td><td style="padding:10px 0;border-bottom:1px solid #E3E9F5;text-align:right;font-family:Consolas,monospace;font-size:14px;font-weight:bold;letter-spacing:1px;color:#0A0F33;">'
+                    . $e($t->code) . '</td></tr>';
+            }
+
+            $download = $site ? $site . '/confirmare?order=' . $order->id : null;
+            $pdfUrl = rtrim((string) config('app.url'), '/') . '/api/tenant-client/storefront/tickets.pdf?' . http_build_query([
+                'hostname' => $site ? parse_url($site, PHP_URL_HOST) : null,
+                'order'    => $order->id,
+                'token'    => self::orderToken($order),
+            ]);
+
+            $first = trim((string) ($meta['customer_first_name'] ?? ''));
+            $body = '<p style="margin:0 0 14px;font-size:16px;color:#0A0F33;">' . ($first !== '' ? $e($first) . ', ' : '') . 'plata a fost confirmată. '
+                . ($tickets->count() === 1 ? 'Biletul tău este atașat' : 'Cele ' . $tickets->count() . ' bilete sunt atașate') . ' acestui email, în format PDF.</p>'
+                . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0;background:#F4F7FD;border-radius:12px;"><tr><td style="padding:18px 20px;">'
+                . '<div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#1151D3;font-weight:bold;">Competiție</div>'
+                . '<div style="margin-top:6px;font-size:20px;font-weight:bold;color:#0A0F33;">' . $e($title) . '</div>'
+                . '<div style="margin-top:6px;font-size:14px;color:#5B6488;">' . $e(implode(' · ', array_filter([$when, $where]))) . '</div>'
+                . '</td></tr></table>'
+                . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $rows
+                . '<tr><td style="padding:14px 0 0;font-size:15px;font-weight:bold;color:#0A0F33;">Total plătit</td>'
+                . '<td style="padding:14px 0 0;text-align:right;font-size:18px;font-weight:bold;color:#0A0F33;">' . number_format(($order->total_cents ?? 0) / 100, 2, ',', '.') . ' lei</td></tr></table>'
+                . '<p style="margin:22px 0 0;font-size:14px;color:#5B6488;">La intrare arăți codul QR de pe bilet, de pe telefon sau tipărit. Comanda are numărul #' . $e($order->id) . '.</p>';
+
+            $html = self::mailLayout($tenant, 'Biletele tale sunt gata', $body, 'Descarcă biletele (PDF)', $pdfUrl,
+                $download ? 'Le găsești oricând și în <a href="' . $e($site . '/biletele-mele') . '" style="color:#1151D3;">Biletele mele</a>, după autentificare.' : '');
+
+            $pdf = $self->buildPdf($tenant, $event, $order, $tickets)->output();
+            $fileName = $tickets->count() === 1 ? 'bilet-' . $tickets->first()->code . '.pdf' : 'bilete-comanda-' . $order->id . '.pdf';
+            $tenantName = $tenant->public_name ?: $tenant->name;
+
+            app(TenantMailService::class)->send($tenant, function ($message) use ($order, $html, $pdf, $fileName, $tenantName, $title) {
+                $message->to($order->customer_email)
+                    ->from(config('mail.from.address'), $tenantName)
+                    ->subject('Biletele tale — ' . $title)
+                    ->html($html)
+                    ->attachData($pdf, $fileName, ['mime' => 'application/pdf']);
+            });
+
+            $meta['confirmation_email_sent_at'] = now()->toIso8601String();
+            $order->forceFill(['meta' => $meta])->saveQuietly();
+        } catch (\Throwable $e) {
+            Log::warning('Storefront order confirmation email failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /** Adresa site-ului public al tenantului (domeniul primar activ). */
+    private static function siteUrl(Tenant $tenant, ?int $domainId = null): ?string
+    {
+        $domain = ($domainId ? Domain::find($domainId) : null)
+            ?: $tenant->domains()->where('is_active', true)->orderByDesc('is_primary')->first();
+
+        return $domain ? 'https://' . $domain->domain : null;
+    }
+
+    /**
+     * Cadrul comun al emailurilor: antet în culorile organizatorului, cu sigla lui, un buton și subsol.
+     * Culorile și sigla vin din settings.storefront (brand_color, brand_dark, logo_url).
+     */
+    private static function mailLayout(Tenant $tenant, string $heading, string $bodyHtml, ?string $buttonLabel = null, ?string $buttonUrl = null, string $afterHtml = ''): string
+    {
+        $cfg = is_array($tenant->settings) ? ($tenant->settings['storefront'] ?? []) : [];
+        $dark = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($cfg['brand_dark'] ?? '')) ? $cfg['brand_dark'] : '#0B1030';
+        $accent = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($cfg['brand_color'] ?? '')) ? $cfg['brand_color'] : '#1151D3';
+        $logo = filter_var($cfg['logo_url'] ?? '', FILTER_VALIDATE_URL) ? $cfg['logo_url'] : null;
+        $name = e($tenant->public_name ?: $tenant->name);
+        $site = self::siteUrl($tenant);
+
+        $button = ($buttonLabel && $buttonUrl)
+            ? '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px;"><tr><td style="border-radius:10px;background:' . $accent . ';">'
+              . '<a href="' . e($buttonUrl) . '" style="display:inline-block;padding:14px 26px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">' . e($buttonLabel) . '</a></td></tr></table>'
+            : '';
+
+        return '<!DOCTYPE html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>'
+            . '<body style="margin:0;padding:0;background:#EEF3FB;font-family:Arial,Helvetica,sans-serif;">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3FB;"><tr><td align="center" style="padding:28px 12px;">'
+            . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;">'
+            . '<tr><td style="background:' . $dark . ';padding:26px 30px;">'
+            . '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+            . ($logo ? '<td style="padding-right:14px;"><img src="' . e($logo) . '" width="52" height="52" alt="" style="display:block;border-radius:26px;background:#ffffff;"></td>' : '')
+            . '<td style="font-size:15px;font-weight:bold;color:#ffffff;line-height:1.3;">' . $name . '</td></tr></table>'
+            . '<div style="margin-top:22px;font-size:26px;font-weight:bold;color:#ffffff;line-height:1.2;">' . e($heading) . '</div>'
+            . '</td></tr>'
+            . '<tr><td style="height:4px;background:' . $accent . ';font-size:0;line-height:0;">&nbsp;</td></tr>'
+            . '<tr><td style="padding:28px 30px 30px;">' . $bodyHtml . $button
+            . ($afterHtml !== '' ? '<p style="margin:14px 0 0;font-size:14px;color:#5B6488;">' . $afterHtml . '</p>' : '')
+            . '</td></tr>'
+            . '<tr><td style="padding:18px 30px 24px;border-top:1px solid #E3E9F5;font-size:12px;color:#7A84A8;line-height:1.5;">'
+            . $name . ($site ? ' · <a href="' . e($site) . '" style="color:#7A84A8;">' . e(parse_url($site, PHP_URL_HOST)) . '</a>' : '')
+            . '<br>Bilete emise prin platforma Tixello.</td></tr>'
+            . '</table></td></tr></table></body></html>';
     }
 
     /**
@@ -229,20 +415,19 @@ class DemoStorefrontController extends Controller
                 'e' => $expires,
                 's' => self::passwordSignature($customer, $expires),
             ]);
-            $tenantName = e($tenant->public_name ?: $tenant->name);
-            $hello = e(trim((string) $customer->first_name) ?: 'Salut');
-            $safeUrl = e($url);
+            $tenantName = $tenant->public_name ?: $tenant->name;
+            $first = trim((string) $customer->first_name);
+            $body = '<p style="margin:0 0 14px;font-size:16px;color:#0A0F33;">' . ($first !== '' ? e($first) . ', ai' : 'Ai')
+                . ' cerut setarea unei parole pentru contul tău. Apasă butonul de mai jos și alege parola.</p>'
+                . '<p style="margin:0;font-size:14px;color:#5B6488;">Linkul este valabil 2 ore. Dacă nu ai cerut tu acest email, îl poți ignora: parola rămâne neschimbată.</p>';
+            $html = self::mailLayout($tenant, 'Setează parola contului', $body, 'Setează parola', $url,
+                'Dacă butonul nu merge, copiază în browser adresa:<br><span style="word-break:break-all;">' . e($url) . '</span>');
 
-            app(TenantMailService::class)->send($tenant, function ($message) use ($customer, $tenantName, $hello, $safeUrl) {
+            app(TenantMailService::class)->send($tenant, function ($message) use ($customer, $tenantName, $html) {
                 $message->to($customer->email)
-                    ->subject('Setează parola contului — ' . html_entity_decode($tenantName, ENT_QUOTES))
-                    ->html("
-                        <h2>{$hello},</h2>
-                        <p>Ai cerut setarea unei parole pentru contul tău de pe {$tenantName}.</p>
-                        <p><a href='{$safeUrl}' style='background-color:#1151D3;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:8px;display:inline-block;'>Setează parola</a></p>
-                        <p>Sau copiază acest link în browser:<br>{$safeUrl}</p>
-                        <p>Linkul este valabil 2 ore. Dacă nu ai cerut tu acest email, îl poți ignora: parola rămâne neschimbată.</p>
-                    ");
+                    ->from(config('mail.from.address'), $tenantName)
+                    ->subject('Setează parola contului — ' . $tenantName)
+                    ->html($html);
             });
         } catch (\Throwable $e) {
             Log::warning('Storefront password link failed', [
@@ -394,17 +579,25 @@ class DemoStorefrontController extends Controller
             'discount'      => ((int) ($meta['discount_cents'] ?? 0)) / 100,
             'promo_code'    => $meta['promo_code']['code'] ?? null,
             'tickets_count' => $order->tickets_count ?? 0,
-            'event'         => $ev ? [
-                'title'      => $ev->getTranslation('title', 'ro') ?: $ev->getTranslation('title', 'en'),
-                'slug'       => $ev->slug,
-                'start_date' => $ev->start_date?->toIso8601String(),
-                'end_date'   => $ev->end_date?->toIso8601String(),
-                'venue'      => $ev->venue?->getTranslation('name', 'ro'),
-                'city'       => $ev->venue?->city,
-            ] : null,
+            'subtotal'      => ((int) ($meta['subtotal_cents'] ?? ($order->total_cents ?? 0))) / 100,
+            'processing_fee' => ((int) ($meta['processing_fee_cents'] ?? 0)) / 100,
+            'payment_method' => 'Card',
+            'event'         => $this->formatEvent($ev),
             // Doar comenzile plătite au bilete de descărcat
             'access_token'  => $paid ? self::orderToken($order) : null,
         ];
+    }
+
+    private function formatEvent(?Event $ev): ?array
+    {
+        return $ev ? [
+            'title'      => $ev->getTranslation('title', 'ro') ?: $ev->getTranslation('title', 'en'),
+            'slug'       => $ev->slug,
+            'start_date' => $ev->start_date?->toIso8601String(),
+            'end_date'   => $ev->end_date?->toIso8601String(),
+            'venue'      => $ev->venue?->getTranslation('name', 'ro'),
+            'city'       => $ev->venue?->city,
+        ] : null;
     }
 
     /** @return array{0: Tenant, 1: Customer}|JsonResponse */

@@ -37,6 +37,20 @@ $headSolid       = $headSolid       ?? false;
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/site.css?v=<?= ASSET_V ?>">
     <script>window.WUKF_CFG = <?= json_encode(['api' => API_BASE, 'host' => TENANT_HOST], JSON_UNESCAPED_SLASHES) ?>;</script>
+    <script>
+        // Consimțământ: totul refuzat până alege vizitatorul; alegerea salvată se aplică înainte de orice script de măsurare
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        (function () {
+            var c = null;
+            try { c = JSON.parse(localStorage.getItem('wukf_consent') || 'null'); } catch (e) {}
+            var yes = function (on) { return on ? 'granted' : 'denied'; };
+            gtag('consent', 'default', {
+                ad_storage: yes(c && c.marketing), ad_user_data: yes(c && c.marketing), ad_personalization: yes(c && c.marketing),
+                analytics_storage: yes(c && c.analytics), functionality_storage: 'granted', security_storage: 'granted'
+            });
+        })();
+    </script>
     <script src="/assets/site.js?v=<?= ASSET_V ?>"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -84,6 +98,7 @@ $headSolid       = $headSolid       ?? false;
             <a href="/cos">Coșul meu</a>
             <a x-show="!user" href="/autentificare">Contul meu</a>
             <a x-show="user" href="/biletele-mele">Biletele mele</a>
+            <a x-show="user" href="/comenzile-mele">Comenzile mele</a>
             <a x-show="user" href="/profil">Profilul meu</a>
             <button type="button" x-show="user" @click="logout()">Ieși din cont</button>
         </div>

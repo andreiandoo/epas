@@ -95,6 +95,8 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->name('api.tenant-client-public.storefront.orders');
     Route::get('/storefront/orders/{id}', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'order'])
         ->whereNumber('id')->name('api.tenant-client-public.storefront.order');
+    Route::get('/storefront/tickets', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'tickets'])
+        ->name('api.tenant-client-public.storefront.tickets');
     Route::get('/storefront/tickets.pdf', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'ticketsPdf'])
         ->name('api.tenant-client-public.storefront.tickets-pdf');
     Route::post('/storefront/password-link', [\App\Http\Controllers\Api\TenantClient\DemoStorefrontController::class, 'passwordLink'])

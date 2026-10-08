@@ -95,6 +95,9 @@ class DemoPaymentController extends Controller
                 // ignoră — punctele nu trebuie să afecteze confirmarea plății
             }
 
+            // Emailul de confirmare cu biletele (doar tenanții care l-au activat; o singură dată pe comandă)
+            \App\Http\Controllers\Api\TenantClient\DemoStorefrontController::sendOrderEmail($order->fresh());
+
             $redirect = $success ?: url('/');
             $sep = str_contains($redirect, '?') ? '&' : '?';
             return redirect()->away($redirect . $sep . 'order=' . $order->id . '&status=paid');

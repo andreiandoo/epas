@@ -265,6 +265,8 @@ class WukfSeed extends Command
             'website'              => 'https://www.wukf.ro',
             'contact_email'        => $ownerEmail,
             'has_own_website'      => false,
+            // Emailurile pleacă prin configurația de mail a platformei (Brevo-ul Tixello)
+            'use_core_smtp'        => true,
             'onboarding_completed' => true,
             'billing_cycle_days'   => 30,
         ];
@@ -279,9 +281,16 @@ class WukfSeed extends Command
             'site_language' => 'ro',
             'site_tagline'  => 'Bilete la competițiile de karate WUKF',
         ];
+        // Site-ul public: email de confirmare cu biletele + identitatea folosită în emailuri
+        $storefront = [
+            'order_emails' => true,
+            'brand_dark'   => '#01012F',
+            'brand_color'  => '#1151D3',
+            'logo_url'     => 'https://' . $domain . '/assets/logo-wukf.png',
+        ];
 
         if (! $tenant) {
-            $data['settings'] = $siteSettings;
+            $data['settings'] = $siteSettings + ['storefront' => $storefront];
             $data['onboarding_completed_at'] = now();
             $data['billing_starts_at'] = now();
             $data['next_billing_date'] = now()->addDays(30)->toDateString();
@@ -300,6 +309,7 @@ class WukfSeed extends Command
 
         // Re-rulare: nu resetăm ciclul de facturare și nu călcăm setările existente.
         $data['settings'] = array_merge($siteSettings, is_array($tenant->settings) ? $tenant->settings : []);
+        $data['settings']['storefront'] = array_merge($storefront, is_array($data['settings']['storefront'] ?? null) ? $data['settings']['storefront'] : []);
         if (empty($tenant->onboarding_completed_at)) {
             $data['onboarding_completed_at'] = now();
         }
