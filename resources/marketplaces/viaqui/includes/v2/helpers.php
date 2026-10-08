@@ -269,7 +269,7 @@ function v2_duration(int $minutes): string
         return '';
     }
     if ($minutes >= 120 && $minutes % 60 === 0) {
-        return ($minutes / 60) . ' ore';
+        return ($minutes / 60) . ' hours';
     }
     return $minutes . ' min';
 }

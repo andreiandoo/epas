@@ -1,21 +1,43 @@
 /* viaqui.com v2: activity page. The booking widget (date, calendar, slots, variants, estimate) hands the choice
-   to BileteOnlineCart.addActivityItem (assets/js/cart.js) exactly as the previous page did, then goes to /cos or
-   /finalizare. Plus the photo gallery. */
+   to BileteOnlineCart.addActivityItem (assets/js/cart.js) exactly as the previous page did, then goes to /cart or
+   /checkout. Plus the photo gallery.
+   Prices are written in the activity's own currency (variant.currency, else the page's booking.currency, else the
+   site's), the one the customer is charged in; the same code goes to the basket with each line. */
 (function () {
   'use strict';
+
+  /* One formatter for every price on the page. assets/js/utils.js is not loaded here, so the rules of
+     BileteOnlineUtils.formatCurrency are repeated (same table): [sign, sign before the amount?, decimals when not whole]. */
+  var CURRENCIES = {
+    EUR: ['€', true, 2], GBP: ['£', true, 2], CHF: ['CHF ', true, 2], CZK: [' Kč', false, 0], PLN: [' zł', false, 0],
+    HUF: [' Ft', false, 0], RON: [' lei', false, 2], SEK: [' kr', false, 0], NOK: [' kr', false, 0], DKK: [' kr', false, 0],
+    ISK: [' kr', false, 0]
+  };
+  function formatMoney(amount, currency) {
+    var code = String(currency || 'EUR').toUpperCase();
+    var utils = window.BileteOnlineUtils || (typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils : null);
+    if (utils && typeof utils.formatCurrency === 'function') return utils.formatCurrency(amount, code);
+    var style = CURRENCIES[code] || [' ' + code, false, 2];
+    var n = Number(amount) || 0;
+    var digits = style[2] === 0 ? 0 : (Math.abs(n - Math.round(n)) < 0.005 ? 0 : style[2]);
+    var formatted = new Intl.NumberFormat('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+    return style[1] ? style[0] + formatted : formatted + style[0];
+  }
+
   var root = document.documentElement;
   var $ = function (id) { return document.getElementById(id); };
   var data = {};
   try { data = JSON.parse(($('v2-data') || {}).textContent || '{}'); } catch (e) {}
   var b = data.booking;
-  var MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
-  var DOW = ['dum', 'lun', 'mar', 'mie', 'joi', 'vin', 'sâm'];
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
-  // local calendar date, never toISOString (that is UTC and shifts the day in Romania)
+  // local calendar date, never toISOString (that is UTC and shifts the day east of Greenwich)
   function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function parse(s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
-  function lei(cents) { return new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format((cents || 0) / 100) + ' lei'; }
+  /** A price in cents, written in its currency. */
+  function money(cents, currency) { return formatMoney((cents || 0) / 100, currency); }
   function node(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -35,6 +57,11 @@
   if (b && $('rezervare')) {
     var variants = b.variants || [];
     var win = b.window || {};
+    // The currency the activity is sold in: its variants' (the API sends it with each price), else the page's,
+    // else the marketplace's, else euro.
+    var pageCur = String(b.currency || (typeof BILETEONLINE_CONFIG !== 'undefined' && BILETEONLINE_CONFIG.CURRENCY) || 'EUR').toUpperCase();
+    var curOf = function (v) { return String((v && v.currency) || pageCur).toUpperCase(); };
+    var cur = curOf(variants.filter(function (v) { return v && v.currency; })[0]);
     var state = {
       date: b.today,
       slot: null,
@@ -72,17 +99,16 @@
       return loyalty() ? Math.max(0, BileteOnlineCart.estimatePoints(totalCents() / 100)) : 0;
     };
     var pointsWord = function (n) {
-      if (n === 1) return '1 punct';
-      var r = n % 100;
-      return new Intl.NumberFormat('ro-RO').format(n) + (n >= 20 && !(r >= 1 && r <= 19) ? ' de puncte' : ' puncte');
+      if (n === 1) return '1 point';
+      return new Intl.NumberFormat('en-GB').format(n) + ' points';
     };
     var participantsLabel = function () {
       var n = seatsUsed();
-      if (!n) return 'Selectează biletele';
+      if (!n) return 'Choose your tickets';
       var min = win.min_participants || 1, max = win.max_participants || 99;
-      if (n < min) return 'Minim ' + min + ' participanți';
-      if (n > max) return 'Maxim ' + max + ' participanți';
-      return n + ' ' + (n === 1 ? 'participant' : 'participanți');
+      if (n < min) return 'Minimum ' + min + ' ' + (min === 1 ? 'participant' : 'participants');
+      if (n > max) return 'Maximum ' + max + ' ' + (max === 1 ? 'participant' : 'participants');
+      return n + ' ' + (n === 1 ? 'participant' : 'participants');
     };
     var canSubmit = function () {
       var min = win.min_participants || 1, max = win.max_participants || 99, n = seatsUsed();
@@ -102,15 +128,15 @@
       var pts = pointsEstimate();
       el.reward.hidden = n === 0 || pts <= 0;
       if (el.points && el.points.parentNode) el.points.parentNode.hidden = pts <= 0;
-      el.sub.textContent = lei(totalCents());
+      el.sub.textContent = money(totalCents(), cur);
       var showFee = rate > 0 && mode === 'added_on_top';
       el.feeRow.hidden = !showFee;
-      el.feeRate.textContent = String(rate).replace('.', ',');
-      el.fee.textContent = lei(feeCents());
-      el.total.textContent = lei(mode === 'added_on_top' ? totalCents() + feeCents() : totalCents());
+      el.feeRate.textContent = String(rate);
+      el.fee.textContent = money(feeCents(), cur);
+      el.total.textContent = money(mode === 'added_on_top' ? totalCents() + feeCents() : totalCents(), cur);
       el.points.textContent = '+' + pointsWord(pts);
-      el.rewardN.textContent = new Intl.NumberFormat('ro-RO').format(pts);
-      el.rewardBig.textContent = '+' + new Intl.NumberFormat('ro-RO').format(pts);
+      el.rewardN.textContent = new Intl.NumberFormat('en-GB').format(pts);
+      el.rewardBig.textContent = '+' + new Intl.NumberFormat('en-GB').format(pts);
       var ok = canSubmit();
       el.cart.disabled = !ok;
       el.checkout.disabled = !ok;
@@ -127,7 +153,7 @@
         btn.setAttribute('aria-pressed', String(state.slot === s.start_time));
         btn.appendChild(node('b', null, (s.start_time || '').toString().slice(0, 5)));
         var left = s.capacity_remaining || 0;
-        btn.appendChild(node('span', left <= 3 ? 'is-low' : null, left + ' locuri'));
+        btn.appendChild(node('span', left <= 3 ? 'is-low' : null, left + (left === 1 ? ' place' : ' places')));
         btn.addEventListener('click', function () {
           state.slot = s.start_time;
           Object.keys(state.qty).forEach(function (k) { state.qty[k] = 0; });
@@ -171,7 +197,7 @@
         var btn = node('button', 'bk-cal-day' + (d.getMonth() === state.calMonth ? '' : ' is-out'), String(d.getDate()));
         btn.type = 'button';
         btn.disabled = !selectable;
-        btn.setAttribute('aria-label', d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + (selectable ? '' : ', indisponibil'));
+        btn.setAttribute('aria-label', d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + (selectable ? '' : ', unavailable'));
         if (value === state.date) btn.setAttribute('aria-current', 'date');
         btn.setAttribute('data-date', value);
         el.calGrid.appendChild(btn);
@@ -187,7 +213,7 @@
         btn.type = 'button';
         btn.setAttribute('data-date', v);
         btn.setAttribute('aria-pressed', String(v === state.date));
-        btn.appendChild(node('span', null, v === b.today ? 'azi' : DOW[d.getDay()]));
+        btn.appendChild(node('span', null, v === b.today ? 'Today' : DOW[d.getDay()]));
         btn.appendChild(node('b', null, String(d.getDate())));
         btn.appendChild(node('small', null, MONTHS[d.getMonth()].slice(0, 3)));
         li.appendChild(btn);
@@ -211,7 +237,7 @@
       state.calOpen = !state.calOpen;
       el.cal.hidden = !state.calOpen;
       el.calToggle.setAttribute('aria-expanded', String(state.calOpen));
-      el.calToggle.textContent = state.calOpen ? 'Ascunde calendar' : 'Alege din calendar';
+      el.calToggle.textContent = state.calOpen ? 'Hide the calendar' : 'Choose from the calendar';
       if (state.calOpen) renderCalendar();
     });
     $('bk-cal-prev').addEventListener('click', function () {
@@ -258,7 +284,7 @@
     var submit = function (dest) {
       if (!canSubmit()) return;
       if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addActivityItem !== 'function') {
-        alert('Coșul nu este încărcat. Reîncarcă pagina și încearcă din nou.');
+        alert('The basket did not load. Reload the page and try again.');
         return;
       }
       var slot = currentSlot();
@@ -267,7 +293,8 @@
         id: b.activity_id, slug: b.slug, title: b.title, image: b.cover_image,
         venue: b.venue_name, city: b.venue_city, organizer_id: b.organizer_id,
         duration_minutes: b.duration_minutes,
-        commission_rate: rate, commission_mode: mode
+        commission_rate: rate, commission_mode: mode,
+        currency: cur
       };
       var pushed = 0;
       variants.forEach(function (v) {
@@ -275,14 +302,15 @@
         if (qty <= 0) return;
         var result = BileteOnlineCart.addActivityItem(
           activityData,
-          { id: v.id, name: v.name, price_cents: v.price_cents, capacity_share: v.capacity_share || 1 },
+          // the basket reads the line's currency from the variant; without it it assumes euro
+          { id: v.id, name: v.name, price_cents: v.price_cents, capacity_share: v.capacity_share || 1, currency: curOf(v) },
           { date: state.date, start_time: slot.start_time, end_time: slot.end_time },
           qty
         );
         if (result) pushed++;
       });
-      if (pushed === 0) { alert('Nu am putut adăuga în coș. Verifică data și ora alese, apoi încearcă din nou.'); return; }
-      window.location.href = dest === 'checkout' ? '/finalizare' : '/cos';
+      if (pushed === 0) { alert('We could not add this to your basket. Check the date and time you chose, then try again.'); return; }
+      window.location.href = dest === 'checkout' ? '/checkout' : '/cart';
     };
     el.cart.addEventListener('click', function () { submit('cart'); });
     el.checkout.addEventListener('click', function () { submit('checkout'); });
@@ -306,7 +334,7 @@
       at = (i + gallery.length) % gallery.length;
       img.src = gallery[at].src;
       img.alt = gallery[at].alt || '';
-      title.textContent = gallery[at].alt || 'Galerie';
+      title.textContent = gallery[at].alt || 'Gallery';
       count.textContent = (at + 1) + ' / ' + gallery.length;
     };
     var close = function () {
