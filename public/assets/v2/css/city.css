@@ -463,3 +463,21 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
   .trip-card a,.trip-cta,.trip-cta .ic,.trip-mark,.fl-all .ic,.fl-list a,.fl-go{transition:none}
   .trip-card a:hover,.trip-card.is-lead a:hover .trip-mark,.trip-card a:hover .trip-cta .ic,.fl-all:hover .ic{transform:none}
 }
+
+/* Flights: where the visitor flies from */
+.fl-form{display:grid;gap:8px;width:100%;max-width:420px;margin-top:var(--space-5)}
+.fl-from-l{font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#9FE0BF}
+.fl-from{position:relative}
+.fl-from-sel,.fl-from-in{width:100%;min-height:52px;padding:12px 16px;border:1px solid rgba(255,255,255,.28);border-radius:var(--r-m);background:rgba(255,255,255,.08);color:var(--on-deep);font:inherit;font-size:1.0625rem;font-weight:600}
+.fl-from-sel option{color:var(--ink);background:#fff}
+.fl-from-in::placeholder{color:rgba(255,255,255,.62);font-weight:500}
+.fl-from-sel:hover,.fl-from-in:hover{border-color:rgba(255,255,255,.5)}
+.fl-from-sel:focus-visible,.fl-from-in:focus-visible{outline:2px solid var(--on-deep);outline-offset:2px;background:rgba(255,255,255,.14)}
+.fl-from-list{position:absolute;z-index:5;left:0;right:0;bottom:calc(100% + 6px);max-height:320px;margin:0;padding:6px;overflow:auto;list-style:none;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);box-shadow:0 18px 40px rgba(7,41,31,.28)}
+.fl-from-list[hidden]{display:none}
+.fl-from-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;min-height:44px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.fl-from-list li b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-from-list li small{grid-column:1;font-size:.8125rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-from-code{grid-column:2;grid-row:1 / span 2;font-size:.75rem;font-weight:700;letter-spacing:.08em;color:var(--green)}
+.fl-from-list li:hover,.fl-from-list li[aria-selected="true"]{background:var(--tint-green)}
+.fl-form .fl-all{margin-top:4px;justify-content:center;text-align:center}

@@ -124,7 +124,6 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         <button type="submit"><?= v2_te('Change') ?></button>
       </form>
       <p class="vf-tags"><?= v2_te('Cities / Cultures / Nature / People / You') ?></p>
-      <a class="vf-up" href="#"><?= v2_ic('arrow-right') ?><?= v2_te('Back to top') ?></a>
     </div>
     <div class="vf-fine-row">
       <p class="vf-copy"><?= v2_t('© {year} Viaqui · platform operated by <a href="https://tixello.com" rel="noopener">Tixello</a> (SC TIXELLO SRL)', ['year' => date('Y')]) ?></p>
@@ -136,6 +135,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
         </a>
         <?php endif; ?>
         <p class="vf-pay">Visa · Mastercard · Google Pay · Apple Pay</p>
+        <a class="vf-up" href="#"><?= v2_ic('arrow-right') ?><?= v2_te('Back to top') ?></a>
       </div>
     </div>
     <p class="vf-credits"><?= v2_t('City and attraction photographs come from Wikimedia Commons; the author and the licence of each one are on its page (<a href="/photo-credits">about the photos</a>). Place data: GeoNames, Wikidata, OpenStreetMap and Natural Earth. Flags: flag-icons.') ?></p>

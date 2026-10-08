@@ -841,8 +841,27 @@ include __DIR__ . '/includes/v2/header.php';
           <p class="fl-best"><?= $flBest['direct']
               ? v2_te('The lowest fare we found: {origin} to {city}, {dates}, direct.', ['origin' => $flBest['from'], 'city' => $cityName, 'dates' => $flBestDates])
               : v2_te('The lowest fare we found: {origin} to {city}, {dates}, with a stop.', ['origin' => $flBest['from'], 'city' => $cityName, 'dates' => $flBestDates]) ?></p>
+          <?php if (!empty($flBest['to'])):
+              $flFromUrl = fn (string $code): string => 'https://www.aviasales.com/?origin_iata=' . rawurlencode($code) . '&destination_iata=' . rawurlencode((string) $flBest['to']) . '&currency=' . strtolower(SITE_CURRENCY) . '&locale=en';
+          ?>
+          <form class="fl-form" id="fl-form" action="/go" method="get" target="_blank" rel="sponsored nofollow noopener" data-to="<?= v2_e((string) $flBest['to']) ?>" data-any="<?= v2_e($flAllUrl) ?>" data-tpl="<?= v2_e($flFromUrl('__FROM__')) ?>">
+            <input type="hidden" name="p" value="aviasales">
+            <input type="hidden" name="s" value="<?= v2_e(v2_partner_sub($flSub)) ?>">
+            <label class="fl-from-l" for="fl-from"><?= v2_te('Flying from') ?></label>
+            <div class="fl-from">
+              <select class="fl-from-sel" id="fl-from" name="u">
+                <option value="<?= v2_e($flAllUrl) ?>"><?= v2_te('Anywhere') ?></option>
+                <?php foreach (V2_FLIGHT_ORIGINS as $flCode => $flName): if ($flCode === $flBest['to']) { continue; } ?>
+                <option value="<?= v2_e($flFromUrl($flCode)) ?>" data-code="<?= v2_e($flCode) ?>"><?= v2_e($flName) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <button class="btn btn-light fl-all" type="submit"><?= v2_te('Search flights to {city}', ['city' => $cityName]) ?><?= v2_ic('arrow-right') ?></button>
+          </form>
+          <?php else: ?>
           <a class="btn btn-light fl-all" href="<?= v2_e(v2_partner_href('aviasales', $flAllUrl, $flSub)) ?>" target="_blank" rel="sponsored nofollow noopener"><?= v2_te('Search all flights to {city}', ['city' => $cityName]) ?><?= v2_ic('arrow-right') ?></a>
-          <p class="fl-on"><?= v2_te('Opens the search on Aviasales, with {city} already filled in.', ['city' => $cityName]) ?></p>
+          <?php endif; ?>
+          <p class="fl-on"><?= v2_te('Opens the search on Aviasales, with your route already filled in.') ?></p>
         </div>
         <div class="fl-board">
           <p class="fl-board-h"><?= v2_te('Lowest return fare found, by departure city') ?></p>
