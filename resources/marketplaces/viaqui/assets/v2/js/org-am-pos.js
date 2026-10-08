@@ -13,7 +13,9 @@
   var S = { locations: [], loc: null, catalog: null, day: {}, hours: null, session: null, cart: [], cat: 'all', last: null, busy: false };
   var today = F.ymd(new Date());
 
-  function lei(cents) { return F.money((cents || 0) / 100); }
+  function money(v) { return typeof BileteOnlineUtils !== 'undefined' ? BileteOnlineUtils.formatCurrency(v || 0) : F.money(v || 0); }
+  function lei(cents) { return money((cents || 0) / 100); }
+  var CLOSED_MSG = VQ.t('The counter is closed: open it above, then take the payment.');
   function hm(t) { return t ? String(t).slice(0, 5) : ''; }
   function show(id, on) { $(id).hidden = !on; }
   function err(msg) { $('pos-err').textContent = msg || ''; $('pos-err').hidden = !msg; }
@@ -39,7 +41,7 @@
       var sel = $('pos-loc');
       sel.textContent = '';
       if (!S.locations.length) { show('pos-none', true); show('pos-main', false); sel.appendChild(el('option', { value: '', text: '—' })); return; }
-      S.locations.forEach(function (l) { sel.appendChild(el('option', { value: String(l.id), text: l.name || ('Locația ' + l.id) })); });
+      S.locations.forEach(function (l) { sel.appendChild(el('option', { value: String(l.id), text: l.name || VQ.t('Venue {id}', { id: l.id }) })); });
       var keep = null;
       try { keep = localStorage.getItem(LOC_KEY); } catch (e) {}
       if (keep && S.locations.some(function (l) { return String(l.id) === keep; })) sel.value = keep;
@@ -51,7 +53,7 @@
     S.cart = [];
     drawCart();
     $('pos-list').textContent = '';
-    $('pos-list').appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    $('pos-list').appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     return Promise.all([
       A.api('/pos/catalog?location_id=' + S.loc),
       A.api('/pos/day?location_id=' + S.loc + '&date=' + today),
@@ -67,7 +69,7 @@
     }, function (e) {
       if (e && e.status === 401) return;
       $('pos-list').textContent = '';
-      $('pos-list').appendChild(el('p', { class: 've-state', text: A.errText(e, 'Nu am putut încărca produsele.') }));
+      $('pos-list').appendChild(el('p', { class: 've-state', text: A.errText(e, VQ.t('We could not load the products.')) }));
     });
   }
   function setDay(d) {
@@ -75,8 +77,8 @@
     (d.products || []).forEach(function (x) { S.day[x.id] = x; });
     S.hours = d.hours || null;
     $('pos-hours').textContent = S.hours && S.hours.open
-      ? 'Azi: ' + hm(S.hours.open) + '–' + hm(S.hours.close) + (S.hours.last_entry ? ', ultima intrare ' + hm(S.hours.last_entry) : '')
-      : 'Azi locația e închisă după program.';
+      ? (S.hours.last_entry ? VQ.t('Today: {open}–{close}, last entry {last}', { open: hm(S.hours.open), close: hm(S.hours.close), last: hm(S.hours.last_entry) }) : VQ.t('Today: {open}–{close}', { open: hm(S.hours.open), close: hm(S.hours.close) }))
+      : VQ.t('Today the venue is closed, according to its opening hours.');
   }
   function refreshDay() {
     return A.api('/pos/day?location_id=' + S.loc + '&date=' + today).then(function (r) { setDay((r && r.data) || {}); drawProducts(); }, function () {});
@@ -90,33 +92,33 @@
     box.className = 'pos-session' + (s ? ' is-open' : '');
     if (!s) {
       var cash = el('input', { class: 'po-input', id: 'pos-open-cash', type: 'number', min: 0, step: '0.01', inputmode: 'decimal', placeholder: '0' });
-      var go = A.button('check', 'Deschide casa', 'btn btn-primary');
+      var go = A.button('check', VQ.t('Open the counter'), 'btn btn-primary');
       go.addEventListener('click', function () {
         go.disabled = true;
         A.api('/pos/session', { method: 'POST', body: { location_id: S.loc, opening_cash: A.conv(cash.value, 'number') || 0 } }).then(function (r) {
           S.session = r.data.session;
-          O.flash((r && r.message) || 'Casa e deschisă.');
+          O.flash((r && r.message) || VQ.t('The counter is open.'));
           drawSession();
           drawCart();
-        }, function (e) { go.disabled = false; O.flash(A.errText(e, 'Nu am putut deschide casa.'), true); });
+        }, function (e) { go.disabled = false; O.flash(A.errText(e, VQ.t('We could not open the counter.')), true); });
       });
-      box.appendChild(el('div', { class: 'pos-session-t' }, [el('b', { text: 'Casa e închisă' }), el('span', { text: 'Deschide-o ca să poți vinde. Scrie cât numerar e în sertar.' })]));
-      box.appendChild(el('div', { class: 'pos-session-tools' }, [A.field('Numerar la deschidere (lei)', cash), go]));
+      box.appendChild(el('div', { class: 'pos-session-t' }, [el('b', { text: VQ.t('The counter is closed') }), el('span', { text: VQ.t('Open it to be able to sell. Enter how much cash is in the drawer.') })]));
+      box.appendChild(el('div', { class: 'pos-session-tools' }, [A.field(VQ.t('Cash at opening (€)'), cash), go]));
       return;
     }
     var since = F.date(new Date(s.opened_at), { hour: '2-digit', minute: '2-digit' });
     box.appendChild(el('div', { class: 'pos-session-t' }, [
-      el('b', { text: 'Casa e deschisă de la ' + since + (s.opened_by ? ' · ' + s.opened_by : '') }),
-      el('span', { text: s.sales + (s.sales === 1 ? ' vânzare' : ' vânzări') + ' · numerar ' + F.money(s.total_cash) + ' · card ' + F.money(s.total_card) + ' · în sertar ar trebui ' + F.money(s.expected_cash) }),
+      el('b', { text: VQ.t('The counter has been open since {time}', { time: since }) + (s.opened_by ? ' · ' + s.opened_by : '') }),
+      el('span', { text: [VQ.n(s.sales || 0, 'sale', 'sales'), VQ.t('cash {amount}', { amount: money(s.total_cash) }), VQ.t('card {amount}', { amount: money(s.total_card) }), VQ.t('the drawer should hold {amount}', { amount: money(s.expected_cash) })].join(' · ') }),
     ]));
-    var close = A.button('x', 'Închide casa', 'btn btn-ghost');
+    var close = A.button('x', VQ.t('Close the counter'), 'btn btn-ghost');
     close.addEventListener('click', openClose);
     box.appendChild(el('div', { class: 'pos-session-tools' }, [close]));
   }
   function openClose() {
     var s = S.session, dl = $('pos-close-sum');
     dl.textContent = '';
-    [['Numerar la deschidere', F.money(s.opening_cash)], ['Încasat numerar', F.money(s.total_cash)], ['Încasat card', F.money(s.total_card)], ['Ar trebui în sertar', F.money(s.expected_cash)]].forEach(function (r) {
+    [[VQ.t('Cash at opening'), money(s.opening_cash)], [VQ.t('Taken in cash'), money(s.total_cash)], [VQ.t('Taken by card'), money(s.total_card)], [VQ.t('Should be in the drawer'), money(s.expected_cash)]].forEach(function (r) {
       dl.appendChild(el('div', null, [el('dt', { text: r[0] }), el('dd', { text: r[1] })]));
     });
     $('pos-counted').value = String(s.expected_cash);
@@ -129,11 +131,11 @@
     A.api('/pos/session/' + S.session.id + '/close', { method: 'POST', body: { counted_cash: A.conv($('pos-counted').value, 'number'), notes: $('pos-notes').value.trim() || null } }).then(function (r) {
       var s = r.data.session;
       closeModal('pos-close');
-      O.flash('Casa e închisă.' + (s.difference ? ' Diferență la numerar: ' + F.money(s.difference) + '.' : ' Numerarul se potrivește.'), !!s.difference);
+      O.flash(s.difference ? VQ.t('The counter is closed. Cash difference: {amount}.', { amount: money(s.difference) }) : VQ.t('The counter is closed. The cash matches.'), !!s.difference);
       S.session = null;
       drawSession();
       drawCart();
-    }, function (e) { O.flash(A.errText(e, 'Nu am putut închide casa.'), true); }).then(function () { b.disabled = false; });
+    }, function (e) { O.flash(A.errText(e, VQ.t('We could not close the counter.')), true); }).then(function () { b.disabled = false; });
   });
 
   /* ---------- products ---------- */
@@ -146,7 +148,7 @@
     var list = $('pos-list'), prods = (S.catalog && S.catalog.products) || [];
     list.textContent = '';
     if (!prods.length) {
-      list.appendChild(el('p', { class: 've-state', text: 'Locația nu are încă produse aprobate. Adaugă-le din „Produse”; după aprobare apar aici.' }));
+      list.appendChild(el('p', { class: 've-state', text: VQ.t('The venue has no approved products yet. Add them from "Products"; after approval they appear here.') }));
       $('pos-cats').hidden = true;
       return;
     }
@@ -156,7 +158,7 @@
     tabs.textContent = '';
     tabs.hidden = cats.length < 2;
     if (cats.length > 1) {
-      [['all', 'Toate']].concat(cats.map(function (c) { return [c, catName(c)]; })).forEach(function (c) {
+      [['all', VQ.t('All')]].concat(cats.map(function (c) { return [c, catName(c)]; })).forEach(function (c) {
         var b = el('button', { type: 'button', class: 'fchip', 'aria-current': S.cat === c[0] ? 'true' : null, text: c[1] });
         b.addEventListener('click', function () { S.cat = c[0]; drawProducts(); });
         tabs.appendChild(b);
@@ -167,11 +169,11 @@
   function availabilityText(p) {
     var d = S.day[p.id];
     if (!d) return ['', ''];
-    if (!d.bookable) return ['Nu se mai poate vinde azi', 'is-off'];
-    if (d.mode === 'day' && d.remaining != null) return [d.remaining + ' locuri azi', d.remaining <= 10 ? 'is-low' : ''];
+    if (!d.bookable) return [VQ.t('It can no longer be sold today'), 'is-off'];
+    if (d.mode === 'day' && d.remaining != null) return [VQ.t('{n} seats left today', { n: d.remaining }), d.remaining <= 10 ? 'is-low' : ''];
     if (d.mode === 'slot') {
       var free = (d.slots || []).filter(function (s) { return s.is_bookable; });
-      return [free.length ? 'următoarea oră: ' + hm(free[0].start_time) : 'nicio oră liberă azi', free.length ? '' : 'is-off'];
+      return [free.length ? VQ.t('next start time: {time}', { time: hm(free[0].start_time) }) : VQ.t('no free start time today'), free.length ? '' : 'is-off'];
     }
     return ['', ''];
   }
@@ -206,12 +208,12 @@
     err('');
     if (p.booking_mode === 'slot' && p.type !== 'package') {
       var slots = slotsFor(p, v).filter(function (s) { return s.is_bookable; });
-      if (!slots.length) { O.flash('Nicio oră liberă azi la „' + p.title + '”.', true); return; }
+      if (!slots.length) { O.flash(VQ.t('No free start time today for "{name}".', { name: p.title }), true); return; }
       var box = $('pos-time-chips');
       box.textContent = '';
       $('pos-time-h').textContent = p.title + ' · ' + v.name;
       slots.forEach(function (s) {
-        var b = el('button', { type: 'button', class: 'pos-chip' }, [el('b', { text: hm(s.start_time) }), el('small', { text: s.capacity_remaining + ' loc.' })]);
+        var b = el('button', { type: 'button', class: 'pos-chip' }, [el('b', { text: hm(s.start_time) }), el('small', { text: VQ.t('{n} left', { n: s.capacity_remaining }) })]);
         b.addEventListener('click', function () { closeModal('pos-time'); add(p, v, s.start_time); });
         box.appendChild(b);
       });
@@ -246,23 +248,23 @@
   function drawCart() {
     var box = $('pos-lines');
     box.textContent = '';
-    if (!S.cart.length) box.appendChild(el('p', { class: 've-sub', text: 'Alege produsele din stânga.' }));
+    if (!S.cart.length) box.appendChild(el('p', { class: 've-sub', text: VQ.t('Choose the products on the left.') }));
     S.cart.forEach(function (l, i) {
       var p = l.product, v = l.variant, step = v.step_qty || 1, min = v.min_per_order || 1;
-      var minus = A.button(null, '−', 've-icon-btn', { 'aria-label': 'Mai puțin: ' + p.title });
-      var plus = A.button(null, '+', 've-icon-btn', { 'aria-label': 'Mai mult: ' + p.title });
+      var minus = A.button(null, '−', 've-icon-btn', { 'aria-label': VQ.t('Less: {name}', { name: p.title }) });
+      var plus = A.button(null, '+', 've-icon-btn', { 'aria-label': VQ.t('More: {name}', { name: p.title }) });
       minus.addEventListener('click', function () { if (l.qty - step < min) S.cart.splice(i, 1); else l.qty -= step; drawCart(); });
       plus.addEventListener('click', function () { if (!v.max_per_order || l.qty + step <= v.max_per_order) { l.qty += step; drawCart(); } });
       var row = el('div', { class: 'pos-line' }, [
         el('div', { class: 'pos-line-t' }, [
           el('b', { text: p.title }),
-          el('small', { text: [v.name, l.time ? 'ora ' + hm(l.time) : null].filter(Boolean).join(' · ') }),
+          el('small', { text: [v.name, l.time ? VQ.t('at {time}', { time: hm(l.time) }) : null].filter(Boolean).join(' · ') }),
         ]),
         el('div', { class: 'pos-qty' }, [minus, el('output', { text: String(l.qty) }), plus]),
         el('b', { class: 'pos-line-sum', text: lei(lineTotal(l)) }),
       ]);
       if (p.requires_vehicle_info) {
-        var plate = el('input', { class: 'po-input', value: l.plate, maxlength: 80, placeholder: 'Nr. înmatriculare', 'aria-label': 'Număr de înmatriculare, ' + p.title });
+        var plate = el('input', { class: 'po-input', value: l.plate, maxlength: 80, placeholder: VQ.t('Number plate'), 'aria-label': VQ.t('Number plate, {name}', { name: p.title }) });
         plate.addEventListener('input', function () { l.plate = plate.value.toUpperCase(); });
         row.appendChild(el('div', { class: 'pos-line-x' }, [plate]));
       }
@@ -271,8 +273,8 @@
         ((d && d.components) || []).forEach(function (c) {
           if (c.mode !== 'slot') return;
           var comp = (p.components || []).filter(function (x) { return x.item_id === c.item_id; })[0];
-          var sel = el('select', { 'aria-label': 'Ora pentru ' + (comp ? comp.title : 'serviciu') });
-          sel.appendChild(el('option', { value: '', text: 'Ora pentru „' + (comp ? comp.title : 'serviciu') + '”' }));
+          var sel = el('select', { 'aria-label': VQ.t('Time for {name}', { name: comp ? comp.title : VQ.t('service') }) });
+          sel.appendChild(el('option', { value: '', text: VQ.t('Time for "{name}"', { name: comp ? comp.title : VQ.t('service') }) }));
           (c.slots || []).filter(function (s) { return s.is_bookable; }).forEach(function (s) { sel.appendChild(el('option', { value: s.start_time, text: hm(s.start_time) })); });
           sel.value = l.comps[c.item_id] || '';
           sel.addEventListener('change', function () { l.comps[c.item_id] = sel.value || null; });
@@ -291,8 +293,8 @@
     var can = S.cart.length > 0 && !!S.session && !S.busy;
     $('pos-cash').disabled = !can;
     $('pos-card').disabled = !can;
-    if (S.cart.length && !S.session) err('Casa e închisă: deschide-o sus, apoi încasează.');
-    else if ($('pos-err').textContent.indexOf('Casa e închisă') === 0) err('');
+    if (S.cart.length && !S.session) err(CLOSED_MSG);
+    else if ($('pos-err').textContent === CLOSED_MSG) err('');
   }
   $('pos-clear').addEventListener('click', function () { S.cart = []; err(''); drawCart(); });
 
@@ -300,7 +302,7 @@
   function sell(method) {
     if (S.busy || !S.cart.length) return;
     var missing = S.cart.filter(function (l) { return l.product.requires_vehicle_info && !l.plate.trim(); })[0];
-    if (missing) { err('Scrie numărul de înmatriculare la „' + missing.product.title + '”.'); return; }
+    if (missing) { err(VQ.t('Enter the number plate for "{name}".', { name: missing.product.title })); return; }
     var items = S.cart.map(function (l) {
       var it = { activity_id: l.product.id, variant_id: l.variant.id, quantity: l.qty };
       if (l.time) it.slot_start_time = l.time;
@@ -312,7 +314,7 @@
     var company = companyFields();
     // the invoice number is taken at the sale, so company details without the tick cannot be invoiced later
     if (company && !$('pos-co-invoice').checked) {
-      err('Ai completat datele firmei. Bifează „Emite factură” sau șterge datele.');
+      err(VQ.t('You filled in the company details. Tick "Issue an invoice" or delete the details.'));
       $('pos-company').open = true;
       return;
     }
@@ -344,7 +346,7 @@
       loadSession();
       loadSales();
     }, function (e) {
-      err(A.errText(e, 'Vânzarea nu s-a putut înregistra.'));
+      err(A.errText(e, VQ.t('The sale could not be recorded.')));
       if (e && e.status === 409) refreshDay();
     }).then(function () { S.busy = false; drawCart(); });
   }
@@ -352,11 +354,13 @@
   $('pos-card').addEventListener('click', function () { sell('card'); });
 
   function showDone(sale, method) {
-    $('pos-done-h').textContent = 'Bonul ' + sale.order_number;
-    $('pos-done-sum').textContent = 'Încasat ' + (method === 'cash' ? 'numerar' : 'cu cardul') + ': ' + F.money(sale.total)
-      + (sale.commission ? ' (din care cost ticketing ' + F.money(sale.commission) + ')' : '') + '. '
-      + sale.tickets.length + (sale.tickets.length === 1 ? ' bilet.' : ' bilete.')
-      + (sale.invoice_number ? ' Factura ' + F.flat(sale.invoice_number) + (sale.company && sale.company.name ? ', pe ' + F.flat(sale.company.name) : '') + '.' : '');
+    $('pos-done-h').textContent = VQ.t('Receipt {number}', { number: sale.order_number });
+    var paid = { total: money(sale.total), fee: money(sale.commission || 0) };
+    $('pos-done-sum').textContent = (method === 'cash'
+      ? (sale.commission ? VQ.t('Paid in cash: {total} (of which ticketing cost {fee}).', paid) : VQ.t('Paid in cash: {total}.', paid))
+      : (sale.commission ? VQ.t('Paid by card: {total} (of which ticketing cost {fee}).', paid) : VQ.t('Paid by card: {total}.', paid)))
+      + ' ' + VQ.n(sale.tickets.length, 'ticket', 'tickets') + '.'
+      + (sale.invoice_number ? ' ' + (sale.company && sale.company.name ? VQ.t('Invoice {number}, for {company}.', { number: F.flat(sale.invoice_number), company: F.flat(sale.company.name) }) : VQ.t('Invoice {number}.', { number: F.flat(sale.invoice_number) })) : '');
     var ul = $('pos-done-tickets');
     ul.textContent = '';
     sale.tickets.forEach(function (t) {
@@ -387,26 +391,26 @@
   }
   $('pos-anaf').addEventListener('click', function () {
     var btn = this, cui = $('pos-co-cui').value.trim();
-    if (!cui) { anafMsg('Scrie întâi CUI-ul firmei.', true); $('pos-co-cui').focus(); return; }
+    if (!cui) { anafMsg(VQ.t('Enter the tax ID (CUI) of the company first.'), true); $('pos-co-cui').focus(); return; }
     if (btn.disabled) return;
     btn.disabled = true;
-    anafMsg('Se caută la ANAF…');
+    anafMsg(VQ.t('Looking it up at ANAF…'));
     O.api('/organizer/settings/verify-cui', { method: 'POST', body: { cui: cui } }).then(function (r) {
       // The proxy answers with company_name / reg_com / full_address (the same shape the venue signup reads).
       var d = (r && r.data) || {}, co = d.company || d;
       var name = F.flat(co.company_name || co.name || co.denumire);
-      if (!name) { anafMsg('ANAF nu a găsit nicio firmă cu acest CUI.', true); return; }
+      if (!name) { anafMsg(VQ.t('ANAF found no company with this tax ID.'), true); return; }
       $('pos-co-name').value = name;
       var street = F.flat(co.address).trim(), place = [F.flat(co.city), F.flat(co.county)].filter(Boolean).join(', ');
       var address = F.flat(co.full_address || co.adresa).trim() || [street, place].filter(Boolean).join(', ');
       if (!$('pos-co-address').value.trim()) $('pos-co-address').value = address;
       if (!$('pos-co-reg').value.trim()) $('pos-co-reg').value = F.flat(co.reg_com || co.reg_no || co.registration_number || co.nrRegCom);
-      if (co.deregistered) { $('pos-co-invoice').checked = false; anafMsg('Firma apare radiată la ANAF. Verifică datele înainte de a emite factura.', true); $('pos-co-cui').value = F.flat(co.cui) || cui; return; }
+      if (co.deregistered) { $('pos-co-invoice').checked = false; anafMsg(VQ.t('ANAF shows the company as struck off. Check the details before issuing the invoice.'), true); $('pos-co-cui').value = F.flat(co.cui) || cui; return; }
       if (co.cui || co.vat_number) $('pos-co-cui').value = F.flat(co.cui || co.vat_number) || cui;
       $('pos-co-invoice').checked = true;
-      anafMsg('Date completate din ANAF.');
+      anafMsg(VQ.t('Details filled in from ANAF.'));
     }, function (e) {
-      anafMsg(A.errText(e, 'Nu am putut interoga ANAF. Completează manual.'), true);
+      anafMsg(A.errText(e, VQ.t('We could not reach ANAF. Fill in the details by hand.')), true);
     }).then(function () { btn.disabled = false; });
   });
 
@@ -433,12 +437,12 @@
     if (sale.company) {
       box.appendChild(el('section', { class: 'pos-tk is-bill' }, [
         el('p', { class: 'pos-tk-k', text: 'viaqui.com · ' + locName }),
-        el('h3', { text: sale.invoice_number ? 'Factura ' + F.flat(sale.invoice_number) : 'Bon ' + sale.order_number }),
+        el('h3', { text: sale.invoice_number ? VQ.t('Invoice {number}', { number: F.flat(sale.invoice_number) }) : VQ.t('Receipt {number}', { number: sale.order_number }) }),
         el('p', { text: F.flat(sale.company.name) }),
-        sale.company.cui ? el('p', { text: 'CUI ' + F.flat(sale.company.cui) }) : null,
+        sale.company.cui ? el('p', { text: VQ.t('Tax ID {id}', { id: F.flat(sale.company.cui) }) }) : null,
         sale.company.reg_no ? el('p', { text: F.flat(sale.company.reg_no) }) : null,
         sale.company.address ? el('p', { text: F.flat(sale.company.address) }) : null,
-        el('p', { class: 'pos-tk-code', text: F.money(sale.total) }),
+        el('p', { class: 'pos-tk-code', text: money(sale.total) }),
         sale.notes ? el('p', { class: 'pos-tk-k', text: F.flat(sale.notes) }) : null,
         el('p', { class: 'pos-tk-k', text: sale.order_number }),
       ]));
@@ -447,12 +451,12 @@
       box.appendChild(el('section', { class: 'pos-tk' }, [
         el('p', { class: 'pos-tk-k', text: 'viaqui.com · ' + locName }),
         el('h3', { text: t.title }),
-        t.package ? el('p', { text: 'Din pachetul „' + t.package + '”' }) : null,
+        t.package ? el('p', { text: VQ.t('From the package "{name}"', { name: t.package }) }) : null,
         el('p', { text: [t.ticket_type, t.date_label, t.time_label].filter(Boolean).join(' · ') }),
-        t.plate ? el('p', { text: 'Mașina: ' + t.plate }) : null,
+        t.plate ? el('p', { text: VQ.t('Car: {plate}', { plate: t.plate }) }) : null,
         qr(t.barcode || t.code),
         el('p', { class: 'pos-tk-code', text: t.code }),
-        el('p', { class: 'pos-tk-k', text: sale.order_number + ' · ' + F.money(t.price) }),
+        el('p', { class: 'pos-tk-k', text: sale.order_number + ' · ' + money(t.price) }),
       ]));
     });
     window.print();
@@ -468,15 +472,15 @@
           return P.printTicket({ event_name: t.title, ticket_type_name: [t.ticket_type, t.time_label].filter(Boolean).join(' · '), code: t.code, qr_data: t.barcode || t.code, visit_date: t.date_label || '', sold_at: soldAt, pos_name: locName, unit_price: t.price });
         });
       }, Promise.resolve());
-    }).then(function () { O.flash('Biletele s-au tipărit.'); }, function (e) { O.flash('Imprimanta nu a răspuns: ' + ((e && e.message) || 'verifică legătura.'), true); });
+    }).then(function () { O.flash(VQ.t('The tickets were printed.')); }, function (e) { O.flash(e && e.message ? VQ.t('The printer did not answer: {error}', { error: e.message }) : VQ.t('The printer did not answer: check the connection.'), true); });
   }
   $('pos-print-thermal').addEventListener('click', printThermal);
   if (window.PosPrinter && navigator.usb) {
     var pb = $('pos-printer');
     pb.hidden = false;
-    var label = function (on) { pb.lastChild.textContent = on ? 'Imprimanta e conectată' : 'Conectează imprimanta'; };
+    var label = function (on) { pb.lastChild.textContent = on ? VQ.t('The printer is connected') : VQ.t('Connect the printer'); };
     window.PosPrinter.isReady().then(label, function () {});
-    pb.addEventListener('click', function () { window.PosPrinter.connect().then(function () { label(true); O.flash('Imprimanta e conectată.'); }, function (e) { O.flash((e && e.message) || 'Nu am găsit imprimanta.', true); }); });
+    pb.addEventListener('click', function () { window.PosPrinter.connect().then(function () { label(true); O.flash(VQ.t('The printer is connected.')); }, function (e) { O.flash((e && e.message) || VQ.t('We could not find the printer.'), true); }); });
   }
 
   /* ---------- the day's sales ---------- */
@@ -495,11 +499,11 @@
           el('td', { text: F.date(new Date(s.created_at), { hour: '2-digit', minute: '2-digit' }) }),
           el('td', { text: s.order_number }),
           el('td', { text: s.lines.map(function (l) { return l.quantity + ' × ' + l.title + (l.variant ? ' (' + l.variant + ')' : ''); }).join(', ') }),
-          el('td', { text: s.payment_method === 'cash' ? 'Numerar' : 'Card' }),
-          el('td', { text: F.money(s.total) }),
+          el('td', { text: s.payment_method === 'cash' ? VQ.t('Cash') : VQ.t('Card') }),
+          el('td', { text: money(s.total) }),
         ]));
       });
-      $('pos-sales-p').textContent = list.length + (list.length === 1 ? ' bon' : ' bonuri') + ' · ' + F.money(sum);
+      $('pos-sales-p').textContent = VQ.n(list.length, 'receipt', 'receipts') + ' · ' + money(sum);
     }, function () {});
   }
 

@@ -64,13 +64,13 @@
     }, function (err) {
       if (err && err.status === 401) return;
       $('ow-loading').hidden = true;
-      O.flash('Nu am putut încărca setările widget-urilor. Reîncarcă pagina.', true);
+      O.flash(VQ.t('We could not load the widget settings. Reload the page.'), true);
     });
   });
 
   /* =================== DOMAIN =================== */
   function showDomain(d) {
-    $('ow-domain-now').textContent = 'Domeniu configurat: ' + d;
+    $('ow-domain-now').textContent = VQ.t('Configured domain: {domain}', { domain: d });
     $('ow-domain-now').hidden = false;
     var host = d.replace(/^https?:\/\//i, '').replace(/^\*\./, 'www.').replace(/\/.*$/, '');
     $('ow-return').value = (/^http:\/\//i.test(d) ? 'http://' : 'https://') + host + '/multumim';
@@ -80,16 +80,16 @@
     var btn = $('ow-domain-go'), d = val('ow-domain-in'), input = $('ow-domain-in'), err = $('ow-domain-err');
     var okFormat = /^(https?:\/\/)?(\*\.)?([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?\/?$/i.test(d);
     err.hidden = okFormat;
-    err.textContent = okFormat ? '' : d ? 'Scrie un domeniu valid, de exemplu https://site-meu.ro sau *.site-meu.ro.' : 'Scrie domeniul site-ului.';
+    err.textContent = okFormat ? '' : d ? VQ.t('Enter a valid domain, for example https://my-site.com or *.my-site.com.') : VQ.t('Enter the domain of the site.');
     if (!okFormat) { input.setAttribute('aria-invalid', 'true'); input.focus(); return; }
     input.removeAttribute('aria-invalid');
     if (btn.getAttribute('aria-busy') === 'true') return;
     d = d.replace(/\/$/, '');
-    busyBtn(btn, true, 'Se salvează…');
+    busyBtn(btn, true, VQ.t('Saving…'));
     save({ embed_domains: [d] }).then(function () {
       showDomain(d);
-      O.flash('Domeniul a fost salvat.');
-    }, function (er) { if (!(er && er.status === 401)) O.flash('Nu am putut salva domeniul. Încearcă din nou.', true); }).then(function () { busyBtn(btn, false); });
+      O.flash(VQ.t('The domain was saved.'));
+    }, function (er) { if (!(er && er.status === 401)) O.flash(VQ.t('We could not save the domain. Try again.'), true); }).then(function () { busyBtn(btn, false); });
   });
 
   /* =================== BRANDING =================== */
@@ -113,42 +113,42 @@
       var file = input.files && input.files[0];
       input.value = '';
       if (!file) return;
-      if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) { msg.textContent = 'Alege o imagine PNG, JPG, WebP sau SVG.'; return; }
-      if (file.size > MAX_IMG) { msg.textContent = 'Imaginea are peste 5MB. Alege una mai mică.'; return; }
+      if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) { msg.textContent = VQ.t('Choose a PNG, JPG, WebP or SVG image.'); return; }
+      if (file.size > MAX_IMG) { msg.textContent = VQ.t('The image is larger than 5 MB. Choose a smaller one.'); return; }
       var token = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.getToken ? BileteOnlineAuth.getToken() : null;
-      if (!token) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return; }
+      if (!token) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return; }
       var fd = new FormData();
       fd.append('image', file);
       fd.append('type', type);
-      msg.textContent = 'Se încarcă…';
+      msg.textContent = VQ.t('Uploading…');
       fetch(((window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php') + '?action=organizer.widget-image', { method: 'POST', body: fd, headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' } }).then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok || !j || !j.success || !j.data || !j.data.url) { var e = new Error('upload'); e.status = res.status; throw e; } return j.data.url; });
       }).then(function (url) {
         images[type] = String(url);
         preview(type, images[type]);
-        msg.textContent = 'Imaginea a fost încărcată. Salvează setările ca s-o folosești în pachet.';
+        msg.textContent = VQ.t('The image was uploaded. Save the settings to use it in the package.');
       }, function (e) {
-        msg.textContent = e && e.status === 422 ? 'Imaginea nu a fost acceptată. Alege PNG, JPG, WebP sau SVG sub 5MB.' : 'Nu am putut încărca imaginea. Încearcă din nou.';
+        msg.textContent = e && e.status === 422 ? VQ.t('The image was not accepted. Choose a PNG, JPG, WebP or SVG under 5 MB.') : VQ.t('We could not upload the image. Try again.');
       });
     });
   });
   $('ow-save').addEventListener('click', function () {
     var btn = this, accent = $('ow-accent-hex').value.trim();
-    if (!HEX.test(accent)) { $('ow-it-branding').click(); $('ow-accent-hex').setAttribute('aria-invalid', 'true'); $('ow-accent-hex').focus(); O.flash('Culoarea principală trebuie să fie un cod de forma #D4A843.', true); return; }
+    if (!HEX.test(accent)) { $('ow-it-branding').click(); $('ow-accent-hex').setAttribute('aria-invalid', 'true'); $('ow-accent-hex').focus(); O.flash(VQ.t('The main colour must be a code like #D4A843.'), true); return; }
     if (btn.getAttribute('aria-busy') === 'true') return;
-    busyBtn(btn, true, 'Se salvează…');
+    busyBtn(btn, true, VQ.t('Saving…'));
     save({
       widget_config: { logo: images.logo, bg_image: images.background, hero_image: images.hero, home_title: val('ow-title'), home_subtitle: val('ow-subtitle'), address: val('ow-address'), phone: val('ow-phone'), accent: accent.toUpperCase(), return_url: val('ow-return') },
       widget_terms: val('ow-terms'),
       widget_privacy: val('ow-privacy'),
-    }).then(function () { O.flash('Setările au fost salvate.'); }, function (er) { if (!(er && er.status === 401)) O.flash('Nu am putut salva setările. Încearcă din nou.', true); }).then(function () { busyBtn(btn, false); });
+    }).then(function () { O.flash(VQ.t('The settings were saved.')); }, function (er) { if (!(er && er.status === 401)) O.flash(VQ.t('We could not save the settings. Try again.'), true); }).then(function () { busyBtn(btn, false); });
   });
 
   /* =================== EMBED CODES =================== */
   function loadEvents() {
     O.api('/organizer/events?status=published&per_page=50', { quiet: true }).then(function (r) {
       var list = Array.isArray(r && r.data) ? r.data : [], sel = $('ow-s-event');
-      list.forEach(function (e) { if (e && e.slug) sel.appendChild(el('option', { value: F.flat(e.slug), text: F.flat(e.name || e.title) || 'Activitate' })); });
+      list.forEach(function (e) { if (e && e.slug) sel.appendChild(el('option', { value: F.flat(e.slug), text: F.flat(e.name || e.title) || VQ.t('Activity') })); });
     }, function () {});
   }
   function attr(name, value) { return '\n  data-' + name + '="' + String(value).replace(/["<>&]/g, '') + '"'; }
@@ -156,7 +156,7 @@
     var box = $(type === 'single' ? 'ow-s-preview' : 'ow-l-preview'), out = $(type === 'single' ? 'ow-s-code' : 'ow-l-code'), attrs;
     if (type === 'single') {
       var ev = $('ow-s-event').value, style = $('ow-s-style').value;
-      if (!ev) { out.value = '<!-- Selectează o activitate -->'; box.textContent = ''; box.appendChild(el('p', { text: 'Selectează o activitate din listă.' })); return; }
+      if (!ev) { out.value = '<!-- ' + VQ.t('Select an activity') + ' -->'; box.textContent = ''; box.appendChild(el('p', { text: VQ.t('Select an activity from the list.') })); return; }
       attrs = attr('type', 'single') + attr('event', ev) + attr('organizer', slug) + attr('theme', $('ow-s-theme').value) + (style !== 'card' ? attr('style', style) : '');
       out.value = '<div id="tixello-event"></div>\n<script src="' + SITE + '/embed/tixello-widget.js"' + attrs + '>\n</' + 'script>';
       load(box, 'ow-s-live', { type: 'single', event: ev, organizer: slug, theme: $('ow-s-theme').value });
@@ -180,7 +180,7 @@
     s.src = SITE + '/embed/tixello-widget.js?_t=' + Date.now();
     s.setAttribute('data-container', id);
     Object.keys(data).forEach(function (k) { if (data[k] !== '' && data[k] != null) s.setAttribute('data-' + k, String(data[k])); });
-    s.onerror = function () { box.textContent = ''; box.appendChild(el('p', { text: 'Previzualizarea nu s-a putut încărca.' })); };
+    s.onerror = function () { box.textContent = ''; box.appendChild(el('p', { text: VQ.t('The preview could not be loaded.') })); };
     document.body.appendChild(s);
   }
   ['ow-s-event', 'ow-s-theme', 'ow-s-style'].forEach(function (id) { $(id).addEventListener('change', function () { code('single'); }); });
@@ -188,7 +188,7 @@
   root.querySelectorAll('[data-copy]').forEach(function (b) {
     b.addEventListener('click', function () {
       var ta = $(b.getAttribute('data-copy'));
-      var done = function () { O.flash('Codul a fost copiat.'); }, failed = function () { ta.focus(); ta.select(); O.flash('Nu am putut copia. Codul e selectat: apasă Ctrl+C.', true); };
+      var done = function () { O.flash(VQ.t('The code was copied.')); }, failed = function () { ta.focus(); ta.select(); O.flash(VQ.t('We could not copy it. The code is selected: press Ctrl+C.'), true); };
       if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(ta.value).then(done, failed);
       else { ta.select(); try { if (document.execCommand('copy')) done(); else failed(); } catch (e) { failed(); } }
     });

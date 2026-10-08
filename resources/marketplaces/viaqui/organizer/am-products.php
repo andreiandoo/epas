@@ -20,8 +20,8 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 require_once __DIR__ . '/../includes/v2/am-labels.php';
 
-$pageTitleRaw = 'Produse — ' . SITE_NAME;
-$pageDescription = 'Biletele de acces, experiențele și pachetele locațiilor tale.';
+$pageTitleRaw = v2_t('Products: {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('The access tickets, experiences and packages of your venues.');
 $canonicalUrl = SITE_URL . '/organizator/produse';
 $noindex = true;
 $skipPageCache = true;
@@ -39,30 +39,30 @@ echo am_product_icon_sprite();
 <div class="ve am" id="am-prod">
   <header class="ve-head" id="am-prod-head">
     <div>
-      <p class="ve-eyebrow"><?= v2_ic('ticket') ?>Locații și produse</p>
-      <h1 class="ve-h">Produse</h1>
-      <p class="ve-lead">Bilete de acces, experiențe și pachete. Toate se pot pune în același coș, pe aceeași dată.</p>
+      <p class="ve-eyebrow"><?= v2_ic('ticket') ?><?= v2_te('Venues and products') ?></p>
+      <h1 class="ve-h"><?= v2_te('Products') ?></h1>
+      <p class="ve-lead"><?= v2_te('Access tickets, experiences and packages. They can all go in the same basket, on the same date.') ?></p>
     </div>
     <div class="ve-head-btns">
-      <a class="btn btn-primary" href="/organizator/produse?nou=1"><?= v2_ic('plus') ?>Produs nou</a>
+      <a class="btn btn-primary" href="/organizator/produse?nou=1"><?= v2_ic('plus') ?><?= v2_te('New product') ?></a>
     </div>
   </header>
 
   <div class="am-filters" id="am-prod-filters">
-    <span class="po-field"><label for="am-f-loc">Locația</label><span class="po-select"><select id="am-f-loc"><option value="">Toate locațiile</option></select><?= v2_ic('caret-down') ?></span></span>
-    <span class="po-field"><label for="am-f-type">Tipul</label><span class="po-select"><select id="am-f-type">
-      <option value="">Toate</option><option value="access">Bilete de acces</option><option value="experience">Experiențe</option><option value="package">Pachete</option>
+    <span class="po-field"><label for="am-f-loc"><?= v2_te('Venue') ?></label><span class="po-select"><select id="am-f-loc"><option value=""><?= v2_te('All venues') ?></option></select><?= v2_ic('caret-down') ?></span></span>
+    <span class="po-field"><label for="am-f-type"><?= v2_te('Type') ?></label><span class="po-select"><select id="am-f-type">
+      <option value=""><?= v2_te('All') ?></option><option value="access"><?= v2_te('Access tickets') ?></option><option value="experience"><?= v2_te('Experiences') ?></option><option value="package"><?= v2_te('Packages') ?></option>
     </select><?= v2_ic('caret-down') ?></span></span>
   </div>
 
   <div class="org-empty is-error" id="am-prod-failed" hidden>
     <span class="org-empty-ic"><?= v2_ic('warning-circle') ?></span>
-    <b>Nu am putut încărca produsele</b>
-    <p>Reîncearcă în câteva secunde.</p>
-    <button class="btn btn-primary" type="button" id="am-prod-retry">Reîncearcă</button>
+    <b><?= v2_te('We could not load the products') ?></b>
+    <p><?= v2_te('Try again in a few seconds.') ?></p>
+    <button class="btn btn-primary" type="button" id="am-prod-retry"><?= v2_te('Try again') ?></button>
   </div>
 
-  <div id="am-prod-list" aria-live="polite"><p class="ve-state">Se încarcă…</p></div>
+  <div id="am-prod-list" aria-live="polite"><p class="ve-state"><?= v2_te('Loading…') ?></p></div>
   <div id="am-prod-edit" hidden></div>
 </div>
 <?php

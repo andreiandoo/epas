@@ -17,8 +17,8 @@ require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 require_once __DIR__ . '/../includes/v2/am-labels.php';
 
-$pageTitleRaw = 'Raport — ' . SITE_NAME;
-$pageDescription = 'Vânzările locațiilor tale pe o perioadă: rezervări, persoane, încasări, comision și ce îți rămâne, pe zile și pe produse.';
+$pageTitleRaw = v2_t('Report: {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('The sales of your venues over a period: bookings, people, takings, commission and what you keep, by day and by product.');
 $canonicalUrl = SITE_URL . '/organizator/raport';
 $noindex = true;
 $skipPageCache = true;
@@ -35,43 +35,43 @@ v2_org_start('am-report');
 <div class="ve am" id="am-rep">
   <header class="ve-head">
     <div>
-      <p class="ve-eyebrow"><?= v2_ic('chart-line-up') ?>Raport</p>
-      <h1 class="ve-h">Raport vânzări</h1>
-      <p class="ve-lead">Ce ai vândut într-o perioadă, online și la casă, după data plății.</p>
+      <p class="ve-eyebrow"><?= v2_ic('chart-line-up') ?><?= v2_te('Report') ?></p>
+      <h1 class="ve-h"><?= v2_te('Sales report') ?></h1>
+      <p class="ve-lead"><?= v2_te('What you sold over a period, online and at the counter, by payment date.') ?></p>
     </div>
-    <button class="btn btn-ghost" type="button" id="rep-export"><?= v2_ic('file-text') ?>Exportă rezervările (CSV)</button>
+    <button class="btn btn-ghost" type="button" id="rep-export"><?= v2_ic('file-text') ?><?= v2_te('Export the bookings (CSV)') ?></button>
   </header>
 
   <form class="am-filters" id="rep-form">
-    <div class="fchips" id="rep-presets" role="group" aria-label="Perioada">
-      <button class="fchip" type="button" data-preset="today">Azi</button>
-      <button class="fchip" type="button" data-preset="7">7 zile</button>
-      <button class="fchip" type="button" data-preset="30">30 de zile</button>
-      <button class="fchip" type="button" data-preset="month">Luna aceasta</button>
-      <button class="fchip" type="button" data-preset="last-month">Luna trecută</button>
-      <button class="fchip" type="button" data-preset="year">Anul acesta</button>
+    <div class="fchips" id="rep-presets" role="group" aria-label="<?= v2_te('Period') ?>">
+      <button class="fchip" type="button" data-preset="today"><?= v2_te('Today') ?></button>
+      <button class="fchip" type="button" data-preset="7"><?= v2_te('7 days') ?></button>
+      <button class="fchip" type="button" data-preset="30"><?= v2_te('30 days') ?></button>
+      <button class="fchip" type="button" data-preset="month"><?= v2_te('This month') ?></button>
+      <button class="fchip" type="button" data-preset="last-month"><?= v2_te('Last month') ?></button>
+      <button class="fchip" type="button" data-preset="year"><?= v2_te('This year') ?></button>
     </div>
-    <span class="po-field"><label for="rep-from">De la</label><input class="po-input" type="date" id="rep-from"></span>
-    <span class="po-field"><label for="rep-to">Până la</label><input class="po-input" type="date" id="rep-to"></span>
-    <span class="po-field"><label for="rep-loc">Locația</label><span class="po-select"><select id="rep-loc"><option value="">Toate locațiile</option></select><?= v2_ic('caret-down') ?></span></span>
-    <button class="btn btn-primary" type="submit">Arată</button>
+    <span class="po-field"><label for="rep-from"><?= v2_te('From') ?></label><input class="po-input" type="date" id="rep-from"></span>
+    <span class="po-field"><label for="rep-to"><?= v2_te('Until') ?></label><input class="po-input" type="date" id="rep-to"></span>
+    <span class="po-field"><label for="rep-loc"><?= v2_te('Venue') ?></label><span class="po-select"><select id="rep-loc"><option value=""><?= v2_te('All venues') ?></option></select><?= v2_ic('caret-down') ?></span></span>
+    <button class="btn btn-primary" type="submit"><?= v2_te('Show') ?></button>
   </form>
 
-  <section class="am-kpis" id="rep-kpis" aria-label="Totaluri"></section>
+  <section class="am-kpis" id="rep-kpis" aria-label="<?= v2_te('Totals') ?>"></section>
 
   <section class="org-panel am-stack" aria-labelledby="rep-days-h">
-    <div class="org-panel-head"><div><h2 class="org-panel-h" id="rep-days-h">Pe zile</h2><p class="org-panel-p" id="rep-days-p"></p></div></div>
+    <div class="org-panel-head"><div><h2 class="org-panel-h" id="rep-days-h"><?= v2_te('By day') ?></h2><p class="org-panel-p" id="rep-days-p"></p></div></div>
     <div class="rep-bars" id="rep-bars" aria-hidden="true"></div>
     <div class="ve-table-wrap"><table class="ve-table am-table">
-      <thead><tr><th scope="col">Ziua</th><th scope="col">Rezervări</th><th scope="col">Vânzări</th><th scope="col">Îți rămân</th></tr></thead>
+      <thead><tr><th scope="col"><?= v2_te('Day') ?></th><th scope="col"><?= v2_te('Bookings') ?></th><th scope="col"><?= v2_te('Sales') ?></th><th scope="col"><?= v2_te('You keep') ?></th></tr></thead>
       <tbody id="rep-days"></tbody>
     </table></div>
   </section>
 
   <section class="org-panel" aria-labelledby="rep-prod-h">
-    <div class="org-panel-head"><div><h2 class="org-panel-h" id="rep-prod-h">Pe produse</h2></div></div>
+    <div class="org-panel-head"><div><h2 class="org-panel-h" id="rep-prod-h"><?= v2_te('By product') ?></h2></div></div>
     <div class="ve-table-wrap"><table class="ve-table am-table">
-      <thead><tr><th scope="col">Produsul</th><th scope="col">Rezervări</th><th scope="col">Persoane</th><th scope="col">Vânzări</th><th scope="col">Îți rămân</th></tr></thead>
+      <thead><tr><th scope="col"><?= v2_te('Product') ?></th><th scope="col"><?= v2_te('Bookings') ?></th><th scope="col"><?= v2_te('People') ?></th><th scope="col"><?= v2_te('Sales') ?></th><th scope="col"><?= v2_te('You keep') ?></th></tr></thead>
       <tbody id="rep-products"></tbody>
     </table></div>
   </section>
