@@ -24,8 +24,8 @@ if (!preg_match('/^[A-Za-z0-9-]{8,64}$/', $sdUuid)) {
     $sdUuid = '';
 }
 
-$pageTitleRaw = 'Comandă serviciu — ' . SITE_NAME;
-$pageDescription = 'Detaliile unei comenzi de servicii extra a unui operator pe viaqui.com.';
+$pageTitleRaw = v2_t('Service order') . ' · ' . SITE_NAME;
+$pageDescription = v2_t('The details of an extra service order of an operator on Viaqui.');
 $canonicalUrl = SITE_URL . ($sdUuid !== '' ? '/organizator/services/' . $sdUuid : '/organizator/servicii/comenzi');
 $noindex = true;
 $skipPageCache = true;
@@ -48,15 +48,15 @@ v2_org_start('services');
 <div class="sd" id="sd" data-uuid="<?= htmlspecialchars($sdUuid, ENT_QUOTES, 'UTF-8') ?>">
   <header class="sd-head">
     <div>
-      <nav class="sd-crumbs" aria-label="Breadcrumb"><a href="/organizator/servicii">Servicii extra</a><span aria-hidden="true">›</span><a href="/organizator/servicii/comenzi">Comenzile mele</a><span aria-hidden="true">›</span><span aria-current="page" id="sd-crumb">Comandă</span></nav>
-      <h1 class="sd-h" id="sd-title">Detalii comandă</h1>
+      <nav class="sd-crumbs" aria-label="<?= v2_te('Breadcrumb') ?>"><a href="/organizator/servicii"><?= v2_te('Extra services') ?></a><span aria-hidden="true">›</span><a href="/organizator/servicii/comenzi"><?= v2_te('My orders') ?></a><span aria-hidden="true">›</span><span aria-current="page" id="sd-crumb"><?= v2_te('Order') ?></span></nav>
+      <h1 class="sd-h" id="sd-title"><?= v2_te('Order details') ?></h1>
     </div>
-    <a class="btn btn-ghost" href="/organizator/servicii/comenzi"><?= v2_ic('arrow-left') ?>Înapoi</a>
+    <a class="btn btn-ghost" href="/organizator/servicii/comenzi"><?= v2_ic('arrow-left') ?><?= v2_te('Back') ?></a>
   </header>
 
   <div class="sd-loading" id="sd-loading" role="status">
     <span class="org-skel sd-sk-a"></span><span class="org-skel sd-sk-b"></span>
-    <span class="sd-sr">Se încarcă comanda…</span>
+    <span class="sd-sr"><?= v2_te('Loading the order…') ?></span>
   </div>
 
   <div class="sd-content" id="sd-content" hidden>
@@ -65,62 +65,62 @@ v2_org_start('services');
         <div class="sd-order-head">
           <span class="sd-type-ic" id="sd-type-ic"></span>
           <div class="sd-order-id">
-            <h2 id="sd-type">Serviciu</h2>
+            <h2 id="sd-type"><?= v2_te('Service') ?></h2>
             <p id="sd-number"></p>
           </div>
           <span class="org-tag" id="sd-status"></span>
         </div>
         <dl class="sd-facts">
-          <?= $sdFact('event', 'Activitate') ?>
-          <?= $sdFact('details', 'Detalii') ?>
-          <?= $sdFact('created', 'Creat la') ?>
-          <?= $sdFact('period', 'Perioadă') ?>
+          <?= $sdFact('event', v2_te('Experience')) ?>
+          <?= $sdFact('details', v2_te('Details')) ?>
+          <?= $sdFact('created', v2_te('Created on')) ?>
+          <?= $sdFact('period', v2_te('Period')) ?>
         </dl>
       </section>
 
       <section class="org-panel sd-pay" aria-labelledby="sd-pay-h">
-        <h2 class="sd-card-h" id="sd-pay-h"><?= v2_ic('credit-card') ?>Plată</h2>
+        <h2 class="sd-card-h" id="sd-pay-h"><?= v2_ic('credit-card') ?><?= v2_te('Payment') ?></h2>
         <dl class="sd-sums">
-          <div><dt>Subtotal</dt><dd id="sd-subtotal">—</dd></div>
-          <div><dt>TVA</dt><dd id="sd-tax">—</dd></div>
-          <div class="sd-total"><dt>Total</dt><dd id="sd-total">—</dd></div>
+          <div><dt><?= v2_te('Subtotal') ?></dt><dd id="sd-subtotal">—</dd></div>
+          <div><dt><?= v2_te('VAT') ?></dt><dd id="sd-tax">—</dd></div>
+          <div class="sd-total"><dt><?= v2_te('Total') ?></dt><dd id="sd-total">—</dd></div>
         </dl>
         <dl class="sd-sums is-small">
-          <div><dt>Metodă</dt><dd id="sd-method">—</dd></div>
-          <div><dt>Status plată</dt><dd id="sd-paystatus">—</dd></div>
-          <div><dt>Plătit la</dt><dd id="sd-paidat">—</dd></div>
+          <div><dt><?= v2_te('Method') ?></dt><dd id="sd-method">—</dd></div>
+          <div><dt><?= v2_te('Payment status') ?></dt><dd id="sd-paystatus">—</dd></div>
+          <div><dt><?= v2_te('Paid on') ?></dt><dd id="sd-paidat">—</dd></div>
         </dl>
       </section>
     </div>
 
     <section class="org-panel sd-email" id="sd-email" aria-labelledby="sd-email-h" hidden>
-      <div class="org-panel-head"><h2 class="org-panel-h" id="sd-email-h">Statistici campanie email</h2></div>
+      <div class="org-panel-head"><h2 class="org-panel-h" id="sd-email-h"><?= v2_te('Email campaign statistics') ?></h2></div>
       <div class="sd-counts">
-        <?= $sdCount('sent', 'Trimise', 'info') ?>
-        <?= $sdCount('opened', 'Deschise', 'ok') ?>
-        <?= $sdCount('clicked', 'Click-uri', 'info') ?>
-        <?= $sdCount('failed', 'Eșuate', 'bad') ?>
-        <?= $sdCount('unsub', 'Dezabonări', 'wait') ?>
+        <?= $sdCount('sent', v2_te('Sent'), 'info') ?>
+        <?= $sdCount('opened', v2_te('Opened'), 'ok') ?>
+        <?= $sdCount('clicked', v2_te('Clicks'), 'info') ?>
+        <?= $sdCount('failed', v2_te('Failed'), 'bad') ?>
+        <?= $sdCount('unsub', v2_te('Unsubscribes'), 'wait') ?>
       </div>
       <div class="sd-rates">
-        <div class="sd-rate is-ok"><p><span>Rata deschidere</span><b id="sd-open-rate">0%</b></p><span class="sd-bar"><span id="sd-open-bar"></span></span></div>
-        <div class="sd-rate is-info"><p><span>Rata click (din deschise)</span><b id="sd-click-rate">0%</b></p><span class="sd-bar"><span id="sd-click-bar"></span></span></div>
+        <div class="sd-rate is-ok"><p><span><?= v2_te('Open rate') ?></span><b id="sd-open-rate">0%</b></p><span class="sd-bar"><span id="sd-open-bar"></span></span></div>
+        <div class="sd-rate is-info"><p><span><?= v2_te('Click rate (of opened)') ?></span><b id="sd-click-rate">0%</b></p><span class="sd-bar"><span id="sd-click-bar"></span></span></div>
       </div>
       <div class="sd-block">
-        <h3 class="sd-block-h">Audiență</h3>
+        <h3 class="sd-block-h"><?= v2_te('Audience') ?></h3>
         <dl class="sd-facts is-four">
-          <?= $sdFact('aud-type', 'Tip audiență') ?>
-          <?= $sdFact('aud-perfect', 'Perfect match') ?>
-          <?= $sdFact('aud-partial', 'Partial match') ?>
-          <?= $sdFact('aud-template', 'Template') ?>
+          <?= $sdFact('aud-type', v2_te('Audience type')) ?>
+          <?= $sdFact('aud-perfect', v2_te('Perfect match')) ?>
+          <?= $sdFact('aud-partial', v2_te('Partial match')) ?>
+          <?= $sdFact('aud-template', v2_te('Template')) ?>
         </dl>
         <div class="sd-filters" id="sd-filters" hidden>
-          <p>Filtre aplicate</p>
+          <p><?= v2_te('Filters applied') ?></p>
           <ul id="sd-filter-tags"></ul>
         </div>
       </div>
       <div class="sd-block sd-nl">
-        <p><span>Status campanie:</span> <span class="org-tag" id="sd-nl-status" hidden></span></p>
+        <p><span><?= v2_te('Campaign status:') ?></span> <span class="org-tag" id="sd-nl-status" hidden></span></p>
         <p class="sd-nl-dates" id="sd-nl-dates"></p>
       </div>
     </section>
@@ -129,37 +129,37 @@ v2_org_start('services');
       <div class="sd-px-head">
         <span class="sd-type-ic is-tracking"><?= v2_ic('target') ?></span>
         <div>
-          <h2 class="sd-card-h" id="sd-px-h">Pixel ID-uri</h2>
-          <p>Adaugă sau editează ID-urile pixel-urilor pentru platformele cumpărate. Tracking-ul începe să funcționeze automat în momentul în care un Pixel ID este completat.</p>
+          <h2 class="sd-card-h" id="sd-px-h"><?= v2_te('Pixel IDs') ?></h2>
+          <p><?= v2_te('Add or edit the pixel IDs for the platforms you bought. Tracking starts working automatically as soon as a Pixel ID is filled in.') ?></p>
         </div>
       </div>
       <form id="sd-px-form" novalidate>
         <div class="sd-px-list" id="sd-px-list"></div>
         <div class="sd-px-foot">
           <p id="sd-px-msg" role="status"></p>
-          <button class="btn btn-primary" type="submit" id="sd-px-save">Salvează ID-uri</button>
+          <button class="btn btn-primary" type="submit" id="sd-px-save"><?= v2_te('Save IDs') ?></button>
         </div>
       </form>
     </section>
 
     <details class="org-panel sd-config">
-      <summary><?= v2_ic('code') ?>Configurație comandă<?= v2_ic('caret-down') ?></summary>
+      <summary><?= v2_ic('code') ?><?= v2_te('Order configuration') ?><?= v2_ic('caret-down') ?></summary>
       <pre id="sd-config"></pre>
     </details>
   </div>
 
   <div class="org-empty" id="sd-missing" hidden>
     <span class="org-empty-ic"><?= v2_ic('receipt') ?></span>
-    <b>Comanda nu a fost găsită</b>
-    <p>Verifică link-ul sau întoarce-te la lista de servicii.</p>
-    <a class="btn btn-primary" href="/organizator/servicii">Înapoi la servicii</a>
+    <b><?= v2_te('The order was not found') ?></b>
+    <p><?= v2_te('Check the link or go back to the list of services.') ?></p>
+    <a class="btn btn-primary" href="/organizator/servicii"><?= v2_te('Back to services') ?></a>
   </div>
 
   <div class="org-empty is-error" id="sd-failed" hidden>
     <span class="org-empty-ic"><?= v2_ic('warning-circle') ?></span>
-    <b>Nu am putut încărca comanda</b>
-    <p>A apărut o problemă de conexiune. Încearcă din nou.</p>
-    <button class="btn btn-primary" type="button" id="sd-retry">Reîncearcă</button>
+    <b><?= v2_te('We could not load the order') ?></b>
+    <p><?= v2_te('There was a connection problem. Try again.') ?></p>
+    <button class="btn btn-primary" type="button" id="sd-retry"><?= v2_te('Try again') ?></button>
   </div>
 </div>
 <?php

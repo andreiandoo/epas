@@ -15,14 +15,14 @@
   var $ = function (id) { return document.getElementById(id); };
 
   var STATUS = {
-    open: ['Deschis', 'is-info'],
-    in_progress: ['În lucru', 'is-ok'],
-    awaiting_organizer: ['Așteaptă răspunsul tău', 'is-wait'],
-    resolved: ['Rezolvat', 'is-done'],
-    closed: ['Închis', 'is-muted'],
+    open: [VQ.t('Open'), 'is-info'],
+    in_progress: [VQ.t('In progress'), 'is-ok'],
+    awaiting_organizer: [VQ.t('Waiting for your reply'), 'is-wait'],
+    resolved: [VQ.t('Resolved'), 'is-done'],
+    closed: [VQ.t('Closed'), 'is-muted'],
   };
   var RULES = { max_size_kb: 3072, allowed_mimes: ['jpg', 'png', 'pdf'], max_per_message: 5 };
-  var mbFmt = new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 });
+  var mbFmt = new Intl.NumberFormat(VQ.locale === 'en' ? 'en-GB' : VQ.locale, { maximumFractionDigits: 1 });
 
   /* ---------- shared ---------- */
   function statusOf(s) { return STATUS[s] || [F.flat(s) || '—', 'is-muted']; }
@@ -41,9 +41,9 @@
   /** A message for the operator: core's validation text, else core's message when it is not a generic English one. */
   function errText(err, fallback) {
     if (!err) return fallback;
-    if (err.status === 0 || err.status == null) return 'Nu am putut ajunge la server. Verifică conexiunea și încearcă din nou.';
-    if (err.status === 413) return 'Fișierele sunt prea mari. Încearcă din nou cu fișiere mai mici.';
-    if (err.status === 429) return 'Prea multe încercări într-un timp scurt. Așteaptă un minut și încearcă din nou.';
+    if (err.status === 0 || err.status == null) return VQ.t('We could not reach the server. Check your connection and try again.');
+    if (err.status === 413) return VQ.t('The files are too large. Try again with smaller files.');
+    if (err.status === 429) return VQ.t('Too many attempts in a short time. Wait a minute and try again.');
     var e = err.errors || (err.data && err.data.errors);
     if (e && typeof e === 'object' && !Array.isArray(e)) {
       var k = Object.keys(e)[0], v = k ? e[k] : null;
@@ -75,7 +75,7 @@
     };
   }
   function rulesText() {
-    return RULES.allowed_mimes.join(', ') + ' — maxim ' + mbFmt.format(RULES.max_size_kb / 1024) + ' MB pe fișier, max ' + RULES.max_per_message + ' fișiere.';
+    return VQ.t('{types}: {size} MB per file at most, up to {max} files.', { types: RULES.allowed_mimes.join(', '), size: mbFmt.format(RULES.max_size_kb / 1024), max: RULES.max_per_message });
   }
   /** jpg in core's rules also accepts .jpeg files. */
   function acceptOf() {
@@ -87,12 +87,12 @@
   function checkFiles(input, list) {
     var files = [].slice.call(input.files || []), max = RULES.max_per_message, maxBytes = RULES.max_size_kb * 1024, msg = '';
     var ext = acceptOf().split(',').map(function (x) { return x.slice(1); });
-    if (files.length > max) msg = 'Poți atașa cel mult ' + max + ' fișiere.';
+    if (files.length > max) msg = VQ.t('You can attach {max} files at most.', { max: max });
     else {
       files.some(function (f) {
         var e = String(f.name || '').split('.').pop().toLowerCase();
-        if (ext.indexOf(e) < 0) { msg = 'Fișierul „' + f.name + '” nu are un format acceptat (' + RULES.allowed_mimes.join(', ') + ').'; return true; }
-        if (f.size > maxBytes) { msg = 'Fișierul „' + f.name + '” depășește limita de ' + mbFmt.format(RULES.max_size_kb / 1024) + ' MB.'; return true; }
+        if (ext.indexOf(e) < 0) { msg = VQ.t('The file "{name}" is not in an accepted format ({types}).', { name: f.name, types: RULES.allowed_mimes.join(', ') }); return true; }
+        if (f.size > maxBytes) { msg = VQ.t('The file "{name}" is over the limit of {size} MB.', { name: f.name, size: mbFmt.format(RULES.max_size_kb / 1024) }); return true; }
         return false;
       });
     }
@@ -113,13 +113,13 @@
   /* =================== LIST + NEW TICKET =================== */
   function listPage(root) {
     var FIELDS = {
-      url: { label: 'URL-ul paginii', ph: 'https://viaqui.com/…', type: 'url', max: 2048 },
-      invoice_series: { label: 'Seria decontului', ph: 'ex: AB', type: 'text', max: 32 },
-      invoice_number: { label: 'Număr decont', ph: 'ex: 12345', type: 'text', max: 64 },
-      module_name: { label: 'Modulul afectat', ph: 'ex: Rezervări, Sold, Produse', type: 'text', max: 100 },
-      event_id: { label: 'Activitate', type: 'event' },
+      url: { label: VQ.t('Page URL'), ph: 'https://viaqui.com/…', type: 'url', max: 2048 },
+      invoice_series: { label: VQ.t('Payout statement series'), ph: VQ.t('e.g. AB'), type: 'text', max: 32 },
+      invoice_number: { label: VQ.t('Payout statement number'), ph: VQ.t('e.g. 12345'), type: 'text', max: 64 },
+      module_name: { label: VQ.t('Affected module'), ph: VQ.t('e.g. Bookings, Balance, Products'), type: 'text', max: 100 },
+      event_id: { label: VQ.t('Experience'), type: 'event' },
     };
-    var ADJ = { open: ['activ', 'active'], resolved: ['rezolvat', 'rezolvate'], closed: ['închis', 'închise'] };
+
     var status = 'open', page = 1, more = false, items = [], total = 0, seq = 0;
     var taxonomy = null, events = null, cfSeq = 0, cfPending = false, sending = false, opener = null;
     var dialog = $('osp-new'), form = $('osp-form'), send = $('osp-send');
@@ -130,7 +130,7 @@
       if (which === 'loading') {
         box.textContent = '';
         for (var i = 0; i < 3; i++) box.appendChild(el('li', { class: 'osp-sk', 'aria-hidden': 'true' }, el('span', { class: 'org-skel' })));
-        $('osp-live').textContent = 'Se încarcă…';
+        $('osp-live').textContent = VQ.t('Loading…');
       }
       box.hidden = which !== 'loading' && which !== 'list';
       $('osp-empty').hidden = which !== 'empty';
@@ -145,12 +145,12 @@
       if (on && focus) $('osp-gate').focus();
     }
     function summary(n) {
-      var a = ADJ[status];
-      return F.count(n, 'tichet', 'tichete') + (a ? ' ' + (Math.round(n) === 1 ? a[0] : a[1]) : ' în total') + '.';
+      n = Math.round(F.toNum(n));
+      return (status === 'open' ? VQ.n(n, 'active ticket', 'active tickets') : status === 'resolved' ? VQ.n(n, 'resolved ticket', 'resolved tickets') : status === 'closed' ? VQ.n(n, 'closed ticket', 'closed tickets') : VQ.t('{tickets} in total', { tickets: VQ.n(n, 'ticket', 'tickets') })) + '.';
     }
     function load(append) {
       var my = ++seq, p = append ? page + 1 : 1, btn = $('osp-more');
-      if (append) busyBtn(btn, true, 'Se încarcă…'); else state('loading');
+      if (append) busyBtn(btn, true, VQ.t('Loading…')); else state('loading');
       return O.api(url(p)).then(function (r) {
         if (my !== seq) return;
         var rows = (Array.isArray(r && r.data) ? r.data : []).filter(function (t) { return t && /^\d+$/.test(String(t.id)); });
@@ -166,15 +166,15 @@
         busyBtn(btn, false);
         if (my !== seq || (err && err.status === 401)) return;
         if (err && err.status === 403) { gate(true); return; }
-        if (append) { O.flash('Nu am putut încărca mai multe tichete. Încearcă din nou.', true); return; }
+        if (append) { O.flash(VQ.t('We could not load more tickets. Try again.'), true); return; }
         state('error');
-        $('osp-live').textContent = 'Nu am putut încărca tichetele.';
+        $('osp-live').textContent = VQ.t('We could not load the tickets.');
       });
     }
     function draw(firstNew) {
       var box = $('osp-list');
       box.textContent = '';
-      if (!items.length) { state('empty'); $('osp-live').textContent = 'Nu ai niciun tichet aici.'; return; }
+      if (!items.length) { state('empty'); $('osp-live').textContent = VQ.t('You have no tickets here.'); return; }
       state('list');
       items.forEach(function (t) { box.appendChild(row(t)); });
       $('osp-more').hidden = !more;
@@ -185,15 +185,15 @@
     function row(t) {
       var st = statusOf(t.status), n = F.toNum(t.messages_count);
       var dept = (t.department && F.flat(t.department.name)) || '—';
-      var meta = [F.count(n, 'mesaj', 'mesaje'), 'Ultima activitate: ' + (F.ago(t.last_activity_at) || '—'), 'Deschis pe ' + dateText(t.opened_at)];
-      return el('li', { class: 'osp-item' + (t.status === 'awaiting_organizer' ? ' is-attn' : '') }, el('a', { class: 'osp-row', href: '/organizator/suport/' + t.id, 'data-id': t.id }, [
+      var meta = [VQ.n(Math.round(n), 'message', 'messages'), VQ.t('Last activity: {when}', { when: F.ago(t.last_activity_at) || '—' }), VQ.t('Opened on {date}', { date: dateText(t.opened_at) })];
+      return el('li', { class: 'osp-item' + (t.status === 'awaiting_organizer' ? ' is-attn' : '') }, el('a', { class: 'osp-row', href: VQ.url('/organizator/suport/' + t.id), 'data-id': t.id }, [
         el('span', { class: 'osp-row-t' }, [
           el('span', { class: 'osp-tags' }, [
             el('span', { class: 'osp-num', text: F.flat(t.ticket_number) || '#' + t.id }),
             el('span', { class: 'org-tag ' + st[1], text: st[0] }),
             el('span', { class: 'osp-dept', text: dept }),
           ]),
-          el('b', { class: 'osp-subj', text: F.flat(t.subject) || 'Fără subiect' }),
+          el('b', { class: 'osp-subj', text: F.flat(t.subject) || VQ.t('No subject') }),
           el('span', { class: 'osp-meta', text: meta.join(' · ') }),
         ]),
         icon('arrow-right', 'ic osp-go'),
@@ -230,7 +230,7 @@
       var ok = !!findPt() && !cfPending && !$('osp-step2').hidden && !!$('osp-subject').value.trim() && !!$('osp-desc').value.trim()
         && cfInputs().every(function (i) { return !i.disabled && i.value.trim() !== ''; });
       if (send.getAttribute('aria-busy') !== 'true') send.disabled = sending || !ok;
-      $('osp-desc-n').textContent = F.num($('osp-desc').value.length) + ' / 10.000';
+      $('osp-desc-n').textContent = VQ.t('{n} / 10,000', { n: F.num($('osp-desc').value.length) });
     }
     function filesHelp() {
       $('osp-files-help').textContent = rulesText();
@@ -239,24 +239,24 @@
     function fillDepts() {
       var sel = $('osp-dept');
       sel.textContent = '';
-      sel.appendChild(el('option', { value: '', text: 'Alege un departament…' }));
-      (taxonomy || []).forEach(function (d) { if (d && d.id != null) sel.appendChild(el('option', { value: d.id, text: F.flat(d.name) || 'Departament' })); });
+      sel.appendChild(el('option', { value: '', text: VQ.t('Choose a department…') }));
+      (taxonomy || []).forEach(function (d) { if (d && d.id != null) sel.appendChild(el('option', { value: d.id, text: F.flat(d.name) || VQ.t('Department') })); });
     }
     function loadTaxonomy() {
       if (taxonomy) { fillDepts(); filesHelp(); return; }
-      setText($('osp-dept-msg'), 'Se încarcă departamentele…');
+      setText($('osp-dept-msg'), VQ.t('Loading departments…'));
       O.api('/organizer/support/departments').then(function (r) {
         var d = (r && r.data) || {};
         taxonomy = Array.isArray(d.departments) ? d.departments : [];
         setRules(d.attachment_rules);
         fillDepts();
         filesHelp();
-        setText($('osp-dept-msg'), taxonomy.length ? '' : 'Nu am găsit niciun departament. Încearcă din nou mai târziu.');
+        setText($('osp-dept-msg'), taxonomy.length ? '' : VQ.t('We found no departments. Try again later.'));
       }, function (err) {
         setText($('osp-dept-msg'), '');
         if (err && err.status === 401) return;
         if (err && err.status === 403) { closeDialog(); gate(true, true); return; }
-        formErr('Nu am putut încărca categoriile. Închide fereastra și încearcă din nou.');
+        formErr(VQ.t('We could not load the categories. Close the window and try again.'));
       });
     }
     function loadEvents() {
@@ -273,11 +273,11 @@
       var help = el('p', { class: 'osp-fe', id: id + '-err', hidden: true });
       if (m.type === 'event') {
         return loadEvents().then(function (rows) {
-          var sel = el('select', { class: 'osp-cf-in', id: id, 'data-meta': key, required: true, 'aria-describedby': id + '-err' }, [el('option', { value: '', text: 'Alege o activitate…' })]);
-          (rows || []).forEach(function (ev) { sel.appendChild(el('option', { value: ev.id, text: F.flat(ev.name || ev.title) || 'Activitate #' + ev.id })); });
+          var sel = el('select', { class: 'osp-cf-in', id: id, 'data-meta': key, required: true, 'aria-describedby': id + '-err' }, [el('option', { value: '', text: VQ.t('Choose an experience…') })]);
+          (rows || []).forEach(function (ev) { sel.appendChild(el('option', { value: ev.id, text: F.flat(ev.name || ev.title) || VQ.t('Experience #{id}', { id: ev.id }) })); });
           if (!rows || !rows.length) {
             sel.disabled = true;
-            setText(help, rows ? 'Acest tip de problemă cere o activitate, iar contul tău nu are niciuna. Alege alt tip de problemă.' : 'Nu am putut încărca activitățile. Alege din nou tipul problemei ca să reîncerci.');
+            setText(help, rows ? VQ.t('This problem type needs an experience, and your account has none. Choose another problem type.') : VQ.t('We could not load the experiences. Choose the problem type again to retry.'));
           }
           return el('div', { class: 'osp-f' }, [label, el('span', { class: 'osp-select' }, [sel, icon('caret-down')]), help]);
         });
@@ -345,10 +345,10 @@
       if (!dept) { $('osp-pt-f').hidden = true; setText($('osp-dept-desc'), ''); update(); return; }
       setText($('osp-dept-desc'), F.flat(dept.description));
       sel.textContent = '';
-      sel.appendChild(el('option', { value: '', text: 'Alege tipul…' }));
+      sel.appendChild(el('option', { value: '', text: VQ.t('Choose the type…') }));
       var types = Array.isArray(dept.problem_types) ? dept.problem_types : [];
-      types.forEach(function (p) { if (p && p.id != null) sel.appendChild(el('option', { value: p.id, text: F.flat(p.name) || 'Tip' })); });
-      if (!types.length) setText($('osp-pt-desc'), 'Departamentul nu are încă tipuri de probleme. Alege alt departament.');
+      types.forEach(function (p) { if (p && p.id != null) sel.appendChild(el('option', { value: p.id, text: F.flat(p.name) || VQ.t('Type') })); });
+      if (!types.length) setText($('osp-pt-desc'), VQ.t('This department has no problem types yet. Choose another department.'));
       $('osp-pt-f').hidden = false;
       update();
     });
@@ -362,7 +362,7 @@
       box.hidden = !req.length;
       cfPending = req.length > 0;
       if (req.length) {
-        box.appendChild(el('p', { class: 'osp-help', text: 'Se pregătesc câmpurile…' }));
+        box.appendChild(el('p', { class: 'osp-help', text: VQ.t('Preparing the fields…') }));
         Promise.all(req.map(field)).then(function (nodes) {
           if (my !== cfSeq) return;
           box.textContent = '';
@@ -393,7 +393,7 @@
         var v = i.value.trim(), fe = $(i.id + '-err');
         if (i.type === 'url' && !httpUrl(v)) {
           i.setAttribute('aria-invalid', 'true');
-          if (fe) setText(fe, 'Scrie adresa completă a paginii, cu https:// în față.');
+          if (fe) setText(fe, VQ.t('Enter the full address of the page, starting with https://.'));
           bad = bad || i;
         }
         meta[i.getAttribute('data-meta')] = v;
@@ -408,7 +408,7 @@
       var files = [].slice.call($('osp-files').files || []);
       sending = true;
       formErr('');
-      busyBtn(send, true, 'Se trimite…');
+      busyBtn(send, true, VQ.t('Sending…'));
       dialog.setAttribute('data-busy', '');
       var lib = typeof BileteOnlineAPI !== 'undefined' && BileteOnlineAPI.organizer;
       var go = lib && lib.createSupportTicket
@@ -416,10 +416,10 @@
         : Promise.reject({ status: 0 });
       go.then(function (r) {
         var t = r && r.data && r.data.ticket;
-        if (t && /^\d+$/.test(String(t.id))) { window.location.href = '/organizator/suport/' + t.id + '?trimis=1'; return; }
+        if (t && /^\d+$/.test(String(t.id))) { window.location.href = VQ.url('/organizator/suport/' + t.id) + '?trimis=1'; return; }
         dialog.removeAttribute('data-busy');
         closeDialog();
-        O.flash('Tichet trimis. Îți răspundem cât de curând.');
+        O.flash(VQ.t('Ticket sent. We will reply as soon as we can.'));
         refreshBadge();
         load();
       }, function (err) {
@@ -428,7 +428,7 @@
         busyBtn(send, false);
         update();
         if (err && err.status === 403) { closeDialog(); gate(true, true); return; }
-        if (err && err.status === 401) { sessionCheck(); formErr('Sesiunea a expirat. Autentifică-te din nou, apoi trimite tichetul.'); return; }
+        if (err && err.status === 401) { sessionCheck(); formErr(VQ.t('Your session has expired. Sign in again, then send the ticket.')); return; }
         var errs = err && (err.errors || (err.data && err.data.errors));
         if (errs && typeof errs === 'object') {
           Object.keys(errs).forEach(function (k) {
@@ -436,7 +436,7 @@
             if (inp && fe) { inp.setAttribute('aria-invalid', 'true'); setText(fe, Array.isArray(errs[k]) ? String(errs[k][0]) : String(errs[k])); }
           });
         }
-        formErr(errText(err, 'A apărut o eroare. Reîncearcă.'));
+        formErr(errText(err, VQ.t('Something went wrong. Try again.')));
       });
     });
 
@@ -447,7 +447,7 @@
   function detailPage(root) {
     var id = root.getAttribute('data-id');
     if (!/^\d+$/.test(String(id))) return;
-    var META = { url: 'URL pagină', invoice_series: 'Seria decont', invoice_number: 'Număr decont', event_id: 'Activitate', module_name: 'Modul' };
+    var META = { url: VQ.t('Page URL'), invoice_series: VQ.t('Payout statement series'), invoice_number: VQ.t('Payout statement number'), event_id: VQ.t('Experience'), module_name: VQ.t('Module') };
     var shown = false, sending = false, closed = false;
     var confirmD = $('osd-confirm'), replyBtn = $('osd-send');
 
@@ -457,10 +457,10 @@
       $('osd-content').hidden = which !== 'content';
     }
     function fail(err) {
-      var h = 'Tichet inexistent', p = 'Verifică linkul sau întoarce-te la lista de tichete.', retry = false;
-      if (err && err.status === 403) { h = 'Acces restricționat'; p = 'Sistemul de tichete este în testare și nu este încă activat pentru contul tău.'; }
-      else if (err && err.status === 404) { p = 'Tichetul nu există sau nu îți aparține.'; }
-      else if (err && err.status !== 'missing') { h = 'Nu am putut încărca tichetul'; p = 'Verifică conexiunea și încearcă din nou.'; retry = true; }
+      var h = VQ.t('Ticket not found'), p = VQ.t('Check the link or go back to the ticket list.'), retry = false;
+      if (err && err.status === 403) { h = VQ.t('Restricted access'); p = VQ.t('The ticket system is being tested and is not turned on for your account yet.'); }
+      else if (err && err.status === 404) { p = VQ.t('The ticket does not exist or is not yours.'); }
+      else if (err && err.status !== 'missing') { h = VQ.t('We could not load the ticket'); p = VQ.t('Check your connection and try again.'); retry = true; }
       $('osd-err-h').textContent = h;
       $('osd-err-p').textContent = p;
       $('osd-retry').hidden = !retry;
@@ -476,14 +476,14 @@
         if (after) after();
       }).catch(function (err) {
         if (err && err.status === 401) return;
-        if (shown && !(err && (err.status === 403 || err.status === 404))) { O.flash('Nu am putut reîncărca tichetul. Reîncarcă pagina.', true); return; }
+        if (shown && !(err && (err.status === 403 || err.status === 404))) { O.flash(VQ.t('We could not reload the ticket. Reload the page.'), true); return; }
         fail(err);
       });
     }
     function render(t, messages) {
       var num = F.flat(t.ticket_number) || '#' + t.id, st = statusOf(t.status);
       closed = typeof t.is_closed === 'boolean' ? t.is_closed : (t.status === 'resolved' || t.status === 'closed');
-      document.title = num + ' — ' + (F.flat(t.subject) || 'Tichet suport');
+      document.title = num + ' · ' + (F.flat(t.subject) || VQ.t('Support ticket'));
       $('osd-num').textContent = num;
       $('osd-crumb').textContent = num;
       var tag = $('osd-status');
@@ -493,7 +493,7 @@
       var pt = t.problem_type && F.flat(t.problem_type.name);
       $('osd-pt').textContent = pt || '';
       $('osd-pt').hidden = !pt;
-      $('osd-subject').textContent = F.flat(t.subject) || 'Fără subiect';
+      $('osd-subject').textContent = F.flat(t.subject) || VQ.t('No subject');
       var opened = $('osd-opened');
       opened.textContent = dateTimeText(t.opened_at);
       if (t.opened_at) opened.setAttribute('datetime', String(t.opened_at));
@@ -512,7 +512,7 @@
         if (v == null || v === '' || typeof v === 'object') return;
         var dd, s = String(v);
         if (k === 'url' && httpUrl(s)) dd =el('dd', null, el('a', { href: httpUrl(s), target: '_blank', rel: 'noopener noreferrer', text: s }));
-        else if (k === 'event_id') dd = el('dd', { text: 'Activitate #' + s });
+        else if (k === 'event_id') dd = el('dd', { text: VQ.t('Experience #{id}', { id: s }) });
         else dd = el('dd', { text: s });
         dl.appendChild(el('div', null, [el('dt', { text: META[k] }), dd]));
       });
@@ -522,19 +522,19 @@
       var box = $('osd-thread');
       box.textContent = '';
       var rows = messages.filter(function (m) { return m && typeof m === 'object'; });
-      if (!rows.length) { box.appendChild(el('li', { class: 'osd-none', text: 'Încă nu a fost trimis niciun mesaj.' })); return; }
+      if (!rows.length) { box.appendChild(el('li', { class: 'osd-none', text: VQ.t('No message has been sent yet.') })); return; }
       rows.forEach(function (m) { box.appendChild(message(m)); });
     }
     function message(m) {
       var when = dateTimeText(m.created_at), time = el('time', { datetime: m.created_at || null, text: when });
       if (m.event_type) {
-        var by = F.flat(m.author_name) || (m.author_type === 'staff' ? 'Echipa viaqui.com' : 'Tu');
-        return el('li', { class: 'osd-ev' }, el('span', { class: 'osd-ev-t' }, [icon('info'), el('span', null, [el('b', { text: F.flat(m.body) }), ' de ' + by + ' · ', time])]));
+        var by = F.flat(m.author_name) || (m.author_type === 'staff' ? VQ.t('The Viaqui team') : VQ.t('You'));
+        return el('li', { class: 'osd-ev' }, el('span', { class: 'osd-ev-t' }, [icon('info'), el('span', null, [el('b', { text: F.flat(m.body) }), ' ' + VQ.t('by {name}', { name: by }) + ' · ', time])]));
       }
       var mine = m.author_type === 'organizer' || m.author_type === 'customer';
-      var who = F.flat(m.author_name) || (mine ? 'Tu' : 'Echipa viaqui.com');
+      var who = F.flat(m.author_name) || (mine ? VQ.t('You') : VQ.t('The Viaqui team'));
       var atts = (Array.isArray(m.attachments) ? m.attachments : []).map(function (a) {
-        var href = a && httpUrl(a.url), name = (a && F.flat(a.original_name)) || 'Fișier';
+        var href = a && httpUrl(a.url), name = (a && F.flat(a.original_name)) || VQ.t('File');
         return href
           ? el('a', { class: 'osd-att', href: href, target: '_blank', rel: 'noopener noreferrer' }, [icon('file-text'), el('span', { text: name })])
           : el('span', { class: 'osd-att' }, [icon('file-text'), el('span', { text: name })]);
@@ -552,19 +552,19 @@
 
     /* ---------- reply ---------- */
     function replyErr(text) { showErr($('osd-reply-err'), text); }
-    function counter() { $('osd-body-n').textContent = F.num($('osd-body').value.length) + ' / 10.000'; }
+    function counter() { $('osd-body-n').textContent = VQ.t('{n} / 10,000', { n: F.num($('osd-body').value.length) }); }
     $('osd-body').addEventListener('input', function () { counter(); if (this.value.trim()) replyErr(''); });
     $('osd-files').addEventListener('change', function () { replyErr(checkFiles(this, $('osd-files-list'))); });
     $('osd-reply').addEventListener('submit', function (e) {
       e.preventDefault();
       if (sending) return;
       var body = $('osd-body').value.trim();
-      if (!body) { replyErr('Scrie mesajul înainte să-l trimiți.'); $('osd-body').focus(); return; }
+      if (!body) { replyErr(VQ.t('Write the message before you send it.')); $('osd-body').focus(); return; }
       var files = [].slice.call($('osd-files').files || []);
       var lib = typeof BileteOnlineAPI !== 'undefined' && BileteOnlineAPI.organizer;
       sending = true;
       replyErr('');
-      busyBtn(replyBtn, true, 'Se trimite…');
+      busyBtn(replyBtn, true, VQ.t('Sending…'));
       (lib && lib.replySupportTicket ? lib.replySupportTicket(id, body, files) : Promise.reject({ status: 0 })).then(function () {
         sending = false;
         busyBtn(replyBtn, false);
@@ -572,15 +572,15 @@
         $('osd-files-list').textContent = '';
         $('osd-files-list').hidden = true;
         counter();
-        O.flash('Mesaj trimis.');
+        O.flash(VQ.t('Message sent.'));
         load(function () { var last = $('osd-thread').lastElementChild; if (last) last.scrollIntoView({ block: 'nearest' }); });
       }, function (err) {
         sending = false;
         busyBtn(replyBtn, false);
-        if (err && err.status === 401) { sessionCheck(); replyErr('Sesiunea a expirat. Autentifică-te din nou, apoi trimite mesajul.'); return; }
-        if (err && err.status === 409) { replyErr('Tichetul este închis. Redeschide-l ca să poți răspunde.'); load(); return; }
+        if (err && err.status === 401) { sessionCheck(); replyErr(VQ.t('Your session has expired. Sign in again, then send the message.')); return; }
+        if (err && err.status === 409) { replyErr(VQ.t('The ticket is closed. Reopen it to reply.')); load(); return; }
         if (err && err.status === 403) { fail(err); return; }
-        replyErr(errText(err, 'Nu am putut trimite mesajul.'));
+        replyErr(errText(err, VQ.t('We could not send the message.')));
       });
     });
 
@@ -615,9 +615,9 @@
     $('osd-confirm-go').addEventListener('click', function () {
       var btn = this;
       if (btn.getAttribute('aria-busy') === 'true') return;
-      busyBtn(btn, true, 'Se marchează…');
+      busyBtn(btn, true, VQ.t('Marking…'));
       confirmD.setAttribute('data-busy', '');
-      act('close', 'Tichet marcat ca rezolvat.', 'Nu am putut închide tichetul.', 'osd-reopen', function () {
+      act('close', VQ.t('Ticket marked as resolved.'), VQ.t('We could not close the ticket.'), 'osd-reopen', function () {
         confirmD.removeAttribute('data-busy');
         busyBtn(btn, false);
         closeConfirm();
@@ -626,8 +626,8 @@
     $('osd-reopen').addEventListener('click', function () {
       var btn = this;
       if (btn.getAttribute('aria-busy') === 'true') return;
-      busyBtn(btn, true, 'Se redeschide…');
-      act('reopen', 'Tichet redeschis.', 'Nu am putut redeschide tichetul.', 'osd-body', function () { busyBtn(btn, false); });
+      busyBtn(btn, true, VQ.t('Reopening…'));
+      act('reopen', VQ.t('Ticket reopened.'), VQ.t('We could not reopen the ticket.'), 'osd-body', function () { busyBtn(btn, false); });
     });
     $('osd-retry').addEventListener('click', function () { state('loading'); load(); });
 
@@ -636,7 +636,7 @@
       try {
         var u = new URL(window.location.href);
         if (u.searchParams.get('trimis') === '1') {
-          O.flash('Tichet trimis. Îți răspundem cât de curând.');
+          O.flash(VQ.t('Ticket sent. We will reply as soon as we can.'));
           u.searchParams.delete('trimis');
           history.replaceState(null, '', u.pathname + u.search + u.hash);
         }

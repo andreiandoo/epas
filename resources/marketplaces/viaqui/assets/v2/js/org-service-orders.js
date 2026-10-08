@@ -9,17 +9,22 @@
   var F = O.fmt, el = O.el;
   var $ = function (id) { return document.getElementById(id); };
   var PER = 20;
-  var TYPES = { featuring: 'Promovare', email: 'Email marketing', tracking: 'Ad tracking', campaign: 'Creare campanie' };
-  var STATUS = { draft: ['Draft', 'is-muted'], pending_payment: ['Așteaptă plata', 'is-wait'], processing: ['În procesare', 'is-wait'], active: ['Activ', 'is-ok'], completed: ['Finalizat', 'is-muted'], cancelled: ['Anulat', 'is-bad'], refunded: ['Rambursat', 'is-bad'] };
+  var TYPES = { featuring: VQ.t('Experience promotion'), location_featuring: VQ.t('Venue promotion'), email: VQ.t('Email marketing'), tracking: VQ.t('Ad tracking'), campaign: VQ.t('Campaign creation') };
+  var STATUS = { draft: [VQ.t('Draft'), 'is-muted'], pending_payment: [VQ.t('Awaiting payment'), 'is-wait'], processing: [VQ.t('Processing'), 'is-wait'], active: [VQ.t('Active'), 'is-ok'], completed: [VQ.t('Completed'), 'is-muted'], cancelled: [VQ.t('Cancelled'), 'is-bad'], refunded: [VQ.t('Refunded'), 'is-bad'] };
   var all = null, page = 1;
 
   function txt(v) { return F.flat(v).trim(); }
   /** What the order applies to: a location, an activity (viaqui.com has no events) or the whole account. */
-  function applies(o) { return o.scope === 'account' ? 'Tot contul' : txt(o.location_name) || txt(o.activity_name) || txt(o.event_name); }
+  function applies(o) { return o.scope === 'account' ? VQ.t('Whole account') : txt(o.location_name) || txt(o.activity_name) || txt(o.event_name); }
   function norm(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function day(v) { var d = F.dateOf(v); return d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
   function stamp(v) { var d = F.dateOf(v); return d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'; }
-  function money(v, cur) { var m = F.money(F.toNum(v)); return cur && !/lei|ron/i.test(cur) ? F.num(F.toNum(v)) + ' ' + cur : m; }
+  /** Money in the currency the order carries; the currency of the site (euro) when it carries none. */
+  function money(v, cur) {
+    cur = /^lei$/i.test(cur || '') ? 'RON' : cur;
+    if (typeof BileteOnlineUtils !== 'undefined' && BileteOnlineUtils.formatCurrency) return BileteOnlineUtils.formatCurrency(F.toNum(v), cur || true);
+    return cur ? F.num(F.toNum(v)) + ' ' + cur : '€' + F.num(F.toNum(v));
+  }
 
   function load() {
     var got = [];
@@ -39,10 +44,10 @@
     }, function (err) {
       if (err && err.status === 401) return;
       ['total', 'pending'].forEach(function (k) { $('sq-s-' + k).textContent = '—'; });
-      var body = $('sq-rows'), retry = el('button', { class: 'sq-pill', type: 'button', text: 'Reîncearcă' });
-      retry.addEventListener('click', function () { body.textContent = ''; body.appendChild(el('tr', null, el('td', { colspan: 7, class: 'sq-state', text: 'Se încarcă…' }))); load(); });
+      var body = $('sq-rows'), retry = el('button', { class: 'sq-pill', type: 'button', text: VQ.t('Try again') });
+      retry.addEventListener('click', function () { body.textContent = ''; body.appendChild(el('tr', null, el('td', { colspan: 7, class: 'sq-state', text: VQ.t('Loading…') }))); load(); });
       body.textContent = '';
-      body.appendChild(el('tr', null, el('td', { colspan: 7, class: 'sq-state' }, ['Nu am putut încărca comenzile. ', retry])));
+      body.appendChild(el('tr', null, el('td', { colspan: 7, class: 'sq-state' }, [VQ.t('We could not load the orders.') + ' ', retry])));
       $('sq-info').textContent = '';
     });
   }
@@ -58,12 +63,12 @@
     if (page > pages) page = pages;
     var from = (page - 1) * PER, rows = list.slice(from, from + PER);
     body.textContent = '';
-    if (!rows.length) body.appendChild(el('tr', null, el('td', { colspan: 7, class: 'sq-state', text: all.length ? 'Nicio comandă nu se potrivește filtrelor.' : 'Nu există comenzi' })));
+    if (!rows.length) body.appendChild(el('tr', null, el('td', { colspan: 7, class: 'sq-state', text: all.length ? VQ.t('No order matches the filters.') : VQ.t('There are no orders') })));
     rows.forEach(function (o) {
       var id = txt(o.id), st = STATUS[o.status] || [txt(o.status_label) || txt(o.status) || '—', 'is-muted'], paid = o.payment_status === 'paid';
-      var start = day(o.service_start_date), end = day(o.service_end_date), href = /^[\w-]+$/.test(id) ? '/organizator/services/' + id : null;
+      var start = day(o.service_start_date), end = day(o.service_end_date), href = /^[\w-]+$/.test(id) ? VQ.url('/organizator/services/' + id) : null;
       body.appendChild(el('tr', null, [
-        el('td', null, el('div', { class: 'sq-num' }, [href ? el('a', { href: href, text: txt(o.order_number) || 'Comandă' }) : el('b', { text: txt(o.order_number) || 'Comandă' }), el('small', { class: paid ? 'is-paid' : '', text: paid ? 'Plătit' : 'Neplătit' })])),
+        el('td', null, el('div', { class: 'sq-num' }, [href ? el('a', { href: href, text: txt(o.order_number) || VQ.t('Order') }) : el('b', { text: txt(o.order_number) || VQ.t('Order') }), el('small', { class: paid ? 'is-paid' : '', text: paid ? VQ.t('Paid') : VQ.t('Unpaid') })])),
         el('td', null, el('span', { class: 'org-tag', text: TYPES[o.type] || txt(o.type_label) || txt(o.type) || '—' })),
         el('td', { text: applies(o) || '—' }),
         el('td', { class: 'sq-muted', text: start && end ? start + ' - ' + end : '—' }),
@@ -72,7 +77,7 @@
         el('td', { class: 'sq-right sq-muted', text: stamp(o.created_at) }),
       ]));
     });
-    $('sq-info').textContent = list.length ? 'Afișare ' + (from + 1) + '-' + Math.min(from + PER, list.length) + ' din ' + F.count(list.length, 'comandă', 'comenzi') : 'Nu există comenzi';
+    $('sq-info').textContent = list.length ? VQ.t('Showing {from}-{to} of {total}', { from: from + 1, to: Math.min(from + PER, list.length), total: VQ.n(list.length, 'order', 'orders') }) : VQ.t('There are no orders');
     $('sq-prev').disabled = page <= 1;
     $('sq-next').disabled = page >= pages;
   }
@@ -88,7 +93,7 @@
     O.api('/organizer/services/stats', { quiet: true }).then(function (r) {
       var d = (r && r.data) || {};
       $('sq-s-active').textContent = F.num(F.toNum(d.active_count));
-      $('sq-s-spent').textContent = F.money(F.toNum(d.total_spent));
+      $('sq-s-spent').textContent = money(d.total_spent, txt(d.currency));
     }, function () { $('sq-s-active').textContent = '—'; $('sq-s-spent').textContent = '—'; });
   });
 })();
