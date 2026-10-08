@@ -105,13 +105,13 @@ function part_summary(bool $withCoupon = true): string {
                 <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12l-8 8-9-9V4h7l10 8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
                 Ai un cod de reducere?
             </button>
-            <form x-show="couponOpen" x-cloak @submit.prevent="applyCoupon()">
+            <div x-show="couponOpen" x-cloak>
                 <div class="coupon__row">
-                    <input type="text" x-model="couponInput" aria-label="Cod de reducere" placeholder="COD" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="50">
-                    <button type="submit" class="btn btn--sm" :disabled="couponBusy" x-text="couponBusy ? 'Verific…' : 'Aplică'">Aplică</button>
+                    <input type="text" x-model="couponInput" @keydown.enter.prevent="applyCoupon()" aria-label="Cod de reducere" placeholder="COD" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="50">
+                    <button type="button" class="btn btn--sm" @click="applyCoupon()" :disabled="couponBusy" x-text="couponBusy ? 'Verific…' : 'Aplică'">Aplică</button>
                 </div>
                 <p class="coupon__msg is-bad" x-show="couponError" x-text="couponError" role="alert"></p>
-            </form>
+            </div>
         </div>
     </template>
 </div>
