@@ -38,7 +38,7 @@
       var hint = $('ve-k-sold-hint'), visitors = s.visitors_today == null ? null : F.toNum(s.visitors_today);
       if (hint) {
         var different = visitors != null && visitors !== F.toNum(s.sold_today);
-        hint.textContent = different ? num(visitors) + ' bilete scanabile' : '';
+        hint.textContent = different ? VQ.t('{n} scannable tickets', { n: num(visitors) }) : '';
         hint.hidden = !different;
       }
       drawStream(Array.isArray(d.stream) ? d.stream : []);
@@ -48,7 +48,7 @@
     var box = $('ve-stream');
     box.textContent = '';
     if (!list.length) {
-      box.appendChild(el('li', { class: 've-state', text: 'Nicio activitate în ultima oră.' }));
+      box.appendChild(el('li', { class: 've-state', text: VQ.t('No activity in the last hour.') }));
       return;
     }
     var ICON = { sale: ['coins', ''], scan: ['check-circle', 'is-scan'], staff_scan: ['users-three', 'is-staff'] };
@@ -69,11 +69,11 @@
     return O.api('/organizer/events/' + eventId + '/leisure/cashier/current', { quiet: true }).then(function (r) {
       var s = (r && r.data && r.data.session) || null, box = $('ve-cash');
       box.classList.toggle('is-open', !!s);
-      $('ve-cash-label').textContent = s ? 'Casa este deschisă' : 'Casa este închisă';
-      $('ve-cash-since').textContent = s ? 'de la ' + hhmm(s.opened_at) + (txt(s.opened_label) ? ' · ' + txt(s.opened_label) : '') : 'Deschide casa din POS ca să poți vinde.';
+      $('ve-cash-label').textContent = s ? VQ.t('The register is open') : VQ.t('The register is closed');
+      $('ve-cash-since').textContent = s ? VQ.t('since {time}', { time: hhmm(s.opened_at) }) + (txt(s.opened_label) ? ' · ' + txt(s.opened_label) : '') : VQ.t('Open the register from the point of sale to start selling.');
       $('ve-cash-cta').textContent = '';
       $('ve-cash-cta').appendChild(O.icon(s ? 'door-open' : 'scan'));
-      $('ve-cash-cta').appendChild(document.createTextNode(s ? 'Gestionează casa' : 'Deschide casa'));
+      $('ve-cash-cta').appendChild(document.createTextNode(s ? VQ.t('Manage the register') : VQ.t('Open the register')));
       show('ve-cash-nums', !!s);
       if (s) {
         var live = s.live || {};
@@ -101,12 +101,12 @@
       var d = (r && r.data) || {}, forecast = d.forecast, days = forecast && Array.isArray(forecast.days) ? forecast.days : [];
       if (!days.length) { show('ve-weather', false); return; }
       var venue = d.venue || {};
-      $('ve-weather-venue').textContent = [txt(venue.name) || 'Locație', txt(venue.city)].filter(Boolean).join(' · ');
+      $('ve-weather-venue').textContent = [txt(venue.name) || VQ.t('Venue'), txt(venue.city)].filter(Boolean).join(' · ');
       var box = $('ve-weather-days');
       box.textContent = '';
-      var names = ['dum', 'lun', 'mar', 'mie', 'joi', 'vin', 'sâm'];
+      var loc = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
       days.forEach(function (day, i) {
-        var date = F.dateOf(day.date), label = i === 0 ? 'Azi' : i === 1 ? 'Mâine' : (date ? names[date.getDay()] : '');
+        var date = F.dateOf(day.date), label = i === 0 ? VQ.t('Today') : i === 1 ? VQ.t('Tomorrow') : (date ? date.toLocaleDateString(loc, { weekday: 'short' }) : '');
         var card = el('li', { class: 've-day' }, [
           el('span', { class: 've-day-k', text: label }),
           el('span', { class: 've-day-d', text: date ? F.date(date, { day: '2-digit', month: '2-digit' }) : txt(day.date) }),
@@ -128,9 +128,9 @@
   function loadCompare() {
     return O.api('/organizer/events/' + eventId + '/leisure/dashboard/compare', { quiet: true }).then(function (r) {
       var d = (r && r.data) || {}, snaps = d.snapshots || {}, body = $('ve-compare-body');
-      var metrics = [['revenue', 'Încasări', lei], ['orders', 'Comenzi', num], ['tickets_sold', 'Bilete vândute', num], ['checkins', 'Check-in-uri', num]];
+      var metrics = [['revenue', VQ.t('Revenue'), lei], ['orders', VQ.t('Orders'), num], ['tickets_sold', VQ.t('Tickets sold'), num], ['checkins', VQ.t('Check-ins'), num]];
       var cols = ['yesterday', 'last_week', 'last_month', 'last_year'];
-      if (d.cutoff_time) $('ve-compare-sub').textContent = 'Comparație corectă: fiecare zi e numărată până la ora ' + txt(d.cutoff_time) + ', aceeași oră ca azi.';
+      if (d.cutoff_time) $('ve-compare-sub').textContent = VQ.t('A fair comparison: each day is counted up to {time}, the same time as today.', { time: txt(d.cutoff_time) });
       body.textContent = '';
       metrics.forEach(function (m) {
         var today = (snaps.today || {})[m[0]];
@@ -156,7 +156,7 @@
     }, function () {
       var body = $('ve-compare-body');
       body.textContent = '';
-      body.appendChild(el('tr', null, el('td', { colspan: 6, class: 've-state', text: 'Nu am putut încărca comparația.' })));
+      body.appendChild(el('tr', null, el('td', { colspan: 6, class: 've-state', text: VQ.t('We could not load the comparison.') })));
     });
   }
 
@@ -182,7 +182,7 @@
     var vis = rows.map(function (x) { return x.visitors != null ? F.toNum(x.visitors) : F.toNum(x.tickets); });
     var maxRev = Math.max.apply(null, revs.concat([1])), maxVis = Math.max.apply(null, vis.concat([1]));
     var n = rows.length, step = iw / Math.max(1, n);
-    var node = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Încasări și vizitatori pe zi, ultimele 30 de zile' });
+    var node = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': VQ.t('Revenue and visitors per day, last 30 days') });
 
     [0, 0.5, 1].forEach(function (t) {
       var y = padT + ih * t;
@@ -242,7 +242,7 @@
     var slug = txt(venue.slug);
     var link = $('ve-public');
     if (slug) {
-      link.href = O.safeHref('/activitate/' + slug, '/');
+      link.href = O.safeHref(VQ.url('/activity/' + slug), '/');
       link.hidden = false;
     } else link.hidden = true;
     stop();
@@ -271,7 +271,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       show('ve-main', true);
       pick(venues[0]);

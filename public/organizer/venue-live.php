@@ -18,8 +18,8 @@ require_once __DIR__ . '/../includes/nav-helpers.php';
 require_once __DIR__ . '/../includes/v2/helpers.php';
 require_once __DIR__ . '/../includes/v2/organizer.php';
 
-$pageTitleRaw = 'Dashboard live — Locație — ' . SITE_NAME;
-$pageDescription = 'Ce se întâmplă acum în locație: bilete, check-in-uri, încasări, casa deschisă și activitatea recentă.';
+$pageTitleRaw = v2_t('Venue live dashboard: {site}', ['site' => SITE_NAME]);
+$pageDescription = v2_t('What is happening at the venue right now: tickets, check-ins, revenue, the open register and recent activity.');
 $canonicalUrl = SITE_URL . '/organizator/locatie/live';
 $noindex = true;
 $skipPageCache = true;
@@ -40,88 +40,88 @@ v2_org_start('venue-live');
 <div class="ve" id="ve">
   <header class="ve-head">
     <div>
-      <p class="ve-eyebrow"><span class="ve-live"><span></span></span>Live · se actualizează la 20 de secunde</p>
-      <h1 class="ve-h" id="ve-title">Dashboard live</h1>
-      <p class="ve-lead">Ce se întâmplă acum în locație. Ultima actualizare: <span id="ve-refresh">—</span>.</p>
+      <p class="ve-eyebrow"><span class="ve-live"><span></span></span><?= v2_te('Live · refreshes every 20 seconds') ?></p>
+      <h1 class="ve-h" id="ve-title"><?= v2_te('Live dashboard') ?></h1>
+      <p class="ve-lead"><?= v2_t('What is happening at the venue right now. Last updated: {time}.', ['time' => '<span id="ve-refresh">—</span>']) ?></p>
     </div>
     <div class="ve-head-tools">
-      <span class="po-field"><label for="ve-event">Locația</label><span class="po-select"><select id="ve-event" disabled><option>Se încarcă…</option></select><?= v2_ic('caret-down') ?></span></span>
+      <span class="po-field"><label for="ve-event"><?= v2_te('Venue') ?></label><span class="po-select"><select id="ve-event" disabled><option><?= v2_te('Loading…') ?></option></select><?= v2_ic('caret-down') ?></span></span>
       <div class="ve-head-btns">
-        <a class="btn btn-primary" href="/organizator/pos"><?= v2_ic('scan') ?>Emite bilete</a>
-        <a class="btn btn-ghost" id="ve-public" href="/" hidden><?= v2_ic('arrow-up-right') ?>Pagina publică</a>
+        <a class="btn btn-primary" href="/organizator/pos"><?= v2_ic('scan') ?><?= v2_te('Issue tickets') ?></a>
+        <a class="btn btn-ghost" id="ve-public" href="/" hidden><?= v2_ic('arrow-up-right') ?><?= v2_te('Public page') ?></a>
       </div>
     </div>
   </header>
 
   <div class="org-empty" id="ve-none" hidden>
     <span class="org-empty-ic"><?= v2_ic('door-open') ?></span>
-    <b>Nicio locație pregătită</b>
-    <p>Paginile de locație funcționează pe o activitate configurată ca locație de agrement. Scrie-ne și îți pregătim locația.</p>
-    <a class="btn btn-primary" href="/organizator/suport">Cere activarea<?= v2_ic('arrow-right') ?></a>
+    <b><?= v2_te('No venue set up yet') ?></b>
+    <p><?= v2_te('Venue pages work on an experience set up as a venue. Write to us and we will set yours up.') ?></p>
+    <a class="btn btn-primary" href="/organizator/suport"><?= v2_te('Ask for activation') ?><?= v2_ic('arrow-right') ?></a>
   </div>
 
   <div class="org-empty is-error" id="ve-failed" hidden>
     <span class="org-empty-ic"><?= v2_ic('warning-circle') ?></span>
-    <b>Nu am putut încărca dashboardul</b>
-    <p>Reîncearcă în câteva secunde.</p>
-    <button class="btn btn-primary" type="button" id="ve-retry">Reîncearcă</button>
+    <b><?= v2_te('We could not load the dashboard') ?></b>
+    <p><?= v2_te('Try again in a few seconds.') ?></p>
+    <button class="btn btn-primary" type="button" id="ve-retry"><?= v2_te('Try again') ?></button>
   </div>
 
   <div class="ve-main" id="ve-main" hidden>
     <!-- ===== register ===== -->
     <section class="ve-cash" id="ve-cash" aria-labelledby="ve-cash-h">
-      <h2 class="ve-sr" id="ve-cash-h">Casa</h2>
+      <h2 class="ve-sr" id="ve-cash-h"><?= v2_te('Register') ?></h2>
       <div class="ve-cash-top">
-        <p class="ve-cash-state"><span class="ve-dot" id="ve-cash-dot"></span><b id="ve-cash-label">Se verifică…</b><small id="ve-cash-since"></small></p>
-        <a class="btn btn-ghost" href="/organizator/pos" id="ve-cash-cta"><?= v2_ic('door-open') ?>Gestionează casa</a>
+        <p class="ve-cash-state"><span class="ve-dot" id="ve-cash-dot"></span><b id="ve-cash-label"><?= v2_te('Checking…') ?></b><small id="ve-cash-since"></small></p>
+        <a class="btn btn-ghost" href="/organizator/pos" id="ve-cash-cta"><?= v2_ic('door-open') ?><?= v2_te('Manage the register') ?></a>
       </div>
       <div class="ve-cash-nums" id="ve-cash-nums" hidden>
-        <div class="is-warm"><p>Cash de predat</p><b id="ve-cash-cash">—</b></div>
-        <div class="is-info"><p>Card încasat</p><b id="ve-cash-card">—</b></div>
-        <div class="is-mint"><p>Total în casă</p><b id="ve-cash-total">—</b></div>
-        <div><p>Comenzi în sesiune</p><b id="ve-cash-orders">—</b></div>
+        <div class="is-warm"><p><?= v2_te('Cash to hand over') ?></p><b id="ve-cash-cash">—</b></div>
+        <div class="is-info"><p><?= v2_te('Card payments') ?></p><b id="ve-cash-card">—</b></div>
+        <div class="is-mint"><p><?= v2_te('Total in the register') ?></p><b id="ve-cash-total">—</b></div>
+        <div><p><?= v2_te('Orders this session') ?></p><b id="ve-cash-orders">—</b></div>
       </div>
-      <p class="ve-note">Doar vânzările din locație. Cele online nu intră în casă.</p>
+      <p class="ve-note"><?= v2_te('On-site sales only. Online sales do not go through the register.') ?></p>
     </section>
 
     <!-- ===== live figures ===== -->
-    <section class="ve-kpis" aria-label="Cifrele de azi">
-      <?= $veKpi('sold', 'ticket', 'Bilete vândute azi', 'hint') ?>
-      <?= $veKpi('scanned', 'check-circle', 'Check-in-uri azi') ?>
-      <?= $veKpi('revenue', 'coins', 'Încasări azi') ?>
-      <?= $veKpi('orders', 'receipt', 'Comenzi azi') ?>
-      <?= $veKpi('occupancy', 'users-three', 'Oameni intrați') ?>
+    <section class="ve-kpis" aria-label="<?= v2_te('Today\'s figures') ?>">
+      <?= $veKpi('sold', 'ticket', v2_te('Tickets sold today'), 'hint') ?>
+      <?= $veKpi('scanned', 'check-circle', v2_te('Check-ins today')) ?>
+      <?= $veKpi('revenue', 'coins', v2_te('Revenue today')) ?>
+      <?= $veKpi('orders', 'receipt', v2_te('Orders today')) ?>
+      <?= $veKpi('occupancy', 'users-three', v2_te('People inside')) ?>
     </section>
 
     <div class="ve-grid">
       <!-- ===== sales over thirty days ===== -->
       <section class="org-panel ve-chart-panel" aria-labelledby="ve-chart-h">
         <div class="org-panel-head">
-          <div><h2 class="org-panel-h" id="ve-chart-h">Vânzări, ultimele 30 de zile</h2><p class="org-panel-p">Încasări pe zi și câți oameni au intrat.</p></div>
-          <p class="ve-legend"><span class="ve-lg is-rev">Încasări</span><span class="ve-lg is-vis">Vizitatori</span></p>
+          <div><h2 class="org-panel-h" id="ve-chart-h"><?= v2_te('Sales, last 30 days') ?></h2><p class="org-panel-p"><?= v2_te('Revenue per day and how many people came in.') ?></p></div>
+          <p class="ve-legend"><span class="ve-lg is-rev"><?= v2_te('Revenue') ?></span><span class="ve-lg is-vis"><?= v2_te('Visitors') ?></span></p>
         </div>
         <div class="ve-chart" id="ve-chart"><span class="org-skel ve-chart-skel"></span></div>
-        <p class="ve-empty" id="ve-chart-empty" hidden>Nicio vânzare în ultimele 30 de zile.</p>
+        <p class="ve-empty" id="ve-chart-empty" hidden><?= v2_te('No sales in the last 30 days.') ?></p>
       </section>
 
       <!-- ===== people ===== -->
       <section class="org-panel ve-people" aria-labelledby="ve-people-h">
-        <h2 class="org-panel-h" id="ve-people-h">Participanți</h2>
+        <h2 class="org-panel-h" id="ve-people-h"><?= v2_te('Participants') ?></h2>
         <p class="ve-big" id="ve-part-total">—</p>
-        <p class="ve-note">Bilete de acces. Pachetele se numără pe componente, fără parcare și activități.</p>
+        <p class="ve-note"><?= v2_te('Access tickets. Packages are counted by their parts, without parking and activities.') ?></p>
         <div class="ve-people-two">
-          <div><b id="ve-part-checked">—</b><p>au intrat</p></div>
-          <div><b id="ve-part-rate">—</b><p>rată de intrare</p></div>
+          <div><b id="ve-part-checked">—</b><p><?= v2_te('checked in') ?></p></div>
+          <div><b id="ve-part-rate">—</b><p><?= v2_te('check-in rate') ?></p></div>
         </div>
-        <a class="btn btn-ghost" href="/organizator/participanti"><?= v2_ic('users-three') ?>Vezi participanții</a>
+        <a class="btn btn-ghost" href="/organizator/participanti"><?= v2_ic('users-three') ?><?= v2_te('See participants') ?></a>
       </section>
     </div>
 
     <!-- ===== weather ===== -->
     <section class="org-panel ve-weather" id="ve-weather" hidden aria-labelledby="ve-weather-h">
       <div class="org-panel-head">
-        <div><h2 class="org-panel-h" id="ve-weather-h">Vremea, 7 zile</h2><p class="org-panel-p" id="ve-weather-venue">—</p></div>
-        <p class="ve-note">Sursa: Open-Meteo</p>
+        <div><h2 class="org-panel-h" id="ve-weather-h"><?= v2_te('Weather, 7 days') ?></h2><p class="org-panel-p" id="ve-weather-venue">—</p></div>
+        <p class="ve-note"><?= v2_te('Source: Open-Meteo') ?></p>
       </div>
       <ul class="ve-days" id="ve-weather-days"></ul>
     </section>
@@ -129,20 +129,20 @@ v2_org_start('venue-live');
     <!-- ===== comparison ===== -->
     <section class="org-panel ve-compare" aria-labelledby="ve-compare-h">
       <div class="org-panel-head">
-        <div><h2 class="org-panel-h" id="ve-compare-h">Azi față de perioadele anterioare</h2><p class="org-panel-p" id="ve-compare-sub">Comparație corectă: fiecare zi e numărată până la aceeași oră ca azi.</p></div>
+        <div><h2 class="org-panel-h" id="ve-compare-h"><?= v2_te('Today against earlier periods') ?></h2><p class="org-panel-p" id="ve-compare-sub"><?= v2_te('A fair comparison: each day is counted up to the same time as today.') ?></p></div>
       </div>
       <div class="ve-table-wrap"><table class="ve-table">
-        <thead><tr><th scope="col">Metrică</th><th scope="col" class="ve-right">Azi</th><th scope="col" class="ve-right">Ieri</th><th scope="col" class="ve-right">Săpt. trecută</th><th scope="col" class="ve-right">Luna trecută</th><th scope="col" class="ve-right">Anul trecut</th></tr></thead>
-        <tbody id="ve-compare-body"><tr><td colspan="6" class="ve-state">Se încarcă…</td></tr></tbody>
+        <thead><tr><th scope="col"><?= v2_te('Metric') ?></th><th scope="col" class="ve-right"><?= v2_te('Today') ?></th><th scope="col" class="ve-right"><?= v2_te('Yesterday') ?></th><th scope="col" class="ve-right"><?= v2_te('Last week') ?></th><th scope="col" class="ve-right"><?= v2_te('Last month') ?></th><th scope="col" class="ve-right"><?= v2_te('Last year') ?></th></tr></thead>
+        <tbody id="ve-compare-body"><tr><td colspan="6" class="ve-state"><?= v2_te('Loading…') ?></td></tr></tbody>
       </table></div>
     </section>
 
     <!-- ===== stream ===== -->
     <section class="org-panel ve-stream-panel" aria-labelledby="ve-stream-h">
       <div class="org-panel-head">
-        <div><h2 class="org-panel-h" id="ve-stream-h">Activitate recentă</h2><p class="org-panel-p">Vânzări și scanări din ultima oră.</p></div>
+        <div><h2 class="org-panel-h" id="ve-stream-h"><?= v2_te('Recent activity') ?></h2><p class="org-panel-p"><?= v2_te('Sales and scans from the last hour.') ?></p></div>
       </div>
-      <ul class="ve-stream" id="ve-stream"><li class="ve-state">Se încarcă…</li></ul>
+      <ul class="ve-stream" id="ve-stream"><li class="ve-state"><?= v2_te('Loading…') ?></li></ul>
     </section>
   </div>
 </div>

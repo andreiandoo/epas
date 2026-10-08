@@ -8,12 +8,14 @@
   if (!O || !root) return;
   var F = O.fmt, el = O.el, icon = O.icon, SVGNS = 'http://www.w3.org/2000/svg';
   var $ = function (id) { return document.getElementById(id); };
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var SITE = document.title.lastIndexOf(' · ') > -1 ? document.title.slice(document.title.lastIndexOf(' · ')) : ''; // " · Viaqui", as head.php wrote it
   var ID = /^\d+$/.test(root.getAttribute('data-event') || '') ? root.getAttribute('data-event') : '';
   var COLORS = ['#1B7F4E', '#F2A900', '#2D6CCD', '#E4572E', '#7A5AC8', '#0E8C8C', '#8E958F', '#C2185B'];
-  var SOURCES = { Direct: 'Direct', Organic: 'Alte site-uri și căutări', Facebook: 'Facebook', Google: 'Google', Instagram: 'Instagram', TikTok: 'TikTok', Email: 'Email' };
-  var ORDER_STATUS = { refunded: ['Rambursată', 'is-info'], partially_refunded: ['Parțial rambursată', 'is-wait'] };
+  var SOURCES = { Direct: VQ.t('Direct'), Organic: VQ.t('Other sites and searches'), Facebook: 'Facebook', Google: 'Google', Instagram: 'Instagram', TikTok: 'TikTok', Email: VQ.t('Email') };
+  var ORDER_STATUS = { refunded: [VQ.t('Refunded'), 'is-info'], partially_refunded: [VQ.t('Partly refunded'), 'is-wait'] };
   var data = null, chart = null, active = -1, parts = null, geo = null, redrawTimer = 0;
-  try { geo = new Intl.DisplayNames(['ro'], { type: 'region' }); } catch (e) { geo = null; }
+  try { geo = new Intl.DisplayNames([LOC], { type: 'region' }); } catch (e) { geo = null; }
 
   /* =================== HELPERS =================== */
   function num(v) { return F.toNum(v); }
@@ -33,8 +35,8 @@
     box.textContent = '';
     box.appendChild(el('p', { class: 'or-empty-p' }, [text, link ? ' ' : null, link || null]));
   }
-  function slug(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'activitate'; }
-  var compact = new Intl.NumberFormat('ro-RO', { notation: 'compact', maximumFractionDigits: 1 });
+  function slug(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'activity'; }
+  var compact = new Intl.NumberFormat(LOC, { notation: 'compact', maximumFractionDigits: 1 });
   function niceNum(x) {
     if (!(x > 0)) return 1;
     var e = Math.pow(10, Math.floor(Math.log10(x))), f = x / e;
@@ -44,10 +46,10 @@
   /* =================== LOAD =================== */
   function start() {
     if (!ID) {
-      showNone('Alege o activitate', 'Raportul se deschide pentru o activitate anume, din lista activităților tale.');
+      showNone(VQ.t('Choose an activity'), VQ.t('The report opens for one activity at a time, from the list of your activities.'));
       return;
     }
-    $('or-all-sales').href = '/organizator/vanzari?event=' + ID;
+    $('or-all-sales').href = VQ.url('/organizator/vanzari?event=' + ID);
     O.api('/organizer/events/' + ID + '/analytics?period=all').then(function (r) {
       data = (r && r.data) || {};
       if (!data.event && r && r.event) data.event = r.event;
@@ -60,16 +62,16 @@
       renderFinance();
       $('or-print').disabled = false;
       $('or-pdf').disabled = false;
-      $('or-generated').textContent = 'Raport generat la ' + stamp(new Date().toISOString()) + '.';
+      $('or-generated').textContent = VQ.t('Report generated on {date}.', { date: stamp(new Date().toISOString()) });
     }).catch(function (err) {
       if (err && err.status === 401) return;
-      if (err && err.status === 404) { showNone('Activitatea nu a fost găsită', 'Poate a fost ștearsă sau nu este în contul tău.'); return; }
-      showNone('Nu am putut încărca raportul', 'Verifică conexiunea și încearcă din nou.', true);
+      if (err && err.status === 404) { showNone(VQ.t('The activity was not found'), VQ.t('It may have been deleted or is not in your account.')); return; }
+      showNone(VQ.t('We could not load the report'), VQ.t('Check your connection and try again.'), true);
     });
-    O.api('/organizer/events/' + ID + '/goals', { quiet: true }).then(renderGoals, function () { empty($('or-goals'), 'Nu am putut încărca obiectivele.'); });
-    O.api('/organizer/events/' + ID + '/milestones', { quiet: true }).then(renderCampaigns, function () { empty($('or-camps'), 'Nu am putut încărca campaniile.'); });
+    O.api('/organizer/events/' + ID + '/goals', { quiet: true }).then(renderGoals, function () { empty($('or-goals'), VQ.t('We could not load the goals.')); });
+    O.api('/organizer/events/' + ID + '/milestones', { quiet: true }).then(renderCampaigns, function () { empty($('or-camps'), VQ.t('We could not load the campaigns.')); });
     loadRefunds();
-    O.api('/organizer/orders?event_id=' + ID + '&status=completed&per_page=5&sort_by=created_at&sort_dir=desc', { quiet: true }).then(renderOrders, function () { empty($('or-orders'), 'Nu am putut încărca ultimele comenzi.'); });
+    O.api('/organizer/orders?event_id=' + ID + '&status=completed&per_page=5&sort_by=created_at&sort_dir=desc', { quiet: true }).then(renderOrders, function () { empty($('or-orders'), VQ.t('We could not load the latest orders.')); });
   }
   function showNone(title, text, retry) {
     $('or-body').hidden = true;
@@ -79,7 +81,7 @@
     box.appendChild(el('span', { class: 'org-empty-ic' }, icon(retry ? 'warning-circle' : 'file-text')));
     box.appendChild(el('b', { text: title }));
     box.appendChild(el('p', { text: text }));
-    var cta = retry ? el('button', { class: 'btn btn-primary', type: 'button', text: 'Reîncearcă' }) : el('a', { class: 'btn btn-primary', href: '/organizator/activities', text: 'Vezi activitățile' });
+    var cta = retry ? el('button', { class: 'btn btn-primary', type: 'button', text: VQ.t('Try again') }) : el('a', { class: 'btn btn-primary', href: VQ.url('/organizator/activities'), text: VQ.t('See the activities') });
     if (retry) cta.addEventListener('click', function () { location.reload(); });
     box.appendChild(el('div', { class: 'or-empty-cta' }, cta));
     box.hidden = false;
@@ -87,27 +89,27 @@
 
   /* =================== HEAD + FIGURES =================== */
   function renderHead() {
-    var e = data.event || {}, title = F.flat(e.title) || 'Activitatea #' + ID;
+    var e = data.event || {}, title = F.flat(e.title) || VQ.t('Activity #{id}', { id: ID });
     $('or-title').textContent = title;
-    document.title = 'Raport: ' + title + ' — viaqui.com';
+    document.title = VQ.t('Report: {title}', { title: title }) + SITE;
     var info = $('or-info'), day = naiveDay(e.starts_at || e.date), time = naiveTime(e.starts_at || e.date), bits = [];
     info.textContent = '';
     if (day) bits.push(dayLabel(day, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) + (time ? ', ' + time : ''));
     [F.flat(e.venue), F.flat(e.venue_city)].forEach(function (v) { if (v) bits.push(v); });
     if (bits.length) info.appendChild(el('span', { text: bits.join(' · ') }));
     var du = e.days_until != null ? num(e.days_until) : null;
-    if (e.is_cancelled) info.appendChild(el('span', { class: 'org-tag is-bad', text: 'Anulată' }));
-    else if (du !== null) info.appendChild(el('span', { class: 'org-tag ' + (du < 0 ? 'is-muted' : 'is-ok'), text: du < 0 ? 'Încheiată' : du === 0 ? 'Azi' : du === 1 ? 'Mâine' : 'Peste ' + F.count(du, 'zi', 'zile') }));
-    if (e.is_sold_out) info.appendChild(el('span', { class: 'org-tag is-wait', text: 'Sold out' }));
+    if (e.is_cancelled) info.appendChild(el('span', { class: 'org-tag is-bad', text: VQ.t('Cancelled') }));
+    else if (du !== null) info.appendChild(el('span', { class: 'org-tag ' + (du < 0 ? 'is-muted' : 'is-ok'), text: du < 0 ? VQ.t('Ended') : du === 0 ? VQ.t('Today') : du === 1 ? VQ.t('Tomorrow') : VQ.t('In {count}', { count: VQ.n(du, 'day', 'days') }) }));
+    if (e.is_sold_out) info.appendChild(el('span', { class: 'org-tag is-wait', text: VQ.t('Sold out') }));
   }
   function setStat(key, value, sub) { $('or-s-' + key).textContent = value; $('or-s-' + key + '-p').textContent = sub || ''; }
   function renderStats() {
     var o = data.overview || {}, sold = num(o.tickets_sold), capacity = num(o.capacity), views = num(o.page_views);
-    setStat('revenue', money(o.net_revenue != null ? o.net_revenue : o.total_revenue), 'Ce îți revine din bilete, după comision și reduceri.');
-    setStat('tickets', F.num(sold), [capacity > 0 ? 'din ' + F.count(capacity, 'loc', 'locuri') : '', num(o.tickets_today) > 0 ? F.num(o.tickets_today) + ' azi' : ''].filter(Boolean).join(' · ') || 'Online, la ușă și invitații.');
-    setStat('views', F.num(views), 'Vizualizări ale paginii activității.');
-    if (views > 0) setStat('conversion', F.pct(o.conversion_rate, 1), F.count(sold, 'bilet', 'bilete') + ' la ' + F.count(views, 'vizualizare', 'vizualizări') + '.');
-    else setStat('conversion', '—', 'Nu avem vizualizări măsurate.');
+    setStat('revenue', money(o.net_revenue != null ? o.net_revenue : o.total_revenue), VQ.t('What you get from tickets, after commission and discounts.'));
+    setStat('tickets', F.num(sold), [capacity > 0 ? VQ.t('of {count}', { count: VQ.n(capacity, 'place', 'places') }) : '', num(o.tickets_today) > 0 ? VQ.t('{n} today', { n: F.num(o.tickets_today) }) : ''].filter(Boolean).join(' · ') || VQ.t('Online, at the door and invitations.'));
+    setStat('views', F.num(views), VQ.t('Views of the activity page.'));
+    if (views > 0) setStat('conversion', F.pct(o.conversion_rate, 1), VQ.t('{tickets} per {views}.', { tickets: VQ.n(sold, 'ticket', 'tickets'), views: VQ.n(views, 'view', 'views') }));
+    else setStat('conversion', '—', VQ.t('No views measured.'));
   }
 
   /* =================== SALES CHART =================== */
@@ -132,9 +134,9 @@
     var revSum = chart.rev.reduce(function (s, v) { return s + v; }, 0), tixSum = chart.tix.reduce(function (s, v) { return s + v; }, 0);
     var saleDays = chart.tix.filter(Boolean).length, best = -1;
     chart.rev.forEach(function (v, i) { if (v > 0 && (best < 0 || v > chart.rev[best])) best = i; });
-    [['Venit net în grafic', money(revSum)], ['Bilete în grafic', F.num(tixSum)], ['Zile cu vânzări', F.num(saleDays)], ['Cea mai bună zi', best < 0 ? '—' : dayLabel(chart.dates[best], { day: 'numeric', month: 'short' }) + ' · ' + money(chart.rev[best])]]
+    [[VQ.t('Net revenue in the chart'), money(revSum)], [VQ.t('Tickets in the chart'), F.num(tixSum)], [VQ.t('Days with sales'), F.num(saleDays)], [VQ.t('Best day'), best < 0 ? '—' : dayLabel(chart.dates[best], { day: 'numeric', month: 'short' }) + ' · ' + money(chart.rev[best])]]
       .forEach(function (t) { box.appendChild(el('div', null, [el('dt', { text: t[0] }), el('dd', { text: t[1] })])); });
-    $('or-plot').setAttribute('aria-label', 'Grafic vânzări, ' + $('or-chart-p').textContent + ': venit net ' + money(revSum) + ', ' + F.count(tixSum, 'bilet vândut', 'bilete vândute') + '. Folosește săgețile pentru fiecare zi.');
+    $('or-plot').setAttribute('aria-label', VQ.t('Sales chart, {period}: net revenue {revenue}, {tickets}. Use the arrow keys to move through the days.', { period: $('or-chart-p').textContent, revenue: money(revSum), tickets: VQ.n(tixSum, 'ticket sold', 'tickets sold') }));
   }
   function drawChart() {
     var plot = $('or-plot'), old = plot.querySelector('svg');
@@ -198,12 +200,12 @@
     var title = cap(dayLabel(chart.dates[i], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })), tip = $('or-tip');
     tip.textContent = '';
     tip.appendChild(el('b', { text: title }));
-    tip.appendChild(el('dl', null, [el('dt', { text: 'Venit net' }), el('dd', { text: money(chart.rev[i]) }), el('dt', { text: 'Bilete' }), el('dd', { text: F.num(chart.tix[i]) })]));
+    tip.appendChild(el('dl', null, [el('dt', { text: VQ.t('Net revenue') }), el('dd', { text: money(chart.rev[i]) }), el('dt', { text: VQ.t('Tickets') }), el('dd', { text: F.num(chart.tix[i]) })]));
     tip.hidden = false;
     var cx = parts.pts[i][0], tw = tip.offsetWidth, left = cx + 16;
     if (left + tw > parts.W - 2) left = cx - 16 - tw;
     tip.style.left = Math.max(0, Math.min(left, parts.W - tw)) + 'px';
-    if (announce) $('or-plot-live').textContent = title + ': venit net ' + money(chart.rev[i]) + ', ' + F.count(chart.tix[i], 'bilet', 'bilete') + '.';
+    if (announce) $('or-plot-live').textContent = VQ.t('{day}: net revenue {revenue}, {tickets}', { day: title, revenue: money(chart.rev[i]), tickets: VQ.n(chart.tix[i], 'ticket', 'tickets') }) + '.';
   }
   function hide() {
     active = -1;
@@ -251,12 +253,12 @@
     body.textContent = '';
     foot.textContent = '';
     renderDonut(list);
-    if (!list.length) { body.appendChild(el('tr', null, el('td', { colspan: '5', class: 'or-empty-p', text: 'Activitatea nu are tipuri de bilete.' }))); return; }
+    if (!list.length) { body.appendChild(el('tr', null, el('td', { colspan: '5', class: 'or-empty-p', text: VQ.t('The activity has no ticket types.') }))); return; }
     var totalRev = list.reduce(function (s, t) { return s + num(t.revenue); }, 0), totalSold = 0;
     list.forEach(function (t, i) {
       var rev = num(t.revenue), pct = totalRev > 0 ? rev / totalRev * 100 : 0, color = COLORS[i % COLORS.length], capq = num(t.capacity);
       totalSold += num(t.sold);
-      var type = el('div', { class: 'or-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || 'Bilet', t.is_invitation ? el('small', { text: 'titlu gratuit (invitație)' }) : t.is_entry_ticket ? el('small', { text: 'încasat de operator' }) : null])]);
+      var type = el('div', { class: 'or-type' }, [el('i', { 'aria-hidden': 'true' }), el('b', null, [F.flat(t.name) || VQ.t('Ticket'), t.is_invitation ? el('small', { text: VQ.t('free of charge (invitation)') }) : t.is_entry_ticket ? el('small', { text: VQ.t('collected by the operator') }) : null])]);
       type.querySelector('i').style.setProperty('--c', color);
       var share = el('div', { class: 'or-share' }, [el('span', { 'aria-hidden': 'true' }, el('i')), el('b', { text: F.pct(pct, 0) })]);
       share.querySelector('i').style.width = pct.toFixed(2) + '%';
@@ -264,50 +266,52 @@
       body.appendChild(el('tr', null, [
         el('td', null, type),
         el('td', { class: 'is-num', text: money(t.price) }),
-        el('td', { class: 'is-num' }, [F.num(t.sold), capq > 0 ? el('span', { class: 'or-sub', text: 'din ' + F.num(capq) }) : null]),
+        el('td', { class: 'is-num' }, [F.num(t.sold), capq > 0 ? el('span', { class: 'or-sub', text: VQ.t('of {n}', { n: F.num(capq) }) }) : null]),
         el('td', { class: 'is-num', text: money(rev) }),
         el('td', { class: 'is-share' }, share),
       ]));
     });
-    foot.appendChild(el('tr', null, [el('td', { text: 'Total' }), el('td'), el('td', { class: 'is-num', text: F.num(totalSold) }), el('td', { class: 'is-num', text: money(totalRev) }), el('td', { class: 'is-share' })]));
+    foot.appendChild(el('tr', null, [el('td', { text: VQ.t('Total') }), el('td'), el('td', { class: 'is-num', text: F.num(totalSold) }), el('td', { class: 'is-num', text: money(totalRev) }), el('td', { class: 'is-share' })]));
   }
   function renderDonut(list) {
     var box = $('or-donut'), legend = $('or-donut-legend'), sold = list.filter(function (t) { return num(t.sold) > 0; });
     box.textContent = '';
     legend.textContent = '';
     var total = sold.reduce(function (s, t) { return s + num(t.sold); }, 0);
-    if (!total) { box.appendChild(el('p', { class: 'or-empty-p', text: 'Niciun bilet vândut încă.' })); return; }
+    if (!total) { box.appendChild(el('p', { class: 'or-empty-p', text: VQ.t('No tickets sold yet.') })); return; }
     var R = 70, C = 2 * Math.PI * R, offset = 0;
-    var svg = svgNode('svg', { viewBox: '0 0 200 200', role: 'img', 'aria-label': 'Distribuția biletelor: ' + sold.map(function (t) { return F.flat(t.name) + ' ' + F.num(t.sold); }).join(', ') });
+    var svg = svgNode('svg', { viewBox: '0 0 200 200', role: 'img', 'aria-label': VQ.t('Ticket split: {list}', { list: sold.map(function (t) { return F.flat(t.name) + ' ' + F.num(t.sold); }).join(', ') }) });
     svg.appendChild(svgNode('circle', { cx: 100, cy: 100, r: R, fill: 'none', stroke: '#EFEFEB', 'stroke-width': 26 }));
     sold.forEach(function (t) {
       var idx = list.indexOf(t), share = num(t.sold) / total, len = C * share;
       svg.appendChild(svgNode('circle', { cx: 100, cy: 100, r: R, fill: 'none', stroke: COLORS[idx % COLORS.length], 'stroke-width': 26, 'stroke-dasharray': Math.max(0, len - (sold.length > 1 ? 1.5 : 0)).toFixed(2) + ' ' + C.toFixed(2), 'stroke-dashoffset': (-offset).toFixed(2), transform: 'rotate(-90 100 100)' }));
       offset += len;
-      var li = el('li', null, [el('i', { 'aria-hidden': 'true' }), el('span', { text: F.flat(t.name) || 'Bilet' }), el('b', null, [F.num(t.sold), el('small', { text: F.pct(share * 100, 0) })])]);
+      var li = el('li', null, [el('i', { 'aria-hidden': 'true' }), el('span', { text: F.flat(t.name) || VQ.t('Ticket') }), el('b', null, [F.num(t.sold), el('small', { text: F.pct(share * 100, 0) })])]);
       li.querySelector('i').style.setProperty('--c', COLORS[idx % COLORS.length]);
       legend.appendChild(li);
     });
     box.appendChild(svg);
-    box.appendChild(el('div', { class: 'or-donut-c', 'aria-hidden': 'true' }, [el('b', { text: F.num(total) }), el('span', { text: total === 1 ? 'bilet' : 'bilete' })]));
+    box.appendChild(el('div', { class: 'or-donut-c', 'aria-hidden': 'true' }, [el('b', { text: F.num(total) }), el('span', { text: VQ.plural(total, 'ticket', 'tickets') })]));
   }
 
   /* =================== GOALS + CAMPAIGNS =================== */
   function renderGoals(r) {
     var box = $('or-goals'), d = r && r.data, goals = d && (Array.isArray(d.goals) ? d.goals : Array.isArray(d) ? d : []);
     box.textContent = '';
-    if (!goals || !goals.length) { empty(box, 'Niciun obiectiv setat.', el('a', { href: '/organizator/analytics/' + ID, text: 'Setează obiective' })); return; }
+    if (!goals || !goals.length) { empty(box, VQ.t('No goal set.'), el('a', { href: VQ.url('/organizator/analytics/' + ID), text: VQ.t('Set goals') })); return; }
     goals.forEach(function (g) {
       var p = Math.max(0, Math.min(100, num(g.progress_percent))), done = !!g.is_achieved || p >= 100;
       var bar = el('i', { class: p >= 75 || done ? '' : p >= 50 ? 'is-mid' : 'is-low' });
       bar.style.width = p.toFixed(1) + '%';
-      var status = done ? ['Obiectiv atins' + (g.achieved_at ? ' pe ' + dayLabel(naiveDay(g.achieved_at)) : '') + '.', 'is-done']
-        : g.is_overdue ? ['Termenul a trecut' + (g.deadline ? ' (' + dayLabel(g.deadline) + ')' : '') + '.', 'is-late']
-        : [F.pct(p, 1) + ' completat' + (g.deadline ? ' · termen ' + dayLabel(g.deadline) + (num(g.days_remaining) > 0 ? ', ' + F.count(g.days_remaining, 'zi rămasă', 'zile rămase') : '') : '') + '.', ''];
+      var daysLeft = num(g.days_remaining);
+      var dueText = !g.deadline ? '' : daysLeft > 0 ? VQ.t('deadline {date}, {count}', { date: dayLabel(g.deadline), count: VQ.n(daysLeft, 'day left', 'days left') }) : VQ.t('deadline {date}', { date: dayLabel(g.deadline) });
+      var status = done ? [g.achieved_at ? VQ.t('Goal reached on {date}.', { date: dayLabel(naiveDay(g.achieved_at)) }) : VQ.t('Goal reached.'), 'is-done']
+        : g.is_overdue ? [g.deadline ? VQ.t('The deadline ({date}) has passed.', { date: dayLabel(g.deadline) }) : VQ.t('The deadline has passed.'), 'is-late']
+        : [VQ.t('{pct} complete', { pct: F.pct(p, 1) }) + (dueText ? ' · ' + dueText : '') + '.', ''];
       box.appendChild(el('article', { class: 'or-goal' + (done ? ' is-done' : '') }, [
-        el('div', { class: 'or-goal-top' }, [el('b', { text: F.flat(g.name) || F.flat(g.type_label) || 'Obiectiv' }), g.type_label ? el('span', { class: 'org-tag is-muted', text: F.flat(g.type_label) }) : null]),
+        el('div', { class: 'or-goal-top' }, [el('b', { text: F.flat(g.name) || F.flat(g.type_label) || VQ.t('Goal') }), g.type_label ? el('span', { class: 'org-tag is-muted', text: F.flat(g.type_label) }) : null]),
         el('p', { class: 'or-goal-v' }, [el('strong', { text: F.flat(g.formatted_current) || F.num(g.current_value) }), el('span', { text: ' / ' + (F.flat(g.formatted_target) || F.num(g.target_value)) })]),
-        el('div', { class: 'or-meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(p)), 'aria-label': 'Progres ' + (F.flat(g.name) || 'obiectiv') }, bar),
+        el('div', { class: 'or-meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(p)), 'aria-label': VQ.t('Progress: {name}', { name: F.flat(g.name) || VQ.t('goal') }) }, bar),
         el('p', { class: 'or-goal-s ' + status[1], text: status[0] }),
       ]));
     });
@@ -315,19 +319,19 @@
   function renderCampaigns(r) {
     var box = $('or-camps'), d = r && r.data, list = d && (Array.isArray(d.milestones) ? d.milestones : Array.isArray(d) ? d : []);
     box.textContent = '';
-    if (!list || !list.length) { empty(box, 'Nicio campanie înregistrată.', el('a', { href: '/organizator/analytics/' + ID, text: 'Adaugă o campanie' })); return; }
+    if (!list || !list.length) { empty(box, VQ.t('No campaign recorded.'), el('a', { href: VQ.url('/organizator/analytics/' + ID), text: VQ.t('Add a campaign') })); return; }
     list.forEach(function (c) {
       var budget = num(c.budget), revenue = num(c.attributed_revenue), roi = budget > 0 ? Math.round((revenue - budget) / budget * 100) : null;
       var dates = [c.start_date ? dayLabel(c.start_date, { day: 'numeric', month: 'short', year: 'numeric' }) : '', c.end_date ? dayLabel(c.end_date, { day: 'numeric', month: 'short', year: 'numeric' }) : ''].filter(Boolean).join(' – ');
       box.appendChild(el('article', { class: 'or-camp' }, [
         el('div', { class: 'or-camp-top' }, [
-          el('div', null, [el('b', { text: F.flat(c.title) || 'Campanie' }), el('span', { class: 'or-sub', text: [F.flat(c.type_label), dates].filter(Boolean).join(' · ') })]),
+          el('div', null, [el('b', { text: F.flat(c.title) || VQ.t('Campaign') }), el('span', { class: 'or-sub', text: [F.flat(c.type_label), dates].filter(Boolean).join(' · ') })]),
           roi !== null ? el('span', { class: 'org-tag ' + (roi >= 0 ? 'is-ok' : 'is-bad'), text: (roi >= 0 ? '+' : '') + F.num(roi) + '% ROI' }) : null,
         ]),
         el('dl', { class: 'or-camp-figs' }, [
-          el('div', null, [el('dt', { text: 'Buget' }), el('dd', { text: money(budget) })]),
-          el('div', null, [el('dt', { text: 'Venituri' }), el('dd', { class: 'is-net', text: money(revenue) })]),
-          el('div', null, [el('dt', { text: 'Conversii' }), el('dd', { text: F.num(c.conversions) })]),
+          el('div', null, [el('dt', { text: VQ.t('Budget') }), el('dd', { text: money(budget) })]),
+          el('div', null, [el('dt', { text: VQ.t('Revenue') }), el('dd', { class: 'is-net', text: money(revenue) })]),
+          el('div', null, [el('dt', { text: VQ.t('Conversions') }), el('dd', { text: F.num(c.conversions) })]),
         ]),
       ]));
     });
@@ -337,31 +341,31 @@
   function renderTraffic() {
     var box = $('or-traffic'), list = (Array.isArray(data.traffic_sources) ? data.traffic_sources : []).filter(function (s) { return num(s.visitors) > 0; });
     box.textContent = '';
-    if (!list.length) { box.appendChild(el('li', { class: 'or-empty-p', text: 'Nu există date despre trafic.' })); return; }
+    if (!list.length) { box.appendChild(el('li', { class: 'or-empty-p', text: VQ.t('No traffic data.') })); return; }
     list.sort(function (a, b) { return num(b.visitors) - num(a.visitors); });
     var total = list.reduce(function (s, x) { return s + num(x.visitors); }, 0);
     list.forEach(function (s) {
       var pct = total ? num(s.visitors) / total * 100 : 0, bar = el('i');
       bar.style.width = pct.toFixed(2) + '%';
       box.appendChild(el('li', null, [
-        el('b', { text: SOURCES[s.source] || F.flat(s.source) || 'Direct' }),
-        el('span', { class: 'or-bar-v' }, [F.count(s.visitors, 'vizitator', 'vizitatori'), el('small', { text: F.pct(pct, 0) })]),
+        el('b', { text: SOURCES[s.source] || F.flat(s.source) || VQ.t('Direct') }),
+        el('span', { class: 'or-bar-v' }, [VQ.n(num(s.visitors), 'visitor', 'visitors'), el('small', { text: F.pct(pct, 0) })]),
         el('div', { class: 'or-meter', 'aria-hidden': 'true' }, bar),
-        num(s.revenue) > 0 ? el('span', { class: 'or-sub', text: 'Vânzări atribuite: ' + money(s.revenue) }) : null,
+        num(s.revenue) > 0 ? el('span', { class: 'or-sub', text: VQ.t('Attributed sales: {amount}', { amount: money(s.revenue) }) }) : null,
       ]));
     });
   }
   function renderLocations() {
     var box = $('or-locations'), list = Array.isArray(data.top_locations) ? data.top_locations.slice(0, 8) : [];
     box.textContent = '';
-    if (!list.length) { box.appendChild(el('li', { class: 'or-empty-p', text: 'Nu există date despre locații.' })); return; }
+    if (!list.length) { box.appendChild(el('li', { class: 'or-empty-p', text: VQ.t('No location data.') })); return; }
     list.forEach(function (l, i) {
       var code = String(l.country_code || l.country || '').toUpperCase(), country = '';
       try { country = geo && /^[A-Z]{2}$/.test(code) ? geo.of(code) : code; } catch (e) { country = code; }
       var city = F.flat(l.city);
       box.appendChild(el('li', null, [
         el('span', { class: 'or-rank-n', text: String(i + 1) }),
-        el('span', null, [el('b', { text: city && city !== 'Unknown' ? city : country || 'Necunoscut' }), city && city !== 'Unknown' && country ? el('small', { text: country }) : null]),
+        el('span', null, [el('b', { text: city && city !== 'Unknown' ? city : country || VQ.t('Unknown') }), city && city !== 'Unknown' && country ? el('small', { text: country }) : null]),
         el('span', { class: 'or-rank-v', text: F.num(l.visitors || l.count) }),
       ]));
     });
@@ -372,8 +376,8 @@
     var st = ORDER_STATUS[o.status];
     return el('li', null, [
       el('div', null, [
-        el('b', { text: F.flat(o.customer) || 'Client' }),
-        el('span', { class: 'or-sub', text: [o.order_number, stamp(o.created_at), refund ? '' : F.count(o.tickets_count, 'bilet', 'bilete')].filter(Boolean).join(' · ') }),
+        el('b', { text: F.flat(o.customer) || VQ.t('Customer') }),
+        el('span', { class: 'or-sub', text: [o.order_number, stamp(o.created_at), refund ? '' : VQ.n(num(o.tickets_count), 'ticket', 'tickets')].filter(Boolean).join(' · ') }),
         refund && st ? el('span', { class: 'org-tag ' + st[1], text: st[0] }) : null,
       ]),
       el('span', { class: 'or-row-v' + (refund ? ' is-refund' : ''), text: (refund ? '−' : '') + money(refund ? o.total : (o.net_total != null ? o.net_total : o.total)) }),
@@ -387,19 +391,19 @@
     ]).then(function (res) {
       var box = $('or-refunds'), rows = [];
       box.textContent = '';
-      if (!res[0] && !res[1]) { empty(box, 'Nu am putut încărca rambursările.'); return; }
+      if (!res[0] && !res[1]) { empty(box, VQ.t('We could not load the refunds.')); return; }
       res.forEach(function (r) { if (r && Array.isArray(r.data)) rows = rows.concat(r.data); });
       rows.sort(function (a, b) { return String(b.created_at || '') < String(a.created_at || '') ? -1 : 1; });
-      if (!rows.length) { box.appendChild(el('li', { class: 'or-empty-p', text: 'Nicio rambursare.' })); return; }
+      if (!rows.length) { box.appendChild(el('li', { class: 'or-empty-p', text: VQ.t('No refunds.') })); return; }
       rows.forEach(function (o) { box.appendChild(orderRow(o, true)); });
       var more = res.reduce(function (s, r) { return s + (r ? Math.max(0, num(O.metaOf(r).total) - (Array.isArray(r.data) ? r.data.length : 0)) : 0); }, 0);
-      if (more > 0) box.appendChild(el('li', { class: 'or-note', text: 'Și încă ' + F.count(more, 'comandă rambursată', 'comenzi rambursate') + ', în Vânzări.' }));
+      if (more > 0) box.appendChild(el('li', { class: 'or-note', text: VQ.t('And {count} more, in Sales.', { count: VQ.n(more, 'refunded order', 'refunded orders') }) }));
     });
   }
   function renderOrders(r) {
     var box = $('or-orders'), rows = r && Array.isArray(r.data) ? r.data : [];
     box.textContent = '';
-    if (!rows.length) { box.appendChild(el('li', { class: 'or-empty-p', text: 'Nicio comandă finalizată încă.' })); return; }
+    if (!rows.length) { box.appendChild(el('li', { class: 'or-empty-p', text: VQ.t('No completed orders yet.') })); return; }
     rows.forEach(function (o) { box.appendChild(orderRow(o, false)); });
   }
 
@@ -409,13 +413,13 @@
     $('or-f-gross').textContent = money(o.gross_revenue != null ? o.gross_revenue : o.total_revenue);
     $('or-f-refunds').textContent = '− ' + money(o.refunds_total);
     $('or-refunds-total').textContent = num(o.refunds_total) > 0 ? '− ' + money(o.refunds_total) : money(0);
-    $('or-f-comm-l').textContent = 'Comision platformă' + (rate ? ' (' + rate + (o.use_fixed_commission ? ' fix' : '') + ')' : '');
+    $('or-f-comm-l').textContent = !rate ? VQ.t('Platform commission') : o.use_fixed_commission ? VQ.t('Platform commission ({rate} fixed)', { rate: rate }) : VQ.t('Platform commission ({rate})', { rate: rate });
     var comm = $('or-f-comm');
     comm.textContent = '';
-    if (onTop) { comm.appendChild(document.createTextNode(money(o.commission_amount))); comm.appendChild(el('small', { text: 'plătit de client, peste preț' })); }
+    if (onTop) { comm.appendChild(document.createTextNode(money(o.commission_amount))); comm.appendChild(el('small', { text: VQ.t('paid by the customer, on top of the price') })); }
     else comm.textContent = '− ' + money(o.commission_amount);
     $('or-f-net').textContent = money(o.net_revenue != null ? o.net_revenue : o.total_revenue);
-    $('or-fin-p').textContent = 'Veniturile brute și nete socotesc biletele valide: comenzile rambursate nu mai sunt incluse în ele, iar suma lor apare separat la Rambursări.' + (onTop ? ' Comisionul a fost plătit de clienți peste prețul biletului, deci nu se scade din venitul tău.' : '');
+    $('or-fin-p').textContent = VQ.t('Gross and net revenue count valid tickets: refunded orders are no longer included in them, and their amount shows separately under Refunds.') + (onTop ? ' ' + VQ.t('The commission was paid by customers on top of the ticket price, so it is not taken out of your revenue.') : '');
   }
 
   /* =================== PRINT + PDF =================== */
@@ -424,10 +428,10 @@
     var btn = this;
     if (!ID || btn.getAttribute('aria-busy') === 'true') return;
     var token = typeof BileteOnlineAuth !== 'undefined' && BileteOnlineAuth.getToken ? BileteOnlineAuth.getToken() : null;
-    if (!token) { O.flash('Sesiunea a expirat. Autentifică-te din nou.', true); return; }
-    var label = btn.querySelector('[data-label]'), base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', name = 'raport-' + slug($('or-title').textContent) + '-' + F.ymd() + '.pdf';
+    if (!token) { O.flash(VQ.t('Your session has expired. Sign in again.'), true); return; }
+    var label = btn.querySelector('[data-label]'), base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php', name = 'report-' + slug($('or-title').textContent) + '-' + F.ymd() + '.pdf';
     btn.setAttribute('aria-busy', 'true');
-    label.textContent = 'Se generează…';
+    label.textContent = VQ.t('Generating…');
     fetch(base + '?action=organizer.event.report.export&event_id=' + encodeURIComponent(ID), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/pdf' } }).then(function (res) {
       if (!res.ok) { var e = new Error('pdf'); e.status = res.status; throw e; }
       return res.blob();
@@ -439,21 +443,21 @@
         document.body.appendChild(a);
         a.click();
         setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
-        O.flash('Raportul PDF a fost descărcat.');
+        O.flash(VQ.t('The PDF report was downloaded.'));
       });
     }).catch(function (err) {
-      function failed() { O.flash('Nu am putut genera raportul PDF. Încearcă din nou.', true); }
+      function failed() { O.flash(VQ.t('We could not generate the PDF report. Try again.'), true); }
       function signOut() {
-        O.flash('Sesiunea a expirat. Te trimitem la autentificare.', true);
+        O.flash(VQ.t('Your session has expired. We are taking you to sign in.'), true);
         setTimeout(function () { O.api('/organizer/me').catch(function () {}); }, 1500);
       }
       if (err && err.status === 401) return signOut();
-      if (err && err.status === 404) { O.flash('Activitatea nu a fost găsită.', true); return; }
+      if (err && err.status === 404) { O.flash(VQ.t('The activity was not found.'), true); return; }
       if (err && err.html) return O.api('/organizer/me', { quiet: true }).then(failed, function (e) { if (e && e.status === 401) signOut(); else failed(); });
       failed();
     }).then(function () {
       btn.removeAttribute('aria-busy');
-      label.textContent = 'Export PDF';
+      label.textContent = VQ.t('Export PDF');
     });
   });
 

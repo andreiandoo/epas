@@ -8,9 +8,11 @@
   var O = window.BO_ORG, root = document.getElementById('oe');
   if (!O || !root) return;
   var F = O.fmt, el = O.el, icon = O.icon;
+  var LOC = VQ.locale === 'en' ? 'en-GB' : VQ.locale;
+  var SITE = document.title.lastIndexOf(' · ') > -1 ? document.title.slice(document.title.lastIndexOf(' · ')) : ''; // " · Viaqui", as head.php wrote it
   var $ = function (id) { return document.getElementById(id); };
   function qsa(sel, ctx) { return [].slice.call((ctx || document).querySelectorAll(sel)); }
-  var LIST_URL = '/organizator/activities';
+  var LIST_URL = VQ.url('/organizator/activities'); // with the language prefix, so the History API keeps it
   var AWAITING = ['draft', 'pending_review', 'rejected'];
   var STATES = ['ongoing', 'draft', 'ended', 'all'];
   var TINY = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.5';
@@ -48,20 +50,20 @@
   function focusQuiet(n) { if (n) { try { n.focus({ preventScroll: true }); } catch (e) { n.focus(); } } }
 
   var MSG = [
-    [/account must be approved/i, 'Contul tău trebuie aprobat înainte de a crea activități.'],
-    [/Event not found/i, 'Activitatea nu a fost găsită.'],
-    [/not accessible/i, 'Nu ai acces la această activitate.'],
-    [/Only unpublished events can be deleted/i, 'Doar activitățile nepublicate pot fi șterse.'],
-    [/existing orders/i, 'Activitatea are comenzi, așa că nu mai poate fi ștearsă.'],
-    [/at least one ticket type/i, 'Adaugă cel puțin un tip de bilet.'],
-    [/already cancelled/i, 'Activitatea este deja anulată.'],
-    [/deja publicat/i, 'Activitatea este deja publicată.'],
-    [/deja trimis spre aprobare/i, 'Activitatea a fost deja trimisă spre aprobare.'],
-    [/semnezi contractul/i, 'Trebuie să semnezi contractul înainte de a publica activități.'],
-    [/No images provided/i, 'Alege o imagine.'],
+    [/account must be approved/i, VQ.t('Your account must be approved before you can create activities.')],
+    [/Event not found/i, VQ.t('The activity was not found.')],
+    [/not accessible/i, VQ.t('You do not have access to this activity.')],
+    [/Only unpublished events can be deleted/i, VQ.t('Only unpublished activities can be deleted.')],
+    [/existing orders/i, VQ.t('The activity has orders, so it can no longer be deleted.')],
+    [/at least one ticket type/i, VQ.t('Add at least one ticket type.')],
+    [/already cancelled/i, VQ.t('The activity is already cancelled.')],
+    [/deja publicat/i, VQ.t('The activity is already published.')],
+    [/deja trimis spre aprobare/i, VQ.t('The activity has already been submitted for approval.')],
+    [/semnezi contractul/i, VQ.t('You need to sign the contract before publishing activities.')],
+    [/No images provided/i, VQ.t('Choose an image.')],
   ];
   function errText(err, fallback) {
-    if (err && err.status === 0) return 'Nu există conexiune. Verifică internetul și încearcă din nou.';
+    if (err && err.status === 0) return VQ.t('No connection. Check your internet and try again.');
     var m = String((err && (err.message || (err.data && err.data.message))) || '').trim();
     for (var i = 0; i < MSG.length; i++) if (MSG[i][0].test(m)) return MSG[i][1];
     if (/[ăâîșțĂÂÎȘȚ]/.test(m) && m.length < 300) return m.replace(/Evenimentul/g, 'Activitatea').replace(/evenimentul/g, 'activitatea').replace(/evenimente/g, 'activități');
@@ -81,9 +83,9 @@
     $('oe-cf-p').textContent = o.text || '';
     $('oe-cf-p').hidden = !o.text;
     var ok = $('oe-cf-ok');
-    ok.textContent = o.ok || 'Confirmă';
+    ok.textContent = o.ok || VQ.t('Confirm');
     ok.className = 'btn ' + (o.danger ? 'oe-btn-danger' : 'btn-primary');
-    $('oe-cf-cancel').textContent = o.cancel || 'Renunță';
+    $('oe-cf-cancel').textContent = o.cancel || VQ.t('Never mind');
     return new Promise(function (resolve) {
       d.returnValue = '';
       d.addEventListener('close', function () { resolve(d.returnValue === 'ok'); }, { once: true });
@@ -92,7 +94,7 @@
     });
   }
   function confirmLeave() {
-    return confirmBox({ title: 'Ai modificări nesalvate', text: 'Dacă ieși acum, pierzi ce ai schimbat de la ultima salvare.', ok: 'Ieși fără să salvezi', cancel: 'Rămân aici', danger: true });
+    return confirmBox({ title: VQ.t('You have unsaved changes'), text: VQ.t('If you leave now, you lose what you changed since the last save.'), ok: VQ.t('Leave without saving'), cancel: VQ.t('Stay here'), danger: true });
   }
 
   /* =================== ROUTING =================== */
@@ -134,10 +136,11 @@
 
   /* =================== CATALOGUE =================== */
   var L = { events: [], loaded: false, loading: null, error: false, status: 'ongoing', q: '' };
-  var BUCKET = { ongoing: 'În derulare', draft: 'Ciorne', ended: 'Încheiate', all: 'Toate' };
-  var STATUS_LABEL = { published: 'Publicat', draft: 'Ciornă', ended: 'Activitate încheiată', pending_review: 'În revizie · așteaptă aprobare', rejected: 'Respins', cancelled: 'Anulat', postponed: 'Amânat' };
+  var BUCKET = { ongoing: VQ.t('In progress'), draft: VQ.t('Drafts'), ended: VQ.t('Ended'), all: VQ.t('All') };
+  var STATUS_LABEL = { published: VQ.t('Published'), draft: VQ.t('Draft'), ended: VQ.t('Activity ended'), pending_review: VQ.t('Under review · waiting for approval'), rejected: VQ.t('Rejected'), cancelled: VQ.t('Cancelled'), postponed: VQ.t('Postponed') };
   var STATUS_TONE = { published: 'is-ok', draft: 'is-wait', ended: 'is-muted', pending_review: 'is-info', rejected: 'is-bad', cancelled: 'is-bad', postponed: 'is-wait' };
-  var SALE_TONE = { 'În vânzare': 'is-ok', 'Sold Out': 'is-info', 'Door Sales': 'is-wait' };
+  var SALE_TONE = { on_sale: 'is-ok', sold_out: 'is-info', door_sales: 'is-wait' };
+  var SALE_LABEL = { on_sale: VQ.t('On sale'), sold_out: VQ.t('Sold out'), door_sales: VQ.t('Door sales') };
 
   function startKey(e) { var n = naive(e.starts_at); return n ? n.date + 'T' + (n.time || '00:00') : ''; }
   function isEnded(e) {
@@ -209,7 +212,7 @@
     L.q = (p.get('q') || '').slice(0, 100);
     $('oe-q').value = L.q;
     syncListUrl();
-    document.title = 'Activitățile tale — viaqui.com';
+    document.title = VQ.t('Your activities') + SITE;
     if (!L.loaded) loadList(); else renderList();
     if (fromEditor) { window.scrollTo(0, 0); focusQuiet($('oe-list-h')); }
   }
@@ -223,7 +226,7 @@
     list.textContent = '';
     list.removeAttribute('aria-busy');
     closeMenus();
-    if (L.error) { list.hidden = true; renderEmpty('error', counts); $('oe-live').textContent = 'Nu am putut încărca activitățile.'; return; }
+    if (L.error) { list.hidden = true; renderEmpty('error', counts); $('oe-live').textContent = VQ.t('We could not load the activities.'); return; }
     var q = norm(L.q);
     var rows = L.events.filter(function (e) { return L.status === 'all' || bucket(e) === L.status; }).filter(function (e) {
       return !q || norm([F.flat(e.name || e.title), F.flat(e.venue_name), F.flat(e.venue_city)].join(' ')).indexOf(q) > -1;
@@ -241,7 +244,7 @@
       list.hidden = false;
       rows.forEach(function (e) { list.appendChild(card(e)); });
     }
-    $('oe-live').textContent = rows.length ? F.count(rows.length, 'activitate', 'activități') + ' în „' + BUCKET[L.status] + '”' : 'Nicio activitate găsită';
+    $('oe-live').textContent = rows.length ? VQ.t('{count} in “{filter}”', { count: VQ.n(rows.length, 'activity', 'activities'), filter: BUCKET[L.status] }) : VQ.t('No activity found');
   }
 
   function renderEmpty(kind, counts) {
@@ -251,24 +254,24 @@
     function button(label, cls, fn) { var b = el('button', { type: 'button', class: cls, text: label }); b.addEventListener('click', fn); return b; }
     function create(label) { return el('button', { type: 'button', class: 'btn btn-primary', 'data-oe-new': true }, [icon('plus'), label]); }
     if (kind === 'error') {
-      ic = 'warning-circle'; title = 'Nu am putut încărca activitățile'; text = 'Verifică conexiunea și încearcă din nou.';
-      actions.push(button('Reîncearcă', 'btn btn-primary', function () { L.loaded = false; loadList(); }));
+      ic = 'warning-circle'; title = VQ.t('We could not load the activities'); text = VQ.t('Check your connection and try again.');
+      actions.push(button(VQ.t('Try again'), 'btn btn-primary', function () { L.loaded = false; loadList(); }));
     } else if (kind === 'none') {
-      ic = 'calendar-blank'; title = 'Nu ai activități încă'; text = 'Creează prima ta activitate și începe să vinzi bilete!';
-      actions.push(create('Creează activitate'));
+      ic = 'calendar-blank'; title = VQ.t('You have no activities yet'); text = VQ.t('Create your first activity and start selling tickets!');
+      actions.push(create(VQ.t('Create an activity')));
     } else if (kind === 'search') {
-      ic = 'magnifying-glass'; title = 'Nicio activitate nu se potrivește cu „' + L.q + '”';
-      text = L.status !== 'all' ? 'Am căutat doar în „' + BUCKET[L.status] + '”.' : 'Încearcă alt nume, altă locație sau alt oraș.';
-      actions.push(button('Șterge căutarea', 'btn btn-ghost', function () { L.q = ''; $('oe-q').value = ''; syncListUrl(); renderList(); focusQuiet($('oe-q')); }));
-      if (L.status !== 'all') actions.push(button('Caută în toate', 'btn btn-primary', function () { setStatus('all'); }));
+      ic = 'magnifying-glass'; title = VQ.t('No activity matches “{query}”', { query: L.q });
+      text = L.status !== 'all' ? VQ.t('We only searched in “{filter}”.', { filter: BUCKET[L.status] }) : VQ.t('Try another name, venue or city.');
+      actions.push(button(VQ.t('Clear the search'), 'btn btn-ghost', function () { L.q = ''; $('oe-q').value = ''; syncListUrl(); renderList(); focusQuiet($('oe-q')); }));
+      if (L.status !== 'all') actions.push(button(VQ.t('Search in all'), 'btn btn-primary', function () { setStatus('all'); }));
     } else {
       ic = 'calendar-blank';
-      title = { ongoing: 'Nicio activitate în derulare', draft: 'Nicio ciornă', ended: 'Nicio activitate încheiată' }[L.status];
-      text = { ongoing: 'Aici apar activitățile publicate care nu s-au încheiat.', draft: 'Aici apar activitățile nepublicate, cele în verificare și cele respinse.', ended: 'Aici apar activitățile trecute, amânate sau anulate.' }[L.status];
+      title = { ongoing: VQ.t('No activity in progress'), draft: VQ.t('No drafts'), ended: VQ.t('No ended activity') }[L.status];
+      text = { ongoing: VQ.t('Published activities that have not ended show up here.'), draft: VQ.t('Unpublished activities, those under review and those rejected show up here.'), ended: VQ.t('Past, postponed or cancelled activities show up here.') }[L.status];
       ['ongoing', 'draft', 'ended'].forEach(function (k) {
         if (k !== L.status && counts[k]) actions.push(button(BUCKET[k] + ' (' + F.num(counts[k]) + ')', 'btn btn-ghost', function () { setStatus(k); }));
       });
-      actions.push(create('Activitate nouă'));
+      actions.push(create(VQ.t('New activity')));
     }
     box.appendChild(el('span', { class: 'org-empty-ic' }, icon(ic)));
     box.appendChild(el('b', { text: title }));
@@ -278,16 +281,16 @@
   }
 
   function card(e) {
-    var id = encodeURIComponent(e.id), name = F.flat(e.name || e.title) || 'Activitate fără nume';
+    var id = encodeURIComponent(e.id), name = F.flat(e.name || e.title) || VQ.t('Untitled activity');
     var ended = isEnded(e), awaiting = AWAITING.indexOf(e.status) > -1;
     var ongoing = e.status === 'published' && !ended && !e.is_cancelled && !e.is_postponed;
     var badge = e.status, sale = '';
     if (e.is_cancelled || e.status === 'cancelled') badge = 'cancelled';
     else if (e.is_postponed || e.status === 'postponed') badge = 'postponed';
-    else if (e.is_sold_out) { badge = 'published'; sale = 'Sold Out'; }
-    else if (e.is_door_sales_only || e.door_sales_only) { badge = 'published'; sale = 'Door Sales'; }
+    else if (e.is_sold_out) { badge = 'published'; sale = 'sold_out'; }
+    else if (e.is_door_sales_only || e.door_sales_only) { badge = 'published'; sale = 'door_sales'; }
     else if (ended) badge = 'ended';
-    else if (ongoing) sale = 'În vânzare';
+    else if (ongoing) sale = 'on_sale';
 
     var media = el('span', { class: 'oe-card-media', 'aria-hidden': 'true' }), letter = name.charAt(0).toUpperCase();
     if (e.image) {
@@ -306,37 +309,37 @@
     var titleNode = editable ? el('a', { href: LIST_URL + '/' + id, 'data-oe-edit': true, text: name }) : name;
 
     var sold = e.tickets_paid != null ? e.tickets_paid : e.tickets_sold;
-    var stats = [['Vizualizări', F.num(e.views)], ['Bilete vândute', F.num(sold)], ['Invitații', F.num(e.invitations)], ['Încasări nete', F.money(e.revenue)]];
+    var stats = [[VQ.t('Views'), F.num(e.views)], [VQ.t('Tickets sold'), F.num(sold)], [VQ.t('Invitations'), F.num(e.invitations)], [VQ.t('Net revenue'), F.money(e.revenue)]];
 
     var countdown = null, days = e.days_until;
     if (!ended && days != null && days >= 0) {
-      countdown = days === 0 ? el('span', { class: 'oe-count is-soon' }, el('b', { text: 'Azi' }))
-        : days === 1 ? el('span', { class: 'oe-count is-soon' }, el('b', { text: 'Mâine' }))
-        : el('span', { class: 'oe-count' }, [el('b', { text: F.num(days) }), ' ', el('span', null, ['zile', el('br'), ' rămase'])]);
+      countdown = days === 0 ? el('span', { class: 'oe-count is-soon' }, el('b', { text: VQ.t('Today') }))
+        : days === 1 ? el('span', { class: 'oe-count is-soon' }, el('b', { text: VQ.t('Tomorrow') }))
+        : el('span', { class: 'oe-count' }, [el('b', { text: F.num(days) }), ' ', el('span', { text: VQ.plural(days, 'day left', 'days left') })]);
     }
 
     var primary = [], more = [];
-    if (editable) primary.push(el('a', { class: 'oe-act is-primary', href: LIST_URL + '/' + id, 'data-oe-edit': true }, [icon('pencil-simple'), 'Editează', el('span', { class: 'sr', text: ': ' + name })]));
-    if (!awaiting) primary.push(el('a', { class: 'oe-act', href: '/organizator/participanti?event=' + id }, [icon('users-three'), 'Participanți', el('span', { class: 'sr', text: ': ' + name })]));
+    if (editable) primary.push(el('a', { class: 'oe-act is-primary', href: LIST_URL + '/' + id, 'data-oe-edit': true }, [icon('pencil-simple'), VQ.t('Edit'), el('span', { class: 'sr', text: ': ' + name })]));
+    if (!awaiting) primary.push(el('a', { class: 'oe-act', href: VQ.url('/organizator/participanti?event=' + id) }, [icon('users-three'), VQ.t('Participants'), el('span', { class: 'sr', text: ': ' + name })]));
     if (!awaiting) {
       primary.push(ended
-        ? el('a', { class: 'oe-act', href: '/organizator/report/' + id }, [icon('file-text'), 'Raport', el('span', { class: 'sr', text: ': ' + name })])
-        : el('a', { class: 'oe-act', href: '/organizator/analytics/' + id }, [icon('chart-line-up'), 'Analiză', el('span', { class: 'sr', text: ': ' + name })]));
-      more.push(el('a', { class: 'oe-mi', href: '/organizator/sold?event=' + id }, [icon('wallet'), 'Vânzări']));
-      more.push(el('a', { class: 'oe-mi', href: '/organizator/documente?event=' + id }, [icon('file-text'), 'Documente']));
-      if (!ended) more.push(el('a', { class: 'oe-mi', href: '/organizator/invitatii?event=' + id }, [icon('envelope-simple'), 'Invitații']));
-      if (ended) more.push(el('a', { class: 'oe-mi', href: '/organizator/raport-staff?event=' + id }, [icon('users-three'), 'Raport staff']));
+        ? el('a', { class: 'oe-act', href: VQ.url('/organizator/report/' + id) }, [icon('file-text'), VQ.t('Report'), el('span', { class: 'sr', text: ': ' + name })])
+        : el('a', { class: 'oe-act', href: VQ.url('/organizator/analytics/' + id) }, [icon('chart-line-up'), VQ.t('Analytics'), el('span', { class: 'sr', text: ': ' + name })]));
+      more.push(el('a', { class: 'oe-mi', href: VQ.url('/organizator/sold?event=' + id) }, [icon('wallet'), VQ.t('Sales')]));
+      more.push(el('a', { class: 'oe-mi', href: VQ.url('/organizator/documente?event=' + id) }, [icon('file-text'), VQ.t('Documents')]));
+      if (!ended) more.push(el('a', { class: 'oe-mi', href: VQ.url('/organizator/invitatii?event=' + id) }, [icon('envelope-simple'), VQ.t('Invitations')]));
+      if (ended) more.push(el('a', { class: 'oe-mi', href: VQ.url('/organizator/raport-staff?event=' + id) }, [icon('users-three'), VQ.t('Staff report')]));
     }
-    if (ongoing) more.push(el('a', { class: 'oe-mi', href: '/organizator/servicii?event=' + id }, [icon('megaphone'), 'Promovează']));
+    if (ongoing) more.push(el('a', { class: 'oe-mi', href: VQ.url('/organizator/servicii?event=' + id) }, [icon('megaphone'), VQ.t('Promote')]));
     if (awaiting) {
       if (more.length) more.push(el('hr'));
-      more.push(el('button', { class: 'oe-mi is-danger', type: 'button', 'data-oe-delete': String(e.id) }, [icon('trash'), 'Șterge activitatea']));
+      more.push(el('button', { class: 'oe-mi is-danger', type: 'button', 'data-oe-delete': String(e.id) }, [icon('trash'), VQ.t('Delete the activity')]));
     }
     var actions = primary.slice();
     if (more.length) {
       var menuId = 'oe-menu-' + e.id;
       actions.push(el('div', { class: 'oe-more' }, [
-        el('button', { class: 'oe-act', type: 'button', 'data-oe-menu': true, 'aria-expanded': 'false', 'aria-controls': menuId }, [icon('dots-three'), 'Mai multe', el('span', { class: 'sr', text: ' pentru ' + name })]),
+        el('button', { class: 'oe-act', type: 'button', 'data-oe-menu': true, 'aria-expanded': 'false', 'aria-controls': menuId }, [icon('dots-three'), VQ.t('More'), el('span', { class: 'sr', text: ' ' + VQ.t('for {name}', { name: name }) })]),
         el('div', { class: 'oe-menu', id: menuId, hidden: true }, more),
       ]));
     }
@@ -345,8 +348,8 @@
       media,
       el('div', { class: 'oe-card-main' }, [
         el('div', { class: 'oe-card-tags' }, [
-          el('span', { class: 'org-tag ' + (STATUS_TONE[badge] || 'is-muted'), text: STATUS_LABEL[badge] || badge || 'Necunoscut' }),
-          sale ? el('span', { class: 'org-tag ' + SALE_TONE[sale], text: sale }) : null,
+          el('span', { class: 'org-tag ' + (STATUS_TONE[badge] || 'is-muted'), text: STATUS_LABEL[badge] || badge || VQ.t('Unknown') }),
+          sale ? el('span', { class: 'org-tag ' + SALE_TONE[sale], text: SALE_LABEL[sale] }) : null,
         ]),
         el('h2', { class: 'oe-card-h' }, titleNode),
         (when || place) ? el('p', { class: 'oe-card-meta' }, [
@@ -396,15 +399,15 @@
   document.addEventListener('focusin', function (e) { if (openMenu && !openMenu.menu.contains(e.target) && !openMenu.btn.contains(e.target)) closeMenus(); });
 
   function deleteActivity(ev) {
-    var name = F.flat(ev.name || ev.title) || 'această activitate';
-    return confirmBox({ title: 'Ștergi activitatea?', text: '„' + name + '” se șterge definitiv, împreună cu tipurile ei de bilet. Acțiunea nu poate fi anulată.', ok: 'Șterge activitatea', danger: true }).then(function (yes) {
+    var name = F.flat(ev.name || ev.title) || VQ.t('this activity');
+    return confirmBox({ title: VQ.t('Delete the activity?'), text: VQ.t('“{name}” is deleted for good, together with its ticket types. This cannot be undone.', { name: name }), ok: VQ.t('Delete the activity'), danger: true }).then(function (yes) {
       if (!yes) return false;
       return O.api('/organizer/events/' + encodeURIComponent(ev.id), { method: 'DELETE' }).then(function () {
         L.events = L.events.filter(function (x) { return String(x.id) !== String(ev.id); });
-        O.flash('Activitatea a fost ștearsă.');
+        O.flash(VQ.t('The activity was deleted.'));
         return true;
       }).catch(function (err) {
-        if (!err || err.status !== 401) O.flash(errText(err, 'Nu am putut șterge activitatea.'), true);
+        if (!err || err.status !== 401) O.flash(errText(err, VQ.t('We could not delete the activity.')), true);
         return false;
       });
     });
@@ -449,7 +452,7 @@
     saving: false, loadingId: null, files: { poster: null, cover: null }, server: { poster: null, cover: null }, orig: {},
     genresAvail: [], genres: [], artists: [], venueId: null, locked: [], free: [], sentRows: [],
   };
-  var HEAD_STATUS = { published: ['Publicat', 'is-ok'], draft: ['Ciornă', 'is-muted'], pending_review: ['În revizuire', 'is-info'], rejected: ['Respins', 'is-bad'], cancelled: ['Anulat', 'is-bad'], postponed: ['Amânat', 'is-wait'], ended: ['Încheiat', 'is-muted'] };
+  var HEAD_STATUS = { published: [VQ.t('Published'), 'is-ok'], draft: [VQ.t('Draft'), 'is-muted'], pending_review: [VQ.t('Under review'), 'is-info'], rejected: [VQ.t('Rejected'), 'is-bad'], cancelled: [VQ.t('Cancelled'), 'is-bad'], postponed: [VQ.t('Postponed'), 'is-wait'], ended: [VQ.t('Ended'), 'is-muted'] };
   var TEXT_FIELDS = ['oe-name', 'oe-short', 'oe-tags', 'oe-start-date', 'oe-start-time', 'oe-end-date', 'oe-end-time', 'oe-end-time-single', 'oe-door-time', 'oe-door-time-range', 'oe-venue', 'oe-city', 'oe-address', 'oe-website', 'oe-facebook', 'oe-video', 'oe-capacity', 'oe-max-order', 'oe-sales-start', 'oe-sales-end'];
 
   function markDirty() { if (!ED.filling && view === 'editor') ED.dirty = true; }
@@ -481,7 +484,7 @@
   function loadForEdit(id) {
     ED.loadingId = id;
     setLoading(true);
-    $('oe-ed-h').textContent = 'Se încarcă activitatea…';
+    $('oe-ed-h').textContent = VQ.t('Loading the activity…');
     function abandon(message) {
       ED.loadingId = null;
       setLoading(false);
@@ -493,14 +496,14 @@
       var ev = r && r.data && (r.data.event || r.data);
       if (!ev || ev.id == null) throw { status: 404 };
       if (ev.is_editable === false || ev.is_past === true) {
-        abandon('Această activitate s-a încheiat sau a fost anulată și nu mai poate fi editată.');
+        abandon(VQ.t('This activity has ended or was cancelled and can no longer be edited.'));
         return null;
       }
       return ensureCategories().then(function () { if (ED.loadingId === id) fillEditor(ev); });
     }).catch(function (err) {
       if (ED.loadingId !== id) return;
       if (err && err.status === 401) { ED.loadingId = null; return; }
-      abandon(err && err.status === 404 ? 'Activitatea nu a fost găsită.' : err && err.status === 403 ? 'Nu ai acces la această activitate.' : errText(err, 'Nu am putut încărca activitatea.'));
+      abandon(err && err.status === 404 ? VQ.t('The activity was not found.') : err && err.status === 403 ? VQ.t('You do not have access to this activity.') : errText(err, VQ.t('We could not load the activity.')));
     }).then(function () {
       if (ED.loadingId !== id) return;
       ED.loadingId = null;
@@ -559,7 +562,7 @@
       var catId = String(ev.marketplace_event_category_id);
       sel.value = catId;
       if (sel.value !== catId) { // a category no longer offered: keep it so saving doesn't drop it
-        sel.appendChild(el('option', { value: catId, text: F.flat(ev.category) || 'Categoria actuală' }));
+        sel.appendChild(el('option', { value: catId, text: F.flat(ev.category) || VQ.t('Current category') }));
         sel.value = catId;
       }
     }
@@ -611,7 +614,7 @@
     if (F.toNum(ev.capacity) > 0) setVal('oe-capacity', String(Math.round(F.toNum(ev.capacity))));
 
     $('oe-rejected').hidden = ED.status !== 'rejected';
-    $('oe-rejected-reason').textContent = F.flat(ev.rejection_reason) || 'nu a fost precizat';
+    $('oe-rejected-reason').textContent = F.flat(ev.rejection_reason) || VQ.t('not given');
     $('oe-review').hidden = ED.status !== 'pending_review';
     $('oe-changes').hidden = !ev.has_pending_changes;
     $('oe-status').hidden = !ED.published;
@@ -689,12 +692,12 @@
       }
       return Promise.all([
         tm.init(Object.assign({}, base, {
-          selector: '#oe-description', height: 300, placeholder: 'Scrie descrierea activității aici…', iframe_aria_text: 'Descriere completă',
+          selector: '#oe-description', height: 300, placeholder: VQ.t('Write the description of the activity here…'), iframe_aria_text: VQ.t('Full description'),
           plugins: 'lists link autolink media', toolbar: 'bold italic underline | bullist numlist | link media | hr | undo redo | removeformat',
           extended_valid_elements: 'iframe[src|frameborder|style|scrolling|class|width|height|name|align|allow|allowfullscreen|loading|referrerpolicy|title]',
           valid_children: '+body[iframe],+div[iframe]', media_live_embeds: true, media_alt_source: false, media_poster: false, setup: setup('desc'),
         })),
-        tm.init(Object.assign({}, base, { selector: '#oe-terms', height: 230, placeholder: 'Condiții de participare, restricții, politica de retur…', iframe_aria_text: 'Condiții activitate', setup: setup('terms') })),
+        tm.init(Object.assign({}, base, { selector: '#oe-terms', height: 230, placeholder: VQ.t('Terms of participation, restrictions, refund policy…'), iframe_aria_text: VQ.t('Activity terms'), setup: setup('terms') })),
       ]).then(function () { return tm; }, function () { return null; });
     });
     return tinyLoad;
@@ -738,7 +741,7 @@
     var list = $('oe-' + kind + '-chips');
     list.textContent = '';
     ED[kind].forEach(function (it) {
-      var b = el('button', { type: 'button', 'aria-label': 'Elimină ' + it.name }, icon('x'));
+      var b = el('button', { type: 'button', 'aria-label': VQ.t('Remove {name}', { name: it.name }) }, icon('x'));
       b.addEventListener('click', function () {
         ED[kind] = ED[kind].filter(function (x) { return x.id !== it.id; });
         renderChips(kind);
@@ -789,10 +792,10 @@
     function run() {
       var q = input.value.trim(), my = ++seq;
       if (q.length < (cfg.min || 0)) { open(false); return; }
-      if (cfg.loading) show([], 'Se caută…');
+      if (cfg.loading) show([], VQ.t('Searching…'));
       Promise.resolve().then(function () { return cfg.fetch(q); }).then(function (res) {
         if (my === seq && document.activeElement === input) show(res.rows, res.message);
-      }, function () { if (my === seq && document.activeElement === input) show([], 'Căutarea nu a funcționat. Încearcă din nou.'); });
+      }, function () { if (my === seq && document.activeElement === input) show([], VQ.t('The search did not work. Try again.')); });
     }
     input.addEventListener('input', function () {
       clearTimeout(timer);
@@ -825,7 +828,7 @@
     fetch: function (q) {
       var t = norm(q);
       var rows = ED.genresAvail.filter(function (g) { return !ED.genres.some(function (s) { return s.id === g.id; }) && (!t || norm(F.flat(g.name)).indexOf(t) > -1); });
-      return { rows: rows, message: rows.length ? '' : (ED.genresAvail.length ? 'Niciun gen nu se potrivește.' : 'Categoria aleasă nu are genuri.') };
+      return { rows: rows, message: rows.length ? '' : (ED.genresAvail.length ? VQ.t('No genre matches.') : VQ.t('The chosen category has no genres.')) };
     },
     render: function (g) { return [el('b', { text: F.flat(g.name) })]; },
     onPick: function (g, c) {
@@ -847,15 +850,15 @@
         return { rows: rows };
       });
     },
-    render: function (a) { return a.create ? [el('b', { text: '+ Adaugă „' + a.name + '” ca artist nou' })] : [el('b', { text: F.flat(a.name) })]; },
+    render: function (a) { return a.create ? [el('b', { text: VQ.t('+ Add “{name}” as a new artist', { name: a.name }) })] : [el('b', { text: F.flat(a.name) })]; },
     onPick: function (a, c) {
       if (!a.create) { addArtist(a); c.input.value = ''; return; }
       c.input.disabled = true;
       O.api('/organizer/artists', { method: 'POST', body: { name: a.name } }).then(function (r) {
         var art = r && r.data && r.data.artist;
-        if (art) { addArtist(art); c.input.value = ''; O.flash('Artistul „' + F.flat(art.name) + '” a fost adăugat.'); }
+        if (art) { addArtist(art); c.input.value = ''; O.flash(VQ.t('The artist “{name}” was added.', { name: F.flat(art.name) })); }
       }).catch(function (err) {
-        if (!err || err.status !== 401) O.flash(errText(err, 'Nu am putut adăuga artistul.'), true);
+        if (!err || err.status !== 401) O.flash(errText(err, VQ.t('We could not add the artist.')), true);
       }).then(function () { c.input.disabled = false; focusQuiet(c.input); });
     },
     onBackspace: function () { if (ED.artists.length) { ED.artists.pop(); renderChips('artists'); markDirty(); refreshSoon(); } },
@@ -867,12 +870,12 @@
       return O.api('/organizer/venues?search=' + encodeURIComponent(q)).then(function (r) {
         var rows = (r && r.data && Array.isArray(r.data.venues)) ? r.data.venues : [];
         $('oe-venue-notice').hidden = ED.venueId != null || rows.some(function (v) { return norm(F.flat(v.name)) === norm(q); });
-        return { rows: rows, message: rows.length ? '' : 'Niciun rezultat găsit' };
+        return { rows: rows, message: rows.length ? '' : VQ.t('No results found') };
       });
     },
     render: function (v) {
       return [
-        el('b', null, [F.flat(v.name), v.is_marketplace ? el('span', { class: 'oe-partner', text: 'Partener viaqui.com' }) : null]),
+        el('b', null, [F.flat(v.name), v.is_marketplace ? el('span', { class: 'oe-partner', text: VQ.t('Viaqui partner') }) : null]),
         (v.city || v.address) ? el('small', { text: [F.flat(v.city), F.flat(v.address)].filter(Boolean).join(' – ') }) : null,
       ];
     },
@@ -903,8 +906,8 @@
     var input = $('oe-' + kind + '-file');
     clearErr(input);
     if (!file) return;
-    if (['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) < 0) { showErr(input, 'Alege o imagine JPG, PNG sau WebP.'); return; }
-    if (file.size > 10 * 1024 * 1024) { showErr(input, 'Imaginea are ' + (file.size / 1048576).toFixed(1).replace('.', ',') + ' MB; limita este 10 MB.'); return; }
+    if (['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) < 0) { showErr(input, VQ.t('Choose a JPG, PNG or WebP image.')); return; }
+    if (file.size > 10 * 1024 * 1024) { showErr(input, VQ.t('The image is {size} MB; the limit is 10 MB.', { size: new Intl.NumberFormat(LOC, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(file.size / 1048576) })); return; }
     ED.files[kind] = file;
     revoke(kind);
     objectUrls[kind] = URL.createObjectURL(file);
@@ -920,7 +923,7 @@
     var img = $('oe-' + kind + '-img');
     if (src) { if (img.getAttribute('src') !== src) img.setAttribute('src', src); } else img.removeAttribute('src');
     root.querySelector('[data-media-undo="' + kind + '"]').hidden = !file;
-    $('oe-' + kind + '-note').textContent = file ? 'Imagine nouă: ' + file.name + '. Se încarcă la salvare.' : (server ? 'Imaginea salvată rămâne până alegi alta.' : '');
+    $('oe-' + kind + '-note').textContent = file ? VQ.t('New image: {name}. It uploads when you save.', { name: file.name }) : (server ? VQ.t('The saved image stays until you choose another.') : '');
   }
   ['poster', 'cover'].forEach(function (kind) {
     var input = $('oe-' + kind + '-file'), drop = $('oe-' + kind + '-drop');
@@ -929,7 +932,7 @@
     ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('is-over'); }); });
     drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) pickFile(kind, f); });
     $('oe-' + kind + '-img').addEventListener('error', function () {
-      if (!ED.files[kind] && ED.server[kind]) $('oe-' + kind + '-note').textContent = 'Imaginea salvată nu poate fi afișată acum; rămâne salvată până alegi alta.';
+      if (!ED.files[kind] && ED.server[kind]) $('oe-' + kind + '-note').textContent = VQ.t('The saved image cannot be shown right now. It stays saved until you choose another.');
     });
   });
   ['dragover', 'drop'].forEach(function (t) { // a file dropped next to a drop zone must not open in the tab
@@ -965,11 +968,11 @@
   function renumberTickets() {
     var rows = qsa('#oe-tt-list [data-tt]');
     rows.forEach(function (row, i) {
-      var title = (ED.published ? 'Tip bilet nou #' : 'Tip bilet #') + (i + 1);
+      var title = ED.published ? VQ.t('New ticket type #{n}', { n: i + 1 }) : VQ.t('Ticket type #{n}', { n: i + 1 });
       row.querySelector('[data-tt-title]').textContent = title;
       var rm = row.querySelector('[data-tt-remove]');
       rm.hidden = !ED.published && rows.length < 2;
-      rm.querySelector('.sr').textContent = 'Elimină: ' + title;
+      rm.querySelector('.sr').textContent = VQ.t('Remove: {title}', { title: title });
     });
   }
   function renderLocked() {
@@ -978,16 +981,18 @@
     var rows = ED.locked.map(function (t) { return [t, false]; }).concat(ED.free.map(function (t) { return [t, true]; }));
     $('oe-tt-locked').hidden = !rows.length;
     $('oe-tt-locked-note').hidden = !(ED.published && ED.locked.length);
-    $('oe-tt-locked-t').textContent = 'Tipurile de bilet existente nu se mai pot modifica după publicare, ca să nu afecteze biletele vândute. Poți adăuga tipuri noi' + (ED.allowLive ? '.' : '; se aplică după aprobare.');
+    $('oe-tt-locked-t').textContent = ED.allowLive
+      ? VQ.t('Existing ticket types can no longer be changed after publishing, so that sold tickets are not affected. You can add new types.')
+      : VQ.t('Existing ticket types can no longer be changed after publishing, so that sold tickets are not affected. You can add new types; they apply after approval.');
     rows.forEach(function (pair) {
       var t = pair[0], free = pair[1], q = F.toNum(t.quantity);
-      var sub = free ? 'Bilet gratuit cu cod · gestionat de administrator' : [q > 0 ? 'Stoc: ' + F.num(q) : 'Stoc nelimitat', F.flat(t.description)].filter(Boolean).join(' · ');
+      var sub = free ? VQ.t('Free ticket with a code · managed by the administrator') : [q > 0 ? VQ.t('Stock: {n}', { n: F.num(q) }) : VQ.t('Unlimited stock'), F.flat(t.description)].filter(Boolean).join(' · ');
       list.appendChild(el('li', { class: 'oe-lk' }, [
         el('span', { class: 'oe-lk-ic', 'aria-hidden': 'true' }, icon(free ? 'gift' : 'lock-simple')),
-        el('div', { class: 'oe-lk-t' }, [el('b', { text: F.flat(t.name) || 'Bilet' }), el('span', { text: sub })]),
+        el('div', { class: 'oe-lk-t' }, [el('b', { text: F.flat(t.name) || VQ.t('Ticket') }), el('span', { text: sub })]),
         el('div', { class: 'oe-lk-v' }, [
           el('b', { text: F.money(t.price) }),
-          t.is_sold_out ? el('span', { class: 'org-tag is-bad', text: 'Sold out' }) : el('span', { class: 'org-tag is-muted', text: 'Vândute: ' + F.num(t.quantity_sold) }),
+          t.is_sold_out ? el('span', { class: 'org-tag is-bad', text: VQ.t('Sold out') }) : el('span', { class: 'org-tag is-muted', text: VQ.t('Sold: {n}', { n: F.num(t.quantity_sold) }) }),
         ]),
       ]));
     });
@@ -1097,7 +1102,7 @@
     problems.forEach(function (p) { showErr(p[0], p[1]); });
     var first = problems[0];
     openSection(first[2]);
-    O.flash(problems.length === 1 ? first[1] : 'Verifică ' + F.count(problems.length, 'câmp marcat', 'câmpuri marcate') + '.', true);
+    O.flash(problems.length === 1 ? first[1] : VQ.t('Check the {count}.', { count: VQ.n(problems.length, 'marked field', 'marked fields') }), true);
     focusField(first[0]);
   }
   function startsUnchanged() { var d = collect().data; return (d.starts_at || null) === ED.orig.starts_at; }
@@ -1105,25 +1110,25 @@
     clearErrors();
     var problems = [];
     function bad(input, msg, step) { if (input) problems.push([input, msg, step]); }
-    if (!val('oe-name').trim()) bad($('oe-name'), 'Scrie numele activității.', 1);
+    if (!val('oe-name').trim()) bad($('oe-name'), VQ.t('Enter the activity name.'), 1);
     var short = val('oe-short').trim();
-    if (words(short) > 120) bad($('oe-short'), 'Descrierea scurtă are ' + F.count(words(short), 'cuvânt', 'cuvinte') + '; limita este 120.', 1);
-    else if (short.length > 500) bad($('oe-short'), 'Descrierea scurtă are ' + F.count(short.length, 'caracter', 'caractere') + '; limita este 500.', 1);
+    if (words(short) > 120) bad($('oe-short'), VQ.t('The short description has {count}; the limit is 120.', { count: VQ.n(words(short), 'word', 'words') }), 1);
+    else if (short.length > 500) bad($('oe-short'), VQ.t('The short description has {count}; the limit is 500.', { count: VQ.n(short.length, 'character', 'characters') }), 1);
     var sd = val('oe-start-date'), st = val('oe-start-time'), mode = modeValue();
     if (level === 'full') {
-      if (!sd) bad($('oe-start-date'), 'Alege data activității.', 2);
-      if (!st) bad($('oe-start-time'), 'Alege ora de începere.', 2);
-      if (mode === 'range' && !val('oe-end-date')) bad($('oe-end-date'), 'Alege data de sfârșit.', 2);
-      if (sd && st && (sd + 'T' + st) <= nowNaive() && !(ED.published && startsUnchanged())) bad($('oe-start-date'), 'Data și ora de începere trebuie să fie în viitor.', 2);
+      if (!sd) bad($('oe-start-date'), VQ.t('Choose the activity date.'), 2);
+      if (!st) bad($('oe-start-time'), VQ.t('Choose the start time.'), 2);
+      if (mode === 'range' && !val('oe-end-date')) bad($('oe-end-date'), VQ.t('Choose the end date.'), 2);
+      if (sd && st && (sd + 'T' + st) <= nowNaive() && !(ED.published && startsUnchanged())) bad($('oe-start-date'), VQ.t('The start date and time must be in the future.'), 2);
     }
-    if (mode === 'range' && sd && val('oe-end-date') && val('oe-end-date') < sd) bad($('oe-end-date'), 'Data de sfârșit trebuie să fie după data de început.', 2);
+    if (mode === 'range' && sd && val('oe-end-date') && val('oe-end-date') < sd) bad($('oe-end-date'), VQ.t('The end date must be after the start date.'), 2);
     if (level === 'full') {
-      if (!val('oe-venue').trim()) bad($('oe-venue'), 'Scrie numele locației.', 3);
-      if (!val('oe-city').trim()) bad($('oe-city'), 'Scrie orașul.', 3);
+      if (!val('oe-venue').trim()) bad($('oe-venue'), VQ.t('Enter the venue name.'), 3);
+      if (!val('oe-city').trim()) bad($('oe-city'), VQ.t('Enter the city.'), 3);
     }
     ['oe-website', 'oe-facebook', 'oe-video'].forEach(function (fid) {
       var v = val(fid).trim();
-      if (v && !isUrl(v)) bad($(fid), 'Scrie adresa completă, cu https:// la început.', 3);
+      if (v && !isUrl(v)) bad($(fid), VQ.t('Enter the full address, starting with https://.'), 3);
     });
     var rows = qsa('#oe-tt-list [data-tt]'), complete = 0;
     rows.forEach(function (row) {
@@ -1131,24 +1136,24 @@
       var any = ['name', 'price', 'quantity', 'description', 'min', 'max'].some(function (f) { return g(f).value.trim(); });
       if (!any) return;
       var name = g('name').value.trim(), price = g('price').value.trim();
-      if (!name) bad(g('name'), 'Scrie numele biletului.', 6);
-      if (price === '') bad(g('price'), 'Scrie prețul (0 pentru gratuit).', 6);
-      else if (!(parseFloat(price) >= 0)) bad(g('price'), 'Prețul nu poate fi negativ.', 6);
+      if (!name) bad(g('name'), VQ.t('Enter the ticket name.'), 6);
+      if (price === '') bad(g('price'), VQ.t('Enter the price (0 for free).'), 6);
+      else if (!(parseFloat(price) >= 0)) bad(g('price'), VQ.t('The price cannot be negative.'), 6);
       ['quantity', 'min', 'max'].forEach(function (f) {
         var v = g(f).value.trim();
-        if (v && !(/^\d+$/.test(v) && +v >= 1)) bad(g(f), 'Scrie un număr întreg, cel puțin 1.', 6);
+        if (v && !(/^\d+$/.test(v) && +v >= 1)) bad(g(f), VQ.t('Enter a whole number, at least 1.'), 6);
       });
-      if (/^\d+$/.test(g('min').value.trim()) && /^\d+$/.test(g('max').value.trim()) && +g('min').value > +g('max').value) bad(g('max'), 'Maximul trebuie să fie cel puțin cât minimul.', 6);
+      if (/^\d+$/.test(g('min').value.trim()) && /^\d+$/.test(g('max').value.trim()) && +g('min').value > +g('max').value) bad(g('max'), VQ.t('The maximum must be at least the minimum.'), 6);
       if (name && price !== '') complete++;
     });
     if (level === 'full' && complete + (ED.published ? ED.locked.length : 0) === 0) {
       var firstName = rows[0] && rows[0].querySelector('[data-f="name"]');
-      bad(firstName && !firstName.value.trim() ? firstName : $('oe-tt-add'), 'Adaugă cel puțin un tip de bilet, cu nume și preț.', 6);
+      bad(firstName && !firstName.value.trim() ? firstName : $('oe-tt-add'), VQ.t('Add at least one ticket type, with a name and a price.'), 6);
     }
     var capacity = val('oe-capacity').trim(), maxOrder = val('oe-max-order').trim();
-    if (capacity && !(/^\d+$/.test(capacity) && +capacity >= 1)) bad($('oe-capacity'), 'Scrie un număr întreg, cel puțin 1.', 7);
-    if (maxOrder && !(/^\d+$/.test(maxOrder) && +maxOrder >= 1 && +maxOrder <= 50)) bad($('oe-max-order'), 'Alege un număr între 1 și 50.', 7);
-    if (val('oe-sales-start') && val('oe-sales-end') && val('oe-sales-end') <= val('oe-sales-start')) bad($('oe-sales-end'), 'Sfârșitul vânzărilor trebuie să fie după început.', 7);
+    if (capacity && !(/^\d+$/.test(capacity) && +capacity >= 1)) bad($('oe-capacity'), VQ.t('Enter a whole number, at least 1.'), 7);
+    if (maxOrder && !(/^\d+$/.test(maxOrder) && +maxOrder >= 1 && +maxOrder <= 50)) bad($('oe-max-order'), VQ.t('Choose a number between 1 and 50.'), 7);
+    if (val('oe-sales-start') && val('oe-sales-end') && val('oe-sales-end') <= val('oe-sales-start')) bad($('oe-sales-end'), VQ.t('The end of sales must be after the start.'), 7);
     if (!problems.length) return true;
     report(problems);
     return false;
@@ -1163,16 +1168,16 @@
   };
   function tr(m) {
     var x;
-    if (/required/i.test(m)) return 'Câmp obligatoriu.';
-    if (/valid URL|format is invalid/i.test(m)) return 'Adresa nu este validă.';
-    if (/must be a date after/i.test(m)) return 'Data trebuie să fie în viitor.';
-    if ((x = /greater than (\d+) characters/i.exec(m))) return 'Textul este prea lung (maximum ' + x[1] + ' de caractere).';
-    if ((x = /greater than (\d+)/i.exec(m))) return 'Valoarea maximă este ' + x[1] + '.';
-    if ((x = /at least (\d+)/i.exec(m))) return 'Valoarea minimă este ' + x[1] + '.';
-    if (/integer|number|numeric/i.test(m)) return 'Scrie un număr.';
-    if (/valid date/i.test(m)) return 'Dată invalidă.';
-    if (/selected .* is invalid/i.test(m)) return 'Alegerea nu mai este validă.';
-    return /[ăâîșț]/i.test(m) ? m : 'Valoare invalidă.';
+    if (/required/i.test(m)) return VQ.t('Required field.');
+    if (/valid URL|format is invalid/i.test(m)) return VQ.t('The address is not valid.');
+    if (/must be a date after/i.test(m)) return VQ.t('The date must be in the future.');
+    if ((x = /greater than (\d+) characters/i.exec(m))) return VQ.t('The text is too long ({n} characters at most).', { n: x[1] });
+    if ((x = /greater than (\d+)/i.exec(m))) return VQ.t('The maximum value is {n}.', { n: x[1] });
+    if ((x = /at least (\d+)/i.exec(m))) return VQ.t('The minimum value is {n}.', { n: x[1] });
+    if (/integer|number|numeric/i.test(m)) return VQ.t('Enter a number.');
+    if (/valid date/i.test(m)) return VQ.t('Invalid date.');
+    if (/selected .* is invalid/i.test(m)) return VQ.t('This choice is no longer valid.');
+    return /[ăâîșț]/i.test(m) ? m : VQ.t('Invalid value.');
   }
   function serverErrors(err) {
     var errs = err && (err.errors || (err.data && err.data.errors));
@@ -1198,20 +1203,20 @@
 
   /* ---------- save ---------- */
   var LABELS = {
-    submit: { short: 'Trimite spre aprobare', long: 'Salvează și trimite spre aprobare', tiny: 'Trimite' },
-    update: { short: 'Salvează modificările', long: 'Salvează modificările', tiny: 'Salvează' },
-    live: { short: 'Salvează și publică', long: 'Salvează și publică modificările', tiny: 'Publică' },
-    draft: { short: 'Salvează ciornă', long: 'Salvează ciornă', tiny: 'Salvează ciornă' },
+    submit: { short: VQ.t('Submit for approval'), long: VQ.t('Save and submit for approval'), tiny: VQ.t('Submit') },
+    update: { short: VQ.t('Save changes'), long: VQ.t('Save changes'), tiny: VQ.t('Save') },
+    live: { short: VQ.t('Save and publish'), long: VQ.t('Save and publish the changes'), tiny: VQ.t('Publish') },
+    draft: { short: VQ.t('Save draft'), long: VQ.t('Save draft'), tiny: VQ.t('Save draft') },
   };
   function primaryKind() { return ED.published || ED.status === 'pending_review' ? 'update' : 'submit'; }
   function setActionLabels(busyKind) {
     var pk = primaryKind(), key = pk === 'update' && ED.published && ED.allowLive ? 'live' : pk;
     qsa('[data-oe-submit]', root).forEach(function (b) {
-      b.querySelector('[data-label]').textContent = busyKind && busyKind !== 'draft' ? (busyKind === 'submit' ? 'Se trimite…' : 'Se salvează…') : LABELS[key][b.getAttribute('data-size')];
+      b.querySelector('[data-label]').textContent = busyKind && busyKind !== 'draft' ? (busyKind === 'submit' ? VQ.t('Sending…') : VQ.t('Saving…')) : LABELS[key][b.getAttribute('data-size')];
     });
     qsa('[data-oe-save]', root).forEach(function (b) {
       b.hidden = pk !== 'submit';
-      b.querySelector('[data-label]').textContent = busyKind === 'draft' ? 'Se salvează…' : LABELS.draft[b.getAttribute('data-size')];
+      b.querySelector('[data-label]').textContent = busyKind === 'draft' ? VQ.t('Saving…') : LABELS.draft[b.getAttribute('data-size')];
     });
   }
   function setBusy(kind) {
@@ -1221,21 +1226,21 @@
     });
     setActionLabels(kind);
   }
-  function stampSaved() { $('oe-saved').textContent = 'Salvat la ' + new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }); }
+  function stampSaved() { $('oe-saved').textContent = VQ.t('Saved at {time}', { time: new Date().toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' }) }); }
   function showAlert(text, href, linkText) {
     $('oe-alert-t').textContent = text;
     var a = $('oe-alert-a');
     a.hidden = !href;
-    if (href) { a.setAttribute('href', href); a.textContent = linkText || 'Deschide'; }
+    if (href) { a.setAttribute('href', href); a.textContent = linkText || VQ.t('Open'); }
     $('oe-alert').hidden = false;
     $('oe-alert').scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
   }
   function hideAlert() { $('oe-alert').hidden = true; }
   function liveMessage(r) {
     var m = String((r && r.message) || '');
-    if (/aprobare/i.test(m)) return 'Modificările au fost trimise spre aprobare.';
-    if (/publicate/i.test(m)) return 'Modificările au fost publicate.';
-    return 'Modificările au fost salvate.';
+    if (/aprobare|approval/i.test(m)) return VQ.t('The changes were sent for approval.');
+    if (/publicate|published/i.test(m)) return VQ.t('The changes were published.');
+    return VQ.t('The changes were saved.');
   }
   function applySaved(ev, imagesOnly) {
     ED.event = ev;
@@ -1272,21 +1277,21 @@
       revoke('cover');
       return (r && r.data && r.data.event) || null;
     }).catch(function (err) {
-      O.flash('Activitatea a fost salvată, dar imaginile nu s-au încărcat. ' + (err && err.status === 422 ? 'Folosește o imagine JPG, PNG sau WebP de cel mult 10 MB.' : 'Încearcă din nou.'), true);
+      O.flash(err && err.status === 422 ? VQ.t('The activity was saved, but the images did not upload. Use a JPG, PNG or WebP image of 10 MB at most.') : VQ.t('The activity was saved, but the images did not upload. Try again.'), true);
       return null;
     });
   }
   function submitForReview() {
     return O.api('/organizer/events/' + encodeURIComponent(ED.id) + '/submit', { method: 'POST', body: {} }).then(function () {
-      O.flash('Activitatea a fost trimisă spre aprobare.');
+      O.flash(VQ.t('The activity was submitted for approval.'));
       navigate(lastListUrl);
       return true;
     }).catch(function (err) {
       if (err && err.status === 401) return false;
       if (err && err.status === 403 && /contract/i.test(String(err.message || ''))) {
-        showAlert('Activitatea a fost salvată. Ca s-o trimiți spre aprobare, semnează mai întâi contractul.', '/organizator/setari#contract', 'Semnează contractul');
+        showAlert(VQ.t('The activity was saved. To submit it for approval, sign the contract first.'), VQ.url('/organizator/setari#contract'), VQ.t('Sign the contract'));
       } else {
-        showAlert('Activitatea a fost salvată, dar nu a putut fi trimisă spre aprobare. ' + errText(err, 'Încearcă din nou.'), null);
+        showAlert(VQ.t('The activity was saved, but could not be submitted for approval. {reason}', { reason: errText(err, VQ.t('Try again.')) }), null);
       }
       return false;
     });
@@ -1295,8 +1300,8 @@
     if (ED.saving || ED.loadingId || view !== 'editor') return Promise.resolve(false);
     hideAlert();
     if (!navigator.onLine) {
-      if (kind === 'draft') { pendingSave = true; O.flash('Nu există conexiune la internet. Salvăm ciorna automat când revine conexiunea.', true); }
-      else O.flash('Nu poți ' + (kind === 'submit' ? 'trimite spre aprobare' : 'salva modificările') + ' fără conexiune la internet. Așteaptă să revină conexiunea.', true);
+      if (kind === 'draft') { pendingSave = true; O.flash(VQ.t('No internet connection. We save the draft automatically when the connection is back.'), true); }
+      else O.flash(kind === 'submit' ? VQ.t('You cannot submit for approval without an internet connection. Wait for the connection to come back.') : VQ.t('You cannot save the changes without an internet connection. Wait for the connection to come back.'), true);
       return Promise.resolve(false);
     }
     if (!validate(kind === 'draft' ? 'draft' : 'full')) return Promise.resolve(false);
@@ -1328,17 +1333,17 @@
         markClean();
         stampSaved();
         if (kind === 'submit') return submitForReview();
-        O.flash(kind === 'draft' ? 'Activitatea a fost salvată ca ciornă.' : liveMessage(r));
+        O.flash(kind === 'draft' ? VQ.t('The activity was saved as a draft.') : liveMessage(r));
         return true;
       });
     }).catch(function (err) {
       if (err && err.status === 401) return false;
       if (err && err.status === 422 && serverErrors(err)) return false;
       if (err && err.status === 403 && /approved/i.test(String(err.message || ''))) {
-        showAlert('Contul tău trebuie aprobat înainte de a crea activități. Completează datele contului și încarcă documentele cerute.', '/organizator/setari', 'Mergi la setările contului');
+        showAlert(VQ.t('Your account must be approved before you can create activities. Fill in the account details and upload the documents requested.'), VQ.url('/organizator/setari'), VQ.t('Go to account settings'));
         return false;
       }
-      O.flash(errText(err, kind === 'submit' ? 'Nu am putut trimite activitatea. Încearcă din nou.' : 'Nu am putut salva activitatea. Încearcă din nou.'), true);
+      O.flash(errText(err, kind === 'submit' ? VQ.t('We could not submit the activity. Try again.') : VQ.t('We could not save the activity. Try again.')), true);
       return false;
     }).then(function (ok) {
       ED.saving = false;
@@ -1360,17 +1365,17 @@
   function renderFlags() {
     var f = ED.flags || {}, chips = $('oe-status-chips');
     chips.textContent = '';
-    [[f.sold, 'Sold Out', 'is-info'], [f.door, 'Door Sales Only', 'is-wait'], [f.postponed, 'Amânată', 'is-wait'], [f.cancelled, 'Anulată', 'is-bad']].forEach(function (x) {
+    [[f.sold, VQ.t('Sold out'), 'is-info'], [f.door, VQ.t('Door sales only'), 'is-wait'], [f.postponed, VQ.t('Postponed'), 'is-wait'], [f.cancelled, VQ.t('Cancelled'), 'is-bad']].forEach(function (x) {
       if (x[0]) chips.appendChild(el('span', { class: 'org-tag ' + x[2], text: x[1] }));
     });
     var so = $('oe-sold-out'), ds = $('oe-door-sales'), pp = $('oe-postpone'), cx = $('oe-cancel');
     so.classList.toggle('is-on', !!f.sold);
-    so.querySelector('span').textContent = f.sold ? 'Anulează Sold Out' : 'Marchează Sold Out';
+    so.querySelector('span').textContent = f.sold ? VQ.t('Undo sold out') : VQ.t('Mark as sold out');
     ds.classList.toggle('is-on', !!f.door);
-    ds.querySelector('span').textContent = f.door ? 'Anulează Door Sales' : 'Door Sales Only';
+    ds.querySelector('span').textContent = f.door ? VQ.t('Undo door sales only') : VQ.t('Door sales only');
     pp.classList.toggle('is-on', !!f.postponed);
-    pp.querySelector('span').textContent = f.postponed ? 'Revocă amânarea' : 'Amână activitatea';
-    cx.querySelector('span').textContent = f.cancelled ? 'Activitate anulată' : 'Anulează activitatea';
+    pp.querySelector('span').textContent = f.postponed ? VQ.t('Revoke the postponement') : VQ.t('Postpone the activity');
+    cx.querySelector('span').textContent = f.cancelled ? VQ.t('Activity cancelled') : VQ.t('Cancel the activity');
     [so, ds, pp, cx].forEach(function (b) { b.disabled = !!f.cancelled; });
     setHeaderStatus();
   }
@@ -1389,20 +1394,20 @@
       O.flash(okMsg);
       return true;
     }).catch(function (err) {
-      if (!err || err.status !== 401) O.flash(errText(err, 'Nu am putut schimba starea activității.'), true);
+      if (!err || err.status !== 401) O.flash(errText(err, VQ.t('We could not change the status of the activity.')), true);
       return false;
     }).then(function (ok) { btn.disabled = false; renderFlags(); return ok; });
   }
   $('oe-sold-out').addEventListener('click', function () {
     var on = !ED.flags.sold;
-    patchStatus({ is_sold_out: on }, on ? 'Activitatea a fost marcată ca Sold Out.' : 'Sold Out a fost anulat.', this);
+    patchStatus({ is_sold_out: on }, on ? VQ.t('The activity was marked as sold out.') : VQ.t('Sold out was undone.'), this);
   });
   $('oe-door-sales').addEventListener('click', function () {
     var on = !ED.flags.door;
-    patchStatus({ door_sales_only: on }, on ? 'Door Sales Only a fost activat.' : 'Door Sales Only a fost dezactivat.', this);
+    patchStatus({ door_sales_only: on }, on ? VQ.t('Door sales only was turned on.') : VQ.t('Door sales only was turned off.'), this);
   });
   $('oe-postpone').addEventListener('click', function () {
-    if (ED.flags.postponed) { patchStatus({ is_postponed: false }, 'Amânarea a fost revocată.', this); return; }
+    if (ED.flags.postponed) { patchStatus({ is_postponed: false }, VQ.t('The postponement was revoked.'), this); return; }
     var ev = ED.event || {};
     setVal('oe-pp-date', ev.postponed_date || '');
     setVal('oe-pp-start', ev.postponed_start_time || '');
@@ -1417,13 +1422,13 @@
     e.preventDefault();
     clearErr($('oe-pp-date'));
     var date = val('oe-pp-date');
-    if (!date) { showErr($('oe-pp-date'), 'Alege noua dată.'); focusQuiet($('oe-pp-date')); return; }
+    if (!date) { showErr($('oe-pp-date'), VQ.t('Choose the new date.')); focusQuiet($('oe-pp-date')); return; }
     var ok = $('oe-pp-ok');
     ok.disabled = true;
     patchStatus({
       is_postponed: true, postponed_date: date, postponed_start_time: val('oe-pp-start') || null, postponed_door_time: val('oe-pp-door') || null,
       postponed_end_time: val('oe-pp-end') || null, postponed_reason: val('oe-pp-reason').trim() || null,
-    }, 'Activitatea a fost marcată ca amânată.', $('oe-postpone')).then(function (done) {
+    }, VQ.t('The activity was marked as postponed.'), $('oe-postpone')).then(function (done) {
       ok.disabled = false;
       if (done) closeDialog($('oe-postpone-d'));
     });
@@ -1437,10 +1442,10 @@
     focusQuiet($('oe-cx-reason'));
   });
   function cancelMessage(r) {
-    var d = (r && r.data) || {}, parts = ['Activitatea a fost anulată.'];
+    var d = (r && r.data) || {}, parts = [VQ.t('The activity was cancelled.')];
     var unpaid = F.toNum(d.orders_cancelled), paid = F.toNum(d.paid_orders_pending_review);
-    if (unpaid > 0) parts.push(F.count(unpaid, 'comandă neplătită a fost anulată.', 'comenzi neplătite au fost anulate.'));
-    if (paid > 0) parts.push(F.count(paid, 'comandă plătită așteaptă', 'comenzi plătite așteaptă') + ' decizia de rambursare a echipei viaqui.com.');
+    if (unpaid > 0) parts.push(VQ.n(unpaid, 'unpaid order was cancelled.', 'unpaid orders were cancelled.'));
+    if (paid > 0) parts.push(VQ.n(paid, 'paid order is waiting for the refund decision of the Viaqui team.', 'paid orders are waiting for the refund decision of the Viaqui team.'));
     return parts.join(' ');
   }
   $('oe-cx-form').addEventListener('submit', function (e) {
@@ -1448,12 +1453,12 @@
     clearErr($('oe-cx-reason'));
     clearErr($('oe-cx-ack'));
     var reason = val('oe-cx-reason').trim(), first = null;
-    if (!reason) { showErr($('oe-cx-reason'), 'Scrie motivul anulării.'); first = $('oe-cx-reason'); }
-    if (!$('oe-cx-ack').checked) { showErr($('oe-cx-ack'), 'Bifează că înțelegi că anularea este definitivă.'); first = first || $('oe-cx-ack'); }
+    if (!reason) { showErr($('oe-cx-reason'), VQ.t('Enter the reason for cancelling.')); first = $('oe-cx-reason'); }
+    if (!$('oe-cx-ack').checked) { showErr($('oe-cx-ack'), VQ.t('Tick the box to confirm you understand that the cancellation is final.')); first = first || $('oe-cx-ack'); }
     if (first) { focusQuiet(first); return; }
     var ok = $('oe-cx-ok');
     ok.disabled = true;
-    ok.textContent = 'Se anulează…';
+    ok.textContent = VQ.t('Cancelling…');
     O.api('/organizer/events/' + encodeURIComponent(ED.id) + '/cancel', { method: 'POST', body: { reason: reason } }).then(function (r) {
       closeDialog($('oe-cancel-d'));
       L.loaded = false;
@@ -1461,8 +1466,8 @@
       O.flash(cancelMessage(r));
       navigate(lastListUrl);
     }).catch(function (err) {
-      if (!err || err.status !== 401) O.flash(errText(err, 'Nu am putut anula activitatea.'), true);
-    }).then(function () { ok.disabled = false; ok.textContent = 'Confirmă anularea'; });
+      if (!err || err.status !== 401) O.flash(errText(err, VQ.t('We could not cancel the activity.')), true);
+    }).then(function () { ok.disabled = false; ok.textContent = VQ.t('Confirm cancellation'); });
   });
 
   /* ---------- preview ---------- */
@@ -1470,13 +1475,13 @@
     var body = $('oe-pv-body');
     body.textContent = '';
     var src = ED.files.cover ? objectUrls.cover : ED.server.cover ? O.img(ED.server.cover) : ED.files.poster ? objectUrls.poster : ED.server.poster ? O.img(ED.server.poster) : '';
-    body.appendChild(el('div', { class: 'oe-pv-hero' }, src ? el('img', { src: src, alt: '' }) : 'Fără imagine'));
+    body.appendChild(el('div', { class: 'oe-pv-hero' }, src ? el('img', { src: src, alt: '' }) : VQ.t('No image')));
     var sel = $('oe-category'), catText = sel.value && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text : '';
     if (catText) body.appendChild(el('span', { class: 'org-tag is-muted oe-pv-cat', text: catText }));
-    body.appendChild(el('h3', { class: 'oe-pv-h', text: val('oe-name').trim() || 'Activitate fără nume' }));
+    body.appendChild(el('h3', { class: 'oe-pv-h', text: val('oe-name').trim() || VQ.t('Untitled activity') }));
     var sd = val('oe-start-date'), st = val('oe-start-time');
     if (sd) {
-      var when = cap(dayLabel(sd, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })) + (st ? ', ora ' + st : '');
+      var when = cap(dayLabel(sd, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })) + (st ? ', ' + st : '');
       if (modeValue() === 'range' && val('oe-end-date')) when += ' – ' + dayLabel(val('oe-end-date'), { day: 'numeric', month: 'long', year: 'numeric' });
       body.appendChild(el('p', { class: 'oe-pv-line' }, [icon('calendar-blank'), when]));
     }
@@ -1484,14 +1489,14 @@
     if (place) body.appendChild(el('p', { class: 'oe-pv-line' }, [icon('map-pin'), place]));
     var short = val('oe-short').trim();
     if (short) body.appendChild(el('p', { class: 'oe-pv-desc', text: short }));
-    body.appendChild(el('p', { class: 'org-k oe-pv-k', text: 'Bilete disponibile' }));
+    body.appendChild(el('p', { class: 'org-k oe-pv-k', text: VQ.t('Tickets available') }));
     var tickets = ED.locked.map(function (t) { return [F.flat(t.name), F.money(t.price)]; }).concat(qsa('#oe-tt-list [data-tt]').map(function (row) {
       var n = row.querySelector('[data-f="name"]').value.trim(), p = row.querySelector('[data-f="price"]').value.trim();
       return n ? [n, p !== '' ? F.money(p) : '—'] : null;
     }).filter(Boolean));
     body.appendChild(tickets.length
       ? el('ul', { class: 'oe-pv-tickets' }, tickets.map(function (t) { return el('li', null, [el('span', { text: t[0] }), el('b', { text: t[1] })]); }))
-      : el('p', { class: 'oe-help', text: 'Fără tipuri de bilet definite încă.' }));
+      : el('p', { class: 'oe-help', text: VQ.t('No ticket types defined yet.') }));
   }
   $('oe-preview-open').addEventListener('click', function () { renderPreview(); showDialog($('oe-preview-d')); });
 
@@ -1499,7 +1504,7 @@
   function setSum(n, t) { var s = $('oe-sum-' + n); if (s) s.textContent = t; }
   function updateShortCount() {
     var v = val('oe-short'), w = words(v), chars = v.trim().length, n = $('oe-short-count');
-    n.textContent = w + '/120 cuvinte · ' + chars + '/500 caractere';
+    n.textContent = VQ.t('{words}/120 words · {chars}/500 characters', { words: w, chars: chars });
     n.classList.toggle('is-over', w > 120 || chars > 500);
   }
   function setHeaderStatus() {
@@ -1510,7 +1515,7 @@
   }
   function setHeader() {
     var name = val('oe-name').trim();
-    if (!ED.loadingId) $('oe-ed-h').textContent = ED.id ? (name || 'Activitate fără nume') : 'Activitate nouă';
+    if (!ED.loadingId) $('oe-ed-h').textContent = ED.id ? (name || VQ.t('Untitled activity')) : VQ.t('New activity');
     var sd = val('oe-start-date'), st = val('oe-start-time'), dEl = $('oe-bar-date');
     dEl.hidden = !sd;
     if (sd) dEl.lastElementChild.textContent = dayLabel(sd, { day: 'numeric', month: 'short', year: 'numeric' }) + (st && st !== '00:00' ? ', ' + st : '');
@@ -1518,7 +1523,7 @@
     vEl.hidden = !place;
     if (place) vEl.lastElementChild.textContent = place;
     setHeaderStatus();
-    if (view === 'editor') document.title = (ED.id ? (name || 'Activitate') + ' · editare' : 'Activitate nouă') + ' — viaqui.com';
+    if (view === 'editor') document.title = (ED.id ? VQ.t('{name} · editing', { name: name || VQ.t('Activity') }) : VQ.t('New activity')) + SITE;
   }
   function refreshAll() {
     if (view !== 'editor') return;
@@ -1527,7 +1532,7 @@
     setSum(1, [val('oe-name').trim(), catText].filter(Boolean).join(' • '));
     var s2 = '';
     if (sd) {
-      s2 = dayLabel(sd, { day: 'numeric', month: 'short', year: 'numeric' }) + (st ? ' la ' + st : '');
+      s2 = dayLabel(sd, { day: 'numeric', month: 'short', year: 'numeric' }) + (st ? ', ' + st : '');
       if (mode === 'range' && val('oe-end-date')) s2 += ' – ' + dayLabel(val('oe-end-date'), { day: 'numeric', month: 'short' });
     }
     setSum(2, s2);
@@ -1535,15 +1540,15 @@
     var desc = plain(getRich('desc'));
     setSum(4, desc.length > 60 ? desc.slice(0, 60) + '…' : desc);
     var hasPoster = !!(ED.files.poster || ED.server.poster), hasCover = !!(ED.files.cover || ED.server.cover);
-    setSum(5, hasPoster && hasCover ? 'Poster și cover adăugate' : hasPoster ? 'Poster adăugat' : hasCover ? 'Cover adăugat' : '');
+    setSum(5, hasPoster && hasCover ? VQ.t('Poster and cover added') : hasPoster ? VQ.t('Poster added') : hasCover ? VQ.t('Cover added') : '');
     var tickets = ED.locked.map(function (t) { return F.flat(t.name) + ': ' + F.money(t.price); }).concat(qsa('#oe-tt-list [data-tt]').map(function (row) {
       var n = row.querySelector('[data-f="name"]').value.trim(), p = row.querySelector('[data-f="price"]').value.trim();
       return n && p !== '' ? n + ': ' + F.money(p) : null;
     }).filter(Boolean));
     setSum(6, tickets.join(' | '));
     var s7 = [];
-    if (val('oe-capacity')) s7.push('Capacitate: ' + val('oe-capacity'));
-    if (val('oe-max-order')) s7.push('Max/comandă: ' + val('oe-max-order'));
+    if (val('oe-capacity')) s7.push(VQ.t('Capacity: {n}', { n: val('oe-capacity') }));
+    if (val('oe-max-order')) s7.push(VQ.t('Max per order: {n}', { n: val('oe-max-order') }));
     setSum(7, s7.join(' • '));
 
     var firstRow = root.querySelector('#oe-tt-list [data-tt]');
@@ -1568,12 +1573,12 @@
       var st2 = root.querySelector('.oe-ol[data-ol="' + n + '"] [data-st]');
       if (st2) {
         st2.className = 'oe-ol-st ' + (done[n] ? 'is-done' : required ? 'is-req' : 'is-part');
-        st2.querySelector('.sr').textContent = done[n] ? ' (completă)' : required ? ' (lipsesc câmpuri obligatorii)' : ' (necompletată)';
+        st2.querySelector('.sr').textContent = ' ' + (done[n] ? VQ.t('(complete)') : required ? VQ.t('(required fields missing)') : VQ.t('(not filled in)'));
       }
       if (required) issues++;
     }
     $('oe-issues').hidden = !issues;
-    $('oe-issues-t').textContent = F.count(issues, 'problemă rămasă', 'probleme rămase');
+    $('oe-issues-t').textContent = VQ.n(issues, 'issue left', 'issues left');
     setHeader();
     updateShortCount();
   }
@@ -1660,18 +1665,18 @@
   window.addEventListener('offline', function () {
     var drafting = view === 'editor' && primaryKind() === 'submit';
     offlineBanner(view === 'editor'
-      ? 'Conexiunea la internet s-a pierdut. Poți continua să editezi; ' + (drafting ? 'ciorna se salvează automat când revine conexiunea.' : 'salvează modificările după ce revine conexiunea.')
-      : 'Conexiunea la internet s-a pierdut.');
+      ? (drafting ? VQ.t('The internet connection was lost. You can keep editing; the draft is saved automatically when the connection is back.') : VQ.t('The internet connection was lost. You can keep editing; save the changes once the connection is back.'))
+      : VQ.t('The internet connection was lost.'));
     if (drafting && ED.dirty) pendingSave = true;
   });
   window.addEventListener('online', function () {
     var auto = pendingSave && view === 'editor' && !!val('oe-name').trim() && primaryKind() === 'submit';
-    offlineBanner('Conexiunea a revenit.' + (auto ? ' Se salvează ciorna…' : ''), true);
+    offlineBanner(auto ? VQ.t('The connection is back. Saving the draft…') : VQ.t('The connection is back.'), true);
     if (!auto) { pendingSave = false; return; }
     setTimeout(function () {
       save('draft').then(function (ok) {
         if (ok) pendingSave = false;
-        else O.flash('Salvarea automată nu a reușit. Salvează manual.', true);
+        else O.flash(VQ.t('Automatic saving did not work. Save manually.'), true);
       });
     }, 1000);
   });

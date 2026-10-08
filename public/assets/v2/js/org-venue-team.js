@@ -10,11 +10,11 @@
   var F = O.fmt, el = O.el;
   var $ = function (id) { return document.getElementById(id); };
   var ROLES = {
-    gate_scanner: 'Scanare la poartă', sales_operator: 'Vânzare', shift_manager: 'Șef de tură', accountant: 'Contabilitate',
-    operator_boats: 'Bărci', operator_pontoon: 'Ponton', operator_pontoon_rental: 'Închirieri ponton', operator_sled: 'Sanie',
-    operator_tow_validation: 'Validare teleschi', admin_mobile: 'Administrare mobilă', field_seller: 'Vânzare pe teren',
+    gate_scanner: VQ.t('Gate scanning'), sales_operator: VQ.t('Sales'), shift_manager: VQ.t('Shift manager'), accountant: VQ.t('Accounting'),
+    operator_boats: VQ.t('Boats'), operator_pontoon: VQ.t('Pontoon'), operator_pontoon_rental: VQ.t('Pontoon rentals'), operator_sled: VQ.t('Sledge'),
+    operator_tow_validation: VQ.t('Ski tow validation'), admin_mobile: VQ.t('Mobile administration'), field_seller: VQ.t('Field sales'),
   };
-  var DAYS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+  var DAYS = [VQ.t('Monday'), VQ.t('Tuesday'), VQ.t('Wednesday'), VQ.t('Thursday'), VQ.t('Friday'), VQ.t('Saturday'), VQ.t('Sunday')];
   var eventId = null, staff = [], members = [], shifts = [], weekStart = monday(new Date());
   var editStaff = null, editShift = null, lastFocus = null, timesLoaded = false;
 
@@ -46,30 +46,30 @@
 
   /* =================== the venue's people =================== */
   function loadStaff() {
-    state('vt-people', 7, 'Se încarcă…');
+    state('vt-people', 7, VQ.t('Loading…'));
     return O.api('/organizer/leisure/staff').then(function (r) {
       staff = ((r && r.data && r.data.staff) || []).filter(function (s) { return s && s.id != null; });
       drawStaff();
       fillStaffFilter();
     }, function (err) {
       if (err && err.status === 401) return;
-      state('vt-people', 7, 'Nu am putut încărca oamenii locației.');
+      state('vt-people', 7, VQ.t('We could not load the venue staff.'));
     });
   }
   function drawStaff() {
     var body = $('vt-people');
     body.textContent = '';
     if (!staff.length) {
-      state('vt-people', 7, 'Niciun om adăugat încă. Adaugă-i ca să se poată ponta.');
+      state('vt-people', 7, VQ.t('No staff added yet. Add them so they can clock in.'));
       $('vt-people-count').textContent = '';
       return;
     }
     staff.forEach(function (s) {
-      var edit = el('button', { class: 've-icon-btn', type: 'button', 'aria-label': 'Schimbă datele' });
+      var edit = el('button', { class: 've-icon-btn', type: 'button', 'aria-label': VQ.t('Edit details') });
       edit.appendChild(O.icon('pencil-simple'));
       edit.addEventListener('click', function () { openStaff(s); });
       var name = el('td', null, [el('b', { text: txt(s.full_name) || (txt(s.first_name) + ' ' + txt(s.last_name)).trim() || '—' })]);
-      if (!s.active) name.appendChild(el('small', { class: 've-sub', text: 'scos din echipă' }));
+      if (!s.active) name.appendChild(el('small', { class: 've-sub', text: VQ.t('removed from the staff') }));
       body.appendChild(el('tr', { class: s.active ? '' : 'is-off' }, [
         name,
         el('td', { text: txt(s.position) || '—' }),
@@ -81,11 +81,11 @@
       ]));
     });
     var active = staff.filter(function (s) { return s.active; }).length;
-    $('vt-people-count').textContent = F.count(staff.length, 'om', 'oameni') + ', din care ' + F.num(active) + ' în activitate.';
+    $('vt-people-count').textContent = VQ.t('{count}, of which {active} active.', { count: VQ.n(staff.length, 'staff member', 'staff members'), active: F.num(active) });
   }
   function openStaff(s) {
     editStaff = s || null;
-    $('vt-modal-h').textContent = s ? 'Schimbă datele omului' : 'Adaugă un om';
+    $('vt-modal-h').textContent = s ? VQ.t('Edit the staff member') : VQ.t('Add a staff member');
     $('vt-f-first').value = s ? txt(s.first_name) : '';
     $('vt-f-last').value = s ? txt(s.last_name) : '';
     $('vt-f-phone').value = s ? txt(s.phone) : '';
@@ -94,9 +94,9 @@
     var qr = $('vt-f-qr');
     qr.textContent = '';
     if (s && txt(s.qr_code)) {
-      qr.appendChild(document.createTextNode('Codul lui de pontaj: '));
+      qr.appendChild(document.createTextNode(VQ.t('Clock-in code: ')));
       qr.appendChild(el('b', { class: 've-mono', text: txt(s.qr_code) }));
-      qr.appendChild(document.createTextNode(' — rămâne același.'));
+      qr.appendChild(document.createTextNode(VQ.t(' (it stays the same).')));
     }
     qr.hidden = !(s && txt(s.qr_code));
     show('vt-f-off', !!(s && s.active));
@@ -105,7 +105,7 @@
   }
   function saveStaff() {
     var first = $('vt-f-first').value.trim(), last = $('vt-f-last').value.trim();
-    if (!first || !last) { O.flash('Scrie prenumele și numele.', true); return; }
+    if (!first || !last) { O.flash(VQ.t('Enter the first name and the surname.'), true); return; }
     var body = {
       first_name: first, last_name: last,
       phone: $('vt-f-phone').value.trim() || null,
@@ -119,10 +119,10 @@
       : O.api('/organizer/leisure/staff', { method: 'POST', body: body });
     req.then(function () {
       closeModal('vt-modal');
-      O.flash(editStaff ? 'Datele au fost schimbate.' : 'Omul a fost adăugat. Codul lui de pontaj e în listă.');
+      O.flash(editStaff ? VQ.t('The details were changed.') : VQ.t('The staff member was added. Their clock-in code is in the list.'));
       loadStaff();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut salva.', true);
+      O.flash((err && err.message) || VQ.t('We could not save.'), true);
     }).then(function () { btn.disabled = false; });
   }
   function offStaff() {
@@ -131,10 +131,10 @@
     btn.disabled = true;
     O.api('/organizer/leisure/staff/' + F.toNum(editStaff.id), { method: 'DELETE' }).then(function () {
       closeModal('vt-modal');
-      O.flash('Omul a fost scos din echipă. Pontajele lui rămân în raport.');
+      O.flash(VQ.t('The staff member was removed. Their clock-ins stay in the report.'));
       loadStaff();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut scoate omul din echipă.', true);
+      O.flash((err && err.message) || VQ.t('We could not remove the staff member.'), true);
     }).then(function () { btn.disabled = false; });
   }
 
@@ -142,7 +142,7 @@
   function loadWeek() {
     if (!eventId) return;
     $('vt-week-label').textContent = dayLabel(weekStart) + ' – ' + dayLabel(addDays(weekStart, 6));
-    state('vt-week', 8, 'Se încarcă…');
+    state('vt-week', 8, VQ.t('Loading…'));
     O.api('/organizer/events/' + eventId + '/leisure/shifts?week=' + F.ymd(weekStart)).then(function (r) {
       var d = (r && r.data) || {};
       members = Array.isArray(d.members) ? d.members : [];
@@ -150,20 +150,20 @@
       drawWeek();
     }, function (err) {
       if (err && err.status === 401) return;
-      state('vt-week', 8, 'Nu am putut încărca programul.');
+      state('vt-week', 8, VQ.t('We could not load the rota.'));
     });
   }
   function drawWeek() {
     var head = $('vt-week-head');
     head.textContent = '';
-    head.appendChild(el('th', { scope: 'col', text: 'Membru' }));
+    head.appendChild(el('th', { scope: 'col', text: VQ.t('Member') }));
     DAYS.forEach(function (name, i) {
       head.appendChild(el('th', { scope: 'col' }, [el('span', { text: name }), el('small', { class: 've-sub', text: dayLabel(addDays(weekStart, i)) })]));
     });
     var body = $('vt-week');
     body.textContent = '';
     if (!members.length) {
-      state('vt-week', 8, 'Niciun membru activ în cont. Adaugă-i din Echipă, apoi le poți da ture.');
+      state('vt-week', 8, VQ.t('No active members in the account. Add them in Team, then you can give them shifts.'));
       return;
     }
     var bucket = {};
@@ -185,7 +185,7 @@
     var loose = [];
     for (var i2 = 0; i2 < 7; i2++) loose.push(bucket['x_' + i2] || []);
     if (loose.some(function (l) { return l.length; })) {
-      var tr2 = el('tr', null, el('td', null, el('b', { text: 'Fără membru' })));
+      var tr2 = el('tr', null, el('td', null, el('b', { text: VQ.t('No member') })));
       loose.forEach(function (list, idx) { tr2.appendChild(dayCell(null, idx, list)); });
       body.appendChild(tr2);
     }
@@ -194,12 +194,12 @@
     var td = el('td', { class: 've-cell' });
     list.forEach(function (s) {
       var chip = el('button', { class: 've-chip', type: 'button', 'data-role': txt(s.role) });
-      chip.appendChild(el('b', { text: ROLES[s.role] || txt(s.role) || 'Tură' }));
+      chip.appendChild(el('b', { text: ROLES[s.role] || txt(s.role) || VQ.t('Shift') }));
       chip.appendChild(el('span', { text: hhmm(s.start_at) + '–' + hhmm(s.end_at) + (txt(s.gate) ? ' · ' + txt(s.gate) : '') }));
       chip.addEventListener('click', function (ev) { ev.stopPropagation(); openShift(s, null, null); });
       td.appendChild(chip);
     });
-    var add = el('button', { class: 've-add', type: 'button', 'aria-label': 'Adaugă o tură' });
+    var add = el('button', { class: 've-add', type: 'button', 'aria-label': VQ.t('Add a shift') });
     add.appendChild(O.icon('plus'));
     add.addEventListener('click', function () { openShift(null, member, addDays(weekStart, dayIndex)); });
     td.appendChild(add);
@@ -207,11 +207,11 @@
   }
   function openShift(s, member, date) {
     editShift = s || null;
-    $('vs-modal-h').textContent = s ? 'Schimbă tura' : 'Adaugă o tură';
+    $('vs-modal-h').textContent = s ? VQ.t('Edit the shift') : VQ.t('Add a shift');
     var sel = $('vs-f-member');
     sel.textContent = '';
-    sel.appendChild(new Option('Fără membru', ''));
-    members.forEach(function (m) { sel.appendChild(new Option(txt(m.name) || ('Membru #' + m.id), String(m.id))); });
+    sel.appendChild(new Option(VQ.t('No member'), ''));
+    members.forEach(function (m) { sel.appendChild(new Option(txt(m.name) || VQ.t('Member #{id}', { id: m.id }), String(m.id))); });
     if (s) {
       sel.value = s.team_member_id == null ? '' : String(s.team_member_id);
       var sd = F.dateOf(s.start_at), ed = F.dateOf(s.end_at);
@@ -235,8 +235,8 @@
   }
   function saveShift() {
     var start = $('vs-f-start').value, end = $('vs-f-end').value;
-    if (!start || !end) { O.flash('Pune ora de început și cea de sfârșit.', true); return; }
-    if (end <= start) { O.flash('Tura se termină înainte să înceapă.', true); return; }
+    if (!start || !end) { O.flash(VQ.t('Set the start and end time.'), true); return; }
+    if (end <= start) { O.flash(VQ.t('The shift ends before it starts.'), true); return; }
     var body = {
       team_member_id: $('vs-f-member').value ? F.toNum($('vs-f-member').value) : null,
       start_at: start, end_at: end, role: $('vs-f-role').value,
@@ -249,10 +249,10 @@
     var req = editShift ? O.api(base + '/' + F.toNum(editShift.id), { method: 'PUT', body: body }) : O.api(base, { method: 'POST', body: body });
     req.then(function () {
       closeModal('vs-modal');
-      O.flash(editShift ? 'Tura a fost schimbată.' : 'Tura a fost adăugată.');
+      O.flash(editShift ? VQ.t('The shift was changed.') : VQ.t('The shift was added.'));
       loadWeek();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut salva tura.', true);
+      O.flash((err && err.message) || VQ.t('We could not save the shift.'), true);
     }).then(function () { btn.disabled = false; });
   }
   function delShift() {
@@ -261,10 +261,10 @@
     btn.disabled = true;
     O.api('/organizer/events/' + eventId + '/leisure/shifts/' + F.toNum(editShift.id), { method: 'DELETE' }).then(function () {
       closeModal('vs-modal');
-      O.flash('Tura a fost ștearsă.');
+      O.flash(VQ.t('The shift was deleted.'));
       loadWeek();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut șterge tura.', true);
+      O.flash((err && err.message) || VQ.t('We could not delete the shift.'), true);
     }).then(function () { btn.disabled = false; });
   }
 
@@ -272,8 +272,8 @@
   function fillStaffFilter() {
     var sel = $('vt-tstaff'), keep = sel.value;
     sel.textContent = '';
-    sel.appendChild(new Option('Toți oamenii', ''));
-    staff.forEach(function (s) { sel.appendChild(new Option(txt(s.full_name) || ('Om #' + s.id), String(s.id))); });
+    sel.appendChild(new Option(VQ.t('All staff'), ''));
+    staff.forEach(function (s) { sel.appendChild(new Option(txt(s.full_name) || VQ.t('Staff #{id}', { id: s.id }), String(s.id))); });
     sel.value = keep;
   }
   function timeQuery() {
@@ -285,7 +285,7 @@
   }
   function loadTimes() {
     if (!eventId) return;
-    state('vt-times', 5, 'Se încarcă…');
+    state('vt-times', 5, VQ.t('Loading…'));
     var q = timeQuery().concat(['limit=500']);
     O.api('/organizer/leisure/staff-checkins?' + q.join('&')).then(function (r) {
       timesLoaded = true;
@@ -297,13 +297,13 @@
         cards.appendChild(el('article', { class: 've-kpi' }, el('div', null, [
           el('b', { text: F.num(F.toNum(p.total)) }),
           el('p', { text: txt(p.staff_name) || '—' }),
-          el('small', { text: p.last_at ? 'ultimul: ' + stamp(p.last_at) : '' }),
+          el('small', { text: p.last_at ? VQ.t('last: {time}', { time: stamp(p.last_at) }) : '' }),
         ])));
       });
       var body = $('vt-times');
       body.textContent = '';
       if (!items.length) {
-        state('vt-times', 5, 'Niciun pontaj în perioada aleasă.');
+        state('vt-times', 5, VQ.t('No clock-ins in the chosen period.'));
         $('vt-time-count').textContent = '';
         return;
       }
@@ -316,10 +316,10 @@
           el('td', { text: stamp(c.checked_in_at) }),
         ]));
       });
-      $('vt-time-count').textContent = 'Afișate ' + F.num(items.length) + ' din ' + F.count(F.toNum(d.total_count) || items.length, 'pontaj', 'pontaje') + '.';
+      $('vt-time-count').textContent = VQ.t('Showing {shown} of {total}.', { shown: F.num(items.length), total: VQ.n(F.toNum(d.total_count) || items.length, 'clock-in', 'clock-ins') });
     }, function (err) {
       if (err && err.status === 401) return;
-      state('vt-times', 5, 'Nu am putut încărca pontajul.');
+      state('vt-times', 5, VQ.t('We could not load the clock-ins.'));
     });
   }
   function exportTimes() {
@@ -337,14 +337,14 @@
     }).then(function (blob) {
       var a = document.createElement('a'), href = URL.createObjectURL(blob);
       a.href = href;
-      a.download = 'pontaj-' + F.ymd(new Date()) + '.csv';
+      a.download = 'clock-ins-' + F.ymd(new Date()) + '.csv';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(function () { URL.revokeObjectURL(href); }, 4000);
-      O.flash('Pontajul a fost descărcat.');
+      O.flash(VQ.t('The clock-ins were downloaded.'));
     }).catch(function () {
-      O.flash('Nu am putut descărca pontajul.', true);
+      O.flash(VQ.t('We could not download the clock-ins.'), true);
     }).then(function () { btn.disabled = false; });
   }
 
@@ -369,7 +369,7 @@
   $('vt-time-btn').addEventListener('click', function () {
     var open = this.getAttribute('aria-expanded') !== 'true';
     this.setAttribute('aria-expanded', String(open));
-    this.firstChild.nodeValue = open ? 'Ascunde pontajul' : 'Arată pontajul';
+    this.firstChild.nodeValue = open ? VQ.t('Hide clock-ins') : VQ.t('Show clock-ins');
     show('vt-time-body', open);
     if (open && !timesLoaded) loadTimes();
   });
@@ -407,7 +407,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       show('ve-main', true);

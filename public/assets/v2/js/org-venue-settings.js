@@ -9,8 +9,8 @@
   if (!O || !root) return;
   var F = O.fmt, el = O.el;
   var $ = function (id) { return document.getElementById(id); };
-  var CAT = { access: 'Acces', parking: 'Parcare', rental: 'Închiriere', activity: 'Activitate', extra: 'Alt produs', package: 'Pachet' };
-  var GATE = { entry: 'Intrare', exit: 'Ieșire', vip: 'VIP', pos: 'Casă / POS' };
+  var CAT = { access: VQ.t('Access'), parking: VQ.t('Parking'), rental: VQ.t('Rental'), activity: VQ.t('Activity'), extra: VQ.t('Other product'), package: VQ.t('Package') };
+  var GATE = { entry: VQ.t('Entry'), exit: VQ.t('Exit'), vip: VQ.t('VIP'), pos: VQ.t('Register / point of sale') };
   var FIELDS = ['name', 'tax_id', 'registration', 'address', 'city', 'county', 'zip', 'bank_name', 'iban', 'invoice_series', 'next_invoice_number', 'vat_payer', 'vat_rate'];
   var events = [], eventId = null, venueId = null, issuerNames = {}, gates = [], editGate = null, delArmed = false, lastFocus = null, repSeq = 0;
 
@@ -18,8 +18,9 @@
   function show(id, on) { var e = $(id); if (e) e.hidden = !on; }
   function day(v) { var d = F.dateOf(v); return d ? F.date(d, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
   function amount(v, cur) {
-    var c = String(cur || 'RON').toUpperCase(), lei = F.money(F.toNum(v));
-    return c === 'RON' || c === 'LEI' ? lei : lei.replace(/ lei$/, '') + ' ' + c;
+    var c = String(cur || '').toUpperCase();
+    if (c && window.BileteOnlineUtils && typeof BileteOnlineUtils.formatCurrency === 'function') return BileteOnlineUtils.formatCurrency(F.toNum(v), c);
+    return F.money(F.toNum(v));
   }
   function state(bodyId, cols, text) {
     var body = $(bodyId);
@@ -27,56 +28,56 @@
     body.appendChild(el('tr', null, el('td', { colspan: cols, class: 've-state', text: text })));
   }
   function issuerLabel(key) {
-    return txt(issuerNames[key]) || (key === 'secondary' ? 'Societatea secundară' : 'Societatea principală');
+    return txt(issuerNames[key]) || (key === 'secondary' ? VQ.t('Second company') : VQ.t('Main company'));
   }
 
   /* =================== ticket types =================== */
   function loadConfig() {
-    state('vx-types', 5, 'Se încarcă…');
+    state('vx-types', 5, VQ.t('Loading…'));
     return O.api('/organizer/events/' + eventId + '/leisure/config').then(function (r) {
       var d = (r && r.data) || {}, iss = d.issuers || {};
       issuerNames = { primary: iss.primary && iss.primary.name, secondary: iss.secondary && iss.secondary.name };
       var types = Array.isArray(d.ticket_types) ? d.ticket_types : [], body = $('vx-types');
       body.textContent = '';
-      if (!types.length) { state('vx-types', 5, 'Locația nu are încă tipuri de bilete.'); return; }
+      if (!types.length) { state('vx-types', 5, VQ.t('The venue has no ticket types yet.')); return; }
       types.forEach(function (t) {
         var company = t.issuing_company === 'secondary' ? 'secondary' : 'primary';
         body.appendChild(el('tr', null, [
           el('td', null, el('b', { text: txt(t.name) || '—' })),
           el('td', { text: CAT[t.service_category] || txt(t.service_category) || '—' }),
           el('td', { class: 've-r', text: t.daily_capacity ? F.num(F.toNum(t.daily_capacity)) : '—' }),
-          el('td', null, [el('span', { class: 'org-tag ' + (company === 'secondary' ? 'is-info' : 'is-ok'), text: company === 'secondary' ? 'Secundară' : 'Principală' }), document.createTextNode(' ' + issuerLabel(company))]),
-          el('td', null, el('span', { class: 'org-tag ' + (t.is_active === false ? 'is-muted' : 'is-ok'), text: t.is_active === false ? 'Oprit' : 'Activ' })),
+          el('td', null, [el('span', { class: 'org-tag ' + (company === 'secondary' ? 'is-info' : 'is-ok'), text: company === 'secondary' ? VQ.t('Second') : VQ.t('Main') }), document.createTextNode(' ' + issuerLabel(company))]),
+          el('td', null, el('span', { class: 'org-tag ' + (t.is_active === false ? 'is-muted' : 'is-ok'), text: t.is_active === false ? VQ.t('Off') : VQ.t('Active') })),
         ]));
       });
     }, function (err) {
       if (err && err.status === 401) return;
-      state('vx-types', 5, 'Nu am putut încărca tipurile de bilete.');
+      state('vx-types', 5, VQ.t('We could not load the ticket types.'));
     });
   }
 
   /* =================== sales per issuing company =================== */
   function loadReport() {
     var f = $('vx-from').value, t = $('vx-to').value, box = $('vx-rep'), my = ++repSeq;
-    if (f && t && f > t) { O.flash('Data de început e după cea de sfârșit.', true); return; }
+    if (f && t && f > t) { O.flash(VQ.t('The start date is after the end date.'), true); return; }
     box.textContent = '';
-    box.appendChild(el('p', { class: 've-state', text: 'Se încarcă…' }));
+    box.appendChild(el('p', { class: 've-state', text: VQ.t('Loading…') }));
     O.api('/organizer/events/' + eventId + '/leisure/reports/by-issuer?from=' + f + '&to=' + t).then(function (r) {
       if (my !== repSeq) return;
       var d = (r && r.data) || {}, rows = Array.isArray(d.rows) ? d.rows : [];
-      $('vx-rep-period').textContent = 'Plătite între ' + day(d.from || f) + ' și ' + day(d.to || t) + '.';
+      $('vx-rep-period').textContent = VQ.t('Paid between {from} and {to}.', { from: day(d.from || f), to: day(d.to || t) });
       box.textContent = '';
       if (!rows.length || rows.every(function (x) { return !F.toNum(x.tickets_count); })) {
-        box.appendChild(el('p', { class: 've-state', text: 'Nicio vânzare în perioada aleasă.' }));
+        box.appendChild(el('p', { class: 've-state', text: VQ.t('No sales in the chosen period.') }));
         return;
       }
       rows.forEach(function (row) {
         var key = row.company === 'secondary' ? 'secondary' : 'primary', iss = row.issuer || {};
         var card = el('article', { class: 've-issuer' + (key === 'secondary' ? ' is-second' : '') }, [
-          el('p', { class: 've-issuer-k' }, [O.icon('buildings'), document.createTextNode(key === 'secondary' ? 'Societatea secundară' : 'Societatea principală')]),
+          el('p', { class: 've-issuer-k' }, [O.icon('buildings'), document.createTextNode(key === 'secondary' ? VQ.t('Second company') : VQ.t('Main company'))]),
           el('h3', { class: 've-issuer-n', text: txt(iss.name) || issuerLabel(key) }),
           el('p', { class: 've-issuer-sum' }, [el('b', { text: amount(row.subtotal, d.currency) })]),
-          el('p', { class: 've-sub ve-issuer-facts', text: [txt(iss.tax_id) ? 'CUI ' + txt(iss.tax_id) : '', F.count(F.toNum(row.tickets_count), 'bilet', 'bilete'), F.count(F.toNum(row.orders_count), 'comandă', 'comenzi')].filter(Boolean).join(' · ') }),
+          el('p', { class: 've-sub ve-issuer-facts', text: [txt(iss.tax_id) ? VQ.t('Tax ID {id}', { id: txt(iss.tax_id) }) : '', VQ.n(F.toNum(row.tickets_count), 'ticket', 'tickets'), VQ.n(F.toNum(row.orders_count), 'order', 'orders')].filter(Boolean).join(' · ') }),
         ]);
         var cats = Object.keys(row.by_category || {});
         if (cats.length) {
@@ -94,7 +95,7 @@
       if (my !== repSeq) return;
       if (err && err.status === 401) return;
       box.textContent = '';
-      box.appendChild(el('p', { class: 've-state', text: 'Nu am putut încărca vânzările pe societate.' }));
+      box.appendChild(el('p', { class: 've-state', text: VQ.t('We could not load the sales by company.') }));
     });
   }
 
@@ -104,7 +105,7 @@
   function loadIssuers() {
     show('vx-iss', false);
     show('vx-iss-state', true);
-    $('vx-iss-state').textContent = 'Se încarcă…';
+    $('vx-iss-state').textContent = VQ.t('Loading…');
     return O.api('/organizer/events/' + eventId + '/leisure/issuers').then(function (r) {
       var d = (r && r.data) || {};
       fill('primary', d.primary || {});
@@ -115,7 +116,7 @@
       show('vx-iss-state', false);
     }, function (err) {
       if (err && err.status === 401) return;
-      $('vx-iss-state').textContent = 'Nu am putut încărca societățile emitente.';
+      $('vx-iss-state').textContent = VQ.t('We could not load the issuing companies.');
     });
   }
   function fill(key, data) {
@@ -127,7 +128,7 @@
       else i.value = data[field] == null ? '' : String(data[field]);
     });
     var last = F.toNum(data.last_invoice_number), hint = form(key).querySelector('[data-next-hint]');
-    hint.textContent = last > 0 ? 'Ultima emisă: ' + F.num(last) + '. Gol = continuă de la ' + F.num(last + 1) + '.' : 'Gol = începe de la 1.';
+    hint.textContent = last > 0 ? VQ.t('Last issued: {last}. Empty = continues from {next}.', { last: F.num(last), next: F.num(last + 1) }) : VQ.t('Empty = starts at 1.');
     vatState(key);
   }
   function vatState(key) {
@@ -158,18 +159,18 @@
     var fields = collect(key), sec = key === 'secondary';
     if (sec) fields.has_secondary_issuer = $('vx-sec-on').checked;
     var active = !sec || fields.has_secondary_issuer;
-    if (active && (!fields.name || !fields.tax_id)) { O.flash('Scrie denumirea și CUI-ul societății.', true); return; }
-    if (fields.next_invoice_number !== undefined && !(fields.next_invoice_number >= 1 && fields.next_invoice_number <= 9999999)) { O.flash('Numărul de factură trebuie să fie între 1 și 9.999.999.', true); return; }
-    if (fields.vat_rate != null && !(fields.vat_rate >= 0 && fields.vat_rate <= 100)) { O.flash('Cota TVA trebuie să fie între 0 și 100.', true); return; }
-    if (fields.iban && !/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(fields.iban)) { O.flash('IBAN-ul nu pare corect.', true); return; }
+    if (active && (!fields.name || !fields.tax_id)) { O.flash(VQ.t('Enter the company\'s name and tax ID.'), true); return; }
+    if (fields.next_invoice_number !== undefined && !(fields.next_invoice_number >= 1 && fields.next_invoice_number <= 9999999)) { O.flash(VQ.t('The invoice number must be between 1 and 9,999,999.'), true); return; }
+    if (fields.vat_rate != null && !(fields.vat_rate >= 0 && fields.vat_rate <= 100)) { O.flash(VQ.t('The VAT rate must be between 0 and 100.'), true); return; }
+    if (fields.iban && !/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(fields.iban)) { O.flash(VQ.t('The IBAN does not look right.'), true); return; }
     btn.disabled = true;
     O.api('/organizer/events/' + eventId + '/leisure/issuers', { method: 'PUT', body: { company: key, fields: fields } }).then(function () {
-      O.flash(sec ? 'Societatea secundară a fost salvată.' : 'Societatea principală a fost salvată.');
+      O.flash(sec ? VQ.t('The second company was saved.') : VQ.t('The main company was saved.'));
       loadIssuers();
       loadConfig();
     }, function (err) {
       var first = err && err.errors && Object.keys(err.errors)[0];
-      O.flash((first && err.errors[first] && err.errors[first][0]) || (err && err.message) || 'Nu am putut salva societatea.', true);
+      O.flash((first && err.errors[first] && err.errors[first][0]) || (err && err.message) || VQ.t('We could not save the company.'), true);
     }).then(function () { btn.disabled = false; });
   }
 
@@ -181,34 +182,36 @@
     venueId = F.toNum(ev.venue_id) || null;
     $('vx-gate-add').disabled = !venueId;
     if (!venueId) {
-      list.appendChild(el('li', { class: 've-state', text: 'Activitatea nu are încă o locație fizică. Alege locația în detaliile activității, apoi poți adăuga porți.' }));
+      list.appendChild(el('li', { class: 've-state', text: VQ.t('This experience has no physical venue yet. Choose the venue in the experience details, then you can add gates.') }));
       return Promise.resolve();
     }
-    list.appendChild(el('li', { class: 've-state', text: 'Se încarcă…' }));
+    list.appendChild(el('li', { class: 've-state', text: VQ.t('Loading…') }));
     return O.api('/organizer/venues/' + venueId + '/gates').then(function (r) {
       var d = (r && r.data) || {}, v = d.venue || {};
       gates = Array.isArray(d.gates) ? d.gates : [];
-      $('vx-venue-line').textContent = 'Punctele pe unde se scanează biletele' + (txt(v.name) ? ' la ' + txt(v.name) : '') + (txt(v.city) ? ', ' + txt(v.city) : '') + '.';
+      $('vx-venue-line').textContent = txt(v.name)
+        ? VQ.t('The points where tickets are scanned at {venue}.', { venue: [txt(v.name), txt(v.city)].filter(Boolean).join(', ') })
+        : VQ.t('The points where tickets are scanned on the way in.');
       drawGates();
     }, function (err) {
       if (err && err.status === 401) return;
       list.textContent = '';
-      list.appendChild(el('li', { class: 've-state', text: 'Nu am putut încărca porțile.' }));
+      list.appendChild(el('li', { class: 've-state', text: VQ.t('We could not load the gates.') }));
     });
   }
   function drawGates() {
     var list = $('vx-gates');
     list.textContent = '';
-    if (!gates.length) { list.appendChild(el('li', { class: 've-state', text: 'Nicio poartă încă. Adaug-o pe prima.' })); return; }
+    if (!gates.length) { list.appendChild(el('li', { class: 've-state', text: VQ.t('No gates yet. Add the first one.') })); return; }
     gates.forEach(function (g) {
       var edit = el('button', { class: 'btn btn-ghost', type: 'button' });
       edit.appendChild(O.icon('pencil-simple'));
-      edit.appendChild(document.createTextNode('Schimbă'));
+      edit.appendChild(document.createTextNode(VQ.t('Edit')));
       edit.addEventListener('click', function () { openGate(g); });
       list.appendChild(el('li', { class: 've-gate' + (g.is_active === false ? ' is-off' : '') }, [
         el('span', { class: 've-gate-ic' }, O.icon(g.type === 'pos' ? 'coins' : 'door-open')),
         el('span', { class: 've-gate-t' }, [el('b', { text: txt(g.name) || '—' }), el('small', { class: 've-sub', text: [GATE[g.type] || txt(g.type), txt(g.location)].filter(Boolean).join(' · ') })]),
-        el('span', { class: 'org-tag ' + (g.is_active === false ? 'is-muted' : 'is-ok'), text: g.is_active === false ? 'Oprită' : 'În funcțiune' }),
+        el('span', { class: 'org-tag ' + (g.is_active === false ? 'is-muted' : 'is-ok'), text: g.is_active === false ? VQ.t('Off') : VQ.t('In use') }),
         edit,
       ]));
     });
@@ -217,14 +220,14 @@
     editGate = g || null;
     delArmed = false;
     lastFocus = document.activeElement;
-    $('vx-modal-h').textContent = g ? 'Schimbă poarta' : 'Adaugă o poartă';
+    $('vx-modal-h').textContent = g ? VQ.t('Edit the gate') : VQ.t('Add a gate');
     $('vx-g-name').value = g ? txt(g.name) : '';
     $('vx-g-type').value = g && GATE[g.type] ? g.type : 'entry';
     $('vx-g-loc').value = g ? txt(g.location) : '';
     $('vx-g-active').checked = !g || g.is_active !== false;
     show('vx-g-active-wrap', !!g);
     show('vx-g-del', !!g);
-    $('vx-g-del').lastChild.textContent = 'Șterge poarta';
+    $('vx-g-del').lastChild.textContent = VQ.t('Delete the gate');
     show('vx-modal', true);
     $('vx-g-name').focus();
   }
@@ -235,30 +238,30 @@
   }
   function saveGate() {
     var body = { name: $('vx-g-name').value.trim(), type: $('vx-g-type').value, location: $('vx-g-loc').value.trim() || null };
-    if (!body.name) { O.flash('Scrie numele porții.', true); $('vx-g-name').focus(); return; }
+    if (!body.name) { O.flash(VQ.t('Enter the gate name.'), true); $('vx-g-name').focus(); return; }
     if (editGate) body.is_active = $('vx-g-active').checked;
     var btn = $('vx-g-save'), base = '/organizer/venues/' + venueId + '/gates';
     btn.disabled = true;
     var req = editGate ? O.api(base + '/' + F.toNum(editGate.id), { method: 'PUT', body: body }) : O.api(base, { method: 'POST', body: body });
     req.then(function () {
-      O.flash(editGate ? 'Poarta a fost schimbată.' : 'Poarta a fost adăugată.');
+      O.flash(editGate ? VQ.t('The gate was changed.') : VQ.t('The gate was added.'));
       closeGate();
       loadGates();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut salva poarta.', true);
+      O.flash((err && err.message) || VQ.t('We could not save the gate.'), true);
     }).then(function () { btn.disabled = false; });
   }
   function deleteGate() {
     if (!editGate) return;
     var btn = $('vx-g-del');
-    if (!delArmed) { delArmed = true; btn.lastChild.textContent = 'Apasă din nou ca să ștergi'; return; }
+    if (!delArmed) { delArmed = true; btn.lastChild.textContent = VQ.t('Press again to delete'); return; }
     btn.disabled = true;
     O.api('/organizer/venues/' + venueId + '/gates/' + F.toNum(editGate.id), { method: 'DELETE' }).then(function () {
-      O.flash('Poarta a fost ștearsă.');
+      O.flash(VQ.t('The gate was deleted.'));
       closeGate();
       loadGates();
     }, function (err) {
-      O.flash((err && err.message) || 'Nu am putut șterge poarta.', true);
+      O.flash((err && err.message) || VQ.t('We could not delete the gate.'), true);
     }).then(function () { btn.disabled = false; });
   }
 
@@ -308,7 +311,7 @@
       if (!venues.length) { show('ve-none', true); return; }
       var sel = $('ve-event');
       sel.textContent = '';
-      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || 'Locație #' + e.id, String(e.id))); });
+      venues.forEach(function (e) { sel.appendChild(new Option(txt(e.title || e.name) || VQ.t('Venue #{id}', { id: e.id }), String(e.id))); });
       sel.disabled = venues.length < 2;
       eventId = F.toNum(venues[0].id);
       $('vx-from').value = F.ymd(new Date(Date.now() - 30 * 86400000));
