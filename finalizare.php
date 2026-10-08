@@ -101,6 +101,9 @@ include __DIR__ . '/includes/head.php';
                             <template x-for="item in cart.items" :key="item.ticket_type_id">
                                 <div><span x-text="item.qty + ' × ' + item.name"></span><span x-text="lei(item.qty * item.price)"></span></div>
                             </template>
+                            <template x-for="seat in cart.seats" :key="seat.seat_uid">
+                                <div><span x-text="seat.label"></span><span x-text="lei(seat.price)"></span></div>
+                            </template>
                         </div>
                         <div style="border-top:1px solid var(--line)"><?= part_summary() ?></div>
                         <div class="panel__body" style="display:grid;gap:14px">

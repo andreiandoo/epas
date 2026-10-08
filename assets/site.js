@@ -1,11 +1,15 @@
 /* competitie.tixello.ro — coș (acces general), cod de reducere, timer de rezervare, autentificare.
    Coșul ține bilete de la O singură competiție (o comandă = un eveniment):
    wukf_cart = { event:{id,slug,title,date,place,poster}, items:[{ticket_type_id,name,price,qty}],
+                 seats:[{seat_uid,label,section,row,seat,price}], event_seating_id:<int|null>,
                  expires_at:<ms>, coupon_code:<string|null> }
+   La competițiile cu locuri numerotate coșul ține `seats` (blocate pe server), nu `items`.
    wukf_auth = { token, user } */
 (function () {
     var CART_KEY = 'wukf_cart', AUTH_KEY = 'wukf_auth', EXPIRED_KEY = 'wukf_cart_expired';
-    var MAX_PER_TYPE = 10, HOLD_MS = 15 * 60 * 1000;
+    var MAX_PER_TYPE = 10, MAX_SEATS = 10, HOLD_MS = 15 * 60 * 1000;
+    // Locurile numerotate sunt blocate pe server tot 15 minute (seating.hold_ttl_seconds = 900)
+    var SEAT_HOLD_MS = 15 * 60 * 1000;
 
     function read(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
     function write(key, val) {
@@ -15,10 +19,14 @@
     var Cart = {
         get: function () {
             var c = read(CART_KEY);
-            if (!(c && c.event && Array.isArray(c.items) && c.items.length)) { return null; }
+            if (!(c && c.event)) { return null; }
+            c.items = Array.isArray(c.items) ? c.items : [];
+            c.seats = Array.isArray(c.seats) ? c.seats : [];
+            if (!c.items.length && !c.seats.length) { return null; }
             if (c.expires_at && c.expires_at <= Date.now()) {
                 // Rezervarea a expirat: golim coșul și ținem minte competiția, pentru mesaj.
                 try { sessionStorage.setItem(EXPIRED_KEY, c.event.slug || '1'); } catch (e) {}
+                Cart.releaseSeats(c, c.seats.map(function (x) { return x.seat_uid; }));
                 write(CART_KEY, null);
                 window.dispatchEvent(new CustomEvent('wukf:cart'));
                 return null;
@@ -27,20 +35,42 @@
         },
         set: function (cart) {
             if (cart) {
-                cart.items = cart.items.filter(function (i) { return i.qty > 0; });
-                if (!cart.expires_at) { cart.expires_at = Date.now() + HOLD_MS; }
+                cart.items = (cart.items || []).filter(function (i) { return i.qty > 0; });
+                cart.seats = cart.seats || [];
+                if (!cart.expires_at) { cart.expires_at = Date.now() + (cart.seats.length ? SEAT_HOLD_MS : HOLD_MS); }
             }
-            write(CART_KEY, cart && cart.items.length ? cart : null);
+            write(CART_KEY, cart && (cart.items.length || cart.seats.length) ? cart : null);
             window.dispatchEvent(new CustomEvent('wukf:cart'));
         },
         clear: function () { Cart.set(null); },
         count: function (cart) {
             cart = cart === undefined ? Cart.get() : cart;
-            return cart ? cart.items.reduce(function (n, i) { return n + i.qty; }, 0) : 0;
+            return cart ? cart.items.reduce(function (n, i) { return n + i.qty; }, 0) + (cart.seats || []).length : 0;
         },
         subtotal: function (cart) {
             cart = cart === undefined ? Cart.get() : cart;
-            return cart ? cart.items.reduce(function (n, i) { return n + i.qty * i.price; }, 0) : 0;
+            if (!cart) { return 0; }
+            return cart.items.reduce(function (n, i) { return n + i.qty * i.price; }, 0)
+                + (cart.seats || []).reduce(function (n, x) { return n + (Number(x.price) || 0); }, 0);
+        },
+        // Forma în care coșul pleacă spre server (calcul de preț și comandă)
+        payload: function (cart) {
+            var out = { event_id: cart.event.id };
+            if (cart.seats && cart.seats.length) {
+                out.event_seating_id = cart.event_seating_id;
+                out.seats = cart.seats.map(function (x) { return { seat_uid: x.seat_uid, price: x.price, label: x.label }; });
+            } else {
+                out.items = cart.items.map(function (i) { return { ticket_type_id: i.ticket_type_id, quantity: i.qty }; });
+            }
+            return out;
+        },
+        // Eliberează pe server locurile blocate (la scoaterea din coș sau la expirare)
+        releaseSeats: function (cart, uids) {
+            if (!cart || !cart.event_seating_id || !uids || !uids.length) { return Promise.resolve(); }
+            return fetch('/api/proxy.php?action=release', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+                body: JSON.stringify({ event_seating_id: cart.event_seating_id, seat_uids: uids })
+            }).catch(function () {});
         },
         // Mesajul „rezervarea a expirat” se arată o singură dată
         takeExpired: function () {
@@ -73,11 +103,7 @@
         try {
             var r = await fetch('/api/proxy.php?action=quote', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    event_id: cart.event.id,
-                    items: cart.items.map(function (i) { return { ticket_type_id: i.ticket_type_id, quantity: i.qty }; }),
-                    coupon_code: couponCode || null
-                })
+                body: JSON.stringify(Object.assign(Cart.payload(cart), { coupon_code: couponCode || null }))
             });
             var d = await r.json().catch(function () { return {}; });
             if (r.ok && d.success && d.data) { return d.data; }
@@ -86,7 +112,7 @@
         return local;
     }
 
-    window.WUKF = { Cart: Cart, Auth: Auth, lei: lei, toast: toast, quote: quote, ticketsLabel: ticketsLabel, MAX_PER_TYPE: MAX_PER_TYPE, HOLD_MS: HOLD_MS };
+    window.WUKF = { Cart: Cart, Auth: Auth, lei: lei, toast: toast, quote: quote, ticketsLabel: ticketsLabel, MAX_PER_TYPE: MAX_PER_TYPE, HOLD_MS: HOLD_MS, SEAT_HOLD_MS: SEAT_HOLD_MS };
 
     /* Comportament comun coșului și paginii de plată: sume, cod de reducere. */
     function pricing() {
@@ -206,8 +232,10 @@
                 },
                 update: function (silent) {
                     var c = read(CART_KEY);
-                    if (!(c && c.expires_at && c.items && c.items.length)) { this.on = false; return; }
+                    var n = c ? ((c.items || []).length + (c.seats || []).length) : 0;
+                    if (!(c && c.expires_at && n)) { this.on = false; return; }
                     this.on = true;
+                    this.total = ((c.seats || []).length ? SEAT_HOLD_MS : HOLD_MS) / 1000;
                     this.left = Math.max(0, Math.round((c.expires_at - Date.now()) / 1000));
                     if (this.left <= 0 && !silent) {
                         clearInterval(this.tick);
@@ -266,6 +294,143 @@
             };
         });
 
+        // Pagina competiției cu locuri numerotate: alegi tribuna, apoi locul
+        Alpine.data('seatPicker', function (event) {
+            return {
+                event: event, loading: true, failed: false, eventSeatingId: null,
+                sections: [], active: null, selected: [], busy: false, error: '', max: MAX_SEATS,
+                lei: lei, ticketsLabel: ticketsLabel,
+                init: async function () {
+                    try {
+                        var meta = await (await fetch('/api/proxy.php?action=seating&event=' + event.id)).json();
+                        this.eventSeatingId = meta && (meta.event_seating_id || (meta.data && meta.data.event_seating_id));
+                        if (!this.eventSeatingId) { throw new Error('fără hartă'); }
+                        var tiers = {};
+                        ((meta.price_tiers || (meta.data && meta.data.price_tiers)) || []).forEach(function (t) { tiers[t.id] = t; });
+
+                        var resp = await (await fetch('/api/proxy.php?action=seats&event=' + event.id)).json();
+                        var seats = resp.data || resp.seats || resp || [];
+                        if (!Array.isArray(seats) || !seats.length) { throw new Error('fără locuri'); }
+
+                        // Locurile deja în coșul acestui vizitator (blocate de el) apar ca selectate, nu ca ocupate
+                        var cart = Cart.get(), mine = {};
+                        if (cart && cart.event.id === event.id) {
+                            this.selected = cart.seats.slice();
+                            cart.seats.forEach(function (x) { mine[x.seat_uid] = true; });
+                        }
+
+                        var map = {};
+                        seats.forEach(function (st) {
+                            var tier = tiers[st.price_tier_id];
+                            var cents = st.price_cents != null ? st.price_cents : (tier ? tier.price_cents : null);
+                            var price = cents != null ? cents / 100 : (st.price != null ? Number(st.price) : 0);
+                            var name = st.section_name || 'Sală', row = String(st.row_label || '');
+                            var sec = map[name] || (map[name] = { name: name, rows: {} });
+                            (sec.rows[row] || (sec.rows[row] = [])).push({
+                                seat_uid: st.seat_uid, seat: String(st.seat_label || ''), row: row, price: price,
+                                status: mine[st.seat_uid] ? 'available' : st.status
+                            });
+                        });
+                        var cardinal = [['nord', 'n'], ['sud', 's'], ['est', 'e'], ['vest', 'w']];
+                        this.sections = Object.keys(map).map(function (name) {
+                            var sec = map[name], lower = name.toLowerCase(), pos = '';
+                            cardinal.forEach(function (c) { if (!pos && lower.indexOf(c[0]) !== -1) { pos = c[1]; } });
+                            var rows = Object.keys(sec.rows).sort().map(function (label) {
+                                return { label: label, seats: sec.rows[label].sort(function (a, b) { return (parseInt(a.seat, 10) || 0) - (parseInt(b.seat, 10) || 0); }) };
+                            });
+                            var all = [].concat.apply([], rows.map(function (r) { return r.seats; }));
+                            var prices = all.map(function (x) { return x.price; }).filter(function (x) { return x > 0; });
+                            return { name: name, pos: pos, rows: rows, total: all.length, from: prices.length ? Math.min.apply(null, prices) : 0 };
+                        });
+                        // Tribunele așezate în jurul suprafeței; dacă numele nu spun unde stau, rămân o listă simplă
+                        var placed = this.sections.filter(function (x) { return x.pos; });
+                        this.arena = placed.length === this.sections.length && placed.length >= 2;
+                        this.active = this.sections[0].name;
+                    } catch (e) {
+                        this.failed = true;
+                    }
+                    this.loading = false;
+                },
+                arena: false,
+                get current() { var self = this; return this.sections.filter(function (x) { return x.name === self.active; })[0] || null; },
+                // Rândurile se afișează cu cel mai apropiat de suprafața de concurs jos
+                get currentRows() { return this.current ? this.current.rows.slice().reverse() : []; },
+                free: function (sec) {
+                    var n = 0;
+                    sec.rows.forEach(function (r) { r.seats.forEach(function (x) { if (x.status === 'available') { n++; } }); });
+                    return n;
+                },
+                priceLevels: function () {
+                    var seen = {}, out = [];
+                    this.sections.forEach(function (sec) { sec.rows.forEach(function (r) { r.seats.forEach(function (x) { if (x.price > 0 && !seen[x.price]) { seen[x.price] = 1; out.push(x.price); } }); }); });
+                    return out.sort(function (a, b) { return b - a; });
+                },
+                isSelected: function (seat) { return this.selected.some(function (x) { return x.seat_uid === seat.seat_uid; }); },
+                isTaken: function (seat) { return seat.status !== 'available' && !this.isSelected(seat); },
+                seatClass: function (seat) {
+                    if (this.isSelected(seat)) { return 'is-on'; }
+                    if (this.isTaken(seat)) { return 'is-taken'; }
+                    return seat.price >= (this.priceLevels()[0] || 0) && this.priceLevels().length > 1 ? 'is-top' : '';
+                },
+                seatLabel: function (seat) {
+                    return this.active + ', rândul ' + seat.row + ', locul ' + seat.seat + ', ' + lei(seat.price)
+                        + (this.isSelected(seat) ? ', selectat' : (this.isTaken(seat) ? ', ocupat' : ''));
+                },
+                get total() { return this.selected.reduce(function (n, x) { return n + x.price; }, 0); },
+                toggle: async function (seat) {
+                    if (this.busy || this.isTaken(seat)) { return; }
+                    this.error = '';
+                    if (this.isSelected(seat)) { return this.remove(seat.seat_uid); }
+                    if (this.selected.length >= this.max) { this.error = 'Poți alege cel mult ' + this.max + ' locuri pe comandă.'; return; }
+                    this.busy = true;
+                    try {
+                        var r = await fetch('/api/proxy.php?action=hold', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ event_seating_id: this.eventSeatingId, seat_uids: [seat.seat_uid] })
+                        });
+                        var d = await r.json().catch(function () { return {}; });
+                        var failed = !r.ok || d.success === false || (Array.isArray(d.failed) && d.failed.length);
+                        if (failed) {
+                            var why = Array.isArray(d.failed) && d.failed[0] ? d.failed[0].reason : '';
+                            if (why === 'max_holds_exceeded') {
+                                this.error = 'Ai atins numărul maxim de locuri pentru o comandă.';
+                            } else {
+                                seat.status = 'held';
+                                this.error = 'Locul tocmai a fost luat de altcineva. Alege altul.';
+                            }
+                        } else {
+                            this.selected.push({
+                                seat_uid: seat.seat_uid, section: this.active, row: seat.row, seat: seat.seat, price: seat.price,
+                                label: this.active + ' · Rând ' + seat.row + ' · Loc ' + seat.seat
+                            });
+                            this.persist();
+                        }
+                    } catch (e) { this.error = 'Conexiunea a eșuat. Încearcă din nou.'; }
+                    this.busy = false;
+                },
+                remove: function (uid) {
+                    this.selected = this.selected.filter(function (x) { return x.seat_uid !== uid; });
+                    Cart.releaseSeats({ event_seating_id: this.eventSeatingId }, [uid]);
+                    this.persist();
+                },
+                // Coșul urmărește selecția în timp real, ca locurile blocate să nu se piardă la un refresh
+                persist: function () {
+                    var prev = Cart.get(), same = prev && prev.event.id === this.event.id && prev.seats.length;
+                    if (!this.selected.length) { if (prev && prev.event.id === this.event.id) { Cart.clear(); } return; }
+                    Cart.set({
+                        event: this.event, items: [], seats: this.selected.slice(), event_seating_id: this.eventSeatingId,
+                        expires_at: same ? prev.expires_at : Date.now() + SEAT_HOLD_MS,
+                        coupon_code: same ? (prev.coupon_code || null) : null
+                    });
+                },
+                save: function () {
+                    if (!this.selected.length) { toast('Alege cel puțin un loc.'); return; }
+                    this.persist();
+                    window.location.href = '/cos';
+                }
+            };
+        });
+
         // Coș
         Alpine.data('cartPage', function () {
             return Object.assign(pricing(), {
@@ -276,6 +441,11 @@
                     this.persist();
                 },
                 remove: function (item) { item.qty = 0; this.persist(); },
+                removeSeat: function (seat) {
+                    Cart.releaseSeats(this.cart, [seat.seat_uid]);
+                    this.cart.seats = this.cart.seats.filter(function (x) { return x.seat_uid !== seat.seat_uid; });
+                    this.persist();
+                },
                 persist: function () {
                     var self = this;
                     Cart.set(JSON.parse(JSON.stringify(this.cart)));
@@ -336,19 +506,17 @@
                     try {
                         var r = await fetch('/api/proxy.php?action=checkout', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                event_id: this.cart.event.id,
+                            body: JSON.stringify(Object.assign(Cart.payload(this.cart), {
                                 customer: {
                                     first_name: this.form.first_name.trim(), last_name: this.form.last_name.trim(),
                                     email: this.form.email.trim(), phone: this.form.phone.trim() || null
                                 },
-                                items: this.cart.items.map(function (i) { return { ticket_type_id: i.ticket_type_id, quantity: i.qty }; }),
                                 coupon_code: this.cart.coupon_code || null,
                                 newsletter: this.form.newsletter,
                                 payment_method: 'card',
                                 success_url: window.location.origin + '/confirmare',
                                 cancel_url: window.location.origin + '/finalizare?plata=anulata'
-                            })
+                            }))
                         });
                         var d = await r.json().catch(function () { return {}; });
                         if (r.ok && d.success && d.redirect_url) { window.location.href = d.redirect_url; return; }

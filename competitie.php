@@ -46,7 +46,10 @@ foreach (($ev['ticket_types'] ?? []) as $t) {
     ];
 }
 usort($types, fn ($a, $b) => $a['id'] <=> $b['id']);   // ordinea din admin
-$canBuy = $types && !$soldOut && !$off;
+// Sală cu locuri numerotate: biletul se cumpără pe loc, din harta tribunelor
+$seated = ev_is_seated($ev);
+$canBuy = ($types || $seated) && !$soldOut && !$off;
+$fromPrice = $types ? min(array_column($types, 'price')) : ($ev['price_from'] ?? 0);
 
 // Datele despre competiție păstrate în coș (afișate în coș și la plată)
 $cartEvent = [
@@ -92,7 +95,11 @@ $pageExtraHead = '<script type="application/ld+json">' . json_encode(array_filte
 
 include __DIR__ . '/includes/head.php';
 ?>
+<?php if ($seated && $canBuy): ?>
+<main x-data='seatPicker(<?= e(json_encode($cartEvent, JSON_UNESCAPED_UNICODE)) ?>)'>
+<?php else: ?>
 <main x-data='ticketPicker(<?= e(json_encode($cartEvent, JSON_UNESCAPED_UNICODE)) ?>, <?= e(json_encode($types, JSON_UNESCAPED_UNICODE)) ?>)'>
+<?php endif; ?>
     <section class="ev-hero">
         <?php if ($poster): ?><div class="ev-hero__bg" style="background-image:url('<?= e($poster) ?>')" data-parallax="6"></div><?php endif; ?>
         <div class="wrap">
@@ -128,6 +135,69 @@ include __DIR__ . '/includes/head.php';
     <div class="wrap">
         <div class="ev-body">
             <article>
+                <?php if ($seated && $canBuy): ?>
+                <section class="seatmap" id="bilete">
+                    <div class="seatmap__head">
+                        <div>
+                            <span class="label">Locuri numerotate</span>
+                            <h2>Alege locurile</h2>
+                        </div>
+                        <ul class="seatmap__legend" x-show="!loading && !failed" x-cloak>
+                            <template x-for="(price, i) in priceLevels()" :key="price">
+                                <li><i class="seat" :class="i === 0 && priceLevels().length > 1 ? 'is-top' : ''"></i><span x-text="lei(price)"></span></li>
+                            </template>
+                            <li><i class="seat is-on"></i>Ales</li>
+                            <li><i class="seat is-taken"></i>Ocupat</li>
+                        </ul>
+                    </div>
+
+                    <p class="seatmap__state" x-show="loading">Se încarcă harta sălii…</p>
+                    <div class="alert" x-show="failed" x-cloak>Harta locurilor nu a putut fi încărcată. <a class="link" href="">Reîncearcă</a></div>
+
+                    <div x-show="!loading && !failed" x-cloak>
+                        <!-- Tribunele, așezate în jurul suprafeței de concurs -->
+                        <div class="arena" x-show="arena">
+                            <template x-for="sec in sections" :key="sec.name">
+                                <button type="button" class="stand" :class="['stand--' + sec.pos, active === sec.name ? 'is-on' : '']" @click="active = sec.name" :aria-pressed="active === sec.name">
+                                    <b x-text="sec.name"></b>
+                                    <span x-text="free(sec) + ' libere din ' + sec.total"></span>
+                                    <small x-show="sec.from" x-text="'de la ' + lei(sec.from)"></small>
+                                </button>
+                            </template>
+                            <div class="arena__mat" aria-hidden="true"><span>Tatami</span></div>
+                        </div>
+                        <div class="chips" x-show="!arena" style="margin-bottom:18px">
+                            <template x-for="sec in sections" :key="sec.name">
+                                <button type="button" class="chip" :class="active === sec.name && 'is-on'" @click="active = sec.name"><span x-text="sec.name"></span><small x-text="free(sec)"></small></button>
+                            </template>
+                        </div>
+
+                        <!-- Locurile din tribuna aleasă -->
+                        <div class="stand-view">
+                            <div class="stand-view__head">
+                                <h3 x-text="active"></h3>
+                                <span x-show="current" x-text="current ? free(current) + ' locuri libere' : ''"></span>
+                            </div>
+                            <div class="stand-view__scroll">
+                                <div class="rows">
+                                    <template x-for="row in currentRows" :key="row.label">
+                                        <div class="srow">
+                                            <span class="srow__l" x-text="row.label" aria-hidden="true"></span>
+                                            <template x-for="seat in row.seats" :key="seat.seat_uid">
+                                                <button type="button" class="seat" :class="seatClass(seat)" :disabled="isTaken(seat)" :aria-label="seatLabel(seat)" :aria-pressed="isSelected(seat)" @click="toggle(seat)" x-text="seat.seat"></button>
+                                            </template>
+                                            <span class="srow__l" x-text="row.label" aria-hidden="true"></span>
+                                        </div>
+                                    </template>
+                                    <div class="rows__mat" aria-hidden="true">Suprafața de concurs</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="alert" style="margin-top:14px" x-show="error" x-cloak x-text="error" role="alert"></p>
+                    </div>
+                </section>
+                <?php endif; ?>
+
                 <div class="prose" data-reveal>
                     <h2>Despre competiție</h2>
                     <?php if (!empty($ev['description'])): ?>
@@ -148,10 +218,40 @@ include __DIR__ . '/includes/head.php';
                 </ul>
             </article>
 
-            <aside class="ev-buy" id="bilete">
+            <aside class="ev-buy"<?= ($seated && $canBuy) ? '' : ' id="bilete"' ?>>
                 <div class="buy" data-reveal>
+                    <?php if ($seated && $canBuy): ?>
+                    <div class="buy__head"><h2>Locurile tale</h2><span>Locuri numerotate</span></div>
+                        <template x-if="!selected.length">
+                            <div class="tt"><div class="tt__desc" style="margin:0">Alege o tribună din hartă, apoi apasă pe locurile dorite. Locul îți rămâne blocat 15 minute.</div></div>
+                        </template>
+                        <template x-for="x in selected" :key="x.seat_uid">
+                            <div class="tt is-picked">
+                                <div>
+                                    <div class="tt__name" x-text="x.section"></div>
+                                    <div class="tt__desc" x-text="'Rând ' + x.row + ' · Loc ' + x.seat"></div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <div class="tt__price" style="margin:0" x-text="lei(x.price)"></div>
+                                    <button type="button" class="line__del" @click="remove(x.seat_uid)" :aria-label="'Scoate ' + x.label">
+                                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                        <div class="buy__foot">
+                            <div class="total"><span x-text="selected.length ? (selected.length === 1 ? '1 loc' : selected.length + ' locuri') : 'Total'"></span><b data-total x-text="lei(total)"></b></div>
+                            <button type="button" class="btn btn--block" :class="!selected.length && 'is-off'" @click="save()">
+                                Continuă spre coș<span class="btn__arrow"><?= ICON_ARROW ?></span>
+                            </button>
+                            <ul class="trust">
+                                <li><?= ICON_CHECK ?>Biletul e valabil pentru locul ales</li>
+                                <li><?= ICON_CHECK ?>Locurile rămân blocate 15 minute</li>
+                                <li><?= ICON_CHECK ?>Maximum 10 locuri pe comandă</li>
+                            </ul>
+                        </div>
+                    <?php elseif ($canBuy): ?>
                     <div class="buy__head"><h2>Bilete</h2><span>Acces general</span></div>
-                    <?php if ($canBuy): ?>
                         <template x-for="t in types" :key="t.id">
                             <div class="tt" :class="qty[t.id] > 0 && 'is-picked'">
                                 <div>
@@ -180,6 +280,7 @@ include __DIR__ . '/includes/head.php';
                             </ul>
                         </div>
                     <?php else: ?>
+                    <div class="buy__head"><h2>Bilete</h2><span><?= $seated ? 'Locuri numerotate' : 'Acces general' ?></span></div>
                         <div class="buy__foot">
                             <p style="font-weight:800;font-size:19px;margin-bottom:8px">
                                 <?= $off ? 'Competiția a fost anulată.' : ($soldOut ? 'Biletele s-au epuizat.' : 'Biletele nu sunt încă în vânzare.') ?>
@@ -195,12 +296,21 @@ include __DIR__ . '/includes/head.php';
 
     <?php if ($canBuy): ?>
     <div class="mobile-bar">
+        <?php if ($seated): ?>
+        <div>
+            <small x-text="selected.length ? (selected.length === 1 ? '1 loc' : selected.length + ' locuri') : 'Locuri de la'"></small>
+            <b x-text="selected.length ? lei(total) : '<?= e(lei($fromPrice)) ?>'"></b>
+        </div>
+        <a class="btn btn--sm" href="#bilete" x-show="!selected.length">Alege locuri</a>
+        <button type="button" class="btn btn--sm" x-show="selected.length" x-cloak @click="save()">Spre coș</button>
+        <?php else: ?>
         <div>
             <small x-text="count ? ticketsLabel(count) : 'Bilete de la'"></small>
-            <b x-text="count ? lei(total) : '<?= e(lei(min(array_column($types, 'price')))) ?>'"></b>
+            <b x-text="count ? lei(total) : '<?= e(lei($fromPrice)) ?>'"></b>
         </div>
         <a class="btn btn--sm" href="#bilete" x-show="count === 0">Alege bilete</a>
         <button type="button" class="btn btn--sm" x-show="count > 0" x-cloak @click="save()">Spre coș</button>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 </main>
