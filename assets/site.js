@@ -331,7 +331,8 @@
                                 status: mine[st.seat_uid] ? 'available' : st.status
                             });
                         });
-                        var cardinal = [['nord', 'n'], ['sud', 's'], ['est', 'e'], ['vest', 'w']];
+                        // „vest” înaintea lui „est”: altfel „Peluza Vest” s-ar potrivi cu „est”
+                        var cardinal = [['nord', 'n'], ['sud', 's'], ['vest', 'w'], ['est', 'e']];
                         this.sections = Object.keys(map).map(function (name) {
                             var sec = map[name], lower = name.toLowerCase(), pos = '';
                             cardinal.forEach(function (c) { if (!pos && lower.indexOf(c[0]) !== -1) { pos = c[1]; } });
@@ -345,7 +346,8 @@
                         // Tribunele așezate în jurul suprafeței; dacă numele nu spun unde stau, rămân o listă simplă
                         var placed = this.sections.filter(function (x) { return x.pos; });
                         this.arena = placed.length === this.sections.length && placed.length >= 2;
-                        this.active = this.sections[0].name;
+                        // Se deschide pe tribuna cea mai mare
+                        this.active = this.sections.slice().sort(function (a, b) { return b.total - a.total; })[0].name;
                     } catch (e) {
                         this.failed = true;
                     }

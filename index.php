@@ -182,36 +182,7 @@ include __DIR__ . '/includes/head.php';
     </section>
 <?php endif; ?>
 
-    <section class="sec">
-        <div class="wrap">
-            <div class="sec__head">
-                <div>
-                    <span class="label">Pentru spectatori</span>
-                    <h2 data-split>Ce vezi pe tatami</h2>
-                </div>
-                <p>Trei probe, trei feluri de a urmări karate. Programul exact al fiecărei competiții e anunțat de federație.</p>
-            </div>
-            <div class="discs" data-reveal-group>
-                <div class="disc">
-                    <span class="disc__kanji" aria-hidden="true">型</span>
-                    <h3>Kata</h3>
-                    <p>Succesiuni de tehnici executate fără adversar, individual sau în echipă. Arbitrii notează precizia, ritmul și forța.</p>
-                </div>
-                <div class="disc">
-                    <span class="disc__kanji" aria-hidden="true">組手</span>
-                    <h3>Kumite</h3>
-                    <p>Lupta dintre doi sportivi, unul cu centură roșie (aka) și unul cu centură albă (shiro). Punctează tehnica dusă curat și controlat.</p>
-                </div>
-                <div class="disc">
-                    <span class="disc__kanji" aria-hidden="true">古武道</span>
-                    <h3>Kobudo</h3>
-                    <p>Proba cu arme tradiționale din Okinawa, precum bō sau sai, executată tot sub formă de kata.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="sec sec--light" id="cum-functioneaza">
+    <section class="sec" id="cum-functioneaza">
         <div class="wrap">
             <div class="sec__head">
                 <div>

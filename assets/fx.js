@@ -95,20 +95,49 @@
         });
     }
 
-    /* ---- Titlul mare din footer: fără GSAP alunecă singur, încet ---- */
-    var footBig = document.querySelector('.site-foot__big');
-    if (!hasGsap) {
-        if (footBig && !reduce) { footBig.classList.add('is-auto'); }
-        return;
-    }
+    /* ---- Titlul mare din footer: se potrivește pe lățime și intră dinspre dreapta când apare footerul.
+       Poziția se calculează din locul real al footerului la fiecare derulare, deci nu depinde de
+       înălțimea paginii (care se schimbă după ce se încarcă imaginile sau harta de locuri). ---- */
+    (function () {
+        var big = document.querySelector('.site-foot__big'), foot = document.querySelector('.site-foot');
+        var text = big && big.firstElementChild;
+        if (!text) { return; }
+        var queued = false;
+        function fit() {
+            text.style.fontSize = '';
+            var room = big.clientWidth - 2 * parseFloat(getComputedStyle(big).paddingLeft || 0);
+            var size = parseFloat(getComputedStyle(text).fontSize), width = text.scrollWidth;
+            if (room > 0 && width > 0) { text.style.fontSize = Math.floor(size * room / width) + 'px'; }
+        }
+        function place() {
+            queued = false;
+            if (reduce) { text.style.transform = ''; return; }
+            var r = foot.getBoundingClientRect(), vh = window.innerHeight;
+            // 0 când footerul abia intră în ecran, 1 când se vede titlul întreg
+            var p = Math.max(0, Math.min(1, (vh - r.top) / Math.max(1, Math.min(r.height, vh) * 0.75)));
+            var eased = 1 - Math.pow(1 - p, 3);
+            text.style.transform = 'translate3d(' + ((1 - eased) * big.clientWidth * 0.6).toFixed(1) + 'px,0,0)';
+        }
+        function queue() { if (!queued) { queued = true; requestAnimationFrame(place); } }
+        fit(); place();
+        window.addEventListener('scroll', queue, { passive: true });
+        window.addEventListener('resize', function () { fit(); queue(); });
+        if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { fit(); place(); }); }
+    })();
 
-    /* Cu GSAP, titlul alunecă spre stânga pe măsură ce te apropii de footer, până se vede tot */
-    if (footBig && footBig.firstElementChild) {
-        var footText = footBig.firstElementChild;
-        gsap.fromTo(footText,
-            { x: function () { return footBig.clientWidth * 0.35; } },
-            { x: function () { return Math.min(0, footBig.clientWidth - footText.scrollWidth); }, ease: 'none',
-              scrollTrigger: { trigger: '.site-foot', start: 'top bottom', end: 'bottom bottom', scrub: .5, invalidateOnRefresh: true } });
+    if (!hasGsap) { return; }
+
+    // Înălțimea paginii se schimbă după încărcare (imagini, hartă de locuri, conținut din Alpine):
+    // pozițiile ScrollTrigger se recalculează, altfel animațiile pornesc în locuri greșite.
+    if (window.ResizeObserver) {
+        var lastH = document.body.scrollHeight, refreshTimer = null;
+        new ResizeObserver(function () {
+            var h = document.body.scrollHeight;
+            if (Math.abs(h - lastH) < 40) { return; }
+            lastH = h;
+            clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(function () { ST.refresh(); }, 250);
+        }).observe(document.body);
     }
 
     /* ---- Bara de progres (centurile, de la alb la negru) ---- */
