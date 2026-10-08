@@ -1,6 +1,6 @@
 <?php
 /**
- * Terms and conditions: /termeni (v2 design, includes/v2/legal.php layout).
+ * Terms and conditions: /terms (v2 design, includes/v2/legal.php layout).
  *
  * The rules of viaqui.com as the platform works today: TIXELLO S.R.L. sells tickets on behalf of the operators of
  * the activities (the operator is responsible for the activity itself), the order and payment (the ticketing fee and
@@ -9,6 +9,9 @@
  * refund including the fee when the operator cancels, as on Ambilet), gift cards (12 months), the points programme,
  * reviews, what isn't allowed, the operators' side (signup creates a pending account, nothing public before approval),
  * liability, complaints (ANPC, SAL) and the applicable law.
+ *
+ * The body of the document is plain English and does not go through v2_t(): a legal text is translated as a whole
+ * file per language. Only the page title, the description and the hero go through the language layer.
  */
 
 require_once __DIR__ . '/includes/config.php';
@@ -27,141 +30,141 @@ $lgEmail = defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : 'contact@viaqui.com';
 $lgMail = '<a href="mailto:' . v2_e($lgEmail) . '">' . v2_e($lgEmail) . '</a>';
 
 $lgSections = [
-    ['despre', 'Despre viaqui.com și acești termeni', <<<'HTML'
-<p>viaqui.com este o platformă prin care descoperi și cumperi bilete la activități, atracții și experiențe din România. Platforma este operată de <strong>TIXELLO S.R.L.</strong> (datele complete sunt mai sus), numită în continuare „noi”.</p>
-<p>Acești termeni se aplică oricui folosește site-ul: vizitatorilor, clienților și operatorilor care își listează activitățile. Când îți creezi un cont sau plasezi o comandă, confirmi că i-ai citit și îi accepți. Datele personale le prelucrăm conform <a href="/confidentialitate">Politicii de confidențialitate</a>.</p>
+    ['despre', 'About viaqui.com and these terms', <<<'HTML'
+<p>viaqui.com is a platform where you discover and buy tickets for activities, attractions and experiences across Europe. The platform is operated by <strong>TIXELLO S.R.L.</strong> (the full company details are above), referred to below as "we" or "us".</p>
+<p>These terms apply to everyone who uses the site: visitors, customers and the operators who list their activities. When you create an account or place an order, you confirm that you have read and accept them. We process personal data in line with the <a href="/privacy">Privacy policy</a>.</p>
 HTML],
-    ['definitii', 'Ce înseamnă termenii folosiți', <<<'HTML'
+    ['definitii', 'What the terms used here mean', <<<'HTML'
 <ul>
-  <li><strong>Platforma:</strong> site-ul viaqui.com și serviciile legate de el (contul, emailurile, biletele electronice).</li>
-  <li><strong>Client:</strong> persoana care cumpără bilete prin platformă.</li>
-  <li><strong>Operator:</strong> locația, organizatorul sau ghidul care oferă activitatea și care răspunde de desfășurarea ei.</li>
-  <li><strong>Activitate:</strong> atracția, experiența, turul, atelierul sau orice alt serviciu de agrement listat pe platformă.</li>
-  <li><strong>Bilet:</strong> dovada electronică a dreptului de acces la activitate, cu un cod QR unic.</li>
-  <li><strong>Comandă:</strong> cumpărarea unuia sau mai multor bilete, într-o singură plată.</li>
+  <li><strong>The platform:</strong> the viaqui.com site and the services linked to it (the account, the emails, the electronic tickets).</li>
+  <li><strong>Customer:</strong> the person who buys tickets through the platform.</li>
+  <li><strong>Operator:</strong> the venue, organiser or guide that offers the activity and is responsible for running it.</li>
+  <li><strong>Activity:</strong> the attraction, experience, tour, workshop or any other leisure service listed on the platform.</li>
+  <li><strong>Ticket:</strong> the electronic proof of the right of access to the activity, with a unique QR code.</li>
+  <li><strong>Order:</strong> the purchase of one or more tickets in a single payment.</li>
 </ul>
 HTML],
-    ['rolul-nostru', 'Rolul nostru și al operatorilor', <<<'HTML'
-<p>Vindem biletele <strong>în numele și pe seama operatorilor</strong>. Contractul pentru activitate se încheie între tine și operator, care răspunde de desfășurarea ei, de siguranță, de calitate, de autorizațiile necesare și de informațiile despre activitate (program, durată, vârstă minimă, reguli de acces, accesibilitate, ce include biletul).</p>
-<p>Noi răspundem de funcționarea platformei, de procesarea comenzii, de încasarea plății în numele operatorului și de emiterea și trimiterea biletelor. Verificăm operatorii înainte ca activitățile lor să devină publice, dar nu putem garanta desfășurarea fiecărei activități.</p>
+    ['rolul-nostru', 'Our role and the role of the operators', <<<'HTML'
+<p>We sell the tickets <strong>in the name and on behalf of the operators</strong>. The contract for the activity is concluded between you and the operator, who is responsible for running it, for safety, for quality, for the necessary permits and for the information about the activity (opening times, duration, minimum age, access rules, accessibility, what the ticket includes).</p>
+<p>We are responsible for the operation of the platform, for processing the order, for collecting the payment on behalf of the operator and for issuing and sending the tickets. We check operators before their activities become public, but we cannot guarantee that every activity takes place.</p>
 HTML],
-    ['cont', 'Contul tău', <<<'HTML'
+    ['cont', 'Your account', <<<'HTML'
 <ul>
-  <li>Contul este gratuit și se poate crea de la 16 ani. Poți cumpăra și fără cont, cu adresa de email.</li>
-  <li>Datele din cont trebuie să fie reale și actuale. Parola e personală: nu o împărți cu nimeni. Pentru mai multă siguranță, activează autentificarea în doi pași din Setări.</li>
-  <li>Dacă observi acces neautorizat în cont, schimbă parola și anunță-ne imediat.</li>
-  <li>Îți poți șterge contul oricând din Setări. Comenzile rămân în evidența noastră cât cere legea.</li>
-  <li>Putem suspenda sau închide conturile folosite pentru fraudă, abuz sau încălcarea acestor termeni.</li>
+  <li>The account is free and can be created from the age of 16. You can also buy without an account, with your email address.</li>
+  <li>The details in your account must be real and up to date. Your password is personal: do not share it with anyone. For extra safety, turn on two-step sign-in in Settings.</li>
+  <li>If you notice unauthorised access to your account, change your password and tell us straight away.</li>
+  <li>You can delete your account at any time from Settings. Orders stay in our records for as long as the law requires.</li>
+  <li>We may suspend or close accounts used for fraud, abuse or breaches of these terms.</li>
 </ul>
 HTML],
-    ['comanda', 'Comanda', <<<'HTML'
+    ['comanda', 'The order', <<<'HTML'
 <ul>
-  <li>Alegi activitatea, data și ora (unde e cazul), tipurile de bilete și opțiunile, apoi plătești în checkout.</li>
-  <li>Cât timp finalizezi plata, locurile alese sunt rezervate temporar. Dacă plata nu se face în timpul afișat, rezervarea expiră și locurile se eliberează.</li>
-  <li>Comanda este confirmată când plata este acceptată. Primești pe email confirmarea și biletele, care apar și în contul tău, la <strong>Biletele mele</strong>.</li>
-  <li>Verifică datele înainte să plătești: activitatea, data, ora, numărul de bilete și adresa de email.</li>
-  <li>Dacă un preț afișat este evident greșit (o eroare tehnică sau de introducere), te anunțăm și poți alege între prețul corect și anularea comenzii, cu rambursarea integrală a sumei plătite.</li>
+  <li>You choose the activity, the date and time (where applicable), the ticket types and the options, then you pay at checkout.</li>
+  <li>While you complete the payment, the places you chose are held temporarily. If the payment is not made within the time shown, the hold expires and the places are released.</li>
+  <li>The order is confirmed when the payment is accepted. You receive the confirmation and the tickets by email, and they also appear in your account, under <strong>My tickets</strong>.</li>
+  <li>Check the details before you pay: the activity, the date, the time, the number of tickets and the email address.</li>
+  <li>If a displayed price is obviously wrong (a technical or data-entry error), we tell you and you can choose between the correct price and cancelling the order, with a full refund of the amount paid.</li>
 </ul>
 HTML],
-    ['preturi-plata', 'Prețuri, taxe și plată', <<<'HTML'
+    ['preturi-plata', 'Prices, fees and payment', <<<'HTML'
 <ul>
-  <li>Prețurile biletelor sunt stabilite de operatori și sunt afișate în lei, cu TVA inclus acolo unde se aplică.</li>
-  <li>Peste prețul biletelor se adaugă <strong>comisionul de ticketing</strong> viaqui.com. Îl vezi separat în coș și în checkout, înainte să plătești. Tot acolo apare orice alt cost, dacă există: de exemplu costul de procesare a plății, protecția biletului, dacă o alegi, sau comisionul suplimentar pentru cardul cultural.</li>
-  <li>Plătești cu cardul (Visa, Mastercard, Maestro), cu Apple Pay sau cu Google Pay, prin procesatorul de plăți (în prezent Stripe), cu autentificare 3D Secure. Unde este acceptat, poți plăti și cu cardul cultural (Edenred, Pluxee, Up), cu comisionul suplimentar afișat la plată.</li>
-  <li>Nu vedem și nu păstrăm datele cardului tău: le introduci direct la procesatorul de plăți.</li>
-  <li>Codurile promoționale, cardurile cadou și punctele se aplică înainte de plată, după regulile lor. Nu se cumulează decât dacă se arată asta în coș.</li>
-  <li>Documentele fiscale se emit conform legii. Dacă ai nevoie de factură pe firmă, completează datele de facturare în checkout.</li>
+  <li>Ticket prices are set by the operators and are shown in the currency displayed next to each price, with VAT included where it applies.</li>
+  <li>The viaqui.com <strong>ticketing fee</strong> is added on top of the ticket price. You see it separately in the cart and at checkout, before you pay. Any other cost, if there is one, appears there too: for example the payment processing cost, ticket protection, if you choose it, or the surcharge for the cultural card.</li>
+  <li>You pay by card (Visa, Mastercard, Maestro), with Apple Pay or with Google Pay, through the payment processor (currently Stripe), with 3D Secure authentication. Where accepted, you can also pay with a cultural card (Edenred, Pluxee, Up), with the surcharge shown at payment.</li>
+  <li>We do not see and do not keep your card details: you enter them directly with the payment processor.</li>
+  <li>Promotional codes, gift cards and points are applied before payment, according to their own rules. They cannot be combined unless the cart shows that they can.</li>
+  <li>Tax documents are issued as required by law. If you need an invoice in the name of a company, fill in the billing details at checkout.</li>
 </ul>
 HTML],
-    ['bilete', 'Biletele', <<<'HTML'
+    ['bilete', 'The tickets', <<<'HTML'
 <ul>
-  <li>Biletele sunt electronice. Le primești pe email și le găsești în cont. Le arăți la intrare pe telefon sau tipărite.</li>
-  <li>Fiecare bilet are un cod QR unic, valabil pentru o singură intrare. La prima scanare biletul este folosit, iar copiile lui nu mai sunt valabile. Nu publica și nu trimite biletele altor persoane decât celor care vin cu tine.</li>
-  <li>Pentru biletele cu reducere (copii, elevi, studenți, pensionari etc.), operatorul poate cere la intrare un act doveditor.</li>
-  <li>Respectă regulile operatorului afișate pe pagina activității: ora de sosire, vârsta minimă, echipamentul, regulile de siguranță. La întârziere se aplică regulile operatorului.</li>
-  <li>Revânzarea biletelor în scop comercial fără acordul operatorului este interzisă. Biletele obținute prin fraudă pot fi anulate fără despăgubire.</li>
+  <li>Tickets are electronic. You receive them by email and you find them in your account. You show them at the entrance on your phone or printed.</li>
+  <li>Each ticket has a unique QR code, valid for a single entry. At the first scan the ticket is used, and copies of it are no longer valid. Do not publish the tickets and do not send them to anyone other than the people coming with you.</li>
+  <li>For discounted tickets (children, pupils, students, pensioners and so on), the operator may ask for proof at the entrance.</li>
+  <li>Follow the operator's rules shown on the activity page: arrival time, minimum age, equipment, safety rules. If you are late, the operator's rules apply.</li>
+  <li>Reselling tickets for commercial purposes without the operator's consent is forbidden. Tickets obtained by fraud may be cancelled without compensation.</li>
 </ul>
 HTML],
-    ['anulare-rambursare', 'Anulare, reprogramare și rambursare', <<<HTML
-<p><strong>Dreptul de retragere.</strong> Pentru biletele la activități de agrement cu o dată sau o perioadă stabilită, dreptul de retragere de 14 zile nu se aplică (OUG nr. 34/2014, art. 16 lit. l).</p>
+    ['anulare-rambursare', 'Cancellation, rescheduling and refunds', <<<HTML
+<p><strong>Right of withdrawal.</strong> For tickets to leisure activities with a set date or period, the 14-day right of withdrawal does not apply (Government Emergency Ordinance no. 34/2014 (OUG nr. 34/2014), art. 16 letter l).</p>
 <ul>
-  <li><strong>Dacă operatorul anulează activitatea</strong>, primești înapoi întreaga sumă plătită pentru biletele afectate, inclusiv comisionul de ticketing.</li>
-  <li><strong>Dacă activitatea este reprogramată</strong>, biletul rămâne valabil pentru noua dată. Dacă nu poți ajunge atunci, poți cere rambursarea în 14 zile de la anunțarea noii date.</li>
-  <li><strong>Dacă renunți tu</strong>, se aplică politica de anulare a operatorului, afișată pe pagina activității. Dacă activitatea nu are o astfel de politică, biletele nu se rambursează. Dacă ai ales la checkout protecția biletului, se aplică și condițiile ei.</li>
+  <li><strong>If the operator cancels the activity</strong>, you get back the full amount paid for the affected tickets, including the ticketing fee.</li>
+  <li><strong>If the activity is rescheduled</strong>, the ticket remains valid for the new date. If you cannot make it then, you can ask for a refund within 14 days of the new date being announced.</li>
+  <li><strong>If you cancel</strong>, the operator's cancellation policy, shown on the activity page, applies. If the activity has no such policy, the tickets are not refundable. If you chose ticket protection at checkout, its conditions apply as well.</li>
 </ul>
-<p>Ceri anularea sau rambursarea din <a href="/contact">pagina de contact</a> sau la {$lgMail}, cu numărul comenzii. Banii se returnează pe aceeași metodă de plată. Durata până apar în cont depinde și de banca ta. La rambursare, punctele folosite în comandă îți revin, iar cele primite pentru ea se anulează. Sumele plătite cu un card cadou se întorc pe card.</p>
+<p>You ask for a cancellation or a refund from the <a href="/contact">contact page</a> or at {$lgMail}, with the order number. The money is returned to the same payment method. How long it takes to appear in your account also depends on your bank. On a refund, the points used in the order come back to you, and the points earned for it are cancelled. Amounts paid with a gift card go back onto the card.</p>
 HTML],
-    ['carduri-cadou', 'Carduri cadou', <<<'HTML'
+    ['carduri-cadou', 'Gift cards', <<<'HTML'
 <ul>
-  <li>Un card cadou este valabil 12 luni de la emitere, dacă la cumpărare nu se arată altă perioadă.</li>
-  <li>Soldul se folosește în una sau mai multe comenzi, până se epuizează sau până expiră cardul. Verifici soldul oricând pe pagina <a href="/voucher">Verifică un card cadou</a>.</li>
-  <li>Cardul cadou nu se preschimbă în bani și nu se rambursează, cu excepția situațiilor prevăzute de lege.</li>
-  <li>Codul cardului funcționează ca numerarul: păstrează-l în siguranță. Nu răspundem pentru folosirea lui de către altcineva căruia i l-ai dat sau care l-a găsit.</li>
-</ul>
-HTML],
-    ['puncte', 'Programul de puncte', <<<'HTML'
-<ul>
-  <li>Primești puncte pentru comenzile plătite. Ele apar „în așteptare” și devin disponibile după ce activitatea a avut loc.</li>
-  <li>Poți primi puncte și de ziua ta (dacă ai data nașterii în cont) și pentru prietenii invitați cu codul tău: le primiți amândoi, după ce prietenul își face cont și cumpără, în limitele programului.</li>
-  <li>Cât valorează punctele, câte primești, cât poți folosi pe o comandă și când expiră le vezi în cont, la <strong>Punctele mele</strong>, și în coș, înainte de plată.</li>
-  <li>Cu punctele reduci prețul biletelor sau participi la concursurile viaqui.com, după regulamentul fiecărui concurs.</li>
-  <li>Punctele nu au valoare în bani, nu se transferă altui cont și expiră după perioada afișată în cont.</li>
-  <li>Punctele primite pentru comenzi anulate sau rambursate se retrag. Punctele obținute prin fraudă (conturi multiple, invitații false, comenzi fictive) se anulează, iar contul poate fi suspendat.</li>
-  <li>Putem schimba sau încheia programul cu un anunț făcut cu cel puțin 30 de zile înainte. Punctele deja disponibile le poți folosi până la data anunțată.</li>
+  <li>A gift card is valid for 12 months from the date of issue, unless a different period is shown at purchase.</li>
+  <li>The balance can be used in one or more orders, until it runs out or until the card expires. You can check the balance at any time on the <a href="/voucher">Check a gift card</a> page.</li>
+  <li>A gift card cannot be exchanged for money and is not refundable, except in the situations provided for by law.</li>
+  <li>The card code works like cash: keep it safe. We are not liable for its use by someone else to whom you gave it or who found it.</li>
 </ul>
 HTML],
-    ['recenzii', 'Recenzii', <<<'HTML'
+    ['puncte', 'The points programme', <<<'HTML'
 <ul>
-  <li>Recenziile trebuie să fie sincere și să se refere la experiența ta la activitatea respectivă.</li>
-  <li>Nu sunt permise limbajul ofensator, datele personale ale altor persoane, reclamele sau conținutul care încalcă legea sau drepturile altora.</li>
-  <li>Putem modera, ascunde sau șterge recenziile care nu respectă aceste reguli.</li>
-  <li>Când publici o recenzie, ne dai dreptul neexclusiv și gratuit să o afișăm, împreună cu fotografiile, pe platformă și în materialele viaqui.com.</li>
+  <li>You earn points for paid orders. They appear as "pending" and become available after the activity has taken place.</li>
+  <li>You can also receive points on your birthday (if your date of birth is in your account) and for friends invited with your code: you both receive them, after your friend creates an account and makes a purchase, within the limits of the programme.</li>
+  <li>What the points are worth, how many you earn, how many you can use on one order and when they expire are shown in your account, under <strong>My points</strong>, and in the cart, before payment.</li>
+  <li>With points you reduce the price of tickets or enter viaqui.com competitions, under the rules of each competition.</li>
+  <li>Points have no cash value, cannot be transferred to another account and expire after the period shown in your account.</li>
+  <li>Points earned for cancelled or refunded orders are withdrawn. Points obtained by fraud (multiple accounts, fake invitations, fictitious orders) are cancelled, and the account may be suspended.</li>
+  <li>We may change or end the programme with notice given at least 30 days in advance. You can use the points already available until the announced date.</li>
 </ul>
 HTML],
-    ['reguli', 'Ce nu este permis', <<<'HTML'
+    ['recenzii', 'Reviews', <<<'HTML'
 <ul>
-  <li>să folosești platforma pentru fraudă sau cu o identitate falsă;</li>
-  <li>să folosești roboți sau programe automate pentru a cumpăra bilete sau pentru a copia conținutul platformei;</li>
-  <li>să încerci să ocolești măsurile de securitate sau să perturbi funcționarea platformei;</li>
-  <li>să revinzi biletele în scop comercial fără acordul operatorului;</li>
-  <li>să copiezi sau să republici conținutul platformei fără acordul nostru.</li>
+  <li>Reviews must be honest and must be about your own experience of that activity.</li>
+  <li>Offensive language, other people's personal data, advertising and content that breaks the law or the rights of others are not allowed.</li>
+  <li>We may moderate, hide or delete reviews that do not follow these rules.</li>
+  <li>When you publish a review, you give us the non-exclusive, free right to display it, together with the photos, on the platform and in viaqui.com materials.</li>
 </ul>
 HTML],
-    ['operatori', 'Pentru operatori', <<<'HTML'
+    ['reguli', 'What is not allowed', <<<'HTML'
 <ul>
-  <li>Te înscrii pe pagina <a href="/inregistrare-locatie">Înregistrare locație</a>. Îți creăm pe loc contul de operator, în care poți intra imediat.</li>
-  <li>Până când un operator viaqui.com îți aprobă cererea (de regulă în cel mult 24 de ore), nimic din ce adaugi în cont nu este public.</li>
-  <li>Comisionul, încasarea și plata sumelor, rapoartele și celelalte condiții comerciale sunt stabilite în contractul de parteneriat, pe care îl semnezi electronic în cont.</li>
-  <li>Răspunzi de corectitudinea informațiilor publicate, de desfășurarea activităților, de autorizațiile necesare, de siguranța participanților, de obligațiile fiscale și de politica de anulare pe care o afișezi.</li>
-  <li>Datele participanților le primești doar pentru organizarea activității și le folosești conform legii.</li>
+  <li>using the platform for fraud or under a false identity;</li>
+  <li>using bots or automated programs to buy tickets or to copy the content of the platform;</li>
+  <li>trying to get around the security measures or to disrupt the operation of the platform;</li>
+  <li>reselling tickets for commercial purposes without the operator's consent;</li>
+  <li>copying or republishing the content of the platform without our consent.</li>
 </ul>
 HTML],
-    ['proprietate', 'Proprietate intelectuală', <<<'HTML'
-<p>Designul, textele, marca viaqui.com, codul și bazele de date ale platformei ne aparțin sau le folosim cu acordul titularilor. Fotografiile și descrierile activităților aparțin operatorilor, care ne permit să le afișăm. Nu le poți copia sau folosi în alt scop fără acordul titularului.</p>
-HTML],
-    ['raspundere', 'Răspundere', <<<'HTML'
+    ['operatori', 'For operators', <<<'HTML'
 <ul>
-  <li>Facem tot ce ține de noi ca platforma să funcționeze fără întreruperi, dar pot apărea pauze pentru mentenanță sau probleme tehnice independente de noi.</li>
-  <li>Nu răspundem pentru desfășurarea activității, de care răspunde operatorul, pentru informațiile publicate de operatori sau pentru pierderile cauzate de împărțirea biletelor, a codurilor sau a parolei cu alte persoane.</li>
-  <li>Nimic din acești termeni nu îți limitează drepturile de consumator prevăzute de lege și nici răspunderea noastră acolo unde legea nu permite limitarea ei.</li>
+  <li>You sign up on the <a href="/list-your-venue">List your venue</a> page. We create your operator account on the spot, and you can sign in to it immediately.</li>
+  <li>Until a viaqui.com team member approves your application (usually within 24 hours at most), nothing you add to the account is public.</li>
+  <li>The commission, the collection and payment of amounts, the reports and the other commercial conditions are set out in the partnership contract, which you sign electronically in your account.</li>
+  <li>You are responsible for the accuracy of the information published, for running the activities, for the necessary permits, for the safety of participants, for your tax obligations and for the cancellation policy you display.</li>
+  <li>You receive participants' data only for organising the activity and you use it in line with the law.</li>
 </ul>
 HTML],
-    ['forta-majora', 'Forța majoră', <<<'HTML'
-<p>Nici noi, nici operatorii nu răspundem pentru neexecutarea obligațiilor cauzată de un eveniment de forță majoră (de exemplu calamități naturale, restricții impuse de autorități, epidemii). Pentru activitățile anulate din acest motiv se aplică regulile de anulare și rambursare de mai sus.</p>
+    ['proprietate', 'Intellectual property', <<<'HTML'
+<p>The design, the texts, the viaqui.com brand, the code and the databases of the platform belong to us or are used by us with the consent of their owners. The photos and descriptions of the activities belong to the operators, who allow us to display them. You may not copy them or use them for another purpose without the owner's consent.</p>
 HTML],
-    ['reclamatii', 'Reclamații și soluționarea litigiilor', <<<HTML
-<p>Pentru orice nemulțumire, scrie-ne din <a href="/contact">pagina de contact</a> sau la {$lgMail}. Îți răspundem cât mai repede, în cel mult 30 de zile.</p>
-<p>Dacă nu ajungem la o soluție, te poți adresa Autorității Naționale pentru Protecția Consumatorilor (<a href="https://anpc.ro" rel="noopener" target="_blank">anpc.ro</a>) sau poți folosi procedura de soluționare alternativă a litigiilor (<a href="https://anpc.ro/ce-este-sal/" rel="noopener" target="_blank">SAL</a>).</p>
-<p>Acești termeni sunt guvernați de legea română. Litigiile care nu se rezolvă pe cale amiabilă sunt de competența instanțelor din România.</p>
+    ['raspundere', 'Liability', <<<'HTML'
+<ul>
+  <li>We do everything in our power to keep the platform running without interruption, but there may be pauses for maintenance or technical problems beyond our control.</li>
+  <li>We are not liable for the running of the activity, for which the operator is responsible, for the information published by operators or for losses caused by sharing tickets, codes or your password with other people.</li>
+  <li>Nothing in these terms limits your consumer rights under the law, or our liability where the law does not allow it to be limited.</li>
+</ul>
 HTML],
-    ['modificari', 'Modificări ale termenilor', <<<'HTML'
-<p>Putem actualiza acești termeni când se schimbă platforma sau legea. Data ultimei actualizări apare la începutul paginii. Comenzilor plasate deja li se aplică termenii în vigoare la data comenzii. Despre schimbările importante te anunțăm pe email sau printr-un mesaj pe platformă.</p>
+    ['forta-majora', 'Force majeure', <<<'HTML'
+<p>Neither we nor the operators are liable for a failure to perform obligations caused by a force majeure event (for example natural disasters, restrictions imposed by the authorities, epidemics). For activities cancelled for this reason, the cancellation and refund rules above apply.</p>
+HTML],
+    ['reclamatii', 'Complaints and dispute resolution', <<<HTML
+<p>If you are unhappy with anything, write to us from the <a href="/contact">contact page</a> or at {$lgMail}. We reply as soon as we can, within 30 days at most.</p>
+<p>If we do not reach a solution, you can contact the National Authority for Consumer Protection of Romania (Autoritatea Națională pentru Protecția Consumatorilor, ANPC, <a href="https://anpc.ro" rel="noopener" target="_blank">anpc.ro</a>) or use the alternative dispute resolution procedure (Soluționarea Alternativă a Litigiilor, <a href="https://anpc.ro/ce-este-sal/" rel="noopener" target="_blank">SAL</a>).</p>
+<p>These terms are governed by Romanian law. Disputes that are not settled amicably fall under the jurisdiction of the courts of Romania.</p>
+HTML],
+    ['modificari', 'Changes to the terms', <<<'HTML'
+<p>We may update these terms when the platform or the law changes. The date of the last update appears at the top of the page. Orders already placed are subject to the terms in force on the date of the order. We tell you about important changes by email or through a message on the platform.</p>
 HTML],
 ];
 
-$pageTitleRaw = 'Termeni și condiții — ' . SITE_NAME;
-$pageDescription = 'Regulile viaqui.com: comanda și plata, biletele, anularea și rambursarea, cardurile cadou, programul de puncte, recenziile și condițiile pentru operatori.';
-$canonicalUrl = SITE_URL . '/termeni';
+$pageTitle = v2_t('Terms and conditions');
+$pageDescription = v2_t('The rules of viaqui.com: ordering and payment, tickets, cancellation and refunds, gift cards, the points programme, reviews and the conditions for operators.');
+$canonicalUrl = SITE_URL . '/terms';
 
 $v2Styles = ['legal.css'];
 $v2Scripts = ['legal.js'];
@@ -171,10 +174,10 @@ include __DIR__ . '/includes/v2/head.php';
 include __DIR__ . '/includes/v2/header.php';
 
 v2_legal_render([
-    'key' => 'termeni',
-    'kicker' => 'Termeni și condiții',
-    'title' => 'Regulile viaqui.com, pe înțeles',
-    'lead' => 'Cum cumperi, cum folosești biletele, ce se întâmplă la anulare și ce reguli au cardurile cadou, punctele și recenziile. Plus ce se aplică operatorilor care își listează activitățile.',
+    'key' => 'terms',
+    'kicker' => v2_t('Terms and conditions'),
+    'title' => v2_t('The rules of viaqui.com, in plain words'),
+    'lead' => v2_t('How you buy, how you use your tickets, what happens on cancellation and what rules apply to gift cards, points and reviews. Plus what applies to the operators who list their activities.'),
     'sections' => $lgSections,
 ]);
 

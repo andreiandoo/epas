@@ -7,8 +7,26 @@
   if (!status) return;
 
   var KEY = 'bo_cookie_consent_v1';
-  var MONTHS = ['ian.', 'feb.', 'mar.', 'apr.', 'mai', 'iun.', 'iul.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.'];
-  var NAMES = { analytics: 'analytics', personalization: 'personalizare', marketing: 'marketing' };
+  var NAMES = { analytics: 1, personalization: 1, marketing: 1 };
+
+  /* One whole sentence for each combination of the three optional categories (analytics, personalization, marketing). */
+  function allowedText(c) {
+    var a = !!c.analytics, p = !!c.personalization, m = !!c.marketing;
+    if (a && p && m) return VQ.t('All categories are allowed.');
+    if (a && p) return VQ.t('Allowed: essential, plus analytics and personalisation.');
+    if (a && m) return VQ.t('Allowed: essential, plus analytics and marketing.');
+    if (p && m) return VQ.t('Allowed: essential, plus personalisation and marketing.');
+    if (a) return VQ.t('Allowed: essential, plus analytics.');
+    if (p) return VQ.t('Allowed: essential, plus personalisation.');
+    if (m) return VQ.t('Allowed: essential, plus marketing.');
+    return VQ.t('Allowed: essential cookies only.');
+  }
+
+  function dateText(d) {
+    try {
+      return d.toLocaleDateString(VQ.locale === 'en' ? 'en-GB' : VQ.locale, { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) { return d.toISOString().slice(0, 10); }
+  }
 
   function saved() {
     var banner = document.getElementById('cc-banner');
@@ -24,21 +42,16 @@
       var pill = document.querySelector('[data-cp-state="' + k + '"]');
       if (!pill) return;
       var on = !!(s && s.consent && s.consent[k]);
-      pill.textContent = on ? 'Activ' : 'Oprit';
+      pill.textContent = on ? VQ.t('On') : VQ.t('Off');
       pill.setAttribute('data-on', String(on));
     });
     if (!s || !s.consent) {
-      status.textContent = 'Nu ai ales încă ce cookies permiți. Până atunci rulează doar cele esențiale.';
+      status.textContent = VQ.t('You have not yet chosen which cookies you allow. Until then only the essential ones run.');
       return;
     }
-    var allowed = Object.keys(NAMES).filter(function (k) { return s.consent[k]; }).map(function (k) { return NAMES[k]; });
     var d = s.savedAt ? new Date(s.savedAt) : null;
-    var when = d && !isNaN(d) ? ' din ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() : '';
-    var what;
-    if (allowed.length === 3) what = 'toate categoriile sunt permise.';
-    else if (!allowed.length) what = 'doar cookies esențiale.';
-    else what = 'esențiale, plus ' + allowed.join(' și ') + '.';
-    status.textContent = 'Alegerea ta' + when + ': ' + what;
+    var when = d && !isNaN(d) ? VQ.t('Your choice, saved on {date}.', { date: dateText(d) }) : VQ.t('Your choice is saved.');
+    status.textContent = when + ' ' + allowedText(s.consent);
   }
 
   window.addEventListener('bo-cookie-consent-updated', function (e) { render(e.detail); });
