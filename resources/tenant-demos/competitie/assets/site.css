@@ -546,3 +546,14 @@ html.lenis, html.lenis body { height: auto; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     .marquee__track { animation: none; }
 }
+
+/* ---- Telefoane înguste: titlurile late se strâng, ca niciun cuvânt să nu iasă din ecran ---- */
+@media (max-width: 560px) {
+    h1, h2, h3 { font-stretch: 106%; overflow-wrap: anywhere; }
+    .hero__title { font-size: 13.2vw; }
+    .sec__head h2 { font-size: clamp(30px, 9vw, 44px); }
+    .phead h1 { font-size: clamp(38px, 11vw, 56px); }
+    .cta h2 { font-size: clamp(32px, 9vw, 44px); }
+    .sec { padding: 64px 0; }
+    .sec__head { margin-bottom: 30px; }
+}
