@@ -5,7 +5,7 @@
  */
 require_once __DIR__ . '/includes/embed-init.php';
 
-$pageTitle = $orgName . ' — Evenimente';
+$pageTitle = v2_t('Events') . ' · ' . $orgName;
 
 // Preload upcoming events from organizer data
 $events = $orgData['data']['upcomingEvents'] ?? [];
@@ -20,14 +20,14 @@ require_once __DIR__ . '/includes/embed-head.php';
     <?php endif; ?>
     <div>
         <h1 style="margin:0;font-size:20px;font-weight:700;color:<?= $textColor ?>;"><?= htmlspecialchars($orgName) ?></h1>
-        <p style="margin:2px 0 0;font-size:13px;color:<?= $mutedColor ?>;"><?= count($events) ?> evenimente disponibile</p>
+        <p style="margin:2px 0 0;font-size:13px;color:<?= $mutedColor ?>;"><?= v2_e(v2_num(count($events), 'event available', 'events available')) ?></p>
     </div>
 </div>
 
 <!-- Events grid -->
 <div id="events-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
     <?php if (empty($events)): ?>
-    <p style="color:<?= $mutedColor ?>;grid-column:1/-1;text-align:center;padding:40px 0;">Nu sunt evenimente disponibile momentan.</p>
+    <p style="color:<?= $mutedColor ?>;grid-column:1/-1;text-align:center;padding:40px 0;"><?= v2_te('There are no events available right now.') ?></p>
     <?php else: ?>
     <?php foreach ($events as $event):
         $imgUrl = $event['poster_url'] ?? $event['image'] ?? '';
@@ -46,9 +46,9 @@ require_once __DIR__ . '/includes/embed-head.php';
         <div style="position:relative;aspect-ratio:16/10;overflow:hidden;">
             <img src="<?= htmlspecialchars($imgUrl) ?>" alt="<?= htmlspecialchars($title) ?>" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
             <?php if ($isSoldOut): ?>
-            <div style="position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;">SOLD OUT</div>
+            <div style="position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;"><?= v2_te('Sold out') ?></div>
             <?php elseif ($price !== null): ?>
-            <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;font-size:13px;font-weight:600;padding:4px 10px;border-radius:8px;">de la <?= number_format($price, 0) ?> RON</div>
+            <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;font-size:13px;font-weight:600;padding:4px 10px;border-radius:8px;"><?= v2_te('from {price}', ['price' => v2_money($price)]) ?></div>
             <?php endif; ?>
         </div>
         <?php endif; ?>

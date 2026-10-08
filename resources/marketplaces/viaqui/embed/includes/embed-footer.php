@@ -7,16 +7,16 @@
             <?php
             // Use organizer's website for terms/privacy, fallback to marketplace
             $orgWebsite = $orgData['data']['social']['website'] ?? '';
-            $termsUrl = $orgWebsite ? rtrim($orgWebsite, '/') . '/terms/' : SITE_URL . '/termeni-si-conditii';
-            $privacyUrl = $orgWebsite ? rtrim($orgWebsite, '/') . '/privacy/' : SITE_URL . '/confidentialitate';
+            $termsUrl = $orgWebsite ? rtrim($orgWebsite, '/') . '/terms/' : SITE_URL . '/terms';
+            $privacyUrl = $orgWebsite ? rtrim($orgWebsite, '/') . '/privacy/' : SITE_URL . '/privacy';
             ?>
             <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:<?= $mutedColor ?>;">
-                <a href="<?= htmlspecialchars($termsUrl) ?>" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;">Termeni și condiții</a>
+                <a href="<?= htmlspecialchars($termsUrl) ?>" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;"><?= v2_te('Terms and conditions') ?></a>
                 <span style="color:<?= $borderColor ?>;">|</span>
-                <a href="<?= htmlspecialchars($privacyUrl) ?>" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;">Confidențialitate date</a>
+                <a href="<?= htmlspecialchars($privacyUrl) ?>" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;"><?= v2_te('Privacy') ?></a>
             </div>
             <div style="font-size:11px;color:<?= $mutedColor ?>;">
-                Bilete oferite prin <a href="<?= SITE_URL ?>" target="_blank" rel="noopener" style="font-weight:600;color:<?= $mutedColor ?>;"><?= htmlspecialchars(SITE_NAME) ?></a>
+                <?= v2_t('Tickets provided by {site}', ['site' => '<a href="' . SITE_URL . '" target="_blank" rel="noopener" style="font-weight:600;color:' . $mutedColor . ';">' . v2_e(SITE_NAME) . '</a>']) ?>
             </div>
         </div>
     </footer>
@@ -34,7 +34,9 @@
         };
     </script>
 
-    <!-- Core scripts -->
+    <!-- Core scripts (i18n.js first: VQ.t() for every script below) -->
+    <?= v2_i18n_script() ?>
+    <script src="<?= SITE_URL ?>/assets/v2/js/i18n.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/api.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/cart.js"></script>

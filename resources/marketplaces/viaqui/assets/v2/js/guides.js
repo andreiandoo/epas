@@ -16,11 +16,6 @@
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
-  /* counting, as v2_num(): 1 guide, 5 guides */
-  function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    return n + ' ' + many;
-  }
   var index = cards.map(function (card) {
     return { q: norm(card.getAttribute('data-q')), topic: card.getAttribute('data-topic-key') };
   });
@@ -37,9 +32,9 @@
     buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b === active)); });
     chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c.getAttribute('data-topic-chip') === topic)); });
     title.textContent = active.getAttribute('data-label');
-    count.textContent = shown + ' of ' + total + ' guides';
+    count.textContent = VQ.t('{shown} of {total} guides', { shown: shown, total: total });
     none.hidden = shown > 0;
-    status.textContent = q ? (shown ? num(shown, 'guide found', 'guides found') : 'No guides found.') : '';
+    status.textContent = q ? (shown ? VQ.n(shown, 'guide found', 'guides found') : VQ.t('No guides found.')) : '';
     if (fromUser) {
       var params = new URLSearchParams(window.location.search);
       if (input.value.trim()) params.set('q', input.value.trim()); else params.delete('q');

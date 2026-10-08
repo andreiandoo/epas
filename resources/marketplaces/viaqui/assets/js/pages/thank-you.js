@@ -82,9 +82,14 @@ const ThankYouPage = {
         return BileteOnlineUtils.formatCurrency(parseFloat(value) || 0, (this.order && this.order.currency) || BILETEONLINE_CONFIG.CURRENCY);
     },
 
-    /** 1 ticket, 5 tickets. */
+    /** The noun for a count of tickets, in the visitor's language. */
     ticketsWord(n) {
-        return n === 1 ? 'ticket' : 'tickets';
+        return VQ.plural(n, 'ticket', 'tickets');
+    },
+
+    /** The locale for dates and numbers written by the browser. */
+    locale() {
+        return VQ.locale === 'en' ? 'en-GB' : VQ.locale;
     },
 
     notify(type, message) {
@@ -113,7 +118,7 @@ const ThankYouPage = {
     /** Venue may be a string or a translatable object {ro: "...", en: "..."}. */
     venueName(event) {
         if (!event || !event.venue) return '';
-        if (typeof event.venue === 'object') return event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '';
+        if (typeof event.venue === 'object') return event.venue[VQ.locale] || event.venue.en || event.venue.ro || Object.values(event.venue)[0] || '';
         return event.venue;
     },
 
@@ -124,7 +129,7 @@ const ThankYouPage = {
         if (typeof event.doors_open === 'string' && /^\d{2}:\d{2}/.test(event.doors_open)) return event.doors_open.substring(0, 5);
         if (event.date && String(event.date).includes('T')) {
             try {
-                const time = new Date(event.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' });
+                const time = new Date(event.date).toLocaleTimeString(this.locale(), { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' });
                 return time === '00:00' ? '' : time; // a date without a start time
             } catch (e) {}
         }
@@ -150,7 +155,7 @@ const ThankYouPage = {
             const res = await fetch('/api/embed-return.php?t=' + encodeURIComponent(token), { credentials: 'same-origin' });
             const data = await res.json();
             if (!data || !data.ok || !/^https?:\/\//.test(data.url || '')) return;
-            this.returnTo = { href: data.url, label: 'Back to ' + (data.name || 'the site'), name: data.name || 'the site' };
+            this.returnTo = { href: data.url, label: VQ.t('Back to {site}', { site: data.name || VQ.t('the site') }), name: data.name || VQ.t('the site') };
         } catch (e) {
             return;
         }
@@ -279,22 +284,22 @@ const ThankYouPage = {
     renderOrderNotFound() {
         this.setState('notfound');
         this.setHero(
-            'We could not find this order',
-            'We have no details for this order. Check the order number or contact support.'
+            VQ.t('We could not find this order'),
+            VQ.t('We have no details for this order. Check the order number or contact support.')
         );
         this.renderBack([
-            { href: '/account/orders', label: 'My orders', primary: true, icon: 'ticket' },
-            { href: '/', label: 'Homepage', icon: 'arrow-left' },
+            { href: '/account/orders', label: VQ.t('My orders'), primary: true, icon: 'ticket' },
+            { href: '/', label: VQ.t('Homepage'), icon: 'arrow-left' },
         ]);
     },
 
     renderFailedPayment() {
         this.setState('failed');
         this.setHero(
-            'The payment did not go through',
-            'We could not complete the payment. Please check your card details and try again.'
+            VQ.t('The payment did not go through'),
+            VQ.t('We could not complete the payment. Please check your card details and try again.')
         );
-        this.setStatus('Failed');
+        this.setStatus(VQ.t('Failed'));
 
         // Still render order details (event info, payment info) so the customer sees what they tried to buy
         this.renderOrderDetails();
@@ -302,22 +307,22 @@ const ThankYouPage = {
         const eventSlug = this.order?.event?.slug;
         const retryUrl = eventSlug ? '/bilete/' + eventSlug : '/';
         this.renderBack([
-            { href: retryUrl, label: 'Try again', primary: true },
-            { href: '/', label: 'Homepage', icon: 'arrow-left' },
+            { href: retryUrl, label: VQ.t('Try again'), primary: true },
+            { href: '/', label: VQ.t('Homepage'), icon: 'arrow-left' },
         ]);
     },
 
     renderPendingPayment() {
         this.setState('pending');
         this.setHero(
-            'Your payment is being processed',
-            'We are checking your payment. Your tickets will be emailed to you as soon as it is confirmed.'
+            VQ.t('Your payment is being processed'),
+            VQ.t('We are checking your payment. Your tickets will be emailed to you as soon as it is confirmed.')
         );
         const emailTitle = document.getElementById('emailCardTitle');
-        if (emailTitle) emailTitle.textContent = 'Your tickets will be emailed once the payment is confirmed';
+        if (emailTitle) emailTitle.textContent = VQ.t('Your tickets will be emailed once the payment is confirmed');
         const buyerEmail = document.getElementById('buyerEmail');
         if (buyerEmail) buyerEmail.textContent = this.order?.customer_email || '';
-        this.setStatus('Pending');
+        this.setStatus(VQ.t('Pending'));
 
         this.renderOrderDetails();
         this.schedulePendingCheck();
@@ -327,19 +332,19 @@ const ThankYouPage = {
         const order = this.order;
 
         this.setState('success');
-        this.setHero('Your tickets are ready.', 'Your payment is confirmed and your tickets have been issued.');
+        this.setHero(VQ.t('Your tickets are ready.'), VQ.t('Your payment is confirmed and your tickets have been issued.'));
         const emailTitle = document.getElementById('emailCardTitle');
-        if (emailTitle) emailTitle.textContent = 'Your tickets were sent by email';
-        document.getElementById('buyerEmail').textContent = order.customer_email || 'Your email address';
-        this.setStatus('Confirmed');
+        if (emailTitle) emailTitle.textContent = VQ.t('Your tickets were sent by email');
+        document.getElementById('buyerEmail').textContent = order.customer_email || VQ.t('Your email address');
+        this.setStatus(VQ.t('Confirmed'));
 
         this.renderEventInfo();
 
         const tickets = order.tickets || [];
         this.renderTickets(Array.isArray(tickets) ? tickets : Object.values(tickets));
 
-        this.renderTicketsSummary('Tickets bought', true);
-        this.renderPaymentSummary('Total paid');
+        this.renderTicketsSummary(VQ.t('Tickets bought'), true);
+        this.renderPaymentSummary(VQ.t('Total paid'));
         this.renderPaymentMethod();
         this.renderThankYouMessage();
 
@@ -349,9 +354,8 @@ const ThankYouPage = {
         if (pointsEl) {
             pointsEl.hidden = toEarn <= 0;
             if (toEarn > 0) {
-                const word = toEarn === 1 ? '1 point' : new Intl.NumberFormat('en-GB').format(toEarn) + ' points';
-                document.getElementById('earnedPoints').textContent = '+' + new Intl.NumberFormat('en-GB').format(toEarn);
-                document.getElementById('pointsTitle').textContent = 'You earn ' + word + ' with this order';
+                document.getElementById('earnedPoints').textContent = '+' + new Intl.NumberFormat(this.locale()).format(toEarn);
+                document.getElementById('pointsTitle').textContent = VQ.t('You earn {points} with this order', { points: VQ.n(toEarn, 'point', 'points') });
             }
         }
 
@@ -405,8 +409,8 @@ const ThankYouPage = {
     renderOrderDetails() {
         if (!this.order) return;
         this.renderEventInfo();
-        this.renderTicketsSummary('Tickets', false);
-        this.renderPaymentSummary('Total');
+        this.renderTicketsSummary(VQ.t('Tickets'), false);
+        this.renderPaymentSummary(VQ.t('Total'));
         this.renderPaymentMethod();
         this.renderThankYouMessage();
 
@@ -436,7 +440,7 @@ const ThankYouPage = {
                     (actImg ? '<img src="' + this.esc(actImg) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
                 '</span>' +
                 '<div>' +
-                    '<h3>' + this.esc(act.title || 'Booking') + '</h3>' +
+                    '<h3>' + this.esc(act.title || VQ.t('Booking')) + '</h3>' +
                     (act.date_label ? '<p>' + this.icon('calendar-blank') + '<span>' + this.esc(act.date_label) + '</span></p>' : '') +
                     (actPlace ? '<p>' + this.icon('map-pin') + '<span>' + this.esc(actPlace) + '</span></p>' : '') +
                 '</div>';
@@ -488,14 +492,14 @@ const ThankYouPage = {
             if (insuredTickets.length > 0) {
                 const n = insuredTickets.length;
                 html += '<div class="ty-extra"><p class="ty-insured">' + this.icon('check-circle') +
-                    n + ' ' + (n === 1 ? 'ticket' : 'tickets') + ' covered by refund protection</p></div>';
+                    VQ.t('{tickets} covered by refund protection', { tickets: VQ.n(n, 'ticket', 'tickets') }) + '</p></div>';
             }
             const seatedTickets = tickets.filter(t => t.seat);
             if (seatedTickets.length > 0) {
-                html += '<div class="ty-extra"><p class="ty-sub-h">Your seats</p>' +
+                html += '<div class="ty-extra"><p class="ty-sub-h">' + VQ.t('Your seats') + '</p>' +
                     seatedTickets.map(t => {
-                        const seat = [t.seat.section_name, t.seat.row_label ? 'Row ' + t.seat.row_label : '', t.seat.seat_number ? 'Seat ' + t.seat.seat_number : ''].filter(Boolean).join(', ') || t.seat.label || '';
-                        return '<p class="ty-seat"><span>' + this.esc(t.type || 'Ticket') + '</span><b>' + this.esc(seat) + '</b></p>';
+                        const seat = [t.seat.section_name, t.seat.row_label ? VQ.t('Row {row}', { row: t.seat.row_label }) : '', t.seat.seat_number ? VQ.t('Seat {seat}', { seat: t.seat.seat_number }) : ''].filter(Boolean).join(', ') || t.seat.label || '';
+                        return '<p class="ty-seat"><span>' + this.esc(t.type || VQ.t('Ticket')) + '</span><b>' + this.esc(seat) + '</b></p>';
                     }).join('') +
                 '</div>';
             }
@@ -525,22 +529,22 @@ const ThankYouPage = {
         const otherFees = Math.max(0, +(serviceFee - commissionAddedOnTop - processingFee).toFixed(2));
 
         const row = (label, amount, cls) => '<div class="ty-row' + (cls ? ' ' + cls : '') + '"><span>' + label + '</span><strong>' + amount + '</strong></div>';
-        let rows = row('Subtotal', this.money(subtotal));
+        let rows = row(VQ.t('Subtotal'), this.money(subtotal));
         if (hasSplit) {
-            if (commissionAddedOnTop > 0) rows += row('Booking fee', this.money(commissionAddedOnTop));
-            if (processingFee > 0) rows += row('Payment processing fee', this.money(processingFee));
-            if (otherFees > 0) rows += row('Other fees', this.money(otherFees));
+            if (commissionAddedOnTop > 0) rows += row(VQ.t('Booking fee'), this.money(commissionAddedOnTop));
+            if (processingFee > 0) rows += row(VQ.t('Payment processing fee'), this.money(processingFee));
+            if (otherFees > 0) rows += row(VQ.t('Other fees'), this.money(otherFees));
         } else if (serviceFee > 0) {
-            rows += row('Service fee', this.money(serviceFee));
+            rows += row(VQ.t('Service fee'), this.money(serviceFee));
         }
-        if (insuranceAmount > 0) rows += row('Refund protection', this.money(insuranceAmount));
-        if (discount > 0) rows += row('Discount', '-' + this.money(discount), 'is-disc');
+        if (insuranceAmount > 0) rows += row(VQ.t('Refund protection'), this.money(insuranceAmount));
+        if (discount > 0) rows += row(VQ.t('Discount'), '-' + this.money(discount), 'is-disc');
         const pointsDiscount = parseFloat(order.points_discount) || 0;
         const pointsUsed = parseInt(order.points_used, 10) || 0;
-        if (pointsDiscount > 0) rows += row('Paid with ' + new Intl.NumberFormat('en-GB').format(pointsUsed) + (pointsUsed === 1 ? ' point' : ' points'),'-' + this.money(pointsDiscount), 'is-disc');
+        if (pointsDiscount > 0) rows += row(VQ.t('Paid with {points}', { points: VQ.n(pointsUsed, 'point', 'points') }), '-' + this.money(pointsDiscount), 'is-disc');
         rows += row(this.esc(totalLabel), this.money(total), 'is-total');
 
-        document.getElementById('paymentSummary').innerHTML = '<p class="ty-sub-h">Payment summary</p><div class="ty-lines">' + rows + '</div>';
+        document.getElementById('paymentSummary').innerHTML = '<p class="ty-sub-h">' + VQ.t('Payment summary') + '</p><div class="ty-lines">' + rows + '</div>';
     },
 
     renderPaymentMethod() {
@@ -588,7 +592,7 @@ const ThankYouPage = {
 
         const esc = (v) => this.esc(v);
         const event = order.event;
-        const eventTitle = event?.name || event?.title || 'Event';
+        const eventTitle = event?.name || event?.title || VQ.t('Event');
         const eventDate = event?.date ? BileteOnlineUtils.formatDate(event.date) : '';
         const venue = this.venueName(event);
         const siteName = window.BILETEONLINE?.siteName || 'viaqui.com';
@@ -596,8 +600,8 @@ const ThankYouPage = {
         const ticketsHtml = order.tickets.map((ticket, idx) => {
             const seatInfo = ticket.seat ? [
                 ticket.seat.section_name,
-                ticket.seat.row_label ? 'Row ' + ticket.seat.row_label : '',
-                ticket.seat.seat_number ? 'Seat ' + ticket.seat.seat_number : ''
+                ticket.seat.row_label ? VQ.t('Row {row}', { row: ticket.seat.row_label }) : '',
+                ticket.seat.seat_number ? VQ.t('Seat {seat}', { seat: ticket.seat.seat_number }) : ''
             ].filter(Boolean).join(' | ') : '';
             const code = ticket.code || ticket.barcode || '';
 
@@ -606,28 +610,28 @@ const ThankYouPage = {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px dashed #DEDED8;">
                         <div>
                             <div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${esc(siteName)}</div>
-                            <div style="font-size: 18px; font-weight: 700;">${esc(ticket.type || 'Ticket')}</div>
+                            <div style="font-size: 18px; font-weight: 700;">${esc(ticket.type || VQ.t('Ticket'))}</div>
                         </div>
                         <div style="text-align: right; font-size: 12px; color: #5F6360;">${idx + 1} / ${order.tickets.length}</div>
                     </div>
                     <div style="margin-bottom: 12px;">
-                        <div style="font-size: 11px; color: #5F6360;">EVENT</div>
+                        <div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${VQ.t('Event')}</div>
                         <div style="font-size: 16px; font-weight: 600;">${esc(eventTitle)}</div>
                     </div>
                     <div style="display: flex; gap: 24px; margin-bottom: 12px;">
-                        <div><div style="font-size: 11px; color: #5F6360;">DATE</div><div style="font-weight: 600;">${esc(eventDate)}</div></div>
-                        <div><div style="font-size: 11px; color: #5F6360;">VENUE</div><div style="font-weight: 600;">${esc(venue)}${event?.city ? ', ' + esc(event.city) : ''}</div></div>
+                        <div><div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${VQ.t('Date')}</div><div style="font-weight: 600;">${esc(eventDate)}</div></div>
+                        <div><div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${VQ.t('Venue')}</div><div style="font-weight: 600;">${esc(venue)}${event?.city ? ', ' + esc(event.city) : ''}</div></div>
                     </div>
                     ${seatInfo ? `<div style="margin-bottom: 12px; padding: 8px 12px; background: #EDEDE9; border-radius: 8px; font-weight: 600;">${esc(seatInfo)}</div>` : ''}
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                        <div><div style="font-size: 11px; color: #5F6360;">TICKET HOLDER</div><div style="font-weight: 500;">${esc(ticket.attendee_name || order.customer_name || '')}</div></div>
-                        <div style="text-align: right;"><div style="font-size: 11px; color: #5F6360;">PRICE</div><div style="font-weight: 700; color: #1E5B48;">${this.money(ticket.price)}</div></div>
+                        <div><div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${VQ.t('Ticket holder')}</div><div style="font-weight: 500;">${esc(ticket.attendee_name || order.customer_name || '')}</div></div>
+                        <div style="text-align: right;"><div style="font-size: 11px; color: #5F6360; text-transform: uppercase;">${VQ.t('Price')}</div><div style="font-weight: 700; color: #1E5B48;">${this.money(ticket.price)}</div></div>
                     </div>
                     <div style="text-align: center; padding-top: 12px; border-top: 1px solid #DEDED8;">
                         ${code ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}" style="width: 150px; height: 150px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
-                        <div style="display:none;padding:10px;border:2px solid #0E4837;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${esc(code)}</div>` : '<div style="padding:10px;color:#6B6F6C;font-size:12px;">Code not available</div>'}
+                        <div style="display:none;padding:10px;border:2px solid #0E4837;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${esc(code)}</div>` : '<div style="padding:10px;color:#6B6F6C;font-size:12px;">' + VQ.t('Code not available') + '</div>'}
                         <div style="font-family: monospace; font-size: 11px; color: #5F6360; margin-top: 6px;">${esc(code)}</div>
-                        ${ticket.ticket_series ? `<div style="font-family: monospace; font-size: 10px; color: #6B6F6C; margin-top: 2px;">Series: ${esc(ticket.ticket_series)}</div>` : ''}
+                        ${ticket.ticket_series ? `<div style="font-family: monospace; font-size: 10px; color: #6B6F6C; margin-top: 2px;">${VQ.t('Series: {series}', { series: esc(ticket.ticket_series) })}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -635,7 +639,7 @@ const ThankYouPage = {
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
-        printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tickets - ${esc(order.order_number)}</title>
+        printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${VQ.t('Tickets: {order}', { order: esc(order.order_number) })}</title>
             <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; color: #212121; }
             @media print { body { padding: 0; } }</style></head>
             <body><div style="max-width: 500px; margin: 0 auto;">${ticketsHtml}</div>
@@ -665,13 +669,13 @@ const ThankYouPage = {
         const event = this.order?.event;
         if (!event) return;
 
-        const title = event.name || event.title || 'Event';
+        const title = event.name || event.title || VQ.t('Event');
         const venue = this.venueName(event);
         const location = venue + (event.city ? ', ' + event.city : '');
         const startDate = event.date ? new Date(event.date) : null;
 
         if (!startDate || isNaN(startDate.getTime())) {
-            this.notify('info', 'The date of the event is not available.');
+            this.notify('info', VQ.t('The date of the event is not available.'));
             return;
         }
 
@@ -683,7 +687,7 @@ const ThankYouPage = {
             + '&text=' + encodeURIComponent(title)
             + '&dates=' + formatGCal(startDate) + '/' + formatGCal(endDate)
             + '&location=' + encodeURIComponent(location)
-            + '&details=' + encodeURIComponent('Tickets bought on ' +(window.BILETEONLINE?.siteName || 'viaqui.com'));
+            + '&details=' + encodeURIComponent(VQ.t('Tickets bought on {site}', { site: window.BILETEONLINE?.siteName || 'viaqui.com' }));
 
         window.open(gcalUrl, '_blank', 'noopener');
     },
@@ -696,7 +700,7 @@ const ThankYouPage = {
         const total = tickets.length;
 
         if (total === 0) {
-            document.getElementById('ticketsCount').textContent = 'No tickets';
+            document.getElementById('ticketsCount').textContent = VQ.t('No tickets');
             container.innerHTML = '';
             indicators.innerHTML = '';
             return;
@@ -704,11 +708,13 @@ const ThankYouPage = {
 
         const eventName = this.order?.event?.name || this.order?.event?.title;
         document.getElementById('ticketsCount').textContent =
-            `${total} ${this.ticketsWord(total)} ${eventName ? 'for ' + eventName : 'in this order'}`;
+            eventName
+                ? VQ.t('{tickets} for {event}', { tickets: VQ.n(total, 'ticket', 'tickets'), event: eventName })
+                : VQ.t('{tickets} in this order', { tickets: VQ.n(total, 'ticket', 'tickets') });
 
         container.innerHTML = tickets.map((ticket, idx) => this.renderTicketCard(ticket, idx, total)).join('');
         indicators.innerHTML = total > 1
-            ? tickets.map((_, idx) => `<button type="button" class="scroll-dot${idx === 0 ? ' active' : ''}" data-index="${idx}" aria-label="Ticket ${idx + 1} of ${total}"></button>`).join('')
+            ? tickets.map((_, idx) => `<button type="button" class="scroll-dot${idx === 0 ? ' active' : ''}" data-index="${idx}" aria-label="${VQ.t('Ticket {n} of {total}', { n: idx + 1, total: total })}"></button>`).join('')
             : '';
 
         const step = () => (container.querySelector('.tk')?.offsetWidth || 300) + 16;
@@ -788,38 +794,38 @@ const ThankYouPage = {
         const siteName = window.BILETEONLINE?.siteName || 'viaqui.com';
         const seat = ticket.seat;
         const code = ticket.code || ticket.barcode || '';
-        const attendee = ticket.attendee_name || this.order?.customer_name || 'Ticket holder';
+        const attendee = ticket.attendee_name || this.order?.customer_name || VQ.t('Ticket holder');
         const field = (label, value) => `<p><small>${label}</small><b>${this.esc(value)}</b></p>`;
 
         const seatFields = seat
-            ? (seat.section_name ? field('Section', seat.section_name) : '')
-                + (seat.row_label ? field('Row', seat.row_label) : '')
-                + (seat.seat_number ? field('Seat', seat.seat_number) : '')
+            ? (seat.section_name ? field(VQ.t('Section'), seat.section_name) : '')
+                + (seat.row_label ? field(VQ.t('Row'), seat.row_label) : '')
+                + (seat.seat_number ? field(VQ.t('Seat'), seat.seat_number) : '')
             : '';
 
         return `
-            <article class="tk" data-index="${idx}" aria-label="Ticket ${idx + 1} of ${total}">
+            <article class="tk" data-index="${idx}" aria-label="${VQ.t('Ticket {n} of {total}', { n: idx + 1, total: total })}">
                 <header class="tk-top">
-                    <p><span>${this.esc(siteName)} · ticket</span><span>${idx + 1} / ${total}</span></p>
-                    <h3>${this.esc(ticket.type || ticket.type_name || 'Ticket')}</h3>
+                    <p><span>${VQ.t('{site} · ticket', { site: this.esc(siteName) })}</span><span>${idx + 1} / ${total}</span></p>
+                    <h3>${this.esc(ticket.type || ticket.type_name || VQ.t('Ticket'))}</h3>
                 </header>
                 <div class="tk-body">
                     <div class="tk-info">
-                        ${eventTitle ? field(act ? 'Experience' : 'Event', eventTitle) : ''}
-                        ${eventDate || eventTime ? `<div class="tk-pair">${eventDate ? field('Date', eventDate) : ''}${eventTime ? field('Time', eventTime) : ''}</div>` : ''}
-                        ${place ? field('Venue', place) : ''}
+                        ${eventTitle ? field(act ? VQ.t('Experience') : VQ.t('Event'), eventTitle) : ''}
+                        ${eventDate || eventTime ? `<div class="tk-pair">${eventDate ? field(VQ.t('Date'), eventDate) : ''}${eventTime ? field(VQ.t('Time'), eventTime) : ''}</div>` : ''}
+                        ${place ? field(VQ.t('Venue'), place) : ''}
                         ${seatFields ? `<div class="tk-pair">${seatFields}</div>` : ''}
-                        ${act && act.plate ? field('Vehicle', act.plate) : ''}
+                        ${act && act.plate ? field(VQ.t('Vehicle'), act.plate) : ''}
                     </div>
                     <div class="tk-foot">
-                        <div><small>Ticket holder</small><b>${this.esc(attendee)}</b></div>
-                        <div><small>Price</small><b class="tk-price">${this.money(ticket.price)}</b></div>
+                        <div><small>${VQ.t('Ticket holder')}</small><b>${this.esc(attendee)}</b></div>
+                        <div><small>${VQ.t('Price')}</small><b class="tk-price">${this.money(ticket.price)}</b></div>
                     </div>
-                    ${ticket.has_insurance ? `<p class="tk-ins">${this.icon('check-circle')}Covered by refund protection</p>` : ''}
+                    ${ticket.has_insurance ? `<p class="tk-ins">${this.icon('check-circle')}${VQ.t('Covered by refund protection')}</p>` : ''}
                     <div class="tk-code">
                         <span class="tk-bars" aria-hidden="true">${bars}</span>
                         ${code ? `<p>${this.esc(code)}</p>` : ''}
-                        ${ticket.ticket_series ? `<p>Series: ${this.esc(ticket.ticket_series)}</p>` : ''}
+                        ${ticket.ticket_series ? `<p>${VQ.t('Series: {series}', { series: this.esc(ticket.ticket_series) })}</p>` : ''}
                     </div>
                 </div>
             </article>
@@ -828,13 +834,13 @@ const ThankYouPage = {
 
     copyLink() {
         const url = this.shareUrl();
-        const done = () => this.notify('success', 'Link copied');
+        const done = () => this.notify('success', VQ.t('Link copied'));
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(done).catch(() => {
-                window.prompt('Copy the link:', url);
+                window.prompt(VQ.t('Copy the link:'), url);
             });
         } else {
-            window.prompt('Copy the link:', url);
+            window.prompt(VQ.t('Copy the link:'), url);
         }
     }
 };

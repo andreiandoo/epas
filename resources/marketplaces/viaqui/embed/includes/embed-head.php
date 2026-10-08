@@ -17,7 +17,7 @@ foreach ($embedDomains as $domain) {
 header("Content-Security-Policy: frame-ancestors " . implode(' ', $cspAncestors));
 header('X-Frame-Options: SAMEORIGIN');
 
-$orgName = $orgData['data']['name'] ?? 'Organizator';
+$orgName = $orgData['data']['name'] ?? v2_t('Operator');
 $accentColor = $accent ?: '#6366f1';
 // $embedLogo and $embedBgImage come from embed-init.php (persisted in cookie)
 $isDark = $theme === 'dark';
@@ -30,7 +30,7 @@ $headerBg = $isDark ? '#1e293b' : '#ffffff';
 $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
 ?>
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="<?= v2_e(v2_locale()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -99,7 +99,7 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
                 <img src="<?= htmlspecialchars($embedLogo) ?>" alt="<?= htmlspecialchars($orgName) ?>" style="max-height:40px;">
                 <?php endif; ?>
             </a>
-            <a href="<?= $baseUrl ?>/cos" style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:<?= $mutedColor ?>;text-decoration:none;" id="embed-header-cart">
+            <a href="<?= $baseUrl ?>/cos" style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:<?= $mutedColor ?>;text-decoration:none;" id="embed-header-cart" aria-label="<?= v2_te('Basket') ?>">
                 <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
                 <span id="embed-cart-count" style="display:none;background:<?= htmlspecialchars($accentColor) ?>;color:#fff;font-size:11px;font-weight:700;padding:1px 6px;border-radius:10px;">0</span>
             </a>
@@ -110,10 +110,10 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
     <div id="embed-cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:<?= $headerBg ?>;border-top:1px solid <?= $borderColor ?>;padding:14px 16px;box-shadow:0 -2px 12px rgba(0,0,0,0.1);">
         <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
             <p style="margin:0;font-size:13px;color:<?= $mutedColor ?>;flex:1;min-width:200px;">
-                Acest site folosește cookie-uri pentru a îmbunătăți experiența ta. Prin continuarea navigării, ești de acord cu utilizarea cookie-urilor.
-                <a href="<?= SITE_URL ?>/privacy" target="_blank" style="font-weight:500;">Politica de confidențialitate</a>
+                <?= v2_te('This site uses cookies to improve your experience. By continuing to browse, you agree to the use of cookies.') ?>
+                <a href="<?= SITE_URL ?>/privacy" target="_blank" style="font-weight:500;"><?= v2_te('Privacy policy') ?></a>
             </p>
-            <button onclick="acceptCookies()" style="padding:8px 20px;background:<?= htmlspecialchars($accentColor) ?>;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Accept</button>
+            <button onclick="acceptCookies()" style="padding:8px 20px;background:<?= htmlspecialchars($accentColor) ?>;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;"><?= v2_te('Accept') ?></button>
         </div>
     </div>
     <script>

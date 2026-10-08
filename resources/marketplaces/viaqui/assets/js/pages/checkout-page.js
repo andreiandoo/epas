@@ -103,9 +103,7 @@ const CheckoutPage = {
     },
 
     pointsWord(n) {
-        n = Math.floor(n);
-        if (n === 1) return '1 point';
-        return new Intl.NumberFormat('en-GB').format(n) + ' points';
+        return VQ.n(Math.floor(n), 'point', 'points');
     },
 
     /** How many points this order uses (0 when off), and what the box says. */
@@ -117,19 +115,19 @@ const CheckoutPage = {
         if (!loggedIn) {
             state.show = ticketValue > 0;
             state.login = true;
-            state.note = 'Have viaqui.com points? Log in to pay part of your tickets with them.';
+            state.note = VQ.t('Have viaqui.com points? Log in to pay part of your tickets with them.');
             return state;
         }
         const min = Math.floor(Number(c.min_redeem_points) || 0);
         if (this.pointsBalance <= 0) return state;
         state.show = ticketValue > 0;
         if (this.pointsBalance < min) {
-            state.note = 'You have ' + this.pointsWord(this.pointsBalance) + '. You can use them once you have ' + this.pointsWord(min) + '.';
+            state.note = VQ.t('You have {points}. You can use them once you have {min}.', { points: this.pointsWord(this.pointsBalance), min: this.pointsWord(min) });
             return state;
         }
         const buyer = (document.getElementById('buyer-email')?.value || '').trim().toLowerCase();
         if (this.pointsEmail && buyer && buyer !== this.pointsEmail) {
-            state.note = 'Points can only be used on orders placed with the email address of your account.';
+            state.note = VQ.t('Points can only be used on orders placed with the email address of your account.');
             return state;
         }
         state.usable = BileteOnlineCart.maxRedeemablePoints(ticketValue, this.pointsBalance);
@@ -153,12 +151,13 @@ const CheckoutPage = {
         if (!state.canUse) this.usePoints = false;
         input.checked = this.usePoints; // the box always says what the total uses
         if (state.canUse) {
-            document.getElementById('use-points-title').textContent = 'Use ' + this.pointsWord(state.usable);
-            document.getElementById('use-points-sub').textContent = '−' + this.money(BileteOnlineCart.pointsValue(state.usable)) +
-                ' off your tickets · you have ' + this.pointsWord(this.pointsBalance);
+            document.getElementById('use-points-title').textContent = VQ.t('Use {points}', { points: this.pointsWord(state.usable) });
+            document.getElementById('use-points-sub').textContent = VQ.t('−{amount} off your tickets · you have {points}', {
+                amount: this.money(BileteOnlineCart.pointsValue(state.usable)), points: this.pointsWord(this.pointsBalance)
+            });
         } else if (!state.login) {
-            document.getElementById('use-points-title').textContent = 'Use your points';
-            document.getElementById('use-points-sub').textContent = 'you have ' + this.pointsWord(this.pointsBalance);
+            document.getElementById('use-points-title').textContent = VQ.t('Use your points');
+            document.getElementById('use-points-sub').textContent = VQ.t('you have {points}', { points: this.pointsWord(this.pointsBalance) });
         }
         const note = document.getElementById('points-note');
         note.hidden = !state.note;
@@ -168,7 +167,7 @@ const CheckoutPage = {
         const pointsRow = document.getElementById('points-row');
         if (state.used > 0) {
             pointsRow.classList.remove('hidden');
-            document.getElementById('points-row-label').textContent = 'Paid with ' + this.pointsWord(state.used);
+            document.getElementById('points-row-label').textContent = VQ.t('Paid with {points}', { points: this.pointsWord(state.used) });
             document.getElementById('points-row-amount').textContent = '-' + this.money(BileteOnlineCart.pointsValue(state.used));
         } else {
             pointsRow.classList.add('hidden');
@@ -178,7 +177,9 @@ const CheckoutPage = {
         const earned = c ? BileteOnlineCart.estimatePoints(earnBase) : 0;
         reward.classList.toggle('hidden', !c || earned <= 0);
         if (c && earned > 0) {
-            document.getElementById('points-rule').textContent = (c.earn_rate_label ? c.earn_rate_label.charAt(0).toUpperCase() + c.earn_rate_label.slice(1) + ', ' : '') + 'added to your account after the activity';
+            document.getElementById('points-rule').textContent = c.earn_rate_label
+                ? VQ.t('{rule}, added to your account after the activity', { rule: c.earn_rate_label.charAt(0).toUpperCase() + c.earn_rate_label.slice(1) })
+                : VQ.t('added to your account after the activity');
             document.getElementById('points-earned').textContent = this.pointsWord(earned);
         }
     },
@@ -197,9 +198,9 @@ const CheckoutPage = {
         return BileteOnlineUtils.formatCurrency(value, BileteOnlineCart.getCurrency());
     },
 
-    /** 1 ticket, 5 tickets. */
+    /** The noun for a count of tickets, in the visitor's language. */
     ticketsWord(n) {
-        return n === 1 ? 'ticket' : 'tickets';
+        return VQ.plural(n, 'ticket', 'tickets');
     },
 
     /** A bare YYYY-MM-DD parses as UTC midnight; adding a local time keeps it on the booked day in any time zone. */
@@ -230,7 +231,7 @@ const CheckoutPage = {
     itemName(item) {
         if (item.type === 'activity' && item.v === 3) {
             // activities module: variant, then time or "valid all day", then the extras
-            const parts = [item.variant?.name || 'Ticket'];
+            const parts = [item.variant?.name || VQ.t('Ticket')];
             if (item.labels && item.labels.time) parts.push(item.labels.time);
             (item.addons || []).forEach(a => parts.push(a.name + ' × ' + a.qty));
             (item.component_labels || []).forEach(c => parts.push(c));
@@ -238,14 +239,14 @@ const CheckoutPage = {
             return parts.join(' · ');
         }
         return item.type === 'activity'
-            ? (item.variant?.name || 'Booking')
-            : (item.ticketType?.name || item.ticket_type_name || 'Ticket');
+            ? (item.variant?.name || VQ.t('Booking'))
+            : (item.ticketType?.name || item.ticket_type_name || VQ.t('Ticket'));
     },
 
     itemTitle(item) {
         return item.type === 'activity'
-            ? (item.activity?.title || item.activity?.name || 'Experience')
-            : (item.event?.title || item.event?.name || item.event_title || 'Event');
+            ? (item.activity?.title || item.activity?.name || VQ.t('Experience'))
+            : (item.event?.title || item.event?.name || item.event_title || VQ.t('Event'));
     },
 
     /** Brand-line placeholder behind a photo (same segments as v2_fallback() in PHP). */
@@ -325,11 +326,11 @@ const CheckoutPage = {
         }
         const surchargeText = document.getElementById('cultural-card-surcharge-text');
         if (surchargeText) {
-            surchargeText.innerHTML = `Payments by culture card carry an extra processing fee of <strong>${this.esc(this.culturalCardSurchargeRate)}%</strong> of the total, because this type of card costs more to process.`;
+            surchargeText.innerHTML = VQ.t('Payments by culture card carry an extra processing fee of <strong>{rate}%</strong> of the total, because this type of card costs more to process.', { rate: this.esc(this.culturalCardSurchargeRate) });
         }
         const surchargeLabel = document.getElementById('cultural-card-surcharge-label');
         if (surchargeLabel) {
-            surchargeLabel.textContent = `Culture card fee (${this.culturalCardSurchargeRate}%)`;
+            surchargeLabel.textContent = VQ.t('Culture card fee ({rate}%)', { rate: this.culturalCardSurchargeRate });
         }
     },
 
@@ -341,8 +342,8 @@ const CheckoutPage = {
 
         section.classList.remove('hidden');
 
-        document.getElementById('insurance-label').textContent = this.insurance.label || 'Refund protection';
-        document.getElementById('insurance-title').textContent = this.insurance.label || 'Ticket refund protection';
+        document.getElementById('insurance-label').textContent = this.insurance.label || VQ.t('Refund protection');
+        document.getElementById('insurance-title').textContent = this.insurance.label || VQ.t('Ticket refund protection');
         document.getElementById('insurance-description').textContent = this.insurance.description || '';
 
         // Insurance always applies only to eligible (refundable) tickets
@@ -352,23 +353,23 @@ const CheckoutPage = {
 
         if (this.insurance.price_type === 'fixed') {
             const pricePerTicket = this.insurance.price || 0;
-            document.getElementById('insurance-price').textContent = this.money(pricePerTicket) + ' per ticket';
+            document.getElementById('insurance-price').textContent = VQ.t('{amount} per ticket', { amount: this.money(pricePerTicket) });
         } else {
-            document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% of the total';
+            document.getElementById('insurance-price').textContent = VQ.t('{rate}% of the total', { rate: this.insurance.price_percentage });
         }
 
         // Show partial note for mixed carts (some eligible, some not)
         const partialNote = document.getElementById('insurance-partial-note');
         if (partialNote && isMixed) {
             const eligibleNames = refundableItems.map(item => {
-                const ticketName = item.ticketType?.name || 'Ticket';
+                const ticketName = item.ticketType?.name || VQ.t('Ticket');
                 const eventName = item.event?.title || item.event?.name || item.event_title || '';
                 const eventDate = item.event?.date || item.event_date || '';
                 const city = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
                 const details = [eventName, eventDate ? this.formatDay(eventDate, 'medium') : '', city].filter(Boolean).join(' · ');
                 return details ? ticketName + ' (' + details + ')' : ticketName;
             }).join(', ');
-            partialNote.textContent = 'Applies to refundable tickets only: ' + eligibleNames;
+            partialNote.textContent = VQ.t('Applies to refundable tickets only: {tickets}', { tickets: eligibleNames });
             partialNote.classList.remove('hidden');
         }
 
@@ -385,7 +386,7 @@ const CheckoutPage = {
         }
 
         document.getElementById('insurance-row-label').textContent =
-            (this.insurance.label || 'Refund protection') + ' (' + applicableTickets + ' ' + this.ticketsWord(applicableTickets) + ')';
+            VQ.t('{label} ({tickets})', { label: this.insurance.label || VQ.t('Refund protection'), tickets: VQ.n(applicableTickets, 'ticket', 'tickets') });
     },
 
     setupInsuranceCheckbox() {
@@ -467,11 +468,11 @@ const CheckoutPage = {
             }
             BileteOnlineCart.clear();
             localStorage.removeItem('cart_end_time');
-            this.notify('warning', 'The reservation time has run out. Your tickets were released.');
+            this.notify('warning', VQ.t('The reservation time has run out. Your tickets were released.'));
             // Redirect to cart page after short delay (inside the widget: back to the widget, not the site's cart)
             setTimeout(() => {
                 if (window.BO_EMBED) history.back();
-                else window.location.href = '/cart';
+                else window.location.href = VQ.url('/cart');
             }, 2000);
         } else if (remaining < 60000) {
             if (timerBar) {
@@ -614,12 +615,12 @@ const CheckoutPage = {
         const btnText = document.getElementById('login-btn-text');
 
         submitBtn.disabled = true;
-        btnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Logging in...';
+        btnText.innerHTML = '<span class="spin" aria-hidden="true"></span>' + VQ.t('Logging in…');
 
         try {
             const result = await BileteOnlineAuth.login(email, password, true);
             if (result.success) {
-                this.notify('success', 'You are logged in.');
+                this.notify('success', VQ.t('You are logged in.'));
                 this.hideLoginModal();
 
                 const user = BileteOnlineAuth.getUser();
@@ -635,13 +636,13 @@ const CheckoutPage = {
                 // The login button is gone: continue from the first field still empty, or the terms
                 this.focusField(this.firstEmptyBuyerField() || document.getElementById('termsCheckbox'));
             } else {
-                this.notify('error', result.message || 'Wrong email or password');
+                this.notify('error', result.message || VQ.t('Wrong email or password'));
             }
         } catch (error) {
-            this.notify('error', 'We could not log you in. Please try again.');
+            this.notify('error', VQ.t('We could not log you in. Please try again.'));
         } finally {
             submitBtn.disabled = false;
-            btnText.textContent = 'Log in';
+            btnText.textContent = VQ.t('Log in');
         }
 
         return false;
@@ -679,19 +680,19 @@ const CheckoutPage = {
                 const id = `bene-${itemIndex}-${i}`;
                 html += `
                     <fieldset class="ck-bene-card">
-                        <legend class="sr">Holder of ticket ${ticketNum}</legend>
+                        <legend class="sr">${VQ.t('Holder of ticket {n}', { n: ticketNum })}</legend>
                         <div class="ck-bene-head">
                             <span class="ck-bene-num" aria-hidden="true">${ticketNum}</span>
                             <div><b>${ticketTypeName}</b><small>${eventTitle}</small></div>
                         </div>
                         <div class="ck-grid">
                             <div class="ck-field">
-                                <label for="${id}-name">Ticket holder's name *</label>
-                                <input type="text" id="${id}-name" placeholder="Full name" autocomplete="off" class="beneficiary-input beneficiary-name" data-item="${itemIndex}" data-index="${i}">
+                                <label for="${id}-name">${VQ.t('Ticket holder\'s name *')}</label>
+                                <input type="text" id="${id}-name" placeholder="${VQ.t('Full name')}" autocomplete="off" class="beneficiary-input beneficiary-name" data-item="${itemIndex}" data-index="${i}">
                             </div>
                             <div class="ck-field">
-                                <label for="${id}-email">Ticket holder's email *</label>
-                                <input type="email" id="${id}-email" placeholder="you@example.com" autocomplete="off" inputmode="email" class="beneficiary-input beneficiary-email" data-item="${itemIndex}" data-index="${i}">
+                                <label for="${id}-email">${VQ.t('Ticket holder\'s email *')}</label>
+                                <input type="email" id="${id}-email" placeholder="${VQ.t('you@example.com')}" autocomplete="off" inputmode="email" class="beneficiary-input beneficiary-email" data-item="${itemIndex}" data-index="${i}">
                             </div>
                         </div>
                     </fieldset>
@@ -700,7 +701,7 @@ const CheckoutPage = {
         });
 
         container.innerHTML = html;
-        document.getElementById('beneficiaries-count').textContent = `${ticketNum} ${this.ticketsWord(ticketNum)}`;
+        document.getElementById('beneficiaries-count').textContent = VQ.n(ticketNum, 'ticket', 'tickets');
     },
 
     toggleBeneficiaries() {
@@ -860,9 +861,9 @@ const CheckoutPage = {
             }
 
             group.tickets.forEach(ticket => {
-                const visitDateHtml = ticket.visitDate ? '<small>Visit date: ' +this.esc(this.formatDay(ticket.visitDate, 'medium')) + '</small>' : '';
+                const visitDateHtml = ticket.visitDate ? '<small>' + VQ.t('Visit date: {date}', { date: this.esc(this.formatDay(ticket.visitDate, 'medium')) }) + '</small>' : '';
                 const vehiclePlates = ticket.vehicleInfo?.license_plates?.filter(p => p)?.join(', ') || '';
-                const vehicleHtml = vehiclePlates ? '<small>Registration no.: ' +this.esc(vehiclePlates) + '</small>' : '';
+                const vehicleHtml = vehiclePlates ? '<small>' + VQ.t('Registration no.: {plates}', { plates: this.esc(vehiclePlates) }) + '</small>' : '';
                 itemsHtml += '<div class="cs-line ck-line">' +
                     '<span>' + ticket.qty + ' × ' + this.esc(ticket.name) + visitDateHtml + vehicleHtml + '</span>' +
                     '<strong>' + (ticket.hasDiscount ? '<s>' + this.money(ticket.originalPrice * ticket.qty) + '</s> ' : '') + this.money(ticket.lineTotal) + '</strong>' +
@@ -948,7 +949,7 @@ const CheckoutPage = {
                     const ratePct = baseSubtotal > 0
                         ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
                         : '';
-                    lbl.textContent = 'Booking fee' + (ratePct ? ' (' + ratePct + '%)' : '');
+                    lbl.textContent = ratePct ? VQ.t('Booking fee ({rate}%)', { rate: ratePct }) : VQ.t('Booking fee');
                 }
             } else {
                 commRow.classList.add('hidden');
@@ -986,7 +987,7 @@ const CheckoutPage = {
             if (promoDiscount > 0) {
                 const promo = BileteOnlineCart.getPromoCode();
                 discountRow.classList.remove('hidden');
-                document.getElementById('discount-label').textContent = 'Discount' + (promo ? ' (' + promo.code + ')' : '');
+                document.getElementById('discount-label').textContent = promo ? VQ.t('Discount ({code})', { code: promo.code }) : VQ.t('Discount');
                 document.getElementById('discount-amount').textContent = '-' + this.money(promoDiscount);
             } else {
                 discountRow.classList.add('hidden');
@@ -1008,14 +1009,14 @@ const CheckoutPage = {
         const currencyCode = document.getElementById('ck-currency-code');
         if (currencyCode) currencyCode.textContent = BileteOnlineCart.getCurrency();
         if (!this.submitting) {
-            document.getElementById('pay-btn-text').textContent = `Pay ${this.money(total)}`;
+            document.getElementById('pay-btn-text').textContent = VQ.t('Pay {amount}', { amount: this.money(total) });
         }
         this.renderPoints(pointsState, Math.max(0, ticketValue - pointsDiscount));
 
         const savingsText = document.getElementById('savings-text');
         if (savings > 0) {
             savingsText.classList.remove('hidden');
-            document.getElementById('savings-amount').textContent = `You save ${this.money(savings)}`;
+            document.getElementById('savings-amount').textContent = VQ.t('You save {amount}', { amount: this.money(savings) });
         } else {
             savingsText.classList.add('hidden');
         }
@@ -1026,27 +1027,27 @@ const CheckoutPage = {
     validateForm() {
         const emptyField = this.firstEmptyBuyerField();
         if (emptyField) {
-            this.notify('error', 'Please fill in all the required fields');
+            this.notify('error', VQ.t('Please fill in all the required fields'));
             this.focusField(emptyField);
             return false;
         }
 
         const emailInput = document.getElementById('buyer-email');
         if (!emailInput.checkValidity()) {
-            this.notify('error', 'The email address is not valid');
+            this.notify('error', VQ.t('The email address is not valid'));
             this.focusField(emailInput);
             return false;
         }
 
         if (!this.validateEmailMatch()) {
-            this.notify('error', 'The email addresses do not match');
+            this.notify('error', VQ.t('The email addresses do not match'));
             this.focusField(document.getElementById('buyer-email-confirm'));
             return false;
         }
 
         const terms = document.getElementById('termsCheckbox');
         if (!terms.checked) {
-            this.notify('error', 'Please accept the terms and conditions');
+            this.notify('error', VQ.t('Please accept the terms and conditions'));
             this.focusField(terms);
             return false;
         }
@@ -1102,13 +1103,13 @@ const CheckoutPage = {
         try { window.parent.postMessage(msg, target); } catch (e) {}
         const payBtn = document.getElementById('payBtn');
         const payBtnText = document.getElementById('pay-btn-text');
-        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Opening the payment page...';
+        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>' + VQ.t('Opening the payment page…');
         let manual = false;
         const offerButton = () => {
             if (manual || document.visibilityState === 'hidden') return;
             manual = true;
             payBtn.disabled = false;
-            payBtnText.textContent = 'Open the payment page';
+            payBtnText.textContent = VQ.t('Open the payment page');
             payBtn.onclick = (e) => {
                 e.preventDefault();
                 const form = document.createElement('form');
@@ -1146,7 +1147,7 @@ const CheckoutPage = {
         const payBtnText = document.getElementById('pay-btn-text');
 
         payBtn.disabled = true;
-        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Processing...';
+        payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>' + VQ.t('Processing…');
 
         // Build customer data (backend expects 'customer' not 'buyer')
         const customer = {
@@ -1215,12 +1216,12 @@ const CheckoutPage = {
             const response = await BileteOnlineAPI.post('/checkout', checkoutData);
 
             if (!response.success) {
-                throw new Error(response.message || 'We could not process your order');
+                throw new Error(response.message || VQ.t('We could not process your order'));
             }
 
             const order = response.data.orders?.[0];
             if (!order) {
-                throw new Error('The order could not be created');
+                throw new Error(VQ.t('The order could not be created'));
             }
 
             // Inside the booking widget on an operator's site (embed/finalizare.php): the processor comes back through
@@ -1232,7 +1233,7 @@ const CheckoutPage = {
 
             // Step 2: Check if payment is required
             if (response.data.payment_required && order.total > 0) {
-                payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>Taking you to the payment page...';
+                payBtnText.innerHTML = '<span class="spin" aria-hidden="true"></span>' + VQ.t('Taking you to the payment page…');
 
                 const payResponse = await BileteOnlineAPI.post(`/orders/${order.id}/pay`, {
                     return_url: thankYouUrl,
@@ -1272,7 +1273,7 @@ const CheckoutPage = {
                         window.location.href = payResponse.data.payment_url;
                     }
                 } else {
-                    throw new Error(payResponse.message || 'The payment could not be started');
+                    throw new Error(payResponse.message || VQ.t('The payment could not be started'));
                 }
             } else {
                 // No payment required (free tickets or zero total)
@@ -1288,10 +1289,10 @@ const CheckoutPage = {
                 await this.loadPointsBalance();
                 this.renderSummary();
             }
-            this.notify('error', error.message || 'Something went wrong. Please try again.');
+            this.notify('error', error.message || VQ.t('Something went wrong. Please try again.'));
             this.submitting = false;
             payBtn.disabled = !document.getElementById('termsCheckbox').checked;
-            payBtnText.textContent = `Pay ${this.money(this.totals.total)}`;
+            payBtnText.textContent = VQ.t('Pay {amount}', { amount: this.money(this.totals.total) });
         }
     }
 };

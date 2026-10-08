@@ -47,8 +47,8 @@ foreach ((array) $rawArticles as $a) {
         // the guide's own image, else a provisional local photo (credited in the footer)
         'photo' => $image ? [$image, 0, 0, ''] : ($cover ? [v2_asset($cover[0]), $cover[1], $cover[2], ''] : (isset(V2_GUIDE_THUMBS[$gSlug]) ? [v2_asset(V2_GUIDE_THUMBS[$gSlug]), 0, 0, ''] : null)),
         'topic' => (string) ($cat['slug'] ?? ''),
-        'topicLabel' => $catName !== '' ? (V2_BLOG_CATEGORIES[$catName] ?? $catName) : 'Guide',
-        'readTime' => (int) ($a['read_time'] ?? 0) > 0 ? (int) $a['read_time'] . ' min' : '5 min',
+        'topicLabel' => $catName !== '' ? (V2_BLOG_CATEGORIES[$catName] ?? $catName) : v2_t('Guide'),
+        'readTime' => v2_t('{n} min', ['n' => (int) ($a['read_time'] ?? 0) > 0 ? (int) $a['read_time'] : 5]),
         'featured' => !empty($a['is_featured']),
     ];
 }
@@ -76,17 +76,17 @@ $featuredGuide = $featuredGuide ?? ($guides[0] ?? null);
 // Activities by context: straight to pages that list what can be booked (not more reading).
 $gdCityCount = count($V2NAV['allCities'] ?? []);
 $contextTiles = [
-    ['map-pin', 'Local', 'Things to do in your city', $gdCityCount > 0 ? 'Choose from ' . v2_num($gdCityCount, 'city', 'cities') . ' and see what there is to do there.' : 'Pick a city and see what there is to do there.', '/cities', 'is-green'],
-    ['sun', 'Weekend', 'What to do on Saturday and Sunday', 'Activities with places left this coming weekend.', '/weekend-ideas', 'is-yellow'],
-    ['cloud-rain', 'Weather', 'Raining? Head indoors', 'Indoor activities for rainy days.', '/rainy-days', 'is-blue'],
-    ['gift', 'Gift', 'An experience to give', 'The calculator finds the right activity and the gift card value.', '/gift-experiences', 'is-red'],
+    ['map-pin', v2_t('Local'), v2_t('Things to do in your city'), $gdCityCount > 0 ? v2_t('Choose from {cities} and see what there is to do there.', ['cities' => v2_num($gdCityCount, 'city', 'cities')]) : v2_t('Pick a city and see what there is to do there.'), '/cities', 'is-green'],
+    ['sun', v2_t('Weekend'), v2_t('What to do on Saturday and Sunday'), v2_t('Activities with places left this coming weekend.'), '/weekend-ideas', 'is-yellow'],
+    ['cloud-rain', v2_t('Weather'), v2_t('Raining? Head indoors'), v2_t('Indoor activities for rainy days.'), '/rainy-days', 'is-blue'],
+    ['gift', v2_t('Gift'), v2_t('An experience to give'), v2_t('The calculator finds the right activity and the gift card value.'), '/gift-experiences', 'is-red'],
 ];
 
 // ------------------------------------------------------------------ page
 $searchQuery = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 60) : '';
 
-$pageTitleRaw = 'Activity guides | ' . SITE_NAME;
-$pageDescription = 'Local and themed guides to things to do: weekend plans, where to go with children, what to pick when it rains and how to book tickets online without the hassle.';
+$pageTitleRaw = v2_t('Activity guides') . ' | ' . SITE_NAME;
+$pageDescription = v2_t('Local and themed guides to things to do: weekend plans, where to go with children, what to pick when it rains and how to book tickets online without the hassle.');
 $canonicalUrl = SITE_URL . '/guides';
 $ogImage = $featuredGuide['photo'][0] ?? null;
 $collection = [
@@ -95,7 +95,7 @@ $collection = [
     'name' => $pageTitleRaw,
     'description' => $pageDescription,
     'url' => $canonicalUrl,
-    'inLanguage' => 'en',
+    'inLanguage' => v2_locale(),
 ];
 if ($guides) {
     $collection['mainEntity'] = [
@@ -121,18 +121,18 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <p class="ct-kicker">Guides · ideas for going out</p>
-        <h1 class="ct-h" id="ct-h">Good ideas for when you want to do something.</h1>
-        <p class="ct-lead">Local and themed guides to things to do: weekend plans, where to go with children, what to pick when it rains and which experiences are worth it in your city.</p>
+        <p class="ct-kicker"><?= v2_te('Guides · ideas for going out') ?></p>
+        <h1 class="ct-h" id="ct-h"><?= v2_te('Good ideas for when you want to do something.') ?></h1>
+        <p class="ct-lead"><?= v2_te('Local and themed guides to things to do: weekend plans, where to go with children, what to pick when it rains and which experiences are worth it in your city.') ?></p>
 
         <form class="ct-search" id="ct-form" action="/guides" method="get" role="search">
-          <label class="sr" for="ct-q">Search guides</label>
-          <input id="ct-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Search: weekend, children, Lisbon, museum, rain…" value="<?= v2_e($searchQuery) ?>">
-          <button type="submit" aria-label="Show matching guides"><?= v2_ic('magnifying-glass') ?></button>
+          <label class="sr" for="ct-q"><?= v2_te('Search guides') ?></label>
+          <input id="ct-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="<?= v2_te('Search: weekend, children, Lisbon, museum, rain…') ?>" value="<?= v2_e($searchQuery) ?>">
+          <button type="submit" aria-label="<?= v2_te('Show matching guides') ?>"><?= v2_ic('magnifying-glass') ?></button>
         </form>
         <p class="ct-status" id="ct-status" role="status"></p>
         <?php if ($quickTopics): ?>
-        <ul class="ct-chips" aria-label="Topics">
+        <ul class="ct-chips" aria-label="<?= v2_te('Topics') ?>">
           <?php foreach ($quickTopics as $topic): ?><li><button type="button" data-topic-chip="<?= v2_e($topic['key']) ?>" aria-pressed="false"><?= v2_e($topic['label']) ?></button></li><?php endforeach; ?>
         </ul>
         <?php endif; ?>
@@ -143,10 +143,10 @@ include __DIR__ . '/includes/v2/header.php';
         <article class="gd-feature">
           <a class="gd-feature-media" href="<?= v2_e($featuredGuide['href']) ?>" tabindex="-1" aria-hidden="true"><?= $featuredGuide['photo'] ? v2_photo($featuredGuide['photo']) : v2_fallback($featuredGuide['title']) ?></a>
           <div class="gd-feature-body">
-            <p class="kicker">Recommended guide</p>
+            <p class="kicker"><?= v2_te('Recommended guide') ?></p>
             <h2><a href="<?= v2_e($featuredGuide['href']) ?>"><?= v2_e($featuredGuide['title']) ?></a></h2>
             <?php if ($featuredGuide['excerpt'] !== ''): ?><p><?= v2_e($featuredGuide['excerpt']) ?></p><?php endif; ?>
-            <a class="btn btn-primary" href="<?= v2_e($featuredGuide['href']) ?>">Read the guide<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-primary" href="<?= v2_e($featuredGuide['href']) ?>"><?= v2_te('Read the guide') ?><?= v2_ic('arrow-right') ?></a>
           </div>
         </article>
       </div>
@@ -158,11 +158,11 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== TOPICS + GUIDES ===================== -->
   <section class="sec ct-main" id="lista" aria-labelledby="ct-title">
     <div class="wrap ct-layout">
-      <aside class="ct-side" aria-label="Filter by topic">
+      <aside class="ct-side" aria-label="<?= v2_te('Filter by topic') ?>">
         <div class="ct-filter">
-          <p class="kicker">Topics</p>
+          <p class="kicker"><?= v2_te('Topics') ?></p>
           <ul class="ct-regions">
-            <li><button type="button" data-topic="all" data-label="All guides" aria-pressed="true">All guides<span><?= count($guides) ?></span></button></li>
+            <li><button type="button" data-topic="all" data-label="<?= v2_te('All guides') ?>" aria-pressed="true"><?= v2_te('All guides') ?><span><?= count($guides) ?></span></button></li>
             <?php foreach ($topics as $topic): ?>
             <li><button type="button" data-topic="<?= v2_e($topic['key']) ?>" data-label="<?= v2_e($topic['label']) ?>" aria-pressed="false"><?= v2_e($topic['label']) ?><span><?= $topic['count'] ?></span></button></li>
             <?php endforeach; ?>
@@ -172,16 +172,16 @@ include __DIR__ . '/includes/v2/header.php';
 
       <div>
         <div class="ct-head">
-          <div><p class="kicker">Guides</p><h2 id="ct-title" tabindex="-1">All guides</h2></div>
-          <p id="ct-count" aria-live="polite"><?= count($guides) ?> of <?= count($guides) ?> guides</p>
+          <div><p class="kicker"><?= v2_te('Guides') ?></p><h2 id="ct-title" tabindex="-1"><?= v2_te('All guides') ?></h2></div>
+          <p id="ct-count" aria-live="polite"><?= v2_te('{shown} of {total} guides', ['shown' => count($guides), 'total' => count($guides)]) ?></p>
         </div>
 
         <?php if (!$guides): ?>
         <div class="ct-none">
           <span class="ct-none-ic"><?= v2_ic('list') ?></span>
-          <p>No guides published yet.</p>
-          <p class="gd-none-text">Check back soon. We are writing guides to things to do.</p>
-          <a class="btn btn-primary" href="/categories">Explore categories<?= v2_ic('arrow-right') ?></a>
+          <p><?= v2_te('No guides published yet.') ?></p>
+          <p class="gd-none-text"><?= v2_te('Check back soon. We are writing guides to things to do.') ?></p>
+          <a class="btn btn-primary" href="/categories"><?= v2_te('Explore categories') ?><?= v2_ic('arrow-right') ?></a>
         </div>
         <?php else: ?>
         <ul class="gd-cards" id="gd-grid">
@@ -198,8 +198,8 @@ include __DIR__ . '/includes/v2/header.php';
         </ul>
         <div class="ct-none" id="ct-none" hidden>
           <span class="ct-none-ic"><?= v2_ic('magnifying-glass') ?></span>
-          <p>No guide matches your search.</p>
-          <button class="btn btn-ghost" type="button" id="ct-reset">Show all guides</button>
+          <p><?= v2_te('No guide matches your search.') ?></p>
+          <button class="btn btn-ghost" type="button" id="ct-reset"><?= v2_te('Show all guides') ?></button>
         </div>
         <?php endif; ?>
       </div>
@@ -210,8 +210,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-context" aria-labelledby="gd-context-h">
     <div class="wrap">
       <div class="gd-context-head">
-        <p class="kicker">Activities by occasion</p>
-        <h2 id="gd-context-h">Start from what you feel like today.</h2>
+        <p class="kicker"><?= v2_te('Activities by occasion') ?></p>
+        <h2 id="gd-context-h"><?= v2_te('Start from what you feel like today.') ?></h2>
       </div>
       <ul class="gd-context-grid">
         <?php foreach ($contextTiles as [$tIcon, $tKicker, $tTitle, $tText, $tHref, $tTone]): ?>

@@ -3,6 +3,20 @@
  * Handles cart operations with localStorage persistence
  */
 
+// Languages: assets/v2/js/i18n.js defines VQ.t() and VQ.n(). The v2 pages load it after this file and the older pages
+// do not load it at all, so until it runs the texts below fall back to English (i18n.js then replaces these functions).
+(function () {
+    var VQ = window.VQ = window.VQ || {};
+    if (VQ.t) return;
+    VQ.locale = VQ.locale || 'en';
+    VQ.t = function (text, vars) {
+        return vars ? text.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] !== undefined && vars[k] !== null ? String(vars[k]) : m; }) : text;
+    };
+    VQ.plural = function (n, one, many) { return n === 1 ? one : many; };
+    VQ.n = function (n, one, many) { return n + ' ' + VQ.plural(n, one, many); };
+    VQ.url = function (path) { return path; };
+})();
+
 const BileteOnlineCart = {
     // Storage key
     STORAGE_KEY: 'bileteonline_cart',
@@ -103,7 +117,7 @@ const BileteOnlineCart = {
         // Start/reset reservation timer when adding items
         this.startReservationTimer();
 
-        this.showNotification(`${ticketTypeData.name} added to your basket`);
+        this.showNotification(VQ.t('{name} added to your basket', { name: ticketTypeData.name }));
 
         // CAPI AddToCart (Layer B bridge â€” backend forwards to Meta Graph API)
         try {
@@ -158,8 +172,7 @@ const BileteOnlineCart = {
         const cart = this.getCart();
         const next = String(currency || BILETEONLINE_CONFIG.CURRENCY).toUpperCase();
         if (!(cart.items || []).length || next === this.getCurrency()) return false;
-        this.showNotification('Your basket holds products priced in ' + this.getCurrency() + ' and this one is priced in ' + next
-            + '. An order is paid in one currency: finish or empty the basket first, then add this.', 'warning');
+        this.showNotification(VQ.t('Your basket holds products priced in {current} and this one is priced in {next}. An order is paid in one currency: finish or empty the basket first, then add this.', { current: this.getCurrency(), next: next }), 'warning');
         return true;
     },
 
@@ -242,7 +255,7 @@ const BileteOnlineCart = {
 
         this.saveCart(cart);
         this.startReservationTimer();
-        this.showNotification(`${variantData.name || 'Ticket'} added to your basket`);
+        this.showNotification(VQ.t('{name} added to your basket', { name: variantData.name || VQ.t('Ticket') }));
         return cart;
     },
 
@@ -294,7 +307,7 @@ const BileteOnlineCart = {
             meta: plate ? { vehicle_plate: plate } : {},
             labels: {
                 date: o.date_label || o.date,
-                time: o.start_time ? hm(o.start_time) + (o.end_time ? '–' + hm(o.end_time) : '') : (p.product_type === 'package' ? '' : 'Valid all day')
+                time: o.start_time ? hm(o.start_time) + (o.end_time ? '–' + hm(o.end_time) : '') : (p.product_type === 'package' ? '' : VQ.t('Valid all day'))
             },
             activity: {
                 id: p.id, slug: p.slug || null, title: p.title || '', image: p.image || null,
@@ -332,7 +345,7 @@ const BileteOnlineCart = {
 
         this.saveCart(cart);
         this.startReservationTimer();
-        if (!o.quiet) this.showNotification(`${p.title || v.name || 'Ticket'} added to your basket`);
+        if (!o.quiet) this.showNotification(VQ.t('{name} added to your basket', { name: p.title || v.name || VQ.t('Ticket') }));
         return cart;
     },
 
@@ -420,7 +433,7 @@ const BileteOnlineCart = {
             const removed = cart.items.splice(index, 1)[0];
             this._releaseItemSeats(removed);
             this.saveCart(cart);
-            this.showNotification(`${this._lineName(removed)} removed from your basket`);
+            this.showNotification(VQ.t('{name} removed from your basket', { name: this._lineName(removed) }));
         }
 
         return cart;
@@ -488,7 +501,7 @@ const BileteOnlineCart = {
     },
 
     _lineName(item) {
-        return (item.type === 'activity' ? item.variant?.name : item.ticketType?.name) || item.ticket_type_name || 'Ticket';
+        return (item.type === 'activity' ? item.variant?.name : item.ticketType?.name) || item.ticket_type_name || VQ.t('Ticket');
     },
 
     /**
@@ -729,14 +742,14 @@ const BileteOnlineCart = {
     async applyPromoCode(code) {
         const cart = this.getCart();
         if (cart.items.length === 0) {
-            return { success: false, message: 'Your basket is empty' };
+            return { success: false, message: VQ.t('Your basket is empty') };
         }
 
         // Promo codes are validated against an event (the API requires event_id), so only event tickets count.
         // For a cart of event tickets only this is exactly what was sent before.
         const eventItems = cart.items.filter(item => item.type !== 'activity');
         if (eventItems.length === 0) {
-            return { success: false, message: 'Promo codes apply to event tickets only, not to bookings of experiences.' };
+            return { success: false, message: VQ.t('Promo codes apply to event tickets only, not to bookings of experiences.') };
         }
 
         try {
@@ -782,11 +795,11 @@ const BileteOnlineCart = {
                     detail: { promo: promoData }
                 }));
 
-                this.showNotification(`Promo code "${code}" applied`, 'success');
+                this.showNotification(VQ.t('Promo code "{code}" applied', { code: code }), 'success');
                 return { success: true, promo: promoData };
             }
 
-            return { success: false, message: response.message || 'This code is not valid' };
+            return { success: false, message: response.message || VQ.t('This code is not valid') };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -802,7 +815,7 @@ const BileteOnlineCart = {
             detail: { promo: null }
         }));
 
-        this.showNotification('Promo code removed');
+        this.showNotification(VQ.t('Promo code removed'));
     },
 
     /**
@@ -1091,7 +1104,7 @@ const BileteOnlineCart = {
             percent_rate: p.percent_rate || 0,
             fixed: (p.fixed_cents || 0) / 100,
             provider: key,
-            label: p.label || 'Card processing',
+            label: p.label || VQ.t('Card processing'),
             pass_to_customer: true,
         };
     },
@@ -1147,7 +1160,7 @@ const BileteOnlineCart = {
 
         // Show notification to user
         if (hadItems) {
-            this.showNotification('The reservation time has run out. Your basket was emptied.', 'warning');
+            this.showNotification(VQ.t('The reservation time has run out. Your basket was emptied.'), 'warning');
         }
 
         console.log('Cart reservation expired - cart cleared');

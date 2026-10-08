@@ -7,12 +7,13 @@
 
 require_once dirname(dirname(__DIR__)) . '/includes/config.php';
 require_once dirname(dirname(__DIR__)) . '/includes/api.php';
+require_once dirname(dirname(__DIR__)) . '/includes/v2/helpers.php'; // v2_t(), v2_te(), v2_money(): the page's texts
 
 $organizerSlug = $_GET['organizer'] ?? '';
 
 if (!$organizerSlug) {
     http_response_code(400);
-    echo 'Missing organizer parameter.';
+    echo v2_te('Missing organizer parameter.');
     exit;
 }
 
@@ -55,11 +56,11 @@ $orgData = api_cached('embed_org_' . $organizerSlug, function () use ($organizer
 
 if (empty($orgData['data'])) {
     http_response_code(404);
-    echo 'Organizer not found.';
+    echo v2_te('Organizer not found.');
     exit;
 }
 
-$orgName = $orgData['data']['name'] ?? 'Organizator';
+$orgName = $orgData['data']['name'] ?? v2_t('Operator');
 $embedDomains = $orgData['data']['embed_domains'] ?? [];
 $widgetEnabled = (bool) ($orgData['data']['widget_enabled'] ?? false);
 
@@ -70,7 +71,7 @@ if (!$embedLogo) {
 
 if (!$widgetEnabled) {
     http_response_code(403);
-    echo 'Widget embedding is not enabled for this organizer.';
+    echo v2_te('Widget embedding is not enabled for this organizer.');
     exit;
 }
 

@@ -23,10 +23,10 @@
   }
   function failure(err) {
     var status = err && err.status;
-    if (status === 422) return 'That email address does not look right. Check it and try again.';
-    if (status === 429) return 'Too many attempts. Try again in a minute.';
-    if (status === 0) return 'We could not connect. Check your internet connection and try again.';
-    return 'We could not send the link just now. Try again in a few moments.';
+    if (status === 422) return VQ.t('That email address does not look right. Check it and try again.');
+    if (status === 429) return VQ.t('Too many attempts. Try again in a minute.');
+    if (status === 0) return VQ.t('We could not connect. Check your internet connection and try again.');
+    return VQ.t('We could not send the link just now. Try again in a few moments.');
   }
   function send(email) {
     if (typeof BileteOnlineAPI === 'undefined') return Promise.reject({ status: -1 });
@@ -38,11 +38,11 @@
   function cooldown() {
     var left = COOLDOWN;
     resend.disabled = true;
-    resend.textContent = 'Resend in ' + left + ' s';
+    resend.textContent = VQ.t('Resend in {n} s', { n: left });
     clearInterval(timer);
     timer = setInterval(function () {
       left--;
-      if (left > 0) { resend.textContent = 'Resend in ' + left + ' s'; return; }
+      if (left > 0) { resend.textContent = VQ.t('Resend in {n} s', { n: left }); return; }
       clearInterval(timer);
       resend.disabled = false;
       resend.textContent = RESEND_LABEL;
@@ -55,17 +55,17 @@
     error.hidden = true;
     var email = input.value.trim();
     input.value = email;
-    if (!email) { say(error, 'Please enter your email.', input); return; }
-    if (!input.checkValidity()) { say(error, 'That email address does not look right. Check it and try again.', input); return; }
+    if (!email) { say(error, VQ.t('Please enter your email.'), input); return; }
+    if (!input.checkValidity()) { say(error, VQ.t('That email address does not look right. Check it and try again.'), input); return; }
 
     busy = true;
     submit.disabled = true;
-    submit.textContent = 'Sending…';
+    submit.textContent = VQ.t('Sending…');
     send(email)
       .then(function () {
         sentTo = email;
         $('fp-sent-email').textContent = email;
-        $('fp-login').href = '/login?' + (venue ? 'ca=venue&' : '') + 'email=' + encodeURIComponent(email);
+        $('fp-login').href = VQ.url('/login') + '?' + (venue ? 'ca=venue&' : '') + 'email=' + encodeURIComponent(email);
         resendError.hidden = true;
         resent.hidden = true;
         formView.hidden = true;
@@ -88,7 +88,7 @@
     resendError.hidden = true;
     resent.hidden = true;
     resend.disabled = true;
-    resend.textContent = 'Resending…';
+    resend.textContent = VQ.t('Resending…');
     send(sentTo)
       .then(function () { resent.hidden = false; cooldown(); })
       .catch(function (err) {

@@ -55,9 +55,9 @@
   }
 
   if (type === 'organizer') {
-    $('vf-kicker').textContent = 'Email verification · operator account';
-    [].forEach.call(document.querySelectorAll('[data-vf-account]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'Go to dashboard'; });
-    [].forEach.call(document.querySelectorAll('[data-vf-account-text]'), function (a) { a.href = '/organizator/panou'; a.textContent = 'go to your dashboard'; });
+    $('vf-kicker').textContent = VQ.t('Email verification · operator account');
+    [].forEach.call(document.querySelectorAll('[data-vf-account]'), function (a) { a.href = VQ.url('/organizator/panou'); a.textContent = VQ.t('Go to dashboard'); });
+    [].forEach.call(document.querySelectorAll('[data-vf-account-text]'), function (a) { a.href = VQ.url('/organizator/panou'); a.textContent = VQ.t('go to your dashboard'); });
   }
   $('vf-sent-to').hidden = !knownEmail;
   $('vf-sent-any').hidden = !!knownEmail;
@@ -77,13 +77,13 @@
   function verify(byUser) {
     if (verifying) return;
     if (!link.token || !link.email) {
-      $('vf-error-p').textContent = 'This verification link is incomplete. Request a new one.';
+      $('vf-error-p').textContent = VQ.t('This verification link is incomplete. Request a new one.');
       $('vf-retry').hidden = true;
       show('error', byUser ? 'vf-error-h' : null);
       return;
     }
     if (typeof BileteOnlineAPI === 'undefined') {
-      $('vf-error-p').textContent = 'Verification could not load. Please reload the page.';
+      $('vf-error-p').textContent = VQ.t('Verification could not load. Please reload the page.');
       show('error');
       return;
     }
@@ -97,13 +97,13 @@
       })
       .catch(function (err) {
         var status = err && err.status, message = String((err && err.message) || '');
-        var text = 'Something went wrong while verifying. Please try again later.', canRetry = false;
-        if (status === 400 && /expired/i.test(message)) text = 'This verification link has expired. Request a new one.';
-        else if (status === 400) text = 'This verification link is invalid or has already been used. Request a new one.';
-        else if (status === 404) text = 'We could not find an account for this email. Check the link or create an account.';
-        else if (status === 422) text = 'This verification link is incomplete. Request a new one.';
-        else if (status === 429) { text = 'Too many attempts. Try again in a minute.'; canRetry = true; }
-        else if (status === 0) { text = 'We could not connect. Check your internet connection and try again.'; canRetry = true; }
+        var text = VQ.t('Something went wrong while verifying. Please try again later.'), canRetry = false;
+        if (status === 400 && /expired/i.test(message)) text = VQ.t('This verification link has expired. Request a new one.');
+        else if (status === 400) text = VQ.t('This verification link is invalid or has already been used. Request a new one.');
+        else if (status === 404) text = VQ.t('We could not find an account for this email. Check the link or create an account.');
+        else if (status === 422) text = VQ.t('This verification link is incomplete. Request a new one.');
+        else if (status === 429) { text = VQ.t('Too many attempts. Try again in a minute.'); canRetry = true; }
+        else if (status === 0) { text = VQ.t('We could not connect. Check your internet connection and try again.'); canRetry = true; }
         else canRetry = true;
         $('vf-error-p').textContent = text;
         $('vf-retry').hidden = !canRetry;
@@ -129,9 +129,9 @@
       note.hidden = true;
       var typed = !field.hidden, email = typed ? input.value.trim() : knownEmail;
       if (typed) input.value = email;
-      if (!email) { say('Enter your account email.', typed); return; }
-      if (typed && !input.checkValidity()) { say('That email address does not look right. Check it and try again.', true); return; }
-      if (typeof BileteOnlineAPI === 'undefined') { say('We could not resend the email. Try again in a few minutes.'); return; }
+      if (!email) { say(VQ.t('Enter your account email.'), typed); return; }
+      if (typed && !input.checkValidity()) { say(VQ.t('That email address does not look right. Check it and try again.'), true); return; }
+      if (typeof BileteOnlineAPI === 'undefined') { say(VQ.t('We could not resend the email. Try again in a few minutes.')); return; }
 
       sending = true;
       btn.disabled = true;
@@ -155,20 +155,20 @@
         })
         .catch(function (err) {
           var status = err && err.status;
-          if (status === 429) say('Please wait a minute before asking for another verification email.');
-          else if (status === 422) say('That email address does not look right. Check it and try again.', typed);
-          else if (status === 0) say('We could not connect. Check your internet connection and try again.');
-          else say('We could not resend the email. Try again in a few minutes.');
+          if (status === 429) say(VQ.t('Please wait a minute before asking for another verification email.'));
+          else if (status === 422) say(VQ.t('That email address does not look right. Check it and try again.'), typed);
+          else if (status === 0) say(VQ.t('We could not connect. Check your internet connection and try again.'));
+          else say(VQ.t('We could not resend the email. Try again in a few minutes.'));
           btn.disabled = false;
           btn.textContent = idle;
         })
         .then(function () { sending = false; });
     });
   }
-  resender($('vf-pending-resend'), $('vf-pending-email'), $('vf-pending-field'), $('vf-pending-msg'), $('vf-pending-note'), 'Sending…',
-    function (left) { return 'Sent ✓ You can resend in ' + left + ' s'; });
-  resender($('vf-error-resend'), $('vf-error-email'), $('vf-error-field'), $('vf-error-msg'), $('vf-error-note'), 'Sending…',
-    function (left) { return '✓ Email sent again · ' + left + ' s'; });
+  resender($('vf-pending-resend'), $('vf-pending-email'), $('vf-pending-field'), $('vf-pending-msg'), $('vf-pending-note'), VQ.t('Sending…'),
+    function (left) { return VQ.t('Sent ✓ You can resend in {n} s', { n: left }); });
+  resender($('vf-error-resend'), $('vf-error-email'), $('vf-error-field'), $('vf-error-msg'), $('vf-error-note'), VQ.t('Sending…'),
+    function (left) { return VQ.t('✓ Email sent again · {n} s', { n: left }); });
 
   if (link) verify(false);
   else show('pending');
