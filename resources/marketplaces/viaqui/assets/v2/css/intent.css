@@ -96,3 +96,7 @@
 .it-towns a:hover{border-color:var(--green);color:var(--green)}
 .it-towns .ic{flex:none;width:16px;height:16px;color:var(--green);transition:transform var(--dur-micro) var(--ease-out)}
 .it-towns a:hover .ic{transform:translateX(3px)}
+
+/* partner listings under our own */
+.it-partner-h{margin:var(--space-7) 0 var(--space-4);font-size:1.25rem;font-weight:700;letter-spacing:-.02em;color:var(--green)}
+.xp-grid[hidden]{display:none}

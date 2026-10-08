@@ -73,6 +73,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/promoted.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 $data = $apiData['data'];
 $intent = is_array($data['intent'] ?? null) ? $data['intent'] : [];
@@ -226,7 +227,9 @@ if ($itRule && $pageNum === 1) {
     usort($actCards, fn ($a, $b) => [(int) $b['promoted'], (int) $b['featured'], $a['title']] <=> [(int) $a['promoted'], (int) $a['featured'], $b['title']]);
 }
 $actTotal = count($actCards);
-$total = $actTotal + $eventTotal;
+// Partner products that fit the idea (WeGoTrip), after our own, on the first page
+$partnerItems = $pageNum === 1 ? v2_wegotrip_for_intent($intentSlugSafe, $city ? $citySlugSafe : '', 24) : [];
+$total = $actTotal + $eventTotal + count($partnerItems);
 
 $currentPage = 'intent';
 // SEO setup for head.php
@@ -468,7 +471,7 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ============================== ACTIVITIES ============================== -->
   <section class="it-list" id="activitati" aria-labelledby="it-list-h">
     <div class="wrap">
-      <?php if (!$cards): ?>
+      <?php if (!$cards && !$partnerItems): ?>
       <div class="it-empty">
         <span class="it-empty-ic" aria-hidden="true"><?= $itIcon($intentSlugSafe, $intentIcon) ?></span>
         <div class="it-empty-copy">
@@ -533,9 +536,16 @@ include __DIR__ . '/includes/v2/header.php';
       </div>
       <?php endif; ?>
 
-      <ul class="xp-grid" id="it-grid">
+      <ul class="xp-grid" id="it-grid"<?= $cards ? '' : ' hidden' ?>>
         <?php foreach ($cards as $i => $c) { $renderCard($c, $i, true); } ?>
       </ul>
+      <?php if ($partnerItems): ?>
+      <?php if ($cards): ?><h3 class="it-partner-h"><?= v2_te('More, through our partner') ?></h3><?php endif; ?>
+      <ul class="xp-grid it-partner-grid">
+        <?= v2_partner_cards($partnerItems, 'wegotrip', 'intent-' . $intentSlugSafe . ($city ? '-' . $citySlugSafe : ''), !$city) ?>
+      </ul>
+      <?= v2_partner_note('wegotrip') ?>
+      <?php endif; ?>
 
       <?php if ($lastPage > 1):
           $maxLinks = 7;

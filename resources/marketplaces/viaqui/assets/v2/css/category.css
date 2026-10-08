@@ -1,34 +1,49 @@
 /* viaqui.com v2: category landing (/{categorie}). Needs base.css. */
 html.k-lock{overflow:hidden}
 
-/* =================== HERO =================== */
+/* =================== HERO ===================
+   A low hero: its height is the height of the copy. The category photo is not in the flow: from 768px it is a
+   full-height panel on the right edge, cut on its left by one long arch laid on its side (the brand's arch), with a
+   thin outlined arch just outside it; on phones it is a backdrop under a deep green veil. Without a photo
+   (.kh-has-photo missing) nothing is reserved and the copy takes the full width. */
 .kh{position:relative;isolation:isolate;overflow:hidden;overflow:clip;background:radial-gradient(55% 70% at 100% 0%, rgba(43,182,115,.22), rgba(43,182,115,0) 70%), radial-gradient(45% 55% at 0% 100%, rgba(242,169,0,.12), rgba(242,169,0,0) 70%), var(--deep);color:var(--on-deep);
-  --drum-main:url(#drum-on-dark);--drum-cave:url(#drum-on-dark);--drum-dot:#7FD1A6;--drum-col:#F2A900}
+  --drum-main:url(#drum-on-dark);--drum-cave:url(#drum-on-dark);--drum-dot:#7FD1A6;--drum-col:#F2A900;
+  --kh-photo:0px}
 .kh :focus-visible{outline-color:var(--online)}
 .kh .deco-arches{left:-110px;top:30%;width:340px;opacity:.18}
+/* the line runs under the photo, so it ends at the photo's edge instead of crossing it */
 .kh-line{position:absolute;z-index:0;left:-4%;bottom:-6px;width:108%;height:auto;aspect-ratio:3240 / 310;opacity:.28;pointer-events:none}
-.kh-in{position:relative;z-index:1;max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) var(--space-8);display:grid;gap:var(--space-7);grid-template-columns:minmax(0,1fr)}
-@media (min-width:1024px){.kh-in{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:center;column-gap:var(--space-8);padding-bottom:var(--space-9)}}
+.kh-in{position:relative;z-index:1;max-width:var(--container);margin-inline:auto;padding:calc(var(--hdr-h) + var(--space-5)) var(--gutter) var(--space-6)}
 .kh .crumbs,.kh .crumbs a{color:var(--on-deep-muted)}
 .kh .crumbs a:hover{color:#FFFFFF}
-.kh-kicker{display:inline-flex;align-items:center;gap:8px;margin:var(--space-2) 0 var(--space-4);padding:6px 12px;border:1px solid rgba(247,247,245,.25);border-radius:999px;font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9FE0BF}
+.kh-kicker{display:inline-flex;align-items:center;gap:8px;margin:var(--space-2) 0 var(--space-3);padding:6px 12px;border:1px solid rgba(247,247,245,.25);border-radius:999px;font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9FE0BF}
 .kh-kicker i{width:6px;height:6px;border-radius:50%;background:var(--online)}
-.kh-h{margin:0;font-size:var(--text-display);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5;overflow-wrap:break-word}
-.kh-h em{display:block;font-style:normal;color:var(--online)}
-.kh-lead{margin:var(--space-5) 0 0;max-width:54ch;font-size:var(--text-lead);line-height:1.5;color:var(--on-deep-muted)}
-.kh-stats{list-style:none;margin:var(--space-6) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
-.kh-stats li{padding:8px 14px;border-radius:999px;background:rgba(247,247,245,.1);color:#F7F7F5;font-size:.9375rem;font-weight:600;font-variant-numeric:tabular-nums}
-.kh-media{position:relative;width:100%;max-width:min(460px, 78vw);justify-self:center}
-@media (min-width:1024px){.kh-media{max-width:460px;justify-self:end}}
-/* a second, outlined arch sits just behind the photo */
-.kh-media::before{content:"";position:absolute;inset:-16px 16px 16px -16px;border:1.5px solid rgba(159,224,191,.35);border-radius:50% 50% var(--r-l) var(--r-l) / 45.45% 45.45% var(--r-l) var(--r-l)}
-.kh-arch{position:relative;aspect-ratio:1 / 1.1;overflow:hidden;overflow:clip;border-radius:50% 50% var(--r-l) var(--r-l) / 45.45% 45.45% var(--r-l) var(--r-l);background:var(--deep-2);box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.kh-h{margin:0;font-size:clamp(2rem,4.2vw,3.25rem);font-weight:700;line-height:1.02;letter-spacing:-.045em;color:#F7F7F5;overflow-wrap:break-word}
+/* the lighter green of the line motif: 4.5:1 and more on the deep green and on the veiled photo */
+.kh-h em{display:block;font-style:normal;color:#7FD1A6}
+.kh-lead{margin:var(--space-3) 0 0;max-width:62ch;font-size:1rem;line-height:1.5;color:var(--on-deep-muted)}
+/* the figures: one quiet strip under a hairline, instead of three pills */
+.kh-stats{list-style:none;margin:var(--space-4) 0 0;padding:var(--space-3) 0 0;display:flex;flex-wrap:wrap;gap:4px 0;max-width:62ch;border-top:1px solid rgba(246,243,232,.18);color:#F7F7F5;font-size:.9375rem;font-weight:600;line-height:1.4;font-variant-numeric:tabular-nums}
+.kh-stats:empty{display:none}
+.kh-stats li{display:flex;align-items:center}
+.kh-stats li + li::before{content:"";width:4px;height:4px;margin-inline:12px;border-radius:50%;background:var(--online)}
+
+.kh-media{position:absolute;z-index:0;inset:0;pointer-events:none}
+.kh-photo{position:absolute;inset:0;overflow:hidden;overflow:clip;background:var(--deep-2)}
+.kh-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* phones: the photo is a backdrop. The veil is darker than the plain hero, so every text keeps its contrast on any photo. */
+.kh-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(7,41,31,.9) 0%, rgba(7,41,31,.84) 45%, rgba(7,41,31,.92) 100%)}
+@media (max-width:767px){.kh-has-photo .kh-line{opacity:.2}}
 @media (min-width:768px){
-  .kh-arch{aspect-ratio:4 / 5;border-radius:50% 50% var(--r-l) var(--r-l) / 40% 40% var(--r-l) var(--r-l)}
-  .kh-media::before{border-radius:50% 50% var(--r-l) var(--r-l) / 40% 40% var(--r-l) var(--r-l)}
+  .kh-has-photo{--kh-photo:clamp(260px, 36vw, 720px)}
+  /* the copy stops before the photo: the photo is measured from the window's edge, the copy from the container's */
+  .kh-has-photo .kh-in{padding-right:calc(max(var(--gutter), var(--kh-photo) - max(0px, (100vw - var(--container)) / 2)) + var(--space-6))}
+  .kh-media{inset:0 0 0 auto;width:var(--kh-photo)}
+  .kh-photo{border-radius:150px 0 0 150px / 50% 0 0 50%}
+  /* green from the left (the copy's side) and from the top (the header's links and icons sit on the photo) */
+  .kh-photo::after{background:linear-gradient(180deg, rgba(7,41,31,.84) 0, rgba(7,41,31,.66) var(--hdr-h), rgba(7,41,31,0) 62%), linear-gradient(90deg, rgba(15,77,58,.62) 0%, rgba(15,77,58,.12) 46%, rgba(15,77,58,0) 100%)}
+  .kh-media::before{content:"";position:absolute;inset:0 0 0 -14px;border:1.5px solid rgba(159,224,191,.35);border-right:0;border-radius:164px 0 0 164px / 50% 0 0 50%}
 }
-.kh-arch img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.kh-arch::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg, rgba(6,34,26,.45) 0%, rgba(6,34,26,0) 40%);pointer-events:none}
 
 /* =================== FILTER BAR =================== */
 .kbar{position:sticky;top:var(--hdr-h);z-index:40;border-bottom:1px solid var(--line);background:rgba(247,247,245,.94);-webkit-backdrop-filter:saturate(1.2) blur(10px);backdrop-filter:saturate(1.2) blur(10px)}
@@ -254,17 +269,43 @@ html:not(.js) .k-empty [data-reset]{display:none}
   }
 }
 
-/* Viaqui: a much lower hero. The copy is tight, the photo is a small window on wide screens and gone on narrow ones. */
-.kh-in{gap:var(--space-5);padding-bottom:var(--space-6)}
-@media (min-width:1024px){.kh-in{grid-template-columns:minmax(0,1fr) 280px;padding-bottom:var(--space-6)}}
-.kh-kicker{margin-bottom:var(--space-3)}
-.kh-h{font-size:clamp(2rem,4.2vw,3.25rem)}
-.kh-lead{margin-top:var(--space-3);max-width:62ch;font-size:1rem}
-.kh-stats{margin-top:var(--space-4)}
-.kh-stats li{padding:6px 12px;font-size:.875rem}
-.kh-media{max-width:280px}
-.kh-media::before{display:none}
-.kh-arch{aspect-ratio:4 / 3;border-radius:42% 42% var(--r-l) var(--r-l) / 56% 56% var(--r-l) var(--r-l)}
-@media (min-width:768px){.kh-arch{aspect-ratio:4 / 3;border-radius:42% 42% var(--r-l) var(--r-l) / 56% 56% var(--r-l) var(--r-l)}}
-@media (max-width:1023px){.kh-media{display:none}}
+/* =================== WHERE (search list of places) ===================
+   With scripts on, the select is replaced by a button that opens a panel: a search field and the list of places
+   (category.js fills it from the select). The same box sits in the "Where" tab of the filters dialog. */
 .kwhere .select{max-width:220px}
+.kw{display:none}
+html.js .kw{display:flex}
+html.js .kwhere-fb{display:none}
+.kw-btn{display:block;min-width:0;text-align:left;font-family:var(--font)}
+.kw-btn span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kw-btn[aria-expanded="true"]{border-color:var(--green);background-color:var(--tint-green);color:var(--green)}
+@media (max-width:599px){.kw .select{max-width:132px}}
+.kw-pop{position:absolute;z-index:46;top:calc(100% + 8px);right:var(--gutter);display:flex;flex-direction:column;width:min(380px, calc(100% - 2 * var(--gutter)));max-height:min(520px, calc(100dvh - var(--hdr-h) - 96px));padding:16px 16px 8px;border-radius:var(--r-l);background:var(--surface);box-shadow:var(--shadow-pop);animation:mega-in var(--dur-state) var(--ease-out)}
+.kw-pop[hidden],.kw-box [hidden]{display:none}
+.kw-pop :focus-visible{outline-color:var(--action)}
+.kw-pop-top{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding-left:4px}
+.kw-pop-top h3{margin:0;font-size:1.125rem;font-weight:700;letter-spacing:-.02em;color:var(--green)}
+.kw-pop .icon-btn{margin:-6px -6px -6px 0}
+.kw-pop .icon-btn:hover{background:var(--surface-2)}
+.kw-box{display:flex;flex-direction:column;min-height:0}
+.kw-field{position:relative;flex:none}
+.kw-field .ic{position:absolute;left:16px;top:50%;width:18px;height:18px;translate:0 -50%;color:var(--muted);pointer-events:none}
+.kw-input{width:100%;min-height:48px;padding:0 16px 0 44px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:500 1rem/1.2 var(--font)}
+.kw-input::placeholder{color:var(--placeholder);opacity:1}
+.kw-input:focus-visible{outline:none;border-color:var(--action);box-shadow:0 0 0 3px rgba(27,127,78,.18)}
+.kw-list{position:relative;min-height:0;margin-top:8px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.kw-list:focus-visible{outline:none}
+.kw-grp-h{position:sticky;z-index:1;top:0;padding:12px 12px 6px;background:var(--surface);font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kw-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:8px 12px;border-radius:12px;color:var(--ink);font-size:.9375rem;font-weight:600;line-height:1.25;cursor:pointer}
+.kw-opt:hover{background:var(--surface-2)}
+.kw-opt.is-active{background:var(--tint-green);color:var(--green);box-shadow:inset 0 0 0 1.5px var(--action)}
+.kw-opt .ic{width:18px;height:18px;visibility:hidden;color:var(--action)}
+.kw-opt[aria-selected="true"]{color:var(--green)}
+.kw-opt[aria-selected="true"] .ic{visibility:visible}
+.kw-none{margin:0;padding:20px 12px;font-size:.9375rem;color:var(--muted)}
+/* in the filters dialog the list is part of the tab, with its own scroll */
+.kdlg-control .kw-list{max-height:min(340px, 42dvh);padding:0 4px 4px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+.kdlg-control .kw-none{border:1px dashed var(--line);border-radius:var(--r-m);margin-top:8px}
+[data-dlg-apply] [hidden]{display:none}
+.kw-noscript{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:var(--space-5);font-size:.875rem;font-weight:600;color:var(--muted)}
+.kw-noscript .btn{min-height:42px;padding:0 18px}

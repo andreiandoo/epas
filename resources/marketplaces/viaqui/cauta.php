@@ -16,6 +16,7 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 require_once __DIR__ . '/includes/v2/promoted.php';
+require_once __DIR__ . '/includes/v2/partners.php';
 
 // ---- Input ----
 // English query names used by the Viaqui pages: date= (the day) and who= (traveller type).
@@ -131,6 +132,30 @@ foreach ($items as $a) {
         $cards[] = $n;
     }
 }
+
+// Attractions of the catalogue that match the words (up to six), shown above the experiences.
+$placeHits = [];
+if ($q !== '' && mb_strlen($q) >= 3 && $page === 1) {
+    $atParams = array_filter(['search' => $q, 'city' => $cityF, 'per_page' => 6, 'page' => 1]);
+    $atResp = api_cached('v2_attractions_' . md5(json_encode($atParams)), fn () => api_get('/attractions', $atParams), 900);
+    foreach ((array) ($atResp['data']['items'] ?? []) as $a) {
+        if (is_array($a) && ($n = v2_attraction($a))) {
+            $placeHits[] = $n;
+        }
+    }
+}
+
+// Partner products (WeGoTrip), after our own, on the first page: what the partner sells in the chosen city, or what
+// its search finds for the words. Not with a day chosen (we cannot tell their availability) or with filters only we have.
+$partnerItems = [];
+if ($page === 1 && !$dateF && !$intF && !$travF && ($q !== '' || $cityF)) {
+    $ptSort = $sort === 'cheapest' ? 'price_asc' : 'recommended';
+    $partnerItems = $cityF
+        ? v2_partner_filter(v2_wegotrip_city_all($cityF), $catF ?: null, $q, $maxPrice, $ptSort)
+        : v2_partner_filter(v2_wegotrip_search($q, 48), $catF ?: null, '', $maxPrice, $ptSort);
+    $partnerItems = array_slice($partnerItems, 0, 24);
+}
+$total += count($partnerItems);
 
 // Interest and traveller-type facets come from the current results (plus whatever is already selected).
 $prettySlug = fn (string $s) => mb_convert_case(str_replace('-', ' ', $s), MB_CASE_TITLE, 'UTF-8');
@@ -359,6 +384,20 @@ include __DIR__ . '/includes/v2/header.php';
           </ul>
         </div>
         <?php endif; ?>
+        <?php if ($placeHits): ?>
+        <div class="sr-locs">
+          <p class="flabel"><?= v2_te('Places to see') ?></p>
+          <ul class="sr-locs-list">
+            <?php foreach ($placeHits as $pi => $ph): ?>
+            <li><a class="sr-loc" href="<?= v2_e($ph['href']) ?>">
+              <span class="sr-loc-media"><?= $ph['image'] ? v2_photo([v2_thumb($ph['image'], 160, 160), 160, 160, '']) : v2_fallback($ph['name'], $pi) ?></span>
+              <span class="sr-loc-t"><b><?= v2_e($ph['name']) ?></b><small><?= v2_e(implode(' · ', array_filter([$ph['type'], $ph['city']]))) ?></small></span>
+              <?= v2_ic('arrow-right') ?>
+            </a></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <?php endif; ?>
         <div class="sr-bar">
           <?php if ($active): ?>
           <ul class="sr-active" aria-label="<?= v2_te('Active filters') ?>">
@@ -371,7 +410,7 @@ include __DIR__ . '/includes/v2/header.php';
           </nav>
         </div>
 
-        <?php if ($cards): ?>
+        <?php if ($cards || $partnerItems): ?>
         <ul class="xp-grid" data-reveal>
           <?php foreach ($cards as $i => $a): ?>
           <li class="xp">
@@ -390,7 +429,9 @@ include __DIR__ . '/includes/v2/header.php';
             </a>
           </li>
           <?php endforeach; ?>
+          <?= $partnerItems ? v2_partner_cards($partnerItems, 'wegotrip', 'search', !$cityF) : '' ?>
         </ul>
+        <?= $partnerItems ? v2_partner_note('wegotrip') : '' ?>
 
         <?php $last = max(1, (int) ($pagination['last_page'] ?? 1)); if ($last > 1): ?>
         <nav class="pager" aria-label="<?= v2_te('Result pages') ?>">
@@ -404,7 +445,7 @@ include __DIR__ . '/includes/v2/header.php';
 
         <?php else: ?>
         <div class="sr-empty">
-          <h2><?= $amLocs ? v2_te('No experiences for this search.') : v2_te('We found nothing for this search.') ?></h2>
+          <h2><?= ($amLocs || $placeHits) ? v2_te('No experiences for this search.') : v2_te('We found nothing for this search.') ?></h2>
           <p><?= $dateF ? v2_te('Try another day, another city, or drop a few filters.') : v2_te('Try another city, or drop a few filters.') ?></p>
           <div class="sr-empty-cta">
             <?php if ($activeCount): ?><a class="btn btn-light" href="<?= v2_e($clearAll) ?>"><?= v2_te('Clear filters') ?></a><?php endif; ?>
