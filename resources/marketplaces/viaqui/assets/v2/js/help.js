@@ -22,8 +22,6 @@
   }
   var blobs = items.map(function (el) { return norm(el.textContent); });
 
-  function plural(n) { return n === 1 ? '1 întrebare' : n + (n !== 0 && (n % 100 === 0 || n % 100 >= 20) ? ' de întrebări' : ' întrebări'); }
-
   function writeUrl() {
     try {
       var url = new URL(window.location.href);
@@ -43,12 +41,12 @@
     });
     catButtons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-hp-cat') === active)); });
     chips.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-hp-chip') === active)); });
-    title.textContent = LABELS[active] || 'Toate';
-    count.textContent = shown + ' din ' + TOTAL + ' întrebări';
+    title.textContent = LABELS[active] || VQ.t('All');
+    count.textContent = VQ.t('{shown} of {total} questions', { shown: shown, total: TOTAL });
     empty.hidden = shown > 0;
     clear.hidden = !search.value;
     if (words.length) {
-      foundT.textContent = shown ? plural(shown) + (shown === 1 ? ' găsită' : ' găsite') : 'Nicio întrebare găsită';
+      foundT.textContent = shown ? VQ.t('{count} found', { count: VQ.n(shown, 'question', 'questions') }) : VQ.t('No questions found');
       jump.hidden = false;
     } else {
       foundT.textContent = '';
@@ -101,7 +99,7 @@
     title.focus();
   });
 
-  // start from the URL: /ajutor?q=retur&categorie=refunds
+  // start from the URL: /help?q=refund&categorie=refunds
   try {
     var params = new URLSearchParams(window.location.search);
     if (params.get('q')) search.value = params.get('q').slice(0, 80);

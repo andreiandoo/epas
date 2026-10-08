@@ -19,9 +19,9 @@
   var sent = $('ct-sent'), error = $('ct-error'), submit = $('ct-submit'), count = $('ct-count');
   var LABEL = submit.textContent, busy = false;
   var FIELD_ERRORS = {
-    first_name: ['Completează prenumele.', 'first'], last_name: ['Completează numele de familie.', 'last'],
-    email: ['Adresa de email nu pare corectă. Verific-o și încearcă din nou.', 'email'], phone: ['Numărul de telefon este prea lung.', 'phone'],
-    order_id: ['Numărul comenzii este prea lung.', 'ref'], message: ['Mesajul lipsește sau este prea lung.', 'message'], subject: ['Alege motivul contactului.', 'reason']
+    first_name: [VQ.t('Enter your first name.'), 'first'], last_name: [VQ.t('Enter your last name.'), 'last'],
+    email: [VQ.t('The email address does not look right. Check it and try again.'), 'email'], phone: [VQ.t('The phone number is too long.'), 'phone'],
+    order_id: [VQ.t('The order number is too long.'), 'ref'], message: [VQ.t('The message is missing or too long.'), 'message'], subject: [VQ.t('Choose the reason for contact.'), 'reason']
   };
 
   function reason() { return REASONS[f.reason.value] || REASONS.other || {}; }
@@ -29,18 +29,18 @@
   // ---------- hints that follow the choices ----------
   function updateRouting() {
     var p = f.priority.value, title, text;
-    if (p === 'today') { title = 'Solicitare cu activitate azi'; text = 'Include ora activității și numărul comenzii. Acest tip de solicitare este prioritizat.'; }
-    else if (p === 'access') { title = 'Solicitare legată de acces / intrare'; text = 'Include numele locației, ora activității și o captură cu biletul sau eroarea.'; }
-    else if (p === 'payment') { title = 'Solicitare legată de plată'; text = 'Include metoda de plată, ora plății și orice mesaj primit de la procesator.'; }
-    else if (f.reason.value === 'venue') { title = 'Mesaj direcționat către zona B2B / locații'; text = 'Include orașul, tipul locației și ce activități vrei să vinzi online.'; }
-    else { title = 'Mesaj direcționat către suport'; text = 'Include detalii clare ca solicitarea să poată fi procesată rapid.'; }
+    if (p === 'today') { title = VQ.t('Request about an activity today'); text = VQ.t('Include the time of the activity and the order number. This kind of request is prioritised.'); }
+    else if (p === 'access') { title = VQ.t('Request about access / entry'); text = VQ.t('Include the name of the venue, the time of the activity and a screenshot of the ticket or the error.'); }
+    else if (p === 'payment') { title = VQ.t('Request about a payment'); text = VQ.t('Include the payment method, the time of the payment and any message you got from the payment processor.'); }
+    else if (f.reason.value === 'venue') { title = VQ.t('Message routed to the B2B / venues team'); text = VQ.t('Include the city, the type of venue and which activities you want to sell online.'); }
+    else { title = VQ.t('Message routed to support'); text = VQ.t('Include clear details so the request can be handled quickly.'); }
     $('ct-route').setAttribute('data-tone', p === 'today' || p === 'access' ? 'urgent' : 'calm');
     $('ct-route-t').textContent = title;
     $('ct-route-p').textContent = text;
   }
   function updateReason() {
     var r = reason();
-    $('ct-ref-label').textContent = r.ref || 'Referință opțională';
+    $('ct-ref-label').textContent = r.ref || VQ.t('Reference (optional)');
     f.ref.placeholder = r.refPh || '';
     f.subject.placeholder = r.subjectPh || '';
     f.message.placeholder = r.messagePh || '';
@@ -76,9 +76,11 @@
       var a = document.createElement('a');
       a.href = 'mailto:' + SUPPORT;
       a.textContent = SUPPORT;
-      error.appendChild(document.createTextNode(' Dacă problema persistă, scrie-ne la '));
+      // one sentence for the translator; the address is a link, so the sentence is cut where it goes
+      var parts = VQ.t('If the problem continues, write to us at {email}.').split('{email}');
+      error.appendChild(document.createTextNode(' ' + parts[0]));
       error.appendChild(a);
-      error.appendChild(document.createTextNode('.'));
+      error.appendChild(document.createTextNode(parts[1] || ''));
     }
     error.hidden = false;
     clearInvalid();
@@ -96,15 +98,16 @@
 
     var missing = [f.first, f.last, f.email, f.subject].filter(function (el) { return !el.value; });
     if (!f.message.value.trim()) missing.push(f.message);
-    if (missing.length) { fail('Te rugăm să completezi toate câmpurile obligatorii.', missing); return; }
-    if (!f.email.checkValidity()) { fail('Adresa de email nu pare corectă. Verific-o și încearcă din nou.', [f.email]); return; }
-    if (!f.consent.checked) { fail('Te rugăm să bifezi acceptul.', [f.consent]); return; }
-    if (typeof BileteOnlineAPI === 'undefined') { fail('Nu am putut trimite mesajul acum.', null, true); return; }
+    if (missing.length) { fail(VQ.t('Please fill in all the required fields.'), missing); return; }
+    if (!f.email.checkValidity()) { fail(VQ.t('The email address does not look right. Check it and try again.'), [f.email]); return; }
+    if (!f.consent.checked) { fail(VQ.t('Please tick the consent box.'), [f.consent]); return; }
+    if (typeof BileteOnlineAPI === 'undefined') { fail(VQ.t('We could not send the message right now.'), null, true); return; }
 
     var r = reason(), priority = f.priority.value, ref = f.ref.value;
-    var head = ['Subiect: ' + f.subject.value, 'Motiv: ' + (r.label || f.reason.value)];
-    if (priority !== 'normal') head.push('Prioritate: ' + (PRIORITIES[priority] || priority));
-    if (ref && !r.orderRef) head.push((r.ref || 'Referință').replace(/ opțional$/, '') + ': ' + ref);
+    // these lines are read by the support team, not by the visitor: plain English and the keys, whatever the page's language
+    var head = ['Subject: ' + f.subject.value, 'Reason: ' + f.reason.value];
+    if (priority !== 'normal') head.push('Priority: ' + priority);
+    if (ref && !r.orderRef) head.push('Reference: ' + ref);
     var payload = {
       first_name: f.first.value,
       last_name: f.last.value,
@@ -118,7 +121,7 @@
 
     busy = true;
     submit.disabled = true;
-    submit.textContent = 'Se trimite…';
+    submit.textContent = VQ.t('Sending…');
     BileteOnlineAPI.post('/contact', payload)
       .then(function (resp) {
         if (!(resp && resp.success !== false)) throw { status: -1 };
@@ -135,9 +138,9 @@
           var keys = Object.keys(errors).filter(function (k) { return FIELD_ERRORS[k]; });
           if (keys.length) { fail(FIELD_ERRORS[keys[0]][0], keys.map(function (k) { return f[FIELD_ERRORS[k][1]]; })); return; }
         }
-        if (status === 429) fail('Prea multe mesaje într-un timp scurt. Încearcă din nou peste un minut.');
-        else if (status === 0) fail('Nu ne-am putut conecta. Verifică internetul și încearcă din nou.', null, true);
-        else fail('Nu am putut trimite mesajul acum. Încearcă din nou în câteva minute.', null, true);
+        if (status === 429) fail(VQ.t('Too many messages in a short time. Try again in a minute.'));
+        else if (status === 0) fail(VQ.t('We could not connect. Check your internet connection and try again.'), null, true);
+        else fail(VQ.t('We could not send the message right now. Try again in a few minutes.'), null, true);
       })
       .then(function () {
         busy = false;

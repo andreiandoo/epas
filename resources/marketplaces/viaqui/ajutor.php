@@ -1,6 +1,6 @@
 <?php
 /**
- * Help center: /ajutor (v2 design). /faqs, /faq and /intrebari redirect here, to the questions (#intrebari).
+ * Help center: /help (v2 design). /faqs, /faq and /intrebari redirect here, to the questions (#intrebari).
  *
  * Hero with search, quick chips and a route card, 4 fast actions, the FAQ list (categories with counts, search that
  * ignores diacritics and matches every word, links under answers), "still need help" contact routes, final CTA.
@@ -24,52 +24,52 @@ require_once __DIR__ . '/includes/v2/nav.php';
 
 // All FAQs inline (server-rendered for SEO + JSON-LD).
 $faqs = [
-    ['category' => 'orders', 'categoryLabel' => 'Comenzi', 'q' => 'Când primesc biletele după plată?',
-        'a' => 'Biletele sunt emise după confirmarea plății și sunt trimise pe email. Dacă ai cont, le găsești și în zona Biletele mele.',
-        'links' => [['Biletele mele', '/cont/bilete'], ['Recuperează comanda', '/recuperare-comanda']]],
-    ['category' => 'orders', 'categoryLabel' => 'Comenzi', 'q' => 'Ce fac dacă nu am primit emailul de confirmare?',
-        'a' => 'Verifică folderele Spam, Promotions sau Updates. Apoi folosește pagina de recuperare comandă cu emailul folosit la checkout și numărul comenzii, dacă îl ai.',
-        'links' => [['Recuperare comandă', '/recuperare-comanda']]],
-    ['category' => 'tickets', 'categoryLabel' => 'Bilete & QR', 'q' => 'Trebuie să printez biletul?',
-        'a' => 'În mod normal nu. Poți arăta codul QR de pe telefon. Dacă o locație cere altceva, această informație apare pe pagina activității și în bilet.'],
-    ['category' => 'tickets', 'categoryLabel' => 'Bilete & QR', 'q' => 'Pot pune nume diferite pe bilete?',
-        'a' => 'Da. În checkout poți alege dacă biletele au același beneficiar sau dacă fiecare bilet are nume diferit. Util pentru grupuri, cadouri și comenzi corporate.'],
-    ['category' => 'tickets', 'categoryLabel' => 'Bilete & QR', 'q' => 'Ce se întâmplă dacă QR-ul nu se scanează?',
-        'a' => 'Personalul locației poate verifica biletul după cod, număr comandă sau datele beneficiarului, în funcție de procedura locației.'],
-    ['category' => 'payments', 'categoryLabel' => 'Plăți & taxe', 'q' => 'Ce metode de plată sunt disponibile?',
-        'a' => 'Checkout-ul include card (Visa, Mastercard), Apple Pay, Google Pay și Card Cultural (Edenred / Sodexo / Up România), în funcție de procesator.'],
-    ['category' => 'payments', 'categoryLabel' => 'Plăți & taxe', 'q' => 'De ce apar comisioane separate în coș?',
-        'a' => 'Comisioanele platformei și eventualele taxe de procesare sunt afișate separat pentru transparență. Totalul final apare înainte de confirmarea plății.'],
-    ['category' => 'payments', 'categoryLabel' => 'Plăți & taxe', 'q' => 'Ce fac dacă plata a eșuat dar banii par blocați?',
-        'a' => 'Unele plăți pot apărea temporar ca autorizări în contul bancar. Dacă plata nu este confirmată, comanda nu se emite. Verifică statusul comenzii sau contactează suportul.',
-        'links' => [['Contact suport', '/contact']]],
-    ['category' => 'refunds', 'categoryLabel' => 'Retururi', 'q' => 'Pot cere retur pentru bilete?',
-        'a' => 'Returul depinde de politica activității, de statusul biletului, de momentul solicitării și de eventualele opțiuni cumpărate (de exemplu protecția bilet).',
-        'links' => [['Trimite cerere', '/contact?motiv=retur#formular']]],
-    ['category' => 'refunds', 'categoryLabel' => 'Retururi', 'q' => 'Ce este protecția bilet?',
-        'a' => 'Protecția bilet este o opțiune suplimentară care poate oferi flexibilitate dacă nu mai poți ajunge. Condițiile exacte sunt afișate în checkout.'],
-    ['category' => 'refunds', 'categoryLabel' => 'Retururi', 'q' => 'Cât durează rambursarea?',
-        'a' => 'Durata depinde de procesator, banca emitentă și statusul cererii. După aprobarea returului, rambursarea poate dura câteva zile lucrătoare.'],
-    ['category' => 'bonus', 'categoryLabel' => 'Puncte & carduri cadou', 'q' => 'Cum funcționează punctele bonus?',
-        'a' => 'La comenzile eligibile primești puncte bonus. Acestea apar în cont după confirmarea comenzii și pot fi folosite la comenzile viitoare.',
-        'links' => [['Punctele mele', '/cont/puncte']]],
-    ['category' => 'bonus', 'categoryLabel' => 'Puncte & carduri cadou', 'q' => 'Pot folosi punctele în aceeași comandă?',
-        'a' => 'În mod normal, punctele se câștigă după confirmarea unei comenzi și se folosesc la comenzi viitoare.'],
-    ['category' => 'bonus', 'categoryLabel' => 'Puncte & carduri cadou', 'q' => 'Cum verific un card cadou?',
-        'a' => 'Poți verifica soldul și validitatea unui card cadou sau voucher în pagina dedicată.',
-        'links' => [['Verifică voucher', '/voucher'], ['Card cadou', '/card-cadou']]],
-    ['category' => 'account', 'categoryLabel' => 'Cont client', 'q' => 'Mi se poate crea cont automat după checkout?',
-        'a' => 'Da. Checkout-ul permite plasarea comenzii fără cont și crearea automată a contului, urmând să setezi ulterior parola.'],
-    ['category' => 'account', 'categoryLabel' => 'Cont client', 'q' => 'Unde găsesc comenzile și biletele?',
-        'a' => 'În contul client, în secțiunile Biletele mele și Comenzile mele. Acolo vezi statusuri, PDF-uri, QR-uri și istoricul.',
-        'links' => [['Contul meu', '/cont']]],
-    ['category' => 'venues', 'categoryLabel' => 'Locații', 'q' => 'Cum listez o locație pe viaqui.com?',
-        'a' => 'Accesează pagina Pentru locații și trimite detaliile despre locație, oraș, tipul activităților și cum vinzi acum biletele.',
-        'links' => [['Pentru locații', '/parteneri']]],
-    ['category' => 'venues', 'categoryLabel' => 'Locații', 'q' => 'O locație poate avea mai multe activități?',
-        'a' => 'Da. O locație poate avea o pagină principală și mai multe activități: escape rooms, tururi, ateliere, pachete, bilete de acces.'],
-    ['category' => 'venues', 'categoryLabel' => 'Locații', 'q' => 'Cum se face check-in-ul la intrare?',
-        'a' => 'Biletele sunt emise cu QR unic, iar staff-ul locației le poate scana pentru validare și controlul accesului.'],
+    ['category' => 'orders', 'categoryLabel' => v2_t('Orders'), 'q' => v2_t('When do I get my tickets after paying?'),
+        'a' => v2_t('Tickets are issued once the payment is confirmed and are sent by email. If you have an account, you also find them under My tickets.'),
+        'links' => [[v2_t('My tickets'), '/account/tickets'], [v2_t('Find your order'), '/find-order']]],
+    ['category' => 'orders', 'categoryLabel' => v2_t('Orders'), 'q' => v2_t('What do I do if I did not get the confirmation email?'),
+        'a' => v2_t('Check the Spam, Promotions or Updates folders. Then use the order recovery page with the email you used at checkout and the order number, if you have it.'),
+        'links' => [[v2_t('Order recovery'), '/find-order']]],
+    ['category' => 'tickets', 'categoryLabel' => v2_t('Tickets and QR'), 'q' => v2_t('Do I need to print my ticket?'),
+        'a' => v2_t('Normally not. You can show the QR code on your phone. If a venue asks for something else, this is stated on the activity page and on the ticket.')],
+    ['category' => 'tickets', 'categoryLabel' => v2_t('Tickets and QR'), 'q' => v2_t('Can I put different names on the tickets?'),
+        'a' => v2_t('Yes. At checkout you choose whether all tickets have the same holder or each ticket has a different name. Handy for groups, gifts and corporate orders.')],
+    ['category' => 'tickets', 'categoryLabel' => v2_t('Tickets and QR'), 'q' => v2_t('What happens if the QR code does not scan?'),
+        'a' => v2_t('The venue staff can check the ticket by its code, the order number or the details of the ticket holder, depending on how the venue works.')],
+    ['category' => 'payments', 'categoryLabel' => v2_t('Payments and fees'), 'q' => v2_t('Which payment methods are available?'),
+        'a' => v2_t('Checkout takes cards (Visa, Mastercard), Apple Pay, Google Pay and Card Cultural (Edenred / Sodexo / Up România), depending on the payment processor.')],
+    ['category' => 'payments', 'categoryLabel' => v2_t('Payments and fees'), 'q' => v2_t('Why are fees shown separately in the cart?'),
+        'a' => v2_t('The platform fees and any processing fees are shown separately to keep things transparent. The final total is shown before you confirm the payment.')],
+    ['category' => 'payments', 'categoryLabel' => v2_t('Payments and fees'), 'q' => v2_t('What do I do if the payment failed but the money seems blocked?'),
+        'a' => v2_t('Some payments can show up for a while as authorisations on your bank account. If the payment is not confirmed, the order is not issued. Check the order status or contact support.'),
+        'links' => [[v2_t('Contact support'), '/contact']]],
+    ['category' => 'refunds', 'categoryLabel' => v2_t('Refunds'), 'q' => v2_t('Can I ask for a refund on tickets?'),
+        'a' => v2_t('A refund depends on the policy of the activity, the status of the ticket, when you ask and any options you bought (ticket protection, for example).'),
+        'links' => [[v2_t('Send a request'), '/contact?motiv=refund#formular']]],
+    ['category' => 'refunds', 'categoryLabel' => v2_t('Refunds'), 'q' => v2_t('What is ticket protection?'),
+        'a' => v2_t('Ticket protection is an optional extra that can give you flexibility if you can no longer make it. The exact conditions are shown at checkout.')],
+    ['category' => 'refunds', 'categoryLabel' => v2_t('Refunds'), 'q' => v2_t('How long does a refund take?'),
+        'a' => v2_t('It depends on the payment processor, the bank that issued the card and the status of the request. Once the refund is approved, the money can take a few working days to arrive.')],
+    ['category' => 'bonus', 'categoryLabel' => v2_t('Points and gift cards'), 'q' => v2_t('How do bonus points work?'),
+        'a' => v2_t('Eligible orders earn bonus points. They show up in your account once the order is confirmed and can be used on future orders.'),
+        'links' => [[v2_t('My points'), '/account/points']]],
+    ['category' => 'bonus', 'categoryLabel' => v2_t('Points and gift cards'), 'q' => v2_t('Can I use the points on the same order?'),
+        'a' => v2_t('Normally, points are earned once an order is confirmed and are used on future orders.')],
+    ['category' => 'bonus', 'categoryLabel' => v2_t('Points and gift cards'), 'q' => v2_t('How do I check a gift card?'),
+        'a' => v2_t('You can check the balance and validity of a gift card or voucher on its own page.'),
+        'links' => [[v2_t('Check a voucher'), '/voucher'], [v2_t('Gift card'), '/gift-card']]],
+    ['category' => 'account', 'categoryLabel' => v2_t('Customer account'), 'q' => v2_t('Can an account be created for me automatically after checkout?'),
+        'a' => v2_t('Yes. You can place the order without an account and have one created automatically, then set the password later.')],
+    ['category' => 'account', 'categoryLabel' => v2_t('Customer account'), 'q' => v2_t('Where do I find my orders and tickets?'),
+        'a' => v2_t('In your customer account, under My tickets and My orders. There you see statuses, PDFs, QR codes and your history.'),
+        'links' => [[v2_t('My account'), '/account']]],
+    ['category' => 'venues', 'categoryLabel' => v2_t('Venues'), 'q' => v2_t('How do I list a venue on Viaqui?'),
+        'a' => v2_t('Go to the For venues page and send us the details: the venue, the city, the type of activities and how you sell tickets today.'),
+        'links' => [[v2_t('For venues'), '/partners']]],
+    ['category' => 'venues', 'categoryLabel' => v2_t('Venues'), 'q' => v2_t('Can a venue have several activities?'),
+        'a' => v2_t('Yes. A venue can have a main page and several activities: escape rooms, tours, workshops, packages, entry tickets.')],
+    ['category' => 'venues', 'categoryLabel' => v2_t('Venues'), 'q' => v2_t('How does check-in at the entrance work?'),
+        'a' => v2_t('Tickets are issued with a unique QR code, and the venue staff can scan them to validate them and control access.')],
 ];
 
 $categoryCounts = [];
@@ -77,32 +77,32 @@ foreach ($faqs as $faq) {
     $categoryCounts[$faq['category']] = ($categoryCounts[$faq['category']] ?? 0) + 1;
 }
 $hpCategories = [
-    ['key' => 'all', 'label' => 'Toate', 'count' => count($faqs)],
-    ['key' => 'orders', 'label' => 'Comenzi', 'count' => $categoryCounts['orders'] ?? 0],
-    ['key' => 'tickets', 'label' => 'Bilete & QR', 'count' => $categoryCounts['tickets'] ?? 0],
-    ['key' => 'payments', 'label' => 'Plăți & taxe', 'count' => $categoryCounts['payments'] ?? 0],
-    ['key' => 'refunds', 'label' => 'Retururi', 'count' => $categoryCounts['refunds'] ?? 0],
-    ['key' => 'bonus', 'label' => 'Puncte & cadouri', 'count' => $categoryCounts['bonus'] ?? 0],
-    ['key' => 'account', 'label' => 'Cont client', 'count' => $categoryCounts['account'] ?? 0],
-    ['key' => 'venues', 'label' => 'Locații', 'count' => $categoryCounts['venues'] ?? 0],
+    ['key' => 'all', 'label' => v2_t('All'), 'count' => count($faqs)],
+    ['key' => 'orders', 'label' => v2_t('Orders'), 'count' => $categoryCounts['orders'] ?? 0],
+    ['key' => 'tickets', 'label' => v2_t('Tickets and QR'), 'count' => $categoryCounts['tickets'] ?? 0],
+    ['key' => 'payments', 'label' => v2_t('Payments and fees'), 'count' => $categoryCounts['payments'] ?? 0],
+    ['key' => 'refunds', 'label' => v2_t('Refunds'), 'count' => $categoryCounts['refunds'] ?? 0],
+    ['key' => 'bonus', 'label' => v2_t('Points and gifts'), 'count' => $categoryCounts['bonus'] ?? 0],
+    ['key' => 'account', 'label' => v2_t('Customer account'), 'count' => $categoryCounts['account'] ?? 0],
+    ['key' => 'venues', 'label' => v2_t('Venues'), 'count' => $categoryCounts['venues'] ?? 0],
 ];
 $quickChips = [
-    ['label' => 'Bilete QR', 'key' => 'tickets'],
-    ['label' => 'Retururi', 'key' => 'refunds'],
-    ['label' => 'Plăți', 'key' => 'payments'],
-    ['label' => 'Puncte', 'key' => 'bonus'],
-    ['label' => 'Locații', 'key' => 'venues'],
+    ['label' => v2_t('QR tickets'), 'key' => 'tickets'],
+    ['label' => v2_t('Refunds'), 'key' => 'refunds'],
+    ['label' => v2_t('Payments'), 'key' => 'payments'],
+    ['label' => v2_t('Points'), 'key' => 'bonus'],
+    ['label' => v2_t('Venues'), 'key' => 'venues'],
 ];
 $hpTiles = [
-    ['/recuperare-comanda', 'ticket', 'Recuperează comanda', 'Găsește biletele după email și număr comandă.'],
-    ['/contact?motiv=retur#formular', 'coins', 'Cerere retur', 'Verifică politica și trimite o cerere structurată.'],
-    ['/voucher', 'gift', 'Verifică voucher', 'Vezi soldul și validitatea cardului cadou.'],
-    ['/contact', 'envelope-simple', 'Contact suport', 'Nu ai găsit răspunsul? Scrie-ne.'],
+    ['/find-order', 'ticket', v2_t('Find your order'), v2_t('Find your tickets by email and order number.')],
+    ['/contact?motiv=refund#formular', 'coins', v2_t('Refund request'), v2_t('Check the policy and send a structured request.')],
+    ['/voucher', 'gift', v2_t('Check a voucher'), v2_t('See the balance and validity of your gift card.')],
+    ['/contact', 'envelope-simple', v2_t('Contact support'), v2_t('Did not find the answer? Write to us.')],
 ];
 
-$pageTitleRaw = 'Întrebări frecvente și ajutor — ' . SITE_NAME;
-$pageDescription = 'Răspunsuri rapide despre comenzi, bilete QR, plăți, retururi, protecție bilet, puncte bonus, carduri cadou, cont client și acces pentru locații.';
-$canonicalUrl = SITE_URL . '/ajutor';
+$pageTitleRaw = v2_t('Help and frequently asked questions') . ' · ' . SITE_NAME;
+$pageDescription = v2_t('Quick answers about orders, QR tickets, payments, refunds, ticket protection, bonus points, gift cards, the customer account and access for venues.');
+$canonicalUrl = SITE_URL . '/help';
 $structuredData = [[
     '@context' => 'https://schema.org',
     '@type' => 'FAQPage',
@@ -128,17 +128,17 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div class="ct-copy">
-        <p class="ct-kicker">FAQ · comenzi · bilete · locații</p>
-        <h1 class="ct-h hp-h" id="hp-h">Răspunsuri rapide, fără ping-pong cu suportul.</h1>
-        <p class="ct-lead">Găsește răspunsuri despre comenzi, bilete QR, plăți, taxe, retururi, protecție bilet, puncte bonus, carduri cadou, cont client și acces pentru locații.</p>
-        <form class="hp-search" id="hp-search-form" role="search" action="/ajutor" method="get">
-          <label class="sr" for="hp-search">Caută în întrebări</label>
+        <p class="ct-kicker"><?= v2_te('FAQ · orders · tickets · venues') ?></p>
+        <h1 class="ct-h hp-h" id="hp-h"><?= v2_te('Quick answers, without the back-and-forth with support.') ?></h1>
+        <p class="ct-lead"><?= v2_te('Find answers about orders, QR tickets, payments, fees, refunds, ticket protection, bonus points, gift cards, the customer account and access for venues.') ?></p>
+        <form class="hp-search" id="hp-search-form" role="search" action="/help" method="get">
+          <label class="sr" for="hp-search"><?= v2_te('Search the questions') ?></label>
           <?= v2_ic('magnifying-glass') ?>
-          <input id="hp-search" name="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Caută: bilete, retur, voucher, puncte, plată...">
-          <button class="hp-clear" id="hp-clear" type="button" aria-label="Șterge căutarea" hidden><?= v2_ic('x') ?></button>
+          <input id="hp-search" name="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="<?= v2_te('Search: tickets, refund, voucher, points, payment...') ?>">
+          <button class="hp-clear" id="hp-clear" type="button" aria-label="<?= v2_te('Clear the search') ?>" hidden><?= v2_ic('x') ?></button>
         </form>
-        <p class="hp-found" id="hp-found" role="status"><span id="hp-found-t"></span><a href="#intrebari" id="hp-jump" hidden>Vezi răspunsurile<?= v2_ic('arrow-right') ?></a></p>
-        <div class="hp-chips" aria-label="Subiecte frecvente">
+        <p class="hp-found" id="hp-found" role="status"><span id="hp-found-t"></span><a href="#intrebari" id="hp-jump" hidden><?= v2_te('See the answers') ?><?= v2_ic('arrow-right') ?></a></p>
+        <div class="hp-chips" aria-label="<?= v2_te('Popular topics') ?>">
           <?php foreach ($quickChips as $chip): ?>
           <button type="button" data-hp-chip="<?= v2_e($chip['key']) ?>"><?= v2_e($chip['label']) ?></button>
           <?php endforeach; ?>
@@ -149,12 +149,12 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ct-router-col">
         <div id="hdr-sentinel" aria-hidden="true"></div>
         <div class="ct-router">
-          <p class="ct-router-k">Help router</p>
-          <h2 class="ct-router-h">Cele mai rapide rezolvări.</h2>
+          <p class="ct-router-k"><?= v2_te('Help router') ?></p>
+          <h2 class="ct-router-h"><?= v2_te('The fastest fixes.') ?></h2>
           <div class="ct-router-list">
-            <a class="ct-route is-primary" href="/recuperare-comanda"><span><b>Nu găsesc biletele</b><small>recuperare comandă</small></span><?= v2_ic('ticket') ?></a>
-            <a class="ct-route" href="/contact?motiv=retur#formular"><span><b>Vreau retur</b><small>cerere / status</small></span><?= v2_ic('coins') ?></a>
-            <a class="ct-route is-mint" href="/voucher"><span><b>Card cadou</b><small>verificare sold / cod</small></span><?= v2_ic('gift') ?></a>
+            <a class="ct-route is-primary" href="/find-order"><span><b><?= v2_te('I cannot find my tickets') ?></b><small><?= v2_te('order recovery') ?></small></span><?= v2_ic('ticket') ?></a>
+            <a class="ct-route" href="/contact?motiv=refund#formular"><span><b><?= v2_te('I want a refund') ?></b><small><?= v2_te('request / status') ?></small></span><?= v2_ic('coins') ?></a>
+            <a class="ct-route is-mint" href="/voucher"><span><b><?= v2_te('Gift card') ?></b><small><?= v2_te('check balance / code') ?></small></span><?= v2_ic('gift') ?></a>
           </div>
         </div>
       </div>
@@ -162,7 +162,7 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
 
   <!-- FAST ACTIONS -->
-  <section class="ct-fast" aria-label="Acțiuni rapide">
+  <section class="ct-fast" aria-label="<?= v2_te('Quick actions') ?>">
     <div class="wrap ct-tiles">
       <?php foreach ($hpTiles as $ti => [$tileHref, $tileIcon, $tileTitle, $tileText]): ?>
       <a class="ct-tile<?= $ti === 3 ? ' is-deep' : '' ?>" href="<?= v2_e($tileHref) ?>">
@@ -178,17 +178,17 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- FAQ LIST -->
   <section class="hp-faq" id="intrebari" aria-labelledby="hp-cat-title">
     <div class="wrap hp-faq-grid">
-      <aside class="hp-aside" aria-label="Categorii FAQ">
+      <aside class="hp-aside" aria-label="<?= v2_te('FAQ categories') ?>">
         <div class="hp-aside-card">
-          <p class="hp-aside-k">Categorii FAQ</p>
+          <p class="hp-aside-k"><?= v2_te('FAQ categories') ?></p>
           <div class="hp-cats">
             <?php foreach ($hpCategories as $cat): ?>
             <button type="button" data-hp-cat="<?= v2_e($cat['key']) ?>" aria-pressed="<?= $cat['key'] === 'all' ? 'true' : 'false' ?>"><span><?= v2_e($cat['label']) ?></span><small><?= (int) $cat['count'] ?></small></button>
             <?php endforeach; ?>
           </div>
           <div class="hp-tip">
-            <b>Nu știi unde se încadrează?</b>
-            <p>Caută după cuvinte simple: „QR”, „retur”, „voucher”, „taxă”, „nume bilet”.</p>
+            <b><?= v2_te('Not sure where it fits?') ?></b>
+            <p><?= v2_te('Search with simple words: “QR”, “refund”, “voucher”, “fee”, “name on ticket”.') ?></p>
           </div>
         </div>
       </aside>
@@ -196,10 +196,10 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="hp-main">
         <div class="hp-main-head">
           <div>
-            <p class="kicker">Întrebări</p>
-            <h2 id="hp-cat-title" tabindex="-1">Toate</h2>
+            <p class="kicker"><?= v2_te('Questions') ?></p>
+            <h2 id="hp-cat-title" tabindex="-1"><?= v2_te('All') ?></h2>
           </div>
-          <p class="hp-count" id="hp-count"><?= count($faqs) ?> din <?= count($faqs) ?> întrebări</p>
+          <p class="hp-count" id="hp-count"><?= v2_te('{shown} of {total} questions', ['shown' => count($faqs), 'total' => count($faqs)]) ?></p>
         </div>
         <div class="hp-list" id="hp-list">
           <?php foreach ($faqs as $faq): ?>
@@ -219,9 +219,9 @@ include __DIR__ . '/includes/v2/header.php';
           </details>
           <?php endforeach; ?>
           <div class="hp-empty" id="hp-empty" hidden>
-            <h3>Nu am găsit întrebări pentru filtrul ales.</h3>
-            <p>Încearcă un termen mai general sau resetează categoria.</p>
-            <button class="btn btn-primary" id="hp-reset" type="button">Resetează</button>
+            <h3><?= v2_te('No questions match this filter.') ?></h3>
+            <p><?= v2_te('Try a broader word or reset the category.') ?></p>
+            <button class="btn btn-primary" id="hp-reset" type="button"><?= v2_te('Reset') ?></button>
           </div>
         </div>
       </div>
@@ -232,19 +232,19 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="hp-help" aria-labelledby="hp-help-h">
     <div class="wrap hp-help-grid">
       <div>
-        <p class="hp-help-k">Suport</p>
-        <h2 id="hp-help-h">Nu ai găsit răspunsul?</h2>
-        <p class="hp-help-p">Folosește pagina de contact și alege motivul corect. Pentru comenzi, include emailul folosit, numărul comenzii și numele activității.</p>
+        <p class="hp-help-k"><?= v2_te('Support') ?></p>
+        <h2 id="hp-help-h"><?= v2_te('Did not find the answer?') ?></h2>
+        <p class="hp-help-p"><?= v2_te('Use the contact page and pick the right reason. For orders, include the email you used, the order number and the name of the activity.') ?></p>
       </div>
       <div class="hp-router">
         <div class="hp-router-head">
-          <p class="hp-router-k">Contact router</p>
-          <h3>Trimite-ne contextul corect</h3>
+          <p class="hp-router-k"><?= v2_te('Contact router') ?></p>
+          <h3><?= v2_te('Send us the right context') ?></h3>
         </div>
         <div class="hp-router-list">
-          <a href="/contact?motiv=comanda#formular"><span><b>Problemă cu o comandă</b><small>bilete, QR, email, plată</small></span><?= v2_ic('arrow-right') ?></a>
-          <a href="/contact?motiv=retur#formular"><span><b>Retur sau rambursare</b><small>eligibilitate, status, protecție bilet</small></span><?= v2_ic('arrow-right') ?></a>
-          <a href="/contact?motiv=locatie#formular"><span><b>Locație / organizator</b><small>listare, demo, dashboard</small></span><?= v2_ic('arrow-right') ?></a>
+          <a href="/contact?motiv=order#formular"><span><b><?= v2_te('A problem with an order') ?></b><small><?= v2_te('tickets, QR, email, payment') ?></small></span><?= v2_ic('arrow-right') ?></a>
+          <a href="/contact?motiv=refund#formular"><span><b><?= v2_te('Refund') ?></b><small><?= v2_te('eligibility, status, ticket protection') ?></small></span><?= v2_ic('arrow-right') ?></a>
+          <a href="/contact?motiv=venue#formular"><span><b><?= v2_te('Venue / organiser') ?></b><small><?= v2_te('listing, demo, dashboard') ?></small></span><?= v2_ic('arrow-right') ?></a>
         </div>
       </div>
     </div>

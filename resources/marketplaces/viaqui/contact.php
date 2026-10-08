@@ -26,49 +26,49 @@ require_once __DIR__ . '/includes/v2/nav.php';
 
 // reason => label, core subject (a known key where one fits, else a short label), reference field, placeholders
 $ctReasons = [
-    'order' => ['label' => 'Comandă / bilete', 'subject' => 'bilete', 'ref' => 'Număr comandă opțional', 'refPh' => 'ex. MKT-W08ABJWH', 'orderRef' => true,
-        'subjectPh' => 'Ex: Nu am primit biletele', 'messagePh' => 'Descrie problema: ce activitate ai cumpărat, ce email ai folosit, ce mesaj de eroare apare.'],
-    'refund' => ['label' => 'Retur / rambursare', 'subject' => 'rambursare', 'ref' => 'Număr comandă', 'refPh' => 'ex. MKT-W08ABJWH', 'orderRef' => true,
-        'subjectPh' => 'Ex: Vreau să verific statusul cererii de retur', 'messagePh' => 'Spune ce bilete vrei să returnezi, motivul și dacă ai cumpărat protecție bilet.'],
-    'gift' => ['label' => 'Card cadou / voucher', 'subject' => 'Card cadou / voucher', 'ref' => 'Cod card cadou opțional', 'refPh' => 'GIFT-2026-WOW', 'orderRef' => false,
-        'subjectPh' => 'Ex: Cardul cadou nu se aplică în checkout', 'messagePh' => 'Include codul voucherului și ce se întâmplă când îl introduci.'],
-    'venue' => ['label' => 'Locație / organizator', 'subject' => 'organizator', 'ref' => 'Website locație / link social', 'refPh' => 'https://...', 'orderRef' => false,
-        'subjectPh' => 'Ex: Vreau să listez locația pe viaqui.com', 'messagePh' => 'Descrie locația, orașul, tipurile de activități, programul și cum vinzi acum biletele.'],
-    'partnership' => ['label' => 'Parteneriat / afiliere', 'subject' => 'parteneriat', 'ref' => 'Website / canal', 'refPh' => 'website / Instagram / newsletter', 'orderRef' => false,
-        'subjectPh' => 'Ex: Propunere colaborare / afiliere', 'messagePh' => 'Descrie audiența, canalul, tipul de colaborare și ce rezultate urmărești.'],
-    'press' => ['label' => 'Presă / brand', 'subject' => 'Presă / brand', 'ref' => 'Publicație / organizație', 'refPh' => 'nume publicație / companie', 'orderRef' => false,
-        'subjectPh' => 'Ex: Solicitare presă / brand assets', 'messagePh' => 'Spune ce informații ai nevoie, termenul limită și contextul materialului.'],
-    'other' => ['label' => 'Alt motiv', 'subject' => 'altele', 'ref' => 'Referință opțională', 'refPh' => '', 'orderRef' => false,
-        'subjectPh' => 'Ex: Întrebare despre platformă', 'messagePh' => 'Scrie cât mai clar întrebarea sau situația.'],
+    'order' => ['label' => v2_t('Order / tickets'), 'subject' => 'bilete', 'ref' => v2_t('Order number (optional)'), 'refPh' => v2_t('e.g. {code}', ['code' => 'MKT-W08ABJWH']), 'orderRef' => true,
+        'subjectPh' => v2_t('E.g. I did not receive my tickets'), 'messagePh' => v2_t('Describe the problem: which activity you bought, which email you used, which error message you see.')],
+    'refund' => ['label' => v2_t('Refund'), 'subject' => 'rambursare', 'ref' => v2_t('Order number'), 'refPh' => v2_t('e.g. {code}', ['code' => 'MKT-W08ABJWH']), 'orderRef' => true,
+        'subjectPh' => v2_t('E.g. I want to check the status of my refund request'), 'messagePh' => v2_t('Tell us which tickets you want to return, why, and whether you bought ticket protection.')],
+    'gift' => ['label' => v2_t('Gift card / voucher'), 'subject' => 'Gift card / voucher', 'ref' => v2_t('Gift card code (optional)'), 'refPh' => 'GIFT-2026-WOW', 'orderRef' => false,
+        'subjectPh' => v2_t('E.g. The gift card is not applied at checkout'), 'messagePh' => v2_t('Include the voucher code and what happens when you enter it.')],
+    'venue' => ['label' => v2_t('Venue / organiser'), 'subject' => 'organizator', 'ref' => v2_t('Venue website / social link'), 'refPh' => 'https://...', 'orderRef' => false,
+        'subjectPh' => v2_t('E.g. I want to list my venue on Viaqui'), 'messagePh' => v2_t('Describe the venue, the city, the types of activities, the opening hours and how you sell tickets today.')],
+    'partnership' => ['label' => v2_t('Partnership / affiliation'), 'subject' => 'parteneriat', 'ref' => v2_t('Website / channel'), 'refPh' => v2_t('website / Instagram / newsletter'), 'orderRef' => false,
+        'subjectPh' => v2_t('E.g. Collaboration / affiliate proposal'), 'messagePh' => v2_t('Describe your audience, your channel, the kind of collaboration and the results you are after.')],
+    'press' => ['label' => v2_t('Press / brand'), 'subject' => 'Press / brand', 'ref' => v2_t('Publication / organisation'), 'refPh' => v2_t('name of the publication / company'), 'orderRef' => false,
+        'subjectPh' => v2_t('E.g. Press request / brand assets'), 'messagePh' => v2_t('Tell us what information you need, your deadline and the context of the piece.')],
+    'other' => ['label' => v2_t('Another reason'), 'subject' => 'altele', 'ref' => v2_t('Reference (optional)'), 'refPh' => '', 'orderRef' => false,
+        'subjectPh' => v2_t('E.g. A question about the platform'), 'messagePh' => v2_t('Write your question or situation as clearly as you can.')],
 ];
-$ctPriorities = ['normal' => 'Normal', 'today' => 'Activitate azi', 'payment' => 'Problemă plată', 'access' => 'Problemă la intrare'];
+$ctPriorities = ['normal' => v2_t('Normal'), 'today' => v2_t('Activity today'), 'payment' => v2_t('Payment problem'), 'access' => v2_t('Problem at the entrance')];
 $ctMessageMax = 4500; // core allows 5000; the rest holds the subject, priority and reference lines
 
 $ctTiles = [
-    ['/recuperare-comanda', 'ticket', 'Recuperează comanda', 'Nu ai primit emailul sau nu găsești biletele?', ''],
-    ['#formular', 'coins', 'Cerere retur', 'Verifică eligibilitatea și trimite o cerere.', 'refund'],
-    ['/card-cadou', 'gift', 'Card cadou', 'Cumpără sau verifică sold-ul unui voucher.', ''],
-    ['/parteneri', 'map-pin', 'Pentru locații', 'Listează activități și vinde bilete online.', ''],
+    ['/find-order', 'ticket', v2_t('Find your order'), v2_t('Did not get the email or cannot find your tickets?'), ''],
+    ['#formular', 'coins', v2_t('Refund request'), v2_t('Check eligibility and send a request.'), 'refund'],
+    ['/gift-card', 'gift', v2_t('Gift card'), v2_t('Buy a voucher or check its balance.'), ''],
+    ['/partners', 'map-pin', v2_t('For venues'), v2_t('List activities and sell tickets online.'), ''],
 ];
 $ctRoutes = [
-    ['Client', 'ticket', 'Comenzi & bilete', 'Pentru bilete nelivrate, PDF, QR, nume beneficiar sau calendar.', '/recuperare-comanda', 'Recuperare comandă', '', ''],
-    ['Retur', 'coins', 'Retur & protecție bilet', 'Pentru anulări, status, protecție bilet sau rambursări.', '#formular', 'Trimite cerere', 'refund', 'is-mint'],
-    ['Gift', 'gift', 'Carduri cadou', 'Pentru coduri, sold, livrare sau voucher invalid.', '/voucher', 'Verifică voucher', '', ''],
-    ['B2B', 'map-pin', 'Locații & organizatori', 'Pentru listare, demo, dashboard sau activități noi.', '/parteneri', 'Pentru locații', '', ''],
-    ['Parteneriat', 'users-three', 'Afiliere & colaborări', 'Pentru ghiduri locale, influenceri, media, turism.', '#formular', 'Trimite propunere', 'partnership', 'is-deep'],
-    ['Legal', 'lock-simple', 'Privacy, cookies, termeni', 'Pentru solicitări GDPR, termeni, cookies sau raportări.', '/confidentialitate', 'Confidențialitate', '', ''],
+    [v2_t('Customer'), 'ticket', v2_t('Orders and tickets'), v2_t('For tickets not delivered, PDF, QR, ticket holder name or calendar.'), '/find-order', v2_t('Order recovery'), '', ''],
+    [v2_t('Refund'), 'coins', v2_t('Refunds and ticket protection'), v2_t('For cancellations, status, ticket protection or refunds.'), '#formular', v2_t('Send a request'), 'refund', 'is-mint'],
+    [v2_t('Gift'), 'gift', v2_t('Gift cards'), v2_t('For codes, balance, delivery or an invalid voucher.'), '/voucher', v2_t('Check a voucher'), '', ''],
+    [v2_t('B2B'), 'map-pin', v2_t('Venues and organisers'), v2_t('For listing, a demo, the dashboard or new activities.'), '/partners', v2_t('For venues'), '', ''],
+    [v2_t('Partnership'), 'users-three', v2_t('Affiliates and collaborations'), v2_t('For local guides, influencers, media, tourism.'), '#formular', v2_t('Send a proposal'), 'partnership', 'is-deep'],
+    [v2_t('Legal'), 'lock-simple', v2_t('Privacy, cookies, terms'), v2_t('For GDPR requests, terms, cookies or reports.'), '/privacy', v2_t('Privacy'), '', ''],
 ];
 $faqs = [
-    ['Nu am primit biletele. Ce fac?', 'Verifică folderul Spam / Promoții, apoi folosește pagina de recuperare comandă cu emailul și numărul comenzii. Dacă tot nu găsești biletele, trimite mesaj cu numărul comenzii.'],
-    ['Pot cere retur pentru bilete?', 'Depinde de politica activității, statusul biletului și opțiunile cumpărate. Trimite un mesaj cu motivul Retur / rambursare.'],
-    ['Am un card cadou care nu merge. Ce fac?', 'Verifică mai întâi codul în pagina dedicată. Dacă apare invalid sau sold greșit, include codul în mesajul către suport.'],
-    ['Cum listez o locație pe viaqui.com?', 'Selectează motivul Locație / organizator în formular, include orașul, tipul activităților și cum vinzi acum biletele. Te contactăm cu demo + pricing.'],
-    ['Ce date personale sunt procesate prin formular?', 'Datele transmise sunt folosite pentru soluționarea solicitării. Vezi Politica de confidențialitate pentru detalii.'],
+    [v2_t('I did not get my tickets. What do I do?'), v2_t('Check the Spam / Promotions folder, then use the order recovery page with your email and order number. If you still cannot find the tickets, send us a message with the order number.')],
+    [v2_t('Can I ask for a refund on tickets?'), v2_t('It depends on the policy of the activity, the status of the ticket and the options you bought. Send a message with the reason Refund.')],
+    [v2_t('My gift card does not work. What do I do?'), v2_t('First check the code on its own page. If it shows as invalid or with the wrong balance, include the code in your message to support.')],
+    [v2_t('How do I list a venue on Viaqui?'), v2_t('Choose the reason Venue / organiser in the form, and include the city, the type of activities and how you sell tickets today. We will get back to you with a demo and pricing.')],
+    [v2_t('What personal data is processed through the form?'), v2_t('The data you send is used to handle your request. See the Privacy policy for details.')],
 ];
 $defaultReason = $ctReasons['order'];
 
-$pageTitleRaw = 'Contact și ajutor — ' . SITE_NAME;
-$pageDescription = 'Ai o întrebare despre o comandă, bilete, retur, card cadou sau listare locație? Alege motivul potrivit și ajungi mai rapid la soluție.';
+$pageTitleRaw = v2_t('Contact and help') . ' · ' . SITE_NAME;
+$pageDescription = v2_t('Have a question about an order, tickets, a refund, a gift card or listing a venue? Pick the right reason and get to the answer faster.');
 $canonicalUrl = SITE_URL . '/contact';
 
 $v2Styles = ['contact.css'];
@@ -97,12 +97,12 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div class="ct-copy">
-        <p class="ct-kicker">Suport · comenzi · bilete · locații</p>
-        <h1 class="ct-h" id="ct-h">Cu ce te putem ajuta?</h1>
-        <p class="ct-lead">Ai o întrebare despre o comandă, nu găsești biletele, vrei să listezi o locație sau ai nevoie de ajutor cu un card cadou? Alege motivul potrivit și ajungi mai repede la soluție.</p>
+        <p class="ct-kicker"><?= v2_te('Support · orders · tickets · venues') ?></p>
+        <h1 class="ct-h" id="ct-h"><?= v2_te('How can we help?') ?></h1>
+        <p class="ct-lead"><?= v2_te('Have a question about an order, cannot find your tickets, want to list a venue or need help with a gift card? Pick the right reason and get to the answer faster.') ?></p>
         <div class="ct-cta">
-          <a class="btn btn-light" href="/recuperare-comanda"><?= v2_ic('ticket') ?>Recuperează comanda</a>
-          <a class="btn btn-outline-light" href="#formular"><?= v2_ic('envelope-simple') ?>Trimite mesaj</a>
+          <a class="btn btn-light" href="/find-order"><?= v2_ic('ticket') ?><?= v2_te('Find your order') ?></a>
+          <a class="btn btn-outline-light" href="#formular"><?= v2_ic('envelope-simple') ?><?= v2_te('Send a message') ?></a>
         </div>
       </div>
       <!-- the column always exists so the header turns solid at the white card on desktop and at the end of the hero
@@ -110,12 +110,12 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="ct-router-col">
         <div id="hdr-sentinel" aria-hidden="true"></div>
         <div class="ct-router">
-          <p class="ct-router-k">Support router</p>
-          <h2 class="ct-router-h">Alege traseul corect.</h2>
+          <p class="ct-router-k"><?= v2_te('Support router') ?></p>
+          <h2 class="ct-router-h"><?= v2_te('Pick the right route.') ?></h2>
           <div class="ct-router-list">
-            <a class="ct-route is-primary" href="/recuperare-comanda"><span><b>Nu găsesc biletele</b><small>recuperare comandă</small></span><?= v2_ic('ticket') ?></a>
-            <a class="ct-route" href="#formular" data-reason="refund"><span><b>Vreau retur</b><small>cerere / status</small></span><?= v2_ic('coins') ?></a>
-            <a class="ct-route is-mint" href="/voucher"><span><b>Card cadou</b><small>verificare / sold</small></span><?= v2_ic('gift') ?></a>
+            <a class="ct-route is-primary" href="/find-order"><span><b><?= v2_te('I cannot find my tickets') ?></b><small><?= v2_te('order recovery') ?></small></span><?= v2_ic('ticket') ?></a>
+            <a class="ct-route" href="#formular" data-reason="refund"><span><b><?= v2_te('I want a refund') ?></b><small><?= v2_te('request / status') ?></small></span><?= v2_ic('coins') ?></a>
+            <a class="ct-route is-mint" href="/voucher"><span><b><?= v2_te('Gift card') ?></b><small><?= v2_te('check / balance') ?></small></span><?= v2_ic('gift') ?></a>
           </div>
         </div>
       </div>
@@ -123,7 +123,7 @@ include __DIR__ . '/includes/v2/header.php';
   </section>
 
   <!-- FAST ACTIONS -->
-  <section class="ct-fast" aria-label="Acțiuni rapide">
+  <section class="ct-fast" aria-label="<?= v2_te('Quick actions') ?>">
     <div class="wrap ct-tiles">
       <?php foreach ($ctTiles as $ti => [$href, $icon, $title, $text, $reason]): ?>
       <a class="ct-tile<?= $ti === 3 ? ' is-deep' : '' ?>" href="<?= v2_e($href) ?>"<?= $reason ? ' data-reason="' . v2_e($reason) . '"' : '' ?>>
@@ -140,16 +140,16 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="ct-form-sec" id="formular" aria-labelledby="ct-form-h">
     <div class="wrap ct-form-grid">
       <div class="ct-form-intro">
-        <p class="kicker">Formular contact</p>
-        <h2 id="ct-form-h">Trimite-ne detaliile corecte de la început.</h2>
-        <p class="ct-form-lead">Cu cât alegi motivul potrivit și incluzi datele relevante, cu atât este mai ușor să ajungă mesajul la fluxul corect.</p>
+        <p class="kicker"><?= v2_te('Contact form') ?></p>
+        <h2 id="ct-form-h"><?= v2_te('Send us the right details from the start.') ?></h2>
+        <p class="ct-form-lead"><?= v2_te('The better the reason fits and the more relevant details you include, the easier it is for your message to reach the right team.') ?></p>
         <div class="ct-include">
-          <b>Pentru comenzi, include:</b>
+          <b><?= v2_te('For orders, include:') ?></b>
           <ul>
-            <li><?= v2_ic('check') ?>numărul comenzii, dacă îl ai;</li>
-            <li><?= v2_ic('check') ?>emailul folosit la comandă;</li>
-            <li><?= v2_ic('check') ?>numele activității;</li>
-            <li><?= v2_ic('check') ?>ce s-a întâmplat concret.</li>
+            <li><?= v2_ic('check') ?><?= v2_te('the order number, if you have it;') ?></li>
+            <li><?= v2_ic('check') ?><?= v2_te('the email used for the order;') ?></li>
+            <li><?= v2_ic('check') ?><?= v2_te('the name of the activity;') ?></li>
+            <li><?= v2_ic('check') ?><?= v2_te('what exactly happened.') ?></li>
           </ul>
         </div>
       </div>
@@ -157,67 +157,67 @@ include __DIR__ . '/includes/v2/header.php';
       <form class="ct-form" id="ct-form" novalidate>
         <div class="ct-sent" id="ct-sent" role="status" tabindex="-1" hidden>
           <?= v2_ic('check-circle') ?>
-          <div><b>Mesajul a fost trimis ✓</b><p>Îți răspundem pe emailul indicat în cel mai scurt timp. Verifică inbox-ul + folderul Spam.</p></div>
+          <div><b><?= v2_te('Message sent ✓') ?></b><p><?= v2_te('We will reply to the email you gave as soon as we can. Check your inbox and the Spam folder.') ?></p></div>
         </div>
         <p class="ct-error" id="ct-error" role="alert" tabindex="-1" hidden></p>
 
         <!-- honeypot: people never see or reach it; bots that fill it are dropped by core -->
-        <div class="ct-trap" aria-hidden="true"><label for="ct-website">Website (nu completa)</label><input id="ct-website" name="website_url" type="text" tabindex="-1" autocomplete="off"></div>
+        <div class="ct-trap" aria-hidden="true"><label for="ct-website"><?= v2_te('Website (leave empty)') ?></label><input id="ct-website" name="website_url" type="text" tabindex="-1" autocomplete="off"></div>
 
         <div class="ct-fields">
           <div class="ct-field">
-            <label for="ct-reason">Motiv contact</label>
+            <label for="ct-reason"><?= v2_te('Reason for contact') ?></label>
             <select class="select" id="ct-reason" name="reason">
               <?php foreach ($ctReasons as $key => $r): ?><option value="<?= $key ?>"><?= v2_e($r['label']) ?></option><?php endforeach; ?>
             </select>
           </div>
           <div class="ct-field">
-            <label for="ct-priority">Prioritate</label>
+            <label for="ct-priority"><?= v2_te('Priority') ?></label>
             <select class="select" id="ct-priority" name="priority">
               <?php foreach ($ctPriorities as $key => $label): ?><option value="<?= $key ?>"><?= v2_e($label) ?></option><?php endforeach; ?>
             </select>
           </div>
           <div class="ct-field">
-            <label for="ct-first">Prenume</label>
-            <input id="ct-first" name="first_name" type="text" autocomplete="given-name" maxlength="100" required placeholder="Prenume">
+            <label for="ct-first"><?= v2_te('First name') ?></label>
+            <input id="ct-first" name="first_name" type="text" autocomplete="given-name" maxlength="100" required placeholder="<?= v2_te('First name') ?>">
           </div>
           <div class="ct-field">
-            <label for="ct-last">Nume</label>
-            <input id="ct-last" name="last_name" type="text" autocomplete="family-name" maxlength="100" required placeholder="Nume de familie">
+            <label for="ct-last"><?= v2_te('Last name') ?></label>
+            <input id="ct-last" name="last_name" type="text" autocomplete="family-name" maxlength="100" required placeholder="<?= v2_te('Last name') ?>">
           </div>
           <div class="ct-field">
-            <label for="ct-email">Email</label>
-            <input id="ct-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="180" required placeholder="email@example.ro">
+            <label for="ct-email"><?= v2_te('Email') ?></label>
+            <input id="ct-email" name="email" type="email" inputmode="email" autocomplete="email" spellcheck="false" maxlength="180" required placeholder="name@example.com">
           </div>
           <div class="ct-field">
-            <label for="ct-phone">Telefon (opțional)</label>
-            <input id="ct-phone" name="phone" type="tel" autocomplete="tel" maxlength="50" placeholder="+40...">
+            <label for="ct-phone"><?= v2_te('Phone (optional)') ?></label>
+            <input id="ct-phone" name="phone" type="tel" autocomplete="tel" maxlength="50" placeholder="+43...">
           </div>
           <div class="ct-field is-wide">
             <label for="ct-ref" id="ct-ref-label"><?= v2_e($defaultReason['ref']) ?></label>
             <input id="ct-ref" name="reference" type="text" autocomplete="off" maxlength="80" placeholder="<?= v2_e($defaultReason['refPh']) ?>">
           </div>
           <div class="ct-field is-wide">
-            <label for="ct-subject">Subiect</label>
+            <label for="ct-subject"><?= v2_te('Subject') ?></label>
             <input id="ct-subject" name="subject" type="text" maxlength="150" required placeholder="<?= v2_e($defaultReason['subjectPh']) ?>">
           </div>
           <div class="ct-field is-wide">
-            <label for="ct-message">Mesaj</label>
+            <label for="ct-message"><?= v2_te('Message') ?></label>
             <textarea id="ct-message" name="message" rows="6" maxlength="<?= $ctMessageMax ?>" required placeholder="<?= v2_e($defaultReason['messagePh']) ?>" aria-describedby="ct-count"></textarea>
             <span class="ct-count" id="ct-count">0 / <?= $ctMessageMax ?></span>
           </div>
           <label class="ct-check is-wide">
             <input id="ct-consent" name="consent" type="checkbox" required>
-            <span>Confirm că datele trimise sunt corecte și accept prelucrarea lor pentru soluționarea solicitării conform <a href="/confidentialitate">Politicii de confidențialitate</a>.</span>
+            <span><?= v2_t('I confirm that the details I sent are correct and I agree to them being processed to handle my request, in line with the <a href="{url}">Privacy policy</a>.', ['url' => '/privacy']) ?></span>
           </label>
         </div>
 
         <div class="ct-route-note" id="ct-route" data-tone="calm">
-          <b id="ct-route-t">Mesaj direcționat către suport</b>
-          <p id="ct-route-p">Include detalii clare ca solicitarea să poată fi procesată rapid.</p>
+          <b id="ct-route-t"><?= v2_te('Message routed to support') ?></b>
+          <p id="ct-route-p"><?= v2_te('Include clear details so the request can be handled quickly.') ?></p>
         </div>
 
-        <button class="btn btn-primary ct-submit" id="ct-submit" type="submit">Trimite mesajul</button>
+        <button class="btn btn-primary ct-submit" id="ct-submit" type="submit"><?= v2_te('Send the message') ?></button>
       </form>
     </div>
   </section>
@@ -226,9 +226,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec ct-routes" aria-labelledby="ct-routes-h">
     <div class="wrap">
       <div class="ct-routes-head">
-        <p class="kicker">Rute contact</p>
-        <h2 id="ct-routes-h">Fiecare solicitare are un traseu mai bun.</h2>
-        <p>Pagina de contact reduce mesajele incomplete și trimite utilizatorul către acțiunea potrivită înainte să scrie suportului.</p>
+        <p class="kicker"><?= v2_te('Contact routes') ?></p>
+        <h2 id="ct-routes-h"><?= v2_te('Every request has a better route.') ?></h2>
+        <p><?= v2_te('The contact page cuts down on incomplete messages and points you to the right action before you write to support.') ?></p>
       </div>
       <div class="ct-route-cards">
         <?php foreach ($ctRoutes as [$k, $icon, $title, $text, $href, $cta, $reason, $variant]): ?>
@@ -247,8 +247,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec ct-faq" aria-labelledby="ct-faq-h">
     <div class="wrap ct-faq-grid">
       <div>
-        <p class="kicker">FAQ</p>
-        <h2 id="ct-faq-h">Întrebări frecvente</h2>
+        <p class="kicker"><?= v2_te('FAQ') ?></p>
+        <h2 id="ct-faq-h"><?= v2_te('Frequently asked questions') ?></h2>
       </div>
       <div>
         <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
