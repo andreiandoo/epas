@@ -164,7 +164,7 @@ include __DIR__ . '/includes/head.php';
                                     <small x-show="sec.from" x-text="'de la ' + lei(sec.from)"></small>
                                 </button>
                             </template>
-                            <div class="arena__mat" aria-hidden="true"><span>Tatami</span></div>
+                            <div class="arena__mat" aria-hidden="true"><span>Suprafața de concurs</span></div>
                         </div>
                         <div class="chips" x-show="!arena" style="margin-bottom:18px">
                             <template x-for="sec in sections" :key="sec.name">
