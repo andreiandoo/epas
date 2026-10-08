@@ -480,6 +480,26 @@ foreach (($V2NAV['countriesFull'] ?? []) as $kwCountry) {
     }
     if ($kwCities) { $whereGroups[] = ['name' => (string) $kwCountry['name'], 'cities' => $kwCities]; }
 }
+// Order: where this category has the most to book comes first. Counted from the listings on the page (ours) and
+// from everything the partner sells in the category; then the cities the partner covers at all; then the order the
+// places came in. The same for the countries, by the sum of their cities.
+$kwCount = [];
+foreach ($acts as $kwAct) {
+    if (empty($kwAct['ext']) && ($kwAct['_city'] ?? '') !== '') { $kwCount[$kwAct['_city']] = ($kwCount[$kwAct['_city']] ?? 0) + 1; }
+}
+foreach (v2_wegotrip_category((string) ($category['slug'] ?? $slug), 1000) as $kwItem) {
+    if ($kwItem['place'] !== '') { $kwCount[$kwItem['place']] = ($kwCount[$kwItem['place']] ?? 0) + 1; }
+}
+$kwCovered = v2_partners_on() ? (v2_wegotrip_index()['cities'] ?? []) : [];
+foreach ($whereGroups as $kwI => $kwGroup) {
+    $kwRank = [];
+    foreach ($kwGroup['cities'] as $kwJ => $kwCity) {
+        $kwRank[] = [-($kwCount[$kwCity['slug']] ?? 0), isset($kwCovered[$kwCity['slug']]) ? 0 : 1, $kwJ];
+    }
+    array_multisort($kwRank, $whereGroups[$kwI]['cities']);
+    $whereGroups[$kwI]['_rank'] = [-array_sum(array_map(fn ($r) => -$r[0], $kwRank)), -count(array_filter($kwRank, fn ($r) => $r[1] === 0)), $kwI];
+}
+usort($whereGroups, fn ($x, $y) => $x['_rank'] <=> $y['_rank']);
 $whereLabel = $cityFilter ? $heroLocation : v2_t('Anywhere in Europe');
 // The search field and the (script-filled) list of places: once in the bar's panel, once in the dialog.
 $renderWhereBox = function (string $id) {
