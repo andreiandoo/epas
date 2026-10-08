@@ -111,7 +111,7 @@
     var who = name && name !== 'Un prieten' ? 'You were invited by ' + name + '.' : 'You were invited by a friend.';
     var reward = info ? Math.floor(Number(info.referred_reward) || 0) : 0;
     if (reward <= 0) return who + ' Create your account so the invitation is recorded.';
-    var gift = info.reward_type && info.reward_type !== 'points' ? '20AC' + reward : (reward === 1 ? '1 point' : reward + ' points');
+    var gift = info.reward_type && info.reward_type !== 'points' ? '€' + reward : (reward === 1 ? '1 point' : reward + ' points');
     return who + ' Create your account and get a ' + gift + ' bonus.';
   }
 
