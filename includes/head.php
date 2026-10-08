@@ -58,7 +58,6 @@ $headSolid       = $headSolid       ?? false;
                 </span>
             </a>
             <nav class="nav" aria-label="Principal">
-                <a href="/" class="<?= $activeNav === 'home' ? 'is-on' : '' ?>">Acasă</a>
                 <a href="/competitii" class="<?= $activeNav === 'events' ? 'is-on' : '' ?>">Competiții</a>
                 <a href="<?= e(SITE_FEDERATION) ?>" target="_blank" rel="noopener">wukf.ro</a>
             </nav>
@@ -80,7 +79,6 @@ $headSolid       = $headSolid       ?? false;
     </div>
     <div class="drawer" x-show="open" x-cloak>
         <div class="wrap">
-            <a href="/">Acasă</a>
             <a href="/competitii">Competiții</a>
             <a href="/cos">Coșul meu</a>
             <a x-show="!user" href="/autentificare">Contul meu</a>
