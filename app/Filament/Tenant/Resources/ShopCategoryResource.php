@@ -90,10 +90,10 @@ class ShopCategoryResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make(__('Category Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$tenantLanguage}")
-                            ->label('Category Name')
+                            ->label(__('Category Name'))
                             ->required()
                             ->maxLength(190)
                             ->live(onBlur: true)
@@ -113,7 +113,7 @@ class ShopCategoryResource extends Resource
                             ->columnSpanFull(),
 
                         Forms\Components\Select::make('parent_id')
-                            ->label('Parent Category')
+                            ->label(__('Parent Category'))
                             ->options(function () {
                                 $tenant = auth()->user()->tenant;
                                 $lang = $tenant->language ?? $tenant->locale ?? 'en';
@@ -123,7 +123,7 @@ class ShopCategoryResource extends Resource
                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('None (Top-level category)'),
+                            ->placeholder(__('None (Top-level category)')),
 
                         Forms\Components\TextInput::make('sort_order')
                             ->label('Sort Order')
@@ -135,11 +135,11 @@ class ShopCategoryResource extends Resource
                             ->default(true),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\FileUpload::make('image_url')
-                            ->label('Category Image')
+                            ->label(__('Category Image'))
                             ->image()
                             ->disk('public')
                             ->directory('shop/categories')
@@ -149,7 +149,7 @@ class ShopCategoryResource extends Resource
                             ->columnSpanFull(),
 
                         Forms\Components\Select::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->options([
                                 'heroicon-o-shopping-bag' => '🛍️ Shopping Bag',
                                 'heroicon-o-shopping-cart' => '🛒 Shopping Cart',
@@ -183,10 +183,10 @@ class ShopCategoryResource extends Resource
                                 'heroicon-o-building-storefront' => '🏪 Store',
                             ])
                             ->searchable()
-                            ->placeholder('Select an icon'),
+                            ->placeholder(__('Select an icon')),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
                     ])->columns(2),
 
                 SC\Section::make('SEO')
@@ -222,7 +222,7 @@ class ShopCategoryResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent')
+                    ->label(__('Parent'))
                     ->formatStateUsing(function ($state) use ($tenantLanguage) {
                         if (is_array($state)) {
                             return $state[$tenantLanguage] ?? $state['en'] ?? '-';
@@ -252,7 +252,7 @@ class ShopCategoryResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_visible')
                     ->label('Visible'),
                 Tables\Filters\SelectFilter::make('parent_id')
-                    ->label('Parent Category')
+                    ->label(__('Parent Category'))
                     ->options(function () {
                         $tenant = auth()->user()->tenant;
                         $lang = $tenant->language ?? $tenant->locale ?? 'en';
@@ -261,7 +261,7 @@ class ShopCategoryResource extends Resource
                             ->get()
                             ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                     })
-                    ->placeholder('All'),
+                    ->placeholder(__('All')),
             ])
             ->actions([
                 EditAction::make(),

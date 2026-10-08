@@ -54,7 +54,7 @@ class OrderResource extends Resource
                             ->label('Număr comandă')
                             ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">#' . str_pad($record->id, 6, '0', STR_PAD_LEFT) . '</span>')),
                         Forms\Components\Placeholder::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             // Culori scrise explicit: clasele de nuanță nu sunt toate în tema compilată, iar pe tema
                             // închisă textul ajungea alb pe fundal verde deschis.
                             ->content(fn ($record) => new HtmlString('<span style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:14px;font-weight:600;' . match ($record->status) {
@@ -294,13 +294,13 @@ class OrderResource extends Resource
                     ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('promo_code')
-                    ->label('Cod discount')
+                    ->label(__('Cod discount'))
                     ->placeholder('-')
                     ->badge()
                     ->color('success')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'warning' => 'pending',
                         'success' => fn ($state) => in_array($state, ['confirmed', 'paid']),

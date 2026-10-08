@@ -77,7 +77,7 @@ class CustomerBadgeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('earned_at')
-                    ->label('Earned At')
+                    ->label(__('Earned At'))
                     ->dateTime()
                     ->sortable(),
 
@@ -86,15 +86,15 @@ class CustomerBadgeResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\ImageColumn::make('badge.icon_url')
-                    ->label('Badge')
+                    ->label(__('Badge'))
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('badge.name')
-                    ->label('Badge Name')
+                    ->label(__('Badge Name'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('badge.rarity_name')
-                    ->label('Rarity')
+                    ->label(__('Rarity'))
                     ->badge()
                     ->color(fn ($record) => match ($record->badge?->rarity_level) {
                         1 => 'gray',
@@ -106,17 +106,17 @@ class CustomerBadgeResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('xp_awarded')
-                    ->label('XP Awarded')
+                    ->label(__('XP Awarded'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('points_awarded')
-                    ->label('Points Awarded')
+                    ->label(__('Points Awarded'))
                     ->sortable(),
             ])
             ->defaultSort('earned_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('badge_id')
-                    ->label('Badge')
+                    ->label(__('Badge'))
                     ->relationship('badge', 'name->en'),
             ])
             ->recordActions([

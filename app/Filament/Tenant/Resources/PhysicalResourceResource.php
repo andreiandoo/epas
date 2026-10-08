@@ -85,7 +85,7 @@ class PhysicalResourceResource extends Resource
 
                     Forms\Components\TextInput::make('label')
                         ->label('Etichetă vizuală')
-                        ->placeholder('ex: RED-01'),
+                        ->placeholder(__('ex: RED-01')),
 
                     Forms\Components\Select::make('status')
                         ->options([
@@ -98,7 +98,7 @@ class PhysicalResourceResource extends Resource
                         ->required(),
 
                     Forms\Components\TextInput::make('qr_code')
-                        ->label('QR Code')
+                        ->label(__('QR Code'))
                         ->disabled(fn ($context) => $context !== 'create')
                         ->helperText('Generat automat la creare. NU îl modifica după ce ai printat.'),
 
@@ -119,7 +119,7 @@ class PhysicalResourceResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\KeyValue::make('meta')
-                        ->label('Atribute (size, color, condition)')
+                        ->label(__('Atribute (size, color, condition)'))
                         ->columnSpanFull(),
                 ]),
         ]);
@@ -148,7 +148,7 @@ class PhysicalResourceResource extends Resource
                     ->fontFamily('mono')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'available' => 'success',
@@ -177,7 +177,7 @@ class PhysicalResourceResource extends Resource
             ->recordActions([
                 EditAction::make(),
                 Action::make('printQr')
-                    ->label('Print QR')
+                    ->label(__('Print QR'))
                     ->icon('heroicon-o-printer')
                     ->url(fn ($record) => route('leisure.qr-print', ['ids' => [$record->id]]))
                     ->openUrlInNewTab(),
@@ -185,7 +185,7 @@ class PhysicalResourceResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('printQrBulk')
-                        ->label('Print QR codes')
+                        ->label(__('Print QR codes'))
                         ->icon('heroicon-o-printer')
                         ->action(fn ($records) => redirect()->route('leisure.qr-print', ['ids' => $records->pluck('id')->toArray()])),
                 ]),

@@ -34,7 +34,7 @@ class EditTenantTeamMember extends EditRecord
                         ->label('Până la')
                         ->required()
                         ->default(now()->addMonths(3)->toDateString())
-                        ->helperText('Inclusiv. Max 365 zile.'),
+                        ->helperText(__('Inclusiv. Max 365 zile.')),
                     Forms\Components\CheckboxList::make('weekdays')
                         ->label('Zile aplicabile')
                         ->options([
@@ -46,7 +46,7 @@ class EditTenantTeamMember extends EditRecord
                         ->required()
                         ->columnSpanFull(),
                     Forms\Components\TimePicker::make('start_time')
-                        ->label('Ora start')
+                        ->label(__('Ora start'))
                         ->seconds(false)
                         ->default('09:00')
                         ->required(),
@@ -70,7 +70,7 @@ class EditTenantTeamMember extends EditRecord
                     Forms\Components\Radio::make('on_conflict')
                         ->label('Dacă există deja un schimb pe acea zi')
                         ->options([
-                            'skip' => 'Sari peste (default)',
+                            'skip' => __('Sari peste (default)'),
                             'replace' => 'Înlocuiește schimburile existente',
                             'add' => 'Adaugă în plus',
                         ])
@@ -85,7 +85,7 @@ class EditTenantTeamMember extends EditRecord
                     $start = CarbonImmutable::parse($data['date_start']);
                     $end = CarbonImmutable::parse($data['date_end']);
                     if ($end->diffInDays($start) > 365) {
-                        Notification::make()->danger()->title('Interval prea lung (max 365 zile)')->send();
+                        Notification::make()->danger()->title(__('Interval prea lung (max 365 zile)'))->send();
                         return;
                     }
                     if ($end->lessThan($start)) {

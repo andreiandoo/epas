@@ -53,30 +53,30 @@ class FinanceFeeRuleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            \Filament\Schemas\Components\Section::make('Fee Rule')->schema([
+            \Filament\Schemas\Components\Section::make(__('Fee Rule'))->schema([
                 Forms\Components\TextInput::make('name')->required(),
                 Forms\Components\Select::make('fee_type')
                     ->options(collect(FeeType::cases())->mapWithKeys(fn ($t) => [$t->value => $t->label()]))
                     ->required()->reactive(),
-                Forms\Components\Select::make('festival_edition_id')->label('Edition')
+                Forms\Components\Select::make('festival_edition_id')->label(__('Edition'))
                     ->relationship('edition', 'name')->required(),
-                Forms\Components\Select::make('vendor_id')->label('Vendor (blank = all)')
+                Forms\Components\Select::make('vendor_id')->label(__('Vendor (blank = all)'))
                     ->relationship('vendor', 'name')->nullable(),
-                Forms\Components\TextInput::make('amount_cents')->numeric()->label('Amount (RON)')
+                Forms\Components\TextInput::make('amount_cents')->numeric()->label(__('Amount (RON)'))
                     ->suffix('RON')->step(0.01)
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0.00')
                     ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
                     ->visible(fn ($get) => in_array($get('fee_type'), ['fixed_daily', 'fixed_period', 'fixed_per_transaction'])),
-                Forms\Components\TextInput::make('percentage')->numeric()->label('Percentage (%)')
+                Forms\Components\TextInput::make('percentage')->numeric()->label(__('Percentage (%)'))
                     ->visible(fn ($get) => in_array($get('fee_type'), ['percentage_sales', 'percentage_per_category'])),
-                Forms\Components\TagsInput::make('category_filter')->label('Categories (for % per category)')
+                Forms\Components\TagsInput::make('category_filter')->label(__('Categories (for % per category)'))
                     ->visible(fn ($get) => $get('fee_type') === 'percentage_per_category'),
                 Forms\Components\DatePicker::make('period_start'),
                 Forms\Components\DatePicker::make('period_end'),
                 Forms\Components\Select::make('apply_on')
-                    ->options(['gross_sales' => 'Gross Sales', 'net_sales' => 'Net Sales']),
+                    ->options(['gross_sales' => __('Gross Sales'), 'net_sales' => 'Net Sales']),
                 Forms\Components\Select::make('billing_frequency')
-                    ->options(['daily' => 'Daily', 'weekly' => 'Weekly', 'end_of_festival' => 'End of Festival']),
+                    ->options(['daily' => __('Daily'), 'weekly' => __('Weekly'), 'end_of_festival' => 'End of Festival']),
                 Forms\Components\Toggle::make('is_active')->default(true),
                 Forms\Components\Textarea::make('notes')->rows(2),
             ])->columns(2),
@@ -90,13 +90,13 @@ class FinanceFeeRuleResource extends Resource
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('fee_type')->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof FeeType ? $state->label() : $state),
-                Tables\Columns\TextColumn::make('amount_cents')->label('Amount')
+                Tables\Columns\TextColumn::make('amount_cents')->label(__('Amount'))
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2) . ' RON' : '-'),
                 Tables\Columns\TextColumn::make('percentage')
                     ->formatStateUsing(fn ($state) => $state ? $state . '%' : '-'),
-                Tables\Columns\TextColumn::make('vendor.name')->label('Vendor')->placeholder('All'),
+                Tables\Columns\TextColumn::make('vendor.name')->label('Vendor')->placeholder(__('All')),
                 Tables\Columns\IconColumn::make('is_active')->boolean(),
-                Tables\Columns\TextColumn::make('edition.name')->label('Edition'),
+                Tables\Columns\TextColumn::make('edition.name')->label(__('Edition')),
             ])
             ->actions([Actions\EditAction::make(), Actions\DeleteAction::make()])
             ->defaultSort('name');

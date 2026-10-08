@@ -325,7 +325,7 @@ class EventStatistics extends Page
         if ($this->isGuestEvent()) {
             return [
                 \Filament\Actions\Action::make('back_to_view')
-                    ->label('Back to Details')
+                    ->label(__('Back to Details'))
                     ->icon('heroicon-o-arrow-left')
                     ->url(EventResource::getUrl('view-guest', ['record' => $this->record])),
             ];
@@ -333,7 +333,7 @@ class EventStatistics extends Page
 
         return [
             \Filament\Actions\Action::make('back_to_edit')
-                ->label('Back to Edit')
+                ->label(__('Back to Edit'))
                 ->icon('heroicon-o-arrow-left')
                 ->url(EventResource::getUrl('edit', ['record' => $this->record])),
         ];

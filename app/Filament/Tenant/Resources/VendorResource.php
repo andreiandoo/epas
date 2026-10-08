@@ -74,7 +74,7 @@ class VendorResource extends Resource
                                 Forms\Components\TextInput::make('phone')
                                     ->tel(),
                                 Forms\Components\TextInput::make('contact_person')
-                                    ->label('Persoana de contact'),
+                                    ->label(__('Persoana de contact')),
                                 Forms\Components\FileUpload::make('logo_url')
                                     ->label('Logo')
                                     ->image()
@@ -92,7 +92,7 @@ class VendorResource extends Resource
                         SC\Tabs\Tab::make('Date societate')
                             ->schema([
                                 SC\Section::make('Interogare ANAF')
-                                    ->description('Introdu CUI-ul si datele se completeaza automat')
+                                    ->description(__('Introdu CUI-ul si datele se completeaza automat'))
                                     ->schema([
                                         Forms\Components\TextInput::make('cui')
                                             ->label('CUI')
@@ -123,7 +123,7 @@ class VendorResource extends Resource
                                                         $data = $anaf->lookupByCui($cui);
                                                         if (! $data) {
                                                             Notification::make()
-                                                                ->title('Societatea nu a fost gasita in baza ANAF')
+                                                                ->title(__('Societatea nu a fost gasita in baza ANAF'))
                                                                 ->danger()
                                                                 ->send();
                                                             return;
@@ -152,38 +152,38 @@ class VendorResource extends Resource
                                 SC\Section::make('Date fiscale')
                                     ->schema([
                                         Forms\Components\TextInput::make('company_name')
-                                            ->label('Denumire comerciala'),
+                                            ->label(__('Denumire comerciala')),
                                         Forms\Components\TextInput::make('fiscal_name')
-                                            ->label('Denumire oficiala (ANAF)'),
+                                            ->label(__('Denumire oficiala (ANAF)')),
                                         Forms\Components\TextInput::make('reg_com')
                                             ->label('Nr. Reg. Com.'),
                                         Forms\Components\TextInput::make('cod_caen')
                                             ->label('Cod CAEN'),
                                         Forms\Components\Textarea::make('fiscal_address')
-                                            ->label('Adresa sediu social')
+                                            ->label(__('Adresa sediu social'))
                                             ->rows(2)
                                             ->columnSpanFull(),
                                         Forms\Components\TextInput::make('county')
-                                            ->label('Judet'),
+                                            ->label(__('Judet')),
                                         Forms\Components\TextInput::make('city')
                                             ->label('Localitate'),
                                         Forms\Components\Toggle::make('is_vat_payer')
-                                            ->label('Platitor TVA')
+                                            ->label(__('Platitor TVA'))
                                             ->inline(false),
                                         Forms\Components\DatePicker::make('vat_since')
-                                            ->label('TVA din data'),
+                                            ->label(__('TVA din data')),
                                         Forms\Components\Toggle::make('is_active_fiscal')
                                             ->label('Activ fiscal')
                                             ->inline(false),
                                         Forms\Components\Toggle::make('is_split_vat')
-                                            ->label('TVA la incasare')
+                                            ->label(__('TVA la incasare'))
                                             ->inline(false),
                                     ])->columns(2),
 
                                 SC\Section::make('Date bancare')
                                     ->schema([
                                         Forms\Components\TextInput::make('bank_name')
-                                            ->label('Banca'),
+                                            ->label(__('Banca')),
                                         Forms\Components\TextInput::make('iban')
                                             ->label('IBAN')
                                             ->maxLength(34),
@@ -233,7 +233,7 @@ class VendorResource extends Resource
                         'inactive'  => 'Inactiv',
                     ]),
                 Tables\Filters\TernaryFilter::make('is_vat_payer')
-                    ->label('Platitor TVA'),
+                    ->label(__('Platitor TVA')),
             ])
             ->actions([
                 Actions\EditAction::make(),

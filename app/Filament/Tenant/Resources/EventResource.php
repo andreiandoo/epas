@@ -222,7 +222,7 @@ class EventResource extends Resource
                     // Subtitlu — doar pentru tenant de tip teatru
                     Forms\Components\TextInput::make("subtitle.{$tenantLanguage}")
                         ->label('Subtitlu')
-                        ->placeholder('ex: dupa William Shakespeare')
+                        ->placeholder(__('ex: dupa William Shakespeare'))
                         ->maxLength(190)
                         ->visible($isTheater)
                         ->columnSpanFull(),
@@ -387,7 +387,7 @@ class EventResource extends Resource
 
                     // Multi day
                     Forms\Components\Repeater::make('multi_slots')
-                        ->label('Zile & ore')
+                        ->label(__('Zile & ore'))
                         ->schema([
                             Forms\Components\DatePicker::make('date')
                                 ->label('Dată')
@@ -905,7 +905,7 @@ class EventResource extends Resource
                                 ->extraAttributes(['class' => 'ep-repeater-padded'])
                                 ->schema([
                                     SC\Grid::make(2)->schema([
-                                        Forms\Components\TextInput::make('role')->label('Funcție')->placeholder('Scenografie, Costume, Muzica...'),
+                                        Forms\Components\TextInput::make('role')->label('Funcție')->placeholder(__('Scenografie, Costume, Muzica...')),
                                         Forms\Components\Select::make('name')->label('Nume')
                                             ->options(fn () => \App\Models\TenantArtist::where('tenant_id', $tenant?->id)->orderBy('name')->pluck('name', 'name'))
                                             ->searchable()
@@ -945,7 +945,7 @@ class EventResource extends Resource
                                 ->where('status', 'active')
                         )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
-                        ->placeholder('Use default template')
+                        ->placeholder(__('Use default template'))
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
                         ->searchable()
                         ->preload()
@@ -1108,7 +1108,7 @@ class EventResource extends Resource
                                 ->schema([
                                     SC\Grid::make(4)->schema([
                                         Forms\Components\TextInput::make('name')
-                                            ->label('Nume')->placeholder('ex: Early Bird, Standard, VIP')
+                                            ->label('Nume')->placeholder(__('ex: Early Bird, Standard, VIP'))
                                             ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                             ->required()->inlineLabel($il)->live(onBlur: true)->skipRenderAfterStateUpdated()
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
@@ -1246,7 +1246,7 @@ class EventResource extends Resource
                                     Forms\Components\Repeater::make('meta.performance_prices')->label('Prețuri per reprezentare')
                                         ->visible(fn (\Livewire\Component $livewire) => $livewire->record && \App\Models\Performance::where('event_id', $livewire->record->id)->exists())
                                         ->schema([
-                                            Forms\Components\Select::make('perf_id')->hiddenLabel()->placeholder('Alege reprezentarea...')
+                                            Forms\Components\Select::make('perf_id')->hiddenLabel()->placeholder(__('Alege reprezentarea...'))
                                                 ->options(function (SGet $get, \Livewire\Component $livewire) {
                                                     $eventId = $livewire->record?->id ?? null;
                                                     if ($eventId) {
@@ -1263,9 +1263,9 @@ class EventResource extends Resource
                                                 })
                                                 ->required()->searchable()->live()->columnSpan(3),
                                             Forms\Components\TextInput::make('price')->hiddenLabel()->numeric()->step(0.01)->placeholder('Preț')->columnSpan(1),
-                                            Forms\Components\TextInput::make('stock')->hiddenLabel()->numeric()->minValue(0)->placeholder('Stoc (gol = stoc tip bilet)')->columnSpan(1),
-                                            Forms\Components\TextInput::make('series_start')->hiddenLabel()->placeholder('Serie start')->disabled()->dehydrated(true)->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])->columnSpan(2),
-                                            Forms\Components\TextInput::make('series_end')->hiddenLabel()->placeholder('Serie end')->disabled()->dehydrated(true)->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])->columnSpan(2),
+                                            Forms\Components\TextInput::make('stock')->hiddenLabel()->numeric()->minValue(0)->placeholder(__('Stoc (gol = stoc tip bilet)'))->columnSpan(1),
+                                            Forms\Components\TextInput::make('series_start')->hiddenLabel()->placeholder(__('Serie start'))->disabled()->dehydrated(true)->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])->columnSpan(2),
+                                            Forms\Components\TextInput::make('series_end')->hiddenLabel()->placeholder(__('Serie end'))->disabled()->dehydrated(true)->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])->columnSpan(2),
                                         ])
                                         ->columns(9)->grid(1)->itemLabel(fn () => null)->addActionLabel('+ Adaugă preț')->defaultItems(0)->reorderable(false)->columnSpan(12),
                                 ])
@@ -1275,7 +1275,7 @@ class EventResource extends Resource
                                 ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_perks'))
                                 ->schema([
                                     Forms\Components\Repeater::make('perks')->label('Condiții / Beneficii')
-                                        ->simple(Forms\Components\TextInput::make('text')->placeholder('ex: Include acces la zona VIP')->required())
+                                        ->simple(Forms\Components\TextInput::make('text')->placeholder(__('ex: Include acces la zona VIP'))->required())
                                         ->defaultItems(0)->addActionLabel('Adaugă condiție / beneficiu')->reorderable()->columnSpan(12),
                                 ])
                                 ->collapsible()->collapsed()->persistCollapsed()->compact()->columns(12)->columnSpan(12),
@@ -1355,11 +1355,11 @@ class EventResource extends Resource
                                         ->collapsible()->collapsed()->persistCollapsed()->columns(12)->columnSpan(12)
                                         ->schema([
                                             Forms\Components\Select::make('rule_type')->label('Tip regulă')
-                                                ->options([ 'buy_x_get_y' => 'Cumperi X primești Y gratis', 'buy_x_percent_off' => 'Cumperi X bilete → % reducere', 'amount_off_per_ticket' => 'Reducere pe bilet (min cantitate)', 'bundle_price' => 'Preț pachet (X bilete la preț total)' ])
+                                                ->options([ 'buy_x_get_y' => 'Cumperi X primești Y gratis', 'buy_x_percent_off' => 'Cumperi X bilete → % reducere', 'amount_off_per_ticket' => __('Reducere pe bilet (min cantitate)'), 'bundle_price' => 'Preț pachet (X bilete la preț total)' ])
                                                 ->required()->columnSpan(4)->live()->partiallyRenderAfterStateUpdated(),
                                             Forms\Components\TextInput::make('buy_qty')->label('Cumperi')->numeric()->minValue(1)->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')->columnSpan(4),
                                             Forms\Components\TextInput::make('get_qty')->label('Primești gratis')->numeric()->minValue(1)->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')->columnSpan(4),
-                                            Forms\Components\TextInput::make('min_qty')->label('Cantitate min')->numeric()->minValue(1)->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))->columnSpan(4),
+                                            Forms\Components\TextInput::make('min_qty')->label(__('Cantitate min'))->numeric()->minValue(1)->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))->columnSpan(4),
                                             Forms\Components\TextInput::make('percent_off')->label('% reducere')->numeric()->minValue(1)->maxValue(100)->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')->columnSpan(4),
                                             Forms\Components\TextInput::make('amount_off')->label('Reducere/bilet')->numeric()->minValue(0.01)->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')->columnSpan(4),
                                             Forms\Components\TextInput::make('bundle_total_price')->label('Preț total pachet')->numeric()->minValue(0.01)->visible(fn ($get) => $get('rule_type') === 'bundle_price')->columnSpan(4),
@@ -1369,14 +1369,14 @@ class EventResource extends Resource
 
                             SC\Section::make('Serie bilete')
                                 ->schema([
-                                    Forms\Components\TextInput::make('series_start')->label('Serie start')->inlineLabel($il)->placeholder('Ex: AMB-5-00001')->maxLength(50)
+                                    Forms\Components\TextInput::make('series_start')->label(__('Serie start'))->inlineLabel($il)->placeholder('Ex: AMB-5-00001')->maxLength(50)
                                         ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                             if (!$state) {
                                                 $eventSeries = $get('../../event_series'); $capacity = $get('capacity'); $ticketTypeIdentifier = $get('id') ?: null;
                                                 if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) { $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001'); }
                                             }
                                         })->columnSpan(6),
-                                    Forms\Components\TextInput::make('series_end')->label('Serie end')->inlineLabel($il)->placeholder('Ex: AMB-5-00500')->maxLength(50)
+                                    Forms\Components\TextInput::make('series_end')->label(__('Serie end'))->inlineLabel($il)->placeholder('Ex: AMB-5-00500')->maxLength(50)
                                         ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                             if (!$state) {
                                                 $eventSeries = $get('../../event_series'); $capacity = (int) ($get('capacity') ?: 0); $ticketTypeIdentifier = $get('id') ?: null; if ($capacity === -1) $capacity = 1000;
@@ -1391,7 +1391,7 @@ class EventResource extends Resource
 
             ]),
 
-            SC\Tabs\Tab::make('Harta Locuri')
+            SC\Tabs\Tab::make(__('Harta Locuri'))
                 ->key('harta')
                 ->icon('heroicon-o-map')
                 ->visible(fn (SGet $get) => (bool) $get('seating_layout_id'))
@@ -1521,16 +1521,16 @@ class EventResource extends Resource
                         ->multiple()
                         ->dehydrated(false)
                         ->options([
-                            'core'        => 'Core (title/description/canonical/robots)',
-                            'intl'        => 'International (hreflang, og:locale)',
+                            'core'        => __('Core (title/description/canonical/robots)'),
+                            'intl'        => __('International (hreflang, og:locale)'),
                             'open_graph'  => 'Open Graph (og:*)',
-                            'article'     => 'OG Article extras',
-                            'product'     => 'OG Product extras',
-                            'twitter'     => 'Twitter Cards',
-                            'jsonld'      => 'Structured Data (JSON-LD)',
-                            'robots_adv'  => 'Robots advanced',
-                            'verify'      => 'Verification (Google/Bing/etc.)',
-                            'feeds'       => 'Feeds (RSS/Atom/oEmbed)',
+                            'article'     => __('OG Article extras'),
+                            'product'     => __('OG Product extras'),
+                            'twitter'     => __('Twitter Cards'),
+                            'jsonld'      => __('Structured Data (JSON-LD)'),
+                            'robots_adv'  => __('Robots advanced'),
+                            'verify'      => __('Verification (Google/Bing/etc.)'),
+                            'feeds'       => __('Feeds (RSS/Atom/oEmbed)'),
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Select templates to add keys. Values will be pre-filled from event data where available.')
                         ->live()

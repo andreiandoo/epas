@@ -85,7 +85,7 @@ class FestivalEditionResource extends Resource
                             ->required()
                             ->default(date('Y')),
                         Forms\Components\TextInput::make('edition_number')
-                            ->label('Numar editie')
+                            ->label(__('Numar editie'))
                             ->numeric(),
                         Forms\Components\DatePicker::make('start_date')
                             ->label('Data inceput')
@@ -96,7 +96,7 @@ class FestivalEditionResource extends Resource
                         Forms\Components\Select::make('status')
                             ->options([
                                 'draft'     => 'Draft',
-                                'announced' => 'Anuntat',
+                                'announced' => __('Anuntat'),
                                 'active'    => 'Activ',
                                 'completed' => 'Finalizat',
                                 'cancelled' => 'Anulat',
@@ -114,9 +114,9 @@ class FestivalEditionResource extends Resource
                         Forms\Components\Select::make('cashless_mode')
                             ->label('Mod cashless')
                             ->options([
-                                'nfc'    => 'NFC (Bratara cu cip)',
-                                'qr'     => 'QR Code',
-                                'hybrid' => 'Hybrid (NFC + QR)',
+                                'nfc'    => __('NFC (Bratara cu cip)'),
+                                'qr'     => __('QR Code'),
+                                'hybrid' => __('Hybrid (NFC + QR)'),
                             ])
                             ->default('nfc'),
                     ])->columns(2),
@@ -138,11 +138,11 @@ class FestivalEditionResource extends Resource
                     ->label('Editia')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('start_date')
-                    ->label('Inceput')
+                    ->label(__('Inceput'))
                     ->date('d.m.Y')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('end_date')
-                    ->label('Sfarsit')
+                    ->label(__('Sfarsit'))
                     ->date('d.m.Y')
                     ->sortable(),
                 Tables\Columns\BadgeColumn::make('status')
@@ -164,7 +164,7 @@ class FestivalEditionResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'draft'     => 'Draft',
-                        'announced' => 'Anuntat',
+                        'announced' => __('Anuntat'),
                         'active'    => 'Activ',
                         'completed' => 'Finalizat',
                         'cancelled' => 'Anulat',

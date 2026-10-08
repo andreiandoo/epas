@@ -73,7 +73,7 @@ class TenantTaxRegistryResource extends Resource
             SC\Section::make('Facturare')
                 ->columns(2)
                 ->schema([
-                    Forms\Components\TextInput::make('invoice_series')->label('Serie facturi')->placeholder('ex: AQUA, ROL'),
+                    Forms\Components\TextInput::make('invoice_series')->label('Serie facturi')->placeholder(__('ex: AQUA, ROL')),
                     Forms\Components\TextInput::make('invoice_next_number')
                         ->label('Următorul număr')
                         ->numeric()->default(1),

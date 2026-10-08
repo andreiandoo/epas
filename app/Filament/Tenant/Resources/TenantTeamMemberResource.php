@@ -91,7 +91,7 @@ class TenantTeamMemberResource extends Resource
                         ->options([
                             'admin' => 'Administrator',
                             'manager' => 'Manager',
-                            'staff' => 'Operator (staff)',
+                            'staff' => __('Operator (staff)'),
                         ])
                         ->default('staff')
                         ->required()
@@ -104,10 +104,10 @@ class TenantTeamMemberResource extends Resource
                         ->helperText('Determină ce ecrane vede operatorul în /operator.'),
 
                     Forms\Components\CheckboxList::make('permissions')
-                        ->label('Permisiuni fine')
+                        ->label(__('Permisiuni fine'))
                         ->options([
                             'orders.view' => 'Vede comenzi',
-                            'orders.refund' => 'Refund comenzi',
+                            'orders.refund' => __('Refund comenzi'),
                             'tickets.scan' => 'Scanare bilete (check-in)',
                             'rentals.start' => 'Start rental',
                             'rentals.end' => 'Finalizare rental',
@@ -120,11 +120,11 @@ class TenantTeamMemberResource extends Resource
                             'reports.view' => 'Vede rapoarte',
                         ])
                         ->columns(2)
-                        ->helperText('Bypassed de role=admin sau leisure_role=admin.')
+                        ->helperText(__('Bypassed de role=admin sau leisure_role=admin.'))
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('status')
-                        ->label('Status')
+                        ->label(__('Status'))
                         ->options([
                             'pending' => 'Pending (invitație trimisă)',
                             'active' => 'Activ',

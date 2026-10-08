@@ -65,8 +65,8 @@ class ThemeEditor extends Page implements HasForms
         if (!$tenant->hasMicroservice(self::MICROSERVICE_SLUG)) {
             Notification::make()
                 ->warning()
-                ->title('Feature not available')
-                ->body('Please purchase the Website Visual Editor to access this feature.')
+                ->title(__('Feature not available'))
+                ->body(__('Please purchase the Website Visual Editor to access this feature.'))
                 ->persistent()
                 ->send();
 
@@ -96,11 +96,11 @@ class ThemeEditor extends Page implements HasForms
             ->schema([
                 SC\Tabs::make('Theme Settings')
                     ->tabs([
-                        SC\Tabs\Tab::make('Colors')
+                        SC\Tabs\Tab::make(__('Colors'))
                             ->icon('heroicon-o-swatch')
                             ->schema([
-                                SC\Section::make('Brand Colors')
-                                    ->description('Define your brand\'s primary and secondary colors')
+                                SC\Section::make(__('Brand Colors'))
+                                    ->description(__('Define your brand\'s primary and secondary colors'))
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.primary')
                                             ->label('Primary Color')
@@ -108,7 +108,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.primaryDark')
-                                            ->label('Primary Dark')
+                                            ->label(__('Primary Dark'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
@@ -118,100 +118,100 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.secondaryDark')
-                                            ->label('Secondary Dark')
+                                            ->label(__('Secondary Dark'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.accent')
-                                            ->label('Accent Color')
+                                            ->label(__('Accent Color'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
 
-                                SC\Section::make('Background Colors')
+                                SC\Section::make(__('Background Colors'))
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.background')
-                                            ->label('Main Background')
+                                            ->label(__('Main Background'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.backgroundAlt')
-                                            ->label('Alternate Background')
+                                            ->label(__('Alternate Background'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.surface')
-                                            ->label('Surface (Cards)')
+                                            ->label(__('Surface (Cards)'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
 
-                                SC\Section::make('Text Colors')
+                                SC\Section::make(__('Text Colors'))
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.text')
-                                            ->label('Main Text')
+                                            ->label(__('Main Text'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.textMuted')
-                                            ->label('Muted Text')
+                                            ->label(__('Muted Text'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.textOnPrimary')
-                                            ->label('Text on Primary')
+                                            ->label(__('Text on Primary'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.border')
-                                            ->label('Border Color')
+                                            ->label(__('Border Color'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(4),
 
-                                SC\Section::make('Status Colors')
+                                SC\Section::make(__('Status Colors'))
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.success')
-                                            ->label('Success')
+                                            ->label(__('Success'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.warning')
-                                            ->label('Warning')
+                                            ->label(__('Warning'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\ColorPicker::make('colors.error')
-                                            ->label('Error')
+                                            ->label(__('Error'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Typography')
+                        SC\Tabs\Tab::make(__('Typography'))
                             ->icon('heroicon-o-language')
                             ->schema([
-                                SC\Section::make('Font Families')
+                                SC\Section::make(__('Font Families'))
                                     ->schema([
                                         Forms\Components\Select::make('typography.fontFamily')
-                                            ->label('Body Font')
+                                            ->label(__('Body Font'))
                                             ->options(ThemeService::getFontOptions())
                                             ->searchable()
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('typography.fontFamilyHeading')
-                                            ->label('Heading Font')
+                                            ->label(__('Heading Font'))
                                             ->options(ThemeService::getFontOptions())
                                             ->searchable()
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(2),
 
-                                SC\Section::make('Base Typography')
+                                SC\Section::make(__('Base Typography'))
                                     ->schema([
                                         Forms\Components\Select::make('typography.baseFontSize')
-                                            ->label('Base Font Size')
+                                            ->label(__('Base Font Size'))
                                             ->options([
                                                 '14px' => '14px (Small)',
                                                 '15px' => '15px',
@@ -223,7 +223,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('typography.lineHeight')
-                                            ->label('Line Height')
+                                            ->label(__('Line Height'))
                                             ->options([
                                                 '1.4' => '1.4 (Compact)',
                                                 '1.5' => '1.5',
@@ -235,57 +235,57 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(2),
 
-                                SC\Section::make('Heading Sizes')
+                                SC\Section::make(__('Heading Sizes'))
                                     ->schema([
                                         SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('typography.headings.h1.size')
-                                                ->label('H1 Size')
+                                                ->label(__('H1 Size'))
                                                 ->placeholder('3rem'),
 
                                             Forms\Components\Select::make('typography.headings.h1.weight')
-                                                ->label('H1 Weight')
+                                                ->label(__('H1 Weight'))
                                                 ->options([
                                                     '400' => 'Normal',
-                                                    '500' => 'Medium',
-                                                    '600' => 'Semibold',
-                                                    '700' => 'Bold',
-                                                    '800' => 'Extra Bold',
+                                                    '500' => __('Medium'),
+                                                    '600' => __('Semibold'),
+                                                    '700' => __('Bold'),
+                                                    '800' => __('Extra Bold'),
                                                 ]),
 
                                             Forms\Components\TextInput::make('typography.headings.h1.lineHeight')
-                                                ->label('H1 Line Height')
+                                                ->label(__('H1 Line Height'))
                                                 ->placeholder('1.2'),
                                         ]),
 
                                         SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('typography.headings.h2.size')
-                                                ->label('H2 Size')
+                                                ->label(__('H2 Size'))
                                                 ->placeholder('2.25rem'),
 
                                             Forms\Components\Select::make('typography.headings.h2.weight')
-                                                ->label('H2 Weight')
+                                                ->label(__('H2 Weight'))
                                                 ->options([
                                                     '400' => 'Normal',
-                                                    '500' => 'Medium',
-                                                    '600' => 'Semibold',
-                                                    '700' => 'Bold',
-                                                    '800' => 'Extra Bold',
+                                                    '500' => __('Medium'),
+                                                    '600' => __('Semibold'),
+                                                    '700' => __('Bold'),
+                                                    '800' => __('Extra Bold'),
                                                 ]),
 
                                             Forms\Components\TextInput::make('typography.headings.h2.lineHeight')
-                                                ->label('H2 Line Height')
+                                                ->label(__('H2 Line Height'))
                                                 ->placeholder('1.3'),
                                         ]),
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Layout')
+                        SC\Tabs\Tab::make(__('Layout'))
                             ->icon('heroicon-o-squares-2x2')
                             ->schema([
-                                SC\Section::make('Spacing')
+                                SC\Section::make(__('Spacing'))
                                     ->schema([
                                         Forms\Components\Select::make('spacing.containerMaxWidth')
-                                            ->label('Container Max Width')
+                                            ->label(__('Container Max Width'))
                                             ->options([
                                                 '1024px' => '1024px (Narrow)',
                                                 '1152px' => '1152px',
@@ -296,7 +296,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('spacing.sectionPadding')
-                                            ->label('Section Padding')
+                                            ->label(__('Section Padding'))
                                             ->options([
                                                 '2rem' => '2rem (Compact)',
                                                 '3rem' => '3rem',
@@ -308,7 +308,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('spacing.cardPadding')
-                                            ->label('Card Padding')
+                                            ->label(__('Card Padding'))
                                             ->options([
                                                 '1rem' => '1rem',
                                                 '1.25rem' => '1.25rem',
@@ -319,54 +319,54 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
 
-                                SC\Section::make('Border Radius')
+                                SC\Section::make(__('Border Radius'))
                                     ->schema([
                                         Forms\Components\Select::make('borders.radius')
-                                            ->label('Default Radius')
+                                            ->label(__('Default Radius'))
                                             ->options([
                                                 '0' => 'None',
-                                                '0.25rem' => 'Small',
-                                                '0.5rem' => 'Medium (Default)',
-                                                '0.75rem' => 'Large',
-                                                '1rem' => 'Extra Large',
+                                                '0.25rem' => __('Small'),
+                                                '0.5rem' => __('Medium (Default)'),
+                                                '0.75rem' => __('Large'),
+                                                '1rem' => __('Extra Large'),
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('borders.radiusLarge')
-                                            ->label('Large Radius (Cards)')
+                                            ->label(__('Large Radius (Cards)'))
                                             ->options([
-                                                '0.5rem' => 'Medium',
-                                                '0.75rem' => 'Large',
-                                                '1rem' => 'Extra Large (Default)',
+                                                '0.5rem' => __('Medium'),
+                                                '0.75rem' => __('Large'),
+                                                '1rem' => __('Extra Large (Default)'),
                                                 '1.5rem' => '2X Large',
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('borders.radiusButton')
-                                            ->label('Button Radius')
+                                            ->label(__('Button Radius'))
                                             ->options([
-                                                '0' => 'None (Square)',
-                                                '0.25rem' => 'Small',
-                                                '0.5rem' => 'Medium (Default)',
-                                                '9999px' => 'Full (Pill)',
+                                                '0' => __('None (Square)'),
+                                                '0.25rem' => __('Small'),
+                                                '0.5rem' => __('Medium (Default)'),
+                                                '9999px' => __('Full (Pill)'),
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Header')
+                        SC\Tabs\Tab::make(__('Header'))
                             ->icon('heroicon-o-bars-3')
                             ->schema([
-                                SC\Section::make('Header Style')
+                                SC\Section::make(__('Header Style'))
                                     ->schema([
                                         Forms\Components\Select::make('header.style')
-                                            ->label('Header Style')
+                                            ->label(__('Header Style'))
                                             ->options([
-                                                'light' => 'Light Background',
-                                                'dark' => 'Dark Background',
+                                                'light' => __('Light Background'),
+                                                'dark' => __('Dark Background'),
                                                 'transparent' => 'Transparent',
                                                 'primary' => 'Primary Color',
                                             ])
@@ -374,57 +374,57 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Toggle::make('header.sticky')
-                                            ->label('Sticky Header')
-                                            ->helperText('Keep header visible when scrolling')
+                                            ->label(__('Sticky Header'))
+                                            ->helperText(__('Keep header visible when scrolling'))
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('header.height')
-                                            ->label('Header Height')
+                                            ->label(__('Header Height'))
                                             ->options([
                                                 '64px' => 'Compact (64px)',
-                                                '72px' => 'Default (72px)',
-                                                '80px' => 'Large (80px)',
+                                                '72px' => __('Default (72px)'),
+                                                '80px' => __('Large (80px)'),
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Buttons')
+                        SC\Tabs\Tab::make(__('Buttons'))
                             ->icon('heroicon-o-cursor-arrow-rays')
                             ->schema([
-                                SC\Section::make('Button Style')
+                                SC\Section::make(__('Button Style'))
                                     ->schema([
                                         Forms\Components\Select::make('buttons.paddingX')
-                                            ->label('Horizontal Padding')
+                                            ->label(__('Horizontal Padding'))
                                             ->options([
-                                                '1rem' => 'Small (1rem)',
-                                                '1.25rem' => 'Medium',
-                                                '1.5rem' => 'Default (1.5rem)',
-                                                '2rem' => 'Large (2rem)',
+                                                '1rem' => __('Small (1rem)'),
+                                                '1.25rem' => __('Medium'),
+                                                '1.5rem' => __('Default (1.5rem)'),
+                                                '2rem' => __('Large (2rem)'),
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('buttons.paddingY')
-                                            ->label('Vertical Padding')
+                                            ->label(__('Vertical Padding'))
                                             ->options([
-                                                '0.5rem' => 'Small',
-                                                '0.625rem' => 'Medium',
+                                                '0.5rem' => __('Small'),
+                                                '0.625rem' => __('Medium'),
                                                 '0.75rem' => 'Default',
-                                                '1rem' => 'Large',
+                                                '1rem' => __('Large'),
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
 
                                         Forms\Components\Select::make('buttons.fontWeight')
-                                            ->label('Font Weight')
+                                            ->label(__('Font Weight'))
                                             ->options([
                                                 '400' => 'Normal',
-                                                '500' => 'Medium',
-                                                '600' => 'Semibold (Default)',
-                                                '700' => 'Bold',
+                                                '500' => __('Medium'),
+                                                '600' => __('Semibold (Default)'),
+                                                '700' => __('Bold'),
                                             ])
                                             ->live()
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
@@ -451,8 +451,8 @@ class ThemeEditor extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Theme saved')
-            ->body('Your theme settings have been updated.')
+            ->title(__('Theme saved'))
+            ->body(__('Your theme settings have been updated.'))
             ->send();
     }
 
@@ -466,8 +466,8 @@ class ThemeEditor extends Page implements HasForms
 
         Notification::make()
             ->info()
-            ->title('Theme reset')
-            ->body('Theme has been reset to defaults. Click Save to apply.')
+            ->title(__('Theme reset'))
+            ->body(__('Theme has been reset to defaults. Click Save to apply.'))
             ->send();
     }
 

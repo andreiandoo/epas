@@ -56,10 +56,10 @@ class MerchandiseAllocationResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Alocare marfa catre vendor')
+                SC\Section::make(__('Alocare marfa catre vendor'))
                     ->schema([
                         Forms\Components\Select::make('festival_edition_id')
-                            ->label('Editie festival')
+                            ->label(__('Editie festival'))
                             ->relationship('edition', 'name', modifyQueryUsing: function (Builder $query) {
                                 $tenant = auth()->user()->tenant;
                                 return $query->where('tenant_id', $tenant?->id);
@@ -92,7 +92,7 @@ class MerchandiseAllocationResource extends Resource
                             ->searchable()
                             ->preload(),
                         Forms\Components\TextInput::make('quantity_allocated')
-                            ->label('Cantitate alocata')
+                            ->label(__('Cantitate alocata'))
                             ->numeric()
                             ->required()
                             ->minValue(0.001),
@@ -104,7 +104,7 @@ class MerchandiseAllocationResource extends Resource
                 SC\Section::make('Retur')
                     ->schema([
                         Forms\Components\TextInput::make('quantity_returned')
-                            ->label('Cantitate returnata')
+                            ->label(__('Cantitate returnata'))
                             ->numeric()
                             ->default(0)
                             ->minValue(0),
@@ -113,13 +113,13 @@ class MerchandiseAllocationResource extends Resource
                         Forms\Components\Select::make('status')
                             ->options([
                                 'allocated'      => 'Alocat',
-                                'partial_return'  => 'Retur partial',
+                                'partial_return'  => __('Retur partial'),
                                 'returned'        => 'Returnat complet',
                             ])
                             ->default('allocated')
                             ->required(),
                         Forms\Components\Textarea::make('notes')
-                            ->label('Observatii')
+                            ->label(__('Observatii'))
                             ->rows(2)
                             ->columnSpanFull(),
                     ])->columns(2),
@@ -131,7 +131,7 @@ class MerchandiseAllocationResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('edition.name')
-                    ->label('Editie')
+                    ->label(__('Editie'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('item.name')
                     ->label('Produs')
@@ -150,7 +150,7 @@ class MerchandiseAllocationResource extends Resource
                     ->formatStateUsing(fn ($state, $record) => rtrim(rtrim(number_format((float) $state, 2, '.', ''), '0'), '.') . ' ' . ($record->item?->unit ?? 'buc'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('outstanding')
-                    ->label('Ramas')
+                    ->label(__('Ramas'))
                     ->getStateUsing(fn ($record) => $record->quantityOutstanding() . ' ' . ($record->item?->unit ?? 'buc')),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
@@ -166,7 +166,7 @@ class MerchandiseAllocationResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('festival_edition_id')
-                    ->label('Editie')
+                    ->label(__('Editie'))
                     ->relationship('edition', 'name', modifyQueryUsing: function (Builder $query) {
                         $tenant = auth()->user()->tenant;
                         return $query->where('tenant_id', $tenant?->id);
@@ -180,14 +180,14 @@ class MerchandiseAllocationResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'allocated'      => 'Alocat',
-                        'partial_return'  => 'Retur partial',
+                        'partial_return'  => __('Retur partial'),
                         'returned'        => 'Returnat complet',
                     ]),
             ])
             ->actions([
                 Actions\EditAction::make(),
                 Actions\Action::make('markReturn')
-                    ->label('Marcheaza retur')
+                    ->label(__('Marcheaza retur'))
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('warning')
                     ->visible(fn ($record) => $record->status !== 'returned')
@@ -211,7 +211,7 @@ class MerchandiseAllocationResource extends Resource
                         $record->markReturned((float) $data['return_qty']);
 
                         Notification::make()
-                            ->title('Retur inregistrat')
+                            ->title(__('Retur inregistrat'))
                             ->success()
                             ->send();
                     }),

@@ -95,7 +95,7 @@ class TicketTypeResource extends Resource
                         Forms\Components\Select::make('service_category')
                             ->label('Categorie serviciu')
                             ->options([
-                                'access' => 'Bilet acces (principal)',
+                                'access' => __('Bilet acces (principal)'),
                                 'parking' => 'Parcare',
                                 'rental' => 'Rental (echipament)',
                                 'activity' => 'Activitate / Ghid',
@@ -103,7 +103,7 @@ class TicketTypeResource extends Resource
                                 'extra' => 'Extra',
                             ])
                             ->live()
-                            ->placeholder('access (implicit)'),
+                            ->placeholder(__('access (implicit)')),
                         Forms\Components\TextInput::make('service_duration_minutes')
                             ->label('Durată implicită (minute)')
                             ->numeric()
@@ -112,10 +112,10 @@ class TicketTypeResource extends Resource
                             ->helperText('Pentru rental/parking: durata pentru care e valabil biletul de bază.')
                             ->visible(fn (callable $get) => in_array($get('service_category'), ['rental', 'parking', 'activity'], true)),
                         Forms\Components\Toggle::make('is_subscription')
-                            ->label('Abonament sezonal')
+                            ->label(__('Abonament sezonal'))
                             ->helperText('Bilet valabil pe o perioadă (nu single-day).'),
                         Forms\Components\Toggle::make('is_entry_ticket')
-                            ->label('Bilet de acces principal')
+                            ->label(__('Bilet de acces principal'))
                             ->helperText('Activează dacă acesta e biletul de intrare (folosit pentru requires_access_ticket pe alte produse).'),
                         Forms\Components\DatePicker::make('valid_date')
                             ->label('Valabil doar în data')
@@ -147,7 +147,7 @@ class TicketTypeResource extends Resource
                             ->helperText('Gol = toate zilele.')
                             ->columnSpanFull(),
                         Forms\Components\TimePicker::make('leisure_schedule_open_time')
-                            ->label('Ora deschidere')
+                            ->label(__('Ora deschidere'))
                             ->seconds(false)
                             ->placeholder('09:00'),
                         Forms\Components\TimePicker::make('leisure_schedule_close_time')
@@ -157,7 +157,7 @@ class TicketTypeResource extends Resource
                         Forms\Components\TextInput::make('leisure_slot_duration_minutes')
                             ->label('Durată slot (minute)')
                             ->numeric()
-                            ->placeholder('ex: 60 pentru sloturi orare')
+                            ->placeholder(__('ex: 60 pentru sloturi orare'))
                             ->helperText('Pentru rental pe timp: cât durează un slot. Gol = capacitate zilnică simplă.')
                             ->columnSpanFull(),
                     ]),
@@ -177,7 +177,7 @@ class TicketTypeResource extends Resource
                                     ->required(),
                                 Forms\Components\TextInput::make('label')
                                     ->label('Etichetă afișată')
-                                    ->placeholder('ex: 30 min, 1h, 2h')
+                                    ->placeholder(__('ex: 30 min, 1h, 2h'))
                                     ->required(),
                                 Forms\Components\TextInput::make('price_multiplier')
                                     ->label('Multiplicator preț')
@@ -223,7 +223,7 @@ class TicketTypeResource extends Resource
                             ->schema([
                                 Forms\Components\TextInput::make('label')
                                     ->label('Etichetă internă')
-                                    ->placeholder('ex: Weekend +25%')
+                                    ->placeholder(__('ex: Weekend +25%'))
                                     ->required(),
                                 Forms\Components\CheckboxList::make('days')
                                     ->label('Zile aplicabile')
@@ -258,7 +258,7 @@ class TicketTypeResource extends Resource
                             ->defaultItems(0),
                     ]),
 
-                SC\Section::make('Leisure: Sezoane')
+                SC\Section::make(__('Leisure: Sezoane'))
                     ->description('Intervale calendaristice cu pricing diferit (ex: vară 1 iulie – 31 august).')
                     ->icon('heroicon-o-sun')
                     ->visible($isLeisureTenant)
@@ -301,7 +301,7 @@ class TicketTypeResource extends Resource
                             ->defaultItems(0),
                     ]),
 
-                SC\Section::make('Descriere produs & Termeni')
+                SC\Section::make(__('Descriere produs & Termeni'))
                     ->icon('heroicon-o-document-text')
                     ->visible($isLeisureTenant)
                     ->collapsed()
@@ -319,7 +319,7 @@ class TicketTypeResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
-                        SC\Section::make('Status')
+                        SC\Section::make(__('Status'))
                             ->schema([
                                 Forms\Components\Toggle::make('is_active')
                                     ->label('Activ')
@@ -372,7 +372,7 @@ class TicketTypeResource extends Resource
                                     ->numeric()
                                     ->suffix('cents'),
                                 Forms\Components\TextInput::make('channel_pricing.embed')
-                                    ->label('Embed')
+                                    ->label(__('Embed'))
                                     ->numeric()
                                     ->suffix('cents'),
                                 Forms\Components\TextInput::make('channel_pricing.partner_app')
@@ -396,7 +396,7 @@ class TicketTypeResource extends Resource
                                             ->mapWithKeys(fn ($r) => [$r->id => "{$r->company_name} ({$r->cui})"]);
                                     })
                                     ->placeholder('Implicită')
-                                    ->helperText('Gol = societatea default.'),
+                                    ->helperText(__('Gol = societatea default.')),
                             ]),
                     ]),
             ]),
@@ -408,7 +408,7 @@ class TicketTypeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('event.title')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->formatStateUsing(fn ($record) => $record->event?->getTranslation('title', app()->getLocale()) ?? '-')
                     ->searchable()
                     ->sortable(),
@@ -419,7 +419,7 @@ class TicketTypeResource extends Resource
                     ->money('EUR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('available_quantity')
-                    ->label('Available')
+                    ->label(__('Available'))
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),

@@ -84,29 +84,29 @@ class GroupBookingResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Group Information')
+                SC\Section::make(__('Group Information'))
                     ->schema([
                         Forms\Components\TextInput::make('group_name')
-                            ->label('Group Name')
+                            ->label(__('Group Name'))
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('e.g., Company Outing, School Trip'),
+                            ->placeholder(__('e.g., Company Outing, School Trip')),
 
                         Forms\Components\Select::make('group_type')
-                            ->label('Group Type')
+                            ->label(__('Group Type'))
                             ->options([
-                                'corporate' => 'Corporate / Business',
-                                'school' => 'School / Educational',
-                                'family' => 'Family & Friends',
-                                'club' => 'Club / Organization',
-                                'tour' => 'Tour Group',
-                                'other' => 'Other',
+                                'corporate' => __('Corporate / Business'),
+                                'school' => __('School / Educational'),
+                                'family' => __('Family & Friends'),
+                                'club' => __('Club / Organization'),
+                                'tour' => __('Tour Group'),
+                                'other' => __('Other'),
                             ])
                             ->default('corporate')
                             ->required(),
 
                         Forms\Components\Select::make('event_id')
-                            ->label('Event')
+                            ->label(__('Event'))
                             ->options(function () use ($tenant) {
                                 $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
                                 return Event::where('tenant_id', $tenant?->id)
@@ -124,7 +124,7 @@ class GroupBookingResource extends Resource
                             ->required(),
 
                         Forms\Components\Select::make('organizer_customer_id')
-                            ->label('Group Organizer')
+                            ->label(__('Group Organizer'))
                             ->options(function () use ($tenant) {
                                 return Customer::where('tenant_id', $tenant?->id)
                                     ->get()
@@ -135,10 +135,10 @@ class GroupBookingResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Contact person for this group'),
                     ])->columns(2),
 
-                SC\Section::make('Tickets & Pricing')
+                SC\Section::make(__('Tickets & Pricing'))
                     ->schema([
                         Forms\Components\TextInput::make('total_tickets')
-                            ->label('Total Tickets')
+                            ->label(__('Total Tickets'))
                             ->numeric()
                             ->required()
                             ->minValue(2)
@@ -146,13 +146,13 @@ class GroupBookingResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Minimum 2 tickets for group booking'),
 
                         Forms\Components\TextInput::make('total_amount')
-                            ->label('Total Amount')
+                            ->label(__('Total Amount'))
                             ->numeric()
                             ->prefix('€')
                             ->required(),
 
                         Forms\Components\TextInput::make('discount_percentage')
-                            ->label('Discount %')
+                            ->label(__('Discount %'))
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(100)
@@ -168,18 +168,18 @@ class GroupBookingResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('discount_amount')
-                            ->label('Discount Amount')
+                            ->label(__('Discount Amount'))
                             ->numeric()
                             ->prefix('€')
                             ->default(0),
                     ])->columns(4),
 
-                SC\Section::make('Status & Payment')
+                SC\Section::make(__('Status & Payment'))
                     ->schema([
                         Forms\Components\Select::make('status')
                             ->options([
                                 'draft' => 'Draft',
-                                'pending' => 'Pending Confirmation',
+                                'pending' => __('Pending Confirmation'),
                                 'confirmed' => 'Confirmed',
                                 'paid' => 'Paid',
                                 'cancelled' => 'Cancelled',
@@ -188,26 +188,26 @@ class GroupBookingResource extends Resource
                             ->required(),
 
                         Forms\Components\Select::make('payment_type')
-                            ->label('Payment Method')
+                            ->label(__('Payment Method'))
                             ->options([
-                                'full' => 'Full Payment',
-                                'split' => 'Split Payment (members pay individually)',
-                                'invoice' => 'Invoice (for companies)',
+                                'full' => __('Full Payment'),
+                                'split' => __('Split Payment (members pay individually)'),
+                                'invoice' => __('Invoice (for companies)'),
                             ])
                             ->default('full'),
 
                         Forms\Components\DateTimePicker::make('deadline_at')
-                            ->label('Payment Deadline'),
+                            ->label(__('Payment Deadline')),
 
                         Forms\Components\DateTimePicker::make('confirmed_at')
-                            ->label('Confirmed At')
+                            ->label(__('Confirmed At'))
                             ->disabled(),
                     ])->columns(4),
 
-                SC\Section::make('Notes')
+                SC\Section::make(__('Notes'))
                     ->schema([
                         Forms\Components\Textarea::make('notes')
-                            ->label('Internal Notes')
+                            ->label(__('Internal Notes'))
                             ->rows(3)
                             ->columnSpanFull(),
                     ]),
@@ -219,19 +219,19 @@ class GroupBookingResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('group_name')
-                    ->label('Group')
+                    ->label(__('Group'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('event.title')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->searchable()
                     ->sortable()
                     ->limit(25),
 
                 Tables\Columns\BadgeColumn::make('group_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->colors([
                         'primary' => 'corporate',
                         'success' => 'school',
@@ -247,7 +247,7 @@ class GroupBookingResource extends Resource
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('final_amount')
-                    ->label('Amount')
+                    ->label(__('Amount'))
                     ->getStateUsing(fn ($record) => '€' . number_format($record->getFinalAmount(), 2))
                     ->sortable(query: fn ($query, $direction) => $query->orderByRaw('(total_amount - discount_amount) ' . $direction)),
 
@@ -261,11 +261,11 @@ class GroupBookingResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('organizer.full_name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('deadline_at')
-                    ->label('Deadline')
+                    ->label(__('Deadline'))
                     ->dateTime('M d, Y')
                     ->sortable()
                     ->toggleable(),
@@ -287,15 +287,15 @@ class GroupBookingResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('group_type')
                     ->options([
-                        'corporate' => 'Corporate',
-                        'school' => 'School',
-                        'family' => 'Family',
+                        'corporate' => __('Corporate'),
+                        'school' => __('School'),
+                        'family' => __('Family'),
                         'club' => 'Club',
-                        'tour' => 'Tour',
-                        'other' => 'Other',
+                        'tour' => __('Tour'),
+                        'other' => __('Other'),
                     ]),
                 Tables\Filters\SelectFilter::make('event_id')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->relationship('event', 'title')
                     ->searchable()
                     ->preload(),
@@ -304,7 +304,7 @@ class GroupBookingResource extends Resource
                 ViewAction::make(),
                 EditAction::make(),
                 Actions\Action::make('confirm')
-                    ->label('Confirm')
+                    ->label(__('Confirm'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => in_array($record->status, ['draft', 'pending']))
@@ -316,7 +316,7 @@ class GroupBookingResource extends Resource
                     })
                     ->requiresConfirmation(),
                 Actions\Action::make('mark_paid')
-                    ->label('Mark Paid')
+                    ->label(__('Mark Paid'))
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'confirmed')

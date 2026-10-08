@@ -74,7 +74,7 @@ class SeatingLayoutResource extends Resource
 
                     Forms\Components\TextInput::make('name')->label('Nume model hartă')->required()->maxLength(255)->columnSpan(1),
 
-                    Forms\Components\Select::make('status')->label('Status')
+                    Forms\Components\Select::make('status')->label(__('Status'))
                         ->options(['draft' => __('Draft'), 'published' => 'Publicat'])
                         ->default('draft')->required()->columnSpan(1),
 
@@ -99,7 +99,7 @@ class SeatingLayoutResource extends Resource
                 Tables\Columns\TextColumn::make('name')->label('Nume')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('venue.name')->label('Locație')
                     ->formatStateUsing(fn ($record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? $record->venue?->getTranslation('name', 'en') ?? '—'),
-                Tables\Columns\TextColumn::make('status')->label('Status')->badge()
+                Tables\Columns\TextColumn::make('status')->label(__('Status'))->badge()
                     ->color(fn ($state) => $state === 'published' ? 'success' : 'gray')
                     ->formatStateUsing(fn ($state) => $state === 'published' ? 'Publicat' : 'Draft'),
                 Tables\Columns\TextColumn::make('updated_at')->label('Modificat')->since()->sortable()->toggleable(),

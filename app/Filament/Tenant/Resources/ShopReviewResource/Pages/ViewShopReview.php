@@ -15,7 +15,7 @@ class ViewShopReview extends ViewRecord
         return [
             Actions\EditAction::make(),
             Actions\Action::make('approve')
-                ->label('Approve')
+                ->label(__('Approve'))
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->visible(fn () => $this->record->status !== 'approved')
@@ -25,7 +25,7 @@ class ViewShopReview extends ViewRecord
                     $this->record->product?->updateReviewStats();
                 }),
             Actions\Action::make('reject')
-                ->label('Reject')
+                ->label(__('Reject'))
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->visible(fn () => $this->record->status !== 'rejected')

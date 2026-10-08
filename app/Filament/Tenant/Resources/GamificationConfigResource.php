@@ -77,16 +77,16 @@ class GamificationConfigResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Point Value Configuration')
-                    ->description('Configure how points are valued and earned')
+                SC\Section::make(__('Point Value Configuration'))
+                    ->description(__('Configure how points are valued and earned'))
                     ->schema([
                         Forms\Components\TextInput::make('point_value')
-                            ->label('Point Value')
+                            ->label(__('Point Value'))
                             ->numeric()
                             ->step(0.01)
                             ->default(0.01)
                             ->required()
-                            ->helperText('How much is 1 point worth for redemption (e.g., 0.01 = 1 point = 0.01 RON)'),
+                            ->helperText(__('How much is 1 point worth for redemption (e.g., 0.01 = 1 point = 0.01 RON)')),
 
                         Forms\Components\Select::make('currency')
                             ->options([
@@ -99,136 +99,136 @@ class GamificationConfigResource extends Resource
                             ->required(),
 
                         Forms\Components\TextInput::make('earn_percentage')
-                            ->label('Earn Percentage')
+                            ->label(__('Earn Percentage'))
                             ->numeric()
                             ->suffix('%')
                             ->default(5.00)
-                            ->helperText('Percentage of order value converted to points'),
+                            ->helperText(__('Percentage of order value converted to points')),
 
                         Forms\Components\Toggle::make('earn_on_subtotal')
-                            ->label('Earn on Subtotal')
+                            ->label(__('Earn on Subtotal'))
                             ->default(true)
-                            ->helperText('Calculate points based on subtotal (vs total with fees)'),
+                            ->helperText(__('Calculate points based on subtotal (vs total with fees)')),
 
                         Forms\Components\TextInput::make('min_order_for_earning')
-                            ->label('Minimum Order')
+                            ->label(__('Minimum Order'))
                             ->numeric()
                             ->step(0.01)
                             ->default(0)
-                            ->helperText('Minimum order value to earn points (e.g., 10.00)'),
+                            ->helperText(__('Minimum order value to earn points (e.g., 10.00)')),
                     ])->columns(3),
 
-                SC\Section::make('Redemption Settings')
-                    ->description('Configure how points can be redeemed')
+                SC\Section::make(__('Redemption Settings'))
+                    ->description(__('Configure how points can be redeemed'))
                     ->schema([
                         Forms\Components\TextInput::make('min_redeem_points')
-                            ->label('Minimum Points to Redeem')
+                            ->label(__('Minimum Points to Redeem'))
                             ->numeric()
                             ->default(100)
                             ->required(),
 
                         Forms\Components\TextInput::make('max_redeem_percentage')
-                            ->label('Max Redemption (%)')
+                            ->label(__('Max Redemption (%)'))
                             ->numeric()
                             ->suffix('%')
                             ->default(50.00)
-                            ->helperText('Maximum percentage of order that can be paid with points'),
+                            ->helperText(__('Maximum percentage of order that can be paid with points')),
 
                         Forms\Components\TextInput::make('max_redeem_points_per_order')
-                            ->label('Max Points Per Order')
+                            ->label(__('Max Points Per Order'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Leave empty for no limit'),
+                            ->helperText(__('Leave empty for no limit')),
                     ])->columns(3),
 
-                SC\Section::make('Bonus Points')
-                    ->description('Configure bonus points for special actions')
+                SC\Section::make(__('Bonus Points'))
+                    ->description(__('Configure bonus points for special actions'))
                     ->schema([
                         Forms\Components\TextInput::make('birthday_bonus_points')
-                            ->label('Birthday Bonus')
+                            ->label(__('Birthday Bonus'))
                             ->numeric()
                             ->default(100),
 
                         Forms\Components\TextInput::make('signup_bonus_points')
-                            ->label('Signup Bonus')
+                            ->label(__('Signup Bonus'))
                             ->numeric()
                             ->default(50),
 
                         Forms\Components\TextInput::make('referral_bonus_points')
-                            ->label('Referral Bonus (Referrer)')
+                            ->label(__('Referral Bonus (Referrer)'))
                             ->numeric()
                             ->default(200)
-                            ->helperText('Points awarded to the person who refers'),
+                            ->helperText(__('Points awarded to the person who refers')),
 
                         Forms\Components\TextInput::make('referred_bonus_points')
-                            ->label('Referral Bonus (Referred)')
+                            ->label(__('Referral Bonus (Referred)'))
                             ->numeric()
                             ->default(100)
-                            ->helperText('Points awarded to the new customer'),
+                            ->helperText(__('Points awarded to the new customer')),
                     ])->columns(4),
 
-                SC\Section::make('Expiration Settings')
+                SC\Section::make(__('Expiration Settings'))
                     ->schema([
                         Forms\Components\TextInput::make('points_expire_days')
-                            ->label('Points Expire After (days)')
+                            ->label(__('Points Expire After (days)'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Leave empty if points never expire'),
+                            ->helperText(__('Leave empty if points never expire')),
 
                         Forms\Components\Toggle::make('expire_on_inactivity')
-                            ->label('Expire on Inactivity')
+                            ->label(__('Expire on Inactivity'))
                             ->default(false),
 
                         Forms\Components\TextInput::make('inactivity_days')
-                            ->label('Inactivity Period (days)')
+                            ->label(__('Inactivity Period (days)'))
                             ->numeric()
                             ->default(365)
                             ->visible(fn (callable $get) => $get('expire_on_inactivity')),
                     ])->columns(3),
 
-                SC\Section::make('Display Settings')
+                SC\Section::make(__('Display Settings'))
                     ->schema([
                         Forms\Components\TextInput::make('points_name')
-                            ->label('Points Name (plural)')
+                            ->label(__('Points Name (plural)'))
                             ->default('puncte')
                             ->required(),
 
                         Forms\Components\TextInput::make('points_name_singular')
-                            ->label('Points Name (singular)')
+                            ->label(__('Points Name (singular)'))
                             ->default('punct')
                             ->required(),
 
                         Forms\Components\Select::make('icon')
                             ->options([
-                                'star' => 'Star',
-                                'sparkles' => 'Sparkles',
-                                'gift' => 'Gift',
-                                'currency-dollar' => 'Dollar',
-                                'trophy' => 'Trophy',
-                                'heart' => 'Heart',
+                                'star' => __('Star'),
+                                'sparkles' => __('Sparkles'),
+                                'gift' => __('Gift'),
+                                'currency-dollar' => __('Dollar'),
+                                'trophy' => __('Trophy'),
+                                'heart' => __('Heart'),
                             ])
                             ->default('star'),
                     ])->columns(3),
 
-                SC\Section::make('Customer Tiers')
-                    ->description('Define customer loyalty tiers (optional)')
+                SC\Section::make(__('Customer Tiers'))
+                    ->description(__('Define customer loyalty tiers (optional)'))
                     ->schema([
                         Forms\Components\Repeater::make('tiers')
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Tier Name')
+                                    ->label(__('Tier Name'))
                                     ->required(),
                                 Forms\Components\TextInput::make('min_points')
-                                    ->label('Minimum Points')
+                                    ->label(__('Minimum Points'))
                                     ->numeric()
                                     ->required(),
                                 Forms\Components\TextInput::make('multiplier')
-                                    ->label('Points Multiplier')
+                                    ->label(__('Points Multiplier'))
                                     ->numeric()
                                     ->default(1.0)
-                                    ->helperText('e.g., 1.5 for 50% bonus'),
+                                    ->helperText(__('e.g., 1.5 for 50% bonus')),
                                 Forms\Components\TextInput::make('color')
-                                    ->label('Badge Color')
+                                    ->label(__('Badge Color'))
                                     ->default('#6366f1'),
                             ])
                             ->columns(4)
@@ -252,28 +252,28 @@ class GamificationConfigResource extends Resource
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('earn_percentage')
-                    ->label('Earn %')
+                    ->label(__('Earn %'))
                     ->suffix('%'),
 
                 Tables\Columns\TextColumn::make('point_value')
-                    ->label('Point Value')
+                    ->label(__('Point Value'))
                     ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . ($record->currency ?? 'RON')),
 
                 Tables\Columns\TextColumn::make('min_redeem_points')
-                    ->label('Min Redeem'),
+                    ->label(__('Min Redeem')),
 
                 Tables\Columns\TextColumn::make('max_redeem_percentage')
-                    ->label('Max Redeem %')
+                    ->label(__('Max Redeem %'))
                     ->suffix('%'),
 
                 Tables\Columns\TextColumn::make('birthday_bonus_points')
-                    ->label('Birthday'),
+                    ->label(__('Birthday')),
 
                 Tables\Columns\TextColumn::make('referral_bonus_points')
-                    ->label('Referral'),
+                    ->label(__('Referral')),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Updated')
+                    ->label(__('Last Updated'))
                     ->dateTime()
                     ->sortable(),
             ])

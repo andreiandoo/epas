@@ -58,28 +58,28 @@ class RefundResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('sale.sale_number')->label('Sale #')->searchable(),
+                Tables\Columns\TextColumn::make('sale.sale_number')->label(__('Sale #'))->searchable(),
                 Tables\Columns\BadgeColumn::make('refund_type')
                     ->colors(['primary' => 'full', 'warning' => 'partial', 'gray' => 'auto', 'info' => 'compensation']),
-                Tables\Columns\TextColumn::make('total_refund_cents')->label('Amount')
+                Tables\Columns\TextColumn::make('total_refund_cents')->label(__('Amount'))
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2) . ' RON'),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors(['warning' => 'pending', 'success' => 'processed', 'danger' => 'rejected', 'info' => 'approved']),
                 Tables\Columns\TextColumn::make('reason')->limit(40)->tooltip(fn ($record) => $record->reason),
-                Tables\Columns\TextColumn::make('requestedBy.name')->label('Requested By'),
-                Tables\Columns\TextColumn::make('approvedBy.name')->label('Approved By')->placeholder('-'),
+                Tables\Columns\TextColumn::make('requestedBy.name')->label(__('Requested By')),
+                Tables\Columns\TextColumn::make('approvedBy.name')->label(__('Approved By'))->placeholder('-'),
                 Tables\Columns\TextColumn::make('requested_at')->dateTime('d M H:i')->sortable(),
                 Tables\Columns\TextColumn::make('vendor.name')->label('Vendor')->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options(['pending' => 'Pending', 'approved' => 'Approved', 'processed' => 'Processed', 'rejected' => 'Rejected']),
+                    ->options(['pending' => 'Pending', 'approved' => __('Approved'), 'processed' => __('Processed'), 'rejected' => 'Rejected']),
                 Tables\Filters\SelectFilter::make('refund_type')
-                    ->options(['full' => 'Full', 'partial' => 'Partial', 'auto' => 'Auto', 'compensation' => 'Compensation']),
+                    ->options(['full' => __('Full'), 'partial' => __('Partial'), 'auto' => __('Auto'), 'compensation' => 'Compensation']),
             ])
             ->actions([
                 Actions\Action::make('approve')
-                    ->label('Approve & Process')
+                    ->label(__('Approve & Process'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->isPending())
@@ -87,13 +87,13 @@ class RefundResource extends Resource
                     ->action(function ($record) {
                         try {
                             app(RefundService::class)->approveAndProcess($record, auth()->id());
-                            Notification::make()->title('Refund processed')->success()->send();
+                            Notification::make()->title(__('Refund processed'))->success()->send();
                         } catch (\Throwable $e) {
                             Notification::make()->title($e->getMessage())->danger()->send();
                         }
                     }),
                 Actions\Action::make('reject')
-                    ->label('Reject')
+                    ->label(__('Reject'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn ($record) => $record->isPending())
@@ -103,7 +103,7 @@ class RefundResource extends Resource
                     ])
                     ->action(function ($record, array $data) {
                         app(RefundService::class)->reject($record, $data['rejection_reason'], auth()->id());
-                        Notification::make()->title('Refund rejected')->warning()->send();
+                        Notification::make()->title(__('Refund rejected'))->warning()->send();
                     }),
             ])
             ->defaultSort('requested_at', 'desc');

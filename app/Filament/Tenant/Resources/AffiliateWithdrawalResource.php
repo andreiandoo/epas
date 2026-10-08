@@ -100,37 +100,37 @@ class AffiliateWithdrawalResource extends Resource
     {
         return $schema
             ->schema([
-                SC\Section::make('Withdrawal Details')
+                SC\Section::make(__('Withdrawal Details'))
                     ->schema([
                         Forms\Components\TextInput::make('reference')
-                            ->label('Reference')
+                            ->label(__('Reference'))
                             ->disabled(),
 
                         Forms\Components\TextInput::make('amount')
-                            ->label('Amount')
+                            ->label(__('Amount'))
                             ->disabled()
                             ->prefix(fn ($record) => $record?->currency ?? 'RON'),
 
                         Forms\Components\Select::make('status')
                             ->options([
                                 'pending' => 'Pending',
-                                'processing' => 'Processing',
-                                'completed' => 'Completed',
-                                'rejected' => 'Rejected',
+                                'processing' => __('Processing'),
+                                'completed' => __('Completed'),
+                                'rejected' => __('Rejected'),
                             ])
                             ->required(),
 
                         Forms\Components\TextInput::make('transaction_id')
-                            ->label('Transaction ID')
-                            ->placeholder('External payment reference')
-                            ->helperText('Reference from bank/PayPal/etc.'),
+                            ->label(__('Transaction ID'))
+                            ->placeholder(__('External payment reference'))
+                            ->helperText(__('Reference from bank/PayPal/etc.')),
                     ])
                     ->columns(2),
 
-                SC\Section::make('Affiliate Information')
+                SC\Section::make(__('Affiliate Information'))
                     ->schema([
                         Forms\Components\Placeholder::make('affiliate_name')
-                            ->label('Affiliate')
+                            ->label(__('Affiliate'))
                             ->content(fn ($record) => $record?->affiliate?->name ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('affiliate_email')
@@ -138,24 +138,24 @@ class AffiliateWithdrawalResource extends Resource
                             ->content(fn ($record) => $record?->affiliate?->contact_email ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('payment_method')
-                            ->label('Payment Method')
+                            ->label(__('Payment Method'))
                             ->content(fn ($record) => $record?->getPaymentMethodLabel() ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('payment_details_display')
-                            ->label('Payment Details')
+                            ->label(__('Payment Details'))
                             ->content(fn ($record) => $record?->getFormattedPaymentDetails() ?? 'N/A'),
                     ])
                     ->columns(2),
 
-                SC\Section::make('Admin Notes')
+                SC\Section::make(__('Admin Notes'))
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
-                            ->label('Notes')
+                            ->label(__('Notes'))
                             ->rows(3)
-                            ->placeholder('Internal notes about this withdrawal...'),
+                            ->placeholder(__('Internal notes about this withdrawal...')),
 
                         Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Rejection Reason')
+                            ->label(__('Rejection Reason'))
                             ->rows(2)
                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('status') === 'rejected')
                             ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('status') === 'rejected'),
@@ -168,14 +168,14 @@ class AffiliateWithdrawalResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('reference')
-                    ->label('Reference')
+                    ->label(__('Reference'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('affiliate.name')
-                    ->label('Affiliate')
+                    ->label(__('Affiliate'))
                     ->searchable()
                     ->sortable(),
 
@@ -185,18 +185,18 @@ class AffiliateWithdrawalResource extends Resource
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('amount')
-                    ->label('Amount')
+                    ->label(__('Amount'))
                     ->money(fn ($record) => $record->currency ?? 'RON')
                     ->sortable()
                     ->color('success'),
 
                 Tables\Columns\TextColumn::make('payment_method')
-                    ->label('Payment')
+                    ->label(__('Payment'))
                     ->formatStateUsing(fn ($record) => $record->getPaymentMethodLabel())
                     ->toggleable(),
 
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'warning' => 'pending',
                         'info' => 'processing',
@@ -206,12 +206,12 @@ class AffiliateWithdrawalResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Requested')
+                    ->label(__('Requested'))
                     ->dateTime()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('processed_at')
-                    ->label('Processed')
+                    ->label(__('Processed'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -220,9 +220,9 @@ class AffiliateWithdrawalResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
-                        'processing' => 'Processing',
-                        'completed' => 'Completed',
-                        'rejected' => 'Rejected',
+                        'processing' => __('Processing'),
+                        'completed' => __('Completed'),
+                        'rejected' => __('Rejected'),
                         'cancelled' => 'Cancelled',
                     ]),
 
@@ -231,7 +231,7 @@ class AffiliateWithdrawalResource extends Resource
 
                 Tables\Filters\SelectFilter::make('payment_method')
                     ->options([
-                        'bank_transfer' => 'Bank Transfer',
+                        'bank_transfer' => __('Bank Transfer'),
                         'paypal' => 'PayPal',
                         'revolut' => 'Revolut',
                         'wise' => 'Wise',
@@ -239,65 +239,65 @@ class AffiliateWithdrawalResource extends Resource
             ])
             ->actions([
                 Action::make('approve')
-                    ->label('Approve')
+                    ->label(__('Approve'))
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'pending')
                     ->requiresConfirmation()
-                    ->modalHeading('Approve Withdrawal')
-                    ->modalDescription('Mark this withdrawal as processing. You will need to manually process the payment.')
+                    ->modalHeading(__('Approve Withdrawal'))
+                    ->modalDescription(__('Mark this withdrawal as processing. You will need to manually process the payment.'))
                     ->action(function ($record) {
                         $record->markAsProcessing(auth()->id());
                         Notification::make()
                             ->success()
-                            ->title('Withdrawal approved')
-                            ->body('The withdrawal has been marked as processing.')
+                            ->title(__('Withdrawal approved'))
+                            ->body(__('The withdrawal has been marked as processing.'))
                             ->send();
                     }),
 
                 Action::make('complete')
-                    ->label('Complete')
+                    ->label(__('Complete'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => in_array($record->status, ['pending', 'processing']))
                     ->form([
                         Forms\Components\TextInput::make('transaction_id')
-                            ->label('Transaction ID')
-                            ->placeholder('Payment reference from bank/PayPal'),
+                            ->label(__('Transaction ID'))
+                            ->placeholder(__('Payment reference from bank/PayPal')),
                         Forms\Components\Textarea::make('admin_notes')
-                            ->label('Notes')
+                            ->label(__('Notes'))
                             ->rows(2),
                     ])
                     ->action(function ($record, array $data) {
                         $record->markAsCompleted($data['transaction_id'] ?? null, $data['admin_notes'] ?? null);
                         Notification::make()
                             ->success()
-                            ->title('Withdrawal completed')
-                            ->body('The withdrawal has been marked as completed.')
+                            ->title(__('Withdrawal completed'))
+                            ->body(__('The withdrawal has been marked as completed.'))
                             ->send();
                     }),
 
                 Action::make('reject')
-                    ->label('Reject')
+                    ->label(__('Reject'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn ($record) => in_array($record->status, ['pending', 'processing']))
                     ->form([
                         Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Reason')
+                            ->label(__('Reason'))
                             ->required()
                             ->rows(3)
-                            ->placeholder('Explain why this withdrawal is being rejected...'),
+                            ->placeholder(__('Explain why this withdrawal is being rejected...')),
                     ])
                     ->requiresConfirmation()
-                    ->modalHeading('Reject Withdrawal')
-                    ->modalDescription('The withdrawal amount will be returned to the affiliate\'s available balance.')
+                    ->modalHeading(__('Reject Withdrawal'))
+                    ->modalDescription(__('The withdrawal amount will be returned to the affiliate\'s available balance.'))
                     ->action(function ($record, array $data) {
                         $record->reject($data['rejection_reason'], auth()->id());
                         Notification::make()
                             ->warning()
-                            ->title('Withdrawal rejected')
-                            ->body('The withdrawal has been rejected and the amount returned to the affiliate.')
+                            ->title(__('Withdrawal rejected'))
+                            ->body(__('The withdrawal has been rejected and the amount returned to the affiliate.'))
                             ->send();
                     }),
 
@@ -305,7 +305,7 @@ class AffiliateWithdrawalResource extends Resource
             ])
             ->bulkActions([
                 BulkAction::make('bulk_approve')
-                    ->label('Approve Selected')
+                    ->label(__('Approve Selected'))
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()

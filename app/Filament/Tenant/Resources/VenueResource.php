@@ -37,7 +37,7 @@ class VenueResource extends Resource
                 ->default($tenant?->id),
 
             // NAME & SLUG - EN/RO
-            SC\Section::make('Venue Identity')
+            SC\Section::make(__('Venue Identity'))
                 ->schema([
                     SC\Tabs::make('Name Translations')
                         ->persistTab()
@@ -56,7 +56,7 @@ class VenueResource extends Resource
                             SC\Tabs\Tab::make('English')
                                 ->schema([
                                     Forms\Components\TextInput::make('name.en')
-                                        ->label('Venue name (EN)')
+                                        ->label(__('Venue name (EN)'))
                                         ->maxLength(255),
                                 ]),
                         ])->columnSpanFull(),
@@ -74,14 +74,14 @@ class VenueResource extends Resource
             SC\Section::make('Media')
                 ->schema([
                     Forms\Components\FileUpload::make('image_url')
-                        ->label('Main image')
+                        ->label(__('Main image'))
                         ->image()
                         ->imagePreviewHeight('200')
                         ->disk('public')
                         ->directory('venues')
                         ->visibility('public'),
                     Forms\Components\FileUpload::make('gallery')
-                        ->label('Gallery')
+                        ->label(__('Gallery'))
                         ->image()
                         ->multiple()
                         ->directory('venues/gallery')
@@ -92,23 +92,23 @@ class VenueResource extends Resource
                     // Video field
                     SC\Grid::make(2)->schema([
                         Forms\Components\Select::make('video_type')
-                            ->label('Video Type')
+                            ->label(__('Video Type'))
                             ->options([
-                                'youtube' => 'YouTube Link',
-                                'upload' => 'Upload Video',
+                                'youtube' => __('YouTube Link'),
+                                'upload' => __('Upload Video'),
                             ])
-                            ->placeholder('No video')
+                            ->placeholder(__('No video'))
                             ->live()
                             ->nullable(),
                         Forms\Components\TextInput::make('video_url')
-                            ->label('YouTube URL')
+                            ->label(__('YouTube URL'))
                             ->url()
                             ->placeholder('https://www.youtube.com/watch?v=...')
                             ->prefixIcon('heroicon-o-play')
                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
                     ])->columnSpanFull(),
                     Forms\Components\FileUpload::make('video_url')
-                        ->label('Upload Video')
+                        ->label(__('Upload Video'))
                         ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
                         ->disk('public')
                         ->directory('venues/videos')
@@ -119,39 +119,39 @@ class VenueResource extends Resource
                 ])->columns(2),
 
             // LOCATION
-            SC\Section::make('Location')
+            SC\Section::make(__('Location'))
                 ->schema([
                     Forms\Components\TextInput::make('address')
                         ->label('Address')
                         ->maxLength(255)
-                        ->placeholder('Street and number'),
+                        ->placeholder(__('Street and number')),
                     // Canonical județ + localitate pickers (helpers) — pre-fill
                     // from / write into the free-text city/state fields below.
                     ...\App\Filament\Support\LocationSelectFields::make(),
                     Forms\Components\TextInput::make('city')
-                        ->label('City')
+                        ->label(__('City'))
                         ->maxLength(120)
                         ->placeholder('e.g. București'),
                     Forms\Components\TextInput::make('state')
-                        ->label('State/Region')
+                        ->label(__('State/Region'))
                         ->maxLength(120)
-                        ->placeholder('e.g. Ilfov'),
+                        ->placeholder(__('e.g. Ilfov')),
                     Forms\Components\TextInput::make('country')
-                        ->label('Country')
+                        ->label(__('Country'))
                         ->maxLength(120)
                         ->placeholder('e.g. RO'),
                     Forms\Components\TextInput::make('lat')
-                        ->label('Latitude')
+                        ->label(__('Latitude'))
                         ->numeric()
                         ->step('0.0000001')
                         ->placeholder('44.4268'),
                     Forms\Components\TextInput::make('lng')
-                        ->label('Longitude')
+                        ->label(__('Longitude'))
                         ->numeric()
                         ->step('0.0000001')
                         ->placeholder('26.1025'),
                     Forms\Components\TextInput::make('google_maps_url')
-                        ->label('Google Maps Link')
+                        ->label(__('Google Maps Link'))
                         ->url()
                         ->placeholder('https://maps.google.com/...')
                         ->prefixIcon('heroicon-o-map')
@@ -159,20 +159,20 @@ class VenueResource extends Resource
                 ])->columns(3),
 
             // CAPACITY
-            SC\Section::make('Capacity')
+            SC\Section::make(__('Capacity'))
                 ->schema([
                     Forms\Components\TextInput::make('capacity_total')
-                        ->label('Total capacity')
+                        ->label(__('Total capacity'))
                         ->numeric()
                         ->minValue(0)
                         ->placeholder('e.g. 12000'),
                     Forms\Components\TextInput::make('capacity_standing')
-                        ->label('Standing')
+                        ->label(__('Standing'))
                         ->numeric()
                         ->minValue(0)
                         ->placeholder('e.g. 8000'),
                     Forms\Components\TextInput::make('capacity_seated')
-                        ->label('Seated')
+                        ->label(__('Seated'))
                         ->numeric()
                         ->minValue(0)
                         ->placeholder('e.g. 4000'),
@@ -195,15 +195,15 @@ class VenueResource extends Resource
                 ]),
 
             // CONTACT & LINKS
-            SC\Section::make('Contact & Links')
+            SC\Section::make(__('Contact & Links'))
                 ->schema([
                     Forms\Components\TextInput::make('phone')
-                        ->label('Phone 1')
+                        ->label(__('Phone 1'))
                         ->maxLength(64)
                         ->placeholder('+40 ...')
                         ->prefixIcon('heroicon-o-phone'),
                     Forms\Components\TextInput::make('phone2')
-                        ->label('Phone 2')
+                        ->label(__('Phone 2'))
                         ->maxLength(64)
                         ->placeholder('+40 ...')
                         ->prefixIcon('heroicon-o-phone'),
@@ -218,7 +218,7 @@ class VenueResource extends Resource
                         ->placeholder('reservations@example.com')
                         ->prefixIcon('heroicon-o-envelope'),
                     Forms\Components\TextInput::make('website_url')
-                        ->label('Website')
+                        ->label(__('Website'))
                         ->url()
                         ->placeholder('https://...')
                         ->prefixIcon('heroicon-o-globe-alt'),
@@ -238,7 +238,7 @@ class VenueResource extends Resource
                         ->placeholder('https://tiktok.com/@...')
                         ->prefixIcon('heroicon-o-link'),
                     Forms\Components\DatePicker::make('established_at')
-                        ->label('Established')
+                        ->label(__('Established'))
                         ->native(false),
                 ])->columns(2),
 
@@ -257,7 +257,7 @@ class VenueResource extends Resource
                             SC\Tabs\Tab::make('English')
                                 ->schema([
                                     Forms\Components\RichEditor::make('description.en')
-                                        ->label('Description (EN)')
+                                        ->label(__('Description (EN)'))
                                         ->columnSpanFull(),
                                 ]),
                         ])->columnSpanFull(),

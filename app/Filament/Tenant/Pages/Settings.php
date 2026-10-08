@@ -145,8 +145,8 @@ class Settings extends Page
                                             ->maxLength(50),
 
                                         Forms\Components\Toggle::make('vat_payer')
-                                            ->label('Platitor TVA')
-                                            ->helperText('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.')
+                                            ->label(__('Platitor TVA'))
+                                            ->helperText(__('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.'))
                                             ->onColor('success')
                                             ->offColor('gray')
                                             ->live(),
@@ -182,10 +182,10 @@ class Settings extends Page
                                         Forms\Components\Select::make('currency')
                                             ->label(__('Currency'))
                                             ->options([
-                                                'RON' => 'RON - Romanian Leu',
-                                                'EUR' => 'EUR - Euro',
-                                                'USD' => 'USD - US Dollar',
-                                                'GBP' => 'GBP - British Pound',
+                                                'RON' => __('RON - Romanian Leu'),
+                                                'EUR' => __('EUR - Euro'),
+                                                'USD' => __('USD - US Dollar'),
+                                                'GBP' => __('GBP - British Pound'),
                                             ])
                                             ->default('EUR')
                                             ->required()
@@ -193,7 +193,7 @@ class Settings extends Page
 
                                         Forms\Components\TextInput::make('ticket_series_prefix')
                                             ->label('Prefix serie bilete')
-                                            ->placeholder('ex: TNB')
+                                            ->placeholder(__('ex: TNB'))
                                             ->maxLength(20)
                                             ->rule('alpha_dash')
                                             ->helperText('Prefixul folosit la seriile de bilete (ex: TNB-12-00001). Lasă gol pentru implicit.')
@@ -318,9 +318,9 @@ class Settings extends Page
                                             ->options([
                                                 'default' => __('Default'),
                                                 'modern' => 'Modern',
-                                                'sleek' => 'Sleek (Minimalist)',
-                                                'theater' => 'Theater (Dark)',
-                                                'pub' => 'Pub (Warm)',
+                                                'sleek' => __('Sleek (Minimalist)'),
+                                                'theater' => __('Theater (Dark)'),
+                                                'pub' => __('Pub (Warm)'),
                                             ])
                                             ->default('default'),
                                     ])->columns(3),
@@ -441,7 +441,7 @@ class Settings extends Page
                                             ->label(__('Mail Provider'))
                                             ->options([
                                                 '' => __('Use Platform Default'),
-                                                'smtp' => 'SMTP (Generic)',
+                                                'smtp' => __('SMTP (Generic)'),
                                                 'brevo' => 'Brevo (Sendinblue)',
                                                 'postmark' => 'Postmark',
                                                 'mailgun' => 'Mailgun',
@@ -890,8 +890,8 @@ class Settings extends Page
                 Forms\Components\Select::make('mail_region')
                     ->label(__('Region'))
                     ->options([
-                        'us' => 'US (api.mailgun.net)',
-                        'eu' => 'EU (api.eu.mailgun.net)',
+                        'us' => __('US (api.mailgun.net)'),
+                        'eu' => __('EU (api.eu.mailgun.net)'),
                     ])
                     ->default('us')
                     ->required()
@@ -981,14 +981,14 @@ class Settings extends Page
                 Forms\Components\Select::make('mail_region')
                     ->label(__('AWS Region'))
                     ->options([
-                        'us-east-1' => 'US East (N. Virginia)',
-                        'us-east-2' => 'US East (Ohio)',
-                        'us-west-1' => 'US West (N. California)',
-                        'us-west-2' => 'US West (Oregon)',
-                        'eu-west-1' => 'EU (Ireland)',
-                        'eu-west-2' => 'EU (London)',
-                        'eu-west-3' => 'EU (Paris)',
-                        'eu-central-1' => 'EU (Frankfurt)',
+                        'us-east-1' => __('US East (N. Virginia)'),
+                        'us-east-2' => __('US East (Ohio)'),
+                        'us-west-1' => __('US West (N. California)'),
+                        'us-west-2' => __('US West (Oregon)'),
+                        'eu-west-1' => __('EU (Ireland)'),
+                        'eu-west-2' => __('EU (London)'),
+                        'eu-west-3' => __('EU (Paris)'),
+                        'eu-central-1' => __('EU (Frankfurt)'),
                     ])
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SES region'),

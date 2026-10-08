@@ -44,7 +44,7 @@ class ListPhysicalResources extends ListRecords
                         ->helperText('Numele final = prefix + index începând de la "start_index".')
                         ->required(),
                     Forms\Components\TextInput::make('start_index')
-                        ->label('Index pornire')
+                        ->label(__('Index pornire'))
                         ->numeric()->default(1)->minValue(1)
                         ->required(),
                     Forms\Components\Select::make('status')

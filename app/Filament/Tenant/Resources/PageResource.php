@@ -60,14 +60,14 @@ class PageResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Page Details')
+                SC\Section::make(__('Page Details'))
                     ->schema([
                         SC\Tabs::make('Title')
                             ->tabs([
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('title.en')
-                                            ->label('Page Title (EN)')
+                                            ->label(__('Page Title (EN)'))
                                             ->required()
                                             ->maxLength(255)
                                             ->live(onBlur: true)
@@ -77,29 +77,29 @@ class PageResource extends Resource
                                                 }
                                             }),
                                     ]),
-                                SC\Tabs\Tab::make('Romanian')
+                                SC\Tabs\Tab::make(__('Romanian'))
                                     ->schema([
                                         Forms\Components\TextInput::make('title.ro')
-                                            ->label('Page Title (RO)')
+                                            ->label(__('Page Title (RO)'))
                                             ->maxLength(255),
                                     ]),
                             ])
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('URL Slug')
+                            ->label(__('URL Slug'))
                             ->required()
                             ->maxLength(255)
-                            ->helperText('The URL-friendly version of the title')
+                            ->helperText(__('The URL-friendly version of the title'))
                             ->unique(ignoreRecord: true, modifyRuleUsing: fn ($rule) => $rule->where('tenant_id', $tenant?->id)),
 
                         Forms\Components\Select::make('parent_id')
-                            ->label('Parent Page')
+                            ->label(__('Parent Page'))
                             ->relationship('parent', 'slug', modifyQueryUsing: fn (Builder $query) => $query->where('tenant_id', $tenant?->id))
                             ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('title', 'en') ?? $record->slug)
                             ->searchable()
                             ->preload()
-                            ->placeholder('None (Top Level)'),
+                            ->placeholder(__('None (Top Level)')),
                     ])->columns(2),
 
                 SC\Section::make('Content')
@@ -109,7 +109,7 @@ class PageResource extends Resource
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\RichEditor::make('content.en')
-                                            ->label('Page Content (EN)')
+                                            ->label(__('Page Content (EN)'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -127,10 +127,10 @@ class PageResource extends Resource
                                             ])
                                             ->columnSpanFull(),
                                     ]),
-                                SC\Tabs\Tab::make('Romanian')
+                                SC\Tabs\Tab::make(__('Romanian'))
                                     ->schema([
                                         Forms\Components\RichEditor::make('content.ro')
-                                            ->label('Page Content (RO)')
+                                            ->label(__('Page Content (RO)'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -152,28 +152,28 @@ class PageResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Publishing Options')
+                SC\Section::make(__('Publishing Options'))
                     ->schema([
                         Forms\Components\Select::make('menu_location')
-                            ->label('Menu Location')
+                            ->label(__('Menu Location'))
                             ->options([
-                                'header' => 'Header Menu',
-                                'footer' => 'Footer Menu',
-                                'none' => 'Do not show in menu',
+                                'header' => __('Header Menu'),
+                                'footer' => __('Footer Menu'),
+                                'none' => __('Do not show in menu'),
                             ])
                             ->default('footer')
                             ->required(),
 
                         Forms\Components\TextInput::make('menu_order')
-                            ->label('Menu Order')
+                            ->label(__('Menu Order'))
                             ->numeric()
                             ->default(0)
-                            ->helperText('Lower numbers appear first'),
+                            ->helperText(__('Lower numbers appear first')),
 
                         Forms\Components\Toggle::make('is_published')
-                            ->label('Published')
+                            ->label(__('Published'))
                             ->default(false)
-                            ->helperText('Only published pages are visible on your website'),
+                            ->helperText(__('Only published pages are visible on your website')),
                     ])->columns(3),
             ]);
     }
@@ -208,7 +208,7 @@ class PageResource extends Resource
 
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
-                    ->label('Published'),
+                    ->label(__('Published')),
 
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
@@ -218,12 +218,12 @@ class PageResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('menu_location')
                     ->options([
-                        'header' => 'Header Menu',
-                        'footer' => 'Footer Menu',
-                        'none' => 'Not in menu',
+                        'header' => __('Header Menu'),
+                        'footer' => __('Footer Menu'),
+                        'none' => __('Not in menu'),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_published')
-                    ->label('Published'),
+                    ->label(__('Published')),
             ])
             ->actions([])
             ->bulkActions([])

@@ -53,17 +53,17 @@ class PricingRuleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            \Filament\Schemas\Components\Section::make('Pricing Rule')->schema([
+            \Filament\Schemas\Components\Section::make(__('Pricing Rule'))->schema([
                 Forms\Components\TextInput::make('name')->required(),
-                Forms\Components\Select::make('festival_edition_id')->label('Edition')
+                Forms\Components\Select::make('festival_edition_id')->label(__('Edition'))
                     ->relationship('edition', 'name')->required(),
-                Forms\Components\Select::make('supplier_product_id')->label('Supplier Product')
+                Forms\Components\Select::make('supplier_product_id')->label(__('Supplier Product'))
                     ->relationship('supplierProduct', 'name')->nullable()->searchable(),
-                Forms\Components\Select::make('supplier_brand_id')->label('Supplier Brand')
+                Forms\Components\Select::make('supplier_brand_id')->label(__('Supplier Brand'))
                     ->relationship('supplierBrand', 'name')->nullable(),
                 Forms\Components\TextInput::make('product_category')->nullable(),
                 Forms\Components\TextInput::make('final_price_cents')->numeric()->required()
-                    ->label('Final Price (cents)')->helperText('e.g. 1049 = 10.49 RON'),
+                    ->label(__('Final Price (cents)'))->helperText(__('e.g. 1049 = 10.49 RON')),
                 Forms\Components\Toggle::make('is_mandatory')->default(true),
                 Forms\Components\Toggle::make('is_active')->default(true),
                 Forms\Components\DatePicker::make('valid_from'),
@@ -71,7 +71,7 @@ class PricingRuleResource extends Resource
                 Forms\Components\Textarea::make('notes')->rows(2),
             ])->columns(2),
 
-            \Filament\Schemas\Components\Section::make('Price Components')->schema([
+            \Filament\Schemas\Components\Section::make(__('Price Components'))->schema([
                 Forms\Components\Repeater::make('components')
                     ->relationship()
                     ->schema([
@@ -79,10 +79,10 @@ class PricingRuleResource extends Resource
                             ->options(collect(PricingComponentType::cases())->mapWithKeys(fn ($t) => [$t->value => $t->label()]))
                             ->required(),
                         Forms\Components\TextInput::make('label')->required(),
-                        Forms\Components\TextInput::make('amount_cents')->numeric()->label('Amount (cents)'),
-                        Forms\Components\TextInput::make('percentage')->numeric()->label('Percentage (%)'),
+                        Forms\Components\TextInput::make('amount_cents')->numeric()->label(__('Amount (cents)')),
+                        Forms\Components\TextInput::make('percentage')->numeric()->label(__('Percentage (%)')),
                         Forms\Components\Select::make('applies_on')
-                            ->options(['base_price' => 'Base Price', 'subtotal' => 'Subtotal']),
+                            ->options(['base_price' => __('Base Price'), 'subtotal' => 'Subtotal']),
                         Forms\Components\Toggle::make('is_included_in_final')->default(true),
                     ])
                     ->columns(3)
@@ -96,13 +96,13 @@ class PricingRuleResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('final_price_cents')->label('Final Price')
+                Tables\Columns\TextColumn::make('final_price_cents')->label(__('Final Price'))
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2) . ' RON'),
                 Tables\Columns\TextColumn::make('supplierProduct.name')->label('Product')->placeholder('-'),
                 Tables\Columns\TextColumn::make('supplierBrand.name')->label('Brand')->placeholder('-'),
                 Tables\Columns\IconColumn::make('is_mandatory')->boolean(),
                 Tables\Columns\IconColumn::make('is_active')->boolean(),
-                Tables\Columns\TextColumn::make('edition.name')->label('Edition'),
+                Tables\Columns\TextColumn::make('edition.name')->label(__('Edition')),
             ])
             ->actions([Actions\EditAction::make()])
             ->defaultSort('name');

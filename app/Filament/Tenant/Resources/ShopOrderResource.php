@@ -90,11 +90,11 @@ class ShopOrderResource extends Resource
                     ->columns(4)
                     ->schema([
                         Forms\Components\Placeholder::make('order_number')
-                            ->label('Order Number')
+                            ->label(__('Order Number'))
                             ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">#' . $record->order_number . '</span>')),
 
                         Forms\Components\Placeholder::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->status) {
                                 'pending_payment' => 'bg-warning-100 text-warning-700',
                                 'paid', 'confirmed' => 'bg-success-100 text-success-700',
@@ -106,7 +106,7 @@ class ShopOrderResource extends Resource
                             } . '">' . ucfirst(str_replace('_', ' ', $record->status)) . '</span>')),
 
                         Forms\Components\Placeholder::make('payment_status')
-                            ->label('Payment')
+                            ->label(__('Payment'))
                             ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->payment_status) {
                                 'paid' => 'bg-success-100 text-success-700',
                                 'pending' => 'bg-warning-100 text-warning-700',
@@ -116,7 +116,7 @@ class ShopOrderResource extends Resource
                             } . '">' . ucfirst($record->payment_status) . '</span>')),
 
                         Forms\Components\Placeholder::make('fulfillment_status')
-                            ->label('Fulfillment')
+                            ->label(__('Fulfillment'))
                             ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->fulfillment_status) {
                                 'fulfilled' => 'bg-success-100 text-success-700',
                                 'unfulfilled' => 'bg-warning-100 text-warning-700',
@@ -135,7 +135,7 @@ class ShopOrderResource extends Resource
                             ->content(fn ($record) => new HtmlString('<a href="mailto:' . $record->customer_email . '" class="text-primary-600 hover:underline">' . $record->customer_email . '</a>')),
 
                         Forms\Components\Placeholder::make('billing_address')
-                            ->label('Billing Address')
+                            ->label(__('Billing Address'))
                             ->content(function ($record) {
                                 $billing = $record->billing_address ?? [];
                                 if (empty($billing)) return 'N/A';
@@ -148,7 +148,7 @@ class ShopOrderResource extends Resource
                             }),
 
                         Forms\Components\Placeholder::make('shipping_address')
-                            ->label('Shipping Address')
+                            ->label(__('Shipping Address'))
                             ->content(function ($record) {
                                 $shipping = $record->shipping_address ?? [];
                                 if (empty($shipping)) return 'Same as billing';
@@ -161,7 +161,7 @@ class ShopOrderResource extends Resource
                             }),
                     ]),
 
-                SC\Section::make('Totals')
+                SC\Section::make(__('Totals'))
                     ->icon('heroicon-o-calculator')
                     ->columns(5)
                     ->schema([
@@ -170,7 +170,7 @@ class ShopOrderResource extends Resource
                             ->content(fn ($record) => number_format($record->subtotal_cents / 100, 2) . ' ' . $record->currency),
 
                         Forms\Components\Placeholder::make('shipping')
-                            ->label('Shipping')
+                            ->label(__('Shipping'))
                             ->content(fn ($record) => number_format($record->shipping_cents / 100, 2) . ' ' . $record->currency),
 
                         Forms\Components\Placeholder::make('discount')
@@ -180,7 +180,7 @@ class ShopOrderResource extends Resource
                                 : '-'),
 
                         Forms\Components\Placeholder::make('tax')
-                            ->label('Tax')
+                            ->label(__('Tax'))
                             ->content(fn ($record) => number_format($record->tax_cents / 100, 2) . ' ' . $record->currency),
 
                         Forms\Components\Placeholder::make('total')
@@ -188,7 +188,7 @@ class ShopOrderResource extends Resource
                             ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total_cents / 100, 2) . ' ' . $record->currency . '</span>')),
                     ]),
 
-                SC\Section::make('Order Items')
+                SC\Section::make(__('Order Items'))
                     ->icon('heroicon-o-cube')
                     ->collapsible()
                     ->schema([
@@ -219,30 +219,30 @@ class ShopOrderResource extends Resource
                             }),
                     ]),
 
-                SC\Section::make('Shipping')
+                SC\Section::make(__('Shipping'))
                     ->icon('heroicon-o-truck')
                     ->collapsible()
                     ->collapsed()
                     ->visible(fn ($record) => $record->shipping_method || $record->tracking_number)
                     ->schema([
                         Forms\Components\Placeholder::make('shipping_method')
-                            ->label('Method')
+                            ->label(__('Method'))
                             ->content(fn ($record) => $record->shipping_method ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('tracking_number')
-                            ->label('Tracking Number')
+                            ->label(__('Tracking Number'))
                             ->content(fn ($record) => $record->tracking_number ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('shipped_at')
-                            ->label('Shipped At')
+                            ->label(__('Shipped At'))
                             ->content(fn ($record) => $record->shipped_at?->format('d M Y H:i') ?? 'Not shipped'),
 
                         Forms\Components\Placeholder::make('delivered_at')
-                            ->label('Delivered At')
+                            ->label(__('Delivered At'))
                             ->content(fn ($record) => $record->delivered_at?->format('d M Y H:i') ?? 'Not delivered'),
                     ]),
 
-                SC\Section::make('Timeline')
+                SC\Section::make(__('Timeline'))
                     ->icon('heroicon-o-clock')
                     ->collapsible()
                     ->collapsed()
@@ -256,11 +256,11 @@ class ShopOrderResource extends Resource
                             ->content(fn ($record) => $record->paid_at?->format('d M Y H:i') ?? '-'),
 
                         Forms\Components\Placeholder::make('shipped_at')
-                            ->label('Shipped')
+                            ->label(__('Shipped'))
                             ->content(fn ($record) => $record->shipped_at?->format('d M Y H:i') ?? '-'),
 
                         Forms\Components\Placeholder::make('delivered_at')
-                            ->label('Delivered')
+                            ->label(__('Delivered'))
                             ->content(fn ($record) => $record->delivered_at?->format('d M Y H:i') ?? '-'),
                     ]),
             ]);
@@ -270,15 +270,15 @@ class ShopOrderResource extends Resource
     {
         return $schema
             ->schema([
-                SC\Section::make('Update Order')
+                SC\Section::make(__('Update Order'))
                     ->schema([
                         Forms\Components\Select::make('status')
                             ->options([
-                                'pending_payment' => 'Pending Payment',
+                                'pending_payment' => __('Pending Payment'),
                                 'paid' => 'Paid',
-                                'processing' => 'Processing',
-                                'shipped' => 'Shipped',
-                                'delivered' => 'Delivered',
+                                'processing' => __('Processing'),
+                                'shipped' => __('Shipped'),
+                                'delivered' => __('Delivered'),
                                 'cancelled' => 'Cancelled',
                                 'refunded' => 'Refunded',
                             ])
@@ -286,23 +286,23 @@ class ShopOrderResource extends Resource
 
                         Forms\Components\Select::make('fulfillment_status')
                             ->options([
-                                'unfulfilled' => 'Unfulfilled',
-                                'partial' => 'Partially Fulfilled',
-                                'fulfilled' => 'Fulfilled',
+                                'unfulfilled' => __('Unfulfilled'),
+                                'partial' => __('Partially Fulfilled'),
+                                'fulfilled' => __('Fulfilled'),
                             ])
                             ->required(),
 
                         Forms\Components\TextInput::make('tracking_number')
-                            ->label('Tracking Number')
+                            ->label(__('Tracking Number'))
                             ->maxLength(100),
 
                         Forms\Components\TextInput::make('tracking_url')
-                            ->label('Tracking URL')
+                            ->label(__('Tracking URL'))
                             ->url()
                             ->maxLength(500),
 
                         Forms\Components\Textarea::make('internal_notes')
-                            ->label('Internal Notes')
+                            ->label(__('Internal Notes'))
                             ->rows(3)
                             ->columnSpanFull(),
                     ])->columns(2),
@@ -326,7 +326,7 @@ class ShopOrderResource extends Resource
                     ->limit(25),
 
                 Tables\Columns\TextColumn::make('items_count')
-                    ->label('Items')
+                    ->label(__('Items'))
                     ->counts('items')
                     ->sortable(),
 
@@ -345,7 +345,7 @@ class ShopOrderResource extends Resource
                     ->formatStateUsing(fn (string $state): string => ucfirst(str_replace('_', ' ', $state))),
 
                 Tables\Columns\BadgeColumn::make('payment_status')
-                    ->label('Payment')
+                    ->label(__('Payment'))
                     ->colors([
                         'success' => 'paid',
                         'warning' => 'pending',
@@ -354,7 +354,7 @@ class ShopOrderResource extends Resource
                     ]),
 
                 Tables\Columns\BadgeColumn::make('fulfillment_status')
-                    ->label('Fulfillment')
+                    ->label(__('Fulfillment'))
                     ->colors([
                         'success' => 'fulfilled',
                         'warning' => 'unfulfilled',
@@ -363,18 +363,18 @@ class ShopOrderResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
+                    ->label(__('Date'))
                     ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending_payment' => 'Pending Payment',
+                        'pending_payment' => __('Pending Payment'),
                         'paid' => 'Paid',
-                        'processing' => 'Processing',
-                        'shipped' => 'Shipped',
-                        'delivered' => 'Delivered',
+                        'processing' => __('Processing'),
+                        'shipped' => __('Shipped'),
+                        'delivered' => __('Delivered'),
                         'cancelled' => 'Cancelled',
                         'refunded' => 'Refunded',
                     ]),
@@ -382,21 +382,21 @@ class ShopOrderResource extends Resource
                     ->options([
                         'pending' => 'Pending',
                         'paid' => 'Paid',
-                        'failed' => 'Failed',
+                        'failed' => __('Failed'),
                         'refunded' => 'Refunded',
                     ]),
                 Tables\Filters\SelectFilter::make('fulfillment_status')
                     ->options([
-                        'unfulfilled' => 'Unfulfilled',
-                        'partial' => 'Partially Fulfilled',
-                        'fulfilled' => 'Fulfilled',
+                        'unfulfilled' => __('Unfulfilled'),
+                        'partial' => __('Partially Fulfilled'),
+                        'fulfilled' => __('Fulfilled'),
                     ]),
                 Tables\Filters\Filter::make('created_at')
                     ->form([
                         Forms\Components\DatePicker::make('created_from')
-                            ->label('From'),
+                            ->label(__('From')),
                         Forms\Components\DatePicker::make('created_until')
-                            ->label('Until'),
+                            ->label(__('Until')),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -407,16 +407,16 @@ class ShopOrderResource extends Resource
             ->actions([
                 ViewAction::make(),
                 Actions\Action::make('mark_shipped')
-                    ->label('Mark Shipped')
+                    ->label(__('Mark Shipped'))
                     ->icon('heroicon-o-truck')
                     ->color('primary')
                     ->visible(fn ($record) => in_array($record->status, ['paid', 'processing']) && $record->fulfillment_status !== 'fulfilled')
                     ->form([
                         Forms\Components\TextInput::make('tracking_number')
-                            ->label('Tracking Number')
+                            ->label(__('Tracking Number'))
                             ->maxLength(100),
                         Forms\Components\TextInput::make('tracking_url')
-                            ->label('Tracking URL')
+                            ->label(__('Tracking URL'))
                             ->url(),
                     ])
                     ->action(function ($record, array $data) {
@@ -428,7 +428,7 @@ class ShopOrderResource extends Resource
                         ]);
                     }),
                 Actions\Action::make('mark_delivered')
-                    ->label('Mark Delivered')
+                    ->label(__('Mark Delivered'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'shipped')
@@ -444,7 +444,7 @@ class ShopOrderResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('mark_processing')
-                        ->label('Mark Processing')
+                        ->label(__('Mark Processing'))
                         ->icon('heroicon-o-arrow-path')
                         ->color('primary')
                         ->action(fn (Collection $records) => $records->each->update(['status' => 'processing']))

@@ -88,7 +88,7 @@ class ShopReviewResource extends Resource
 
         return $schema
             ->components([
-                SC\Section::make('Review Details')
+                SC\Section::make(__('Review Details'))
                     ->columns(3)
                     ->schema([
                         Forms\Components\Placeholder::make('product')
@@ -104,7 +104,7 @@ class ShopReviewResource extends Resource
                             )),
 
                         Forms\Components\Placeholder::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->status) {
                                 'approved' => 'bg-success-100 text-success-700',
                                 'pending' => 'bg-warning-100 text-warning-700',
@@ -113,7 +113,7 @@ class ShopReviewResource extends Resource
                             } . '">' . ucfirst($record->status) . '</span>')),
                     ]),
 
-                SC\Section::make('Reviewer')
+                SC\Section::make(__('Reviewer'))
                     ->columns(3)
                     ->schema([
                         Forms\Components\Placeholder::make('reviewer_name')
@@ -125,11 +125,11 @@ class ShopReviewResource extends Resource
                             ->content(fn ($record) => $record->reviewer_email ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('verified_purchase')
-                            ->label('Verified Purchase')
+                            ->label(__('Verified Purchase'))
                             ->content(fn ($record) => $record->verified_purchase ? 'Yes' : 'No'),
                     ]),
 
-                SC\Section::make('Review Content')
+                SC\Section::make(__('Review Content'))
                     ->schema([
                         Forms\Components\Placeholder::make('title')
                             ->label('Title')
@@ -140,7 +140,7 @@ class ShopReviewResource extends Resource
                             ->content(fn ($record) => $record->content),
                     ]),
 
-                SC\Section::make('Admin Response')
+                SC\Section::make(__('Admin Response'))
                     ->visible(fn ($record) => !empty($record->admin_response))
                     ->schema([
                         Forms\Components\Placeholder::make('admin_response')
@@ -148,7 +148,7 @@ class ShopReviewResource extends Resource
                             ->content(fn ($record) => $record->admin_response),
 
                         Forms\Components\Placeholder::make('responded_at')
-                            ->label('Responded At')
+                            ->label(__('Responded At'))
                             ->content(fn ($record) => $record->responded_at?->format('d M Y H:i')),
                     ]),
             ]);
@@ -158,20 +158,20 @@ class ShopReviewResource extends Resource
     {
         return $schema
             ->schema([
-                SC\Section::make('Moderation')
+                SC\Section::make(__('Moderation'))
                     ->schema([
                         Forms\Components\Select::make('status')
                             ->options([
-                                'pending' => 'Pending Review',
-                                'approved' => 'Approved',
-                                'rejected' => 'Rejected',
+                                'pending' => __('Pending Review'),
+                                'approved' => __('Approved'),
+                                'rejected' => __('Rejected'),
                             ])
                             ->required(),
 
                         Forms\Components\Textarea::make('admin_response')
-                            ->label('Admin Response')
+                            ->label(__('Admin Response'))
                             ->rows(3)
-                            ->placeholder('Respond to this review (visible to public)'),
+                            ->placeholder(__('Respond to this review (visible to public)')),
                     ]),
             ]);
     }
@@ -195,7 +195,7 @@ class ShopReviewResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('reviewer_name')
-                    ->label('Reviewer')
+                    ->label(__('Reviewer'))
                     ->searchable()
                     ->limit(20),
 
@@ -205,7 +205,7 @@ class ShopReviewResource extends Resource
                     ->placeholder('—'),
 
                 Tables\Columns\IconColumn::make('verified_purchase')
-                    ->label('Verified')
+                    ->label(__('Verified'))
                     ->boolean()
                     ->toggleable(),
 
@@ -217,13 +217,13 @@ class ShopReviewResource extends Resource
                     ]),
 
                 Tables\Columns\IconColumn::make('admin_response')
-                    ->label('Response')
+                    ->label(__('Response'))
                     ->boolean()
                     ->getStateUsing(fn ($record) => !empty($record->admin_response))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
+                    ->label(__('Date'))
                     ->dateTime('d M Y')
                     ->sortable(),
             ])
@@ -231,8 +231,8 @@ class ShopReviewResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected',
+                        'approved' => __('Approved'),
+                        'rejected' => __('Rejected'),
                     ]),
                 Tables\Filters\SelectFilter::make('rating')
                     ->options([
@@ -243,12 +243,12 @@ class ShopReviewResource extends Resource
                         5 => '5 Stars',
                     ]),
                 Tables\Filters\TernaryFilter::make('verified_purchase')
-                    ->label('Verified Purchase'),
+                    ->label(__('Verified Purchase')),
             ])
             ->actions([
                 ViewAction::make(),
                 Actions\Action::make('approve')
-                    ->label('Approve')
+                    ->label(__('Approve'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->status !== 'approved')
@@ -258,7 +258,7 @@ class ShopReviewResource extends Resource
                         $record->product?->updateReviewStats();
                     }),
                 Actions\Action::make('reject')
-                    ->label('Reject')
+                    ->label(__('Reject'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn ($record) => $record->status !== 'rejected')
@@ -271,7 +271,7 @@ class ShopReviewResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve')
-                        ->label('Approve Selected')
+                        ->label(__('Approve Selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->action(function (Collection $records) {
@@ -282,7 +282,7 @@ class ShopReviewResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('reject')
-                        ->label('Reject Selected')
+                        ->label(__('Reject Selected'))
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->action(function (Collection $records) {

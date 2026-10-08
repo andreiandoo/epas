@@ -61,11 +61,11 @@ class BulkAddMerchandiseItems extends Page implements HasForms
         return $schema
             ->statePath('headerData')
             ->schema([
-                SC\Section::make('Setari comune (se aplica tuturor produselor)')
-                    ->description('Completeaza mai intai aceste campuri, apoi adauga produsele in tabelul de mai jos.')
+                SC\Section::make(__('Setari comune (se aplica tuturor produselor)'))
+                    ->description(__('Completeaza mai intai aceste campuri, apoi adauga produsele in tabelul de mai jos.'))
                     ->schema([
                         Forms\Components\Select::make('festival_edition_id')
-                            ->label('Editie festival')
+                            ->label(__('Editie festival'))
                             ->options(
                                 FestivalEdition::where('tenant_id', $tenant?->id)
                                     ->pluck('name', 'id')
@@ -89,11 +89,11 @@ class BulkAddMerchandiseItems extends Page implements HasForms
                             ->default(19)
                             ->suffix('%'),
                         Forms\Components\Toggle::make('vat_included')
-                            ->label('TVA inclus in pretul de achizitie')
+                            ->label(__('TVA inclus in pretul de achizitie'))
                             ->default(false)
-                            ->helperText('Daca DA, pretul introdus contine deja TVA. Daca NU, TVA-ul se va calcula separat.'),
+                            ->helperText(__('Daca DA, pretul introdus contine deja TVA. Daca NU, TVA-ul se va calcula separat.')),
                         Forms\Components\TextInput::make('invoice_number')
-                            ->label('Nr. factura'),
+                            ->label(__('Nr. factura')),
                         Forms\Components\DatePicker::make('invoice_date')
                             ->label('Data factura'),
                     ])->columns(4),
@@ -125,13 +125,13 @@ class BulkAddMerchandiseItems extends Page implements HasForms
     {
         $tenant = auth()->user()->tenant;
         if (!$tenant) {
-            Notification::make()->title('Eroare: nu exista tenant.')->danger()->send();
+            Notification::make()->title(__('Eroare: nu exista tenant.'))->danger()->send();
             return;
         }
 
         $editionId = $this->headerData['festival_edition_id'] ?? null;
         if (!$editionId) {
-            Notification::make()->title('Selecteaza editia de festival.')->warning()->send();
+            Notification::make()->title(__('Selecteaza editia de festival.'))->warning()->send();
             return;
         }
 
@@ -196,7 +196,7 @@ class BulkAddMerchandiseItems extends Page implements HasForms
 
         if (!empty($errors)) {
             Notification::make()
-                ->title('Unele randuri au erori')
+                ->title(__('Unele randuri au erori'))
                 ->body(implode("\n", array_slice($errors, 0, 5)))
                 ->warning()
                 ->send();

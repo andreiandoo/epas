@@ -77,89 +77,89 @@ class ExperienceConfigResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Naming')
-                    ->description('Customize how XP and levels are displayed')
+                SC\Section::make(__('Naming'))
+                    ->description(__('Customize how XP and levels are displayed'))
                     ->schema([
                         Forms\Components\TextInput::make('xp_name.en')
-                            ->label('XP Name (English)')
+                            ->label(__('XP Name (English)'))
                             ->default('Experience'),
 
                         Forms\Components\TextInput::make('xp_name.ro')
-                            ->label('XP Name (Romanian)')
+                            ->label(__('XP Name (Romanian)'))
                             ->default('Experiență'),
 
                         Forms\Components\TextInput::make('level_name.en')
-                            ->label('Level Name (English)')
+                            ->label(__('Level Name (English)'))
                             ->default('Level'),
 
                         Forms\Components\TextInput::make('level_name.ro')
-                            ->label('Level Name (Romanian)')
+                            ->label(__('Level Name (Romanian)'))
                             ->default('Nivel'),
 
                         Forms\Components\Select::make('icon')
                             ->options([
-                                'star' => 'Star',
-                                'sparkles' => 'Sparkles',
-                                'bolt' => 'Lightning',
-                                'fire' => 'Fire',
-                                'trophy' => 'Trophy',
+                                'star' => __('Star'),
+                                'sparkles' => __('Sparkles'),
+                                'bolt' => __('Lightning'),
+                                'fire' => __('Fire'),
+                                'trophy' => __('Trophy'),
                             ])
                             ->default('star'),
                     ])->columns(3),
 
-                SC\Section::make('Level Progression')
-                    ->description('Configure how XP translates to levels')
+                SC\Section::make(__('Level Progression'))
+                    ->description(__('Configure how XP translates to levels'))
                     ->schema([
                         Forms\Components\Select::make('level_formula')
                             ->options([
-                                'linear' => 'Linear (same XP per level)',
-                                'exponential' => 'Exponential (increasing XP per level)',
-                                'custom' => 'Custom (define each level)',
+                                'linear' => __('Linear (same XP per level)'),
+                                'exponential' => __('Exponential (increasing XP per level)'),
+                                'custom' => __('Custom (define each level)'),
                             ])
                             ->default('exponential')
                             ->required()
                             ->live(),
 
                         Forms\Components\TextInput::make('base_xp_per_level')
-                            ->label('Base XP per Level')
+                            ->label(__('Base XP per Level'))
                             ->numeric()
                             ->default(100)
                             ->required()
-                            ->helperText('XP needed for level 1→2'),
+                            ->helperText(__('XP needed for level 1→2')),
 
                         Forms\Components\TextInput::make('level_multiplier')
-                            ->label('Level Multiplier')
+                            ->label(__('Level Multiplier'))
                             ->numeric()
                             ->step(0.1)
                             ->default(1.5)
-                            ->helperText('For exponential: each level needs base × multiplier^(level-1)')
+                            ->helperText(__('For exponential: each level needs base × multiplier^(level-1)'))
                             ->visible(fn (callable $get) => $get('level_formula') === 'exponential'),
 
                         Forms\Components\TextInput::make('max_level')
-                            ->label('Maximum Level')
+                            ->label(__('Maximum Level'))
                             ->numeric()
                             ->default(100)
                             ->required(),
                     ])->columns(2),
 
-                SC\Section::make('Level Groups')
-                    ->description('Group levels into tiers (e.g., Bronze 1-5, Silver 6-10)')
+                SC\Section::make(__('Level Groups'))
+                    ->description(__('Group levels into tiers (e.g., Bronze 1-5, Silver 6-10)'))
                     ->schema([
                         Forms\Components\Repeater::make('level_groups')
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Group Name')
+                                    ->label(__('Group Name'))
                                     ->required(),
                                 Forms\Components\TextInput::make('min_level')
-                                    ->label('Min Level')
+                                    ->label(__('Min Level'))
                                     ->numeric()
                                     ->required(),
                                 Forms\Components\TextInput::make('max_level')
-                                    ->label('Max Level')
+                                    ->label(__('Max Level'))
                                     ->numeric()
                                     ->required(),
                                 Forms\Components\ColorPicker::make('color')
-                                    ->label('Color')
+                                    ->label(__('Color'))
                                     ->default('#6366F1'),
                             ])
                             ->columns(4)
@@ -170,21 +170,21 @@ class ExperienceConfigResource extends Resource
                             ->defaultItems(0),
                     ]),
 
-                SC\Section::make('Level Rewards')
-                    ->description('Award bonuses at specific levels')
+                SC\Section::make(__('Level Rewards'))
+                    ->description(__('Award bonuses at specific levels'))
                     ->schema([
                         Forms\Components\Repeater::make('level_rewards')
                             ->schema([
                                 Forms\Components\TextInput::make('level')
-                                    ->label('At Level')
+                                    ->label(__('At Level'))
                                     ->numeric()
                                     ->required(),
                                 Forms\Components\TextInput::make('bonus_points')
-                                    ->label('Bonus Points')
+                                    ->label(__('Bonus Points'))
                                     ->numeric()
                                     ->default(0),
                                 Forms\Components\Select::make('badge_id')
-                                    ->label('Award Badge')
+                                    ->label(__('Award Badge'))
                                     ->relationship('badges', 'name->en')
                                     ->nullable(),
                             ])
@@ -211,21 +211,21 @@ class ExperienceConfigResource extends Resource
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('level_formula')
-                    ->label('Formula')
+                    ->label(__('Formula'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => ucfirst($state)),
 
                 Tables\Columns\TextColumn::make('base_xp_per_level')
-                    ->label('Base XP'),
+                    ->label(__('Base XP')),
 
                 Tables\Columns\TextColumn::make('level_multiplier')
-                    ->label('Multiplier'),
+                    ->label(__('Multiplier')),
 
                 Tables\Columns\TextColumn::make('max_level')
-                    ->label('Max Level'),
+                    ->label(__('Max Level')),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Updated')
+                    ->label(__('Last Updated'))
                     ->dateTime()
                     ->sortable(),
             ])

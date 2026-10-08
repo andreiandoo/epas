@@ -100,7 +100,7 @@ class ResourceRentalResource extends Resource
                     ->color(fn ($state) => $state > 0 ? 'danger' : 'gray'),
 
                 Tables\Columns\TextColumn::make('overtime_surcharge_cents')
-                    ->label('Surcharge')
+                    ->label(__('Surcharge'))
                     ->alignEnd()
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2) . ' RON')
                     ->toggleable(),

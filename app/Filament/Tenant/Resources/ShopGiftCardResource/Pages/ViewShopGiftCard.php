@@ -15,19 +15,19 @@ class ViewShopGiftCard extends ViewRecord
         return [
             Actions\EditAction::make(),
             Actions\Action::make('add_credit')
-                ->label('Add Credit')
+                ->label(__('Add Credit'))
                 ->icon('heroicon-o-plus-circle')
                 ->color('success')
                 ->visible(fn () => $this->record->status === 'active')
                 ->form([
                     \Filament\Forms\Components\TextInput::make('amount_cents')
-                        ->label('Amount (cents)')
+                        ->label(__('Amount (cents)'))
                         ->required()
                         ->numeric()
                         ->minValue(1),
                     \Filament\Forms\Components\TextInput::make('description')
                         ->label('Description')
-                        ->placeholder('Reason for credit'),
+                        ->placeholder(__('Reason for credit')),
                 ])
                 ->action(function (array $data) {
                     $this->record->credit($data['amount_cents'], $data['description'] ?? 'Manual credit');

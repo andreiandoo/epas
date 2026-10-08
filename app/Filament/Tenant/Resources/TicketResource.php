@@ -48,7 +48,7 @@ class TicketResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Cod Bilet')
+                    ->label(__('Cod Bilet'))
                     ->searchable()
                     ->sortable()
                     ->copyable(),
@@ -58,7 +58,7 @@ class TicketResource extends Resource
                     ->sortable()
                     ->limit(30),
                 Tables\Columns\TextColumn::make('ticketType.name')
-                    ->label('Tip Bilet')
+                    ->label(__('Tip Bilet'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('order.id')
                     ->label('Nr. Comandă')
@@ -107,7 +107,7 @@ class TicketResource extends Resource
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'success' => 'valid',
                         'warning' => 'used',
@@ -142,7 +142,7 @@ class TicketResource extends Resource
                     ->label('Tip')
                     ->placeholder('Toate')
                     ->trueLabel('Doar Invitații')
-                    ->falseLabel('Doar Comenzi')
+                    ->falseLabel(__('Doar Comenzi'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereJsonContains('meta->is_invitation', true),
                         false: fn (Builder $query) => $query->where(function ($q) {

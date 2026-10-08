@@ -63,7 +63,7 @@ class PhysicalResourceTypeResource extends Resource
                         }),
                     Forms\Components\TextInput::make('slug')
                         ->label('Slug')
-                        ->helperText('Identificator unic. Folosit ca prefix pentru QR codes.')
+                        ->helperText(__('Identificator unic. Folosit ca prefix pentru QR codes.'))
                         ->required(),
 
                     Forms\Components\Textarea::make('description')
@@ -72,7 +72,7 @@ class PhysicalResourceTypeResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('icon')
-                        ->label('Emoji / Icon')
+                        ->label(__('Emoji / Icon'))
                         ->placeholder('🛶'),
                     Forms\Components\ColorPicker::make('color')
                         ->label('Culoare'),
@@ -84,7 +84,7 @@ class PhysicalResourceTypeResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('linked_ticket_type_ids')
-                        ->label('Bilete asociate (default)')
+                        ->label(__('Bilete asociate (default)'))
                         ->multiple()
                         ->options(function () {
                             $tenantId = auth()->user()?->tenant?->id;
@@ -102,7 +102,7 @@ class PhysicalResourceTypeResource extends Resource
                         ->default(true),
 
                     Forms\Components\KeyValue::make('meta')
-                        ->label('Atribute (size, color, …)')
+                        ->label(__('Atribute (size, color, …)'))
                         ->columnSpanFull(),
                 ]),
         ]);

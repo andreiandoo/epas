@@ -49,7 +49,7 @@ class UserResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('User Details')
+                SC\Section::make(__('User Details'))
                     ->schema([
                         Forms\Components\TextInput::make('first_name')
                             ->label('First Name')
@@ -76,7 +76,7 @@ class UserResource extends Resource
                             ->tel()
                             ->maxLength(50),
                         Forms\Components\TextInput::make('position')
-                            ->label('Position/Title')
+                            ->label(__('Position/Title'))
                             ->maxLength(255),
                         Forms\Components\Hidden::make('role')
                             ->default('editor'),

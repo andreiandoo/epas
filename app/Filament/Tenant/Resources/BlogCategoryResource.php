@@ -83,10 +83,10 @@ class BlogCategoryResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make(__('Category Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$tenantLanguage}")
-                            ->label('Category Name')
+                            ->label(__('Category Name'))
                             ->required()
                             ->maxLength(190)
                             ->live(onBlur: true)
@@ -105,7 +105,7 @@ class BlogCategoryResource extends Resource
                             ->rows(3),
 
                         Forms\Components\Select::make('parent_id')
-                            ->label('Parent Category')
+                            ->label(__('Parent Category'))
                             ->options(function () {
                                 $tenant = auth()->user()->tenant;
                                 $lang = $tenant->language ?? $tenant->locale ?? 'en';
@@ -115,7 +115,7 @@ class BlogCategoryResource extends Resource
                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('None (Top-level category)'),
+                            ->placeholder(__('None (Top-level category)')),
 
                         Forms\Components\TextInput::make('sort_order')
                             ->label('Sort Order')
@@ -127,21 +127,21 @@ class BlogCategoryResource extends Resource
                             ->default(true),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\TextInput::make('image_url')
-                            ->label('Image URL')
+                            ->label(__('Image URL'))
                             ->url()
                             ->maxLength(500),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->placeholder('heroicon-o-folder')
                             ->maxLength(100),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
                     ])->columns(3),
 
                 SC\Section::make('SEO')
@@ -176,7 +176,7 @@ class BlogCategoryResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent')
+                    ->label(__('Parent'))
                     ->formatStateUsing(function ($state) use ($tenantLanguage) {
                         if (is_array($state)) {
                             return $state[$tenantLanguage] ?? $state['en'] ?? '-';
@@ -185,7 +185,7 @@ class BlogCategoryResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('article_count')
-                    ->label('Articles')
+                    ->label(__('Articles'))
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')

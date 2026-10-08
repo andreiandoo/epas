@@ -80,24 +80,24 @@ class RewardResource extends Resource
                 SC\Section::make('Basic Information')
                     ->schema([
                         Forms\Components\TextInput::make('name.en')
-                            ->label('Name (English)')
+                            ->label(__('Name (English)'))
                             ->required(),
 
                         Forms\Components\TextInput::make('name.ro')
-                            ->label('Name (Romanian)')
+                            ->label(__('Name (Romanian)'))
                             ->required(),
 
                         Forms\Components\TextInput::make('slug')
                             ->label('Slug')
                             ->unique(ignoreRecord: true)
-                            ->helperText('Auto-generated if left empty'),
+                            ->helperText(__('Auto-generated if left empty')),
 
                         Forms\Components\Textarea::make('description.en')
-                            ->label('Description (English)')
+                            ->label(__('Description (English)'))
                             ->rows(2),
 
                         Forms\Components\Textarea::make('description.ro')
-                            ->label('Description (Romanian)')
+                            ->label(__('Description (Romanian)'))
                             ->rows(2),
 
                         Forms\Components\FileUpload::make('image_url')
@@ -106,27 +106,27 @@ class RewardResource extends Resource
                             ->directory('rewards'),
                     ])->columns(2),
 
-                SC\Section::make('Reward Configuration')
+                SC\Section::make(__('Reward Configuration'))
                     ->schema([
                         Forms\Components\Select::make('type')
                             ->options([
-                                'fixed_discount' => 'Fixed Discount',
-                                'percentage_discount' => 'Percentage Discount',
-                                'free_item' => 'Free Item',
-                                'voucher_code' => 'Voucher Code',
+                                'fixed_discount' => __('Fixed Discount'),
+                                'percentage_discount' => __('Percentage Discount'),
+                                'free_item' => __('Free Item'),
+                                'voucher_code' => __('Voucher Code'),
                             ])
                             ->default('fixed_discount')
                             ->required()
                             ->live(),
 
                         Forms\Components\TextInput::make('points_cost')
-                            ->label('Points Cost')
+                            ->label(__('Points Cost'))
                             ->numeric()
                             ->required()
-                            ->helperText('How many points needed to redeem'),
+                            ->helperText(__('How many points needed to redeem')),
 
                         Forms\Components\TextInput::make('value')
-                            ->label('Value')
+                            ->label(__('Value'))
                             ->numeric()
                             ->required()
                             ->helperText(fn (callable $get) => match ($get('type')) {
@@ -146,51 +146,51 @@ class RewardResource extends Resource
                             ->visible(fn (callable $get) => in_array($get('type'), ['fixed_discount', 'voucher_code'])),
 
                         Forms\Components\TextInput::make('voucher_prefix')
-                            ->label('Voucher Prefix')
+                            ->label(__('Voucher Prefix'))
                             ->maxLength(10)
-                            ->helperText('Prefix for generated voucher codes')
+                            ->helperText(__('Prefix for generated voucher codes'))
                             ->visible(fn (callable $get) => $get('type') === 'voucher_code'),
                     ])->columns(3),
 
-                SC\Section::make('Restrictions')
+                SC\Section::make(__('Restrictions'))
                     ->schema([
                         Forms\Components\TextInput::make('min_order_value')
-                            ->label('Minimum Order Value')
+                            ->label(__('Minimum Order Value'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Minimum order value to use this reward'),
+                            ->helperText(__('Minimum order value to use this reward')),
 
                         Forms\Components\TextInput::make('max_redemptions_total')
-                            ->label('Total Redemption Limit')
+                            ->label(__('Total Redemption Limit'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Leave empty for unlimited'),
+                            ->helperText(__('Leave empty for unlimited')),
 
                         Forms\Components\TextInput::make('max_redemptions_per_customer')
-                            ->label('Per Customer Limit')
+                            ->label(__('Per Customer Limit'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Leave empty for unlimited'),
+                            ->helperText(__('Leave empty for unlimited')),
 
                         Forms\Components\TextInput::make('min_level_required')
-                            ->label('Minimum Level Required')
+                            ->label(__('Minimum Level Required'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Minimum XP level to redeem'),
+                            ->helperText(__('Minimum XP level to redeem')),
                     ])->columns(4),
 
-                SC\Section::make('Validity Period')
+                SC\Section::make(__('Validity Period'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('valid_from')
                             ->label('Valid From')
                             ->nullable(),
 
                         Forms\Components\DateTimePicker::make('valid_until')
-                            ->label('Valid Until')
+                            ->label(__('Valid Until'))
                             ->nullable(),
                     ])->columns(2),
 
-                SC\Section::make('Display Settings')
+                SC\Section::make(__('Display Settings'))
                     ->schema([
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
@@ -221,7 +221,7 @@ class RewardResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'fixed_discount' => 'Fixed Discount',
@@ -232,14 +232,14 @@ class RewardResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('points_cost')
-                    ->label('Points Cost')
+                    ->label(__('Points Cost'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('formatted_value')
-                    ->label('Value'),
+                    ->label(__('Value')),
 
                 Tables\Columns\TextColumn::make('remaining_redemptions')
-                    ->label('Remaining')
+                    ->label(__('Remaining'))
                     ->placeholder('Unlimited'),
 
                 Tables\Columns\IconColumn::make('is_featured')
@@ -253,10 +253,10 @@ class RewardResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
-                        'fixed_discount' => 'Fixed Discount',
-                        'percentage_discount' => 'Percentage Discount',
-                        'free_item' => 'Free Item',
-                        'voucher_code' => 'Voucher Code',
+                        'fixed_discount' => __('Fixed Discount'),
+                        'percentage_discount' => __('Percentage Discount'),
+                        'free_item' => __('Free Item'),
+                        'voucher_code' => __('Voucher Code'),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),

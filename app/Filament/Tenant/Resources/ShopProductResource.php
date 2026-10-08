@@ -198,9 +198,9 @@ class ShopProductResource extends Resource
 
                                         Forms\Components\Select::make('currency')
                                             ->options([
-                                                'RON' => 'RON - Romanian Leu',
-                                                'EUR' => 'EUR - Euro',
-                                                'USD' => 'USD - US Dollar',
+                                                'RON' => __('RON - Romanian Leu'),
+                                                'EUR' => __('EUR - Euro'),
+                                                'USD' => __('USD - US Dollar'),
                                             ])
                                             ->default('RON')
                                             ->required()

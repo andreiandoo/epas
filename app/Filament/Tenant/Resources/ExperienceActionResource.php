@@ -77,7 +77,7 @@ class ExperienceActionResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Action Configuration')
+                SC\Section::make(__('Action Configuration'))
                     ->schema([
                         Forms\Components\Select::make('action_type')
                             ->options(ExperienceAction::ACTION_TYPES)
@@ -85,36 +85,36 @@ class ExperienceActionResource extends Resource
                             ->unique(ignoreRecord: true, modifyRuleUsing: fn ($rule) => $rule->where('tenant_id', auth()->user()->tenant?->id)),
 
                         Forms\Components\TextInput::make('name.en')
-                            ->label('Name (English)')
+                            ->label(__('Name (English)'))
                             ->required(),
 
                         Forms\Components\TextInput::make('name.ro')
-                            ->label('Name (Romanian)')
+                            ->label(__('Name (Romanian)'))
                             ->required(),
 
                         Forms\Components\Textarea::make('description.en')
-                            ->label('Description (English)')
+                            ->label(__('Description (English)'))
                             ->rows(2),
 
                         Forms\Components\Textarea::make('description.ro')
-                            ->label('Description (Romanian)')
+                            ->label(__('Description (Romanian)'))
                             ->rows(2),
                     ])->columns(2),
 
-                SC\Section::make('XP Calculation')
+                SC\Section::make(__('XP Calculation'))
                     ->schema([
                         Forms\Components\Select::make('xp_type')
                             ->options([
                                 'fixed' => 'Fixed Amount',
-                                'per_currency' => 'Per Currency Unit (e.g., per RON spent)',
-                                'multiplier' => 'Multiplier',
+                                'per_currency' => __('Per Currency Unit (e.g., per RON spent)'),
+                                'multiplier' => __('Multiplier'),
                             ])
                             ->default('fixed')
                             ->required()
                             ->live(),
 
                         Forms\Components\TextInput::make('xp_amount')
-                            ->label('XP Amount')
+                            ->label(__('XP Amount'))
                             ->numeric()
                             ->default(0)
                             ->required()
@@ -126,33 +126,33 @@ class ExperienceActionResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('xp_per_currency_unit')
-                            ->label('XP per Currency Unit')
+                            ->label(__('XP per Currency Unit'))
                             ->numeric()
                             ->step(0.01)
                             ->default(1)
-                            ->helperText('e.g., 1 = 1 XP per RON spent')
+                            ->helperText(__('e.g., 1 = 1 XP per RON spent'))
                             ->visible(fn (callable $get) => in_array($get('xp_type'), ['per_currency', 'multiplier'])),
 
                         Forms\Components\TextInput::make('max_xp_per_action')
-                            ->label('Max XP per Action')
+                            ->label(__('Max XP per Action'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Cap on XP from single action (leave empty for no limit)'),
+                            ->helperText(__('Cap on XP from single action (leave empty for no limit)')),
                     ])->columns(2),
 
-                SC\Section::make('Rate Limiting')
+                SC\Section::make(__('Rate Limiting'))
                     ->schema([
                         Forms\Components\TextInput::make('max_times_per_day')
-                            ->label('Max Times per Day')
+                            ->label(__('Max Times per Day'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('How many times can earn per day (leave empty for unlimited)'),
+                            ->helperText(__('How many times can earn per day (leave empty for unlimited)')),
 
                         Forms\Components\TextInput::make('cooldown_hours')
-                            ->label('Cooldown (hours)')
+                            ->label(__('Cooldown (hours)'))
                             ->numeric()
                             ->nullable()
-                            ->helperText('Hours between earning from same action'),
+                            ->helperText(__('Hours between earning from same action')),
                     ])->columns(2),
 
                 Forms\Components\Toggle::make('is_active')
@@ -166,7 +166,7 @@ class ExperienceActionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('action_type_label')
-                    ->label('Action')
+                    ->label(__('Action'))
                     ->searchable(query: fn ($query, $search) => $query->where('action_type', 'like', "%{$search}%")),
 
                 Tables\Columns\TextColumn::make('name')
@@ -174,18 +174,18 @@ class ExperienceActionResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('xp_type_label')
-                    ->label('XP Type')
+                    ->label(__('XP Type'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('xp_amount')
-                    ->label('XP Amount'),
+                    ->label(__('XP Amount')),
 
                 Tables\Columns\TextColumn::make('xp_per_currency_unit')
-                    ->label('Per Currency')
+                    ->label(__('Per Currency'))
                     ->placeholder('-'),
 
                 Tables\Columns\TextColumn::make('max_times_per_day')
-                    ->label('Daily Limit')
+                    ->label(__('Daily Limit'))
                     ->placeholder('Unlimited'),
 
                 Tables\Columns\IconColumn::make('is_active')

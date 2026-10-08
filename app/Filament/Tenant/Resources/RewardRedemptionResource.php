@@ -80,7 +80,7 @@ class RewardRedemptionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
+                    ->label(__('Date'))
                     ->dateTime()
                     ->sortable(),
 
@@ -89,20 +89,20 @@ class RewardRedemptionResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('reward.name')
-                    ->label('Reward')
+                    ->label(__('Reward'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('points_spent')
-                    ->label('Points Spent')
+                    ->label(__('Points Spent'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('voucher_code')
-                    ->label('Voucher Code')
+                    ->label(__('Voucher Code'))
                     ->copyable()
                     ->placeholder('-'),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'pending' => 'warning',
@@ -114,12 +114,12 @@ class RewardRedemptionResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('discount_applied')
-                    ->label('Discount Applied')
+                    ->label(__('Discount Applied'))
                     ->money('RON')
                     ->placeholder('-'),
 
                 Tables\Columns\TextColumn::make('voucher_used_at')
-                    ->label('Used At')
+                    ->label(__('Used At'))
                     ->dateTime()
                     ->placeholder('-'),
             ])
@@ -129,18 +129,18 @@ class RewardRedemptionResource extends Resource
                     ->options([
                         'pending' => 'Pending',
                         'active' => 'Active',
-                        'used' => 'Used',
+                        'used' => __('Used'),
                         'expired' => 'Expired',
                         'cancelled' => 'Cancelled',
                     ]),
                 Tables\Filters\SelectFilter::make('reward_id')
-                    ->label('Reward')
+                    ->label(__('Reward'))
                     ->relationship('reward', 'name->en'),
             ])
             ->recordActions([
                 ViewAction::make(),
                 Action::make('cancel')
-                    ->label('Cancel')
+                    ->label(__('Cancel'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()

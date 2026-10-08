@@ -90,10 +90,10 @@ class ShopAttributeResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Attribute Details')
+                SC\Section::make(__('Attribute Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$tenantLanguage}")
-                            ->label('Attribute Name')
+                            ->label(__('Attribute Name'))
                             ->required()
                             ->maxLength(100)
                             ->live(onBlur: true)
@@ -110,9 +110,9 @@ class ShopAttributeResource extends Resource
 
                         Forms\Components\Select::make('type')
                             ->options([
-                                'select' => 'Dropdown Select',
-                                'color' => 'Color Picker',
-                                'text' => 'Text Input',
+                                'select' => __('Dropdown Select'),
+                                'color' => __('Color Picker'),
+                                'text' => __('Text Input'),
                             ])
                             ->default('select')
                             ->required(),
@@ -129,7 +129,7 @@ class ShopAttributeResource extends Resource
                             ->relationship('values')
                             ->schema([
                                 Forms\Components\TextInput::make("value.{$tenantLanguage}")
-                                    ->label('Value')
+                                    ->label(__('Value'))
                                     ->required()
                                     ->maxLength(100)
                                     ->live(onBlur: true)
@@ -143,7 +143,7 @@ class ShopAttributeResource extends Resource
                                     ->maxLength(100),
 
                                 Forms\Components\ColorPicker::make('color_code')
-                                    ->label('Color')
+                                    ->label(__('Color'))
                                     ->visible(fn ($get) => $get('../../type') === 'color'),
 
                                 Forms\Components\TextInput::make('sort_order')
@@ -156,7 +156,7 @@ class ShopAttributeResource extends Resource
                             ->defaultItems(0)
                             ->reorderable()
                             ->orderColumn('sort_order')
-                            ->addActionLabel('Add Value')
+                            ->addActionLabel(__('Add Value'))
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string =>
                                 $state['value'][$tenantLanguage] ?? $state['slug'] ?? null
@@ -183,7 +183,7 @@ class ShopAttributeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\BadgeColumn::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->colors([
                         'primary' => 'select',
                         'success' => 'color',
@@ -191,7 +191,7 @@ class ShopAttributeResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('values_count')
-                    ->label('Values')
+                    ->label(__('Values'))
                     ->counts('values')
                     ->sortable(),
 
@@ -212,9 +212,9 @@ class ShopAttributeResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
-                        'select' => 'Dropdown Select',
-                        'color' => 'Color Picker',
-                        'text' => 'Text Input',
+                        'select' => __('Dropdown Select'),
+                        'color' => __('Color Picker'),
+                        'text' => __('Text Input'),
                     ]),
             ])
             ->actions([

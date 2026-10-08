@@ -60,7 +60,7 @@ class CustomerProfileResource extends Resource
                     ->searchable(['customer.first_name', 'customer.last_name']),
                 Tables\Columns\BadgeColumn::make('segment')
                     ->colors(['success' => 'whale', 'primary' => 'regular', 'warning' => 'occasional', 'gray' => 'minimal']),
-                Tables\Columns\TextColumn::make('overall_score')->label('Score')
+                Tables\Columns\TextColumn::make('overall_score')->label(__('Score'))
                     ->sortable()->badge()
                     ->color(fn ($state) => match (true) {
                         $state >= 80 => 'success',
@@ -68,29 +68,29 @@ class CustomerProfileResource extends Resource
                         $state >= 20 => 'warning',
                         default      => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('total_spent_cents')->label('Total Spent')
+                Tables\Columns\TextColumn::make('total_spent_cents')->label(__('Total Spent'))
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2) . ' RON')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('total_transactions')->label('Transactions')->sortable(),
-                Tables\Columns\TextColumn::make('avg_transaction_cents')->label('Avg Basket')
+                Tables\Columns\TextColumn::make('total_transactions')->label(__('Transactions'))->sortable(),
+                Tables\Columns\TextColumn::make('avg_transaction_cents')->label(__('Avg Basket'))
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2)),
                 Tables\Columns\TextColumn::make('age_group')->toggleable(),
                 Tables\Columns\TextColumn::make('gender')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('peak_hour')->label('Peak Hour')
+                Tables\Columns\TextColumn::make('peak_hour')->label(__('Peak Hour'))
                     ->formatStateUsing(fn ($state) => $state !== null ? sprintf('%02d:00', $state) : '-')
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('tags')->label('Tags')
+                Tables\Columns\TextColumn::make('tags')->label(__('Tags'))
                     ->formatStateUsing(fn ($state) => is_array($state) ? implode(', ', $state) : '-')
                     ->wrap()->toggleable(),
                 Tables\Columns\IconColumn::make('is_minor')->boolean()->label('Minor')->toggleable(),
-                Tables\Columns\IconColumn::make('flagged_for_review')->boolean()->label('Flagged')
+                Tables\Columns\IconColumn::make('flagged_for_review')->boolean()->label(__('Flagged'))
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('segment')
-                    ->options(['whale' => 'Whale', 'regular' => 'Regular', 'occasional' => 'Occasional', 'minimal' => 'Minimal']),
+                    ->options(['whale' => __('Whale'), 'regular' => __('Regular'), 'occasional' => __('Occasional'), 'minimal' => 'Minimal']),
                 Tables\Filters\Filter::make('high_score')
-                    ->label('High Score (80+)')
+                    ->label(__('High Score (80+)'))
                     ->query(fn (Builder $q) => $q->where('overall_score', '>=', 80))
                     ->toggle(),
                 Tables\Filters\TernaryFilter::make('is_minor'),

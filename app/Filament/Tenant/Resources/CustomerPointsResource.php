@@ -85,7 +85,7 @@ class CustomerPointsResource extends Resource
     {
         return $schema
             ->schema([
-                SC\Section::make('Customer Information')
+                SC\Section::make(__('Customer Information'))
                     ->schema([
                         Forms\Components\Select::make('customer_id')
                             ->relationship('customer', 'email')
@@ -95,78 +95,78 @@ class CustomerPointsResource extends Resource
                             ->disabled(fn ($record) => $record !== null),
 
                         Forms\Components\TextInput::make('referral_code')
-                            ->label('Referral Code')
+                            ->label(__('Referral Code'))
                             ->disabled(),
                     ])->columns(2),
 
-                SC\Section::make('Points Balance')
+                SC\Section::make(__('Points Balance'))
                     ->schema([
                         Forms\Components\TextInput::make('current_balance')
-                            ->label('Current Balance')
+                            ->label(__('Current Balance'))
                             ->numeric()
                             ->disabled(),
 
                         Forms\Components\TextInput::make('total_earned')
-                            ->label('Total Earned')
+                            ->label(__('Total Earned'))
                             ->numeric()
                             ->disabled(),
 
                         Forms\Components\TextInput::make('total_spent')
-                            ->label('Total Spent')
+                            ->label(__('Total Spent'))
                             ->numeric()
                             ->disabled(),
 
                         Forms\Components\TextInput::make('total_expired')
-                            ->label('Total Expired')
+                            ->label(__('Total Expired'))
                             ->numeric()
                             ->disabled(),
 
                         Forms\Components\TextInput::make('pending_points')
-                            ->label('Pending Points')
+                            ->label(__('Pending Points'))
                             ->numeric()
                             ->disabled(),
                     ])->columns(5),
 
-                SC\Section::make('Tier Information')
+                SC\Section::make(__('Tier Information'))
                     ->schema([
                         Forms\Components\TextInput::make('current_tier')
-                            ->label('Current Tier')
+                            ->label(__('Current Tier'))
                             ->disabled(),
 
                         Forms\Components\TextInput::make('tier_points')
-                            ->label('Tier Points')
+                            ->label(__('Tier Points'))
                             ->numeric()
                             ->disabled(),
 
                         Forms\Components\DateTimePicker::make('tier_updated_at')
-                            ->label('Tier Updated')
+                            ->label(__('Tier Updated'))
                             ->disabled(),
                     ])->columns(3),
 
-                SC\Section::make('Referral Stats')
+                SC\Section::make(__('Referral Stats'))
                     ->schema([
                         Forms\Components\TextInput::make('referral_count')
-                            ->label('Referrals')
+                            ->label(__('Referrals'))
                             ->numeric()
                             ->disabled(),
 
                         Forms\Components\TextInput::make('referral_points_earned')
-                            ->label('Points from Referrals')
+                            ->label(__('Points from Referrals'))
                             ->numeric()
                             ->disabled(),
                     ])->columns(2),
 
-                SC\Section::make('Manual Adjustment')
-                    ->description('Add or remove points manually')
+                SC\Section::make(__('Manual Adjustment'))
+                    ->description(__('Add or remove points manually'))
                     ->schema([
                         Forms\Components\TextInput::make('adjustment_points')
-                            ->label('Points to Add/Remove')
+                            ->label(__('Points to Add/Remove'))
                             ->numeric()
-                            ->helperText('Use negative number to remove points')
+                            ->helperText(__('Use negative number to remove points'))
                             ->live(),
 
                         Forms\Components\Textarea::make('adjustment_reason')
-                            ->label('Reason')
+                            ->label(__('Reason'))
                             ->rows(2),
                     ])->columns(2)
                     ->visible(fn ($record) => $record !== null),
@@ -188,41 +188,41 @@ class CustomerPointsResource extends Resource
                     ->searchable(['customer.first_name', 'customer.last_name']),
 
                 Tables\Columns\TextColumn::make('current_balance')
-                    ->label('Balance')
+                    ->label(__('Balance'))
                     ->sortable()
                     ->badge()
                     ->color(fn ($state) => $state > 0 ? 'success' : 'gray'),
 
                 Tables\Columns\TextColumn::make('total_earned')
-                    ->label('Earned')
+                    ->label(__('Earned'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('total_spent')
-                    ->label('Spent')
+                    ->label(__('Spent'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('current_tier')
-                    ->label('Tier')
+                    ->label(__('Tier'))
                     ->badge()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('referral_code')
-                    ->label('Referral Code')
+                    ->label(__('Referral Code'))
                     ->copyable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('referral_count')
-                    ->label('Referrals')
+                    ->label(__('Referrals'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('last_earned_at')
-                    ->label('Last Activity')
+                    ->label(__('Last Activity'))
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('current_tier')
-                    ->label('Tier')
+                    ->label(__('Tier'))
                     ->options(fn () => CustomerPoints::query()
                         ->distinct()
                         ->whereNotNull('current_tier')
@@ -230,22 +230,22 @@ class CustomerPointsResource extends Resource
                         ->toArray()
                     ),
                 Tables\Filters\Filter::make('has_balance')
-                    ->label('Has Points')
+                    ->label(__('Has Points'))
                     ->query(fn (Builder $query) => $query->where('current_balance', '>', 0)),
             ])
             ->actions([
                 ViewAction::make(),
                 Action::make('adjust')
-                    ->label('Adjust Points')
+                    ->label(__('Adjust Points'))
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->form([
                         Forms\Components\TextInput::make('points')
-                            ->label('Points')
+                            ->label(__('Points'))
                             ->numeric()
                             ->required()
-                            ->helperText('Use negative to remove points'),
+                            ->helperText(__('Use negative to remove points')),
                         Forms\Components\Textarea::make('reason')
-                            ->label('Reason')
+                            ->label(__('Reason'))
                             ->required(),
                     ])
                     ->action(function (CustomerPoints $record, array $data): void {
@@ -256,7 +256,7 @@ class CustomerPointsResource extends Resource
                         );
 
                         Notification::make()
-                            ->title('Points adjusted successfully')
+                            ->title(__('Points adjusted successfully'))
                             ->success()
                             ->send();
                     }),
@@ -264,15 +264,15 @@ class CustomerPointsResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('bulk_adjust')
-                        ->label('Bulk Adjust Points')
+                        ->label(__('Bulk Adjust Points'))
                         ->icon('heroicon-o-adjustments-horizontal')
                         ->form([
                             Forms\Components\TextInput::make('points')
-                                ->label('Points')
+                                ->label(__('Points'))
                                 ->numeric()
                                 ->required(),
                             Forms\Components\Textarea::make('reason')
-                                ->label('Reason')
+                                ->label(__('Reason'))
                                 ->required(),
                         ])
                         ->action(function ($records, array $data): void {

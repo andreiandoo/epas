@@ -59,7 +59,7 @@ class SubscriptionPlanResource extends Resource
                         ->placeholder('generat-din-nume'),
                     Forms\Components\TextInput::make('subtitle')
                         ->label('Subtitlu')
-                        ->placeholder('ex: 5 spectacole • Staluri')
+                        ->placeholder(__('ex: 5 spectacole • Staluri'))
                         ->maxLength(190)
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('price_cents')
@@ -97,7 +97,7 @@ class SubscriptionPlanResource extends Resource
                         ->helperText('Locul ales devine locul abonatului la toate spectacolele incluse.'),
                     Forms\Components\TagsInput::make('allowed_sections')
                         ->label('Zone permise')
-                        ->placeholder('ex: Staluri, Balcon')
+                        ->placeholder(__('ex: Staluri, Balcon'))
                         ->helperText('Lasă gol pentru toate zonele.'),
                     Forms\Components\Select::make('validity_mode')
                         ->label('Valabilitate')
@@ -108,7 +108,7 @@ class SubscriptionPlanResource extends Resource
                         ->default('season')
                         ->live(),
                     Forms\Components\Toggle::make('priority_access')
-                        ->label('Acces prioritar la premiere')
+                        ->label(__('Acces prioritar la premiere'))
                         ->default(false),
                     Forms\Components\DatePicker::make('valid_from')
                         ->label('Valabil de la')
@@ -120,7 +120,7 @@ class SubscriptionPlanResource extends Resource
                         ->visible(fn (SGet $get) => $get('validity_mode') === 'date_range'),
                 ])->columns(2),
 
-            SC\Section::make('Beneficii & Aspect')
+            SC\Section::make(__('Beneficii & Aspect'))
                 ->schema([
                     Forms\Components\TagsInput::make('benefits')
                         ->label('Beneficii')

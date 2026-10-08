@@ -54,7 +54,7 @@ class ArtistResource extends Resource
                     // Câmp de căutare dedicat (nu se salvează — doar pentru import)
                     Forms\Components\TextInput::make('library_query')
                         ->label('Caută artist în bibliotecă')
-                        ->placeholder('Scrie un nume, ex: Maia Morgenstern...')
+                        ->placeholder(__('Scrie un nume, ex: Maia Morgenstern...'))
                         ->live(debounce: 500)
                         ->dehydrated(false)
                         ->columnSpanFull(),
@@ -111,7 +111,7 @@ class ArtistResource extends Resource
                         ->placeholder('generat-din-nume'),
                     Forms\Components\TextInput::make('role')
                         ->label('Rol / Funcție')
-                        ->placeholder('Actor, Regizor, Scenograf...')
+                        ->placeholder(__('Actor, Regizor, Scenograf...'))
                         ->maxLength(120),
                     Forms\Components\DatePicker::make('birth_date')
                         ->label('Data nașterii')
@@ -129,12 +129,12 @@ class ArtistResource extends Resource
                                 Forms\Components\RichEditor::make('bio.ro')->label('Biografie (RO)'),
                             ]),
                             SC\Tabs\Tab::make('English')->schema([
-                                Forms\Components\RichEditor::make('bio.en')->label('Biography (EN)'),
+                                Forms\Components\RichEditor::make('bio.en')->label(__('Biography (EN)')),
                             ]),
                         ])->columnSpanFull(),
                 ]),
 
-            SC\Section::make('Foto & Contact')
+            SC\Section::make(__('Foto & Contact'))
                 ->schema([
                     Forms\Components\FileUpload::make('photo_url')
                         ->label('Fotografie (portret)')
@@ -160,7 +160,7 @@ class ArtistResource extends Resource
                 ->schema([
                     Forms\Components\Toggle::make('is_resident')->label('Membru rezident al trupei')->default(true),
                     Forms\Components\Select::make('status')
-                        ->label('Status')
+                        ->label(__('Status'))
                         ->options(['active' => 'Activ', 'inactive' => 'Inactiv'])
                         ->default('active'),
                     Forms\Components\DatePicker::make('contract_start')->label('Început contract'),
@@ -177,7 +177,7 @@ class ArtistResource extends Resource
                 Tables\Columns\TextColumn::make('name')->label('Nume')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('role')->label('Rol')->badge()->color('warning'),
                 Tables\Columns\IconColumn::make('is_resident')->label('Rezident')->boolean(),
-                Tables\Columns\TextColumn::make('status')->label('Status')->badge()
+                Tables\Columns\TextColumn::make('status')->label(__('Status'))->badge()
                     ->color(fn ($state) => $state === 'active' ? 'success' : 'gray'),
                 Tables\Columns\TextColumn::make('created_at')->label('Adăugat')->date()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])

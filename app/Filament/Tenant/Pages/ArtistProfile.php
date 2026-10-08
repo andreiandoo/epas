@@ -115,9 +115,9 @@ class ArtistProfile extends Page
                                 SC\Tabs\Tab::make('Details')
                                     ->icon('heroicon-o-document-text')
                                     ->schema([
-                                        SC\Section::make('Basic Info')->schema([
+                                        SC\Section::make(__('Basic Info'))->schema([
                                             Forms\Components\TextInput::make('name')
-                                                ->label('Artist name')
+                                                ->label(__('Artist name'))
                                                 ->required()
                                                 ->maxLength(190)
                                                 ->extraAttributes(['class' => 'ep-title'])
@@ -135,24 +135,24 @@ class ArtistProfile extends Page
                                         SC\Section::make('Media')->compact()->schema([
                                             SC\Grid::make(3)->schema([
                                                 Forms\Components\FileUpload::make('main_image_url')
-                                                    ->label('Main (horiz.)')
+                                                    ->label(__('Main (horiz.)'))
                                                     ->image()->directory('artists/hero')
                                                     ->disk('public')->visibility('public')
                                                     ->maxSize(4096)->helperText('1600x900+'),
                                                 Forms\Components\FileUpload::make('logo_url')
-                                                    ->label('Logo (horiz.)')
+                                                    ->label(__('Logo (horiz.)'))
                                                     ->image()->directory('artists/logo')
                                                     ->disk('public')->visibility('public')
                                                     ->maxSize(2048)->helperText('800x300+'),
                                                 Forms\Components\FileUpload::make('portrait_url')
-                                                    ->label('Portrait (vert.)')
+                                                    ->label(__('Portrait (vert.)'))
                                                     ->image()->directory('artists/portrait')
                                                     ->disk('public')->visibility('public')
                                                     ->maxSize(4096)->helperText('900x1200+'),
                                             ]),
                                         ]),
 
-                                        SC\Section::make('Location')->compact()->schema([
+                                        SC\Section::make(__('Location'))->compact()->schema([
                                             Forms\Components\Select::make('country')
                                                 ->options(Locations::countries())
                                                 ->searchable()->live()->preload(false),
@@ -175,12 +175,12 @@ class ArtistProfile extends Page
                                             TranslatableField::richEditor('bio_html', 'Bio')->columnSpanFull(),
                                         ]),
 
-                                        SC\Section::make('YouTube Videos')->compact()->collapsible()->schema([
+                                        SC\Section::make(__('YouTube Videos'))->compact()->collapsible()->schema([
                                             Forms\Components\Repeater::make('youtube_videos')
-                                                ->label('Video URLs')
-                                                ->addActionLabel('Add video')
+                                                ->label(__('Video URLs'))
+                                                ->addActionLabel(__('Add video'))
                                                 ->schema([
-                                                    Forms\Components\TextInput::make('url')->label('YouTube URL')->url()->required(),
+                                                    Forms\Components\TextInput::make('url')->label(__('YouTube URL'))->url()->required(),
                                                 ])
                                                 ->default([])
                                                 ->collapsed()
@@ -190,12 +190,12 @@ class ArtistProfile extends Page
                                     ]),
 
                                 // TAB 3: Social & Links
-                                SC\Tabs\Tab::make('Social & Links')
+                                SC\Tabs\Tab::make(__('Social & Links'))
                                     ->icon('heroicon-o-link')
                                     ->lazy()
                                     ->schema([
-                                        SC\Section::make('Social Links')->schema([
-                                            Forms\Components\TextInput::make('website')->label('Website')->url()->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
+                                        SC\Section::make(__('Social Links'))->schema([
+                                            Forms\Components\TextInput::make('website')->label(__('Website'))->url()->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
                                             Forms\Components\TextInput::make('facebook_url')->label('Facebook')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
                                             Forms\Components\TextInput::make('instagram_url')->label('Instagram')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
                                             Forms\Components\TextInput::make('tiktok_url')->label('TikTok')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
@@ -208,14 +208,14 @@ class ArtistProfile extends Page
                                             Forms\Components\TextInput::make('musicbrainz_url')->label('MusicBrainz')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
                                         ])->columns(2),
 
-                                        SC\Section::make('Platform IDs')->compact()->schema([
-                                            Forms\Components\TextInput::make('youtube_id')->label('YouTube Channel ID')->maxLength(190)->helperText('Used to fetch channel stats.'),
-                                            Forms\Components\TextInput::make('spotify_id')->label('Spotify Artist ID')->maxLength(190)->helperText('Used to fetch Spotify stats.'),
+                                        SC\Section::make(__('Platform IDs'))->compact()->schema([
+                                            Forms\Components\TextInput::make('youtube_id')->label(__('YouTube Channel ID'))->maxLength(190)->helperText(__('Used to fetch channel stats.')),
+                                            Forms\Components\TextInput::make('spotify_id')->label(__('Spotify Artist ID'))->maxLength(190)->helperText(__('Used to fetch Spotify stats.')),
                                         ])->columns(2),
                                     ]),
 
                                 // TAB 4: Contact & Management
-                                SC\Tabs\Tab::make('Contact & Management')
+                                SC\Tabs\Tab::make(__('Contact & Management'))
                                     ->icon('heroicon-o-phone')
                                     ->lazy()
                                     ->schema([
@@ -225,27 +225,27 @@ class ArtistProfile extends Page
                                                 Forms\Components\TextInput::make('phone')->label('Phone')->maxLength(120),
                                             ])->columns(2),
                                             SC\Section::make('Manager')->icon('heroicon-o-user')->schema([
-                                                Forms\Components\TextInput::make('manager_first_name')->label('First name')->maxLength(120),
-                                                Forms\Components\TextInput::make('manager_last_name')->label('Last name')->maxLength(120),
+                                                Forms\Components\TextInput::make('manager_first_name')->label(__('First name'))->maxLength(120),
+                                                Forms\Components\TextInput::make('manager_last_name')->label(__('Last name'))->maxLength(120),
                                                 Forms\Components\TextInput::make('manager_email')->label('Email')->email()->maxLength(190),
                                                 Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120),
-                                                Forms\Components\TextInput::make('manager_website')->label('Website')->url()->maxLength(255),
+                                                Forms\Components\TextInput::make('manager_website')->label(__('Website'))->url()->maxLength(255),
                                             ])->columns(2),
                                         ]),
 
                                         SC\Grid::make(2)->schema([
-                                            SC\Section::make('Booking Agent')->icon('heroicon-o-briefcase')->schema([
-                                                Forms\Components\TextInput::make('agent_first_name')->label('First name')->maxLength(120),
-                                                Forms\Components\TextInput::make('agent_last_name')->label('Last name')->maxLength(120),
+                                            SC\Section::make(__('Booking Agent'))->icon('heroicon-o-briefcase')->schema([
+                                                Forms\Components\TextInput::make('agent_first_name')->label(__('First name'))->maxLength(120),
+                                                Forms\Components\TextInput::make('agent_last_name')->label(__('Last name'))->maxLength(120),
                                                 Forms\Components\TextInput::make('agent_email')->label('Email')->email()->maxLength(190),
                                                 Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120),
-                                                Forms\Components\TextInput::make('agent_website')->label('Website')->url()->maxLength(255),
+                                                Forms\Components\TextInput::make('agent_website')->label(__('Website'))->url()->maxLength(255),
                                             ])->columns(2),
-                                            SC\Section::make('Booking Agency')->icon('heroicon-o-building-office')->schema([
-                                                Forms\Components\TextInput::make('booking_agency.name')->label('Agency Name'),
+                                            SC\Section::make(__('Booking Agency'))->icon('heroicon-o-building-office')->schema([
+                                                Forms\Components\TextInput::make('booking_agency.name')->label(__('Agency Name')),
                                                 Forms\Components\TextInput::make('booking_agency.email')->label('Email')->email(),
                                                 Forms\Components\TextInput::make('booking_agency.phone')->label('Phone'),
-                                                Forms\Components\TextInput::make('booking_agency.website')->label('Website')->url(),
+                                                Forms\Components\TextInput::make('booking_agency.website')->label(__('Website'))->url(),
                                             ])->columns(2),
                                         ]),
                                     ]),
@@ -255,11 +255,11 @@ class ArtistProfile extends Page
                                     ->icon('heroicon-o-banknotes')
                                     ->lazy()
                                     ->schema([
-                                        SC\Section::make('Fee Ranges')->schema([
-                                            Forms\Components\TextInput::make('min_fee_concert')->label('Min Fee Concert (EUR)')->numeric()->minValue(0),
-                                            Forms\Components\TextInput::make('max_fee_concert')->label('Max Fee Concert (EUR)')->numeric()->minValue(0),
-                                            Forms\Components\TextInput::make('min_fee_festival')->label('Min Fee Festival (EUR)')->numeric()->minValue(0),
-                                            Forms\Components\TextInput::make('max_fee_festival')->label('Max Fee Festival (EUR)')->numeric()->minValue(0),
+                                        SC\Section::make(__('Fee Ranges'))->schema([
+                                            Forms\Components\TextInput::make('min_fee_concert')->label(__('Min Fee Concert (EUR)'))->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('max_fee_concert')->label(__('Max Fee Concert (EUR)'))->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('min_fee_festival')->label(__('Min Fee Festival (EUR)'))->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('max_fee_festival')->label(__('Max Fee Festival (EUR)'))->numeric()->minValue(0),
                                         ])->columns(2),
                                     ]),
                             ]),
@@ -290,7 +290,7 @@ class ArtistProfile extends Page
                         ]),
 
                         // Artist Stats
-                        SC\Section::make('Stats (12 months)')
+                        SC\Section::make(__('Stats (12 months)'))
                             ->icon('heroicon-o-chart-bar')
                             ->compact()
                             ->schema([
@@ -313,7 +313,7 @@ class ArtistProfile extends Page
                             ]),
 
                         // Social Stats
-                        SC\Section::make('Social Stats')
+                        SC\Section::make(__('Social Stats'))
                             ->icon('heroicon-o-signal')
                             ->compact()
                             ->schema([
@@ -349,7 +349,7 @@ class ArtistProfile extends Page
         $artist = auth()->user()->tenant?->artist;
 
         if (!$artist) {
-            Notification::make()->danger()->title('No artist linked')->send();
+            Notification::make()->danger()->title(__('No artist linked'))->send();
             return;
         }
 
@@ -398,8 +398,8 @@ class ArtistProfile extends Page
 
         Notification::make()
             ->success()
-            ->title('Artist profile updated')
-            ->body('Your artist profile has been saved.')
+            ->title(__('Artist profile updated'))
+            ->body(__('Your artist profile has been saved.'))
             ->send();
     }
 

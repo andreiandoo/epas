@@ -88,10 +88,10 @@ class ShopEventProductResource extends Resource
 
         return $schema
             ->schema([
-                SC\Section::make('Association Details')
+                SC\Section::make(__('Association Details'))
                     ->schema([
                         Forms\Components\Select::make('event_id')
-                            ->label('Event')
+                            ->label(__('Event'))
                             ->options(
                                 Event::where('tenant_id', $tenantId)
                                     ->where('is_cancelled', false)
@@ -116,10 +116,10 @@ class ShopEventProductResource extends Resource
                             ->required(),
 
                         Forms\Components\Select::make('association_type')
-                            ->label('Association Type')
+                            ->label(__('Association Type'))
                             ->options([
-                                'upsell' => 'Upsell - Show during checkout',
-                                'bundle' => 'Bundle - Included with ticket',
+                                'upsell' => __('Upsell - Show during checkout'),
+                                'bundle' => __('Bundle - Included with ticket'),
                             ])
                             ->required()
                             ->live()
@@ -130,7 +130,7 @@ class ShopEventProductResource extends Resource
                             }),
 
                         Forms\Components\Select::make('ticket_type_id')
-                            ->label('Ticket Type')
+                            ->label(__('Ticket Type'))
                             ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                                 $eventId = $get('event_id');
                                 if (!$eventId) return [];
@@ -147,27 +147,27 @@ class ShopEventProductResource extends Resource
                             ->visible(fn(\Filament\Schemas\Components\Utilities\Get $get) => $get('event_id') !== null),
 
                         Forms\Components\TextInput::make('quantity_included')
-                            ->label('Quantity Included')
+                            ->label(__('Quantity Included'))
                             ->numeric()
                             ->default(1)
                             ->minValue(1)
                             ->visible(fn(\Filament\Schemas\Components\Utilities\Get $get) => $get('association_type') === 'bundle')
-                            ->helperText('Number of this product included per ticket'),
+                            ->helperText(__('Number of this product included per ticket')),
                     ])
                     ->columns(2),
 
-                SC\Section::make('Display Settings')
+                SC\Section::make(__('Display Settings'))
                     ->schema([
                         Forms\Components\TextInput::make('sort_order')
                             ->label('Sort Order')
                             ->numeric()
                             ->default(0)
-                            ->helperText('Lower numbers appear first'),
+                            ->helperText(__('Lower numbers appear first')),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Inactive products will not be shown or included'),
+                            ->helperText(__('Inactive products will not be shown or included')),
                     ])
                     ->columns(2),
             ]);
@@ -180,7 +180,7 @@ class ShopEventProductResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('event.title')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->formatStateUsing(fn($record) => $record->event?->getTranslation('title', $tenantLanguage))
                     ->searchable()
                     ->sortable(),
@@ -191,7 +191,7 @@ class ShopEventProductResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\BadgeColumn::make('association_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->colors([
                         'primary' => 'upsell',
                         'success' => 'bundle',
@@ -199,13 +199,13 @@ class ShopEventProductResource extends Resource
                     ->formatStateUsing(fn($state) => ucfirst($state)),
 
                 Tables\Columns\TextColumn::make('ticketType.name')
-                    ->label('Ticket Type')
+                    ->label(__('Ticket Type'))
                     ->formatStateUsing(fn($record) => $record->ticketType?->name ?? 'All')
                     ->badge()
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('quantity_included')
-                    ->label('Qty')
+                    ->label(__('Qty'))
                     ->visible(fn($livewire) => $livewire->tableFilters['association_type']['value'] ?? null === 'bundle'),
 
                 Tables\Columns\TextColumn::make('sort_order')
@@ -219,12 +219,12 @@ class ShopEventProductResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('association_type')
                     ->options([
-                        'upsell' => 'Upsells',
-                        'bundle' => 'Bundles',
+                        'upsell' => __('Upsells'),
+                        'bundle' => __('Bundles'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('event_id')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->options(function () {
                         $tenantId = auth()->user()?->tenant?->id;
                         $tenantLanguage = auth()->user()?->tenant?->language ?? 'en';

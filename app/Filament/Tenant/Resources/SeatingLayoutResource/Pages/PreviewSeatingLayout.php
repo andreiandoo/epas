@@ -31,7 +31,7 @@ class PreviewSeatingLayout extends Page
     {
         return [
             Actions\Action::make('designer')
-                ->label('Deschide Designer')
+                ->label(__('Deschide Designer'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->url(fn () => SeatingLayoutResource::getUrl('designer', ['record' => $this->layoutId])),

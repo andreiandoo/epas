@@ -63,7 +63,7 @@ class MerchandiseItemResource extends Resource
                 SC\Section::make('Detalii produs')
                     ->schema([
                         Forms\Components\Select::make('festival_edition_id')
-                            ->label('Editie festival')
+                            ->label(__('Editie festival'))
                             ->relationship('edition', 'name', modifyQueryUsing: function (Builder $query) {
                                 $tenant = auth()->user()->tenant;
                                 return $query->where('tenant_id', $tenant?->id);
@@ -86,7 +86,7 @@ class MerchandiseItemResource extends Resource
                                 Forms\Components\TextInput::make('cui')
                                     ->label('CUI'),
                                 Forms\Components\TextInput::make('contact_person')
-                                    ->label('Persoana contact'),
+                                    ->label(__('Persoana contact')),
                                 Forms\Components\TextInput::make('phone')
                                     ->label('Telefon')
                                     ->tel(),
@@ -101,7 +101,7 @@ class MerchandiseItemResource extends Resource
                             ->label('Nume produs')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('Pahar personalizat 500ml'),
+                            ->placeholder(__('Pahar personalizat 500ml')),
                         Forms\Components\Select::make('type')
                             ->label('Tip')
                             ->options([
@@ -114,9 +114,9 @@ class MerchandiseItemResource extends Resource
                             ->default('consumable')
                             ->required(),
                         Forms\Components\Select::make('unit')
-                            ->label('Unitate masura')
+                            ->label(__('Unitate masura'))
                             ->options([
-                                'buc' => 'Bucati',
+                                'buc' => __('Bucati'),
                                 'kg'  => 'Kilograme',
                                 'l'   => 'Litri',
                                 'set' => 'Seturi',
@@ -129,7 +129,7 @@ class MerchandiseItemResource extends Resource
                             ->required()
                             ->minValue(0),
                         Forms\Components\TextInput::make('acquisition_price_cents')
-                            ->label('Pret achizitie')
+                            ->label(__('Pret achizitie'))
                             ->numeric()
                             ->required()
                             ->suffix('RON')
@@ -150,14 +150,14 @@ class MerchandiseItemResource extends Resource
                             ->suffix('%'),
                     ])->columns(2),
 
-                SC\Section::make('Factura')
+                SC\Section::make(__('Factura'))
                     ->schema([
                         Forms\Components\TextInput::make('invoice_number')
-                            ->label('Nr. factura'),
+                            ->label(__('Nr. factura')),
                         Forms\Components\DatePicker::make('invoice_date')
                             ->label('Data factura'),
                         Forms\Components\Textarea::make('notes')
-                            ->label('Observatii')
+                            ->label(__('Observatii'))
                             ->rows(2)
                             ->columnSpanFull(),
                     ])->columns(2),
@@ -169,7 +169,7 @@ class MerchandiseItemResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('edition.name')
-                    ->label('Editie')
+                    ->label(__('Editie'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('supplier.name')
                     ->label('Furnizor')
@@ -192,17 +192,17 @@ class MerchandiseItemResource extends Resource
                     ->formatStateUsing(fn ($state, $record) => rtrim(rtrim(number_format((float) $state, 2, '.', ''), '0'), '.') . ' ' . $record->unit)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('acquisition_price_cents')
-                    ->label('Pret achizitie')
+                    ->label(__('Pret achizitie'))
                     ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . $record->currency)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('invoice_number')
-                    ->label('Nr. factura')
+                    ->label(__('Nr. factura'))
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('festival_edition_id')
-                    ->label('Editie')
+                    ->label(__('Editie'))
                     ->relationship('edition', 'name', modifyQueryUsing: function (Builder $query) {
                         $tenant = auth()->user()->tenant;
                         return $query->where('tenant_id', $tenant?->id);

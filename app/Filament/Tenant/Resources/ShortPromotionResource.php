@@ -61,7 +61,7 @@ class ShortPromotionResource extends Resource
                 ->description('Poți promova doar shorts publicate care îți aparțin. Slotul e marcat vizibil ca sponsorizat în feed — asta nu se poate dezactiva.')
                 ->schema([
                     Forms\Components\Select::make('short_id')
-                        ->label('Short')
+                        ->label(__('Short'))
                         ->options(fn () => Short::query()
                             ->where('tenant_id', auth()->user()?->tenant_id)
                             ->where('status', Short::STATUS_PUBLISHED)
@@ -124,7 +124,7 @@ class ShortPromotionResource extends Resource
                 ])
                 ->columns(2),
 
-            SC\Section::make('Targetare')
+            SC\Section::make(__('Targetare'))
                 ->description('Opțional. Fără țară, campania rulează oriunde. Cu țară setată, un vizitator a cărui locație nu poate fi determinată NU vede reclama.')
                 ->schema([
                     Forms\Components\TagsInput::make('targeting.geo')
@@ -143,7 +143,7 @@ class ShortPromotionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('short.title')->label('Short')->limit(30)->searchable(),
+                Tables\Columns\TextColumn::make('short.title')->label(__('Short'))->limit(30)->searchable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()

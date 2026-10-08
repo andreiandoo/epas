@@ -63,7 +63,7 @@ class WristbandResource extends Resource
                 SC\Section::make('Detalii bratara')
                     ->schema([
                         Forms\Components\Select::make('festival_edition_id')
-                            ->label('Editie festival')
+                            ->label(__('Editie festival'))
                             ->relationship('edition', 'name', modifyQueryUsing: function (Builder $query) {
                                 $tenant = auth()->user()->tenant;
                                 return $query->where('tenant_id', $tenant?->id);
@@ -79,17 +79,17 @@ class WristbandResource extends Resource
                             ->label('Tip')
                             ->options([
                                 'nfc'  => 'NFC',
-                                'qr'   => 'QR Code',
+                                'qr'   => __('QR Code'),
                                 'rfid' => 'RFID',
                             ])
                             ->default('nfc')
                             ->required(),
                         Forms\Components\Select::make('status')
                             ->options([
-                                'unassigned' => 'Neasignata',
-                                'assigned'   => 'Asignata',
-                                'active'     => 'Activa',
-                                'disabled'   => 'Dezactivata',
+                                'unassigned' => __('Neasignata'),
+                                'assigned'   => __('Asignata'),
+                                'active'     => __('Activa'),
+                                'disabled'   => __('Dezactivata'),
                             ])
                             ->default('unassigned')
                             ->required(),
@@ -142,7 +142,7 @@ class WristbandResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('edition.name')
-                    ->label('Editie')
+                    ->label(__('Editie'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('wristband_type')
                     ->label('Tip')
@@ -162,7 +162,7 @@ class WristbandResource extends Resource
                     ->label('Client')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('activated_at')
-                    ->label('Activata la')
+                    ->label(__('Activata la'))
                     ->dateTime('d.m.Y H:i')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -170,13 +170,13 @@ class WristbandResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'unassigned' => 'Neasignata',
-                        'assigned'   => 'Asignata',
-                        'active'     => 'Activa',
-                        'disabled'   => 'Dezactivata',
+                        'unassigned' => __('Neasignata'),
+                        'assigned'   => __('Asignata'),
+                        'active'     => __('Activa'),
+                        'disabled'   => __('Dezactivata'),
                     ]),
                 Tables\Filters\SelectFilter::make('festival_edition_id')
-                    ->label('Editie')
+                    ->label(__('Editie'))
                     ->relationship('edition', 'name', modifyQueryUsing: function (Builder $query) {
                         $tenant = auth()->user()->tenant;
                         return $query->where('tenant_id', $tenant?->id);
@@ -185,7 +185,7 @@ class WristbandResource extends Resource
                     ->label('Tip')
                     ->options([
                         'nfc'  => 'NFC',
-                        'qr'   => 'QR Code',
+                        'qr'   => __('QR Code'),
                         'rfid' => 'RFID',
                     ]),
             ])

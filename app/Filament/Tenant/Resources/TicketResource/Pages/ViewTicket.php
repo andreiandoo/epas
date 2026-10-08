@@ -149,7 +149,7 @@ class ViewTicket extends ViewRecord
                 ])
                 ->requiresConfirmation()
                 ->modalHeading('Schimbă starea biletului')
-                ->modalDescription('Un bilet anulat nu mai e acceptat la intrare.')
+                ->modalDescription(__('Un bilet anulat nu mai e acceptat la intrare.'))
                 ->action(function (array $data) {
                     $ticket = $this->record;
                     $oldStatus = $ticket->status;

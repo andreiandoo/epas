@@ -73,12 +73,12 @@ class ShortResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            SC\Section::make('Source')
-                ->description('Upload a vertical video, or paste a link to one you already posted.')
+            SC\Section::make(__('Source'))
+                ->description(__('Upload a vertical video, or paste a link to one you already posted.'))
                 ->schema([
                     Forms\Components\Select::make('source')
                         ->options([
-                            'upload' => 'Native upload',
+                            'upload' => __('Native upload'),
                             'youtube' => 'YouTube',
                             'tiktok' => 'TikTok',
                             'instagram' => 'Instagram',
@@ -89,24 +89,24 @@ class ShortResource extends Resource
                         ->live(),
 
                     Forms\Components\TextInput::make('source_url')
-                        ->label('Source link')
+                        ->label(__('Source link'))
                         ->url()
                         ->maxLength(2048)
                         ->visible(fn (Forms\Get $get) => $get('source') !== 'upload'),
                 ])
                 ->columns(2),
 
-            SC\Section::make('Presentation')
+            SC\Section::make(__('Presentation'))
                 ->schema([
                     Forms\Components\TextInput::make('title')->maxLength(255),
                     Forms\Components\TextInput::make('language')->maxLength(8),
                     Forms\Components\Textarea::make('caption')->rows(3)->columnSpanFull(),
                     Forms\Components\TagsInput::make('hashtags')->columnSpanFull(),
                     Forms\Components\TextInput::make('music_credit')
-                        ->helperText('Royalty-free library only — unlicensed music gets the short taken down.')
+                        ->helperText(__('Royalty-free library only — unlicensed music gets the short taken down.'))
                         ->columnSpanFull(),
                     Forms\Components\FileUpload::make('poster_path')
-                        ->label('Cover')
+                        ->label(__('Cover'))
                         ->image()
                         ->disk('public')
                         ->directory('shorts/posters')
@@ -114,10 +114,10 @@ class ShortResource extends Resource
                 ])
                 ->columns(2),
 
-            SC\Section::make('Sell from this short')
+            SC\Section::make(__('Sell from this short'))
                 ->schema([
                     Forms\Components\Select::make('event_id')
-                        ->label('Event')
+                        ->label(__('Event'))
                         ->relationship(
                             'event',
                             'title',
@@ -128,11 +128,11 @@ class ShortResource extends Resource
                         ->live(),
 
                     Forms\Components\Select::make('cta_type')
-                        ->label('Button')
+                        ->label(__('Button'))
                         ->options([
                             'none' => 'None',
-                            'buy_tickets' => 'Buy tickets',
-                            'open_event' => 'Open event',
+                            'buy_tickets' => __('Buy tickets'),
+                            'open_event' => __('Open event'),
                         ])
                         ->default('none')
                         ->live(),
@@ -149,18 +149,18 @@ class ShortResource extends Resource
                                 ->pluck('name', 'id')
                                 ->all()
                             : [])
-                        ->helperText('Pre-selected at checkout.')
+                        ->helperText(__('Pre-selected at checkout.'))
                         ->visible(fn (Forms\Get $get) => $get('cta_type') === 'buy_tickets'),
 
                     Forms\Components\TextInput::make('promo_code')
                         ->maxLength(64)
-                        ->helperText('Must be an existing coupon code.')
+                        ->helperText(__('Must be an existing coupon code.'))
                         ->visible(fn (Forms\Get $get) => $get('cta_type') === 'buy_tickets'),
                 ])
                 ->columns(2),
 
-            SC\Section::make('Status')
-                ->description('New shorts go to review before they reach the global feed.')
+            SC\Section::make(__('Status'))
+                ->description(__('New shorts go to review before they reach the global feed.'))
                 ->schema([
                     Forms\Components\TextInput::make('status')
                         ->disabled()
@@ -168,7 +168,7 @@ class ShortResource extends Resource
 
                     Forms\Components\DateTimePicker::make('expires_at')
                         ->seconds(false)
-                        ->helperText('Optional — drops out of the feed automatically.'),
+                        ->helperText(__('Optional — drops out of the feed automatically.')),
                 ])
                 ->columns(2),
         ]);
@@ -179,7 +179,7 @@ class ShortResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('poster_path')
-                    ->label('Cover')
+                    ->label(__('Cover'))
                     ->disk('public')
                     ->height(48),
 
@@ -197,7 +197,7 @@ class ShortResource extends Resource
                 Tables\Columns\TextColumn::make('views')->numeric()->sortable(),
 
                 Tables\Columns\TextColumn::make('avg_watch_ratio')
-                    ->label('Watch %')
+                    ->label(__('Watch %'))
                     ->formatStateUsing(fn ($state) => number_format(((float) $state) * 100, 1).'%'),
 
                 Tables\Columns\TextColumn::make('cta_clicks')->label('CTA')->numeric(),
@@ -228,10 +228,10 @@ class ShortResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')->options([
                     'draft' => 'Draft',
-                    'pending_review' => 'Pending review',
-                    'published' => 'Published',
+                    'pending_review' => __('Pending review'),
+                    'published' => __('Published'),
                     'archived' => 'Archived',
-                    'rejected' => 'Rejected',
+                    'rejected' => __('Rejected'),
                 ]),
             ])
             ->recordActions([EditAction::make()])

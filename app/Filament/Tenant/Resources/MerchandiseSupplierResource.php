@@ -64,7 +64,7 @@ class MerchandiseSupplierResource extends Resource
                         Forms\Components\TextInput::make('cui')
                             ->label('CUI'),
                         Forms\Components\TextInput::make('contact_person')
-                            ->label('Persoana contact'),
+                            ->label(__('Persoana contact')),
                         Forms\Components\TextInput::make('phone')
                             ->label('Telefon')
                             ->tel(),

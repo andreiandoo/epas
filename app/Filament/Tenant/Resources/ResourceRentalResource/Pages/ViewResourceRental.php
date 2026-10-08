@@ -45,11 +45,11 @@ class ViewResourceRental extends ViewRecord
     public function infolist(Schema $schema): Schema
     {
         return $schema->schema([
-            Info\Section::make('Status rental')
+            Info\Section::make(__('Status rental'))
                 ->columns(3)
                 ->schema([
                     Info\TextEntry::make('status')
-                        ->label('Status')
+                        ->label(__('Status'))
                         ->badge()
                         ->state(fn ($record) => $record->is_active
                             ? ($record->is_overdue ? 'overdue' : 'active')
@@ -88,18 +88,18 @@ class ViewResourceRental extends ViewRecord
                         ->badge()
                         ->placeholder('—'),
                     Info\TextEntry::make('physicalResource.qr_code')
-                        ->label('QR Code')
+                        ->label(__('QR Code'))
                         ->fontFamily('mono')
                         ->copyable(),
                     Info\TextEntry::make('physicalResource.label')
                         ->label('Etichetă')
                         ->placeholder('—'),
                     Info\TextEntry::make('physicalResource.status')
-                        ->label('Status echipament')
+                        ->label(__('Status echipament'))
                         ->badge(),
                 ]),
 
-            Info\Section::make('Bilet & client')
+            Info\Section::make(__('Bilet & client'))
                 ->columns(3)
                 ->schema([
                     Info\TextEntry::make('ticket.code')

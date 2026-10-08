@@ -21,16 +21,16 @@ class ViewCustomerPoints extends ViewRecord
     {
         return [
             Actions\Action::make('adjust')
-                ->label('Adjust Points')
+                ->label(__('Adjust Points'))
                 ->icon('heroicon-o-adjustments-horizontal')
                 ->form([
                     Forms\Components\TextInput::make('points')
-                        ->label('Points')
+                        ->label(__('Points'))
                         ->numeric()
                         ->required()
-                        ->helperText('Use negative to remove points'),
+                        ->helperText(__('Use negative to remove points')),
                     Forms\Components\Textarea::make('reason')
-                        ->label('Reason')
+                        ->label(__('Reason'))
                         ->required(),
                 ])
                 ->action(function (array $data): void {
@@ -41,7 +41,7 @@ class ViewCustomerPoints extends ViewRecord
                     );
 
                     Notification::make()
-                        ->title('Points adjusted successfully')
+                        ->title(__('Points adjusted successfully'))
                         ->success()
                         ->send();
 
@@ -62,47 +62,47 @@ class ViewCustomerPoints extends ViewRecord
                             ->label('Name')
                             ->formatStateUsing(fn ($record) => trim(($record->customer->first_name ?? '') . ' ' . ($record->customer->last_name ?? '')) ?: '-'),
                         Info\TextEntry::make('referral_code')
-                            ->label('Referral Code')
+                            ->label(__('Referral Code'))
                             ->copyable(),
                     ])->columns(3),
 
-                Info\Section::make('Points Balance')
+                Info\Section::make(__('Points Balance'))
                     ->schema([
                         Info\TextEntry::make('current_balance')
-                            ->label('Current Balance')
+                            ->label(__('Current Balance'))
                             ->badge()
                             ->color('success'),
                         Info\TextEntry::make('total_earned')
-                            ->label('Total Earned'),
+                            ->label(__('Total Earned')),
                         Info\TextEntry::make('total_spent')
-                            ->label('Total Spent'),
+                            ->label(__('Total Spent')),
                         Info\TextEntry::make('total_expired')
-                            ->label('Total Expired'),
+                            ->label(__('Total Expired')),
                         Info\TextEntry::make('pending_points')
                             ->label('Pending'),
                     ])->columns(5),
 
-                Info\Section::make('Tier & Activity')
+                Info\Section::make(__('Tier & Activity'))
                     ->schema([
                         Info\TextEntry::make('current_tier')
-                            ->label('Tier')
+                            ->label(__('Tier'))
                             ->badge(),
                         Info\TextEntry::make('tier_points')
-                            ->label('Tier Points'),
+                            ->label(__('Tier Points')),
                         Info\TextEntry::make('last_earned_at')
-                            ->label('Last Earned')
+                            ->label(__('Last Earned'))
                             ->dateTime(),
                         Info\TextEntry::make('last_spent_at')
-                            ->label('Last Spent')
+                            ->label(__('Last Spent'))
                             ->dateTime(),
                     ])->columns(4),
 
-                Info\Section::make('Referrals')
+                Info\Section::make(__('Referrals'))
                     ->schema([
                         Info\TextEntry::make('referral_count')
-                            ->label('Total Referrals'),
+                            ->label(__('Total Referrals')),
                         Info\TextEntry::make('referral_points_earned')
-                            ->label('Points from Referrals'),
+                            ->label(__('Points from Referrals')),
                     ])->columns(2),
             ]);
     }

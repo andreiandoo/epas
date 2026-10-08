@@ -81,7 +81,7 @@ class VendorEmployeeResource extends Resource
                             ->required()
                             ->minLength(4)
                             ->maxLength(6)
-                            ->helperText('PIN unic per vendor, folosit pentru autentificare rapida la POS'),
+                            ->helperText(__('PIN unic per vendor, folosit pentru autentificare rapida la POS')),
                         Forms\Components\Select::make('role')
                             ->label('Rol')
                             ->options([
@@ -102,11 +102,11 @@ class VendorEmployeeResource extends Resource
                         Forms\Components\CheckboxList::make('permissions')
                             ->label('Permisiuni')
                             ->options([
-                                'sell'            => 'Vanzare produse',
-                                'refund'          => 'Retur / Refund',
+                                'sell'            => __('Vanzare produse'),
+                                'refund'          => __('Retur / Refund'),
                                 'view_reports'    => 'Vizualizare rapoarte',
                                 'manage_products' => 'Gestionare produse',
-                                'manage_employees'=> 'Gestionare angajati',
+                                'manage_employees'=> __('Gestionare angajati'),
                             ])
                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('role') === 'operator')
                             ->columnSpanFull(),

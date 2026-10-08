@@ -15,36 +15,36 @@ class EditBlogArticle extends EditRecord
     {
         return [
             Actions\Action::make('publish')
-                ->label('Publish')
+                ->label(__('Publish'))
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->visible(fn () => $this->record->status !== 'published')
                 ->requiresConfirmation()
-                ->modalHeading('Publish Article')
-                ->modalDescription('Are you sure you want to publish this article? It will become visible to all visitors.')
+                ->modalHeading(__('Publish Article'))
+                ->modalDescription(__('Are you sure you want to publish this article? It will become visible to all visitors.'))
                 ->action(function () {
                     $this->record->publish();
                     Notification::make()
                         ->success()
-                        ->title('Article Published')
-                        ->body('The article is now live.')
+                        ->title(__('Article Published'))
+                        ->body(__('The article is now live.'))
                         ->send();
                 }),
 
             Actions\Action::make('unpublish')
-                ->label('Unpublish')
+                ->label(__('Unpublish'))
                 ->icon('heroicon-o-eye-slash')
                 ->color('warning')
                 ->visible(fn () => $this->record->status === 'published')
                 ->requiresConfirmation()
-                ->modalHeading('Unpublish Article')
-                ->modalDescription('Are you sure you want to unpublish this article? It will no longer be visible to visitors.')
+                ->modalHeading(__('Unpublish Article'))
+                ->modalDescription(__('Are you sure you want to unpublish this article? It will no longer be visible to visitors.'))
                 ->action(function () {
                     $this->record->unpublish();
                     Notification::make()
                         ->success()
-                        ->title('Article Unpublished')
-                        ->body('The article has been moved to draft.')
+                        ->title(__('Article Unpublished'))
+                        ->body(__('The article has been moved to draft.'))
                         ->send();
                 }),
 

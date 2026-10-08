@@ -90,17 +90,17 @@ class ShopShippingZoneResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Zone Details')
+                SC\Section::make(__('Zone Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$tenantLanguage}")
-                            ->label('Zone Name')
+                            ->label(__('Zone Name'))
                             ->required()
                             ->maxLength(100)
-                            ->placeholder('e.g., Romania, Europe, Worldwide'),
+                            ->placeholder(__('e.g., Romania, Europe, Worldwide')),
 
                         Forms\Components\TagsInput::make('countries')
-                            ->label('Countries')
-                            ->placeholder('Add country codes (e.g., RO, DE, FR)')
+                            ->label(__('Countries'))
+                            ->placeholder(__('Add country codes (e.g., RO, DE, FR)'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Use ISO 3166-1 alpha-2 country codes. Leave empty for "Rest of World"'),
 
                         Forms\Components\TextInput::make('sort_order')
@@ -113,7 +113,7 @@ class ShopShippingZoneResource extends Resource
                             ->default(true),
                     ]),
 
-                SC\Section::make('Shipping Methods')
+                SC\Section::make(__('Shipping Methods'))
                     ->schema([
                         Forms\Components\Repeater::make('methods')
                             ->relationship('methods')
@@ -121,18 +121,18 @@ class ShopShippingZoneResource extends Resource
                                 SC\Grid::make(2)
                                     ->schema([
                                         Forms\Components\TextInput::make("name.{$tenantLanguage}")
-                                            ->label('Method Name')
+                                            ->label(__('Method Name'))
                                             ->required()
                                             ->maxLength(100)
-                                            ->placeholder('e.g., Standard Shipping, Express'),
+                                            ->placeholder(__('e.g., Standard Shipping, Express')),
 
                                         Forms\Components\Select::make('calculation_type')
-                                            ->label('Type')
+                                            ->label(__('Type'))
                                             ->options([
-                                                'flat' => 'Flat Rate',
+                                                'flat' => __('Flat Rate'),
                                                 'free' => 'Free Shipping',
-                                                'weight_based' => 'Weight Based',
-                                                'price_based' => 'Price Based',
+                                                'weight_based' => __('Weight Based'),
+                                                'price_based' => __('Price Based'),
                                             ])
                                             ->default('flat')
                                             ->required()
@@ -142,7 +142,7 @@ class ShopShippingZoneResource extends Resource
                                 SC\Grid::make(3)
                                     ->schema([
                                         Forms\Components\TextInput::make('cost')
-                                            ->label('Price (RON)')
+                                            ->label(__('Price (RON)'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->default(0)
@@ -150,7 +150,7 @@ class ShopShippingZoneResource extends Resource
                                             ->visible(fn ($get) => in_array($get('calculation_type'), ['flat', 'weight_based', 'price_based'])),
 
                                         Forms\Components\TextInput::make('cost_per_kg')
-                                            ->label('Cost per KG')
+                                            ->label(__('Cost per KG'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->prefix('RON')
@@ -158,30 +158,30 @@ class ShopShippingZoneResource extends Resource
                                             ->visible(fn ($get) => $get('calculation_type') === 'weight_based'),
 
                                         Forms\Components\TextInput::make('min_order')
-                                            ->label('Min Order')
+                                            ->label(__('Min Order'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->prefix('RON')
-                                            ->placeholder('No minimum'),
+                                            ->placeholder(__('No minimum')),
 
                                         Forms\Components\TextInput::make('max_order')
-                                            ->label('Free Above / Max Order')
+                                            ->label(__('Free Above / Max Order'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->prefix('RON')
-                                            ->placeholder('No maximum')
+                                            ->placeholder(__('No maximum'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Free shipping when order exceeds this amount'),
                                     ]),
 
                                 SC\Grid::make(4)
                                     ->schema([
                                         Forms\Components\TextInput::make('estimated_days_min')
-                                            ->label('Est. Days (min)')
+                                            ->label(__('Est. Days (min)'))
                                             ->numeric()
                                             ->default(3),
 
                                         Forms\Components\TextInput::make('estimated_days_max')
-                                            ->label('Est. Days (max)')
+                                            ->label(__('Est. Days (max)'))
                                             ->numeric()
                                             ->default(5),
 
@@ -197,7 +197,7 @@ class ShopShippingZoneResource extends Resource
                                     ]),
                             ])
                             ->defaultItems(1)
-                            ->addActionLabel('Add Shipping Method')
+                            ->addActionLabel(__('Add Shipping Method'))
                             ->collapsible()
                             ->reorderable()
                             ->orderColumn('sort_order')
@@ -214,12 +214,12 @@ class ShopShippingZoneResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$tenantLanguage}")
-                    ->label('Zone Name')
+                    ->label(__('Zone Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('countries')
-                    ->label('Countries')
+                    ->label(__('Countries'))
                     ->formatStateUsing(function ($state) {
                         if (empty($state)) return 'Rest of World';
                         if (is_array($state)) {
@@ -231,7 +231,7 @@ class ShopShippingZoneResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('methods_count')
-                    ->label('Methods')
+                    ->label(__('Methods'))
                     ->counts('methods')
                     ->sortable(),
 

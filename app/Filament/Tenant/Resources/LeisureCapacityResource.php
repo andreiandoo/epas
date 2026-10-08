@@ -72,7 +72,7 @@ class LeisureCapacityResource extends Resource
                         ->required(),
 
                     Forms\Components\TimePicker::make('time_slot_start')
-                        ->label('Slot orar (start)')
+                        ->label(__('Slot orar (start)'))
                         ->seconds(false)
                         ->helperText('Lasă gol pentru capacitate pe toată ziua.'),
 
@@ -118,7 +118,7 @@ class LeisureCapacityResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('time_slot_start')
-                    ->label('Slot')
+                    ->label(__('Slot'))
                     ->formatStateUsing(function ($state, $record) {
                         if (! $state) return 'Toată ziua';
                         return $record->time_slot_start->format('H:i') . ' – ' . ($record->time_slot_end?->format('H:i') ?? '?');
@@ -149,7 +149,7 @@ class LeisureCapacityResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'available' => 'success',

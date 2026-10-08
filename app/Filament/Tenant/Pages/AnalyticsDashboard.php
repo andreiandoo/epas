@@ -76,7 +76,7 @@ class AnalyticsDashboard extends Page
             Notification::make()
                 ->warning()
                 ->title('Microservice Not Active')
-                ->body('You need to activate the Analytics microservice first.')
+                ->body(__('You need to activate the Analytics microservice first.'))
                 ->send();
 
             redirect()->route('filament.tenant.pages.microservices');
@@ -93,12 +93,12 @@ class AnalyticsDashboard extends Page
         return $form
             ->schema([
                 Forms\Components\Select::make('date_range')
-                    ->label('Date Range')
+                    ->label(__('Date Range'))
                     ->options([
                         '7d' => 'Last 7 days',
                         '30d' => 'Last 30 days',
                         '90d' => 'Last 90 days',
-                        'all' => 'All time',
+                        'all' => __('All time'),
                     ])
                     ->default('30d')
                     ->live()

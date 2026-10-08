@@ -60,8 +60,8 @@ class EventCategoryResource extends Resource
                         ->rule('alpha_dash')
                         ->placeholder('generat-din-nume'),
                     Forms\Components\TextInput::make('icon')
-                        ->label('Icon (nume Heroicon)')
-                        ->placeholder('ex: calendar, ticket, musical-note')
+                        ->label(__('Icon (nume Heroicon)'))
+                        ->placeholder(__('ex: calendar, ticket, musical-note'))
                         ->helperText('Numele unui icon Heroicon fără prefix.')
                         ->maxLength(64),
                 ])->columns(2),
@@ -69,7 +69,7 @@ class EventCategoryResource extends Resource
             SC\Section::make('Aspect')
                 ->schema([
                     Forms\Components\FileUpload::make('image')
-                        ->label('Imagine categorie')
+                        ->label(__('Imagine categorie'))
                         ->image()
                         ->imageEditor()
                         ->disk('public')
@@ -101,7 +101,7 @@ class EventCategoryResource extends Resource
                     ->getStateUsing(fn ($record) => $record->getTranslation('name', 'ro'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')->label('Slug')->toggleable(),
-                Tables\Columns\TextColumn::make('icon')->label('Icon')->badge()->toggleable(),
+                Tables\Columns\TextColumn::make('icon')->label(__('Icon'))->badge()->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')->label('Activă')->boolean(),
                 Tables\Columns\TextColumn::make('events_count')->counts('events')->label('Evenimente')->badge()->color('info'),
             ])

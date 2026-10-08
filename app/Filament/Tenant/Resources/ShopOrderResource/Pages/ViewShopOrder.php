@@ -15,16 +15,16 @@ class ViewShopOrder extends ViewRecord
         return [
             Actions\EditAction::make(),
             Actions\Action::make('mark_shipped')
-                ->label('Mark Shipped')
+                ->label(__('Mark Shipped'))
                 ->icon('heroicon-o-truck')
                 ->color('primary')
                 ->visible(fn () => in_array($this->record->status, ['paid', 'processing']) && $this->record->fulfillment_status !== 'fulfilled')
                 ->form([
                     \Filament\Forms\Components\TextInput::make('tracking_number')
-                        ->label('Tracking Number')
+                        ->label(__('Tracking Number'))
                         ->maxLength(100),
                     \Filament\Forms\Components\TextInput::make('tracking_url')
-                        ->label('Tracking URL')
+                        ->label(__('Tracking URL'))
                         ->url(),
                 ])
                 ->action(function (array $data) {
@@ -36,7 +36,7 @@ class ViewShopOrder extends ViewRecord
                     ]);
                 }),
             Actions\Action::make('mark_delivered')
-                ->label('Mark Delivered')
+                ->label(__('Mark Delivered'))
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->visible(fn () => $this->record->status === 'shipped')

@@ -284,11 +284,11 @@ class ViewGuestEvent extends Page
     {
         return [
             \Filament\Actions\Action::make('back')
-                ->label('Back to Events')
+                ->label(__('Back to Events'))
                 ->icon('heroicon-o-arrow-left')
                 ->url(EventResource::getUrl('index')),
             \Filament\Actions\Action::make('statistics')
-                ->label('Statistics')
+                ->label(__('Statistics'))
                 ->icon('heroicon-o-chart-bar')
                 ->color('info')
                 ->url(EventResource::getUrl('statistics', ['record' => $this->record])),

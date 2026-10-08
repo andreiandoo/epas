@@ -16,35 +16,35 @@ class ViewAffiliateWithdrawal extends ViewRecord
     {
         return $schema
             ->schema([
-                SC\Section::make('Withdrawal Details')
+                SC\Section::make(__('Withdrawal Details'))
                     ->schema([
                         Infolists\Components\TextEntry::make('reference')
-                            ->label('Reference')
+                            ->label(__('Reference'))
                             ->copyable()
                             ->weight('bold'),
 
                         Infolists\Components\TextEntry::make('amount')
-                            ->label('Amount')
+                            ->label(__('Amount'))
                             ->money(fn ($record) => $record->currency ?? 'RON'),
 
                         Infolists\Components\TextEntry::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->badge()
                             ->color(fn ($record) => $record->getStatusColor()),
 
                         Infolists\Components\TextEntry::make('created_at')
-                            ->label('Requested At')
+                            ->label(__('Requested At'))
                             ->dateTime(),
                     ])
                     ->columns(4),
 
-                SC\Section::make('Affiliate Information')
+                SC\Section::make(__('Affiliate Information'))
                     ->schema([
                         Infolists\Components\TextEntry::make('affiliate.name')
-                            ->label('Affiliate Name'),
+                            ->label(__('Affiliate Name')),
 
                         Infolists\Components\TextEntry::make('affiliate.code')
-                            ->label('Affiliate Code')
+                            ->label(__('Affiliate Code'))
                             ->badge()
                             ->color('gray'),
 
@@ -53,57 +53,57 @@ class ViewAffiliateWithdrawal extends ViewRecord
                             ->copyable(),
 
                         Infolists\Components\TextEntry::make('affiliate.available_balance')
-                            ->label('Current Balance')
+                            ->label(__('Current Balance'))
                             ->money(fn ($record) => $record->currency ?? 'RON'),
                     ])
                     ->columns(4),
 
-                SC\Section::make('Payment Information')
+                SC\Section::make(__('Payment Information'))
                     ->schema([
                         Infolists\Components\TextEntry::make('payment_method')
-                            ->label('Payment Method')
+                            ->label(__('Payment Method'))
                             ->formatStateUsing(fn ($record) => $record->getPaymentMethodLabel()),
 
                         Infolists\Components\TextEntry::make('payment_details')
-                            ->label('Payment Details')
+                            ->label(__('Payment Details'))
                             ->formatStateUsing(fn ($record) => $record->getFormattedPaymentDetails()),
 
                         Infolists\Components\TextEntry::make('transaction_id')
-                            ->label('Transaction ID')
-                            ->placeholder('Not provided')
+                            ->label(__('Transaction ID'))
+                            ->placeholder(__('Not provided'))
                             ->copyable(),
                     ])
                     ->columns(3),
 
-                SC\Section::make('Processing Information')
+                SC\Section::make(__('Processing Information'))
                     ->schema([
                         Infolists\Components\TextEntry::make('processedByUser.name')
-                            ->label('Processed By')
-                            ->placeholder('Not processed'),
+                            ->label(__('Processed By'))
+                            ->placeholder(__('Not processed')),
 
                         Infolists\Components\TextEntry::make('processed_at')
-                            ->label('Processed At')
+                            ->label(__('Processed At'))
                             ->dateTime()
-                            ->placeholder('Not processed'),
+                            ->placeholder(__('Not processed')),
 
                         Infolists\Components\TextEntry::make('rejection_reason')
-                            ->label('Rejection Reason')
+                            ->label(__('Rejection Reason'))
                             ->placeholder('N/A')
                             ->visible(fn ($record) => $record->status === 'rejected'),
 
                         Infolists\Components\TextEntry::make('admin_notes')
-                            ->label('Admin Notes')
-                            ->placeholder('No notes')
+                            ->label(__('Admin Notes'))
+                            ->placeholder(__('No notes'))
                             ->columnSpanFull(),
                     ])
                     ->columns(2)
                     ->visible(fn ($record) => in_array($record->status, ['processing', 'completed', 'rejected'])),
 
-                SC\Section::make('Request Information')
+                SC\Section::make(__('Request Information'))
                     ->schema([
                         Infolists\Components\TextEntry::make('requested_ip')
-                            ->label('IP Address')
-                            ->placeholder('Not recorded'),
+                            ->label(__('IP Address'))
+                            ->placeholder(__('Not recorded')),
                     ])
                     ->collapsed(),
             ]);

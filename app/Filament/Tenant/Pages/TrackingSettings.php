@@ -197,7 +197,7 @@ class TrackingSettings extends Page
                             ->live(),
 
                         Forms\Components\TextInput::make('meta_id')
-                            ->label('Pixel ID')
+                            ->label(__('Pixel ID'))
                             ->placeholder('1234567890123456')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Meta Pixel ID from Facebook Business Manager')
                             ->maxLength(20)
@@ -226,7 +226,7 @@ class TrackingSettings extends Page
                     ->collapsible()
                     ->collapsed(),
 
-                SC\Section::make('TikTok Pixel')
+                SC\Section::make(__('TikTok Pixel'))
                     ->description(__('Track conversions for TikTok ads'))
                     ->icon('heroicon-o-play')
                     ->schema([
@@ -236,7 +236,7 @@ class TrackingSettings extends Page
                             ->live(),
 
                         Forms\Components\TextInput::make('tiktok_id')
-                            ->label('Pixel ID')
+                            ->label(__('Pixel ID'))
                             ->placeholder('CXXXXXXXXXXXXXXXXX')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your TikTok Pixel ID from TikTok Ads Manager')
                             ->maxLength(25)

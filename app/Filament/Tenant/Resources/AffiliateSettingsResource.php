@@ -77,13 +77,13 @@ class AffiliateSettingsResource extends Resource
                         SC\Tabs\Tab::make('Commission')
                             ->icon('heroicon-o-currency-dollar')
                             ->schema([
-                                SC\Section::make('Default Commission Settings')
-                                    ->description('Set the default commission for new affiliates')
+                                SC\Section::make(__('Default Commission Settings'))
+                                    ->description(__('Set the default commission for new affiliates'))
                                     ->schema([
                                         Forms\Components\Select::make('default_commission_type')
-                                            ->label('Commission Type')
+                                            ->label(__('Commission Type'))
                                             ->options([
-                                                'percent' => 'Percentage (%)',
+                                                'percent' => __('Percentage (%)'),
                                                 'fixed' => 'Fixed Amount',
                                             ])
                                             ->default('percent')
@@ -101,90 +101,90 @@ class AffiliateSettingsResource extends Resource
                                                 : 'Fixed amount per conversion'),
 
                                         Forms\Components\TextInput::make('commission_hold_days')
-                                            ->label('Commission Hold Period')
+                                            ->label(__('Commission Hold Period'))
                                             ->numeric()
                                             ->default(30)
                                             ->suffix('days')
-                                            ->helperText('Days before commission becomes available for withdrawal'),
+                                            ->helperText(__('Days before commission becomes available for withdrawal')),
                                     ])
                                     ->columns(3),
 
-                                SC\Section::make('Commission Rules')
+                                SC\Section::make(__('Commission Rules'))
                                     ->schema([
                                         Forms\Components\Toggle::make('exclude_taxes')
-                                            ->label('Exclude Taxes')
-                                            ->helperText('Calculate commission on net amount (excluding taxes)')
+                                            ->label(__('Exclude Taxes'))
+                                            ->helperText(__('Calculate commission on net amount (excluding taxes)'))
                                             ->default(true),
 
                                         Forms\Components\Toggle::make('exclude_shipping')
-                                            ->label('Exclude Shipping')
-                                            ->helperText('Calculate commission excluding shipping costs')
+                                            ->label(__('Exclude Shipping'))
+                                            ->helperText(__('Calculate commission excluding shipping costs'))
                                             ->default(true),
 
                                         Forms\Components\Toggle::make('prevent_self_purchase')
-                                            ->label('Prevent Self-Purchase')
-                                            ->helperText('Prevent affiliates from earning commission on their own orders')
+                                            ->label(__('Prevent Self-Purchase'))
+                                            ->helperText(__('Prevent affiliates from earning commission on their own orders'))
                                             ->default(true),
                                     ])
                                     ->columns(3),
                             ]),
 
-                        SC\Tabs\Tab::make('Registration')
+                        SC\Tabs\Tab::make(__('Registration'))
                             ->icon('heroicon-o-user-plus')
                             ->schema([
-                                SC\Section::make('Self-Registration')
+                                SC\Section::make(__('Self-Registration'))
                                     ->schema([
                                         Forms\Components\Toggle::make('allow_self_registration')
-                                            ->label('Allow Self-Registration')
-                                            ->helperText('Allow customers to register as affiliates through your website')
+                                            ->label(__('Allow Self-Registration'))
+                                            ->helperText(__('Allow customers to register as affiliates through your website'))
                                             ->default(true)
                                             ->live(),
 
                                         Forms\Components\Toggle::make('require_approval')
-                                            ->label('Require Approval')
-                                            ->helperText('New affiliates must be approved before they can start earning')
+                                            ->label(__('Require Approval'))
+                                            ->helperText(__('New affiliates must be approved before they can start earning'))
                                             ->default(true)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('allow_self_registration')),
                                     ])
                                     ->columns(2),
 
-                                SC\Section::make('Program Information')
-                                    ->description('Information shown on the affiliate registration page')
+                                SC\Section::make(__('Program Information'))
+                                    ->description(__('Information shown on the affiliate registration page'))
                                     ->schema([
                                         Forms\Components\TextInput::make('program_name')
-                                            ->label('Program Name')
-                                            ->placeholder('Partner Program')
+                                            ->label(__('Program Name'))
+                                            ->placeholder(__('Partner Program'))
                                             ->maxLength(255),
 
                                         Forms\Components\Textarea::make('program_description')
-                                            ->label('Program Description')
+                                            ->label(__('Program Description'))
                                             ->rows(3)
-                                            ->placeholder('Describe your affiliate program...'),
+                                            ->placeholder(__('Describe your affiliate program...')),
 
                                         Forms\Components\Repeater::make('program_benefits')
-                                            ->label('Benefits')
+                                            ->label(__('Benefits'))
                                             ->simple(
                                                 Forms\Components\TextInput::make('benefit')
-                                                    ->placeholder('e.g., Earn 10% on every sale')
+                                                    ->placeholder(__('e.g., Earn 10% on every sale'))
                                             )
-                                            ->addActionLabel('Add Benefit')
+                                            ->addActionLabel(__('Add Benefit'))
                                             ->collapsible()
                                             ->defaultItems(0),
 
                                         Forms\Components\RichEditor::make('registration_terms')
                                             ->label('Terms & Conditions')
-                                            ->helperText('Affiliates must accept these terms to register')
+                                            ->helperText(__('Affiliates must accept these terms to register'))
                                             ->columnSpanFull(),
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Withdrawals')
+                        SC\Tabs\Tab::make(__('Withdrawals'))
                             ->icon('heroicon-o-banknotes')
                             ->schema([
-                                SC\Section::make('Withdrawal Settings')
+                                SC\Section::make(__('Withdrawal Settings'))
                                     ->schema([
                                         Forms\Components\TextInput::make('min_withdrawal_amount')
-                                            ->label('Minimum Withdrawal Amount')
+                                            ->label(__('Minimum Withdrawal Amount'))
                                             ->numeric()
                                             ->default(50)
                                             ->required()
@@ -193,33 +193,33 @@ class AffiliateSettingsResource extends Resource
                                         Forms\Components\Select::make('currency')
                                             ->label('Currency')
                                             ->options([
-                                                'RON' => 'RON (Romanian Leu)',
-                                                'EUR' => 'EUR (Euro)',
-                                                'USD' => 'USD (US Dollar)',
+                                                'RON' => __('RON (Romanian Leu)'),
+                                                'EUR' => __('EUR (Euro)'),
+                                                'USD' => __('USD (US Dollar)'),
                                             ])
                                             ->default('RON')
                                             ->required(),
 
                                         Forms\Components\TextInput::make('withdrawal_processing_days')
-                                            ->label('Processing Time')
+                                            ->label(__('Processing Time'))
                                             ->numeric()
                                             ->default(14)
                                             ->suffix('days')
-                                            ->helperText('Estimated days to process withdrawals'),
+                                            ->helperText(__('Estimated days to process withdrawals')),
 
                                         Forms\Components\Toggle::make('auto_approve_withdrawals')
-                                            ->label('Auto-Approve Withdrawals')
-                                            ->helperText('Automatically approve withdrawal requests')
+                                            ->label(__('Auto-Approve Withdrawals'))
+                                            ->helperText(__('Automatically approve withdrawal requests'))
                                             ->default(false),
                                     ])
                                     ->columns(2),
 
-                                SC\Section::make('Payment Methods')
+                                SC\Section::make(__('Payment Methods'))
                                     ->schema([
                                         Forms\Components\CheckboxList::make('payment_methods')
-                                            ->label('Available Payment Methods')
+                                            ->label(__('Available Payment Methods'))
                                             ->options([
-                                                'bank_transfer' => 'Bank Transfer',
+                                                'bank_transfer' => __('Bank Transfer'),
                                                 'paypal' => 'PayPal',
                                                 'revolut' => 'Revolut',
                                                 'wise' => 'Wise',
@@ -229,25 +229,25 @@ class AffiliateSettingsResource extends Resource
                                     ]),
                             ]),
 
-                        SC\Tabs\Tab::make('Tracking')
+                        SC\Tabs\Tab::make(__('Tracking'))
                             ->icon('heroicon-o-chart-bar')
                             ->schema([
-                                SC\Section::make('Cookie Settings')
+                                SC\Section::make(__('Cookie Settings'))
                                     ->schema([
                                         Forms\Components\TextInput::make('cookie_name')
-                                            ->label('Cookie Name')
+                                            ->label(__('Cookie Name'))
                                             ->default('aff_ref')
                                             ->required()
                                             ->maxLength(50)
-                                            ->helperText('Name of the tracking cookie'),
+                                            ->helperText(__('Name of the tracking cookie')),
 
                                         Forms\Components\TextInput::make('cookie_duration_days')
-                                            ->label('Cookie Duration')
+                                            ->label(__('Cookie Duration'))
                                             ->numeric()
                                             ->default(90)
                                             ->suffix('days')
                                             ->required()
-                                            ->helperText('How long the affiliate attribution lasts'),
+                                            ->helperText(__('How long the affiliate attribution lasts')),
                                     ])
                                     ->columns(2),
                             ]),
@@ -256,7 +256,7 @@ class AffiliateSettingsResource extends Resource
 
                 Forms\Components\Toggle::make('is_active')
                     ->label('Active')
-                    ->helperText('Enable or disable the affiliate program')
+                    ->helperText(__('Enable or disable the affiliate program'))
                     ->default(true),
             ]);
     }
@@ -270,15 +270,15 @@ class AffiliateSettingsResource extends Resource
                     ->formatStateUsing(fn ($record) => $record->getFormattedCommission()),
 
                 Tables\Columns\TextColumn::make('min_withdrawal_amount')
-                    ->label('Min. Withdrawal')
+                    ->label(__('Min. Withdrawal'))
                     ->money(fn ($record) => $record->currency ?? 'RON'),
 
                 Tables\Columns\IconColumn::make('allow_self_registration')
-                    ->label('Self-Reg')
+                    ->label(__('Self-Reg'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('require_approval')
-                    ->label('Approval Req.')
+                    ->label(__('Approval Req.'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_active')
@@ -286,7 +286,7 @@ class AffiliateSettingsResource extends Resource
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Updated')
+                    ->label(__('Last Updated'))
                     ->dateTime()
                     ->sortable(),
             ])

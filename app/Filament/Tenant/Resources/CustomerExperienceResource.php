@@ -81,28 +81,28 @@ class CustomerExperienceResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('current_level')
-                    ->label('Level')
+                    ->label(__('Level'))
                     ->sortable()
                     ->badge()
                     ->color('primary'),
 
                 Tables\Columns\TextColumn::make('current_level_group')
-                    ->label('Group')
+                    ->label(__('Group'))
                     ->badge()
                     ->color(fn ($record) => $record->level_group_color ?? 'gray'),
 
                 Tables\Columns\TextColumn::make('total_xp')
-                    ->label('Total XP')
+                    ->label(__('Total XP'))
                     ->numeric()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('level_progress')
-                    ->label('Progress')
+                    ->label(__('Progress'))
                     ->suffix('%')
                     ->formatStateUsing(fn ($state) => number_format($state, 1)),
 
                 Tables\Columns\TextColumn::make('total_badges_earned')
-                    ->label('Badges')
+                    ->label(__('Badges'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('events_attended')
@@ -110,22 +110,22 @@ class CustomerExperienceResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('reviews_submitted')
-                    ->label('Reviews')
+                    ->label(__('Reviews'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('referrals_converted')
-                    ->label('Referrals')
+                    ->label(__('Referrals'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('last_xp_earned_at')
-                    ->label('Last Activity')
+                    ->label(__('Last Activity'))
                     ->dateTime()
                     ->sortable(),
             ])
             ->defaultSort('total_xp', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('current_level_group')
-                    ->label('Level Group')
+                    ->label(__('Level Group'))
                     ->options(fn () => CustomerExperience::query()
                         ->whereNotNull('current_level_group')
                         ->distinct()
