@@ -337,17 +337,6 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
 /* The pager is the fallback without JavaScript; the script hides it and puts this row in its place. The row keeps
    its height whether it says something or not, so nothing under it moves when a page arrives. */
 .cl .pager[hidden]{display:none}
-.cl-more{display:grid;justify-items:center;align-content:center;gap:var(--space-3);min-height:52px;margin-top:var(--space-6);text-align:center}
-.cl-more-status{display:flex;align-items:center;justify-content:center;gap:10px;margin:0;font-size:.9375rem;line-height:1.4;color:var(--muted)}
-.cl-more-line:empty{display:none}
-.cl-more.is-busy .cl-more-status::before{content:"";flex:none;width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--action);border-radius:50%;animation:cl-spin 800ms linear infinite}
-@keyframes cl-spin{to{transform:rotate(360deg)}}
-.cl-more-btn[hidden]{display:none}
-.cl-earlier{margin:var(--space-5) 0 0}
-.cl-earlier a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:var(--green);font-weight:700;text-decoration:underline;text-decoration-color:rgba(15,77,58,.3);text-underline-offset:4px}
-.cl-earlier a:hover{text-decoration-color:var(--green)}
-.cl-earlier .ic{width:18px;height:18px}
-@media (prefers-reduced-motion: reduce){.cl-more.is-busy .cl-more-status::before{animation:none;border-color:var(--action)}}
 
 /* =================== FLIGHTS: A BOARDING PASS (partner: Aviasales) =================== */
 /* Two parts of one ticket: the deep stub carries the lowest fare found and the one button; the board beside it

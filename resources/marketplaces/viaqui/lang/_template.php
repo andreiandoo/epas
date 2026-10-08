@@ -666,7 +666,7 @@ return [
         'Beach' => '',      // includes/v2/am-labels.php
         'Beaches' => '',      // includes/v2/places.php
         'Become a partner' => '',      // operatori.php
-        'Before you go' => '',      // country.php
+        'Before you go' => '',      // atractie.php
         'Before you set off' => '',      // includes/v2/route-page.php
         'Besides the dashboard for online orders, you have a <strong class="dp-yellow">panel for managing on-site sales</strong>. You sell and issue tickets right at the till: admission, extra services or rentals.' => '',      // devino-partener.php
         'Besides the dashboard for online orders, you have a <strong class="pt-yellow">panel for managing on-site sales</strong>. The POS issues the ticket on the spot and stands in for the till, inside the app: cart, cash or card payment, receipt printed on a 58 or 80 mm thermal printer, straight from the browser, with no drivers to install. You sell admission, extra services or rentals.' => '',      // parteneri.php
@@ -2914,6 +2914,7 @@ return [
         'Other relationship' => '',      // user/settings.php
         'Other routes' => '',      // includes/v2/route-page.php
         'Other things to sort out' => '',      // user/dashboard.php
+        'Our guide to {name}' => '',      // atractie.php
         'Our own engine shows your activities to the best-matched buyers, from a base of over {count} customers.' => '',      // parteneri.php
         'Our suggestion' => '',      // includes/cookie-consent.php
         'Our tip' => '',      // locatie.php
@@ -3299,7 +3300,7 @@ return [
         'Read next' => '',      // ghid.php
         'Read or unread' => '',      // organizer/notifications.php
         'Read the contract' => '',      // organizer/settings.php
-        'Read the guide' => '',      // ghiduri.php
+        'Read the guide' => '',      // atractie.php
         'Ready to list?' => '',      // pentru-locatii.php
         'Ready-filtered pages for the most searched city in {region}: with kids, at the weekend, indoors or on a small budget.' => '',      // region.php
         'Ready-made itineraries' => '',      // includes/v2/home/sections.php
@@ -3691,7 +3692,6 @@ return [
         'See the FAQ' => '',      // user/support.php
         'See the activities' => '',      // cum-functioneaza.php
         'See the answers' => '',      // ajutor.php
-        'See the attraction' => '',      // ghid.php
         'See the balance and validity of your gift card.' => '',      // ajutor.php
         'See the categories' => '',      // region.php
         'See the category' => '',      // includes/v2/header.php
@@ -3704,7 +3704,7 @@ return [
         'See the gallery ({n})' => '',      // atractie.php
         'See the gift card' => '',      // includes/v2/header.php
         'See the list' => '',      // plan.php
-        'See the list from the start' => '',      // city.php
+        'See the list from the start' => '',      // attractions.php
         'See the operator panel' => '',      // vinde-bilete.php
         'See the page for venues' => '',      // cum-functioneaza.php
         'See the profile' => '',      // organizer/public.php
@@ -5993,8 +5993,9 @@ return [
         'minute|minutes' => ['minute', 'minutes'],      // assets/v2/js/settings.js
         'month|months' => ['month', 'months'],      // assets/v2/js/org-services.js
         'more activity|more activities' => ['more activity', 'more activities'],      // region.php
+        'more attraction|more attractions' => ['more attraction', 'more attractions'],      // assets/v2/js/more.js
         'more character|more characters' => ['more character', 'more characters'],      // assets/v2/js/reviews.js
-        'more experience|more experiences' => ['more experience', 'more experiences'],      // assets/v2/js/city.js
+        'more experience|more experiences' => ['more experience', 'more experiences'],      // assets/v2/js/more.js
         'night|nights' => ['night', 'nights'],      // assets/v2/js/plan.js
         'notification|notifications' => ['notification', 'notifications'],      // assets/v2/js/org-notifications.js
         'open ticket|open tickets' => ['open ticket', 'open tickets'],      // assets/v2/js/dashboard.js
@@ -7367,7 +7368,8 @@ return [
         'Load the report first.' => '',      // assets/v2/js/org-venue-report.js
         'Loading departments…' => '',      // assets/v2/js/org-support.js
         'Loading experiences…' => '',      // assets/v2/js/org-settings.js
-        'Loading more experiences…' => '',      // assets/v2/js/city.js
+        'Loading more attractions…' => '',      // assets/v2/js/more.js
+        'Loading more experiences…' => '',      // assets/v2/js/more.js
         'Loading participants: {done} of {total}…' => '',      // assets/v2/js/org-participants.js
         'Loading the activities…' => '',      // assets/v2/js/org-analytics.js
         'Loading the activity…' => '',      // assets/v2/js/org-events.js
@@ -8307,7 +8309,8 @@ return [
         'Show history' => '',      // assets/v2/js/org-venue-orders.js
         'Show invoices' => '',      // assets/v2/js/org-venue-sales.js
         'Show me' => '',      // assets/v2/js/booking.js
-        'Show more experiences' => '',      // assets/v2/js/city.js
+        'Show more attractions' => '',      // assets/v2/js/more.js
+        'Show more experiences' => '',      // assets/v2/js/more.js
         'Show only orders with status: {status}' => '',      // assets/v2/js/org-sales.js
         'Show password' => '',      // assets/v2/js/org-settings.js
         'Show places to stay' => '',      // assets/v2/js/plan.js
@@ -9394,7 +9397,8 @@ return [
         'We could not generate the export. Try again.' => '',      // assets/v2/js/org-sales.js
         'We could not generate the invitations. Try again.' => '',      // assets/v2/js/org-invitations.js
         'We could not generate the invoice.' => '',      // assets/v2/js/org-pos.js
-        'We could not load more experiences.' => '',      // assets/v2/js/city.js
+        'We could not load more attractions.' => '',      // assets/v2/js/more.js
+        'We could not load more experiences.' => '',      // assets/v2/js/more.js
         'We could not load more notifications. Try again.' => '',      // assets/v2/js/org-notifications.js
         'We could not load more series. Try again.' => '',      // assets/v2/js/org-invitations.js
         'We could not load more tickets. Try again.' => '',      // assets/v2/js/org-support.js
@@ -9792,7 +9796,7 @@ return [
         'You have not saved any guests yet. Add the first one so you do not type the name with every order.' => '',      // assets/v2/js/settings.js
         'You have not yet chosen which cookies you allow. Until then only the essential ones run.' => '',      // assets/v2/js/cookies.js
         'You have one hour to get out. For 2–6 players.' => '',      // assets/v2/js/org-am-products.js
-        'You have reached the end of the list.' => '',      // assets/v2/js/city.js
+        'You have reached the end of the list.' => '',      // assets/v2/js/more.js
         'You have reached the limit of 25 guests. Delete one to add another.' => '',      // assets/v2/js/settings.js
         'You have reached the maximum number of team members ({max}). Remove someone to add a new colleague.' => '',      // assets/v2/js/org-team.js
         'You have reached the maximum number of team members. Remove someone to add a new colleague.' => '',      // assets/v2/js/org-team.js
@@ -10270,7 +10274,7 @@ return [
         '{country} · not on the map' => '',      // assets/v2/js/org-analytics.js
         '{count} / {max} · ready to publish' => '',      // assets/v2/js/reviews.js
         '{count} / {max} · write {more}' => '',      // assets/v2/js/reviews.js
-        '{count} added to the list.' => '',      // assets/v2/js/city.js
+        '{count} added to the list.' => '',      // assets/v2/js/more.js
         '{count} ago.' => '',      // assets/v2/js/org-analytics.js
         '{count} email addresses are not valid. Fix the file and upload it again.' => '',      // assets/v2/js/org-invitations.js
         '{count} email addresses are not valid. Fix them or leave the fields empty.' => '',      // assets/v2/js/org-invitations.js

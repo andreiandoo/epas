@@ -433,7 +433,7 @@ if (empty($V2NAV['categories'])) {
 }
 
 $v2Styles = ['city.css'];
-$v2Scripts = ['hdrag.js', 'city.js'];
+$v2Scripts = ['hdrag.js', 'more.js', 'city.js'];
 $v2HeaderOverlay = true;
 $v2HeadExtra = $heroPhoto ? '<link rel="preload" as="image" href="' . v2_e($heroPhoto['src']) . '" fetchpriority="high">' : '';
 $v2ClientData = ['gallery' => $gallery];
@@ -649,7 +649,7 @@ include __DIR__ . '/includes/v2/header.php';
       <?php if ($pageNum > 1): // opened in the middle of the list: the way back to its start, with or without the pager ?>
       <p class="cl-earlier"><a href="<?= v2_e($cityUrl(['page' => ''])) ?>"><?= v2_ic('arrow-left') ?><?= v2_te('See the list from the start') ?></a></p>
       <?php endif; ?>
-      <ul class="xp-grid" data-reveal>
+      <ul class="xp-grid" data-reveal data-more="experiences" data-more-grid="#things-to-do .xp-grid" data-more-item=":scope &gt; li" data-more-pager="#things-to-do .pager" data-more-note="#things-to-do .xp-grid ~ .partner-note">
         <?php foreach ($cards as $i => $card): ?>
         <?php if (!empty($card['partner'])): ?><?= v2_partner_cards([$card['partner']], 'wegotrip', 'city-' . $slug) ?><?php continue; endif; ?>
         <li class="xp">

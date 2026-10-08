@@ -203,3 +203,8 @@
 .v-prose p,.v-prose li{line-height:1.65;color:var(--ink)}
 .v-prose ul{margin:0 0 1em;padding-left:1.2em;display:grid;gap:.5em}
 .v-prose a{color:var(--green);font-weight:600}
+
+/* attraction lists that go on (more.js): the pager is the fallback without JavaScript, the script hides it;
+   the way back to the start of a list opened in the middle sits above the grid */
+.v-pager[hidden]{display:none}
+.v-places .cl-earlier{margin:0 0 20px}

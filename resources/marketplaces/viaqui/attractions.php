@@ -108,7 +108,7 @@ $structuredData = [[
     'itemListElement' => array_map(fn ($it, $i) => ['@type' => 'ListItem', 'position' => ($atPage - 1) * 24 + $i + 1, 'url' => SITE_URL . $it['href'], 'name' => $it['name']], $atItems, array_keys($atItems)),
 ]];
 $v2Styles = ['places.css'];
-$v2Scripts = [];
+$v2Scripts = ['more.js'];      // the next page of cards arrives as the visitor nears the end of the grid
 $v2HeaderOverlay = true;
 
 include __DIR__ . '/includes/v2/head.php';
@@ -158,7 +158,10 @@ include __DIR__ . '/includes/v2/header.php';
     </div>
 
     <?php if ($atItems): ?>
-    <div class="v-pgrid v-agrid">
+    <?php if ($atPage > 1): // opened in the middle of the list: the way back to its start, with or without the pager ?>
+    <p class="cl-earlier v-aearlier"><a href="<?= v2_e($atUrl(['page' => ''])) ?>"><?= v2_ic('arrow-left') ?><?= v2_te('See the list from the start') ?></a></p>
+    <?php endif; ?>
+    <div class="v-pgrid v-agrid" data-more="attractions" data-more-grid=".v-agrid" data-more-item=":scope &gt; .v-pcard" data-more-pager=".v-pager">
       <?php foreach ($atItems as $i => $a): ?>
       <a class="v-pcard" href="<?= v2_e($a['href']) ?>">
         <span class="v-pcard-ph"><?= $a['image'] ? '<img src="' . v2_e(v2_thumb($a['image'], 480)) . '" alt=""' . ($a['credit'] !== '' ? ' title="' . v2_e($a['credit']) . '"' : '') . ' loading="lazy" decoding="async">' : v2_fallback($a['name'], $i) ?><?php if ($a['unesco']): ?><small class="v-pcard-u"><?= v2_ic('star') ?>UNESCO</small><?php endif; ?></span>
