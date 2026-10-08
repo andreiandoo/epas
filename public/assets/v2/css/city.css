@@ -332,3 +332,134 @@ html.lb-lock,html.sheet-lock{overflow:hidden}
 .ch-city{font-size:clamp(2.5rem,5.6vw,4.5rem)}
 .ch-lead{margin-top:var(--space-4)}
 .ch-search{margin-top:var(--space-5)}
+
+/* =================== LISTING: MORE CARDS WHILE SCROLLING (city.js) =================== */
+/* The pager is the fallback without JavaScript; the script hides it and puts this row in its place. The row keeps
+   its height whether it says something or not, so nothing under it moves when a page arrives. */
+.cl .pager[hidden]{display:none}
+.cl-more{display:grid;justify-items:center;align-content:center;gap:var(--space-3);min-height:52px;margin-top:var(--space-6);text-align:center}
+.cl-more-status{display:flex;align-items:center;justify-content:center;gap:10px;margin:0;font-size:.9375rem;line-height:1.4;color:var(--muted)}
+.cl-more-line:empty{display:none}
+.cl-more.is-busy .cl-more-status::before{content:"";flex:none;width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--action);border-radius:50%;animation:cl-spin 800ms linear infinite}
+@keyframes cl-spin{to{transform:rotate(360deg)}}
+.cl-more-btn[hidden]{display:none}
+.cl-earlier{margin:var(--space-5) 0 0}
+.cl-earlier a{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:var(--green);font-weight:700;text-decoration:underline;text-decoration-color:rgba(15,77,58,.3);text-underline-offset:4px}
+.cl-earlier a:hover{text-decoration-color:var(--green)}
+.cl-earlier .ic{width:18px;height:18px}
+@media (prefers-reduced-motion: reduce){.cl-more.is-busy .cl-more-status::before{animation:none;border-color:var(--action)}}
+
+/* =================== FLIGHTS: A BOARDING PASS (partner: Aviasales) =================== */
+/* Two parts of one ticket: the deep stub carries the lowest fare found and the one button; the board beside it
+   lists the fare from each departure city. A dashed line with two notches is the tear between them. */
+#flights,#plan-your-trip{scroll-margin-top:calc(var(--hdr-h) + var(--cnav-h))}
+.flp.sec{padding-block:clamp(48px, 7vw, 96px);background:var(--bg)}
+.fl-pass{position:relative;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden;overflow:clip;border-radius:var(--r-l);background:var(--surface);box-shadow:0 0 0 1px var(--line), 0 40px 70px -48px rgba(14,72,55,.55)}
+@media (min-width:1024px){.fl-pass{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+
+.fl-lead{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:flex-start;padding:clamp(24px, 3.6vw, 48px);background:var(--deep);color:var(--on-deep)}
+.fl-photo{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover}
+.fl-lead::before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(200deg, rgba(10,58,43,.86) 0%, rgba(10,58,43,.94) 45%, rgba(7,41,31,.98) 100%)}
+.fl-lead :focus-visible{outline-color:var(--on-deep)}
+.fl-lead .kicker{color:#9FE0BF}
+.fl-lead h2{margin:0;max-width:16ch;font-size:clamp(1.375rem, 2.2vw, 1.875rem);font-weight:600;line-height:1.2;letter-spacing:-.02em;color:var(--on-deep)}
+.fl-price{display:block;margin-top:var(--space-2);font-size:1.0625rem;font-weight:500;letter-spacing:0;color:var(--on-deep-muted)}
+.fl-price b{display:block;margin-top:2px;font-size:clamp(3.25rem, 7vw, 5.25rem);font-weight:700;line-height:.95;letter-spacing:-.05em;font-variant-numeric:tabular-nums;color:#FFFFFF}
+.fl-best{margin:var(--space-4) 0 0;max-width:38ch;font-size:1rem;line-height:1.5;color:var(--on-deep)}
+.fl-all{margin-top:var(--space-5);max-width:100%;padding-block:10px;white-space:normal;text-align:left;line-height:1.2}
+.fl-all .ic{width:18px;height:18px;transition:transform var(--dur-micro) var(--ease-out)}
+.fl-all:hover .ic{transform:translateX(3px)}
+.fl-on{margin:var(--space-3) 0 0;font-size:.8125rem;line-height:1.45;color:var(--on-deep-muted)}
+
+.fl-board{position:relative;min-width:0;padding:clamp(20px, 2.6vw, 36px) clamp(16px, 2.6vw, 36px) clamp(20px, 2.4vw, 32px);border-top:2px dashed var(--line)}
+.fl-board::before,.fl-board::after{content:"";position:absolute;z-index:1;top:-15px;width:28px;height:28px;border-radius:50%;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.fl-board::before{left:-14px}
+.fl-board::after{right:-14px}
+@media (min-width:1024px){
+  .fl-board{border-top:0;border-left:2px dashed var(--line)}
+  .fl-board::before{left:-15px;top:-14px}
+  .fl-board::after{left:-15px;right:auto;top:auto;bottom:-14px}
+}
+.fl-board-h{margin:0 0 var(--space-3);font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fl-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.fl-list li{border-bottom:1px solid var(--line)}
+.fl-list a{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"route fare" "when fare";align-items:center;gap:2px var(--space-4);min-height:64px;margin-inline:-10px;padding:10px;border-radius:12px;color:var(--ink);text-decoration:none;transition:background-color var(--dur-micro) var(--ease-out)}
+.fl-list a:hover{background:var(--tint-green)}
+.fl-list a:focus-visible{outline-offset:-2px}
+.fl-route{grid-area:route;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0;font-size:1.0625rem;line-height:1.25}
+.fl-route b{font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
+.fl-route > span{color:var(--muted)}
+.fl-route .ic{width:14px;height:14px;color:var(--muted)}
+.fl-tag{padding:3px 8px;border-radius:999px;background:var(--tint-green);color:var(--green);font-size:.6875rem;font-style:normal;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.fl-list a:hover .fl-tag{background:var(--surface)}
+.fl-when{grid-area:when;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:.875rem;line-height:1.3;color:var(--muted);font-variant-numeric:tabular-nums}
+.fl-when .ic{width:15px;height:15px}
+.fl-stop::before{content:"\00B7";margin-right:8px}
+.fl-fare{grid-area:fare;text-align:right;white-space:nowrap}
+.fl-fare small{display:block;font-size:.75rem;line-height:1.2;color:var(--muted)}
+.fl-fare b{display:block;font-size:1.375rem;font-weight:700;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--green)}
+.fl-go{display:none}
+@media (min-width:600px){
+  .fl-list a{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) auto 36px;grid-template-areas:"route when fare go";gap:var(--space-4)}
+  .fl-go{grid-area:go;display:grid;place-items:center;width:36px;height:36px;border:1.5px solid var(--line);border-radius:50%;color:var(--green);transition:background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)}
+  .fl-go .ic{width:16px;height:16px}
+  .fl-list a:hover .fl-go{border-color:var(--action);background:var(--action);color:#FFFFFF}
+}
+.fl-note{margin:var(--space-4) 0 0;max-width:72ch;font-size:.75rem;line-height:1.5;color:var(--muted)}
+
+/* =================== BEFORE YOU GO: WHAT EACH SERVICE SOLVES (partners: transfer, luggage, eSIM, car) =================== */
+/* Not a row of equal tiles: the two services a city visit needs first are large cards with a filled button, the
+   others are slim rows under them. On a sand band, so it does not read as a second copy of the flights block. */
+.trip.sec{padding-block:clamp(48px, 7vw, 96px);background:var(--surface-2)}
+.trip-head{max-width:760px;margin-bottom:clamp(24px, 3.4vw, 40px)}
+.trip-head .kicker{color:var(--green)}
+.trip-head h2{margin:0;max-width:20ch;font-size:clamp(1.75rem, 3.4vw, 2.75rem);font-weight:700;line-height:1.06;letter-spacing:-.04em;color:var(--green)}
+.trip-sub{margin:var(--space-3) 0 0;max-width:60ch;font-size:var(--text-lead);line-height:1.45;color:var(--muted)}
+.trip-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr)}
+.trip-card{display:flex;min-width:0}
+.trip-card a{position:relative;isolation:isolate;flex:1;display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-areas:"ic body" "foot foot";align-items:start;gap:var(--space-4);min-width:0;overflow:hidden;overflow:clip;padding:20px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);text-decoration:none;transition:border-color var(--dur-state) var(--ease-out), box-shadow var(--dur-state) var(--ease-out), transform var(--dur-state) var(--ease-out)}
+.trip-ic{grid-area:ic;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--tint-green);color:var(--green)}
+.trip-ic .ic{width:22px;height:22px}
+.trip-body{grid-area:body;display:grid;gap:4px;min-width:0}
+.trip-kind{font-size:var(--text-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--action)}
+.trip-title{font-size:1.1875rem;font-weight:700;line-height:1.2;letter-spacing:-.02em;color:var(--ink)}
+.trip-text{font-size:.9375rem;line-height:1.5;color:var(--muted)}
+.trip-foot{grid-area:foot;display:flex;flex-wrap:wrap;align-items:center;gap:8px var(--space-4)}
+.trip-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border:1.5px solid var(--green);border-radius:999px;color:var(--green);font-size:.9375rem;font-weight:700;line-height:1;transition:background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out)}
+.trip-cta .ic{width:16px;height:16px;transition:transform var(--dur-micro) var(--ease-out)}
+.trip-by{font-size:.8125rem;line-height:1.3;color:var(--muted)}
+.trip-card a:hover{border-color:var(--green);box-shadow:0 26px 44px -32px rgba(14,72,55,.55)}
+.trip-card a:hover .trip-cta{background:var(--green);color:#FFFFFF}
+.trip-card a:hover .trip-cta .ic{transform:translateX(3px)}
+
+/* the large cards */
+.trip-card.is-lead a{grid-template-columns:minmax(0,1fr);grid-template-areas:"ic" "body" "foot";gap:var(--space-5);padding:clamp(24px, 3vw, 36px);border-radius:var(--r-l);box-shadow:0 30px 50px -44px rgba(14,72,55,.5)}
+.is-lead .trip-ic{width:56px;height:56px;background:var(--deep);color:var(--on-deep)}
+.is-lead .trip-ic .ic{width:26px;height:26px}
+.is-lead .trip-body{gap:8px}
+.is-lead .trip-title{max-width:20ch;font-size:clamp(1.5rem, 2.4vw, 2rem);line-height:1.1;letter-spacing:-.03em;color:var(--green)}
+.is-lead .trip-text{max-width:46ch;font-size:1.0625rem;color:var(--ink)}
+.is-lead .trip-foot{align-self:end;gap:10px var(--space-4)}
+.is-lead .trip-cta{min-height:52px;padding:0 24px;border-color:var(--action);background:var(--action);color:#FFFFFF;font-size:1rem}
+.trip-card.is-lead a:hover .trip-cta{border-color:var(--action-hover);background:var(--action-hover)}
+.trip-mark{position:absolute;z-index:-1;right:-28px;top:-28px;width:190px;height:190px;color:var(--tint-green);pointer-events:none;transition:transform 600ms var(--ease-out)}
+.trip-card.is-lead a:hover .trip-mark{transform:rotate(-6deg) scale(1.04)}
+@media (hover:hover){.trip-card a:hover{transform:translateY(-2px)}}
+
+@media (min-width:768px){
+  .trip-list{grid-template-columns:repeat(6, minmax(0,1fr));gap:var(--space-5)}
+  .trip-card{grid-column:span 3}
+  .trip-list[data-lead="1"] .is-lead,.trip-list[data-rest="1"] .trip-card:not(.is-lead){grid-column:span 6}
+  .trip-card.is-lead a{grid-template-rows:auto 1fr auto}
+  .trip-card:not(.is-lead) a{grid-template-areas:"ic body" ". foot"}
+  .trip-list[data-lead="1"] .is-lead a{grid-template-columns:56px minmax(0,1fr) auto;grid-template-rows:auto;grid-template-areas:"ic body foot";align-items:center}
+  .trip-list[data-lead="1"] .is-lead .trip-foot{align-self:center;flex-direction:column;align-items:flex-start}
+}
+@media (min-width:1100px){
+  .trip-list[data-rest="1"] .trip-card:not(.is-lead) a{grid-template-columns:44px minmax(0,1fr) auto;grid-template-areas:"ic body foot";align-items:center}
+  .trip-list[data-rest="1"] .trip-card:not(.is-lead) .trip-foot{flex-direction:column;align-items:flex-end;text-align:right}
+}
+@media (prefers-reduced-motion: reduce){
+  .trip-card a,.trip-cta,.trip-cta .ic,.trip-mark,.fl-all .ic,.fl-list a,.fl-go{transition:none}
+  .trip-card a:hover,.trip-card.is-lead a:hover .trip-mark,.trip-card a:hover .trip-cta .ic,.fl-all:hover .ic{transform:none}
+}

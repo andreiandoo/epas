@@ -356,7 +356,7 @@
         [].forEach.call(entry.target.children, function (child) { child.classList.add('is-in'); });
         revealIO.unobserve(entry.target);
       });
-    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0 }   /* any part on screen: a tall grid on a phone never shows 8% of itself */);
     document.querySelectorAll('[data-reveal]').forEach(function (group) {
       if (group.getBoundingClientRect().top < window.innerHeight) return;
       [].forEach.call(group.children, function (child, i) {

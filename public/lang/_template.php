@@ -114,6 +114,7 @@ return [
         '<strong>Widgets are not enabled.</strong> Contact the Viaqui team to have the embed feature enabled.' => '',      // organizer/widgets.php
         'A 20-minute demonstration, no obligation.' => '',      // parteneri.php
         'A better experience for customers.' => '',      // pentru-locatii.php
+        'A car for the days you leave {city}' => '',      // city.php
         'A car for this route' => '',      // includes/v2/route-page.php
         'A cart with your ticket types, packages and extras' => '',      // parteneri.php
         'A child' => '',      // experiente-cadou.php
@@ -136,6 +137,7 @@ return [
         'A digit or a symbol <small>(recommended)</small>' => '',      // organizer/settings.php
         'A digital gift card for activities and experiences: escape rooms, museums, parks, workshops, nature.' => '',      // card-cadou.php
         'A digital gift, fast, with no physical delivery.' => '',      // card-cadou.php
+        'A driver waiting for you at arrivals' => '',      // city.php
         'A fair comparison: each day is counted up to the same time as today.' => '',      // organizer/venue-live.php
         'A family outdoors' => '',      // includes/v2/home/sections.php
         'A few tips' => '',      // organizer/settings.php
@@ -401,6 +403,7 @@ return [
         'Ages 6 to 10' => '',      // user/reviews.php
         'Agreements' => '',      // checkout.php
         'Air conditioning' => '',      // includes/v2/am-labels.php
+        'Airport transfer' => '',      // city.php
         'Albanian lek' => '',      // includes/v2/currency.php
         'All' => '',      // hub-experiente.php
         'All about venues, products and bookings' => '',      // organizer/help.php
@@ -411,17 +414,17 @@ return [
         'All attractions' => '',      // hub-atractii.php
         'All attractions in {city}' => '',      // atractie.php
         'All bookings' => '',      // organizer/am-bookings.php
-        'All categories' => '',      // city.php
+        'All categories' => '',      // ghid.php
         'All categories · activities · online tickets' => '',      // categorii.php
         'All channels' => '',      // parteneri.php
         'All cities' => '',      // locatii.php
         'All cities in {country}' => '',      // map.php
         'All countries' => '',      // attractions.php
-        'All destinations' => '',      // city.php
+        'All destinations' => '',      // map.php
         'All events' => '',      // embed/event.php
         'All experiences' => '',      // hub-experiente.php
         'All experiences in this category' => '',      // category.php
-        'All guides' => '',      // city.php
+        'All guides' => '',      // ghid.php
         'All notifications' => '',      // organizer/notifications.php
         'All of Europe, by city and by category.' => '',      // region.php
         'All of {name}' => '',      // country.php
@@ -536,6 +539,7 @@ return [
         'Are {category} available all year?' => '',      // category.php
         'Arrivals' => '',      // organizer/participants.php
         'Arrive 10–15 minutes before the time you booked, especially for group activities.' => '',      // locatie.php
+        'Arrive in {city} with the practical things sorted' => '',      // city.php
         'Art' => '',      // includes/v2/product-icons.php
         'Artists' => '',      // organizer/events.php
         'As a couple' => '',      // includes/v2/plan-config.php
@@ -661,7 +665,7 @@ return [
         'Beach' => '',      // includes/v2/am-labels.php
         'Beaches' => '',      // includes/v2/places.php
         'Become a partner' => '',      // operatori.php
-        'Before you go' => '',      // city.php
+        'Before you go' => '',      // country.php
         'Before you set off' => '',      // includes/v2/route-page.php
         'Besides the dashboard for online orders, you have a <strong class="dp-yellow">panel for managing on-site sales</strong>. You sell and issue tickets right at the till: admission, extra services or rentals.' => '',      // devino-partener.php
         'Besides the dashboard for online orders, you have a <strong class="pt-yellow">panel for managing on-site sales</strong>. The POS issues the ticket on the spot and stands in for the till, inside the app: cart, cash or card payment, receipt printed on a 58 or 80 mm thermal printer, straight from the browser, with no drivers to install. You sell admission, extra services or rentals.' => '',      // parteneri.php
@@ -690,6 +694,7 @@ return [
         'Bonus points with every order' => '',      // organizer/public.php
         'Book' => '',      // activitate.php
         'Book a demo' => '',      // includes/v2/footer.php
+        'Book a transfer' => '',      // city.php
         'Book at least {n} hours before the time slot.' => '',      // activitate.php
         'Book each activity separately. All your tickets arrive by email, with a QR code.' => '',      // locatie.php
         'Book now: straight to checkout' => '',      // single-activitate.php
@@ -700,6 +705,7 @@ return [
         'Book your stay' => '',      // includes/v2/am-labels.php
         'Book · from {price}' => '',      // single-activitate.php
         'Booked' => '',      // devino-partener.php
+        'Booked and paid on {partner}' => '',      // city.php
         'Booking' => '',      // parteneri.php
         'Booking by time slot and calendar, advanced analytics, 100% tracking that lowers your ad costs, and a mobile app with offline scanning. The commission of {accent} doesn\'t touch your price: you keep the price you set.' => '',      // devino-partener.php
         'Booking by time slot and calendar, an operator panel, a ticket office with receipts, an offline scanning app, analytics and tracking that lowers your ad costs. The commission of {accent} doesn\'t touch your price: you keep the price you set.' => '',      // parteneri.php
@@ -841,6 +847,7 @@ return [
         'Capacity: {seats}' => '',      // embed/event.php
         'Capital' => '',      // country.php
         'Car' => '',      // includes/v2/product-icons.php
+        'Car hire' => '',      // city.php
         'Card' => '',      // parteneri.php
         'Card (including Apple Pay and Google Pay), culture card where accepted, different ticket holders, automatic account, fees shown separately and commercial options.' => '',      // pentru-locatii.php
         'Card POS' => '',      // organizer/raport-staff.php
@@ -1074,7 +1081,7 @@ return [
         'City walks, food tours, history tours, sightseeing and private experiences.' => '',      // pentru-locatii.php
         'City, attraction or experience' => '',      // includes/v2/home/sections.php
         'Clear' => '',      // category.php
-        'Clear all' => '',      // city.php
+        'Clear all' => '',      // category.php
         'Clear costs, with no infrastructure built from scratch.' => '',      // pentru-locatii.php
         'Clear costs, with no infrastructure built from scratch: you pay for infrastructure that sells, not for vague promises. No monthly subscription, no setup cost and no fee for each ticket issued at the ticket office.' => '',      // parteneri.php
         'Clear filters' => '',      // cauta.php
@@ -1082,7 +1089,7 @@ return [
         'Clear payouts' => '',      // parteneri.php
         'Clear search' => '',      // includes/v2/hub-filter.php
         'Clear signature' => '',      // organizer/settings.php
-        'Clear the filters' => '',      // city.php
+        'Clear the filters' => '',      // attractions.php
         'Clear the search' => '',      // ajutor.php
         'Clear the selection' => '',      // organizer/invitatii.php
         'Clear title + description' => '',      // pentru-locatii.php
@@ -1096,7 +1103,7 @@ return [
         'Clock-ins' => '',      // organizer/venue-team.php
         'Close' => '',      // cauta.php
         'Close cookie settings' => '',      // includes/cookie-consent.php
-        'Close filters' => '',      // city.php
+        'Close filters' => '',      // category.php
         'Close settings' => '',      // includes/v2/foot.php
         'Close the counter' => '',      // organizer/am-pos.php
         'Close the gallery' => '',      // single-activitate.php
@@ -1142,6 +1149,7 @@ return [
         'Company registration number' => '',      // organizer/venue-settings.php
         'Company tax ID (CUI) *' => '',      // inregistrare-locatie.php
         'Company, tax ID, invoice or order number' => '',      // organizer/venue-sales.php
+        'Compare car hire' => '',      // city.php
         'Complete it now' => '',      // includes/organizer-topbar.php
         'Complete the order for the tickets in your basket. Pay securely by card, Apple Pay or Google Pay.' => '',      // checkout.php
         'Complete the sale' => '',      // organizer/pos.php
@@ -1320,7 +1328,7 @@ return [
         'Description <small>(optional)</small>' => '',      // organizer/settings.php
         'Design' => '',      // card-cadou.php
         'Desk & POS' => '',      // includes/v2/organizer.php
-        'Destinations' => '',      // city.php
+        'Destinations' => '',      // country.php
         'Destinations: cities and countries' => '',      // cities.php
         'Detail' => '',      // organizer/venue-report.php
         'Detailed booking: participants, options, add-ons' => '',      // parteneri.php
@@ -1343,7 +1351,7 @@ return [
         'Digital tickets' => '',      // single-activitate.php
         'Digital tickets and fast check-in.' => '',      // pentru-locatii.php
         'Digital tickets with a QR code' => '',      // includes/auth-branding.php
-        'Direct · return' => '',      // city.php
+        'Direct' => '',      // city.php
         'Discard the new image' => '',      // organizer/events.php
         'Discount' => '',      // checkout.php
         'Discount applied' => '',      // cart.php
@@ -1689,6 +1697,7 @@ return [
         'Find another order' => '',      // recuperare-comanda.php
         'Find answers about orders, QR tickets, payments, fees, refunds, ticket protection, bonus points, gift cards, the customer account and access for venues.' => '',      // ajutor.php
         'Find experiences' => '',      // includes/v2/home/sections.php
+        'Find luggage storage' => '',      // city.php
         'Find my order' => '',      // includes/v2/header.php
         'Find order and resend tickets' => '',      // recuperare-comanda.php
         'Find places to go, not just events.' => '',      // cum-functioneaza.php
@@ -1714,7 +1723,6 @@ return [
         'Fit to screen' => '',      // organizer/invitatii.php
         'Fixed amount' => '',      // organizer/promo.php
         'Flags: <a href="{url}" target="_blank" rel="noopener">flag-icons</a> (MIT).' => '',      // photo-credits.php
-        'Flights to {city}' => '',      // city.php
         'Flower' => '',      // includes/v2/product-icons.php
         'Follow conversion from visit to sale, in real time' => '',      // parteneri.php
         'Follow the line from the capital to the sea. Every stop is a city with places you can book before you get there.' => '',      // includes/v2/home/sections.php
@@ -1769,6 +1777,7 @@ return [
         'Fr' => '',      // single-activitate.php
         'Free' => '',      // region.php
         'Free cancellation' => '',      // single-activitate.php
+        'Free hands between check-out and your flight' => '',      // city.php
         'Free parking' => '',      // includes/v2/am-labels.php
         'Free time' => '',      // includes/v2/plan-config.php
         'Freedom to choose' => '',      // card-cadou.php
@@ -1782,7 +1791,7 @@ return [
         'Friend' => '',      // experiente-cadou.php
         'Friends' => '',      // includes/v2/home/sections.php
         'Friends in kayaks on a quiet river' => '',      // includes/v2/home/sections.php
-        'From' => '',      // city.php
+        'From' => '',      // organizer/venue-participants.php
         'From 00:00.' => '',      // organizer/promo.php
         'From a vague idea to an actual activity.' => '',      // categorii.php
         'From account to first sale' => '',      // parteneri.php
@@ -1836,6 +1845,7 @@ return [
         'Genres' => '',      // organizer/events.php
         'German' => '',      // single-activitate.php
         'Get a feel for it before you book' => '',      // activitate.php
+        'Get an eSIM' => '',      // city.php
         'Get ideas for {city}.<br>More places.<br>Same feeling.<br><em>Your way in.</em>' => '',      // city.php
         'Get something back with every purchase.' => '',      // cum-functioneaza.php
         'Get your QR code' => '',      // cum-functioneaza.php
@@ -1908,7 +1918,7 @@ return [
         'Guided tours' => '',      // includes/v2/partner-testimonials.php
         'Guided tours, trails and outdoor activities with slots by day and hour, plus offline scanning where there is no signal. The commission of {accent} doesn\'t touch your price: you keep the price you set.' => '',      // includes/v2/partner-profiles.php
         'Guided tours, workshops, boat trips, tastings and other things to do, at the venues that run them.' => '',      // hub-experiente.php
-        'Guides' => '',      // city.php
+        'Guides' => '',      // ghid.php
         'Guides and ideas' => '',      // city.php
         'Guides and weekend ideas' => '',      // includes/v2/header.php
         'Guides · ideas for going out' => '',      // ghiduri.php
@@ -2126,6 +2136,7 @@ return [
         'InfoPoint: issue tickets' => '',      // parteneri.php
         'Initial value' => '',      // voucher.php
         'Inspiration' => '',      // includes/v2/header.php
+        'Install it on your phone before you leave home and switch it on when you land, with no roaming bill to come home to.' => '',      // city.php
         'Instant' => '',      // activitate.php
         'Instant QR' => '',      // activitate.php
         'Instant confirmation' => '',      // activitate.php
@@ -2259,6 +2270,7 @@ return [
         'Leave them all off and you get a bit of everything.' => '',      // plan.php
         'Leave this field empty' => '',      // vinde-bilete.php
         'Leave us a few details about you and your venue and we create your operator account on the spot. It is quick and simple, you can do it all yourself. And if you want help, we can connect online at any time and guide you step by step.' => '',      // inregistrare-locatie.php
+        'Leave your bags for a few hours near the station or in the centre, and spend the last day in {city} without them.' => '',      // city.php
         'Left after commission' => '',      // organizer/venue-sales.php
         'Left empty, the series gets the name of the experience and the date.' => '',      // organizer/invitatii.php
         'Legal' => '',      // contact.php
@@ -2290,7 +2302,7 @@ return [
         'List (horizontal)' => '',      // organizer/widgets.php
         'List activities and sell tickets online.' => '',      // contact.php
         'List widget' => '',      // organizer/widgets.php
-        'List your venue' => '',      // city.php
+        'List your venue' => '',      // login.php
         'List your venue and sell tickets online.' => '',      // locatii.php
         'List your venue on viaqui.com and sell tickets online for escape rooms, museums, parks, workshops, caves, nature reserves and local experiences. SEO pages, checkout, QR, scanning, reports and dashboard.' => '',      // pentru-locatii.php
         'List your venue: {site}' => '',      // inregistrare-locatie.php
@@ -2340,10 +2352,12 @@ return [
         'Look up the company' => '',      // organizer/pos.php
         'Lost tracking' => '',      // parteneri.php
         'Low' => '',      // user/support.php
+        'Lowest' => '',      // city.php
         'Lowest prices first' => '',      // includes/v2/header.php
+        'Lowest return fare found, by departure city' => '',      // city.php
         'Lowest value' => '',      // user/orders.php
         'Loyalty wallet' => '',      // user/rewards.php
-        'Luggage storage' => '',      // includes/v2/am-labels.php
+        'Luggage storage' => '',      // city.php
         'Macedonian denar' => '',      // includes/v2/currency.php
         'Macedonian denars' => '',      // includes/v2/currency.php
         'Main' => '',      // includes/v2/header.php
@@ -2430,6 +2444,7 @@ return [
         'Mission Alpha' => '',      // locatii.php
         'Mo' => '',      // single-activitate.php
         'Mobile administration' => '',      // organizer/venue-team.php
+        'Mobile data from the moment you land' => '',      // city.php
         'Mobile ticket' => '',      // includes/v2/home/sections.php
         'Moderation' => '',      // user/reviews.php
         'Modern payments' => '',      // cum-functioneaza.php
@@ -2807,6 +2822,7 @@ return [
         'Opening hours, address & access' => '',      // locatie.php
         'Opening hours, exhibitions, tours, adult and child tickets, access.' => '',      // locatii.php
         'Opening hours, roads and driving distances: © <a href="{url}" target="_blank" rel="noopener">OpenStreetMap</a> contributors (ODbL).' => '',      // photo-credits.php
+        'Opens the search on Aviasales, with {city} already filled in.' => '',      // city.php
         'Operated by {company}' => '',      // includes/v2/legal.php
         'Operations' => '',      // pentru-locatii.php
         'Operations / ticket office' => '',      // parteneri.php
@@ -3077,7 +3093,6 @@ return [
         'Plan' => '',      // country.php
         'Plan a trip' => '',      // country.php
         'Plan a trip with them' => '',      // plan.php
-        'Plan your trip to {city}' => '',      // city.php
         'Plan your trip to {country}' => '',      // country.php
         'Planner, map and routes' => '',      // includes/v2/header.php
         'Planning something together?' => '',      // organizer/public.php
@@ -3142,13 +3157,13 @@ return [
         'Previous ticket' => '',      // thank-you.php
         'Previous venues' => '',      // city.php
         'Previous week' => '',      // organizer/venue-team.php
-        'Price' => '',      // city.php
+        'Price' => '',      // category.php
         'Price ({currency})' => '',      // organizer/events.php
         'Price change' => '',      // organizer/analytics.php
         'Price on request' => '',      // experiente-cadou.php
         'Price unit' => '',      // organizer/venue-products.php
         'Price unit ({lang})' => '',      // organizer/venue-products.php
-        'Price: high to low' => '',      // city.php
+        'Price: high to low' => '',      // category.php
         'Price: low to high' => '',      // city-intent.php
         'Prices are shown in the currency of each country. The price filter and the sort use their value in euro.' => '',      // category.php
         'Prices are shown in {currency}, as you chose. Converted prices are approximate; the amount to pay is confirmed before you pay.' => '',      // includes/v2/currency.php
@@ -3272,7 +3287,7 @@ return [
         'Read next' => '',      // ghid.php
         'Read or unread' => '',      // organizer/notifications.php
         'Read the contract' => '',      // organizer/settings.php
-        'Read the guide' => '',      // city.php
+        'Read the guide' => '',      // ghiduri.php
         'Ready to list?' => '',      // pentru-locatii.php
         'Ready-filtered pages for the most searched city in {region}: with kids, at the weekend, indoors or on a small budget.' => '',      // region.php
         'Ready-made itineraries' => '',      // includes/v2/home/sections.php
@@ -3411,6 +3426,7 @@ return [
         'Results from the platform' => '',      // organizer/analytics.php
         'Return URL (after payment)' => '',      // organizer/widgets.php
         'Return fares for one adult, found on Aviasales in the last two days for the dates shown. Fares change often; you search and book on Aviasales or the airline\'s site. Viaqui may earn a commission, at no extra cost to you.' => '',      // city.php
+        'Return flights to {city} <span class="fl-price">from <b>{price}</b></span>' => '',      // city.php
         'Returned or refunded' => '',      // user/orders.php
         'Returns the list of all your experiences.' => '',      // organizer/api-docs.php
         'Reusable balance' => '',      // card-cadou.php
@@ -3551,6 +3567,7 @@ return [
         'Search activities, experiences and attractions' => '',      // cauta.php
         'Search activities, participants…' => '',      // includes/organizer-topbar.php
         'Search all cities' => '',      // region.php
+        'Search all flights to {city}' => '',      // city.php
         'Search an activity, an attraction or a city' => '',      // 404.php
         'Search an attraction by name' => '',      // attractions.php
         'Search and filter activities on Viaqui by day, city, category, price, interests and who they are for. Book online, get in with a QR ticket.' => '',      // cauta.php
@@ -3622,7 +3639,7 @@ return [
         'Second company (SC2)' => '',      // organizer/settings.php
         'Sections of the panel' => '',      // parteneri.php
         'Sections of this activity' => '',      // single-activitate.php
-        'Sections of this page' => '',      // city.php
+        'Sections of this page' => '',      // locatie.php
         'Secure card payment · SSL 256-bit · 3D Secure' => '',      // checkout.php
         'Secure card payment. One basket can hold tickets from several venues.' => '',      // experienta.php
         'Secure card payment. Operator: {name}' => '',      // embed/locatie.php
@@ -3673,16 +3690,19 @@ return [
         'See the gallery ({n})' => '',      // atractie.php
         'See the gift card' => '',      // includes/v2/header.php
         'See the list' => '',      // plan.php
+        'See the list from the start' => '',      // city.php
         'See the operator panel' => '',      // vinde-bilete.php
         'See the page for venues' => '',      // cum-functioneaza.php
         'See the profile' => '',      // organizer/public.php
         'See the routes' => '',      // includes/v2/home/sections.php
         'See the steps' => '',      // cum-functioneaza.php
         'See the terms and conditions' => '',      // checkout.php
+        'See the towns and countryside around {city} on your own timetable, and hand the car back when you are done.' => '',      // city.php
         'See the venue' => '',      // includes/v2/promoted.php
         'See the venue\'s own page for details of where it is.' => '',      // locatie.php
         'See the venues in other cities, or the experiences here.' => '',      // hub-locatii.php
         'See them in the right order.' => '',      // attractions.php
+        'See this fare on Aviasales' => '',      // city.php
         'See tickets' => '',      // ghid.php
         'See what else there is in {city}' => '',      // atractie.php
         'See what is coming up, what you have bought, how many points you have, which recommendations suit you and what is left to sort out before your next activity.' => '',      // user/dashboard.php
@@ -3895,11 +3915,11 @@ return [
         'Something wrong?' => '',      // photo-credits.php
         'Somewhere else?' => '',      // region.php
         'Soonest first' => '',      // cauta.php
-        'Sort' => '',      // city.php
+        'Sort' => '',      // category.php
         'Sort by' => '',      // hub-experiente.php
         'Sort the results' => '',      // cauta.php
         'Sorted by revenue, highest first. “Online” adds up the sales made on the public site.' => '',      // organizer/raport-staff.php
-        'Sorted: {order}' => '',      // city.php
+        'Sorted: {order}' => '',      // category.php
         'Source' => '',      // organizer/venue-orders.php
         'Source: Open-Meteo' => '',      // organizer/venue-live.php
         'Spa' => '',      // includes/v2/am-labels.php
@@ -4198,6 +4218,8 @@ return [
         'The list of activities, tickets, prices, availability.' => '',      // locatii.php
         'The list of operators cannot be loaded right now.' => '',      // operatori.php
         'The live status of Viaqui: the site, the ticketing platform, payments and ticket delivery, with the history of the last 90 days.' => '',      // status.php
+        'The lowest fare we found: {origin} to {city}, {dates}, direct.' => '',      // city.php
+        'The lowest fare we found: {origin} to {city}, {dates}, with a stop.' => '',      // city.php
         'The main company is the company of your account: the name, tax ID and IBAN here are the same as in <a href="{url}">Account &amp; company</a>. An IBAN changed here changes the account your payouts are paid into.' => '',      // organizer/venue-settings.php
         'The main sights, guided tours and what not to miss.' => '',      // city.php
         'The main steps for buying activity tickets through Viaqui.' => '',      // cum-functioneaza.php
@@ -4231,6 +4253,7 @@ return [
         'The organisation' => '',      // user/reviews.php
         'The page you are looking for does not exist or has moved. Try another category or city.' => '',      // 404.php
         'The participants of your experiences on Viaqui: check-in, tickets by type and channel, CSV export.' => '',      // organizer/participants.php
+        'The parts of a city trip that are easier to settle at home than at the airport. Each is booked online, ahead of the trip, on the partner\'s own site.' => '',      // city.php
         'The password is not shown anywhere again once you close this window.' => '',      // organizer/team.php
         'The password of the operator account. Team members have their own passwords, under <a href="{url}">Team</a>.' => '',      // organizer/settings.php
         'The payment did not go through' => '',      // embed/confirmare.php
@@ -4253,6 +4276,7 @@ return [
         'The point of sale works on an experience set up as a venue, with products marked for sale at the register. Write to us and we will set yours up.' => '',      // organizer/pos.php
         'The points where tickets are scanned on the way in.' => '',      // organizer/venue-settings.php
         'The price filter is in euro: €10 is about {amount}.' => '',      // includes/v2/currency.php
+        'The price is fixed when you book, before you fly, so there is no meter to watch on the way to your door in {city}.' => '',      // city.php
         'The price of bookings that are already paid does not change.' => '',      // organizer/help.php
         'The process is the same whether you choose an escape room, a museum, a cave, a nature reserve or a workshop for kids.' => '',      // cum-functioneaza.php
         'The promo codes of an operator on Viaqui: creating them, limits, periods and uses.' => '',      // organizer/promo.php
@@ -4350,6 +4374,7 @@ return [
         'These cookies are needed for the platform to work and cannot be turned off from this panel.' => '',      // includes/cookie-consent.php
         'These details appear on tickets, confirmation emails and invoices.' => '',      // user/settings.php
         'These fields matter most for your <a href="{url}">Recommendations</a> page. The clearer they are, the better the activities we can suggest.' => '',      // user/settings.php
+        'These services are sold by our partners: you book and pay on their sites. Viaqui may earn a commission, at no extra cost to you.' => '',      // city.php
         'They appear in the top bar of your account, with the number of unread ones.' => '',      // organizer/settings.php
         'They appear on the contract, on commission invoices and on payout statements.' => '',      // organizer/settings.php
         'They are added to your account after the activity. You can see them in <a href="{url}">My points</a>.' => '',      // thank-you.php
@@ -5099,7 +5124,7 @@ return [
         'With a password, visitors enter it before they see the data. Leave empty for open access.' => '',      // organizer/settings.php
         'With a phone or a tablet. The ticket is valid, was already scanned or is not recognised: you see it at once, with sound and vibration.' => '',      // parteneri.php
         'With a seating map' => '',      // organizer/invitatii.php
-        'With a stop · return' => '',      // city.php
+        'With a stop' => '',      // city.php
         'With children' => '',      // includes/v2/plan-config.php
         'With family' => '',      // includes/v2/plan-config.php
         'With friends' => '',      // includes/v2/plan-config.php
@@ -5516,6 +5541,8 @@ return [
         'e.g. we have slots every 30 min, we want to integrate with our existing till, etc.' => '',      // inregistrare-locatie.php
         'e.g. www.your-company.com' => '',      // organizer/settings.php
         'e.g. {code}' => '',      // contact.php
+        'eSIM for your trip' => '',      // city.php
+        'eSIM for {country}' => '',      // city.php
         'educational programme' => '',      // includes/v2/partner-profiles.php
         'eligibility, status, ticket protection' => '',      // ajutor.php
         'eligible orders' => '',      // user/rewards.php
@@ -5747,7 +5774,7 @@ return [
         'you can apply a discount' => '',      // user/recommendations.php
         'you choose' => '',      // includes/cookie-consent.php
         'you get your QR code by email after confirmation' => '',      // single-activitate.php
-        'you@example.com' => '',      // city.php
+        'you@example.com' => '',      // checkout.php
         'you@yourvenue.com' => '',      // login.php
         'your city' => '',      // single-activitate.php
         'your password' => '',      // login.php
@@ -5872,9 +5899,9 @@ return [
         '{what} in {place}, each with a map, what is around it and what you can book nearby.' => '',      // attractions.php
         '{words}/120 words · {chars}/500 characters' => '',      // organizer/events.php
         '{year} BC' => '',      // atractie.php
-        '© {year} Viaqui · operated by <a href="https://tixello.ro" rel="noopener">Tixello</a>' => '',      // includes/v2/footer.php
+        '© {year} Viaqui · operated by <a href="https://tixello.com" rel="noopener">Tixello</a>' => '',      // includes/v2/footer.php
         '© {year} Viaqui · operated by {company}' => '',      // includes/organizer-footer.php
-        '© {year} Viaqui · platform operated by <a href="https://tixello.ro" rel="noopener">Tixello</a> (SC TIXELLO SRL)' => '',      // includes/v2/footer.php
+        '© {year} Viaqui · platform operated by <a href="https://tixello.com" rel="noopener">Tixello</a> (SC TIXELLO SRL)' => '',      // includes/v2/footer.php
         '≈ 5 minutes' => '',      // parteneri.php
         '≈ <span id="db-points-lei">{amount}</span> off' => '',      // user/dashboard.php
         '≈ <span id="db-stat-points-lei">{amount}</span> off' => '',      // user/dashboard.php
@@ -5949,6 +5976,7 @@ return [
         'month|months' => ['month', 'months'],      // assets/v2/js/org-services.js
         'more activity|more activities' => ['more activity', 'more activities'],      // region.php
         'more character|more characters' => ['more character', 'more characters'],      // assets/v2/js/reviews.js
+        'more experience|more experiences' => ['more experience', 'more experiences'],      // assets/v2/js/city.js
         'night|nights' => ['night', 'nights'],      // assets/v2/js/plan.js
         'notification|notifications' => ['notification', 'notifications'],      // assets/v2/js/org-notifications.js
         'open ticket|open tickets' => ['open ticket', 'open tickets'],      // assets/v2/js/dashboard.js
@@ -7321,6 +7349,7 @@ return [
         'Load the report first.' => '',      // assets/v2/js/org-venue-report.js
         'Loading departments…' => '',      // assets/v2/js/org-support.js
         'Loading experiences…' => '',      // assets/v2/js/org-settings.js
+        'Loading more experiences…' => '',      // assets/v2/js/city.js
         'Loading participants: {done} of {total}…' => '',      // assets/v2/js/org-participants.js
         'Loading the activities…' => '',      // assets/v2/js/org-analytics.js
         'Loading the activity…' => '',      // assets/v2/js/org-events.js
@@ -8260,6 +8289,7 @@ return [
         'Show history' => '',      // assets/v2/js/org-venue-orders.js
         'Show invoices' => '',      // assets/v2/js/org-venue-sales.js
         'Show me' => '',      // assets/v2/js/booking.js
+        'Show more experiences' => '',      // assets/v2/js/city.js
         'Show only orders with status: {status}' => '',      // assets/v2/js/org-sales.js
         'Show password' => '',      // assets/v2/js/org-settings.js
         'Show places to stay' => '',      // assets/v2/js/plan.js
@@ -9346,6 +9376,7 @@ return [
         'We could not generate the export. Try again.' => '',      // assets/v2/js/org-sales.js
         'We could not generate the invitations. Try again.' => '',      // assets/v2/js/org-invitations.js
         'We could not generate the invoice.' => '',      // assets/v2/js/org-pos.js
+        'We could not load more experiences.' => '',      // assets/v2/js/city.js
         'We could not load more notifications. Try again.' => '',      // assets/v2/js/org-notifications.js
         'We could not load more series. Try again.' => '',      // assets/v2/js/org-invitations.js
         'We could not load more tickets. Try again.' => '',      // assets/v2/js/org-support.js
@@ -9743,6 +9774,7 @@ return [
         'You have not saved any guests yet. Add the first one so you do not type the name with every order.' => '',      // assets/v2/js/settings.js
         'You have not yet chosen which cookies you allow. Until then only the essential ones run.' => '',      // assets/v2/js/cookies.js
         'You have one hour to get out. For 2–6 players.' => '',      // assets/v2/js/org-am-products.js
+        'You have reached the end of the list.' => '',      // assets/v2/js/city.js
         'You have reached the limit of 25 guests. Delete one to add another.' => '',      // assets/v2/js/settings.js
         'You have reached the maximum number of team members ({max}). Remove someone to add a new colleague.' => '',      // assets/v2/js/org-team.js
         'You have reached the maximum number of team members. Remove someone to add a new colleague.' => '',      // assets/v2/js/org-team.js
@@ -10220,6 +10252,7 @@ return [
         '{country} · not on the map' => '',      // assets/v2/js/org-analytics.js
         '{count} / {max} · ready to publish' => '',      // assets/v2/js/reviews.js
         '{count} / {max} · write {more}' => '',      // assets/v2/js/reviews.js
+        '{count} added to the list.' => '',      // assets/v2/js/city.js
         '{count} ago.' => '',      // assets/v2/js/org-analytics.js
         '{count} email addresses are not valid. Fix the file and upload it again.' => '',      // assets/v2/js/org-invitations.js
         '{count} email addresses are not valid. Fix them or leave the fields empty.' => '',      // assets/v2/js/org-invitations.js

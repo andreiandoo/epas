@@ -502,7 +502,8 @@ const V2_FLIGHT_ORIGINS = [
 
 /**
  * The cheapest return fares to one of our cities, one per origin, cheapest first.
- * Each: ['from' => 'London', 'price' => 47.0, 'out' => '2026-11-03', 'back' => '2026-11-10', 'direct' => true, 'url' => …].
+ * Each: ['from' => 'London', 'price' => 47.0, 'out' => '2026-11-03', 'back' => '2026-11-10', 'direct' => true, 'url' => …,
+ *        'to' => 'ROM' (the IATA code of the destination)].
  * Empty when partner offers are off, the city has no airport in the index or the API gave nothing.
  */
 function v2_flights_to(string $slug, int $limit = 6): array
@@ -563,7 +564,9 @@ function v2_flights_to(string $slug, int $limit = 6): array
     }
     // a fare found for a day that has passed since it was cached is no longer on sale
     $today = date('Y-m-d');
-    return array_slice(array_values(array_filter($res['fares'], fn ($f) => $f['out'] > $today)), 0, $limit);
+    $fares = array_slice(array_values(array_filter($res['fares'], fn ($f) => $f['out'] > $today)), 0, $limit);
+    // the destination code travels with each fare, for a link to every fare to the city
+    return array_map(fn ($f) => $f + ['to' => $code], $fares);
 }
 
 /** "3 – 10 Nov" / "28 Oct – 4 Nov" */
