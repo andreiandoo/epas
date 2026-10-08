@@ -138,7 +138,7 @@ foreach (v2_routes() as $rtSlug => $rt) {
 if (!$mpCountry) {
     shuffle($mpRouteCards);
 }
-$mpRouteCards = array_slice($mpRouteCards, 0, 3);
+$mpRouteCards = array_slice($mpRouteCards, 0, 6);
 
 // ------------------------------------------------------------------ page
 $breadcrumbs = [['Home', '/'], ['Attractions', '/attractions'], ['Map', '/map']];

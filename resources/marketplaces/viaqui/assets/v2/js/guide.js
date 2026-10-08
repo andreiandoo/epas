@@ -100,8 +100,8 @@
     var label = copy.textContent, timer = null;
     copy.addEventListener('click', function () {
       copyText(copy.getAttribute('data-copy')).then(function (ok) {
-        copy.textContent = ok ? 'Copiat ✓' : 'Nu s-a putut copia';
-        if (status) status.textContent = ok ? 'Linkul ghidului a fost copiat.' : 'Linkul nu a putut fi copiat.';
+        copy.textContent = ok ? 'Copied ✓' : 'Could not copy';
+        if (status) status.textContent = ok ? 'The guide link was copied.' : 'The link could not be copied.';
         clearTimeout(timer);
         timer = setTimeout(function () { copy.textContent = label; }, 2500);
       });

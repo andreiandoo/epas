@@ -33,8 +33,6 @@ if (!empty($v2FooterCompact) || $v2FooterSwitch) {
       <?php if ($ftrMiniLogo): ?>
       <a class="ftr-mark ftr-psp" href="https://netopia-payments.com" target="_blank" rel="nofollow noopener" aria-label="Payments processed by <?= v2_e($ftrMiniPay['label']) ?>"><img src="<?= v2_e($ftrMiniLogo) ?>" alt="<?= v2_e($ftrMiniPay['label']) ?>" width="418" height="75" loading="lazy" decoding="async"></a>
       <?php endif; ?>
-      <a class="ftr-mark ftr-anpc" href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sal.png') ?>" alt="ANPC: alternative dispute resolution" width="250" height="62" loading="lazy" decoding="async"></a>
-      <a class="ftr-mark ftr-anpc" href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow noopener"><img src="<?= v2_asset('img/anpc-sol.png') ?>" alt="EU online dispute resolution" width="250" height="62" loading="lazy" decoding="async"></a>
     </div>
     <p class="ftr-mini-copy">© <?= date('Y') ?> Viaqui · operated by <a href="https://tixello.ro" rel="noopener">Tixello</a></p>
   </div>

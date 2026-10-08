@@ -326,6 +326,7 @@
       ui.theme = tool('sun', 'Aspect');
       ui.theme.classList.add('epm-tool-icon');
       ui.theme.querySelector('.epm-tool-label').classList.add('sr');
+      ui.theme.hidden = true;      // Viaqui shows one look of the map; the control stays in code, out of the bar
       main.appendChild(ui.theme);
 
       if (cfg.dialog) {
@@ -349,7 +350,10 @@
       ui.chipbar.appendChild(ui.prev);
       ui.chipbar.appendChild(ui.chips);
       ui.chipbar.appendChild(ui.next);
-      if (!route && cfg.chips !== false) bar.appendChild(ui.chipbar);
+      /* With only the toggles to show (the explorer above the map owns the types), they sit on the row of the search
+         and of "Near me" instead of taking a row of their own. */
+      if (!route && cfg.chips === 'flags') { ui.chipbar.classList.add('is-inline'); main.appendChild(ui.chipbar); }
+      else if (!route && cfg.chips !== false) bar.appendChild(ui.chipbar);
 
       ui.meta = el('p', 'epm-meta');
       ui.meta.setAttribute('aria-live', 'polite');
@@ -1059,11 +1063,6 @@
       go.target = '_blank';
       go.rel = 'noopener';
       actions.appendChild(go);
-      var nav = el('a', 'btn btn-light', 'Google Maps');
-      nav.href = 'https://www.google.com/maps/dir/?api=1&destination=' + D.lat[i] + ',' + D.lng[i];
-      nav.target = '_blank';
-      nav.rel = 'noopener';
-      actions.appendChild(nav);
       body.appendChild(actions);
 
       ui.card.appendChild(body);

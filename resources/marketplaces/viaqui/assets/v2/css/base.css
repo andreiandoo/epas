@@ -1053,3 +1053,6 @@ html.mm-lock,html.mm-lock body{overflow:hidden}
 .vf-cur select,.vf-cur button{min-height:36px;padding:6px 10px;border:1px solid currentColor;border-radius:10px;background:transparent;color:inherit;font:inherit}
 .vf-cur select option{color:#1F2937}
 .vf-cur button{cursor:pointer;font-weight:700}
+
+/* On the light (scrolled or open) header the wordmark is brand green; over a dark hero it stays cream */
+.hdr.is-solid .brand,.hdr.menu-open .brand,.hdr.mega-open .brand{color:var(--green)}

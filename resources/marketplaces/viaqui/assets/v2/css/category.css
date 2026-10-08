@@ -253,3 +253,18 @@ html:not(.js) .k-empty [data-reset]{display:none}
     .kh .deco-arches{animation:ky-drift linear both;animation-timeline:view();animation-range:cover}
   }
 }
+
+/* Viaqui: a much lower hero. The copy is tight, the photo is a small window on wide screens and gone on narrow ones. */
+.kh-in{gap:var(--space-5);padding-bottom:var(--space-6)}
+@media (min-width:1024px){.kh-in{grid-template-columns:minmax(0,1fr) 280px;padding-bottom:var(--space-6)}}
+.kh-kicker{margin-bottom:var(--space-3)}
+.kh-h{font-size:clamp(2rem,4.2vw,3.25rem)}
+.kh-lead{margin-top:var(--space-3);max-width:62ch;font-size:1rem}
+.kh-stats{margin-top:var(--space-4)}
+.kh-stats li{padding:6px 12px;font-size:.875rem}
+.kh-media{max-width:280px}
+.kh-media::before{display:none}
+.kh-arch{aspect-ratio:4 / 3;border-radius:42% 42% var(--r-l) var(--r-l) / 56% 56% var(--r-l) var(--r-l)}
+@media (min-width:768px){.kh-arch{aspect-ratio:4 / 3;border-radius:42% 42% var(--r-l) var(--r-l) / 56% 56% var(--r-l) var(--r-l)}}
+@media (max-width:1023px){.kh-media{display:none}}
+.kwhere .select{max-width:220px}

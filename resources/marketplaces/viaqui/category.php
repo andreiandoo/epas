@@ -597,6 +597,22 @@ include __DIR__ . '/includes/v2/header.php';
         <?php endforeach; ?>
         <button class="kclear" type="button" data-reset data-reset-bar hidden>Clear all</button>
       </div>
+      <?php /* Where: a country, then one of its cities. A plain choice that reloads the list for that city (?city=). */ ?>
+      <label class="ksort kwhere"><span>Where</span>
+        <select class="select" id="k-where" onchange="if (this.value) window.location.href = this.value;">
+          <option value="<?= v2_e($catUrl(['city' => ''])) ?>"<?= $cityFilter ? '' : ' selected' ?>>Anywhere in Europe</option>
+          <?php foreach (($V2NAV['countriesFull'] ?? []) as $kwCountry): if (empty($kwCountry['featured'])) { continue; } ?>
+          <optgroup label="<?= v2_e($kwCountry['name']) ?>">
+            <?php foreach ($kwCountry['featured'] as $kwCity): $kwSlug = ltrim((string) ($kwCity['href'] ?? ''), '/'); if ($kwSlug === '') { continue; } ?>
+            <option value="<?= v2_e($catUrl(['city' => $kwSlug])) ?>"<?= $cityFilter === $kwSlug ? ' selected' : '' ?>><?= v2_e($kwCity['name']) ?></option>
+            <?php endforeach; ?>
+          </optgroup>
+          <?php endforeach; ?>
+          <?php if ($cityFilter && !in_array($cityFilter, array_map(fn ($c) => ltrim((string) ($c['href'] ?? ''), '/'), array_merge(...array_values(array_column($V2NAV['countriesFull'] ?? [], 'featured')) ?: [[]])), true)): ?>
+          <option value="<?= v2_e($catUrl(['city' => $cityFilter])) ?>" selected><?= v2_e($heroLocation) ?></option>
+          <?php endif; ?>
+        </select>
+      </label>
       <label class="ksort"><span>Sort</span>
         <select class="select" id="k-sort">
           <option value="recommended">Recommended</option>

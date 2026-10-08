@@ -11,7 +11,9 @@ $rcCards = $routeCards ?? ($routePage['others'] ?? []);
     <a class="rc" href="/routes/<?= v2_e($cSlug) ?>">
       <span class="rc-media">
         <?php if ($cImg): ?><img src="<?= v2_e(v2_thumb($cImg, 640, 400)) ?>" alt="" width="480" height="300" loading="lazy" decoding="async"><?php else: ?><?= v2_fallback($cTitle) ?><?php endif; ?>
-        <span class="rc-emoji" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($cEmoji) ?? 'map', 'ic-em') ?></span>
+        <?php $cFlags = function_exists('v2_flag') ? implode('', array_map('v2_flag', (array) ($rcRow[9] ?? []))) : ''; ?>
+        <?php if ($cFlags !== ''): ?><span class="rc-flags" aria-hidden="true"><?= $cFlags ?></span>
+        <?php else: ?><span class="rc-emoji" aria-hidden="true"><?= am_product_icon_svg(am_product_icon($cEmoji) ?? 'map', 'ic-em') ?></span><?php endif; ?>
       </span>
       <span class="rc-body">
         <span class="rc-title"><?= v2_e($cTitle) ?></span>

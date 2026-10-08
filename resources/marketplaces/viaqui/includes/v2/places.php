@@ -129,7 +129,8 @@ function v2_route_card(string $slug, array $r): array
             break;
         }
     }
-    return [$slug, $r['title'], $r['lead'], $r['icon'], $r['pace'], (int) $r['count'], (int) $r['km'], $img, (int) ($r['min'] ?? 0)];
+    // the last entry: the country codes the route runs through, for the flags on its card
+    return [$slug, $r['title'], $r['lead'], $r['icon'], $r['pace'], (int) $r['count'], (int) $r['km'], $img, (int) ($r['min'] ?? 0), array_column($r['countries'] ?? [], 0)];
 }
 
 /**

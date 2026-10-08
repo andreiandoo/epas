@@ -42,12 +42,12 @@ foreach ((array) $rawArticles as $a) {
     $guides[] = [
         'title' => $gTitle,
         'slug' => $gSlug,
-        'href' => '/ghiduri/' . $gSlug,
+        'href' => '/guides/' . $gSlug,
         'excerpt' => trim((string) ($a['excerpt'] ?? '')),
         // the guide's own image, else a provisional local photo (credited in the footer)
         'photo' => $image ? [$image, 0, 0, ''] : ($cover ? [v2_asset($cover[0]), $cover[1], $cover[2], ''] : (isset(V2_GUIDE_THUMBS[$gSlug]) ? [v2_asset(V2_GUIDE_THUMBS[$gSlug]), 0, 0, ''] : null)),
         'topic' => (string) ($cat['slug'] ?? ''),
-        'topicLabel' => $catName !== '' ? (V2_BLOG_CATEGORIES[$catName] ?? $catName) : 'Ghid',
+        'topicLabel' => $catName !== '' ? (V2_BLOG_CATEGORIES[$catName] ?? $catName) : 'Guide',
         'readTime' => (int) ($a['read_time'] ?? 0) > 0 ? (int) $a['read_time'] . ' min' : '5 min',
         'featured' => !empty($a['is_featured']),
     ];
@@ -76,18 +76,18 @@ $featuredGuide = $featuredGuide ?? ($guides[0] ?? null);
 // Activities by context: straight to pages that list what can be booked (not more reading).
 $gdCityCount = count($V2NAV['allCities'] ?? []);
 $contextTiles = [
-    ['map-pin', 'Local', 'Activități în orașul tău', $gdCityCount > 0 ? 'Alege dintre ' . v2_num($gdCityCount, 'oraș', 'orașe') . ' și vezi ce e de făcut acolo.' : 'Alege orașul și vezi ce e de făcut acolo.', '/orase', 'is-green'],
-    ['sun', 'Weekend', 'Ce faci sâmbătă și duminică', 'Activități cu locuri libere în weekendul care vine.', '/activitati-weekend', 'is-yellow'],
-    ['cloud-rain', 'Vreme', 'Plouă? Mergi la adăpost', 'Activități în interior, pentru zilele ploioase.', '/activitati-zile-ploioase', 'is-blue'],
-    ['gift', 'Cadou', 'O experiență de dăruit', 'Calculatorul găsește activitatea potrivită și valoarea cardului cadou.', '/experiente-cadou', 'is-red'],
+    ['map-pin', 'Local', 'Things to do in your city', $gdCityCount > 0 ? 'Choose from ' . v2_num($gdCityCount, 'city', 'cities') . ' and see what there is to do there.' : 'Pick a city and see what there is to do there.', '/cities', 'is-green'],
+    ['sun', 'Weekend', 'What to do on Saturday and Sunday', 'Activities with places left this coming weekend.', '/weekend-ideas', 'is-yellow'],
+    ['cloud-rain', 'Weather', 'Raining? Head indoors', 'Indoor activities for rainy days.', '/rainy-days', 'is-blue'],
+    ['gift', 'Gift', 'An experience to give', 'The calculator finds the right activity and the gift card value.', '/gift-experiences', 'is-red'],
 ];
 
 // ------------------------------------------------------------------ page
 $searchQuery = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 60) : '';
 
-$pageTitleRaw = 'Ghiduri de activități — ' . SITE_NAME;
-$pageDescription = 'Ghiduri locale și tematice pentru activități: ce să faci în weekend, unde mergi cu copiii, ce alegi când plouă și cum cumperi bilete online fără haos.';
-$canonicalUrl = SITE_URL . '/ghiduri';
+$pageTitleRaw = 'Activity guides | ' . SITE_NAME;
+$pageDescription = 'Local and themed guides to things to do: weekend plans, where to go with children, what to pick when it rains and how to book tickets online without the hassle.';
+$canonicalUrl = SITE_URL . '/guides';
 $ogImage = $featuredGuide['photo'][0] ?? null;
 $collection = [
     '@context' => 'https://schema.org',
@@ -95,7 +95,7 @@ $collection = [
     'name' => $pageTitleRaw,
     'description' => $pageDescription,
     'url' => $canonicalUrl,
-    'inLanguage' => 'ro-RO',
+    'inLanguage' => 'en',
 ];
 if ($guides) {
     $collection['mainEntity'] = [
@@ -121,18 +121,18 @@ include __DIR__ . '/includes/v2/header.php';
     <svg class="ct-line draw-clip" viewBox="0 590 3240 310" aria-hidden="true" focusable="false"><use href="#drum-g"/></svg>
     <div class="ct-in">
       <div>
-        <p class="ct-kicker">Ghiduri · idei de ieșit · SEO editorial</p>
-        <h1 class="ct-h" id="ct-h">Idei bune pentru când vrei să faci ceva.</h1>
-        <p class="ct-lead">Ghiduri locale și tematice pentru activități: ce să faci în weekend, unde mergi cu copiii, ce alegi când plouă și ce experiențe merită în orașul tău.</p>
+        <p class="ct-kicker">Guides · ideas for going out</p>
+        <h1 class="ct-h" id="ct-h">Good ideas for when you want to do something.</h1>
+        <p class="ct-lead">Local and themed guides to things to do: weekend plans, where to go with children, what to pick when it rains and which experiences are worth it in your city.</p>
 
-        <form class="ct-search" id="ct-form" action="/ghiduri" method="get" role="search">
-          <label class="sr" for="ct-q">Caută ghiduri</label>
-          <input id="ct-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Caută: weekend, copii, Brașov, muzeu, ploaie..." value="<?= v2_e($searchQuery) ?>">
-          <button type="submit" aria-label="Arată ghidurile găsite"><?= v2_ic('magnifying-glass') ?></button>
+        <form class="ct-search" id="ct-form" action="/guides" method="get" role="search">
+          <label class="sr" for="ct-q">Search guides</label>
+          <input id="ct-q" name="q" type="search" autocomplete="off" enterkeyhint="search" maxlength="60" placeholder="Search: weekend, children, Lisbon, museum, rain…" value="<?= v2_e($searchQuery) ?>">
+          <button type="submit" aria-label="Show matching guides"><?= v2_ic('magnifying-glass') ?></button>
         </form>
         <p class="ct-status" id="ct-status" role="status"></p>
         <?php if ($quickTopics): ?>
-        <ul class="ct-chips" aria-label="Topicuri">
+        <ul class="ct-chips" aria-label="Topics">
           <?php foreach ($quickTopics as $topic): ?><li><button type="button" data-topic-chip="<?= v2_e($topic['key']) ?>" aria-pressed="false"><?= v2_e($topic['label']) ?></button></li><?php endforeach; ?>
         </ul>
         <?php endif; ?>
@@ -143,10 +143,10 @@ include __DIR__ . '/includes/v2/header.php';
         <article class="gd-feature">
           <a class="gd-feature-media" href="<?= v2_e($featuredGuide['href']) ?>" tabindex="-1" aria-hidden="true"><?= $featuredGuide['photo'] ? v2_photo($featuredGuide['photo']) : v2_fallback($featuredGuide['title']) ?></a>
           <div class="gd-feature-body">
-            <p class="kicker">Ghid recomandat</p>
+            <p class="kicker">Recommended guide</p>
             <h2><a href="<?= v2_e($featuredGuide['href']) ?>"><?= v2_e($featuredGuide['title']) ?></a></h2>
             <?php if ($featuredGuide['excerpt'] !== ''): ?><p><?= v2_e($featuredGuide['excerpt']) ?></p><?php endif; ?>
-            <a class="btn btn-primary" href="<?= v2_e($featuredGuide['href']) ?>">Citește ghidul<?= v2_ic('arrow-right') ?></a>
+            <a class="btn btn-primary" href="<?= v2_e($featuredGuide['href']) ?>">Read the guide<?= v2_ic('arrow-right') ?></a>
           </div>
         </article>
       </div>
@@ -158,11 +158,11 @@ include __DIR__ . '/includes/v2/header.php';
   <!-- ===================== TOPICS + GUIDES ===================== -->
   <section class="sec ct-main" id="lista" aria-labelledby="ct-title">
     <div class="wrap ct-layout">
-      <aside class="ct-side" aria-label="Filtrează după topic">
+      <aside class="ct-side" aria-label="Filter by topic">
         <div class="ct-filter">
-          <p class="kicker">Topicuri</p>
+          <p class="kicker">Topics</p>
           <ul class="ct-regions">
-            <li><button type="button" data-topic="all" data-label="Toate ghidurile" aria-pressed="true">Toate ghidurile<span><?= count($guides) ?></span></button></li>
+            <li><button type="button" data-topic="all" data-label="All guides" aria-pressed="true">All guides<span><?= count($guides) ?></span></button></li>
             <?php foreach ($topics as $topic): ?>
             <li><button type="button" data-topic="<?= v2_e($topic['key']) ?>" data-label="<?= v2_e($topic['label']) ?>" aria-pressed="false"><?= v2_e($topic['label']) ?><span><?= $topic['count'] ?></span></button></li>
             <?php endforeach; ?>
@@ -172,16 +172,16 @@ include __DIR__ . '/includes/v2/header.php';
 
       <div>
         <div class="ct-head">
-          <div><p class="kicker">Ghiduri</p><h2 id="ct-title" tabindex="-1">Toate ghidurile</h2></div>
-          <p id="ct-count" aria-live="polite"><?= count($guides) ?> din <?= count($guides) ?> ghiduri</p>
+          <div><p class="kicker">Guides</p><h2 id="ct-title" tabindex="-1">All guides</h2></div>
+          <p id="ct-count" aria-live="polite"><?= count($guides) ?> of <?= count($guides) ?> guides</p>
         </div>
 
         <?php if (!$guides): ?>
         <div class="ct-none">
           <span class="ct-none-ic"><?= v2_ic('list') ?></span>
-          <p>Încă nu sunt ghiduri publicate.</p>
-          <p class="gd-none-text">Revino în curând — pregătim conținut editorial pentru activități.</p>
-          <a class="btn btn-primary" href="/categorii">Explorează categorii<?= v2_ic('arrow-right') ?></a>
+          <p>No guides published yet.</p>
+          <p class="gd-none-text">Check back soon. We are writing guides to things to do.</p>
+          <a class="btn btn-primary" href="/categories">Explore categories<?= v2_ic('arrow-right') ?></a>
         </div>
         <?php else: ?>
         <ul class="gd-cards" id="gd-grid">
@@ -198,8 +198,8 @@ include __DIR__ . '/includes/v2/header.php';
         </ul>
         <div class="ct-none" id="ct-none" hidden>
           <span class="ct-none-ic"><?= v2_ic('magnifying-glass') ?></span>
-          <p>Niciun ghid nu se potrivește căutării.</p>
-          <button class="btn btn-ghost" type="button" id="ct-reset">Arată toate ghidurile</button>
+          <p>No guide matches your search.</p>
+          <button class="btn btn-ghost" type="button" id="ct-reset">Show all guides</button>
         </div>
         <?php endif; ?>
       </div>
@@ -210,8 +210,8 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-context" aria-labelledby="gd-context-h">
     <div class="wrap">
       <div class="gd-context-head">
-        <p class="kicker">Activități după context</p>
-        <h2 id="gd-context-h">Pornește de la ce ai chef azi.</h2>
+        <p class="kicker">Activities by occasion</p>
+        <h2 id="gd-context-h">Start from what you feel like today.</h2>
       </div>
       <ul class="gd-context-grid">
         <?php foreach ($contextTiles as [$tIcon, $tKicker, $tTitle, $tText, $tHref, $tTone]): ?>

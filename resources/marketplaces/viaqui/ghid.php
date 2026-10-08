@@ -45,7 +45,7 @@ $gdCard = function (array $card, int $pos, string $extraClass = ''): string {
     $badge = $card['catName'] !== '' ? '<span class="xp-badges"><span>' . v2_e($card['catName']) . '</span></span>' : '';
     $meta = ($card['city'] !== '' ? '<span>' . v2_ic('map-pin') . v2_e($card['city']) . '</span>' : '')
         . ($card['dur'] !== '' ? '<span>' . v2_ic('clock') . v2_e($card['dur']) . '</span>' : '');
-    $price = $card['price'] > 0 ? '<span class="xp-price">de la<b>' . v2_thousands($card['price']) . ' lei</b></span>' : '';
+    $price = $card['price'] > 0 ? '<span class="xp-price">from<b>' . v2_e($card['priceLabel']) . '</b></span>' : '';
     return '<li class="xp' . $extraClass . '"><a href="' . v2_e($card['href']) . '"><span class="xp-media">' . $media . $badge . '</span>'
         . '<span class="xp-body"><span class="xp-title">' . v2_e($card['title']) . '</span><span class="xp-meta">' . $meta . '</span>'
         . '<span class="xp-foot"><span class="xp-go">' . v2_ic('arrow-right') . '</span>' . $price . '</span></span></a></li>';
@@ -116,12 +116,12 @@ $catRaw = navFlatName($cat['name'] ?? '');
 $catName = $catRaw !== '' ? (V2_BLOG_CATEGORIES[$catRaw] ?? $catRaw) : '';
 // The topic is a blog category: a page of its own only when an activity category has the same slug, otherwise the
 // guides filtered by it (/ghiduri-de-oras, /aventura… don't exist).
-$topicHref = $catSlug === '' ? '' : (isset($V2NAV['categoryBySlug'][$catSlug]) ? '/' . $catSlug : '/ghiduri?topic=' . rawurlencode($catSlug));
+$topicHref = $catSlug === '' ? '' : (isset($V2NAV['categoryBySlug'][$catSlug]) ? '/' . $catSlug : '/guides?topic=' . rawurlencode($catSlug));
 $readTime = (int) ($article['read_time'] ?? 0) > 0 ? (int) $article['read_time'] . ' min' : '5 min';
 
 $publishedAt = (string) ($article['published_at'] ?? '') ?: (string) ($article['created_at'] ?? '');
 $ts = $publishedAt !== '' ? strtotime($publishedAt) : false;
-$gdMonths = [1 => 'ianuarie', 2 => 'februarie', 3 => 'martie', 4 => 'aprilie', 5 => 'mai', 6 => 'iunie', 7 => 'iulie', 8 => 'august', 9 => 'septembrie', 10 => 'octombrie', 11 => 'noiembrie', 12 => 'decembrie'];
+$gdMonths = [1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'];
 $dateIso = $ts ? date('c', $ts) : null;
 $dateLabel = $ts ? (int) date('j', $ts) . ' ' . $gdMonths[(int) date('n', $ts)] . ' ' . date('Y', $ts) : '';
 
@@ -180,9 +180,9 @@ foreach ((array) ($article['faqs'] ?? []) as $faq) {
 }
 if (!$faqs) {
     $faqs = [
-        ['Cum cumpăr bilete pentru activitățile din ghid?', 'Deschizi activitatea recomandată, alegi data și ora disponibile, completezi datele și primești biletul cu cod QR pe email.'],
-        ['Trebuie să printez biletul?', 'Nu. Poți arăta codul QR de pe telefon. Dacă o locație cere altceva, găsești informația pe pagina activității.'],
-        ['Pot anula sau reprograma?', 'Politica de anulare este stabilită de fiecare locație și apare pe pagina activității înainte de plată.'],
+        ['How do I buy tickets for the activities in this guide?', 'Open the recommended activity, pick an available date and time, fill in your details and you get the ticket with a QR code by email.'],
+        ['Do I need to print the ticket?', 'No. You can show the QR code on your phone. If a venue asks for something else, it says so on the activity page.'],
+        ['Can I cancel or reschedule?', 'Each venue sets its own cancellation policy. You can read it on the activity page before you pay.'],
     ];
 }
 
@@ -205,10 +205,10 @@ foreach ((array) ($relatedResp['data']['articles'] ?? $relatedResp['data'] ?? []
     $rCat = is_array($r['category'] ?? null) ? navFlatName($r['category']['name'] ?? '') : '';
     $related[] = [
         'title' => $rTitle,
-        'href' => '/ghiduri/' . $rSlug,
+        'href' => '/guides/' . $rSlug,
         'excerpt' => trim((string) ($r['excerpt'] ?? '')),
         'photo' => $rImage ? [$rImage, 0, 0, ''] : (isset(V2_GUIDE_THUMBS[$rSlug]) ? [v2_asset(V2_GUIDE_THUMBS[$rSlug]), 0, 0, ''] : null),
-        'kicker' => $rCat !== '' ? (V2_BLOG_CATEGORIES[$rCat] ?? $rCat) : 'Ghid',
+        'kicker' => $rCat !== '' ? (V2_BLOG_CATEGORIES[$rCat] ?? $rCat) : 'Guide',
     ];
     if (count($related) >= 3) {
         break;
@@ -228,16 +228,16 @@ foreach ((array) ($railResp['data']['items'] ?? []) as $a) {
 }
 
 // ------------------------------------------------------------------ page
-$breadcrumbs = [['name' => 'Acasă', 'url' => '/'], ['name' => 'Ghiduri', 'url' => '/ghiduri'], ['name' => $title, 'url' => '/ghiduri/' . $slug]];
-$canonicalUrl = SITE_URL . '/ghiduri/' . $slug;
+$breadcrumbs = [['name' => 'Home', 'url' => '/'], ['name' => 'Guides', 'url' => '/guides'], ['name' => $title, 'url' => '/guides/' . $slug]];
+$canonicalUrl = SITE_URL . '/guides/' . $slug;
 $shareLinks = [
     ['Facebook', 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($canonicalUrl)],
     ['WhatsApp', 'https://wa.me/?text=' . rawurlencode($title . ' ' . $canonicalUrl)],
     ['Email', 'mailto:?subject=' . rawurlencode($title) . '&body=' . rawurlencode($canonicalUrl)],
 ];
 
-$pageTitleRaw = $title . ' — ghid | ' . SITE_NAME;
-$descSource = $excerpt !== '' ? $excerpt : 'Ghid de activități pe ' . SITE_NAME . ': ' . $title;
+$pageTitleRaw = $title . ': guide | ' . SITE_NAME;
+$descSource = $excerpt !== '' ? $excerpt : 'Activity guide on ' . SITE_NAME . ': ' . $title;
 if (mb_strlen($descSource) > 160) {
     $cut = mb_substr($descSource, 0, 160);
     $descSource = rtrim(mb_substr($cut, 0, mb_strrpos($cut, ' ') ?: 160), ' ,.;:–-') . '…';
@@ -266,7 +266,7 @@ $structuredData = [$gdClean([
     'image' => $coverUrl,
     'datePublished' => $dateIso,
     'articleSection' => $catName,
-    'inLanguage' => 'ro-RO',
+    'inLanguage' => 'en',
     'author' => ['@type' => 'Organization', 'name' => SITE_NAME],
     'publisher' => ['@type' => 'Organization', 'name' => SITE_NAME, 'url' => SITE_URL . '/'],
 ]), [
@@ -302,8 +302,8 @@ include __DIR__ . '/includes/v2/header.php';
         <?php if ($excerpt !== ''): ?><p class="gd-lead"><?= v2_e($excerpt) ?></p><?php endif; ?>
         <div class="gd-byline">
           <span class="gd-avatar" aria-hidden="true"><svg viewBox="24 53 148 150"><use href="#sym-g"/></svg></span>
-          <p class="gd-by"><b>Ghid viaqui.com</b><span><?php if ($dateLabel !== ''): ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time><span aria-hidden="true">·</span><?php endif; ?><?= v2_e($readTime) ?> de citit</span></p>
-          <a class="gd-share-jump" href="#gd-share"><?= v2_ic('link') ?>Trimite ghidul</a>
+          <p class="gd-by"><b>Viaqui guide</b><span><?php if ($dateLabel !== ''): ?><time datetime="<?= v2_e($dateIso) ?>"><?= v2_e($dateLabel) ?></time><span aria-hidden="true">·</span><?php endif; ?><?= v2_e($readTime) ?> read</span></p>
+          <a class="gd-share-jump" href="#gd-share"><?= v2_ic('link') ?>Share this guide</a>
         </div>
       </div>
       <?php if ($coverUrl): ?>
@@ -318,7 +318,7 @@ include __DIR__ . '/includes/v2/header.php';
       <div class="wrap gd-layout<?= $gdToc ? ' has-toc' : '' ?>">
         <?php if ($gdToc): ?>
         <nav class="gd-toc" aria-labelledby="gd-toc-h">
-          <button class="gd-toc-toggle" type="button" id="gd-toc-toggle" aria-expanded="false" aria-controls="gd-toc-list"><span id="gd-toc-h">În acest ghid</span><small><?= $gdTocCount ?> secțiuni</small><?= v2_ic('caret-down') ?></button>
+          <button class="gd-toc-toggle" type="button" id="gd-toc-toggle" aria-expanded="false" aria-controls="gd-toc-list"><span id="gd-toc-h">In this guide</span><small><?= $gdTocCount ?> sections</small><?= v2_ic('caret-down') ?></button>
           <ol class="gd-toc-list" id="gd-toc-list">
             <?php foreach ($gdToc as $ti => $t): ?>
             <li><a href="#<?= v2_e($t['id']) ?>" data-toc="<?= v2_e($t['id']) ?>"><?php if ($t['level'] === 2): ?><span class="gd-toc-n" aria-hidden="true"><?= str_pad((string) (count(array_filter(array_slice($gdToc, 0, $ti + 1), fn ($x) => $x['level'] === 2))), 2, '0', STR_PAD_LEFT) ?></span><?php endif; ?><span><?= v2_e($t['text']) ?></span></a>
@@ -335,10 +335,10 @@ include __DIR__ . '/includes/v2/header.php';
 
         <div class="gd-main">
           <?php if ($event): ?>
-          <aside class="gd-event" aria-label="Eveniment din ghid">
+          <aside class="gd-event" aria-label="Event in this guide">
             <span class="gd-event-ic" aria-hidden="true"><?= v2_ic('ticket') ?></span>
-            <p><small>Eveniment din acest ghid</small><b><?= v2_e($eventTitle) ?></b></p>
-            <a class="btn btn-primary" href="/bilete/<?= v2_e($event['slug']) ?>">Vezi biletele<?= v2_ic('arrow-right') ?></a>
+            <p><small>Event in this guide</small><b><?= v2_e($eventTitle) ?></b></p>
+            <a class="btn btn-primary" href="/bilete/<?= v2_e($event['slug']) ?>">See tickets<?= v2_ic('arrow-right') ?></a>
           </aside>
           <?php endif; ?>
 
@@ -346,44 +346,44 @@ include __DIR__ . '/includes/v2/header.php';
             <?php if ($contentHtml !== ''): ?>
             <?= $contentHtml /* authored in the admin RichEditor: trusted HTML */ ?>
             <?php else: ?>
-            <p class="gd-empty">Conținutul acestui ghid va fi disponibil în curând.</p>
+            <p class="gd-empty">This guide will be available soon.</p>
             <?php endif; ?>
           </div>
 
           <section class="gd-end" id="gd-share" aria-labelledby="gd-share-h">
-            <h2 class="gd-end-h" id="gd-share-h">Ți-a fost util? Trimite-l cuiva cu care ieși.</h2>
+            <h2 class="gd-end-h" id="gd-share-h">Was it useful? Send it to someone you go out with.</h2>
             <div class="gd-share">
-              <button class="is-native" type="button" data-native-share data-title="<?= v2_e($title) ?>" data-url="<?= v2_e($canonicalUrl) ?>" hidden>Trimite prin aplicații</button>
+              <button class="is-native" type="button" data-native-share data-title="<?= v2_e($title) ?>" data-url="<?= v2_e($canonicalUrl) ?>" hidden>Share via apps</button>
               <?php foreach ($shareLinks as [$shareLabel, $shareUrl]): ?>
-              <a href="<?= v2_e($shareUrl) ?>"<?= $shareLabel !== 'Email' ? ' target="_blank" rel="noopener"' : '' ?> aria-label="Trimite ghidul pe <?= v2_e($shareLabel) ?>"><?= v2_e($shareLabel) ?></a>
+              <a href="<?= v2_e($shareUrl) ?>"<?= $shareLabel !== 'Email' ? ' target="_blank" rel="noopener"' : '' ?> aria-label="Share this guide on <?= v2_e($shareLabel) ?>"><?= v2_e($shareLabel) ?></a>
               <?php endforeach; ?>
-              <button type="button" data-copy="<?= v2_e($canonicalUrl) ?>"><?= v2_ic('link') ?>Copiază linkul</button>
+              <button type="button" data-copy="<?= v2_e($canonicalUrl) ?>"><?= v2_ic('link') ?>Copy link</button>
             </div>
             <span class="sr" role="status" id="gd-copy-status"></span>
           </section>
 
           <section class="gd-faq" aria-labelledby="faq">
-            <h2 id="faq">Întrebări frecvente</h2>
+            <h2 id="faq">Frequently asked questions</h2>
             <?php foreach ($faqs as $fi => [$faqQ, $faqA]): ?>
             <details class="qa"<?= $fi === 0 ? ' open' : '' ?>><summary><?= v2_e($faqQ) ?><span class="pm"><?= v2_ic('plus') ?></span></summary><p><?= v2_e($faqA) ?></p></details>
             <?php endforeach; ?>
           </section>
 
           <section class="gd-next" aria-labelledby="gd-next-h">
-            <h2 class="sr" id="gd-next-h">Mai departe</h2>
+            <h2 class="sr" id="gd-next-h">Where to next</h2>
             <?php if ($topicHref !== ''): ?>
             <a class="gd-next-card is-topic" href="<?= v2_e($topicHref) ?>">
-              <small>Vrei direct activități?</small>
-              <b>Vezi activități legate de acest ghid</b>
-              <span class="gd-next-go"><?= v2_e($catName ?: 'Vezi activități') ?><?= v2_ic('arrow-right') ?></span>
+              <small>Want to go straight to activities?</small>
+              <b>See activities related to this guide</b>
+              <span class="gd-next-go"><?= v2_e($catName ?: 'See activities') ?><?= v2_ic('arrow-right') ?></span>
             </a>
             <?php endif; ?>
-            <a class="gd-next-card is-gift" href="/card-cadou">
-              <small>Card cadou</small>
-              <b>Nu știi ce să alegi? Trimite un card cadou și lasă destinatarul să aleagă experiența.</b>
-              <span class="gd-next-go"><?= v2_ic('gift') ?>Cumpără card</span>
+            <a class="gd-next-card is-gift" href="/gift-card">
+              <small>Gift card</small>
+              <b>Not sure what to pick? Send a gift card and let them choose the experience.</b>
+              <span class="gd-next-go"><?= v2_ic('gift') ?>Buy a gift card</span>
             </a>
-            <p class="gd-next-more"><a href="/categorii">Toate categoriile<?= v2_ic('arrow-right') ?></a></p>
+            <p class="gd-next-more"><a href="/categories">All categories<?= v2_ic('arrow-right') ?></a></p>
           </section>
         </div>
       </div>
@@ -395,10 +395,10 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-rail" aria-labelledby="gd-rail-h">
     <div class="wrap">
       <div class="sec-head">
-        <div><p class="kicker">După lectură</p><h2 id="gd-rail-h">Activități recomandate</h2></div>
+        <div><p class="kicker">After reading</p><h2 id="gd-rail-h">Recommended activities</h2></div>
         <div class="rail-btns" data-for="gd-rail-list">
-          <button class="rail-btn" type="button" data-dir="-1" aria-label="Activitățile anterioare"><?= v2_ic('arrow-left') ?></button>
-          <button class="rail-btn" type="button" data-dir="1" aria-label="Activitățile următoare"><?= v2_ic('arrow-right') ?></button>
+          <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous activities"><?= v2_ic('arrow-left') ?></button>
+          <button class="rail-btn" type="button" data-dir="1" aria-label="Next activities"><?= v2_ic('arrow-right') ?></button>
         </div>
       </div>
       <ul class="rail" id="gd-rail-list">
@@ -413,9 +413,9 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="sec gd-related" aria-labelledby="gd-related-h">
     <div class="wrap gd-related-in">
       <div class="gd-related-head">
-        <p class="kicker">Citește și</p>
-        <h2 id="gd-related-h">Ghiduri similare</h2>
-        <a class="sec-link" href="/ghiduri">Toate ghidurile<?= v2_ic('arrow-right') ?></a>
+        <p class="kicker">Read next</p>
+        <h2 id="gd-related-h">Related guides</h2>
+        <a class="sec-link" href="/guides">All guides<?= v2_ic('arrow-right') ?></a>
       </div>
       <ol class="gd-rel-list">
         <?php foreach ($related as $rgi => $rg): ?>
