@@ -23,6 +23,11 @@ class EventStatistics extends Page
     protected static string $resource = EventResource::class;
     protected static ?string $title = 'Event Statistics';
 
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return __('Event Statistics');
+    }
+
     protected string $view = 'filament.tenant.resources.event-resource.pages.event-statistics';
 
     public function mount(int|string $record): void

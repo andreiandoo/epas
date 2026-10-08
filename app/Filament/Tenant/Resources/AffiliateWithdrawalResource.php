@@ -24,15 +24,40 @@ class AffiliateWithdrawalResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
 
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Marketing');
+    }
+
     protected static ?string $navigationLabel = 'Withdrawals';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Withdrawals');
+    }
+
     protected static ?string $navigationParentItem = 'Affiliates';
+
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Affiliates');
+    }
 
     protected static ?int $navigationSort = 3;
 
     protected static ?string $modelLabel = 'Withdrawal';
 
+    public static function getModelLabel(): string
+    {
+        return __('Withdrawal');
+    }
+
     protected static ?string $pluralModelLabel = 'Withdrawals';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Withdrawals');
+    }
 
     public static function getNavigationBadge(): ?string
     {

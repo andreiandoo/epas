@@ -27,15 +27,40 @@ class ShopGiftCardResource extends Resource
 
     protected static ?string $navigationLabel = 'Gift Cards';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Gift Cards');
+    }
+
     protected static ?string $navigationParentItem = 'Shop';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Shop');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 7;
 
     protected static ?string $modelLabel = 'Gift Card';
 
+    public static function getModelLabel(): string
+    {
+        return __('Gift Card');
+    }
+
     protected static ?string $pluralModelLabel = 'Gift Cards';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Gift Cards');
+    }
 
     protected static ?string $slug = 'shop-gift-cards';
 

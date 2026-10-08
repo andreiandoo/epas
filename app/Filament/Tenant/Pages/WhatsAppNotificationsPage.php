@@ -9,7 +9,17 @@ class WhatsAppNotificationsPage extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationLabel = 'WhatsApp Notifications';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('WhatsApp Notifications');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 6;
     protected static ?string $slug = 'whatsapp-notifications';
     protected string $view = 'filament.tenant.pages.whatsapp-notifications';

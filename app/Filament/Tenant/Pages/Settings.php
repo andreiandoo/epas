@@ -18,7 +18,17 @@ class Settings extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationLabel = 'Settings';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Settings');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.settings';
 

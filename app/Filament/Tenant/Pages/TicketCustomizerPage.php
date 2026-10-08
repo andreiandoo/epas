@@ -9,7 +9,17 @@ class TicketCustomizerPage extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static ?string $navigationLabel = 'Ticket Customizer';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Ticket Customizer');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 5;
     protected static ?string $slug = 'ticket-customizer';
     protected string $view = 'filament.tenant.pages.ticket-customizer';

@@ -12,7 +12,17 @@ class VenueUsage extends Page
 {
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Venue Usage';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Venue Usage');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Venue';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Venue');
+    }
     protected static ?int $navigationSort = 50;
     protected string $view = 'filament.tenant.pages.venue-usage';
 
@@ -31,8 +41,8 @@ class VenueUsage extends Page
     public function updatedStatusFilter(): void {}
     public function updatedVenueFilter(): void {}
 
-    public function getTitle(): string { return 'Venue Usage'; }
-    public function getHeading(): ?string { return 'Venue Usage'; }
+    public function getTitle(): string { return __('Venue Usage'); }
+    public function getHeading(): ?string { return __('Venue Usage'); }
     public function getSubheading(): ?string { return 'Events happening at your venues'; }
 
     public function getViewData(): array

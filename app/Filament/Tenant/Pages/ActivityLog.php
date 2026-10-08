@@ -10,13 +10,23 @@ class ActivityLog extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
     protected static ?string $navigationLabel = 'Activity Log';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Activity Log');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Help';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Help');
+    }
     protected static ?int $navigationSort = 2;
     protected string $view = 'filament.tenant.pages.activity-log';
 
     public function getTitle(): string
     {
-        return 'Activity Log';
+        return __('Activity Log');
     }
 
     public function getViewData(): array

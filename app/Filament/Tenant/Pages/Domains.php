@@ -9,14 +9,24 @@ class Domains extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Domains';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Domains');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 2;
     protected static bool $shouldRegisterNavigation = false; // Moved to Settings tab
     protected string $view = 'filament.tenant.pages.domains';
 
     public function getTitle(): string
     {
-        return 'Domains';
+        return __('Domains');
     }
 
     public function getViewData(): array

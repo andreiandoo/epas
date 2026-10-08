@@ -15,7 +15,17 @@ class VenueAnalytics extends Page
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Venue Analytics';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Venue Analytics');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Venue';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Venue');
+    }
     protected static ?int $navigationSort = 51;
     protected string $view = 'filament.tenant.pages.venue-analytics';
 
@@ -83,7 +93,7 @@ class VenueAnalytics extends Page
 
     public function getTitle(): string
     {
-        return 'Venue Analytics';
+        return __('Venue Analytics');
     }
 
     public function getViewData(): array

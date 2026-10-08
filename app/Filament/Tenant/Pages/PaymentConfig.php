@@ -21,7 +21,17 @@ class PaymentConfig extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-credit-card';
     protected static ?string $navigationLabel = 'Payment Processor';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Payment Processor');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 10;
     protected string $view = 'filament.tenant.pages.payment-config';
 
@@ -520,7 +530,7 @@ class PaymentConfig extends Page
 
     public function getTitle(): string
     {
-        return 'Payment Processor';
+        return __('Payment Processor');
     }
 
     /**

@@ -16,7 +16,17 @@ class ArtistAnalytics extends Page
     use ArtistAnalyticsMethods;
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
     protected static ?string $navigationLabel = 'Analytics';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Analytics');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Sales');
+    }
     protected static ?int $navigationSort = 2;
     protected string $view = 'filament.tenant.pages.artist-analytics-wrapper';
 

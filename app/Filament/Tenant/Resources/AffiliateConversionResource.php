@@ -17,8 +17,23 @@ class AffiliateConversionResource extends Resource
     protected static ?string $model = AffiliateConversion::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
     protected static ?string $navigationLabel = 'Conversions';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Conversions');
+    }
     protected static ?string $navigationParentItem = 'Affiliates';
+
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Affiliates');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Marketing');
+    }
     protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder

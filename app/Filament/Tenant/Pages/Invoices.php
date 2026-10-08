@@ -9,7 +9,17 @@ class Invoices extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Invoices';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Invoices');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 3;
     protected string $view = 'filament.tenant.pages.invoices';
 

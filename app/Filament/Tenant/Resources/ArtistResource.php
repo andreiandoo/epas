@@ -25,6 +25,11 @@ class ArtistResource extends Resource
     protected static ?int $navigationSort = 4;
     protected static ?string $navigationLabel = 'Artiști';
     protected static ?string $modelLabel = 'Artist';
+
+    public static function getModelLabel(): string
+    {
+        return __('Artist');
+    }
     protected static ?string $pluralModelLabel = 'Artiști';
 
     public static function getEloquentQuery(): Builder

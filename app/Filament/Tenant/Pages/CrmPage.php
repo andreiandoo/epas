@@ -9,7 +9,17 @@ class CrmPage extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'CRM';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('CRM');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 8;
     protected static ?string $slug = 'crm';
     protected string $view = 'filament.tenant.pages.crm';

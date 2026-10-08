@@ -21,13 +21,33 @@ class ExperienceConfigResource extends Resource
 
     protected static ?string $navigationLabel = 'Experience & Levels';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Experience & Levels');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Gamification';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Gamification');
+    }
 
     protected static ?int $navigationSort = 49;
 
     protected static ?string $modelLabel = 'Experience Configuration';
 
+    public static function getModelLabel(): string
+    {
+        return __('Experience Configuration');
+    }
+
     protected static ?string $pluralModelLabel = 'Experience Configuration';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Experience Configuration');
+    }
 
     protected static ?string $slug = 'gamification-experience';
 

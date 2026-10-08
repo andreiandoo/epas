@@ -27,11 +27,26 @@ class BlogArticleResource extends Resource
 
     protected static ?string $navigationLabel = 'Blog';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Blog');
+    }
+
     protected static ?int $navigationSort = 1;
 
     protected static ?string $modelLabel = 'Article';
 
+    public static function getModelLabel(): string
+    {
+        return __('Article');
+    }
+
     protected static ?string $pluralModelLabel = 'Blog Articles';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Blog Articles');
+    }
 
     protected static ?string $slug = 'blog-articles';
 

@@ -22,7 +22,17 @@ class AffiliateResource extends Resource
     protected static ?string $model = Affiliate::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Affiliates';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Affiliates');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 1;
 
     public static function getNavigationBadge(): ?string

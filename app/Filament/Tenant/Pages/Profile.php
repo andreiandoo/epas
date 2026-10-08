@@ -17,7 +17,17 @@ class Profile extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-circle';
     protected static ?string $navigationLabel = 'Profile';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Profile');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 2;
     protected string $view = 'filament.tenant.pages.profile';
 

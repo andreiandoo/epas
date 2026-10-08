@@ -11,6 +11,11 @@ class LeisureReports extends Page
 {
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 60;
     protected static ?string $title = 'Rapoarte';
     protected static ?string $slug = 'leisure/reports';

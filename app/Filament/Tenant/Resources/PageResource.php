@@ -23,12 +23,27 @@ class PageResource extends Resource
 
     protected static ?string $navigationLabel = 'Pages';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Pages');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 4;
 
     protected static ?string $modelLabel = 'Page';
 
+    public static function getModelLabel(): string
+    {
+        return __('Page');
+    }
+
     protected static ?string $pluralModelLabel = 'Pages';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Pages');
+    }
 
     public static function getEloquentQuery(): Builder
     {

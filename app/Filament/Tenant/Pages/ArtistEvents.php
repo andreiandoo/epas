@@ -13,7 +13,17 @@ class ArtistEvents extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
     protected static ?string $navigationLabel = 'Events Listed';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Events Listed');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Sales');
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.artist-events';
 
@@ -34,7 +44,7 @@ class ArtistEvents extends Page
 
     public function getTitle(): string
     {
-        return 'Events Listed';
+        return __('Events Listed');
     }
 
     public function getViewData(): array

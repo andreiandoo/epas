@@ -24,7 +24,17 @@ class ShortsAnalytics extends Page
 
     protected static ?string $navigationLabel = 'Shorts analytics';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Shorts analytics');
+    }
+
     protected static UnitEnum|string|null $navigationGroup = 'Website';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Website');
+    }
 
     protected static ?int $navigationSort = 31;
 

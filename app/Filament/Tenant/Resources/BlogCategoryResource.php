@@ -25,13 +25,33 @@ class BlogCategoryResource extends Resource
 
     protected static ?string $navigationLabel = 'Blog Categories';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Blog Categories');
+    }
+
     protected static ?string $navigationParentItem = 'Blog';
+
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Blog');
+    }
 
     protected static ?int $navigationSort = 2;
 
     protected static ?string $modelLabel = 'Category';
 
+    public static function getModelLabel(): string
+    {
+        return __('Category');
+    }
+
     protected static ?string $pluralModelLabel = 'Blog Categories';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Blog Categories');
+    }
 
     protected static ?string $slug = 'blog-categories';
 

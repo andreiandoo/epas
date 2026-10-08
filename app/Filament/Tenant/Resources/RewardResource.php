@@ -21,13 +21,33 @@ class RewardResource extends Resource
 
     protected static ?string $navigationLabel = 'Rewards';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Rewards');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Gamification';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Gamification');
+    }
 
     protected static ?int $navigationSort = 47;
 
     protected static ?string $modelLabel = 'Reward';
 
+    public static function getModelLabel(): string
+    {
+        return __('Reward');
+    }
+
     protected static ?string $pluralModelLabel = 'Rewards';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Rewards');
+    }
 
     protected static ?string $slug = 'gamification-rewards';
 

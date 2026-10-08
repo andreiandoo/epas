@@ -11,13 +11,23 @@ class Documentation extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-book-open';
     protected static ?string $navigationLabel = 'Documentation';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Documentation');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Help';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Help');
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.documentation';
 
     public function getTitle(): string
     {
-        return 'Documentation';
+        return __('Documentation');
     }
 
     public function getCategories()

@@ -13,7 +13,17 @@ class CashlessReports extends Page
 
     protected static ?string $navigationLabel = 'Cashless Reports';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Cashless Reports');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Cashless');
+    }
 
     protected static ?int $navigationSort = 2;
 

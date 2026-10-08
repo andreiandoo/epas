@@ -22,7 +22,17 @@ class ArtistProfile extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user';
     protected static ?string $navigationLabel = 'Artist Profile';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Artist Profile');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Sales');
+    }
     protected static ?int $navigationSort = 0;
     protected string $view = 'filament.tenant.pages.artist-profile';
 
@@ -395,6 +405,6 @@ class ArtistProfile extends Page
 
     public function getTitle(): string
     {
-        return 'Artist Profile';
+        return __('Artist Profile');
     }
 }

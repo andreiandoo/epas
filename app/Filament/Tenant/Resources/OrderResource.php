@@ -29,6 +29,11 @@ class OrderResource extends Resource
     }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shopping-cart';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Sales');
+    }
     protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder

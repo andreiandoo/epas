@@ -26,15 +26,40 @@ class ShopCategoryResource extends Resource
 
     protected static ?string $navigationLabel = 'Categories';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Categories');
+    }
+
     protected static ?string $navigationParentItem = 'Shop';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Shop');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 2;
 
     protected static ?string $modelLabel = 'Category';
 
+    public static function getModelLabel(): string
+    {
+        return __('Category');
+    }
+
     protected static ?string $pluralModelLabel = 'Shop Categories';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Shop Categories');
+    }
 
     protected static ?string $slug = 'shop-categories';
 

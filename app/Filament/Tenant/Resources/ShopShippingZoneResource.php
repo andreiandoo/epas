@@ -26,15 +26,40 @@ class ShopShippingZoneResource extends Resource
 
     protected static ?string $navigationLabel = 'Shipping';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Shipping');
+    }
+
     protected static ?string $navigationParentItem = 'Shop';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Shop');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 5;
 
     protected static ?string $modelLabel = 'Shipping Zone';
 
+    public static function getModelLabel(): string
+    {
+        return __('Shipping Zone');
+    }
+
     protected static ?string $pluralModelLabel = 'Shipping Zones';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Shipping Zones');
+    }
 
     protected static ?string $slug = 'shop-shipping';
 

@@ -15,8 +15,18 @@ class ImportEvents extends Page implements HasForms
 
     protected static string $resource = EventResource::class;
     protected static ?string $title = 'Import Evenimente';
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return __('Import Evenimente');
+    }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?string $navigationLabel = 'Import Events';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Import Events');
+    }
 
     protected string $view = 'filament.pages.import-events';
 

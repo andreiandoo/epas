@@ -9,7 +9,17 @@ class GroupBookingPage extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Group Booking';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Group Booking');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 7;
     protected static ?string $slug = 'group-booking';
     protected string $view = 'filament.tenant.pages.group-booking';

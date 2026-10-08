@@ -20,7 +20,17 @@ class ThemeEditor extends Page implements HasForms
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-paint-brush';
     protected static ?string $navigationLabel = 'Theme Editor';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Theme Editor');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Website';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Website');
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.theme-editor';
 
@@ -509,6 +519,6 @@ class ThemeEditor extends Page implements HasForms
 
     public function getTitle(): string
     {
-        return 'Theme Editor';
+        return __('Theme Editor');
     }
 }

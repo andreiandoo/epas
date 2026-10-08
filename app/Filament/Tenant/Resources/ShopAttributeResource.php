@@ -26,15 +26,40 @@ class ShopAttributeResource extends Resource
 
     protected static ?string $navigationLabel = 'Attributes';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Attributes');
+    }
+
     protected static ?string $navigationParentItem = 'Shop';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Shop');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 3;
 
     protected static ?string $modelLabel = 'Attribute';
 
+    public static function getModelLabel(): string
+    {
+        return __('Attribute');
+    }
+
     protected static ?string $pluralModelLabel = 'Product Attributes';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Product Attributes');
+    }
 
     protected static ?string $slug = 'shop-attributes';
 

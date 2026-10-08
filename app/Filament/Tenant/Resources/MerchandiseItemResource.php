@@ -19,10 +19,30 @@ class MerchandiseItemResource extends Resource
     protected static ?string $model = MerchandiseItem::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cube';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 5;
     protected static ?string $navigationLabel = 'Marfa';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Marfa');
+    }
     protected static ?string $modelLabel = 'Produs marfa';
+
+    public static function getModelLabel(): string
+    {
+        return __('Produs marfa');
+    }
     protected static ?string $pluralModelLabel = 'Marfa';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Marfa');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

@@ -21,13 +21,33 @@ class RewardRedemptionResource extends Resource
 
     protected static ?string $navigationLabel = 'Redemption History';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Redemption History');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Gamification';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Gamification');
+    }
 
     protected static ?int $navigationSort = 51;
 
     protected static ?string $modelLabel = 'Redemption';
 
+    public static function getModelLabel(): string
+    {
+        return __('Redemption');
+    }
+
     protected static ?string $pluralModelLabel = 'Redemption History';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Redemption History');
+    }
 
     protected static ?string $slug = 'gamification-redemptions';
 

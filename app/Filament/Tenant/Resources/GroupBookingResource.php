@@ -28,13 +28,33 @@ class GroupBookingResource extends Resource
 
     protected static ?string $navigationLabel = 'Group Bookings';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Group Bookings');
+    }
+
     protected static ?string $navigationParentItem = 'Group Booking';
+
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Group Booking');
+    }
 
     protected static ?int $navigationSort = 1;
 
     protected static ?string $modelLabel = 'Group Booking';
 
+    public static function getModelLabel(): string
+    {
+        return __('Group Booking');
+    }
+
     protected static ?string $pluralModelLabel = 'Group Bookings';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Group Bookings');
+    }
 
     protected static ?string $slug = 'group-bookings';
 

@@ -21,13 +21,33 @@ class AffiliateSettingsResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
 
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Marketing');
+    }
+
     protected static ?string $navigationLabel = 'Affiliate Settings';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Affiliate Settings');
+    }
 
     protected static ?int $navigationSort = 10;
 
     protected static ?string $modelLabel = 'Affiliate Settings';
 
+    public static function getModelLabel(): string
+    {
+        return __('Affiliate Settings');
+    }
+
     protected static ?string $pluralModelLabel = 'Affiliate Settings';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Affiliate Settings');
+    }
 
     public static function getNavigationBadge(): ?string
     {

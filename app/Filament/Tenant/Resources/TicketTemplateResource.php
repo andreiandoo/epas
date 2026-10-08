@@ -37,7 +37,17 @@ class TicketTemplateResource extends Resource
 
     protected static ?string $navigationLabel = 'Ticket Templates';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Ticket Templates');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
 
     protected static ?int $navigationSort = 20;
 

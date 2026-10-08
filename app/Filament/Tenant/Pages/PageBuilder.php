@@ -21,7 +21,17 @@ class PageBuilder extends Page implements HasForms
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-group';
     protected static ?string $navigationLabel = 'Page Builder';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Page Builder');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Website';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Website');
+    }
     protected static ?int $navigationSort = 2;
     protected string $view = 'filament.tenant.pages.page-builder';
 
@@ -371,7 +381,7 @@ class PageBuilder extends Page implements HasForms
 
     public function getTitle(): string|Htmlable
     {
-        return 'Page Builder';
+        return __('Page Builder');
     }
 
     public function getBlockName(string $type): string

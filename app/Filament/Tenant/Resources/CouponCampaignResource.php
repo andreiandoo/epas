@@ -37,7 +37,17 @@ class CouponCampaignResource extends Resource
 
     protected static ?string $navigationLabel = 'Coupon Campaigns';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Coupon Campaigns');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 10;
 

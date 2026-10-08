@@ -21,7 +21,17 @@ class VoucherResource extends Resource
 
     protected static ?string $navigationLabel = 'Vouchers';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Vouchers');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Cashless');
+    }
 
     protected static ?int $navigationSort = 50;
 

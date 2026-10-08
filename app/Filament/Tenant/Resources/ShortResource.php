@@ -37,11 +37,31 @@ class ShortResource extends Resource
 
     protected static UnitEnum|string|null $navigationGroup = 'Website';
 
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Website');
+    }
+
     protected static ?string $navigationLabel = 'Shorts';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Shorts');
+    }
 
     protected static ?string $modelLabel = 'Short';
 
+    public static function getModelLabel(): string
+    {
+        return __('Short');
+    }
+
     protected static ?string $pluralModelLabel = 'Shorts';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Shorts');
+    }
 
     protected static ?int $navigationSort = 30;
 

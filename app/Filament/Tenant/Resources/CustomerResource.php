@@ -28,6 +28,11 @@ class CustomerResource extends Resource
     }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Sales');
+    }
     protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder

@@ -11,7 +11,17 @@ class TaxReports extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
     protected static ?string $navigationLabel = 'Tax Reports';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Tax Reports');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Reports';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Reports');
+    }
     protected static ?int $navigationSort = 10;
     protected string $view = 'filament.tenant.pages.tax-reports';
 

@@ -22,8 +22,18 @@ class TenantTeamMemberResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Echipa';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Echipa');
+    }
     protected static ?string $modelLabel = 'Membru echipă';
     protected static ?string $pluralModelLabel = 'Membri echipă';
 

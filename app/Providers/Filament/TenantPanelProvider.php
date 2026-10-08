@@ -90,12 +90,12 @@ class TenantPanelProvider extends PanelProvider
             // Define navigation group order
             // Note: Groups cannot have icons if their items also have icons (Filament 4 constraint)
             ->navigationGroups([
-                NavigationGroup::make('Sales'),
-                NavigationGroup::make('Services'),
-                NavigationGroup::make('Website'),
-                NavigationGroup::make('Settings')
+                NavigationGroup::make(fn (): string => __('Sales')),
+                NavigationGroup::make(fn (): string => __('Services')),
+                NavigationGroup::make(fn (): string => __('Website')),
+                NavigationGroup::make(fn (): string => __('Settings'))
                     ->collapsed(),
-                NavigationGroup::make('Help')
+                NavigationGroup::make(fn (): string => __('Help'))
                     ->collapsed(),
             ])
 

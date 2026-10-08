@@ -28,7 +28,17 @@ class Invitations extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-envelope';
     protected static ?string $navigationLabel = 'Invitations';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Invitations');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.invitations';
 

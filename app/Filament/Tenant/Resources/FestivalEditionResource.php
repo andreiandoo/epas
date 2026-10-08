@@ -19,10 +19,30 @@ class FestivalEditionResource extends Resource
     protected static ?string $model = FestivalEdition::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar-days';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationLabel = 'Editii Festival';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Editii Festival');
+    }
     protected static ?string $modelLabel = 'Editie';
+
+    public static function getModelLabel(): string
+    {
+        return __('Editie');
+    }
     protected static ?string $pluralModelLabel = 'Editii Festival';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Editii Festival');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

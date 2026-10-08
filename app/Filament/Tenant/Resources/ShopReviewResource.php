@@ -27,15 +27,40 @@ class ShopReviewResource extends Resource
 
     protected static ?string $navigationLabel = 'Reviews';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Reviews');
+    }
+
     protected static ?string $navigationParentItem = 'Shop';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Shop');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 6;
 
     protected static ?string $modelLabel = 'Review';
 
+    public static function getModelLabel(): string
+    {
+        return __('Review');
+    }
+
     protected static ?string $pluralModelLabel = 'Product Reviews';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Product Reviews');
+    }
 
     protected static ?string $slug = 'shop-reviews';
 

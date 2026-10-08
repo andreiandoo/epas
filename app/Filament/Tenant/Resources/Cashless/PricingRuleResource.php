@@ -22,7 +22,17 @@ class PricingRuleResource extends Resource
 
     protected static ?string $navigationLabel = 'Pricing Rules';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Pricing Rules');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Cashless');
+    }
 
     protected static ?int $navigationSort = 41;
 

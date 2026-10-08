@@ -36,6 +36,11 @@ class ShortPromotionResource extends Resource
 
     protected static UnitEnum|string|null $navigationGroup = 'Website';
 
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Website');
+    }
+
     protected static ?string $navigationLabel = 'Promovare Shorts';
 
     protected static ?string $modelLabel = 'promovare';

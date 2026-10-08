@@ -24,7 +24,17 @@ class AnalyticsDashboard extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
     protected static ?string $navigationLabel = 'Analytics';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Analytics');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.analytics-dashboard';
 

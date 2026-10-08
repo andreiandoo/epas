@@ -23,6 +23,11 @@ class LeisureCapacityResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-no-symbol';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 20;
     protected static ?string $navigationLabel = 'Excepții capacități';
     protected static ?string $modelLabel = 'Excepție';

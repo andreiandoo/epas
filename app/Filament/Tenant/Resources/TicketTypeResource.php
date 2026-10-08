@@ -17,6 +17,11 @@ class TicketTypeResource extends Resource
     protected static ?string $model = TicketType::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 5;
 
     public static function getNavigationLabel(): string

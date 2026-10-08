@@ -18,7 +18,17 @@ class CashlessDashboard extends Page
 
     protected static ?string $navigationLabel = 'Cashless Dashboard';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Cashless Dashboard');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Cashless');
+    }
 
     protected static ?int $navigationSort = 1;
 

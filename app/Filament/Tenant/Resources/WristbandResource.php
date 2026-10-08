@@ -19,10 +19,30 @@ class WristbandResource extends Resource
     protected static ?string $model = Wristband::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-identification';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 4;
     protected static ?string $navigationLabel = 'Bratari';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Bratari');
+    }
     protected static ?string $modelLabel = 'Bratara';
+
+    public static function getModelLabel(): string
+    {
+        return __('Bratara');
+    }
     protected static ?string $pluralModelLabel = 'Bratari';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Bratari');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

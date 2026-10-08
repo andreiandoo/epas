@@ -25,6 +25,11 @@ class FiscalTemplateResource extends Resource
     protected static ?string $model = TenantTaxTemplate::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 60;
     protected static ?string $navigationLabel = 'Șabloane documente';
     protected static ?string $modelLabel = 'Șablon de document';

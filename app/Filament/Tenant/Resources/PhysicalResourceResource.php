@@ -22,6 +22,11 @@ class PhysicalResourceResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cube';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 30;
     protected static ?string $navigationLabel = 'Inventar (unități)';
     protected static ?string $modelLabel = 'Unitate';

@@ -19,10 +19,25 @@ class MerchandiseSupplierResource extends Resource
     protected static ?string $model = MerchandiseSupplier::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-truck';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 7;
     protected static ?string $navigationLabel = 'Furnizori marfa';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Furnizori marfa');
+    }
     protected static ?string $modelLabel = 'Furnizor';
     protected static ?string $pluralModelLabel = 'Furnizori marfa';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Furnizori marfa');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

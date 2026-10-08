@@ -20,7 +20,17 @@ class CashlessAccountResource extends Resource
 
     protected static ?string $navigationLabel = 'Cashless Accounts';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Cashless Accounts');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Cashless');
+    }
 
     protected static ?int $navigationSort = 10;
 

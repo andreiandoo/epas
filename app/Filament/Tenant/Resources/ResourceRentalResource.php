@@ -16,10 +16,30 @@ class ResourceRentalResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 31;
     protected static ?string $navigationLabel = 'Rentals (istoric)';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Rentals (istoric)');
+    }
     protected static ?string $modelLabel = 'Rental';
+
+    public static function getModelLabel(): string
+    {
+        return __('Rental');
+    }
     protected static ?string $pluralModelLabel = 'Rentals';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Rentals');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

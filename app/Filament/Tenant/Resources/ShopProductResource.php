@@ -44,7 +44,17 @@ class ShopProductResource extends Resource
 
     protected static ?string $navigationLabel = 'Shop';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Shop');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 1;
 

@@ -20,10 +20,25 @@ class MerchandiseAllocationResource extends Resource
     protected static ?string $model = MerchandiseAllocation::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrow-path';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 6;
     protected static ?string $navigationLabel = 'Alocare marfa';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Alocare marfa');
+    }
     protected static ?string $modelLabel = 'Alocare';
     protected static ?string $pluralModelLabel = 'Alocari marfa';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Alocari marfa');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

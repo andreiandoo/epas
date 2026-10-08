@@ -21,6 +21,11 @@ class BulkAddMerchandiseItems extends Page implements HasForms
 
     protected static string $resource = MerchandiseItemResource::class;
     protected static ?string $title = 'Adaugare in bulk';
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return __('Adaugare in bulk');
+    }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-squares-plus';
 
     protected string $view = 'filament.tenant.pages.bulk-add-merchandise-items';

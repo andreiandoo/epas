@@ -18,8 +18,18 @@ class UserResource extends Resource
     protected static ?string $model = User::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Settings');
+    }
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationLabel = 'Team Members';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Team Members');
+    }
 
     public static function getEloquentQuery(): Builder
     {

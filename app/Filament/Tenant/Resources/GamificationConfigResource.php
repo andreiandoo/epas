@@ -21,13 +21,33 @@ class GamificationConfigResource extends Resource
 
     protected static ?string $navigationLabel = 'Gamification Settings';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Gamification Settings');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 46;
 
     protected static ?string $modelLabel = 'Gamification Settings';
 
+    public static function getModelLabel(): string
+    {
+        return __('Gamification Settings');
+    }
+
     protected static ?string $pluralModelLabel = 'Gamification Settings';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Gamification Settings');
+    }
 
     protected static ?string $slug = 'gamification-settings';
 

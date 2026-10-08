@@ -21,9 +21,19 @@ class VendorResource extends Resource
     protected static ?string $model = Vendor::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-storefront';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 2;
     protected static ?string $navigationLabel = 'Vendori';
     protected static ?string $modelLabel = 'Vendor';
+
+    public static function getModelLabel(): string
+    {
+        return __('Vendor');
+    }
     protected static ?string $pluralModelLabel = 'Vendori';
 
     public static function shouldRegisterNavigation(): bool

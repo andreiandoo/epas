@@ -25,15 +25,40 @@ class CustomerPointsResource extends Resource
 
     protected static ?string $navigationLabel = 'Customer Points';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Customer Points');
+    }
+
     protected static ?string $navigationParentItem = 'Gamification Settings';
 
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Gamification Settings');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
 
     protected static ?int $navigationSort = 47;
 
     protected static ?string $modelLabel = 'Customer Points';
 
+    public static function getModelLabel(): string
+    {
+        return __('Customer Points');
+    }
+
     protected static ?string $pluralModelLabel = 'Customer Points';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Customer Points');
+    }
 
     protected static ?string $slug = 'customer-points';
 

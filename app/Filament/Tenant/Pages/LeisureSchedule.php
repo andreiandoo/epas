@@ -13,6 +13,11 @@ class LeisureSchedule extends Page
 {
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar-date-range';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Leisure');
+    }
     protected static ?int $navigationSort = 12;
     protected static ?string $title = 'Pontaj';
     protected static ?string $navigationLabel = 'Pontaj';

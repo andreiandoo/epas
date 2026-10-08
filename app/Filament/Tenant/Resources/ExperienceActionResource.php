@@ -21,13 +21,33 @@ class ExperienceActionResource extends Resource
 
     protected static ?string $navigationLabel = 'XP Actions';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('XP Actions');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Gamification';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Gamification');
+    }
 
     protected static ?int $navigationSort = 50;
 
     protected static ?string $modelLabel = 'XP Action';
 
+    public static function getModelLabel(): string
+    {
+        return __('XP Action');
+    }
+
     protected static ?string $pluralModelLabel = 'XP Actions';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('XP Actions');
+    }
 
     protected static ?string $slug = 'gamification-xp-actions';
 

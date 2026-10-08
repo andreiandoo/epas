@@ -18,13 +18,33 @@ class CustomerBadgeResource extends Resource
 
     protected static ?string $navigationLabel = 'Customer Badges';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Customer Badges');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Gamification';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Gamification');
+    }
 
     protected static ?int $navigationSort = 52;
 
     protected static ?string $modelLabel = 'Customer Badge';
 
+    public static function getModelLabel(): string
+    {
+        return __('Customer Badge');
+    }
+
     protected static ?string $pluralModelLabel = 'Customer Badges';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Customer Badges');
+    }
 
     protected static ?string $slug = 'gamification-customer-badges';
 

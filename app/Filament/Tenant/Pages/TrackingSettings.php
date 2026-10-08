@@ -18,7 +18,17 @@ class TrackingSettings extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static ?string $navigationLabel = 'Tracking & Pixels';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Tracking & Pixels');
+    }
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.tenant.pages.tracking-settings';
 

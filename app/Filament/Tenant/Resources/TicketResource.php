@@ -26,6 +26,11 @@ class TicketResource extends Resource
     }
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Sales');
+    }
     protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder

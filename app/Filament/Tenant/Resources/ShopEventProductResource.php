@@ -28,13 +28,38 @@ class ShopEventProductResource extends Resource
 
     protected static ?string $navigationLabel = 'Event Products';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Event Products');
+    }
+
     protected static ?string $modelLabel = 'Event Product';
+
+    public static function getModelLabel(): string
+    {
+        return __('Event Product');
+    }
 
     protected static ?string $pluralModelLabel = 'Event Products';
 
+    public static function getPluralModelLabel(): string
+    {
+        return __('Event Products');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
 
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Services');
+    }
+
     protected static ?string $navigationParentItem = 'Shop';
+
+    public static function getNavigationParentItem(): ?string
+    {
+        return __('Shop');
+    }
 
     protected static ?int $navigationSort = 70;
 

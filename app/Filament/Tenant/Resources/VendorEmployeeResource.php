@@ -19,10 +19,25 @@ class VendorEmployeeResource extends Resource
     protected static ?string $model = VendorEmployee::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static \UnitEnum|string|null $navigationGroup = 'Festival';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Festival');
+    }
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Angajati vendori';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Angajati vendori');
+    }
     protected static ?string $modelLabel = 'Angajat';
     protected static ?string $pluralModelLabel = 'Angajati vendori';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Angajati vendori');
+    }
 
     public static function shouldRegisterNavigation(): bool
     {

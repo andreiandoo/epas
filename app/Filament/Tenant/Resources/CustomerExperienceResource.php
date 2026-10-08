@@ -18,13 +18,33 @@ class CustomerExperienceResource extends Resource
 
     protected static ?string $navigationLabel = 'Customer Levels';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Customer Levels');
+    }
+
     protected static \UnitEnum|string|null $navigationGroup = 'Gamification';
+
+    public static function getNavigationGroup(): string|\UnitEnum|null
+    {
+        return __('Gamification');
+    }
 
     protected static ?int $navigationSort = 53;
 
     protected static ?string $modelLabel = 'Customer Experience';
 
+    public static function getModelLabel(): string
+    {
+        return __('Customer Experience');
+    }
+
     protected static ?string $pluralModelLabel = 'Customer Levels';
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Customer Levels');
+    }
 
     protected static ?string $slug = 'gamification-customer-levels';
 
