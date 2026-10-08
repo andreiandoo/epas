@@ -14,6 +14,21 @@
  */
 
 $__vqPath = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
+
+// A language prefix (/de/rome): the code goes to $GLOBALS['V2_LOCALE'] (read by includes/v2/i18n.php) and the rest of
+// the address is routed as if the prefix were not there. Only languages opened in includes/locales.php count; the
+// default language has no prefix, and asking for it with one (/en/rome) is sent to the plain address.
+$__vqLocales = is_file(__DIR__ . '/locales.php') ? (array) require __DIR__ . '/locales.php' : [];
+if (preg_match('#^/([a-z]{2})(/.*)?$#', $__vqPath, $__vqLm) && in_array($__vqLm[1], (array) ($__vqLocales['enabled'] ?? []), true)) {
+    $__vqRest = ($__vqLm[2] ?? '') === '' ? '/' : $__vqLm[2];
+    if ($__vqLm[1] === ($__vqLocales['default'] ?? 'en')) {
+        header('Location: ' . $__vqRest . (($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . $_SERVER['QUERY_STRING'] : ''), true, 301);
+        exit;
+    }
+    $GLOBALS['V2_LOCALE'] = $__vqLm[1];
+    $__vqPath = $__vqRest;
+}
+
 if ($__vqPath === '' || $__vqPath === '/' || $__vqPath === '/index.php') {
     return; // the homepage: index.php carries on
 }

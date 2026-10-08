@@ -24,14 +24,16 @@ $v2Og = $ogImage ?? SITE_URL . '/assets/v2/img/hero-1440.webp';
 if (is_string($v2Og) && strncmp($v2Og, '/', 1) === 0) {
     $v2Og = SITE_URL . $v2Og;      // a photo from our own thumbnail cache: share previews need the full address
 }
+v2_i18n_boot();      // a language other than the default: internal links get its prefix on the way out
 ?><!DOCTYPE html>
-<html lang="en">
+<html lang="<?= v2_e(v2_locale()) ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title><?= v2_e($v2Title) ?></title>
 <meta name="description" content="<?= v2_e($v2Desc) ?>">
 <link rel="canonical" href="<?= v2_e($v2Canonical) ?>">
+<?= v2_hreflang($v2Canonical) ?><?= v2_i18n_script() ?>
 <meta name="robots" content="<?= $v2Robots ?>">
 <meta name="theme-color" content="#0F4D3A">
 <meta name="format-detection" content="telephone=no">
