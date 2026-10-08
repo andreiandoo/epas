@@ -16,11 +16,10 @@
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
   }
-  /* Romanian counting, as v2_num(): 1 ghid, 5 ghiduri, 20 de ghiduri */
+  /* counting, as v2_num(): 1 guide, 5 guides */
   function num(n, one, many) {
     if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
+    return n + ' ' + many;
   }
   var index = cards.map(function (card) {
     return { q: norm(card.getAttribute('data-q')), topic: card.getAttribute('data-topic-key') };
@@ -38,9 +37,9 @@
     buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b === active)); });
     chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c.getAttribute('data-topic-chip') === topic)); });
     title.textContent = active.getAttribute('data-label');
-    count.textContent = shown + ' din ' + total + ' ghiduri';
+    count.textContent = shown + ' of ' + total + ' guides';
     none.hidden = shown > 0;
-    status.textContent = q ? (shown ? num(shown, 'ghid găsit', 'ghiduri găsite') : 'Niciun ghid găsit.') : '';
+    status.textContent = q ? (shown ? num(shown, 'guide found', 'guides found') : 'No guides found.') : '';
     if (fromUser) {
       var params = new URLSearchParams(window.location.search);
       if (input.value.trim()) params.set('q', input.value.trim()); else params.delete('q');

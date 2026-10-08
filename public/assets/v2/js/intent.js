@@ -12,11 +12,9 @@
   var city = 'all';
   var total = cards.length;
 
-  /* Romanian counting, as v2_num(): 1 rezultat, 5 rezultate, 20 de rezultate */
+  /* Counting, as v2_num(): 1 result, 5 results, 1,250 results */
   function num(n, one, many) {
-    if (n === 1) return '1 ' + one;
-    var rem = n % 100;
-    return n + ' ' + (n >= 20 && !(rem >= 1 && rem <= 19) ? 'de ' : '') + many;
+    return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many);
   }
   function value(card, key) {
     var raw = card.getAttribute('data-' + key);
@@ -45,7 +43,7 @@
     var key = sort ? sort.value : 'recommended';
     var order = cards.slice().sort(key === 'priceAsc' ? by('price') : key === 'duration' ? by('dur') : by('order'));
     order.forEach(function (card) { grid.appendChild(card); });
-    if (count && chips.length) count.textContent = city === 'all' ? num(total, 'rezultat', 'rezultate') : shown + ' din ' + num(total, 'rezultat', 'rezultate');
+    if (count && chips.length) count.textContent = city === 'all' ? num(total, 'result', 'results') : shown + ' of ' + num(total, 'result', 'results');
   }
 
   chips.forEach(function (chip) {

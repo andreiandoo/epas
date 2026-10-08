@@ -129,3 +129,7 @@
 .rx-filter a:hover{border-color:var(--green)}
 .rx-filter a[aria-current]{background:var(--green);border-color:var(--green);color:#fff}
 .rx-filter .v-flag{width:20px;height:15px;margin-right:8px}
+
+/* Viaqui: the mark on a route card is the flag of its country (or countries) */
+.rc-flags{position:absolute;left:12px;top:12px;display:flex;gap:6px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,.94);box-shadow:0 6px 16px -8px rgba(0,0,0,.55)}
+.rc-flags img{display:block;width:26px;height:19px;margin:0;border-radius:3px;object-fit:cover;box-shadow:0 0 0 1px rgba(31,41,55,.12)}
