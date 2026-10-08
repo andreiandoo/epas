@@ -48,6 +48,13 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
+        // Auth provider that only resolves accounts with status "active" (used
+        // by the marketplace_admins provider in config/auth.php).
+        \Illuminate\Support\Facades\Auth::provider('eloquent-active', function ($app, array $config) {
+            return (new \Illuminate\Auth\EloquentUserProvider($app['hash'], $config['model']))
+                ->withQuery(fn ($query) => $query->where('status', 'active'));
+        });
+
         // Marketplace admin: the menu entries a marketplace hid (Setări → Meniu) leave its sidebar and answer 403,
         // for that marketplace only.
         \App\Support\Marketplace\MarketplaceMenu::boot();

@@ -80,8 +80,11 @@ return [
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 
+        // Active accounts only: a deactivated admin is refused at login, on an
+        // open session, on "remember me" and on password reset. The driver is
+        // registered in AppServiceProvider.
         'marketplace_admins' => [
-            'driver' => 'eloquent',
+            'driver' => 'eloquent-active',
             'model' => App\Models\MarketplaceAdmin::class,
         ],
 

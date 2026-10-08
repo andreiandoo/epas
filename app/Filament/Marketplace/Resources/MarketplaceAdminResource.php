@@ -6,6 +6,8 @@ use App\Filament\Marketplace\Resources\MarketplaceAdminResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\MarketplaceAdmin;
 use Filament\Forms;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
@@ -14,6 +16,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
@@ -112,7 +115,10 @@ class MarketplaceAdminResource extends Resource
                                 'suspended' => 'Suspendat',
                             ])
                             ->required()
-                            ->default('active'),
+                            ->default('active')
+                            // Changing your own status would lock you out.
+                            ->disabled(fn (?MarketplaceAdmin $record): bool => $record !== null && $record->id === $currentAdmin?->id)
+                            ->helperText('Doar utilizatorii activi se pot loga. Un utilizator inactiv sau suspendat rămâne în sistem, cu tot istoricul lui.'),
 
                         Forms\Components\Select::make('locale')
                             ->label('Limbă')
@@ -269,6 +275,12 @@ class MarketplaceAdminResource extends Resource
                         'inactive' => 'gray',
                         'suspended' => 'danger',
                         default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'active' => 'Activ',
+                        'inactive' => 'Inactiv',
+                        'suspended' => 'Suspendat',
+                        default => $state,
                     }),
 
                 Tables\Columns\TextColumn::make('last_login_at')
@@ -300,6 +312,8 @@ class MarketplaceAdminResource extends Resource
             ])
             ->recordActions([
                 EditAction::make(),
+                static::deactivateAction(),
+                static::activateAction(),
                 DeleteAction::make()
                     ->visible(fn ($record) => $record->id !== $currentAdmin?->id),
             ])
@@ -308,6 +322,65 @@ class MarketplaceAdminResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Deactivate: the user can no longer log in at all, but the account (and
+     * everything that references it) stays in place.
+     */
+    public static function deactivateAction(): Action
+    {
+        return Action::make('deactivate')
+            ->label('Dezactivează')
+            ->icon('heroicon-o-no-symbol')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Dezactivezi acest utilizator?')
+            ->modalDescription('Nu se va mai putea loga deloc în platformă și este scos imediat din sesiunile deschise. Contul și istoricul lui rămân neatinse și îl poți reactiva oricând.')
+            ->modalSubmitActionLabel('Dezactivează')
+            ->visible(fn (MarketplaceAdmin $record): bool => $record->isActive() && static::canChangeStatus($record))
+            ->action(fn (MarketplaceAdmin $record, $livewire) => static::changeStatus($record, 'inactive', $livewire));
+    }
+
+    public static function activateAction(): Action
+    {
+        return Action::make('activate')
+            ->label('Reactivează')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->requiresConfirmation()
+            ->modalHeading('Reactivezi acest utilizator?')
+            ->modalDescription('Se va putea loga din nou cu parola pe care o avea.')
+            ->modalSubmitActionLabel('Reactivează')
+            ->visible(fn (MarketplaceAdmin $record): bool => !$record->isActive() && static::canChangeStatus($record))
+            ->action(fn (MarketplaceAdmin $record, $livewire) => static::changeStatus($record, 'active', $livewire));
+    }
+
+    protected static function changeStatus(MarketplaceAdmin $record, string $status, $livewire): void
+    {
+        // Checked again here: Filament v4 actions don't go through can*().
+        abort_unless(static::canChangeStatus($record), 403);
+
+        $record->update(['status' => $status]);
+
+        if ($livewire instanceof EditRecord) {
+            $livewire->refreshFormData(['status']);
+        }
+
+        Notification::make()
+            ->title($status === 'active' ? 'Utilizator reactivat' : 'Utilizator dezactivat')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Same rule as editing, and never on your own account.
+     */
+    public static function canChangeStatus(MarketplaceAdmin $record): bool
+    {
+        $admin = Auth::guard('marketplace_admin')->user();
+
+        return $record->id !== $admin?->id && static::canEdit($record);
     }
 
     public static function getPages(): array

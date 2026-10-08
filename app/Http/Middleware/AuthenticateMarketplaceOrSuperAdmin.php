@@ -88,27 +88,6 @@ class AuthenticateMarketplaceOrSuperAdmin
      */
     protected function getOrCreateSystemAdmin(int $clientId, $coreUser): ?MarketplaceAdmin
     {
-        // Look for existing system admin or admin with super_admin role
-        $admin = MarketplaceAdmin::where('marketplace_client_id', $clientId)
-            ->where(function ($q) use ($coreUser) {
-                $q->where('email', $coreUser->email)
-                  ->orWhere('role', 'super_admin');
-            })
-            ->first();
-
-        if ($admin) {
-            return $admin;
-        }
-
-        // Create a system admin entry for this super-admin
-        return MarketplaceAdmin::create([
-            'marketplace_client_id' => $clientId,
-            'email' => $coreUser->email,
-            'password' => bcrypt(uniqid('system_', true)), // Random password - won't be used
-            'name' => $coreUser->name . ' (System)',
-            'role' => 'super_admin',
-            'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
+        return MarketplaceAdmin::resolveForCoreSuperAdmin($clientId, $coreUser);
     }
 }

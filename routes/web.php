@@ -146,23 +146,8 @@ Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', functio
 
     $user = auth('web')->user();
 
-    $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $clientId)
-        ->where(function ($q) use ($user) {
-            $q->where('email', $user->email)->orWhere('role', 'super_admin');
-        })
-        ->first();
-
-    if (!$admin) {
-        $admin = \App\Models\MarketplaceAdmin::create([
-            'marketplace_client_id' => $clientId,
-            'email' => $user->email,
-            'password' => bcrypt(uniqid('system_', true)),
-            'name' => $user->name . ' (System)',
-            'role' => 'super_admin',
-            'status' => 'active',
-            'email_verified_at' => now(),
-        ]);
-    }
+    $admin = \App\Models\MarketplaceAdmin::resolveForCoreSuperAdmin((int) $clientId, $user);
+    abort_if(!$admin, 403, 'Contul tău de pe acest marketplace este dezactivat.');
 
     \App\Support\SuperAdminMarketplaceSwitcher::switchTo($admin, (int) $clientId, $user);
 

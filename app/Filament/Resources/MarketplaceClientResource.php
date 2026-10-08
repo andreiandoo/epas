@@ -501,22 +501,8 @@ class MarketplaceClientResource extends Resource
                         // the /marketplace/switch-client/{id} route share the
                         // same no-migrate session manipulation.
                         $user = auth('web')->user();
-                        $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $record->id)
-                            ->where(function ($q) use ($user) {
-                                $q->where('email', $user->email)->orWhere('role', 'super_admin');
-                            })
-                            ->first();
-                        if (!$admin) {
-                            $admin = \App\Models\MarketplaceAdmin::create([
-                                'marketplace_client_id' => $record->id,
-                                'email' => $user->email,
-                                'password' => bcrypt(uniqid('system_', true)),
-                                'name' => $user->name . ' (System)',
-                                'role' => 'super_admin',
-                                'status' => 'active',
-                                'email_verified_at' => now(),
-                            ]);
-                        }
+                        $admin = \App\Models\MarketplaceAdmin::resolveForCoreSuperAdmin((int) $record->id, $user);
+                        abort_if(!$admin, 403, 'Contul tău de pe acest marketplace este dezactivat.');
 
                         \App\Support\SuperAdminMarketplaceSwitcher::switchTo($admin, (int) $record->id, $user);
                     })

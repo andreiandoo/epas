@@ -13,6 +13,8 @@ class EditMarketplaceAdmin extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            MarketplaceAdminResource::deactivateAction(),
+            MarketplaceAdminResource::activateAction(),
             Actions\DeleteAction::make(),
         ];
     }

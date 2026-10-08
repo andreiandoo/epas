@@ -24,22 +24,8 @@ class EditMarketplaceClient extends EditRecord
                     // auth->login() — TL;DR Session::migrate(true) breaks the
                     // browser cookie under our session config.
                     $user = auth('web')->user();
-                    $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $this->record->id)
-                        ->where(function ($q) use ($user) {
-                            $q->where('email', $user->email)->orWhere('role', 'super_admin');
-                        })
-                        ->first();
-                    if (!$admin) {
-                        $admin = \App\Models\MarketplaceAdmin::create([
-                            'marketplace_client_id' => $this->record->id,
-                            'email' => $user->email,
-                            'password' => bcrypt(uniqid('system_', true)),
-                            'name' => $user->name . ' (System)',
-                            'role' => 'super_admin',
-                            'status' => 'active',
-                            'email_verified_at' => now(),
-                        ]);
-                    }
+                    $admin = \App\Models\MarketplaceAdmin::resolveForCoreSuperAdmin((int) $this->record->id, $user);
+                    abort_if(!$admin, 403, 'Contul tău de pe acest marketplace este dezactivat.');
 
                     \App\Support\SuperAdminMarketplaceSwitcher::switchTo($admin, (int) $this->record->id, $user);
 

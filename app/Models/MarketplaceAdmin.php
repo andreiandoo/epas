@@ -59,6 +59,60 @@ class MarketplaceAdmin extends Authenticatable implements FilamentUser
         'password' => 'hashed',
     ];
 
+    protected static function booted(): void
+    {
+        // A deactivated admin must lose every way back in: the session and
+        // "remember me" are refused by the auth provider (active accounts
+        // only), API tokens are revoked here.
+        static::updated(function (self $admin) {
+            if ($admin->wasChanged('status') && !$admin->isActive()) {
+                $admin->tokens()->delete();
+                $admin->forceFill(['remember_token' => null])->saveQuietly();
+            }
+        });
+    }
+
+    /**
+     * The marketplace admin a core super-admin enters this marketplace as:
+     * their own account or any super admin, active ones only. Creates a system
+     * account when there is none. Null when the only match is their own
+     * deactivated (or deleted) account — the email is unique per marketplace,
+     * so no system account can be created next to it.
+     */
+    public static function resolveForCoreSuperAdmin(int $clientId, $coreUser): ?self
+    {
+        $admin = static::where('marketplace_client_id', $clientId)
+            ->where('status', 'active')
+            ->where(function ($q) use ($coreUser) {
+                $q->where('email', $coreUser->email)
+                  ->orWhere('role', 'super_admin');
+            })
+            ->first();
+
+        if ($admin) {
+            return $admin;
+        }
+
+        $emailTaken = static::withTrashed()
+            ->where('marketplace_client_id', $clientId)
+            ->where('email', $coreUser->email)
+            ->exists();
+
+        if ($emailTaken) {
+            return null;
+        }
+
+        return static::create([
+            'marketplace_client_id' => $clientId,
+            'email' => $coreUser->email,
+            'password' => bcrypt(uniqid('system_', true)), // Random password - won't be used
+            'name' => $coreUser->name . ' (System)',
+            'role' => 'super_admin',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+    }
+
     /**
      * Get the marketplace client this admin belongs to
      */
