@@ -43,7 +43,7 @@ include __DIR__ . '/includes/head.php';
                     <div class="ticket__main">
                         <div class="ticket__type"><?= e($t['type'] ?? 'Bilet') ?></div>
                         <div class="ticket__title"><?= e($oev['title'] ?? '') ?></div>
-                        <div class="ticket__meta"><?= e(implode(' · ', array_filter([$when, $where]))) ?></div>
+                        <div class="ticket__meta"><?= e(implode(' · ', array_filter([$t['seat_label'] ?? null, $when, $where]))) ?></div>
                         <div class="ticket__code"><?= e($t['code'] ?? '') ?></div>
                         <a class="link ticket__dl no-print" data-dl="<?= e($t['code'] ?? '') ?>" href="#" hidden>Descarcă biletul</a>
                     </div>
