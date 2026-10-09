@@ -96,7 +96,7 @@ foreach ($v2Parents as $c) {
         'desc' => trim((string) ($c['description'] ?? '')),
         'image' => $local ? v2_asset('img/cat-' . $imgKey . '.webp') : $apiImage,
         'thumb' => $local ? v2_asset('img/cat-' . $imgKey . '-320.webp') : $apiImage,
-        'srcset' => $local ? v2_asset('img/cat-' . $imgKey . '-320.webp') . ' 320w, ' . v2_asset('img/cat-' . $imgKey . '.webp') . ' 640w' : '',
+        'srcset' => $local ? v2_asset('img/cat-' . $imgKey . '-320.webp') . ' 320w, ' . v2_asset('img/cat-' . $imgKey . '-360.webp') . ' 360w, ' . v2_asset('img/cat-' . $imgKey . '.webp') . ' 640w' : '',
         'count' => (int) ($c['activities_count'] ?? 0) ?: (int) ($c['event_count'] ?? 0),
         'href' => '/' . $c['slug'],
         'subs' => $subs,

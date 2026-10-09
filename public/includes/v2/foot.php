@@ -19,6 +19,9 @@
     </div>
   </div>
 </section>
+<?php /* The banner is the largest text on a phone's first screen, so it must not wait for base.js to download:
+   shown here when no choice is stored (same key and version as base.js and head.php). */ ?>
+<script>(function(){try{var s=JSON.parse(localStorage.getItem('bo_cookie_consent_v1'));if(s&&s.version==='2026-05-26'&&s.consent)return}catch(e){}document.getElementById('cc-banner').hidden=false})();</script>
 <div class="cc-dialog" id="cc-dialog" role="dialog" aria-modal="true" aria-labelledby="cc-title" data-lenis-prevent hidden>
   <div class="cc-panel">
     <div class="cc-top">
