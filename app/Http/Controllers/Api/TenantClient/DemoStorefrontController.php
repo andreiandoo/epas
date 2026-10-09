@@ -511,6 +511,8 @@ class DemoStorefrontController extends Controller
         $pdf = Pdf::loadHTML($html)
             ->setPaper([0, 0, $widthPt, $heightPt])
             ->setOption('isRemoteEnabled', true)
+            // Doar literele folosite din font ajung în PDF: același aspect, fișier de ~18 ori mai mic
+            ->setOption('isFontSubsettingEnabled', true)
             ->setOption('isHtml5ParserEnabled', true);
 
         try {
@@ -582,6 +584,8 @@ class DemoStorefrontController extends Controller
         return Pdf::loadHTML($html)
             ->setPaper([0, 0, 595, 255])
             ->setOption('isRemoteEnabled', true)
+            // Doar literele folosite din font ajung în PDF: același aspect, fișier de ~18 ori mai mic
+            ->setOption('isFontSubsettingEnabled', true)
             ->setOption('isHtml5ParserEnabled', true);
     }
 

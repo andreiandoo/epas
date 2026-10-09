@@ -163,7 +163,9 @@ class TenantFiscalDocuments
             return ($cp <= 0 || $cp > 0x10FFFF) ? $m[0] : mb_chr($cp, 'UTF-8');
         }, $html);
 
-        $pdf = Pdf::loadHTML($html)->setPaper('a4', $template->page_orientation === 'landscape' ? 'landscape' : 'portrait');
+        $pdf = Pdf::loadHTML($html)
+            ->setPaper('a4', $template->page_orientation === 'landscape' ? 'landscape' : 'portrait')
+            ->setOption('isFontSubsettingEnabled', true);   // doar literele folosite din font: fișier mult mai mic, același aspect
 
         $eventName = is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? 'eveniment') : ((string) $event->title ?: 'eveniment');
         $filename = sprintf('%s_%s_%s.pdf', Str::slug($eventName), Str::slug($own->name), now()->format('Y-m-d_His'));
