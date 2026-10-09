@@ -175,7 +175,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .hero__veil { position: absolute; inset: 0; z-index: -1; pointer-events: none;
     background: linear-gradient(90deg, rgba(1, 1, 47, .92) 0%, rgba(1, 1, 47, .55) 42%, rgba(1, 1, 47, 0) 72%), linear-gradient(0deg, var(--navy) 0%, rgba(1, 1, 47, 0) 26%); }
-.hero__inner { flex: 1; display: grid; align-content: end; gap: 36px; padding: calc(var(--head-h) + 40px) 0 44px; }
+.hero__inner { flex: 1; display: grid; align-content: end; gap: 36px; padding-top: calc(var(--head-h) + 40px); padding-bottom: 44px; }
 .hero__title { font-size: clamp(52px, 9.4vw, 132px); line-height: .88; letter-spacing: 0; margin: 22px 0 0; }
 .hero__title em { font-style: normal; color: transparent; -webkit-text-stroke: 1.5px rgba(255, 255, 255, .85); }
 .hero__title .hl { color: var(--blue-hi); }
@@ -702,3 +702,30 @@ html.lenis, html.lenis body { height: auto; }
 .has-mobile-bar .cookiebar { bottom: 88px; }
 @media (min-width: 1000px) { .has-mobile-bar .cookiebar { bottom: 12px; } }
 @media print { .cookiebar { display: none !important; } }
+
+/* ---- Elementele din grile nu au voie să lățească pagina (tabele, hărți de locuri, texte lungi) ---- */
+.ev-body > *, .split > *, .spot > *, .ev-hero__grid > *, .hero__foot > *, .site-foot__grid > *, .foot-pay > * { min-width: 0; }
+.seatmap, .stand-view, .stand-view__scroll { min-width: 0; max-width: 100%; }
+.seatmap__hint { display: none; margin: 0; padding: 10px 14px 0; font-size: 13px; color: var(--fg-2); }
+@media (max-width: 760px) { .seatmap__hint { display: block; } }
+
+/* ---- Hero pe telefon și tabletă: scena 3D sus, textul dedesubt, nu unul peste altul ---- */
+@media (max-width: 1023px) {
+    .hero { min-height: 0; }
+    .hero__canvas { inset: 0 0 auto 0; height: 46svh; }
+    .hero__veil { background: linear-gradient(180deg, rgba(1, 1, 47, .5) 0, rgba(1, 1, 47, 0) 90px, rgba(1, 1, 47, 0) 30svh, var(--navy) 46svh); }
+    .hero::before { background: radial-gradient(90% 46svh at 50% 22svh, rgba(17, 81, 211, .5) 0%, rgba(17, 81, 211, 0) 70%), var(--navy); }
+    .hero__inner { align-content: start; gap: 26px; padding-top: calc(46svh - 46px); padding-bottom: 36px; }
+    .hero__title { margin-top: 14px; }
+    .hero__foot { gap: 22px; }
+    .hero__cta { margin-top: 20px; }
+}
+@media (max-width: 560px) {
+    .hero__lead { display: none; }
+    .hero__cta { margin-top: 0; }
+    .hero__cta .btn { flex: 1 1 auto; }
+    .hero__cta .btn--ghost { display: none; }
+    .next { padding: 14px; gap: 14px; }
+    .next__title { font-size: 23px; margin: 8px 0 6px; }
+    .next__row { flex-wrap: wrap; }
+}
