@@ -729,3 +729,24 @@ html.lenis, html.lenis body { height: auto; }
     .next__title { font-size: 23px; margin: 8px 0 6px; }
     .next__row { flex-wrap: wrap; }
 }
+
+/* ---- Cont pe telefon: filele pe un singur rând care se derulează, bilet mai compact ---- */
+@media (max-width: 700px) {
+    .tabs { display: grid; gap: 10px; justify-content: stretch; }
+    .tabs nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px; -webkit-overflow-scrolling: touch; }
+    .tabs nav::-webkit-scrollbar { display: none; }
+    .tab { flex: none; white-space: nowrap; padding: 0 16px; font-size: 14px; }
+    .tab--out { justify-self: start; min-height: 40px; }
+    .tickets { grid-template-columns: minmax(0, 1fr); }
+    .ticket { grid-template-columns: minmax(0, 1fr) 112px; }
+    .ticket__main { padding: 16px 14px 20px 16px; }
+    .ticket__title { font-size: 19px; }
+    .ticket__qr { padding: 10px; }
+    .ticket__qr > div, .ticket__qr img, .ticket__qr canvas { width: 88px !important; height: 88px !important; }
+    .ticket::before, .ticket::after { right: 100px; }
+    .order__head { padding: 18px; }
+    .order__head h2 { font-size: 26px; }
+    .order__actions { padding: 0 18px 18px; }
+    .order__actions .btn { flex: 1 1 auto; }
+    .order__tickets { padding: 16px; }
+}
