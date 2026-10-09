@@ -95,6 +95,19 @@
     function ticketsLabel(n) { return n === 1 ? '1 bilet' : (n < 20 ? n + ' bilete' : n + ' de bilete'); }
     function toast(msg) { window.dispatchEvent(new CustomEvent('wukf:toast', { detail: msg })); }
 
+    // „14–15 noiembrie 2026” / „3 aprilie 2027” / „30 ianuarie – 1 februarie 2027”, din două date ISO
+    function dateRange(startIso, endIso) {
+        if (!startIso) { return ''; }
+        var day = function (iso) { var p = String(iso).slice(0, 10).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
+        var a = day(startIso), b = endIso ? day(endIso) : a;
+        var full = { day: 'numeric', month: 'long', year: 'numeric' };
+        if (a.getTime() === b.getTime()) { return a.toLocaleDateString('ro-RO', full); }
+        if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) {
+            return a.getDate() + '–' + b.toLocaleDateString('ro-RO', full);
+        }
+        return a.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }) + ' – ' + b.toLocaleDateString('ro-RO', full);
+    }
+
     /* Tokenurile comenzilor plasate din acest browser: cu ele se descarcă biletele după plată,
        fără cont. Se păstrează ultimele 20. */
     var Orders = {
@@ -728,15 +741,7 @@
                         { key: 'past', title: 'Competiții încheiate', items: this.tickets.filter(function (t) { return !t.is_upcoming; }) }
                     ];
                 },
-                eventDate: function (t) {
-                    if (!t.event || !t.event.start_date) { return ''; }
-                    var s = String(t.event.start_date).slice(0, 10), e = t.event.end_date ? String(t.event.end_date).slice(0, 10) : s;
-                    var fmt = function (day, withYear) {
-                        var p = day.split('-');
-                        return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('ro-RO', withYear ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'long' });
-                    };
-                    return s === e ? fmt(s, true) : fmt(s, false) + ' – ' + fmt(e, true);
-                },
+                eventDate: function (t) { return t.event ? dateRange(t.event.start_date, t.event.end_date) : ''; },
                 place: function (t) { return t.event ? [t.event.venue, t.event.city].filter(Boolean).join(', ') : ''; },
                 pdf: function (t) { return pdfUrl(t.order_id, t.access_token, t.code); }
             };
@@ -763,15 +768,7 @@
                     var d = new Date(iso);
                     return isNaN(d) ? '' : d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
                 },
-                eventDate: function (o) {
-                    if (!o.event || !o.event.start_date) { return ''; }
-                    var s = String(o.event.start_date).slice(0, 10), e = o.event.end_date ? String(o.event.end_date).slice(0, 10) : s;
-                    var fmt = function (day, withYear) {
-                        var p = day.split('-');
-                        return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('ro-RO', withYear ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'long' });
-                    };
-                    return s === e ? fmt(s, true) : fmt(s, false) + ' – ' + fmt(e, true);
-                },
+                eventDate: function (o) { return o.event ? dateRange(o.event.start_date, o.event.end_date) : ''; },
                 place: function (o) { return o.event ? [o.event.venue, o.event.city].filter(Boolean).join(', ') : ''; },
                 pdf: function (o, code) { return pdfUrl(o.id, o.access_token, code); },
                 toggle: async function (o) {
