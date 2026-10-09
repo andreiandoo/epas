@@ -29,7 +29,11 @@ class DeactivateExpiredFeaturing extends Command
 
         foreach ($expired as $order) {
             try {
-                $order->complete();
+                \App\Support\AutomatedActivity::run(
+                    \App\Support\AutomatedActivity::EVENT_FEATURING_EXPIRED,
+                    fn () => $order->complete(),
+                    ['service_order_number' => $order->order_number]
+                );
                 $deactivated++;
                 Log::channel('marketplace')->info('Expired featuring order deactivated', [
                     'order_number'     => $order->order_number,

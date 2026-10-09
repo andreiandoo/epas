@@ -902,10 +902,30 @@ Schedule::command('marketplace:deactivate-expired-featuring')
 // so we must compare with now() in the same timezone
 Schedule::call(function () {
     $now = now('Europe/Bucharest');
-    $count = \App\Models\TicketType::where('status', 'active')
+    $due = \Illuminate\Support\Facades\DB::table('ticket_types')
+        ->where('status', 'active')
         ->whereNotNull('active_until')
         ->where('active_until', '<=', $now)
-        ->update(['status' => 'hidden']);
+        ->get(['id', 'event_id', 'active_until']);
+    $count = 0;
+    foreach ($due as $row) {
+        // Mass update on purpose (no model events, as before); the activity is written by hand.
+        $updated = \App\Models\TicketType::where('id', $row->id)
+            ->where('status', 'active')
+            ->update(['status' => 'hidden']);
+        if ($updated === 0) {
+            continue;
+        }
+        $count++;
+        \App\Support\AutomatedActivity::log(
+            (new \App\Models\TicketType)->newFromBuilder(['id' => $row->id, 'event_id' => $row->event_id]),
+            \App\Support\AutomatedActivity::TICKET_AVAILABILITY_ENDED,
+            ['status' => 'active'],
+            ['status' => 'hidden'],
+            ['active_until' => $row->active_until],
+            'tenant'
+        );
+    }
     if ($count > 0) {
         \Log::info("Auto-deactivated {$count} ticket types (active_until reached)");
     }

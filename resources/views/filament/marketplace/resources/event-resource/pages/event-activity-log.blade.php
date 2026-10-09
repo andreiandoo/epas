@@ -49,8 +49,10 @@
                                             @case('deleted') bg-red-600 @break
                                             @default bg-blue-600
                                         @endswitch
-                                    ">
-                                        @if($log['subject_kind'] === 'ticket_type')
+                                    " @if($log['is_automated']) style="background-color:#d97706" @endif>
+                                        @if($log['is_automated'])
+                                            <x-heroicon-s-bolt class="w-3.5 h-3.5 text-white" />
+                                        @elseif($log['subject_kind'] === 'ticket_type')
                                             <x-heroicon-s-ticket class="w-3.5 h-3.5 text-white" />
                                         @else
                                             @switch($log['event'])
@@ -71,7 +73,7 @@
                                 <div class="flex-1 min-w-0">
                                     {{-- Line 1: summary + timestamp --}}
                                     <div class="flex items-baseline justify-between gap-3">
-                                        <span class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white {{ $log['is_automated'] ? '' : 'truncate' }}">
                                             {{ $log['summary'] }}
                                         </span>
                                         <span class="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap"

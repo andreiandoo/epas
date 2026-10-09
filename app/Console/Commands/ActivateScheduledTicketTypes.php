@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\TicketType;
+use App\Support\AutomatedActivity;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -14,15 +16,40 @@ class ActivateScheduledTicketTypes extends Command
     {
         $now = now('Europe/Bucharest');
 
-        $count = DB::table('ticket_types')
+        $due = DB::table('ticket_types')
             ->where('status', 'hidden')
             ->whereNotNull('scheduled_at')
             ->where('scheduled_at', '<=', $now)
-            ->update([
-                'status' => 'active',
-                'scheduled_at' => null,
-                'updated_at' => $now,
-            ]);
+            ->get(['id', 'event_id', 'scheduled_at']);
+
+        $count = 0;
+
+        foreach ($due as $row) {
+            // Raw update on purpose: skips the model saved hooks, as before.
+            $updated = DB::table('ticket_types')
+                ->where('id', $row->id)
+                ->where('status', 'hidden')
+                ->update([
+                    'status' => 'active',
+                    'scheduled_at' => null,
+                    'updated_at' => $now,
+                ]);
+
+            if ($updated === 0) {
+                continue;
+            }
+
+            $count++;
+
+            AutomatedActivity::log(
+                (new TicketType)->newFromBuilder(['id' => $row->id, 'event_id' => $row->event_id]),
+                AutomatedActivity::TICKET_SCHEDULED_ACTIVATION,
+                ['status' => 'hidden'],
+                ['status' => 'active'],
+                ['scheduled_at' => $row->scheduled_at],
+                'tenant'
+            );
+        }
 
         if ($count > 0) {
             $this->info("Auto-activated {$count} ticket type(s) (scheduled_at reached).");

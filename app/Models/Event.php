@@ -1032,6 +1032,8 @@ class Event extends Model
     public function tapActivity(\Spatie\Activitylog\Contracts\Activity $activity, string $eventName)
     {
         $activity->properties = $activity->properties->put('tenant_id', $this->tenant_id);
+
+        \App\Support\AutomatedActivity::tag($activity);
     }
 
     /* Analytics Relations */

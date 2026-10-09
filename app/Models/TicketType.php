@@ -429,10 +429,19 @@ class TicketType extends Model
             }
 
             if ($previousSoldOut) {
-                $candidate->update([
-                    'status' => 'active',
-                    'autostart_when_previous_sold_out' => false,
-                ]);
+                $previousName = is_array($previous->name)
+                    ? ($previous->name['ro'] ?? $previous->name['en'] ?? reset($previous->name) ?: null)
+                    : $previous->name;
+
+                // Logged as an automatic action, whoever happened to trigger the check.
+                \App\Support\AutomatedActivity::run(
+                    \App\Support\AutomatedActivity::TICKET_AUTOSTART_PREVIOUS_SOLD_OUT,
+                    fn () => $candidate->update([
+                        'status' => 'active',
+                        'autostart_when_previous_sold_out' => false,
+                    ]),
+                    ['previous_ticket_type_id' => $previous->id, 'previous_ticket_type_name' => $previousName]
+                );
                 $count++;
             }
         }
@@ -758,6 +767,8 @@ class TicketType extends Model
         if ($tenantId) {
             $activity->properties = $activity->properties->put('tenant_id', $tenantId);
         }
+
+        \App\Support\AutomatedActivity::tag($activity);
     }
 
     /* ------------------------------------------------------------------ */

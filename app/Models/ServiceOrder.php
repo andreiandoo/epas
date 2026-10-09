@@ -509,6 +509,18 @@ class ServiceOrder extends Model
 
             if (! empty($updates)) {
                 Event::where('id', $this->marketplace_event_id)->update($updates);
+
+                // Mass update = no model events; when the expiry cron drives this,
+                // leave a trace in the event's activity log.
+                if (\App\Support\AutomatedActivity::current() === \App\Support\AutomatedActivity::EVENT_FEATURING_EXPIRED) {
+                    \App\Support\AutomatedActivity::log(
+                        (new Event)->newFromBuilder(['id' => $this->marketplace_event_id]),
+                        \App\Support\AutomatedActivity::EVENT_FEATURING_EXPIRED,
+                        array_map(fn () => true, $updates),
+                        $updates,
+                        ['service_order_number' => $this->order_number]
+                    );
+                }
             }
         }
 

@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\TicketType;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Venue;
+use App\Support\AutomatedActivity;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Spatie\Activitylog\Models\Activity;
@@ -141,6 +142,7 @@ class EventActivityLog extends Page
             // TicketType
             'name' => 'Denumire bilet',
             'price_cents' => 'Preț',
+            'sale_price_cents' => 'Preț redus',
             'quota_total' => 'Stoc',
             'status' => 'Status',
         ];
@@ -219,18 +221,24 @@ class EventActivityLog extends Page
                 $isTicketType = $this->isTicketTypeActivity($activity);
                 $changes = $this->formatChanges($activity, $isTicketType);
                 $subjectLabel = $isTicketType ? $this->ticketTypeName($activity) : null;
+                $automation = $activity->properties->get('automation');
+                $isAutomated = is_string($automation) && $automation !== '';
 
                 return [
                     'id' => $activity->id,
                     'event' => $activity->event,
                     'subject_kind' => $isTicketType ? 'ticket_type' : 'event',
                     'subject_label' => $subjectLabel,
-                    'summary' => $this->buildSummary($activity, $isTicketType, $changes, $subjectLabel),
-                    'causer_name' => $this->getCauserName($activity),
-                    'causer_type' => $this->getCauserType($activity),
-                    'causer_type_label' => $this->getCauserTypeLabel($activity),
-                    'causer_email' => $this->getCauserEmail($activity),
-                    'causer_url' => $this->getCauserUrl($activity),
+                    'is_automated' => $isAutomated,
+                    'summary' => $isAutomated
+                        ? $this->buildAutomatedSummary($activity, $automation, $subjectLabel)
+                        : $this->buildSummary($activity, $isTicketType, $changes, $subjectLabel),
+                    // Automated actions have no author, whoever's request happened to trigger them.
+                    'causer_name' => $isAutomated ? 'Acțiune automată' : $this->getCauserName($activity),
+                    'causer_type' => $isAutomated ? 'system' : $this->getCauserType($activity),
+                    'causer_type_label' => $isAutomated ? 'Sistem' : $this->getCauserTypeLabel($activity),
+                    'causer_email' => $isAutomated ? null : $this->getCauserEmail($activity),
+                    'causer_url' => $isAutomated ? null : $this->getCauserUrl($activity),
                     'changes' => $changes,
                     'created_at' => $activity->created_at,
                     'formatted_date' => $activity->created_at?->timezone('Europe/Bucharest')->format('d M Y') ?? '',
@@ -248,7 +256,7 @@ class EventActivityLog extends Page
         ->filter()
         // Drop entries that ended up with nothing meaningful to show
         // (e.g. an "updated" event where every changed column was noise).
-        ->filter(fn ($log) => $log['event'] === 'created' || $log['event'] === 'deleted' || !empty($log['changes']))
+        ->filter(fn ($log) => $log['is_automated'] || $log['event'] === 'created' || $log['event'] === 'deleted' || !empty($log['changes']))
         ->values();
     }
 
@@ -293,6 +301,57 @@ class EventActivityLog extends Page
             'deleted' => 'A șters evenimentul',
             default => $this->summariseEventUpdate($changes),
         };
+    }
+
+    /**
+     * One-line summary for an action the system took on its own (cron, cascade):
+     * what happened and why. Keys are the AutomatedActivity constants.
+     */
+    protected function buildAutomatedSummary(Activity $activity, string $automation, ?string $subjectLabel): string
+    {
+        $props = $activity->properties;
+        $label = $subjectLabel ? "«{$subjectLabel}»" : '';
+        $ticket = trim("Tipul de bilet {$label}");
+        $discount = trim("Reducerea la tipul de bilet {$label}");
+
+        $salePrice = ($props->get('attributes')['sale_price_cents'] ?? null) ?: ($props->get('old')['sale_price_cents'] ?? null);
+        $prices = $salePrice ? 'preț redus ' . $this->formatValue($salePrice, 'price_cents') : '';
+        if ($prices !== '' && $props->get('price_cents')) {
+            $prices .= ', preț întreg ' . $this->formatValue($props->get('price_cents'), 'price_cents');
+        }
+        $prices = $prices !== '' ? " ({$prices})" : '';
+
+        $previous = $props->get('previous_ticket_type_name');
+        $previous = is_string($previous) && $previous !== '' ? " «{$previous}»" : '';
+
+        return match ($automation) {
+            AutomatedActivity::TICKET_SCHEDULED_ACTIVATION => "{$ticket} a fost activat automat: a sosit data programată" . $this->automationMoment($props->get('scheduled_at')),
+            AutomatedActivity::TICKET_AUTOSTART_PREVIOUS_SOLD_OUT => "{$ticket} a fost activat automat: tipul de bilet precedent{$previous} este sold out",
+            AutomatedActivity::TICKET_AVAILABILITY_ENDED => "{$ticket} a fost dezactivat automat: s-a încheiat perioada de disponibilitate" . $this->automationMoment($props->get('active_until')),
+            AutomatedActivity::TICKET_DISCOUNT_STARTED => "{$discount} a început automat{$prices}",
+            AutomatedActivity::TICKET_DISCOUNT_ENDED => "{$discount} a fost dezactivată automat: s-a încheiat perioada de reducere{$prices}",
+            AutomatedActivity::TICKET_DISCOUNT_STOCK_DEPLETED => "{$discount} a fost dezactivată automat: s-a epuizat stocul la preț redus{$prices}",
+            AutomatedActivity::EVENT_ENDED => 'Evenimentul s-a încheiat și a fost arhivat automat',
+            AutomatedActivity::EVENT_FEATURING_EXPIRED => 'Promovarea evenimentului a expirat și a fost dezactivată automat',
+            default => $subjectLabel !== null ? "Modificare automată la tipul de bilet {$label}" : 'Modificare automată a evenimentului',
+        };
+    }
+
+    /**
+     * " (12 Oct 2026 10:00)" for the stored moment that triggered an automation.
+     * These columns hold Europe/Bucharest wall-clock time, so no conversion.
+     */
+    protected function automationMoment(mixed $value): string
+    {
+        if (! is_string($value) || $value === '') {
+            return '';
+        }
+
+        try {
+            return ' (' . Carbon::parse($value)->format('d M Y H:i') . ')';
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     protected function summariseTicketUpdate(string $label, array $changes): string
@@ -524,7 +583,7 @@ class EventActivityLog extends Page
         }
 
         // Price stored in cents
-        if ($field === 'price_cents' || $field === 'cheapest_price_cents' || $field === 'target_price') {
+        if ($field === 'price_cents' || $field === 'sale_price_cents' || $field === 'cheapest_price_cents' || $field === 'target_price') {
             $lei = is_numeric($value) ? ((float) $value) / 100 : null;
             if ($lei !== null) {
                 return rtrim(rtrim(number_format($lei, 2, '.', ''), '0'), '.') . ' lei';
@@ -579,6 +638,7 @@ class EventActivityLog extends Page
                 'active' => 'Activ',
                 'hidden' => 'Ascuns',
                 'draft' => 'Ciornă',
+                'archived' => 'Arhivat',
                 default => (string) $value,
             };
         }

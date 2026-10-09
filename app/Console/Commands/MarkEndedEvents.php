@@ -37,9 +37,12 @@ class MarkEndedEvents extends Command
             if ($effectiveEnd && $now->greaterThan($effectiveEnd)) {
                 // Only set status to archived — keep is_published true
                 // so the event page remains accessible (shows "Încheiat" badge)
-                $event->update([
-                    'status' => 'archived',
-                ]);
+                \App\Support\AutomatedActivity::run(
+                    \App\Support\AutomatedActivity::EVENT_ENDED,
+                    fn () => $event->update([
+                        'status' => 'archived',
+                    ])
+                );
                 $count++;
             }
         }
