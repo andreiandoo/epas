@@ -4,7 +4,9 @@ User-agent: *
 Disallow: /account
 Disallow: /cont/
 Disallow: /organizator/
-Disallow: /cart
+# (exact address or with a query: a bare /cart would also close /cartagena)
+Disallow: /cart$
+Disallow: /cart?
 Disallow: /checkout
 Disallow: /thank-you
 Disallow: /login
@@ -16,7 +18,9 @@ Disallow: /find-order
 Disallow: /search
 Disallow: /embed/
 # the way out to partners' sites
-Disallow: /go
+# (a bare /go would also close /gothenburg, /gorizia, /gorj-county…)
+Disallow: /go$
+Disallow: /go?
 # the API (the photo thumbnails it serves stay open)
 Disallow: /api/
 Allow: /api/img.php
