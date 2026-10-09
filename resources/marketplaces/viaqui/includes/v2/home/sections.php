@@ -110,7 +110,7 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
     <ul class="v-cats" data-vreveal>
       <?php foreach ($V2['categories'] as $i => $c): [$look, $glyph] = V2_CAT_LOOK[$i % count(V2_CAT_LOOK)]; if ($look === 'p' && !$c['image']) { $look = 'f'; } ?>
       <li><a class="v-cat is-<?= $look ?>" href="<?= v2_e($c['href']) ?>">
-        <?php if ($look === 'p'): ?><img src="<?= v2_e($c['image']) ?>"<?= $c['srcset'] ? ' srcset="' . v2_e($c['srcset']) . '" sizes="(min-width:1024px) 25vw, 50vw"' : '' ?> alt="" loading="lazy" decoding="async" width="640" height="800"><?php else: ?><?= $hvGlyph($glyph) ?><?php endif; ?>
+        <?php if ($look === 'p'): ?><img src="<?= v2_e($c['image']) ?>"<?= $c['srcset'] ? ' srcset="' . v2_e($c['srcset']) . '" sizes="(min-width:1100px) 25vw, (min-width:720px) 33vw, 46vw"' : '' ?> alt="" loading="lazy" decoding="async" width="640" height="800"><?php else: ?><?= $hvGlyph($glyph) ?><?php endif; ?>
         <?php if ($c['count']): ?><span class="v-cat-n"><?= v2_e(v2_exp($c['count'])) ?></span><?php endif; ?>
         <h3><?= v2_e($c['name']) ?></h3>
         <?php if ($c['desc']): ?><p><?= v2_e($c['desc']) ?></p><?php endif; ?>

@@ -72,7 +72,7 @@ sort($v2FootCityNames, SORT_FLAG_CASE | SORT_STRING);
       <form class="vf-nl-form" data-newsletter="footer" data-msg="ftr-nl-msg" data-ok="<?= v2_te('Done. Check your inbox to confirm.') ?>" data-err="<?= v2_te('We could not complete the subscription. Please try again.') ?>">
         <label class="vf-field"><span><?= v2_te('Email') ?></span><input id="ftr-email" name="email" type="email" required placeholder="<?= v2_te('you@example.com') ?>" autocomplete="email"></label>
         <label class="vf-field"><span><?= v2_t('Your city <i>(optional)</i>') ?></span><input id="ftr-city" name="city" type="text" list="ftr-cities" maxlength="80" placeholder="<?= v2_te('Where do you set off from?') ?>" autocomplete="off"></label>
-        <datalist id="ftr-cities"><?php foreach ($v2FootCityNames as $n): ?><option value="<?= v2_e($n) ?>"></option><?php endforeach; ?></datalist>
+        <datalist id="ftr-cities" data-names="<?= v2_e(json_encode(array_values($v2FootCityNames), JSON_UNESCAPED_UNICODE)) ?>"></datalist>
         <button class="btn vf-nl-go" type="submit"><?= v2_te('Subscribe') ?><?= v2_ic('arrow-right') ?></button>
       </form>
       <p class="form-msg" id="ftr-nl-msg" role="status" hidden></p>

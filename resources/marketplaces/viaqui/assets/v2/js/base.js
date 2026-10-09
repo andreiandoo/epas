@@ -375,6 +375,23 @@
     });
   }
 
+  /* ---------- city suggestions (footer newsletter, partner forms): built when such a field is first used ---------- */
+  var ftrCities = $('ftr-cities');
+  if (ftrCities && ftrCities.hasAttribute('data-names')) {
+    var fillCities = function (e) {
+      if (!e.target || !e.target.getAttribute || e.target.getAttribute('list') !== 'ftr-cities') return;
+      document.removeEventListener('focusin', fillCities); document.removeEventListener('pointerover', fillCities);
+      var names = [];
+      try { names = JSON.parse(ftrCities.getAttribute('data-names')) || []; } catch (x) { names = []; }
+      ftrCities.removeAttribute('data-names');
+      var frag = document.createDocumentFragment();
+      names.forEach(function (n) { var o = document.createElement('option'); o.value = n; frag.appendChild(o); });
+      ftrCities.appendChild(frag);
+    };
+    document.addEventListener('focusin', fillCities);
+    document.addEventListener('pointerover', fillCities, { passive: true });
+  }
+
   /* ---------- language and currency menu ---------- */
   var langBtn = $('lang-btn'), langMenu = $('lang-menu');
   if (langBtn && langMenu) {

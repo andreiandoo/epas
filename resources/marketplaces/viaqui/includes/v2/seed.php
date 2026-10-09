@@ -69,7 +69,7 @@ function v2_seed_nav(): array
             'desc' => $desc,
             'image' => v2_asset('img/cat-' . $img . '.webp'),
             'thumb' => v2_asset('img/cat-' . $img . '-320.webp'),
-            'srcset' => v2_asset('img/cat-' . $img . '-320.webp') . ' 320w, ' . v2_asset('img/cat-' . $img . '.webp') . ' 640w',
+            'srcset' => v2_asset('img/cat-' . $img . '-320.webp') . ' 320w, ' . v2_asset('img/cat-' . $img . '-360.webp') . ' 360w, ' . v2_asset('img/cat-' . $img . '.webp') . ' 640w',
             'count' => 0,
             'href' => '/' . $slug,
             'subs' => array_map(function ($s) use ($slug) {
