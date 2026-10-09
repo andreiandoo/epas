@@ -97,6 +97,26 @@ function v2_asset(string $path): string
 }
 
 /**
+ * Stylesheets under assets/v2/css as one block for a <style> element, with their relative addresses (../fonts/…)
+ * made absolute. Null when a file cannot be read or holds something a <style> element cannot carry: the caller then
+ * links the files as usual.
+ */
+function v2_inline_css(array $files): ?string
+{
+    $css = '';
+    foreach ($files as $file) {
+        $part = @file_get_contents(BILETEONLINE_ROOT . '/assets/v2/css/' . ltrim($file, '/'));
+        if (!is_string($part) || $part === '' || stripos($part, '</style') !== false) {
+            return null;
+        }
+        $css .= str_replace(['url(../', 'url("../', "url('../"], ['url(/assets/v2/', 'url("/assets/v2/', "url('/assets/v2/"], $part) . "
+";
+    }
+
+    return $css;
+}
+
+/**
  * The pin dataset behind the interactive map, as written by
  * bin/build-map-data.php: ['url', 'v', 'total', 'types', 'cities', 'generated_at'].
  *

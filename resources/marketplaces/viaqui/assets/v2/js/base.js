@@ -7,6 +7,9 @@
   var desktopMQ = window.matchMedia('(min-width: 1024px)');
   var $ = function (id) { return document.getElementById(id); };
   var hdr = $('hdr');
+  // First measurements wait for the browser's own first layout: a script that reads sizes before it makes the whole
+  // page lay out on the spot (a forced reflow), which delays the first paint.
+  var afterLayout = function (fn) { window.requestAnimationFrame(function () { setTimeout(fn, 0); }); };
 
   /* ---------- header: solid once the content reaches it (pages with a hero; the others render it solid) ---------- */
   // Checked on scroll, not with an IntersectionObserver: on a hero taller than the screen the sentinel starts below
@@ -23,7 +26,7 @@
       if (!solidQueued) { solidQueued = true; window.requestAnimationFrame(checkSolid); }
     }, { passive: true });
     window.addEventListener('resize', checkSolid);
-    checkSolid();
+    afterLayout(checkSolid);
   }
 
   /* ---------- mobile menu ----------
@@ -357,13 +360,18 @@
         revealIO.unobserve(entry.target);
       });
     }, { rootMargin: '0px 0px -10% 0px', threshold: 0 }   /* any part on screen: a tall grid on a phone never shows 8% of itself */);
-    document.querySelectorAll('[data-reveal]').forEach(function (group) {
-      if (group.getBoundingClientRect().top < window.innerHeight) return;
-      [].forEach.call(group.children, function (child, i) {
-        child.style.setProperty('--i', i);
-        child.classList.add('will-reveal');
+    afterLayout(function () {
+      // every position is read before anything is changed, so the page is laid out once
+      var view = window.innerHeight;
+      [].filter.call(document.querySelectorAll('[data-reveal]'), function (group) {
+        return group.getBoundingClientRect().top >= view;
+      }).forEach(function (group) {
+        [].forEach.call(group.children, function (child, i) {
+          child.style.setProperty('--i', i);
+          child.classList.add('will-reveal');
+        });
+        revealIO.observe(group);
       });
-      revealIO.observe(group);
     });
   }
 
@@ -402,7 +410,7 @@
       requestAnimationFrame(function () { ticking = false; update(); });
     }, { passive: true });
     window.addEventListener('resize', update);
-    update();
+    afterLayout(update);
     // data-drag: the mouse can drag the rail sideways; a drag never opens the card under the pointer
     if (rail.hasAttribute('data-drag')) {
       var drag = null, dragged = false;

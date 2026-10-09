@@ -14,6 +14,8 @@
  *   $ogImage          share image URL
  *   $structuredData   extra JSON-LD blocks (PHP arrays)
  *   $v2Styles         page stylesheets under assets/v2/css, e.g. ['home.css']
+ *   $v2InlineCss      true puts the stylesheets inside the page, so the first paint does not wait for them
+ *                     (for landing pages; the page grows by the size of the stylesheets on every view)
  *   $v2HeadExtra      raw HTML before </head> (preloads, noscript styles)
  */
 $v2Title = $pageTitleRaw ?? (!empty($pageTitle) ? $pageTitle . ' · ' . SITE_NAME : SITE_NAME);
@@ -47,13 +49,20 @@ v2_i18n_boot();      // a language other than the default: internal links get it
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg">
 <link rel="manifest" href="/site.webmanifest">
-<link rel="preconnect" href="<?= v2_e(CORE_URL) ?>" crossorigin>
+<?php /* photos of guides and listings come from core, most of them below the fold: the name is resolved early, the
+   connection opens when the first one is needed */ ?>
+<link rel="dns-prefetch" href="<?= v2_e(CORE_URL) ?>">
 <?php /* the font URL must match the one in base.css exactly, so it is preloaded without a version query */ ?>
 <link rel="preload" href="/assets/v2/fonts/Geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+<?php $v2Inline = !empty($v2InlineCss) ? v2_inline_css(array_merge(['base.css'], $v2Styles ?? [])) : null; ?>
+<?php if ($v2Inline !== null): ?>
+<style><?= $v2Inline ?></style>
+<?php else: ?>
 <link rel="stylesheet" href="<?= v2_asset('css/base.css') ?>">
 <?php foreach (($v2Styles ?? []) as $v2Css): ?>
 <link rel="stylesheet" href="<?= v2_asset('css/' . $v2Css) ?>">
 <?php endforeach; ?>
+<?php endif; ?>
 <?= $v2HeadExtra ?? '' ?>
 <script>document.documentElement.classList.add('js')</script>
 

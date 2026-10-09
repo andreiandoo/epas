@@ -13,7 +13,19 @@
 
   /* ---- hero photo rotation ---- */
   var heroImgs = $$('#hero-arch img'), dots = $$('#hero-dots button'), hi = 0, ht;
+  // Only the first photo is in the page; the others arrive once the page has loaded, so they do not compete with it.
+  function loadHero() {
+    heroImgs.forEach(function (im) {
+      if (!im.dataset.src) return;
+      if (im.dataset.srcset) im.srcset = im.dataset.srcset;
+      im.src = im.dataset.src;
+      im.removeAttribute('data-src'); im.removeAttribute('data-srcset');
+    });
+  }
+  if (document.readyState === 'complete') setTimeout(loadHero, 1200);
+  else window.addEventListener('load', function () { setTimeout(loadHero, 1200); });
   function showHero(i) {
+    loadHero();
     hi = i;
     heroImgs.forEach(function (im, k) { im.classList.toggle('is-on', k === i); });
     dots.forEach(function (d, k) { d.setAttribute('aria-pressed', k === i ? 'true' : 'false'); });
@@ -122,7 +134,7 @@
     prog.style.setProperty('--p', p);
     line.style.strokeDasharray = 1; line.style.strokeDashoffset = Math.max(0, 0.86 - p * 0.86);
   }
-  if (stops && line && prog) { stops.addEventListener('scroll', railProgress, { passive: true }); railProgress(); }
+  if (stops && line && prog) { stops.addEventListener('scroll', railProgress, { passive: true }); requestAnimationFrame(function () { setTimeout(railProgress, 0); }); }
 
   if (reduce) return;
 

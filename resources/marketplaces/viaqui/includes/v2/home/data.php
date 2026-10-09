@@ -16,6 +16,17 @@ const V2_HERO_PLACES = [
     'mogosoaia' => ['Mogoșoaia Palace', 'Near Bucharest, Romania', 'mogosoaia-palace'],
 ];
 
+/** The widths a hero photo exists in, as a srcset (the 720 one is what a phone needs). */
+function v2_home_hero_srcset(string $key): string
+{
+    $set = [];
+    foreach ([720, 900, 1440] as $w) {
+        $set[] = v2_asset('img/hero-' . $key . '-' . $w . '.webp') . ' ' . $w . 'w';
+    }
+
+    return implode(', ', $set);
+}
+
 // Glyph (v2/home/sections.php sprite) and colour block for each of the twelve category cards, by position.
 // f = forest, s = sage, d = sand, p = photo.
 const V2_CAT_LOOK = [

@@ -50,7 +50,7 @@ jobs:
           node-version: 20
 
       - name: Install the build tools (same versions as deploy-bilete.yml)
-        run: npm install -g tailwindcss@3.2.4 terser@5.46.0 clean-css-cli@5.6.3
+        run: npm install -g tailwindcss@3.2.4 terser@5.46.0 clean-css-cli@5.6.3 esbuild@0.24.0
 
       - name: Replace the site files
         run: |
@@ -81,6 +81,14 @@ jobs:
           done
           cleancss -o assets/css/custom.css.tmp assets/css/custom.css && mv assets/css/custom.css.tmp assets/css/custom.css
           cat assets/css/custom.css assets/css/tailwind.min.css > assets/css/styles.css
+          # The v2 pages: their own scripts (the libraries under vendor/ are minified already) and stylesheets.
+          # esbuild for the stylesheets: clean-css does not know the newer CSS they use. A file that fails stays as it is.
+          find assets/v2/js -maxdepth 1 -name '*.js' -print0 | while IFS= read -r -d '' f; do
+            if terser "$f" --compress --mangle -o "$f.tmp"; then mv "$f.tmp" "$f"; else rm -f "$f.tmp"; echo "::warning::terser failed on $f"; fi
+          done
+          find assets/v2/css -name '*.css' -print0 | while IFS= read -r -d '' f; do
+            if esbuild "$f" --minify --log-level=error --outfile="$f.tmp" && [ -s "$f.tmp" ]; then mv "$f.tmp" "$f"; else rm -f "$f.tmp"; echo "::warning::esbuild failed on $f"; fi
+          done
 
       - name: Stamp this build
         working-directory: site/public

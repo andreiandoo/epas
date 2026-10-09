@@ -77,8 +77,9 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
       </svg>
       <div class="v-hero-arch" id="hero-arch">
         <?php foreach ($hvHero as $i => $key): [$hvName] = V2_HERO_PLACES[$key]; ?>
-        <img<?= $i === 0 ? ' class="is-on" fetchpriority="high"' : ' loading="lazy"' ?> decoding="async" width="1440" height="1029" alt="<?= v2_e($hvName) ?>"
-             src="<?= v2_asset('img/hero-' . $key . '-900.webp') ?>" srcset="<?= v2_asset('img/hero-' . $key . '-900.webp') ?> 900w, <?= v2_asset('img/hero-' . $key . '-1440.webp') ?> 1440w" sizes="(min-width:1024px) 40vw, 90vw">
+        <?php /* only the first photo loads with the page; home.js gives the others their address after the load event */ ?>
+        <img<?= $i === 0 ? ' class="is-on" fetchpriority="high"' : '' ?> decoding="async" width="1440" height="1029" alt="<?= v2_e($hvName) ?>"
+             <?= $i === 0 ? '' : 'data-' ?>src="<?= v2_asset('img/hero-' . $key . '-900.webp') ?>" <?= $i === 0 ? '' : 'data-' ?>srcset="<?= v2_e(v2_home_hero_srcset($key)) ?>" sizes="(min-width:1024px) 40vw, 90vw">
         <?php endforeach; ?>
       </div>
       <p class="v-hero-place" aria-live="polite"><small><?= v2_te('In the picture') ?></small><strong id="hero-place-n"><?= v2_e(V2_HERO_PLACES[$hvFirst][0]) ?></strong><span id="hero-place-m"><?= v2_e(V2_HERO_PLACES[$hvFirst][1]) ?></span></p>
@@ -262,15 +263,15 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
       <button class="v-tab" type="button" role="tab" id="tt-1" aria-controls="tp-1" aria-selected="false" tabindex="-1"><?= v2_te('Categories') ?></button>
       <button class="v-tab" type="button" role="tab" id="tt-2" aria-controls="tp-2" aria-selected="false" tabindex="-1"><?= v2_te('Countries') ?></button>
     </div>
-    <ul class="v-toplist" id="tp-0" role="tabpanel" aria-labelledby="tt-0">
+    <div id="tp-0" role="tabpanel" aria-labelledby="tt-0"><ul class="v-toplist">
       <?php foreach (array_slice($V2['citiesList'], 0, 24) as $i => $c): ?><li><a href="<?= v2_e($c['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($c['name']) ?><span><?= v2_e($c['count'] ? v2_exp($c['count']) : $c['region']) ?></span></a></li><?php endforeach; ?>
-    </ul>
-    <ul class="v-toplist" id="tp-1" role="tabpanel" aria-labelledby="tt-1" hidden>
+    </ul></div>
+    <div id="tp-1" role="tabpanel" aria-labelledby="tt-1" hidden><ul class="v-toplist">
       <?php foreach ($V2['categories'] as $i => $c): ?><li><a href="<?= v2_e($c['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($c['name']) ?><?php if ($c['count']): ?><span><?= (int) $c['count'] ?></span><?php endif; ?></a></li><?php endforeach; ?>
-    </ul>
-    <ul class="v-toplist" id="tp-2" role="tabpanel" aria-labelledby="tt-2" hidden>
+    </ul></div>
+    <div id="tp-2" role="tabpanel" aria-labelledby="tt-2" hidden><ul class="v-toplist">
       <?php foreach (($V2['countriesAll'] ?? $V2['regions']) as $i => $r): ?><li><a href="/<?= v2_e($r['slug']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($r['name']) ?><span><?= v2_e(v2_num($r['citiesCount'], 'city', 'cities')) ?></span></a></li><?php endforeach; ?>
-    </ul>
+    </ul></div>
   </div>
 </section>
 
