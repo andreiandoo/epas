@@ -154,17 +154,21 @@ function start(canvas) {
     onScroll();
 
     function resize() {
-        const w = host.clientWidth, h = host.clientHeight;
+        // Dimensiunea o dă CSS-ul canvasului: pe telefon scena ocupă doar partea de sus a hero-ului
+        const w = canvas.clientWidth || host.clientWidth, h = canvas.clientHeight || host.clientHeight;
         if (!w || !h) { return; }
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small.matches ? 1.5 : 2));
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         // Pe desktop scena stă în dreapta textului; pe mobil urcă deasupra lui
-        if (small.matches) { camera.setViewOffset(w, h, 0, Math.round(h * 0.17), w, h); }
+        // Pe desktop scena stă în dreapta textului; pe telefon are zona ei și rămâne centrată
+        if (small.matches) { camera.clearViewOffset(); }
         else { camera.setViewOffset(w, h, -Math.round(w * 0.2), -Math.round(h * 0.04), w, h); }
         camera.updateProjectionMatrix();
     }
-    new ResizeObserver(resize).observe(host);
+    const ro = new ResizeObserver(resize);
+    ro.observe(host);
+    ro.observe(canvas);
     resize();
 
     const outExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));

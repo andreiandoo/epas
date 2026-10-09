@@ -178,6 +178,7 @@ include __DIR__ . '/includes/head.php';
                                 <h3 x-text="active"></h3>
                                 <span x-show="current" x-text="current ? free(current) + ' locuri libere' : ''"></span>
                             </div>
+                            <p class="seatmap__hint">Glisează lateral ca să vezi toate locurile din rând.</p>
                             <div class="stand-view__scroll">
                                 <div class="rows">
                                     <template x-for="row in currentRows" :key="row.label">
