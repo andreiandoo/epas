@@ -716,7 +716,7 @@ html.lenis, html.lenis body { height: auto; }
     .hero__veil { background: linear-gradient(180deg, rgba(1, 1, 47, .5) 0, rgba(1, 1, 47, 0) 90px, rgba(1, 1, 47, 0) 30svh, var(--navy) 46svh); }
     .hero::before { background: radial-gradient(90% 46svh at 50% 22svh, rgba(17, 81, 211, .5) 0%, rgba(17, 81, 211, 0) 70%), var(--navy); }
     .hero__inner { align-content: start; gap: 26px; padding-top: calc(46svh - 46px); padding-bottom: 36px; }
-    .hero__title { margin-top: 14px; }
+    .hero__title { margin-top: 20px; }
     .hero__foot { gap: 22px; }
     .hero__cta { margin-top: 20px; }
 }
