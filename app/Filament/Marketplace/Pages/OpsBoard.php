@@ -89,11 +89,6 @@ class OpsBoard extends Page
         return 'Operațiuni';
     }
 
-    public function getSubheading(): string|null
-    {
-        return 'Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual.';
-    }
-
     public function setPeriod(string $period): void
     {
         $this->period = $period === 'month' ? 'month' : 'week';

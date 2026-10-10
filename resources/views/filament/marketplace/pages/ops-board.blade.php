@@ -5,6 +5,7 @@
         .opsb { --opsb-line: #e5e7eb; --opsb-muted: #6b7280; --opsb-card: #fff; --opsb-text: #111827; --opsb-head: #f9fafb; }
         .dark .opsb { --opsb-line: #374151; --opsb-muted: #9ca3af; --opsb-card: #1f2937; --opsb-text: #f3f4f6; --opsb-head: #111827; }
         .opsb { color: var(--opsb-text); display: flex; flex-direction: column; gap: 1.25rem; padding-bottom: 5rem; }
+        .opsb-intro { font-size: .75rem; color: var(--opsb-muted); margin-top: -.75rem; }
         .opsb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
         .opsb-seg { display: inline-flex; border: 1px solid var(--opsb-line); border-radius: .5rem; overflow: hidden; background: var(--opsb-card); }
         .opsb-seg button { padding: .4rem .9rem; font-size: .875rem; color: var(--opsb-muted); }
@@ -92,6 +93,8 @@
     {{-- q: instant search, kept in the browser. A row is hidden when its
          event and organizer names do not contain what was typed. --}}
     <div class="opsb" x-data="{ q: '', hit(el) { return this.q.trim() === '' || el.dataset.s.includes(this.q.trim().toLowerCase()); } }">
+        <p class="opsb-intro">Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual.</p>
+
         <div class="opsb-bar">
             <div class="opsb-seg">
                 <button type="button" wire:click="setPeriod('week')" @class(['is-on' => $this->period === 'week'])>Săptămână</button>
