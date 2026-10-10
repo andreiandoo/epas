@@ -25,9 +25,11 @@ class OpsBoard extends Page
     use HasMarketplaceContext;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-view-columns';
-    protected static ?string $navigationLabel = 'Tablă operațiuni';
-    protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
-    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationLabel = 'Operațiuni';
+    // Ungrouped with the Dashboard's own sort: pages register in name order,
+    // ahead of resources, so this lands right under it.
+    protected static \UnitEnum|string|null $navigationGroup = null;
+    protected static ?int $navigationSort = 1;
     protected static ?string $slug = 'ops-board';
     protected string $view = 'filament.marketplace.pages.ops-board';
 
@@ -80,7 +82,7 @@ class OpsBoard extends Page
 
     public function getTitle(): string
     {
-        return 'Tablă operațiuni';
+        return 'Operațiuni';
     }
 
     public function getSubheading(): string|null
@@ -184,7 +186,7 @@ class OpsBoard extends Page
 
         if ($this->byRegistry) {
             foreach (['backlog', 'period', 'upcoming'] as $zone) {
-                usort($board[$zone], fn ($a, $b) => [$a['registry'] === null, $a['registry'], $a['sort']] <=> [$b['registry'] === null, $b['registry'], $b['sort']]);
+                usort($board[$zone], fn ($a, $b) => [$a['registry'] === null, $a['registry'], $a['open_count'] === 0, $a['sort']] <=> [$b['registry'] === null, $b['registry'], $b['open_count'] === 0, $b['sort']]);
             }
         }
 

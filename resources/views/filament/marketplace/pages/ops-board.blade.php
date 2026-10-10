@@ -18,7 +18,13 @@
         .opsb-stat.is-amber { color: #92400e; border-color: #fcd34d; background: #fffbeb; }
         .opsb-stat.is-blue { color: #1d4ed8; border-color: #93c5fd; background: #eff6ff; }
         .opsb-zone { background: var(--opsb-card); border: 1px solid var(--opsb-line); border-radius: .75rem; overflow: hidden; }
-        .opsb-zone-head { display: flex; align-items: baseline; gap: .6rem; padding: .75rem 1rem; border-bottom: 1px solid var(--opsb-line); background: var(--opsb-head); }
+        .opsb-zone-head { display: flex; align-items: baseline; gap: .6rem; width: 100%; text-align: left; padding: .75rem 1rem; background: var(--opsb-head); cursor: pointer; }
+        .opsb-zone-body { border-top: 1px solid var(--opsb-line); }
+        .opsb-chevron { margin-left: auto; color: var(--opsb-muted); transition: transform .15s; }
+        .opsb-chevron.is-open { transform: rotate(90deg); }
+        .opsb-meta a:hover { text-decoration: underline; }
+        .opsb-history a { text-decoration: underline; }
+        .opsb-history b { display: inline-block; min-width: 9rem; font-weight: 600; }
         .opsb-zone-head h3 { font-size: .95rem; font-weight: 600; }
         .opsb-zone-head span { font-size: .8125rem; color: var(--opsb-muted); }
         .opsb-scroll { overflow-x: auto; }
@@ -107,12 +113,14 @@
             @endphp
             @continue(empty($rows) && $emptyText === null)
 
-            <div class="opsb-zone" wire:key="opsb-zone-{{ $key }}">
-                <div class="opsb-zone-head">
+            <div class="opsb-zone" wire:key="opsb-zone-{{ $key }}" x-data="{ open: {{ $key === 'backlog' ? 'false' : 'true' }} }">
+                <button type="button" class="opsb-zone-head" x-on:click="open = !open" x-bind:aria-expanded="open">
                     <h3>{{ $heading }} ({{ count($rows) }})</h3>
                     <span>{{ $hint }}</span>
-                </div>
+                    <span class="opsb-chevron" x-bind:class="open && 'is-open'">▸</span>
+                </button>
 
+                <div class="opsb-zone-body" x-show="open" @if($key === 'backlog') style="display: none;" @endif>
                 @if(empty($rows))
                     <div class="opsb-empty">{{ $emptyText }}</div>
                 @else
@@ -137,17 +145,17 @@
                                     @endif
                                     <tr wire:key="opsb-{{ $key }}-{{ $row['id'] }}">
                                         <td class="opsb-event">
-                                            <a href="{{ $row['url'] }}">{{ $row['title'] }}</a>
+                                            <a href="{{ $row['url'] }}" target="_blank" rel="noopener">{{ $row['title'] }}</a>
                                             @if($row['cancelled'])<span class="opsb-tag">Anulat</span>@endif
                                             @if($row['postponed'])<span class="opsb-tag is-postponed">Amânat</span>@endif
                                             <div class="opsb-meta">
                                                 {{ $row['date_label'] }}@if($row['place']) · {{ $row['place'] }}@endif
                                             </div>
                                             @if($row['organizer'])
-                                                <div class="opsb-meta">{{ $row['organizer'] }}</div>
+                                                <div class="opsb-meta"><a href="{{ $row['organizer_url'] }}" target="_blank" rel="noopener">{{ $row['organizer'] }}</a></div>
                                             @endif
                                             @if($row['filing'])
-                                                <a href="{{ $row['filing']['url'] }}" @class(['opsb-filing', 'is-missing' => $row['filing']['missing']])>{{ $row['filing']['label'] }}</a>
+                                                <a href="{{ $row['filing']['url'] }}" target="_blank" rel="noopener" @class(['opsb-filing', 'is-missing' => $row['filing']['missing']])>{{ $row['filing']['label'] }}</a>
                                             @endif
                                             <div>
                                                 <button type="button" class="opsb-link" wire:click="toggleHistory({{ $row['id'] }})">
@@ -159,7 +167,7 @@
                                             @php $cell = $row['cells'][$taskKey]; @endphp
                                             <td>
                                                 @if($cell['url'])
-                                                    <a href="{{ $cell['url'] }}" class="opsb-cell opsb-{{ $cell['state'] }}">
+                                                    <a href="{{ $cell['url'] }}" target="_blank" rel="noopener" class="opsb-cell opsb-{{ $cell['state'] }}">
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
                                                     </a>
@@ -180,7 +188,7 @@
                                                 @else
                                                     <ul>
                                                         @foreach($history as $entry)
-                                                            <li><time>{{ $entry['at'] }}</time>{{ $entry['text'] }}@if($entry['by']) · {{ $entry['by'] }}@endif</li>
+                                                            <li><b>{{ $entry['by'] ?? '—' }}</b><time>{{ $entry['at'] }}</time>@if($entry['url'])<a href="{{ $entry['url'] }}" target="_blank" rel="noopener">{{ $entry['text'] }}</a>@else{{ $entry['text'] }}@endif</li>
                                                         @endforeach
                                                     </ul>
                                                 @endif
@@ -192,6 +200,7 @@
                         </table>
                     </div>
                 @endif
+                </div>
             </div>
         @endforeach
     </div>

@@ -5,6 +5,7 @@ namespace App\Services\Marketplace;
 use App\Models\Event;
 use App\Models\Invoice;
 use App\Models\EventDocumentFiling;
+use App\Models\MarketplaceAdmin;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceClientMicroservice;
 use App\Models\MarketplacePayout;
@@ -14,6 +15,7 @@ use App\Support\TestPos;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Builds the operations board ("Tablă operațiuni", microservice `ops-board`):
@@ -158,7 +160,8 @@ class OpsBoardService
         asort($options['registries']);
 
         foreach ($zones as $zone => $rows) {
-            usort($rows, fn ($a, $b) => [$a['sort'], $a['id']] <=> [$b['sort'], $b['id']]);
+            // Events with nothing left to do sink to the bottom.
+            usort($rows, fn ($a, $b) => [$a['open_count'] === 0, $a['sort'], $a['id']] <=> [$b['open_count'] === 0, $b['sort'], $b['id']]);
             $zones[$zone] = $rows;
         }
 
@@ -229,10 +232,11 @@ class OpsBoardService
         $facts['payouts'] = $payouts->groupBy('event_id')->all();
 
         if ($payouts->isNotEmpty()) {
+            // Ordered by id, so a payout with several invoices keeps the latest.
             $facts['invoiced'] = Invoice::query()
                 ->whereIn('marketplace_payout_id', $payouts->pluck('id'))
-                ->pluck('marketplace_payout_id')
-                ->flip()
+                ->orderBy('id')
+                ->pluck('id', 'marketplace_payout_id')
                 ->all();
         }
 
@@ -341,6 +345,7 @@ class OpsBoardService
             'sort' => $start->toDateString(),
             'organizer' => $event->marketplaceOrganizer?->name,
             'organizer_id' => $event->marketplaceOrganizer?->id,
+            'organizer_url' => $event->marketplaceOrganizer ? "/marketplace/organizers/{$event->marketplaceOrganizer->id}/edit" : null,
             'registry' => $registry?->name,
             'registry_id' => $registry?->id,
             'place' => $event->venue?->city ?: $this->text($event->venue?->name),
@@ -390,23 +395,25 @@ class OpsBoardService
      * What happened on an event so far, newest first: documents generated,
      * filings, deconts and invoices, read from the records themselves.
      *
-     * @return array<int, array{at: string, text: string, by: ?string}>
+     * @return array<int, array{at: string, text: string, by: ?string, url: ?string}>
      */
     public function history(Event $event): array
     {
         $entries = [];
-        $add = function ($at, string $text, ?string $by = null) use (&$entries) {
+        $add = function ($at, string $text, ?string $by = null, ?string $url = null) use (&$entries) {
             if ($at) {
-                $entries[] = ['at' => Carbon::parse((string) $at, 'UTC'), 'text' => $text, 'by' => $by ?: null];
+                $entries[] = ['at' => Carbon::parse((string) $at, 'UTC'), 'text' => $text, 'by' => $by ?: null, 'url' => $url];
             }
         };
+        $file = fn (?string $path) => $path ? Storage::disk('public')->url($path) : null;
+        $docsUrl = "/marketplace/events/{$event->id}/edit?tab=documente";
 
         $generated = DB::table('event_generated_documents as d')
             ->leftJoin('marketplace_tax_templates as t', 't.id', '=', 'd.marketplace_tax_template_id')
             ->where('d.event_id', $event->id)
             ->get(['d.created_at', 'd.file_path', 'd.generated_by_name', 't.name as template_name']);
         foreach ($generated as $doc) {
-            $add($doc->created_at, 'Document generat: ' . ($doc->template_name ?: 'document'), $doc->generated_by_name);
+            $add($doc->created_at, 'Document generat: ' . ($doc->template_name ?: 'document'), $doc->generated_by_name, $file($doc->file_path));
         }
         // Organizer-side documents; the mirrored copies of the ones above are skipped.
         $mirrored = $generated->pluck('file_path')->filter()->all();
@@ -416,7 +423,7 @@ class OpsBoardService
             ->get(['created_at', 'file_path', 'title', 'document_type']);
         foreach ($organizerDocs as $doc) {
             if (! in_array($doc->file_path, $mirrored, true)) {
-                $add($doc->created_at, 'Document generat de organizator: ' . ($doc->title ?: $doc->document_type));
+                $add($doc->created_at, 'Document generat de organizator: ' . ($doc->title ?: $doc->document_type), 'organizator', $file($doc->file_path));
             }
         }
 
@@ -427,22 +434,28 @@ class OpsBoardService
                     $filing->filed_at,
                     'Depus: ' . $label . ' prin ' . $filing->methodLabel() . ($filing->sent_to ? ' la ' . $filing->sent_to : ''),
                     $filing->filed_by_name,
+                    $docsUrl,
                 );
-                $add($filing->voided_at, 'Depunere anulată: ' . $label, $filing->voided_by_name);
+                $add($filing->voided_at, 'Depunere anulată: ' . $label, $filing->voided_by_name, $docsUrl);
             }
         }
 
         $payouts = MarketplacePayout::where('event_id', $event->id)->get();
+        $admins = MarketplaceAdmin::whereIn('id', $payouts->flatMap(fn ($p) => [$p->approved_by, $p->processed_by, $p->rejected_by])->filter()->unique())
+            ->pluck('name', 'id');
         foreach ($payouts as $payout) {
             $name = 'Decont ' . ($payout->decont_series ?: $payout->reference);
-            $add($payout->created_at, $name . ' creat');
-            $add($payout->approved_at, $name . ' aprobat');
-            $add($payout->completed_at, $name . ' achitat' . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''));
-            $add($payout->rejected_at, $name . ' respins');
+            $url = "/marketplace/payouts/{$payout->id}";
+            // Who created a decont or marked it paid is not stored; the
+            // source at least tells an organizer request from an admin one.
+            $add($payout->created_at, $name . ' creat', $payout->source === 'organizer' ? 'organizator' : null, $url);
+            $add($payout->approved_at, $name . ' aprobat', $admins[$payout->approved_by] ?? null, $url);
+            $add($payout->completed_at, $name . ' achitat' . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''), null, $url);
+            $add($payout->rejected_at, $name . ' respins', $admins[$payout->rejected_by] ?? null, $url);
         }
         if ($payouts->isNotEmpty()) {
             foreach (Invoice::whereIn('marketplace_payout_id', $payouts->pluck('id'))->get() as $invoice) {
-                $add($invoice->created_at, 'Factură emisă' . ($invoice->number ? ': ' . $invoice->number : ''));
+                $add($invoice->created_at, 'Factură emisă' . ($invoice->number ? ': ' . $invoice->number : ''), null, "/marketplace/organizer-invoices/{$invoice->id}/edit");
             }
         }
 
@@ -453,6 +466,7 @@ class OpsBoardService
             'at' => $e['at']->copy()->setTimezone($tz)->format('d.m.Y H:i'),
             'text' => $e['text'],
             'by' => $e['by'],
+            'url' => $e['url'],
         ], $entries);
     }
 
@@ -587,15 +601,16 @@ class OpsBoardService
             return $this->cell('na', 'Nu se aplică', 'comision 0');
         }
 
-        $url = '/marketplace/organizer-invoices';
-        if ($payouts->contains(fn ($p) => isset($facts['invoiced'][$p->id]))) {
-            return $this->cell('done', 'Emisă', null, null, false, false, $url);
+        $invoiceId = $payouts->map(fn ($p) => $facts['invoiced'][$p->id] ?? null)->filter()->max();
+        if ($invoiceId) {
+            return $this->cell('done', 'Emisă', null, null, false, false, "/marketplace/organizer-invoices/{$invoiceId}/edit");
         }
         if (! $ended) {
             return $this->cell('waiting', 'După eveniment');
         }
 
-        return $this->todoCell($due, $url);
+        // The invoice is issued from the decont's own page.
+        return $this->todoCell($due, '/marketplace/payouts/' . $payouts->sortByDesc('id')->first()->id);
     }
 
     protected function documentCell(?string $generatedAt, ?array $filing, bool $applies, Carbon $due, string $url): array
