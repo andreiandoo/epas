@@ -1270,3 +1270,15 @@ Schedule::command('partners:refresh-event-feed')
     ->everyFiveMinutes()
     ->withoutOverlapping(30)
     ->runInBackground();
+
+// Operations board (microservice `ops-board`): Monday summary for admins, and
+// on working days the list of long-overdue items for super admins. Both can
+// be switched off per marketplace from the board's settings.
+Schedule::command('ops-board:digest')
+    ->weeklyOn(1, '08:00')
+    ->timezone('Europe/Bucharest');
+
+Schedule::command('ops-board:digest --escalation')
+    ->weekdays()
+    ->at('08:30')
+    ->timezone('Europe/Bucharest');

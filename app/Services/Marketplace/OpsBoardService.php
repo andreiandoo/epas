@@ -4,7 +4,9 @@ namespace App\Services\Marketplace;
 
 use App\Models\Event;
 use App\Models\Invoice;
+use App\Models\EventDocumentFiling;
 use App\Models\MarketplaceClient;
+use App\Models\MarketplaceClientMicroservice;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceTaxRegistry;
 use App\Support\MarketplaceTz;
@@ -42,6 +44,9 @@ class OpsBoardService
 
     public const TAX_DUE_DAY = 10;
 
+    /** Days overdue after which an item is escalated to super admins. */
+    public const DEFAULT_ESCALATE_DAYS = 3;
+
     /** Column order of the board. */
     public const TASKS = [
         'cerere' => 'Cerere vizare',
@@ -71,9 +76,10 @@ class OpsBoardService
      * @param  Carbon  $from  first day of the period
      * @param  Carbon  $to  last day of the period
      * @param  Carbon  $trackFrom  events that ended before this day are never shown as backlog
-     * @return array{backlog: array, period: array, upcoming: array, counts: array}
+     * @param  array{organizer_id?: ?int, registry_id?: ?int, only_open?: bool}  $filters
+     * @return array{backlog: array, period: array, upcoming: array, counts: array, options: array}
      */
-    public function build(MarketplaceClient $client, Carbon $from, Carbon $to, Carbon $trackFrom): array
+    public function build(MarketplaceClient $client, Carbon $from, Carbon $to, Carbon $trackFrom, array $filters = []): array
     {
         $this->tz = MarketplaceTz::tz($client);
         $this->today = Carbon::now($this->tz)->startOfDay();
@@ -83,6 +89,7 @@ class OpsBoardService
         $trackFrom = Carbon::parse($trackFrom->format('Y-m-d'), $this->tz);
 
         $zones = ['backlog' => [], 'period' => [], 'upcoming' => []];
+        $options = ['organizers' => [], 'registries' => []];
         $candidates = [];
 
         foreach ($this->fetchEvents($client, $from, $to, $trackFrom) as $event) {
@@ -126,15 +133,36 @@ class OpsBoardService
                 continue;
             }
 
+            // The filter dropdowns list everything on the board, not just
+            // what survives the current filter.
+            if ($row['organizer_id']) {
+                $options['organizers'][$row['organizer_id']] = $row['organizer'];
+            }
+            if ($row['registry_id']) {
+                $options['registries'][$row['registry_id']] = $row['registry'];
+            }
+
+            if (! empty($filters['organizer_id']) && $row['organizer_id'] !== (int) $filters['organizer_id']) {
+                continue;
+            }
+            if (! empty($filters['registry_id']) && $row['registry_id'] !== (int) $filters['registry_id']) {
+                continue;
+            }
+            if (! empty($filters['only_open']) && $row['open_count'] === 0) {
+                continue;
+            }
+
             $zones[$c['zone']][] = $row;
         }
+        asort($options['organizers']);
+        asort($options['registries']);
 
         foreach ($zones as $zone => $rows) {
             usort($rows, fn ($a, $b) => [$a['sort'], $a['id']] <=> [$b['sort'], $b['id']]);
             $zones[$zone] = $rows;
         }
 
-        return $zones + ['counts' => $this->counts($zones)];
+        return $zones + ['counts' => $this->counts($zones), 'options' => $options];
     }
 
     /**
@@ -289,6 +317,7 @@ class OpsBoardService
         // migrated yet, keeps the documents on the board.
         $ownDocuments = $event->marketplaceOrganizer?->marketplace_manages_documents === false;
         $theirs = $this->cell('na', 'La organizator');
+        $registry = ($facts['registries'] ?? [])[$event->marketplace_tax_registry_id] ?? null;
 
         $cells = [
             'cerere' => $ownDocuments ? $theirs : $this->cerereCell($event, $start, $ended, $cancelled, $docs, $facts, $docsUrl),
@@ -311,6 +340,9 @@ class OpsBoardService
             'date_label' => $this->dateLabel($start, $end),
             'sort' => $start->toDateString(),
             'organizer' => $event->marketplaceOrganizer?->name,
+            'organizer_id' => $event->marketplaceOrganizer?->id,
+            'registry' => $registry?->name,
+            'registry_id' => $registry?->id,
             'place' => $event->venue?->city ?: $this->text($event->venue?->name),
             'cancelled' => $cancelled,
             'postponed' => (bool) $event->is_postponed,
@@ -320,6 +352,128 @@ class OpsBoardService
             'open_count' => count(array_filter($cells, fn ($c) => $c['open'])),
             'overdue_count' => count(array_filter($cells, fn ($c) => $c['overdue'])),
         ];
+    }
+
+    /**
+     * Every cell that still needs attention, flattened: what the email
+     * digest lists.
+     *
+     * @return array<int, array{event: string, date: string, task: string, label: string, detail: ?string, overdue: bool, late: int, url: string}>
+     */
+    public function openItems(array $board): array
+    {
+        $items = [];
+        foreach (['backlog', 'period', 'upcoming'] as $zone) {
+            foreach ($board[$zone] as $row) {
+                foreach ($row['cells'] as $task => $cell) {
+                    if (! $cell['open']) {
+                        continue;
+                    }
+                    $items[] = [
+                        'event' => $row['title'],
+                        'date' => $row['date_label'],
+                        'task' => self::TASKS[$task],
+                        'label' => $cell['label'],
+                        'detail' => $cell['detail'],
+                        'overdue' => $cell['overdue'],
+                        'late' => $cell['due'] ? max(0, (int) Carbon::parse($cell['due'], $this->tz)->diffInDays($this->today, false)) : 0,
+                        'url' => $cell['url'] ?: $row['url'],
+                    ];
+                }
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * What happened on an event so far, newest first: documents generated,
+     * filings, deconts and invoices, read from the records themselves.
+     *
+     * @return array<int, array{at: string, text: string, by: ?string}>
+     */
+    public function history(Event $event): array
+    {
+        $entries = [];
+        $add = function ($at, string $text, ?string $by = null) use (&$entries) {
+            if ($at) {
+                $entries[] = ['at' => Carbon::parse((string) $at, 'UTC'), 'text' => $text, 'by' => $by ?: null];
+            }
+        };
+
+        $generated = DB::table('event_generated_documents as d')
+            ->leftJoin('marketplace_tax_templates as t', 't.id', '=', 'd.marketplace_tax_template_id')
+            ->where('d.event_id', $event->id)
+            ->get(['d.created_at', 'd.file_path', 'd.generated_by_name', 't.name as template_name']);
+        foreach ($generated as $doc) {
+            $add($doc->created_at, 'Document generat: ' . ($doc->template_name ?: 'document'), $doc->generated_by_name);
+        }
+        // Organizer-side documents; the mirrored copies of the ones above are skipped.
+        $mirrored = $generated->pluck('file_path')->filter()->all();
+        $organizerDocs = DB::table('organizer_documents')
+            ->where('event_id', $event->id)
+            ->whereIn('document_type', array_values(self::DOC_TYPES))
+            ->get(['created_at', 'file_path', 'title', 'document_type']);
+        foreach ($organizerDocs as $doc) {
+            if (! in_array($doc->file_path, $mirrored, true)) {
+                $add($doc->created_at, 'Document generat de organizator: ' . ($doc->title ?: $doc->document_type));
+            }
+        }
+
+        if (EventDocumentFilingService::available()) {
+            foreach (EventDocumentFiling::where('event_id', $event->id)->get() as $filing) {
+                $label = EventDocumentFilingService::TYPE_LABELS[$filing->document_type] ?? $filing->document_type;
+                $add(
+                    $filing->filed_at,
+                    'Depus: ' . $label . ' prin ' . $filing->methodLabel() . ($filing->sent_to ? ' la ' . $filing->sent_to : ''),
+                    $filing->filed_by_name,
+                );
+                $add($filing->voided_at, 'Depunere anulată: ' . $label, $filing->voided_by_name);
+            }
+        }
+
+        $payouts = MarketplacePayout::where('event_id', $event->id)->get();
+        foreach ($payouts as $payout) {
+            $name = 'Decont ' . ($payout->decont_series ?: $payout->reference);
+            $add($payout->created_at, $name . ' creat');
+            $add($payout->approved_at, $name . ' aprobat');
+            $add($payout->completed_at, $name . ' achitat' . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''));
+            $add($payout->rejected_at, $name . ' respins');
+        }
+        if ($payouts->isNotEmpty()) {
+            foreach (Invoice::whereIn('marketplace_payout_id', $payouts->pluck('id'))->get() as $invoice) {
+                $add($invoice->created_at, 'Factură emisă' . ($invoice->number ? ': ' . $invoice->number : ''));
+            }
+        }
+
+        usort($entries, fn ($a, $b) => $b['at'] <=> $a['at']);
+        $tz = MarketplaceTz::tz($event->marketplaceClient);
+
+        return array_map(fn ($e) => [
+            'at' => $e['at']->copy()->setTimezone($tz)->format('d.m.Y H:i'),
+            'text' => $e['text'],
+            'by' => $e['by'],
+        ], $entries);
+    }
+
+    /**
+     * Earliest event end that can still show up as backlog: the saved
+     * setting, else the day the microservice was switched on.
+     */
+    public static function trackFrom(?MarketplaceClientMicroservice $pivot, string $tz): Carbon
+    {
+        $saved = $pivot?->getSetting('track_from');
+        if ($saved) {
+            try {
+                return Carbon::createFromFormat('Y-m-d', $saved, $tz)->startOfDay();
+            } catch (\Throwable $e) {
+                // fall through to the activation date
+            }
+        }
+
+        return $pivot?->activated_at
+            ? $pivot->activated_at->copy()->setTimezone($tz)->startOfDay()
+            : Carbon::now($tz)->startOfDay();
     }
 
     /**

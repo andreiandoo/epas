@@ -46,6 +46,14 @@
         .opsb-progress { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
         .opsb-generated { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
         .opsb-done { background: #dcfce7; color: #14532d; border-color: #86efac; }
+        .opsb-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; font-size: .8125rem; }
+        .opsb-filters select { border: 1px solid var(--opsb-line); border-radius: .5rem; background: var(--opsb-card); color: var(--opsb-text); font-size: .8125rem; padding: .35rem 2rem .35rem .6rem; max-width: 16rem; }
+        .opsb-filters label { display: inline-flex; align-items: center; gap: .35rem; color: var(--opsb-muted); cursor: pointer; }
+        .opsb-group td { background: var(--opsb-head); font-weight: 600; color: var(--opsb-muted); }
+        .opsb-link { margin-top: .2rem; font-size: .75rem; color: var(--opsb-muted); text-decoration: underline; }
+        .opsb-history td { background: var(--opsb-head); }
+        .opsb-history ul { display: grid; gap: .25rem; }
+        .opsb-history time { display: inline-block; min-width: 8.5rem; color: var(--opsb-muted); }
         .opsb-empty { padding: 1.25rem 1rem; color: var(--opsb-muted); font-size: .875rem; }
     </style>
 
@@ -75,6 +83,23 @@
             </div>
         </div>
 
+        <div class="opsb-filters">
+            <select wire:model.live="organizer" aria-label="Organizator">
+                <option value="">Toți organizatorii</option>
+                @foreach($board['options']['organizers'] as $id => $name)
+                    <option value="{{ $id }}">{{ $name }}</option>
+                @endforeach
+            </select>
+            <select wire:model.live="registry" aria-label="Primărie">
+                <option value="">Toate primăriile</option>
+                @foreach($board['options']['registries'] as $id => $name)
+                    <option value="{{ $id }}">{{ $name }}</option>
+                @endforeach
+            </select>
+            <label><input type="checkbox" wire:model.live="onlyOpen"> Doar cu ceva de făcut</label>
+            <label><input type="checkbox" wire:model.live="byRegistry"> Grupează pe primărie</label>
+        </div>
+
         @foreach($zones as $key => $zone)
             @php
                 [$heading, $hint, $emptyText] = $zone;
@@ -102,7 +127,14 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                @php $lastRegistry = false; @endphp
                                 @foreach($rows as $row)
+                                    @if($this->byRegistry && $row['registry'] !== $lastRegistry)
+                                        @php $lastRegistry = $row['registry']; @endphp
+                                        <tr class="opsb-group" wire:key="opsb-{{ $key }}-group-{{ $row['registry_id'] ?? 0 }}">
+                                            <td colspan="{{ count($tasks) + 1 }}">{{ $row['registry'] ?? 'Fără registru fiscal' }}</td>
+                                        </tr>
+                                    @endif
                                     <tr wire:key="opsb-{{ $key }}-{{ $row['id'] }}">
                                         <td class="opsb-event">
                                             <a href="{{ $row['url'] }}">{{ $row['title'] }}</a>
@@ -117,6 +149,11 @@
                                             @if($row['filing'])
                                                 <a href="{{ $row['filing']['url'] }}" @class(['opsb-filing', 'is-missing' => $row['filing']['missing']])>{{ $row['filing']['label'] }}</a>
                                             @endif
+                                            <div>
+                                                <button type="button" class="opsb-link" wire:click="toggleHistory({{ $row['id'] }})">
+                                                    {{ $this->historyFor === $row['id'] ? 'Ascunde istoricul' : 'Istoric' }}
+                                                </button>
+                                            </div>
                                         </td>
                                         @foreach($tasks as $taskKey => $taskLabel)
                                             @php $cell = $row['cells'][$taskKey]; @endphp
@@ -135,6 +172,21 @@
                                             </td>
                                         @endforeach
                                     </tr>
+                                    @if($this->historyFor === $row['id'] && $history !== null)
+                                        <tr class="opsb-history" wire:key="opsb-{{ $key }}-history-{{ $row['id'] }}">
+                                            <td colspan="{{ count($tasks) + 1 }}">
+                                                @if(empty($history))
+                                                    Nimic înregistrat încă pe acest eveniment.
+                                                @else
+                                                    <ul>
+                                                        @foreach($history as $entry)
+                                                            <li><time>{{ $entry['at'] }}</time>{{ $entry['text'] }}@if($entry['by']) · {{ $entry['by'] }}@endif</li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endif
                                 @endforeach
                             </tbody>
                         </table>

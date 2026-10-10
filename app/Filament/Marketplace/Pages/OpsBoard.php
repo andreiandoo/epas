@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Pages;
 
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\Event;
 use App\Models\MarketplaceClientMicroservice;
 use App\Services\Marketplace\OpsBoardService;
 use App\Support\MarketplaceTz;
@@ -37,6 +38,23 @@ class OpsBoard extends Page
     /** Any day inside the period shown (Y-m-d). */
     #[Url]
     public string $date = '';
+
+    /** Organizer id, empty = all. */
+    #[Url]
+    public string $organizer = '';
+
+    /** Tax registry id, empty = all. */
+    #[Url]
+    public string $registry = '';
+
+    #[Url]
+    public bool $onlyOpen = false;
+
+    #[Url]
+    public bool $byRegistry = false;
+
+    /** Event whose history is expanded. */
+    public ?int $historyFor = null;
 
     protected ?MarketplaceClientMicroservice $pivot = null;
 
@@ -90,6 +108,11 @@ class OpsBoard extends Page
         $this->date = Carbon::now($this->tz())->toDateString();
     }
 
+    public function toggleHistory(int $eventId): void
+    {
+        $this->historyFor = $this->historyFor === $eventId ? null : $eventId;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -103,6 +126,8 @@ class OpsBoard extends Page
                 ->fillForm(fn () => [
                     'default_view' => $this->setting('default_view') === 'month' ? 'month' : 'week',
                     'track_from' => $this->trackFrom()->toDateString(),
+                    'digest_enabled' => (bool) ($this->setting('digest_enabled') ?? true),
+                    'escalate_days' => (int) ($this->setting('escalate_days') ?? OpsBoardService::DEFAULT_ESCALATE_DAYS),
                 ])
                 ->form([
                     Forms\Components\Select::make('default_view')
@@ -115,6 +140,17 @@ class OpsBoard extends Page
                         ->helperText('Evenimentele încheiate înainte de această dată nu apar la restanțe.')
                         ->maxDate(now())
                         ->required(),
+                    Forms\Components\Toggle::make('digest_enabled')
+                        ->label('Rezumat pe email luni dimineața')
+                        ->helperText('Către administratori și super administratori: ce e restant și ce e de făcut în săptămâna care începe.'),
+                    Forms\Components\TextInput::make('escalate_days')
+                        ->label('Escaladare către super administratori după')
+                        ->helperText('În zilele lucrătoare, super administratorii primesc lista cu ce e restant de cel puțin atâtea zile. 0 = fără escaladare.')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(60)
+                        ->suffix('zile')
+                        ->required(),
                 ])
                 ->action(function (array $data) {
                     $pivot = $this->pivot();
@@ -124,6 +160,8 @@ class OpsBoard extends Page
                     $pivot->update(['settings' => array_merge($pivot->settings ?? [], [
                         'default_view' => $data['default_view'] === 'month' ? 'month' : 'week',
                         'track_from' => Carbon::parse($data['track_from'])->toDateString(),
+                        'digest_enabled' => (bool) ($data['digest_enabled'] ?? false),
+                        'escalate_days' => max(0, (int) ($data['escalate_days'] ?? 0)),
                     ])]);
                     Notification::make()->success()->title('Setări salvate')->send();
                 }),
@@ -135,12 +173,28 @@ class OpsBoard extends Page
         $marketplace = static::getMarketplaceClient();
         [$from, $to] = $this->range();
 
+        $service = app(OpsBoardService::class);
         $board = $marketplace
-            ? app(OpsBoardService::class)->build($marketplace, $from, $to, $this->trackFrom())
-            : ['backlog' => [], 'period' => [], 'upcoming' => [], 'counts' => ['overdue' => 0, 'todo' => 0, 'awaiting_payment' => 0, 'events' => 0]];
+            ? $service->build($marketplace, $from, $to, $this->trackFrom(), [
+                'organizer_id' => (int) $this->organizer ?: null,
+                'registry_id' => (int) $this->registry ?: null,
+                'only_open' => $this->onlyOpen,
+            ])
+            : ['backlog' => [], 'period' => [], 'upcoming' => [], 'counts' => ['overdue' => 0, 'todo' => 0, 'awaiting_payment' => 0, 'events' => 0], 'options' => ['organizers' => [], 'registries' => []]];
+
+        if ($this->byRegistry) {
+            foreach (['backlog', 'period', 'upcoming'] as $zone) {
+                usort($board[$zone], fn ($a, $b) => [$a['registry'] === null, $a['registry'], $a['sort']] <=> [$b['registry'] === null, $b['registry'], $b['sort']]);
+            }
+        }
+
+        $historyEvent = ($marketplace && $this->historyFor)
+            ? Event::where('marketplace_client_id', $marketplace->id)->find($this->historyFor)
+            : null;
 
         return [
             'board' => $board,
+            'history' => $historyEvent ? $service->history($historyEvent) : null,
             'tasks' => OpsBoardService::TASKS,
             'periodLabel' => $this->period === 'month'
                 ? $from->locale('ro')->translatedFormat('F Y')
@@ -176,25 +230,9 @@ class OpsBoard extends Page
         }
     }
 
-    /**
-     * Earliest event end that can still show up as backlog: the saved
-     * setting, else the day the microservice was switched on.
-     */
     protected function trackFrom(): Carbon
     {
-        $saved = $this->setting('track_from');
-        if ($saved) {
-            try {
-                return Carbon::createFromFormat('Y-m-d', $saved, $this->tz())->startOfDay();
-            } catch (\Throwable $e) {
-                // fall through to the activation date
-            }
-        }
-        $activatedAt = $this->pivot()?->activated_at;
-
-        return $activatedAt
-            ? $activatedAt->copy()->setTimezone($this->tz())->startOfDay()
-            : Carbon::now($this->tz())->startOfDay();
+        return OpsBoardService::trackFrom($this->pivot(), $this->tz());
     }
 
     protected function setting(string $key): mixed
