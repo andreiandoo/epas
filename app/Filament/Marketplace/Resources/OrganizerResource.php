@@ -509,6 +509,18 @@ class OrganizerResource extends Resource
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
                                 ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
                                 ->columnSpanFull(),
+
+                            Forms\Components\Toggle::make('marketplace_manages_documents')
+                                ->label(function () {
+                                    $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
+                                    $marketplaceName = $marketplaceAdmin?->marketplaceClient?->public_name
+                                        ?? $marketplaceAdmin?->marketplaceClient?->name
+                                        ?? 'Marketplace';
+                                    return $marketplaceName . ' gestionează documente';
+                                })
+                                ->helperText('Activ: cererea de vizare, impozitul și PV-ul de distrugere le pregătim și le depunem noi. Inactiv: rămân în grija organizatorului.')
+                                ->default(false)
+                                ->columnSpanFull(),
                         ]),
 
                                 ]), // end Tab 2 (Date legale)

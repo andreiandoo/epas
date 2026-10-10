@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Invoice;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplacePayout;
+use App\Models\MarketplaceTaxRegistry;
 use App\Support\MarketplaceTz;
 use App\Support\TestPos;
 use Carbon\Carbon;
@@ -26,6 +27,9 @@ use Illuminate\Support\Facades\DB;
  *     don't work weekends)
  *   - impozit + PV distrugere: the first 10th after the event (same month
  *     when the event is on the 1st–9th, next month otherwise)
+ *
+ * The three fiscal documents are on the board only for organizers whose
+ * documents the marketplace handles (marketplace_manages_documents).
  *
  * Not tracked yet: whether a fiscal document was filed with the city hall.
  * Until that lands, a generated document counts as closed here.
@@ -104,6 +108,11 @@ class OpsBoardService
         }
 
         $facts = $this->loadFacts(collect($candidates)->map(fn ($c) => $c['event']->id)->all());
+        $facts['registries'] = MarketplaceTaxRegistry::query()
+            ->whereIn('id', collect($candidates)->map(fn ($c) => $c['event']->marketplace_tax_registry_id)->filter()->unique()->values())
+            ->get()
+            ->keyBy('id')
+            ->all();
 
         foreach ($candidates as $c) {
             $row = $this->buildRow($c['event'], $c['start'], $c['end'], $facts);
@@ -169,7 +178,7 @@ class OpsBoardService
                         $q2->where('is_postponed', true)->whereBetween('postponed_date', [$a, $b]);
                     });
             })
-            ->with(['marketplaceOrganizer:id,name', 'venue:id,name,city'])
+            ->with(['marketplaceOrganizer', 'venue:id,name,city'])
             ->get();
     }
 
@@ -273,16 +282,24 @@ class OpsBoardService
         $docsUrl = "/marketplace/events/{$event->id}/edit?tab=documente";
         $decontDue = $this->nextWorkingDay($end);
         $taxDue = $this->taxDue($end);
+        // Strictly false: an event without an organizer, or a database not
+        // migrated yet, keeps the documents on the board.
+        $ownDocuments = $event->marketplaceOrganizer?->marketplace_manages_documents === false;
+        $theirs = $this->cell('na', 'La organizator');
 
         $cells = [
-            'cerere' => $this->cerereCell($event, $start, $ended, $cancelled, $docs, $facts, $docsUrl),
+            'cerere' => $ownDocuments ? $theirs : $this->cerereCell($event, $start, $ended, $cancelled, $docs, $facts, $docsUrl),
             'decont' => $this->decontCell($event, $ended, $cancelled, $payouts, $facts, $decontDue),
             'factura' => $this->facturaCell($ended, $cancelled, $payouts, $facts, $decontDue),
-            'impozit' => $cancelled
-                ? $this->cell('na', 'Nu se aplică', 'eveniment anulat')
-                : $this->documentCell($docs[self::DOC_TYPES['impozit']] ?? null, $ended, $taxDue, $docsUrl, 'Generat'),
+            'impozit' => match (true) {
+                $ownDocuments => $theirs,
+                $cancelled => $this->cell('na', 'Nu se aplică', 'eveniment anulat'),
+                default => $this->documentCell($docs[self::DOC_TYPES['impozit']] ?? null, $ended, $taxDue, $docsUrl, 'Generat'),
+            },
             // A cancelled event still needs its tickets destroyed, right away.
-            'pv' => $this->documentCell($docs[self::DOC_TYPES['pv']] ?? null, $ended || $cancelled, $taxDue, $docsUrl, 'Generat'),
+            'pv' => $ownDocuments
+                ? $theirs
+                : $this->documentCell($docs[self::DOC_TYPES['pv']] ?? null, $ended || $cancelled, $taxDue, $docsUrl, 'Generat'),
         ];
 
         return [
@@ -295,10 +312,32 @@ class OpsBoardService
             'cancelled' => $cancelled,
             'postponed' => (bool) $event->is_postponed,
             'url' => "/marketplace/events/{$event->id}/edit",
+            'filing' => $ownDocuments ? null : $this->filing($event, $facts['registries'] ?? []),
             'cells' => $cells,
             'open_count' => count(array_filter($cells, fn ($c) => $c['open'])),
             'overdue_count' => count(array_filter($cells, fn ($c) => $c['overdue'])),
         ];
+    }
+
+    /**
+     * Where and how the event's documents get filed, or what is missing to
+     * know that.
+     *
+     * @return array{label: string, missing: bool, url: string}
+     */
+    protected function filing(Event $event, array $registries): array
+    {
+        $registry = $registries[$event->marketplace_tax_registry_id] ?? null;
+        if (! $registry) {
+            return ['label' => 'Fără registru fiscal', 'missing' => true, 'url' => "/marketplace/events/{$event->id}/edit"];
+        }
+
+        $url = "/marketplace/tax-registry/{$registry->id}/edit";
+        $method = $registry->submissionLabel();
+
+        return $method
+            ? ['label' => $registry->name . ' · ' . $method, 'missing' => false, 'url' => $url]
+            : ['label' => $registry->name . ' · metodă de depunere nesetată', 'missing' => true, 'url' => $url];
     }
 
     protected function cerereCell(Event $event, Carbon $start, bool $ended, bool $cancelled, array $docs, array $facts, string $url): array

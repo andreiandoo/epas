@@ -9,6 +9,10 @@ class MarketplaceTaxRegistry extends Model
 {
     protected $table = 'marketplace_tax_registries';
 
+    public const SUBMISSION_EMAIL = 'email';
+
+    public const SUBMISSION_THIRD_PARTY = 'third_party';
+
     protected $fillable = [
         'marketplace_client_id',
         'country',
@@ -22,6 +26,11 @@ class MarketplaceTaxRegistry extends Model
         'phone',
         'email',
         'email2',
+        'submission_method',
+        'submission_email',
+        'third_party_name',
+        'third_party_url',
+        'third_party_procedure',
         'website_url',
         'cif',
         'iban',
@@ -98,6 +107,27 @@ class MarketplaceTaxRegistry extends Model
 
                 return $countryMatch && $countyMatch && $cityMatch;
             });
+    }
+
+    /**
+     * Address the fiscal documents are emailed to: the dedicated one, else
+     * the registry's general email.
+     */
+    public function submissionEmail(): ?string
+    {
+        return $this->submission_email ?: ($this->email ?: null);
+    }
+
+    /**
+     * Short label of how documents are filed here, null while not set up.
+     */
+    public function submissionLabel(): ?string
+    {
+        return match ($this->submission_method) {
+            self::SUBMISSION_EMAIL => 'Email',
+            self::SUBMISSION_THIRD_PARTY => 'Terț' . ($this->third_party_name ? ': ' . $this->third_party_name : ''),
+            default => null,
+        };
     }
 
     /**

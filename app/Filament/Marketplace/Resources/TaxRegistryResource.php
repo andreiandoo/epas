@@ -197,6 +197,48 @@ class TaxRegistryResource extends Resource
                             ->default(true),
                     ])
                     ->columns(2),
+
+                Section::make('Depunerea documentelor')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->description('Cum ajung la această primărie cererea de vizare, impozitul și PV-ul de distrugere.')
+                    ->schema([
+                        Forms\Components\Select::make('submission_method')
+                            ->label('Cum se depun actele')
+                            ->options([
+                                MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',
+                                MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY => 'Prin soluție terță',
+                            ])
+                            ->placeholder('Nesetat')
+                            ->native(false)
+                            ->live(),
+
+                        Forms\Components\TextInput::make('submission_email')
+                            ->label('Email pentru documente')
+                            ->email()
+                            ->maxLength(255)
+                            ->helperText('Lasă gol ca să folosim adresa de Email de mai sus.')
+                            ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_EMAIL),
+
+                        Forms\Components\TextInput::make('third_party_name')
+                            ->label('Numele soluției terțe')
+                            ->maxLength(255)
+                            ->required(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY)
+                            ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY),
+
+                        Forms\Components\TextInput::make('third_party_url')
+                            ->label('Link către soluția terță')
+                            ->maxLength(500)
+                            ->placeholder('https://...')
+                            ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY),
+
+                        Forms\Components\Textarea::make('third_party_procedure')
+                            ->label('Procedura de depunere')
+                            ->rows(6)
+                            ->columnSpanFull()
+                            ->placeholder('Pașii de urmat: unde te autentifici, ce formular alegi, ce atașezi...')
+                            ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -225,6 +267,13 @@ class TaxRegistryResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('submission_method')
+                    ->label('Depunere')
+                    ->state(fn ($record) => $record->submissionLabel() ?? 'Nesetat')
+                    ->badge()
+                    ->color(fn ($record) => $record->submission_method ? 'success' : 'warning')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
@@ -248,6 +297,13 @@ class TaxRegistryResource extends Resource
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
+
+                Tables\Filters\SelectFilter::make('submission_method')
+                    ->label('Depunere')
+                    ->options([
+                        MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',
+                        MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY => 'Prin soluție terță',
+                    ]),
 
                 Tables\Filters\SelectFilter::make('county')
                     ->label('County')

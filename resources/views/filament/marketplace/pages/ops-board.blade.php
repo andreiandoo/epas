@@ -31,6 +31,9 @@
         .opsb-event a:hover { text-decoration: underline; }
         .opsb-meta { color: var(--opsb-muted); margin-top: .15rem; }
         .opsb-tag { display: inline-block; margin-left: .35rem; padding: 0 .4rem; border-radius: .25rem; font-size: .6875rem; font-weight: 600; background: #fee2e2; color: #991b1b; }
+        .opsb-filing { display: inline-block; margin-top: .15rem; color: var(--opsb-muted); }
+        .opsb-filing.is-missing { color: #b45309; font-weight: 600; }
+        .opsb-filing:hover { text-decoration: underline; }
         .opsb-tag.is-postponed { background: #e0e7ff; color: #3730a3; }
         .opsb-cell { display: block; width: 9.5rem; padding: .35rem .5rem; border-radius: .4rem; border: 1px solid transparent; line-height: 1.25; }
         .opsb-cell strong { display: block; font-weight: 600; }
@@ -111,6 +114,9 @@
                                             </div>
                                             @if($row['organizer'])
                                                 <div class="opsb-meta">{{ $row['organizer'] }}</div>
+                                            @endif
+                                            @if($row['filing'])
+                                                <a href="{{ $row['filing']['url'] }}" @class(['opsb-filing', 'is-missing' => $row['filing']['missing']])>{{ $row['filing']['label'] }}</a>
                                             @endif
                                         </td>
                                         @foreach($tasks as $taskKey => $taskLabel)
