@@ -65,6 +65,9 @@ class MarketplaceEmailTemplate extends Model
         'bulk_password_reset_customer' => 'Resetare parolă în masă — Clienți',
         'bulk_password_reset_guest' => 'Creare cont — Invitație Guests',
         'bulk_password_reset_organizer' => 'Resetare parolă în masă — Organizatori',
+        // Fiscal documents sent to the city hall
+        'fiscal_cerere_avizare' => 'Primărie: Cerere vizare bilete',
+        'fiscal_impozit_pv' => 'Primărie: Impozit + PV distrugere',
         // Stock Alerts
         'stock_low_alert' => 'Low Stock Alert',
         // Gift Card Templates
@@ -267,6 +270,16 @@ class MarketplaceEmailTemplate extends Model
                 'purchaser_name' => 'Purchaser name',
                 'recipient_name' => 'Person who claimed the card',
                 'gift_card_amount' => 'Gift card amount',
+            ],
+            'fiscal_cerere_avizare', 'fiscal_impozit_pv' => [
+                'event_name' => 'Event name',
+                'event_date' => 'Event date',
+                'venue_name' => 'Venue name',
+                'venue_city' => 'Venue city',
+                'organizer_name' => 'Organizer company name',
+                'organizer_tax_id' => 'Organizer tax ID (CUI)',
+                'registry_name' => 'City hall / tax registry name',
+                'documents_list' => 'Attached documents, comma separated',
             ],
             default => [],
         };

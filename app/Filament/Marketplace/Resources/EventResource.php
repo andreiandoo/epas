@@ -4768,6 +4768,42 @@ class EventResource extends Resource
                                                     }),
                                             ]),
 
+                                        // Filing with the city hall: send by email or confirm the
+                                        // filing made through the registry's third-party solution.
+                                        SC\Section::make($t('Depunere la primărie', 'Filing with the city hall'))
+                                            ->icon('heroicon-o-paper-airplane')
+                                            ->visible(fn (?Event $record) => $record && $record->exists
+                                                && \App\Services\Marketplace\EventDocumentFilingService::available())
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('event_document_filing')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?Event $record) {
+                                                        if (!$record) return '';
+
+                                                        $service = app(\App\Services\Marketplace\EventDocumentFilingService::class);
+
+                                                        // Never let this block take the event page down with it.
+                                                        try {
+                                                            $groups = array_map(
+                                                                fn ($group) => $service->status($record, $group),
+                                                                array_keys($service::GROUPS)
+                                                            );
+                                                        } catch (\Throwable $e) {
+                                                            report($e);
+
+                                                            return 'Secțiunea de depunere nu a putut fi încărcată.';
+                                                        }
+
+                                                        return new HtmlString(
+                                                            view('filament.marketplace.components.event-document-filing', [
+                                                                'event' => $record,
+                                                                'groups' => $groups,
+                                                                'isSuperAdmin' => (bool) auth('marketplace_admin')->user()?->isSuperAdmin(),
+                                                            ])->render()
+                                                        );
+                                                    }),
+                                            ]),
+
                                         // New section — every PDF actually generated for this event,
                                         // from any source (EventGeneratedDocument, OrganizerDocument
                                         // for payout PDFs, plus Invoice records linked via payout).

@@ -41,13 +41,12 @@
         a.opsb-cell:hover { filter: brightness(.96); }
         .opsb-na { color: var(--opsb-muted); border-color: var(--opsb-line); border-style: dashed; }
         .opsb-waiting { color: var(--opsb-muted); border-color: var(--opsb-line); }
-        .opsb-todo, .opsb-redo, .opsb-warn { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+        .opsb-todo, .opsb-tofile, .opsb-redo, .opsb-warn { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
         .opsb-overdue { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
         .opsb-progress { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
         .opsb-generated { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
         .opsb-done { background: #dcfce7; color: #14532d; border-color: #86efac; }
         .opsb-empty { padding: 1.25rem 1rem; color: var(--opsb-muted); font-size: .875rem; }
-        .opsb-note { font-size: .8125rem; color: var(--opsb-muted); }
     </style>
 
     @php
@@ -143,9 +142,5 @@
                 @endif
             </div>
         @endforeach
-
-        <p class="opsb-note">
-            Depunerea la primărie nu e urmărită încă: un document generat apare ca „Generat”, fără să știm dacă a fost și depus.
-        </p>
     </div>
 </x-filament-panels::page>

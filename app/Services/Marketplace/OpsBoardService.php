@@ -31,8 +31,8 @@ use Illuminate\Support\Facades\DB;
  * The three fiscal documents are on the board only for organizers whose
  * documents the marketplace handles (marketplace_manages_documents).
  *
- * Not tracked yet: whether a fiscal document was filed with the city hall.
- * Until that lands, a generated document counts as closed here.
+ * A fiscal document is closed only once it is filed with the city hall
+ * (see EventDocumentFilingService); regenerating it afterwards reopens it.
  */
 class OpsBoardService
 {
@@ -187,10 +187,12 @@ class OpsBoardService
      */
     protected function loadFacts(array $eventIds): array
     {
-        $facts = ['payouts' => [], 'invoiced' => [], 'docs' => [], 'tickets_changed' => [], 'sold' => []];
+        $facts = ['payouts' => [], 'invoiced' => [], 'docs' => [], 'filings' => [], 'tickets_changed' => [], 'sold' => []];
         if (empty($eventIds)) {
             return $facts;
         }
+
+        $facts['filings'] = app(EventDocumentFilingService::class)->currentFilings($eventIds);
 
         $payouts = MarketplacePayout::query()
             ->whereIn('event_id', $eventIds)
@@ -279,6 +281,7 @@ class OpsBoardService
         $ended = $this->today->gt($end);
         $payouts = $facts['payouts'][$event->id] ?? collect();
         $docs = $facts['docs'][$event->id] ?? [];
+        $filings = $facts['filings'][$event->id] ?? [];
         $docsUrl = "/marketplace/events/{$event->id}/edit?tab=documente";
         $decontDue = $this->nextWorkingDay($end);
         $taxDue = $this->taxDue($end);
@@ -294,12 +297,12 @@ class OpsBoardService
             'impozit' => match (true) {
                 $ownDocuments => $theirs,
                 $cancelled => $this->cell('na', 'Nu se aplică', 'eveniment anulat'),
-                default => $this->documentCell($docs[self::DOC_TYPES['impozit']] ?? null, $ended, $taxDue, $docsUrl, 'Generat'),
+                default => $this->documentCell($docs[self::DOC_TYPES['impozit']] ?? null, $filings[self::DOC_TYPES['impozit']] ?? null, $ended, $taxDue, $docsUrl),
             },
             // A cancelled event still needs its tickets destroyed, right away.
             'pv' => $ownDocuments
                 ? $theirs
-                : $this->documentCell($docs[self::DOC_TYPES['pv']] ?? null, $ended || $cancelled, $taxDue, $docsUrl, 'Generat'),
+                : $this->documentCell($docs[self::DOC_TYPES['pv']] ?? null, $filings[self::DOC_TYPES['pv']] ?? null, $ended || $cancelled, $taxDue, $docsUrl),
         ];
 
         return [
@@ -368,7 +371,7 @@ class OpsBoardService
             );
         }
 
-        return $this->cell('generated', 'Generată', $this->stamp($generatedAt), null, false, false, $url);
+        return $this->filedCell($facts['filings'][$event->id][self::DOC_TYPES['cerere']] ?? null, $generatedAt, $due, $url);
     }
 
     protected function decontCell(Event $event, bool $ended, bool $cancelled, Collection $payouts, array $facts, Carbon $due): array
@@ -441,16 +444,39 @@ class OpsBoardService
         return $this->todoCell($due, $url);
     }
 
-    protected function documentCell(?string $generatedAt, bool $applies, Carbon $due, string $url, string $doneLabel): array
+    protected function documentCell(?string $generatedAt, ?array $filing, bool $applies, Carbon $due, string $url): array
     {
         if ($generatedAt) {
-            return $this->cell('generated', $doneLabel, $this->stamp($generatedAt), null, false, false, $url);
+            return $this->filedCell($filing, $generatedAt, $due, $url);
         }
         if (! $applies) {
             return $this->cell('waiting', 'După eveniment', 'scadent ' . $this->day($due));
         }
 
         return $this->todoCell($due, $url);
+    }
+
+    /**
+     * A generated document: closed once filed, and open again when it was
+     * regenerated after its filing.
+     */
+    protected function filedCell(?array $filing, string $generatedAt, Carbon $due, string $url): array
+    {
+        // Filings are not recorded yet on a database that was not migrated.
+        if (! EventDocumentFilingService::available()) {
+            return $this->cell('generated', 'Generat', $this->stamp($generatedAt), null, false, false, $url);
+        }
+
+        if ($filing && $filing['filed_at'] >= $generatedAt) {
+            return $this->cell('done', 'Depus', $filing['method_label'] . ' · ' . $this->stamp($filing['filed_at']), null, false, false, $url);
+        }
+
+        $label = $filing ? 'De redepus' : 'De depus';
+        $late = (int) $due->diffInDays($this->today, false);
+
+        return $late > 0
+            ? $this->cell('overdue', $label, 'restant de ' . $late . ($late === 1 ? ' zi' : ' zile'), $due, true, true, $url)
+            : $this->cell('tofile', $label, $late === 0 ? 'scadent azi' : 'scadent ' . $this->day($due), $due, false, true, $url);
     }
 
     /**
@@ -486,7 +512,7 @@ class OpsBoardService
     }
 
     /**
-     * @param  string  $state  na | waiting | todo | overdue | redo | progress | warn | generated | done
+     * @param  string  $state  na | waiting | todo | tofile | overdue | redo | progress | warn | generated | done
      * @param  bool  $open  still needs someone's attention (keeps earlier events on the board)
      */
     protected function cell(string $state, string $label, ?string $detail = null, ?Carbon $due = null, bool $overdue = false, bool $open = false, ?string $url = null): array
@@ -511,7 +537,7 @@ class OpsBoardService
                 foreach ($row['cells'] as $cell) {
                     if ($cell['overdue']) {
                         $counts['overdue']++;
-                    } elseif (in_array($cell['state'], ['todo', 'redo', 'warn'], true)) {
+                    } elseif (in_array($cell['state'], ['todo', 'tofile', 'redo', 'warn'], true)) {
                         $counts['todo']++;
                     } elseif ($cell['state'] === 'progress') {
                         $counts['awaiting_payment']++;
