@@ -55,6 +55,10 @@ class OpsBoard extends Page
     #[Url]
     public bool $byRegistry = false;
 
+    /** Pills switched on as filters: overdue | todo | awaiting_payment. */
+    #[Url]
+    public array $status = [];
+
     /** Event whose history is expanded. */
     public ?int $historyFor = null;
 
@@ -108,6 +112,21 @@ class OpsBoard extends Page
     public function goToday(): void
     {
         $this->date = Carbon::now($this->tz())->toDateString();
+    }
+
+    public function toggleStatus(string $status): void
+    {
+        if (! in_array($status, OpsBoardService::STATUSES, true)) {
+            return;
+        }
+        $this->status = in_array($status, $this->status, true)
+            ? array_values(array_diff($this->status, [$status]))
+            : [...$this->status, $status];
+    }
+
+    public function clearStatus(): void
+    {
+        $this->status = [];
     }
 
     public function toggleHistory(int $eventId): void
@@ -181,6 +200,7 @@ class OpsBoard extends Page
                 'organizer_id' => (int) $this->organizer ?: null,
                 'registry_id' => (int) $this->registry ?: null,
                 'only_open' => $this->onlyOpen,
+                'statuses' => $this->status,
             ])
             : ['backlog' => [], 'period' => [], 'upcoming' => [], 'counts' => ['overdue' => 0, 'todo' => 0, 'awaiting_payment' => 0, 'events' => 0], 'options' => ['organizers' => [], 'registries' => []]];
 

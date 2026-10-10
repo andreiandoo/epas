@@ -54,6 +54,24 @@ class MarketplacePayout extends Model
      */
     public const ADVANCE_CONSUMING_STATUSES = ['approved', 'processing', 'completed'];
 
+    /** created_by / completed_by exist? (the code may reach the server before the migration) */
+    public static function actorColumnsEnabled(): bool
+    {
+        static $enabled = null;
+
+        return $enabled ??= \Illuminate\Support\Facades\Schema::hasColumn('marketplace_payouts', 'completed_by');
+    }
+
+    /** The marketplace admin acting right now, if any (none in console or organizer requests). */
+    protected static function actingAdminId(): ?int
+    {
+        try {
+            return auth('marketplace_admin')->id();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     /** Tabelul de compensări există? (codul poate ajunge pe server înaintea migrării) */
     public static function advancesEnabled(): bool
     {
@@ -1001,6 +1019,21 @@ class MarketplacePayout extends Model
             // Avansurile nu sunt deconturi — nu consumă numere din serie.
             if (!$payout->isAdvance()) {
                 $payout->assignDecontSeries();
+            }
+            // Some deconts are born already paid (advances, zero-amount ones).
+            if (static::actorColumnsEnabled()) {
+                $payout->created_by ??= static::actingAdminId();
+                if ($payout->status === 'completed') {
+                    $payout->completed_by ??= static::actingAdminId();
+                }
+            }
+        });
+
+        // Every path that marks a decont paid ends in a status change, so
+        // this is the one place that sees them all.
+        static::updating(function (self $payout) {
+            if ($payout->isDirty('status') && $payout->status === 'completed' && static::actorColumnsEnabled()) {
+                $payout->completed_by ??= static::actingAdminId();
             }
         });
 

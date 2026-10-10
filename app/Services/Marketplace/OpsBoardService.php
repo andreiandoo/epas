@@ -49,6 +49,9 @@ class OpsBoardService
     /** Days overdue after which an item is escalated to super admins. */
     public const DEFAULT_ESCALATE_DAYS = 3;
 
+    /** The three pills above the board; each is also a filter. */
+    public const STATUSES = ['overdue', 'todo', 'awaiting_payment'];
+
     /** Column order of the board. */
     public const TASKS = [
         'cerere' => 'Cerere vizare',
@@ -78,7 +81,7 @@ class OpsBoardService
      * @param  Carbon  $from  first day of the period
      * @param  Carbon  $to  last day of the period
      * @param  Carbon  $trackFrom  events that ended before this day are never shown as backlog
-     * @param  array{organizer_id?: ?int, registry_id?: ?int, only_open?: bool}  $filters
+     * @param  array{organizer_id?: ?int, registry_id?: ?int, only_open?: bool, statuses?: string[]}  $filters
      * @return array{backlog: array, period: array, upcoming: array, counts: array, options: array}
      */
     public function build(MarketplaceClient $client, Carbon $from, Carbon $to, Carbon $trackFrom, array $filters = []): array
@@ -165,7 +168,26 @@ class OpsBoardService
             $zones[$zone] = $rows;
         }
 
-        return $zones + ['counts' => $this->counts($zones), 'options' => $options];
+        // Counted before the status filter, so the pills keep their totals
+        // while one of them is switched on.
+        $counts = $this->counts($zones);
+
+        $statuses = array_values(array_intersect($filters['statuses'] ?? [], self::STATUSES));
+        if ($statuses) {
+            foreach ($zones as $zone => $rows) {
+                $zones[$zone] = array_values(array_filter($rows, function ($row) use ($statuses) {
+                    foreach ($row['cells'] as $cell) {
+                        if (in_array($this->statusOf($cell), $statuses, true)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }));
+            }
+        }
+
+        return $zones + ['counts' => $counts, 'options' => $options];
     }
 
     /**
@@ -441,22 +463,29 @@ class OpsBoardService
         }
 
         $payouts = MarketplacePayout::where('event_id', $event->id)->get();
-        $admins = MarketplaceAdmin::whereIn('id', $payouts->flatMap(fn ($p) => [$p->approved_by, $p->processed_by, $p->rejected_by])->filter()->unique())
-            ->pluck('name', 'id');
+        $invoices = $payouts->isNotEmpty()
+            ? Invoice::whereIn('marketplace_payout_id', $payouts->pluck('id'))->get()
+            : collect();
+        $admins = MarketplaceAdmin::whereIn(
+            'id',
+            $payouts->flatMap(fn ($p) => [$p->created_by, $p->approved_by, $p->processed_by, $p->completed_by, $p->rejected_by])
+                ->merge($invoices->pluck('issued_by_admin_id'))
+                ->filter()
+                ->unique()
+        )->pluck('name', 'id');
+        $requester = ['organizer' => 'organizator', 'automated' => 'sistem'];
         foreach ($payouts as $payout) {
             $name = 'Decont ' . ($payout->decont_series ?: $payout->reference);
             $url = "/marketplace/payouts/{$payout->id}";
-            // Who created a decont or marked it paid is not stored; the
-            // source at least tells an organizer request from an admin one.
-            $add($payout->created_at, $name . ' creat', $payout->source === 'organizer' ? 'organizator' : null, $url);
+            // created_by / completed_by are filled only since they exist;
+            // for older rows the source still tells an organizer request apart.
+            $add($payout->created_at, $name . ' creat', $admins[$payout->created_by] ?? $requester[$payout->source] ?? null, $url);
             $add($payout->approved_at, $name . ' aprobat', $admins[$payout->approved_by] ?? null, $url);
-            $add($payout->completed_at, $name . ' achitat' . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''), null, $url);
+            $add($payout->completed_at, $name . ' achitat' . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''), $admins[$payout->completed_by] ?? null, $url);
             $add($payout->rejected_at, $name . ' respins', $admins[$payout->rejected_by] ?? null, $url);
         }
-        if ($payouts->isNotEmpty()) {
-            foreach (Invoice::whereIn('marketplace_payout_id', $payouts->pluck('id'))->get() as $invoice) {
-                $add($invoice->created_at, 'Factură emisă' . ($invoice->number ? ': ' . $invoice->number : ''), null, "/marketplace/organizer-invoices/{$invoice->id}/edit");
-            }
+        foreach ($invoices as $invoice) {
+            $add($invoice->created_at, 'Factură emisă' . ($invoice->number ? ': ' . $invoice->number : ''), $admins[$invoice->issued_by_admin_id] ?? null, "/marketplace/organizer-invoices/{$invoice->id}/edit");
         }
 
         usort($entries, fn ($a, $b) => $b['at'] <=> $a['at']);
@@ -704,18 +733,28 @@ class OpsBoardService
             $counts['events'] += count($rows);
             foreach ($rows as $row) {
                 foreach ($row['cells'] as $cell) {
-                    if ($cell['overdue']) {
-                        $counts['overdue']++;
-                    } elseif (in_array($cell['state'], ['todo', 'tofile', 'redo', 'warn'], true)) {
-                        $counts['todo']++;
-                    } elseif ($cell['state'] === 'progress') {
-                        $counts['awaiting_payment']++;
+                    $status = $this->statusOf($cell);
+                    if ($status) {
+                        $counts[$status]++;
                     }
                 }
             }
         }
 
         return $counts;
+    }
+
+    /**
+     * Which of the three pills a cell counts under, if any.
+     */
+    protected function statusOf(array $cell): ?string
+    {
+        return match (true) {
+            $cell['overdue'] => 'overdue',
+            in_array($cell['state'], ['todo', 'tofile', 'redo', 'warn'], true) => 'todo',
+            $cell['state'] === 'progress' => 'awaiting_payment',
+            default => null,
+        };
     }
 
     /**

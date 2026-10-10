@@ -8,6 +8,24 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Invoice extends Model
 {
+    protected static function booted(): void
+    {
+        // Remember which marketplace admin issued the invoice. The column
+        // check covers a server where the migration has not run yet.
+        static::creating(function (self $invoice) {
+            static $enabled = null;
+            $enabled ??= \Illuminate\Support\Facades\Schema::hasColumn('invoices', 'issued_by_admin_id');
+            if (! $enabled || ! $invoice->marketplace_client_id || $invoice->issued_by_admin_id) {
+                return;
+            }
+            try {
+                $invoice->issued_by_admin_id = auth('marketplace_admin')->id();
+            } catch (\Throwable $e) {
+                // no admin in this context (console, organizer side)
+            }
+        });
+    }
+
     protected $fillable = [
         'tenant_id',
         'marketplace_client_id',
