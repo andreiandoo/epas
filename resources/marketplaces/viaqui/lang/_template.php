@@ -214,7 +214,7 @@ return [
         'About the attractions map' => '',      // includes/v2/map-page.php
         'About the event' => '',      // embed/event.php
         'About the operator' => '',      // organizer/public.php
-        'About the photos' => '',      // attractions.php
+        'About the photos' => '',      // photo-credits.php
         'About the planner' => '',      // plan.php
         'About the recommendations' => '',      // user/recommendations.php
         'About the route' => '',      // includes/v2/route-page.php
@@ -413,13 +413,14 @@ return [
         'All ages' => '',      // user/reviews.php
         'All attractions' => '',      // hub-atractii.php
         'All attractions in {city}' => '',      // atractie.php
+        'All attractions in {country}' => '',      // country.php
         'All bookings' => '',      // organizer/am-bookings.php
         'All categories' => '',      // city.php
         'All categories · activities · online tickets' => '',      // categorii.php
         'All channels' => '',      // parteneri.php
         'All cities' => '',      // locatii.php
         'All cities in {country}' => '',      // map.php
-        'All countries' => '',      // attractions.php
+        'All countries' => '',      // routes.php
         'All destinations' => '',      // map.php
         'All events' => '',      // embed/event.php
         'All experiences' => '',      // hub-experiente.php
@@ -427,7 +428,7 @@ return [
         'All guides' => '',      // ghiduri.php
         'All notifications' => '',      // organizer/notifications.php
         'All of Europe, by city and by category.' => '',      // region.php
-        'All of {name}' => '',      // country.php
+        'All of {name}' => '',      // cities.php
         'All operators' => '',      // operatori.php
         'All orders' => '',      // user/dashboard.php
         'All participants' => '',      // organizer/participants.php
@@ -575,14 +576,16 @@ return [
         'Attractions <em>in {city}</em>' => '',      // hub-atractii.php
         'Attractions across Europe ({type}): castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.' => '',      // hub-atractii.php
         'Attractions across Europe: castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.' => '',      // hub-atractii.php
+        'Attractions by country' => '',      // attractions.php
         'Attractions in Europe' => '',      // hub-atractii.php
         'Attractions in the area' => '',      // includes/v2/location-page.php
         'Attractions in {cities}, each with a page, a pin and what to know before you go.' => '',      // includes/v2/home/sections.php
         'Attractions in {city}' => '',      // hub-atractii.php
         'Attractions in {city} ({type}): castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.' => '',      // hub-atractii.php
         'Attractions in {city}: castles, museums, monasteries, parks and viewpoints, with a map and things to do nearby.' => '',      // hub-atractii.php
+        'Attractions in {country} by type' => '',      // country.php
         'Attractions in {place}' => '',      // atractie.php
-        'Attractions map' => '',      // country.php
+        'Attractions map' => '',      // cities.php
         'Attractions map <em>of {place}</em>' => '',      // map.php
         'Attractions map of {place}' => '',      // map.php
         'Attractions near {place}' => '',      // ghid.php
@@ -1092,7 +1095,7 @@ return [
         'Clear payouts' => '',      // parteneri.php
         'Clear search' => '',      // includes/v2/hub-filter.php
         'Clear signature' => '',      // organizer/settings.php
-        'Clear the filters' => '',      // attractions.php
+        'Clear the filters' => '',      // city.php
         'Clear the search' => '',      // ajutor.php
         'Clear the selection' => '',      // organizer/invitatii.php
         'Clear title + description' => '',      // pentru-locatii.php
@@ -1331,7 +1334,7 @@ return [
         'Description <small>(optional)</small>' => '',      // organizer/settings.php
         'Design' => '',      // card-cadou.php
         'Desk & POS' => '',      // includes/v2/organizer.php
-        'Destinations' => '',      // country.php
+        'Destinations' => '',      // cities.php
         'Destinations: cities and countries' => '',      // cities.php
         'Detail' => '',      // organizer/venue-report.php
         'Detailed booking: participants, options, add-ons' => '',      // parteneri.php
@@ -1537,7 +1540,7 @@ return [
         'Escape room, kids, museum, Vienna…' => '',      // user/recommendations.php
         'Escape rooms' => '',      // locatii.php
         'Essential' => '',      // cookies.php
-        'Essential cookies are needed for the basket, checkout, sign-in and security. With your consent we also use cookies for analytics, personalisation and marketing.' => '',      // includes/v2/foot.php
+        'Essential cookies are needed for the basket, checkout, sign-in and security. With your consent we also use cookies for analytics, personalisation and marketing.' => '',      // includes/v2/cookie-banner.php
         'Essential cookies are needed for the cart, checkout, sign-in and security. With your consent, we can also use cookies for analytics, personalisation and marketing. You can accept all, reject the optional ones or choose by category.' => '',      // includes/cookie-consent.php
         'Estimated bonus points' => '',      // single-activitate.php
         'Estimated net revenue' => '',      // organizer/analytics.php
@@ -3058,9 +3061,9 @@ return [
         'Photo {n}' => '',      // single-activitate.php
         'Photo {n} of {total}' => '',      // locatie.php
         'Photo: {author}' => '',      // atractie.php
-        'Photo: {author}, {licence}, Wikimedia Commons' => '',      // attractions.php
+        'Photo: {author}, {licence}, Wikimedia Commons' => '',      // country.php
         'Photographs' => '',      // photo-credits.php
-        'Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction\'s page.' => '',      // attractions.php
+        'Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction\'s page.' => '',      // country.php
         'Photos' => '',      // locatie.php
         'Photos of attractions and cities come from <a href="{url}" target="_blank" rel="noopener">Wikimedia Commons</a>, each under the free licence its author chose (most often Creative Commons Attribution or Attribution-ShareAlike). We show them unchanged apart from resizing and cropping to fit the page.' => '',      // photo-credits.php
         'Photos uploaded by venues and operators for their own listings belong to them and are used with their permission.' => '',      // photo-credits.php
@@ -3101,7 +3104,7 @@ return [
         'Places worth opening' => '',      // map.php
         'Places worth opening in {country}' => '',      // map.php
         'Places you go to do something.' => '',      // locatii.php
-        'Plan' => '',      // country.php
+        'Plan' => '',      // cities.php
         'Plan a trip' => '',      // country.php
         'Plan a trip with them' => '',      // plan.php
         'Plan your trip to {country}' => '',      // country.php
@@ -3469,7 +3472,7 @@ return [
         'Room 13' => '',      // locatii.php
         'Rooms' => '',      // includes/v2/location-page.php
         'Route' => '',      // includes/v2/product-icons.php
-        'Routes' => '',      // country.php
+        'Routes' => '',      // cities.php
         'Routes <em>through {place}</em>' => '',      // routes.php
         'Routes are suggestions, not schedules. You can drive them the other way round, split them over more days or take only the stops that are on your way. To start from one place and see what is around it, open <a href="{url}">the attractions map</a>.' => '',      // routes.php
         'Routes by country' => '',      // routes.php
@@ -3704,7 +3707,7 @@ return [
         'See the gallery ({n})' => '',      // atractie.php
         'See the gift card' => '',      // includes/v2/header.php
         'See the list' => '',      // plan.php
-        'See the list from the start' => '',      // attractions.php
+        'See the list from the start' => '',      // city.php
         'See the operator panel' => '',      // vinde-bilete.php
         'See the page for venues' => '',      // cum-functioneaza.php
         'See the profile' => '',      // organizer/public.php
@@ -3958,7 +3961,7 @@ return [
         'Start for free' => '',      // parteneri.php
         'Start from the map and see what is near you, or follow a ready-made route with the stops already in order.' => '',      // cities.php
         'Start from what you feel like today.' => '',      // ghiduri.php
-        'Start here' => '',      // country.php
+        'Start here' => '',      // cities.php
         'Start in 5 minutes. Leave us a few details and we create your operator account on the spot: it is quick and simple, and if you want help, we guide you online.' => '',      // inregistrare-locatie.php
         'Start now, for free' => '',      // parteneri.php
         'Start time' => '',      // organizer/events.php
@@ -4568,6 +4571,7 @@ return [
         'Too many requests: rate limit exceeded' => '',      // organizer/api-docs.php
         'Tools for the road' => '',      // includes/v2/header.php
         'Top activities in {city}' => '',      // single-activitate.php
+        'Top attractions in {country}' => '',      // country.php
         'Top buyer locations' => '',      // organizer/report.php
         'Top destinations in {country}' => '',      // country.php
         'Top lists' => '',      // includes/v2/home/sections.php
@@ -4619,7 +4623,7 @@ return [
         'Travel closer.<br>Experience more.' => '',      // includes/v2/home/sections.php
         'Tree' => '',      // includes/v2/product-icons.php
         'Trend' => '',      // organizer/analytics.php
-        'Trip planner' => '',      // country.php
+        'Trip planner' => '',      // cities.php
         'Trip planner <em>where to?</em>' => '',      // plan.php
         'Trip planner for {country}: a day-by-day itinerary with a map' => '',      // plan.php
         'Trip planner: a day-by-day itinerary with a map' => '',      // plan.php
@@ -4939,7 +4943,7 @@ return [
         'We show you the panel on your own data: which activities you would publish, which ticket types fit, which pages should be created, which SEO opportunities you have and what a day at the ticket office would look like. No long presentation.' => '',      // parteneri.php
         'We take the company details automatically from ANAF, you don\'t need to fill them in.' => '',      // inregistrare-locatie.php
         'We use cookies for the operation of the platform (cart, checkout, sign-in) and, only with your consent, for analytics, personalisation and marketing. You can change your choice at any time from the banner or from the button below.' => '',      // cookies.php
-        'We use cookies so the site works well and to suggest things you might like.' => '',      // includes/v2/foot.php
+        'We use cookies so the site works well and to suggest things you might like.' => '',      // includes/v2/cookie-banner.php
         'We use cookies to make the site work well and to recommend more relevant activities.' => '',      // includes/cookie-consent.php
         'We went from queues at the entrance to people arriving with the ticket on their phone. Every morning we see how many are coming and for which time slot, and at the end of the day we know exactly how much was sold online and how much at the ticket office.' => '',      // includes/v2/partner-testimonials.php
         'We will reply to the email you gave as soon as we can. Check your inbox and the Spam folder.' => '',      // contact.php
@@ -5077,6 +5081,7 @@ return [
         'Where the photographs and the place data on Viaqui come from, how every photo is credited, and how to ask for a correction.' => '',      // photo-credits.php
         'Where the places to stay come from' => '',      // plan.php
         'Where the sales came from.' => '',      // organizer/venue-report.php
+        'Where there is most to see' => '',      // country.php
         'Where they are' => '',      // organizer/report.php
         'Where they come from' => '',      // organizer/report.php
         'Where to' => '',      // cities.php
@@ -5953,7 +5958,7 @@ return [
         'city found|cities found' => ['city found', 'cities found'],      // assets/v2/js/cities.js
         'city or town|cities and towns' => ['city or town', 'cities and towns'],      // map.php
         'city|cities' => ['city', 'cities'],      // region.php
-        'city|cities and towns' => ['city', 'cities and towns'],      // country.php
+        'city|cities and towns' => ['city', 'cities and towns'],      // cities.php
         'clock-in|clock-ins' => ['clock-in', 'clock-ins'],      // assets/v2/js/org-venue-team.js
         'closed ticket|closed tickets' => ['closed ticket', 'closed tickets'],      // assets/v2/js/org-support.js
         'code|codes' => ['code', 'codes'],      // assets/v2/js/org-promo.js
@@ -6016,6 +6021,7 @@ return [
         'photo|photos' => ['photo', 'photos'],      // assets/v2/js/org-am-products.js
         'place left|places left' => ['place left', 'places left'],      // assets/v2/js/share-view.js
         'place on the map|places on the map' => ['place on the map', 'places on the map'],      // includes/v2/map-page.php
+        'place to see|places to see' => ['place to see', 'places to see'],      // country.php
         'place|places' => ['place', 'places'],      // single-activitate.php
         'point|points' => ['point', 'points'],      // checkout.php
         'product|products' => ['product', 'products'],      // assets/v2/js/org-am-locations.js
@@ -6025,7 +6031,7 @@ return [
         'receipt|receipts' => ['receipt', 'receipts'],      // assets/v2/js/org-am-pos.js
         'recommendation|recommendations' => ['recommendation', 'recommendations'],      // assets/v2/js/recommendations.js
         'refunded order|refunded orders' => ['refunded order', 'refunded orders'],      // assets/v2/js/org-report.js
-        'region|regions' => ['region', 'regions'],      // country.php
+        'region|regions' => ['region', 'regions'],      // map.php
         'regiune|regiuni' => ['regiune', 'regiuni'],      // harta.php
         'resolved ticket|resolved tickets' => ['resolved ticket', 'resolved tickets'],      // assets/v2/js/org-support.js
         'result|results' => ['result', 'results'],      // cauta.php

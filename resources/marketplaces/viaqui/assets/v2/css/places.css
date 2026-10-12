@@ -208,3 +208,7 @@
    the way back to the start of a list opened in the middle sits above the grid */
 .v-pager[hidden]{display:none}
 .v-places .cl-earlier{margin:0 0 20px}
+
+/* Country page, "Top attractions": the types below the cards and the cities that hold the most */
+.v-types-in{margin:clamp(24px,3vw,36px) 0 0}
+.v-ph3{margin:clamp(32px,4vw,52px) 0 10px;font-size:clamp(1.125rem,1.6vw,1.375rem);font-weight:600;letter-spacing:-.02em;color:var(--green)}

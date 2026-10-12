@@ -5,6 +5,7 @@
  *   php bin/ping-search.php              the daily run
  *   php bin/ping-search.php --dry-run    show what would be sent, send nothing, keep the state as it is
  *   php bin/ping-search.php --force      run even while the site is hidden from search engines (SITE_PRELAUNCH)
+ *   php bin/ping-search.php --status     say where the priority pages stand in Google (from the last runs), send nothing
  *
  * What a run does:
  *   1. Guides: every guide that is new or changed since the last run (read from the API, compared with the state
@@ -13,6 +14,11 @@
  *   2. Pages of the platform: a daily slice of the other addresses (hubs, countries, cities, routes, then the
  *      attractions, country by country) is sent to IndexNow, so the whole site goes round in turn.
  *   3. Google Search Console: the sitemap index is submitted again (the official way to say "read it again").
+ *   4. Google, the priority pages (hubs, guides, countries, routes, the largest cities, the best-known attractions,
+ *      about 11,000 addresses): up to 1,500 a day are looked up with the URL Inspection API, which answers whether
+ *      an address is indexed, waiting, or refused and why. Those still waiting are sent to the Indexing API, the
+ *      most important first, at most 190 a day together with the guides and not again for 30 days. The run ends
+ *      with the count for each state and the addresses that need a look (noindex, redirect, not found).
  *
  * Settings, in the secrets file of the site (secrets.php above the web folder, see includes/config.php):
  *   'indexnow_key'       => 32 hex characters; the site then answers https://viaqui.com/<key>.txt with the key
@@ -24,9 +30,13 @@
  * Without a setting, its part is skipped and the run says so. The state is kept in viaqui-ping-state.json beside
  * the secrets file.
  *
- * Note on Google: the Indexing API is documented by Google for job postings and livestreams only; for other pages it
- * may be ignored. It is used here for guides the same way it is used for events on tics.ro. The sitemap is what
- * Google officially reads.
+ * Note on Google: nothing in its APIs does what the "Request indexing" button of Search Console does. The URL
+ * Inspection API only reads the state of an address. The Indexing API is documented for job postings and livestreams
+ * only; for other pages Google may ignore the notification, and it says it may withdraw access from accounts that
+ * misuse it. It is used here the way it is used for events on tics.ro, within its daily allowance. The sitemap is
+ * what Google officially reads.
+ * The state file keeps, for each priority page: [verdict, state as Search Console words it, day sent to the Indexing
+ * API, day inspected] (days counted from 1970).
  */
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -53,7 +63,7 @@ if (defined('SITE_PRELAUNCH') && SITE_PRELAUNCH && !$force) {
 $secrets = $GLOBALS['viaquiSecrets'] ?? [];
 $stateFile = (is_file(dirname($root) . '/secrets.php') ? dirname($root) : $root . '/data') . '/viaqui-ping-state.json';
 $state = is_file($stateFile) ? (json_decode((string) file_get_contents($stateFile), true) ?: []) : [];
-$state += ['guides' => [], 'offset' => 0, 'indexnow_retry' => []];
+$state += ['guides' => [], 'offset' => 0, 'indexnow_retry' => [], 'google' => []];
 
 $http = function (string $method, string $url, array $headers = [], ?string $body = null): array {
     $ch = curl_init($url);
@@ -150,6 +160,63 @@ if (!preg_match('/^[a-f0-9]{16,64}$/', $indexNowKey)) {
     }
 }
 
+// ------------------------------------------------------------------ Google: the pages worth asking for first
+// In the order they are checked: hubs, guides, countries, routes, the ten largest cities of each country, Europe's
+// best-known attractions, then more cities and more attractions (about 11,000 addresses; the rest of the site is
+// left to the sitemaps). Paths, not full addresses: they are the keys of the state.
+$priority = ['/', '/cities', '/attractions', '/guides', '/map', '/routes', '/experiences', '/plan'];
+foreach (array_keys($guides) as $slug) {
+    $priority[] = '/guides/' . $slug;
+}
+foreach ($countries as $slug => $c) {
+    $priority[] = '/' . $slug;
+    $priority[] = '/attractions?country=' . strtolower($c['code']);
+}
+foreach (array_keys(v2_routes()) as $slug) {
+    $priority[] = '/routes/' . $slug;
+}
+$europe = v2_map_file('europe') ?? [];
+$europeSlugAt = array_search('slug', $europe['fields'] ?? [], true);
+$best = $europeSlugAt === false ? [] : array_map(fn ($row) => '/attraction/' . $row[$europeSlugAt], $europe['points'] ?? []);
+unset($europe);
+$cityRound = function (int $from, int $count) use ($countries, $cities): array {
+    $out = [];
+    foreach ($countries as $c) {
+        foreach (array_slice($cities[$c['code']] ?? [], $from, $count) as $citySlug) {
+            $out[] = '/' . $citySlug;
+        }
+    }
+    return $out;
+};
+$priority = array_values(array_unique(array_merge($priority, $cityRound(0, 10), array_slice($best, 0, 1500), $cityRound(10, 30), array_slice($best, 1500))));
+
+// What Search Console says about an address that is not in the index yet but could be: only these are worth a
+// notification. Anything else that is not "indexed" (noindex, redirect, not found, blocked) is a fault to look at.
+$waiting = ['Discovered - currently not indexed', 'Crawled - currently not indexed', 'URL is unknown to Google'];
+$today = intdiv(time(), 86400);
+$googleSummary = function () use (&$state, $priority, $waiting, $say): void {
+    $by = [];
+    $faults = [];
+    foreach ($priority as $path) {
+        $row = $state['google'][$path] ?? null;
+        $row = $row && !empty($row[3]) ? $row : null;      // sent but not inspected yet counts as not checked
+        $what = $row ? ($row[0] === 'PASS' ? 'Indexed' : $row[1]) : 'Not checked yet';
+        $by[$what] = ($by[$what] ?? 0) + 1;
+        if ($row && $row[0] !== 'PASS' && !in_array($row[1], $waiting, true) && count($faults) < 25) {
+            $faults[] = $path . ' (' . $row[1] . ')';
+        }
+    }
+    arsort($by);
+    $say('Google, the ' . count($priority) . ' priority pages: ' . implode(', ', array_map(fn ($k, $n) => $n . ' ' . $k, array_keys($by), $by)) . '.');
+    if ($faults) {
+        $say('Google, to look at: ' . implode('; ', $faults) . '.');
+    }
+};
+if (in_array('--status', $argv, true)) {
+    $googleSummary();
+    exit(0);
+}
+
 // ------------------------------------------------------------------ Google (service account)
 $googleToken = function (string $scope) use ($secrets, $http, $say): ?string {
     $path = (string) ($secrets['google_credentials'] ?? '');
@@ -181,45 +248,150 @@ $googleToken = function (string $scope) use ($secrets, $http, $say): ?string {
     return $token ?: null;
 };
 
+// Several POST requests at a time (the inspections: one request per address, each a second or two).
+$postMany = function (string $url, array $headers, array $bodies, int $parallel = 6): array {
+    $answers = [];
+    foreach (array_chunk($bodies, $parallel, true) as $chunk) {
+        $multi = curl_multi_init();
+        $handles = [];
+        foreach ($chunk as $key => $body) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 40, CURLOPT_POST => true, CURLOPT_HTTPHEADER => $headers, CURLOPT_POSTFIELDS => $body]);
+            curl_multi_add_handle($multi, $ch);
+            $handles[$key] = $ch;
+        }
+        do {
+            $status = curl_multi_exec($multi, $running);
+            if ($running) {
+                curl_multi_select($multi, 1.0);
+            }
+        } while ($running && $status === CURLM_OK);
+        foreach ($handles as $key => $ch) {
+            $answers[$key] = [(int) curl_getinfo($ch, CURLINFO_HTTP_CODE), (string) curl_multi_getcontent($ch)];
+            curl_multi_remove_handle($multi, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($multi);
+    }
+    return $answers;
+};
+
+$inspectPerDay = 1500;      // Search Console allows 2,000 inspections a day for a property; the rest stays for people
+$notifyPerDay = 190;        // the Indexing API allows 200 notifications a day
+$recheckAfter = 7;          // days before an address that was not indexed is inspected again
+$confirmAfter = 60;         // days before an indexed address is looked at again
+$notifyAgainAfter = 30;     // days before the same address is sent to the Indexing API again
+
 $hasGoogle = (string) ($secrets['google_credentials'] ?? '') !== '' && is_file((string) $secrets['google_credentials']);
 if (!$hasGoogle) {
     $say('Google: no service account in the secrets file (google_credentials), skipped.');
 } elseif ($dryRun) {
-    $say('Google (dry run): would submit the sitemap again and send ' . min(150, count($changed)) . ' guides to the Indexing API.');
+    $say('Google (dry run): would submit the sitemap again, inspect up to ' . $inspectPerDay . ' of the ' . count($priority) . ' priority pages and send up to ' . $notifyPerDay . ' addresses to the Indexing API (' . min($notifyPerDay, count($changed)) . ' guides first).');
 } else {
+    $notified = 0;
+    $notify = function (string $url, string $token) use ($http, $say, &$notified): bool {
+        static $refused = 0;
+        [$code, $out] = $http('POST', 'https://indexing.googleapis.com/v3/urlNotifications:publish', ['Authorization: Bearer ' . $token, 'Content-Type: application/json'], json_encode(['url' => $url, 'type' => 'URL_UPDATED'], JSON_UNESCAPED_SLASHES));
+        if ($code >= 200 && $code < 300) {
+            $notified++;
+            return true;
+        }
+        if ($refused++ === 0) {
+            $say('Indexing API: answer ' . $code . ' ' . substr(preg_replace('/\s+/', ' ', $out), 0, 200));
+        }
+        return false;
+    };
+
     // the sitemap, again
-    if ($token = $googleToken('https://www.googleapis.com/auth/webmasters')) {
+    $googleSite = '';
+    $gscToken = $googleToken('https://www.googleapis.com/auth/webmasters');
+    if ($gscToken) {
         $sites = array_filter([(string) ($secrets['google_site'] ?? '')]) ?: ['sc-domain:' . parse_url(SITE_URL, PHP_URL_HOST), SITE_URL . '/'];
-        $done = false;
         foreach ($sites as $site) {
-            [$code, $out] = $http('PUT', 'https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($site) . '/sitemaps/' . rawurlencode(SITE_URL . '/sitemap.xml'), ['Authorization: Bearer ' . $token, 'Content-Length: 0']);
+            [$code, $out] = $http('PUT', 'https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($site) . '/sitemaps/' . rawurlencode(SITE_URL . '/sitemap.xml'), ['Authorization: Bearer ' . $gscToken, 'Content-Length: 0']);
             $say('Search Console: sitemap submitted for ' . $site . ', answer ' . $code . ($code >= 300 ? ' ' . substr(preg_replace('/\s+/', ' ', $out), 0, 200) : '') . '.');
             if ($code >= 200 && $code < 300) {
-                $done = true;
+                $googleSite = $site;
                 break;
             }
         }
-        if (!$done) {
+        if ($googleSite === '') {
             $say('Search Console: the sitemap was not accepted. Check that the service account is a user of the property and set google_site.');
         }
     }
-    // the guides, one by one
-    if ($changed && ($token = $googleToken('https://www.googleapis.com/auth/indexing'))) {
-        $sent = 0;
+
+    // the guides that are new or changed, one by one
+    $indexingToken = $googleToken('https://www.googleapis.com/auth/indexing');
+    if ($changed && $indexingToken) {
         $failed = 0;
-        foreach (array_slice($changed, 0, 150) as $url) {
-            [$code, $out] = $http('POST', 'https://indexing.googleapis.com/v3/urlNotifications:publish', ['Authorization: Bearer ' . $token, 'Content-Type: application/json'], json_encode(['url' => $url, 'type' => 'URL_UPDATED'], JSON_UNESCAPED_SLASHES));
-            if ($code >= 200 && $code < 300) {
-                $sent++;
+        foreach (array_slice($changed, 0, $notifyPerDay) as $url) {
+            if ($notify($url, $indexingToken)) {
+                $row = $state['google'][substr($url, strlen(SITE_URL))] ?? [];
+                $state['google'][substr($url, strlen(SITE_URL))] = [$row[0] ?? '', $row[1] ?? '', $today, $row[3] ?? 0];
             } else {
                 $failed++;
-                if ($failed === 1) {
-                    $say('Indexing API: answer ' . $code . ' ' . substr(preg_replace('/\s+/', ' ', $out), 0, 200));
-                }
             }
         }
-        $say('Indexing API: ' . $sent . ' guides sent, ' . $failed . ' refused.');
+        $say('Indexing API: ' . $notified . ' guides sent, ' . $failed . ' refused.');
     }
+
+    // the priority pages: ask Search Console where each one stands (URL Inspection API, read only)
+    if ($gscToken && $googleSite !== '') {
+        $fresh = [];
+        $again = [];
+        foreach ($priority as $path) {
+            $row = $state['google'][$path] ?? null;
+            if (!$row || empty($row[3])) {
+                $fresh[] = $path;
+            } elseif ($today - $row[3] >= ($row[0] === 'PASS' ? $confirmAfter : $recheckAfter)) {
+                $again[] = $path;
+            }
+        }
+        // a third of the day goes to second looks, so that the first look still reaches the end of the list
+        $again = array_slice($again, 0, $fresh ? intdiv($inspectPerDay, 3) : $inspectPerDay);
+        $due = array_merge($again, array_slice($fresh, 0, $inspectPerDay - count($again)));
+        $checked = 0;
+        $stopped = '';
+        foreach (array_chunk($due, 60) as $batch) {
+            $bodies = [];
+            foreach ($batch as $path) {
+                $bodies[$path] = json_encode(['inspectionUrl' => SITE_URL . $path, 'siteUrl' => $googleSite, 'languageCode' => 'en'], JSON_UNESCAPED_SLASHES);
+            }
+            foreach ($postMany('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', ['Authorization: Bearer ' . $gscToken, 'Content-Type: application/json'], $bodies) as $path => [$code, $out]) {
+                $result = json_decode($out, true)['inspectionResult']['indexStatusResult'] ?? null;
+                if ($code === 200 && is_array($result)) {
+                    $state['google'][$path] = [(string) ($result['verdict'] ?? ''), (string) ($result['coverageState'] ?? ''), (int) ($state['google'][$path][2] ?? 0), $today];
+                    $checked++;
+                } elseif ($code === 429 || $code === 403 || $code === 401) {
+                    $stopped = $code . ' ' . substr(preg_replace('/\s+/', ' ', $out), 0, 200);
+                }
+            }
+            if ($stopped !== '') {
+                break;
+            }
+        }
+        $say('Search Console: ' . $checked . ' of ' . count($due) . ' pages inspected today' . ($stopped !== '' ? ', stopped at answer ' . $stopped : '') . '.');
+    }
+
+    // ... and tell the Indexing API about those that are still waiting, the most important first
+    if ($indexingToken) {
+        $before = $notified;
+        foreach ($priority as $path) {
+            if ($notified >= $notifyPerDay) {
+                break;
+            }
+            $row = $state['google'][$path] ?? null;
+            if (!$row || empty($row[3]) || $row[0] === 'PASS' || !in_array($row[1], $waiting, true) || ($row[2] && $today - $row[2] < $notifyAgainAfter)) {
+                continue;
+            }
+            if (!$notify(SITE_URL . $path, $indexingToken)) {
+                break;      // the day's allowance is used up, or the API refuses: no point in going on
+            }
+            $state['google'][$path][2] = $today;
+        }
+        $say('Indexing API: ' . ($notified - $before) . ' pages that are not indexed yet sent.');
+    }
+    $googleSummary();
 }
 
 // ------------------------------------------------------------------ remember
@@ -229,6 +401,7 @@ if (!$dryRun) {
     }
     $state['offset'] = $total ? ($offset + $perDay) % $total : 0;
     $state['indexnow_retry'] = $indexNowFailed ? array_slice($toIndexNow, 0, 5000) : [];
+    $state['google'] = array_intersect_key($state['google'], array_flip($priority));      // pages that left the list are forgotten
     $state['last_run'] = date('c');
     if (@file_put_contents($stateFile, json_encode($state, JSON_UNESCAPED_SLASHES)) === false) {
         $say('Could not write the state file ' . $stateFile . ': the same addresses will be sent again tomorrow.');

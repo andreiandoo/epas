@@ -157,6 +157,47 @@ foreach (v2_map_file(strtolower($cnCode) . '.summary')['picks'] ?? [] as $cnPick
 </section>
 <?php endif; ?>
 
+<?php
+// What to see: the country's best-known places as picture cards, the types it has most of and the cities that hold
+// the most, all from the map's summary of the country (the picks carry a photo and its credit). First page only.
+$cnSum = $cnShowTop ? (v2_map_file(strtolower($cnCode) . '.summary') ?? []) : [];
+$cnSights = array_slice(array_values(array_filter($cnSum['picks'] ?? [], fn ($p) => !empty($p[0]) && !empty($p[6]))), 0, 12);
+$cnTypeNames = v2_attraction_types_t();
+$cnSightTypes = array_values(array_filter($cnSum['types'] ?? [], fn ($t) => isset($cnTypeNames[$t[0]]) && (int) ($t[3] ?? 0) > 0));
+$cnSightCities = array_slice(array_values(array_filter($cnSum['cities'] ?? [], fn ($c) => !empty($c[0]) && (int) ($c[4] ?? 0) > 1)), 0, 24);
+$cnAllSights = '/attractions?country=' . strtolower($cnCode);
+?>
+<?php if ($cnSights): ?>
+<section class="v-psec" id="attractions" aria-labelledby="cn-at-h">
+  <div class="wrap">
+    <div class="v-phead"><div><p class="v-eyebrow"><?= v2_e(v2_num((int) ($cnSum['total'] ?? 0), 'place to see', 'places to see')) ?></p><h2 class="v-ph2" id="cn-at-h"><?= v2_te('Top attractions in {country}', ['country' => $cnName]) ?></h2></div><a class="v-plink" href="<?= v2_e($cnAllSights) ?>"><?= v2_te('All attractions in {country}', ['country' => $cnName]) ?><?= v2_ic('arrow-right') ?></a></div>
+    <div class="v-pgrid v-agrid">
+      <?php foreach ($cnSights as $p): $cnCr = $p[7] ?? []; ?>
+      <a class="v-pcard" href="/attraction/<?= v2_e($p[0]) ?>">
+        <span class="v-pcard-ph"><img src="<?= v2_e(v2_thumb($p[6], 480)) ?>" alt=""<?= !empty($cnCr[1]) ? ' title="' . v2_te('Photo: {author}, {licence}, Wikimedia Commons', ['author' => ($cnCr[0] ?? '') !== '' ? $cnCr[0] : v2_t('unknown author'), 'licence' => $cnCr[1]]) . '"' : '' ?> loading="lazy" decoding="async"></span>
+        <strong><?= v2_e($p[1]) ?></strong>
+        <span><?= v2_e(implode(' · ', array_filter([$cnTypeNames[$p[3]] ?? '', $p[4] ?? '']))) ?></span>
+      </a>
+      <?php endforeach; ?>
+    </div>
+    <p class="v-acredit"><?= v2_te('Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction\'s page.') ?> <a href="/photo-credits"><?= v2_te('About the photos') ?></a></p>
+    <?php if ($cnSightTypes): ?>
+    <nav class="v-types v-types-in" aria-label="<?= v2_te('Attractions in {country} by type', ['country' => $cnName]) ?>">
+      <?php foreach ($cnSightTypes as $t): ?><a href="<?= v2_e('/attractions?type=' . $t[0] . '&country=' . strtolower($cnCode)) ?>"><?= v2_e($cnTypeNames[$t[0]]) ?></a><?php endforeach; ?>
+    </nav>
+    <?php endif; ?>
+    <?php if ($cnSightCities): ?>
+    <h3 class="v-ph3"><?= v2_te('Where there is most to see') ?></h3>
+    <ul class="v-clist">
+      <?php foreach ($cnSightCities as $c): ?>
+      <li><a href="/<?= v2_e($c[0]) ?>/attractions"><b><?= v2_e($c[1]) ?></b><span><?= v2_e(implode(' · ', array_filter([$c[2] ?? '', v2_num((int) $c[4], 'attraction', 'attractions')]))) ?></span></a></li>
+      <?php endforeach; ?>
+    </ul>
+    <?php endif; ?>
+  </div>
+</section>
+<?php endif; ?>
+
 <?php if (count($cnRegions) > 1):
     // Region outlines (includes/v2/regions/{cc}.json, built by plans/viaqui-data/build_region_maps.py from Natural Earth).
     // Without a file for this country the section is the list alone.

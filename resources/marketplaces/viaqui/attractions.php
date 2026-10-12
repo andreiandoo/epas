@@ -185,6 +185,25 @@ include __DIR__ . '/includes/v2/header.php';
   </div>
 </section>
 
+<?php
+// The whole catalogue, country by country: the form above cannot be followed by a visitor without a mouse or by a
+// search engine, these links can. Counts come from the map's index (assets/v2/data/map/index.json).
+$atByCountry = ($atCitySlug === '' && !$atFiltered && $atSort === '' && $atPage === 1) ? (v2_map_file('index')['countries'] ?? []) : [];
+uasort($atByCountry, fn ($a, $b) => strcoll((string) $a['name'], (string) $b['name']));
+?>
+<?php if ($atByCountry): ?>
+<section class="v-psec v-psec-tint" id="by-country" aria-labelledby="at-cn-h">
+  <div class="wrap">
+    <div class="v-phead"><div><p class="v-eyebrow"><?= v2_e(v2_num(count($atByCountry), 'country', 'countries')) ?></p><h2 class="v-ph2" id="at-cn-h"><?= v2_te('Attractions by country') ?></h2></div></div>
+    <ul class="v-clist">
+      <?php foreach ($atByCountry as $c): ?>
+      <li><a href="/attractions?country=<?= v2_e(strtolower((string) $c['code'])) ?>"><b><?= v2_e($c['name']) ?></b><span><?= v2_e(v2_num((int) $c['total'], 'attraction', 'attractions')) ?></span></a></li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+</section>
+<?php endif; ?>
+
 <section class="v-psec v-ptools-sec" aria-labelledby="at-tools-h">
   <div class="wrap"><div class="v-ptools">
     <div><p class="v-eyebrow"><?= v2_te('Plan') ?></p><h2 class="v-ph2" id="at-tools-h"><?= v2_te('See them in the right order.') ?></h2><p><?= v2_te('Pick the places you want and let the planner arrange them by day, in the order they link up on the road.') ?></p></div>
