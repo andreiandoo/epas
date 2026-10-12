@@ -29,7 +29,12 @@
     hi = i;
     heroImgs.forEach(function (im, k) { im.classList.toggle('is-on', k === i); });
     dots.forEach(function (d, k) { d.setAttribute('aria-pressed', k === i ? 'true' : 'false'); });
-    if (dots[i]) { $('#hero-place-n').textContent = dots[i].dataset.name; $('#hero-place-m').textContent = dots[i].dataset.meta; }
+    if (dots[i]) {
+      var n = $('#hero-place-n'), c = $('#hero-place-c');
+      n.textContent = dots[i].dataset.name; n.href = VQ.url(dots[i].dataset.href || '/attractions');
+      $('#hero-place-m').textContent = dots[i].dataset.meta;
+      if (c) c.textContent = dots[i].dataset.credit || '';
+    }
   }
   function cycle() {
     clearInterval(ht);
@@ -41,7 +46,7 @@
   /* ---- hero search: suggestions from the cities and categories in the page data ---- */
   var q = $('#hs-q'), sug = $('#hs-suggest'), form = $('#hero-search');
   if (q && sug) {
-    var pool = (data.cities || []).concat(data.categories || []), active = -1;
+    var pool = (data.cities || []).concat(data.attractions || [], data.categories || []), active = -1;
     var fold = function (s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
     var close = function () { sug.hidden = true; q.setAttribute('aria-expanded', 'false'); active = -1; };
     var render = function () {

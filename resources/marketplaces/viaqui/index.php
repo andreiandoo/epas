@@ -41,7 +41,7 @@ $v2Styles = ['home.css'];
 $v2InlineCss = true;      // the first paint of the landing page does not wait for a stylesheet request
 $v2Scripts = ['home.js'];
 $v2HeaderOverlay = true;
-$v2HeadExtra = '<link rel="preload" as="image" href="' . v2_asset('img/hero-bran-900.webp') . '" imagesrcset="' . v2_home_hero_srcset('bran') . '" imagesizes="(min-width:1024px) 40vw, 90vw" fetchpriority="high">';
+$v2HeadExtra = '<link rel="preload" as="image" href="' . v2_e($V2['hero'][0]['src']) . '" imagesrcset="' . v2_e($V2['hero'][0]['srcset']) . '" imagesizes="(min-width:1024px) 40vw, 90vw" fetchpriority="high">';
 $v2ClientData = [
     'libs' => [
         'gsap' => v2_asset('vendor/gsap-3.15.0.min.js'), 'scrollTrigger' => v2_asset('vendor/ScrollTrigger-3.15.0.min.js'),
@@ -50,6 +50,7 @@ $v2ClientData = [
     ],
     'cities' => $V2['suggest']['cities'],
     'categories' => $V2['suggest']['categories'],
+    'attractions' => $V2['suggest']['attractions'],
 ];
 
 include __DIR__ . '/includes/v2/head.php';

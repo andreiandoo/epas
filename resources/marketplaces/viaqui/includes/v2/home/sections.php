@@ -5,7 +5,7 @@
  * Data: $V2 from v2/home/data.php. Styles: assets/v2/css/home.css (every class starts with "v-", so nothing here
  * collides with the shared shell). Script: assets/v2/js/home.js; the page is complete without it.
  */
-$hvHero = array_keys(V2_HERO_PLACES);
+$hvHero = $V2['hero'];
 $hvFirst = $hvHero[0];
 $hvBadges = [
     'inst' => ['lightning', v2_t('Instant confirmation'), ' is-inst'], 'mob' => ['qr-code', v2_t('Mobile ticket'), ''],
@@ -76,18 +76,20 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
         <path id="hero-l2" pathLength="1" stroke="#C6A15B" d="M-22 582V330c0-70 44-118 104-118"/>
       </svg>
       <div class="v-hero-arch" id="hero-arch">
-        <?php foreach ($hvHero as $i => $key): [$hvName] = V2_HERO_PLACES[$key]; ?>
+        <?php foreach ($hvHero as $i => $h): ?>
         <?php /* only the first photo loads with the page; home.js gives the others their address after the load event */ ?>
-        <img<?= $i === 0 ? ' class="is-on" fetchpriority="high"' : '' ?> decoding="async" width="1440" height="1029" alt="<?= v2_e($hvName) ?>"
-             <?= $i === 0 ? '' : 'data-' ?>src="<?= v2_asset('img/hero-' . $key . '-900.webp') ?>" <?= $i === 0 ? '' : 'data-' ?>srcset="<?= v2_e(v2_home_hero_srcset($key)) ?>" sizes="(min-width:1024px) 40vw, 90vw">
+        <img<?= $i === 0 ? ' class="is-on" fetchpriority="high"' : '' ?> decoding="async" alt="<?= v2_e($h['name']) ?>"
+             <?= $i === 0 ? '' : 'data-' ?>src="<?= v2_e($h['src']) ?>" <?= $i === 0 ? '' : 'data-' ?>srcset="<?= v2_e($h['srcset']) ?>" sizes="(min-width:1024px) 40vw, 90vw">
         <?php endforeach; ?>
       </div>
-      <p class="v-hero-place" aria-live="polite"><small><?= v2_te('In the picture') ?></small><strong id="hero-place-n"><?= v2_e(V2_HERO_PLACES[$hvFirst][0]) ?></strong><span id="hero-place-m"><?= v2_e(V2_HERO_PLACES[$hvFirst][1]) ?></span></p>
+      <p class="v-hero-place" aria-live="polite"><small><?= v2_te('In the picture') ?></small><strong><a id="hero-place-n" href="<?= v2_e($hvFirst['href']) ?>"><?= v2_e($hvFirst['name']) ?></a></strong><span id="hero-place-m"><?= v2_e($hvFirst['meta']) ?></span><em id="hero-place-c"><?= v2_e($hvFirst['credit']) ?></em></p>
+      <?php if (count($hvHero) > 1): ?>
       <div class="v-hero-dots" id="hero-dots" role="group" aria-label="<?= v2_te('Hero photo') ?>">
-        <?php foreach ($hvHero as $i => $key): ?>
-        <button type="button" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>" aria-label="<?= v2_e(V2_HERO_PLACES[$key][0]) ?>" data-name="<?= v2_e(V2_HERO_PLACES[$key][0]) ?>" data-meta="<?= v2_e(V2_HERO_PLACES[$key][1]) ?>"></button>
+        <?php foreach ($hvHero as $i => $h): ?>
+        <button type="button" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>" aria-label="<?= v2_e($h['name']) ?>" data-name="<?= v2_e($h['name']) ?>" data-meta="<?= v2_e($h['meta']) ?>" data-href="<?= v2_e($h['href']) ?>" data-credit="<?= v2_e($h['credit']) ?>"></button>
         <?php endforeach; ?>
       </div>
+      <?php endif; ?>
     </div>
   </div>
 </section>
@@ -122,6 +124,7 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
 </section>
 
 <!-- ============================ THIS WEEK ============================ -->
+<?php if ($V2['cards']): ?>
 <section class="v-sec v-week" id="this-week" aria-labelledby="week-h">
   <div class="wrap">
     <div class="v-head"><div><p class="v-eyebrow"><?= v2_te('Time-based') ?></p><h2 class="v-slash" id="week-h"><?= v2_te('this week') ?></h2></div><p class="v-lede"><?= v2_te('Pick a day, then narrow it down. Every listing shows what the ticket includes before you pay.') ?></p></div>
@@ -135,16 +138,15 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
         <button class="v-chip" type="button" aria-pressed="true" data-f="all"><?= v2_te('Popular') ?></button>
         <?php foreach ($V2['filters'] as $k => $label): ?><button class="v-chip" type="button" aria-pressed="false" data-f="<?= v2_e($k) ?>"><?= v2_e($label) ?></button><?php endforeach; ?>
       </div>
-      <?php if ($V2['sample']): ?><p class="v-note"><?= v2_te('Sample listings, shown until the first venues go live.') ?></p><?php endif; ?>
     </div>
     <ul class="v-cards" id="week-cards">
       <?php foreach ($V2['cards'] as $i => $card): ?>
-      <li data-k="<?= v2_e($card['k']) ?>"><a class="v-card" href="<?= v2_e($card['href']) ?>">
+      <li data-k="<?= v2_e($card['k']) ?>"><a class="v-card" href="<?= v2_e($card['href']) ?>"<?= $card['via'] !== '' ? ' target="_blank" rel="sponsored nofollow noopener"' : '' ?>>
         <span class="v-card-ph"><?= $card['image'] ? '<img src="' . v2_e($card['image']) . '" alt="" loading="lazy" decoding="async" width="640" height="560">' : v2_fallback($card['title'], $i) ?><span class="v-fav"><?= v2_ic('heart') ?></span></span>
         <span class="v-card-b">
           <small><?= v2_e($card['place']) ?></small>
           <strong><?= v2_e($card['title']) ?></strong>
-          <span class="v-badges"><?php foreach ($card['badges'] as $b): [$bIcon, $bText, $bCls] = $hvBadges[$b]; ?><span class="v-badge<?= $bCls ?>"><?= v2_ic($bIcon) ?><?= v2_e($bText) ?></span><?php endforeach; ?></span>
+          <span class="v-badges"><?php foreach ($card['badges'] as $b): [$bIcon, $bText, $bCls] = $hvBadges[$b]; ?><span class="v-badge<?= $bCls ?>"><?= v2_ic($bIcon) ?><?= v2_e($bText) ?></span><?php endforeach; ?><?php if ($card['via'] !== ''): ?><span class="v-badge"><?= v2_ic('arrow-up-right') ?><?= v2_te('on {partner}', ['partner' => $card['via']]) ?></span><?php endif; ?></span>
           <span class="v-card-f">
             <?php if ($card['rating']): ?><span class="v-rate"><?= v2_ic('star') ?><?= v2_e(number_format($card['rating'][0], 1)) ?> (<?= (int) $card['rating'][1] ?>)</span><?php else: ?><span></span><?php endif; ?>
             <?php if ($card['price']): ?><span><?= v2_t('from <b>{price}</b>', ['price' => v2_e($card['price'])]) ?></span><?php endif; ?>
@@ -156,12 +158,14 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
     <p class="v-more"><a class="v-link" href="/experiences"><?= v2_te('All experiences') ?><?= v2_ic('arrow-right') ?></a></p>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- ============================ JOURNEY ============================ -->
+<?php if ($V2['route']): $hvR = $V2['route']; ?>
 <section class="v-journey-sec" id="journey" aria-labelledby="journey-h">
   <div class="v-journey" id="journey-scene">
     <div class="wrap">
-      <div class="v-journey-head"><div><p class="v-eyebrow"><?= v2_te('A path forward') ?></p><h2 id="journey-h"><?= v2_t('One road, six ways <em>in</em>.') ?></h2></div><p><?= v2_te('Follow the line from the capital to the sea. Every stop is a city with places you can book before you get there.') ?></p></div>
+      <div class="v-journey-head"><div><p class="v-eyebrow"><?= v2_te('Route of the week') ?></p><h2 id="journey-h"><a href="<?= v2_e($hvR['href']) ?>"><?= v2_e($hvR['title']) ?></a></h2></div><p><?= v2_e($hvR['lead']) ?></p></div>
       <svg class="v-route" viewBox="0 0 1240 120" aria-hidden="true">
         <?php $hvRoute = 'M0 96c40 0 46-8 70-8 16 0 14-40 26-40s10 40 26 40c20 0 24 6 44 6 14 0 12-30 22-30s8 30 22 30h60l10-22h-8l12-18h-8l10-16 10 16h-8l12 18h-8l10 22h70c26 0 30-10 56-10h34V52h-8V38h10v8h10v-8h10v8h10v-8h10v14h-8v36c30 0 34 12 70 12 40 0 44-20 80-20 30 0 40 14 60 14 12 0 22-50 62-50s50 50 62 50h62V44h-10V32h70v12h-10v52h34c40 0 50-14 90-14 50 0 60 18 132 18M690 96c4-20 16-30 30-30s26 10 30 30M946 44v52M962 44v52M978 44v52'; ?>
         <path class="v-route-ghost" d="<?= $hvRoute ?>"/>
@@ -169,14 +173,15 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
       </svg>
     </div>
     <div class="v-stops" id="journey-stops">
-      <?php foreach ($V2['journey'] as $s): ?>
-      <a class="v-stop" href="<?= v2_e($s['href']) ?>"><span class="v-stop-ph"><img src="<?= v2_e($s['image']) ?>" alt="<?= v2_e($s['alt']) ?>" loading="lazy" decoding="async" width="640" height="672"><small><?= $s['count'] ? v2_e(v2_exp($s['count'])) : v2_e($s['region']) ?></small></span><strong><?= v2_e($s['label']) ?></strong><span class="v-stop-t"><?= v2_e($s['text']) ?></span></a>
+      <?php foreach ($hvR['stops'] as $s): ?>
+      <a class="v-stop" href="<?= v2_e($s['href']) ?>"><span class="v-stop-ph"><img src="<?= v2_e($s['image']) ?>" alt="<?= v2_e($s['name']) ?>" loading="lazy" decoding="async" width="640" height="672"><?php if ($s['type'] !== ''): ?><small><?= v2_e($s['type']) ?></small><?php endif; ?></span><strong><?= v2_e(mb_strtolower($s['name'])) ?></strong><span class="v-stop-t"><?= v2_e($s['where']) ?></span></a>
       <?php endforeach; ?>
-      <div class="v-stop is-end"><p class="v-eyebrow"><?= v2_te('More places. Same feeling.') ?></p><strong><?= $V2['totals']['cities'] ? v2_e(v2_num($V2['totals']['cities'], 'city', 'cities')) : v2_te('Across Europe') ?></strong><span class="v-stop-t"><?= v2_te('Every destination gets its own page with a map, opening days and what to book first.') ?></span><a class="btn v-btn-cream" href="/cities"><?= v2_te('All destinations') ?><?= v2_ic('arrow-right') ?></a></div>
+      <div class="v-stop is-end"><p class="v-eyebrow"><?= v2_te('The whole route') ?></p><strong><?= v2_e(v2_num($hvR['count'], 'stop', 'stops')) ?></strong><span class="v-stop-t"><?= v2_e(implode(' · ', array_filter([$hvR['km'] > 0 ? v2_t('{km} km by road', ['km' => number_format($hvR['km'])]) : '', $hvR['pace']]))) ?></span><a class="btn v-btn-cream" href="<?= v2_e($hvR['href']) ?>"><?= v2_te('See the route') ?><?= v2_ic('arrow-right') ?></a><a class="v-stop-all" href="/routes"><?= v2_te('All {n} routes', ['n' => $hvR['total']]) ?></a></div>
     </div>
-    <div class="wrap"><div class="v-progress" id="journey-progress" aria-hidden="true"><span>Bucharest</span><i></i><span>Black Sea</span></div></div>
+    <div class="wrap"><div class="v-progress" id="journey-progress" aria-hidden="true"><span><?= v2_e($hvR['from']) ?></span><i></i><span><?= v2_e($hvR['to']) ?></span></div></div>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- ============================ PLAN TOOLS ============================ -->
 <section class="v-sec v-tools-sec" aria-labelledby="tools-h">
@@ -260,16 +265,28 @@ $hvSaturday = (new DateTimeImmutable('saturday this week', new DateTimeZone('Eur
     <div class="v-head"><div><p class="v-eyebrow"><?= v2_te('Across the map') ?></p><h2 id="top-h" class="v-h2"><?= v2_te('Where people are heading') ?></h2></div></div>
     <div class="v-tabs" role="tablist" aria-label="<?= v2_te('Top lists') ?>" id="top-tabs">
       <button class="v-tab" type="button" role="tab" id="tt-0" aria-controls="tp-0" aria-selected="true"><?= v2_te('Destinations') ?></button>
-      <button class="v-tab" type="button" role="tab" id="tt-1" aria-controls="tp-1" aria-selected="false" tabindex="-1"><?= v2_te('Categories') ?></button>
-      <button class="v-tab" type="button" role="tab" id="tt-2" aria-controls="tp-2" aria-selected="false" tabindex="-1"><?= v2_te('Countries') ?></button>
+      <?php if ($V2['topAttractions']): ?><button class="v-tab" type="button" role="tab" id="tt-1" aria-controls="tp-1" aria-selected="false" tabindex="-1"><?= v2_te('Attractions') ?></button><?php endif; ?>
+      <?php if ($V2['topRoutes']): ?><button class="v-tab" type="button" role="tab" id="tt-2" aria-controls="tp-2" aria-selected="false" tabindex="-1"><?= v2_te('Routes') ?></button><?php endif; ?>
+      <button class="v-tab" type="button" role="tab" id="tt-3" aria-controls="tp-3" aria-selected="false" tabindex="-1"><?= v2_te('Categories') ?></button>
+      <button class="v-tab" type="button" role="tab" id="tt-4" aria-controls="tp-4" aria-selected="false" tabindex="-1"><?= v2_te('Countries') ?></button>
     </div>
     <div id="tp-0" role="tabpanel" aria-labelledby="tt-0"><ul class="v-toplist">
       <?php foreach (array_slice($V2['citiesList'], 0, 24) as $i => $c): ?><li><a href="<?= v2_e($c['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($c['name']) ?><span><?= v2_e($c['count'] ? v2_exp($c['count']) : $c['region']) ?></span></a></li><?php endforeach; ?>
-    </ul></div>
+    </ul><p class="v-more"><a class="v-link" href="/cities"><?= v2_te('All destinations') ?><?= v2_ic('arrow-right') ?></a></p></div>
+    <?php if ($V2['topAttractions']): ?>
     <div id="tp-1" role="tabpanel" aria-labelledby="tt-1" hidden><ul class="v-toplist">
+      <?php foreach ($V2['topAttractions'] as $i => $a): ?><li><a href="<?= v2_e($a['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($a['name']) ?><?php if ($a['note'] !== ''): ?><span><?= v2_e($a['note']) ?></span><?php endif; ?></a></li><?php endforeach; ?>
+    </ul><p class="v-more"><a class="v-link" href="/attractions"><?= v2_te('All attractions') ?><?= v2_ic('arrow-right') ?></a></p></div>
+    <?php endif; ?>
+    <?php if ($V2['topRoutes']): ?>
+    <div id="tp-2" role="tabpanel" aria-labelledby="tt-2" hidden><ul class="v-toplist">
+      <?php foreach ($V2['topRoutes'] as $i => $r): ?><li><a href="<?= v2_e($r['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($r['name']) ?><?php if ($r['km'] > 0): ?><span><?= v2_e(number_format($r['km'])) ?> km</span><?php endif; ?></a></li><?php endforeach; ?>
+    </ul></div>
+    <?php endif; ?>
+    <div id="tp-3" role="tabpanel" aria-labelledby="tt-3" hidden><ul class="v-toplist">
       <?php foreach ($V2['categories'] as $i => $c): ?><li><a href="<?= v2_e($c['href']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($c['name']) ?><?php if ($c['count']): ?><span><?= (int) $c['count'] ?></span><?php endif; ?></a></li><?php endforeach; ?>
     </ul></div>
-    <div id="tp-2" role="tabpanel" aria-labelledby="tt-2" hidden><ul class="v-toplist">
+    <div id="tp-4" role="tabpanel" aria-labelledby="tt-4" hidden><ul class="v-toplist">
       <?php foreach (($V2['countriesAll'] ?? $V2['regions']) as $i => $r): ?><li><a href="/<?= v2_e($r['slug']) ?>"><i><?= sprintf('%02d', $i + 1) ?></i><?= v2_e($r['name']) ?><span><?= v2_e(v2_num($r['citiesCount'], 'city', 'cities')) ?></span></a></li><?php endforeach; ?>
     </ul></div>
   </div>

@@ -151,14 +151,12 @@ return [
         'A good venue is more than an address.' => '',      // locatii.php
         'A guide to your first venue and first product' => '',      // organizer/help.php
         'A larger or a smaller map' => '',      // plan.php
-        'A lived-in medieval citadel: clock tower, covered stairway, painted houses.' => '',      // includes/v2/home/data.php
         'A local audience from your city' => '',      // organizer/services.php
         'A message from the organiser' => '',      // thank-you.php
         'A mobile app + a till for on-site sales.' => '',      // devino-partener.php
         'A mountain landscape' => '',      // cum-functioneaza.php
         'A new order was created' => '',      // organizer/api-docs.php
         'A newsletter made for you' => '',      // user/settings.php
-        'A path forward' => '',      // includes/v2/home/sections.php
         'A phone or a tablet' => '',      // parteneri.php
         'A phone or a tablet for scanning and, if you want a printed receipt, a 58 or 80 mm thermal printer. The receipt prints straight from the browser, with no special drivers. The POS stands in for the till, inside the app.' => '',      // parteneri.php
         'A platform for venues that sell tickets online to their activities: SEO pages, checkout, QR tickets, scanning, dashboard, reports, gift cards and bonus points.' => '',      // pentru-locatii.php
@@ -173,7 +171,6 @@ return [
         'A route with {stops} and {km} km by road ({time} of driving), with a map and navigation.' => '',      // route.php
         'A route with {stops} and {km} km by road, with a map and navigation.' => '',      // route.php
         'A route with {stops} and {km} km, with a map and navigation.' => '',      // route.php
-        'A royal summer residence in the pines, an hour and a half from the capital.' => '',      // includes/v2/home/data.php
         'A selection of guided tours, experiences and activities available through GetYourGuide.' => '',      // city.php
         'A short description of the activity (120 words at most)' => '',      // organizer/events.php
         'A simpler way to a more <em>open</em> world.' => '',      // includes/v2/home/sections.php
@@ -196,7 +193,6 @@ return [
         'A viaqui.com partner operator with activities available online.' => '',      // operatori.php
         'A viaqui.com partner operator with {count} in {city}.' => '',      // operatori.php
         'A viaqui.com partner operator with {count}.' => '',      // operatori.php
-        'A walled old town under a mountain, with Bran and the bear sanctuary close by.' => '',      // includes/v2/home/data.php
         'A weekend in' => '',      // includes/v2/header.php
         'A weekend in {city}' => '',      // region.php
         'A {amount} ticket: what do you receive?' => '',      // parteneri.php
@@ -258,7 +254,6 @@ return [
         'Accounting RO' => '',      // parteneri.php
         'Accounting and ANAF, handled automatically.' => '',      // parteneri.php
         'Accounting entry' => '',      // parteneri.php
-        'Across Europe' => '',      // includes/v2/home/sections.php
         'Across the map' => '',      // includes/v2/home/sections.php
         'Actions' => '',      // organizer/venue-orders.php
         'Activate the account' => '',      // organizer/accept-invite.php
@@ -460,6 +455,7 @@ return [
         'All {cities} in {country}' => '',      // includes/v2/header.php
         'All {cities} in {region}' => '',      // region.php
         'All {n} countries' => '',      // includes/v2/header.php
+        'All {n} routes' => '',      // includes/v2/home/sections.php
         'All {venues} in {city}' => '',      // includes/v2/header.php
         'All-day access' => '',      // organizer/venue-products.php
         'Allows pixels and identifiers to be used for campaigns, remarketing, ad measurement and audiences.' => '',      // includes/cookie-consent.php
@@ -1235,7 +1231,6 @@ return [
         'Corporate' => '',      // card-cadou.php
         'Costs' => '',      // vinde-bilete.php
         'Cot' => '',      // includes/v2/am-labels.php
-        'Council Square in Brașov seen from above' => '',      // includes/v2/home/data.php
         'Counter & POS' => '',      // organizer/am-pos.php
         'Counter & POS: {site}' => '',      // organizer/am-pos.php
         'Counter sale' => '',      // organizer/am-pos.php
@@ -1569,7 +1564,6 @@ return [
         'Every city in {country}' => '',      // country.php
         'Every country' => '',      // cities.php
         'Every day' => '',      // includes/v2/am-labels.php
-        'Every destination gets its own page with a map, opening days and what to book first.' => '',      // includes/v2/home/sections.php
         'Every order of the venue, from the site and from the register. Open a row to see the tickets issued.' => '',      // organizer/venue-orders.php
         'Every page shows what the ticket includes, how long it takes, who it suits, where to go, how to get in and the rules you need to know.' => '',      // cum-functioneaza.php
         'Every paid order earns you points. They stay “pending” until the activity has taken place, then they are added to your account.' => '',      // user/rewards.php
@@ -1735,7 +1729,6 @@ return [
         'Flower' => '',      // includes/v2/product-icons.php
         'Flying from' => '',      // city.php
         'Follow conversion from visit to sale, in real time' => '',      // parteneri.php
-        'Follow the line from the capital to the sea. Every stop is a city with places you can book before you get there.' => '',      // includes/v2/home/sections.php
         'Food & drink' => '',      // experiente-cadou.php
         'Food and rest' => '',      // includes/v2/am-labels.php
         'Football' => '',      // includes/v2/product-icons.php
@@ -2490,7 +2483,6 @@ return [
         'More people' => '',      // experiente-cadou.php
         'More places to visit' => '',      // locatie.php
         'More places to visit in {city}' => '',      // locatie.php
-        'More places. Same feeling.' => '',      // includes/v2/home/sections.php
         'More places.<br>Same feeling.<br><em>Your way in.</em>' => '',      // includes/v2/footer.php
         'More than “pay and done”.' => '',      // cum-functioneaza.php
         'More things to do in {city}' => '',      // city-intent.php
@@ -2779,7 +2771,6 @@ return [
         'One month' => '',      // organizer/venue-participants.php
         'One operator can have several activities.' => '',      // operatori.php
         'One platform, many ways to get out of the house.' => '',      // cum-functioneaza.php
-        'One road, six ways <em>in</em>.' => '',      // includes/v2/home/sections.php
         'One sale → documents generated automatically, in seconds' => '',      // parteneri.php
         'One venue can have several activities.' => '',      // locatii.php
         'One venue can sell several kinds of ticket: general entry, guided tours, time slots, themed rooms, workshops or passes.' => '',      // locatie.php
@@ -2955,7 +2946,6 @@ return [
         'Paid with points' => '',      // checkout.php
         'Painting' => '',      // includes/v2/product-icons.php
         'Palaces' => '',      // includes/v2/places.php
-        'Palaces, hidden courtyards and a concert hall that locals paid for one coin at a time.' => '',      // includes/v2/home/data.php
         'Panel' => '',      // parteneri.php
         'Parameter' => '',      // organizer/api-docs.php
         'Parent' => '',      // user/settings.php
@@ -3023,7 +3013,6 @@ return [
         'Payouts are paid into the primary account. You can have 5 accounts at most.' => '',      // organizer/settings.php
         'Payouts at regular intervals or on request, with transparent records.' => '',      // parteneri.php
         'Payouts issued' => '',      // organizer/venue-payouts.php
-        'Peleș Castle in Sinaia' => '',      // includes/v2/home/data.php
         'Peleș Castle in Sinaia, its towers rising above the forest on a clear summer day' => '',      // includes/v2/photo-meta.php
         'Pending' => '',      // user/orders.php
         'Pending invitations' => '',      // organizer/team.php
@@ -3061,6 +3050,7 @@ return [
         'Photo {n}' => '',      // single-activitate.php
         'Photo {n} of {total}' => '',      // locatie.php
         'Photo: {author}' => '',      // atractie.php
+        'Photo: {author}, {licence}' => '',      // includes/v2/home/data.php
         'Photo: {author}, {licence}, Wikimedia Commons' => '',      // country.php
         'Photographs' => '',      // photo-credits.php
         'Photographs from Wikimedia Commons: point at a photo to see who took it; the full credit and the licence are on the attraction\'s page.' => '',      // country.php
@@ -3472,6 +3462,7 @@ return [
         'Room 13' => '',      // locatii.php
         'Rooms' => '',      // includes/v2/location-page.php
         'Route' => '',      // includes/v2/product-icons.php
+        'Route of the week' => '',      // includes/v2/home/sections.php
         'Routes' => '',      // cities.php
         'Routes <em>through {place}</em>' => '',      // routes.php
         'Routes are suggestions, not schedules. You can drive them the other way round, split them over more days or take only the stops that are on your way. To start from one place and see what is around it, open <a href="{url}">the attractions map</a>.' => '',      // routes.php
@@ -3526,7 +3517,6 @@ return [
         'Salt mines' => '',      // includes/v2/places.php
         'Sample checkout summary' => '',      // cum-functioneaza.php
         'Sample code' => '',      // card-cadou.php
-        'Sample listings, shown until the first venues go live.' => '',      // includes/v2/home/sections.php
         'Sat' => '',      // parteneri.php
         'Sat, 19 Oct · 14:00' => '',      // parteneri.php
         'Saturday' => '',      // activitate.php
@@ -3711,6 +3701,7 @@ return [
         'See the operator panel' => '',      // vinde-bilete.php
         'See the page for venues' => '',      // cum-functioneaza.php
         'See the profile' => '',      // organizer/public.php
+        'See the route' => '',      // includes/v2/home/sections.php
         'See the routes' => '',      // includes/v2/home/sections.php
         'See the steps' => '',      // cum-functioneaza.php
         'See the terms and conditions' => '',      // checkout.php
@@ -3948,7 +3939,6 @@ return [
         'Sport and movement' => '',      // includes/v2/product-icons.php
         'Spot the empty slots and fill them with targeted promotions' => '',      // parteneri.php
         'Square & old town' => '',      // includes/v2/am-labels.php
-        'Squares that open into each other and roofs that seem to watch you pass.' => '',      // includes/v2/home/data.php
         'Staff' => '',      // organizer/venue-orders.php
         'Staff & rota' => '',      // organizer/venue-team.php
         'Staff member' => '',      // organizer/venue-team.php
@@ -4095,16 +4085,12 @@ return [
         'The 2%* commission is added transparently on top, in the final price. You set your price and receive it <strong class="pt-yellow">in full</strong> at payout, with nothing taken from your margin. If you also sell your tickets elsewhere, the commission is 4%: 2% included in the price and 2% added.' => '',      // parteneri.php
         'The API returns standard HTTP codes:' => '',      // organizer/api-docs.php
         'The API uses JSON. Set the {header} header.' => '',      // organizer/api-docs.php
-        'The Black Sea, an Art Nouveau casino and two thousand years of harbour life.' => '',      // includes/v2/home/data.php
-        'The Casino in Constanța on the seafront' => '',      // includes/v2/home/data.php
         'The ID of the category' => '',      // organizer/api-docs.php
         'The ID of the venue' => '',      // organizer/api-docs.php
-        'The Large Square in Sibiu' => '',      // includes/v2/home/data.php
         'The POS at the ticket office, a mock-up with sample data' => '',      // parteneri.php
         'The POS issues the ticket on the spot and stands in for the till, inside the app: cart, cash or card payment, receipt printed on a 58 or 80 mm thermal printer, straight from the browser, with no drivers to install.' => '',      // vinde-bilete.php
         'The POS screen, with sample data' => '',      // vinde-bilete.php
         'The QR code lands in your inbox right after payment. Show it at the gate, online or off.' => '',      // includes/v2/home/sections.php
-        'The Romanian Athenaeum in Bucharest' => '',      // includes/v2/home/data.php
         'The Viaqui API documentation for operators: authentication, limits, errors, endpoints and webhooks.' => '',      // organizer/api-docs.php
         'The Viaqui commission is added on top of your prices, so you keep your full price on every ticket. The money from online sales is collected through Viaqui and is owed to you, and for tickets sold at the desk we send you a monthly invoice for the commission.' => '',      // organizer/finance.php
         'The Viaqui team checks it before it is published. You can keep making changes.' => '',      // organizer/events.php
@@ -4139,7 +4125,6 @@ return [
         'The categories are not set up yet.' => '',      // categorii.php
         'The categories will load soon. Reload the page in a few minutes.' => '',      // devino-partener.php
         'The category says what the activity is: escape room, museum, park, workshop. The intent says why you are looking for it: for children, for the weekend, for a rainy day, on a budget or for a birthday.' => '',      // categorii.php
-        'The citadel of Sighișoara' => '',      // includes/v2/home/data.php
         'The cities below already have their own pages, and they fill up as venues in the region publish their activities. Until then, see what is available elsewhere.' => '',      // region.php
         'The cities of {region} in one place: {cities} and {n} more. Choose a city to see its activities, attractions and weekend ideas.' => '',      // region.php
         'The city you set off from, in {country}' => '',      // plan.php
@@ -4367,6 +4352,7 @@ return [
         'The week\'s rota' => '',      // organizer/venue-team.php
         'The whole category' => '',      // includes/v2/header.php
         'The whole country' => '',      // user/settings.php
+        'The whole route' => '',      // includes/v2/home/sections.php
         'The widget opens only on the sites in the list. Enter the address, for example my-site.com (the www version works automatically) or *.my-site.com for all subdomains.' => '',      // organizer/am-widgets.php
         'The workshops have few places and children of different ages. We set up ticket types by age, and parents see straight away what suits them.' => '',      // includes/v2/partner-testimonials.php
         'The {remaining} and {reset} headers are included in every response.' => '',      // organizer/api-docs.php
@@ -5850,6 +5836,7 @@ return [
         '{h}h' => '',      // atractie.php
         '{h}h {m}m' => '',      // atractie.php
         '{image}, preview' => '',      // organizer/events.php
+        '{km} km by road' => '',      // includes/v2/home/sections.php
         '{km} km from the previous stop' => '',      // includes/v2/route-page.php
         '{km} km · {time} from the previous stop' => '',      // includes/v2/route-page.php
         '{label} <small>(optional)</small>' => '',      // organizer/services.php
