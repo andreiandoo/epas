@@ -241,13 +241,29 @@ class CartController extends BaseController
             $itemKey = $event->id . '_' . $ticketType->id;
             $items = $cart->items ?? [];
 
-            // If there are existing seats for this item, release them first
-            if (isset($items[$itemKey]['seat_uids']) && !empty($items[$itemKey]['seat_uids'])) {
-                $this->seatHoldService->releaseSeats(
-                    $items[$itemKey]['event_seating_id'],
-                    $items[$itemKey]['seat_uids'],
-                    $sessionId
-                );
+            // Release the seats of the previous selection for this item — but
+            // only the ones that are NOT part of the new selection. The old
+            // list can overlap the seats just held above (the client released
+            // them and picked some again); releasing the whole old list put
+            // those seats back on sale while they sat in the buyer's cart.
+            if (isset($items[$itemKey])) {
+                $previousSeatUids = $items[$itemKey]['seat_uids'] ?? [];
+                $previousSeatingId = $items[$itemKey]['event_seating_id'] ?? null;
+                $staleSeatUids = ((int) $previousSeatingId === (int) $validated['event_seating_id'])
+                    ? array_values(array_diff($previousSeatUids, $holdResult['held']))
+                    : $previousSeatUids;
+
+                if (!empty($staleSeatUids) && $previousSeatingId) {
+                    $this->seatHoldService->releaseSeats(
+                        $previousSeatingId,
+                        $staleSeatUids,
+                        $sessionId
+                    );
+                }
+
+                // Drop the old entry: MarketplaceCart::addItem() only bumps the
+                // quantity of an existing key, which kept the old seat list.
+                $cart->removeItem($itemKey);
             }
 
             // Add/update item with seat information

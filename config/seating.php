@@ -44,6 +44,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Enforce Seats At Checkout
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, marketplace checkout rejects a seated ticket type that
+    | arrives without one seat per ticket (a sales channel without the seat
+    | picker). Set to false only to let such a channel keep selling while it
+    | is being updated — its tickets will have no seat.
+    |
+    */
+
+    'enforce_seats_at_checkout' => env('SEATING_ENFORCE_SEATS_AT_CHECKOUT', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Rate Limits
     |--------------------------------------------------------------------------
     |

@@ -583,8 +583,15 @@ class CheckoutController extends BaseController
                 // leaving quantity intact. Reject the whole checkout so
                 // they go back and re-pick instead of paying for blanks.
                 $itemSeatUids = $item['seat_uids'] ?? [];
-                $hasSeatedTicketType = ($ticketType && method_exists($ticketType, 'getAttribute') && $ticketType->getAttribute('has_seating'))
-                    || ($mktTicketType && method_exists($mktTicketType, 'getAttribute') && $mktTicketType->getAttribute('has_seating'));
+                // `has_seating` is not a column — it is computed by the event
+                // API (type has rows/sections assigned AND the event has a seat
+                // map). Mirror that here, otherwise a client that sends only a
+                // quantity (no seat picker) gets tickets without a seat.
+                $hasSeatedTicketType = $ticketType
+                    && $event
+                    && config('seating.enforce_seats_at_checkout', true)
+                    && $ticketType->hasSeatingAssigned()
+                    && \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->published()->exists();
                 if (!empty($item['event_seating_id']) || $hasSeatedTicketType || !empty($itemSeatUids)) {
                     if (count($itemSeatUids) !== (int) $quantity) {
                         Log::channel('marketplace')->warning('Checkout: seat/quantity mismatch on seated item', [
