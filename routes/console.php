@@ -201,9 +201,9 @@ Schedule::command('db:backup --verify')
     });
 
 // Daily at 04:30: drop rendered invitation PDFs for events that ended more
-// than 30 days ago (plus deleted/orphan batches). They are regenerable on
+// than 1 day ago (plus deleted/orphan batches). They are regenerable on
 // demand and had grown to 18 GB.
-Schedule::command('invitations:prune-pdfs --days=30 --force')
+Schedule::command('invitations:prune-pdfs --days=1 --force')
     ->dailyAt('04:30')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping()
