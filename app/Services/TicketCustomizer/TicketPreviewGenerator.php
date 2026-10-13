@@ -20,6 +20,11 @@ class TicketPreviewGenerator
     private const PDF_IMAGE_JPEG_MIN_PIXELS = 200_000;
     private const PDF_IMAGE_CACHE_SECONDS = 600;
 
+    /** A one-line text layer is never shrunk below this share of its designed size. */
+    private const TEXT_FIT_MIN_SCALE = 0.5;
+
+    private static ?\Dompdf\FontMetrics $fontMetrics = null;
+
     /** @var array<string, array{uri: string, at: int}> */
     private static array $pdfImageCache = [];
 
@@ -239,6 +244,7 @@ class TicketPreviewGenerator
         // pentru a permite HTML inline (ex: {{ order.addon_services_html }} cu <img> QR-uri).
         $isHtmlContent = (bool) preg_match('/\{\{\s*[^}]*_html\s*\}\}/', $rawContent);
         $content = $this->replacePlaceholders($rawContent, $data);
+        $plainContent = $isHtmlContent ? null : trim($content);
         if (!$isHtmlContent) {
             $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
         }
@@ -268,8 +274,41 @@ class TicketPreviewGenerator
         $hasMultiline = $isHtmlContent || str_contains($content, "\n");
         $whiteSpaceCss = $hasMultiline ? ' white-space: pre-line;' : '';
 
+        // Auto-fit: a one-line box whose text is too wide used to wrap onto a
+        // second line hidden by overflow (a 16-char code showed its first 11).
+        // Shrink the font just enough for the whole text to fit on the line.
+        if (!$hasMultiline && $plainContent !== null && $plainContent !== '' && $w > 0 && $h < 2 * $lineHeightPt) {
+            $textWidth = $this->measureTextWidthPt($plainContent, $fontWeight, $fontSizePt);
+            if ($textWidth !== null && $textWidth > $w) {
+                $fitted = floor($fontSizePt * ($w / $textWidth) * 0.98 * 10) / 10;
+                $fontSizePt = max($fitted, round($fontSizePt * self::TEXT_FIT_MIN_SCALE, 1), 4.0);
+                $whiteSpaceCss = ' white-space: nowrap;';
+            }
+        }
+
         // Use DejaVu Sans (DomPDF built-in) to guarantee rendering
         return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; font-size: {$fontSizePt}pt; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: 'DejaVu Sans', sans-serif; line-height: {$lineHeightPt}pt; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word;{$whiteSpaceCss}{$effectCss}\">{$content}</div>\n";
+    }
+
+    /**
+     * Width of a single line of text in DejaVu Sans, measured with dompdf's
+     * own font metrics so it matches what the PDF renderer will lay out.
+     * Returns null when the metrics are unavailable (the caller then leaves
+     * the layer exactly as designed).
+     */
+    private function measureTextWidthPt(string $text, string $fontWeight, float $fontSizePt): ?float
+    {
+        try {
+            if (self::$fontMetrics === null) {
+                $dompdf = function_exists('app') && app()->bound('dompdf') ? app('dompdf') : new \Dompdf\Dompdf();
+                self::$fontMetrics = $dompdf->getFontMetrics();
+            }
+            $font = self::$fontMetrics->getFont('DejaVu Sans', $fontWeight);
+
+            return $font ? (float) self::$fontMetrics->getTextWidth($text, $font, $fontSizePt) : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h, string $effectCss = ''): string
