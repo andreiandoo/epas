@@ -1302,8 +1302,10 @@ class Invitations extends Page
                 'urls' => null,
             ]);
 
-        // Reset batch qty_rendered
-        $batch->update(['qty_rendered' => 0]);
+        // Reset batch qty_rendered and put it back in draft — renderBatch()
+        // only renders drafts, so without this a regenerate deleted the PDFs
+        // and then refused to rebuild them.
+        $batch->update(['qty_rendered' => 0, 'status' => 'draft']);
 
         // Now regenerate
         $this->renderBatch($batchId);
