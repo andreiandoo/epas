@@ -53,6 +53,34 @@ if ($meSlug === '' || !hash_equals($meSlug, (string) $organizerSlug)) {
     exit;
 }
 
+// The package gets the organizer's own whitelabel key — a restricted key that
+// only works for this organizer's events. The marketplace API key never
+// leaves this server; if the organizer key cannot be obtained, no package.
+$keyCurl = curl_init(API_BASE_URL . '/organizer/whitelabel-key');
+curl_setopt_array($keyCurl, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 15,
+    CURLOPT_HTTPHEADER => [
+        'Accept: application/json',
+        'X-API-Key: ' . API_KEY,
+        'Authorization: ' . $authHeader,
+    ],
+]);
+$keyRaw = curl_exec($keyCurl);
+$keyStatus = (int) curl_getinfo($keyCurl, CURLINFO_HTTP_CODE);
+curl_close($keyCurl);
+
+$keyData = $keyStatus === 200 ? json_decode((string) $keyRaw, true) : null;
+$whitelabelKey = is_array($keyData) ? (string) ($keyData['data']['key'] ?? '') : '';
+
+if (strpos($whitelabelKey, 'wlk_') !== 0) {
+    http_response_code(502);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Whitelabel key unavailable']);
+    exit;
+}
+
 // Fetch organizer data to get settings
 $orgData = api_get('/marketplace-events/organizers/' . urlencode($organizerSlug));
 $org = $orgData['data'] ?? null;
@@ -90,7 +118,7 @@ $trackingFbPixelId = $org['widget_tracking_fb_pixel_id'] ?? $org['settings']['wi
 $replacements = [
     '{{API_BASE_URL}}' => API_BASE_URL,
     '{{STORAGE_URL}}' => STORAGE_URL,
-    '{{API_KEY}}' => API_KEY,
+    '{{API_KEY}}' => $whitelabelKey,
     '{{ORG_ID}}' => (string) ($org['id'] ?? 0),
     '{{ORG_SLUG}}' => $organizerSlug,
     '{{ORG_NAME}}' => $orgName,

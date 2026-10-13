@@ -226,6 +226,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </button>
                         <p id="widget-config-save-hint" class="hidden text-xs text-green-600">Setările au fost salvate.</p>
                     </div>
+
+                    <!-- Whitelabel API key -->
+                    <div class="pt-6 mt-6 border-t border-border">
+                        <h3 class="mb-1 text-sm font-bold text-secondary">Cheia API a site-ului tău</h3>
+                        <p class="mb-3 text-xs text-muted">Este deja inclusă în pachet (<code class="px-1 py-0.5 bg-slate-100 rounded">includes/config.php</code>, linia <code class="px-1 py-0.5 bg-slate-100 rounded">API_KEY</code>) și funcționează doar pentru evenimentele tale. Dacă a ajuns la cine nu trebuie, genereaz-o din nou: cea veche se oprește imediat, iar site-ul tău nu mai vinde până pui cheia nouă în <code class="px-1 py-0.5 bg-slate-100 rounded">config.php</code>.</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="text" id="wl-api-key" readonly value="" placeholder="Apasă „Arată cheia”" class="flex-1 min-w-[240px] px-3 py-2 font-mono text-xs border rounded-lg border-border bg-slate-50 text-secondary">
+                            <button type="button" onclick="WidgetsPage.showApiKey()" class="px-4 py-2 text-xs font-semibold border rounded-lg border-border text-secondary hover:bg-slate-50 transition">Arată cheia</button>
+                            <button type="button" onclick="WidgetsPage.copyApiKey()" class="px-4 py-2 text-xs font-semibold border rounded-lg border-border text-secondary hover:bg-slate-50 transition">Copiază</button>
+                            <button type="button" onclick="WidgetsPage.regenerateApiKey()" class="px-4 py-2 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition">Generează cheie nouă</button>
+                        </div>
+                        <p id="wl-api-key-msg" class="hidden mt-2 text-xs"></p>
+                    </div>
                 </div>
             </div>
 
@@ -783,6 +796,56 @@ const WidgetsPage = {
         if (orgSlug) s.setAttribute('data-organizer', orgSlug);
         if (limit) s.setAttribute('data-limit', limit);
         document.body.appendChild(s);
+    },
+
+    // Whitelabel API key (restricted to this organizer's events)
+    async apiKeyRequest(method) {
+        const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
+        const resp = await fetch(this.siteUrl + '/embed/whitelabel-key.php', {
+            method: method,
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+        });
+        const json = await resp.json().catch(() => null);
+        const key = json && json.data && json.data.key;
+        if (!resp.ok || !key) throw new Error((json && json.message) || ('HTTP ' + resp.status));
+        return key;
+    },
+
+    apiKeyMessage(text, ok) {
+        const msg = document.getElementById('wl-api-key-msg');
+        msg.textContent = text;
+        msg.className = 'mt-2 text-xs ' + (ok ? 'text-green-600' : 'text-red-600');
+    },
+
+    async showApiKey() {
+        try {
+            document.getElementById('wl-api-key').value = await this.apiKeyRequest('GET');
+            return true;
+        } catch (e) {
+            this.apiKeyMessage('Cheia nu a putut fi încărcată. Reîncarcă pagina și încearcă din nou.', false);
+            return false;
+        }
+    },
+
+    async copyApiKey() {
+        const input = document.getElementById('wl-api-key');
+        if (!input.value && !(await this.showApiKey())) return;
+        try {
+            await navigator.clipboard.writeText(input.value);
+            this.apiKeyMessage('Cheia a fost copiată.', true);
+        } catch (e) {
+            input.select();
+        }
+    },
+
+    async regenerateApiKey() {
+        if (!confirm('Generezi o cheie nouă? Cheia actuală se oprește imediat, iar site-ul tău nu mai poate vinde bilete până înlocuiești API_KEY în includes/config.php cu cheia nouă.')) return;
+        try {
+            document.getElementById('wl-api-key').value = await this.apiKeyRequest('POST');
+            this.apiKeyMessage('Cheie nouă generată. Pune-o acum în includes/config.php pe site-ul tău.', true);
+        } catch (e) {
+            this.apiKeyMessage('Cheia nu a putut fi generată. Încearcă din nou.', false);
+        }
     },
 
     // The package is only served to the logged-in organizer: the request
