@@ -200,6 +200,17 @@ Schedule::command('db:backup --verify')
         \Log::error('Daily database backup (db:backup) failed');
     });
 
+// Daily at 04:30: drop rendered invitation PDFs for events that ended more
+// than 30 days ago (plus deleted/orphan batches). They are regenerable on
+// demand and had grown to 18 GB.
+Schedule::command('invitations:prune-pdfs --days=30 --force')
+    ->dailyAt('04:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        \Log::error('Invitation PDF prune (invitations:prune-pdfs) failed');
+    });
+
 // Schedule invoice status transition from 'new' to 'outstanding' (daily at 1 AM)
 Schedule::command('invoices:transition-new --grace-days=3')
     ->dailyAt('01:00')
