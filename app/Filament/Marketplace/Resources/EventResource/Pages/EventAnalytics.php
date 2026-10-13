@@ -718,7 +718,8 @@ class EventAnalytics extends Page implements HasForms
 
             $this->showExportModal = false;
             $this->redirect($this->exportService->getDownloadUrl($filepath));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
             Notification::make()
                 ->danger()
                 ->title('Export Failed')
@@ -744,7 +745,8 @@ class EventAnalytics extends Page implements HasForms
 
             $this->showExportModal = false;
             $this->redirect($this->exportService->getDownloadUrl($filepath));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
             Notification::make()
                 ->danger()
                 ->title('Export Failed')
@@ -766,7 +768,8 @@ class EventAnalytics extends Page implements HasForms
 
             $this->showExportModal = false;
             $this->redirect($this->exportService->getDownloadUrl($filepath));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
             Notification::make()
                 ->danger()
                 ->title('Export Failed')

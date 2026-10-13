@@ -60,7 +60,8 @@ class HealthCheckService
             // Check memory
             $memoryUsage = memory_get_usage(true);
             $memoryLimit = $this->returnBytes(ini_get('memory_limit'));
-            $memoryUsagePercent = ($memoryUsage / $memoryLimit) * 100;
+            // memory_limit = -1 (unlimited, e.g. CLI/scheduler) has no meaningful percentage
+            $memoryUsagePercent = $memoryLimit > 0 ? ($memoryUsage / $memoryLimit) * 100 : 0;
 
             $responseTime = (microtime(true) - $startTime) * 1000;
 

@@ -18,9 +18,11 @@ use Illuminate\Support\Facades\Log;
  * service tells ambilet to drop those entries for the affected events, so
  * the next visitor gets the fresh page — no waiting, no ?preview=1.
  *
- * Sync HTTP with a 3s timeout — fire-and-forget. If ambilet is down or
- * the request times out, we just log it; the worst case is the existing
- * TTLs still apply.
+ * Fire-and-forget: on web requests the call runs after the response has
+ * been sent (ambilet scans its whole page-cache directory, which regularly
+ * took longer than the old inline 3s timeout and stalled the admin save).
+ * If ambilet is down or the request times out, we just log it; the worst
+ * case is the existing TTLs still apply.
  */
 class AmbiletCacheBuster
 {
@@ -103,9 +105,22 @@ class AmbiletCacheBuster
             return;
         }
 
+        // Console (commands, queue workers) has no response to wait for and a
+        // long-lived worker would never reach its terminating callbacks.
+        if (app()->runningInConsole()) {
+            $this->send($slugs, $context);
+
+            return;
+        }
+
+        app()->terminating(fn () => $this->send($slugs, $context));
+    }
+
+    protected function send(array $slugs, array $context): void
+    {
         try {
-            $response = Http::timeout(3)
-                ->connectTimeout(2)
+            $response = Http::timeout(15)
+                ->connectTimeout(3)
                 ->acceptJson()
                 ->post(config('services.ambilet.cache_bust_url'), [
                     'token' => config('services.ambilet.cache_bust_token'),

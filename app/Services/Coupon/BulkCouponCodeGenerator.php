@@ -212,7 +212,7 @@ class BulkCouponCodeGenerator
         return response()->streamDownload(function () use ($batch, $eventTitle, $eventDate, $ticketName, $organizerName) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Cod', 'Eveniment', 'Data eveniment', 'Tip bilet', 'Reducere', 'Valabil de la', 'Expiră la', 'Utilizări', 'Status', 'Organizator', 'Lot'], ';');
+            fputcsv($out, ['Cod', 'Eveniment', 'Data eveniment', 'Tip bilet', 'Reducere', 'Valabil de la', 'Expiră la', 'Utilizări', 'Status', 'Organizator', 'Lot'], ';', '"', '\\');
 
             $batch->codes()->orderBy('code')->chunk(1000, function ($codes) use ($out, $batch, $eventTitle, $eventDate, $ticketName, $organizerName) {
                 foreach ($codes as $c) {
@@ -231,7 +231,7 @@ class BulkCouponCodeGenerator
                         ['active' => 'Activ', 'disabled' => 'Inactiv', 'exhausted' => 'Folosit', 'expired' => 'Expirat'][$c->status] ?? $c->status,
                         $organizerName,
                         $batch->label,
-                    ], ';');
+                    ], ';', '"', '\\');
                 }
             });
 

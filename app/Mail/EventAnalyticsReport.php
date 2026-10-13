@@ -28,7 +28,7 @@ class EventAnalyticsReport extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        $eventName = $this->event->title_translated ?? $this->event->title ?? 'Event';
+        $eventName = \App\Services\Analytics\EventExportService::eventTitle($this->event);
         $periodLabel = $this->reportData['schedule']['frequency'] ?? 'Analytics';
 
         return new Envelope(

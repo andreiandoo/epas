@@ -547,7 +547,11 @@ class PaymentController extends BaseController
                 // Mirrors the same idempotency the success branch above
                 // already enforces for already-paid orders.
                 if (in_array($order->status, ['paid', 'completed', 'confirmed', 'refunded', 'partially_refunded'])) {
-                    Log::channel('marketplace')->warning('Late/duplicate Netopia callback for already-finalized order — ignoring', [
+                    // A 'refunded' (credit) IPN is Netopia echoing a refund we
+                    // started ourselves — expected, so it stays out of the
+                    // warning-level error dashboard.
+                    $lateLevel = $result['status'] === 'refunded' ? 'info' : 'warning';
+                    Log::channel('marketplace')->log($lateLevel, 'Late/duplicate Netopia callback for already-finalized order — ignoring', [
                         'order_id' => $order->id,
                         'order_number' => $order->order_number,
                         'current_status' => $order->status,

@@ -178,7 +178,7 @@ class ScheduledReportService
 
         // Prepare alert data
         $alertData = [
-            'event_name' => $event->title_translated ?? $event->title,
+            'event_name' => \App\Services\Analytics\EventExportService::eventTitle($event),
             'goal_type' => $goal->type_label,
             'goal_name' => $goal->name,
             'threshold' => $threshold,

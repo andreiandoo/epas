@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Analytics Report - {{ $event->title_translated ?? $event->title }}</title>
+    <title>Analytics Report - {{ $event_title }}</title>
     <style>
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
@@ -122,7 +122,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ $event->title_translated ?? $event->title }}</h1>
+        <h1>{{ $event_title }}</h1>
         <div class="subtitle">
             Analytics Report | {{ $date_range['start']->format('M d, Y') }} - {{ $date_range['end']->format('M d, Y') }}
         </div>

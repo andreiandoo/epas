@@ -37,7 +37,7 @@ class EventExportService
 
         // Header info
         $csvContent[] = ['Event Analytics Report'];
-        $csvContent[] = ['Event', $event->title_translated ?? $event->title];
+        $csvContent[] = ['Event', self::eventTitle($event)];
         $csvContent[] = ['Period', $dateRange['start']->format('Y-m-d') . ' to ' . $dateRange['end']->format('Y-m-d')];
         $csvContent[] = ['Generated', now()->format('Y-m-d H:i:s')];
         $csvContent[] = [];
@@ -173,6 +173,7 @@ class EventExportService
         // Gather all data
         $data = [
             'event' => $event,
+            'event_title' => self::eventTitle($event),
             'period' => $period,
             'date_range' => $dateRange,
             'generated_at' => now(),
@@ -230,7 +231,7 @@ class EventExportService
         $data = [
             'event' => [
                 'id' => $event->id,
-                'name' => $event->title_translated ?? $event->title,
+                'name' => self::eventTitle($event),
                 'date' => $event->start_date?->format('M d, Y'),
                 'days_until' => $event->days_until,
                 'status' => $event->status_label,
@@ -306,7 +307,7 @@ class EventExportService
         $orders = $query->get();
 
         $csvContent = [];
-        $csvContent[] = ['Sales Export - ' . ($event->title_translated ?? $event->title)];
+        $csvContent[] = ['Sales Export - ' . self::eventTitle($event)];
         $csvContent[] = ['Generated', now()->format('Y-m-d H:i:s')];
         $csvContent[] = [];
         $csvContent[] = [
@@ -408,6 +409,22 @@ class EventExportService
 
     /* Helper methods */
 
+    /**
+     * Event title as a plain string. `title` is a translatable JSON column,
+     * so reading it directly yields an array ("Array to string conversion").
+     */
+    public static function eventTitle($event): string
+    {
+        $title = $event->title ?? $event->name ?? null;
+
+        if (is_array($title)) {
+            $title = $title[app()->getLocale()] ?? $title['ro'] ?? $title['en']
+                ?? collect($title)->first(fn ($v) => is_string($v) && $v !== '');
+        }
+
+        return is_string($title) && $title !== '' ? $title : 'Event';
+    }
+
     protected function getDateRange(string $period): array
     {
         return match ($period) {
@@ -421,7 +438,7 @@ class EventExportService
 
     protected function generateFilename(Event $event, string $extension, string $type = 'analytics'): string
     {
-        $slug = Str::slug($event->title_translated ?? $event->title ?? 'event');
+        $slug = Str::slug(self::eventTitle($event));
         $date = now()->format('Y-m-d_His');
         return "{$slug}_{$type}_{$date}.{$extension}";
     }
