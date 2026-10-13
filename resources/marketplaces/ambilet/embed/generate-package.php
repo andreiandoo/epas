@@ -16,6 +16,43 @@ if (!$organizerSlug) {
     exit;
 }
 
+// The package contains the API key, so it is only handed to the logged-in
+// organizer it belongs to. The widgets page sends the organizer token as a
+// Bearer header; without a valid one that resolves to this slug: no download.
+$authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+if (stripos($authHeader, 'Bearer ') !== 0 || strlen($authHeader) < 20) {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Authentication required']);
+    exit;
+}
+
+$meCurl = curl_init(API_BASE_URL . '/organizer/me');
+curl_setopt_array($meCurl, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 15,
+    CURLOPT_HTTPHEADER => [
+        'Accept: application/json',
+        'X-API-Key: ' . API_KEY,
+        'Authorization: ' . $authHeader,
+    ],
+]);
+$meRaw = curl_exec($meCurl);
+$meStatus = (int) curl_getinfo($meCurl, CURLINFO_HTTP_CODE);
+curl_close($meCurl);
+
+$me = $meStatus === 200 ? json_decode((string) $meRaw, true) : null;
+$meOrganizer = is_array($me) ? ($me['data']['organizer'] ?? $me['organizer'] ?? $me['data'] ?? null) : null;
+$meSlug = is_array($meOrganizer) ? (string) ($meOrganizer['slug'] ?? '') : '';
+
+if ($meSlug === '' || !hash_equals($meSlug, (string) $organizerSlug)) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Not allowed']);
+    exit;
+}
+
 // Fetch organizer data to get settings
 $orgData = api_get('/marketplace-events/organizers/' . urlencode($organizerSlug));
 $org = $orgData['data'] ?? null;
