@@ -14,6 +14,15 @@ class TicketPreviewGenerator
 {
     private const MM_TO_PT = 2.8346;
 
+    /** Resolution template images are capped at inside generated PDFs. */
+    private const PDF_IMAGE_DPI = 300;
+    private const PDF_IMAGE_JPEG_QUALITY = 88;
+    private const PDF_IMAGE_JPEG_MIN_PIXELS = 200_000;
+    private const PDF_IMAGE_CACHE_SECONDS = 600;
+
+    /** @var array<string, array{uri: string, at: int}> */
+    private static array $pdfImageCache = [];
+
     public function __construct(
         private TicketVariableService $variableService
     ) {}
@@ -371,7 +380,7 @@ class TicketPreviewGenerator
             return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: #f3f4f6; border: 1pt solid #d1d5db;{$effectCss}\"></div>\n";
         }
 
-        $dataUri = $this->fetchImageAsDataUri($src);
+        $dataUri = $this->fetchImageForPdf($src, $w, $h);
         $imgSrc = $dataUri ?: $src;
 
         // For 'contain' mode, calculate scaled dimensions preserving aspect ratio
@@ -392,6 +401,171 @@ class TicketPreviewGenerator
         }
 
         return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt;{$effectCss}\">\n";
+    }
+
+    /**
+     * Fetch a template image and shrink it for embedding in a PDF.
+     *
+     * dompdf copies a JPEG into the PDF as-is, but unpacks a PNG and stores
+     * its raw pixels: a 1672x941 PNG adds ~2 MB to every ticket/invitation
+     * no matter how small the PNG file was. So the image is capped at print
+     * resolution for the box it is drawn in and, when it has no transparency,
+     * re-encoded as JPEG. Results are memoised so a batch of invitations
+     * downloads and processes each template image once.
+     *
+     * Any failure returns the untouched image, exactly as before.
+     */
+    private function fetchImageForPdf(string $src, float $boxWPt, float $boxHPt): ?string
+    {
+        $key = md5($src) . '|' . round($boxWPt) . 'x' . round($boxHPt);
+        $cached = self::$pdfImageCache[$key] ?? null;
+        if ($cached && $cached['at'] > time() - self::PDF_IMAGE_CACHE_SECONDS) {
+            return $cached['uri'];
+        }
+
+        $dataUri = $this->fetchImageAsDataUri($src);
+        if ($dataUri === null) {
+            return null;
+        }
+
+        try {
+            $dataUri = $this->optimizeImageDataUri($dataUri, $boxWPt, $boxHPt);
+        } catch (\Throwable $e) {
+            // Keep the original image
+        }
+
+        if (count(self::$pdfImageCache) >= 20) {
+            self::$pdfImageCache = [];
+        }
+        self::$pdfImageCache[$key] = ['uri' => $dataUri, 'at' => time()];
+
+        return $dataUri;
+    }
+
+    /**
+     * Downscale to print resolution and convert opaque images to JPEG.
+     * Returns the input unchanged whenever the image cannot be improved.
+     */
+    private function optimizeImageDataUri(string $dataUri, float $boxWPt, float $boxHPt): string
+    {
+        if (!function_exists('imagecreatefromstring') || !preg_match('#^data:image/(png|jpe?g|webp|gif);base64,#i', $dataUri, $m)) {
+            return $dataUri;
+        }
+        $isJpeg = in_array(strtolower($m[1]), ['jpg', 'jpeg'], true);
+
+        $binary = base64_decode(substr($dataUri, strlen($m[0])), true);
+        $size = $binary !== false ? @getimagesizefromstring($binary) : false;
+        if (!$size || $size[0] < 1 || $size[1] < 1) {
+            return $dataUri;
+        }
+        [$srcW, $srcH] = $size;
+
+        // Pixels needed to print the box at PDF_IMAGE_DPI; never upscale.
+        $scale = min(1, max(
+            ($boxWPt / 72 * self::PDF_IMAGE_DPI) / $srcW,
+            ($boxHPt / 72 * self::PDF_IMAGE_DPI) / $srcH
+        ));
+        $dstW = max(1, (int) round($srcW * $scale));
+        $dstH = max(1, (int) round($srcH * $scale));
+        $shrinks = $dstW < $srcW || $dstH < $srcH;
+
+        // A JPEG that already fits is embedded verbatim by dompdf — nothing to gain.
+        if ($isJpeg && !$shrinks) {
+            return $dataUri;
+        }
+
+        // GD needs ~5 bytes per pixel for each of the two canvases; skip
+        // rather than risk an (uncatchable) out-of-memory fatal.
+        $needed = ($srcW * $srcH + $dstW * $dstH) * 5;
+        $limit = $this->memoryLimitBytes();
+        if ($srcW * $srcH > 24_000_000 || ($limit > 0 && $needed > ($limit - memory_get_usage(true)) * 0.6)) {
+            return $dataUri;
+        }
+
+        $source = @imagecreatefromstring($binary);
+        if (!$source) {
+            return $dataUri;
+        }
+        if (!imageistruecolor($source)) {
+            imagepalettetotruecolor($source);
+        }
+
+        // PNG stays PNG when it is transparent, or small enough that JPEG
+        // artefacts on a logo would cost more than the bytes saved.
+        $keepPng = !$isJpeg && (
+            $dstW * $dstH < self::PDF_IMAGE_JPEG_MIN_PIXELS
+            || $this->imageHasTransparency($source, $srcW, $srcH)
+        );
+        if ($keepPng && !$shrinks) {
+            imagedestroy($source);
+
+            return $dataUri;
+        }
+
+        $target = imagecreatetruecolor($dstW, $dstH);
+        if ($keepPng) {
+            imagealphablending($target, false);
+            imagesavealpha($target, true);
+            imagefill($target, 0, 0, imagecolorallocatealpha($target, 0, 0, 0, 127));
+        } else {
+            imagefill($target, 0, 0, imagecolorallocate($target, 255, 255, 255));
+        }
+        imagecopyresampled($target, $source, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+        imagedestroy($source);
+
+        ob_start();
+        $ok = $keepPng ? imagepng($target, null, 9) : imagejpeg($target, null, self::PDF_IMAGE_JPEG_QUALITY);
+        $output = ob_get_clean();
+        imagedestroy($target);
+
+        if (!$ok || $output === false || $output === '') {
+            return $dataUri;
+        }
+
+        return 'data:image/' . ($keepPng ? 'png' : 'jpeg') . ';base64,' . base64_encode($output);
+    }
+
+    /**
+     * True when the image has visibly transparent areas. Checked on a small
+     * resampled copy so large images stay cheap to inspect.
+     */
+    private function imageHasTransparency(\GdImage $image, int $width, int $height): bool
+    {
+        $probeW = min($width, 64);
+        $probeH = min($height, 64);
+        $probe = imagecreatetruecolor($probeW, $probeH);
+        imagealphablending($probe, false);
+        imagesavealpha($probe, true);
+        imagecopyresampled($probe, $image, 0, 0, 0, 0, $probeW, $probeH, $width, $height);
+
+        $transparent = false;
+        for ($y = 0; $y < $probeH && !$transparent; $y++) {
+            for ($x = 0; $x < $probeW; $x++) {
+                if (((imagecolorat($probe, $x, $y) >> 24) & 0x7F) > 0) {
+                    $transparent = true;
+                    break;
+                }
+            }
+        }
+        imagedestroy($probe);
+
+        return $transparent;
+    }
+
+    private function memoryLimitBytes(): int
+    {
+        $value = trim((string) ini_get('memory_limit'));
+        if ($value === '' || $value === '-1') {
+            return 0;
+        }
+        $number = (int) $value;
+
+        return match (strtolower(substr($value, -1))) {
+            'g' => $number * 1073741824,
+            'm' => $number * 1048576,
+            'k' => $number * 1024,
+            default => $number,
+        };
     }
 
     /**
