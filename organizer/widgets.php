@@ -785,9 +785,28 @@ const WidgetsPage = {
         document.body.appendChild(s);
     },
 
-    downloadPackage() {
+    // The package is only served to the logged-in organizer: the request
+    // carries the organizer token, so it is fetched and saved as a file
+    // instead of navigating to the URL.
+    async downloadPackage() {
         const slug = this.organizer?.slug || '';
-        window.location.href = this.siteUrl + '/embed/generate-package.php?organizer=' + encodeURIComponent(slug);
+        const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
+        try {
+            const resp = await fetch(this.siteUrl + '/embed/generate-package.php?organizer=' + encodeURIComponent(slug), {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const url = URL.createObjectURL(await resp.blob());
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bilete-' + slug + '.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } catch (e) {
+            alert('Pachetul nu a putut fi descărcat. Reîncarcă pagina, autentifică-te din nou și încearcă încă o dată.');
+        }
     },
 
     copyCode(type) {
