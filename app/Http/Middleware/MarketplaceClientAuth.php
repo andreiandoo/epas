@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\MarketplaceClient;
+use App\Models\MarketplaceWhitelabelKey;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -47,6 +48,11 @@ class MarketplaceClientAuth
                 'success' => false,
                 'message' => 'API key is required',
             ], 401);
+        }
+
+        // Whitelabel site of an organizer: restricted key, handled separately
+        if (MarketplaceWhitelabelKey::isWhitelabelKey($apiKey)) {
+            return $this->handleWhitelabelKey($request, $next, $apiKey);
         }
 
         // Find marketplace client by API key (cached for 10 minutes)
@@ -108,6 +114,67 @@ class MarketplaceClientAuth
         $this->addCorsHeaders($request, $response, $client);
 
         return $response;
+    }
+
+    /**
+     * Authenticate a request made with an organizer's whitelabel key.
+     *
+     * The key resolves to its marketplace client, so controllers work as
+     * usual, but only the endpoints a whitelabel site needs are let through
+     * and only for the organizer's own events (MarketplaceWhitelabelKey::
+     * scopeViolation). The client's IP/domain restrictions are not applied:
+     * they describe the marketplace's own servers, not the organizer's.
+     */
+    protected function handleWhitelabelKey(Request $request, Closure $next, string $apiKey): Response
+    {
+        $key = MarketplaceWhitelabelKey::resolve($apiKey);
+
+        if (!$key) {
+            $this->logFailedAttempt($request, 'invalid_api_key');
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid API key',
+            ], 401);
+        }
+
+        $client = MarketplaceClient::find($key->marketplace_client_id);
+        $organizer = $key->organizer;
+
+        if (!$client || !$client->isActive() || !$organizer || $organizer->status !== 'active'
+            || !($organizer->settings['widget_enabled'] ?? false)) {
+            $this->logFailedAttempt($request, 'inactive_client', $client);
+            return response()->json([
+                'success' => false,
+                'message' => 'Whitelabel access is not active',
+            ], 403);
+        }
+
+        $violation = $key->scopeViolation($request);
+        if ($violation !== null) {
+            Log::warning('Whitelabel API key used outside its scope', [
+                'reason' => $violation,
+                'organizer_id' => $organizer->id,
+                'client_id' => $client->id,
+                'ip' => $request->ip(),
+                'method' => $request->method(),
+                'endpoint' => $request->path(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'This API key is not allowed to access this resource',
+            ], 403);
+        }
+
+        $request->attributes->set('marketplace_client', $client);
+        $request->attributes->set('whitelabel_organizer_id', $organizer->id);
+
+        $this->logApiCall($request, $client);
+
+        if (!$key->last_used_at || $key->last_used_at->lt(now()->subHour())) {
+            $key->forceFill(['last_used_at' => now()])->saveQuietly();
+        }
+
+        return $next($request);
     }
 
     /**

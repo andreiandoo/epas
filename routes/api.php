@@ -1846,6 +1846,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.mobile-settings.update');
         Route::post('/widget-image', [OrganizerAuthController::class, 'uploadWidgetImage'])
             ->name('api.marketplace-client.organizer.widget-image.upload');
+        Route::get('/whitelabel-key', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\WhitelabelKeyController::class, 'show'])
+            ->name('api.marketplace-client.organizer.whitelabel-key');
+        Route::post('/whitelabel-key/regenerate', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\WhitelabelKeyController::class, 'regenerate'])
+            ->name('api.marketplace-client.organizer.whitelabel-key.regenerate');
         Route::put('/password', [OrganizerAuthController::class, 'updatePassword'])
             ->name('api.marketplace-client.organizer.password.update');
         Route::put('/payout-details', [OrganizerAuthController::class, 'updatePayoutDetails'])
