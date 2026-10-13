@@ -25,6 +25,13 @@ class TicketPreviewGenerator
 
     private static ?\Dompdf\FontMetrics $fontMetrics = null;
 
+    /**
+     * Counts QR codes, barcodes and images that could not be fetched and
+     * were replaced by a placeholder (or left for dompdf to fetch). Callers
+     * that must not save a degraded PDF compare it before and after a render.
+     */
+    public static int $assetFailures = 0;
+
     /** @var array<string, array{uri: string, at: int}> */
     private static array $pdfImageCache = [];
 
@@ -420,6 +427,9 @@ class TicketPreviewGenerator
         }
 
         $dataUri = $this->fetchImageForPdf($src, $w, $h);
+        if (!$dataUri) {
+            self::$assetFailures++;
+        }
         $imgSrc = $dataUri ?: $src;
 
         // For 'contain' mode, calculate scaled dimensions preserving aspect ratio
@@ -673,11 +683,12 @@ class TicketPreviewGenerator
         ]);
 
         $result = $this->fetchImageAsDataUri($url);
-        if ($result) {
+        if ($result && str_starts_with($result, 'data:image/')) {
             return $result;
         }
 
         // Fallback: simple black square placeholder
+        self::$assetFailures++;
         return 'data:image/svg+xml;base64,' . base64_encode(
             '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#f3f4f6"/><text x="100" y="100" text-anchor="middle" font-size="14" fill="#666">QR</text></svg>'
         );
@@ -696,6 +707,8 @@ class TicketPreviewGenerator
         }
 
         // Fallback placeholder
+        self::$assetFailures++;
+
         return 'data:image/svg+xml;base64,' . base64_encode(
             '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><rect width="300" height="100" fill="#f3f4f6"/><text x="150" y="50" text-anchor="middle" font-size="14" fill="#666">' . htmlspecialchars($data) . '</text></svg>'
         );
