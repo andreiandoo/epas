@@ -219,7 +219,7 @@ class StaffController extends BaseController
             $out = fopen('php://output', 'w');
             // UTF-8 BOM ca să se deschidă corect în Excel
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['ID', 'Angajat', 'Telefon', 'Pozitie', 'Eveniment', 'Punct check-in', 'Data si ora'], ';');
+            fputcsv($out, ['ID', 'Angajat', 'Telefon', 'Pozitie', 'Eveniment', 'Punct check-in', 'Data si ora'], ';', escape: '\\');
 
             $query->chunk(500, function ($chunk) use ($out) {
                 foreach ($chunk as $c) {
@@ -234,7 +234,7 @@ class StaffController extends BaseController
                         $eventName,
                         $c->location ?? '',
                         $c->checked_in_at?->format('Y-m-d H:i:s'),
-                    ], ';');
+                    ], ';', escape: '\\');
                 }
             });
             fclose($out);

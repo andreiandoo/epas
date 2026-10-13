@@ -120,8 +120,8 @@ class FetchBrevoSuppressionsCommand extends Command
 
         if ($report) {
             $fh = fopen($report, 'w');
-            fputcsv($fh, ['email', 'source', 'brevo_code_or_event', 'internal_reason', 'when']);
-            foreach ($rowsForReport as $row) fputcsv($fh, $row);
+            fputcsv($fh, ['email', 'source', 'brevo_code_or_event', 'internal_reason', 'when'], escape: '\\');
+            foreach ($rowsForReport as $row) fputcsv($fh, $row, escape: '\\');
             fclose($fh);
             $this->info("Report written to {$report}");
         }

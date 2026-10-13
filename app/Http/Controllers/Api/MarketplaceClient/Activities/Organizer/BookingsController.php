@@ -136,7 +136,7 @@ class BookingsController extends BaseController
         return response()->streamDownload(function () use ($rows, $cell) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Data', 'Până la', 'Ora', 'Produs', 'Bilet', 'Cantitate', 'Pachet', 'Client', 'Telefon', 'E-mail', 'Cod rezervare', 'Comandă', 'Status', 'Valoare (lei)', 'Nr. înmatriculare', 'Suplimente'], ';');
+            fputcsv($out, ['Data', 'Până la', 'Ora', 'Produs', 'Bilet', 'Cantitate', 'Pachet', 'Client', 'Telefon', 'E-mail', 'Cod rezervare', 'Comandă', 'Status', 'Valoare (lei)', 'Nr. înmatriculare', 'Suplimente'], ';', escape: '\\');
             foreach ($rows as $b) {
                 $d = BookingDescriber::booking($b);
                 fputcsv($out, array_map($cell, [
@@ -146,7 +146,7 @@ class BookingsController extends BaseController
                     $b->confirmation_code, $b->order?->order_number ?? '', $b->status,
                     number_format($b->total_cents / 100, 2, ',', ''), $d['vehicle_plate'] ?? '',
                     implode(', ', array_map(fn ($a) => $a['name'] . ' × ' . $a['qty'], $d['addons'])),
-                ]), ';');
+                ]), ';', escape: '\\');
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);

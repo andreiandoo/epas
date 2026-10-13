@@ -67,7 +67,7 @@ class BillingController extends BaseController
         ];
 
         $fh = fopen('php://temp', 'r+');
-        fputcsv($fh, ['Număr', 'Data', 'Descriere', 'Sumă', 'Monedă', 'Status']);
+        fputcsv($fh, ['Număr', 'Data', 'Descriere', 'Sumă', 'Monedă', 'Status'], escape: '\\');
 
         foreach ($invoices as $inv) {
             fputcsv($fh, [
@@ -77,7 +77,7 @@ class BillingController extends BaseController
                 number_format((float) ($inv['amount'] ?? 0), 2, '.', ''),
                 $currency,
                 $statusLabels[$inv['status'] ?? ''] ?? ($inv['status'] ?? ''),
-            ]);
+            ], escape: '\\');
         }
 
         rewind($fh);

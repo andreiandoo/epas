@@ -133,9 +133,9 @@ class PayoutsReconcileCommand extends Command
 
         if ($csv = $this->option('csv')) {
             $fh = fopen($csv, 'w');
-            fputcsv($fh, $headers);
+            fputcsv($fh, $headers, escape: '\\');
             foreach ($rows as $r) {
-                fputcsv($fh, $r);
+                fputcsv($fh, $r, escape: '\\');
             }
             fclose($fh);
             $this->info("CSV scris in: {$csv} (" . count($rows) . ' randuri)');
