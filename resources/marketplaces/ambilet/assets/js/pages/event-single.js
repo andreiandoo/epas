@@ -597,6 +597,12 @@ const EventPage = {
                 const eventContent = document.getElementById('event-content');
                 if (eventContent) eventContent.style.display = '';
 
+                // The gate hid the mobile purchase bar inline; hand it back to
+                // its CSS (lg:hidden) before render(), which re-hides it for
+                // ended events.
+                const mobileBtn = document.getElementById('mobileTicketBtn');
+                if (mobileBtn) mobileBtn.style.display = '';
+
                 this.render();
                 if (this.event.organizer && this.event.organizer.id) {
                     this.loadOrganizerTracking(this.event.organizer.id);
