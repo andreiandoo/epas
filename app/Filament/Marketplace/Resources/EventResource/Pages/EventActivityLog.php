@@ -223,6 +223,7 @@ class EventActivityLog extends Page
                 $subjectLabel = $isTicketType ? $this->ticketTypeName($activity) : null;
                 $automation = $activity->properties->get('automation');
                 $isAutomated = is_string($automation) && $automation !== '';
+                $workflow = ($isTicketType || $isAutomated) ? null : $this->workflowStep($activity);
 
                 return [
                     'id' => $activity->id,
@@ -230,9 +231,12 @@ class EventActivityLog extends Page
                     'subject_kind' => $isTicketType ? 'ticket_type' : 'event',
                     'subject_label' => $subjectLabel,
                     'is_automated' => $isAutomated,
+                    'workflow' => $workflow,
                     'summary' => $isAutomated
                         ? $this->buildAutomatedSummary($activity, $automation, $subjectLabel)
-                        : $this->buildSummary($activity, $isTicketType, $changes, $subjectLabel),
+                        : ($workflow
+                            ? $this->workflowSummary($workflow)
+                            : $this->buildSummary($activity, $isTicketType, $changes, $subjectLabel)),
                     // Automated actions have no author, whoever's request happened to trigger them.
                     'causer_name' => $isAutomated ? 'Acțiune automată' : $this->getCauserName($activity),
                     'causer_type' => $isAutomated ? 'system' : $this->getCauserType($activity),
@@ -256,8 +260,104 @@ class EventActivityLog extends Page
         ->filter()
         // Drop entries that ended up with nothing meaningful to show
         // (e.g. an "updated" event where every changed column was noise).
-        ->filter(fn ($log) => $log['is_automated'] || $log['event'] === 'created' || $log['event'] === 'deleted' || !empty($log['changes']))
+        ->filter(fn ($log) => $log['is_automated'] || $log['workflow'] || $log['event'] === 'created' || $log['event'] === 'deleted' || !empty($log['changes']))
         ->values();
+    }
+
+    /**
+     * Approval-flow step this update represents, if any: submitted /
+     * resubmitted (organizer), approved / published_directly / unpublished /
+     * rejected (admin). Activities only carry dirty attributes, so a key being
+     * present in `attributes` means that column changed.
+     */
+    protected function workflowStep(Activity $activity): ?string
+    {
+        if ($activity->event !== 'updated') {
+            return null;
+        }
+
+        $old = $activity->properties->get('old');
+        $new = $activity->properties->get('attributes');
+        if (!is_array($old) || !is_array($new)) {
+            return null;
+        }
+
+        $truthy = fn ($v) => $v === true || $v === 1 || $v === '1' || $v === 'true';
+
+        if (array_key_exists('is_published', $new) && $truthy($new['is_published']) !== $truthy($old['is_published'] ?? null)) {
+            if (!$truthy($new['is_published'])) {
+                return 'unpublished';
+            }
+
+            // Published after the organizer asked for it = an approval;
+            // otherwise staff published it without a submission.
+            $submittedAt = $this->record->submitted_at;
+
+            return ($submittedAt && $activity->created_at && $submittedAt->lte($activity->created_at))
+                ? 'approved'
+                : 'published_directly';
+        }
+
+        if (!empty($new['rejected_at'])) {
+            return 'rejected';
+        }
+
+        if (!empty($new['submitted_at'])) {
+            return empty($old['submitted_at']) ? 'submitted' : 'resubmitted';
+        }
+
+        return null;
+    }
+
+    protected function workflowSummary(string $step): string
+    {
+        return match ($step) {
+            'submitted' => 'A trimis evenimentul spre aprobare',
+            'resubmitted' => 'A retrimis evenimentul spre aprobare',
+            'approved' => 'A aprobat și a publicat evenimentul',
+            'published_directly' => 'A publicat evenimentul fără cerere de aprobare de la organizator',
+            'unpublished' => 'A retras evenimentul de pe site (nepublicat)',
+            'rejected' => 'A respins evenimentul',
+            default => 'A actualizat evenimentul',
+        };
+    }
+
+    /**
+     * Where the event currently stands in the approval flow, for the banner
+     * above the timeline. Keys: label, detail, tone (success|warning|danger|gray).
+     */
+    public function getApprovalStatus(): array
+    {
+        $record = $this->record;
+        $moment = fn ($date) => $date?->timezone('Europe/Bucharest')->format('d M Y, H:i');
+
+        if ($record->is_published) {
+            return ['label' => 'Publicat', 'detail' => 'Evenimentul este vizibil pe site.', 'tone' => 'success'];
+        }
+
+        if ($record->rejected_at) {
+            return [
+                'label' => 'Respins',
+                'detail' => 'Respins la ' . $moment($record->rejected_at) . ($record->rejection_reason ? ' — ' . $record->rejection_reason : ''),
+                'tone' => 'danger',
+            ];
+        }
+
+        if ($record->submitted_at) {
+            return [
+                'label' => 'În așteptarea aprobării',
+                'detail' => 'Trimis spre aprobare la ' . $moment($record->submitted_at) . '. Nu este încă vizibil pe site.',
+                'tone' => 'warning',
+            ];
+        }
+
+        return [
+            'label' => 'Ciornă',
+            'detail' => $record->marketplace_organizer_id
+                ? 'Organizatorul nu a trimis încă evenimentul spre aprobare. Nu este vizibil pe site.'
+                : 'Evenimentul nu este publicat și nu este vizibil pe site.',
+            'tone' => 'gray',
+        ];
     }
 
     protected function isTicketTypeActivity(Activity $activity): bool
@@ -297,7 +397,9 @@ class EventActivityLog extends Page
         }
 
         return match ($event) {
-            'created' => 'A creat evenimentul',
+            'created' => ($activity->properties->get('attributes')['is_published'] ?? null) === false
+                ? 'A creat evenimentul ca ciornă'
+                : 'A creat evenimentul',
             'deleted' => 'A șters evenimentul',
             default => $this->summariseEventUpdate($changes),
         };
@@ -653,6 +755,16 @@ class EventActivityLog extends Page
             return $value->format('d M Y H:i');
         }
 
+        // Real timestamps are stored in UTC; show them on the same clock as
+        // the timeline entries.
+        if (in_array($field, ['submitted_at', 'rejected_at'], true) && is_string($value)) {
+            try {
+                return Carbon::parse($value, 'UTC')->timezone('Europe/Bucharest')->format('d M Y H:i');
+            } catch (\Exception $e) {
+                // fall through
+            }
+        }
+
         // Date strings
         if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
             try {
@@ -718,6 +830,12 @@ class EventActivityLog extends Page
             'venue' => Venue::find($id)?->name,
             default => null,
         };
+
+        // Venue names are translatable ({ro, en}); casting the array to string
+        // throws and used to drop the whole timeline entry (incl. "created").
+        if (is_array($name)) {
+            $name = $this->extractTranslatableText($name);
+        }
 
         return $this->nameCache[$cacheKey] = ($name ? (string) $name : "#{$id}");
     }

@@ -3,7 +3,27 @@
         $logs = $this->getActivityLogs();
     @endphp
 
+    @php
+        $approval = $this->getApprovalStatus();
+        $approvalColor = ['success' => '#16a34a', 'warning' => '#d97706', 'danger' => '#dc2626', 'gray' => '#6b7280'][$approval['tone']] ?? '#6b7280';
+        $workflowColors = [
+            'submitted' => '#d97706', 'resubmitted' => '#d97706',
+            'approved' => '#16a34a', 'published_directly' => '#16a34a',
+            'unpublished' => '#6b7280', 'rejected' => '#dc2626',
+        ];
+    @endphp
+
     <div class="space-y-6">
+        {{-- Approval status --}}
+        <div class="flex items-start gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700"
+             style="border-left: 4px solid {{ $approvalColor }}">
+            <div class="min-w-0">
+                <div class="text-xs text-gray-500 dark:text-gray-400">Stare aprobare</div>
+                <div class="text-sm font-semibold" style="color: {{ $approvalColor }}">{{ $approval['label'] }}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-300 break-words">{{ $approval['detail'] }}</div>
+            </div>
+        </div>
+
         {{-- Summary Stats --}}
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -49,9 +69,17 @@
                                             @case('deleted') bg-red-600 @break
                                             @default bg-blue-600
                                         @endswitch
-                                    " @if($log['is_automated']) style="background-color:#d97706" @endif>
+                                    " @if($log['is_automated']) style="background-color:#d97706" @elseif($log['workflow']) style="background-color:{{ $workflowColors[$log['workflow']] ?? '#2563eb' }}" @endif>
                                         @if($log['is_automated'])
                                             <x-heroicon-s-bolt class="w-3.5 h-3.5 text-white" />
+                                        @elseif(in_array($log['workflow'], ['submitted', 'resubmitted'], true))
+                                            <x-heroicon-s-paper-airplane class="w-3.5 h-3.5 text-white" />
+                                        @elseif(in_array($log['workflow'], ['approved', 'published_directly'], true))
+                                            <x-heroicon-s-check class="w-3.5 h-3.5 text-white" />
+                                        @elseif($log['workflow'] === 'rejected')
+                                            <x-heroicon-s-x-mark class="w-3.5 h-3.5 text-white" />
+                                        @elseif($log['workflow'] === 'unpublished')
+                                            <x-heroicon-s-eye-slash class="w-3.5 h-3.5 text-white" />
                                         @elseif($log['subject_kind'] === 'ticket_type')
                                             <x-heroicon-s-ticket class="w-3.5 h-3.5 text-white" />
                                         @else
