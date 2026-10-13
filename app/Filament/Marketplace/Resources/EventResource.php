@@ -5767,6 +5767,30 @@ class EventResource extends Resource
      * the event: an in-app MarketplaceNotification row + a marketplace-routed
      * email. Called from the Approve / Reject Filament actions.
      */
+    /**
+     * Whether the event was created from the organizer account (vs. by staff in
+     * this panel). Events carry no creator column, so this reads the causer of
+     * the "created" activity. Only called for unpublished, unsubmitted rows.
+     */
+    protected static function wasCreatedByOrganizer(Event $event): bool
+    {
+        if (!$event->marketplace_organizer_id) {
+            return false;
+        }
+
+        $organizerTypes = array_unique([
+            \App\Models\MarketplaceOrganizer::class,
+            (new \App\Models\MarketplaceOrganizer)->getMorphClass(),
+        ]);
+
+        return \Spatie\Activitylog\Models\Activity::query()
+            ->whereIn('subject_type', array_unique([Event::class, $event->getMorphClass()]))
+            ->where('subject_id', $event->id)
+            ->where('event', 'created')
+            ->whereIn('causer_type', $organizerTypes)
+            ->exists();
+    }
+
     protected static function notifyOrganizerEventDecision(Event $event, string $decision, ?string $reason = null): void
     {
         $organizer = $event->marketplaceOrganizer;
@@ -6167,21 +6191,48 @@ class EventResource extends Resource
                             $endDate = $record->event_date;
                         }
 
-                        if (!$endDate) {
-                            return 'unknown';
+                        if ($endDate && $endDate->endOfDay()->isPast()) {
+                            return 'ended';
                         }
 
-                        return $endDate->endOfDay()->isPast() ? 'ended' : 'active';
+                        // Not live yet: say where it stands in the approval
+                        // flow, so a draft the organizer is still working on
+                        // isn't mistaken for something staff has to handle.
+                        if (!$record->is_published) {
+                            if ($record->rejected_at) {
+                                return 'rejected';
+                            }
+                            if ($record->submitted_at) {
+                                return 'pending_approval';
+                            }
+
+                            return self::wasCreatedByOrganizer($record) ? 'organizer_draft' : 'draft';
+                        }
+
+                        return $endDate ? 'active' : 'unknown';
                     })
                     ->formatStateUsing(fn ($state) => match($state) {
                         'active' => 'Activ',
                         'ended' => 'Încheiat',
+                        'organizer_draft' => 'Ciornă la organizator',
+                        'draft' => 'Ciornă',
+                        'pending_approval' => 'De aprobat',
+                        'rejected' => 'Respins',
                         default => '-',
                     })
-                    ->colors([
-                        'success' => 'active',
-                        'gray' => 'ended',
-                    ])
+                    ->color(fn ($state) => match($state) {
+                        'active' => 'success',
+                        'pending_approval' => 'warning',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
+                    ->tooltip(fn ($state) => match($state) {
+                        'organizer_draft' => 'Organizatorul încă lucrează la eveniment și nu l-a trimis spre aprobare. Nu necesită nicio acțiune.',
+                        'draft' => 'Eveniment nepublicat, netrimis spre aprobare.',
+                        'pending_approval' => 'Organizatorul a trimis evenimentul spre aprobare. Deschide-l pentru a-l aproba sau respinge.',
+                        'rejected' => 'Respins; organizatorul îl poate edita și retrimite.',
+                        default => null,
+                    })
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
