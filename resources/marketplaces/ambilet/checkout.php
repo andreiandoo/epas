@@ -33,9 +33,16 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Reservation Timer -->
+    <style>
+        @media (max-width: 768px) {
+            #timer-bar .timer-row { flex-wrap: wrap; column-gap: 6px; row-gap: 2px; font-size: 13px; line-height: 1.3; text-align: center; }
+            #timer-bar .timer-row svg { width: 18px; height: 18px; flex-shrink: 0; color: #1E293B !important; }
+            #timer-bar #countdown { color: #1E293B !important; white-space: nowrap; flex-shrink: 0; font-size: 15px; }
+        }
+    </style>
     <div id="timer-bar" class="hidden border-b bg-warning/10 border-warning/20 mobile:sticky mobile:top-18 mobile:bg-warning mobile:z-20">
         <div class="px-4 py-3 mx-auto max-w-7xl">
-            <div class="flex items-center justify-center gap-2 text-sm">
+            <div class="flex items-center justify-center gap-2 text-sm timer-row">
                 <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span class="text-secondary"><?= htmlspecialchars(ct('checkout_timer_label')) ?></span>
                 <span id="countdown" class="font-bold countdown text-warning tabular-nums">14:59</span>
