@@ -596,6 +596,72 @@ $ambiletBackendDown = isBackendUnreachable();
             </div>
         </div>
     </div>
+    <?php if (!empty($mobileCartTimerBar)): ?>
+    <!-- Mobile cart timer (doar pagina de eveniment): comanda nefinalizata din cos -->
+    <style>
+        #mobileCartTimerBar { display: none; }
+        @media (max-width: 768px) {
+            body.has-mobile-cart-timer #mobileCartTimerBar { display: block; }
+            body.has-mobile-cart-timer { padding-top: 38px; }
+        }
+        #mobileCartTimerBar { background: #F59E0B; color: #1E293B; font-size: 13px; line-height: 1.3; border-top: 1px solid rgba(0,0,0,.06); }
+        #mobileCartTimerBar.is-urgent { background: #A51C30; color: #fff; }
+        #mobileCartTimerBar a { color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; column-gap: 6px; row-gap: 2px; padding: 9px 16px; text-align: center; }
+        #mobileCartTimerBar .mct-time { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        #mobileCartTimerBar .mct-cta { font-weight: 600; text-decoration: underline; white-space: nowrap; }
+        #mobileCartTimerBar svg { width: 16px; height: 16px; flex-shrink: 0; }
+        @media (max-width: 359px) { #mobileCartTimerBar svg { display: none; } }
+    </style>
+    <div id="mobileCartTimerBar" role="status" aria-live="off">
+        <a href="/cos">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Ai o comandă nefinalizată</span>
+            <span class="mct-time" id="mobileCartTimerCountdown">--:--</span>
+            <span class="mct-cta">Finalizează &rarr;</span>
+        </a>
+    </div>
+    <script>
+    (function () {
+        var bar = document.getElementById('mobileCartTimerBar');
+        var cd = document.getElementById('mobileCartTimerCountdown');
+        if (!bar || !cd) return;
+        var timer = null;
+        function cartCount() {
+            try {
+                var raw = localStorage.getItem('ambilet_cart');
+                if (!raw) return 0;
+                var p = JSON.parse(raw);
+                var items = (p && p.items) || p || [];
+                return Array.isArray(items) ? items.length : 0;
+            } catch (e) { return 0; }
+        }
+        function endTime() {
+            try { return parseInt(localStorage.getItem('cart_end_time') || '0', 10) || 0; } catch (e) { return 0; }
+        }
+        function hide() {
+            document.body.classList.remove('has-mobile-cart-timer');
+            if (timer) { clearInterval(timer); timer = null; }
+        }
+        function tick() {
+            if (document.getElementById('timer-bar')) { hide(); return; }
+            var remaining = endTime() - Date.now();
+            if (cartCount() === 0 || remaining <= 0) { hide(); return; }
+            var m = Math.floor(remaining / 60000), s = Math.floor((remaining % 60000) / 1000);
+            cd.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+            bar.classList.toggle('is-urgent', remaining < 5 * 60 * 1000);
+            document.body.classList.add('has-mobile-cart-timer');
+            if (!timer) timer = setInterval(tick, 1000);
+        }
+        function start() { tick(); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+        window.addEventListener('ambilet:cart:update', tick);
+        window.addEventListener('ambilet:cart:reservation', tick);
+        window.addEventListener('ambilet:cart:clear', hide);
+        window.addEventListener('ambilet:cart:expired', hide);
+        window.addEventListener('storage', function (e) { if (e.key === 'cart_end_time' || e.key === 'ambilet_cart') tick(); });
+    })();
+    </script>
+    <?php endif; ?>
 </header>
 
 <!-- Mobile Menu -->

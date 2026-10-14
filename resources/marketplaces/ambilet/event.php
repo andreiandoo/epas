@@ -261,7 +261,7 @@ if (!empty($ev['id'])) {
 require_once __DIR__ . '/includes/head.php';
 ?>
 
-<?php require_once __DIR__ . '/includes/header.php'; ?>
+<?php $mobileCartTimerBar = true; require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Breadcrumb -->
     <div class="bg-white border-b border-border mt-17 mobile:hidden">
