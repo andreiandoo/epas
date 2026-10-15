@@ -477,7 +477,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 });
 
 // Admin Domain Management Routes
-Route::middleware(['web'])->prefix('admin')->group(function () {
+Route::middleware(['web', 'auth', \App\Http\Middleware\EnsureCoreAdmin::class])->prefix('admin')->group(function () {
     Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');
     Route::post('/domains/{domainId}/toggle-active', [DomainController::class, 'toggleActive'])->name('admin.domains.toggle-active');
     Route::post('/domains/{domainId}/toggle-confirmed', [DomainController::class, 'toggleConfirmed'])->name('admin.domains.toggle-confirmed');

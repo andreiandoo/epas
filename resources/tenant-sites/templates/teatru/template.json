@@ -1,0 +1,282 @@
+{
+    "name": "Teatru clasic",
+    "description": "Fundal întunecat, accente aurii și burgundy, tipografie serif. Pentru teatre, filarmonici, opere.",
+    "version": 1,
+
+    "theme": {
+        "colors": {
+            "canvas": "#0A0A0A",
+            "surface": "#1A1A1A",
+            "panel": "#1D1A17",
+            "fg": "#FFFEF2",
+            "muted": "#9A9590",
+            "primary": "#D4AF37",
+            "accent": "#722F37"
+        },
+        "fonts": {
+            "display": "Playfair Display",
+            "body": "Lato"
+        }
+    },
+
+    "links": {
+        "events": "/program",
+        "event": "/spectacol/{slug}",
+        "artist": "/artist/{id}"
+    },
+
+    "routes": {
+        "/repertoriu": "repertoire.php",
+        "/program": "schedule.php",
+        "/abonamente": "subscriptions.php",
+        "/abonament": "abonament.php",
+        "/trupa": "troupe.php",
+        "/spectacol/{slug}": "show.php",
+        "/artist/{id}": "artist.php"
+    },
+
+    "nav": [
+        { "label": "Repertoriu", "url": "/repertoriu" },
+        { "label": "Program", "url": "/program" },
+        { "label": "Abonamente", "url": "/abonamente" },
+        { "label": "Trupa", "url": "/trupa" },
+        { "label": "Despre noi", "url": "/despre" },
+        { "label": "Contact", "url": "/contact" }
+    ],
+
+    "header_cta": { "label": "Cumpără bilete", "url": "/program" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Stagiunea curentă",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Stagiunea curentă",
+                    "title": "*Arta* care\n**transformă** suflete",
+                    "subtitle": "Peste un secol de tradiție teatrală. Spectacole care emoționează, inspiră și provoacă gândirea.",
+                    "button1_label": "Vezi programul", "button1_url": "/program",
+                    "button2_label": "Abonamente stagiune", "button2_url": "/abonamente",
+                    "show_scroll": true
+                } },
+                { "type": "featured_event", "data": { "eyebrow": "Spotlight", "title": "Spectacolul lunii" } },
+                { "type": "events_grid", "data": {
+                    "eyebrow": "Repertoriu", "title": "Spectacole în program", "limit": 6,
+                    "button_label": "Vezi tot repertoriul →", "button_url": "/repertoriu",
+                    "empty_text": "Momentan nu sunt spectacole publicate. Reveniți în curând."
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Fidelitate", "title": "Abonamente de stagiune",
+                    "text": "Păstrați același loc la toate spectacolele stagiunii. Reduceri pentru elevi, studenți și pensionari.",
+                    "button_label": "Vezi abonamentele", "button_url": "/abonamente", "style": "plain"
+                } }
+            ]
+        },
+        "about": {
+            "label": "Despre noi",
+            "path": "/despre",
+            "title": "Despre noi",
+            "sections": [
+                { "type": "page_header", "data": {
+                    "eyebrow": "Tradiție", "title": "*Despre* noi",
+                    "subtitle": "Peste un secol de tradiție, inovație și excelență în arta teatrală românească.",
+                    "image": "https://images.unsplash.com/photo-1503095396549-807759245b35?w=1920&q=80", "size": "large"
+                } },
+                { "type": "image_text", "data": {
+                    "eyebrow": "Misiunea noastră", "title": "Teatrul ca *oglindă* a societății",
+                    "text": "De la înființare și până astăzi, instituția noastră a fost nu doar un așezământ cultural, ci o tribună a conștiinței, un spațiu al dialogului și al reflecției asupra condiției umane.\n\nMisiunea noastră este să aducem pe scenă spectacole care provoacă, emoționează și inspiră — îmbinând tradiția cu inovația, clasicul cu contemporanul.",
+                    "image": "https://images.unsplash.com/photo-1514306191717-452ec28c7814?w=800&q=80", "image_position": "right"
+                } },
+                { "type": "stats", "data": { "items": [
+                    { "value": "100+", "label": "ani de tradiție" },
+                    { "value": "900", "label": "locuri în Sala Mare" },
+                    { "value": "50+", "label": "spectacole în repertoriu" },
+                    { "value": "300K", "label": "spectatori anual" }
+                ] } },
+                { "type": "timeline", "data": { "eyebrow": "Repere istorice", "title": "O istorie de legendă", "items": [
+                    { "label": "Fondare", "title": "Înființarea instituției", "text": "Teatrul este înființat ca scenă de referință, devenind un reper al vieții culturale." },
+                    { "label": "Azi", "title": "Stagiunea curentă", "text": "Teatrul continuă să inoveze cu producții care îmbină tradiția cu experimentul." }
+                ] } },
+                { "type": "cards", "data": { "eyebrow": "Spațiile noastre", "title": "Sălile de spectacol", "items": [
+                    { "image": "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&q=80", "title": "Sala Mare", "text": "Spațiul principal de reprezentație, cu locuri în staluri, loji și balcon.", "facts": [ { "value": "900", "label": "Locuri" } ] },
+                    { "image": "https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&q=80", "title": "Sala Studio", "text": "Spațiu intim pentru producții experimentale și spectacole de cameră.", "facts": [ { "value": "150", "label": "Locuri" } ] }
+                ] } },
+                { "type": "cta", "data": {
+                    "title": "Vizitează-ne", "text": "Te așteptăm să descoperi magia teatrului. Rezervă-ți locul la unul dintre spectacolele noastre.",
+                    "button_label": "Vezi programul", "button_url": "/program",
+                    "button2_label": "Contactează-ne", "button2_url": "/contact", "style": "accent", "ornament": true
+                } }
+            ]
+        },
+        "contact": {
+            "label": "Contact",
+            "path": "/contact",
+            "title": "Contact",
+            "sections": [
+                { "type": "page_header", "data": {
+                    "eyebrow": "Suntem aici pentru tine", "title": "Contact",
+                    "subtitle": "Ai întrebări despre bilete, abonamente sau spectacole? Echipa noastră îți stă la dispoziție.", "size": "small"
+                } },
+                { "type": "contact", "data": {
+                    "form_title": "Trimite-ne un mesaj",
+                    "email": "", "email_note": "Răspundem în 24h",
+                    "phone": "", "phone_note": "Casa de bilete",
+                    "address": "",
+                    "subjects": "Bilete și rezervări\nAbonamente\nGrupuri și școli\nPresă și parteneriate\nAltele",
+                    "hours_title": "Program casă de bilete",
+                    "hours": [
+                        { "label": "Luni – Vineri", "value": "10:00 – 19:00" },
+                        { "label": "Sâmbătă – Duminică", "value": "10:00 – 14:00" }
+                    ]
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Hero (ecran întreg)",
+            "icon": "heroicon-o-photo",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "textarea", "label": "Titlu", "help": "*cuvânt* = italic, **cuvânt** = evidențiat cu culoarea principală, Enter = rând nou" },
+                { "name": "subtitle", "type": "textarea", "label": "Subtitlu" },
+                { "name": "image", "type": "image", "label": "Imagine de fundal", "help": "Goală = imaginea spectacolului recomandat" },
+                { "name": "button1_label", "type": "text", "label": "Buton principal — text" },
+                { "name": "button1_url", "type": "text", "label": "Buton principal — link" },
+                { "name": "button2_label", "type": "text", "label": "Buton secundar — text" },
+                { "name": "button2_url", "type": "text", "label": "Buton secundar — link" },
+                { "name": "show_scroll", "type": "toggle", "label": "Indicator „Descoperă” jos" }
+            ]
+        },
+        "featured_event": {
+            "label": "Spectacol recomandat",
+            "icon": "heroicon-o-star",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "event_slug", "type": "text", "label": "Slug spectacol", "help": "Gol = spectacolul marcat ca recomandat în core" }
+            ]
+        },
+        "events_grid": {
+            "label": "Grilă de spectacole",
+            "icon": "heroicon-o-squares-2x2",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "limit", "type": "select", "label": "Câte spectacole", "options": { "3": "3", "6": "6", "9": "9", "12": "12" } },
+                { "name": "button_label", "type": "text", "label": "Buton — text" },
+                { "name": "button_url", "type": "text", "label": "Buton — link" },
+                { "name": "empty_text", "type": "text", "label": "Text când nu sunt spectacole" }
+            ]
+        },
+        "page_header": {
+            "label": "Antet de pagină",
+            "icon": "heroicon-o-bars-3-bottom-left",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu", "help": "*cuvânt* = italic, **cuvânt** = evidențiat" },
+                { "name": "subtitle", "type": "textarea", "label": "Subtitlu" },
+                { "name": "image", "type": "image", "label": "Imagine de fundal (opțional)" },
+                { "name": "size", "type": "select", "label": "Înălțime", "options": { "small": "Mic", "large": "Mare" } }
+            ]
+        },
+        "image_text": {
+            "label": "Imagine + text",
+            "icon": "heroicon-o-document-text",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu", "help": "*cuvânt* = italic, **cuvânt** = evidențiat" },
+                { "name": "text", "type": "textarea", "label": "Text", "help": "Un rând gol între paragrafe" },
+                { "name": "image", "type": "image", "label": "Imagine" },
+                { "name": "image_position", "type": "select", "label": "Imaginea în", "options": { "right": "Dreapta", "left": "Stânga" } },
+                { "name": "button_label", "type": "text", "label": "Buton — text (opțional)" },
+                { "name": "button_url", "type": "text", "label": "Buton — link" }
+            ]
+        },
+        "text": {
+            "label": "Text",
+            "icon": "heroicon-o-bars-3",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text", "help": "Un rând gol între paragrafe" },
+                { "name": "align", "type": "select", "label": "Aliniere", "options": { "center": "Centrat", "left": "Stânga" } }
+            ]
+        },
+        "stats": {
+            "label": "Cifre",
+            "icon": "heroicon-o-chart-bar",
+            "fields": [
+                { "name": "items", "type": "repeater", "label": "Cifre", "max": 4, "fields": [
+                    { "name": "value", "type": "text", "label": "Valoare" },
+                    { "name": "label", "type": "text", "label": "Etichetă" }
+                ] }
+            ]
+        },
+        "timeline": {
+            "label": "Cronologie",
+            "icon": "heroicon-o-clock",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "items", "type": "repeater", "label": "Repere", "fields": [
+                    { "name": "label", "type": "text", "label": "An / etichetă" },
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "text", "type": "textarea", "label": "Text" }
+                ] }
+            ]
+        },
+        "cards": {
+            "label": "Carduri (săli, spații)",
+            "icon": "heroicon-o-rectangle-group",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "items", "type": "repeater", "label": "Carduri", "fields": [
+                    { "name": "image", "type": "image", "label": "Imagine" },
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "text", "type": "textarea", "label": "Text" },
+                    { "name": "facts", "type": "repeater", "label": "Detalii", "max": 3, "fields": [
+                        { "name": "value", "type": "text", "label": "Valoare" },
+                        { "name": "label", "type": "text", "label": "Etichetă" }
+                    ] }
+                ] }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn (CTA)",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton principal — text" },
+                { "name": "button_url", "type": "text", "label": "Buton principal — link" },
+                { "name": "button2_label", "type": "text", "label": "Buton secundar — text" },
+                { "name": "button2_url", "type": "text", "label": "Buton secundar — link" },
+                { "name": "style", "type": "select", "label": "Fundal", "options": { "plain": "Simplu", "accent": "Culoarea secundară" } },
+                { "name": "ornament", "type": "toggle", "label": "Ornament deasupra" }
+            ]
+        },
+        "contact": {
+            "label": "Contact (formular + date)",
+            "icon": "heroicon-o-envelope",
+            "fields": [
+                { "name": "form_title", "type": "text", "label": "Titlu formular" },
+                { "name": "email", "type": "text", "label": "Email", "help": "Formularul deschide un email către această adresă" },
+                { "name": "email_note", "type": "text", "label": "Notă sub email" },
+                { "name": "phone", "type": "text", "label": "Telefon" },
+                { "name": "phone_note", "type": "text", "label": "Notă sub telefon" },
+                { "name": "address", "type": "text", "label": "Adresă" },
+                { "name": "subjects", "type": "textarea", "label": "Subiecte formular", "help": "Câte unul pe rând" },
+                { "name": "hours_title", "type": "text", "label": "Titlu program" },
+                { "name": "hours", "type": "repeater", "label": "Program", "fields": [
+                    { "name": "label", "type": "text", "label": "Zile" },
+                    { "name": "value", "type": "text", "label": "Ore" }
+                ] }
+            ]
+        }
+    }
+}

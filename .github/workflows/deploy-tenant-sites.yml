@@ -1,0 +1,63 @@
+# Publishes the hosted tenant sites (resources/tenant-sites) on every push to `core` that touches them.
+#
+# The folder is copied as it is to the root of the `tenant-sites` branch; the web directory of the Ploi site is
+# public/. Ploi deploys that branch itself: connect the repository in Ploi with branch `tenant-sites` and enable
+# Quick deploy. No build step: the pages use the Tailwind Play CDN and read their theme from core.
+#
+# Skip a build with [skip ci] in the commit message.
+name: Deploy tenant sites
+
+on:
+  push:
+    branches: [core]
+    paths:
+      - 'resources/tenant-sites/**'
+      - '.github/workflows/deploy-tenant-sites.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-tenant-sites
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    if: github.repository == 'andreiandoo/epas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the tenant sites folder from core
+        uses: actions/checkout@v4
+        with:
+          path: src
+          sparse-checkout: resources/tenant-sites
+
+      - name: Check out the tenant-sites branch (created on the first run)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if ! git clone -q --depth 1 --branch tenant-sites "$remote" site; then
+            rm -rf site && mkdir site && cd site
+            git init -q -b tenant-sites
+            git remote add origin "$remote"
+          fi
+
+      - name: Replace the site files
+        run: |
+          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a src/resources/tenant-sites/. site/
+          date -u '+%Y-%m-%d %H:%M:%S' > site/public/.deploy-timestamp
+
+      - name: Push to the tenant-sites branch
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "nothing to deploy"; exit 0; fi
+          subject="$(git -C ../src log -1 --format=%s | head -c 120)"
+          git commit -q -m "Deploy tenant sites ${GITHUB_SHA::9}: ${subject}"
+          git push origin HEAD:tenant-sites

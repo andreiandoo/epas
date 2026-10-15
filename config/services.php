@@ -115,7 +115,7 @@ return [
     'cloudflare' => [
         'api_token' => env('CLOUDFLARE_API_TOKEN'),
         'zone_id' => env('CLOUDFLARE_ZONE_ID'),
-        'base_domain' => env('CLOUDFLARE_BASE_DOMAIN', 'ticks.ro'),
+        'base_domain' => env('CLOUDFLARE_BASE_DOMAIN', 'tics.ro'),
     ],
 
     /*

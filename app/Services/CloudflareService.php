@@ -16,7 +16,7 @@ class CloudflareService
     {
         $this->apiToken = config('services.cloudflare.api_token');
         $this->zoneId = config('services.cloudflare.zone_id');
-        $this->baseDomain = config('services.cloudflare.base_domain', 'ticks.ro');
+        $this->baseDomain = config('services.cloudflare.base_domain', 'tics.ro');
     }
 
     /**
@@ -29,7 +29,7 @@ class CloudflareService
 
     /**
      * Create a DNS A record for a subdomain
-     * Since we use wildcard DNS (*.ticks.ro), this is optional
+     * Since we use wildcard DNS (*.tics.ro), this is optional
      * but can be used for tracking/management purposes
      */
     public function createSubdomainRecord(string $subdomain): array

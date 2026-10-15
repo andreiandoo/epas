@@ -790,6 +790,10 @@ class TenantResource extends Resource
                         ->schema([
                             SC\Section::make('Domains')
                                 ->description('Websites associated with this tenant - manage domain status and access')
+                                ->headerActions([
+                                    \App\Filament\Resources\Tenants\TenantSiteActions::generateSubdomain(),
+                                    \App\Filament\Resources\Tenants\TenantSiteActions::openSiteEditor(),
+                                ])
                                 ->schema([
                                     Forms\Components\Repeater::make('new_domains')
                                         ->label('Domains')
@@ -1456,6 +1460,7 @@ class TenantResource extends Resource
             'create' => Pages\CreateTenant::route('/create'),
             'edit' => Pages\EditTenant::route('/{record}/edit'),
             'payment-config' => Pages\ManagePaymentConfig::route('/{record}/payment-config'),
+            'site' => Pages\ManageTenantSite::route('/{record}/site'),
         ];
     }
 }

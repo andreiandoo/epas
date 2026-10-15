@@ -236,6 +236,12 @@ class Tenant extends Model
         return $this->hasMany(Domain::class);
     }
 
+    /** Site-ul găzduit de noi pe un subdomeniu (resources/tenant-sites). */
+    public function site(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TenantSite::class);
+    }
+
     public function packages(): HasMany
     {
         return $this->hasMany(TenantPackage::class);

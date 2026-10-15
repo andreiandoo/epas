@@ -59,6 +59,12 @@ use App\Http\Controllers\Api\TenantClientController;
 |
 */
 
+// Site-urile de tenant găzduite de noi (resources/tenant-sites): configurația după host.
+// Se cere server-side, de pe serverul site-urilor, cu cache de un minut acolo.
+Route::get('/tenant-site/config', [\App\Http\Controllers\Api\TenantSiteController::class, 'config'])
+    ->middleware('throttle:600,1')
+    ->name('api.tenant-site.config');
+
 Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
     // Handle OPTIONS preflight requests
     Route::options('/{any}', fn () => response('', 200))
