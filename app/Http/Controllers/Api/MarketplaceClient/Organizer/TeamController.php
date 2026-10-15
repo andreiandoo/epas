@@ -342,6 +342,8 @@ class TeamController extends BaseController
             return $this->error('Membrul nu a fost gasit', 404);
         }
 
+        // Log the member out everywhere: their tokens live on the organizer.
+        $organizer->tokens()->where('name', 'team-member-' . $member->id)->delete();
         $member->delete();
 
         return $this->success(null, 'Membru eliminat cu succes');

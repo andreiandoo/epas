@@ -55,6 +55,22 @@ class AppServiceProvider extends ServiceProvider
                 ->withQuery(fn ($query) => $query->where('status', 'active'));
         });
 
+        // Team-member logins mint their Sanctum token on the parent organizer
+        // (name `team-member-{id}`). Once the member is removed or deactivated
+        // the token must stop working; otherwise it keeps authenticating as
+        // the organizer itself, with owner access.
+        \Laravel\Sanctum\Sanctum::authenticateAccessTokensUsing(function ($token, bool $isValid) {
+            $name = (string) ($token->name ?? '');
+            if (! $isValid || ! str_starts_with($name, 'team-member-')) {
+                return $isValid;
+            }
+
+            return \App\Models\MarketplaceOrganizerTeamMember::whereKey((int) substr($name, strlen('team-member-')))
+                ->where('marketplace_organizer_id', $token->tokenable_id)
+                ->where('status', 'active')
+                ->exists();
+        });
+
         // Marketplace admin: the menu entries a marketplace hid (Setări → Meniu) leave its sidebar and answer 403,
         // for that marketplace only.
         \App\Support\Marketplace\MarketplaceMenu::boot();
