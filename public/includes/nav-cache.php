@@ -83,6 +83,13 @@ function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
         markBackendUnreachable('HTTP ' . $httpCode);
         return false;
     }
+    // Rate limited or key rejected: not an outage, but the body is an error, not data. Fall back to the stale copy
+    // like a 5xx does, and let 404.php answer 503 if the page cannot be built.
+    if ($httpCode === 429 || $httpCode === 401 || $httpCode === 403) {
+        error_log('[nav-cache] HTTP ' . $httpCode . ' for ' . $url);
+        $GLOBALS['v2_api_failed'] = true;
+        return false;
+    }
     // Successful fetch — clear any stale outage flag so the banner
     // disappears immediately once the backend comes back.
     markBackendReachable();
@@ -96,6 +103,7 @@ function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
  */
 function markBackendUnreachable(string $reason): void {
     $GLOBALS['bileteonline_backend_unreachable'] = true;
+    $GLOBALS['v2_api_failed'] = true;
     $flagFile = sys_get_temp_dir() . '/bileteonline_backend_unreachable.flag';
     @file_put_contents($flagFile, json_encode([
         'at' => time(),

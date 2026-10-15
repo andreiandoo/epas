@@ -52,6 +52,12 @@ if ($atCitySlug !== '' && (!is_array($atCity) || empty($atR['city']['success']))
     return;
 }
 $atCityName = $atCity ? navFlatName($atCity['name'] ?? '') : '';
+// The list itself failed (timeout, rate limit): an empty 200 would be cached and indexed as a thin page; 404.php
+// answers 503 for it instead.
+if (empty($atR['list']['success'])) {
+    require __DIR__ . '/404.php';
+    return;
+}
 
 $atItems = [];
 foreach ((array) ($atR['list']['data']['items'] ?? []) as $row) {
