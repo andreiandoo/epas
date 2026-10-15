@@ -14,6 +14,11 @@ return [
     |
     */
 
+    // Requests per minute per marketplace API key + IP (limiter `marketplace`, AppServiceProvider).
+    'marketplace_api' => [
+        'rate_limit' => (int) env('MARKETPLACE_API_RATE_LIMIT', 1200),
+    ],
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],

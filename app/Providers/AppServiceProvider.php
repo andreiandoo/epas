@@ -142,6 +142,16 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) $limit)->by($bucket);
         });
 
+        // Marketplace client API (sites like viaqui.com, bilete.online, Ambilet). Their pages call core from the
+        // site's own server, so every visitor and every crawler shares that server's IP: the old `throttle:120,1`
+        // per IP made pages fail (and answer 404) whenever Google crawled a few pages a second. Bucketed by key +
+        // IP, so a key used straight from browsers is still limited per visitor.
+        RateLimiter::for('marketplace', function (Request $request) {
+            $key = (string) ($request->header('X-API-Key') ?? '');
+            $limit = (int) config('services.marketplace_api.rate_limit', 1200);
+            return Limit::perMinute(max(120, $limit))->by('mp:' . sha1($key) . '|' . $request->ip());
+        });
+
         // Seating API limiters. They are also declared in bootstrap/app.php, but inside the
         // routing `then:` callback, which Laravel skips when routes are cached (route:cache is
         // part of the deploy) — every /api/public seating endpoint then failed with

@@ -12,12 +12,18 @@ require_once __DIR__ . '/includes/nav-helpers.php';
 require_once __DIR__ . '/includes/v2/helpers.php';
 require_once __DIR__ . '/includes/v2/nav.php';
 
+// Core failed during this render (rate limit, timeout, 5xx): the page may well exist, so answer 503 + Retry-After.
+// Search engines keep the page and come back; a 404 here would drop real pages from the index.
+$nfUnavailable = !empty($GLOBALS['v2_api_failed']);
 if (!headers_sent()) {
-    http_response_code(404);
+    http_response_code($nfUnavailable ? 503 : 404);
+    if ($nfUnavailable) {
+        header('Retry-After: 120');
+    }
 }
 $skipPageCache = true;
 
-$pageTitleRaw = v2_t('Page not found · Viaqui');
+$pageTitleRaw = $nfUnavailable ? v2_t('Back in a moment · Viaqui') : v2_t('Page not found · Viaqui');
 $pageDescription = v2_t('The page you are looking for does not exist or has moved. Try another category or city.');
 $canonicalUrl = SITE_URL . '/404';
 $noindex = true;
@@ -43,9 +49,15 @@ include __DIR__ . '/includes/v2/header.php';
   <section class="nf" aria-labelledby="nf-h">
     <div class="wrap nf-grid">
       <div class="nf-text">
+        <?php if ($nfUnavailable): ?>
+        <p class="kicker"><?= v2_te('Busy right now') ?></p>
+        <h1 class="nf-h" id="nf-h"><?= v2_t('Back in <em>a moment</em>.') ?></h1>
+        <p class="nf-lead"><?= v2_te('We could not load this page just now. Reload it in a few seconds, or keep exploring from here.') ?></p>
+        <?php else: ?>
         <p class="kicker"><?= v2_te('404 · Not found') ?></p>
         <h1 class="nf-h" id="nf-h"><?= v2_t('This page is <em>not</em><br>on the map.') ?></h1>
         <p class="nf-lead"><?= v2_te('The link you followed no longer leads anywhere, or the page has moved. Let us get you back to what you came for.') ?></p>
+        <?php endif; ?>
 
         <form class="nf-search" role="search" action="/search" method="get">
           <?= v2_ic('magnifying-glass') ?>

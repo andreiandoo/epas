@@ -41,6 +41,19 @@ function api_post(string $endpoint, array $data = []): array
 }
 
 /**
+ * Remember that core could not answer during this render (connection error, unreadable body, rate limit, 5xx,
+ * rejected key). A 404 from core is a real "not found" and is not recorded. 404.php reads the flag and answers
+ * 503 instead of 404, so a transient upstream failure never tells search engines that a real page is gone.
+ */
+function api_note_failure(int $httpCode): void
+{
+    if ($httpCode === 404 || $httpCode === 410 || $httpCode === 422) {
+        return;
+    }
+    $GLOBALS['v2_api_failed'] = true;
+}
+
+/**
  * Make an API request using cURL
  *
  * @param string $method HTTP method (GET, POST, etc.)
@@ -85,6 +98,7 @@ function api_request(string $method, string $url, ?array $data = null): array
     // Handle cURL errors
     if ($error) {
         error_log("API Request Error: {$error} for URL: {$url}");
+        api_note_failure(0);
         return [
             'success' => false,
             'error' => 'Connection error',
@@ -97,6 +111,7 @@ function api_request(string $method, string $url, ?array $data = null): array
 
     if (json_last_error() !== JSON_ERROR_NONE) {
         error_log("API Response Parse Error: " . json_last_error_msg() . " for URL: {$url}");
+        api_note_failure((int) $httpCode >= 400 ? (int) $httpCode : 0);
         return [
             'success' => false,
             'error' => 'Invalid response',
@@ -107,6 +122,7 @@ function api_request(string $method, string $url, ?array $data = null): array
     // Check for API errors
     if ($httpCode >= 400) {
         error_log("API Error ({$httpCode}): " . ($decoded['message'] ?? 'Unknown error') . " for URL: {$url}");
+        api_note_failure((int) $httpCode);
         return [
             'success' => false,
             'error' => $decoded['message'] ?? 'API error',
@@ -293,15 +309,18 @@ function api_cached_many(array $jobs): array
 
         if ($error) {
             error_log("API Multi Error: {$error} for {$job['endpoint']}");
+            api_note_failure(0);
             $results[$rk] = ['success' => false, 'error' => 'Connection error', 'data' => []];
             continue;
         }
         $decoded = json_decode((string) $response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
+            api_note_failure((int) $httpCode >= 400 ? (int) $httpCode : 0);
             $results[$rk] = ['success' => false, 'error' => 'Invalid response', 'data' => []];
             continue;
         }
         if ($httpCode >= 400) {
+            api_note_failure((int) $httpCode);
             $results[$rk] = ['success' => false, 'error' => $decoded['message'] ?? 'API error', 'data' => []];
             continue;
         }

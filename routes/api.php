@@ -1576,7 +1576,8 @@ Route::prefix('marketplace-client')->middleware('throttle:120,1')->group(functio
         ->name('api.marketplace-client.newsletter.preferences.update');
 });
 
-Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+// throttle:marketplace = per API key + IP (AppServiceProvider); the sites call from one server IP.
+Route::prefix('marketplace-client')->middleware(['throttle:marketplace', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
     Route::options('/{any}', fn () => response('', 200))
         ->where('any', '.*')
@@ -3210,7 +3211,7 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
 use App\Http\Controllers\Api\MarketplaceClient\LocationsController as MarketplaceLocationsController;
 use App\Http\Controllers\Api\MarketplaceClient\CategoriesController as MarketplaceCategoriesController;
 
-Route::prefix('marketplace-client/locations')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+Route::prefix('marketplace-client/locations')->middleware(['throttle:marketplace', 'marketplace.auth'])->group(function () {
     Route::get('/stats', [MarketplaceLocationsController::class, 'stats'])
         ->name('api.marketplace-client.locations.stats');
     Route::get('/cities/featured', [MarketplaceLocationsController::class, 'featuredCities'])
@@ -3232,7 +3233,7 @@ Route::prefix('marketplace-client/locations')->middleware(['throttle:120,1', 'ma
 });
 
 // Event Categories
-Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+Route::prefix('marketplace-client/event-categories')->middleware(['throttle:marketplace', 'marketplace.auth'])->group(function () {
     Route::get('/', [MarketplaceCategoriesController::class, 'index'])
         ->name('api.marketplace-client.event-categories');
     Route::get('/{slug}', [MarketplaceCategoriesController::class, 'show'])
@@ -3265,7 +3266,7 @@ Route::get('/marketplace-client/event-genres', [MarketplaceEventsController::cla
 // Venue Categories
 use App\Http\Controllers\Api\MarketplaceClient\VenueCategoriesController as MarketplaceVenueCategoriesController;
 
-Route::prefix('marketplace-client/venue-categories')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+Route::prefix('marketplace-client/venue-categories')->middleware(['throttle:marketplace', 'marketplace.auth'])->group(function () {
     Route::get('/', [MarketplaceVenueCategoriesController::class, 'index'])
         ->name('api.marketplace-client.venue-categories');
     Route::get('/{slug}', [MarketplaceVenueCategoriesController::class, 'show'])
@@ -3275,7 +3276,7 @@ Route::prefix('marketplace-client/venue-categories')->middleware(['throttle:120,
 // Venues
 use App\Http\Controllers\Api\MarketplaceClient\VenuesController as MarketplaceVenuesController;
 
-Route::prefix('marketplace-client/venues')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+Route::prefix('marketplace-client/venues')->middleware(['throttle:marketplace', 'marketplace.auth'])->group(function () {
     Route::get('/', [MarketplaceVenuesController::class, 'index'])
         ->name('api.marketplace-client.venues');
     Route::get('/featured', [MarketplaceVenuesController::class, 'featured'])
@@ -3568,7 +3569,7 @@ Route::prefix('marketplace-client/epk')->middleware(['throttle:30,1', 'marketpla
 // Knowledge Base
 use App\Http\Controllers\Api\MarketplaceClient\KnowledgeBaseController as MarketplaceKnowledgeBaseController;
 
-Route::prefix('marketplace-client/kb')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+Route::prefix('marketplace-client/kb')->middleware(['throttle:marketplace', 'marketplace.auth'])->group(function () {
     Route::get('/categories', [MarketplaceKnowledgeBaseController::class, 'categories'])
         ->name('api.marketplace-client.kb.categories');
     Route::get('/categories/{slug}', [MarketplaceKnowledgeBaseController::class, 'category'])
