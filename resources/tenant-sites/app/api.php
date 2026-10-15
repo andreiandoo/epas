@@ -107,7 +107,7 @@ function api_run_refresh_queue(): void {
  */
 function api_request(string $method, string $url, array $body = [], array $headers = []): array {
     $ch = curl_init($url);
-    $defaultHeaders = ['Accept: application/json'];
+    $defaultHeaders = array_merge(['Accept: application/json'], ts_visitor_headers());
     if (!empty($body)) { $defaultHeaders[] = 'Content-Type: application/json'; }
 
     curl_setopt_array($ch, [
@@ -146,6 +146,26 @@ function api_request(string $method, string $url, array $body = [], array $heade
         'error'   => $success ? null : ($decoded['message'] ?? $decoded['error'] ?? "HTTP $status"),
         'raw'     => $decoded,
     ];
+}
+
+/**
+ * IP-ul vizitatorului (site-ul stă în spatele Cloudflare). Îl trimitem la core
+ * în X-Forwarded-For: altfel toate site-urile de pe server ar împărți aceeași
+ * limită de cereri pe minut (core numără pe IP, iar IP-ul ar fi al serverului).
+ */
+function ts_visitor_ip(): ?string {
+    foreach (['HTTP_CF_CONNECTING_IP', 'REMOTE_ADDR'] as $key) {
+        $ip = trim((string) ($_SERVER[$key] ?? ''));
+        if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return $ip;
+        }
+    }
+    return null;
+}
+
+function ts_visitor_headers(): array {
+    $ip = ts_visitor_ip();
+    return $ip ? ['X-Forwarded-For: ' . $ip, 'X-Visitor-IP: ' . $ip] : [];
 }
 
 /**

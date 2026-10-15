@@ -72,6 +72,10 @@ class DemoCheckoutController extends Controller
         }
         $tenant = $resolved['tenant'];
 
+        if (! \App\Support\DemoCheckout::allowed($tenant)) {
+            return response()->json(\App\Support\DemoCheckout::refusal(), 403);
+        }
+
         $event = Event::where('tenant_id', $tenant->id)->find($validated['event_id']);
         if (! $event) {
             return response()->json(['success' => false, 'error' => 'Event not found'], 404);

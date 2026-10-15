@@ -39,6 +39,11 @@ class SubscriptionController extends Controller
         }
         $tenant = $resolved['tenant'];
 
+        // Plata abonamentului e simulată (gateway demo): doar pe site-urile de prezentare.
+        if (! \App\Support\DemoCheckout::allowed($tenant)) {
+            return response()->json(\App\Support\DemoCheckout::refusal(), 403);
+        }
+
         $customer = $this->resolveCustomer($request);
         if (! $customer) {
             return response()->json(['success' => false, 'error' => 'Trebuie să fii autentificat pentru a cumpăra un abonament.'], 401);

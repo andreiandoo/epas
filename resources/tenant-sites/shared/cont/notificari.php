@@ -9,7 +9,7 @@ require __DIR__ . '/_inc/top.php';
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex gap-2 overflow-x-auto">
             <template x-for="t in tabs" :key="t[0]">
-                <button @click="tab=t[0]" :class="tab===t[0]?'bg-primary text-canvas':'border-white/10 text-fg/45'" class="whitespace-nowrap rounded-full border px-4 py-2 text-sm" x-text="t[1] + countFor(t[0])"></button>
+                <button @click="tab=t[0]" :class="tab===t[0]?'bg-primary text-canvas':'border-fg/10 text-fg/45'" class="whitespace-nowrap rounded-full border px-4 py-2 text-sm" x-text="t[1] + countFor(t[0])"></button>
             </template>
         </div>
         <button @click="markAll()" class="text-sm text-primary-light">Marchează toate ca citite</button>
@@ -18,7 +18,7 @@ require __DIR__ . '/_inc/top.php';
     <div x-show="loading" class="py-12 text-center"><div class="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div></div>
     <div x-show="!loading && filtered().length===0" x-cloak class="card mt-6 p-10 text-center"><p class="text-fg/45">Nicio notificare în această categorie.</p></div>
 
-    <div class="card mt-6 overflow-hidden divide-y divide-white/8" x-show="!loading && filtered().length" x-cloak>
+    <div class="card mt-6 overflow-hidden divide-y divide-fg/8" x-show="!loading && filtered().length" x-cloak>
         <template x-for="(n,i) in filtered()" :key="i">
             <article class="flex gap-4 p-5" :class="isRead(n)?'':'bg-primary/[.035]'">
                 <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl" :class="iconBg(n.icon)">

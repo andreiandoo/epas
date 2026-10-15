@@ -6,7 +6,7 @@ require __DIR__ . '/_inc/top.php';
 ?>
 <div class="mb-9"><p class="text-[11px] font-bold tracking-[.22em] text-primary-light">FAVORITE</p><h1 class="mt-3 font-display text-4xl leading-tight sm:text-5xl">Favorite și alerte</h1><p class="mt-3 max-w-3xl text-sm leading-7 text-fg/48 sm:text-base">Urmărește spectacole și artiști și primești alerte pentru date noi și locuri eliberate.</p></div>
 <div x-data="favPage()" x-init="load()">
-    <div class="flex gap-2 overflow-x-auto rounded-xl border border-white/8 bg-white/[.025] p-1">
+    <div class="flex gap-2 overflow-x-auto rounded-xl border border-fg/8 bg-fg/[.025] p-1">
         <button @click="tab='shows'" :class="tab==='shows'?'bg-primary text-canvas':'text-fg/45'" class="rounded-lg px-4 py-2 text-sm font-semibold">Spectacole · <span x-text="shows.length"></span></button>
         <button @click="tab='artists'" :class="tab==='artists'?'bg-primary text-canvas':'text-fg/45'" class="rounded-lg px-4 py-2 text-sm font-semibold">Artiști · <span x-text="artists.length"></span></button>
     </div>

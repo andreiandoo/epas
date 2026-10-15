@@ -24,7 +24,7 @@ foreach (tc_events($eventsResp) as $ev) {
             <section class="grain relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-accent-dark via-panel to-surface p-6 sm:p-8">
                 <div class="relative grid gap-7 lg:grid-cols-[1fr_.8fr] lg:items-start">
                     <div>
-                        <span class="badge" :class="s.status==='active'?'bg-emerald-500/12 text-emerald-300':'bg-white/10 text-fg/50'" x-text="s.status==='active'?'ABONAMENT ACTIV':s.status.toUpperCase()"></span>
+                        <span class="badge" :class="s.status==='active'?'bg-emerald-500/12 text-emerald-300':'bg-fg/10 text-fg/50'" x-text="s.status==='active'?'ABONAMENT ACTIV':s.status.toUpperCase()"></span>
                         <h2 class="mt-4 font-display text-4xl" x-text="'Abonament ' + s.name"></h2>
                         <p class="mt-3 text-fg/50" x-show="s.valid_until" x-text="'Valabil până la ' + s.valid_until"></p>
                         <div class="mt-5" x-show="s.seat_labels && s.seat_labels.length">
@@ -33,12 +33,12 @@ foreach (tc_events($eventsResp) as $ev) {
                         </div>
                         <ul class="mt-5 space-y-1 text-sm" x-show="s.benefits && s.benefits.length"><template x-for="bft in s.benefits" :key="bft"><li class="flex items-center gap-2"><span class="text-primary-light">✓</span><span x-text="bft"></span></li></template></ul>
                     </div>
-                    <div class="rounded-2xl border border-white/10 bg-canvas/40 p-5">
+                    <div class="rounded-2xl border border-fg/10 bg-canvas/40 p-5">
                         <div class="flex items-end justify-between"><div><strong class="font-display text-5xl" x-text="s.shows_remaining ?? '∞'"></strong><span class="ml-2 text-fg/40">rămase</span></div><span class="text-sm text-primary-light" x-show="s.shows_included" x-text="Math.round(100*(s.shows_used||0)/(s.shows_included||1)) + '%'"></span></div>
-                        <div class="mt-4 h-3 rounded-full bg-white/10" x-show="s.shows_included"><div class="h-full rounded-full bg-primary" :style="'width:' + Math.round(100*(s.shows_used||0)/(s.shows_included||1)) + '%'"></div></div>
-                        <div class="mt-4 grid grid-cols-2 gap-3 text-xs"><div class="rounded-xl bg-white/[.035] p-3"><span class="text-fg/35">Folosite</span><strong class="mt-1 block text-lg" x-text="s.shows_used ?? 0"></strong></div><div class="rounded-xl bg-white/[.035] p-3"><span class="text-fg/35">Incluse</span><strong class="mt-1 block text-lg" x-text="s.shows_included ?? '∞'"></strong></div></div>
+                        <div class="mt-4 h-3 rounded-full bg-fg/10" x-show="s.shows_included"><div class="h-full rounded-full bg-primary" :style="'width:' + Math.round(100*(s.shows_used||0)/(s.shows_included||1)) + '%'"></div></div>
+                        <div class="mt-4 grid grid-cols-2 gap-3 text-xs"><div class="rounded-xl bg-fg/[.035] p-3"><span class="text-fg/35">Folosite</span><strong class="mt-1 block text-lg" x-text="s.shows_used ?? 0"></strong></div><div class="rounded-xl bg-fg/[.035] p-3"><span class="text-fg/35">Incluse</span><strong class="mt-1 block text-lg" x-text="s.shows_included ?? '∞'"></strong></div></div>
 
-                        <div class="mt-5 border-t border-white/10 pt-4" x-show="s.status==='active' && (s.shows_remaining>0 || s.shows_remaining===null)">
+                        <div class="mt-5 border-t border-fg/10 pt-4" x-show="s.status==='active' && (s.shows_remaining>0 || s.shows_remaining===null)">
                             <p class="text-xs text-fg/40 mb-2">Folosește la un spectacol</p>
                             <div class="flex gap-2">
                                 <select x-model="pick[s.id]" class="input flex-1 text-sm"><option value="">Alege spectacolul...</option><template x-for="ev in avail(s)" :key="ev.id"><option :value="ev.id" x-text="ev.title + (ev.date?' — '+ev.date:'')"></option></template></select>
@@ -49,7 +49,7 @@ foreach (tc_events($eventsResp) as $ev) {
 
                         <div class="mt-4" x-show="s.redeemed_events && s.redeemed_events.length">
                             <p class="text-xs text-fg/40 mb-1">Rezervate</p>
-                            <template x-for="r in s.redeemed_events" :key="r.event_id"><div class="flex justify-between text-xs border-b border-white/8 py-1"><span x-text="r.title"></span><span class="text-fg/40" x-text="r.date"></span></div></template>
+                            <template x-for="r in s.redeemed_events" :key="r.event_id"><div class="flex justify-between text-xs border-b border-fg/8 py-1"><span x-text="r.title"></span><span class="text-fg/40" x-text="r.date"></span></div></template>
                         </div>
                     </div>
                 </div>

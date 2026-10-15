@@ -6,7 +6,7 @@ $navGroups = $navGroups ?? require __DIR__ . '/nav.php';
 $navActive = $navActive ?? '';
 $itemClass = fn (bool $active) => $active
     ? 'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition border-primary/30 bg-primary/10 text-primary-light'
-    : 'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition border-transparent text-fg/58 hover:bg-white/[.045] hover:text-fg';
+    : 'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition border-transparent text-fg/58 hover:bg-fg/[.045] hover:text-fg';
 ?>
         </section>
     </div>
@@ -16,7 +16,7 @@ $itemClass = fn (bool $active) => $active
 <div x-cloak x-show="mobileMenu" x-transition.opacity class="fixed inset-0 z-[70] bg-canvas/98 p-5 lg:hidden overflow-y-auto">
     <div class="flex items-center justify-between">
         <strong class="font-display text-2xl">Contul meu</strong>
-        <button @click="mobileMenu=false" class="grid h-11 w-11 place-items-center rounded-full border border-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button>
+        <button @click="mobileMenu=false" class="grid h-11 w-11 place-items-center rounded-full border border-fg/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button>
     </div>
     <nav class="mt-7 grid gap-1">
         <?php foreach ($navGroups as $group => $items): ?>
@@ -34,7 +34,7 @@ $itemClass = fn (bool $active) => $active
     <div class="mx-auto max-w-2xl pt-16">
         <div class="flex items-center justify-between">
             <h2 class="font-display text-3xl">Caută</h2>
-            <button @click="searchOpen=false" class="grid h-11 w-11 place-items-center rounded-full border border-white/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button>
+            <button @click="searchOpen=false" class="grid h-11 w-11 place-items-center rounded-full border border-fg/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button>
         </div>
         <input x-ref="search" x-model="query" class="input mt-7 text-lg" placeholder="Spectacol, comandă, ajutor...">
         <div class="mt-5 grid gap-2">

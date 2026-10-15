@@ -67,7 +67,10 @@ class ManageTenantSite extends Page
 
         $draft = $builder->fillMissing($this->site->draft ?? [], $tenant, $this->site->template);
         $draft['pages'] = $this->onlyKnownSections($draft['pages'] ?? [], $this->site->template);
-        $this->form->fill(['template' => $this->site->template] + $draft);
+        $this->form->fill([
+            'template' => $this->site->template,
+            'demo_checkout' => \App\Support\DemoCheckout::allowed($tenant),
+        ] + $draft);
     }
 
     /**
@@ -204,6 +207,10 @@ class ManageTenantSite extends Page
                             ->afterStateUpdated(fn ($state) => $this->switchTemplate((string) $state)),
                         Forms\Components\Placeholder::make('status')->label('Stare')
                             ->content(fn () => $this->statusLine()),
+                        Forms\Components\Toggle::make('demo_checkout')
+                            ->label('Checkout demo (plată simulată)')
+                            ->helperText('Plățile reale pentru site-urile de tenant nu sunt încă conectate. Pornit: comenzile se „plătesc” fără bani (doar pentru prezentări). Oprit: checkout-ul refuză comanda.')
+                            ->columnSpanFull(),
                     ])->columns(2),
                 SC\Tabs::make('site')->tabs($tabs)->persistTabInQueryString(),
             ])
@@ -300,7 +307,14 @@ class ManageTenantSite extends Page
     {
         $state = $this->form->getState();
         $template = $state['template'];
-        unset($state['template']);
+        $demoCheckout = (bool) ($state['demo_checkout'] ?? false);
+        unset($state['template'], $state['demo_checkout']);
+
+        if ($demoCheckout !== \App\Support\DemoCheckout::allowed($this->record)) {
+            $settings = $this->record->settings ?? [];
+            $settings['demo_checkout'] = $demoCheckout;
+            $this->record->update(['settings' => $settings]);
+        }
 
         $draft = app(SiteConfigBuilder::class)->fillMissing($state, $this->record, $template);
         $this->site->update(['template' => $template, 'draft' => $draft]);
@@ -359,7 +373,10 @@ class ManageTenantSite extends Page
                     ->action(function () {
                         $draft = app(SiteConfigBuilder::class)->defaultDraft($this->record, $this->site->template);
                         $this->site->update(['draft' => $draft]);
-                        $this->form->fill(['template' => $this->site->template] + $draft);
+                        $this->form->fill([
+                            'template' => $this->site->template,
+                            'demo_checkout' => \App\Support\DemoCheckout::allowed($this->record),
+                        ] + $draft);
                         Notification::make()->title('Ciorna a fost resetată')->success()->send();
                     }),
                 Actions\Action::make('edit_tenant')

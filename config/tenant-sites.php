@@ -37,6 +37,11 @@ return [
     // Template-ul propus pentru un site nou.
     'default_template' => 'teatru',
 
+    // Checkout-ul demo (plată simulată) e permis doar tenanților cu un domeniu
+    // activ sub aceste domenii (site-urile de prezentare) sau cu
+    // settings.demo_checkout = true. Vezi App\Support\DemoCheckout.
+    'demo_checkout_domains' => array_filter(explode(',', (string) env('DEMO_CHECKOUT_DOMAINS', 'tixello.ro'))),
+
     // Discul și folderul pentru imaginile urcate din panoul de personalizare.
     'disk' => 'public',
     'upload_directory' => 'tenant-sites',
