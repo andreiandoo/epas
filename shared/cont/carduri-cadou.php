@@ -23,7 +23,7 @@ require __DIR__ . '/_inc/top.php';
 
     <div class="mt-6 grid gap-5 md:grid-cols-2" x-show="!loading && cards.length" x-cloak>
         <template x-for="c in cards" :key="c.id">
-            <article class="overflow-hidden rounded-3xl border p-6" :class="c.status==='used'?'border-white/10 bg-gradient-to-br from-imaginario/30 to-surface opacity-70':'border-primary/30 bg-gradient-to-br from-primary/25 via-accent-dark to-surface'">
+            <article class="overflow-hidden rounded-3xl border p-6" :class="c.status==='used'?'border-fg/10 bg-gradient-to-br from-imaginario/30 to-surface opacity-70':'border-primary/30 bg-gradient-to-br from-primary/25 via-accent-dark to-surface'">
                 <div class="flex items-start justify-between">
                     <span class="grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary-light"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 10h16v10H4V10Zm-1-4h18v4H3V6Zm9 0v14M12 6H8.5A2.5 2.5 0 1 1 11 3.5V6Zm0 0h3.5A2.5 2.5 0 1 0 13 3.5V6Z"/></svg></span>
                     <span class="badge" :class="statusBg(c.status)" x-text="statusLabel(c.status)"></span>
@@ -44,7 +44,7 @@ require __DIR__ . '/_inc/top.php';
     <div x-cloak x-show="buy" class="fixed inset-0 z-[90] grid place-items-center bg-canvas/90 p-5" @click.self="buy=false">
         <form @submit.prevent="purchase()" class="card w-full max-w-md p-6"><div class="flex justify-between"><h3 class="font-display text-2xl">Cumpără un card cadou</h3><button type="button" @click="buy=false"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button></div>
             <div class="mt-5 overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/25 via-accent-dark to-surface p-5"><p class="text-sm text-fg/40">CARD CADOU</p><strong class="mt-1 block font-display text-4xl" x-text="money(form.amount)"></strong><p class="mt-4 text-xs text-fg/40" x-text="form.recipient_name?('Pentru '+form.recipient_name):'Pentru cine dorești'"></p></div>
-            <div class="mt-5"><span class="label">Valoare</span><div class="grid grid-cols-4 gap-2"><template x-for="v in [50,100,150,200]" :key="v"><button type="button" @click="form.amount=v" :class="Number(form.amount)===v?'bg-primary text-canvas':'border border-white/10 text-fg/50'" class="rounded-xl py-2 text-sm font-bold" x-text="v"></button></template></div><input type="number" min="25" max="5000" class="input mt-2" x-model="form.amount" placeholder="Altă sumă (lei)"></div>
+            <div class="mt-5"><span class="label">Valoare</span><div class="grid grid-cols-4 gap-2"><template x-for="v in [50,100,150,200]" :key="v"><button type="button" @click="form.amount=v" :class="Number(form.amount)===v?'bg-primary text-canvas':'border border-fg/10 text-fg/50'" class="rounded-xl py-2 text-sm font-bold" x-text="v"></button></template></div><input type="number" min="25" max="5000" class="input mt-2" x-model="form.amount" placeholder="Altă sumă (lei)"></div>
             <label class="mt-4 block"><span class="label">Destinatar (opțional)</span><input class="input" x-model="form.recipient_name" placeholder="Numele persoanei"></label>
             <label class="mt-4 block"><span class="label">Mesaj (opțional)</span><textarea class="input" rows="2" x-model="form.message" placeholder="Un gând pentru destinatar"></textarea></label>
             <p x-show="err" x-text="err" class="mt-3 text-sm text-rose-300"></p>
@@ -70,7 +70,7 @@ function giftPage(){
         money(v){ return (Number(v)||0).toLocaleString('ro-RO')+' lei'; },
         totalInitial(){ return this.cards.reduce((s,c)=>s+(Number(c.initial)||0),0); },
         statusLabel(s){ return ({active:'ACTIV',partial:'FOLOSIT PARȚIAL',used:'FOLOSIT'})[s]||(s||'').toUpperCase(); },
-        statusBg(s){ return s==='used'?'bg-white/10 text-fg/50':(s==='partial'?'bg-amber-500/10 text-amber-300':'bg-primary text-canvas'); },
+        statusBg(s){ return s==='used'?'bg-fg/10 text-fg/50':(s==='partial'?'bg-amber-500/10 text-amber-300':'bg-primary text-canvas'); },
         async load(){
             const a=this.auth(); if(!a||!a.token){ this.loading=false; return; }
             try { const r=await fetch('/api/proxy.php?action=acc-gift-cards',{headers:{'Authorization':'Bearer '+a.token}}); const d=await r.json().catch(()=>({})); if(d&&d.success){ this.cards=d.data||[]; this.stats=d.stats||{}; } } catch(e){}

@@ -7,7 +7,7 @@ require __DIR__ . '/_inc/top.php';
 <div class="mb-9"><p class="text-[11px] font-bold tracking-[.22em] text-primary-light">BILETE</p><h1 class="mt-3 font-display text-4xl leading-tight sm:text-5xl">Biletele mele</h1><p class="mt-3 max-w-3xl text-sm leading-7 text-fg/48 sm:text-base">Accesează rapid codurile QR, descarcă biletele și gestionează transferurile sau modificările de program.</p></div>
 <div x-data="ticketsPage()" x-init="load()">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex gap-2 rounded-xl border border-white/8 bg-white/[.025] p-1">
+        <div class="flex gap-2 rounded-xl border border-fg/8 bg-fg/[.025] p-1">
             <button @click="tab='upcoming'" :class="tab==='upcoming'?'bg-primary text-canvas':'text-fg/45'" class="rounded-lg px-4 py-2 text-sm font-semibold">Viitoare · <span x-text="up.length"></span></button>
             <button @click="tab='past'" :class="tab==='past'?'bg-primary text-canvas':'text-fg/45'" class="rounded-lg px-4 py-2 text-sm font-semibold">Trecute · <span x-text="past.length"></span></button>
         </div>
@@ -23,13 +23,13 @@ require __DIR__ . '/_inc/top.php';
                 <article class="print-card card overflow-hidden"><div class="grid lg:grid-cols-[130px_1fr_auto]">
                     <div class="grid min-h-32 place-items-center bg-accent/25 p-5 text-center"><strong class="font-display text-3xl" x-text="dayNum(t.date)"></strong><small class="tracking-[.15em] text-fg/40" x-text="monthTime(t)"></small></div>
                     <div class="p-5 sm:p-6"><div class="flex flex-wrap gap-2"><span class="badge bg-emerald-500/10 text-emerald-300">VALID</span><span class="badge bg-primary/10 text-primary-light" x-show="t.is_subscription">ABONAMENT</span></div><h2 class="mt-3 font-display text-2xl" x-text="t.event || 'Spectacol'"></h2><p class="mt-2 text-sm text-fg/42" x-text="[t.venue, t.seat_label].filter(Boolean).join(' · ')"></p><p class="mt-3 text-xs text-fg/30" x-text="'Cod ' + t.code"></p></div>
-                    <div class="flex flex-wrap items-center gap-2 border-t border-white/8 p-5 lg:w-52 lg:flex-col lg:justify-center lg:border-l lg:border-t-0"><button @click="showQR(t)" class="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h2v2h-2v-2Zm4 0h2v6h-2m-4-2h2v2h-2v-2Z"/></svg>Vezi QR</button></div>
+                    <div class="flex flex-wrap items-center gap-2 border-t border-fg/8 p-5 lg:w-52 lg:flex-col lg:justify-center lg:border-l lg:border-t-0"><button @click="showQR(t)" class="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h2v2h-2v-2Zm4 0h2v6h-2m-4-2h2v2h-2v-2Z"/></svg>Vezi QR</button></div>
                 </div></article>
             </template>
         </div>
         <div x-show="tab==='past'" x-cloak class="mt-6 grid gap-4">
             <template x-for="(t,i) in past" :key="i">
-                <article class="card flex flex-col gap-4 p-5 opacity-75 sm:flex-row sm:items-center"><div class="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-white/5 font-display" x-text="dayNum(t.date)"></div><div class="flex-1"><h2 class="font-display text-xl" x-text="t.event || 'Spectacol'"></h2><p class="mt-1 text-xs text-fg/40" x-text="[t.seat_label, 'utilizat'].filter(Boolean).join(' · ')"></p></div><a href="/cont/scrie-recenzie" class="text-sm text-primary-light">Scrie o recenzie →</a></article>
+                <article class="card flex flex-col gap-4 p-5 opacity-75 sm:flex-row sm:items-center"><div class="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-fg/5 font-display" x-text="dayNum(t.date)"></div><div class="flex-1"><h2 class="font-display text-xl" x-text="t.event || 'Spectacol'"></h2><p class="mt-1 text-xs text-fg/40" x-text="[t.seat_label, 'utilizat'].filter(Boolean).join(' · ')"></p></div><a href="/cont/scrie-recenzie" class="text-sm text-primary-light">Scrie o recenzie →</a></article>
             </template>
         </div>
     </div>

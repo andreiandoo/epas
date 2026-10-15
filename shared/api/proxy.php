@@ -287,6 +287,7 @@ $headers = [
     'Accept: application/json',
     'X-Session-Id: ' . $sid,
 ];
+$headers = array_merge($headers, ts_visitor_headers());
 if ($body !== null) { $headers[] = 'Content-Type: application/json'; }
 // Forward token-ul de autentificare al clientului (pt. /me, /logout)
 $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');

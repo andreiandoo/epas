@@ -49,18 +49,18 @@ foreach (tc_events(api_get('/tenant-client/events', ['limit' => 8], 120)) as $ev
                         <div class="mt-6 flex flex-wrap gap-3"><a href="/program" class="btn-primary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold">Vezi programul</a></div>
                     </div>
                 </template>
-                <div x-show="loading" class="h-24 animate-pulse rounded-2xl bg-white/[.04]"></div>
+                <div x-show="loading" class="h-24 animate-pulse rounded-2xl bg-fg/[.04]"></div>
             </div>
 
             <template x-if="sub">
-                <div class="rounded-2xl border border-white/10 bg-canvas/45 p-5">
+                <div class="rounded-2xl border border-fg/10 bg-canvas/45 p-5">
                     <div class="flex items-center justify-between"><span class="text-xs text-fg/40" x-text="('Abonament ' + (sub.name||'')).toUpperCase()"></span><span class="badge bg-emerald-500/12 text-emerald-300" x-show="sub.status==='active'">ACTIV</span></div>
                     <div class="mt-5 flex items-end justify-between"><div><strong class="font-display text-3xl" x-text="sub.shows_remaining ?? '∞'"></strong><span class="ml-2 text-sm text-fg/40" x-text="sub.shows_included ? ('din ' + sub.shows_included + ' intrări rămase') : 'intrări nelimitate'"></span></div><a href="/cont/abonamente" class="text-sm text-primary-light">Gestionează →</a></div>
-                    <div class="mt-4 h-2 overflow-hidden rounded-full bg-white/10" x-show="sub.shows_included"><div class="h-full rounded-full bg-primary" :style="'width:' + pct(sub) + '%'"></div></div>
+                    <div class="mt-4 h-2 overflow-hidden rounded-full bg-fg/10" x-show="sub.shows_included"><div class="h-full rounded-full bg-primary" :style="'width:' + pct(sub) + '%'"></div></div>
                 </div>
             </template>
             <template x-if="!sub && !loading">
-                <div class="rounded-2xl border border-white/10 bg-canvas/45 p-5">
+                <div class="rounded-2xl border border-fg/10 bg-canvas/45 p-5">
                     <span class="text-xs text-fg/40">ABONAMENTE</span>
                     <p class="mt-3 text-sm text-fg/55">Nu ai un abonament activ momentan.</p>
                     <a href="/abonamente" class="btn-secondary mt-4 inline-flex rounded-full px-4 py-2 text-sm">Vezi abonamentele</a>
@@ -80,11 +80,11 @@ foreach (tc_events(api_get('/tenant-client/events', ['limit' => 8], 120)) as $ev
         <div class="space-y-6">
             <section class="card p-5 sm:p-6">
                 <div class="flex items-center justify-between"><div><h2 class="font-display text-2xl">Următoarele experiențe</h2><p class="mt-1 text-xs text-fg/35">Bilete și rezervări active</p></div><a href="/cont/bilete" class="text-sm text-primary-light">Vezi toate</a></div>
-                <div x-show="loading" class="mt-5 h-20 animate-pulse rounded-2xl bg-white/[.04]"></div>
-                <div x-show="!loading && upcoming.length===0" x-cloak class="mt-5 rounded-2xl border border-white/8 bg-canvas/35 p-6 text-center text-sm text-fg/40">Nu ai bilete viitoare. <a href="/program" class="text-primary-light">Vezi programul</a></div>
+                <div x-show="loading" class="mt-5 h-20 animate-pulse rounded-2xl bg-fg/[.04]"></div>
+                <div x-show="!loading && upcoming.length===0" x-cloak class="mt-5 rounded-2xl border border-fg/8 bg-canvas/35 p-6 text-center text-sm text-fg/40">Nu ai bilete viitoare. <a href="/program" class="text-primary-light">Vezi programul</a></div>
                 <div class="mt-5 grid gap-3" x-show="!loading && upcoming.length" x-cloak>
                     <template x-for="(t,i) in upcoming.slice(0,4)" :key="i">
-                        <a href="/cont/bilete" class="card-hover flex flex-col gap-4 rounded-2xl border border-white/8 bg-canvas/35 p-4 sm:flex-row sm:items-center">
+                        <a href="/cont/bilete" class="card-hover flex flex-col gap-4 rounded-2xl border border-fg/8 bg-canvas/35 p-4 sm:flex-row sm:items-center">
                             <div class="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-accent/30 text-center"><strong class="font-display text-2xl" x-text="dnum(t.date)"></strong><small class="text-[10px] text-fg/40" x-text="dmon(t.date)"></small></div>
                             <div class="min-w-0 flex-1"><strong class="font-display text-xl" x-text="t.event || 'Spectacol'"></strong><p class="mt-1 text-xs text-fg/40" x-text="[(t.time||'').slice(0,5), t.venue, t.seat_label].filter(Boolean).join(' · ')"></p></div>
                             <span class="badge" :class="t.is_subscription ? 'bg-primary/10 text-primary-light' : 'bg-emerald-500/10 text-emerald-300'" x-text="t.is_subscription ? 'ABONAMENT' : 'CONFIRMAT'"></span>
@@ -98,7 +98,7 @@ foreach (tc_events(api_get('/tenant-client/events', ['limit' => 8], 120)) as $ev
                 <?php if (!empty($recEvents)): ?>
                 <div class="mt-5 grid gap-4 md:grid-cols-3">
                     <?php foreach ($recEvents as $rev): ?>
-                    <a href="/spectacol/<?= e($rev['slug']) ?>" class="card-hover rounded-2xl border border-white/8 bg-canvas/35 p-5">
+                    <a href="/spectacol/<?= e($rev['slug']) ?>" class="card-hover rounded-2xl border border-fg/8 bg-canvas/35 p-5">
                         <?php if ($rev['category'] !== ''): ?><small class="text-primary-light"><?= e($rev['category']) ?></small><?php endif; ?>
                         <h3 class="mt-3 font-display text-xl"><?= e($rev['title']) ?></h3>
                         <p class="mt-2 text-xs leading-6 text-fg/38"><?= $rev['date'] !== '' ? e($rev['date']) : 'Rezervă-ți locul' ?></p>
@@ -106,13 +106,13 @@ foreach (tc_events(api_get('/tenant-client/events', ['limit' => 8], 120)) as $ev
                     <?php endforeach; ?>
                 </div>
                 <?php else: ?>
-                <p class="mt-5 rounded-2xl border border-white/8 bg-canvas/35 p-6 text-center text-sm text-fg/40">Programul stagiunii va fi anunțat în curând. <a href="/repertoriu" class="text-primary-light">Vezi repertoriul</a></p>
+                <p class="mt-5 rounded-2xl border border-fg/8 bg-canvas/35 p-6 text-center text-sm text-fg/40">Programul stagiunii va fi anunțat în curând. <a href="/repertoriu" class="text-primary-light">Vezi repertoriul</a></p>
                 <?php endif; ?>
             </section>
         </div>
 
         <div class="space-y-6">
-            <section class="card p-5"><div class="flex items-center justify-between"><h2 class="font-display text-xl">Acțiuni rapide</h2></div><div class="mt-4 grid gap-2"><a href="/cont/bilete" class="flex items-center gap-3 rounded-xl bg-white/[.035] p-3 text-sm hover:bg-primary/8"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5V9a3 3 0 0 0 0 6v1.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5V15a3 3 0 0 0 0-6V7.5ZM14 8v8"/></svg>Deschide biletele</a><a href="/cont/carduri-cadou" class="flex items-center gap-3 rounded-xl bg-white/[.035] p-3 text-sm hover:bg-primary/8"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 10h16v10H4V10Zm-1-4h18v4H3V6Zm9 0v14M12 6H8.5A2.5 2.5 0 1 1 11 3.5V6Zm0 0h3.5A2.5 2.5 0 1 0 13 3.5V6Z"/></svg>Folosește un card cadou</a><a href="/cont/ajutor" class="flex items-center gap-3 rounded-xl bg-white/[.035] p-3 text-sm hover:bg-primary/8"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9.1 9a3 3 0 1 1 4.8 2.4c-1 .8-1.9 1.3-1.9 2.6M12 18h.01M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0Z"/></svg>Cere ajutor</a></div></section>
+            <section class="card p-5"><div class="flex items-center justify-between"><h2 class="font-display text-xl">Acțiuni rapide</h2></div><div class="mt-4 grid gap-2"><a href="/cont/bilete" class="flex items-center gap-3 rounded-xl bg-fg/[.035] p-3 text-sm hover:bg-primary/8"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5V9a3 3 0 0 0 0 6v1.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5V15a3 3 0 0 0 0-6V7.5ZM14 8v8"/></svg>Deschide biletele</a><a href="/cont/carduri-cadou" class="flex items-center gap-3 rounded-xl bg-fg/[.035] p-3 text-sm hover:bg-primary/8"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 10h16v10H4V10Zm-1-4h18v4H3V6Zm9 0v14M12 6H8.5A2.5 2.5 0 1 1 11 3.5V6Zm0 0h3.5A2.5 2.5 0 1 0 13 3.5V6Z"/></svg>Folosește un card cadou</a><a href="/cont/ajutor" class="flex items-center gap-3 rounded-xl bg-fg/[.035] p-3 text-sm hover:bg-primary/8"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9.1 9a3 3 0 1 1 4.8 2.4c-1 .8-1.9 1.3-1.9 2.6M12 18h.01M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0Z"/></svg>Cere ajutor</a></div></section>
 
             <section class="card p-5"><div class="flex items-start gap-3"><span class="grid h-10 w-10 place-items-center rounded-xl bg-accent/20 text-rose-300"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/></svg></span><div><h3 class="font-semibold">Notificări</h3><p class="mt-1 text-xs leading-6 text-fg/40">Confirmări de comandă, puncte primite și noutăți despre abonamentele tale.</p><a href="/cont/notificari" class="mt-3 inline-flex text-sm text-primary-light">Vezi notificările →</a></div></div></section>
 
