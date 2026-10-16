@@ -118,12 +118,14 @@ class ServiceOrderResource extends Resource
                 Section::make('Pricing')
                     ->schema([
                         Forms\Components\Placeholder::make('subtotal_display')
-                            ->label('Subtotal')
+                            ->label('Subtotal (fără TVA)')
                             ->content(fn (?ServiceOrder $record): string =>
                                 $record ? number_format($record->subtotal, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('tax_display')
-                            ->label('Tax (TVA)')
+                            ->label(fn (?ServiceOrder $record): string => ($rate = (float) ($record?->config['vat_rate'] ?? 0)) > 0
+                                ? 'TVA (' . rtrim(rtrim(number_format($rate, 2), '0'), '.') . '%)'
+                                : 'TVA')
                             ->content(fn (?ServiceOrder $record): string =>
                                 $record ? number_format($record->tax, 2) . ' ' . $record->currency : '-'),
 
@@ -360,6 +362,7 @@ class ServiceOrderResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total')
+                    ->label('Total (incl. TVA)')
                     ->money('RON')
                     ->sortable()
                     ->toggleable(),

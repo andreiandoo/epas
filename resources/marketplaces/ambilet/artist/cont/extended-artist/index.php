@@ -104,7 +104,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
         });
 
     function renderStatusCard(el, status, pricing) {
-        const monthlyPrice = pricing.monthly_price || 99;
+        // monthly_price is net; shown with the marketplace VAT when it applies
+        const vatRate = parseFloat(pricing.vat_rate) || 0;
+        const netMonthly = pricing.monthly_price || 99;
+        const monthlyPrice = vatRate > 0 ? (Math.round(netMonthly * (100 + vatRate)) / 100).toFixed(2) : netMonthly;
         const currency = pricing.currency || 'RON';
         const trialDays = pricing.trial_days || 30;
 

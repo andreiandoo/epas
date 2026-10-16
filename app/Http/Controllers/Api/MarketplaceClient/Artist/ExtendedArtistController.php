@@ -51,6 +51,8 @@ class ExtendedArtistController extends BaseController
             'name' => $serviceType->name,
             'audience' => $serviceType->audience,
             'monthly_price' => (float) ($pricing['monthly'] ?? 0),
+            // monthly_price is NET; the marketplace VAT is added on top (0 = none)
+            'vat_rate' => (float) (\App\Models\MarketplaceClient::find($account->marketplace_client_id)?->vatRate() ?? 0),
             'currency' => $pricing['currency'] ?? 'RON',
             'trial_days' => (int) ($pricing['trial_days'] ?? $this->access->trialDays()),
         ]);
@@ -107,7 +109,11 @@ class ExtendedArtistController extends BaseController
             return $this->error('Pricing not configured.', 500);
         }
 
-        $order = DB::transaction(function () use ($account, $microservice, $serviceType, $monthly, $currency) {
+        // NET monthly price + the marketplace VAT (0 unless it is a VAT payer)
+        $vatClient = \App\Models\MarketplaceClient::find($account->marketplace_client_id);
+        $vat = $vatClient ? $vatClient->vatOnNet($monthly) : ['vat' => 0.0, 'gross' => $monthly, 'rate' => 0.0];
+
+        $order = DB::transaction(function () use ($account, $microservice, $serviceType, $monthly, $currency, $vat) {
             return ServiceOrder::create([
                 'marketplace_client_id' => $account->marketplace_client_id,
                 'marketplace_artist_account_id' => $account->id,
@@ -116,10 +122,10 @@ class ExtendedArtistController extends BaseController
                 'config' => [
                     'service_type_id' => $serviceType->id,
                     'billing_cycle' => 'monthly',
-                ],
+                ] + ($vat['rate'] > 0 ? ['vat_rate' => $vat['rate']] : []),
                 'subtotal' => $monthly,
-                'tax' => 0,
-                'total' => $monthly,
+                'tax' => $vat['vat'],
+                'total' => $vat['gross'],
                 'currency' => $currency,
                 'payment_method' => 'card',
                 'payment_status' => ServiceOrder::PAYMENT_PENDING,

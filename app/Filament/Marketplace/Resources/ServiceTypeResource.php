@@ -190,29 +190,38 @@ class ServiceTypeResource extends Resource
                     ->description('Multiple pricing tiers for ad tracking integration')
                     ->statePath('pricing')
                     ->schema([
-                        Forms\Components\TextInput::make('monthly')
-                            ->label('Cost lunar (RON)')
+                        // The keys the price calculation and the organizer page read
+                        // (ServiceOrderController::calculatePrice): a monthly price per
+                        // platform and a discount per duration (0.10 = 10%).
+                        Forms\Components\TextInput::make('per_platform_monthly')
+                            ->label('Cost lunar / platformă (RON, fără TVA)')
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Preț per lună, facturat lunar'),
+                            ->helperText('Preț per platformă (Facebook, Google, TikTok) pe lună'),
 
-                        Forms\Components\TextInput::make('biannual')
-                            ->label('Cost bianual (RON)')
+                        Forms\Components\TextInput::make('discounts.3')
+                            ->label('Reducere 3 luni')
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Preț total pentru 6 luni'),
+                            ->minValue(0)
+                            ->maxValue(1)
+                            ->helperText('Fracție: 0.10 = 10%'),
 
-                        Forms\Components\TextInput::make('annual')
-                            ->label('Cost anual (RON)')
+                        Forms\Components\TextInput::make('discounts.6')
+                            ->label('Reducere 6 luni')
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Preț total pentru 12 luni'),
+                            ->minValue(0)
+                            ->maxValue(1)
+                            ->helperText('Fracție: 0.15 = 15%'),
 
-                        Forms\Components\TextInput::make('one_time')
-                            ->label('Cost one-time (RON)')
+                        Forms\Components\TextInput::make('discounts.12')
+                            ->label('Reducere 12 luni')
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Plată unică, acces permanent'),
+                            ->minValue(0)
+                            ->maxValue(1)
+                            ->helperText('Fracție: 0.25 = 25%'),
                     ])
                     ->columns(4)
                     ->visible(fn ($record) => $record?->code === 'tracking'),
@@ -284,7 +293,7 @@ class ServiceTypeResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('pricing_summary')
-                    ->label('Pricing')
+                    ->label('Pricing (fără TVA)')
                     ->getStateUsing(function (ServiceType $record): string {
                         $pricing = $record->pricing;
                         return match ($record->code) {
@@ -301,11 +310,11 @@ class ServiceTypeResource extends Resource
                                 $pricing['marketplace_per_email'] ?? 0
                             ),
                             'tracking' => sprintf(
-                                'Lunar: %d, Bianual: %d, Anual: %d, One-time: %d RON',
-                                $pricing['monthly'] ?? $pricing['per_platform_monthly'] ?? 0,
-                                $pricing['biannual'] ?? 0,
-                                $pricing['annual'] ?? 0,
-                                $pricing['one_time'] ?? 0
+                                '%s RON/lună/platformă · reduceri 3/6/12 luni: %s%% / %s%% / %s%%',
+                                $pricing['per_platform_monthly'] ?? $pricing['monthly'] ?? 0,
+                                round(((float) ($pricing['discounts']['3'] ?? 0)) * 100),
+                                round(((float) ($pricing['discounts']['6'] ?? 0)) * 100),
+                                round(((float) ($pricing['discounts']['12'] ?? 0)) * 100)
                             ),
                             'campaign' => sprintf(
                                 'Basic: %d RON, Premium: %d RON',

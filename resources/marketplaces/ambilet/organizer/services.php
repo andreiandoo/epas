@@ -129,7 +129,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <span class="px-2 py-1 text-xs text-blue-600 bg-blue-100 rounded-full">Google Ads</span>
                                     <span class="px-2 py-1 text-xs text-blue-600 bg-blue-100 rounded-full">TikTok Ads</span>
                                 </div>
-                                <p class="text-sm font-semibold text-secondary">De la <span class="text-blue-600">99 RON</span> / luna</p>
+                                <p class="text-sm font-semibold text-secondary">De la <span class="text-blue-600" id="card-tracking-price">49 RON</span> / luna</p>
                             </div>
                         </div>
                     </div>
@@ -156,7 +156,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <span class="px-2 py-1 text-xs text-purple-600 bg-purple-100 rounded-full">Design Creativ</span>
                                     <span class="px-2 py-1 text-xs text-purple-600 bg-purple-100 rounded-full">Management</span>
                                 </div>
-                                <p class="text-sm font-semibold text-secondary">De la <span class="text-purple-600">499 RON</span> / campanie</p>
+                                <p class="text-sm font-semibold text-secondary">De la <span class="text-purple-600" id="card-campaign-price">499 RON</span> / campanie</p>
                             </div>
                         </div>
                     </div>
@@ -716,6 +716,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <!-- Summary will be populated dynamically -->
                         </div>
                         <div class="pt-4 mt-4 border-t border-border">
+                            <div id="order-vat-rows" class="hidden mb-2 space-y-1 text-sm">
+                                <div class="flex justify-between"><span class="text-muted">Subtotal (fără TVA)</span><span class="font-medium text-secondary" id="order-net">0 RON</span></div>
+                                <div class="flex justify-between"><span class="text-muted" id="order-vat-label">TVA</span><span class="font-medium text-secondary" id="order-vat">0 RON</span></div>
+                            </div>
                             <div class="flex items-center justify-between text-lg">
                                 <span class="font-semibold text-secondary">Total de plata:</span>
                                 <span class="font-bold text-primary" id="order-total">0 RON</span>
@@ -878,6 +882,12 @@ let currentStep = 1;
 let currentServiceType = '';
 let events = [];
 let activeServices = [];
+// Marketplace VAT added on top of the (net) service prices; 0 = none
+let serviceVatRate = 0;
+function svcGross(net) {
+    const n = Math.round((Number(net) || 0) * 100) / 100;
+    return serviceVatRate > 0 ? Math.round((n + Math.round(n * serviceVatRate) / 100) * 100) / 100 : n;
+}
 let servicePricing = {
     featuring: { home_hero: 120, home_recommendations: 80, category: 60, city: 40 },
     email: { own_per_email: 0.40, marketplace_per_email: 0.50, minimum: 100 },
@@ -1059,6 +1069,7 @@ async function loadPricing() {
         const response = await AmbiletAPI.get('/organizer/services/pricing');
         if (response.success && response.data?.pricing) {
             servicePricing = response.data.pricing;
+            serviceVatRate = parseFloat(response.data.vat_rate) || 0;
             updatePricingUI();
         } else if (response.success && response.data) {
             servicePricing = response.data;
@@ -1077,16 +1088,16 @@ function updatePricingUI() {
             servicePricing.email.own_per_email || 0.40,
             servicePricing.email.marketplace_per_email || 0.50
         );
-        cardEmailPrice.textContent = AmbiletUtils.formatCurrency(lowestEmailPrice);
+        cardEmailPrice.textContent = AmbiletUtils.formatCurrency(svcGross(lowestEmailPrice));
     }
 
     const ownPriceEl = document.querySelector('#email-options input[value="own"]')?.closest('label')?.querySelector('.text-accent.font-semibold');
     if (ownPriceEl) {
-        ownPriceEl.textContent = AmbiletUtils.formatCurrency(servicePricing.email.own_per_email || 0.40) + ' / email';
+        ownPriceEl.textContent = AmbiletUtils.formatCurrency(svcGross(servicePricing.email.own_per_email || 0.40)) + ' / email';
     }
     const marketplacePriceEl = document.querySelector('#email-options input[value="marketplace"]')?.closest('label')?.querySelector('.text-accent.font-semibold');
     if (marketplacePriceEl) {
-        marketplacePriceEl.textContent = AmbiletUtils.formatCurrency(servicePricing.email.marketplace_per_email || 0.50) + ' / email';
+        marketplacePriceEl.textContent = AmbiletUtils.formatCurrency(svcGross(servicePricing.email.marketplace_per_email || 0.50)) + ' / email';
     }
 
     const fp = servicePricing.featuring || {};
@@ -1095,7 +1106,7 @@ function updatePricingUI() {
         if (priceEl) {
             const key = priceEl.getAttribute('data-price-key');
             const price = fp[key] ?? fp[input.value];
-            priceEl.textContent = price != null ? price + ' RON / zi' : '— RON / zi';
+            priceEl.textContent = price != null ? svcGross(price) + ' RON / zi' : '— RON / zi';
         }
     });
 
@@ -1103,14 +1114,24 @@ function updatePricingUI() {
     if (cardFeaturingPrice) {
         const lowestFeaturing = Math.min(...Object.values(fp).filter(v => typeof v === 'number' && v > 0));
         if (isFinite(lowestFeaturing)) {
-            cardFeaturingPrice.textContent = lowestFeaturing + ' RON';
+            cardFeaturingPrice.textContent = svcGross(lowestFeaturing) + ' RON';
         }
+    }
+
+    const cardTrackingPrice = document.getElementById('card-tracking-price');
+    if (cardTrackingPrice && servicePricing.tracking?.per_platform_monthly) {
+        cardTrackingPrice.textContent = svcGross(servicePricing.tracking.per_platform_monthly) + ' RON';
+    }
+    const cardCampaignPrice = document.getElementById('card-campaign-price');
+    const lowestCampaign = Math.min(...Object.values(servicePricing.campaign || {}).filter(v => typeof v === 'number' && v > 0));
+    if (cardCampaignPrice && isFinite(lowestCampaign)) {
+        cardCampaignPrice.textContent = svcGross(lowestCampaign) + ' RON';
     }
 
     document.querySelectorAll('#tracking-options input[name="tracking_platforms[]"]').forEach(input => {
         const priceEl = input.closest('label').querySelector('.text-blue-600');
         if (priceEl && servicePricing.tracking.per_platform_monthly) {
-            priceEl.textContent = servicePricing.tracking.per_platform_monthly + ' RON / luna';
+            priceEl.textContent = svcGross(servicePricing.tracking.per_platform_monthly) + ' RON / luna';
         }
     });
 
@@ -1118,7 +1139,7 @@ function updatePricingUI() {
     document.querySelectorAll('#campaign-options input[name="campaign_type"]').forEach(input => {
         const priceEl = input.closest('label').querySelector('.text-purple-600');
         if (priceEl && campaignPrices[input.value]) {
-            priceEl.textContent = AmbiletUtils.formatCurrency(campaignPrices[input.value]);
+            priceEl.textContent = AmbiletUtils.formatCurrency(svcGross(campaignPrices[input.value]));
         }
     });
 
@@ -1489,7 +1510,10 @@ function calculateOrderSummary() {
             const emailPricePerUnit = emailAudienceType === 'own'
                 ? (servicePricing.email.own_per_email || 0.40)
                 : (servicePricing.email.marketplace_per_email || 0.50);
-            const emailTotalPrice = emailCount * emailPricePerUnit;
+            // Same rule as the server: partial matches at half price
+            const emailPerfect = emailAudiences[emailAudienceType]?.perfect_count ?? emailCount;
+            const emailPartial = emailAudiences[emailAudienceType]?.partial_count || 0;
+            const emailTotalPrice = Math.round((emailPerfect * emailPricePerUnit + emailPartial * (Math.round(emailPricePerUnit / 2 * 100) / 100)) * 100) / 100;
             items.push({
                 name: 'Campanie Email - ' + emailAudienceLabels[emailAudienceType],
                 price: null
@@ -1555,7 +1579,16 @@ function calculateOrderSummary() {
         `).join('')}
     `;
 
-    document.getElementById('order-total').textContent = AmbiletUtils.formatCurrency(total);
+    const net = Math.round(total * 100) / 100;
+    const gross = svcGross(net);
+    const vatRows = document.getElementById('order-vat-rows');
+    if (vatRows) {
+        vatRows.classList.toggle('hidden', !(serviceVatRate > 0));
+        document.getElementById('order-net').textContent = AmbiletUtils.formatCurrency(net);
+        document.getElementById('order-vat-label').textContent = 'TVA (' + serviceVatRate + '%)';
+        document.getElementById('order-vat').textContent = AmbiletUtils.formatCurrency(Math.round((gross - net) * 100) / 100);
+    }
+    document.getElementById('order-total').textContent = AmbiletUtils.formatCurrency(gross);
 }
 
 function setupPaymentMethodToggle() {
@@ -1900,7 +1933,8 @@ document.getElementById('service-form').addEventListener('submit', async functio
                 const hh = String(now.getHours()).padStart(2, '0');
                 const mm = String(now.getMinutes()).padStart(2, '0');
                 startDatetime = featStartVal + 'T' + hh + ':' + mm;
-                endDatetime = featEndVal + 'T' + hh + ':' + mm;
+                // Ends at 00:00 like a future start; the same HH:MM made the server count one extra day
+                endDatetime = featEndVal + 'T00:00';
             } else {
                 startDatetime = featStartVal + 'T07:00';
                 endDatetime = featEndVal + 'T00:00';
@@ -1923,7 +1957,7 @@ document.getElementById('service-form').addEventListener('submit', async functio
                 template: document.querySelector('input[name="email_template"]:checked')?.value || 'classic',
                 send_date: emailDate + 'T' + emailTime,
                 recipient_count: aud.filtered_count || 0,
-                perfect_count: aud.perfect_count || aud.filtered_count || 0,
+                perfect_count: aud.perfect_count ?? aud.filtered_count ?? 0,
                 partial_count: aud.partial_count || 0,
                 variant_indices: window._emailPreviewVariants || {},
                 filters: {

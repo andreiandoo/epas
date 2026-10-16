@@ -38,7 +38,10 @@ class ServiceOrderController extends BaseController
             $pricing[$locationFeaturing->code] = $locationFeaturing->pricing;
         }
 
-        return $this->success(['pricing' => $pricing]);
+        // Prices above are NET; the marketplace's VAT is added on top (0 = none)
+        $client = \App\Models\MarketplaceClient::find($organizer->marketplace_client_id);
+
+        return $this->success(['pricing' => $pricing, 'vat_rate' => $client ? $client->vatRate() : 0.0]);
     }
 
     /**
@@ -273,10 +276,15 @@ class ServiceOrderController extends BaseController
             $config['activity_name'] = $this->getProductName($product);
         }
 
-        // Calculate price (no TVA for extra services)
-        $subtotal = $this->calculatePrice($requestedType, $config, $serviceType->pricing);
-        $tax = 0;
-        $total = $subtotal;
+        // Price is NET; the marketplace's VAT goes on top (0 unless it is a VAT payer)
+        $subtotal = round($this->calculatePrice($requestedType, $config, $serviceType->pricing), 2);
+        $vatClient = \App\Models\MarketplaceClient::find($organizer->marketplace_client_id);
+        $vat = $vatClient ? $vatClient->vatOnNet($subtotal) : ['vat' => 0.0, 'gross' => $subtotal, 'rate' => 0.0];
+        $tax = $vat['vat'];
+        $total = $vat['gross'];
+        if ($vat['rate'] > 0) {
+            $config['vat_rate'] = $vat['rate'];
+        }
 
         try {
             $order = ServiceOrder::create([
@@ -391,6 +399,14 @@ class ServiceOrderController extends BaseController
             return $this->error('Order not found or not payable', 404);
         }
 
+        // An order created before the marketplace became a VAT payer carries no
+        // VAT; it is cancelled instead of being charged at the old price.
+        if ($client->vatRate() > 0 && (float) $order->tax <= 0 && (float) $order->subtotal > 0) {
+            $order->cancel();
+
+            return $this->error('Comanda a fost creată înainte de aplicarea TVA și a fost anulată. Te rugăm să plasezi o comandă nouă.', 409);
+        }
+
         $defaultPaymentMethod = $client->getDefaultPaymentMethod();
         if (! $defaultPaymentMethod) {
             return $this->error('No payment method configured for this marketplace', 400);
@@ -498,7 +514,7 @@ class ServiceOrderController extends BaseController
                 $monthlyRate = $pricing['per_platform_monthly'] ?? 49;
                 $discount = $pricing['discounts'][(string) $months] ?? 0;
                 $subtotal = count($platforms) * $monthlyRate * $months;
-                return $subtotal * (1 - $discount);
+                return round($subtotal * (1 - $discount), 2);
 
             case ServiceOrder::TYPE_CAMPAIGN:
                 $campaignType = $config['campaign_type'] ?? 'standard';
@@ -672,6 +688,7 @@ class ServiceOrderController extends BaseController
             'config' => $order->config,
             'subtotal' => (float) $order->subtotal,
             'tax' => (float) $order->tax,
+            'vat_rate' => (float) ($order->config['vat_rate'] ?? 0),
             'payment_method' => $order->payment_method,
             'payment_reference' => $order->payment_reference,
             'paid_at' => $order->paid_at?->toIso8601String(),
