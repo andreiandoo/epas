@@ -172,12 +172,22 @@ class Incomes extends Page
                     ? "(meta->>'ticket_insurance')::boolean = true"
                     : "json_extract(meta, '$.ticket_insurance') = true");
 
+            // insurance_amount is what the customer paid; the marketplace VAT on
+            // it (insurance_vat, set on VAT orders) is not revenue.
             $refundFeeRevenue = (float) (clone $insuranceQuery)
                 ->selectRaw(DB::getDriverName() === 'pgsql'
-                    ? "COALESCE(SUM((meta->>'insurance_amount')::numeric), 0) as total"
-                    : "COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
+                    ? "COALESCE(SUM((meta->>'insurance_amount')::numeric - COALESCE((meta->>'insurance_vat')::numeric, 0)), 0) as total"
+                    : "COALESCE(SUM(json_extract(meta, '$.insurance_amount') - COALESCE(json_extract(meta, '$.insurance_vat'), 0)), 0) as total")
                 ->value('total');
             $totalRefunds = (int) (clone $insuranceQuery)->count();
+
+            // ─── Marketplace VAT collected (on-top commission + insurance), not revenue ───
+            $ordersVat = (float) $this->baseOrderQuery()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->selectRaw(DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(SUM(COALESCE((meta->>'commission_vat_amount')::numeric, 0) + COALESCE((meta->>'insurance_vat')::numeric, 0)), 0) as total"
+                    : "COALESCE(SUM(COALESCE(json_extract(meta, '$.commission_vat_amount'), 0) + COALESCE(json_extract(meta, '$.insurance_vat'), 0)), 0) as total")
+                ->value('total');
 
             // ─── Gift Card Revenue ───
             $giftCardQuery = MarketplaceGiftCard::where('marketplace_client_id', $marketplaceId)
@@ -196,7 +206,9 @@ class Incomes extends Page
                 $serviceQuery->where('marketplace_organizer_id', $this->organizerId);
             }
 
-            $servicesRevenue = (float) $serviceQuery->sum('total');
+            // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
+            $servicesRevenue = (float) (clone $serviceQuery)->sum('subtotal');
+            $servicesVat = (float) (clone $serviceQuery)->sum('tax');
             $serviceCount = (int) $serviceQuery->count();
 
             // Services breakdown by type
@@ -204,7 +216,7 @@ class Incomes extends Page
                 ->where('payment_status', 'paid')
                 ->whereBetween('paid_at', [$startDate, $endDate])
                 ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
-                ->select('service_type', DB::raw('SUM(total) as revenue'), DB::raw('COUNT(*) as count'))
+                ->select('service_type', DB::raw('SUM(subtotal) as revenue'), DB::raw('COUNT(*) as count'))
                 ->groupBy('service_type')
                 ->get()
                 ->map(fn ($row) => [
@@ -223,6 +235,7 @@ class Incomes extends Page
 
             // ─── Grand Total ───
             $grandTotal = $totalCommissions + $refundFeeRevenue + $giftCardRevenue + $servicesRevenue;
+            $vatCollected = round($ordersVat + $servicesVat, 2);
 
             // ─── Averages ───
             $avgDailySales = $daysInRange > 0 ? $totalSales / $daysInRange : 0;
@@ -253,7 +266,7 @@ class Incomes extends Page
             return compact(
                 'totalSales', 'totalOrders', 'totalCommissions',
                 'refundFeeRevenue', 'totalRefunds', 'giftCardRevenue', 'giftCardCount',
-                'servicesRevenue', 'serviceCount', 'servicesByType',
+                'servicesRevenue', 'serviceCount', 'servicesByType', 'vatCollected',
                 'grandTotal', 'avgDailySales', 'avgDailyCommissions', 'avgDailyRevenue',
                 'avgOrderValue', 'avgCommissionPerOrder', 'effectiveCommissionRate',
                 'deltas', 'chartData', 'topOrganizers'
@@ -317,6 +330,8 @@ class Incomes extends Page
                 'gift_card_revenue' => $giftCardRevenue,
                 'services_revenue' => $servicesRevenue,
                 'grand_total' => $grandTotal,
+                // Marketplace VAT collected in the period (not part of the revenue above)
+                'vat_collected' => $vatCollected ?? 0,
                 'avg_daily_sales' => $avgDailySales,
                 'avg_daily_commissions' => $avgDailyCommissions,
                 'avg_daily_revenue' => $avgDailyRevenue,
@@ -372,7 +387,7 @@ class Incomes extends Page
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
             ->select(
                 DB::raw('DATE(paid_at) as date'),
-                DB::raw('SUM(total) as total')
+                DB::raw('SUM(subtotal) as total')
             )
             ->groupBy('date')
             ->pluck('total', 'date')
@@ -480,7 +495,7 @@ class Incomes extends Page
             ->where('payment_status', 'paid')
             ->whereBetween('paid_at', [$prevStart, $prevEnd])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
-            ->sum('total');
+            ->sum('subtotal');
 
         $prevGrandTotal = $prevCommissions + $prevRefundFees + $prevGiftCards + $prevServices;
 

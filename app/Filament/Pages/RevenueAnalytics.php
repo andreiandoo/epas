@@ -349,7 +349,7 @@ class RevenueAnalytics extends Page
 
         $services = (float) ServiceOrder::where('payment_status', 'paid')
             ->whereBetween('created_at', [$start, $end])
-            ->sum('total');
+            ->sum('subtotal'); // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
 
         // Convert RON → EUR (page base currency).
         return [

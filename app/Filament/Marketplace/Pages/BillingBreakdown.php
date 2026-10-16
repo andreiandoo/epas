@@ -719,7 +719,7 @@ class BillingBreakdown extends Page
             $servicesByType[$type] = [
                 'label' => $label,
                 'orders' => $typeOrders->map(function ($so) use ($tixelloShare) {
-                    $gross = (float) $so->total;
+                    $gross = (float) $so->subtotal; // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
                     return [
                         'id' => $so->id,
                         'order_number' => $so->order_number,
@@ -731,7 +731,7 @@ class BillingBreakdown extends Page
                         'config_label' => $so->config['package'] ?? $so->config['plan'] ?? null,
                     ];
                 })->values()->toArray(),
-                'total' => round((float) $typeOrders->sum('total') * $tixelloShare, 2),
+                'total' => round((float) $typeOrders->sum('subtotal') * $tixelloShare, 2),
             ];
         }
 

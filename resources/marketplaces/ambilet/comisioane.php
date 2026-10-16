@@ -41,7 +41,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-2 text-2xl font-bold text-slate-800">Starter</div>
                     <div class="mb-6 text-sm leading-relaxed text-slate-500">Pentru organizatori care incep si vor sa testeze platforma.</div>
                     <div class="pb-8 mb-8 border-b border-slate-200">
-                        <div class="text-5xl font-extrabold text-slate-800">2% <span class="text-lg font-medium text-slate-500">+ 1 RON/bilet</span></div>
+                        <div class="text-5xl font-extrabold text-slate-800">2% <span class="text-lg font-medium text-slate-500">+ 1 RON/bilet + TVA</span></div>
                         <div class="mt-2 text-sm text-slate-400">Primele 100 bilete gratuit</div>
                     </div>
                     <ul class="mb-8 space-y-4">
@@ -63,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-2 text-2xl font-bold text-slate-800">Pro</div>
                     <div class="mb-6 text-sm leading-relaxed text-slate-500">Pentru organizatori activi cu evenimente regulate.</div>
                     <div class="pb-8 mb-8 border-b border-slate-200">
-                        <div class="text-5xl font-extrabold text-slate-800">1.5% <span class="text-lg font-medium text-slate-500">+ 0.5 RON/bilet</span></div>
+                        <div class="text-5xl font-extrabold text-slate-800">1.5% <span class="text-lg font-medium text-slate-500">+ 0.5 RON/bilet + TVA</span></div>
                         <div class="mt-2 text-sm text-slate-400">De la 10 evenimente/an</div>
                     </div>
                     <ul class="mb-8 space-y-4">

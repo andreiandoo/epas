@@ -75,7 +75,8 @@ class AllTimeStatsService
         $serviceStats = ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['active', 'completed'])
             ->where('payment_status', 'paid')
-            ->selectRaw('COALESCE(SUM(total), 0) as total')
+            // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
+            ->selectRaw('COALESCE(SUM(subtotal), 0) as total')
             ->first();
         $serviceOrdersTotal = (float) $serviceStats->total;
 

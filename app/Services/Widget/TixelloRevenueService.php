@@ -172,7 +172,7 @@ class TixelloRevenueService
         }
 
         return $query
-            ->selectRaw('currency, COALESCE(SUM(total), 0) as total')
+            ->selectRaw('currency, COALESCE(SUM(subtotal), 0) as total') // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
             ->groupBy('currency')
             ->get()
             ->mapWithKeys(fn ($row) => [

@@ -278,6 +278,9 @@
         {{-- Breakdown by Type --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Breakdown Venituri</h3>
+            @if(($stats['vat_collected'] ?? 0) > 0)
+                <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">Sumele sunt fără TVA. TVA colectat în perioadă (nu intră în venituri): <strong>{{ number_format($stats['vat_collected'], 2) }} RON</strong></p>
+            @endif
             <div class="space-y-3">
                 @foreach($breakdown as $item)
                     @php

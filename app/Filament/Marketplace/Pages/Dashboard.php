@@ -546,7 +546,8 @@ class Dashboard extends Page
         $serviceStats = ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['active', 'completed'])
             ->where('payment_status', 'paid')
-            ->selectRaw('COALESCE(SUM(total), 0) as total')
+            // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
+            ->selectRaw('COALESCE(SUM(subtotal), 0) as total')
             ->first();
         $serviceOrdersTotal = (float) $serviceStats->total;
 
@@ -1314,7 +1315,7 @@ class Dashboard extends Page
             ->whereIn('status', ['active', 'completed'])
             ->where('payment_status', 'paid')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw('service_type, COALESCE(SUM(total), 0) as total')
+            ->selectRaw('service_type, COALESCE(SUM(subtotal), 0) as total') // subtotal = NET of the marketplace VAT (equal to total on orders without VAT)
             ->groupBy('service_type')
             ->pluck('total', 'service_type')
             ->toArray();
