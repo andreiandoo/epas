@@ -184,9 +184,69 @@ $breadcrumbs[] = ['name' => $atName, 'url' => SITE_URL . '/attraction/' . $slug]
 $kicker = trim($atType . ($atCityName ? ' · ' . $atCityName : ''), ' ·') ?: v2_t('Attraction');
 
 $pageTitleRaw = $atName . ($atCityName ? ', ' . $atCityName : ($atCountryName !== '' ? ', ' . $atCountryName : '')) . ' | Viaqui';
-$pageDescription = $atDesc !== '' ? mb_substr(trim(strip_tags($atDesc)), 0, 160) : trim(($atSubtitle !== '' ? ucfirst($atSubtitle) . '. ' : '') . ($atCityName
-        ? v2_t('Where {name} is, what is around it in {city} and what you can book nearby.', ['name' => $atName, 'city' => $atCityName])
-        : v2_t('Where {name} is, what is around it and what you can book nearby.', ['name' => $atName])));
+/* Meta description: our own sentence from the facts, never the Wikipedia introduction (duplicate text, often opening
+   with a pronunciation). "Bran Castle is a Gothic castle in Bran, Romania, built in 1377, a UNESCO World Heritage
+   Site. Opening hours, photos, the map and tickets nearby." Optional parts drop out, last first, until it fits. */
+$atMetaDesc = function () use ($attraction, $atName, $atCityName, $atCountryName, $atFacts, $atUnesco, $atActivities, $atPartner, $lightbox): string {
+    $slug = (string) ($attraction['type']['slug'] ?? '');
+    $type = V2_ATTRACTION_TYPE_ONE[$slug] ?? '';
+    $type = $type !== '' ? v2_t($type) : '';
+    // a style and a building year only say something about buildings; a site "dates from", nature has neither
+    $buildings = ['castles', 'palaces', 'cathedrals', 'churches', 'monasteries', 'fortresses', 'landmarks', 'theatres-operas', 'bridges', 'lighthouses'];
+    $isBuilding = in_array($slug, $buildings, true);
+    $style = '';
+    foreach ($isBuilding ? (array) ($atFacts['styles'] ?? []) : [] as $s) {
+        $s = trim(preg_replace('/\s+(architecture|style)$/i', '', (string) $s));
+        if ($s !== '' && mb_strlen($s) <= 22 && mb_stripos($type, $s) === false) {
+            $style = $s;
+        }
+        break;
+    }
+    // "Paris 16 Passy" (a district locality) reads as "Paris"
+    $city = preg_replace('/^(\D+?)\s+\d{1,2}(\s.*)?$/u', '$1', (string) $atCityName);
+    $place = implode(', ', array_filter([$city, $atCountryName !== $city ? $atCountryName : '']));
+    $year = (int) ($atFacts['year'] ?? 0);
+    $yearText = $year < 0 ? v2_t('{year} BC', ['year' => abs($year)]) : (string) $year;
+    $built = '';
+    if ($year !== 0 && $isBuilding) {
+        $built = v2_t('built in {year}', ['year' => $yearText]);
+    } elseif ($year !== 0 && in_array($slug, ['archaeological-sites', 'old-towns-squares', 'unesco-sites'], true)) {
+        $built = v2_t('dating from {year}', ['year' => $yearText]);
+    }
+    $what = [];
+    if (!empty($atFacts['hours'])) {
+        $what[] = v2_t('opening hours');
+    }
+    if (count($lightbox) >= 2) {
+        $what[] = v2_t('photos');
+    }
+    $what[] = v2_t('the map');
+    $what[] = ($atActivities || !empty($atPartner['items'])) ? v2_t('tickets you can book') : v2_t('what is nearby');
+    $tail = v2_t('See {list}.', ['list' => implode(', ', array_slice($what, 0, -1)) . ' ' . v2_t('and') . ' ' . end($what)]);
+
+    $first = function (bool $withStyle, bool $withYear, bool $withUnesco) use ($atName, $type, $style, $place, $built, $atUnesco): string {
+        $noun = trim(($withStyle ? $style . ' ' : '') . $type);
+        $s = $noun !== ''
+            ? $atName . ' ' . v2_t('is') . ' ' . (preg_match('/^[aeiou]/i', $noun) ? 'an' : 'a') . ' ' . $noun . ($place !== '' ? ' ' . v2_t('in') . ' ' . $place : '')
+            : $atName . ($place !== '' ? ', ' . $place : '');
+        if ($withYear && $built !== '') {
+            $s .= ', ' . $built;
+        }
+        if ($withUnesco && $atUnesco) {
+            $s .= ', ' . v2_t('a UNESCO World Heritage Site');
+        }
+        return $s . '.';
+    };
+    foreach ([[true, true, true], [false, true, true], [false, false, true], [false, false, false]] as [$st, $yr, $un]) {
+        $text = $first($st, $yr, $un) . ' ' . $tail;
+        if (mb_strlen($text) <= 160) {
+            return $text;
+        }
+    }
+    $text = $first(false, false, $atUnesco);
+    return mb_strlen($text) <= 160 ? $text : rtrim(mb_substr($text, 0, 157)) . '…';
+};
+$pageDescription = $atMetaDesc();
 $canonicalUrl = SITE_URL . '/attraction/' . $slug;
 $ogImage = $atCover ?: (SITE_URL . '/assets/images/og-default.jpg');
 
