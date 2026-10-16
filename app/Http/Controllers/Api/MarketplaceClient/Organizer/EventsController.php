@@ -3147,6 +3147,9 @@ class EventsController extends BaseController
                 'commission_rate' => $event->getEffectiveCommissionRate(),
                 'commission_mode' => $event->getEffectiveCommissionMode(),
                 'use_fixed_commission' => (bool) $event->use_fixed_commission,
+                // marketplace VAT on its commission (0 = none): on-top paid by the customer,
+                // included invoiced to the organizer with this VAT
+                'commission_vat_rate' => (float) ($event->marketplaceClient?->vatRate() ?? 0),
             ],
             'chart' => [
                 'labels' => $chartLabels,

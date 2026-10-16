@@ -319,6 +319,8 @@ class PayoutController extends BaseController
                     'is_past' => $event->event_date ? $event->event_date->isPast() : false,
                     'commission_rate' => $commissionRate,
                     'commission_mode' => $commissionMode,
+                    // marketplace VAT on its commission (0 = none)
+                    'commission_vat_rate' => (float) ($organizer->marketplaceClient?->vatRate() ?? 0),
                     'gross_revenue' => $grossRevenue,
                     'net_revenue' => $netRevenue,
                     'commission_amount' => $commissionAmount,

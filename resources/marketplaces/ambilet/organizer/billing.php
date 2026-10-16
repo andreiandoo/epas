@@ -553,8 +553,8 @@ const BillingManager = {
                             <tr class="border-t border-slate-100">
                                 <td class="py-3 text-sm text-secondary">${this.escapeHtml(item.description)}</td>
                                 <td class="py-3 text-sm text-right text-muted">${item.quantity}</td>
-                                <td class="py-3 text-sm text-right text-muted">${this.formatCurrency(item.price)}</td>
-                                <td class="py-3 text-sm font-semibold text-right text-secondary">${this.formatCurrency(item.total)}</td>
+                                <td class="py-3 text-sm text-right text-muted">${this.formatCurrency(item.price ?? item.unit_price ?? 0)}</td>
+                                <td class="py-3 text-sm font-semibold text-right text-secondary">${this.formatCurrency(item.total ?? item.amount ?? 0)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
