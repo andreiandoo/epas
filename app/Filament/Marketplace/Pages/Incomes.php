@@ -185,8 +185,8 @@ class Incomes extends Page
             $ordersVat = (float) $this->baseOrderQuery()
                 ->whereBetween('paid_at', [$startDate, $endDate])
                 ->selectRaw(DB::getDriverName() === 'pgsql'
-                    ? "COALESCE(SUM(COALESCE((meta->>'commission_vat_amount')::numeric, 0) + COALESCE((meta->>'insurance_vat')::numeric, 0)), 0) as total"
-                    : "COALESCE(SUM(COALESCE(json_extract(meta, '$.commission_vat_amount'), 0) + COALESCE(json_extract(meta, '$.insurance_vat'), 0)), 0) as total")
+                    ? "COALESCE(SUM(COALESCE((meta->>'commission_vat_amount')::numeric, 0) + COALESCE((meta->>'insurance_vat')::numeric, 0) + COALESCE((meta->>'cultural_card_vat')::numeric, 0)), 0) as total"
+                    : "COALESCE(SUM(COALESCE(json_extract(meta, '$.commission_vat_amount'), 0) + COALESCE(json_extract(meta, '$.insurance_vat'), 0) + COALESCE(json_extract(meta, '$.cultural_card_vat'), 0)), 0) as total")
                 ->value('total');
 
             // ─── Gift Card Revenue ───

@@ -1587,7 +1587,7 @@ class OrderResource extends Resource
         $culturalSurcharge = (float) ($record->meta['cultural_card_surcharge'] ?? 0);
         if ($culturalSurcharge > 0) {
             $html .= "<div style='{$headStyle}'>Card Cultural Național</div>";
-            $html .= "<div style='{$rowStyle}' title='Surcharge Netopia pentru plata cu card cultural — revine AmBilet, transferat mai departe către furnizorul de plată card cultural'><span style='{$labelStyle}'>Surcharge card cultural (4%)</span><span style='font-size:12px;font-weight:600;color:#A78BFA;'>" . number_format($culturalSurcharge, 2) . " {$currency}</span></div>";
+            $html .= "<div style='{$rowStyle}' title='Surcharge Netopia pentru plata cu card cultural — revine AmBilet, transferat mai departe către furnizorul de plată card cultural'><span style='{$labelStyle}'>Surcharge card cultural (4%)</span><span style='font-size:12px;font-weight:600;color:#A78BFA;'>" . number_format($culturalSurcharge, 2) . " {$currency}" . (((float) ($record->meta['cultural_card_vat'] ?? 0)) > 0 ? ' (incl. TVA ' . number_format((float) $record->meta['cultural_card_vat'], 2) . ')' : '') . "</span></div>";
             $html .= "<div style='{$subStyle}'>💳 Suma revine AmBilet (transferat furnizorului plată card cultural)</div>";
         }
 

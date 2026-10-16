@@ -850,6 +850,7 @@ class OrdersController extends BaseController
                 'vat_rate' => (float) ($order->meta['vat_rate'] ?? 0),
                 'commission_vat' => number_format((float) ($order->meta['commission_vat_amount'] ?? 0), 2, '.', ''),
                 'insurance_vat' => number_format((float) ($order->meta['insurance_vat'] ?? 0), 2, '.', ''),
+                'cultural_card_vat' => number_format((float) ($order->meta['cultural_card_vat'] ?? 0), 2, '.', ''),
                 'discount' => number_format($discount, 2, '.', ''),
                 'points_used' => (int) ($order->points_used ?? 0),
                 'points_discount' => number_format($pointsDiscount, 2, '.', ''),

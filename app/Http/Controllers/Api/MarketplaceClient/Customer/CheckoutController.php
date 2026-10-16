@@ -1051,9 +1051,14 @@ class CheckoutController extends BaseController
             }
 
             // Cultural card surcharge
+            // The client sends it NET; the customer pays it plus the marketplace
+            // VAT. $culturalCardSurcharge is the gross (stored as before).
             $culturalCardSurcharge = 0;
+            $culturalCardVat = 0.0;
             if ($request->input('payment_method') === 'card_cultural' && $request->has('cultural_card_surcharge')) {
-                $culturalCardSurcharge = round((float) $request->input('cultural_card_surcharge'), 2);
+                $culturalCardNet = round((float) $request->input('cultural_card_surcharge'), 2);
+                $culturalCardVat = ($marketplaceVatRate > 0 && $culturalCardNet > 0) ? round($culturalCardNet * $marketplaceVatRate / 100, 2) : 0.0;
+                $culturalCardSurcharge = round($culturalCardNet + $culturalCardVat, 2);
                 $orderTotal += $culturalCardSurcharge;
             }
 
@@ -1211,6 +1216,7 @@ class CheckoutController extends BaseController
                     'commission_vat_amount' => $totalCommissionVat,
                     'insurance_net' => $hasInsurance ? $insuranceNet : 0,
                     'insurance_vat' => $hasInsurance ? $insuranceVat : 0,
+                    'cultural_card_vat' => $culturalCardVat,
                 ] : []),
             ]);
 
@@ -1590,6 +1596,7 @@ class CheckoutController extends BaseController
                 'insurance' => (float) ($hasInsurance ? $insuranceAmount : 0),
                 'insurance_vat' => (float) ($hasInsurance ? $insuranceVat : 0),
                 'commission_vat' => (float) $totalCommissionVat,
+                'cultural_card_vat' => (float) $culturalCardVat,
                 'vat_rate' => (float) $marketplaceVatRate,
                 'points_used' => (int) $order->points_used,
                 'points_discount' => (float) $order->points_discount,

@@ -565,7 +565,7 @@ const ThankYouPage = {
         const serviceFee = parseFloat(order.service_fee) || 0;
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
         // Marketplace VAT inside the service fee and the return fee (0 before the VAT start date)
-        const vatPaid = (parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0);
+        const vatPaid = (parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0) + (parseFloat(order.cultural_card_vat) || 0);
 
         document.getElementById('paymentSummary').innerHTML = `
             <h4 class="mb-3 font-semibold text-secondary">${this.t('payment_summary')}</h4>
@@ -780,7 +780,7 @@ const ThankYouPage = {
         const serviceFee = parseFloat(order.service_fee) || 0;
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
         // Marketplace VAT inside the service fee and the return fee (0 before the VAT start date)
-        const vatPaid = (parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0);
+        const vatPaid = (parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0) + (parseFloat(order.cultural_card_vat) || 0);
         const currency = order.currency || 'RON';
 
         document.getElementById('paymentSummary').innerHTML = `

@@ -717,12 +717,14 @@ const CheckoutPage = {
 
         // Cultural card surcharge (applied on entire total including insurance)
         const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'card';
+        // NET surcharge (sent to the server, which adds the VAT) and the gross paid
         let culturalCardSurcharge = 0;
         if (paymentMethod === 'card_cultural') {
             culturalCardSurcharge = Math.round(baseTotal * (this.culturalCardSurchargeRate / 100) * 100) / 100;
         }
+        const culturalCardGross = this.withVat(culturalCardSurcharge);
 
-        const total = baseTotal + culturalCardSurcharge;
+        const total = baseTotal + culturalCardGross;
         const points = Math.floor(total / 10);
 
         this.totals = { subtotal: subtotalWithCommission, tax: totalCommissionVat, discount: promoDiscount, insurance: insuranceAmount, insuranceGross, culturalCardSurcharge, total, savings };
@@ -767,7 +769,8 @@ const CheckoutPage = {
         if (culturalCardRow) {
             if (culturalCardSurcharge > 0) {
                 culturalCardRow.classList.remove('hidden');
-                document.getElementById('cultural-card-amount').textContent = '+' + AmbiletUtils.formatCurrency(culturalCardSurcharge);
+                document.getElementById('cultural-card-amount').textContent = '+' + AmbiletUtils.formatCurrency(culturalCardGross)
+                    + (this.vatRate > 0 ? ' (incl. TVA ' + AmbiletUtils.formatCurrency(culturalCardGross - culturalCardSurcharge) + ')' : '');
             } else {
                 culturalCardRow.classList.add('hidden');
             }

@@ -466,7 +466,8 @@ class PaymentController extends BaseController
                     // insurance fee) is never the organizer's money.
                     $grossAmount = (float) $order->total
                         - (float) ($order->meta['commission_vat_amount'] ?? 0)
-                        - (float) ($order->meta['insurance_vat'] ?? 0);
+                        - (float) ($order->meta['insurance_vat'] ?? 0)
+                        - (float) ($order->meta['cultural_card_vat'] ?? 0);
                     $commissionAmount = round($grossAmount * $commissionRate / 100, 2);
 
                     MarketplaceTransaction::recordSale(
@@ -998,6 +999,8 @@ class PaymentController extends BaseController
         $vatRate = (float) ($order->meta['vat_rate'] ?? 0);
         $commissionVat = (float) ($order->meta['commission_vat_amount'] ?? 0);
         $insuranceVat = (float) ($order->meta['insurance_vat'] ?? 0);
+        // VAT on the cultural card surcharge counts in the "din care TVA" total
+        $culturalCardVat = (float) ($order->meta['cultural_card_vat'] ?? 0);
         $vatRateLabel = rtrim(rtrim(number_format($vatRate, 2, ',', ''), '0'), ',');
 
         // Commission (only the part added on top of the price is charged to the customer)
@@ -1043,8 +1046,8 @@ class PaymentController extends BaseController
 
         // Total
         $html .= '<tr style="border-top:2px solid #1a1a2e;"><td style="padding:10px 0 6px;font-weight:700;font-size:16px;">Total plătit:</td><td style="padding:10px 0 6px;text-align:right;font-weight:700;font-size:16px;color:#1a1a2e;">' . $totalAmount . '</td></tr>';
-        if ($commissionVat + $insuranceVat > 0) {
-            $html .= '<tr><td style="padding:2px 0;color:#888;font-size:12px;">din care TVA (' . $vatRateLabel . '%):</td><td style="padding:2px 0;text-align:right;color:#888;font-size:12px;">' . number_format($commissionVat + $insuranceVat, 2, ',', '.') . ' ' . $currency . '</td></tr>';
+        if ($commissionVat + $insuranceVat + $culturalCardVat > 0) {
+            $html .= '<tr><td style="padding:2px 0;color:#888;font-size:12px;">din care TVA (' . $vatRateLabel . '%):</td><td style="padding:2px 0;text-align:right;color:#888;font-size:12px;">' . number_format($commissionVat + $insuranceVat + $culturalCardVat, 2, ',', '.') . ' ' . $currency . '</td></tr>';
         }
         $html .= '</table>';
         $html .= '</div>';
@@ -1086,7 +1089,7 @@ class PaymentController extends BaseController
                 'vat_rate' => $vatRate > 0 ? $vatRateLabel . '%' : '',
                 'commission_vat' => $commissionVat > 0 ? number_format($commissionVat, 2, ',', '.') . ' ' . $currency : '',
                 'insurance_vat' => $insuranceVat > 0 ? number_format($insuranceVat, 2, ',', '.') . ' ' . $currency : '',
-                'vat_total' => ($commissionVat + $insuranceVat) > 0 ? number_format($commissionVat + $insuranceVat, 2, ',', '.') . ' ' . $currency : '',
+                'vat_total' => ($commissionVat + $insuranceVat + $culturalCardVat) > 0 ? number_format($commissionVat + $insuranceVat + $culturalCardVat, 2, ',', '.') . ' ' . $currency : '',
                 'marketplace_name' => $marketplaceName,
                 'tickets_list' => $ticketsHtml,
                 'download_url' => $downloadUrl,

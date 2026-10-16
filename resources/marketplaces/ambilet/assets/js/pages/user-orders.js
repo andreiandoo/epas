@@ -255,10 +255,10 @@ const UserOrders = {
                             <span class="text-secondary">Total plătit</span>
                             <span class="text-secondary">${paidTotal.toFixed(2)} lei</span>
                         </div>
-                        ${((parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0)) > 0 ? `
+                        ${((parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0) + (parseFloat(order.cultural_card_vat) || 0)) > 0 ? `
                         <div class="flex justify-between text-xs text-muted">
                             <span>din care TVA (${parseFloat(order.vat_rate) || 0}%)</span>
-                            <span>${((parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0)).toFixed(2)} lei</span>
+                            <span>${((parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0) + (parseFloat(order.cultural_card_vat) || 0)).toFixed(2)} lei</span>
                         </div>
                         ` : ''}
                         ${order.commission_amount > 0 && order.commission_mode === 'included' ? `
