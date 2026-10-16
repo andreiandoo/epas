@@ -255,6 +255,17 @@
   // ── Bootstrap ────────────────────────────────────────────────────────────
   function bootstrap() {
     if (!authGuard()) return;
+
+    // Rapoarte (event revenue) only for owner / admin, like the Android app
+    // (isAdmin && reports permission; admins have every permission).
+    if (!ScanAuth.isAdmin()) {
+      var reportsTab = document.querySelector('.scanapp-tabbar [data-tab="rapoarte"]');
+      if (reportsTab) reportsTab.hidden = true;
+      if (window.SCAN_APP && window.SCAN_APP.page === 'rapoarte' && !window.SCAN_APP.venue) {
+        location.replace('/organizator/scan/panou');
+        return;
+      }
+    }
     bindHeader();
 
     if (typeof EventContext === 'undefined') {

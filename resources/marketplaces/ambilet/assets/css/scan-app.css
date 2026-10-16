@@ -313,7 +313,9 @@ body.scanapp-body {
   right: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* One equal column per visible tab (4 for venues, 4 when Rapoarte is hidden). */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   height: calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom) + 8px);
   padding-bottom: calc(var(--scanapp-safe-bottom) + 8px);
   padding-top: 8px;
