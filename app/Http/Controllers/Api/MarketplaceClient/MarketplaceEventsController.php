@@ -2716,7 +2716,8 @@ class MarketplaceEventsController extends BaseController
                 'venue_city' => $venue?->city ?? '',
                 'price' => $minPrice,
                 'display_price' => $minPrice !== null && ($commissionMode === 'added_on_top' || $commissionMode === 'on_top')
-                    ? (int) ceil($minPrice + $minPrice * $commissionRate / 100)
+                    // ticket + on-top commission + the marketplace VAT on that commission
+                    ? (int) ceil($minPrice + ($minPrice * $commissionRate / 100) * (1 + $client->vatRate() / 100))
                     : ($minPrice !== null ? (int) ceil($minPrice) : null),
                 'is_sold_out' => (bool) $event->is_sold_out,
                 'is_cancelled' => (bool) $event->is_cancelled,
@@ -2809,6 +2810,8 @@ class MarketplaceEventsController extends BaseController
             'facts' => $facts,
             'commission_mode' => $commissionMode,
             'commission_rate' => $commissionRate,
+            // marketplace VAT on the commission added on top (0 = none)
+            'commission_vat_rate' => $client->vatRate(),
             'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
             'embed_domains' => $organizer->settings['embed_domains'] ?? [],
             'widget_config' => $organizer->settings['widget_config'] ?? [],

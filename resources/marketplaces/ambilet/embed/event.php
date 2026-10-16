@@ -57,6 +57,8 @@ require_once __DIR__ . '/includes/embed-head.php';
         'ticket_types' => $ticketTypes,
         'commission_mode' => $eventData['data']['commission_mode'] ?? 'included',
         'commission_rate' => (float) ($eventData['data']['commission_rate'] ?? 5),
+        // marketplace VAT on the commission added on top (0 = none)
+        'commission_vat_rate' => (float) ($eventData['data']['commission_vat_rate'] ?? 0),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 

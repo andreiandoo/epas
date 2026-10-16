@@ -13,11 +13,12 @@ $orgData = api_cached('wl_org_' . ORG_SLUG, function () {
 }, 300);
 $commMode = $orgData['data']['commission_mode'] ?? 'included';
 $commRate = (float) ($orgData['data']['commission_rate'] ?? 5);
+$commVatRate = (float) ($orgData['data']['commission_vat_rate'] ?? 0);
 
 require_once __DIR__ . '/includes/head.php';
 ?>
 <script>
-window.__WL_COMMISSION__ = <?= json_encode(['mode' => $commMode, 'rate' => $commRate]) ?>;
+window.__WL_COMMISSION__ = <?= json_encode(['mode' => $commMode, 'rate' => $commRate, 'vat_rate' => $commVatRate]) ?>;
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof WLTracking === 'undefined') return;
     try {
