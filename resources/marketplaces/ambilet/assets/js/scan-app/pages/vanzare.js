@@ -649,7 +649,8 @@
       }
       ScanAPI.get('/claim/' + token + '/status').then(function (resp) {
         var d = (resp && resp.data) || resp || {};
-        if (d.completed || d.claimed || d.status === 'completed') {
+        // Same signal as the Android app: the customer filled in an email.
+        if (d.has_email || d.is_claimed) {
           dom.claimStatus.classList.add('scanapp-claim-status--ok');
           dom.claimStatus.textContent = '✓ Biletele au fost trimise pe email.';
           clearInterval(claimPollTimer);
