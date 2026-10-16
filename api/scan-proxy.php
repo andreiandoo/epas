@@ -157,6 +157,11 @@ list($cleanPath, $queryFromPath) = array_pad(explode('?', $path, 2), 2, null);
 // Build the target URL. API_BASE_URL is set by config.php to
 // https://core.tixello.com/api/marketplace-client (or stage variant).
 $targetUrl = rtrim(API_BASE_URL, '/') . $cleanPath;
+// The POS claim status lives on core's web routes (/claim/{token}/status),
+// not under the marketplace API, and sends no CORS headers.
+if (preg_match('#^/claim/[A-Za-z0-9_-]+/status$#', $cleanPath)) {
+    $targetUrl = rtrim(CORE_URL, '/') . $cleanPath;
+}
 if ($queryFromPath !== null && $queryFromPath !== '') {
     $targetUrl .= '?' . $queryFromPath;
 }

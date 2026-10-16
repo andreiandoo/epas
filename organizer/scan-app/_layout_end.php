@@ -5,6 +5,7 @@
     $isActive = ($scanPage === $key);
 ?>
     <a class="scanapp-tabbar__tab<?= $isActive ? ' scanapp-tabbar__tab--active' : '' ?>"
+       data-tab="<?= htmlspecialchars($key) ?>"
        href="<?= htmlspecialchars($tab['href']) ?>"
        aria-current="<?= $isActive ? 'page' : 'false' ?>">
       <span class="scanapp-tabbar__icon">
