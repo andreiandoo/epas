@@ -17,6 +17,17 @@ const V2_ATTRACTION_TYPES = [
     'wineries' => 'Wineries', 'bridges' => 'Bridges', 'lighthouses' => 'Lighthouses',
 ];
 
+/** One place of each type, for sentences ("Bran Castle is a castle in Bran"). Empty: the type has no single noun. */
+const V2_ATTRACTION_TYPE_ONE = [
+    'castles' => 'castle', 'palaces' => 'palace', 'museums' => 'museum', 'cathedrals' => 'cathedral', 'churches' => 'church',
+    'monasteries' => 'monastery', 'fortresses' => 'fortress', 'archaeological-sites' => 'archaeological site',
+    'old-towns-squares' => 'historic square', 'unesco-sites' => 'heritage site', 'landmarks' => 'landmark', 'viewpoints' => 'viewpoint',
+    'theatres-operas' => 'theatre', 'national-parks' => 'national park', 'caves' => 'cave', 'waterfalls' => 'waterfall',
+    'lakes' => 'lake', 'beaches' => 'beach', 'zoos' => 'zoo', 'aquariums' => 'aquarium', 'botanical-gardens' => 'botanical garden',
+    'theme-parks' => 'theme park', 'thermal-baths' => 'thermal spa', 'cable-cars' => 'cable car', 'salt-mines' => 'salt mine',
+    'wineries' => 'winery', 'bridges' => 'bridge', 'lighthouses' => 'lighthouse',
+];
+
 /**
  * V2_ATTRACTION_TYPES in the visitor's language: the same slugs in the same order. The constant stays for the code
  * that only needs the slugs (validating a filter); whatever prints a label reads this.

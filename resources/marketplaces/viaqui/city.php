@@ -297,8 +297,10 @@ $pageTitleRaw = ($countryName !== ''
     : v2_t('Things to do in {city}: tickets and experiences', ['city' => $cityName])) . ' | Viaqui';
 $pageDescription = v2_t('Things to do in {city}: attractions, museums, tours, family days out and experiences. Book online and walk in with a QR ticket on your phone.', ['city' => $cityName]);
 $canonicalUrl = SITE_URL . '/' . $slug;
-$ogImage = $cityCover
-    ? (str_starts_with($cityCover, 'http') ? $cityCover : STORAGE_URL . '/' . ltrim($cityCover, '/'))
+// share image: the city's own cover, else its photo (most cities carry the photo of their best-known attraction)
+$ogImage = v2_media_url($cityCover) ?? v2_media_url($cityImage);
+$ogImage = $ogImage !== null
+    ? (str_starts_with($ogImage, '/') ? SITE_URL . $ogImage : $ogImage)
     : (SITE_URL . '/assets/images/og-default.jpg');
 
 $breadcrumbs = array_values(array_filter([

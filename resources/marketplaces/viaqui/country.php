@@ -104,13 +104,8 @@ $v2Styles = ['places.css'];
 $v2Scripts = ['places.js'];
 $v2HeaderOverlay = true;
 
-include __DIR__ . '/includes/v2/head.php';
-include __DIR__ . '/includes/v2/header.php';
-?>
-<main id="main" class="v-places">
-<?php
 // The photo of the hero: the country's best-known place that is a sight rather than an interior, from the map's
-// summary of the country (assets/v2/data/map/<cc>.summary.json; each pick carries its photo credit).
+// summary of the country (assets/v2/data/map/<cc>.summary.json; each pick carries its photo credit). Also the share image.
 $cnShot = null;
 foreach (v2_map_file(strtolower($cnCode) . '.summary')['picks'] ?? [] as $cnPick) {
     if (!empty($cnPick[6]) && !in_array($cnPick[3], ['museums', 'theatres-operas', 'zoos', 'aquariums'], true)) {
@@ -118,7 +113,15 @@ foreach (v2_map_file(strtolower($cnCode) . '.summary')['picks'] ?? [] as $cnPick
         break;
     }
 }
+if ($cnShot) {
+    $ogImage = v2_thumb($cnShot[6], 960);
+    $ogImage = str_starts_with($ogImage, '/') ? SITE_URL . $ogImage : $ogImage;
+}
+
+include __DIR__ . '/includes/v2/head.php';
+include __DIR__ . '/includes/v2/header.php';
 ?>
+<main id="main" class="v-places">
 <section class="v-phero" aria-labelledby="cn-h">
   <div class="v-phero-topo" aria-hidden="true"></div>
   <div class="wrap v-phero-in<?= $cnShot ? ' has-shot' : '' ?>">
