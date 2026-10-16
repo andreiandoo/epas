@@ -113,8 +113,8 @@ require_once __DIR__ . '/includes/header.php';
                                     <span class="text-success"><?= htmlspecialchars(ct('discount_applied')) ?></span>
                                     <span id="discountAmount" class="font-medium text-success">-0.00 lei</span>
                                 </div>
-                                <!-- Subtotal - last before total -->
-                                <div class="flex justify-between pt-2 text-sm border-t border-border">
+                                <!-- Subtotal: hidden (kept for the script that fills it) -->
+                                <div class="flex justify-between pt-2 text-sm border-t border-border" style="display:none">
                                     <span class="text-muted"><?= htmlspecialchars(ct('subtotal')) ?> (<span id="summaryItems">0</span> <?= htmlspecialchars(ct('cart_items_unit')) ?>)</span>
                                     <span id="subtotal" class="font-medium">0.00 lei</span>
                                 </div>

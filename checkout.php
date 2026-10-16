@@ -325,7 +325,8 @@ require_once __DIR__ . '/includes/header.php';
                                     <!-- Taxes will be rendered dynamically by JS -->
                                 </div>
                                 
-                                <div class="flex justify-between text-sm">
+                                <!-- Subtotal: hidden (kept for the script that fills it) -->
+                                <div class="flex justify-between text-sm" style="display:none">
                                     <span class="text-muted"><?= htmlspecialchars(ct('subtotal')) ?> (<span id="summary-items">0</span> <?= htmlspecialchars(ct('cart_items_unit')) ?>)</span>
                                     <span id="summary-subtotal" class="font-medium">0.00 lei</span>
                                 </div>
