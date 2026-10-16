@@ -738,8 +738,22 @@ class ViewPayout extends ViewRecord
                         $parts[] = 'comision reținut la rambursări (rămas în vistieria Ambilet): ' . $fmt($preview['kept']);
                     }
                     $breakdown = !empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '';
+                    // Marketplace VAT on this invoice (split by sale date)
+                    $vatNote = '';
+                    try {
+                        $mp = $this->record->marketplaceClient;
+                        if ($mp && $mp->vat_payer) {
+                            $vat = app(\App\Services\Invoicing\GeneralClientInvoiceVat::class)
+                                ->compute($this->record, $mp, (float) $preview['commission'], $preview['kept'] > 0.01 ? $this->record->getKeptCommissionRowsForPayout() : []);
+                            if ($vat['vat_amount'] > 0) {
+                                $vatNote = ' Pe factură: ' . $fmt($vat['subtotal']) . ' fără TVA + TVA ' . $fmt($vat['vat_amount']) . ' = ' . $fmt($vat['subtotal'] + $vat['vat_amount']) . '.';
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // preview only
+                    }
                     return 'Se va genera o factură către clientul general pentru comisioanele încasate pe acest decont: '
-                        . $fmt($preview['total']) . $breakdown . '.';
+                        . $fmt($preview['total']) . $breakdown . '.' . $vatNote;
                 })
                 // Only appears on on_top payouts WITH something to bill: this
                 // action creates the general-client invoice for the commission
@@ -1109,8 +1123,18 @@ class ViewPayout extends ViewRecord
                         $parts[] = 'minus comision reținut din rambursări parțiale (rămâne în vistieria Ambilet): −' . $fmt($preview['kept']);
                     }
                     $breakdown = !empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '';
+                    // Marketplace VAT added on the organizer invoice (only on sales from the VAT start date)
+                    $vatNote = '';
+                    try {
+                        $built = app(\App\Services\Invoicing\PosInvoiceContentBuilder::class)->build($this->record);
+                        if (!isset($built['error']) && ($built['vat_amount'] ?? 0) > 0) {
+                            $vatNote = ' + TVA ' . $fmt($built['vat_amount']) . ' = ' . $fmt($built['amount']) . ' de plată';
+                        }
+                    } catch (\Throwable $e) {
+                        // preview only
+                    }
                     return 'Se va genera o factură către organizator pentru comisioanele datorate pe acest decont: '
-                        . $fmt($preview['total']) . $breakdown
+                        . $fmt($preview['total']) . $vatNote . $breakdown
                         . '. Facturile organizator sunt emise per decont — dacă evenimentul mai are alte deconturi, fiecare are propria factură.';
                 })
                 // Bill ONCE per PAYOUT — each decont has its own invoice
