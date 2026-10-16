@@ -303,7 +303,9 @@ class MarketplaceEmailService
         $variables = [
             'customer_name' => $customer->full_name ?? $customer->name ?? $order->customer_name ?? '',
             'order_number' => $order->order_number ?? str_pad($order->id, 8, '0', STR_PAD_LEFT),
-            'refund_amount' => number_format($refund->approved_amount ?? $refund->requested_amount, 2) . ' ' . ($order->currency ?? 'RON'),
+            'refund_amount' => number_format($refund->approved_amount ?? $refund->requested_amount, 2) . ' ' . ($order->currency ?? 'RON')
+                // marketplace VAT returned with the on-top commission (fees_refund)
+                . ((float) ($refund->fees_refund ?? 0) > 0 ? ' (din care TVA ' . number_format((float) $refund->fees_refund, 2) . ' ' . ($order->currency ?? 'RON') . ')' : ''),
             'refund_reason' => $refund->reason ?? '',
             'refund_reference' => $refund->reference ?? '',
             'refunded_tickets' => $refundedTickets ?: 'Toate biletele din comandă',
