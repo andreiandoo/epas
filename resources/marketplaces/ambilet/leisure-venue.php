@@ -387,6 +387,7 @@ require_once __DIR__ . '/includes/head.php';
                 'order_summary' => 'Sumar comandă',
                 'subtotal_tickets' => 'Subtotal bilete',
                 'total_commission' => 'Total comision',
+                'commission_vat' => 'TVA comision',
                 'commission_plus' => '+ Comision ticketing',
                 'total' => 'Total',
                 'choose_date_first' => 'Alege mai întâi data',
@@ -479,6 +480,7 @@ require_once __DIR__ . '/includes/head.php';
                 'order_summary' => 'Rendelés összesítő',
                 'subtotal_tickets' => 'Jegyek részösszege',
                 'total_commission' => 'Összes jutalék',
+                'commission_vat' => 'Jutalék ÁFA',
                 'commission_plus' => '+ Jegyértékesítési jutalék',
                 'total' => 'Összesen',
                 'choose_date_first' => 'Előbb válassz dátumot',
@@ -567,6 +569,7 @@ require_once __DIR__ . '/includes/head.php';
                 'order_summary' => 'Order summary',
                 'subtotal_tickets' => 'Tickets subtotal',
                 'total_commission' => 'Total commission',
+                'commission_vat' => 'Commission VAT',
                 'commission_plus' => '+ Ticketing commission',
                 'total' => 'Total',
                 'choose_date_first' => 'Pick a date first',
@@ -1595,9 +1598,13 @@ require_once __DIR__ . '/includes/head.php';
                                             <span class="text-forest-700/70" data-i18n="ticketing_fee">Taxă ticketing</span>
                                             <span class="font-bold"><span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
                                         </div>
+                                        <div x-show="commissionVatPerTicket(item.effective_price) > 0" class="flex items-center justify-between gap-3 py-1 border-b border-forest-100">
+                                            <span class="text-forest-700/70"><span data-i18n="commission_vat">TVA comision</span> (<span x-text="commission.vat_rate"></span>%)</span>
+                                            <span class="font-bold"><span x-text="(item.qty * commissionVatPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
+                                        </div>
                                         <div class="flex items-center justify-between gap-3 pt-1">
                                             <span class="font-semibold text-forest-900" data-i18n="total">Total</span>
-                                            <span class="font-bold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                                            <span class="font-bold"><span x-text="(item.qty * (parseFloat(item.effective_price || 0) + commissionVatPerTicket(item.effective_price))).toFixed(2)"></span> RON</span>
                                         </div>
                                     </div>
                                 </span>
@@ -1630,6 +1637,10 @@ require_once __DIR__ . '/includes/head.php';
             <div x-show="hasCommission" class="flex items-center justify-between text-sm text-white/70 py-1">
                 <span data-i18n="total_commission">Total comision</span>
                 <span>+<span x-text="cartCommissionTotal.toFixed(2)"></span> RON</span>
+            </div>
+            <div x-show="hasCommission && cartCommissionVatTotal > 0" class="flex items-center justify-between text-sm text-white/70 py-1">
+                <span><span data-i18n="commission_vat">TVA comision</span> (<span x-text="commission.vat_rate"></span>%)</span>
+                <span>+<span x-text="cartCommissionVatTotal.toFixed(2)"></span> RON</span>
             </div>
             <div class="flex items-center justify-between py-3 border-t border-white/10">
                 <span class="font-bold" data-i18n="total">Total</span>
@@ -2284,9 +2295,15 @@ function reservationPage() {
             const pct = parseFloat(price || 0) * rate / 100;
             return Math.max(pct, fixed);
         },
+        // Marketplace VAT on the on-top commission of ONE ticket (0 = none)
+        commissionVatPerTicket(price) {
+            const rate = parseFloat(this.commission.vat_rate || 0);
+            const com = Math.round(this.commissionPerTicket(price) * 100) / 100;
+            return rate > 0 && com > 0 ? Math.round(com * rate) / 100 : 0;
+        },
         cartItemSubtotal(item) {
             const unit = parseFloat(item.effective_price || 0);
-            const com = this.commissionPerTicket(unit);
+            const com = this.commissionPerTicket(unit) + this.commissionVatPerTicket(unit);
             return item.qty * (unit + com);
         },
         get cartSubtotalBase() {
@@ -2298,8 +2315,11 @@ function reservationPage() {
         get cartCommissionTotal() {
             return this.cartItems.reduce((s, t) => s + t.qty * this.commissionPerTicket(parseFloat(t.effective_price || 0)), 0);
         },
+        get cartCommissionVatTotal() {
+            return this.cartItems.reduce((s, t) => s + t.qty * this.commissionVatPerTicket(parseFloat(t.effective_price || 0)), 0);
+        },
         get cartTotal() {
-            return (this.cartSubtotalBase + this.cartAddonsTotal + this.cartCommissionTotal).toFixed(2);
+            return (this.cartSubtotalBase + this.cartAddonsTotal + this.cartCommissionTotal + this.cartCommissionVatTotal).toFixed(2);
         },
         get hasCommission() {
             return (this.commission.mode === 'added_on_top') && (this.commission.rate > 0 || this.commission.fixed > 0);
@@ -2614,8 +2634,11 @@ function reservationPage() {
 
             this.cartItems.forEach(t => {
                 const unit = parseFloat(t.effective_price) || 0;
+                // The price kept in the cart is what the customer pays per ticket:
+                // ticket + on-top commission + the marketplace VAT on it
                 const commission = this.commissionPerTicket(unit);
-                const finalUnit = unit + commission;
+                const commissionVat = this.commissionVatPerTicket(unit);
+                const finalUnit = unit + commission + commissionVat;
                 const variantInfo = t.variant ? {
                     id: String(t.variant.id),
                     label: String(t.variant.label),

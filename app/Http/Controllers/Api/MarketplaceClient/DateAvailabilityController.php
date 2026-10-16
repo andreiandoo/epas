@@ -442,6 +442,8 @@ class DateAvailabilityController extends BaseController
                 ];
             }
         }
+        // The marketplace's own VAT on the commission added on top (0 = none)
+        $commission['vat_rate'] = $client->vatRate();
 
         // C2: categorii custom (sortate) pentru grupare pe pagina publica.
         // Numele poate fi multi-locale (object) sau string simplu → aplicam locale.
