@@ -93,7 +93,6 @@ class VenueOwnerUsageService
             'cancelled'     => $allEvents->where('computed_status', 'cancelled')->count(),
             'unknown'       => $allEvents->where('computed_status', 'unknown')->count(),
             'total_sold'    => (int) $allEvents->sum('ticket_stats.sold'),
-            'total_revenue' => round((float) $allEvents->sum('ticket_stats.revenue'), 2),
         ];
 
         return compact('events', 'stats');
@@ -112,12 +111,10 @@ class VenueOwnerUsageService
         // ticket types), so the Venit column was empty for them.
         $sold     = $sales ? (int) $sales->tickets_sold : 0;
         $capacity = (int) $event->ticketTypes->sum('quota_total');
-        $revenue  = $sales ? (float) $sales->revenue : 0.0;
 
         $event->ticket_stats = [
             'sold'      => $sold,
             'capacity'  => $capacity,
-            'revenue'   => round((float) $revenue, 2),
             'fill_rate' => $capacity > 0 ? round($sold / $capacity * 100) : 0,
         ];
 
@@ -171,7 +168,6 @@ class VenueOwnerUsageService
             'cancelled'     => 0,
             'unknown'       => 0,
             'total_sold'    => 0,
-            'total_revenue' => 0.0,
         ];
     }
 }

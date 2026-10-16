@@ -198,7 +198,6 @@ class EventsController extends BaseController
             'image' => $event->poster_url,
             'status' => $this->derivedStatus($event),
             'tickets_sold' => $s->tickets_sold,
-            'revenue' => $s->revenue ?? 0.0,
             'capacity' => $s->stock_total,
             // Original venue-owner-shape fields (kept for VenueEventsScreen).
             'title' => $event->getTranslation('title'),
@@ -241,7 +240,6 @@ class EventsController extends BaseController
                 'tickets_sold' => $s->tickets_sold,
                 'checked_in_count' => $s->checked_in_count,
                 'stock_total' => $s->stock_total,
-                'revenue' => $s->revenue ?? 0.0,
             ],
         ];
 

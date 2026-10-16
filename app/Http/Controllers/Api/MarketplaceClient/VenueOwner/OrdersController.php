@@ -385,7 +385,23 @@ class OrdersController extends BaseController
         if (!$tenant instanceof Tenant || !$eventModel instanceof Event) {
             return $this->error('Venue owner context not resolved', 500);
         }
-        return app(MarketplaceOrdersController::class)->salesBreakdown($request, $event);
+        $response = app(MarketplaceOrdersController::class)->salesBreakdown($request, $event);
+
+        // Same shape as the organizer's, minus the money per channel: the venue
+        // owner must not see what the organizer earned. Its own door takings
+        // stay in venue_collections.
+        $payload = $response->getData(true);
+        if (is_array($payload['data'] ?? null)) {
+            foreach (['online', 'pos'] as $channel) {
+                unset($payload['data'][$channel]['revenue']);
+            }
+            foreach ($payload['data']['pos']['by_user'] ?? [] as $i => $row) {
+                unset($payload['data']['pos']['by_user'][$i]['revenue']);
+            }
+            $response->setData($payload);
+        }
+
+        return $response;
     }
 
     /**

@@ -77,7 +77,6 @@ class AttendeesController extends BaseController
                 'checked_in' => $checked,
                 'not_checked_in' => $total - $checked,
                 'check_in_rate' => $total > 0 ? round($checked / $total * 100, 1) : 0,
-                'revenue' => $s ? $s->revenue : 0.0,
             ]];
         });
     }
