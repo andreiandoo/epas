@@ -822,7 +822,7 @@ class EditOrganizerInvoice extends EditRecord
                     'country' => 'Romania',
                 ],
             ],
-            'lines' => array_map(function ($item) {
+            'lines' => array_map(function ($item) use ($invoice) {
                 // New split (2026-08-07): item['name'] = canonical article
                 // title shown as product_name in Oblio; item['description'] =
                 // per-payout event/decont context stored as the article's
@@ -835,7 +835,10 @@ class EditOrganizerInvoice extends EditRecord
                     'description' => $desc,
                     'quantity' => (float) ($item['quantity'] ?? 1),
                     'unit_price' => (float) ($item['price'] ?? $item['unit_price'] ?? 0),
-                    'tax_rate' => 19,
+                    // The invoice's own VAT rate (0 for a non-VAT-payer marketplace or
+                    // for sales before its VAT start date). Prices here are NET.
+                    'tax_rate' => (float) ($item['vat_rate'] ?? $invoice->vat_rate ?? 0),
+                    'vat_included' => false,
                     'unit' => 'buc',
                 ];
             }, $items),

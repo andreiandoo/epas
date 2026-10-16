@@ -1943,14 +1943,17 @@ class ViewPayout extends ViewRecord
                     'country' => $customerCountry,
                 ],
             ],
-            'lines' => array_map(function ($item) use ($eventDescription) {
+            'lines' => array_map(function ($item) use ($eventDescription, $invoice) {
                 // Short product name + event details as description (avoids duplication)
                 return [
                     'product_name' => 'Comision servicii ticketing',
                     'description' => $eventDescription ?: ($item['description'] ?? ''),
                     'quantity' => (float) ($item['quantity'] ?? 1),
                     'unit_price' => (float) ($item['unit_price'] ?? $item['price'] ?? 0),
-                    'tax_rate' => 19,
+                    // The invoice's own VAT rate (0 for a non-VAT-payer marketplace or
+                    // for sales before its VAT start date). Prices here are NET.
+                    'tax_rate' => (float) ($item['vat_rate'] ?? $invoice->vat_rate ?? 0),
+                    'vat_included' => false,
                     'unit' => 'buc',
                 ];
             }, $items),

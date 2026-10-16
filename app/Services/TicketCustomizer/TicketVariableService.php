@@ -1287,7 +1287,12 @@ class TicketVariableService
         // Without these filters every ticket showed 'Taxa de Monument
         // Istoric' / 'TVA' regardless of whether they actually applied.
         $venueHasMonumentTax = (bool) ($event->venue?->has_historical_monument_tax ?? false);
-        $isVatPayer = (bool) ($event->marketplaceClient?->vat_payer ?? false);
+        // Ticket VAT belongs to the organizer issuing the ticket, not to the
+        // marketplace (whose own VAT is on its commission only). Events with no
+        // marketplace organizer keep the previous marketplace-level flag.
+        $isVatPayer = $event->marketplaceOrganizer
+            ? (bool) ($event->marketplaceOrganizer->getIssuerData('primary')['vat_payer'] ?? false)
+            : (bool) ($event->marketplaceClient?->vat_payer ?? false);
 
         $taxes = $taxes->filter(function ($tax) use ($venueHasMonumentTax, $isVatPayer) {
             $nameLower = strtolower($tax->name ?? '');

@@ -2333,7 +2333,13 @@ class EventResource extends Resource
                                             return '';
                                         }
 
-                                        $isVatPayer = $marketplace?->vat_payer ?? false;
+                                        // Ticket VAT is the organizer's, not the marketplace's own VAT.
+                                        $eventOrganizer = $get('marketplace_organizer_id')
+                                            ? \App\Models\MarketplaceOrganizer::find($get('marketplace_organizer_id'))
+                                            : null;
+                                        $isVatPayer = $eventOrganizer
+                                            ? (bool) ($eventOrganizer->getIssuerData('primary')['vat_payer'] ?? false)
+                                            : (bool) ($marketplace?->vat_payer ?? false);
                                         $taxDisplayMode = $marketplace?->tax_display_mode ?? 'included';
 
                                         // Get applicable taxes using the new forEventTypes scope

@@ -293,19 +293,45 @@ class OblioAdapter implements AccountingAdapterInterface
             ]);
 
             // Add line items
+            $companyCif = $payload['cif'] ?? $this->cif;
             foreach ($invoice['lines'] as $line) {
-                $payload['products'][] = [
+                // Lines that state 'vat_included' (marketplace commission/service
+                // invoices, NET prices) get the VAT name from the company's Oblio
+                // nomenclature and an explicit vatIncluded. Every other caller is
+                // sent exactly as before.
+                $explicit = array_key_exists('vat_included', $line) && $line['vat_included'] !== null;
+                $rateValue = (float) ($line['tax_rate'] ?? 19);
+                $vatName = $explicit
+                    ? $this->resolveVatName($rateValue, (string) $companyCif)
+                    : $this->getVatName((int) ($line['tax_rate'] ?? 19));
+                // A 0% line on a company whose Oblio VAT list has no 0% rate (a
+                // non-VAT-payer account) keeps the payload used until now:
+                // 19 / Normala with Oblio's default vatIncluded.
+                $legacy = $vatName === null;
+                if ($legacy) {
+                    $rateValue = 19.0;
+                    $vatName = 'Normala';
+                }
+                $rate = ($explicit && fmod($rateValue, 1.0) !== 0.0) ? $rateValue : (int) round($rateValue);
+                $product = [
                     'name' => $line['product_name'] ?? $line['description'] ?? 'Serviciu',
                     'description' => $line['description'] ?? '',
                     'quantity' => (float) ($line['quantity'] ?? 1),
                     'price' => (float) ($line['unit_price'] ?? 0),
                     'measuringUnit' => $line['unit'] ?? 'buc',
-                    'vatName' => $this->getVatName($line['tax_rate'] ?? 19),
-                    'vatPercentage' => (int) ($line['tax_rate'] ?? 19),
+                    'vatName' => $vatName,
+                    'vatPercentage' => $rate,
                     'currency' => $invoice['currency'] ?? 'RON',
                     'productType' => 'Serviciu',
                     'save' => 1,
                 ];
+                // Oblio defaults vatIncluded to 1 (price already contains VAT).
+                // Callers that send NET prices say so explicitly; callers that
+                // don't set the flag keep Oblio's default, as before.
+                if ($explicit && !$legacy) {
+                    $product['vatIncluded'] = $line['vat_included'] ? 1 : 0;
+                }
+                $payload['products'][] = $product;
             }
 
             // Add idempotency key if invoice number is available
@@ -334,17 +360,48 @@ class OblioAdapter implements AccountingAdapterInterface
     }
 
     /**
-     * Get VAT name for Oblio based on rate
+     * Get VAT name for Oblio based on rate (static fallback)
      */
     protected function getVatName(int $rate): string
     {
         return match ($rate) {
             0 => 'Normala',
-            5 => 'Redusa',
-            9 => 'Redusa',
-            19 => 'Normala',
+            5, 9, 11 => 'Redusa',
+            19, 21 => 'Normala',
             default => 'Normala',
         };
+    }
+
+    /**
+     * VAT name for a rate, taken from the company's own Oblio VAT nomenclature
+     * (names differ per company, e.g. which 0% rate exists). Cached; falls back
+     * to the static map when the nomenclature can't be read. Returns null for a
+     * 0% rate the company doesn't have (caller keeps the legacy payload).
+     */
+    protected function resolveVatName(float $rate, string $cif): ?string
+    {
+        try {
+            $rates = Cache::remember('oblio_vat_rates_' . md5($cif), now()->addHours(6), function () use ($cif) {
+                $result = $this->apiRequest('GET', '/api/nomenclature/vat_rates', ['cif' => $cif]);
+                return $result['data'] ?? [];
+            });
+
+            $matches = array_values(array_filter((array) $rates, fn ($r) => abs((float) ($r['percent'] ?? -1) - $rate) < 0.001));
+            if (!empty($matches)) {
+                $default = array_values(array_filter($matches, fn ($r) => !empty($r['default'])));
+                return (string) (($default[0] ?? $matches[0])['name'] ?? $this->getVatName((int) round($rate)));
+            }
+            if ($rate < 0.001) {
+                return null;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Oblio VAT nomenclature unavailable, using static VAT names', ['error' => $e->getMessage()]);
+            if ($rate < 0.001) {
+                return null;
+            }
+        }
+
+        return $this->getVatName((int) round($rate));
     }
 
     /**

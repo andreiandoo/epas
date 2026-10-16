@@ -56,6 +56,8 @@ class Settings extends Page
                 'cui' => $marketplace->cui,
                 'reg_com' => $marketplace->reg_com,
                 'vat_payer' => (bool) $marketplace->vat_payer,
+                'vat_rate' => data_get($settings, 'tax.vat_rate', 21),
+                'vat_payer_since' => data_get($settings, 'tax.vat_payer_since'),
                 'tax_display_mode' => $marketplace->tax_display_mode ?? 'included',
                 'fixed_commission' => $marketplace->fixed_commission,
                 'address' => $marketplace->address,
@@ -314,7 +316,25 @@ class Settings extends Page
                                             ->label('Platitor TVA')
                                             ->helperText('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.')
                                             ->onColor('success')
-                                            ->offColor('gray'),
+                                            ->offColor('gray')
+                                            ->live(),
+
+                                        Forms\Components\TextInput::make('vat_rate')
+                                            ->label('Cota TVA (%)')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.01)
+                                            ->default(21)
+                                            ->helperText('TVA-ul marketplace-ului: pe comisionul adăugat peste preț, pe taxa de retur, pe servicii și pe factura de comision către organizatori.')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('vat_payer')),
+
+                                        Forms\Components\DatePicker::make('vat_payer_since')
+                                            ->label('Plătitor TVA de la data')
+                                            ->native(false)
+                                            ->displayFormat('d.m.Y')
+                                            ->helperText('Vânzările făcute înainte de această dată rămân fără TVA. Gol = toate vânzările.')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('vat_payer')),
 
                                         Forms\Components\Select::make('tax_display_mode')
                                             ->label('Modul de afișare taxe')
@@ -1317,6 +1337,14 @@ class Settings extends Page
         if (array_key_exists('hidden_navigation', $data)) {
             $settings[MarketplaceMenu::SETTINGS_KEY] = MarketplaceMenu::clean((array) ($data['hidden_navigation'] ?? []));
         }
+        $settings['tax'] = array_merge($settings['tax'] ?? [], [
+            'vat_rate' => array_key_exists('vat_rate', $data) && $data['vat_rate'] !== null && $data['vat_rate'] !== ''
+                ? (float) $data['vat_rate']
+                : (float) data_get($settings, 'tax.vat_rate', 21),
+            'vat_payer_since' => array_key_exists('vat_payer_since', $data)
+                ? ($data['vat_payer_since'] ? \Carbon\Carbon::parse($data['vat_payer_since'])->toDateString() : null)
+                : data_get($settings, 'tax.vat_payer_since'),
+        ]);
         $settings['invoice_preparer'] = $data['invoice_preparer'] ?? '';
         $settings['invoice_preparer_cnp'] = $data['invoice_preparer_cnp'] ?? '';
         $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';

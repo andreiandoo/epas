@@ -982,6 +982,68 @@ class MarketplaceClient extends Model
     }
 
     /**
+     * The marketplace's OWN VAT (charged on its commission, insurance fee and
+     * services). Not the organizer's ticket VAT, which lives on MarketplaceOrganizer.
+     *
+     * Stored as `vat_payer` (column) + `settings.tax.vat_rate` and
+     * `settings.tax.vat_payer_since` (Y-m-d, in the marketplace timezone).
+     * A sale made before `vat_payer_since` carries no VAT.
+     */
+    public function vatPayerSince(): ?\Carbon\CarbonImmutable
+    {
+        $since = data_get($this->settings, 'tax.vat_payer_since');
+        if (!$since) {
+            return null;
+        }
+
+        try {
+            return \Carbon\CarbonImmutable::parse($since, \App\Support\MarketplaceTz::tz($this))->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /** Whether a sale made at $at (default: now) is subject to the marketplace's VAT. */
+    public function isVatPayerAt(\DateTimeInterface|string|null $at = null): bool
+    {
+        if (!$this->vat_payer) {
+            return false;
+        }
+
+        $since = $this->vatPayerSince();
+        if (!$since) {
+            return true;
+        }
+
+        $at = $at === null ? \Carbon\CarbonImmutable::now() : \Carbon\CarbonImmutable::parse($at);
+
+        return $at->greaterThanOrEqualTo($since);
+    }
+
+    /** VAT rate in percent for a sale made at $at (0 when not a VAT payer then). */
+    public function vatRate(\DateTimeInterface|string|null $at = null): float
+    {
+        if (!$this->isVatPayerAt($at)) {
+            return 0.0;
+        }
+
+        return (float) data_get($this->settings, 'tax.vat_rate', 21);
+    }
+
+    /**
+     * VAT added on top of a net amount: ['net', 'vat', 'gross', 'rate'].
+     * Rounded once on the total, never per unit.
+     */
+    public function vatOnNet(float $net, \DateTimeInterface|string|null $at = null): array
+    {
+        $rate = $this->vatRate($at);
+        $net = round($net, 2);
+        $vat = $rate > 0 ? round($net * $rate / 100, 2) : 0.0;
+
+        return ['net' => $net, 'vat' => $vat, 'gross' => round($net + $vat, 2), 'rate' => $rate];
+    }
+
+    /**
      * Get ticket insurance settings for checkout
      *
      * @return array{

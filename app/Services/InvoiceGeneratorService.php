@@ -32,7 +32,7 @@ class InvoiceGeneratorService
 
         $created = 0;
         $commissionRate = $organizer->getEffectiveCommissionRate();
-        $vatRate = $marketplace->vat_payer ? 19 : 0;
+        $vatRate = $marketplace->vatRate();
         $currency = $marketplace->currency ?? 'RON';
 
         foreach ($grouped as $month => $monthOrders) {
