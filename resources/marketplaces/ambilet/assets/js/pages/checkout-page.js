@@ -78,6 +78,11 @@ const CheckoutPage = {
         try {
             const response = await AmbiletAPI.get('/checkout.features');
             if (response.success && response.data) {
+                // Marketplace VAT (added to the on-top commission and the insurance fee); 0 = none
+                this.vatRate = parseFloat(response.data.marketplace_vat_rate) || 0;
+                if (typeof AmbiletCart !== 'undefined' && AmbiletCart.setVatRate) AmbiletCart.setVatRate(this.vatRate);
+                if (this.vatRate > 0 && this.items?.length) this.renderSummary();
+
                 // Handle cultural card settings
                 if (response.data.cultural_card && response.data.cultural_card.enabled) {
                     this.culturalCardEnabled = true;
@@ -165,10 +170,10 @@ const CheckoutPage = {
 
         // Show price per ticket info
         if (this.insurance.price_type === 'fixed') {
-            const pricePerTicket = this.insurance.price || 0;
-            document.getElementById('insurance-price').textContent = AmbiletUtils.formatCurrency(pricePerTicket) + '/bilet';
+            const pricePerTicket = this.withVat(this.insurance.price || 0);
+            document.getElementById('insurance-price').textContent = AmbiletUtils.formatCurrency(pricePerTicket) + '/bilet' + (this.vatRate > 0 ? ' (TVA inclus)' : '');
         } else {
-            document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% din total';
+            document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% din total' + (this.vatRate > 0 ? ' + TVA ' + this.vatRate + '%' : '');
         }
 
         // Show partial note for mixed carts (some eligible, some not)
@@ -236,6 +241,17 @@ const CheckoutPage = {
         }
     },
 
+    /** Marketplace VAT on a net amount (0 when the marketplace isn't a VAT payer). */
+    vatOn(net) {
+        const rate = this.vatRate || 0;
+        return rate > 0 ? Math.round(net * rate) / 100 : 0;
+    },
+
+    withVat(net) {
+        return Math.round((net + this.vatOn(net)) * 100) / 100;
+    },
+
+    /** NET insurance fee (what the server receives; it adds the VAT). */
     calculateInsuranceAmount() {
         if (!this.insurance) return 0;
 
@@ -527,6 +543,7 @@ const CheckoutPage = {
         const eventGroups = {};
         let baseSubtotal = 0;
         let totalCommission = 0;
+        let totalCommissionVat = 0;
         let savings = 0;
         let totalQty = 0;
         let hasAddedOnTopCommission = false;
@@ -571,6 +588,8 @@ const CheckoutPage = {
 
             baseSubtotal += itemTotal;
             totalCommission += commissionTotal;
+            // VAT per cart line, as the server rounds it (per ticket type)
+            totalCommissionVat += this.vatOn(Math.round(commissionTotal * 100) / 100);
             totalQty += qty;
             eventGroups[eventId].subtotal += itemTotal;
             eventGroups[eventId].commission += commissionTotal;
@@ -680,18 +699,21 @@ const CheckoutPage = {
 
         itemsSummary.innerHTML = itemsHtml;
 
-        // Calculate insurance if selected
+        // Calculate insurance if selected (net, then the gross the customer pays)
         let insuranceAmount = 0;
+        let insuranceGross = 0;
         if (this.insuranceSelected && this.insurance) {
             insuranceAmount = this.calculateInsuranceAmount();
+            insuranceGross = this.withVat(insuranceAmount);
         }
+        totalCommissionVat = Math.round(totalCommissionVat * 100) / 100;
 
         // Promo code discount
         const promoDiscount = AmbiletCart.getPromoDiscount();
 
         // Total = base prices + commission + insurance - discount
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const baseTotal = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount);
+        const baseTotal = Math.max(0, subtotalWithCommission + totalCommissionVat + insuranceGross - promoDiscount);
 
         // Cultural card surcharge (applied on entire total including insurance)
         const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'card';
@@ -703,7 +725,7 @@ const CheckoutPage = {
         const total = baseTotal + culturalCardSurcharge;
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: promoDiscount, insurance: insuranceAmount, culturalCardSurcharge, total, savings };
+        this.totals = { subtotal: subtotalWithCommission, tax: totalCommissionVat, discount: promoDiscount, insurance: insuranceAmount, insuranceGross, culturalCardSurcharge, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
@@ -716,7 +738,13 @@ const CheckoutPage = {
                 taxesContainer.innerHTML = '<div class="flex justify-between text-sm">' +
                     '<span class="text-muted">Taxe procesare</span>' +
                     '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
-                '</div>';
+                '</div>' +
+                (totalCommissionVat > 0
+                    ? '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">TVA taxe procesare (' + this.vatRate + '%)</span>' +
+                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommissionVat) + '</span>' +
+                      '</div>'
+                    : '');
             } else {
                 taxesContainer.innerHTML = '';
             }
@@ -727,7 +755,8 @@ const CheckoutPage = {
         if (insuranceRow) {
             if (this.insuranceSelected && insuranceAmount > 0) {
                 insuranceRow.classList.remove('hidden');
-                document.getElementById('insurance-row-amount').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
+                document.getElementById('insurance-row-amount').textContent = '+' + AmbiletUtils.formatCurrency(insuranceGross)
+                    + (this.vatRate > 0 ? ' (incl. TVA ' + AmbiletUtils.formatCurrency(insuranceGross - insuranceAmount) + ')' : '');
             } else {
                 insuranceRow.classList.add('hidden');
             }

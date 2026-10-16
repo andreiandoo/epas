@@ -269,6 +269,10 @@ class AccountController extends BaseController
                     ];
                 })->values()->toArray(),
                 'insurance_amount' => (float) ($order->meta['insurance_amount'] ?? 0),
+                // Marketplace VAT paid by the customer (0 on orders before the VAT start date)
+                'vat_rate' => (float) ($order->meta['vat_rate'] ?? 0),
+                'commission_vat' => (float) ($order->meta['commission_vat_amount'] ?? 0),
+                'insurance_vat' => (float) ($order->meta['insurance_vat'] ?? 0),
                 'can_request_refund' => $canRequestRefund,
                 'refund_reason' => $refundReason,
                 'created_at' => $order->created_at->toIso8601String(),
@@ -508,6 +512,11 @@ class AccountController extends BaseController
                 'subtotal' => number_format((float) $order->subtotal, 2, '.', ''),
                 'service_fee' => number_format($serviceFee, 2, '.', ''),
                 'insurance_amount' => number_format($insuranceAmount, 2, '.', ''),
+                // Marketplace VAT paid by the customer (0 on orders before the VAT start date):
+                // commission_vat is part of service_fee, insurance_vat part of insurance_amount.
+                'vat_rate' => (float) ($order->meta['vat_rate'] ?? 0),
+                'commission_vat' => number_format((float) ($order->meta['commission_vat_amount'] ?? 0), 2, '.', ''),
+                'insurance_vat' => number_format((float) ($order->meta['insurance_vat'] ?? 0), 2, '.', ''),
                 'discount' => number_format($discount, 2, '.', ''),
                 'points_used' => (int) ($order->points_used ?? 0),
                 'points_discount' => number_format((float) ($order->points_discount ?? 0), 2, '.', ''),

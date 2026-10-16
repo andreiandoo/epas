@@ -89,9 +89,18 @@ class CheckoutController extends BaseController
             }
         }
 
-        // Get ticket insurance data
+        // The marketplace's own VAT (on the commission added on top of the price
+        // and on the insurance fee). 0 unless the marketplace is a VAT payer at
+        // the time of the sale, so other marketplaces are unchanged.
+        $marketplaceVatRate = $isTestOrder ? 0.0 : $client->vatRate();
+
+        // Get ticket insurance data. The client sends the NET insurance fee; the
+        // customer pays it plus the marketplace VAT. $insuranceAmount is the gross
+        // (what is charged), as stored in meta.insurance_amount until now.
         $hasInsurance = $request->boolean('ticket_insurance');
-        $insuranceAmount = $hasInsurance ? (float) $request->input('ticket_insurance_amount', 0) : 0;
+        $insuranceNet = $hasInsurance ? round((float) $request->input('ticket_insurance_amount', 0), 2) : 0;
+        $insuranceVat = ($marketplaceVatRate > 0 && $insuranceNet > 0) ? round($insuranceNet * $marketplaceVatRate / 100, 2) : 0;
+        $insuranceAmount = round($insuranceNet + $insuranceVat, 2);
         $insurancePerTicket = 0; // Will be calculated after we know total ticket count
 
         // Try to get items from request body first (frontend sends localStorage cart)
@@ -332,6 +341,7 @@ class CheckoutController extends BaseController
             $subtotal = 0;
             $totalCommission = 0;
             $totalOnTopCommission = 0;
+            $totalCommissionVat = 0.0;
             $processedItems = [];
             $seatedItemsMeta = [];
             $eventIds = [];
@@ -568,9 +578,16 @@ class CheckoutController extends BaseController
                 }
                 $totalCommission += $itemCommission;
 
-                // Track on-top commission per item
+                // Track on-top commission per item, plus the marketplace VAT on it
+                // (the customer pays commission + VAT; included commission carries
+                // no VAT here, it is invoiced to the organizer with VAT).
+                $itemCommissionVat = 0.0;
                 if (in_array($itemCommissionMode, ['on_top', 'added_on_top'])) {
                     $totalOnTopCommission += $itemCommission;
+                    if ($marketplaceVatRate > 0 && $itemCommission > 0) {
+                        $itemCommissionVat = round($itemCommission * $marketplaceVatRate / 100, 2);
+                        $totalCommissionVat += $itemCommissionVat;
+                    }
                 }
 
                 // Seat-consistency safety net. For seated events the cart
@@ -627,6 +644,8 @@ class CheckoutController extends BaseController
                     'commission_amount' => $itemCommission,
                     'commission_rate' => $itemCommissionRate,
                     'commission_mode' => $itemCommissionMode,
+                    'commission_vat' => $itemCommissionVat,
+                    'refundable' => (bool) ($mktTicketType?->is_refundable ?? $ticketType?->is_refundable ?? false),
                     'seat_uids' => $item['seat_uids'] ?? [],
                     'seats' => $item['seats'] ?? [],
                     'event_seating_id' => $item['event_seating_id'] ?? null,
@@ -1022,6 +1041,14 @@ class CheckoutController extends BaseController
             if ($totalOnTopCommission > 0) {
                 $orderTotal += $totalOnTopCommission;
             }
+            $totalCommissionVat = round($totalCommissionVat, 2);
+            if ($totalCommissionVat > 0) {
+                $orderTotal += $totalCommissionVat;
+            }
+
+            if ($hasInsurance && $insuranceNet > 0) {
+                $this->logInsuranceMismatch($client, $processedItems, $insuranceNet);
+            }
 
             // Cultural card surcharge
             $culturalCardSurcharge = 0;
@@ -1170,11 +1197,21 @@ class CheckoutController extends BaseController
                         'commission_rate' => $pi['commission_rate'],
                         'commission_amount' => $pi['commission_amount'],
                         'commission_mode' => $pi['commission_mode'],
-                    ])->all(),
+                    ] + ($marketplaceVatRate > 0 ? ['commission_vat' => $pi['commission_vat'] ?? 0.0] : []))->all(),
                     'multi_event' => $isMultiEvent,
                     'event_ids' => array_keys($eventIds),
                     'seated_items' => $seatedItemsMeta,
-                ], $isTestOrder ? ['is_test_order' => true] : []),
+                ], $isTestOrder ? ['is_test_order' => true] : [],
+                // Marketplace VAT snapshot (only for VAT-payer marketplaces). The
+                // amounts above stay NET (commission_amount, commission_details);
+                // insurance_amount is the gross the customer paid.
+                $marketplaceVatRate > 0 ? [
+                    'vat_rate' => $marketplaceVatRate,
+                    'commission_on_top_amount' => round($totalOnTopCommission, 2),
+                    'commission_vat_amount' => $totalCommissionVat,
+                    'insurance_net' => $hasInsurance ? $insuranceNet : 0,
+                    'insurance_vat' => $hasInsurance ? $insuranceVat : 0,
+                ] : []),
             ]);
 
             // The points leave the balance with the order (locked: two tabs can't spend them twice). Given back by
@@ -1551,6 +1588,9 @@ class CheckoutController extends BaseController
                 'subtotal' => (float) $order->subtotal,
                 'discount' => (float) $order->discount_amount,
                 'insurance' => (float) ($hasInsurance ? $insuranceAmount : 0),
+                'insurance_vat' => (float) ($hasInsurance ? $insuranceVat : 0),
+                'commission_vat' => (float) $totalCommissionVat,
+                'vat_rate' => (float) $marketplaceVatRate,
                 'points_used' => (int) $order->points_used,
                 'points_discount' => (float) $order->points_discount,
                 'total' => (float) $order->total,
@@ -1917,6 +1957,38 @@ class CheckoutController extends BaseController
             ]);
 
             return $this->error('Checkout failed: ' . $e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * The insurance fee is still taken from the client (net). Log when it differs
+     * from what the marketplace settings give for this cart, so the client value
+     * can be replaced by the server one once the logs are clean.
+     */
+    protected function logInsuranceMismatch($client, array $processedItems, float $clientNet): void
+    {
+        try {
+            $settings = $client->getTicketInsuranceSettings();
+            if (!$settings) {
+                return;
+            }
+
+            $eligible = array_filter($processedItems, fn ($pi) => ($settings['apply_to'] ?? 'all') !== 'refundable_only' || !empty($pi['refundable']));
+            $qty = array_sum(array_map(fn ($pi) => (int) $pi['quantity'], $eligible));
+            $expected = ($settings['price_type'] ?? 'fixed') === 'percentage'
+                ? round(array_sum(array_map(fn ($pi) => (float) $pi['total'], $eligible)) * ((float) $settings['price_percentage'] / 100), 2)
+                : round((float) $settings['price'] * $qty, 2);
+
+            if (abs($expected - $clientNet) > 0.01) {
+                Log::channel('marketplace')->warning('Checkout: insurance amount differs from settings', [
+                    'client_id' => $client->id,
+                    'client_net' => $clientNet,
+                    'expected_net' => $expected,
+                    'eligible_qty' => $qty,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Diagnostics only — never block a checkout.
         }
     }
 

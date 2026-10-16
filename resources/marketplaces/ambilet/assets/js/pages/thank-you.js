@@ -37,6 +37,7 @@ const THANK_YOU_I18N = {
         subtotal: 'Subtotal',
         service_fee: 'Comision serviciu',
         return_fee: 'Taxa de retur',
+        vat_included: 'din care TVA',
         discount: 'Reducere',
         total: 'Total',
         // Failed / Pending
@@ -84,6 +85,7 @@ const THANK_YOU_I18N = {
         subtotal: 'Részösszeg',
         service_fee: 'Szolgáltatási díj',
         return_fee: 'Visszatérítési díj',
+        vat_included: 'ebből ÁFA',
         discount: 'Kedvezmény',
         total: 'Összesen',
         payment_failed: 'A fizetés sikertelen',
@@ -129,6 +131,7 @@ const THANK_YOU_I18N = {
         subtotal: 'Subtotal',
         service_fee: 'Service fee',
         return_fee: 'Return insurance',
+        vat_included: 'of which VAT',
         discount: 'Discount',
         total: 'Total',
         payment_failed: 'Payment was not processed',
@@ -561,6 +564,8 @@ const ThankYouPage = {
         const discount = parseFloat(order.discount) || 0;
         const serviceFee = parseFloat(order.service_fee) || 0;
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
+        // Marketplace VAT inside the service fee and the return fee (0 before the VAT start date)
+        const vatPaid = (parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0);
 
         document.getElementById('paymentSummary').innerHTML = `
             <h4 class="mb-3 font-semibold text-secondary">${this.t('payment_summary')}</h4>
@@ -588,6 +593,11 @@ const ThankYouPage = {
                     <span>${this.t('total')}</span>
                     <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
                 </div>
+                ${vatPaid > 0 ? `
+                <div class="flex justify-between text-xs text-muted">
+                    <span>${this.t('vat_included') || 'din care TVA'} (${parseFloat(order.vat_rate) || 0}%)</span>
+                    <span>${AmbiletUtils.formatCurrency(vatPaid)}</span>
+                </div>` : ''}
             </div>
         `;
 
@@ -769,6 +779,8 @@ const ThankYouPage = {
         const discount = parseFloat(order.discount) || 0;
         const serviceFee = parseFloat(order.service_fee) || 0;
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
+        // Marketplace VAT inside the service fee and the return fee (0 before the VAT start date)
+        const vatPaid = (parseFloat(order.commission_vat) || 0) + (parseFloat(order.insurance_vat) || 0);
         const currency = order.currency || 'RON';
 
         document.getElementById('paymentSummary').innerHTML = `
@@ -800,6 +812,11 @@ const ThankYouPage = {
                     <span>${this.t('total')}</span>
                     <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
                 </div>
+                ${vatPaid > 0 ? `
+                <div class="flex justify-between text-xs text-muted">
+                    <span>${this.t('vat_included') || 'din care TVA'} (${parseFloat(order.vat_rate) || 0}%)</span>
+                    <span>${AmbiletUtils.formatCurrency(vatPaid)}</span>
+                </div>` : ''}
             </div>
         `;
 

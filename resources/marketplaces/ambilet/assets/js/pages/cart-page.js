@@ -6,6 +6,15 @@ const CartPage = {
     taxes: [], // Dynamic taxes from API/config
 
     async init() {
+        // Refresh the marketplace VAT rate (on-top commission); re-render when it arrives
+        try {
+            AmbiletAPI.get('/checkout.features').then(r => {
+                if (r && r.success && r.data && typeof r.data.marketplace_vat_rate !== 'undefined') {
+                    AmbiletCart.setVatRate(r.data.marketplace_vat_rate);
+                    this.updateSummary();
+                }
+            }).catch(() => {});
+        } catch (e) { /* optional */ }
         await this.loadTaxes();
         this.setupTimer();
         this.loadExistingPromo();
@@ -516,6 +525,7 @@ const CartPage = {
         const items = AmbiletCart.getItems();
         let baseSubtotal = 0;  // Subtotal without commission
         let totalCommission = 0;  // Total commission
+        let totalCommissionVat = 0;  // Marketplace VAT on the on-top commission
         let totalItems = 0;
         let savings = 0;
         const savingsTickets = [];
@@ -560,6 +570,7 @@ const CartPage = {
 
             baseSubtotal += lineTotal;
             totalCommission += commissionTotal;
+            totalCommissionVat += AmbiletCart.lineCommissionVat(commissionTotal);
             totalItems += quantity;
             eventGroups[eventId].subtotal += lineTotal;
             eventGroups[eventId].commission += commissionTotal;
@@ -606,7 +617,8 @@ const CartPage = {
         if (liveDiscount > subtotalWithCommission) liveDiscount = subtotalWithCommission;
         // Keep this.discount in sync for callers that still read it.
         this.discount = liveDiscount;
-        let total = subtotalWithCommission - liveDiscount;
+        totalCommissionVat = Math.round(totalCommissionVat * 100) / 100;
+        let total = subtotalWithCommission + totalCommissionVat - liveDiscount;
         const points = Math.floor(total / 10);
 
         // Update DOM
@@ -656,6 +668,12 @@ const CartPage = {
                     '<span class="text-muted">Taxe procesare</span>' +
                     '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
                 '</div>';
+                if (totalCommissionVat > 0) {
+                    breakdownHtml += '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">TVA taxe procesare (' + AmbiletCart.getVatRate() + '%)</span>' +
+                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommissionVat) + '</span>' +
+                    '</div>';
+                }
             }
 
             taxesContainer.innerHTML = breakdownHtml;

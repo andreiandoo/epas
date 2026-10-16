@@ -161,6 +161,8 @@ class ConfigController extends BaseController
             'payment'       => $this->getPaymentProcessor($client),
             // points rules for the cart, checkout and activity pages; null when the marketplace has no automatic rewards
             'loyalty'       => app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->publicSettings($client),
+            // the marketplace's own VAT, added to the commission charged on top of the price and to the insurance fee (0 = none)
+            'marketplace_vat_rate' => $client->vatRate(),
         ];
 
         return $this->success($features);

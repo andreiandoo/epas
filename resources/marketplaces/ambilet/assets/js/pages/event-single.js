@@ -654,6 +654,10 @@ const EventPage = {
      */
     transformApiData(apiData) {
         var eventData = apiData.event || apiData;
+        // Marketplace VAT on the on-top commission, shared with the cart and mini-cart
+        if (typeof AmbiletCart !== 'undefined' && AmbiletCart.setVatRate) {
+            AmbiletCart.setVatRate(apiData.commission_vat_rate ?? eventData.commission_vat_rate ?? 0);
+        }
         var venueData = apiData.venue || null;
         var artistsData = apiData.artists || [];
         var ticketTypesData = apiData.ticket_types || [];
@@ -2978,6 +2982,7 @@ const EventPage = {
         const totalTickets = Object.values(this.quantities).reduce(function(a, b) { return a + b; }, 0);
         let baseSubtotal = 0;  // Subtotal without commission
         let totalCommission = 0;  // Total commission amount
+        let totalCommissionVat = 0;  // Marketplace VAT on the on-top commission
         var self = this;
         var ticketBreakdown = [];  // For showing individual ticket lines
 
@@ -2999,6 +3004,9 @@ const EventPage = {
 
                 baseSubtotal += qty * ticketBasePrice;
                 totalCommission += qty * ticketCommission;
+                if (typeof AmbiletCart !== 'undefined' && AmbiletCart.lineCommissionVat) {
+                    totalCommissionVat += AmbiletCart.lineCommissionVat(qty * ticketCommission);
+                }
 
                 ticketBreakdown.push({
                     name: tt.name,
@@ -3013,7 +3021,8 @@ const EventPage = {
 
         // Calculate final total (subtotal = base price + commission if on top)
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const total = subtotalWithCommission;  // No other taxes
+        totalCommissionVat = Math.round(totalCommissionVat * 100) / 100;
+        const total = subtotalWithCommission + totalCommissionVat;
         const points = Math.floor(total / 10);
 
         this.updateHeaderCart();
@@ -3046,6 +3055,12 @@ const EventPage = {
                     breakdownHtml += '<div class="flex justify-between text-sm pt-2 mt-2 border-t border-border">' +
                         '<span class="text-muted">Taxe procesare</span>' +
                         '<span class="font-medium">' + totalCommission.toFixed(2) + ' lei</span>' +
+                    '</div>';
+                }
+                if (totalCommissionVat > 0) {
+                    breakdownHtml += '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">TVA taxe procesare (' + AmbiletCart.getVatRate() + '%)</span>' +
+                        '<span class="font-medium">' + totalCommissionVat.toFixed(2) + ' lei</span>' +
                     '</div>';
                 }
 

@@ -453,6 +453,11 @@
         document.body.style.overflow = '';
     }
 
+    // Marketplace VAT on the on-top commission (stored by the event page / checkout; 0 = none)
+    function marketplaceVatRate() {
+        try { return Number(localStorage.getItem('ambilet_marketplace_vat_rate')) || 0; } catch (e) { return 0; }
+    }
+
     function calculateItemCommission(item) {
         // Free companion tickets ("bilet gratuit cu cod") never carry a fee.
         if (item.ticketType && item.ticketType.is_free_with_code) {
@@ -480,16 +485,22 @@
         var itemCount = items.reduce(function(sum, item) { return sum + (item.quantity || 1); }, 0);
         var baseSubtotal = 0;
         var totalCommission = 0;
+        var totalCommissionVat = 0;
+        var vatRate = marketplaceVatRate();
 
         items.forEach(function(item) {
             var price = item.ticketType ? item.ticketType.price : (item.price || 0);
             var qty = item.quantity || 1;
             baseSubtotal += price * qty;
             var commission = calculateItemCommission(item);
-            if (commission.mode === 'added_on_top') totalCommission += commission.amount * qty;
+            if (commission.mode === 'added_on_top') {
+                var lineCommission = Math.round(commission.amount * qty * 100) / 100;
+                totalCommission += commission.amount * qty;
+                if (vatRate > 0) totalCommissionVat += Math.round(lineCommission * vatRate) / 100;
+            }
         });
 
-        var subtotal = baseSubtotal + totalCommission;
+        var subtotal = baseSubtotal + totalCommission + totalCommissionVat;
 
         if (itemCount > 0) {
             cartBadge.textContent = itemCount > 99 ? '99+' : itemCount;
@@ -605,7 +616,7 @@
             var eventSlug = item.event ? (item.event.slug || '') : '';
             var commission = calculateItemCommission(item);
             var displayPrice = basePrice;
-            if (commission.mode === 'added_on_top') displayPrice = basePrice + commission.amount;
+            if (commission.mode === 'added_on_top') displayPrice = basePrice + commission.amount * (1 + marketplaceVatRate() / 100);
 
             var qtyHtml;
             if (hasSeats) {

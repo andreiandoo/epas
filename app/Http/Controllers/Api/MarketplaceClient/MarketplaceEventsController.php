@@ -1223,6 +1223,8 @@ class MarketplaceEventsController extends BaseController
             })->values(),
             'commission_mode' => $commissionMode,
             'commission_rate' => (float) $commissionRate,
+            // The marketplace's own VAT on the commission added on top of the price (0 = none)
+            'commission_vat_rate' => $client->vatRate(),
             'taxes' => $taxes,
             // Seating layout if venue has one (includes event_seating_id for seat holds)
             'seating_layout' => $this->getSeatingLayout($venue, $event),

@@ -12,6 +12,25 @@ const AmbiletCart = {
     // lines include free companion tickets. Separate key (like PROMO_KEY) so
     // external save(items) callers can never drop it by rebuilding the cart.
     FREE_CODES_KEY: 'ambilet_cart_free_codes',
+    // The marketplace's own VAT rate (on the commission added on top of the
+    // price). Same for every line; set by the event page and the checkout from
+    // the API, read by the cart and the mini-cart. 0 = no VAT.
+    VAT_RATE_KEY: 'ambilet_marketplace_vat_rate',
+
+    setVatRate(rate) {
+        try { localStorage.setItem(this.VAT_RATE_KEY, String(Number(rate) || 0)); } catch (e) { /* storage unavailable */ }
+    },
+
+    getVatRate() {
+        try { return Number(localStorage.getItem(this.VAT_RATE_KEY)) || 0; } catch (e) { return 0; }
+    },
+
+    /** VAT on one cart line's on-top commission, rounded per line as checkout does. */
+    lineCommissionVat(lineCommission) {
+        const rate = this.getVatRate();
+        const commission = Math.round((lineCommission || 0) * 100) / 100;
+        return rate > 0 && commission > 0 ? Math.round(commission * rate) / 100 : 0;
+    },
 
     /**
      * Get cart from localStorage
