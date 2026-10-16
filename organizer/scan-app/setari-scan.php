@@ -41,12 +41,32 @@ require __DIR__ . '/_layout.php';
       <div class="scanapp-setting-row__label">Efecte Sonore</div>
       <div class="scanapp-toggle" data-setting="soundEffects" role="switch" tabindex="0"><div class="scanapp-toggle__knob"></div></div>
     </div>
+    <?php if (!$scanVenue): ?>
     <div class="scanapp-divider-line"></div>
     <div class="scanapp-setting-row">
       <div class="scanapp-setting-row__label">Auto-confirmare Valide</div>
       <div class="scanapp-toggle" data-setting="autoConfirmValid" role="switch" tabindex="0"><div class="scanapp-toggle__knob"></div></div>
     </div>
+    <?php endif; ?>
   </div>
+
+  <?php if ($scanVenue): ?>
+  <!-- Venue owner: Autovalidare bilete (setari-scan.js) -->
+  <div class="scanapp-settings-section-header">Vânzare la intrare</div>
+  <div class="scanapp-section-card">
+    <div class="scanapp-setting-row">
+      <div>
+        <div class="scanapp-setting-row__label">Autovalidare bilete</div>
+        <div class="scanapp-card__text scanapp-card__text--muted" id="scanapp-venue-autovalidate-desc" style="margin: 2px 0 0;">—</div>
+      </div>
+      <div class="scanapp-toggle" id="scanapp-venue-autovalidate" role="switch" tabindex="0" aria-checked="false"><div class="scanapp-toggle__knob"></div></div>
+    </div>
+    <div class="scanapp-info-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="scanapp-info-box__text">Biletele vândute la intrare (numerar sau card POS) se marchează automat ca validate, deci clientul intră direct, fără să mai fie scanat. Se poate porni doar în ziua evenimentului și rămâne activă doar în ziua respectivă.</div>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <!-- Hardware -->
   <div class="scanapp-settings-section-header">Hardware</div>

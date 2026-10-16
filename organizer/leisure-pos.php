@@ -235,6 +235,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div id="lv-commission-line" class="hidden justify-between text-muted">
                         <span>Comision ticketing</span><span id="lv-commission-amount">+0.00 RON</span>
                     </div>
+                    <div id="lv-commission-vat-line" class="hidden justify-between text-muted">
+                        <span id="lv-commission-vat-label">TVA comision</span><span id="lv-commission-vat-amount">+0.00 RON</span>
+                    </div>
                     <div class="flex justify-between font-bold text-lg pt-1 border-t border-border"><span>Total</span><span id="lv-total" class="text-primary">0.00 RON</span></div>
                 </div>
                 <!-- Plată -->
@@ -685,7 +688,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 ${addonsRows}
             </div>`;
         }).join('');
-        const grandTotal = subtotal + addonsGrandTotal + commissionTotal;
+        // Marketplace VAT on the on-top commission, rounded once as the server does
+        const commissionVatRate = parseFloat(commission.vat_rate || 0);
+        const commissionVat = (commissionVatRate > 0 && commissionTotal > 0)
+            ? Math.round(Math.round(commissionTotal * 100) / 100 * commissionVatRate) / 100
+            : 0;
+        const grandTotal = subtotal + addonsGrandTotal + commissionTotal + commissionVat;
         $('lv-subtotal').textContent = fmtMoney(subtotal + addonsGrandTotal) + ' RON';
         $('lv-total').textContent = fmtMoney(grandTotal) + ' RON';
 
@@ -728,6 +736,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             } else {
                 comLine.classList.add('hidden');
                 comLine.classList.remove('flex');
+            }
+        }
+        const comVatLine = $('lv-commission-vat-line');
+        if (comVatLine) {
+            if (commissionVat > 0) {
+                comVatLine.classList.remove('hidden');
+                comVatLine.classList.add('flex');
+                $('lv-commission-vat-label').textContent = 'TVA comision (' + commissionVatRate + '%)';
+                $('lv-commission-vat-amount').textContent = '+' + fmtMoney(commissionVat) + ' RON';
+            } else {
+                comVatLine.classList.add('hidden');
+                comVatLine.classList.remove('flex');
             }
         }
         // Guard: casa deschisa OBLIGATORIU pentru orice vanzare
@@ -832,6 +852,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="sep"></div>
             ${(Number(o.commission_total) > 0) ? `<div class="row"><span>Subtotal bilete</span><span>${fmtMoney(o.subtotal)}</span></div>
             <div class="row"><span>Comision ticketing</span><span>+${fmtMoney(o.commission_total)}</span></div>` : ''}
+            ${(Number(o.commission_vat) > 0) ? `<div class="row"><span>TVA comision (${Number(o.vat_rate) || 0}%)</span><span>+${fmtMoney(o.commission_vat)}</span></div>` : ''}
             <div class="row" style="font-weight:bold;font-size:13px"><span>TOTAL</span><span>${fmtMoney(o.total)} ${o.currency || 'RON'}</span></div>
             <div class="row"><span>Plată:</span><span>${payMap[o.payment_method] || o.payment_method}</span></div>
             <div class="sep"></div>

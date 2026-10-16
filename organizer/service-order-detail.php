@@ -85,7 +85,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <span class="text-sm font-medium text-secondary" id="subtotal">-</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-sm text-muted">TVA</span>
+                                <span class="text-sm text-muted" id="tax-label">TVA</span>
                                 <span class="text-sm font-medium text-secondary" id="tax">-</span>
                             </div>
                             <div class="flex justify-between pt-3 border-t border-border">
@@ -304,6 +304,7 @@ function renderOrder(order) {
 
     document.getElementById('subtotal').textContent = fmtCurrency(order.subtotal) + ' ' + order.currency;
     document.getElementById('tax').textContent = fmtCurrency(order.tax) + ' ' + order.currency;
+    if (parseFloat(order.vat_rate) > 0) document.getElementById('tax-label').textContent = 'TVA (' + parseFloat(order.vat_rate) + '%)';
     document.getElementById('total').textContent = fmtCurrency(order.total) + ' ' + order.currency;
     document.getElementById('payment-method').textContent = order.payment_method === 'card' ? 'Card online' : (order.payment_method === 'transfer' ? 'Transfer bancar' : order.payment_method || '-');
     document.getElementById('payment-status-text').textContent = order.payment_status === 'paid' ? 'Platit' : (order.payment_status || '-');

@@ -2966,7 +2966,7 @@ async function saveCancelled(e) {
     const eventId = document.getElementById('saved-event-id').value;
     if (!eventId) return;
 
-    if (!confirm('Ești sigur că vrei să anulezi evenimentul? Această acțiune nu poate fi anulată și toate comenzile vor fi rambursate.')) {
+    if (!confirm('Ești sigur că vrei să anulezi evenimentul? Această acțiune nu poate fi anulată. Comenzile neplătite se anulează; rambursarea comenzilor plătite se face separat, din partea de administrare.')) {
         return;
     }
 
@@ -2982,7 +2982,7 @@ async function saveCancelled(e) {
             currentEventStatus.is_cancelled = true;
             updateStatusIndicators();
             closeCancelledModal();
-            AmbiletNotifications.success('Evenimentul a fost anulat. ' + (response.data?.orders_refunded > 0 ? `${response.data.orders_refunded} comenzi au fost rambursate.` : ''));
+            AmbiletNotifications.success(response.message || 'Evenimentul a fost anulat.');
         } else {
             AmbiletNotifications.error(response.message || 'Eroare la anularea evenimentului');
         }

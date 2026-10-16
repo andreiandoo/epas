@@ -190,7 +190,7 @@ require_once __DIR__ . '/includes/header.php';
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Toate prețurile afișate includ TVA acolo unde este cazul. Taxele de serviciu ale Ambilet sunt afișate separat în procesul de checkout. Prețul final include:</p>
             <ul class="my-4 pl-6 list-disc space-y-2.5">
                 <li class="text-[15px] leading-[1.8] text-gray-600">Prețul biletului stabilit de organizator</li>
-                <li class="text-[15px] leading-[1.8] text-gray-600">Taxa de serviciu Ambilet</li>
+                <li class="text-[15px] leading-[1.8] text-gray-600">Taxa de serviciu Ambilet, cu TVA inclus</li>
                 <li class="text-[15px] leading-[1.8] text-gray-600">Taxa de procesare a plății (unde este cazul)</li>
             </ul>
 

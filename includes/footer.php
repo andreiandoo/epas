@@ -264,7 +264,7 @@ $currentYear = date('Y');
             <div class="flex flex-col flex-wrap items-center justify-between gap-5 lg:flex-row">
                 <div class="text-[13px] text-white/90 text-center lg:text-left w-[33.33%] mobile:w-full">
                     &copy; <?= $currentYear ?> <a href="/" class="transition-colors text-white/90 hover:text-white"><?= SITE_NAME ?></a>. Toate drepturile rezervate.<br/>
-                    SC Ambilet.ro SRL • J40/7859/2017 • CUI 37653424
+                    SC Ambilet.ro SRL • J40/7859/2017 • CUI RO37653424
                 </div>
 
                 <div class="flex flex-wrap items-center justify-center gap-6 mobile:gap-4">

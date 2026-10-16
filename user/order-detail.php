@@ -248,7 +248,10 @@ const OrderDetailPage = {
 
         document.getElementById('tickets-count').textContent = order.tickets_count;
         document.getElementById('subtotal').textContent = order.subtotal + ' RON';
-        document.getElementById('service-fee').textContent = order.service_fee + ' RON';
+        // Marketplace VAT inside the service fee (0 before the VAT start date)
+        const commissionVat = parseFloat(order.commission_vat) || 0;
+        document.getElementById('service-fee').textContent = order.service_fee + ' RON'
+            + (commissionVat > 0 ? ' (incl. TVA ' + commissionVat.toFixed(2) + ' RON)' : '');
 
         if (order.discount && order.discount > 0) {
             document.getElementById('discount-row').style.display = 'flex';
