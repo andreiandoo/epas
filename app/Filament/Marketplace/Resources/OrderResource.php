@@ -1456,6 +1456,13 @@ class OrderResource extends Resource
         $ticketInsurance = (bool) ($record->meta['ticket_insurance'] ?? false);
         $isPosOrder = $record->source === 'pos_app';
         $isExternalImport = $record->source === 'external_import';
+        // Marketplace VAT snapshot (orders placed while the marketplace is a VAT payer)
+        $vatRate = (float) ($record->meta['vat_rate'] ?? 0);
+        $vatRateLabel = rtrim(rtrim(number_format($vatRate, 2), '0'), '.');
+        $commissionVat = (float) ($record->meta['commission_vat_amount'] ?? 0);
+        $insuranceVat = (float) ($record->meta['insurance_vat'] ?? 0);
+        $culturalCardVat = (float) ($record->meta['cultural_card_vat'] ?? 0);
+        $vatTotal = round($commissionVat + $insuranceVat + $culturalCardVat, 2);
 
         $rowStyle = "display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.3);";
         $labelStyle = "font-size:12px;color:#94A3B8;";
@@ -1528,6 +1535,11 @@ class OrderResource extends Resource
                 $html .= "<div style='{$subStyle}'>" . e($name) . " x{$qty} ({$perTicket} {$currency}/bilet, {$cdMode}) — " . number_format($commission, 2) . " {$currency}</div>";
             }
 
+            // Marketplace VAT on the on-top commission (paid by the customer)
+            if ($commissionVat > 0) {
+                $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>TVA comision ({$vatRateLabel}%)</span><span style='{$valueStyle}'>" . number_format($commissionVat, 2) . " {$currency}</span></div>";
+            }
+
             // Organizer receives
             $organizerRevenue = $ticketsValue;
             if (!$isOnTop) $organizerRevenue -= $orderCommission;
@@ -1570,7 +1582,7 @@ class OrderResource extends Resource
         // === INSURANCE ===
         if ($insuranceAmount > 0 || $ticketInsurance) {
             $html .= "<div style='{$headStyle}'>Asigurare retur</div>";
-            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Taxa de retur bilete</span><span style='font-size:12px;font-weight:600;color:#A78BFA;'>" . number_format($insuranceAmount, 2) . " {$currency}</span></div>";
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Taxa de retur bilete</span><span style='font-size:12px;font-weight:600;color:#A78BFA;'>" . number_format($insuranceAmount, 2) . " {$currency}" . ($insuranceVat > 0 ? ' (incl. TVA ' . number_format($insuranceVat, 2) . ')' : '') . "</span></div>";
 
             // Show which tickets have insurance
             $insuredTickets = $record->tickets->filter(fn ($t) => !empty($t->meta['has_insurance']));
@@ -1596,6 +1608,9 @@ class OrderResource extends Resource
             <span style='font-size:13px;font-weight:600;color:white;'>Total plătit</span>
             <span style='font-size:18px;font-weight:700;color:white;'>" . number_format($orderTotal, 2) . " {$currency}</span>
         </div>";
+        if ($vatTotal > 0) {
+            $html .= "<div style='display:flex;justify-content:space-between;padding:4px 0 0;'><span style='font-size:11px;color:#64748B;'>din care TVA ({$vatRateLabel}%)</span><span style='font-size:11px;color:#94A3B8;'>" . number_format($vatTotal, 2) . " {$currency}</span></div>";
+        }
 
         $html .= '</div>';
         return new HtmlString($html);
