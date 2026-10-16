@@ -6,7 +6,7 @@ return [
     'staff_app_version' => env('STAFF_APP_VERSION', '1.6.12'),
     'sfana_app_version' => env('SFANA_APP_VERSION', '0.1.1'),
     // ambilet-app2 (AmBilet NEXT, /android-nou-2), read by /api/app-version-next
-    'next_app_version' => env('NEXT_APP_VERSION', '2.2.0-dev.14'),
+    'next_app_version' => env('NEXT_APP_VERSION', '2.2.0-dev.15'),
 
     /*
     |--------------------------------------------------------------------------
