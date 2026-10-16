@@ -1728,13 +1728,29 @@ class OrderResource extends Resource
             }
         }
 
+        // Marketplace VAT on the on-top commission (orders placed while the marketplace is a VAT payer)
+        $vatRate = (float) ($record->meta['vat_rate'] ?? 0);
+        $commissionVat = (float) ($record->meta['commission_vat_amount'] ?? 0);
+        $insuranceVat = (float) ($record->meta['insurance_vat'] ?? 0);
+        if ($commissionVat > 0) {
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                    <span style='font-size: 13px; color: #94A3B8;'>TVA comision (" . rtrim(rtrim(number_format($vatRate, 2), '0'), '.') . "%)</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>" . number_format($commissionVat, 2) . " {$currency}</span>
+                </div>
+            ";
+        }
+
         // Insurance / Taxa de retur (if any)
         $insuranceAmount = (float) ($record->meta['insurance_amount'] ?? 0);
         if ($insuranceAmount > 0) {
+            $insuranceVatNote = $insuranceVat > 0
+                ? " <span style='font-size: 11px; color: #64748B;'>(incl. TVA " . number_format($insuranceVat, 2) . ")</span>"
+                : '';
             $html .= "
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                     <span style='font-size: 13px; color: #94A3B8;'>Taxa de retur</span>
-                    <span style='font-size: 13px; font-weight: 600; color: #A78BFA;'>" . number_format($insuranceAmount, 2) . " {$currency}</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #A78BFA;'>" . number_format($insuranceAmount, 2) . " {$currency}{$insuranceVatNote}</span>
                 </div>
             ";
         }
@@ -1744,7 +1760,7 @@ class OrderResource extends Resource
         $finalTotal = $isPosOrder
             ? ($ticketsValue - $discount + $insuranceAmount)
             : ($isOnTop
-                ? ($ticketsValue + $commission - $discount + $insuranceAmount)
+                ? ($ticketsValue + $commission + $commissionVat - $discount + $insuranceAmount)
                 : $total);
 
         // Total

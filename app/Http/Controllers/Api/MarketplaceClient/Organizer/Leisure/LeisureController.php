@@ -88,6 +88,8 @@ class LeisureController extends BaseController
                 'mode' => $eventOrganizer->getEffectiveCommissionMode(),
             ];
         }
+        // The marketplace's own VAT on the commission added on top (0 = none)
+        $commission['vat_rate'] = $marketplace ? $marketplace->vatRate() : 0.0;
 
         // C2: categorii custom pentru gruparea tipurilor de bilete (afișare pe
         // pagina publica + organizator panel). Stocate in venue_config.ticket_categories
@@ -1318,7 +1320,12 @@ class LeisureController extends BaseController
                 $items[$idx]['commission_per_ticket'] = 0.0;
             }
         }
-        $total = round($subtotal + $commissionTotal, 2);
+        // The marketplace's VAT on the on-top commission (0 unless it is a VAT payer)
+        $commissionVatRate = $marketplace->vatRate();
+        $commissionVat = ($commissionVatRate > 0 && $commissionTotal > 0)
+            ? round($commissionTotal * $commissionVatRate / 100, 2)
+            : 0.0;
+        $total = round($subtotal + $commissionTotal + $commissionVat, 2);
 
         // „Via email" cu valoare > 0: comanda asteapta plata online prin link.
         $awaitingPayment = $paymentMethod === 'invoice' && $total > 0;
@@ -1377,7 +1384,11 @@ class LeisureController extends BaseController
                     'commission_rate' => $commissionRate,
                     'commission_fixed' => $commissionFixed,
                     'commission_mode' => $commissionMode,
-                ], $awaitingPayment ? [
+                ], $commissionVat > 0 ? [
+                    'vat_rate' => $commissionVatRate,
+                    'commission_on_top_amount' => round($commissionTotal, 2),
+                    'commission_vat_amount' => $commissionVat,
+                ] : [], $awaitingPayment ? [
                     \App\Services\Leisure\LeisurePosEmail::TOKEN_META_KEY => \App\Services\Leisure\LeisurePosEmail::newToken(),
                     // Vanzarea POS nu incrementeaza quota_sold, deci nici anularea
                     // (expirare / plata esuata) nu are ce restitui. Fara stampila,
@@ -1725,6 +1736,8 @@ class LeisureController extends BaseController
                 'total' => (float) $order->total,
                 'subtotal' => (float) $order->subtotal,
                 'commission_total' => $commissionTotal,
+                'commission_vat' => $commissionVat,
+                'vat_rate' => $commissionVatRate,
                 'currency' => $order->currency,
                 'payment_method' => $paymentMethod,
                 'status' => $order->status,

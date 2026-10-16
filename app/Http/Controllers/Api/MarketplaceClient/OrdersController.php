@@ -219,6 +219,10 @@ class OrdersController extends BaseController
             $commissionAmount = round($subtotal * ($commission / 100), 2);
             $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && !$isAppPosSale;
             $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
+            // The marketplace's own VAT on the on-top commission (0 unless it is a VAT payer)
+            $commissionVatRate = $isOnTop ? $client->vatRate() : 0.0;
+            $commissionVat = ($commissionVatRate > 0 && $commissionAmount > 0) ? round($commissionAmount * $commissionVatRate / 100, 2) : 0.0;
+            $total = round($total + $commissionVat, 2);
 
             // POS operators authenticate with a Sanctum token named
             // "team-member-{id}" (see Organizer/AuthController). Capture
@@ -248,6 +252,11 @@ class OrdersController extends BaseController
                 'ip_address' => $request->ip(),
                 'sold_by' => $request->input('sold_by'),
             ];
+            if ($commissionVat > 0) {
+                $orderMeta['vat_rate'] = $commissionVatRate;
+                $orderMeta['commission_on_top_amount'] = $commissionAmount;
+                $orderMeta['commission_vat_amount'] = $commissionVat;
+            }
             if ($teamMemberId) {
                 $orderMeta['team_member_id'] = $teamMemberId;
                 $orderMeta['team_member_name'] = $teamMemberName;
