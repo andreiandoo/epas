@@ -999,7 +999,9 @@ class TicketVariableService
         $currency = $order?->currency ?? $ticketType?->currency ?? 'RON';
 
         // Build computed fields
-        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency, $commissionPerUnit, $effectiveLocale);
+        // Marketplace VAT the customer paid on the on-top commission (0 when none)
+        $commissionVatRate = (float) ($orderMeta['vat_rate'] ?? 0);
+        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency, $commissionPerUnit, $effectiveLocale, $commissionVatRate);
         $feesText = $this->buildFeesText($event);
         $serial = $this->buildSerialNumber($ticket);
 
@@ -1190,7 +1192,7 @@ class TicketVariableService
      *         (preview / template editor) — in which case we fall back to
      *         rate × price so the preview still renders a plausible number.
      */
-    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency, float $commissionPerTicket = 0.0, string $locale = 'ro'): string
+    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency, float $commissionPerTicket = 0.0, string $locale = 'ro', float $commissionVatRate = 0.0): string
     {
         // Currency label localizat: 'lei' pe RO, 'RON' pe EN/HU (mai universal in engleza).
         $isRon = strtolower($currency) === 'ron';
@@ -1227,6 +1229,10 @@ class TicketVariableService
             $commission = $commissionPerTicket > 0
                 ? $commissionPerTicket
                 : round($price * $commissionRate / 100, 2);
+            // The processing fee as paid: with the marketplace VAT on it
+            if ($commissionVatRate > 0) {
+                $commission = round($commission + round($commission * $commissionVatRate / 100, 2), 2);
+            }
             $totalWithCommission = $price + $commission;
             $formattedTotal = number_format($totalWithCommission, 2, $decSep, $thouSep);
             $formattedCommission = number_format($commission, 2, $decSep, $thouSep);
