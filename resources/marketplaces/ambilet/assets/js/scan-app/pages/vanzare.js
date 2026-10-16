@@ -525,6 +525,24 @@
 
   var claimPollTimer = null;
 
+  function isVenue() { return !!(window.SCAN_APP && window.SCAN_APP.venue); }
+
+  // Venue owners have their own switch, valid only on the event's day.
+  function autoValidateSales() {
+    var ev = EventContext.getState().selectedEvent;
+    return isVenue() ? AppContext.isVenueAutoValidateOn(ev) : AppContext.get('autoConfirmValid') === true;
+  }
+
+  var autoValidatePromptDismissedFor = null;
+  function renderAutoValidatePrompt() {
+    var box = $('scanapp-autovalidate-prompt');
+    if (!box) return;
+    var ev = EventContext.getState().selectedEvent;
+    var show = isVenue() && !!ev && AppContext.isEventDay(ev) && !AppContext.isVenueAutoValidateOn(ev)
+      && String(autoValidatePromptDismissedFor) !== String(ev.id);
+    box.hidden = !show;
+  }
+
   function onOrderCreated(orderData, method, total) {
     dom.successTitle.textContent = 'Plată reușită';
     dom.successSubtitle.textContent = 'Comandă #' + (orderData.id || '?') + ' · ' + formatLei(total);
@@ -553,10 +571,16 @@
         console.warn('[vanzare] generate-claim-url failed:', e);
       });
 
-      // Auto-check-in (if setting enabled and we're on cash/card)
-      var autoConfirm = AppContext.get('autoConfirmValid') === true;
-      if (autoConfirm) {
-        ScanAPI.post('/orders/' + orderData.id + '/pos-complete', {}).catch(function () {});
+      // Auto-check-in (if setting enabled and we're on cash/card). Without
+      // auto_checkin the server only completes the order and checks nothing in.
+      if (autoValidateSales()) {
+        var tm = ScanAuth.getTeamMember && ScanAuth.getTeamMember();
+        var body = { auto_checkin: true };
+        // Venue owner: the server labels the check-in with the venue name.
+        if (!isVenue()) {
+          body.checked_in_by = (tm && tm.name) || (ScanAuth.getOrganizer() && ScanAuth.getOrganizer().name) || 'POS';
+        }
+        ScanAPI.post('/orders/' + orderData.id + '/pos-complete', body).catch(function () {});
       }
     }
 
@@ -664,6 +688,18 @@
     bindSeatingMessages();
     if (dom.seatBack) dom.seatBack.addEventListener('click', closeSeating);
 
+    var avOn = $('scanapp-autovalidate-on');
+    var avLater = $('scanapp-autovalidate-later');
+    if (avOn) avOn.addEventListener('click', function () {
+      AppContext.setVenueAutoValidate(true);
+      ScanApp.toast('Autovalidarea biletelor e activă azi.', 'success');
+    });
+    if (avLater) avLater.addEventListener('click', function () {
+      var ev = EventContext.getState().selectedEvent;
+      autoValidatePromptDismissedFor = ev ? ev.id : null;
+      renderAutoValidatePrompt();
+    });
+
     if (window.EventContext) {
       EventContext.subscribe('event-selected', function () {
         cart = [];
@@ -676,6 +712,7 @@
         renderCart();
         renderRecentSales();
         reflectReportsOnly();
+        renderAutoValidatePrompt();
         prefetchSeating(); // re-warm for the new event
       });
       EventContext.subscribe('ticket-types-updated', function () {
@@ -684,6 +721,7 @@
       reflectReportsOnly();
       renderGrid();
       renderRecentSales();
+      renderAutoValidatePrompt();
       // Initial warm-up for the current event (covers SWR-hydrated state where
       // event-selected may have fired before this subscription was attached).
       prefetchSeating();
@@ -691,6 +729,9 @@
 
     if (window.AppContext) {
       AppContext.subscribe('sale-added', function () { renderRecentSales(); });
+      AppContext.subscribe('settings-change', function (e) {
+        if (e.detail && e.detail.key === 'venueAutoValidate') renderAutoValidatePrompt();
+      });
     }
   }
 

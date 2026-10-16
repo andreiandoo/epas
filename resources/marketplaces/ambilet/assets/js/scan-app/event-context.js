@@ -312,7 +312,9 @@
           door_count:         rawStats.door_count      != null ? rawStats.door_count      : 0,
           by_source_and_type: rawStats.by_source_and_type || { online: [], door: [] },
           total_sold:         eventData.tickets_sold   != null ? eventData.tickets_sold   : (rawStats.total || 0),
-          revenue:            eventData.revenue        != null ? eventData.revenue        : (rawStats.revenue || 0),
+          // A venue owner never sees an event's revenue (other organizers' money).
+          revenue:            (window.SCAN_APP && window.SCAN_APP.venue) ? null
+                                : (eventData.revenue != null ? eventData.revenue : (rawStats.revenue || 0)),
           // Prefer the stats-side effective capacity (handles the
           // event.capacity=null fallback to Σ ticket_types.capacity
           // computed server-side). Fall through to eventData.capacity

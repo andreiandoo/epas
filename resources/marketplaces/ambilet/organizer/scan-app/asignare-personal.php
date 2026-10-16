@@ -28,6 +28,7 @@ require __DIR__ . '/_layout.php';
     <p class="scanapp-card__text" id="scanapp-staff-sheet-member">—</p>
     <div id="scanapp-staff-sheet-gates" style="margin-top: 12px;"></div>
     <hr class="scanapp-divider">
+    <button type="button" class="scanapp-btn scanapp-btn--block" id="scanapp-staff-sheet-remove" style="color: var(--scanapp-red, #dc2626); margin-bottom: 8px;" hidden>Elimină din echipă</button>
     <button type="button" class="scanapp-btn scanapp-btn--block" id="scanapp-staff-sheet-close">Închide</button>
   </div>
 </div>

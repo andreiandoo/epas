@@ -20,6 +20,7 @@
     dom.sheetMember    = $('scanapp-staff-sheet-member');
     dom.sheetGates     = $('scanapp-staff-sheet-gates');
     dom.sheetClose     = $('scanapp-staff-sheet-close');
+    dom.sheetRemove    = $('scanapp-staff-sheet-remove');
   }
 
   var members = [];
@@ -116,6 +117,8 @@
     }).join('');
 
     dom.sheetGates.innerHTML = html;
+    // The owner row (id owner_X) can't be removed.
+    if (dom.sheetRemove) dom.sheetRemove.hidden = member.role === 'owner' || String(member.id).indexOf('owner_') === 0;
     dom.sheetGates.querySelectorAll('[data-gate-pick]').forEach(function (row) {
       row.addEventListener('click', function () {
         var gateId = row.getAttribute('data-gate-pick');
@@ -149,6 +152,24 @@
     });
   }
 
+  function removeMember() {
+    if (!editingMember) return;
+    var member = editingMember;
+    var name = member.name || member.email || 'acest membru';
+    if (!window.confirm('Elimini pe ' + name + ' din echipă? Pierde imediat accesul în aplicație.')) return;
+    ScanAPI.post('/organizer/team/remove', { member_id: String(member.id) }).then(function (resp) {
+      if (resp && resp.success === false) throw new Error(resp.message || 'Eliminarea a eșuat.');
+      // The team list is cached ~30s by the scan proxy, so drop the row locally.
+      members = members.filter(function (m) { return String(m.id) !== String(member.id); });
+      closeSheet();
+      renderMembers();
+      ScanApp.toast('Membru eliminat din echipă.', 'success');
+    }).catch(function (err) {
+      console.error('[asignare] remove failed:', err);
+      ScanApp.toast((err && err.message) || 'Eliminarea a eșuat.', 'danger');
+    });
+  }
+
   function init() {
     collectDom();
     if (!dom.list) return;
@@ -157,6 +178,7 @@
       return;
     }
     dom.sheetClose.addEventListener('click', closeSheet);
+    if (dom.sheetRemove) dom.sheetRemove.addEventListener('click', removeMember);
     dom.sheet.addEventListener('click', function (e) { if (e.target === dom.sheet) closeSheet(); });
 
     if (window.EventContext) {

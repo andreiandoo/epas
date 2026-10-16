@@ -16,6 +16,22 @@ require __DIR__ . '/_layout.php';
 
   <!-- Ticket grid -->
   <div id="scanapp-sales-main">
+    <?php if ($scanVenue): ?>
+    <!-- Venue owner, event day: Autovalidare bilete prompt (vanzare.js) -->
+    <div class="scanapp-card" id="scanapp-autovalidate-prompt" hidden style="background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.35);">
+      <div class="scanapp-card__title">Activează Autovalidarea biletelor</div>
+      <p class="scanapp-card__text">
+        Azi e ziua evenimentului. Cu Autovalidarea pornită, biletele vândute aici la intrare
+        (numerar sau card POS) se marchează automat ca validate, deci clientul intră direct,
+        fără să mai fie scanat, iar vânzarea la intrare merge mai repede. Rămâne activă doar azi
+        și o poți opri oricând din Setări.
+      </p>
+      <div class="scanapp-result__actions">
+        <button type="button" class="scanapp-btn scanapp-btn--primary" id="scanapp-autovalidate-on">Activează acum</button>
+        <button type="button" class="scanapp-btn" id="scanapp-autovalidate-later">Mai târziu</button>
+      </div>
+    </div>
+    <?php endif; ?>
     <div class="scanapp-section-title">Tipuri de bilete</div>
     <div class="scanapp-ticket-grid" id="scanapp-ticket-grid">
       <div class="scanapp-card scanapp-card--placeholder">

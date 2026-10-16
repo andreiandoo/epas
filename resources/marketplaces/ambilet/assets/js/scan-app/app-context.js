@@ -44,6 +44,8 @@
     try { storage.setItem(key, JSON.stringify(value)); } catch (e) { /* quota / safari private */ }
   }
 
+  var VENUE_AUTO_VALIDATE_KEY = 'scanapp_venue_auto_validate_day';
+
   var defaultSettings = {
     vibrationFeedback: true,
     soundEffects:      true,
@@ -186,6 +188,37 @@
     },
 
     isOnline: function () { return state.isOnline; },
+
+    // Venue owner "Autovalidare bilete": stored as the local day it was
+    // switched on, so it lasts for that day only (off by default) and can
+    // be switched on only on the selected event's day. Same rule as the
+    // Android app (ambilet-app2 utils/eventCategories.js).
+    localDayKey: function (date) {
+      var d = date || new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    },
+    isEventDay: function (event) {
+      if (!event) return false;
+      var isDay = function (v) { return /^\d{4}-\d{2}-\d{2}$/.test(v); };
+      var start = String(event.start_date || event.starts_at || event.event_date || '').slice(0, 10);
+      if (!isDay(start)) return false;
+      var endRaw = String(event.end_date || event.ends_at || '').slice(0, 10);
+      var end = isDay(endRaw) && endRaw >= start ? endRaw : start;
+      var today = AppContext.localDayKey();
+      return today >= start && today <= end;
+    },
+    isVenueAutoValidateOn: function (event) {
+      var day = null;
+      try { day = localStorage.getItem(VENUE_AUTO_VALIDATE_KEY); } catch (e) {}
+      return !!day && day === AppContext.localDayKey() && AppContext.isEventDay(event);
+    },
+    setVenueAutoValidate: function (on) {
+      try {
+        if (on) localStorage.setItem(VENUE_AUTO_VALIDATE_KEY, AppContext.localDayKey());
+        else localStorage.removeItem(VENUE_AUTO_VALIDATE_KEY);
+      } catch (e) { /* safari private */ }
+      emit('settings-change', { key: 'venueAutoValidate', value: !!on, settings: state.settings });
+    },
 
     // Pub/sub
     subscribe: function (event, handler) {

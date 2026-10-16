@@ -91,10 +91,51 @@
     });
   }
 
+  // Venue owner: Autovalidare bilete — only on the selected event's day.
+  function renderVenueAutoValidate() {
+    var el = $('scanapp-venue-autovalidate');
+    if (!el) return;
+    var ev = window.EventContext ? EventContext.getState().selectedEvent : null;
+    var on = AppContext.isVenueAutoValidateOn(ev);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+    var desc = $('scanapp-venue-autovalidate-desc');
+    if (desc) {
+      desc.textContent = on
+        ? 'Activă azi. Se oprește singură la finalul zilei.'
+        : (AppContext.isEventDay(ev) ? 'Oprită' : 'Se poate porni doar în ziua evenimentului');
+    }
+  }
+
+  function bindVenueAutoValidate() {
+    var el = $('scanapp-venue-autovalidate');
+    if (!el) return;
+    var toggle = function () {
+      var ev = window.EventContext ? EventContext.getState().selectedEvent : null;
+      if (AppContext.isVenueAutoValidateOn(ev)) {
+        AppContext.setVenueAutoValidate(false);
+      } else if (!AppContext.isEventDay(ev)) {
+        ScanApp.toast(ev
+          ? 'Autovalidarea se poate porni doar în ziua evenimentului pentru care vinzi bilete.'
+          : 'Alege întâi evenimentul din Evenimente. Autovalidarea se poate porni doar în ziua evenimentului.', 'danger');
+        return;
+      } else {
+        AppContext.setVenueAutoValidate(true);
+      }
+      renderVenueAutoValidate();
+    };
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', function (e) {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
+    });
+    if (window.EventContext) EventContext.subscribe('event-selected', renderVenueAutoValidate);
+    renderVenueAutoValidate();
+  }
+
   function init() {
     renderAccount();
     reflectAllToggles();
     bindToggles();
+    bindVenueAutoValidate();
     renderInstallBanners();
     renderVersion();
     bindLogout();
