@@ -2652,11 +2652,15 @@ const EventPage = {
                 commissionAmount = displayPrice - basePrice;
                 totalPrice = displayPrice;
             } else {
-                // Commission added on top
+                // Commission added on top, plus the marketplace VAT on it
                 basePrice = displayPrice;
                 commissionAmount = ticketComm.amount;
                 totalPrice = displayPrice + commissionAmount;
             }
+            var commissionVat = (ticketComm.mode !== 'included' && typeof AmbiletCart !== 'undefined' && AmbiletCart.lineCommissionVat)
+                ? AmbiletCart.lineCommissionVat(commissionAmount)
+                : 0;
+            totalPrice += commissionVat;
 
             // Tooltip HTML - show commission as "Taxe procesare"
             var tooltipHtml = '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p><div class="space-y-1 text-xs">';
@@ -2667,6 +2671,7 @@ const EventPage = {
             } else {
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + displayPrice.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    (commissionVat > 0 ? '<div class="flex justify-between"><span class="text-white/90">TVA taxe procesare (' + AmbiletCart.getVatRate() + '%):</span><span>+' + commissionVat.toFixed(2) + ' lei</span></div>' : '') +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             }
             tooltipHtml += '</div>';

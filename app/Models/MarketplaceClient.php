@@ -107,6 +107,14 @@ class MarketplaceClient extends Model
                 $client->slug = Str::slug($client->name);
             }
         });
+
+        // MarketplaceClientAuth caches the client per API key for 10 minutes;
+        // drop it on save so settings (e.g. VAT payer / rate) apply at once.
+        static::saved(function ($client) {
+            if (!empty($client->api_key)) {
+                \Illuminate\Support\Facades\Cache::forget("marketplace_client_api_{$client->api_key}");
+            }
+        });
     }
 
     /**

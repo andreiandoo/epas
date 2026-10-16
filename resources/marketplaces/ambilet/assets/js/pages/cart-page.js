@@ -305,7 +305,9 @@ const CartPage = {
         if (commissionMode === 'added_on_top') {
             commissionAmount = commission.amount;
         }
-        const totalWithCommission = price + commissionAmount;
+        // Marketplace VAT on the on-top commission (per ticket)
+        const commissionVat = commissionMode === 'added_on_top' ? AmbiletCart.lineCommissionVat(commissionAmount) : 0;
+        const totalWithCommission = price + commissionAmount + commissionVat;
 
         // Build tooltip HTML with price breakdown
         let tooltipHtml = '<p class="pb-2 mb-3 text-sm font-semibold border-b border-white/20">Detalii preț bilet ' + ticketTypeName + '</p>' +
@@ -325,6 +327,7 @@ const CartPage = {
                 commissionLabel += ' (' + commission.rate + '% + ' + commission.fixed.toFixed(2) + ' lei)';
             }
             tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">' + commissionLabel + ':</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                (commissionVat > 0 ? '<div class="flex justify-between"><span class="text-white/90">TVA taxe procesare (' + AmbiletCart.getVatRate() + '%):</span><span>+' + commissionVat.toFixed(2) + ' lei</span></div>' : '') +
                 '<div class="flex justify-between pt-2 mt-2 border-t border-white/20"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
         }
 
