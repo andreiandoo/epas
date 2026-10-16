@@ -155,7 +155,7 @@ require_once __DIR__ . '/includes/header.php';
                             <span class="text-base font-semibold text-white" id="totalRevenue">50,000 RON</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-white/90">Comision AmBilet</span>
+                            <span class="text-sm text-white/90">Comision AmBilet (cu TVA 21%)</span>
                             <span class="text-base font-semibold text-white" id="totalFee">1,500 RON</span>
                         </div>
                         <div class="flex items-center justify-between pt-4 mt-2 border-t border-white/10">
@@ -266,6 +266,8 @@ function calculateFees() {
         fee = (totalRevenue * 0.015) + (count * 0.5);
     }
 
+    // the commission is invoiced with 21% VAT
+    fee = Math.round(fee * 1.21 * 100) / 100;
     const netRevenue = totalRevenue - fee;
 
     document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString('ro-RO') + ' RON';

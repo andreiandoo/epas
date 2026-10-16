@@ -134,7 +134,7 @@ $cssBundle = 'static';
                         </div>
                         <div>
                             <h4 class="text-base font-bold text-secondary mb-1">Rambursare completa disponibila</h4>
-                            <p class="text-sm text-muted leading-relaxed">Cu mai mult de 30 de zile inainte de eveniment, poti obtine rambursarea completa a biletului, inclusiv taxa de serviciu.</p>
+                            <p class="text-sm text-muted leading-relaxed">Cu mai mult de 30 de zile inainte de eveniment, poti obtine rambursarea completa a biletului, inclusiv taxa de serviciu si TVA-ul aferent.</p>
                         </div>
                     </div>
                     <div class="flex flex-col md:flex-row gap-4 md:gap-5 py-5 border-b border-slate-100">
@@ -143,7 +143,7 @@ $cssBundle = 'static';
                         </div>
                         <div>
                             <h4 class="text-base font-bold text-secondary mb-1">Rambursare cu retinere taxa</h4>
-                            <p class="text-sm text-muted leading-relaxed">Primesti valoarea biletului minus taxa de serviciu AmBilet (de regula 5-10% din valoare).</p>
+                            <p class="text-sm text-muted leading-relaxed">Primesti valoarea biletului minus taxa de serviciu AmBilet (de regula 5-10% din valoare), care include TVA.</p>
                         </div>
                     </div>
                     <div class="flex flex-col md:flex-row gap-4 md:gap-5 py-5 border-b border-slate-100">
