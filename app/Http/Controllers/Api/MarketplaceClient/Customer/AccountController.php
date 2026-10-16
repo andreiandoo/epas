@@ -56,11 +56,7 @@ class AccountController extends BaseController
         $totalSpentCents = (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('total_cents');
         $totalSpentDecimal = (float) (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('total');
         $totalSpent = $totalSpentCents > 0 ? ($totalSpentCents / 100) : $totalSpentDecimal;
-
-        // Also sum insurance amounts from meta for paid orders
-        $paidOrders = (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->get(['meta']);
-        $totalInsurance = $paidOrders->sum(fn ($o) => (float) ($o->meta['insurance_amount'] ?? 0));
-        $totalSpent += $totalInsurance;
+        // The insurance fee is already part of orders.total (checkout adds it), so it is not added again here.
 
         $totalSaved = (float) (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('discount_amount');
 

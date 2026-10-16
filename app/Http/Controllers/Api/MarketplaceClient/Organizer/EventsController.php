@@ -737,15 +737,9 @@ class EventsController extends BaseController
                     'cancelled_at' => now(),
                 ]);
                 $order->tickets()->update(['status' => 'cancelled']);
-
-                // Restore ticket availability
-                foreach ($order->items as $item) {
-                    if ($item->ticket_type_id) {
-                        $event->ticketTypes()
-                            ->where('id', $item->ticket_type_id)
-                            ->increment('quota_total', $item->quantity);
-                    }
-                }
+                // Stock and seats are released by the Order saved observer
+                // (releaseSeatsAndRestoreStock, idempotent). Raising quota_total
+                // here as well used to inflate the event's capacity.
             }
 
             // Count paid orders that admin will need to review for refunds.

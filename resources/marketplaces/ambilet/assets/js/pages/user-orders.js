@@ -65,7 +65,7 @@ const UserOrders = {
         } else {
             // Fallback: compute from loaded orders
             const confirmed = this.orders.filter(o => ['confirmed', 'paid', 'completed'].includes(o.status));
-            const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0) + (parseFloat(o.insurance_amount) || 0), 0);
+            const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
             const totalSaved = confirmed.reduce((sum, o) => sum + (parseFloat(o.savings) || 0), 0);
 
             document.getElementById('stat-total').textContent = this.orders.length;
@@ -100,9 +100,9 @@ const UserOrders = {
         container.innerHTML = filtered.map(order => this.renderOrderCard(order)).join('');
     },
 
-    /** Compute the total the customer actually paid (order total + insurance fee) */
+    /** The total the customer actually paid. order.total already includes the insurance fee (checkout adds it). */
     orderPaidTotal(order) {
-        return (parseFloat(order.total) || 0) + (parseFloat(order.insurance_amount) || 0);
+        return parseFloat(order.total) || 0;
     },
 
     renderOrderCard(order) {

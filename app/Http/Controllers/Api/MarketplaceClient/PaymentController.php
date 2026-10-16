@@ -6,7 +6,6 @@ use App\Models\Order;
 use App\Models\MarketplaceTransaction;
 use App\Models\Tenant;
 use App\Models\Gamification\ExperienceAction;
-use App\Notifications\MarketplaceOrderNotification;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use App\Services\Gamification\ExperienceService;
 use Illuminate\Http\Request;

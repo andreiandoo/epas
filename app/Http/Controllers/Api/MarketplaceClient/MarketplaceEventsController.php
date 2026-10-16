@@ -866,7 +866,7 @@ class MarketplaceEventsController extends BaseController
             : 0.0;
 
         // Get commission settings (event > organizer > marketplace default)
-        $commissionMode = $event->commission_mode ?? $organizer?->commission_mode ?? $client->commission_mode ?? 'included';
+        $commissionMode = $event->commission_mode ?? $organizer?->default_commission_mode ?? $client->commission_mode ?? 'included';
         $commissionRate = $event->commission_rate ?? $organizer?->commission_rate ?? $client->commission_rate ?? 5.0;
 
         // Get target_price for discount display
