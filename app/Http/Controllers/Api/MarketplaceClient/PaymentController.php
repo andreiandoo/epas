@@ -1070,7 +1070,14 @@ class PaymentController extends BaseController
             $templateTotalAmount = $totalAmount;
             $insuranceLabel = '';
             if ($insuranceAmount > 0) {
-                $insuranceLabel = number_format($insuranceAmount, 2, ',', '.') . ' ' . $currency;
+                $insuranceLabel = number_format($insuranceAmount, 2, ',', '.') . ' ' . $currency
+                    . ($insuranceVat > 0 ? ' (incl. TVA ' . number_format($insuranceVat, 2, ',', '.') . ' ' . $currency . ')' : '');
+            }
+            // The stored ticket_purchase templates only print {{total_amount}}:
+            // carry the marketplace VAT paid there, wherever the template uses it.
+            $templateVatTotal = $commissionVat + $insuranceVat + $culturalCardVat;
+            if ($templateVatTotal > 0) {
+                $templateTotalAmount .= ' (din care TVA ' . $vatRateLabel . '%: ' . number_format($templateVatTotal, 2, ',', '.') . ' ' . $currency . ')';
             }
 
             $vars = [
