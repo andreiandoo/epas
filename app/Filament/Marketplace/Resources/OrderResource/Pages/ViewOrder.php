@@ -326,6 +326,8 @@ class ViewOrder extends ViewRecord
             $mode = $cd['commission_mode'] ?? null;
             $commissionByType[$key] = [
                 'amount_per_unit' => (float) ($cd['commission_amount'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
+                // Marketplace VAT paid on the on-top commission (0 when none)
+                'vat_per_unit' => (float) ($cd['commission_vat'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
                 'mode' => in_array($mode, ['on_top', 'add_on_top', 'added_on_top'], true) ? 'on_top' : 'included',
                 'rate' => (float) ($cd['commission_rate'] ?? 0),
             ];
@@ -488,6 +490,10 @@ class ViewOrder extends ViewRecord
                         : $grossAfterDiscount;
                     // Included tickets always refund with commission regardless of operator choice.
                     $effectiveRefundCommission = ($ticketMode === 'included') ? true : $chosenRefundCommission;
+                    // On-top commission is shown and refunded with its VAT (as PaymentRefundService does)
+                    if ($ticketMode !== 'included' && $cd) {
+                        $commission = round($commission + round($cd['vat_per_unit'] ?? 0, 2), 2);
+                    }
                     $refundAmount = $effectiveRefundCommission ? ($faceValue + $commission) : $faceValue;
 
                     $totalFace += $faceValue;

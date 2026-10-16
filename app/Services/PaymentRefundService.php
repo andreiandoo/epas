@@ -249,6 +249,9 @@ class PaymentRefundService
             $mode = $cd['commission_mode'] ?? null;
             $commissionByType[$key] = [
                 'amount_per_unit' => (float) ($cd['commission_amount'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
+                // Marketplace VAT the customer paid on this on-top commission
+                // (stored at checkout; absent = none, e.g. before the VAT start date)
+                'vat_per_unit' => (float) ($cd['commission_vat'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
                 'mode' => in_array($mode, ['on_top', 'add_on_top', 'added_on_top'], true) ? 'on_top' : 'included',
             ];
         }
@@ -256,6 +259,7 @@ class PaymentRefundService
 
         $items = [];
         $totalRefund = 0;
+        $totalVatRefunded = 0.0;
 
         foreach ($tickets as $ticket) {
             $originalPrice = (float) ($ticket->price ?? 0);
@@ -276,7 +280,13 @@ class PaymentRefundService
             // Included tickets MUST refund with commission (face+commission = gross
             // customer paid); on_top tickets follow the operator's choice.
             $effectiveRefundCommission = ($ticketMode === 'included') ? true : $refundCommission;
-            $refundAmount = $effectiveRefundCommission ? ($faceValue + $commission) : $faceValue;
+            // The VAT on an on-top commission goes back with the commission (and
+            // stays with the marketplace when the commission is kept).
+            $commissionVat = ($ticketMode === 'on_top' && $effectiveRefundCommission && $cd)
+                ? round($cd['vat_per_unit'] ?? 0, 2)
+                : 0.0;
+            $refundAmount = $effectiveRefundCommission ? ($faceValue + $commission + $commissionVat) : $faceValue;
+            $totalVatRefunded += $commissionVat;
 
             $items[] = [
                 'ticket' => $ticket,
@@ -326,6 +336,9 @@ class PaymentRefundService
                 'refund_method' => 'original_payment',
                 'payment_processor' => $order->payment_processor,
                 'commission_refund' => collect($items)->filter(fn ($i) => $i['commission_refunded'])->sum('commission_amount'),
+                // Marketplace VAT returned with the on-top commission (part of
+                // approved_amount; reversed on the general-client invoice)
+                'fees_refund' => round($totalVatRefunded, 2),
                 'organizer_deduction' => collect($items)->sum('face_value'),
                 'requested_at' => now(),
             ]);
