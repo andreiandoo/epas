@@ -162,6 +162,8 @@ class PosInvoiceContentBuilder
                 'quantity' => $displayQty,
                 'unit_price' => $displayUnit,
                 'amount' => $lineTotal,
+                '_cat' => 'pos',
+                '_tt' => (int) ($item['ticket_type_id'] ?? 0),
             ];
         }
 
@@ -183,6 +185,8 @@ class PosInvoiceContentBuilder
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
+                '_cat' => 'refunded',
+                '_tt' => (int) ($row['ticket_type_id'] ?? 0),
             ];
         }
 
@@ -216,6 +220,8 @@ class PosInvoiceContentBuilder
                 'quantity' => $displayQty,
                 'unit_price' => $displayUnit,
                 'amount' => $lineTotal,
+                '_cat' => 'online',
+                '_tt' => (int) ($row['ticket_type_id'] ?? 0),
             ];
         }
 
@@ -237,6 +243,8 @@ class PosInvoiceContentBuilder
                 'quantity' => $qty,
                 'unit_price' => -$commPerTicket,
                 'amount' => -$lineTotal,
+                '_cat' => 'kept',
+                '_tt' => (int) ($row['ticket_type_id'] ?? 0),
             ];
         }
 
@@ -244,8 +252,10 @@ class PosInvoiceContentBuilder
             return ['error' => 'Nu există comisioane de facturat'];
         }
 
-        $vatRate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0;
-        $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
+        // Marketplace VAT. Only commission from sales made on/after the
+        // marketplace's VAT start date is taxed; a decont spanning that date
+        // gets each line split into a taxed part and a 0% part.
+        [$items, $vatRate, $vatAmount] = $this->applyVat($payout, $marketplace, $items);
         $total = round($subtotal + $vatAmount, 2);
 
         return [
@@ -255,6 +265,101 @@ class PosInvoiceContentBuilder
             'vat_amount' => $vatAmount,
             'amount' => $total,
         ];
+    }
+
+    /**
+     * @return array{0: array, 1: float, 2: float} [items with per-line vat_rate, invoice vat_rate, vat_amount]
+     */
+    protected function applyVat(MarketplacePayout $payout, $marketplace, array $items): array
+    {
+        $rate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0.0;
+        $since = $rate > 0 ? $marketplace->vatPayerSince() : null;
+        $sinceUtc = $since ? Carbon::instance($since->toDateTime())->utc() : null;
+        $start = $payout->period_start ? $payout->period_start->copy()->startOfDay() : null;
+        $end = $payout->period_end ? $payout->period_end->copy()->endOfDay() : null;
+
+        if ($rate <= 0 || ($sinceUtc && $end && $end->lt($sinceUtc))) {
+            $regime = 'none';
+        } elseif (!$sinceUtc || ($start && $start->gte($sinceUtc))) {
+            $regime = 'all';
+        } else {
+            $regime = 'split';
+        }
+
+        $clean = fn (array $line, float $lineRate) => array_diff_key($line, ['_cat' => 1, '_tt' => 1]) + ['vat_rate' => $lineRate];
+
+        if ($regime !== 'split') {
+            $lineRate = $regime === 'all' ? $rate : 0.0;
+            $taxable = array_sum(array_map(fn ($l) => (float) $l['amount'], $items));
+            $vat = $lineRate > 0 && $taxable > 0 ? round($taxable * $lineRate / 100, 2) : 0.0;
+
+            return [array_map(fn ($l) => $clean($l, $lineRate), $items), $vat > 0 ? $lineRate : 0.0, $vat];
+        }
+
+        // Commission per ticket type from sales on/after the start date.
+        $postAmounts = ['pos' => [], 'online' => [], 'refunded' => [], 'kept' => []];
+        $collect = function (string $cat, array $rows) use (&$postAmounts) {
+            foreach ($rows as $row) {
+                $tt = (int) ($row['ticket_type_id'] ?? 0);
+                $qty = (int) ($row['qty'] ?? $row['quantity'] ?? $row['tickets'] ?? 0);
+                $amount = isset($row['commission_amount'])
+                    ? (float) $row['commission_amount']
+                    : $qty * (float) ($row['commission_per_ticket'] ?? 0);
+                $postAmounts[$cat][$tt] = [
+                    'qty' => ($postAmounts[$cat][$tt]['qty'] ?? 0) + $qty,
+                    'amount' => round(($postAmounts[$cat][$tt]['amount'] ?? 0) + $amount, 2),
+                ];
+            }
+        };
+        if ($payout->event) {
+            $collect('pos', $payout->filterRowsToIssuer(
+                app(SalesBreakdownService::class)->buildPosForPayout($payout->event, $sinceUtc, $end, exactBounds: true)
+            ));
+        }
+        $collect('online', $payout->getOnlineIncludedCommissionRowsBetween($sinceUtc, $end, exactBounds: true));
+        $collect('refunded', $payout->getRefundedCommissionRowsForPayout($since));
+        $collect('kept', $payout->getKeptCommissionRowsForPayout($since));
+
+        $out = [];
+        $taxable = 0.0;
+        foreach ($items as $line) {
+            $sign = (float) $line['amount'] < 0 ? -1 : 1;
+            $lineAbs = abs((float) $line['amount']);
+            $post = $postAmounts[$line['_cat'] ?? ''][$line['_tt'] ?? 0] ?? null;
+            $postAmount = $post ? min($lineAbs, abs($post['amount'])) : 0.0;
+            $postQty = $post ? min((int) $line['quantity'], (int) $post['qty']) : 0;
+
+            if ($postAmount <= 0) {
+                $out[] = $clean($line, 0.0);
+                continue;
+            }
+            if ($postAmount >= $lineAbs - 0.005) {
+                $out[] = $clean($line, $rate);
+                $taxable += $sign * $lineAbs;
+                continue;
+            }
+
+            $preAmount = round($lineAbs - $postAmount, 2);
+            $postQty = max(1, $postQty);
+            $preQty = max(1, (int) $line['quantity'] - $postQty);
+            $out[] = $clean(array_merge($line, [
+                'description' => $line['description'] . ' (vânzări din ' . $since->format('d.m.Y') . ')',
+                'quantity' => $postQty,
+                'unit_price' => $sign * round($postAmount / $postQty, 2),
+                'amount' => $sign * $postAmount,
+            ]), $rate);
+            $out[] = $clean(array_merge($line, [
+                'description' => $line['description'] . ' (vânzări înainte de ' . $since->format('d.m.Y') . ')',
+                'quantity' => $preQty,
+                'unit_price' => $sign * round($preAmount / $preQty, 2),
+                'amount' => $sign * $preAmount,
+            ]), 0.0);
+            $taxable += $sign * $postAmount;
+        }
+
+        $vat = $taxable > 0 ? round($taxable * $rate / 100, 2) : 0.0;
+
+        return [$out, $vat > 0 ? $rate : 0.0, $vat];
     }
 
     protected function resolveEventContext(?\App\Models\Event $event): array

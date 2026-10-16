@@ -294,6 +294,10 @@ class OblioAdapter implements AccountingAdapterInterface
 
             // Add line items
             $companyCif = $payload['cif'] ?? $this->cif;
+            // An invoice with at least one taxed line comes from a VAT-payer
+            // account: its 0% lines must use a real 0% rate, never the legacy
+            // 19 / Normala payload below.
+            $anyTaxedLine = collect($invoice['lines'])->contains(fn ($l) => (float) ($l['tax_rate'] ?? 0) > 0 && array_key_exists('vat_included', $l));
             foreach ($invoice['lines'] as $line) {
                 // Lines that state 'vat_included' (marketplace commission/service
                 // invoices, NET prices) get the VAT name from the company's Oblio
@@ -307,6 +311,9 @@ class OblioAdapter implements AccountingAdapterInterface
                 // A 0% line on a company whose Oblio VAT list has no 0% rate (a
                 // non-VAT-payer account) keeps the payload used until now:
                 // 19 / Normala with Oblio's default vatIncluded.
+                if ($vatName === null && $anyTaxedLine) {
+                    $vatName = 'SDD';
+                }
                 $legacy = $vatName === null;
                 if ($legacy) {
                     $rateValue = 19.0;

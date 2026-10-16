@@ -378,6 +378,11 @@ class Invoice extends Model
         if (!$payout) {
             throw new \RuntimeException('Decontul asociat nu mai există.');
         }
+        // The builder below makes the ORGANIZER invoice; a general-client
+        // (on-top commission) invoice would be replaced with organizer lines.
+        if (($this->meta['recipient_type'] ?? null) === 'general_client') {
+            throw new \RuntimeException('Factura către client general nu se regenerează de aici — anuleaz-o și generează-o din nou din decont.');
+        }
 
         $result = app(\App\Services\Invoicing\PosInvoiceContentBuilder::class)->build($payout);
         if (isset($result['error'])) {

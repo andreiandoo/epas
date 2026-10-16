@@ -207,7 +207,100 @@ class ServiceOrder extends Model
             'status' => self::STATUS_PROCESSING,
         ]);
 
+        try {
+            $this->issueVatInvoice();
+        } catch (\Throwable $e) {
+            // The payment stands; the invoice can be issued again from the admin.
+            Log::error('ServiceOrder: VAT invoice not issued', ['service_order_id' => $this->id, 'error' => $e->getMessage()]);
+        }
+
         return $this;
+    }
+
+    /**
+     * Fiscal invoice from the marketplace to the organizer for a paid service
+     * carrying VAT (orders without VAT keep the previous behaviour: no
+     * invoice). Idempotent: config.invoice_id remembers it. Sent to the
+     * accounting provider from the invoice page, like the decont invoices.
+     */
+    public function issueVatInvoice(): ?\App\Models\Invoice
+    {
+        if ((float) $this->tax <= 0 || !$this->marketplace_organizer_id) {
+            return null;
+        }
+        $config = $this->config ?? [];
+        if (!empty($config['invoice_id']) && \App\Models\Invoice::whereKey($config['invoice_id'])->exists()) {
+            return \App\Models\Invoice::find($config['invoice_id']);
+        }
+
+        $marketplace = \App\Models\MarketplaceClient::find($this->marketplace_client_id);
+        $organizer = \App\Models\MarketplaceOrganizer::find($this->marketplace_organizer_id);
+        if (!$marketplace || !$organizer) {
+            return null;
+        }
+
+        $d = $organizer->getIssuerData('primary');
+        $client = [
+            'name' => (string) (($d['name'] ?? '') ?: $organizer->name),
+            'cui' => (string) ($d['tax_id'] ?? ''),
+            'reg_com' => (string) ($d['registration'] ?? ''),
+            'address' => implode(', ', array_filter([$d['address'] ?? null, $d['city'] ?? null, $d['county'] ?? null])),
+            'is_pf' => ($organizer->person_type ?? null) === 'pf',
+        ];
+
+        $rate = (float) ($config['vat_rate'] ?? ((float) $this->subtotal > 0 ? round((float) $this->tax / (float) $this->subtotal * 100, 2) : 0));
+        $name = 'Servicii promovare - ' . $this->service_type_label;
+        $eventTitle = $this->event?->title;
+        $eventTitle = is_array($eventTitle) ? ($eventTitle['ro'] ?? (reset($eventTitle) ?: '')) : (string) ($eventTitle ?? '');
+        $description = trim($this->order_number . ($eventTitle !== '' ? ', "' . $eventTitle . '"' : ''));
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($marketplace, $organizer, $client, $rate, $name, $description, $config) {
+            $last = \App\Models\Invoice::where('marketplace_client_id', $marketplace->id)->lockForUpdate()->orderByDesc('id')->first();
+            $next = $last ? ((int) preg_replace('/\D/', '', $last->number) + 1) : 1;
+
+            $invoice = \App\Models\Invoice::create([
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => $organizer->id,
+                'number' => 'F-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT),
+                'type' => 'fiscal',
+                'description' => $name . ' (' . $this->order_number . ')',
+                'issue_date' => now(),
+                'due_date' => now(),
+                'subtotal' => (float) $this->subtotal,
+                'vat_rate' => $rate,
+                'vat_amount' => (float) $this->tax,
+                'amount' => (float) $this->total,
+                'currency' => $this->currency ?? 'RON',
+                'status' => 'paid',
+                'paid_at' => $this->paid_at ?? now(),
+                'meta' => [
+                    'service_order_id' => $this->id,
+                    'service_order_number' => $this->order_number,
+                    'issuer' => [
+                        'name' => $marketplace->company_name ?? $marketplace->name,
+                        'cui' => $marketplace->cui ?? '',
+                        'address' => $marketplace->address ?? '',
+                        'vat_payer' => (bool) $marketplace->vat_payer,
+                    ],
+                    'client' => $client,
+                    'recipient_type' => 'organizer',
+                    'items' => [[
+                        'name' => $name,
+                        'description' => $description,
+                        'quantity' => 1,
+                        'unit_price' => (float) $this->subtotal,
+                        'amount' => (float) $this->subtotal,
+                        'vat_rate' => $rate,
+                        'vat_amount' => (float) $this->tax,
+                    ]],
+                ],
+            ]);
+
+            $config['invoice_id'] = $invoice->id;
+            $this->update(['config' => $config]);
+
+            return $invoice;
+        });
     }
 
     /**

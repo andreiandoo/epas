@@ -1524,7 +1524,7 @@ class MarketplacePayout extends Model
      *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
      */
-    public function getRefundedCommissionRowsForPayout(): array
+    public function getRefundedCommissionRowsForPayout(?\Carbon\CarbonInterface $soldFrom = null, ?\Carbon\CarbonInterface $soldBefore = null): array
     {
         if (!$this->event_id || !$this->marketplace_organizer_id) {
             return [];
@@ -1537,6 +1537,7 @@ class MarketplacePayout extends Model
             })
             ->where('commission_refunded', true)
             ->where('status', 'refunded')
+            ->tap(fn ($q) => $this->scopeRefundItemsBySaleDate($q, $soldFrom, $soldBefore))
             ->with('ticketType:id,name')
             ->get();
 
@@ -1605,6 +1606,16 @@ class MarketplacePayout extends Model
      */
     public function getOnlineIncludedCommissionRowsForPayout(): array
     {
+        return $this->getOnlineIncludedCommissionRowsBetween($this->period_start, $this->period_end);
+    }
+
+    /**
+     * Same rows for an arbitrary [start, end] slice (default bounds widen to
+     * whole days; exactBounds keeps the datetimes as given). Used to split a
+     * decont at the marketplace's VAT start date.
+     */
+    public function getOnlineIncludedCommissionRowsBetween(?\Carbon\Carbon $start, ?\Carbon\Carbon $end, bool $exactBounds = false): array
+    {
         if (!$this->event_id || !$this->event) {
             return [];
         }
@@ -1616,7 +1627,7 @@ class MarketplacePayout extends Model
         }
 
         $bd = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->build($this->event, $this->period_start, $this->period_end, excludePos: true, dateColumn: 'paid_at');
+            ->build($this->event, $start, $end, excludePos: true, dateColumn: 'paid_at', exactBounds: $exactBounds);
 
         $result = [];
         foreach (($bd['per_type'] ?? []) as $row) {
@@ -1673,7 +1684,7 @@ class MarketplacePayout extends Model
      *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
      */
-    public function getKeptCommissionRowsForPayout(): array
+    public function getKeptCommissionRowsForPayout(?\Carbon\CarbonInterface $soldFrom = null, ?\Carbon\CarbonInterface $soldBefore = null): array
     {
         if (!$this->event_id || !$this->marketplace_organizer_id) {
             return [];
@@ -1686,6 +1697,7 @@ class MarketplacePayout extends Model
             })
             ->where('commission_refunded', false)
             ->where('status', 'refunded')
+            ->tap(fn ($q) => $this->scopeRefundItemsBySaleDate($q, $soldFrom, $soldBefore))
             ->with('ticketType:id,name')
             ->get();
 
@@ -1716,6 +1728,26 @@ class MarketplacePayout extends Model
         }
 
         return $this->filterRowsToIssuer(array_values($byType));
+    }
+
+    /**
+     * Restrict refund items to tickets whose ORDER was paid in [$soldFrom,
+     * $soldBefore). No bounds = no filter (the original behaviour).
+     */
+    protected function scopeRefundItemsBySaleDate($query, ?\Carbon\CarbonInterface $soldFrom, ?\Carbon\CarbonInterface $soldBefore): void
+    {
+        if (!$soldFrom && !$soldBefore) {
+            return;
+        }
+        $query->whereHas('ticket.order', function ($o) use ($soldFrom, $soldBefore) {
+            $saleDate = \Illuminate\Support\Facades\DB::raw('COALESCE(paid_at, created_at)');
+            if ($soldFrom) {
+                $o->where($saleDate, '>=', $soldFrom->copy()->utc()->toDateTimeString());
+            }
+            if ($soldBefore) {
+                $o->where($saleDate, '<', $soldBefore->copy()->utc()->toDateTimeString());
+            }
+        });
     }
 
     public function getKeptCommissionTotalForPayout(): float

@@ -857,8 +857,22 @@ class ViewPayout extends ViewRecord
                         return;
                     }
 
-                    $vatRate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0;
-                    $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
+                    // Marketplace VAT. General-client (on-top) invoices: the VAT
+                    // the customers paid, split by sale date (none before the VAT
+                    // start date, extracted where it wasn't collected yet).
+                    // Organizer-recipient invoices keep VAT added on top.
+                    $generalVat = null;
+                    if ($isGeneralClient) {
+                        $generalVat = app(\App\Services\Invoicing\GeneralClientInvoiceVat::class)
+                            ->compute($payout, $marketplace, round($commissionSubtotal - $keptCommission, 2), $keptRowsForGeneralClient);
+                        $vatRate = $generalVat['vat_rate'];
+                        $vatAmount = $generalVat['vat_amount'];
+                        $invoiceSubtotal = $generalVat['subtotal'];
+                    } else {
+                        $vatRate = $marketplace->vatRate();
+                        $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
+                        $invoiceSubtotal = $commissionSubtotal;
+                    }
 
                     // Description + line item composition mirrors what the
                     // accountant expects to see on the printed factură. The
@@ -877,10 +891,10 @@ class ViewPayout extends ViewRecord
                         'period_start' => $payout->period_start,
                         'period_end' => $payout->period_end,
                         'due_date' => now()->addDays(30),
-                        'subtotal' => $commissionSubtotal,
+                        'subtotal' => $invoiceSubtotal,
                         'vat_rate' => $vatRate,
                         'vat_amount' => $vatAmount,
-                        'amount' => $commissionSubtotal + $vatAmount,
+                        'amount' => round($invoiceSubtotal + $vatAmount, 2),
                         'currency' => $payout->currency ?? 'RON',
                         'status' => $isGeneralClient ? 'paid' : 'outstanding',
                         'paid_at' => $isGeneralClient ? now() : null,
@@ -890,10 +904,49 @@ class ViewPayout extends ViewRecord
                                 'name' => $marketplace->company_name ?? $marketplace->name,
                                 'cui' => $marketplace->cui ?? '',
                                 'address' => $marketplace->address ?? '',
+                                'vat_payer' => (bool) $marketplace->vat_payer,
                             ],
                             'client' => $client,
                             'recipient_type' => $recipientType,
-                            'items' => (function () use ($itemName, $itemDescription, $commissionSubtotal, $keptCommission, $keptRowsForGeneralClient, $isGeneralClient) {
+                            'items' => (function () use ($itemName, $itemDescription, $commissionSubtotal, $keptCommission, $keptRowsForGeneralClient, $isGeneralClient, $generalVat, $vatRate) {
+                                // VAT split by sale date (general client): each line is
+                                // NET and carries its own rate.
+                                if ($generalVat !== null && $generalVat['vat_amount'] > 0) {
+                                    $sliceNote = [
+                                        'before' => ' (vânzări înainte de înregistrarea în scopuri de TVA)',
+                                        'uncollected' => '',
+                                        'collected' => '',
+                                    ];
+                                    $items = [];
+                                    foreach ($generalVat['base'] as $line) {
+                                        $items[] = [
+                                            'name' => $itemName,
+                                            'description' => $itemDescription . $sliceNote[$line['slice']],
+                                            'quantity' => 1,
+                                            'unit_price' => $line['net'],
+                                            'amount' => $line['net'],
+                                            'vat_rate' => $line['rate'],
+                                            'vat_amount' => $line['vat'],
+                                        ];
+                                    }
+                                    foreach ($generalVat['kept'] as $line) {
+                                        $row = $line['row'];
+                                        $qty = max(1, (int) ($row['qty'] ?? 1));
+                                        $items[] = [
+                                            'name' => 'Comision reținut din rambursare',
+                                            'description' => 'Comision reținut din rambursare bilet(e) "'
+                                                . ($row['ticket_type_name'] ?? 'Bilet') . '"' . $sliceNote[$line['slice']],
+                                            'quantity' => $qty,
+                                            'unit_price' => round($line['net'] / $qty, 2),
+                                            'amount' => $line['net'],
+                                            'vat_rate' => $line['rate'],
+                                            'vat_amount' => $line['vat'],
+                                        ];
+                                    }
+
+                                    return $items;
+                                }
+
                                 // Base line: total commission MINUS kept portion so the
                                 // main "Taxa ticketing" reflects only revenue from valid
                                 // tickets. Kept commission gets its own line(s) below
