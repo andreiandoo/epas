@@ -210,6 +210,8 @@ class EventsController extends Controller
                                 'id' => $type->id,
                                 'name' => $type->name,
                                 'description' => $type->description ?? '',
+                                // în listă fără has_seating: două interogări pe bilet, pentru fiecare eveniment
+                                ...$this->ticketExtras($type, $locale, false),
                                 'sku' => $type->sku,
                                 'price' => $type->price_max,
                                 'sale_price' => $type->price ?? null,
@@ -223,10 +225,11 @@ class EventsController extends Controller
                                 'sales_start_at' => $type->sales_start_at?->toIso8601String(),
                                 'sales_end_at' => $type->sales_end_at?->toIso8601String(),
                                 'bulk_discounts' => $type->bulk_discounts ?? [],
-                            ])->values(),
+                            ])->sortBy('sort_order')->values(),
                         'price_from' => $event->ticketTypes
                             ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
                             ->min('display_price'),
+                        ...$this->eventExtras($event),
                     ];
                 }),
                 'meta' => [
@@ -236,6 +239,46 @@ class EventsController extends Controller
                 ],
             ],
         ])->header('Cache-Control', 'public, max-age=60, s-maxage=120');
+    }
+
+    /**
+     * Câmpurile biletului pentru site-urile de tenant (templates): traducerea opțională din
+     * meta.i18n.{locale} (name / description / perks / group), beneficiile, grupul, ordinea,
+     * culoarea, ziua (bilete de o zi), parcarea și has_seating (se cumpără alegând locul pe hartă).
+     * Cheile name/description de aici le înlocuiesc pe cele de bază doar când există traducere.
+     */
+    private function ticketExtras($type, string $locale, bool $withSeating = true): array
+    {
+        $tr = (array) ($type->meta['i18n'][$locale] ?? []);
+        return array_filter([
+            'name' => $tr['name'] ?? null,
+            'description' => $tr['description'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '') + [
+            'perks' => array_values(array_filter((array) ($tr['perks'] ?? $type->perks ?? []))),
+            'group' => ($tr['group'] ?? null) ?: ($type->ticket_group ?: null),
+            'sort_order' => (int) ($type->sort_order ?? 0),
+            'color' => $type->color ?: null,
+            'valid_date' => $type->valid_date?->toDateString(),
+            'is_parking' => (bool) $type->is_parking,
+        ] + ($withSeating ? ['has_seating' => $type->hasSeatingAssigned()] : []);
+    }
+
+    /**
+     * Câmpurile evenimentului pentru site-urile de tenant: biletele vândute de alt organizator
+     * (link extern) și câte bilete mai sunt („ultimele bilete”, „sold out” în listele de date).
+     */
+    private function eventExtras(Event $event): array
+    {
+        $types = $event->ticketTypes->filter(fn ($type) => !($type->meta['is_invitation'] ?? false));
+        $unlimited = $types->contains(fn ($type) => (int) $type->available_quantity >= PHP_INT_MAX);
+        $left = $unlimited ? null : (int) $types->sum(fn ($type) => max(0, (int) ($type->available_quantity ?? 0)));
+        $cap = (int) $types->sum(fn ($type) => max(0, (int) ($type->quota_total ?? 0)));
+        return [
+            'external_ticket_url' => $event->external_ticket_url ?: null,
+            'external_ticket_label' => $event->external_ticket_label ?: null,
+            'tickets_left' => $types->isEmpty() ? null : $left,
+            'tickets_low' => $left !== null && $types->isNotEmpty() && $left > 0 && $left <= max(20, (int) round($cap * 0.05)),
+        ];
     }
 
     /**
@@ -475,6 +518,7 @@ class EventsController extends Controller
                             'id' => $type->id,
                             'name' => $type->name,
                             'description' => $type->description ?? '',
+                            ...$this->ticketExtras($type, $locale),
                             'sku' => $type->sku,
                             'price' => $type->price_max,
                             'sale_price' => $type->price ?? null,
@@ -492,10 +536,11 @@ class EventsController extends Controller
                             'commission_amount' => $commissionAmount,
                             'final_price' => $finalPrice, // Price customer pays (with commission if added_on_top)
                         ];
-                    })->values(),
+                    })->sortBy('sort_order')->values(),
                 'price_from' => $event->ticketTypes
                     ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
                     ->min('display_price'),
+                ...$this->eventExtras($event),
             ],
         ])->header('Cache-Control', 'public, max-age=30, s-maxage=60');
     }
