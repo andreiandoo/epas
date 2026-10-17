@@ -17,6 +17,10 @@ function api_get(string $path, array $params = [], ?int $cacheTtl = null): array
     if (strpos($path, '/tenant-client/') !== false && !isset($params['tenant'])) {
         $params['tenant'] = TENANT_ID;
     }
+    // Limba conținutului din core (titluri, descrieri traduse); intră și în cheia de cache
+    if (strpos($path, '/tenant-client/') !== false && !isset($params['locale'])) {
+        $params['locale'] = ts_locale();
+    }
 
     $url = API_BASE . $path;
     if (!empty($params)) {
@@ -107,7 +111,7 @@ function api_run_refresh_queue(): void {
  */
 function api_request(string $method, string $url, array $body = [], array $headers = []): array {
     $ch = curl_init($url);
-    $defaultHeaders = array_merge(['Accept: application/json'], ts_visitor_headers());
+    $defaultHeaders = array_merge(['Accept: application/json', 'Accept-Language: ' . ts_locale()], ts_visitor_headers());
     if (!empty($body)) { $defaultHeaders[] = 'Content-Type: application/json'; }
 
     curl_setopt_array($ch, [
@@ -235,7 +239,7 @@ function tc_payment_methods(?int $cacheTtl = 120): array {
     $resp = api_get('/tenant-client/payment-methods', [], $cacheTtl);
     $d = $resp['data'] ?? null;
     if (is_array($d) && !empty($d)) { return $d; }
-    return [['id' => 'card', 'name' => 'Card bancar (demo)', 'hint' => 'Visa, Mastercard — gateway simulat', 'surcharge_percent' => 0]];
+    return [['id' => 'card', 'name' => t('Card bancar (demo)'), 'hint' => t('Visa, Mastercard — gateway simulat'), 'surcharge_percent' => 0]];
 }
 
 /**

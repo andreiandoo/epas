@@ -96,6 +96,7 @@ function ts_boot_site(): void {
     define('SITE_NAME', (string) ($cfg['branding']['name'] ?? ''));
     define('SITE_LOGO_TEXT', (string) ($cfg['branding']['short_name'] ?? ''));
     define('SITE_CITY', (string) ($cfg['branding']['tagline'] ?? ''));
+    ts_boot_locale();
 
     // Demo de template: bara de sus + site-ul în iframe (vezi demo_frame.php)
     if (!empty($cfg['demo'])) {

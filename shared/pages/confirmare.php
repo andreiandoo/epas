@@ -6,7 +6,7 @@ $status  = $_GET['status'] ?? '';
 $summary = $orderId ? tc_order_summary($orderId) : null;
 $ok = $summary && ($summary['is_paid'] ?? false);
 
-$pageTitle = ($ok ? 'Comandă confirmată' : 'Comandă anulată') . ' — ' . SITE_NAME;
+$pageTitle = ($ok ? t('Comandă confirmată') : t('Comandă anulată')) . ' — ' . SITE_NAME;
 $pageExtraStyles = '
     @keyframes ep-pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
     @keyframes ep-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
@@ -23,12 +23,12 @@ include ts_layout('header');
 <!-- Step indicator -->
 <div class="pt-28 pb-6 px-4">
     <div class="max-w-3xl mx-auto flex items-center justify-center gap-3 text-sm">
-        <?php foreach (['Coș', 'Finalizare', 'Confirmare'] as $i => $label): ?>
+        <?php foreach ([t('Coș'), t('Finalizare'), t('Confirmare')] as $i => $label): ?>
         <div class="flex items-center gap-2">
             <div class="w-7 h-7 rounded-full bg-primary text-canvas flex items-center justify-center">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <span class="hidden sm:inline text-primary"><?= $label ?></span>
+            <span class="hidden sm:inline text-primary"><?= e($label) ?></span>
         </div>
         <?php if ($i < 2): ?><div class="w-10 h-px bg-primary/40"></div><?php endif; ?>
         <?php endforeach; ?>
@@ -42,8 +42,8 @@ include ts_layout('header');
             <div class="ep-pop w-20 h-20 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-5">
                 <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <h1 class="font-display text-4xl lg:text-5xl mb-2">Plata a fost procesată!</h1>
-            <p class="text-fg/60">Comanda <span class="text-primary font-mono">#<?= e((string) $summary['order_id']) ?></span> a fost confirmată.</p>
+            <h1 class="font-display text-4xl lg:text-5xl mb-2"><?= te('Plata a fost procesată!') ?></h1>
+            <p class="text-fg/60"><?= t('Comanda {n} a fost confirmată.', ['n' => '<span class="text-primary font-mono">#' . e((string) $summary['order_id']) . '</span>']) ?></p>
         </div>
 
         <!-- Email confirmation -->
@@ -52,7 +52,7 @@ include ts_layout('header');
                 <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
             <div class="flex-1">
-                <p class="font-medium">Biletele au fost trimise pe email</p>
+                <p class="font-medium"><?= te('Biletele au fost trimise pe email') ?></p>
                 <p class="text-muted text-sm"><?= e($summary['customer_email'] ?? '') ?></p>
             </div>
             <svg class="w-6 h-6 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -61,8 +61,8 @@ include ts_layout('header');
         <!-- Order details -->
         <div class="ep-rise ep-d2 bg-surface rounded-2xl border border-primary/10 overflow-hidden mb-6">
             <div class="flex items-center justify-between p-5 border-b border-primary/10">
-                <h2 class="font-display text-xl">Detalii comandă</h2>
-                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary/15 text-primary">Confirmată</span>
+                <h2 class="font-display text-xl"><?= te('Detalii comandă') ?></h2>
+                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary/15 text-primary"><?= te('Confirmată') ?></span>
             </div>
             <div class="p-5">
                 <?php if ($ev): ?>
@@ -73,13 +73,13 @@ include ts_layout('header');
                     <?php endif; ?>
                     <div>
                         <?php if (!empty($ev['slug'])): ?>
-                        <a href="/spectacol/<?= e($ev['slug']) ?>" class="font-display text-lg hover:text-primary transition-colors"><?= e($ev['title'] ?? '') ?></a>
+                        <a href="<?= e(ts_link('event', ['slug' => $ev['slug']])) ?>" class="font-display text-lg hover:text-primary transition-colors"><?= e($ev['title'] ?? '') ?></a>
                         <?php else: ?>
                         <p class="font-display text-lg"><?= e($ev['title'] ?? '') ?></p>
                         <?php endif; ?>
                         <?php
                             $when = '';
-                            if (!empty($ev['date'])) { $ts = strtotime($ev['date']); if ($ts) { $when = date('d.m.Y', $ts); } }
+                            if (!empty($ev['date'])) { $ts = strtotime($ev['date']); if ($ts) { $when = ts_date($ev['date'], true); } }
                             if (!empty($ev['time'])) { $when .= ($when ? ' · ' : '') . substr($ev['time'], 0, 5); }
                         ?>
                         <?php if ($when): ?><p class="text-muted text-sm mt-1"><?= e($when) ?></p><?php endif; ?>
@@ -91,12 +91,12 @@ include ts_layout('header');
                 <!-- Tickets -->
                 <?php if (!empty($summary['tickets'])): ?>
                 <div class="ep-ticket bg-canvas/60 rounded-xl p-4 mb-6">
-                    <h4 class="text-sm text-primary tracking-wider uppercase mb-3">Bilete achiziționate (<?= count($summary['tickets']) ?>)</h4>
+                    <h4 class="text-sm text-primary tracking-wider uppercase mb-3"><?= te('Bilete achiziționate') ?> (<?= count($summary['tickets']) ?>)</h4>
                     <div class="space-y-2">
                         <?php foreach ($summary['tickets'] as $t): ?>
                         <div class="flex items-center justify-between gap-3 text-sm border-b border-primary/5 last:border-0 pb-2 last:pb-0">
                             <div>
-                                <span class="font-medium"><?= e($t['seat_label'] ?? ($t['type'] ?? 'Bilet')) ?></span>
+                                <span class="font-medium"><?= e($t['seat_label'] ?? ($t['type'] ?? t('Bilet'))) ?></span>
                                 <?php if (!empty($t['seat_label']) && !empty($t['type'])): ?><span class="text-muted"> · <?= e($t['type']) ?></span><?php endif; ?>
                             </div>
                             <span class="font-mono text-xs text-muted"><?= e($t['code'] ?? '') ?></span>
@@ -105,9 +105,9 @@ include ts_layout('header');
                     </div>
                     <a data-dl="" hidden class="btn-primary mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm" target="_blank" rel="noopener">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
-                        Descarcă biletele (PDF)
+                        <?= te('Descarcă biletele (PDF)') ?>
                     </a>
-                    <p data-dl-missing hidden class="mt-4 text-sm text-muted">Biletele ți-au fost trimise și pe email.</p>
+                    <p data-dl-missing hidden class="mt-4 text-sm text-muted"><?= te('Biletele ți-au fost trimise și pe email.') ?></p>
                 </div>
                 <?php endif; ?>
                 <p data-account-note hidden class="mb-6 rounded-lg bg-primary/10 px-4 py-3 text-sm"></p>
@@ -115,16 +115,16 @@ include ts_layout('header');
                 <!-- Payment -->
                 <div class="grid sm:grid-cols-2 gap-5 pt-5 border-t border-primary/10">
                     <div>
-                        <h4 class="text-sm text-muted mb-2">Metodă de plată</h4>
+                        <h4 class="text-sm text-muted mb-2"><?= te('Metodă de plată') ?></h4>
                         <div class="flex items-center gap-3 bg-canvas/60 rounded-lg p-3">
                             <div class="w-10 h-7 rounded bg-gradient-to-r from-amber-600 to-amber-800 flex items-center justify-center text-[8px] font-bold text-white">DEMO</div>
-                            <p class="text-sm"><?= e($summary['payment_method'] ?? 'Card') ?></p>
+                            <p class="text-sm"><?= e($summary['payment_method'] ?? t('Card')) ?></p>
                         </div>
                     </div>
                     <div>
-                        <h4 class="text-sm text-muted mb-2">Sumar plată</h4>
+                        <h4 class="text-sm text-muted mb-2"><?= te('Sumar plată') ?></h4>
                         <div class="flex justify-between items-center bg-canvas/60 rounded-lg p-3">
-                            <span class="text-muted text-sm">Total achitat</span>
+                            <span class="text-muted text-sm"><?= te('Total achitat') ?></span>
                             <span class="font-display text-2xl text-primary"><?= e(number_format((float) ($summary['total'] ?? 0), 0, ',', '.')) ?> <?= e($summary['currency'] ?? 'RON') ?></span>
                         </div>
                     </div>
@@ -138,8 +138,8 @@ include ts_layout('header');
             <div class="flex items-center gap-3">
                 <span class="text-3xl">🎁</span>
                 <div>
-                    <p class="font-medium">Ai câștigat <?= e($summary['points_name'] ?? 'puncte') ?>!</p>
-                    <p class="text-muted text-sm">Le găsești în contul tău, la următoarea vizită.</p>
+                    <p class="font-medium"><?= te('Ai câștigat {points}!', ['points' => $summary['points_name'] ?? t('puncte')]) ?></p>
+                    <p class="text-muted text-sm"><?= te('Le găsești în contul tău, la următoarea vizită.') ?></p>
                 </div>
             </div>
             <p class="font-display text-2xl text-primary">+<?= e((string) $summary['points_earned']) ?></p>
@@ -150,11 +150,11 @@ include ts_layout('header');
         <div class="ep-rise ep-d3 grid sm:grid-cols-2 gap-4">
             <a href="/cont" class="flex items-center justify-center gap-3 p-4 bg-surface rounded-xl border border-primary/10 hover:border-primary/40 transition-colors">
                 <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                <span>Vezi biletele în cont</span>
+                <span><?= te('Vezi biletele în cont') ?></span>
             </a>
             <a href="<?= e(ts_link('events')) ?>" class="flex items-center justify-center gap-3 p-4 bg-surface rounded-xl border border-primary/10 hover:border-primary/40 transition-colors">
                 <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5l7 7-7 7M3 12h18"/></svg>
-                <span>Vezi alte evenimente</span>
+                <span><?= te('Vezi alte evenimente') ?></span>
             </a>
         </div>
     </div>
@@ -168,8 +168,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var box = document.querySelector('[data-account-note]');
     if (note && box) {
         box.textContent = note === 'created'
-            ? 'Contul tău a fost creat. Te autentifici cu adresa de email și parola alese la plată.'
-            : 'Adresa ta avea deja comenzi, așa că ți-am trimis pe email un link cu care îți setezi parola contului.';
+            ? TS.t('Contul tău a fost creat. Te autentifici cu adresa de email și parola alese la plată.')
+            : TS.t('Adresa ta avea deja comenzi, așa că ți-am trimis pe email un link cu care îți setezi parola contului.');
         box.hidden = false;
     }
     // PDF-ul biletelor: tokenul comenzii e ținut în browserul din care s-a cumpărat
@@ -185,9 +185,9 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
             <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </div>
-        <h1 class="font-display text-4xl mb-3">Plată neefectuată</h1>
-        <p class="text-fg/70 mb-8">Comanda nu a fost finalizată. Poți încerca din nou oricând.</p>
-        <a href="/repertoriu" class="btn-primary px-8 py-4 rounded-lg inline-block">Vezi spectacolele</a>
+        <h1 class="font-display text-4xl mb-3"><?= te('Plată neefectuată') ?></h1>
+        <p class="text-fg/70 mb-8"><?= te('Comanda nu a fost finalizată. Poți încerca din nou oricând.') ?></p>
+        <a href="<?= e(ts_link('events')) ?>" class="btn-primary px-8 py-4 rounded-lg inline-block"><?= te('Vezi evenimentele') ?></a>
     </div>
 </section>
 <?php endif; ?>

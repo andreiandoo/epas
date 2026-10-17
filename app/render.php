@@ -76,8 +76,18 @@ function ts_render_sections_page(string $key): void {
 
     include ts_layout('head');
     include ts_layout('header');
-    foreach ($page['sections'] ?? [] as $section) {
-        ts_section((string) ($section['type'] ?? ''), (array) ($section['data'] ?? []));
+    $defaults = (array) manifest('pages.' . $key . '.sections', []);
+    foreach (array_values($page['sections'] ?? []) as $i => $section) {
+        $type = (string) ($section['type'] ?? '');
+        // Textele implicite ale secțiunii, în limba vizitatorului (vezi i18n.php)
+        $def = $defaults[$i] ?? null;
+        if (!$def || ($def['type'] ?? '') !== $type) {
+            $def = null;
+            foreach ($defaults as $d) {
+                if (($d['type'] ?? '') === $type) { $def = $d; break; }
+            }
+        }
+        ts_section($type, ts_section_locale((array) ($section['data'] ?? []), $def['data'] ?? null));
     }
     include ts_layout('footer');
 }

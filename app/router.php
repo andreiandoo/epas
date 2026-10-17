@@ -24,6 +24,7 @@ const TS_SHARED_ROUTES = [
     '/autentificare' => 'pages/login.php',
     '/inregistrare' => 'pages/register.php',
     '/recuperare-parola' => 'pages/forgot-password.php',
+    '/parola-noua' => 'pages/new-password.php',
     '/confidentialitate' => 'pages/privacy.php',
     '/termeni' => 'pages/terms.php',
     '/cookies' => 'pages/cookies.php',

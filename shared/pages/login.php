@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Autentificare — ' . SITE_NAME;
+$pageTitle = t('Autentificare') . ' — ' . SITE_NAME;
 $logoText = defined('SITE_LOGO_TEXT') ? SITE_LOGO_TEXT : 'TN';
 $siteName = SITE_NAME;
 $siteCity = defined('SITE_CITY') ? SITE_CITY : '';
@@ -13,6 +13,7 @@ $pageExtraStyles = '
 include ts_layout('head');
 ?>
 <body class="antialiased min-h-screen" x-data="loginPage()">
+<div class="fixed right-4 top-4 z-50"><?= ts_lang_switch('flex gap-1 rounded-full border border-primary/20 bg-surface/80 p-1 text-xs font-bold', 'rounded-full px-3 py-1.5 text-fg/60', '!text-on-primary bg-primary') ?></div>
 <div class="min-h-screen flex">
     <!-- Left - Form -->
     <div class="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 py-12">
@@ -21,17 +22,17 @@ include ts_layout('head');
                 <div class="w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center"><span class="font-display text-primary text-xl"><?= e($logoText) ?></span></div>
                 <div><p class="font-display text-lg leading-tight"><?= e($siteName) ?></p><p class="text-xs text-primary tracking-widest"><?= e($siteCity) ?></p></div>
             </a>
-            <h1 class="font-display text-4xl mb-2">Bine ai revenit</h1>
-            <p class="text-fg/70 mb-8">Intră în contul tău pentru a vedea biletele și abonamentele.</p>
+            <h1 class="font-display text-4xl mb-2"><?= te('Bine ai revenit') ?></h1>
+            <p class="text-fg/70 mb-8"><?= te('Intră în contul tău pentru a vedea biletele și abonamentele.') ?></p>
             <div x-show="error" x-text="error" class="bg-red-900/30 border border-red-500/40 text-red-200 rounded-lg p-3 mb-4 text-sm"></div>
             <form @submit.prevent="submit()">
                 <div class="space-y-5">
                     <div>
-                        <label class="block text-sm text-muted mb-2">Email</label>
-                        <input type="email" x-model="email" class="input-field w-full px-4 py-3 rounded-lg text-fg" placeholder="ion@email.com" required>
+                        <label class="block text-sm text-muted mb-2"><?= te('Email') ?></label>
+                        <input type="email" x-model="email" class="input-field w-full px-4 py-3 rounded-lg text-fg" placeholder="<?= te('ion@email.com') ?>" required>
                     </div>
                     <div>
-                        <label class="block text-sm text-muted mb-2">Parolă</label>
+                        <label class="block text-sm text-muted mb-2"><?= te('Parolă') ?></label>
                         <div class="relative">
                             <input :type="showPassword ? 'text' : 'password'" x-model="password" class="input-field w-full px-4 py-3 rounded-lg text-fg pr-12" placeholder="••••••••" required>
                             <button type="button" @click="showPassword = !showPassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-primary">
@@ -41,21 +42,16 @@ include ts_layout('head');
                         </div>
                     </div>
                     <div class="flex items-center justify-between">
-                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="w-4 h-4 rounded border-primary/30 bg-surface text-primary focus:ring-primary"><span class="text-sm text-fg/70">Ține-mă minte</span></label>
-                        <a href="/recuperare-parola" class="text-sm text-primary hover:underline">Ai uitat parola?</a>
+                        <span></span>
+                        <a href="/recuperare-parola" class="text-sm text-primary hover:underline"><?= te('Ai uitat parola?') ?></a>
                     </div>
                     <button type="submit" :disabled="loading" class="btn-primary w-full py-4 rounded-lg flex items-center justify-center gap-2">
                         <svg x-show="loading" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                        <span x-text="loading ? 'Se autentifică...' : 'Intră în cont'"></span>
+                        <span x-text="loading ? TS.t('Se autentifică...') : TS.t('Intră în cont')"></span>
                     </button>
                 </div>
             </form>
-            <div class="flex items-center gap-4 my-8"><div class="flex-1 h-px bg-primary/20"></div><span class="text-muted text-sm">sau continuă cu</span><div class="flex-1 h-px bg-primary/20"></div></div>
-            <div class="grid grid-cols-2 gap-4">
-                <button class="social-btn flex items-center justify-center gap-3 py-3 rounded-lg"><span class="text-primary">G</span><span>Google</span></button>
-                <button class="social-btn flex items-center justify-center gap-3 py-3 rounded-lg"><svg class="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg><span>Facebook</span></button>
-            </div>
-            <p class="text-center text-fg/70 mt-8">Nu ai cont? <a href="/inregistrare" class="text-primary hover:underline">Creează unul gratuit</a></p>
+            <p class="text-center text-fg/70 mt-8"><?= te('Nu ai cont?') ?> <a href="/inregistrare" class="text-primary hover:underline"><?= te('Creează unul gratuit') ?></a></p>
         </div>
     </div>
     <!-- Right - Image -->
@@ -64,12 +60,12 @@ include ts_layout('head');
         <div class="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/50 to-transparent"></div>
         <div class="absolute inset-0 bg-accent/20"></div>
         <div class="absolute bottom-12 left-12 right-12 bg-canvas/80 backdrop-blur-md rounded-xl p-8 border border-primary/20">
-            <h3 class="font-display text-2xl text-primary mb-4">Beneficiile contului tău</h3>
+            <h3 class="font-display text-2xl text-primary mb-4"><?= te('Beneficiile contului tău') ?></h3>
             <ul class="space-y-3">
-                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80">Biletele tale într-un singur loc</span></li>
-                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80">Acces rapid la checkout</span></li>
-                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80">Istoric și recomandări personalizate</span></li>
-                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80">Oferte exclusive pentru membri</span></li>
+                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80"><?= te('Biletele tale într-un singur loc') ?></span></li>
+                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80"><?= te('Plată mai rapidă, cu datele completate') ?></span></li>
+                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80"><?= te('Istoricul comenzilor și facturile') ?></span></li>
+                <li class="flex items-center gap-3"><span class="text-primary">✓</span><span class="text-fg/80"><?= te('Abonamente și carduri cadou în cont') ?></span></li>
             </ul>
         </div>
     </div>
@@ -93,11 +89,11 @@ function loginPage() {
                     const next = new URLSearchParams(location.search).get('next');
                     window.location.href = (next && next.startsWith('/')) ? next : '/cont';
                 } else {
-                    this.error = (d.message || (d.errors && d.errors.email && d.errors.email[0])) || 'Date de autentificare incorecte.';
+                    this.error = (d.message || (d.errors && d.errors.email && d.errors.email[0])) || TS.t('Date de autentificare incorecte.');
                     this.loading = false;
                 }
             } catch (e) {
-                this.error = 'Eroare de conexiune.'; this.loading = false;
+                this.error = TS.t('Eroare de conexiune.'); this.loading = false;
             }
         }
     };

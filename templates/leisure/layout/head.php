@@ -10,7 +10,7 @@ $pageDescription = $pageDescription ?? (site('branding.description') ?: 'Bilete 
 $GLOBALS['lvSections'] = !isset($pageExtraStyles) && !defined('TS_SHARED_PAGE') && !empty($activeNav ?? null);
 ?>
 <!DOCTYPE html>
-<html lang="ro" class="scroll-smooth">
+<html lang="<?= ts_locale() ?>" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
