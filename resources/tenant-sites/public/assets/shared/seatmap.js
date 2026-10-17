@@ -85,6 +85,10 @@
             var tiers = {};
             (meta.price_tiers || []).forEach(function (x) { tiers[x.id] = x; });
             this.tiers = tiers;
+            // Culoarea fiecărei secțiuni din desen, pentru prețurile fără culoare de categorie
+            var secColor = {};
+            meta.sections.forEach(function (x) { if (x && x.name && (x.color || x.color_hex)) { secColor[x.name] = x.color || x.color_hex; } });
+            this.secColor = secColor;
 
             var resp = await getJson('/api/proxy.php?action=seats&event=' + ev.id);
             var list = resp.seats || resp.data || (Array.isArray(resp) ? resp : []);
@@ -110,6 +114,18 @@
             this.draw(meta);
             this.renderSel();
             this.emit(true);
+            // Locurile scoase din coș în altă parte (sertar, pagina coșului, alt tab) dispar și de pe hartă
+            var sync = function () {
+                var c = TS.Cart.get(), keep = {};
+                ((c && c.event && c.event.id === ev.id) ? c.seats : []).forEach(function (x) { keep[x.seat_uid] = true; });
+                var gone = self.selected.filter(function (x) { return !keep[x.seat_uid]; });
+                if (!gone.length) { return; }
+                self.selected = self.selected.filter(function (x) { return keep[x.seat_uid]; });
+                gone.forEach(function (x) { self.paint(x.seat_uid); });
+                self.renderSel();
+            };
+            window.addEventListener('site:cart', sync);
+            window.addEventListener('storage', function (e) { if (e.key === 'site_cart') { sync(); } });
         } catch (e) {
             this.emit(false);
             this.stage.innerHTML = '<div class="tsx-sm__state"><div>' + esc(t('Harta sălii nu poate fi afișată acum. Încearcă din nou în câteva minute.')) + '</div></div>';
@@ -118,12 +134,19 @@
 
     // O culoare pe nivel de preț (a categoriei din core, dacă are), de la scump la ieftin
     SeatMap.prototype.colors = function () {
-        var prices = {}, self = this;
-        Object.keys(this.seats).forEach(function (k) { var s = self.seats[k]; if (s.price > 0) { prices[s.price] = s.tier; } });
+        var prices = {}, sectionOf = {}, self = this;
+        Object.keys(this.seats).forEach(function (k) {
+            var s = self.seats[k];
+            if (s.price > 0) { prices[s.price] = s.tier; if (!sectionOf[s.price]) { sectionOf[s.price] = s.section; } }
+        });
         this.levels = Object.keys(prices).map(Number).sort(function (a, b) { return b - a; }).map(function (p, i) {
             var tier = self.tiers[prices[p]];
-            return { price: p, color: (tier && (tier.color_hex || tier.color)) || PALETTE[i % PALETTE.length], name: tier ? tier.name : '' };
+            var color = (tier && (tier.color_hex || tier.color)) || self.secColor[sectionOf[p]] || PALETTE[i % PALETTE.length];
+            return { price: p, color: color, name: tier ? tier.name : '' };
         });
+        // Două niveluri cu aceeași culoare de secțiune (ex. „Parter” cu două prețuri) se deosebesc din paletă
+        var used = {};
+        this.levels.forEach(function (l, i) { if (used[l.color]) { l.color = PALETTE[i % PALETTE.length]; } used[l.color] = 1; });
         this.colorOf = {};
         this.levels.forEach(function (l) { self.colorOf[l.price] = l.color; });
     };

@@ -597,6 +597,20 @@ class TenantClientController extends Controller
             'currency' => $event->ticketTypes
                 ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
                 ->first()?->currency ?? 'EUR',
+            // Câte bilete mai sunt (listele de date: „ultimele bilete”, „sold out”)
+            ...(function () use ($event) {
+                $types = $event->ticketTypes->filter(fn ($type) => !($type->meta['is_invitation'] ?? false));
+                // Un tip fără limită de stoc (available_quantity = PHP_INT_MAX) înseamnă „nelimitat”
+                if ($types->contains(fn ($type) => (int) $type->available_quantity >= PHP_INT_MAX)) {
+                    return ['tickets_left' => null, 'tickets_low' => false];
+                }
+                $left = (int) $types->sum(fn ($type) => max(0, (int) ($type->available_quantity ?? 0)));
+                $cap = (int) $types->sum(fn ($type) => max(0, (int) ($type->capacity ?? 0)));
+                return [
+                    'tickets_left' => $types->isEmpty() ? null : $left,
+                    'tickets_low' => $types->isNotEmpty() && $left > 0 && $left <= max(20, (int) round($cap * 0.05)),
+                ];
+            })(),
         ];
     }
 
@@ -613,6 +627,9 @@ class TenantClientController extends Controller
             ->pluck('slug', 'name');
 
         return array_merge($basic, [
+            // Programul serii: deschiderea porților și ora de final
+            'door_time' => $event->door_time ? substr((string) $event->door_time, 0, 5) : null,
+            'end_time' => $event->end_time ? substr((string) $event->end_time, 0, 5) : null,
             'subtitle' => $event->getTranslation('subtitle', $locale),
             'description' => $event->getTranslation('description', $locale),
             'short_description' => $event->getTranslation('short_description', $locale),
