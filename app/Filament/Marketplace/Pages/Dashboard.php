@@ -309,6 +309,15 @@ class Dashboard extends Page
         $monthStats = $this->monthValue('month_stats', $marketplaceId, $month, "mp_dash_month_v2_{$marketplaceId}_{$month}", 300, function () use ($marketplaceId, $month) {
             return $this->computeCurrentMonthStats($marketplaceId, $month);
         });
+        // The VAT of the current month is refreshed every minute, apart from the
+        // month stats (up to 10 min old), so it follows today's sales.
+        if ($month === Carbon::now('Europe/Bucharest')->format('Y-m')) {
+            $monthStats['vat'] = Cache::remember(
+                "mp_dash_vat_v1_{$marketplaceId}_{$month}",
+                60,
+                fn () => $this->computeMonthVat($marketplaceId, Carbon::createFromFormat('!Y-m', $month, 'Europe/Bucharest'), (float) ($monthStats['total_commission'] ?? 0))
+            );
+        }
 
         // Today stats (Romania timezone)
         $todayStats = Cache::remember("mp_dash_today_v2_{$marketplaceId}", 30, function () use ($marketplaceId) {
@@ -413,6 +422,8 @@ class Dashboard extends Page
             'invitationAbuse' => $invitationAbuse,
             'billing' => $billingData,
             'todayStats' => $todayStats,
+            // VAT rate on today's (net) commission, 0 when not a VAT payer today.
+            'todayVatRate' => $marketplace->vatRate(Carbon::now('Europe/Bucharest')),
             'prevYearChartData' => $prevYearChartData,
             'prevYearTicketChartData' => $prevYearTicketChartData,
             'chartSummary' => $chartSummary,
@@ -1249,9 +1260,26 @@ class Dashboard extends Page
         $fromUtc = $vatStart->copy()->utc();
         $toUtc = $monthEnd->copy()->utc();
 
-        // Month fully under VAT → the month commission already computed. Only
-        // the month VAT started in needs its own (cached) partial build.
-        if ($vatStart->equalTo($monthStart)) {
+        $todayStart = Carbon::now('Europe/Bucharest')->startOfDay();
+        if ($monthEnd->gte($todayStart)) {
+            // Current month: closed days (one build per event over the window,
+            // cached per day) + today's commission from the daily report itself,
+            // so the card moves with the "Raport vânzări pe zi" table and agrees
+            // with the sum of its "+TVA" values.
+            $commissionBase = 0.0;
+            if ($vatStart->lt($todayStart)) {
+                $yesterdayEnd = $todayStart->copy()->subSecond();
+                $commissionBase = (float) Cache::remember(
+                    "mp_vat_comm_closed_v1_{$marketplaceId}_{$vatStart->format('Y-m-d')}_{$yesterdayEnd->format('Y-m-d')}",
+                    86400,
+                    fn () => $this->monthCommissionViaService($marketplaceId, $vatStart->copy()->utc(), $yesterdayEnd->copy()->utc())
+                );
+            }
+            $todayRows = app(\App\Services\Marketplace\DailySalesReportService::class)
+                ->rowsCached($marketplaceId, $todayStart->format('Y-m-d'));
+            $commissionBase += (float) array_sum(array_column($todayRows, 'commission_day'));
+        } elseif ($vatStart->equalTo($monthStart)) {
+            // Closed month fully under VAT → the month commission already computed.
             $commissionBase = $totalCommission;
         } else {
             $key = "mp_month_comm_svc_v2_{$marketplaceId}_{$monthDate->format('Y-m')}_from_{$vatStart->format('Y-m-d')}";

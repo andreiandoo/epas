@@ -432,6 +432,9 @@
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Comisioane azi</p>
                     <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['commission'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
+                    @if(($todayVatRate ?? 0) > 0)
+                    <p class="mt-0.5 text-[10px] text-gray-400">net · +TVA {{ number_format(($todayStats['commission'] ?? 0) * $todayVatRate / 100, 2) }} RON</p>
+                    @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente publicate azi</p>
@@ -882,9 +885,9 @@
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     @php $mVat = $monthStats['vat'] ?? null; @endphp
                     <p class="text-xs text-gray-500 dark:text-gray-400">TVA de plată @if(!empty($mVat['from_label']))<span class="text-gray-400">(din {{ $mVat['from_label'] }})</span>@endif</p>
-                    <p class="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($mVat['total'] ?? 0, 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                    <p class="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($mVat['total'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
                     @if(($mVat['total'] ?? 0) > 0)
-                    <p class="mt-0.5 text-[10px] text-gray-400">comision {{ number_format($mVat['commission'], 0) }} · servicii {{ number_format($mVat['services'], 0) }} · taxe retur/card cultural {{ number_format($mVat['other'], 0) }}</p>
+                    <p class="mt-0.5 text-[10px] text-gray-400">comision {{ number_format($mVat['commission'], 2) }} · servicii {{ number_format($mVat['services'], 2) }} · taxe retur/card cultural {{ number_format($mVat['other'], 2) }}</p>
                     @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
