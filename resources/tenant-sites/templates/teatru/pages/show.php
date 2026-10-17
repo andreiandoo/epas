@@ -36,6 +36,32 @@ $lead      = $th['lead'] ?? ($event['artists'][0]['name'] ?? null);
 $duration  = $th['duration'] ?? null;
 $castList  = $th['cast'] ?? [];
 $creative  = $th['creative'] ?? [];
+
+// Bilete fără loc (acces general): tipurile active, cu prețul redus dacă există
+$types = [];
+foreach (($event['ticket_types'] ?? []) as $t) {
+    if (($t['status'] ?? 'active') !== 'active' || empty($t['id'])) { continue; }
+    $full = (float) ($t['price'] ?? 0);
+    $sale = isset($t['sale_price']) && $t['sale_price'] !== null ? (float) $t['sale_price'] : null;
+    $types[] = [
+        'id'        => (int) $t['id'],
+        'name'      => (string) ($t['name'] ?? 'Bilet'),
+        'desc'      => trim(strip_tags((string) ($t['description'] ?? ''))),
+        'price'     => ($sale !== null && $sale > 0 && $sale < $full) ? $sale : $full,
+        'full'      => $full,
+        'available' => (int) ($t['available'] ?? 0),
+    ];
+}
+// Evenimentul așa cum îl ține coșul comun (commerce.js)
+$cartEvent = [
+    'id'     => $eventId,
+    'slug'   => (string) ($event['slug'] ?? $slug),
+    'title'  => (string) ($event['title'] ?? ''),
+    'date'   => $dateStr,
+    'place'  => $venueName,
+    'poster' => $poster,
+    'url'    => ts_link('event', ['slug' => $event['slug'] ?? $slug]),
+];
 $pageExtraStyles = '
     .seat { width: 24px; height: 24px; border-radius: 5px 5px 3px 3px; cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; transition: all .15s ease; }
     .seat.available { background: rgb(var(--c-accent-dark)); border: 1px solid rgb(var(--c-accent)); }
@@ -104,8 +130,36 @@ include ts_layout('header');
         <div x-show="loading" class="text-center py-16 text-muted">Se încarcă harta sălii…</div>
 
         <!-- No seating configured -->
-        <div x-show="!loading && !hasSeating" class="text-center py-12 text-muted">
-            <p>Harta de sală pentru acest spectacol nu este încă disponibilă.</p>
+        <div x-show="!loading && !hasSeating">
+            <?php if ($types): ?>
+            <div x-data='ticketPicker(<?= e(json_encode($cartEvent, JSON_UNESCAPED_UNICODE)) ?>, <?= e(json_encode($types, JSON_UNESCAPED_UNICODE)) ?>)' class="max-w-2xl mx-auto">
+                <div class="space-y-3">
+                    <template x-for="t in types" :key="t.id">
+                        <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-surface/60 border border-primary/10 px-5 py-4">
+                            <div class="min-w-0">
+                                <p class="font-display text-lg" x-text="t.name"></p>
+                                <p class="text-sm text-muted" x-show="t.desc" x-text="t.desc"></p>
+                                <p class="mt-1 text-primary font-display">
+                                    <span x-text="lei(t.price)"></span>
+                                    <s class="ml-2 text-sm text-muted" x-show="t.full > t.price" x-text="lei(t.full)"></s>
+                                </p>
+                            </div>
+                            <div class="inline-flex items-center rounded-full border border-primary/20">
+                                <button type="button" class="h-10 w-10 text-xl disabled:opacity-30" @click="dec(t)" :disabled="!qty[t.id]" :aria-label="'Scade ' + t.name">−</button>
+                                <output class="min-w-[2rem] text-center font-semibold" x-text="qty[t.id]"></output>
+                                <button type="button" class="h-10 w-10 text-xl disabled:opacity-30" @click="inc(t)" :disabled="qty[t.id] >= limit(t)" :aria-label="'Adaugă ' + t.name">+</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-surface p-5">
+                    <div><p class="text-sm text-muted" x-text="ticketsLabel(count)"></p><p data-total class="font-display text-3xl text-primary" x-text="lei(total)"></p></div>
+                    <button type="button" @click="save()" class="btn-primary rounded-lg px-8 py-4 text-lg" :disabled="!count">Adaugă în coș</button>
+                </div>
+            </div>
+            <?php else: ?>
+            <p class="text-center py-12 text-muted">Biletele pentru acest spectacol nu sunt încă puse în vânzare.</p>
+            <?php endif; ?>
         </div>
 
         <!-- Seat map -->
@@ -151,7 +205,7 @@ include ts_layout('header');
 
             <!-- Summary -->
             <div x-show="selected.length > 0" x-transition class="mt-8 bg-surface rounded-xl p-6 max-w-2xl mx-auto">
-                <h3 class="font-display text-lg mb-4">Locurile tale <span class="text-muted text-sm">(rezervate 10 min)</span></h3>
+                <h3 class="font-display text-lg mb-4">Locurile tale <span class="text-muted text-sm">(rezervate 15 min)</span></h3>
                 <div class="space-y-2 mb-6">
                     <template x-for="s in selected" :key="s.seat_uid">
                         <div class="flex items-center justify-between py-2 border-b border-primary/10">
@@ -326,13 +380,16 @@ function seatMap(eventId) {
         },
         checkout() {
             if (this.selected.length === 0) return;
-            const seats = this.selected.map(s => ({ label: s.section + ' Rând ' + s.row + ', Loc ' + s.seat_label, price: s.price, seat_uid: s.seat_uid }));
-            localStorage.setItem('site_cart', JSON.stringify({
-                event: <?= json_encode(['id' => $eventId, 'title' => $event['title'] ?? '', 'author' => ($event['category']['name'] ?? ''), 'date' => $dateStr, 'venue' => $venueName, 'image' => $poster], JSON_UNESCAPED_UNICODE) ?>,
-                event_seating_id: this.eventSeatingId,
-                seats: seats,
-                subtotal: this.total
-            }));
+            // Coșul comun (commerce.js): locurile sunt deja blocate pe server, cât ține rezervarea
+            const seats = this.selected.map(s => ({ seat_uid: s.seat_uid, section: s.section, row: s.row, seat: s.seat_label, price: s.price, label: s.section + ' · Rând ' + s.row + ' · Loc ' + s.seat_label }));
+            const prev = window.TS ? TS.Cart.get() : null;
+            const same = prev && prev.event.id === <?= (int) $eventId ?> && prev.seats.length;
+            TS.Cart.set({
+                event: <?= json_encode($cartEvent, JSON_UNESCAPED_UNICODE) ?>,
+                items: [], seats: seats, event_seating_id: this.eventSeatingId,
+                expires_at: same ? prev.expires_at : Date.now() + TS.SEAT_HOLD_MS,
+                coupon_code: same ? (prev.coupon_code || null) : null
+            });
             window.location.href = '/cos';
         }
     };

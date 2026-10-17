@@ -1,223 +1,118 @@
 <?php
-$pageTitle = 'Finalizare comandă — ' . SITE_NAME;
+/**
+ * Date și plată (comun tuturor template-urilor). Logica: checkoutPage din
+ * commerce.js; trimite comanda prin proxy (action=checkout).
+ */
+$pageTitle = 'Date și plată — ' . SITE_NAME;
+$pageExtraHead = '<meta name="robots" content="noindex">';
+$pageExtraStyles = ts_commerce_styles()
+    . '.pay-opt{border:2px solid rgb(var(--c-fg) / .1);transition:border-color .2s,background .2s;cursor:pointer}'
+    . '.pay-opt.is-on{border-color:rgb(var(--c-primary));background:rgb(var(--c-primary) / .06)}'
+    . '.btn-primary:disabled{opacity:.5;cursor:not-allowed}';
+$cancelled = ($_GET['plata'] ?? '') === 'anulata';
+$methods = tc_payment_methods();
 $gami = tc_gamification();
-$badgeMap = [
-    'card'          => ['badge' => 'DEMO', 'class' => 'bg-gradient-to-r from-amber-600 to-amber-800'],
-    'card_cultural' => ['badge' => 'CULTURAL', 'class' => 'bg-gradient-to-r from-purple-600 to-purple-800'],
-];
-$pmDisplay = array_map(fn ($m) => [
-    'id'                => $m['id'] ?? 'card',
-    'name'              => $m['name'] ?? 'Card',
-    'hint'              => $m['hint'] ?? '',
-    'surcharge_percent' => (float) ($m['surcharge_percent'] ?? 0),
-    'badge'             => $badgeMap[$m['id'] ?? 'card']['badge'] ?? 'CARD',
-    'badgeClass'        => $badgeMap[$m['id'] ?? 'card']['class'] ?? 'bg-gradient-to-r from-amber-600 to-amber-800',
-], tc_payment_methods());
-$pageExtraStyles = '
-    .input-field { background: rgb(var(--c-surface)); border: 1px solid rgb(var(--c-primary) / .2); transition: all .3s ease; }
-    .input-field:focus { border-color: rgb(var(--c-primary)); outline: none; box-shadow: 0 0 0 3px rgb(var(--c-primary) / .1); }
-    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-    .pay-option { border: 2px solid rgb(var(--c-primary) / .15); transition: all .25s ease; cursor: pointer; }
-    .pay-option.selected { border-color: rgb(var(--c-primary)); background: rgb(var(--c-primary) / .06); }
-    .pay-radio { width: 18px; height: 18px; border-radius: 999px; border: 2px solid rgb(var(--c-primary) / .4); flex-shrink: 0; position: relative; }
-    .pay-option.selected .pay-radio { border-color: rgb(var(--c-primary)); }
-    .pay-option.selected .pay-radio::after { content: ""; position: absolute; inset: 3px; border-radius: 999px; background: rgb(var(--c-primary)); }
-    .num-badge { width: 32px; height: 32px; border-radius: 9px; background: rgb(var(--c-primary) / .12); color: rgb(var(--c-primary)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem; }
-';
+$eventsUrl = ts_link('events');
 include ts_layout('head');
 include ts_layout('header');
 ?>
-<div x-data="checkoutPage()" x-init="init()" class="pt-28 pb-16 px-4 lg:px-8">
-    <div class="max-w-5xl mx-auto">
-        <h1 class="font-display text-4xl mb-8">Finalizare comandă</h1>
-        <div class="grid lg:grid-cols-3 gap-8">
-            <!-- Left: form -->
-            <div class="lg:col-span-2 space-y-6">
-
-                <!-- 1. Contact -->
-                <div class="bg-surface rounded-2xl border border-primary/10 p-6">
-                    <div class="flex items-center justify-between mb-5">
-                        <h2 class="flex items-center gap-3 font-display text-xl"><span class="num-badge">1</span> Date de contact</h2>
-                        <button type="button" x-show="!loggedIn" @click="goLogin()" class="btn-outline px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                            Am deja cont
-                        </button>
-                        <span x-show="loggedIn" x-cloak class="text-sm text-primary" x-text="'Autentificat: ' + (user?.email || '')"></span>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm text-muted mb-2">Nume *</label><input x-model="form.lastName" class="input-field w-full px-4 py-3 rounded-lg text-fg" placeholder="Popescu" required></div>
-                        <div><label class="block text-sm text-muted mb-2">Prenume *</label><input x-model="form.firstName" class="input-field w-full px-4 py-3 rounded-lg text-fg" placeholder="Ion" required></div>
-                        <div><label class="block text-sm text-muted mb-2">Email *</label><input type="email" x-model="form.email" autocomplete="off" class="input-field w-full px-4 py-3 rounded-lg text-fg" required></div>
-                        <div>
-                            <label class="block text-sm text-muted mb-2">Confirmă email *</label>
-                            <input type="email" x-model="form.emailConfirm" autocomplete="new-password" onpaste="return false;" ondrop="return false;" oncontextmenu="return false;" class="input-field w-full px-4 py-3 rounded-lg text-fg" required>
-                            <p x-show="form.emailConfirm && form.email !== form.emailConfirm" class="text-red-300 text-xs mt-1">Adresele de email nu coincid.</p>
-                        </div>
-                        <div class="md:col-span-2"><label class="block text-sm text-muted mb-2">Telefon *</label><input type="tel" x-model="form.phone" class="input-field w-full px-4 py-3 rounded-lg text-fg" required></div>
-                    </div>
-                    <!-- Auto-create account -->
-                    <div x-show="!loggedIn" class="mt-4">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" x-model="form.createAccount" class="w-5 h-5 rounded border-primary/30 bg-canvas text-primary">
-                            <span class="text-sm text-fg/80">Creează-mi automat un cont pentru comenzile viitoare</span>
-                        </label>
-                        <div x-show="form.createAccount" x-cloak class="mt-3">
-                            <label class="block text-sm text-muted mb-2">Alege o parolă *</label>
-                            <input type="password" x-model="form.password" autocomplete="new-password" class="input-field w-full px-4 py-3 rounded-lg text-fg" placeholder="Minim 8 caractere">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Beneficiaries -->
-                <div class="bg-surface rounded-2xl border border-primary/10 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="flex items-center gap-3 font-display text-xl"><span class="num-badge">2</span> Deținători bilete</h2>
-                        <span class="text-muted text-sm" x-text="seatCount + ' bilet' + (seatCount === 1 ? '' : 'e')"></span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 bg-canvas/60 rounded-xl gap-3 flex-wrap">
-                        <div class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <p class="text-sm">Toate biletele sunt trimise pe emailul cumpărătorului.</p>
-                        </div>
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" x-model="form.differentBeneficiaries" class="w-5 h-5 rounded border-primary/30 bg-canvas text-primary">
-                            <span class="text-sm font-medium">Folosește date diferite pentru fiecare bilet</span>
-                        </label>
-                    </div>
-                    <div x-show="form.differentBeneficiaries" x-cloak class="mt-5 space-y-4">
-                        <template x-for="(b, i) in beneficiaries" :key="i">
-                            <div class="bg-canvas/40 rounded-xl p-4 border border-primary/5">
-                                <p class="text-primary text-sm mb-3" x-text="'Bilet ' + (i+1) + (cart?.seats?.[i]?.label ? ' — ' + cart.seats[i].label : '')"></p>
-                                <div class="grid md:grid-cols-2 gap-3">
-                                    <input x-model="b.name" class="input-field w-full px-4 py-2.5 rounded-lg text-fg text-sm" placeholder="Nume deținător">
-                                    <input type="email" x-model="b.email" class="input-field w-full px-4 py-2.5 rounded-lg text-fg text-sm" placeholder="Email (opțional)">
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- 3. Terms & newsletter -->
-                <div class="bg-surface rounded-2xl border border-primary/10 p-6 space-y-4">
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" x-model="form.terms" class="w-5 h-5 rounded border-primary/30 bg-canvas text-primary mt-0.5">
-                        <span class="text-sm text-fg/80">Sunt de acord cu <a href="/termeni" class="text-primary hover:underline">termenii și condițiile</a> și <a href="/confidentialitate" class="text-primary hover:underline">politica de confidențialitate</a>. *</span>
-                    </label>
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" x-model="form.newsletter" class="w-5 h-5 rounded border-primary/30 bg-canvas text-primary mt-0.5">
-                        <span class="text-sm text-fg/80">Doresc să primesc newsletter și notificări despre spectacole de la <?= e(SITE_NAME) ?>.</span>
-                    </label>
-                </div>
-
-                <!-- 4. Payment method -->
-                <div class="bg-surface rounded-2xl border border-primary/10 p-6">
-                    <h2 class="flex items-center gap-3 font-display text-xl mb-4"><span class="num-badge">3</span> Metodă de plată</h2>
-                    <div class="space-y-3">
-                        <template x-for="m in paymentMethods" :key="m.id">
-                            <div class="pay-option flex items-center gap-4 p-4 rounded-xl" :class="form.paymentMethod === m.id ? 'selected' : ''" @click="form.paymentMethod = m.id">
-                                <div class="pay-radio"></div>
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-8 rounded flex items-center justify-center text-[9px] font-bold text-white" :class="m.badgeClass" x-text="m.badge"></div>
-                                    <div><p class="font-medium text-sm" x-text="m.name"></p><p class="text-xs text-muted" x-text="m.hint"></p></div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <div x-show="error" x-text="error" class="bg-red-900/30 border border-red-500/40 text-red-200 rounded-lg p-3 text-sm"></div>
-            </div>
-
-            <!-- Right: summary -->
-            <div class="lg:col-span-1">
-                <div class="bg-surface rounded-2xl border border-primary/10 p-6 sticky top-28">
-                    <h2 class="font-display text-xl mb-5">Sumar comandă</h2>
-                    <template x-if="cart && cart.event">
-                        <div class="pb-4 border-b border-primary/10 mb-4">
-                            <p class="font-display text-lg" x-text="cart.event.title"></p>
-                            <p class="text-muted text-sm" x-text="cart.event.date"></p>
-                            <div class="flex flex-wrap gap-2 mt-3"><template x-for="(s,i) in cart.seats" :key="i"><span class="bg-canvas px-2 py-1 rounded text-xs" x-text="s.label"></span></template></div>
-                        </div>
-                    </template>
-                    <div class="space-y-2 mb-4 text-sm">
-                        <div class="flex justify-between"><span class="text-muted">Subtotal</span><span x-text="subtotal + ' RON'"></span></div>
-                        <div x-show="surcharge() > 0" x-cloak class="flex justify-between"><span class="text-muted" x-text="'Comision ' + (selectedMethod()?.name || '')"></span><span x-text="'+' + surcharge() + ' RON'"></span></div>
-                    </div>
-                    <div class="flex justify-between items-center mb-4 pt-3 border-t border-primary/10">
-                        <span class="font-medium">Total</span>
-                        <span class="font-display text-2xl text-primary" x-text="grandTotal + ' RON'"></span>
-                    </div>
-                    <div x-show="earnEnabled && earnedPoints() > 0" x-cloak class="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6">
-                        <span class="text-2xl">🎁</span>
-                        <p class="text-sm">Vei câștiga <span class="text-primary font-semibold" x-text="earnedPoints()"></span> <span x-text="earnName"></span> la această comandă.</p>
-                    </div>
-                    <button @click="pay()" :disabled="loading || !canPay" class="btn-primary w-full py-4 rounded-lg text-lg" x-text="loading ? 'Se procesează...' : 'Plătește ' + grandTotal + ' RON'"></button>
-                    <p class="text-muted text-xs text-center mt-3">Vei fi redirecționat către gateway-ul de plată securizat.</p>
-                </div>
-            </div>
+<main class="pt-32 pb-24 px-4 lg:px-8" x-data="checkoutPage">
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <h1 class="font-display text-4xl lg:text-5xl">Date și plată</h1>
+            <?= ts_part_flow(2) ?>
         </div>
+
+        <template x-if="cart">
+            <form class="grid gap-8 lg:grid-cols-[1fr_380px]" @submit.prevent="pay()" novalidate>
+                <div class="space-y-6">
+                    <?= ts_part_timer() ?>
+                    <?php if ($cancelled): ?>
+                    <div class="rounded-xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm">Plata a fost anulată și nu s-a încasat nimic. Biletele sunt încă în coș, poți încerca din nou.</div>
+                    <?php endif; ?>
+
+                    <section class="rounded-xl border border-primary/10 bg-surface/60 p-6">
+                        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                            <h2 class="font-display text-2xl">Datele tale</h2>
+                            <a href="/autentificare?next=/finalizare" class="text-sm text-primary hover:text-primary-light" x-show="!user">Am deja cont</a>
+                            <span class="text-sm text-fg/60" x-show="user" x-cloak>Conectat ca <b x-text="user ? (user.name || user.email) : ''"></b></span>
+                        </div>
+                        <div class="grid gap-5 md:grid-cols-2">
+                            <label class="block"><span class="mb-2 block text-sm text-muted">Prenume</span>
+                                <input type="text" autocomplete="given-name" x-model="form.first_name" class="ts-input" :class="bad('first_name') && 'is-bad'" required></label>
+                            <label class="block"><span class="mb-2 block text-sm text-muted">Nume</span>
+                                <input type="text" autocomplete="family-name" x-model="form.last_name" class="ts-input" :class="bad('last_name') && 'is-bad'" required></label>
+                            <label class="block"><span class="mb-2 block text-sm text-muted">Email</span>
+                                <input type="email" autocomplete="email" inputmode="email" spellcheck="false" autocapitalize="off" x-model="form.email" class="ts-input" :class="bad('email') && 'is-bad'"
+                                       @paste="noPaste($event)" @drop="noPaste($event)" @copy.prevent @cut.prevent required>
+                                <small class="mt-1 block text-xs text-muted" x-text="usesAccountEmail() ? 'Adresa contului tău. Aici trimitem biletele.' : 'Aici trimitem biletele.'"></small></label>
+                            <label class="block" x-show="!usesAccountEmail()"><span class="mb-2 block text-sm text-muted">Confirmă emailul</span>
+                                <input type="email" autocomplete="off" inputmode="email" spellcheck="false" autocapitalize="off" x-model="form.email2" class="ts-input"
+                                       :class="{ 'is-bad': confirmState() === 'bad', 'is-good': confirmState() === 'good' }" @paste="noPaste($event)" @drop="noPaste($event)" required>
+                                <small class="mt-1 block text-xs" :class="confirmState() === 'bad' ? 'text-red-400' : (confirmState() === 'good' ? 'text-emerald-400' : 'text-muted')"
+                                       x-text="confirmState() === 'good' ? 'Adresele sunt identice.' : (confirmState() === 'bad' ? 'Adresele nu sunt identice.' : 'Scrie adresa încă o dată, de mână.')"></small></label>
+                            <label class="block"><span class="mb-2 block text-sm text-muted">Telefon <em class="not-italic text-fg/40">(opțional)</em></span>
+                                <input type="tel" autocomplete="tel" inputmode="tel" x-model="form.phone" class="ts-input"></label>
+                        </div>
+                        <div class="mt-6 rounded-lg border border-primary/10 p-4" x-show="!user">
+                            <label class="ts-check text-sm"><input type="checkbox" x-model="form.create_account">
+                                <span><b>Creează-mi și un cont cu aceste date.</b> Găsești oricând biletele în contul tău, fără să cauți prin email.</span></label>
+                            <label class="mt-4 block max-w-xs" x-show="form.create_account" x-cloak><span class="mb-2 block text-sm text-muted">Parolă pentru cont</span>
+                                <input type="password" autocomplete="new-password" minlength="8" x-model="form.password" class="ts-input" :class="tried && !passwordOk() && 'is-bad'">
+                                <small class="mt-1 block text-xs text-muted">Minimum 8 caractere.</small></label>
+                        </div>
+                        <p class="mt-4 rounded-lg bg-primary/10 px-4 py-3 text-sm" x-show="pasteWarn" x-cloak role="status">Lipirea e dezactivată pentru adresa de email. Scrie adresa de mână în ambele câmpuri: așa prindem o greșeală de tastare înainte să rămâi fără bilete.</p>
+                    </section>
+
+                    <section class="rounded-xl border border-primary/10 bg-surface/60 p-6 space-y-5">
+                        <h2 class="font-display text-2xl">Plată</h2>
+                        <div class="grid gap-3">
+                            <?php foreach ($methods as $m): $id = (string) ($m['id'] ?? 'card'); ?>
+                            <label class="pay-opt flex items-center gap-4 rounded-xl p-4" :class="payMethod === <?= e(json_encode($id)) ?> && 'is-on'">
+                                <input type="radio" class="sr-only" name="pay" value="<?= e($id) ?>" x-model="payMethod">
+                                <svg class="h-7 w-7 text-primary shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></svg>
+                                <span><b class="block"><?= e($m['name'] ?? 'Card') ?></b><?php if (!empty($m['hint'])): ?><span class="text-sm text-muted"><?= e($m['hint']) ?></span><?php endif; ?>
+                                <?php if (!empty($m['surcharge_percent'])): ?><span class="block text-xs text-muted">+<?= e(rtrim(rtrim(number_format((float) $m['surcharge_percent'], 2, ',', ''), '0'), ',')) ?>% la plată</span><?php endif; ?></span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <label class="ts-check text-sm"><input type="checkbox" x-model="form.terms">
+                            <span>Am citit și accept <a href="/termeni" target="_blank" class="text-primary underline">termenii de vânzare</a> și <a href="/confidentialitate" target="_blank" class="text-primary underline">politica de confidențialitate</a>.</span></label>
+                        <label class="ts-check text-sm"><input type="checkbox" x-model="form.newsletter">
+                            <span>Vreau să primesc pe email noutăți despre evenimentele <?= e(SITE_NAME) ?>.</span></label>
+                    </section>
+                </div>
+
+                <aside class="lg:sticky lg:top-28 h-fit rounded-xl border border-primary/10 bg-surface/60 p-6">
+                    <div class="flex items-center gap-4 border-b border-primary/10 pb-4 mb-4">
+                        <template x-if="cart.event.poster"><img :src="cart.event.poster" alt="" class="h-16 w-12 rounded object-cover"></template>
+                        <div><p class="font-display text-lg" x-text="cart.event.title"></p><p class="text-xs text-muted" x-text="[cart.event.date, cart.event.place].filter(Boolean).join(' · ')"></p></div>
+                    </div>
+                    <div class="space-y-1 text-sm mb-4">
+                        <template x-for="item in cart.items" :key="item.ticket_type_id"><div class="flex justify-between text-fg/70"><span x-text="item.qty + ' × ' + item.name"></span><span x-text="lei(item.qty * item.price)"></span></div></template>
+                        <template x-for="seat in cart.seats" :key="seat.seat_uid"><div class="flex justify-between text-fg/70"><span x-text="seat.label"></span><span x-text="lei(seat.price)"></span></div></template>
+                    </div>
+                    <?= ts_part_summary() ?>
+                    <?php if (!empty($gami['enabled']) && !empty($gami['earn_percentage'])): ?>
+                    <p class="mt-4 rounded-lg bg-primary/10 px-4 py-3 text-sm">Primești <b x-text="Math.floor(total * <?= (float) $gami['earn_percentage'] ?> / 100)"></b> <?= e($gami['points_name'] ?? 'puncte') ?> pentru această comandă.</p>
+                    <?php endif; ?>
+                    <p class="mt-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-300" x-show="error" x-cloak x-text="error" role="alert"></p>
+                    <button type="submit" class="btn-primary mt-5 w-full rounded-lg py-4" :disabled="busy || quoting">
+                        <span x-text="busy ? 'Se procesează…' : 'Plătește ' + lei(total)"></span>
+                    </button>
+                    <a href="/cos" class="mt-3 block text-center text-sm text-fg/60 hover:text-fg">Înapoi la coș</a>
+                </aside>
+            </form>
+        </template>
+
+        <template x-if="!cart">
+            <div class="rounded-xl border border-primary/10 bg-surface/40 px-6 py-20 text-center">
+                <h2 class="font-display text-3xl mb-3">Nu ai bilete în coș</h2>
+                <p class="text-fg/60 mb-8">Alege un eveniment din program pentru a continua.</p>
+                <a href="<?= e($eventsUrl) ?>" class="btn-primary inline-block rounded-lg px-8 py-4">Vezi programul</a>
+            </div>
+        </template>
     </div>
-</div>
-<script>
-function checkoutPage() {
-    return {
-        cart: null, loading: false, error: '', loggedIn: false, user: null,
-        earnEnabled: <?= !empty($gami['enabled']) ? 'true' : 'false' ?>,
-        earnPct: <?= (float) ($gami['earn_percentage'] ?? 0) ?>,
-        earnMin: <?= (float) ($gami['min_order'] ?? 0) ?>,
-        earnName: <?= json_encode($gami['points_name'] ?? 'puncte', JSON_UNESCAPED_UNICODE) ?>,
-        earnedPoints() { return (this.earnEnabled && this.grandTotal >= this.earnMin) ? Math.floor(this.grandTotal * this.earnPct) : 0; },
-        form: { firstName:'', lastName:'', email:'', emailConfirm:'', phone:'', createAccount:false, password:'', differentBeneficiaries:false, terms:false, newsletter:false, paymentMethod:'card' },
-        beneficiaries: [],
-        paymentMethods: <?= json_encode($pmDisplay, JSON_UNESCAPED_UNICODE) ?>,
-        selectedMethod() { return this.paymentMethods.find(m => m.id === this.form.paymentMethod) || this.paymentMethods[0]; },
-        surcharge() { const m = this.selectedMethod(); return m && m.surcharge_percent ? Math.round(this.subtotal * m.surcharge_percent / 100) : 0; },
-        get grandTotal() { return this.subtotal + this.surcharge(); },
-        init() {
-            try { this.cart = JSON.parse(localStorage.getItem('site_cart') || 'null'); } catch(e) { this.cart = null; }
-            this.beneficiaries = (this.cart?.seats || []).map(() => ({ name:'', email:'' }));
-            let a = null; try { a = JSON.parse(localStorage.getItem('site_auth') || 'null'); } catch(e) {}
-            if (a && a.user) {
-                this.loggedIn = true; this.user = a.user;
-                const parts = (a.user.name || '').trim().split(/\s+/);
-                this.form.lastName = parts[0] || ''; this.form.firstName = parts.slice(1).join(' ') || '';
-                this.form.email = a.user.email || ''; this.form.emailConfirm = a.user.email || '';
-            }
-        },
-        get seatCount() { return this.cart?.seats?.length || 0; },
-        get subtotal() { return this.cart?.seats ? this.cart.seats.reduce((s,x)=>s+(x.price||0),0) : 0; },
-        get canPay() {
-            return this.form.firstName && this.form.lastName && this.form.email && this.form.phone
-                && this.form.email === this.form.emailConfirm && this.form.terms
-                && (!this.form.createAccount || (this.form.password && this.form.password.length >= 8));
-        },
-        goLogin() { window.location.href = '/autentificare'; },
-        async pay() {
-            if (this.loading) return;
-            if (!this.canPay) { this.error = 'Completează câmpurile obligatorii și acceptă termenii.'; return; }
-            if (!this.cart || !this.cart.seats?.length) { this.error = 'Coșul este gol.'; return; }
-            this.loading = true; this.error = '';
-            try {
-                const payload = {
-                    event_id: this.cart.event.id,
-                    event_seating_id: this.cart.event_seating_id || null,
-                    customer: { first_name: this.form.firstName, last_name: this.form.lastName, email: this.form.email, phone: this.form.phone },
-                    seats: this.cart.seats.map(s => ({ seat_uid: s.seat_uid, price: s.price, label: s.label })),
-                    beneficiaries: this.form.differentBeneficiaries ? this.beneficiaries : [],
-                    create_account: this.form.createAccount,
-                    password: this.form.createAccount ? this.form.password : null,
-                    newsletter: this.form.newsletter,
-                    payment_method: this.form.paymentMethod,
-                    success_url: window.location.origin + '/confirmare',
-                    cancel_url: window.location.origin + '/cos'
-                };
-                const r = await fetch('/api/proxy.php?action=checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-                const d = await r.json().catch(()=>({}));
-                if (r.ok && d.success && d.redirect_url) { window.location.href = d.redirect_url; }
-                else { this.error = d.error || 'Nu am putut iniția plata.'; this.loading = false; }
-            } catch (e) { this.error = 'Eroare de conexiune.'; this.loading = false; }
-        }
-    };
-}
-</script>
+</main>
+<div x-data="toastHost" x-show="show" x-cloak x-transition class="fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-xl" x-text="msg" role="status"></div>
 <?php include ts_layout('footer');
