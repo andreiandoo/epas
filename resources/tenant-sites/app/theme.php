@@ -138,7 +138,8 @@ function ts_head_assets(): string {
     ];
     $hex = sprintf('#%02x%02x%02x', ...ts_colors()['canvas']);
 
-    return ts_fonts_head()
+    return ts_consent_default()
+        . ts_fonts_head()
         . '<meta name="theme-color" content="' . $hex . '">'
         . '<script src="https://cdn.tailwindcss.com"></script>'
         . '<script>(function(){var c=' . json_encode($config, JSON_UNESCAPED_SLASHES) . ';'

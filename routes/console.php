@@ -68,6 +68,14 @@ Schedule::command('tickets:audit-quota-sold --notify=nastase.ai@gmail.com')
     ->withoutOverlapping()
     ->timezone('Europe/Bucharest');
 
+// Demo-urile de template (demo-*.tics.ro): comenzile, clienții și codurile
+// folosite de vizitatori se șterg în fiecare noapte. Doar tenanții demo
+// (tenant_site_demos + demo_checkout), niciodată tenantul 60 (config).
+Schedule::command('demo:reset')
+    ->dailyAt('04:15')
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest');
+
 // Expire ticket type sale discounts when sales_end_at passes (every minute)
 Schedule::command('ticket-types:expire-sales')
     ->everyMinute()

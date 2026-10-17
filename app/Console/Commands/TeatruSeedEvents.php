@@ -87,7 +87,7 @@ class TeatruSeedEvents extends Command
                     ['role' => 'Muzica', 'name' => 'Vasile Șirli'],
                 ],
                 'poster' => '1507924538820-ede94a04019d',
-                'gallery' => ['1503095396549-807759245b35', '1516450360452-9312f5e86fc7', '1460881680858-30d872d5b530', '1519677100203-a0e668c92439'],
+                'gallery' => ['1503095396549-807759245b35', '1514306191717-452ec28c7814', '1585699324551-f6c309eedeca'],
             ],
             [
                 'title' => 'O scrisoare pierdută', 'cat' => 'comedie', 'days' => 21, 'time' => '19:30',
@@ -104,8 +104,8 @@ class TeatruSeedEvents extends Command
                     ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
                     ['role' => 'Costume', 'name' => 'Lia Manțoc'],
                 ],
-                'poster' => '1460881680858-30d872d5b530',
-                'gallery' => ['1507924538820-ede94a04019d', '1470229722913-7c0e2dbbafd3', '1516450360452-9312f5e86fc7'],
+                'poster' => '1503095396549-807759245b35',
+                'gallery' => ['1516307365426-bea591f05011', '1514306191717-452ec28c7814', '1507924538820-ede94a04019d'],
             ],
             [
                 'title' => 'Livada de vișini', 'cat' => 'drama', 'days' => 30, 'time' => '19:00',
@@ -122,8 +122,8 @@ class TeatruSeedEvents extends Command
                     ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
                     ['role' => 'Muzica', 'name' => 'Vasile Șirli'],
                 ],
-                'poster' => '1470229722913-7c0e2dbbafd3',
-                'gallery' => ['1503095396549-807759245b35', '1519677100203-a0e668c92439'],
+                'poster' => '1522383225653-ed111181a951',
+                'gallery' => ['1585699324551-f6c309eedeca', '1516307365426-bea591f05011'],
             ],
             [
                 'title' => 'Lacul lebedelor', 'cat' => 'balet', 'days' => 38, 'time' => '18:30',
@@ -138,8 +138,8 @@ class TeatruSeedEvents extends Command
                     ['role' => 'Coregrafie', 'name' => 'Alexandru Dabija'],
                     ['role' => 'Scenografie', 'name' => 'Dragoș Buhagiar'],
                 ],
-                'poster' => '1519677100203-a0e668c92439',
-                'gallery' => ['1516450360452-9312f5e86fc7', '1460881680858-30d872d5b530', '1507924538820-ede94a04019d'],
+                'poster' => '1508807526345-15e9b5f4eaff',
+                'gallery' => ['1518834107812-67b0b7c58434', '1547153760-18fc86324498', '1516307365426-bea591f05011'],
             ],
         ];
     }

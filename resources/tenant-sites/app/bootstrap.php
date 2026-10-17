@@ -17,4 +17,5 @@ require TS_APP . '/render.php';
 require TS_APP . '/gallery.php';
 require TS_APP . '/demo_frame.php';
 require TS_SHARED . '/partials/commerce.php';
+require TS_SHARED . '/partials/cookiebar.php';
 require TS_APP . '/router.php';

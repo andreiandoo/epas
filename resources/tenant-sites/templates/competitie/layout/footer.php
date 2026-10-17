@@ -57,6 +57,7 @@ $logoUrl = site('branding.logo');
             <nav class="foot-base__links" aria-label="Informații legale" x-data>
                 <a href="/termeni">Termeni și condiții</a>
                 <a href="/confidentialitate">Confidențialitate</a>
+                <a href="/cookies">Cookies</a>
                 <a href="#" @click.prevent="$dispatch('site:cookie-settings')">Setări cookies</a>
                 <a href="https://anpc.ro/" target="_blank" rel="nofollow noopener">ANPC</a>
             </nav>

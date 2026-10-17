@@ -49,6 +49,9 @@ return [
     // settings.demo_checkout = true. Vezi App\Support\DemoCheckout.
     'demo_checkout_domains' => array_filter(explode(',', (string) env('DEMO_CHECKOUT_DOMAINS', 'tixello.ro'))),
 
+    // demo:reset (curățenia de noapte a demo-urilor) nu atinge acești tenanți.
+    'demo_reset_exclude' => array_map('intval', array_filter(explode(',', (string) env('TENANT_SITES_DEMO_RESET_EXCLUDE', '60')))),
+
     // Discul și folderul pentru imaginile urcate din panoul de personalizare.
     'disk' => 'public',
     'upload_directory' => 'tenant-sites',

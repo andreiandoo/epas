@@ -26,6 +26,7 @@ const TS_SHARED_ROUTES = [
     '/recuperare-parola' => 'pages/forgot-password.php',
     '/confidentialitate' => 'pages/privacy.php',
     '/termeni' => 'pages/terms.php',
+    '/cookies' => 'pages/cookies.php',
     '/cont' => 'cont/index.php',
     '/api/proxy.php' => 'api/proxy.php',
 ];
