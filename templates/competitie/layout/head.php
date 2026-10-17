@@ -23,20 +23,6 @@ $pageImage       = $pageImage       ?? (site('branding.logo') ?: null);
     <?php if ($pageImage): ?><meta property="og:image" content="<?= e($pageImage) ?>"><?php endif; ?>
     <link rel="icon" href="<?= e(site('branding.favicon') ?: '/favicon.svg') ?>">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <script>
-        // Consimțământ: totul refuzat până alege vizitatorul (bara de cookies, commerce.js)
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        (function () {
-            var c = null;
-            try { c = JSON.parse(localStorage.getItem('site_consent') || 'null'); } catch (e) {}
-            var yes = function (on) { return on ? 'granted' : 'denied'; };
-            gtag('consent', 'default', {
-                ad_storage: yes(c && c.marketing), ad_user_data: yes(c && c.marketing), ad_personalization: yes(c && c.marketing),
-                analytics_storage: yes(c && c.analytics), functionality_storage: 'granted', security_storage: 'granted'
-            });
-        })();
-    </script>
     <?= ts_head_assets() ?>
     <link rel="stylesheet" href="<?= e(ts_asset('site.css')) ?>">
     <?php if (!defined('TS_SHARED_PAGE')): ?>

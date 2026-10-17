@@ -37,10 +37,13 @@ $logoUrl = site('branding.logo');
             <div class="space-y-2 md:text-right">
                 <p><a href="/confidentialitate" class="hover:text-primary transition-colors">Confidențialitate</a></p>
                 <p><a href="/termeni" class="hover:text-primary transition-colors">Termeni</a></p>
+                <p><a href="/cookies" class="hover:text-primary transition-colors">Cookies</a> · <a href="#" onclick="window.dispatchEvent(new CustomEvent('site:cookie-settings'));return false" class="hover:text-primary transition-colors">Setări cookies</a></p>
                 <p class="pt-2">© <?= date('Y') ?> <?= e(SITE_NAME) ?> · Ticketing by <a href="https://tixello.ro" class="text-primary hover:text-primary-light font-semibold">tixello</a></p>
             </div>
         </div>
     </footer>
+
+    <?= ts_cookie_bar() ?>
 
     <!-- Toast global + componentă Alpine „favorite/follow” pentru pagini publice -->
     <div x-data="{msg:'',show:false}" x-init="window.siteToast=(m)=>{msg=m;show=true;setTimeout(()=>show=false,2600)}" x-show="show" x-cloak style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120" class="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-xl" x-text="msg"></div>
