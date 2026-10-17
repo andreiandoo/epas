@@ -1,0 +1,330 @@
+{
+    "name": "Parc de agrement",
+    "description": "Natural, luminos, cu rezervare pe zi și pe interval orar: bilete de acces, activități, închirieri, calendar cu locuri reale. Pentru parcuri, rezervații, aquaparcuri, saline, muzee.",
+    "version": 1,
+    "category": "Agrement & natură",
+    "kind": "leisure",
+    "status": "draft",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": [],
+    "tailwind_preflight": true,
+
+    "tailwind_extend": {
+        "colors": {
+            "pine": {
+                "950": "rgb(var(--c-pine-950) / <alpha-value>)",
+                "900": "rgb(var(--c-pine-900) / <alpha-value>)",
+                "850": "rgb(var(--c-pine-850) / <alpha-value>)",
+                "800": "rgb(var(--c-pine-800) / <alpha-value>)",
+                "700": "rgb(var(--c-pine-700) / <alpha-value>)",
+                "600": "rgb(var(--c-pine-600) / <alpha-value>)"
+            },
+            "acid": "rgb(var(--c-primary) / <alpha-value>)",
+            "cream": "rgb(var(--c-canvas) / <alpha-value>)",
+            "oat": "rgb(var(--c-surface) / <alpha-value>)",
+            "ink": "rgb(var(--c-fg) / <alpha-value>)",
+            "ember": "#f27b4a",
+            "moss": "#b7c9a3",
+            "sky": "#b8dce0"
+        },
+        "boxShadow": {
+            "lift": "0 36px 100px -38px rgb(var(--c-pine-950) / .58)",
+            "card": "0 18px 48px -28px rgb(var(--c-pine-950) / .46)",
+            "acid": "0 18px 54px -24px rgb(var(--c-primary) / .58)"
+        }
+    },
+
+    "settings": [
+        { "name": "today_hours", "type": "text", "label": "Program (afișat în antet)", "default": "09:00–20:00", "help": "Ex.: 09:00–20:00. Gol = nu se afișează." },
+        { "name": "last_entry", "type": "text", "label": "Ultima intrare", "default": "18:30" },
+        { "name": "address", "type": "text", "label": "Adresa parcului", "default": "" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#FFFDF6",
+            "surface": "#F0ECDF",
+            "panel": "#FFFFFF",
+            "fg": "#16231E",
+            "muted": "#64736D",
+            "primary": "#DFFC62",
+            "accent": "#09251D"
+        },
+        "fonts": {
+            "display": "Fraunces",
+            "body": "DM Sans"
+        }
+    },
+
+    "links": {
+        "events": "/experiente",
+        "catalog": "/experiente",
+        "event": "/experienta/{slug}",
+        "subscriptions": "/abonamente",
+        "contact": "/contact"
+    },
+
+    "routes": {
+        "/experiente": "experiences.php",
+        "/experienta": "experience.php",
+        "/experienta/{slug}": "experience.php",
+        "/bilete": "bilete.php",
+        "/calendar": "calendar.php",
+        "/planifica": "planifica.php",
+        "/abonamente": "abonamente.php",
+        "/grupuri": "grupuri.php",
+        "/card-cadou": "gift-card.php",
+        "/card-cadou-confirmare": "gift-card-confirmation.php",
+        "/voucher": "voucher-verify.php",
+        "/despre": "about.php",
+        "/contact": "contact.php",
+        "/intrebari": "faq.php",
+        "/noutati": "news.php",
+        "/noutati/{slug}": "news-detail.php"
+    },
+
+    "nav": [
+        { "label": "Experiențe", "url": "/experiente" },
+        { "label": "Bilete", "url": "/bilete" },
+        { "label": "Calendar", "url": "/calendar" },
+        { "label": "Grupuri", "url": "/grupuri" },
+        { "label": "Card cadou", "url": "/card-cadou" },
+        { "label": "Contact", "url": "/contact" }
+    ],
+
+    "header_cta": { "label": "Bilete", "url": "/bilete" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Bilete și rezervări online",
+            "sections": [
+                { "type": "hero", "data": {
+                    "show_intro": true,
+                    "eyebrow": "Natură · aventură · familie",
+                    "title": "Mai aproape\nde pădure.\nMai viu.",
+                    "lead": "Trasee, activități în aer liber și echipament de închiriat. O zi construită în jurul ritmului tău, cu biletele direct pe telefon.",
+                    "button_label": "Alege vizita",
+                    "secondary_label": "Descoperă parcul",
+                    "secondary_url": "#experiente",
+                    "badge_1": "Bilet pe telefon",
+                    "badge_2": "Locuri garantate pe interval",
+                    "featured_label": "Recomandat azi",
+                    "image": "https://images.unsplash.com/photo-1521336575822-6da63fb45455?auto=format&fit=crop&w=1600&q=86",
+                    "stats": [
+                        { "value": "11", "prefix": "", "suffix": "", "label": "trasee marcate" },
+                        { "value": "34", "prefix": "", "suffix": " ha", "label": "de pădure" },
+                        { "value": "7", "prefix": "", "suffix": " zile", "label": "pe săptămână" },
+                        { "value": "96", "prefix": "", "suffix": "%", "label": "vizitatori mulțumiți" }
+                    ]
+                } },
+                { "type": "marquee", "data": { "words": "Bilete online\nAcces pe telefon\nParcare gratuită\nTrasee pentru familii\nTururi ghidate\nLocuri limitate pe interval" } },
+                { "type": "planner", "data": {
+                    "eyebrow": "Planifică vizita",
+                    "title": "Spune-ne cum vrei să te simți.",
+                    "lead": "Nu toate zilele în aer liber arată la fel. Alege ritmul, iar noi îți arătăm ce să rezervi.",
+                    "button_label": "Rezervă recomandarea",
+                    "moods": [
+                        { "name": "Liniște & explorare", "caption": "Poteci, natură și ritm lent", "title": "O zi fără grabă", "description": "Intri când vrei, mergi pe potecile marcate, faci pauze la belvederi și la zona de picnic.", "tags": "ritm lent, fără echipament, toate vârstele", "duration": "2–4 ore", "category": "access", "image": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=84" },
+                        { "name": "Activ & în mișcare", "caption": "Activități cu oră fixă", "title": "Aventura zilei", "description": "Alege o activitate cu interval rezervat și locuri limitate, cu echipament și instructaj incluse.", "tags": "interval fix, locuri limitate, 12+ ani", "duration": "90 min", "category": "activity", "image": "https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1000&q=84" },
+                        { "name": "Pe apă sau pe bicicletă", "caption": "Închirieri pe durata aleasă", "title": "Echipamentul te așteaptă", "description": "Rezervi echipamentul pe durata potrivită și îl ridici direct din parc, fără coadă.", "tags": "30 min – o zi, echipament inclus", "duration": "la alegere", "category": "rental", "image": "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1000&q=84" }
+                    ]
+                } },
+                { "type": "experiences", "data": {
+                    "eyebrow": "Ce poți face în parc",
+                    "title": "Aventura nu vine într-o singură formă.",
+                    "limit": "6",
+                    "button_label": "Toate experiențele",
+                    "button_url": "/experiente"
+                } },
+                { "type": "day", "data": {
+                    "eyebrow": "Ritmul unei zile",
+                    "title": "De dimineață până la ultima intrare.",
+                    "lead": "Parcul se schimbă pe parcursul zilei. Alege momentul care ți se potrivește.",
+                    "moments": [
+                        { "time": "09:00", "title": "Parcul se deschide", "caption": "Lumină moale, poteci libere.", "description": "Cele mai liniștite ore pentru plimbări și tururi ghidate.", "image": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=84" },
+                        { "time": "11:30", "title": "În plin ritm", "caption": "Toate activitățile sunt deschise.", "description": "Intervalul ideal pentru activitățile cu oră fixă și închirieri.", "image": "https://images.unsplash.com/photo-1521336575822-6da63fb45455?auto=format&fit=crop&w=1200&q=84" },
+                        { "time": "15:00", "title": "După-amiaza în familie", "caption": "Umbra se întoarce pe poteci.", "description": "Pauze la picnic, joacă și activități pentru cei mici.", "image": "https://images.unsplash.com/photo-1504151932400-72d4384f04b3?auto=format&fit=crop&w=1200&q=84" },
+                        { "time": "18:30", "title": "Ultima intrare", "caption": "Lumina cade printre copaci.", "description": "Ultimele intervale ale zilei și apusul văzut din parc.", "image": "https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=1200&q=84" }
+                    ]
+                } },
+                { "type": "story", "data": {
+                    "eyebrow": "Mai mult decât agrement",
+                    "title": "Natura nu este decorul. Este gazda.",
+                    "text": "O parte din suprafața parcului rămâne zonă protejată, monitorizată și lăsată să se regenereze. Vizitatorii se bucură de rest, pe trasee marcate.",
+                    "stat1_value": "34 ha",
+                    "stat1_label": "zonă protejată",
+                    "stat2_value": "1 / 3",
+                    "stat2_label": "din bilet merge în conservare",
+                    "link_label": "Despre parc",
+                    "link_url": "/despre",
+                    "image": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1400&q=86",
+                    "image_2": "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1000&q=86",
+                    "note_label": "Jurnal de teren",
+                    "note_text": "„În această dimineață, urmele de cerb au traversat poteca albastră.”"
+                } },
+                { "type": "passes", "data": {
+                    "eyebrow": "Bilete de acces",
+                    "title": "Prețuri clare. Fără costuri ascunse.",
+                    "lead": "Biletul de acces e valabil toată ziua aleasă. Activitățile și închirierile le adaugi în aceeași comandă.",
+                    "featured_label": "Cel mai ales",
+                    "benefits": "Acces toată ziua\nBilet pe email, cu cod QR\nTrasee marcate",
+                    "button_label": "Alege ziua",
+                    "subscription_title": "",
+                    "subscription_text": ""
+                } },
+                { "type": "faq_cta", "data": {
+                    "eyebrow": "Înainte să pornești",
+                    "title": "Lucrurile mici care fac ziua simplă.",
+                    "lead": "Biletul e pe telefon, locul e rezervat, iar echipa e acolo dacă ai nevoie de ceva.",
+                    "faqs": [
+                        { "q": "Trebuie să rezerv în avans?", "a": "Recomandăm, mai ales în weekend: locurile sunt limitate pe fiecare zi și pe fiecare interval." },
+                        { "q": "Ce se întâmplă dacă plouă?", "a": "Parcul rămâne deschis pe ploaie ușoară. Dacă o activitate se suspendă, te anunțăm și îți propunem altă zi." },
+                        { "q": "Cum primesc biletele?", "a": "Pe email, imediat după plată, cu câte un cod QR. Le arăți de pe telefon la intrare." },
+                        { "q": "Există activități pentru copii?", "a": "Da. Accesul pentru copii are bilet separat, iar descrierea fiecărei activități spune de la ce vârstă e potrivită." }
+                    ],
+                    "cta_eyebrow": "Următoarea ieșire începe aici",
+                    "cta_title": "O zi în aer liber. Fără improvizație.",
+                    "cta_button_label": "Alege biletele",
+                    "cta_secondary_label": "Vezi calendarul",
+                    "cta_secondary_url": "/calendar",
+                    "image": "https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=1800&q=86"
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Hero",
+            "icon": "heroicon-o-photo",
+            "fields": [
+                { "name": "show_intro", "type": "toggle", "label": "Ecran de intro cu numele parcului" },
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "textarea", "label": "Titlu", "help": "Un rând = o linie (al doilea rând e colorat, al treilea în contur). *cuvânt* = italic" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton rezervare — text", "help": "Deschide rezervarea rapidă" },
+                { "name": "secondary_label", "type": "text", "label": "Buton secundar — text" },
+                { "name": "secondary_url", "type": "text", "label": "Buton secundar — link" },
+                { "name": "badge_1", "type": "text", "label": "Avantaj 1" },
+                { "name": "badge_2", "type": "text", "label": "Avantaj 2" },
+                { "name": "featured_label", "type": "text", "label": "Eticheta cardului cu produsul recomandat", "help": "Produsul e prima activitate din core" },
+                { "name": "image", "type": "image", "label": "Imagine" },
+                { "name": "stats", "type": "repeater", "label": "Cifre (max. 4)", "max": 4, "fields": [
+                    { "name": "value", "type": "text", "label": "Valoare", "help": "Număr = se animă" },
+                    { "name": "prefix", "type": "text", "label": "Înainte" },
+                    { "name": "suffix", "type": "text", "label": "După (ex. „ ha”)" },
+                    { "name": "label", "type": "text", "label": "Descriere" }
+                ] }
+            ]
+        },
+        "marquee": {
+            "label": "Bandă cu cuvinte",
+            "icon": "heroicon-o-arrows-right-left",
+            "fields": [
+                { "name": "words", "type": "textarea", "label": "Cuvinte", "help": "Unul pe rând" }
+            ]
+        },
+        "planner": {
+            "label": "Planificator (stări → recomandare)",
+            "icon": "heroicon-o-sparkles",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" },
+                { "name": "moods", "type": "repeater", "label": "Stări", "max": 5, "fields": [
+                    { "name": "name", "type": "text", "label": "Nume" },
+                    { "name": "caption", "type": "text", "label": "Descriere scurtă" },
+                    { "name": "title", "type": "text", "label": "Titlul recomandării" },
+                    { "name": "description", "type": "textarea", "label": "Textul recomandării" },
+                    { "name": "tags", "type": "text", "label": "Etichete", "help": "Separate prin virgulă" },
+                    { "name": "duration", "type": "text", "label": "Durată recomandată" },
+                    { "name": "category", "type": "select", "label": "Ce se rezervă", "options": { "access": "Bilete de acces", "activity": "Activități", "rental": "Închirieri" } },
+                    { "name": "image", "type": "image", "label": "Imagine" }
+                ] }
+            ]
+        },
+        "experiences": {
+            "label": "Experiențe (din core)",
+            "icon": "heroicon-o-squares-2x2",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "limit", "type": "select", "label": "Câte produse", "options": { "3": "3", "5": "5", "6": "6", "9": "9" } },
+                { "name": "button_label", "type": "text", "label": "Buton — text" },
+                { "name": "button_url", "type": "text", "label": "Buton — link" }
+            ]
+        },
+        "day": {
+            "label": "Ritmul unei zile",
+            "icon": "heroicon-o-clock",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "moments", "type": "repeater", "label": "Momente", "max": 6, "fields": [
+                    { "name": "time", "type": "text", "label": "Ora" },
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "caption", "type": "text", "label": "Subtitlu" },
+                    { "name": "description", "type": "textarea", "label": "Text" },
+                    { "name": "image", "type": "image", "label": "Imagine" }
+                ] }
+            ]
+        },
+        "story": {
+            "label": "Despre loc (text + imagini)",
+            "icon": "heroicon-o-document-text",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text", "help": "Un rând gol între paragrafe" },
+                { "name": "stat1_value", "type": "text", "label": "Cifra 1" },
+                { "name": "stat1_label", "type": "text", "label": "Cifra 1 — descriere" },
+                { "name": "stat2_value", "type": "text", "label": "Cifra 2" },
+                { "name": "stat2_label", "type": "text", "label": "Cifra 2 — descriere" },
+                { "name": "link_label", "type": "text", "label": "Link — text" },
+                { "name": "link_url", "type": "text", "label": "Link — adresă" },
+                { "name": "image", "type": "image", "label": "Imagine mare" },
+                { "name": "image_2", "type": "image", "label": "Imagine mică" },
+                { "name": "note_label", "type": "text", "label": "Notă — eticheta" },
+                { "name": "note_text", "type": "text", "label": "Notă — text" }
+            ]
+        },
+        "passes": {
+            "label": "Bilete de acces (din core)",
+            "icon": "heroicon-o-ticket",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "featured_label", "type": "text", "label": "Eticheta biletului evidențiat" },
+                { "name": "benefits", "type": "textarea", "label": "Ce include (pe fiecare card)", "help": "Câte unul pe rând" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" },
+                { "name": "subscription_title", "type": "text", "label": "Card abonamente — titlu", "help": "Gol = fără card de abonamente" },
+                { "name": "subscription_text", "type": "text", "label": "Card abonamente — text" }
+            ]
+        },
+        "faq_cta": {
+            "label": "Întrebări + banner final",
+            "icon": "heroicon-o-question-mark-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "faqs", "type": "repeater", "label": "Întrebări", "fields": [
+                    { "name": "q", "type": "text", "label": "Întrebare" },
+                    { "name": "a", "type": "textarea", "label": "Răspuns" }
+                ] },
+                { "name": "cta_eyebrow", "type": "text", "label": "Banner — supratitlu" },
+                { "name": "cta_title", "type": "text", "label": "Banner — titlu", "help": "Gol = fără banner" },
+                { "name": "cta_button_label", "type": "text", "label": "Banner — buton rezervare" },
+                { "name": "cta_secondary_label", "type": "text", "label": "Banner — buton secundar" },
+                { "name": "cta_secondary_url", "type": "text", "label": "Banner — link secundar" },
+                { "name": "image", "type": "image", "label": "Banner — imagine" }
+            ]
+        }
+    }
+}

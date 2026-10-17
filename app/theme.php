@@ -145,6 +145,9 @@ function ts_head_assets(): string {
         . '<script>(function(){var c=' . json_encode($config, JSON_UNESCAPED_SLASHES) . ';'
         // scala completă de opacitate, ca modificatorii /N (ex. text-fg/48) să existe pe Play CDN
         . 'var op={};for(var i=0;i<=100;i++){op[i]=(i/100).toString();}c.theme.extend.opacity=op;'
+        // Paleta proprie a template-ului (manifest "tailwind_extend"), legată de tokeni
+        . 'var x=' . json_encode((object) manifest('tailwind_extend', []), JSON_UNESCAPED_SLASHES) . ';'
+        . 'Object.keys(x).forEach(function(k){c.theme.extend[k]=Object.assign({},c.theme.extend[k]||{},x[k]);});'
         . 'c.theme.extend.borderColor={DEFAULT:"rgb(var(--c-fg) / 0.1)"};c.theme.extend.divideColor={DEFAULT:"rgb(var(--c-fg) / 0.1)"};'
         // Template-urile cu CSS propriu pot opri resetul Tailwind pe paginile lor
         // (manifest: "tailwind_preflight": false); paginile comune îl păstrează.

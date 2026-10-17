@@ -1,0 +1,186 @@
+/* Pagina de start a template-ului leisure (Nordvale): stilurile secțiunilor. */
+:root {
+            --pine: rgb(var(--c-pine-900));
+            --pine-dark: rgb(var(--c-pine-950));
+            --acid: rgb(var(--c-primary));
+            --ember: #f27b4a;
+            --cream: rgb(var(--c-canvas));
+            --oat: rgb(var(--c-surface));
+            --ink: rgb(var(--c-fg));
+        }
+
+        * { box-sizing: border-box; }
+        html { background: var(--oat); }
+        body {
+            margin: 0;
+            overflow-x: hidden;
+            background: var(--oat);
+            color: var(--ink);
+            font-family: var(--f-body);
+            text-rendering: optimizeLegibility;
+        }
+        [x-cloak] { display: none !important; }
+        ::selection { background: var(--acid); color: var(--pine-dark); }
+
+        .safe-top { padding-top: max(12px, env(safe-area-inset-top)); }
+        .safe-bottom { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+
+        .grain::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 8;
+            pointer-events: none;
+            opacity: .09;
+            mix-blend-mode: soft-light;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.58'/%3E%3C/svg%3E");
+        }
+
+        .topo-dark {
+            background-image:
+                radial-gradient(circle at 18% 22%, rgb(var(--c-primary) / .14), transparent 20%),
+                radial-gradient(circle at 84% 18%, rgba(242,123,74,.12), transparent 17%),
+                url("data:image/svg+xml,%3Csvg width='820' height='820' viewBox='0 0 820 820' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.055' stroke-width='1.1'%3E%3Cpath d='M88 212c37-105 158-179 273-133 94 37 117 148 65 224-49 72-150 69-199 143-51 77-34 200-133 247-95 45-205-31-192-137 13-103 118-121 127-216 5-55-2-92 59-128Z'/%3E%3Cpath d='M119 231c31-83 127-143 219-107 76 30 95 118 53 180-40 58-121 56-160 115-42 61-28 159-107 197-77 37-165-25-154-110 10-83 94-98 102-174 4-44 0-74 47-101Z'/%3E%3Cpath d='M513 479c52-81 159-106 232-43 72 60 50 172-26 217-68 40-149 11-202 68-45 48-39 134-105 151-74 19-142-53-112-125 28-67 109-63 148-123 31-49 30-97 65-145Z'/%3E%3Cpath d='M548 507c39-60 118-79 173-32 53 45 37 128-19 161-50 30-111 8-150 51-34 36-29 100-79 112-55 14-106-39-83-92 21-50 81-47 110-92 23-36 22-72 48-108Z'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: auto, auto, 820px 820px;
+        }
+
+        .paper-grid {
+            background-image:
+                linear-gradient(rgb(var(--c-pine-900) / .052) 1px, transparent 1px),
+                linear-gradient(90deg, rgb(var(--c-pine-900) / .052) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .nav-shell {
+            background: rgb(var(--c-pine-950) / .78);
+            border: 1px solid rgba(255,255,255,.12);
+            box-shadow: 0 24px 70px -42px rgba(0,0,0,.9);
+            backdrop-filter: blur(22px) saturate(130%);
+            -webkit-backdrop-filter: blur(22px) saturate(130%);
+        }
+
+        .hero-mask {
+            clip-path: polygon(6% 0, 100% 0, 97% 87%, 76% 100%, 0 93%, 0 10%);
+        }
+
+        .image-mask-a { clip-path: polygon(0 0, 94% 4%, 100% 90%, 9% 100%, 0 82%); }
+        .image-mask-b { clip-path: polygon(7% 0, 100% 0, 95% 94%, 0 100%, 2% 11%); }
+
+        .outline-word {
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(255,255,255,.46);
+            text-stroke: 1px rgba(255,255,255,.46);
+        }
+
+        .route-line {
+            fill: none;
+            stroke: var(--acid);
+            stroke-width: 2.4;
+            stroke-linecap: round;
+            stroke-dasharray: 9 13;
+            filter: drop-shadow(0 0 8px rgb(var(--c-primary) / .38));
+        }
+
+        .glow-orbit {
+            position: absolute;
+            border: 1px solid rgb(var(--c-primary) / .22);
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .kinetic-word {
+            display: inline-block;
+            will-change: transform;
+        }
+
+        .experience-card {
+            transform-style: preserve-3d;
+            perspective: 900px;
+        }
+        .experience-card__inner {
+            transition: transform .22s ease-out, box-shadow .35s ease;
+            will-change: transform;
+        }
+        .experience-card:hover .experience-card__inner { box-shadow: 0 38px 90px -42px rgba(0,0,0,.75); }
+        .experience-card img { transition: transform .9s cubic-bezier(.18,.8,.22,1); }
+        .experience-card:hover img { transform: scale(1.06); }
+
+        .marquee {
+            overflow: hidden;
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+        }
+        .marquee-track {
+            display: flex;
+            width: max-content;
+            animation: marquee 36s linear infinite;
+        }
+        @keyframes marquee { to { transform: translateX(-50%); } }
+
+        .pulse-dot { animation: pulse-dot 2.2s ease-out infinite; }
+        @keyframes pulse-dot {
+            0% { box-shadow: 0 0 0 0 rgb(var(--c-primary) / .48); }
+            70% { box-shadow: 0 0 0 10px rgb(var(--c-primary) / 0); }
+            100% { box-shadow: 0 0 0 0 rgb(var(--c-primary) / 0); }
+        }
+
+        .reveal-ready [data-reveal] { opacity: 0; transform: translateY(34px); }
+        .reveal-ready [data-hero-kicker],
+        .reveal-ready [data-hero-title],
+        .reveal-ready [data-hero-copy],
+        .reveal-ready [data-hero-cta],
+        .reveal-ready [data-hero-visual] { opacity: 0; }
+        .reveal-ready [data-hero-title] { transform: translateY(54px); }
+        .reveal-ready [data-hero-copy], .reveal-ready [data-hero-cta], .reveal-ready [data-hero-kicker] { transform: translateY(22px); }
+        .reveal-ready [data-hero-visual] { transform: translateX(62px) rotate(1.5deg); }
+
+        .intro-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: grid;
+            place-items: center;
+            background: var(--pine-dark);
+            color: white;
+            transition: opacity .45s ease, visibility .45s ease;
+        }
+        .intro-screen.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .intro-line { transform-origin: left center; }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .drawer-shadow { box-shadow: -50px 0 120px -60px rgb(var(--c-pine-950) / .82); }
+        .progress-line { transform: scaleX(0); transform-origin: left center; }
+
+        @media (max-width: 1023px) {
+            .hero-mask { clip-path: polygon(0 0, 100% 0, 100% 93%, 9% 100%, 0 95%); }
+        }
+
+        @media (max-width: 639px) {
+            .hero-mask,
+            .image-mask-a,
+            .image-mask-b { clip-path: none; border-radius: 24px; }
+            .marquee { mask-image: none; -webkit-mask-image: none; }
+        }
+
+        @media (hover: none), (pointer: coarse) {
+            .experience-card__inner { transform: none !important; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+            }
+            .intro-screen { display: none; }
+            .progress-line { transform: scaleX(1); }
+            .reveal-ready [data-reveal],
+            .reveal-ready [data-hero-kicker],
+            .reveal-ready [data-hero-title],
+            .reveal-ready [data-hero-copy],
+            .reveal-ready [data-hero-cta],
+            .reveal-ready [data-hero-visual] { opacity: 1; transform: none; }
+        }

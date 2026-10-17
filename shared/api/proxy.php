@@ -80,6 +80,22 @@ switch ($action) {
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
+    // Agrement: zilele cu locuri dintr-o lună și intervalele unei zile (LeisureController)
+    case 'leisure-availability':
+        $path  = '/tenant-client/leisure/availability';
+        $query = array_filter([
+            'month'       => preg_match('/^\d{4}-\d{2}$/', (string) ($_GET['month'] ?? '')) ? $_GET['month'] : null,
+            'ticket_type' => (int) ($_GET['ticket_type'] ?? 0) ?: null,
+        ]);
+        break;
+    case 'leisure-slots':
+        $path  = '/tenant-client/leisure/slots';
+        $query = array_filter([
+            'date'        => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['date'] ?? '')) ? $_GET['date'] : null,
+            'ticket_type' => (int) ($_GET['ticket_type'] ?? 0) ?: null,
+        ]);
+        break;
+
     // Comenzile și biletele din browserul cumpărătorului, setarea parolei (DemoStorefrontController)
     case 'orders':
         $path = '/tenant-client/storefront/orders';
