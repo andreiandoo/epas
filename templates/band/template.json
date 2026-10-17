@@ -1,0 +1,234 @@
+{
+    "name": "Trupă",
+    "description": "Site de trupă construit ca un univers propriu: globul cu orașele turneului, jurnalul de zbor cu bilete, echipajul, discografia ca misiuni, concert pe locuri numerotate cu hartă, lista fanilor. Pentru formații.",
+    "version": 1,
+    "category": "Muzică",
+    "kind": "events",
+    "status": "ready",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": ["lenis", "gsap"],
+    "tailwind_preflight": true,
+
+    "settings": [
+        { "name": "featured_slug", "type": "text", "label": "Concertul din afiș (slug)", "default": "", "help": "Gol = următorul concert" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#070A12",
+            "surface": "#0E1422",
+            "panel": "#121A2B",
+            "fg": "#E8ECF4",
+            "muted": "#8A94A8",
+            "primary": "#FF6B2C",
+            "accent": "#3DE0C8"
+        },
+        "fonts": {
+            "display": "Space Grotesk",
+            "body": "Work Sans"
+        }
+    },
+
+    "links": {
+        "events": "/turneu",
+        "catalog": "/turneu",
+        "event": "/concert/{slug}"
+    },
+
+    "routes": {
+        "/turneu": "turneu.php",
+        "/concert/{slug}": "concert.php"
+    },
+
+    "nav": [
+        { "label": "Turneu", "url": "/turneu" },
+        { "label": "Echipaj", "url": "/#echipaj" },
+        { "label": "Discografie", "url": "/#discografie" },
+        { "label": "Video", "url": "/#video" }
+    ],
+
+    "header_cta": { "label": "Bilete", "url": "/turneu" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Turneu, bilete și muzică",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Misiunea în curs · Orbită joasă",
+                    "lead": "Patru oameni din Iași, un album nou și cele mai multe orașe în care am cântat vreodată.",
+                    "button_label": "Bilete pentru turneu",
+                    "listen_label": "Ascultă albumul",
+                    "listen_url": "#discografie",
+                    "image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=2000&q=80",
+                    "en": { "eyebrow": "Mission in progress · Low Orbit", "lead": "Four people from Iași, a new album and the most cities we have ever played.", "button_label": "Tour tickets", "listen_label": "Listen to the album" }
+                } },
+                { "type": "next_show", "data": {
+                    "eyebrow": "Următoarea aterizare",
+                    "button_label": "Cumpără bilete",
+                    "en": { "eyebrow": "Next landing", "button_label": "Buy tickets" }
+                } },
+                { "type": "tour", "data": {
+                    "eyebrow": "Jurnal de zbor",
+                    "title": "Orbită joasă Tour",
+                    "limit": "10",
+                    "button_label": "Toate datele",
+                    "en": { "eyebrow": "Flight log", "title": "Low Orbit Tour", "button_label": "All dates" }
+                } },
+                { "type": "crew", "data": {
+                    "eyebrow": "Echipaj",
+                    "title": "Cine e la bord",
+                    "members": [
+                        { "name": "Ilinca Roman", "role": "Voce, sintetizator", "image": "https://images.unsplash.com/photo-1415886541506-6efc5e4b1786?auto=format&fit=crop&w=900&q=80", "bio": "A scris primele piese pe un casetofon în Copou. Cântă și pe tot ce are clape." },
+                        { "name": "Vlad Ciobanu", "role": "Chitară", "image": "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?auto=format&fit=crop&w=900&q=80", "bio": "Inginer de sunet ziua, chitarist noaptea. Responsabil cu ecourile." },
+                        { "name": "Mara Dobre", "role": "Bas", "image": "https://images.unsplash.com/photo-1528489496900-d841974f5290?auto=format&fit=crop&w=900&q=80", "bio": "A intrat în trupă după un concert la care a lipsit basistul. N-a mai plecat." },
+                        { "name": "Andrei Pop", "role": "Tobe", "image": "https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?auto=format&fit=crop&w=900&q=80", "bio": "Ține tempo-ul și calendarul turneului. Colecționează bețe rupte." }
+                    ],
+                    "en": {
+                        "eyebrow": "Crew",
+                        "title": "Who is on board",
+                        "members": [
+                            { "name": "Ilinca Roman", "role": "Vocals, synth", "image": "https://images.unsplash.com/photo-1415886541506-6efc5e4b1786?auto=format&fit=crop&w=900&q=80", "bio": "Wrote the first songs on a tape recorder in Copou. Plays anything with keys." },
+                            { "name": "Vlad Ciobanu", "role": "Guitar", "image": "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?auto=format&fit=crop&w=900&q=80", "bio": "Sound engineer by day, guitarist by night. In charge of the echoes." },
+                            { "name": "Mara Dobre", "role": "Bass", "image": "https://images.unsplash.com/photo-1528489496900-d841974f5290?auto=format&fit=crop&w=900&q=80", "bio": "Joined after a gig the bassist missed. Never left." },
+                            { "name": "Andrei Pop", "role": "Drums", "image": "https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?auto=format&fit=crop&w=900&q=80", "bio": "Keeps the tempo and the tour calendar. Collects broken sticks." }
+                        ]
+                    }
+                } },
+                { "type": "missions", "data": {
+                    "eyebrow": "Discografie",
+                    "title": "Misiunile de până acum",
+                    "releases": [
+                        { "title": "Orbită joasă", "year": "2026", "type": "Album", "cover": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=900&q=80", "text": "Al treilea album: zece piese despre distanță, prieteni și orașe văzute de sus.", "url": "https://open.spotify.com/" },
+                        { "title": "Semnal slab", "year": "2024", "type": "Album", "cover": "https://images.unsplash.com/photo-1543722530-d2c3201371e7?auto=format&fit=crop&w=900&q=80", "text": "Albumul care ne-a scos din Iași.", "url": "https://open.spotify.com/" },
+                        { "title": "Lumini de oraș", "year": "2022", "type": "EP", "cover": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=80", "text": "Cinci piese înregistrate într-o sală de repetiții de la subsol.", "url": "https://open.spotify.com/" }
+                    ],
+                    "en": {
+                        "eyebrow": "Discography",
+                        "title": "Missions so far",
+                        "releases": [
+                            { "title": "Low Orbit", "year": "2026", "type": "Album", "cover": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=900&q=80", "text": "Our third album: ten songs about distance, friends and cities seen from above.", "url": "https://open.spotify.com/" },
+                            { "title": "Weak Signal", "year": "2024", "type": "Album", "cover": "https://images.unsplash.com/photo-1543722530-d2c3201371e7?auto=format&fit=crop&w=900&q=80", "text": "The album that got us out of Iași.", "url": "https://open.spotify.com/" },
+                            { "title": "City Lights", "year": "2022", "type": "EP", "cover": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=80", "text": "Five songs recorded in a basement rehearsal room.", "url": "https://open.spotify.com/" }
+                        ]
+                    }
+                } },
+                { "type": "video", "data": {
+                    "eyebrow": "Video",
+                    "title": "Orbită joasă (live din sala de repetiții)",
+                    "youtube_id": "",
+                    "poster": "https://images.unsplash.com/photo-1501612780327-45045538702b?auto=format&fit=crop&w=1800&q=80",
+                    "en": { "title": "Low Orbit (live from the rehearsal room)" }
+                } },
+                { "type": "newsletter", "data": {
+                    "eyebrow": "Canal deschis",
+                    "title": "Află primul de aterizările noi",
+                    "text": "Biletele pentru datele noi se pun întâi în vânzare pentru cei de pe listă. Un mesaj pe lună, fără spam.",
+                    "button_label": "Mă abonez",
+                    "en": { "eyebrow": "Open channel", "title": "Be first to hear about new landings", "text": "Tickets for new dates go on sale to the list first. One message a month, no spam.", "button_label": "Sign me up" }
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Turneu",
+                    "title": "Ne vedem la sol",
+                    "button_label": "Alege orașul",
+                    "en": { "eyebrow": "Tour", "title": "See you on the ground", "button_label": "Pick your city" }
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Afișul (globul cu orașele turneului)",
+            "icon": "heroicon-o-globe-europe-africa",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Numele mare", "help": "Gol = numele site-ului" },
+                { "name": "lead", "type": "textarea", "label": "Text scurt" },
+                { "name": "image", "type": "image", "label": "Imagine de rezervă", "help": "Pe telefoanele slabe și când animațiile sunt oprite, în locul globului" },
+                { "name": "button_label", "type": "text", "label": "Buton bilete — text" },
+                { "name": "listen_label", "type": "text", "label": "Buton muzică — text" },
+                { "name": "listen_url", "type": "text", "label": "Buton muzică — link" }
+            ]
+        },
+        "next_show": {
+            "label": "Următorul concert (din core)",
+            "icon": "heroicon-o-ticket",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "tour": {
+            "label": "Datele turneului (din core)",
+            "icon": "heroicon-o-map",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "limit", "type": "text", "label": "Câte date arată" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "crew": {
+            "label": "Membrii trupei",
+            "icon": "heroicon-o-user-group",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "members", "type": "repeater", "label": "Membri", "max": 12, "fields": [
+                    { "name": "name", "type": "text", "label": "Nume" },
+                    { "name": "role", "type": "text", "label": "Instrument / rol" },
+                    { "name": "image", "type": "image", "label": "Fotografie" },
+                    { "name": "bio", "type": "textarea", "label": "Câteva cuvinte" }
+                ] }
+            ]
+        },
+        "missions": {
+            "label": "Discografie",
+            "icon": "heroicon-o-musical-note",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "releases", "type": "repeater", "label": "Albume și EP-uri", "help": "Primul e cel nou, afișat mare", "fields": [
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "year", "type": "text", "label": "Anul" },
+                    { "name": "type", "type": "text", "label": "Tip (Album, EP, Single)" },
+                    { "name": "cover", "type": "image", "label": "Coperta" },
+                    { "name": "text", "type": "textarea", "label": "Text" },
+                    { "name": "url", "type": "text", "label": "Link de ascultare" }
+                ] }
+            ]
+        },
+        "video": {
+            "label": "Video",
+            "icon": "heroicon-o-play-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "youtube_id", "type": "text", "label": "ID-ul videoclipului YouTube", "help": "Partea de după watch?v= din link. Gol = doar imaginea." },
+                { "name": "poster", "type": "image", "label": "Imagine (până pornește videoclipul)" }
+            ]
+        },
+        "newsletter": {
+            "label": "Newsletter (lista fanilor)",
+            "icon": "heroicon-o-envelope",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn final",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        }
+    }
+}
