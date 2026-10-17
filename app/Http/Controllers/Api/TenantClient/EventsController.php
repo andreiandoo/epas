@@ -98,7 +98,7 @@ class EventsController extends Controller
         $orderColumn = 'event_date';
 
         $events = $query->with([
-                'venue:id,name,city,slug',
+                'venue:id,name,city,slug,country,lat,lng',
                 'eventTypes',
                 'eventGenres',
                 'artists:id,name,main_image_url',
@@ -665,7 +665,7 @@ class EventsController extends Controller
 
         // Order by start_date descending (most recent first)
         $events = $query->with([
-                'venue:id,name,city,slug',
+                'venue:id,name,city,slug,country,lat,lng',
                 'eventTypes',
                 'eventGenres',
                 'artists:id,name,main_image_url',
