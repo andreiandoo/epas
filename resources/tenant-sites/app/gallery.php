@@ -83,7 +83,7 @@ function ts_render_gallery(): void {
     .btn-line:hover{border-color:var(--ink-3)}
     /* hero */
     .hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:center;padding:56px 0 88px}
-    .hero h1{font-size:clamp(40px,5.2vw,68px);line-height:1.02;letter-spacing:-.045em;font-weight:700;margin:0 0 22px;max-width:11ch}
+    .hero h1{font-size:clamp(40px,5.2vw,68px);line-height:1.02;letter-spacing:-.045em;font-weight:700;margin:0 0 22px;max-width:15ch;text-wrap:balance}
     .hero p{font-size:19px;color:var(--ink-2);max-width:42ch;margin:0 0 32px}
     .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
     .shots{position:relative;aspect-ratio:16/12}
