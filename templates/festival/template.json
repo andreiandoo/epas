@@ -1,0 +1,272 @@
+{
+    "name": "Festival de muzică",
+    "description": "Noapte, scene și afiș tipografic: lineup pe zile, program orar pe scene, abonamente cu faze de preț, bilete de o zi, camping. Pentru festivaluri de una sau mai multe zile.",
+    "version": 1,
+    "category": "Muzică & festivaluri",
+    "kind": "festival",
+    "status": "ready",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": ["lenis", "gsap"],
+    "tailwind_preflight": true,
+
+    "settings": [
+        { "name": "event_slug", "type": "text", "label": "Festivalul afișat (slug)", "default": "", "help": "Gol = primul eveniment viitor al organizatorului" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#0C0B10",
+            "surface": "#16141D",
+            "panel": "#1F1C28",
+            "fg": "#F4EFE6",
+            "muted": "#9C96A8",
+            "primary": "#FF5A36",
+            "accent": "#FFD23F"
+        },
+        "fonts": {
+            "display": "Anton",
+            "body": "Archivo"
+        }
+    },
+
+    "links": {
+        "events": "/bilete",
+        "catalog": "/lineup",
+        "event": "/bilete"
+    },
+
+    "routes": {
+        "/lineup": "lineup.php",
+        "/program": "program.php",
+        "/bilete": "bilete.php"
+    },
+
+    "nav": [
+        { "label": "Lineup", "url": "/lineup" },
+        { "label": "Program", "url": "/program" },
+        { "label": "Bilete", "url": "/bilete" },
+        { "label": "Info", "url": "/#info" }
+    ],
+
+    "header_cta": { "label": "Cumpără bilete", "url": "/bilete" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Bilete și program",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Ediția {year}",
+                    "title": "",
+                    "lead": "Trei zile, trei scene și o vale întreagă între munți. Muzică live până la miezul nopții, electronic până la răsărit.",
+                    "button_label": "Cumpără abonament",
+                    "secondary_label": "Vezi lineup-ul",
+                    "secondary_url": "/lineup",
+                    "image": "",
+                    "show_countdown": true,
+                    "show_marquee": true,
+                    "en": {
+                        "eyebrow": "Edition {year}",
+                        "lead": "Three days, three stages and a whole valley between mountains. Live music until midnight, electronic until sunrise.",
+                        "button_label": "Get your pass",
+                        "secondary_label": "See the lineup"
+                    }
+                } },
+                { "type": "lineup_poster", "data": {
+                    "eyebrow": "Lineup",
+                    "title": "Cine urcă pe scenă",
+                    "button_label": "Lineup complet",
+                    "en": { "title": "Who takes the stage", "button_label": "Full lineup" }
+                } },
+                { "type": "tickets", "data": {
+                    "eyebrow": "Bilete",
+                    "title": "Alege-ți intrarea",
+                    "lead": "Prețurile cresc pe faze. Abonamentul de 3 zile e cea mai bună alegere dacă vii tot weekendul.",
+                    "note": "Biletele ajung pe email, cu cod QR. La intrare primești brățara cu cip.",
+                    "en": {
+                        "eyebrow": "Tickets",
+                        "title": "Choose your way in",
+                        "lead": "Prices go up in tiers. The 3-day pass is the best pick if you’re staying all weekend.",
+                        "note": "Tickets arrive by email with a QR code. You get your chip wristband at the gate."
+                    }
+                } },
+                { "type": "stages", "data": {
+                    "eyebrow": "Scene",
+                    "title": "Trei lumi, o singură vale",
+                    "lead": "Fiecare scenă are sunetul, lumina și programul ei.",
+                    "en": { "eyebrow": "Stages", "title": "Three worlds, one valley", "lead": "Every stage has its own sound, light and schedule." }
+                } },
+                { "type": "experience", "data": {
+                    "eyebrow": "Experiența",
+                    "title": "Mai mult decât concerte",
+                    "items": [
+                        { "caption": "Apusul văzut de pe Scena Lunii" },
+                        { "caption": "Hangarul, de la 20:00 până la răsărit" },
+                        { "caption": "Confetti la miezul nopții" },
+                        { "caption": "Campingul, la cinci minute de scene" },
+                        { "caption": "Concerte acustice în Pădure" },
+                        { "caption": "Lumini, fum și zeci de mii de oameni" }
+                    ],
+                    "en": {
+                        "eyebrow": "The experience",
+                        "title": "More than concerts",
+                        "items": [
+                            { "caption": "Sunset from the Moon Stage" },
+                            { "caption": "The Hangar, from 20:00 until sunrise" },
+                            { "caption": "Confetti at midnight" },
+                            { "caption": "The campsite, five minutes from the stages" },
+                            { "caption": "Acoustic shows in the Forest" },
+                            { "caption": "Lights, haze and tens of thousands of people" }
+                        ]
+                    }
+                } },
+                { "type": "info", "data": {
+                    "eyebrow": "Informații practice",
+                    "title": "Tot ce-ți trebuie înainte să pleci",
+                    "anchor": "info",
+                    "items": [
+                        { "icon": "bus", "title": "Cum ajungi", "text": "Navete din Brașov la fiecare oră, între 14:00 și 06:00. Parcarea se cumpără online, odată cu biletul." },
+                        { "icon": "tent", "title": "Camping", "text": "Campingul se deschide joi la 12:00. Ai dușuri, toalete, apă potabilă și zonă păzită. Glampingul vine cu cortul montat." },
+                        { "icon": "card", "title": "Plăți în festival", "text": "Plătești cu brățara cu cip. O încarci online sau la punctele de top-up; ce rămâne se returnează după festival." },
+                        { "icon": "access", "title": "Accesibilitate", "text": "Platforme pentru scaun rulant la Scena Lunii și în Hangar, toalete adaptate și intrare separată." },
+                        { "icon": "age", "title": "Vârstă", "text": "Accesul e permis de la 16 ani. Între 16 și 18 ani, doar însoțit de un adult și cu acordul părinților." },
+                        { "icon": "rules", "title": "Ce nu ai voie", "text": "Sticlă, obiecte ascuțite, drone și băuturi aduse din afară. Poți intra cu o sticlă de apă goală." }
+                    ],
+                    "en": {
+                        "eyebrow": "Good to know",
+                        "title": "Everything you need before you go",
+                        "items": [
+                            { "icon": "bus", "title": "Getting there", "text": "Shuttles from Brașov every hour, from 14:00 to 06:00. Parking is bought online with your ticket." },
+                            { "icon": "tent", "title": "Camping", "text": "The campsite opens on Thursday at 12:00, with showers, toilets, drinking water and a guarded area. Glamping comes with your tent already pitched." },
+                            { "icon": "card", "title": "Paying at the festival", "text": "You pay with your chip wristband. Top it up online or at the top-up points; what’s left is refunded after the festival." },
+                            { "icon": "access", "title": "Accessibility", "text": "Wheelchair platforms at the Moon Stage and in the Hangar, accessible toilets and a separate entrance." },
+                            { "icon": "age", "title": "Age", "text": "Entry from 16. Between 16 and 18, only with an adult and parental consent." },
+                            { "icon": "rules", "title": "Not allowed", "text": "Glass, sharp objects, drones and drinks from outside. You can bring an empty water bottle." }
+                        ]
+                    }
+                } },
+                { "type": "faq", "data": {
+                    "eyebrow": "Întrebări",
+                    "title": "Întrebări frecvente",
+                    "faqs": [
+                        { "q": "Cum primesc biletele?", "a": "Pe email, imediat după plată, cu câte un cod QR. Le găsești și în contul tău." },
+                        { "q": "Pot transfera biletul altcuiva?", "a": "Da, biletul e valabil pentru cine îl are; nu e nominal. Păstrează codul QR doar pentru tine." },
+                        { "q": "Ce se întâmplă dacă pierd brățara?", "a": "Vino la punctul de informații cu buletinul și biletul; blocăm brățara veche și îți dăm alta, cu soldul rămas." },
+                        { "q": "Pot ieși și reintra în festival?", "a": "Da, cu abonamentul sau biletul de o zi poți ieși și reintra oricând în ziua respectivă." }
+                    ],
+                    "en": {
+                        "eyebrow": "Questions",
+                        "title": "Frequently asked questions",
+                        "faqs": [
+                            { "q": "How do I get my tickets?", "a": "By email, right after payment, each with a QR code. They’re also in your account." },
+                            { "q": "Can I transfer my ticket to someone else?", "a": "Yes, the ticket is valid for whoever holds it; it isn’t personal. Keep the QR code to yourself." },
+                            { "q": "What if I lose my wristband?", "a": "Come to the info point with your ID and ticket; we block the old wristband and give you a new one with the remaining balance." },
+                            { "q": "Can I leave and come back in?", "a": "Yes, with a pass or a day ticket you can leave and re-enter any time that day." }
+                        ]
+                    }
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Ne vedem în vale",
+                    "title": "Prețul crește la următoarea fază",
+                    "button_label": "Cumpără abonament",
+                    "en": { "eyebrow": "See you in the valley", "title": "Prices go up in the next tier", "button_label": "Get your pass" }
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Hero (festivalul)",
+            "icon": "heroicon-o-sparkles",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu", "help": "{year} = anul festivalului" },
+                { "name": "title", "type": "textarea", "label": "Titlu", "help": "Gol = numele festivalului. Un rând = o linie" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton bilete — text" },
+                { "name": "secondary_label", "type": "text", "label": "Buton secundar — text" },
+                { "name": "secondary_url", "type": "text", "label": "Buton secundar — link" },
+                { "name": "image", "type": "image", "label": "Imagine de fundal", "help": "Goală = imaginea festivalului din core" },
+                { "name": "show_countdown", "type": "toggle", "label": "Numărătoare inversă până la deschiderea porților" },
+                { "name": "show_marquee", "type": "toggle", "label": "Banda cu artiștii" }
+            ]
+        },
+        "lineup_poster": {
+            "label": "Afișul lineup-ului (din core)",
+            "icon": "heroicon-o-musical-note",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "tickets": {
+            "label": "Bilete (din core)",
+            "icon": "heroicon-o-ticket",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "note", "type": "text", "label": "Notă sub bilete" }
+            ]
+        },
+        "stages": {
+            "label": "Scenele (din core)",
+            "icon": "heroicon-o-speaker-wave",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" }
+            ]
+        },
+        "experience": {
+            "label": "Experiența (galerie)",
+            "icon": "heroicon-o-photo",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "items", "type": "repeater", "label": "Imagini", "help": "Fără imagine = fotografiile festivalului din core, în ordine", "fields": [
+                    { "name": "caption", "type": "text", "label": "Text" },
+                    { "name": "image", "type": "image", "label": "Imagine (opțional)" }
+                ] }
+            ]
+        },
+        "info": {
+            "label": "Informații practice",
+            "icon": "heroicon-o-information-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "anchor", "type": "text", "label": "Ancoră", "help": "Pentru linkul /#info din meniu" },
+                { "name": "items", "type": "repeater", "label": "Carduri", "max": 8, "fields": [
+                    { "name": "icon", "type": "select", "label": "Pictogramă", "options": { "bus": "Transport", "tent": "Camping", "card": "Plăți", "access": "Accesibilitate", "age": "Vârstă", "rules": "Reguli", "info": "Info" } },
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "text", "type": "textarea", "label": "Text" }
+                ] }
+            ]
+        },
+        "faq": {
+            "label": "Întrebări frecvente",
+            "icon": "heroicon-o-question-mark-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "faqs", "type": "repeater", "label": "Întrebări", "fields": [
+                    { "name": "q", "type": "text", "label": "Întrebare" },
+                    { "name": "a", "type": "textarea", "label": "Răspuns" }
+                ] }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn final",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        }
+    }
+}
