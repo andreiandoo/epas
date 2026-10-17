@@ -13,7 +13,9 @@ if (!$ev || !$groups) {
 $cfg = ['event' => fest_cart_event($ev), 'types' => []];
 foreach ($groups as $g) {
     foreach ($g['items'] as $t) {
-        $cfg['types'][] = fest_ticket_js($t);
+        if (empty($t['has_seating'])) {
+            $cfg['types'][] = fest_ticket_js($t);
+        }
     }
 }
 $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT;
@@ -36,7 +38,9 @@ $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_H
                 <?php endif; ?>
                 <div class="fx-pass__foot">
                     <div class="fx-price"><?php if ($j['was']): ?><s><?= e(fest_money($j['was'])) ?></s><?php endif; ?><b><?= e(fest_money($j['price'])) ?></b></div>
-                    <?php if (!$j['soldOut']): ?>
+                    <?php if (!$j['soldOut'] && $j['seated']): ?>
+                    <button type="button" class="fx-btn fx-btn--sm" data-ts-seatmap="<?= e(json_encode(fest_cart_event($ev), JSON_UNESCAPED_UNICODE)) ?>"><?= te('Alege locul pe hartă') ?></button>
+                    <?php elseif (!$j['soldOut']): ?>
                     <div class="fx-qty" role="group" aria-label="<?= te('Cantitate') ?> — <?= e($j['name']) ?>">
                         <button type="button" @click="dec(<?= $id ?>)" :disabled="!qty[<?= $id ?>]" aria-label="<?= te('Scade') ?>">−</button>
                         <output x-text="qty[<?= $id ?>]">0</output>
@@ -55,6 +59,8 @@ $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_H
                 <div class="fx-price"><?php if ($j['was']): ?><s><?= e(fest_money($j['was'])) ?></s><?php endif; ?><b><?= e(fest_money($j['price'])) ?></b></div>
                 <?php if ($j['soldOut']): ?>
                 <span class="fx-chip fx-chip--out"><?= te('Epuizat') ?></span>
+                <?php elseif ($j['seated']): ?>
+                <button type="button" class="fx-btn fx-btn--sm" data-ts-seatmap="<?= e(json_encode(fest_cart_event($ev), JSON_UNESCAPED_UNICODE)) ?>"><?= te('Alege locul pe hartă') ?></button>
                 <?php else: ?>
                 <div class="fx-qty" role="group" aria-label="<?= te('Cantitate') ?> — <?= e($j['name']) ?>">
                     <button type="button" @click="dec(<?= $id ?>)" :disabled="!qty[<?= $id ?>]" aria-label="<?= te('Scade') ?>">−</button>

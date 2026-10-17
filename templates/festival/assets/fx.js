@@ -43,16 +43,15 @@
             get total() { var q = this.qty; return types.reduce(function (n, x) { return n + q[x.id] * x.price; }, 0); },
             save: function () {
                 if (!this.count) { return; }
-                var q = this.qty, prev = TS.Cart.get(), same = prev && prev.event && prev.event.id === cfg.event.id && !(prev.seats || []).length;
-                TS.Cart.set({
-                    event: cfg.event,
+                var q = this.qty;
+                // Păstrează locurile alese pe hartă, timerul și codul de reducere (același eveniment)
+                TS.Cart.merge(cfg.event, {
                     items: types.filter(function (x) { return q[x.id] > 0; }).map(function (x) {
                         return { ticket_type_id: x.id, name: x.name, price: x.price, qty: q[x.id], when: x.dateLabel || null };
-                    }),
-                    expires_at: same ? prev.expires_at : null,
-                    coupon_code: same ? (prev.coupon_code || null) : null
+                    })
                 });
-                window.location.href = '/cos';
+                // Sertarul coșului arată timerul de rezervare și drumul spre plată
+                if (TS.Drawer) { TS.Drawer.open(); } else { window.location.href = '/cos'; }
             }
         };
     };

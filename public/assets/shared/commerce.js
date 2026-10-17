@@ -48,6 +48,24 @@
             window.dispatchEvent(new CustomEvent('site:cart'));
         },
         clear: function () { Cart.set(null); },
+        /* Pune în coș biletele fără loc (part.items) sau locurile (part.seats + event_seating_id) ale
+           unui eveniment, păstrând cealaltă parte, timerul și codul de reducere dacă e același eveniment. */
+        merge: function (event, part) {
+            var prev = Cart.get(), same = prev && prev.event && prev.event.id === event.id;
+            var next = {
+                event: event,
+                items: 'items' in part ? part.items : (same ? prev.items : []),
+                seats: 'seats' in part ? part.seats : (same ? prev.seats : []),
+                event_seating_id: part.event_seating_id || (same ? prev.event_seating_id : null) || null,
+                expires_at: same ? prev.expires_at : null,
+                coupon_code: same ? (prev.coupon_code || null) : null
+            };
+            // Primul loc blocat pe server pornește timerul de la zero, chiar dacă biletele erau deja în coș
+            if (same && part.seats && part.seats.length && !(prev.seats || []).length) { next.expires_at = Date.now() + SEAT_HOLD_MS; }
+            // Locurile din alt eveniment rămân blocate degeaba: le eliberăm
+            if (prev && !same && (prev.seats || []).length) { Cart.releaseSeats(prev, prev.seats.map(function (x) { return x.seat_uid; })); }
+            Cart.set(next);
+        },
         count: function (cart) {
             cart = cart === undefined ? Cart.get() : cart;
             return cart ? cart.items.reduce(function (n, i) { return n + i.qty; }, 0) + (cart.seats || []).length : 0;
@@ -62,11 +80,13 @@
         // Cheia unei linii din coș: același tip de bilet poate apărea pe zile / intervale diferite
         lineKey: function (i) { return [i.ticket_type_id, i.visit_date || '', i.slot_time || '', i.capacity_id || ''].join('|'); },
         payload: function (cart) {
+            // Locurile numerotate și biletele fără loc (peluză, acces general) pot sta în aceeași comandă
             var out = { event_id: cart.event.id };
             if (cart.seats && cart.seats.length) {
                 out.event_seating_id = cart.event_seating_id;
                 out.seats = cart.seats.map(function (x) { return { seat_uid: x.seat_uid, price: x.price, label: x.label }; });
-            } else {
+            }
+            if (cart.items && cart.items.length) {
                 // Rezervările (leisure) trimit și ziua, intervalul și capacitatea; core le verifică și le rezervă
                 out.items = cart.items.map(function (i) {
                     var it = { ticket_type_id: i.ticket_type_id, quantity: i.qty };
@@ -338,17 +358,14 @@
                 save: function () {
                     var self = this;
                     if (!this.count) { toast(t('Alege cel puțin un bilet.')); return; }
-                    var prev = Cart.get(), same = prev && prev.event.id === this.event.id;
-                    Cart.set({
-                        event: this.event,
+                    // La aceeași competiție păstrăm locurile, timerul și codul; la alta pornim de la zero
+                    Cart.merge(this.event, {
                         items: types.filter(function (t) { return self.qty[t.id] > 0; }).map(function (t) {
                             return { ticket_type_id: t.id, name: t.name, price: t.price, qty: self.qty[t.id] };
-                        }),
-                        // La aceeași competiție păstrăm timerul și codul; la alta pornim de la zero
-                        expires_at: same ? prev.expires_at : null,
-                        coupon_code: same ? (prev.coupon_code || null) : null
+                        })
                     });
-                    window.location.href = '/cos';
+                    // Sertarul coșului arată timerul de rezervare și drumul spre plată
+                    if (TS.Drawer) { TS.Drawer.open(); } else { window.location.href = '/cos'; }
                 }
             };
         });
@@ -476,13 +493,7 @@
                 },
                 // Coșul urmărește selecția în timp real, ca locurile blocate să nu se piardă la un refresh
                 persist: function () {
-                    var prev = Cart.get(), same = prev && prev.event.id === this.event.id && prev.seats.length;
-                    if (!this.selected.length) { if (prev && prev.event.id === this.event.id) { Cart.clear(); } return; }
-                    Cart.set({
-                        event: this.event, items: [], seats: this.selected.slice(), event_seating_id: this.eventSeatingId,
-                        expires_at: same ? prev.expires_at : Date.now() + SEAT_HOLD_MS,
-                        coupon_code: same ? (prev.coupon_code || null) : null
-                    });
+                    Cart.merge(this.event, { seats: this.selected.slice(), event_seating_id: this.eventSeatingId });
                 },
                 save: function () {
                     if (!this.selected.length) { toast(t('Alege cel puțin un loc.')); return; }

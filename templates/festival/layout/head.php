@@ -9,6 +9,14 @@ require_once TEMPLATE_DIR . '/lib.php';
 $pageTitle       = $pageTitle       ?? SITE_NAME;
 $pageDescription = $pageDescription ?? (site('branding.description') ?: t('Bilete, lineup și program — {name}.', ['name' => SITE_NAME]));
 $pageImage       = $pageImage       ?? (fest_event()['hero_image_url'] ?? null);
+// Festivalul ca eveniment (Festival), cu artiștii din lineup, pe paginile proprii ale template-ului
+if (!isset($pageSchema) && !defined('TS_SHARED_PAGE') && ($fe = fest_event())) {
+    $names = [];
+    foreach ((array) (fest_lineup()['slots'] ?? []) as $sl) {
+        if (!empty($sl['name'])) { $names[$sl['name']] = ['name' => $sl['name'], 'type' => 'PerformingGroup']; }
+    }
+    $pageSchema = [ts_event_schema($fe, ['type' => 'Festival', 'url' => '/', 'performers' => array_values(array_slice($names, 0, 40))])];
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= ts_locale() ?>">
@@ -17,13 +25,7 @@ $pageImage       = $pageImage       ?? (fest_event()['hero_image_url'] ?? null);
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= e($pageTitle) ?></title>
     <meta name="description" content="<?= e($pageDescription) ?>">
-    <?php if (SITE_PREVIEW): ?><meta name="robots" content="noindex,nofollow"><?php endif; ?>
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="<?= e(SITE_NAME) ?>">
-    <meta property="og:title" content="<?= e($pageTitle) ?>">
-    <meta property="og:description" content="<?= e($pageDescription) ?>">
-    <?php if ($pageImage): ?><meta property="og:image" content="<?= e($pageImage) ?>"><?php endif; ?>
-    <?php foreach (ts_languages() as $l): ?><link rel="alternate" hreflang="<?= $l ?>" href="<?= e(ts_lang_url($l)) ?>"><?php endforeach; ?>
+    <?= ts_seo_head(['title' => $pageTitle, 'description' => $pageDescription, 'image' => $pageImage ?? null, 'schema' => $pageSchema ?? []]) ?>
     <link rel="icon" href="<?= e(site('branding.favicon') ?: '/favicon.svg') ?>">
     <?php // înaintea lui Alpine: componentele paginii (festTickets, lineupPage …) sunt definite aici ?>
     <?php if (!defined('TS_SHARED_PAGE')): ?><script defer src="<?= e(ts_asset('fx.js')) ?>"></script><?php endif; ?>

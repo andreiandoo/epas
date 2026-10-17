@@ -15,7 +15,7 @@ $GLOBALS['lvSections'] = !isset($pageExtraStyles) && !defined('TS_SHARED_PAGE') 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="<?= e($pageDescription) ?>">
-    <?php if (SITE_PREVIEW): ?><meta name="robots" content="noindex,nofollow"><?php endif; ?>
+    <?= ts_seo_head(['title' => $pageTitle, 'description' => $pageDescription, 'image' => $pageImage ?? null, 'schema' => $pageSchema ?? []]) ?>
     <link rel="icon" href="<?= e(site('branding.favicon') ?: '/favicon.svg') ?>">
     <title><?= e($pageTitle) ?></title>
     <style><?= lv_palette_css() ?></style>

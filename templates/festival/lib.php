@@ -76,6 +76,8 @@ function fest_ticket_js(array $t): array {
         'date' => $t['valid_date'] ?? null,
         'dateLabel' => !empty($t['valid_date']) ? ts_date($t['valid_date'], true, false) : null,
         'parking' => !empty($t['is_parking']),
+        // Bilet cu loc numerotat: se alege locul pe harta sălii (seatmap.js), nu cantitatea
+        'seated' => !empty($t['has_seating']),
     ];
 }
 

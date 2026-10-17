@@ -24,7 +24,7 @@ function ts_demo_wants_frame(): bool {
         return false;
     }
     $path = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-    if (preg_match('#^/(api|assets|tpl)/|^/(robots\.txt|favicon\.(svg|ico))$#', $path)) {
+    if (preg_match('#^/(api|assets|tpl)/|^/(robots\.txt|sitemap\.xml|favicon\.(svg|ico))$#', $path)) {
         return false;
     }
     $dest = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? 'document'));

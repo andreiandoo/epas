@@ -169,8 +169,13 @@ function ts_head_assets(): string {
 function ts_commerce_assets(): string {
     $file = TS_ROOT . '/public/assets/shared/commerce.js';
     $cfg = ['api' => API_BASE, 'host' => ts_host(), 'eventsUrl' => ts_link('events'), 'locale' => ts_locale()];
+    $v = fn (string $name) => '/assets/shared/' . $name . '?v=' . (is_file(TS_ROOT . '/public/assets/shared/' . $name) ? filemtime(TS_ROOT . '/public/assets/shared/' . $name) : 1);
+    // chrome.js: sertarul coșului, timerul de rezervare, bara de derulare; seatmap.js: harta de locuri
     return '<script>window.TS_CFG=' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';window.TS_I18N=' . ts_js_catalog() . ';</script>'
-        . '<script defer src="/assets/shared/commerce.js?v=' . (is_file($file) ? filemtime($file) : 1) . '"></script>';
+        . '<link rel="stylesheet" href="' . e($v('chrome.css')) . '">'
+        . '<script defer src="/assets/shared/commerce.js?v=' . (is_file($file) ? filemtime($file) : 1) . '"></script>'
+        . '<script defer src="' . e($v('chrome.js')) . '"></script>'
+        . '<script defer src="' . e($v('seatmap.js')) . '"></script>';
 }
 
 /** Versiunile fixate ale bibliotecilor de animație (UI_RESOURCES.md: niciodată „latest”). */

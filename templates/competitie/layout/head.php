@@ -15,12 +15,7 @@ $pageImage       = $pageImage       ?? (site('branding.logo') ?: null);
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= e($pageTitle) ?></title>
     <meta name="description" content="<?= e($pageDescription) ?>">
-    <?php if (SITE_PREVIEW): ?><meta name="robots" content="noindex,nofollow"><?php endif; ?>
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="<?= e(SITE_NAME) ?>">
-    <meta property="og:title" content="<?= e($pageTitle) ?>">
-    <meta property="og:description" content="<?= e($pageDescription) ?>">
-    <?php if ($pageImage): ?><meta property="og:image" content="<?= e($pageImage) ?>"><?php endif; ?>
+    <?= ts_seo_head(['title' => $pageTitle, 'description' => $pageDescription, 'image' => $pageImage ?? null, 'schema' => $pageSchema ?? []]) ?>
     <link rel="icon" href="<?= e(site('branding.favicon') ?: '/favicon.svg') ?>">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <?= ts_head_assets() ?>

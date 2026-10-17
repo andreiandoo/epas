@@ -11,6 +11,7 @@ foreach ((array) ($ev['ticket_types'] ?? []) as $t) {
     $types[] = [
         'id' => (int) $t['id'], 'name' => (string) $t['name'], 'description' => (string) ($t['description'] ?? ''),
         'price' => $price, 'perks' => array_values((array) ($t['perks'] ?? [])),
+        'seated' => !empty($t['has_seating']),
         'soldOut' => $avail !== null && (int) $avail <= 0, 'left' => $avail !== null && (int) $avail > 0 && (int) $avail <= 20 ? (int) $avail : null,
     ];
 }
@@ -18,7 +19,9 @@ if (!$types) {
     echo '<p class="gx-empty">' . te('Biletele se pun în vânzare în curând.') . '</p>';
     return;
 }
-$cfg = ['event' => gx_cart_event($ev), 'types' => $types];
+// Zonele cu locuri numerotate se cumpără din hartă; în coșul cu cantități intră doar celelalte
+$cfg = ['event' => gx_cart_event($ev), 'types' => array_values(array_filter($types, fn ($t) => !$t['seated']))];
+$seatEvent = e(json_encode(gx_cart_event($ev), JSON_UNESCAPED_UNICODE));
 $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT;
 $top = count($types) - 1;
 ?>
@@ -37,6 +40,8 @@ $top = count($types) - 1;
                 <b class="gx-price"><?= e(gx_money($t['price'])) ?></b>
                 <?php if ($t['soldOut']): ?>
                 <span class="gx-chip"><?= te('Epuizat') ?></span>
+                <?php elseif ($t['seated']): ?>
+                <button type="button" class="gx-btn gx-btn--sm" data-ts-seatmap="<?= $seatEvent ?>"><?= te('Alege locul pe hartă') ?></button>
                 <?php else: ?>
                 <div class="gx-qty" role="group" aria-label="<?= te('Cantitate') ?> — <?= e($t['name']) ?>">
                     <button type="button" @click="dec(<?= $id ?>)" :disabled="!qty[<?= $id ?>]" aria-label="<?= te('Scade') ?>">−</button>

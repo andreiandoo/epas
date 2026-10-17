@@ -72,7 +72,8 @@ function ts_render_sections_page(string $key): void {
     $pageTitle = $key === 'home'
         ? SITE_NAME . ($title !== '' ? ' — ' . $title : '')
         : ($title !== '' ? $title . ' — ' : '') . SITE_NAME;
-    $pageDescription = site('branding.description') ?: null;
+    // Descrierea pentru Google: a paginii (panou), altfel a site-ului
+    $pageDescription = trim((string) ($page['description'] ?? '')) ?: (site('branding.description') ?: null);
     $activeNav = $page['path'] ?? '';
 
     include ts_layout('head');
