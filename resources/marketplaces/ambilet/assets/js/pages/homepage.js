@@ -1,72 +1,138 @@
 // 3D Poster Stack Carousel Module
 const HeroSlider = {
     events: [],
+    banners: [],
+    slides: [], // events + custom banners, filtered for the current layout
     currentIndex: 0,
     autoplayInterval: null,
     autoplayDelay: 2000, // 2 seconds
+    // Mobile shows vertical posters; desktop/tablet the landscape images.
+    mobileQuery: window.matchMedia('(max-width: 767px)'),
 
     async init() {
         try {
             const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
-            if (response.data && response.data.events && response.data.events.length > 0) {
-                this.events = response.data.events;
+            const data = response.data || {};
+            this.events = Array.isArray(data.events) ? data.events : [];
+            this.banners = Array.isArray(data.banners) ? data.banners : [];
+            this.build();
+            if (this.slides.length > 0) {
                 this.render();
                 this.renderDots();
                 this.updatePositions();
                 this.bindEvents();
                 this.startAutoplay();
             } else {
-                const section = document.getElementById('heroSlider');
-                if (section) section.style.display = 'none';
+                this.hide();
             }
         } catch (error) {
             console.warn('Failed to load hero events:', error);
-            const section = document.getElementById('heroSlider');
-            if (section) section.style.display = 'none';
+            this.hide();
         }
+    },
+
+    hide() {
+        const section = document.getElementById('heroSlider');
+        if (section) section.style.display = 'none';
+    },
+
+    // Normalize events + banners into one slide list for the current layout.
+    // Banners go in at their 1-based `position`; past the end they are appended.
+    build() {
+        const mobile = this.mobileQuery.matches;
+
+        const slides = this.events.map((event) => {
+            const landscape = event.homepage_featured_image || event.featured_image || event.hero_image_url || event.image;
+            const portrait = event.poster_url || event.image || landscape;
+            const city = event.venue_city || event.city || '';
+            const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
+            return {
+                href: '/bilete/' + (event.slug || ''),
+                newTab: false,
+                image: getStorageUrl(mobile ? portrait : landscape),
+                title: event.title || event.name || 'Eveniment',
+                subtitle: '',
+                location: city ? (venue ? city + ', ' + venue : city) : venue,
+                price: event.price_from || '',
+                overlay: true
+            };
+        });
+
+        this.banners.forEach((banner) => {
+            const image = mobile ? banner.image_vertical : banner.image_horizontal;
+            if (!image || !banner.url) return;
+            const slide = {
+                href: banner.url,
+                newTab: !!banner.open_in_new_tab,
+                image: getStorageUrl(image),
+                title: banner.title || '',
+                subtitle: banner.subtitle || '',
+                location: '',
+                price: '',
+                overlay: !!(banner.title || banner.subtitle),
+                banner: true
+            };
+            const at = Math.max(0, (parseInt(banner.position, 10) || 1) - 1);
+            slides.splice(Math.min(at, slides.length), 0, slide);
+        });
+
+        this.slides = slides;
+        if (this.currentIndex >= slides.length) this.currentIndex = 0;
     },
 
     render() {
         const container = document.getElementById('heroCarousel');
-        if (!container || this.events.length === 0) return;
+        if (!container || this.slides.length === 0) return;
 
-        container.innerHTML = this.events.map((event, index) => {
-            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.hero_image_url || event.image);
-            const title = this.escapeHtml(event.title || event.name || 'Eveniment');
-            const city = event.venue_city || event.city || '';
-            const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
-            const locationText = city ? (venue ? city + ', ' + venue : city) : venue;
-            const priceFrom = event.price_from ? '<span class="text-sm text-muted">De la</span> ' + event.price_from + ' Lei' : '';
+        container.innerHTML = this.slides.map((slide, index) => {
+            const title = this.escapeHtml(slide.title);
+            const alt = title || 'Banner';
+            const priceFrom = slide.price ? '<span class="text-sm text-muted">De la</span> ' + this.escapeHtml(String(slide.price)) + ' Lei' : '';
+            const target = slide.newTab ? ' target="_blank" rel="noopener"' : '';
 
-            return '<div class="hero-item" data-index="' + index + '" style="--r: ' + (index - this.currentIndex) + ';">' +
-                '<a href="/bilete/' + (event.slug || '') + '" class="hero-item-inner">' +
-                    '<img src="' + image + '" alt="' + title + '" loading="' + (index < 5 ? 'eager' : 'lazy') + '">' +
-                    '<div class="hero-item-overlay"></div>' +
-
+            let content = '';
+            if (slide.overlay) {
+                content = '<div class="hero-item-overlay"></div>' +
                     '<div class="hero-item-content">' +
-                        '<h3 class="hero-item-title">' + title + '</h3>' +
-                        '<div class="hero-item-meta">' +
-                            (locationText ? '<span class="hero-item-location"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(locationText) + '</span>' : '') +
+                        (title ? '<h3 class="hero-item-title">' + title + '</h3>' : '') +
+                        (slide.subtitle ? '<p class="hero-item-subtitle">' + this.escapeHtml(slide.subtitle) + '</p>' : '') +
+                        ((slide.location || priceFrom) ? '<div class="hero-item-meta">' +
+                            (slide.location ? '<span class="hero-item-location"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(slide.location) + '</span>' : '') +
                             (priceFrom ? '<span class="hero-item-price">' + priceFrom + '</span>' : '') +
-                        '</div>' +
-                    '</div>' +
+                        '</div>' : '') +
+                    '</div>';
+            }
+
+            return '<div class="hero-item' + (slide.banner ? ' hero-item-banner' : '') + '" data-index="' + index + '" style="--r: ' + (index - this.currentIndex) + ';">' +
+                '<a href="' + this.escapeHtml(slide.href) + '"' + target + ' class="hero-item-inner">' +
+                    '<img src="' + this.escapeHtml(String(slide.image || '')) + '" alt="' + alt + '" loading="' + (index < 5 ? 'eager' : 'lazy') + '">' +
+                    content +
                 '</a>' +
             '</div>';
         }).join('');
+    },
+
+    // Layout switch (rotation / resize across the mobile breakpoint).
+    rebuild() {
+        this.build();
+        if (this.slides.length === 0) return;
+        this.render();
+        this.renderDots();
+        this.updatePositions();
     },
 
     renderDots() {
         const dotsContainer = document.getElementById('heroDots');
         if (!dotsContainer) return;
 
-        dotsContainer.innerHTML = this.events.map((_, index) =>
+        dotsContainer.innerHTML = this.slides.map((_, index) =>
             '<button class="hero-dot' + (index === 0 ? ' active' : '') + '" data-index="' + index + '"></button>'
         ).join('');
     },
 
     updatePositions() {
         const items = document.querySelectorAll('.hero-item');
-        const total = this.events.length;
+        const total = this.slides.length;
 
         items.forEach((item, index) => {
             let r = index - this.currentIndex;
@@ -91,7 +157,7 @@ const HeroSlider = {
     },
 
     goToSlide(index) {
-        const total = this.events.length;
+        const total = this.slides.length;
         if (index < 0) index = total - 1;
         if (index >= total) index = 0;
         this.currentIndex = index;
@@ -108,7 +174,7 @@ const HeroSlider = {
 
     startAutoplay() {
         this.stopAutoplay();
-        if (this.events.length > 1) {
+        if (this.slides.length > 1) {
             this.autoplayInterval = setInterval(() => this.next(), this.autoplayDelay);
         }
     },
@@ -149,6 +215,11 @@ const HeroSlider = {
                 }
             });
         }
+
+        // Swap poster/landscape images when crossing the mobile breakpoint
+        const onLayoutChange = () => this.rebuild();
+        if (this.mobileQuery.addEventListener) this.mobileQuery.addEventListener('change', onLayoutChange);
+        else if (this.mobileQuery.addListener) this.mobileQuery.addListener(onLayoutChange);
 
         // Pause on hover
         if (heroSection) {

@@ -365,6 +365,7 @@ class AppServiceProvider extends ServiceProvider
             'events/hero',
             'events/posters',
             'gift-card-designs',
+            'hero-banners',
             'imports',
             'organizer-documents',
             'seating/backgrounds',

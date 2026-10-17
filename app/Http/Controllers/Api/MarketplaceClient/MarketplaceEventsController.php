@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Event;
 use App\Models\MarketplaceCity;
 use App\Models\MarketplaceEventCategory;
+use App\Models\MarketplaceHeroBanner;
 use App\Models\MarketplaceOrganizer;
 use App\Models\ServiceOrder;
 use App\Models\Platform\CoreCustomerEvent;
@@ -698,6 +699,26 @@ class MarketplaceEventsController extends BaseController
             ->limit(min((int) $request->input('limit', 10), 50))
             ->get()
             ->map(fn ($event) => $this->formatEventWithFeaturedImage($event, $language, $client));
+
+        // Homepage hero: custom banners (Content → Bannere homepage) are mixed
+        // in client-side at their `position`.
+        if ($featuredType === 'homepage') {
+            try {
+                $banners = MarketplaceHeroBanner::where('marketplace_client_id', $client->id)
+                    ->live()
+                    ->orderBy('position')
+                    ->orderBy('id')
+                    ->get()
+                    ->map(fn (MarketplaceHeroBanner $b) => $b->toApiArray())
+                    ->values();
+            } catch (\Throwable $e) {
+                // Table missing before migrate — never break the hero for it.
+                Log::warning('Hero banners unavailable: ' . $e->getMessage());
+                $banners = [];
+            }
+
+            return $this->success(['events' => $events, 'banners' => $banners]);
+        }
 
         return $this->success(['events' => $events]);
     }
