@@ -150,9 +150,12 @@ const HeroSlider = {
             item.style.filter = 'brightness(' + (1 - 0.15 * abs) + ')';
             item.style.pointerEvents = abs > maxAbs ? 'none' : 'auto';
             // Side slides get a dark gradient from their outer edge (CSS)
+            // (center keeps its last side class so the gradient fades out smoothly)
             item.classList.toggle('is-center', r === 0);
-            item.classList.toggle('is-left', r > 0);
-            item.classList.toggle('is-right', r < 0);
+            if (r !== 0) {
+                item.classList.toggle('is-left', r > 0);
+                item.classList.toggle('is-right', r < 0);
+            }
         });
 
         // Update dots
