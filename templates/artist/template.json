@@ -1,0 +1,217 @@
+{
+    "name": "Artist solo",
+    "description": "Site de artist construit pe era albumului curent: afiș pe tot ecranul, turneul cu bilete, concert cu locuri numerotate pe hartă, album, video și despre. Pentru cântăreți și artiști solo.",
+    "version": 1,
+    "category": "Muzică",
+    "kind": "events",
+    "status": "ready",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": ["lenis", "gsap"],
+    "tailwind_preflight": true,
+
+    "settings": [
+        { "name": "featured_slug", "type": "text", "label": "Concertul din afiș (slug)", "default": "", "help": "Gol = următorul concert" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#F1F2F4",
+            "surface": "#E3E6EB",
+            "panel": "#FFFFFF",
+            "fg": "#0B0D12",
+            "muted": "#5D6470",
+            "primary": "#2343FF",
+            "accent": "#FF5A36"
+        },
+        "fonts": {
+            "display": "Archivo",
+            "body": "DM Sans"
+        }
+    },
+
+    "links": {
+        "events": "/turneu",
+        "catalog": "/turneu",
+        "event": "/concert/{slug}"
+    },
+
+    "routes": {
+        "/turneu": "turneu.php",
+        "/concert/{slug}": "concert.php"
+    },
+
+    "nav": [
+        { "label": "Turneu", "url": "/turneu" },
+        { "label": "Muzică", "url": "/#muzica" },
+        { "label": "Video", "url": "/#video" },
+        { "label": "Despre", "url": "/#despre" }
+    ],
+
+    "header_cta": { "label": "Bilete", "url": "/turneu" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Turneu, bilete și muzică",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Albumul nou · Ora albastră",
+                    "image": "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=2000&q=82",
+                    "button_label": "Bilete pentru turneu",
+                    "listen_label": "Ascultă albumul",
+                    "listen_url": "#muzica",
+                    "en": { "eyebrow": "New album · Blue Hour", "button_label": "Tour tickets", "listen_label": "Listen to the album" }
+                } },
+                { "type": "next_show", "data": {
+                    "eyebrow": "Următorul concert",
+                    "button_label": "Cumpără bilete",
+                    "en": { "eyebrow": "Next show", "button_label": "Buy tickets" }
+                } },
+                { "type": "tour", "data": {
+                    "eyebrow": "Turneu",
+                    "title": "Ora albastră Tour",
+                    "limit": "8",
+                    "button_label": "Toate datele",
+                    "en": { "eyebrow": "Tour", "title": "Blue Hour Tour", "button_label": "All dates" }
+                } },
+                { "type": "release", "data": {
+                    "eyebrow": "Albumul nou",
+                    "title": "Ora albastră",
+                    "year": "2026",
+                    "text": "Unsprezece piese scrise între două plecări: despre orașe văzute din tren, prieteni care rămân și lumina din minutele de dinaintea nopții.",
+                    "cover": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=82",
+                    "tracks": [
+                        { "title": "Ora albastră", "length": "3:42" },
+                        { "title": "Tren de noapte", "length": "3:15" },
+                        { "title": "Sticlă", "length": "4:01" },
+                        { "title": "Nu mai sun", "length": "2:58" },
+                        { "title": "Iarna în Cluj", "length": "3:37" },
+                        { "title": "Dacă rămâi", "length": "4:20" }
+                    ],
+                    "spotify_url": "https://open.spotify.com/",
+                    "apple_url": "https://music.apple.com/",
+                    "youtube_url": "https://music.youtube.com/",
+                    "en": {
+                        "eyebrow": "New album",
+                        "title": "Blue Hour",
+                        "text": "Eleven songs written between departures: about cities seen from a train, friends who stay and the light in the minutes before night.",
+                        "tracks": [
+                            { "title": "Blue Hour", "length": "3:42" },
+                            { "title": "Night Train", "length": "3:15" },
+                            { "title": "Glass", "length": "4:01" },
+                            { "title": "I Won’t Call", "length": "2:58" },
+                            { "title": "Winter in Cluj", "length": "3:37" },
+                            { "title": "If You Stay", "length": "4:20" }
+                        ]
+                    }
+                } },
+                { "type": "video", "data": {
+                    "eyebrow": "Video",
+                    "title": "Ora albastră (live din repetiții)",
+                    "youtube_id": "",
+                    "poster": "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1800&q=80",
+                    "en": { "title": "Blue Hour (live from rehearsals)" }
+                } },
+                { "type": "about", "data": {
+                    "eyebrow": "Despre",
+                    "title": "Cânt despre locurile de unde pleci",
+                    "text": "Iris a crescut în Brașov, a studiat pian în Cluj și a scris primele piese în trenurile de noapte dintre cele două orașe.\n\nDupă două EP-uri și un an de concerte în cluburi, „Ora albastră” e primul ei album și primul turneu cu trupa completă.",
+                    "image": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=80",
+                    "en": {
+                        "eyebrow": "About",
+                        "title": "Songs about the places you leave",
+                        "text": "Iris grew up in Brașov, studied piano in Cluj and wrote her first songs on the night trains between the two cities.\n\nAfter two EPs and a year of club shows, Blue Hour is her first album and her first tour with the full band."
+                    }
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Turneu",
+                    "title": "Ne vedem în sală",
+                    "button_label": "Alege orașul",
+                    "en": { "eyebrow": "Tour", "title": "See you at the show", "button_label": "Pick your city" }
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Afișul (portret pe tot ecranul)",
+            "icon": "heroicon-o-sparkles",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu (albumul, era)" },
+                { "name": "title", "type": "text", "label": "Numele mare", "help": "Gol = numele site-ului" },
+                { "name": "image", "type": "image", "label": "Portret" },
+                { "name": "button_label", "type": "text", "label": "Buton bilete — text" },
+                { "name": "listen_label", "type": "text", "label": "Buton muzică — text" },
+                { "name": "listen_url", "type": "text", "label": "Buton muzică — link" }
+            ]
+        },
+        "next_show": {
+            "label": "Următorul concert (din core)",
+            "icon": "heroicon-o-ticket",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "tour": {
+            "label": "Datele turneului (din core)",
+            "icon": "heroicon-o-map",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "limit", "type": "text", "label": "Câte date arată" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "release": {
+            "label": "Albumul",
+            "icon": "heroicon-o-musical-note",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlul albumului" },
+                { "name": "year", "type": "text", "label": "Anul" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "cover", "type": "image", "label": "Coperta" },
+                { "name": "tracks", "type": "repeater", "label": "Piese", "fields": [
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "length", "type": "text", "label": "Durata" }
+                ] },
+                { "name": "spotify_url", "type": "text", "label": "Link Spotify" },
+                { "name": "apple_url", "type": "text", "label": "Link Apple Music" },
+                { "name": "youtube_url", "type": "text", "label": "Link YouTube Music" }
+            ]
+        },
+        "video": {
+            "label": "Video",
+            "icon": "heroicon-o-play-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "youtube_id", "type": "text", "label": "ID-ul videoclipului YouTube", "help": "Partea de după watch?v= din link. Gol = doar imaginea." },
+                { "name": "poster", "type": "image", "label": "Imagine (până pornește videoclipul)" }
+            ]
+        },
+        "about": {
+            "label": "Despre",
+            "icon": "heroicon-o-user",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "image", "type": "image", "label": "Fotografie" }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn final",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        }
+    }
+}
