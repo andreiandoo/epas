@@ -159,6 +159,7 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/account/gift-cards', [TenantAccountController::class, 'giftCards'])->name('api.tenant-client-public.account.gift-cards');
     Route::post('/account/gift-cards/redeem', [TenantAccountController::class, 'redeemGiftCard'])->name('api.tenant-client-public.account.gift-cards.redeem');
     Route::post('/account/gift-cards/purchase', [TenantAccountController::class, 'purchaseGiftCard'])->name('api.tenant-client-public.account.gift-cards.purchase');
+    Route::get('/gift-cards/{code}', [TenantAccountController::class, 'checkGiftCard'])->middleware('throttle:20,1')->name('api.tenant-client-public.gift-cards.check');
 
     // Leisure public (tenant_type=leisure). 404 pentru orice alt tenant, deci
     // nu schimbă nimic pentru tenanții existenți. Consumate de storefront-ul

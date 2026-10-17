@@ -758,8 +758,9 @@ class CustomerAccountController extends Controller
             return response()->json(['success' => true, 'data' => ['balance' => $card->balance_cents / 100]]);
         }
 
-        // Mod demo: acceptă orice cod în formatul TC-GIFT-XXXX și emite un card nou.
-        if (! preg_match('/^TC-GIFT-[A-Z0-9]{3,}$/', $code)) {
+        // Mod demo: acceptă orice cod în formatul TC-GIFT-XXXX și emite un card nou
+        // (doar pe site-urile de prezentare; altfel ar fi bani din nimic).
+        if (! \App\Support\DemoCheckout::allowed($tenant) || ! preg_match('/^TC-GIFT-[A-Z0-9]{3,}$/', $code)) {
             return response()->json(['success' => false, 'error' => 'Cod card cadou invalid.'], 422);
         }
         $card = TenantGiftCard::create([
@@ -775,12 +776,44 @@ class CustomerAccountController extends Controller
         return response()->json(['success' => true, 'data' => ['balance' => $card->balance_cents / 100]]);
     }
 
+    /**
+     * Verificarea publică a unui card cadou după cod (pagina „Voucher” a site-ului):
+     * doar starea și soldul, fără date despre cumpărător sau destinatar.
+     */
+    public function checkGiftCard(Request $request, string $code): JsonResponse
+    {
+        $resolved = $this->resolveRequestTenantWithDomain($request);
+        if (! $resolved) {
+            return response()->json(['success' => false, 'error' => 'Tenant not found'], 404);
+        }
+        $code = strtoupper(trim($code));
+        $card = strlen($code) <= 64
+            ? TenantGiftCard::where('tenant_id', $resolved['tenant']->id)->where('code', $code)->first()
+            : null;
+        if (! $card) {
+            return response()->json(['success' => false, 'error' => 'Codul nu a fost găsit.'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => [
+            'code'     => $card->code,
+            'status'   => $card->status,
+            'balance'  => $card->balance_cents / 100,
+            'initial'  => $card->initial_cents / 100,
+            'currency' => 'RON',
+        ]]);
+    }
+
     /** Cumpărare card cadou (demo — fără procesator; emite cardul direct). */
     public function purchaseGiftCard(Request $request): JsonResponse
     {
         $ctx = $this->ctx($request);
         if ($ctx instanceof JsonResponse) { return $ctx; }
         [$tenant, $customer] = $ctx;
+
+        // Cardul se emite fără plată (gateway simulat): doar pe site-urile de prezentare.
+        if (! \App\Support\DemoCheckout::allowed($tenant)) {
+            return response()->json(\App\Support\DemoCheckout::refusal(), 403);
+        }
 
         $v = $request->validate([
             'amount'         => 'required|numeric|min:25|max:5000',

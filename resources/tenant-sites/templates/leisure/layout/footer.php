@@ -9,7 +9,9 @@ $socials = array_filter([
 $hours     = trim((string) site('settings.today_hours', ''));
 $lastEntry = trim((string) site('settings.last_entry', ''));
 $headerCta = (array) site('header_cta', []);
-$half = (int) ceil(count($navItems) / 2);
+// Paginile din secțiuni care nu sunt deja în meniu (Despre, Abonamente, Card cadou …)
+$navUrls = array_map(fn ($i) => $i['url'] ?? '', $navItems);
+$morePages = array_values(array_filter((array) site('pages', []), fn ($pg) => !empty($pg['path']) && $pg['path'] !== '/' && !in_array($pg['path'], $navUrls, true)));
 ?>
 <style>
   .nvf{background:rgb(var(--c-pine-950));color:#fff;padding:64px 16px 32px;font-family:var(--f-body)}
@@ -42,8 +44,8 @@ $half = (int) ceil(count($navItems) / 2);
         <?php if (!empty($footer['text'])): ?><p class="nvf-blurb"><?= ts_md($footer['text']) ?></p><?php endif; ?>
         <?php if ($socials): ?><div class="nvf-social"><?php foreach ($socials as $label => $url): ?><a href="<?= e(ts_href($url)) ?>" target="_blank" rel="noopener" aria-label="<?= e($label) ?>"><?= e($label) ?></a><?php endforeach; ?></div><?php endif; ?>
       </div>
-      <div class="nvf-col"><h4>Explorează</h4><?php foreach (array_slice($navItems, 0, $half) as $i): ?><a href="<?= e(ts_href($i['url'] ?? '')) ?>"><?= e($i['label'] ?? '') ?></a><?php endforeach; ?></div>
-      <div class="nvf-col"><h4>Vizită</h4><?php foreach (array_slice($navItems, $half) as $i): ?><a href="<?= e(ts_href($i['url'] ?? '')) ?>"><?= e($i['label'] ?? '') ?></a><?php endforeach; ?><?php if (!empty($footer['email'])): ?><a href="mailto:<?= e($footer['email']) ?>"><?= e($footer['email']) ?></a><?php endif; ?><?php if (!empty($footer['phone'])): ?><a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $footer['phone'])) ?>"><?= e($footer['phone']) ?></a><?php endif; ?></div>
+      <div class="nvf-col"><h4>Explorează</h4><?php foreach ($navItems as $i): ?><a href="<?= e(ts_href($i['url'] ?? '')) ?>"><?= e($i['label'] ?? '') ?></a><?php endforeach; ?></div>
+      <div class="nvf-col"><h4>Informații</h4><?php foreach ($morePages as $pg): ?><a href="<?= e($pg['path']) ?>"><?= e($pg['label'] ?? $pg['title'] ?? '') ?></a><?php endforeach; ?><?php if (!empty($footer['email'])): ?><a href="mailto:<?= e($footer['email']) ?>"><?= e($footer['email']) ?></a><?php endif; ?><?php if (!empty($footer['phone'])): ?><a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $footer['phone'])) ?>"><?= e($footer['phone']) ?></a><?php endif; ?></div>
       <div class="nvf-col"><h4>Astăzi</h4><?php if ($hours !== ''): ?><p><?= e($hours) ?></p><?php endif; ?><?php if ($lastEntry !== ''): ?><p>Ultima intrare: <?= e($lastEntry) ?></p><?php endif; ?><?php if (!empty($headerCta['label']) && !empty($headerCta['url'])): ?><a class="nvf-cta" href="<?= e(ts_href($headerCta['url'])) ?>"><?= e($headerCta['label']) ?></a><?php endif; ?></div>
     </div>
     <div class="nvf-bottom">
