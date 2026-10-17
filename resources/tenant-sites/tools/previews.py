@@ -11,7 +11,8 @@ import sys
 from playwright.sync_api import sync_playwright
 from PIL import Image
 
-OUT = r'I:\WORK\eventpilot\epas\resources\tenant-sites\templates'
+import os
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'templates')
 # template => adresa demo-ului live (?ts_shot=1 ascunde bara de cookies și bara de demo)
 DEMOS = {'teatru': 'https://demo-teatru.tics.ro/?ts_shot=1', 'competitie': 'https://demo-sport.tics.ro/?ts_shot=1'}
 if len(sys.argv) > 2:
@@ -32,7 +33,8 @@ with sync_playwright() as p:
         w, h = img.size
         img = img.crop((0, 0, w, min(h, 5200)))
         img = img.resize((960, int(img.size[1] * 960 / w)), Image.LANCZOS)
-        path = OUT + '\\' + slug + '\\assets\\preview.jpg'
+        os.makedirs(os.path.join(OUT, slug, 'assets'), exist_ok=True)
+        path = os.path.join(OUT, slug, 'assets', 'preview.jpg')
         img.save(path, 'JPEG', quality=78, optimize=True, progressive=True)
         print(slug, (w, h), '->', img.size, path)
         ctx.close()
