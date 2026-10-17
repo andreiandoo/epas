@@ -68,6 +68,7 @@ function ts_section(string $type, array $s): void {
 function ts_render_sections_page(string $key): void {
     $page = site('pages.' . $key, []);
     $title = trim((string) ($page['title'] ?? ''));
+    $title = $title !== '' ? t($title) : '';
     $pageTitle = $key === 'home'
         ? SITE_NAME . ($title !== '' ? ' — ' . $title : '')
         : ($title !== '' ? $title . ' — ' : '') . SITE_NAME;

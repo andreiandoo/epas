@@ -576,6 +576,12 @@ class Event extends Model
         );
     }
 
+    /** Fight card-ul (gale de lupte): meciurile evenimentului. */
+    public function bouts(): HasMany
+    {
+        return $this->hasMany(\App\Models\EventBout::class);
+    }
+
     public function artists(): BelongsToMany
     {
         return $this->belongsToMany(

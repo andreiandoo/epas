@@ -14,7 +14,7 @@ from PIL import Image
 import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'templates')
 # template => adresa demo-ului live (?ts_shot=1 ascunde bara de cookies și bara de demo)
-DEMOS = {'teatru': 'https://demo-teatru.tics.ro/?ts_shot=1', 'competitie': 'https://demo-sport.tics.ro/?ts_shot=1', 'leisure': 'https://demo-parc.tics.ro/?ts_shot=1', 'festival': 'https://demo-festival.tics.ro/?ts_shot=1'}
+DEMOS = {'teatru': 'https://demo-teatru.tics.ro/?ts_shot=1', 'competitie': 'https://demo-sport.tics.ro/?ts_shot=1', 'leisure': 'https://demo-parc.tics.ro/?ts_shot=1', 'festival': 'https://demo-festival.tics.ro/?ts_shot=1', 'gala': 'https://demo-mma.tics.ro/?ts_shot=1'}
 if len(sys.argv) > 2:
     DEMOS = {sys.argv[1]: sys.argv[2]}
 

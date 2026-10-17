@@ -1905,7 +1905,10 @@ class EventResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            // Doar la organizatorii de competiții (sau dacă evenimentul are deja meciuri)
+            EventResource\RelationManagers\BoutsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

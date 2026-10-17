@@ -1,0 +1,203 @@
+{
+    "name": "Gală de lupte",
+    "description": "MMA, box, kickbox: afișul galei față în față, fight card pe secțiuni, bilete pe zone, luptători cu record și rezultate. Pentru promoții și gale.",
+    "version": 1,
+    "category": "Sport & competiții",
+    "kind": "fights",
+    "status": "ready",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": ["lenis", "gsap"],
+    "tailwind_preflight": true,
+
+    "settings": [
+        { "name": "featured_slug", "type": "text", "label": "Gala din prima pagină (slug)", "default": "", "help": "Gol = următoarea gală" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#0A0A0A",
+            "surface": "#141414",
+            "panel": "#1C1C1C",
+            "fg": "#F5F5F0",
+            "muted": "#8E8E89",
+            "primary": "#E10600",
+            "accent": "#1E6BFF"
+        },
+        "fonts": {
+            "display": "Bebas Neue",
+            "body": "Barlow"
+        }
+    },
+
+    "links": {
+        "events": "/gale",
+        "catalog": "/gale",
+        "event": "/gala/{slug}",
+        "artists": "/luptatori"
+    },
+
+    "routes": {
+        "/gale": "gale.php",
+        "/gala/{slug}": "gala.php",
+        "/luptatori": "luptatori.php"
+    },
+
+    "nav": [
+        { "label": "Gale", "url": "/gale" },
+        { "label": "Fight card", "url": "/#fight-card" },
+        { "label": "Luptători", "url": "/luptatori" },
+        { "label": "Rezultate", "url": "/gale#rezultate" }
+    ],
+
+    "header_cta": { "label": "Bilete", "url": "/#bilete" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Gale și bilete",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Următoarea gală",
+                    "button_label": "Cumpără bilete",
+                    "card_label": "Vezi fight card-ul",
+                    "en": { "eyebrow": "Next fight night", "button_label": "Buy tickets", "card_label": "See the fight card" }
+                } },
+                { "type": "fight_card", "data": {
+                    "eyebrow": "Fight card",
+                    "title": "Cine intră în cușcă",
+                    "en": { "title": "Who steps into the cage" }
+                } },
+                { "type": "tickets", "data": {
+                    "eyebrow": "Bilete",
+                    "title": "Alege-ți locul",
+                    "lead": "De la peluză la cageside: cu cât ești mai aproape, cu atât simți fiecare lovitură.",
+                    "note": "Biletele ajung pe email, cu cod QR. Porțile se deschid cu o oră înainte de primul meci.",
+                    "en": {
+                        "eyebrow": "Tickets",
+                        "title": "Pick your seat",
+                        "lead": "From standing to cageside: the closer you are, the more you feel every strike.",
+                        "note": "Tickets arrive by email with a QR code. Doors open an hour before the first bout."
+                    }
+                } },
+                { "type": "champions", "data": {
+                    "eyebrow": "Campioni",
+                    "title": "Cine deține centurile",
+                    "en": { "eyebrow": "Champions", "title": "Who holds the belts" }
+                } },
+                { "type": "upcoming", "data": {
+                    "eyebrow": "Urmează",
+                    "title": "Galele sezonului",
+                    "en": { "eyebrow": "Coming up", "title": "This season’s fight nights" }
+                } },
+                { "type": "results", "data": {
+                    "eyebrow": "Rezultate",
+                    "title": "Ce s-a întâmplat ultima dată",
+                    "en": { "eyebrow": "Results", "title": "What happened last time" }
+                } },
+                { "type": "faq", "data": {
+                    "eyebrow": "Întrebări",
+                    "title": "Înainte de gală",
+                    "faqs": [
+                        { "q": "La ce oră încep meciurile?", "a": "Porțile se deschid cu o oră înainte de preliminarii. Main card-ul începe la aproximativ două ore după primul meci." },
+                        { "q": "Pot intra cu copii?", "a": "Accesul e permis de la 14 ani; între 14 și 18 ani doar însoțit de un adult." },
+                        { "q": "Ce se întâmplă dacă se schimbă un meci?", "a": "Schimbările de adversar sunt frecvente în sporturile de luptă și nu duc la returnarea biletului. Dacă se anulează main event-ul, te anunțăm pe email cu opțiunile." },
+                        { "q": "Cum primesc biletele?", "a": "Pe email, imediat după plată, cu câte un cod QR. Le găsești și în contul tău." }
+                    ],
+                    "en": {
+                        "eyebrow": "Questions",
+                        "title": "Before fight night",
+                        "faqs": [
+                            { "q": "What time do the fights start?", "a": "Doors open an hour before the prelims. The main card starts roughly two hours after the first bout." },
+                            { "q": "Can I bring children?", "a": "Entry is from 14; between 14 and 18 only with an adult." },
+                            { "q": "What if a bout changes?", "a": "Opponent changes are common in combat sports and don’t qualify for a refund. If the main event is cancelled, we’ll email you with your options." },
+                            { "q": "How do I get my tickets?", "a": "By email, right after payment, each with a QR code. They’re also in your account." }
+                        ]
+                    }
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Nu rata",
+                    "title": "Locurile de lângă cușcă se termină primele",
+                    "button_label": "Cumpără bilete",
+                    "en": { "eyebrow": "Don’t miss it", "title": "Cageside seats go first", "button_label": "Buy tickets" }
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Afișul galei (din core)",
+            "icon": "heroicon-o-fire",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "button_label", "type": "text", "label": "Buton bilete — text" },
+                { "name": "card_label", "type": "text", "label": "Buton fight card — text" }
+            ]
+        },
+        "fight_card": {
+            "label": "Fight card (din core)",
+            "icon": "heroicon-o-queue-list",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" }
+            ]
+        },
+        "tickets": {
+            "label": "Bilete (din core)",
+            "icon": "heroicon-o-ticket",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "lead", "type": "textarea", "label": "Text" },
+                { "name": "note", "type": "text", "label": "Notă sub bilete" }
+            ]
+        },
+        "champions": {
+            "label": "Campioni (din core)",
+            "icon": "heroicon-o-trophy",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" }
+            ]
+        },
+        "upcoming": {
+            "label": "Galele următoare (din core)",
+            "icon": "heroicon-o-calendar",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" }
+            ]
+        },
+        "results": {
+            "label": "Rezultatele ultimei gale (din core)",
+            "icon": "heroicon-o-check-badge",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" }
+            ]
+        },
+        "faq": {
+            "label": "Întrebări frecvente",
+            "icon": "heroicon-o-question-mark-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "faqs", "type": "repeater", "label": "Întrebări", "fields": [
+                    { "name": "q", "type": "text", "label": "Întrebare" },
+                    { "name": "a", "type": "textarea", "label": "Răspuns" }
+                ] }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn final",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        }
+    }
+}

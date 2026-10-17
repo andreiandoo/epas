@@ -42,6 +42,7 @@ class ArtistResource extends Resource
     {
         $tenant = auth()->user()->tenant;
         $isTheater = (bool) ($tenant?->isTheater());
+        $isCompetition = $tenant?->tenant_type === \App\Enums\TenantType::Competition;
 
         return $schema->schema([
             Forms\Components\Hidden::make('tenant_id')->default($tenant?->id),
@@ -112,6 +113,8 @@ class ArtistResource extends Resource
                     Forms\Components\TextInput::make('role')
                         ->label('Rol / Funcție')
                         ->placeholder(__('Actor, Regizor, Scenograf...'))
+                        ->helperText($isCompetition ? 'Pentru luptători scrie „fighter”: apare profilul sportiv mai jos.' : null)
+                        ->live(onBlur: true)
                         ->maxLength(120),
                     Forms\Components\DatePicker::make('birth_date')
                         ->label('Data nașterii')
@@ -120,6 +123,26 @@ class ArtistResource extends Resource
                         ->maxDate(now())
                         ->visible($isTheater),
                 ])->columns(2),
+
+            // Profilul sportiv (gale de lupte): fight card-ul și pagina luptătorilor citesc din meta
+            SC\Section::make('Profil de luptător')
+                ->description('Recordul, categoria și datele afișate în fight card și pe pagina luptătorilor.')
+                ->visible(fn (SGet $get) => $get('role') === 'fighter')
+                ->schema([
+                    Forms\Components\TextInput::make('meta.nickname')->label('Poreclă')->maxLength(60),
+                    Forms\Components\TextInput::make('meta.country')->label('Țara (cod ISO, ex. RO)')->maxLength(2),
+                    Forms\Components\TextInput::make('meta.weight_class')->label('Categoria')->placeholder('Ușoară (70 kg)')->maxLength(64),
+                    Forms\Components\Select::make('meta.discipline')->label('Disciplina')->options(\App\Models\EventBout::DISCIPLINES),
+                    Forms\Components\TextInput::make('meta.record.w')->label('Victorii')->numeric()->minValue(0),
+                    Forms\Components\TextInput::make('meta.record.l')->label('Înfrângeri')->numeric()->minValue(0),
+                    Forms\Components\TextInput::make('meta.record.d')->label('Egaluri')->numeric()->minValue(0),
+                    Forms\Components\TextInput::make('meta.team')->label('Echipa / sala')->maxLength(80),
+                    Forms\Components\TextInput::make('meta.height_cm')->label('Înălțime (cm)')->numeric(),
+                    Forms\Components\TextInput::make('meta.reach_cm')->label('Anvergură (cm)')->numeric(),
+                    Forms\Components\Select::make('meta.stance')->label('Gardă')->options(['Orthodox' => 'Orthodox', 'Southpaw' => 'Southpaw', 'Switch' => 'Switch']),
+                    Forms\Components\Toggle::make('meta.is_champion')->label('Campion en titre'),
+                    Forms\Components\DatePicker::make('birth_date')->label('Data nașterii')->native(false)->displayFormat('d.m.Y')->maxDate(now()),
+                ])->columns(3),
 
             SC\Section::make('Biografie')
                 ->schema([
