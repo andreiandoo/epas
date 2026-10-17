@@ -1,0 +1,191 @@
+{
+    "name": "Competiție sportivă",
+    "description": "Întunecat, energic, cu scenă 3D în hero, numărătoare inversă și calendarul sezonului. Pentru federații, cupe, campionate, gale.",
+    "version": 1,
+    "category": "Sport & competiții",
+    "kind": "events",
+    "status": "ready",
+    "visibility": "public",
+    "motion": [],
+    "tailwind_preflight": false,
+
+    "theme": {
+        "colors": {
+            "canvas": "#01012F",
+            "surface": "#060A45",
+            "panel": "#0B1260",
+            "fg": "#F4F7FF",
+            "muted": "#9AA6CC",
+            "primary": "#1151D3",
+            "accent": "#E01020"
+        },
+        "fonts": {
+            "display": "Barlow Condensed",
+            "body": "Barlow"
+        }
+    },
+
+    "links": {
+        "events": "/competitii",
+        "catalog": "/competitii",
+        "event": "/competitii/{slug}"
+    },
+
+    "routes": {
+        "/competitii": "competitii.php",
+        "/competitii/{slug}": "competitie.php"
+    },
+
+    "nav": [
+        { "label": "Competiții", "url": "/competitii" },
+        { "label": "Despre", "url": "/despre" }
+    ],
+
+    "header_cta": { "label": "", "url": "" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Bilete la competiții",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "",
+                    "title": "Sportul *văzut din* **tribună**",
+                    "lead": "Bilete la cupele și campionatele sezonului, cumpărate online, direct de pe telefon.",
+                    "button_label": "Vezi competițiile",
+                    "button_single_label": "Cumpără bilete",
+                    "empty_label": "Calendarul competițiilor",
+                    "empty_url": "/competitii",
+                    "secondary_label": "Cum funcționează",
+                    "secondary_url": "#cum-functioneaza",
+                    "show_3d": true,
+                    "show_next": true
+                } },
+                { "type": "marquee", "data": { "words": "Kata\nKumite\nEchipe\nIndividual\nCupa României\nCampionat Național" } },
+                { "type": "spotlight", "data": { "button_label": "Alege biletele" } },
+                { "type": "season", "data": {
+                    "eyebrow": "Calendar", "title": "Mai departe în sezon", "link_label": "Tot calendarul",
+                    "one_title": "Următoarele competiții se anunță în curând",
+                    "one_text": "Deocamdată sunt bilete în vânzare la o singură competiție.",
+                    "empty_title": "Calendarul se anunță în curând",
+                    "empty_text": "Momentan nu există competiții cu bilete puse în vânzare. Urmărește anunțurile noastre.",
+                    "external_label": "", "external_url": ""
+                } },
+                { "type": "steps", "data": {
+                    "eyebrow": "Fără cozi la casă", "title": "De la bilet la tribună", "anchor": "cum-functioneaza",
+                    "items": [
+                        { "title": "Alegi biletele", "text": "Pe tipuri de bilet sau direct pe locul din tribună, acolo unde sala are locuri numerotate." },
+                        { "title": "Plătești cu cardul", "text": "Nu ai nevoie de cont. Biletele îți rămân rezervate cât completezi datele." },
+                        { "title": "Intri cu codul QR", "text": "Primești biletele pe email. Le arăți la intrare de pe telefon sau tipărite." }
+                    ]
+                } },
+                { "type": "cta_next", "data": { "ghost": "Hajime", "button_label": "Cumpără bilete" } }
+            ]
+        },
+        "about": {
+            "label": "Despre",
+            "path": "/despre",
+            "title": "Despre",
+            "sections": [
+                { "type": "page_header", "data": { "eyebrow": "Despre noi", "title": "Cine organizează", "subtitle": "" } },
+                { "type": "text", "data": {
+                    "eyebrow": "", "title": "",
+                    "text": "Scrie aici câteva rânduri despre organizator: federația, clubul sau asociația din spatele competițiilor.\n\nPoți adăuga oricâte secțiuni din panoul de personalizare.",
+                    "button_label": "Vezi competițiile", "button_url": "/competitii"
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Hero cu scenă 3D",
+            "icon": "heroicon-o-sparkles",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu", "help": "Gol = numele site-ului" },
+                { "name": "title", "type": "textarea", "label": "Titlu", "help": "*cuvânt* = cursiv, **cuvânt** = evidențiat, Enter = rând nou" },
+                { "name": "lead", "type": "textarea", "label": "Text scurt" },
+                { "name": "button_label", "type": "text", "label": "Buton — mai multe competiții", "help": "Duce la calendar" },
+                { "name": "button_single_label", "type": "text", "label": "Buton — o singură competiție", "help": "Duce direct la competiție" },
+                { "name": "empty_label", "type": "text", "label": "Buton — nicio competiție" },
+                { "name": "empty_url", "type": "text", "label": "Link — nicio competiție" },
+                { "name": "secondary_label", "type": "text", "label": "Buton secundar — text" },
+                { "name": "secondary_url", "type": "text", "label": "Buton secundar — link" },
+                { "name": "show_3d", "type": "toggle", "label": "Scena 3D (pe calculator; pe telefon o versiune ușoară)" },
+                { "name": "show_next", "type": "toggle", "label": "Cardul „Urmează” cu numărătoare inversă" }
+            ]
+        },
+        "marquee": {
+            "label": "Bandă cu cuvinte",
+            "icon": "heroicon-o-arrows-right-left",
+            "fields": [
+                { "name": "words", "type": "textarea", "label": "Cuvinte", "help": "Câte unul pe rând" }
+            ]
+        },
+        "spotlight": {
+            "label": "Competiția în prim-plan",
+            "icon": "heroicon-o-star",
+            "fields": [
+                { "name": "event_slug", "type": "text", "label": "Slug competiție", "help": "Gol = următoarea competiție" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "season": {
+            "label": "Calendarul sezonului",
+            "icon": "heroicon-o-calendar-days",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "link_label", "type": "text", "label": "Link spre calendar — text" },
+                { "name": "one_title", "type": "text", "label": "Titlu când e o singură competiție" },
+                { "name": "one_text", "type": "textarea", "label": "Text când e o singură competiție" },
+                { "name": "empty_title", "type": "text", "label": "Titlu când nu e nicio competiție" },
+                { "name": "empty_text", "type": "textarea", "label": "Text când nu e nicio competiție" },
+                { "name": "external_label", "type": "text", "label": "Buton extern — text (opțional)" },
+                { "name": "external_url", "type": "text", "label": "Buton extern — link" }
+            ]
+        },
+        "steps": {
+            "label": "Pași (cum funcționează)",
+            "icon": "heroicon-o-list-bullet",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "anchor", "type": "text", "label": "Ancoră", "help": "Pentru link-uri de tipul #cum-functioneaza" },
+                { "name": "items", "type": "repeater", "label": "Pași", "max": 4, "fields": [
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "text", "type": "textarea", "label": "Text" }
+                ] }
+            ]
+        },
+        "cta_next": {
+            "label": "Îndemn final (următoarea competiție)",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "ghost", "type": "text", "label": "Cuvânt mare în fundal" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "page_header": {
+            "label": "Antet de pagină",
+            "icon": "heroicon-o-bars-3-bottom-left",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "subtitle", "type": "textarea", "label": "Subtitlu" }
+            ]
+        },
+        "text": {
+            "label": "Text",
+            "icon": "heroicon-o-bars-3",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text", "help": "Un rând gol între paragrafe" },
+                { "name": "button_label", "type": "text", "label": "Buton — text (opțional)" },
+                { "name": "button_url", "type": "text", "label": "Buton — link" }
+            ]
+        }
+    }
+}

@@ -145,6 +145,9 @@ function ts_head_assets(): string {
         // scala completă de opacitate, ca modificatorii /N (ex. text-fg/48) să existe pe Play CDN
         . 'var op={};for(var i=0;i<=100;i++){op[i]=(i/100).toString();}c.theme.extend.opacity=op;'
         . 'c.theme.extend.borderColor={DEFAULT:"rgb(var(--c-fg) / 0.1)"};c.theme.extend.divideColor={DEFAULT:"rgb(var(--c-fg) / 0.1)"};'
+        // Template-urile cu CSS propriu pot opri resetul Tailwind pe paginile lor
+        // (manifest: "tailwind_preflight": false); paginile comune îl păstrează.
+        . (manifest('tailwind_preflight', true) === false && !defined('TS_SHARED_PAGE') ? 'c.corePlugins={preflight:false};' : '')
         . 'tailwind.config=c;})();</script>'
         . ts_commerce_assets()
         . '<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>'

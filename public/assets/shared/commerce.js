@@ -595,5 +595,33 @@
                 }
             });
         });
+
+        // Bara de cookies (comună): alegerea se ține în browser și se transmite prin Consent Mode.
+        // Markup-ul îl pune template-ul; „Setări cookies” trimite evenimentul site:cookie-settings.
+        Alpine.data('cookieBar', function () {
+            return {
+                open: false, details: false, analytics: false, marketing: false,
+                init: function () {
+                    var c = read('site_consent');
+                    if (c && c.v === 1) { this.analytics = !!c.analytics; this.marketing = !!c.marketing; }
+                    else { this.open = true; }
+                },
+                reopen: function () { this.details = true; this.open = true; },
+                choose: function (all) { this.analytics = all; this.marketing = all; this.save(); },
+                save: function () {
+                    var c = { v: 1, analytics: !!this.analytics, marketing: !!this.marketing, ts: new Date().toISOString() };
+                    write('site_consent', c);
+                    var yes = function (on) { return on ? 'granted' : 'denied'; };
+                    if (typeof window.gtag === 'function') {
+                        window.gtag('consent', 'update', {
+                            ad_storage: yes(c.marketing), ad_user_data: yes(c.marketing), ad_personalization: yes(c.marketing),
+                            analytics_storage: yes(c.analytics)
+                        });
+                    }
+                    window.dispatchEvent(new CustomEvent('site:consent', { detail: c }));
+                    this.open = false; this.details = false;
+                }
+            };
+        });
     });
 })();

@@ -111,7 +111,16 @@ Test local: `php -S 127.0.0.1:8094 -t public public/index.php`, cu header-ul `Ho
 
    Pe coș, checkout și cont nu se încarcă niciodată. Cu `prefers-reduced-motion` totul rămâne static.
    Resursele de UI permise: `plans/mds/UI_RESOURCES.md`.
-9. **Fișierele proprii** (imagini, modele 3D, JS, fonturi) stau în `templates/{slug}/assets/` și se
+9. **CSS propriu în locul Tailwind:** un template cu stilurile lui (ca `competitie`, cu `assets/site.css`)
+   pune `"tailwind_preflight": false`. Resetul Tailwind se oprește pe paginile template-ului și rămâne pe
+   paginile comune. Variabilele lui CSS se leagă de tokeni (`--blue: rgb(var(--c-primary))`), ca tenantul
+   să-și poată schimba culorile.
+10. **Comerțul** e comun: `public/assets/shared/commerce.js`.
+    - Componente Alpine: `ticketPicker(event, types)`, `seatPicker(event)`, `cartPage`, `checkoutPage`,
+      `cartTimer`, `toastHost`, `siteHead`, `cookieBar`.
+    - Un template doar le dă markup. Pagina de eveniment scrie în coș prin `ticketPicker`, `seatPicker`
+      sau `TS.Cart.set()`.
+11. **Fișierele proprii** (imagini, modele 3D, JS, fonturi) stau în `templates/{slug}/assets/` și se
    folosesc cu `ts_asset('img/hero.webp')`. La deploy ajung în `public/tpl/{slug}/`.
 
 ## Demo-uri live
