@@ -170,12 +170,7 @@ class DemoCheckoutController extends Controller
                         // and hold the day/slot so the venue cannot oversell.
                         $isLeisure = ! empty($item['visit_date']) || ! empty($item['capacity_id']);
                         if ($isLeisure && $tt) {
-                            $visitDate = CarbonImmutable::parse($item['visit_date'] ?? 'today');
-                            $priceCents = app(LeisurePricingResolver::class)->resolvePrice(
-                                $tt,
-                                $visitDate,
-                                isset($item['duration_minutes']) ? (int) $item['duration_minutes'] : null,
-                            );
+                            $priceCents = $this->leisureUnitPrice($tt, $item);
                             if (! empty($item['capacity_id'])) {
                                 $ok = app(CapacityAvailabilityService::class)
                                     ->reserve((int) $item['capacity_id'], $qty);
@@ -353,6 +348,11 @@ class DemoCheckoutController extends Controller
             'items'                  => 'nullable|array',
             'items.*.ticket_type_id' => 'required_with:items|integer',
             'items.*.quantity'       => 'required_with:items|integer|min:1|max:50',
+            // Rezervări leisure: același preț ca în store() (zi, durată, preț special pe interval)
+            'items.*.capacity_id'      => 'nullable|integer',
+            'items.*.visit_date'       => 'nullable|date_format:Y-m-d',
+            'items.*.slot_time'        => 'nullable|date_format:H:i',
+            'items.*.duration_minutes' => 'nullable|integer|min:1',
             // Locuri numerotate: prețul vine din hartă, la fel ca în store()
             'seats'                  => 'nullable|array|max:50',
             'seats.*.seat_uid'       => 'required_with:seats|string|max:64',
@@ -389,7 +389,13 @@ class DemoCheckoutController extends Controller
             if (! $tt) {
                 return response()->json(['success' => false, 'error' => 'Un tip de bilet din coș nu mai este disponibil.'], 422);
             }
-            $priceCents = (int) ($tt->price_cents ?: (($tt->price_max ?? 0) * 100));
+            try {
+                $priceCents = (! empty($item['visit_date']) || ! empty($item['capacity_id']))
+                    ? $this->leisureUnitPrice($tt, $item)
+                    : (int) ($tt->price_cents ?: (($tt->price_max ?? 0) * 100));
+            } catch (\RuntimeException $e) {
+                return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+            }
             for ($i = 0; $i < (int) $item['quantity']; $i++) {
                 $subtotalCents += $priceCents;
                 $rows[] = ['ticket_type_id' => $tt->id, 'price_cents' => $priceCents];
@@ -433,6 +439,33 @@ class DemoCheckoutController extends Controller
                 'currency'       => 'RON',
             ],
         ]);
+    }
+
+    /**
+     * Prețul unei rezervări leisure (bani): prețul special al intervalului, dacă
+     * are unul, altfel rezolverul (zi din săptămână, sezon, varianta de durată).
+     * Capacitatea trebuie să fie a acestui tip de bilet și să corespundă zilei.
+     * Același calcul în quote() și store(), ca totalul afișat să fie cel încasat.
+     */
+    private function leisureUnitPrice(TicketType $tt, array $item): int
+    {
+        $visitDate = CarbonImmutable::parse($item['visit_date'] ?? 'today');
+        if (! empty($item['capacity_id'])) {
+            $row = \App\Models\Leisure\TicketTypeCapacity::find((int) $item['capacity_id']);
+            if (! $row || (int) $row->ticket_type_id !== (int) $tt->id
+                || (! empty($item['visit_date']) && $row->capacity_date && $row->capacity_date->format('Y-m-d') !== $visitDate->format('Y-m-d'))) {
+                throw new \RuntimeException('Intervalul ales nu aparține acestui bilet. Alege din nou data și ora.');
+            }
+            if ($row->price_override_cents !== null) {
+                return (int) $row->price_override_cents;
+            }
+        }
+
+        return app(LeisurePricingResolver::class)->resolvePrice(
+            $tt,
+            $visitDate,
+            isset($item['duration_minutes']) ? (int) $item['duration_minutes'] : null,
+        );
     }
 
     /**

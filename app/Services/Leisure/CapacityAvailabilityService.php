@@ -175,6 +175,20 @@ class CapacityAvailabilityService
         });
     }
 
+    /**
+     * Returnează în pool locuri deja vândute (comandă plătită anulată / rambursată / ștearsă).
+     */
+    public function unsell(int $capacityId, int $quantity): void
+    {
+        DB::transaction(function () use ($capacityId, $quantity) {
+            $row = TicketTypeCapacity::lockForUpdate()->findOrFail($capacityId);
+            $back = min((int) $row->sold, $quantity);
+            if ($back > 0) {
+                $row->decrement('sold', $back);
+            }
+        });
+    }
+
     protected function aggregateStatus(int $remaining, int $capacity, bool $allClosed): string
     {
         if ($allClosed) {

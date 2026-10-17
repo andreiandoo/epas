@@ -498,6 +498,30 @@ class Order extends Model
                 }
             }
 
+            // Leisure: locurile pe zi / interval luate la checkout
+            // (meta.leisure_capacity). Neconfirmate → reserved, confirmate la plată → sold.
+            // No-op pentru orice comandă fără rezervări leisure.
+            $holds = (array) (($this->meta ?? [])['leisure_capacity'] ?? []);
+            if ($holds) {
+                $capacity = app(\App\Services\Leisure\CapacityAvailabilityService::class);
+                $confirmed = ! empty(($this->meta ?? [])['leisure_confirmed']);
+                foreach ($holds as $hold) {
+                    [$capacityId, $qty] = array_pad((array) $hold, 2, null);
+                    if (! $capacityId || ! $qty) {
+                        continue;
+                    }
+                    try {
+                        $confirmed
+                            ? $capacity->unsell((int) $capacityId, (int) $qty)
+                            : $capacity->release((int) $capacityId, (int) $qty);
+                    } catch (\Throwable $e) {
+                        Log::warning('Order: leisure capacity release failed', [
+                            'order_id' => $this->id, 'capacity_id' => $capacityId, 'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+
             // Stamp the order so a later transition / reconcile can't decrement
             // the counters a second time (see the idempotency guard above).
             // saveQuietly avoids re-entering the saved observer.

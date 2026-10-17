@@ -125,7 +125,8 @@ class OrderObserver
                 // reserved → sold. No-op for every non-leisure order, which
                 // never carries meta.leisure_capacity.
                 DB::afterCommit(function () use ($order) {
-                    foreach ((array) ($order->meta['leisure_capacity'] ?? []) as $hold) {
+                    $holds = (array) ($order->meta['leisure_capacity'] ?? []);
+                    foreach ($holds as $hold) {
                         [$capacityId, $qty] = array_pad((array) $hold, 2, null);
                         if (! $capacityId || ! $qty) {
                             continue;
@@ -140,6 +141,14 @@ class OrderObserver
                                 'error' => $e->getMessage(),
                             ]);
                         }
+                    }
+                    // Ținem minte că locurile au trecut în „vândute”: la o anulare
+                    // ulterioară se scot din sold, nu din reserved (Order::releaseSeatsAndRestoreStock).
+                    if ($holds && empty($order->meta['leisure_confirmed'])) {
+                        $meta = $order->meta ?? [];
+                        $meta['leisure_confirmed'] = true;
+                        $order->meta = $meta;
+                        $order->saveQuietly();
                     }
                 });
             }
