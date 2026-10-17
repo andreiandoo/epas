@@ -96,6 +96,13 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->name('api.tenant-client-public.event.fight-card');
     Route::get('/fighters', [\App\Http\Controllers\Api\TenantClient\FightCardController::class, 'fighters'])
         ->name('api.tenant-client-public.fighters');
+    // Agenții de artiști: rosterul, pagina unui artist (cu concertele lui) și cererile de booking
+    Route::get('/roster', [\App\Http\Controllers\Api\TenantClient\RosterController::class, 'index'])
+        ->name('api.tenant-client-public.roster');
+    Route::get('/roster/{slug}', [\App\Http\Controllers\Api\TenantClient\RosterController::class, 'show'])
+        ->name('api.tenant-client-public.roster.show');
+    Route::post('/booking-requests', [\App\Http\Controllers\Api\TenantClient\RosterController::class, 'booking'])
+        ->middleware('throttle:5,1')->name('api.tenant-client-public.booking-requests');
     // Newsletterul tenantului (fanii unui artist …): abonare din site, dezabonare din linkul din email
     Route::post('/newsletter/subscribe', [\App\Http\Controllers\Api\TenantClient\NewsletterController::class, 'subscribe'])
         ->middleware('throttle:8,1')->name('api.tenant-client-public.newsletter.subscribe');

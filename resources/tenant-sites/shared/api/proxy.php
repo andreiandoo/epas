@@ -101,6 +101,13 @@ switch ($action) {
         $path = '/tenant-client/gift-cards/' . rawurlencode(substr((string) ($_GET['code'] ?? ''), 0, 64));
         break;
 
+    // Cererile de booking ale agențiilor de artiști (RosterController)
+    case 'booking-request':
+        $method = 'POST';
+        $path   = '/tenant-client/booking-requests';
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     // Newsletterul tenantului (NewsletterController): abonare din formular, dezabonare din linkul din email
     case 'newsletter-subscribe':
     case 'newsletter-unsubscribe':

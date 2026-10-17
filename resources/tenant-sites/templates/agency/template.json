@@ -1,0 +1,234 @@
+{
+    "name": "Agenție de artiști",
+    "description": "Site de agenție de management și booking: rosterul cu filtre (tip, gen, teritoriu), pagina fiecărui artist cu concertele lui și cerere de booking, evenimentele produse de agenție cu bilete și hartă de locuri.",
+    "version": 1,
+    "category": "Muzică",
+    "kind": "events",
+    "status": "ready",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": ["lenis", "gsap"],
+    "tailwind_preflight": true,
+
+    "settings": [
+        { "name": "featured_slug", "type": "text", "label": "Concertul din afiș (slug)", "default": "", "help": "Gol = următorul concert" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#0F1A14",
+            "surface": "#15241B",
+            "panel": "#1B2D22",
+            "fg": "#EDEFE6",
+            "muted": "#9AA79E",
+            "primary": "#F2B33D",
+            "accent": "#7FA88A"
+        },
+        "fonts": {
+            "display": "Syne",
+            "body": "Archivo"
+        }
+    },
+
+    "links": {
+        "events": "/evenimente",
+        "catalog": "/evenimente",
+        "event": "/eveniment/{slug}",
+        "artists": "/artisti",
+        "artist": "/artist/{id}"
+    },
+
+    "routes": {
+        "/artisti": "artisti.php",
+        "/artist/{id}": "artist.php",
+        "/evenimente": "evenimente.php",
+        "/eveniment/{slug}": "eveniment.php",
+        "/booking": "booking.php"
+    },
+
+    "nav": [
+        { "label": "Artiști", "url": "/artisti" },
+        { "label": "Evenimente", "url": "/evenimente" },
+        { "label": "Booking", "url": "/booking" },
+        { "label": "Despre", "url": "/#despre" }
+    ],
+
+    "header_cta": { "label": "Cere un booking", "url": "/booking" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Management, booking și concerte",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Management · Booking · Concerte",
+                    "title": "Artiști pe care îi crezi pe cuvânt.",
+                    "text": "Reprezentăm 14 artiști și trupe din România pe scenele din țară și din Europa. Le construim cariera, le vindem concertele și le producem turneele.",
+                    "button_label": "Vezi artiștii",
+                    "booking_label": "Cere un booking",
+                    "en": {
+                        "eyebrow": "Management · Booking · Live",
+                        "title": "Artists you can take at their word.",
+                        "text": "We represent 14 artists and bands from Romania on stages at home and across Europe. We build their careers, book their shows and produce their tours.",
+                        "button_label": "Meet the artists",
+                        "booking_label": "Request a booking"
+                    }
+                } },
+                { "type": "featured", "data": {
+                    "eyebrow": "Rosterul",
+                    "title": "Pe cine reprezentăm",
+                    "button_label": "Tot rosterul",
+                    "en": { "eyebrow": "Roster", "title": "Who we represent", "button_label": "Full roster" }
+                } },
+                { "type": "tour", "data": {
+                    "eyebrow": "Concerte",
+                    "title": "Urmează pe scenă",
+                    "limit": "6",
+                    "button_label": "Toate evenimentele",
+                    "en": { "eyebrow": "Live", "title": "Coming up on stage", "button_label": "All events" }
+                } },
+                { "type": "services", "data": {
+                    "eyebrow": "Ce facem",
+                    "title": "De la prima piesă la sala plină",
+                    "items": [
+                        { "title": "Management", "text": "Strategie de carieră, lansări, echipă și parteneriate, pe termen lung." },
+                        { "title": "Booking", "text": "Concerte în cluburi, săli și festivaluri, în România și în Europa." },
+                        { "title": "Producție de evenimente", "text": "Turnee și concerte proprii, cu bilete vândute direct pe site." },
+                        { "title": "Evenimente private", "text": "Artiști pentru evenimente corporate, nunți și lansări." }
+                    ],
+                    "en": {
+                        "eyebrow": "What we do",
+                        "title": "From the first song to a full room",
+                        "items": [
+                            { "title": "Management", "text": "Career strategy, releases, team and partnerships, for the long run." },
+                            { "title": "Booking", "text": "Shows in clubs, halls and festivals, in Romania and across Europe." },
+                            { "title": "Event production", "text": "Our own tours and concerts, with tickets sold right here." },
+                            { "title": "Private events", "text": "Artists for corporate events, weddings and launches." }
+                        ]
+                    }
+                } },
+                { "type": "about", "data": {
+                    "eyebrow": "Despre noi",
+                    "title": "O agenție mică, cu răbdare mare",
+                    "text": "Am pornit în 2016 cu doi artiști și un calendar de concerte în cluburi. Astăzi lucrăm cu 14 artiști și producem peste 120 de concerte pe an.\n\nNu reprezentăm mai mulți artiști decât putem urmări cu adevărat. Fiecare are un manager dedicat și un plan pe trei ani.",
+                    "stats": [
+                        { "value": "14", "label": "artiști în roster" },
+                        { "value": "120+", "label": "concerte pe an" },
+                        { "value": "11", "label": "țări în 2026" }
+                    ],
+                    "en": {
+                        "eyebrow": "About us",
+                        "title": "A small agency with a lot of patience",
+                        "text": "We started in 2016 with two artists and a calendar of club shows. Today we work with 14 artists and produce more than 120 shows a year.\n\nWe never represent more artists than we can truly look after. Each one has a dedicated manager and a three-year plan.",
+                        "stats": [
+                            { "value": "14", "label": "artists on the roster" },
+                            { "value": "120+", "label": "shows a year" },
+                            { "value": "11", "label": "countries in 2026" }
+                        ]
+                    }
+                } },
+                { "type": "newsletter", "data": {
+                    "eyebrow": "Noutăți",
+                    "title": "Concertele noi, primele în inbox",
+                    "text": "Un email pe lună cu datele noi ale artiștilor noștri și biletele puse în vânzare.",
+                    "button_label": "Mă abonez",
+                    "en": { "eyebrow": "News", "title": "New shows, first in your inbox", "text": "One email a month with new dates from our artists and tickets going on sale.", "button_label": "Sign me up" }
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Booking",
+                    "title": "Cauți un artist pentru evenimentul tău?",
+                    "button_label": "Cere un booking",
+                    "en": { "eyebrow": "Booking", "title": "Looking for an artist for your event?", "button_label": "Request a booking" }
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Afișul",
+            "icon": "heroicon-o-sparkles",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton artiști — text" },
+                { "name": "booking_label", "type": "text", "label": "Buton booking — text" }
+            ]
+        },
+        "featured": {
+            "label": "Artiștii recomandați (din core)",
+            "icon": "heroicon-o-star",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "tour": {
+            "label": "Concertele următoare (din core)",
+            "icon": "heroicon-o-map",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "limit", "type": "text", "label": "Câte concerte arată" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "services": {
+            "label": "Ce face agenția",
+            "icon": "heroicon-o-briefcase",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "items", "type": "repeater", "label": "Servicii", "max": 6, "fields": [
+                    { "name": "title", "type": "text", "label": "Titlu" },
+                    { "name": "text", "type": "textarea", "label": "Text" }
+                ] }
+            ]
+        },
+        "about": {
+            "label": "Despre agenție",
+            "icon": "heroicon-o-building-office",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "stats", "type": "repeater", "label": "Cifre", "max": 4, "fields": [
+                    { "name": "value", "type": "text", "label": "Valoare" },
+                    { "name": "label", "type": "text", "label": "Ce înseamnă" }
+                ] }
+            ]
+        },
+        "video": {
+            "label": "Video",
+            "icon": "heroicon-o-play-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "youtube_id", "type": "text", "label": "ID-ul videoclipului YouTube" },
+                { "name": "poster", "type": "image", "label": "Imagine (până pornește videoclipul)" }
+            ]
+        },
+        "newsletter": {
+            "label": "Newsletter",
+            "icon": "heroicon-o-envelope",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn la booking",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        }
+    }
+}

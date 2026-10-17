@@ -319,6 +319,7 @@ class EventsController extends Controller
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
                 'tags',
                 'tenant:id,name,public_name,slug,company_name,website',
+                'tenantArtists',
             ])
             ->first();
 
@@ -545,6 +546,13 @@ class EventsController extends Controller
                     ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
                     ->min('display_price'),
                 ...$this->eventExtras($event),
+                // Artiștii din rosterul tenantului (agenții, trupe): cine cântă, cu pagina lor
+                'roster' => $event->tenantArtists->where('status', 'active')->map(fn ($a) => [
+                    'slug' => $a->slug ?: (string) $a->id,
+                    'name' => $a->name,
+                    'photo' => $a->photo_url ? (preg_match('#^https?://#', $a->photo_url) ? $a->photo_url : Storage::disk('public')->url($a->photo_url)) : null,
+                    'role_in_event' => $a->pivot?->role_in_event,
+                ])->values(),
             ],
         ])->header('Cache-Control', 'public, max-age=30, s-maxage=60');
     }

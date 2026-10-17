@@ -43,6 +43,8 @@ class ArtistResource extends Resource
         $tenant = auth()->user()->tenant;
         $isTheater = (bool) ($tenant?->isTheater());
         $isCompetition = $tenant?->tenant_type === \App\Enums\TenantType::Competition;
+        // Agențiile de artiști (și artiștii / trupele) au un roster: profil public + booking
+        $isRoster = in_array($tenant?->tenant_type, [\App\Enums\TenantType::Agency, \App\Enums\TenantType::Artist], true);
 
         return $schema->schema([
             Forms\Components\Hidden::make('tenant_id')->default($tenant?->id),
@@ -142,6 +144,31 @@ class ArtistResource extends Resource
                     Forms\Components\Select::make('meta.stance')->label('Gardă')->options(['Orthodox' => 'Orthodox', 'Southpaw' => 'Southpaw', 'Switch' => 'Switch']),
                     Forms\Components\Toggle::make('meta.is_champion')->label('Campion en titre'),
                     Forms\Components\DatePicker::make('birth_date')->label('Data nașterii')->native(false)->displayFormat('d.m.Y')->maxDate(now()),
+                ])->columns(3),
+
+            // Profilul din roster (agenții): pagina artistului, filtrele rosterului și booking-ul citesc din meta
+            SC\Section::make('Profil în roster')
+                ->description('Ce apare pe site: în lista artiștilor (filtre după tip, gen, teritoriu) și pe pagina artistului, unde se cer booking-uri.')
+                ->visible($isRoster)
+                ->schema([
+                    Forms\Components\Select::make('meta.kind')->label('Tip')->options(['solo' => 'Artist solo', 'band' => 'Trupă', 'dj' => 'DJ / producător', 'duo' => 'Duo', 'ensemble' => 'Ansamblu / orchestră'])->default('solo'),
+                    Forms\Components\TagsInput::make('meta.genres')->label('Genuri')->placeholder('indie, pop, electronic…'),
+                    Forms\Components\TextInput::make('meta.city')->label('Oraș')->maxLength(80),
+                    Forms\Components\TextInput::make('meta.country')->label('Țara (cod ISO, ex. RO)')->maxLength(2),
+                    Forms\Components\TextInput::make('meta.tagline')->label('O frază despre artist')->maxLength(140)->columnSpan(2),
+                    Forms\Components\TagsInput::make('meta.territories')->label('Teritorii de booking')->placeholder('România, Europa…'),
+                    Forms\Components\Toggle::make('meta.bookable')->label('Primește cereri de booking')->default(true),
+                    Forms\Components\Toggle::make('meta.featured')->label('Recomandat pe prima pagină'),
+                    Forms\Components\TextInput::make('meta.hero_url')->label('Imagine mare (link)')->url()->maxLength(500)->helperText('Gol = fotografia de portret'),
+                    Forms\Components\TextInput::make('meta.youtube_id')->label('Video YouTube (ID)')->maxLength(20)->helperText('Partea de după watch?v= din link'),
+                    Forms\Components\TextInput::make('meta.listeners')->label('Ascultători lunari')->numeric()->minValue(0),
+                    Forms\Components\TextInput::make('meta.links.spotify')->label('Spotify')->url(),
+                    Forms\Components\TextInput::make('meta.links.instagram')->label('Instagram')->url(),
+                    Forms\Components\TextInput::make('meta.links.youtube')->label('YouTube')->url(),
+                    Forms\Components\TextInput::make('meta.links.tiktok')->label('TikTok')->url(),
+                    Forms\Components\TextInput::make('meta.links.website')->label('Site')->url(),
+                    Forms\Components\Textarea::make('meta.quote.text')->label('Citat de presă')->rows(2)->columnSpan(2),
+                    Forms\Components\TextInput::make('meta.quote.source')->label('Sursa citatului')->maxLength(80),
                 ])->columns(3),
 
             SC\Section::make('Biografie')

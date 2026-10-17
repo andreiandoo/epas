@@ -6,6 +6,7 @@ use App\Models\Coupon\CouponCode;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Tenant;
+use App\Models\TenantBookingRequest;
 use App\Models\TenantCustomerSubscription;
 use App\Models\TenantNewsletter;
 use App\Models\TenantNewsletterSubscriber;
@@ -127,7 +128,17 @@ class DemoSitesReset extends Command
                 $this->line("  abonați newsletter: {$n}");
             }
 
-            // 4. Codurile de reducere: utilizările revin la zero
+            // 4. Cererile de booking trimise de vizitatori (nume, email, telefon reale)
+            if (Schema::hasTable('tenant_booking_requests')) {
+                $br = TenantBookingRequest::where('tenant_id', $tenant->id)->where('created_at', '<', $cutoff);
+                $n = $br->count();
+                if (! $dry) {
+                    $br->delete();
+                }
+                $this->line("  cereri de booking: {$n}");
+            }
+
+            // 5. Codurile de reducere: utilizările revin la zero
             if (Schema::hasTable('coupon_codes')) {
                 $coupons = CouponCode::where('tenant_id', $tenant->id)->where('current_uses', '>', 0)->get();
                 if (! $dry) {

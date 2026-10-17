@@ -226,6 +226,14 @@ class EventResource extends Resource
                         ->maxLength(190)
                         ->visible($isTheater)
                         ->columnSpanFull(),
+                    // Agenții și artiști: cine cântă, din rosterul tenantului (pagina artistului își arată concertele)
+                    Forms\Components\Select::make('tenantArtists')
+                        ->label('Artiști din roster')
+                        ->relationship('tenantArtists', 'name', fn (Builder $query) => $query->where('tenant_id', auth()->user()->tenant?->id)->where(fn ($q) => $q->whereNull('role')->orWhere('role', '!=', 'fighter')))
+                        ->multiple()->preload()->searchable()
+                        ->visible(in_array(auth()->user()->tenant?->tenant_type, [\App\Enums\TenantType::Agency, \App\Enums\TenantType::Artist], true))
+                        ->helperText('Concertul apare pe pagina fiecărui artist ales.')
+                        ->columnSpanFull(),
                 ]),
 
             // FLAGS
