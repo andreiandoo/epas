@@ -96,7 +96,7 @@ require_once __DIR__ . '/includes/header.php';
                     <span class="text-[11px] font-bold tracking-widest uppercase text-primary">Azi</span>
                 </div>
                 <p class="text-base font-bold text-white md:text-lg">
-                    <?= $todayCount ?> <?= $todayCount === 1 ? 'eveniment are loc' : 'evenimente au loc' ?> azi
+                    <?= $todayCount ?> <?= $todayCount === 1 ? 'eveniment' : 'evenimente' ?> azi
                 </p>
                 <?php if ($todayNames): ?>
                 <p class="text-xs text-gray-400 truncate md:text-sm"><?= htmlspecialchars(implode(', ', $todayNames)) ?><?= $todayCount > count($todayNames) ? ' și altele' : '' ?></p>
