@@ -146,10 +146,22 @@ function ts_head_assets(): string {
         . 'var op={};for(var i=0;i<=100;i++){op[i]=(i/100).toString();}c.theme.extend.opacity=op;'
         . 'c.theme.extend.borderColor={DEFAULT:"rgb(var(--c-fg) / 0.1)"};c.theme.extend.divideColor={DEFAULT:"rgb(var(--c-fg) / 0.1)"};'
         . 'tailwind.config=c;})();</script>'
+        . ts_commerce_assets()
         . '<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>'
         . '<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>'
         . '<style>' . ts_theme_css() . '</style>'
         . ts_motion_assets();
+}
+
+/**
+ * Comerțul comun (coș, cod de reducere, timer, alegere bilete/locuri, plată):
+ * public/assets/shared/commerce.js, înaintea lui Alpine ca să-și înregistreze componentele.
+ */
+function ts_commerce_assets(): string {
+    $file = TS_ROOT . '/public/assets/shared/commerce.js';
+    $cfg = ['api' => API_BASE, 'host' => ts_host(), 'eventsUrl' => ts_link('events')];
+    return '<script>window.TS_CFG=' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';</script>'
+        . '<script defer src="/assets/shared/commerce.js?v=' . (is_file($file) ? filemtime($file) : 1) . '"></script>';
 }
 
 /** Versiunile fixate ale bibliotecilor de animație (UI_RESOURCES.md: niciodată „latest”). */

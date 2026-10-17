@@ -50,6 +50,7 @@ switch ($action) {
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'event lipsă']); exit; }
         $path = "/public/events/{$eventId}/seats";
+        $query['limit'] = 5000; // harta întreagă dintr-o cerere
         foreach (['section', 'status', 'limit'] as $p) {
             if (isset($_GET[$p])) { $query[$p] = $_GET[$p]; }
         }
@@ -70,6 +71,30 @@ switch ($action) {
     case 'holds':
         $path  = '/public/seats/holds';
         $query = ['event_seating_id' => $_GET['event_seating_id'] ?? ''];
+        break;
+
+    // Prețul real al coșului (reducere din cod + taxa de procesare), calculat pe server
+    case 'quote':
+        $method = 'POST';
+        $path   = '/tenant-client/demo-checkout/quote';
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
+    // Comenzile și biletele din browserul cumpărătorului, setarea parolei (DemoStorefrontController)
+    case 'orders':
+        $path = '/tenant-client/storefront/orders';
+        break;
+    case 'tickets':
+        $path = '/tenant-client/storefront/tickets';
+        break;
+    case 'order':
+        $path = '/tenant-client/storefront/orders/' . (int) ($_GET['id'] ?? 0);
+        break;
+    case 'password-link':
+    case 'password-set':
+        $method = 'POST';
+        $path   = '/tenant-client/storefront/' . $action;
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         break;
 
     case 'checkout':
@@ -276,6 +301,12 @@ switch ($action) {
         http_response_code(400);
         echo json_encode(['error' => 'acțiune necunoscută']);
         exit;
+}
+
+// Tenantul se găsește după domeniul pe care a venit vizitatorul (subdomeniu, domeniu propriu sau demo)
+if (str_starts_with($path, '/tenant-client/')) {
+    $query['hostname'] = ts_host();
+    $query['tenant'] = $query['tenant'] ?? TENANT_ID;
 }
 
 $url = API_BASE . $path;

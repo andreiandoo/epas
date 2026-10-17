@@ -1,91 +1,90 @@
 <?php
+/**
+ * Coșul (comun tuturor template-urilor): bilete fără loc și locuri numerotate,
+ * cod de reducere, timer de rezervare. Logica: cartPage din commerce.js.
+ */
 $pageTitle = 'Coșul tău — ' . SITE_NAME;
-$gami = tc_gamification();
-$pageExtraStyles = '.cart-item { background: linear-gradient(180deg,rgb(var(--c-surface)) 0%,rgb(var(--c-canvas)) 100%); border: 1px solid rgb(var(--c-primary) / .1); }';
+$pageExtraHead = '<meta name="robots" content="noindex">';
+$pageExtraStyles = ts_commerce_styles();
+$eventsUrl = ts_link('events');
 include ts_layout('head');
 include ts_layout('header');
 ?>
-<main class="pt-32 pb-20 px-4 lg:px-8" x-data="cartPage()" x-init="init()">
-    <div class="max-w-7xl mx-auto">
-        <h1 class="font-display text-4xl mb-8">Coșul tău</h1>
+<main class="pt-32 pb-24 px-4 lg:px-8" x-data="cartPage">
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <h1 class="font-display text-4xl lg:text-5xl">Coșul tău</h1>
+            <?= ts_part_flow(1) ?>
+        </div>
 
-        <!-- With items -->
-        <div x-show="cart && cart.seats && cart.seats.length > 0">
-            <div class="grid lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 space-y-4">
-                    <div class="cart-item rounded-xl p-5 flex flex-col sm:flex-row gap-5">
-                        <img :src="cart.event.image" :alt="cart.event.title" class="w-full sm:w-32 h-32 rounded-lg object-cover">
-                        <div class="flex-1">
-                            <div class="flex justify-between items-start mb-2">
+        <template x-if="cart">
+            <div class="grid gap-8 lg:grid-cols-[1fr_380px]">
+                <div class="space-y-5">
+                    <?= ts_part_timer() ?>
+                    <div class="rounded-xl border border-primary/10 bg-surface/60 overflow-hidden">
+                        <a class="flex items-center gap-4 p-5 border-b border-primary/10 hover:bg-fg/[.03]" :href="cart.event.url || '<?= e($eventsUrl) ?>'">
+                            <template x-if="cart.event.poster"><img :src="cart.event.poster" alt="" class="h-20 w-16 rounded-lg object-cover"></template>
+                            <div>
+                                <p class="font-display text-xl" x-text="cart.event.title"></p>
+                                <p class="text-sm text-muted" x-text="[cart.event.date, cart.event.place].filter(Boolean).join(' · ')"></p>
+                            </div>
+                        </a>
+                        <template x-for="item in cart.items" :key="item.ticket_type_id">
+                            <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-primary/10">
                                 <div>
-                                    <p class="text-primary text-sm" x-text="cart.event.author"></p>
-                                    <h3 class="font-display text-xl" x-text="cart.event.title"></h3>
+                                    <p class="font-semibold" x-text="item.name"></p>
+                                    <p class="text-sm text-muted" x-text="lei(item.price) + ' / bilet'"></p>
                                 </div>
-                                <button @click="clear()" class="text-muted hover:text-accent transition-colors p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                <div class="flex items-center gap-4">
+                                    <div class="ts-qty">
+                                        <button type="button" @click="step(item, -1)" :aria-label="'Scade ' + item.name">−</button>
+                                        <output x-text="item.qty"></output>
+                                        <button type="button" @click="step(item, 1)" :disabled="item.qty >= max" :aria-label="'Adaugă ' + item.name">+</button>
+                                    </div>
+                                    <p class="w-24 text-right font-semibold" x-text="lei(item.qty * item.price)"></p>
+                                    <button type="button" class="text-fg/40 hover:text-red-400" @click="remove(item)" :aria-label="'Șterge ' + item.name">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2m-6 0l1 12h6l1-12"/></svg>
+                                    </button>
+                                </div>
                             </div>
-                            <p class="text-muted text-sm mb-3" x-text="[cart.event.date, cart.event.venue].filter(Boolean).join(' • ')"></p>
-                            <div class="flex flex-wrap gap-2 mb-4">
-                                <template x-for="(s,i) in cart.seats" :key="i"><span class="bg-surface px-3 py-1 rounded text-sm" x-text="s.label"></span></template>
+                        </template>
+                        <template x-for="seat in cart.seats" :key="seat.seat_uid">
+                            <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-primary/10">
+                                <div>
+                                    <p class="font-semibold" x-text="seat.section || 'Loc'"></p>
+                                    <p class="text-sm text-muted" x-text="seat.row ? ('Rând ' + seat.row + ' · Loc ' + seat.seat) : seat.label"></p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <p class="font-semibold" x-text="lei(seat.price)"></p>
+                                    <button type="button" class="text-fg/40 hover:text-red-400" @click="removeSeat(seat)" :aria-label="'Scoate ' + seat.label">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2m-6 0l1 12h6l1-12"/></svg>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex items-center justify-between">
-                                <p class="text-sm text-muted" x-text="cart.seats.length + ' bilete'"></p>
-                                <p class="font-display text-xl text-primary" x-text="subtotal + ' RON'"></p>
-                            </div>
+                        </template>
+                        <div class="px-5 py-4">
+                            <a class="text-sm text-primary hover:text-primary-light" :href="cart.event.url || '<?= e($eventsUrl) ?>'" x-text="cart.seats.length ? 'Alege alte locuri' : 'Adaugă alte bilete'"></a>
                         </div>
                     </div>
-                    <a href="/program" class="block text-center py-4 border border-dashed border-primary/20 rounded-xl text-muted hover:border-primary/40 hover:text-fg transition-colors">+ Adaugă alte bilete</a>
                 </div>
 
-                <div class="lg:col-span-1">
-                    <div class="bg-surface rounded-xl p-6 sticky top-28">
-                        <h2 class="font-display text-xl mb-6">Sumar comandă</h2>
-                        <div class="space-y-3 pb-4 border-b border-primary/10">
-                            <div class="flex justify-between"><span class="text-muted">Subtotal</span><span x-text="subtotal + ' RON'"></span></div>
-                        </div>
-                        <div class="flex justify-between py-4"><span class="font-medium text-lg">Total</span><span class="font-display text-2xl text-primary" x-text="total + ' RON'"></span></div>
-                        <div x-show="earnEnabled && earnedPoints() > 0" x-cloak class="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-lg p-3 mb-4">
-                            <span class="text-2xl">🎁</span>
-                            <p class="text-sm">Câștigi <span class="text-primary font-semibold" x-text="earnedPoints()"></span> <span x-text="earnName"></span>.</p>
-                        </div>
-                        <div class="mb-2"></div>
-                        <div class="bg-accent/20 rounded-lg p-4 mb-6 flex items-center gap-3">
-                            <svg class="w-5 h-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <div><p class="text-sm">Locurile sunt rezervate pentru</p><p class="font-display text-primary" x-text="timer"></p></div>
-                        </div>
-                        <a href="/finalizare" class="btn-primary w-full py-4 rounded-lg text-center block text-lg">Finalizează comanda</a>
-                        <div class="mt-6 flex items-center justify-center gap-2 text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span class="text-xs">Plată securizată SSL</span></div>
-                    </div>
-                </div>
+                <aside class="lg:sticky lg:top-28 h-fit rounded-xl border border-primary/10 bg-surface/60 p-6">
+                    <h2 class="font-display text-2xl mb-5">Sumar</h2>
+                    <?= ts_part_summary() ?>
+                    <a href="/finalizare" class="btn-primary mt-6 block rounded-lg py-4 text-center">Continuă</a>
+                    <p class="mt-3 text-center text-xs text-muted">Plata se face cu cardul, în pasul următor.</p>
+                </aside>
             </div>
-        </div>
+        </template>
 
-        <!-- Empty -->
-        <div x-show="!cart || !cart.seats || cart.seats.length === 0" class="text-center py-20">
-            <div class="w-24 h-24 rounded-full bg-surface mx-auto mb-6 flex items-center justify-center"><svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg></div>
-            <h2 class="font-display text-2xl mb-3">Coșul tău este gol</h2>
-            <p class="text-muted mb-8">Explorează repertoriul și alege spectacolele care te inspiră.</p>
-            <a href="/program" class="btn-primary px-8 py-4 rounded-lg inline-block">Vezi programul</a>
-        </div>
+        <template x-if="!cart">
+            <div class="rounded-xl border border-primary/10 bg-surface/40 px-6 py-20 text-center">
+                <h2 class="font-display text-3xl mb-3">Coșul e gol</h2>
+                <p class="text-fg/60 mb-8">Alege un eveniment din program și adaugă biletele dorite.</p>
+                <a href="<?= e($eventsUrl) ?>" class="btn-primary inline-block rounded-lg px-8 py-4">Vezi programul</a>
+            </div>
+        </template>
     </div>
 </main>
-<script>
-function cartPage() {
-    return {
-        cart: null, timerSeconds: 600,
-        earnEnabled: <?= !empty($gami['enabled']) ? 'true' : 'false' ?>,
-        earnPct: <?= (float) ($gami['earn_percentage'] ?? 0) ?>,
-        earnMin: <?= (float) ($gami['min_order'] ?? 0) ?>,
-        earnName: <?= json_encode($gami['points_name'] ?? 'puncte', JSON_UNESCAPED_UNICODE) ?>,
-        earnedPoints() { return (this.earnEnabled && this.subtotal >= this.earnMin) ? Math.floor(this.subtotal * this.earnPct) : 0; },
-        init() {
-            try { this.cart = JSON.parse(localStorage.getItem('site_cart') || 'null'); } catch(e) { this.cart = null; }
-            setInterval(() => { if (this.timerSeconds > 0) this.timerSeconds--; }, 1000);
-        },
-        get subtotal() { return this.cart && this.cart.seats ? this.cart.seats.reduce((s,x)=>s+(x.price||0),0) : 0; },
-        get total() { return this.subtotal; },
-        get timer() { const m = Math.floor(this.timerSeconds/60), s = this.timerSeconds%60; return `${m}:${s.toString().padStart(2,'0')}`; },
-        clear() { localStorage.removeItem('site_cart'); this.cart = null; }
-    };
-}
-</script>
+<div x-data="toastHost" x-show="show" x-cloak x-transition class="fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-xl" x-text="msg" role="status"></div>
 <?php include ts_layout('footer');
