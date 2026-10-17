@@ -504,7 +504,7 @@ class EventsController extends Controller
                 // Commission is ALWAYS calculated from BASE price (price_max), not discounted price
                 'ticket_types' => $event->ticketTypes
                     ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
-                    ->map(function ($type) use ($commissionMode, $commissionRate) {
+                    ->map(function ($type) use ($commissionMode, $commissionRate, $locale) {
                         $basePrice = $type->price_max; // Always use base price for commission
                         $effectivePrice = $type->price ?? $type->price_max; // Sale price or base price
                         $commissionAmount = $commissionMode === 'added_on_top' && $basePrice
