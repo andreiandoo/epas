@@ -68,7 +68,7 @@ Route::get('/tenant-site/demos', [\App\Http\Controllers\Api\TenantSiteController
     ->middleware('throttle:600,1')
     ->name('api.tenant-site.demos');
 
-Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors', \App\Http\Middleware\TenantClientLocale::class])->group(function () {
     // Handle OPTIONS preflight requests
     Route::options('/{any}', fn () => response('', 200))
         ->where('any', '.*')
@@ -88,6 +88,9 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
 
     Route::get('/events/{slug}', [TenantClientController::class, 'event'])
         ->name('api.tenant-client-public.event');
+    // Programul unui festival: zile, scene, cine cântă unde și când (site-urile de tenant)
+    Route::get('/events/{slug}/lineup', [\App\Http\Controllers\Api\TenantClient\FestivalLineupController::class, 'show'])
+        ->name('api.tenant-client-public.event.lineup');
 
     Route::get('/categories', [TenantClientController::class, 'categories'])
         ->name('api.tenant-client-public.categories');

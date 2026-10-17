@@ -647,8 +647,9 @@ class TenantClientController extends Controller
                 ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
                 ->map(fn ($type) => [
                     'id' => $type->id,
-                    'name' => $type->name,
-                    'description' => $type->description ?? '',
+                    // Traducerea opțională a biletului: meta.i18n.{locale}.name / description / perks
+                    'name' => $type->meta['i18n'][$locale]['name'] ?? $type->name,
+                    'description' => $type->meta['i18n'][$locale]['description'] ?? ($type->description ?? ''),
                     'sku' => $type->sku,
                     'price' => $type->price_max,
                     'sale_price' => $type->price ?? null,
@@ -658,7 +659,16 @@ class TenantClientController extends Controller
                     'currency' => $type->currency ?? 'EUR',
                     'available' => $type->available_quantity ?? 0,
                     'status' => $type->status,
-                ])->values(),
+                    // Gruparea și detaliile pentru pagini de bilete (festival: abonamente / o zi / camping)
+                    'group' => ($type->meta['i18n'][$locale]['group'] ?? null) ?: ($type->ticket_group ?: null),
+                    'perks' => array_values(array_filter((array) ($type->meta['i18n'][$locale]['perks'] ?? $type->perks ?? []))),
+                    'sort_order' => (int) ($type->sort_order ?? 0),
+                    'color' => $type->color ?: null,
+                    'valid_date' => $type->valid_date?->toDateString(),
+                    'sales_start_at' => $type->sales_start_at?->toIso8601String(),
+                    'sales_end_at' => $type->sales_end_at?->toIso8601String(),
+                    'is_parking' => (bool) $type->is_parking,
+                ])->sortBy('sort_order')->values(),
             'genres' => $event->eventGenres->map(fn ($genre) => [
                 'name' => $genre->getTranslation('name', $locale),
                 'slug' => $genre->slug,
