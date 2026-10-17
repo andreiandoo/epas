@@ -201,9 +201,17 @@ class ManageTenantSite extends Page
                 SC\Section::make('Template')
                     ->schema([
                         Forms\Components\Select::make('template')->label('Template')
-                            ->options(app(TemplateRegistry::class)->options())
+                            ->options(fn () => app(TemplateRegistry::class)->groupedOptionsFor($this->record->getKey(), $this->site->template))
                             ->required()->live()
                             ->helperText($manifest['description'] ?? null)
+                            ->hintAction(
+                                Actions\Action::make('demo_link')
+                                    ->label('Vezi demo live')
+                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                    ->visible(fn () => (bool) $this->demoUrl($template))
+                                    ->url(fn () => $this->demoUrl($template))
+                                    ->openUrlInNewTab()
+                            )
                             ->afterStateUpdated(fn ($state) => $this->switchTemplate((string) $state)),
                         Forms\Components\Placeholder::make('status')->label('Stare')
                             ->content(fn () => $this->statusLine()),
@@ -293,6 +301,18 @@ class ManageTenantSite extends Page
         $line = 'Publicat ' . $site->published_at->timezone('Europe/Bucharest')->format('d.m.Y H:i');
 
         return $site->hasUnpublishedChanges() ? $line . ' · ciorna are modificări nepublicate' : $line;
+    }
+
+    /** Primul demo live al template-ului (demo-*.tics.ro), dacă există. */
+    public function demoUrl(?string $template): ?string
+    {
+        if (! $template) {
+            return null;
+        }
+        $demo = \App\Models\TenantSiteDemo::with('domain')->where('template', $template)
+            ->where('is_listed', true)->orderBy('sort')->first();
+
+        return $demo?->domain ? 'https://' . $demo->domain->domain : null;
     }
 
     /** Domeniul pe care rulează site-ul: subdomeniul nostru, altfel domeniul principal activ. */

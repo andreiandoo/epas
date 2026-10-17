@@ -64,6 +64,9 @@ use App\Http\Controllers\Api\TenantClientController;
 Route::get('/tenant-site/config', [\App\Http\Controllers\Api\TenantSiteController::class, 'config'])
     ->middleware('throttle:600,1')
     ->name('api.tenant-site.config');
+Route::get('/tenant-site/demos', [\App\Http\Controllers\Api\TenantSiteController::class, 'demos'])
+    ->middleware('throttle:600,1')
+    ->name('api.tenant-site.demos');
 
 Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
     // Handle OPTIONS preflight requests

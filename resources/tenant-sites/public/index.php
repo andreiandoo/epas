@@ -6,5 +6,6 @@
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 
+ts_serve_static();
 ts_boot_site();
 ts_dispatch();

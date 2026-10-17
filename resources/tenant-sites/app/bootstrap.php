@@ -14,4 +14,5 @@ require TS_APP . '/api.php';
 require TS_APP . '/site.php';
 require TS_APP . '/theme.php';
 require TS_APP . '/render.php';
+require TS_APP . '/gallery.php';
 require TS_APP . '/router.php';

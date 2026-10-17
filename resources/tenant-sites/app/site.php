@@ -60,6 +60,9 @@ function ts_boot_site(): void {
     if ($host === '') {
         ts_system_page('unknown', 400);
     }
+    if (ts_is_gallery_host($host)) {
+        ts_render_gallery();
+    }
 
     $preview = ts_preview_token();
     $res = ts_fetch_site_config($host, $preview);

@@ -4,11 +4,11 @@ $img = !empty($s['image']) ? $s['image'] : teatru_ev_img(teatru_featured());
 ?>
 <section class="relative min-h-screen flex items-center justify-center overflow-hidden curtain-texture">
     <div class="absolute inset-0">
-        <img src="<?= e($img) ?>" alt="" class="w-full h-full object-cover opacity-40">
+        <img src="<?= e($img) ?>" alt="" class="w-full h-full object-cover opacity-40 scale-110" data-parallax="0.12">
         <div class="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/80 to-canvas/40"></div>
         <div class="absolute inset-0 bg-gradient-to-r from-accent/20 via-transparent to-accent/20"></div>
     </div>
-    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto pt-20">
+    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto pt-20" data-reveal>
         <?php if (!empty($s['eyebrow'])): ?><p class="text-primary tracking-[0.3em] text-sm mb-6 uppercase"><?= e($s['eyebrow']) ?></p><?php endif; ?>
         <h1 class="font-display text-5xl sm:text-7xl lg:text-8xl mb-6 leading-tight"><?= ts_md($s['title'] ?? SITE_NAME) ?></h1>
         <?php if (!empty($s['subtitle'])): ?><p class="text-xl text-fg/70 max-w-2xl mx-auto mb-10"><?= ts_md($s['subtitle']) ?></p><?php endif; ?>

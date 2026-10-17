@@ -49,7 +49,8 @@ class TenantSiteActions
                 $full = "{$sub}.{$base}";
 
                 $reserved = array_merge(app(CloudflareService::class)->getReservedSubdomains(), config('tenant-sites.reserved', []));
-                if (in_array($sub, $reserved, true)) {
+                // demo-* și demo sunt ale demo-urilor de template (galeria + demo-{slug})
+                if (in_array($sub, $reserved, true) || str_starts_with($sub, 'demo')) {
                     Notification::make()->title("„{$sub}” este rezervat")->danger()->send();
 
                     return;

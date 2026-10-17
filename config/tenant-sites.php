@@ -31,6 +31,13 @@ return [
         'radar', 'pay', 'plata', 'checkout', 'cont', 'account', 'webmail', 'smtp', 'ns1', 'ns2',
     ],
 
+    // Demo-urile live ale template-urilor: demo-{slug}.{demo_base_domain}, plus
+    // galeria demo.{demo_base_domain}. Tenantul demo primește checkout demo.
+    'demo_base_domain' => env('TENANT_SITES_DEMO_DOMAIN', 'tics.ro'),
+
+    // De unde se servesc fișierele template-urilor (public/tpl/{slug}/ pe serverul site-urilor).
+    'assets_base' => env('TENANT_SITES_ASSETS_BASE', 'https://sites.tics.ro'),
+
     // Unde stau template-urile (același folder ajunge și pe serverul site-urilor).
     'templates_path' => resource_path('tenant-sites/templates'),
 

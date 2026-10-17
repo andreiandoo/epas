@@ -49,6 +49,13 @@ jobs:
         run: |
           find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a src/resources/tenant-sites/. site/
+          # Fișierele fiecărui template (templates/X/assets) se servesc de nginx din public/tpl/X
+          for dir in site/templates/*/assets; do
+            [ -d "$dir" ] || continue
+            slug="$(basename "$(dirname "$dir")")"
+            mkdir -p "site/public/tpl/$slug"
+            cp -a "$dir/." "site/public/tpl/$slug/"
+          done
           date -u '+%Y-%m-%d %H:%M:%S' > site/public/.deploy-timestamp
 
       - name: Push to the tenant-sites branch

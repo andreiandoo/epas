@@ -3,7 +3,7 @@ require_once __DIR__ . '/_events.php';
 $accent = ($s['style'] ?? 'plain') === 'accent';
 ?>
 <section class="<?= $accent ? 'py-20 bg-accent/20' : 'py-24' ?> px-4 lg:px-8">
-    <div class="max-w-3xl mx-auto text-center">
+    <div class="max-w-3xl mx-auto text-center" data-reveal>
         <?php if (!empty($s['ornament'])): ?><div class="divider-ornate mb-6"><span class="text-primary text-2xl">✦</span></div><?php endif; ?>
         <?= teatru_eyebrow($s['eyebrow'] ?? '') ?>
         <?php if (!empty($s['title'])): ?><h2 class="font-display text-3xl lg:text-4xl mb-4"><?= ts_md($s['title']) ?></h2><?php endif; ?>

@@ -10,7 +10,7 @@ $img = $s['image'] ?? null;
         <div class="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/70 to-canvas/40"></div>
     </div>
     <?php endif; ?>
-    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
+    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto" data-reveal>
         <?php if (!empty($s['eyebrow'])): ?><p class="text-primary tracking-[0.3em] text-sm mb-6 uppercase"><?= e($s['eyebrow']) ?></p><?php endif; ?>
         <h1 class="font-display text-5xl sm:text-7xl mb-6"><?= ts_md($s['title'] ?? '') ?></h1>
         <?php if (!empty($s['subtitle'])): ?><p class="text-xl text-fg/70 max-w-2xl mx-auto"><?= ts_md($s['subtitle']) ?></p><?php endif; ?>

@@ -30,6 +30,44 @@ const TS_SHARED_ROUTES = [
     '/api/proxy.php' => 'api/proxy.php',
 ];
 
+/**
+ * Fișiere statice, înainte de a căuta site-ul după host. Pe server nginx le
+ * servește direct din public/ (workflow-ul copiază templates/X/assets în
+ * public/tpl/X); aici e drumul pentru dezvoltare locală și pentru un fișier
+ * de template încă necopiat.
+ */
+function ts_serve_static(): void {
+    $path = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
+    if (str_contains($path, '..')) {
+        return;
+    }
+    $file = null;
+    if (preg_match('#^/tpl/([a-z0-9-]+)/(.+)$#', $path, $m)) {
+        $file = TS_TEMPLATES . '/' . $m[1] . '/assets/' . $m[2];
+    } elseif (str_starts_with($path, '/assets/')) {
+        $file = TS_ROOT . '/public' . $path;
+    }
+    if (!$file || !is_file($file)) {
+        return;
+    }
+    $types = [
+        'js' => 'text/javascript', 'mjs' => 'text/javascript', 'css' => 'text/css', 'json' => 'application/json',
+        'svg' => 'image/svg+xml', 'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp', 'avif' => 'image/avif', 'gif' => 'image/gif', 'woff2' => 'font/woff2',
+        'glb' => 'model/gltf-binary', 'gltf' => 'model/gltf+json', 'ktx2' => 'image/ktx2', 'mp4' => 'video/mp4',
+        'webm' => 'video/webm', 'hdr' => 'application/octet-stream', 'wasm' => 'application/wasm',
+    ];
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    if (!isset($types[$ext])) {
+        return;
+    }
+    header('Content-Type: ' . $types[$ext]);
+    header('Cache-Control: public, max-age=31536000, immutable');
+    header('Access-Control-Allow-Origin: *');
+    readfile($file);
+    exit;
+}
+
 function ts_dispatch(): void {
     $path = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
     $path = '/' . trim($path, '/');
@@ -98,6 +136,9 @@ function ts_match(string $pattern, string $path): ?array {
 function ts_run(string $file): void {
     if (!is_file($file)) {
         ts_not_found();
+    }
+    if (str_starts_with($file, TS_SHARED . '/')) {
+        define('TS_SHARED_PAGE', true);
     }
     // Pagina și layout-ul inclus de ea împart scopul acestei funcții
     // ($pageTitle, $activeNav ... setate înainte de layout).
