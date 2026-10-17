@@ -97,6 +97,18 @@ function ts_boot_site(): void {
     define('SITE_LOGO_TEXT', (string) ($cfg['branding']['short_name'] ?? ''));
     define('SITE_CITY', (string) ($cfg['branding']['tagline'] ?? ''));
 
+    // Demo de template: bara de sus + site-ul în iframe (vezi demo_frame.php)
+    if (!empty($cfg['demo'])) {
+        if (ts_demo_wants_frame()) {
+            ts_render_demo_frame();
+        }
+        if (isset($_GET['ts_shot'])) {
+            ts_demo_inject_shot_style();
+        } elseif (isset($_GET['_frame']) || strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '')) === 'iframe') {
+            ts_demo_inject_frame_script();
+        }
+    }
+
     // Cache-ul API separat pe tenant (și separat pentru previzualizare).
     define('CACHE_DIR', CACHE_ROOT . '/t' . TENANT_ID);
     if (!is_dir(CACHE_DIR)) {

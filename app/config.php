@@ -21,6 +21,8 @@ defined('CACHE_ROOT')    || define('CACHE_ROOT', TS_ROOT . '/cache');
 defined('SITE_LOCALE')   || define('SITE_LOCALE', 'ro');
 // Host-urile galeriei de demo-uri (listă separată prin virgulă)
 defined('DEMO_GALLERY_HOSTS') || define('DEMO_GALLERY_HOSTS', 'demo.tics.ro');
+// Unde duce „Vreau acest site” din bara demo-urilor și din galerie
+defined('DEMO_CTA_URL') || define('DEMO_CTA_URL', 'https://tixello.ro');
 
 if (!is_dir(CACHE_ROOT)) {
     @mkdir(CACHE_ROOT, 0775, true);
