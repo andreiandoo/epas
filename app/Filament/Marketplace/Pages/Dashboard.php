@@ -33,6 +33,11 @@ class Dashboard extends Page
     // marketplace, so other marketplaces don't see it.
     private const FEATURED_EVENT_ID = 4234;
 
+    // A month is stored for good (marketplace_dashboard_snapshots) once it ended
+    // this many days ago — the grace leaves room for late refunds and fixes.
+    // `dashboard:unfreeze` recomputes a month if needed.
+    private const FREEZE_AFTER_DAYS = 7;
+
     public ?MarketplaceClient $marketplace = null;
 
     #[Url]
@@ -44,9 +49,6 @@ class Dashboard extends Page
     #[Url]
     public string $selectedMonth = '';
 
-    #[Url]
-    public string $selectedDailyReportDate = '';
-
     public function mount(): void
     {
         $admin = Auth::guard('marketplace_admin')->user();
@@ -54,9 +56,6 @@ class Dashboard extends Page
         $nowRo = Carbon::now('Europe/Bucharest');
         if (!$this->selectedMonth) {
             $this->selectedMonth = $nowRo->format('Y-m');
-        }
-        if (!$this->selectedDailyReportDate) {
-            $this->selectedDailyReportDate = $nowRo->format('Y-m-d');
         }
         if (!$this->chartMonth) {
             $this->chartMonth = $nowRo->format('Y-m');
@@ -72,7 +71,7 @@ class Dashboard extends Page
     {
         $tz = 'Europe/Bucharest';
         try {
-            $current = Carbon::createFromFormat('Y-m', $this->chartMonth, $tz)->startOfMonth();
+            $current = Carbon::createFromFormat('!Y-m', $this->chartMonth, $tz)->startOfMonth();
         } catch (\Throwable $e) {
             $current = Carbon::now($tz)->startOfMonth();
         }
@@ -89,23 +88,24 @@ class Dashboard extends Page
 
     public function updatedSelectedMonth(): void
     {
-        // Clear month-related caches when month changes
-        if ($this->marketplace) {
-            $id = $this->marketplace->id;
-            Cache::forget("mp_dash_month_{$id}_{$this->selectedMonth}");
-            Cache::forget("mp_dash_billing_{$id}_{$this->selectedMonth}");
-            // Month sales/commission now come from the daily-report cache; the
-            // report-based chart series cache is keyed by month too.
-            Cache::forget("mp_dash_chart_rep_v1_{$id}_month_{$this->selectedMonth}");
-        }
+        // Nothing to invalidate: month caches are keyed by month and short-lived,
+        // and closed months are stored once (see monthValue()). Forgetting them
+        // here used to force a full recompute on every month switch.
     }
 
-    public function updatedSelectedDailyReportDate(): void
+    /**
+     * A month-scoped dashboard value: from the snapshot table once the month is
+     * closed (computed once, never again), otherwise from the cache.
+     */
+    private function monthValue(string $kind, int $marketplaceId, string $ym, string $cacheKey, int $ttl, \Closure $compute): mixed
     {
-        // No cache invalidation needed — the daily report cache key already
-        // includes the date, so changing the date just hits a different
-        // (possibly empty) cache slot. Method exists so Livewire registers
-        // the property as live-bindable.
+        $tz = 'Europe/Bucharest';
+        $monthEnd = Carbon::createFromFormat('!Y-m', $ym, $tz)->endOfMonth();
+        if ($monthEnd->lt(Carbon::now($tz)->subDays(self::FREEZE_AFTER_DAYS))) {
+            return \App\Models\MarketplaceDashboardSnapshot::remember($marketplaceId, $kind, $ym, $compute);
+        }
+
+        return Cache::remember($cacheKey, $ttl, $compute);
     }
 
     public function getTitle(): string
@@ -163,7 +163,7 @@ class Dashboard extends Page
             $nowRo = Carbon::now($tz);
             $monthRef = $this->chartMonth ?: $nowRo->format('Y-m');
             try {
-                $chartMonthDate = Carbon::createFromFormat('Y-m', $monthRef, $tz)->startOfMonth();
+                $chartMonthDate = Carbon::createFromFormat('!Y-m', $monthRef, $tz)->startOfMonth();
             } catch (\Throwable $e) {
                 $chartMonthDate = $nowRo->copy()->startOfMonth();
                 $monthRef = $chartMonthDate->format('Y-m');
@@ -191,10 +191,10 @@ class Dashboard extends Page
 
             // "Vânzări" bars = money collected per day (SUM order.total), the
             // same basis as the "Total vânzări" card and billing-breakdown.
-            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+            $chartData = $this->monthValue('chart_sales', $marketplaceId, $monthRef, "mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
                 return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
             });
-            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+            $ticketChartData = $this->monthValue('chart_tickets', $marketplaceId, $monthRef, "mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
                 return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
             });
 
@@ -203,13 +203,13 @@ class Dashboard extends Page
             $prevStart = $prevYearMonthDate->copy()->utc();
             $prevEnd = $prevYearMonthDate->copy()->endOfMonth()->endOfDay()->utc();
             $prevDays = $prevYearMonthDate->daysInMonth;
-            $prevYearChartData = Cache::remember("mp_dash_chart_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+            $prevYearChartData = $this->monthValue('chart_sales_ly', $marketplaceId, $prevYearMonthDate->format('Y-m'), "mp_dash_chart_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
                 // Include legacy_import for the comparison line — last year's
                 // sales are mostly migrated orders; excluding them would leave
                 // the prev-year series empty and nothing to compare against.
                 return $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false);
             });
-            $prevYearTicketChartData = Cache::remember("mp_dash_tchart_v2_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+            $prevYearTicketChartData = $this->monthValue('chart_tickets_ly', $marketplaceId, $prevYearMonthDate->format('Y-m'), "mp_dash_tchart_v2_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
                 // Include legacy_import for last year (mostly migrated tickets).
                 return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false);
             });
@@ -248,7 +248,8 @@ class Dashboard extends Page
             // because the service can't value last year's migrated legacy data.
             $viewMonthStart = $chartMonthDate->copy()->startOfMonth()->utc();
             $viewMonthEnd = $chartMonthDate->copy()->endOfMonth()->endOfDay()->utc();
-            $commSoFar = $chartMonthMode === 'future' ? 0.0 : Cache::remember(
+            $commSoFar = $chartMonthMode === 'future' ? 0.0 : $this->monthValue(
+                'commission', $marketplaceId, $chartMonthDate->format('Y-m'),
                 "mp_month_comm_svc_v2_{$marketplaceId}_{$chartMonthDate->format('Y-m')}",
                 $chartMonthMode === 'past' ? 86400 : 900,
                 fn () => $this->monthCommissionViaService($marketplaceId, $viewMonthStart, $viewMonthEnd)
@@ -301,11 +302,11 @@ class Dashboard extends Page
 
         // Selected month stats
         $month = $this->selectedMonth ?: Carbon::now('Europe/Bucharest')->format('Y-m');
-        $billingData = Cache::remember("mp_dash_billing_{$marketplaceId}_{$month}", 600, function () use ($marketplaceId, $month) {
+        $billingData = $this->monthValue('billing', $marketplaceId, $month, "mp_dash_billing_{$marketplaceId}_{$month}", 600, function () use ($marketplaceId, $month) {
             return $this->computeMonthlyBilling($marketplaceId, $month);
         });
 
-        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}_{$month}", 300, function () use ($marketplaceId, $month) {
+        $monthStats = $this->monthValue('month_stats', $marketplaceId, $month, "mp_dash_month_v2_{$marketplaceId}_{$month}", 300, function () use ($marketplaceId, $month) {
             return $this->computeCurrentMonthStats($marketplaceId, $month);
         });
 
@@ -390,32 +391,6 @@ class Dashboard extends Page
                 ->analyze($marketplaceId, request()->has('refresh_invite_abuse'))
             : null;
 
-        // Daily event sales report (super-admin only) — events that had
-        // sales on the selected day, with same-day + all-time aggregates.
-        // Date is clamped to [today-30d, today] in Romania time. Today
-        // gets a short TTL (data is still moving); past days cache longer.
-        $dailyEventReport = null;
-        $dailyReportDate = null;
-        $dailyReportMinDate = null;
-        $dailyReportMaxDate = null;
-        $dailyReportVatRate = 0.0;
-        if ($isSuperAdmin) {
-            $maxDate = Carbon::now($tz)->format('Y-m-d');
-            $minDate = Carbon::now($tz)->subDays(30)->format('Y-m-d');
-            $reqDate = $this->selectedDailyReportDate ?: $maxDate;
-            if ($reqDate < $minDate) { $reqDate = $minDate; }
-            if ($reqDate > $maxDate) { $reqDate = $maxDate; }
-            $dailyReportDate = $reqDate;
-            $dailyReportMinDate = $minDate;
-            $dailyReportMaxDate = $maxDate;
-            // Shared per-day cache — same key the month chart reads, so the
-            // chart bar and this table never diverge for the same day.
-            $dailyEventReport = $this->dailyReportRowsCached($marketplaceId, $reqDate);
-            // VAT on the commission of that day (0 before the marketplace became
-            // a VAT payer). Applied in the view, so the cached rows stay as-is.
-            $dailyReportVatRate = $marketplace->vatRate(Carbon::createFromFormat('Y-m-d', $reqDate, $tz)->endOfDay());
-        }
-
         return [
             'marketplace' => $marketplace,
             'isSuperAdmin' => $isSuperAdmin,
@@ -443,11 +418,6 @@ class Dashboard extends Page
             'chartSummary' => $chartSummary,
             'chartMonthMeta' => $chartMonthMeta,
             'selectedMonth' => $month,
-            'dailyEventReport' => $dailyEventReport,
-            'dailyReportDate' => $dailyReportDate,
-            'dailyReportMinDate' => $dailyReportMinDate,
-            'dailyReportMaxDate' => $dailyReportMaxDate,
-            'dailyReportVatRate' => $dailyReportVatRate,
         ];
     }
 
@@ -490,7 +460,7 @@ class Dashboard extends Page
         );
 
         Cache::put("mp_dash_stats_v2_{$mid}", $this->computeStats($mid), $ttl);
-        Cache::put("mp_dash_month_{$mid}_{$ym}", $this->computeCurrentMonthStats($mid, $ym, refresh: true), $ttl);
+        Cache::put("mp_dash_month_v2_{$mid}_{$ym}", $this->computeCurrentMonthStats($mid, $ym, refresh: true), $ttl);
 
         // Today's report with fresh all-time totals per event: the report itself
         // keeps its 60s TTL (still moving), but the expensive unbounded build per
@@ -498,7 +468,7 @@ class Dashboard extends Page
         $today = $now->format('Y-m-d');
         Cache::put(
             "mp_dash_daily_evt_v9_{$mid}_{$today}",
-            $this->computeDailyEventReport($mid, $today, refreshAllTime: true),
+            app(\App\Services\Marketplace\DailySalesReportService::class)->compute($mid, $today, refreshAllTime: true),
             60
         );
         // Same short TTL as the report it sums, so the "Azi" cards and the table
@@ -1112,7 +1082,7 @@ class Dashboard extends Page
     private function computeCurrentMonthStats(int $marketplaceId, string $month = '', bool $refresh = false): array
     {
         $tz = 'Europe/Bucharest';
-        $monthDate = $month ? Carbon::createFromFormat('Y-m', $month, $tz) : Carbon::now($tz);
+        $monthDate = $month ? Carbon::createFromFormat('!Y-m', $month, $tz) : Carbon::now($tz);
         $monthStart = $monthDate->copy()->startOfMonth()->utc();
         $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay()->utc();
         $now = Carbon::now($tz);
@@ -1181,7 +1151,8 @@ class Dashboard extends Page
         // build per event (not per event × per day), cached on its own key so
         // the expensive part isn't recomputed on every dashboard load.
         $isPastMonth = $monthDate->copy()->endOfMonth()->lt(Carbon::now($tz)->startOfMonth());
-        $totalCommission = Cache::remember(
+        $totalCommission = $this->monthValue(
+            'commission', $marketplaceId, $monthDate->format('Y-m'),
             "mp_month_comm_svc_v2_{$marketplaceId}_{$monthDate->format('Y-m')}",
             $isPastMonth ? 86400 : 900,
             fn () => $this->monthCommissionViaService($marketplaceId, $monthStart, $monthEnd)
@@ -1320,7 +1291,7 @@ class Dashboard extends Page
     private function computeMonthlyBilling(int $marketplaceId, string $month = ''): array
     {
         $tz = 'Europe/Bucharest';
-        $monthDate = $month ? Carbon::createFromFormat('Y-m', $month, $tz) : Carbon::now($tz);
+        $monthDate = $month ? Carbon::createFromFormat('!Y-m', $month, $tz) : Carbon::now($tz);
         $monthStart = $monthDate->copy()->startOfMonth()->utc();
         $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay()->utc();
 
@@ -1507,7 +1478,7 @@ class Dashboard extends Page
         // the paid-sales report. Same cache slot as the report table, so a page
         // load builds today's report once, not twice.
         $todayDate = Carbon::now($tz)->toDateString();
-        $dailyRows = $this->dailyReportRowsCached($marketplaceId, $todayDate);
+        $dailyRows = app(\App\Services\Marketplace\DailySalesReportService::class)->rowsCached($marketplaceId, $todayDate);
         $reportOrders = (int) array_sum(array_column($dailyRows, 'orders_day'));
         $reportTickets = (int) array_sum(array_column($dailyRows, 'tickets_day'));
         $reportRevenue = (float) array_sum(array_column($dailyRows, 'sales_day'));
@@ -1530,33 +1501,6 @@ class Dashboard extends Page
             'events_published' => $eventsPublished,
             'date_label' => Carbon::now($tz)->translatedFormat('d F Y'),
         ];
-    }
-
-    /**
-     * Per-event sales breakdown for a single day. Returns a list of events
-     * that had at least one paid/confirmed/completed order on that day,
-     * each row carrying same-day + all-time aggregates (orders, tickets,
-     * revenue, commission).
-     *
-     * Caller is responsible for super-admin gating and date clamping
-     * (the date arrives validated from getViewData()).
-     */
-    /**
-     * Per-day report rows, cached under the SAME key used by the daily report
-     * table so the month chart and the table share one computation and can
-     * never disagree for a given day. Today keeps a short TTL (still moving);
-     * past days are immutable → cache 24h.
-     */
-    private function dailyReportRowsCached(int $marketplaceId, string $date): array
-    {
-        $today = Carbon::now('Europe/Bucharest')->format('Y-m-d');
-        $ttl = ($date >= $today) ? 60 : 86400;
-
-        return Cache::remember(
-            "mp_dash_daily_evt_v9_{$marketplaceId}_{$date}",
-            $ttl,
-            fn () => $this->computeDailyEventReport($marketplaceId, $date)
-        );
     }
 
     /**
@@ -1597,61 +1541,6 @@ class Dashboard extends Page
         }
 
         return round($sum, 2);
-    }
-
-    /**
-     * Distribute each paid order's total across the events it contains,
-     * proportional to the FACE value (ticket.price) of that event's tickets in
-     * the order. Single-event orders keep 100% of their total (fees/discounts
-     * included); multi-event carts are split by real ticket value — never a
-     * blind total ÷ count. Σ over events = Σ order.total = money collected.
-     * Scoped by order created_at, valid/used tickets, paid non-excluded orders.
-     *
-     * @return array<int, array{revenue: float, tickets: int, orders: int}>
-     */
-    private function allocateDayRevenue(int $marketplaceId, Carbon $start, Carbon $end): array
-    {
-        $rows = DB::table('tickets as t')
-            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-            ->join('events as e', 'e.id', '=', 'tt.event_id')
-            ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('e.marketplace_client_id', $marketplaceId)
-            ->whereIn('t.status', ['valid', 'used'])
-            ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-            ->whereNotIn('o.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-            // Test POS nu intra in statistici
-            ->whereRaw(\App\Support\TestPos::notTypeSql('tt'))
-            ->whereBetween('o.created_at', [$start, $end])
-            ->select('t.order_id', 't.price', 'e.id as eid', 'o.total as order_total')
-            ->get();
-
-        $out = [];
-        foreach ($rows->groupBy('order_id') as $orderId => $tks) {
-            $orderTotal = (float) $tks->first()->order_total;
-            $sumFace = (float) $tks->sum('price');
-            $count = $tks->count();
-            foreach ($tks->groupBy('eid') as $eid => $group) {
-                $eid = (int) $eid;
-                // Split by ticket face value; fall back to ticket count only if
-                // the whole order is zero-value (all comp/free tickets).
-                $share = $sumFace > 0
-                    ? ((float) $group->sum('price') / $sumFace)
-                    : ($count > 0 ? $group->count() / $count : 0);
-                if (!isset($out[$eid])) {
-                    $out[$eid] = ['revenue' => 0.0, 'tickets' => 0, 'orders' => []];
-                }
-                $out[$eid]['revenue'] += $orderTotal * $share;
-                $out[$eid]['tickets'] += $group->count();
-                $out[$eid]['orders'][$orderId] = true;
-            }
-        }
-        foreach ($out as &$d) {
-            $d['revenue'] = round($d['revenue'], 2);
-            $d['orders'] = count($d['orders']);
-        }
-        unset($d);
-
-        return $out;
     }
 
     /**
@@ -1889,203 +1778,5 @@ class Dashboard extends Page
             else { $half = 1; $month++; if ($month > 12) { $month = 1; $year++; } }
         }
         return null;
-    }
-
-    /**
-     * All-time revenue + commission of one event (unbounded SalesBreakdownService
-     * build — the heaviest call of the daily report). Cached per event, so it is
-     * shared by every day the event sold on and by today's cards; the warm cron
-     * refreshes it for today's events.
-     *
-     * @return array{revenue: float, commission: float}
-     */
-    private function eventAllTimeTotals(Event $event, bool $refresh = false): array
-    {
-        $key = "mp_evt_alltime_v1_{$event->id}";
-        $compute = function () use ($event) {
-            $bd = app(\App\Services\Marketplace\SalesBreakdownService::class)->build($event);
-            $kept = (float) ($bd['total_commission_kept_from_refunds'] ?? 0);
-
-            return [
-                'revenue' => (float) $bd['total_revenue'] + $kept,
-                'commission' => (float) $bd['total_commission'] + $kept,
-            ];
-        };
-
-        if ($refresh) {
-            $totals = $compute();
-            Cache::put($key, $totals, 1200);
-
-            return $totals;
-        }
-
-        return Cache::remember($key, 600, $compute);
-    }
-
-    private function computeDailyEventReport(int $marketplaceId, string $date, bool $refreshAllTime = false): array
-    {
-        $tz = 'Europe/Bucharest';
-        $dayStart = Carbon::createFromFormat('Y-m-d', $date, $tz)->startOfDay()->utc();
-        $dayEnd = Carbon::createFromFormat('Y-m-d', $date, $tz)->endOfDay()->utc();
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
-
-        // Step 1 — per-event day figures via per-ticket allocation: each order's
-        // total is distributed across its events by the face value of that
-        // event's tickets (see allocateDayRevenue). Discovers events through
-        // their tickets, so multi-event carts (no single event_id on the order)
-        // are attributed per event and Σ = money collected. No separate bucket.
-        $eventSub = function ($sub) use ($marketplaceId) {
-            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
-        };
-        $orderScope = function ($q) use ($marketplaceId, $eventSub) {
-            $q->where('orders.marketplace_client_id', $marketplaceId)
-                ->orWhereIn('orders.marketplace_event_id', $eventSub)
-                ->orWhereIn('orders.event_id', $eventSub);
-        };
-
-        $dayAlloc = $this->allocateDayRevenue($marketplaceId, $dayStart, $dayEnd);
-        if (empty($dayAlloc)) {
-            return [];
-        }
-        $eventIds = array_keys($dayAlloc);
-
-        // Step 3 — all-time per-event aggregates for the same scope, so
-        // both the day cell and the running total live on the same row.
-        // Filter by the same effective event id list so we don't pull
-        // every marketplace order into memory.
-        $eventIdsInt = array_map('intval', $eventIds);
-        $eventIdsList = implode(',', $eventIdsInt);
-        $totalRows = Order::where($orderScope)
-            ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-            ->whereRaw("COALESCE(marketplace_event_id, event_id) IN ({$eventIdsList})")
-            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
-            ->selectRaw('COUNT(*) as orders_count')
-            ->selectRaw('SUM(total) as revenue')
-            ->selectRaw('SUM(COALESCE(commission_amount, 0)) as commission_db')
-            ->groupBy('eid')
-            ->get()
-            ->keyBy('eid');
-
-        $totalTicketCounts = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
-            ->join('events', 'ticket_types.event_id', '=', 'events.id')
-            ->join('orders', 'tickets.order_id', '=', 'orders.id')
-            ->where('events.marketplace_client_id', $marketplaceId)
-            ->whereIn('events.id', $eventIds)
-            ->whereIn('tickets.status', ['valid', 'used'])
-            ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
-            // Test POS nu intra in statistici
-            ->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))
-            ->selectRaw('events.id as eid, COUNT(*) as cnt')
-            ->groupBy('events.id')
-            ->pluck('cnt', 'eid');
-
-        // Step 4 — pull the event records (with venue) so we can render
-        // name/date/venue in the UI. Done in one query and indexed by id.
-        $events = Event::with(['venue:id,name,city', 'marketplaceOrganizer'])
-            ->whereIn('id', $eventIds)
-            ->get([
-                'id', 'title', 'event_date', 'range_start_date', 'duration_mode', 'multi_slots', 'venue_id',
-                // Needed by SalesBreakdownService for leisure valuation + commission
-                // (rate/floor/mode). Without these it re-fetches per event or falls
-                // back to the wrong rate.
-                'display_template', 'marketplace_organizer_id', 'marketplace_client_id', 'tenant_id', 'commission_rate', 'commission_mode',
-            ])
-            ->keyBy('id');
-
-        // Revenue + commission must match each event's own Vânzări tab (and
-        // payout math), so derive them from the authoritative
-        // SalesBreakdownService rather than SUM(orders.total) / a flat
-        // marketplace commission rate. The old approach (a) undercounted
-        // revenue for orders linked to the event only through their tickets
-        // (order.event_id / marketplace_event_id NULL — typical for POS /
-        // leisure sales) while still counting those tickets, and (b) fell back
-        // to a flat marketplace rate when orders.commission_amount was 0. That
-        // produced e.g. 863,00 / 8,63 on the dashboard vs 1.303,00 / 71,58 on
-        // the event page for the same 25 tickets.
-        $salesService = app(\App\Services\Marketplace\SalesBreakdownService::class);
-
-        $rows = [];
-        foreach ($eventIds as $eid) {
-            $eid = (int) $eid;
-            $event = $events->get($eid);
-            if (!$event) {
-                continue; // Ticket pointing at a deleted event — skip.
-            }
-            $alloc = $dayAlloc[$eid];
-
-            // sales_day = money collected, attributed to this event by ticket
-            // face value (see allocateDayRevenue) — a package counts at the
-            // price paid, and multi-event carts are split by real ticket value.
-            // commission_day = AmBilet's actual cut via SalesBreakdownService
-            // (floor/leisure/per-type aware — orders.commission_amount is 0 for
-            // POS/leisure).
-            $dayBd = $salesService->build($event, $dayStart, $dayEnd, exactBounds: true);
-            $dayKept = (float) ($dayBd['total_commission_kept_from_refunds'] ?? 0);
-            $dayRevenue = (float) $alloc['revenue'];
-            $dayCommission = (float) $dayBd['total_commission'] + $dayKept;
-
-            $total = $totalRows->get((string) $eid) ?? $totalRows->get($eid);
-            $totalOrders = $total ? (int) $total->orders_count : 0;
-
-            // All-time totals (no period bounds). Lifetime revenue uses the
-            // service's per-event ticket valuation (an all-time order.total
-            // allocation would have to scan the whole history).
-            ['revenue' => $totalRevenue, 'commission' => $totalCommission] = $this->eventAllTimeTotals($event, $refreshAllTime);
-
-            // Display date — single_day uses event_date, range starts at
-            // range_start_date, multi-day slot lists fall back to the
-            // earliest entry in multi_slots.
-            $displayDate = null;
-            if ($event->duration_mode === 'range' && $event->range_start_date) {
-                $displayDate = Carbon::parse($event->range_start_date);
-            } elseif ($event->duration_mode === 'single_day' && $event->event_date) {
-                $displayDate = Carbon::parse($event->event_date);
-            } elseif (is_array($event->multi_slots) && !empty($event->multi_slots)) {
-                $firstSlot = collect($event->multi_slots)->pluck('date')->filter()->sort()->first();
-                if ($firstSlot) {
-                    $displayDate = Carbon::parse($firstSlot);
-                }
-            } elseif ($event->event_date) {
-                $displayDate = Carbon::parse($event->event_date);
-            }
-
-            $venueName = '-';
-            $venueCity = '';
-            if ($event->venue) {
-                $rawName = $event->venue->name;
-                if (is_array($rawName)) {
-                    $venueName = $rawName['ro'] ?? $rawName['en'] ?? reset($rawName) ?: '-';
-                } else {
-                    $venueName = $rawName ?: '-';
-                }
-                $venueCity = $event->venue->city ?: '';
-            }
-
-            $rows[] = [
-                'event_id' => $eid,
-                'event_name' => $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: '-',
-                'event_edit_url' => \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $eid]),
-                'event_date' => $displayDate?->format('Y-m-d'),
-                'event_date_label' => $displayDate?->translatedFormat('d M Y') ?? '-',
-                'venue_name' => $venueName,
-                'venue_city' => $venueCity,
-                'orders_day' => (int) $alloc['orders'],
-                'tickets_day' => (int) $alloc['tickets'],
-                'sales_day' => $dayRevenue,
-                'commission_day' => $dayCommission,
-                'orders_total' => $totalOrders,
-                'tickets_total' => (int) ($totalTicketCounts[$eid] ?? 0),
-                'sales_total' => $totalRevenue,
-                'commission_total' => $totalCommission,
-            ];
-        }
-
-        // Highest same-day revenue first — operators usually scan from
-        // top for "what moved today".
-        usort($rows, fn ($a, $b) => $b['sales_day'] <=> $a['sales_day']);
-
-        return $rows;
     }
 }
