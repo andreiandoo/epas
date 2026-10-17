@@ -282,11 +282,16 @@ function updateReport(data) {
         const commission = o.commission_amount ?? (grossRevenue * (commissionRate / 100));
         const netRevenue = o.net_revenue ?? (grossRevenue - refunds - commission);
 
+        // Marketplace VAT on the commission: paid by the customer (on top) or
+        // added on the commission invoice to the organizer (included)
+        const commissionVatRate = parseFloat(o.commission_vat_rate) || 0;
         let commissionLabel;
         if (commissionMode === 'added_on_top') {
             commissionLabel = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''} +preț)`;
         } else {
-            commissionLabel = `Comision platformă`;
+            commissionLabel = commissionVatRate > 0
+                ? `Comision platformă (+ TVA ${commissionVatRate}% pe factura de comision)`
+                : `Comision platformă`;
         }
 
         document.getElementById('financial-gross').textContent = formatCurrency(grossRevenue);

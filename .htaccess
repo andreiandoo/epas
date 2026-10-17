@@ -32,6 +32,15 @@ RewriteRule ^android-nou-2/?$ https://core.tixello.com/android-nou-2 [R=302,L,QS
 # Scan app, web build of ambilet-app2 (iPhone users; test address while F0
 # runs). Files live in scan-nou/, written by ambilet-app2/scripts/build-web.js.
 # Declared early so no catch-all below can take these paths.
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
+<IfModule mod_headers.c>
+    # The service worker must always be checked for a new version.
+    <FilesMatch "^sw\.js$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
 RewriteRule ^scan-nou/ - [L]
 RewriteRule ^organizator/scan-nou$ /organizator/scan-nou/ [R=301,L]
 RewriteRule ^organizator/scan-nou/?$ scan-nou/index.html [L]

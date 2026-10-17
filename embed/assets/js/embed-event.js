@@ -12,6 +12,8 @@
     const ticketTypes = EVENT_DATA.ticket_types || [];
     const defaultCommissionMode = EVENT_DATA.commission_mode || 'included';
     const defaultCommissionRate = EVENT_DATA.commission_rate || 5;
+    // Marketplace VAT on the on-top commission (0 = none); checkout charges it
+    const commissionVatRate = parseFloat(EVENT_DATA.commission_vat_rate) || 0;
 
     const $container = document.getElementById('embed-ticket-types');
     const $summary = document.getElementById('embed-cart-summary');
@@ -43,7 +45,10 @@
         const base = parseFloat(tt.price || 0);
         const comm = calcCommission(tt, base);
         if (comm.mode === 'added_on_top' || comm.mode === 'on_top') {
-            return { display: Math.round((base + comm.amount) * 100) / 100, base, commission: comm.amount, mode: comm.mode };
+            // what the customer pays: ticket + commission + the VAT on the commission
+            const vat = commissionVatRate > 0 ? Math.round(comm.amount * commissionVatRate) / 100 : 0;
+            const fees = Math.round((comm.amount + vat) * 100) / 100;
+            return { display: Math.round((base + fees) * 100) / 100, base, commission: fees, vat, mode: comm.mode };
         }
         // included — display price IS the price (commission already inside)
         return { display: base, base, commission: comm.amount, mode: comm.mode };
@@ -95,7 +100,7 @@
                 }
                 html += '<div style="font-weight:700;font-size:15px;">' + pricing.display.toFixed(2) + ' ' + (tt.currency || 'RON') + '</div>';
                 if (pricing.mode === 'added_on_top' || pricing.mode === 'on_top') {
-                    html += '<div style="font-size:9px;color:var(--muted-color);">incl. taxe ' + pricing.commission.toFixed(2) + '</div>';
+                    html += '<div style="font-size:9px;color:var(--muted-color);">incl. taxe' + (pricing.vat > 0 ? ' și TVA ' : ' ') + pricing.commission.toFixed(2) + '</div>';
                 }
                 html += '</div>';
 

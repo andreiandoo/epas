@@ -1,0 +1,26 @@
+{
+  "name": "AmBilet Scan",
+  "short_name": "AmBilet Scan",
+  "description": "Scanare și vânzare bilete la intrare",
+  "lang": "ro",
+  "start_url": "/organizator/scan-nou/",
+  "scope": "/organizator/scan-nou/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F2F2",
+  "theme_color": "#F6F2F2",
+  "icons": [
+    {
+      "src": "/organizator/scan-nou/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/organizator/scan-nou/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -17,6 +17,7 @@ $artists = $eventData['data']['artists'] ?? [];
 $venue = $eventData['data']['venue'] ?? [];
 $commMode = $eventData['data']['commission_mode'] ?? 'included';
 $commRate = (float) ($eventData['data']['commission_rate'] ?? 5);
+$commVatRate = (float) ($eventData['data']['commission_vat_rate'] ?? 0);
 
 $pageTitle = ($ev['name'] ?? 'Eveniment') . ' — ' . ORG_NAME;
 $coverUrl = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['poster_url'] ?? '';
@@ -52,6 +53,7 @@ require_once __DIR__ . '/includes/head.php';
         'ticket_types' => $ticketTypes,
         'commission_mode' => $commMode,
         'commission_rate' => $commRate,
+        'commission_vat_rate' => $commVatRate,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     window.__wlEventId = <?= json_encode((int) ($ev['id'] ?? 0)) ?>;
     document.addEventListener('DOMContentLoaded', function () {

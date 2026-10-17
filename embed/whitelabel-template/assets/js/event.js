@@ -9,6 +9,8 @@
     var ticketTypes = DATA.ticket_types || [];
     var defMode = DATA.commission_mode || 'included';
     var defRate = DATA.commission_rate || 5;
+    // marketplace VAT on the on-top commission (0 = none)
+    var commVatRate = parseFloat(DATA.commission_vat_rate) || 0;
     var $types = document.getElementById('wl-ticket-types');
     var $summary = document.getElementById('wl-order-summary');
     var $addBtn = document.getElementById('wl-add-btn');
@@ -118,8 +120,12 @@
                     // p.display now equals base (commission deferred to cart);
                     // surface the post-commission total here so the tooltip
                     // remains an accurate "what you'll actually pay" breakdown.
-                    var totalAtCheckout = Math.round((base + c.amount) * 100) / 100;
+                    var commVat = commVatRate > 0 ? Math.round(c.amount * commVatRate) / 100 : 0;
+                    var totalAtCheckout = Math.round((base + c.amount + commVat) * 100) / 100;
                     html += '<div style="display:flex;justify-content:space-between;"><span>Taxă procesare (' + commTypeLabel + '):</span><span>+' + c.amount.toFixed(2) + ' lei</span></div>';
+                    if (commVat > 0) {
+                        html += '<div style="display:flex;justify-content:space-between;"><span>TVA taxă procesare (' + commVatRate + '%):</span><span>+' + commVat.toFixed(2) + ' lei</span></div>';
+                    }
                     html += '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;font-weight:600;"><span>Total la plată:</span><span>' + totalAtCheckout.toFixed(2) + ' lei</span></div>';
                 } else {
                     html += '<div style="display:flex;justify-content:space-between;"><span>Taxă procesare (' + commTypeLabel + '):</span><span>' + c.amount.toFixed(2) + ' lei</span></div>';

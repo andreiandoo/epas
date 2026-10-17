@@ -465,7 +465,9 @@ function renderEvents() {
             { label: 'Total vânzări', value: fmt(customerPaid), cls: 'text-secondary' }
         ];
         if (!isOnTop) {
-            moneyCells.push({ label: 'Comision Ambilet', value: '− ' + fmt(e.commission_amount || 0), cls: 'text-amber-600' });
+            // The commission invoice adds the marketplace VAT (shown, not deducted here)
+            const commVatRate = parseFloat(e.commission_vat_rate) || 0;
+            moneyCells.push({ label: commVatRate > 0 ? 'Comision Ambilet (+ TVA ' + commVatRate + '% pe factură)' : 'Comision Ambilet', value: '− ' + fmt(e.commission_amount || 0), cls: 'text-amber-600' });
         }
         moneyCells.push({ label: 'Reduceri acordate', value: '− ' + fmt(e.discount_amount || 0), cls: 'text-amber-600' });
         moneyCells.push({ label: 'Venituri eveniment', value: fmt(net), cls: 'text-success' });

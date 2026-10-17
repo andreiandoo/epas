@@ -11,6 +11,8 @@ var WLCheckout = {
     // Organizer-level commission defaults (injected from checkout.php)
     orgCommRate: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.rate) || 5,
     orgCommMode: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.mode) || 'included',
+    // marketplace VAT on the on-top commission (0 = none); checkout charges it
+    orgCommVatRate: parseFloat(window.__WL_COMMISSION__ && window.__WL_COMMISSION__.vat_rate) || 0,
 
     init: function() {
         var cart = WLCart.getCart();
@@ -83,6 +85,7 @@ var WLCheckout = {
         var $btn = document.getElementById('wl-pay-btn');
         var subtotalBase = 0;
         var totalComm = 0;
+        var totalCommVat = 0;
         // Whether AT LEAST ONE item has mode='added_on_top'. Drives whether the
         // commission line shows "+X lei" (added on top) or "incl. X lei" (in
         // price). Real-world organizers don't mix modes per cart, so taking the
@@ -120,6 +123,9 @@ var WLCheckout = {
             var lineComm = Math.round(commAmt * item.quantity * 100) / 100;
             subtotalBase += lineBase;
             totalComm += lineComm;
+            if (mode === 'added_on_top' && self.orgCommVatRate > 0) {
+                totalCommVat += Math.round(lineComm * self.orgCommVatRate) / 100;
+            }
 
             html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + fmtP(lineBase) + ' lei</div></div>';
         });
@@ -133,11 +139,15 @@ var WLCheckout = {
                 : 'Comision Ticketing (inclus)';
             html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">' + commLabel + '</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + (anyOnTop ? '+' : '') + fmtP(totalComm) + ' lei</div></div>';
         }
+        totalCommVat = Math.round(totalCommVat * 100) / 100;
+        if (totalCommVat > 0) {
+            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">TVA comision (' + self.orgCommVatRate + '%)</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">+' + fmtP(totalCommVat) + ' lei</div></div>';
+        }
 
         // added_on_top: total = base + commission. included: total = base
         // (commission is already inside the displayed price, line above is
         // informational only).
-        var grandTotal = anyOnTop ? subtotalBase + totalComm : subtotalBase;
+        var grandTotal = anyOnTop ? subtotalBase + totalComm + totalCommVat : subtotalBase;
 
         if (this.promoDiscount > 0) {
             grandTotal = Math.max(0, grandTotal - this.promoDiscount);

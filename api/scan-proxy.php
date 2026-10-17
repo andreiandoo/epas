@@ -214,13 +214,28 @@ if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
     $body = file_get_contents('php://input');
 }
 
+// multipart/form-data (emergency report with photo / voice note from the web
+// app): PHP has already parsed it into $_POST / $_FILES and php://input is
+// empty, so rebuild it with CURLFile and let curl set the boundary.
+$incomingType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+if ($method === 'POST' && stripos($incomingType, 'multipart/form-data') === 0) {
+    $body = $_POST;
+    foreach ($_FILES as $field => $file) {
+        if (is_array($file['tmp_name'] ?? null)) continue; // no array uploads in the app
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK && is_uploaded_file($file['tmp_name'])) {
+            $body[$field] = new CURLFile($file['tmp_name'], $file['type'] ?: 'application/octet-stream', $file['name'] ?: $field);
+        }
+    }
+    $headers = array_values(array_filter($headers, fn ($h) => stripos($h, 'Content-Type:') !== 0));
+}
+
 $ch = curl_init($targetUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 curl_setopt($ch, CURLOPT_TIMEOUT, 25);
 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-if ($body !== null && $body !== '') {
+if ($body !== null && $body !== '' && $body !== []) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
 }
 
