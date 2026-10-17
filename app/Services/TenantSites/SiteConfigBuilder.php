@@ -57,6 +57,8 @@ class SiteConfigBuilder
                 'youtube' => '',
             ],
             'pages' => $pages,
+            // Câmpurile proprii ale template-ului (manifest "settings"), cu valorile implicite
+            'settings' => collect($m['settings'] ?? [])->mapWithKeys(fn ($f) => [$f['name'] => $f['default'] ?? null])->all(),
         ];
     }
 
@@ -77,6 +79,7 @@ class SiteConfigBuilder
                 $draft['pages'][$key] = $page;
             }
         }
+        $draft['settings'] = array_merge($defaults['settings'], array_filter((array) ($draft['settings'] ?? []), fn ($v) => $v !== null && $v !== ''));
         foreach ($defaults['theme'] as $group => $values) {
             $draft['theme'][$group] = array_merge($values, array_filter($draft['theme'][$group] ?? []));
         }
@@ -136,6 +139,7 @@ class SiteConfigBuilder
             'nav' => array_values(array_filter($data['nav'] ?? [], fn ($i) => ! empty($i['label']) && ! empty($i['url']))),
             'header_cta' => $data['header_cta'] ?? null,
             'footer' => $data['footer'] ?? [],
+            'settings' => $this->resolveImages((array) ($data['settings'] ?? []), $m['settings'] ?? []),
             'pages' => $pages,
         ];
     }

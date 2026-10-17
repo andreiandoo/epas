@@ -167,6 +167,12 @@ class ManageTenantSite extends Page
                 ])->columns(2),
             ]),
 
+            SC\Tabs\Tab::make('Setări template')->icon('heroicon-o-adjustments-horizontal')
+                ->visible(! empty($manifest['settings']))
+                ->schema(empty($manifest['settings']) ? [] : [
+                    SC\Grid::make(2)->statePath('settings')->schema($this->fields($manifest['settings'])),
+                ]),
+
             SC\Tabs\Tab::make('Meniu')->icon('heroicon-o-bars-3')->schema([
                 Forms\Components\Repeater::make('nav')->label('Meniul de sus')
                     ->schema([

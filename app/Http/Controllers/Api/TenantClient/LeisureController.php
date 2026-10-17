@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Leisure\PhysicalResource;
 use App\Models\Leisure\PhysicalResourceType;
+use App\Models\Leisure\TicketTypeCapacity;
 use App\Models\TicketType;
 use App\Services\Leisure\CapacityAvailabilityService;
 use App\Services\Leisure\LeisurePricingResolver;
@@ -77,6 +78,15 @@ class LeisureController extends Controller
             ->with(['venue:id,name,city', 'ticketTypes' => fn ($q) => $q->where('status', 'active')])
             ->get();
 
+        // Bookable online = has capacity scheduled from today on. Products without
+        // any (bar items, POS-only extras) stay in the list but flagged, so a
+        // storefront can hide them without guessing from names or prices.
+        $scheduled = TicketTypeCapacity::where('tenant_id', $tenant->id)
+            ->where('capacity_date', '>=', $today->toDateString())
+            ->distinct()
+            ->pluck('ticket_type_id')
+            ->flip();
+
         $items = [];
         foreach ($events as $event) {
             foreach ($event->ticketTypes as $tt) {
@@ -84,7 +94,8 @@ class LeisureController extends Controller
                 if ($category && $cat !== $category) {
                     continue;
                 }
-                $items[] = $this->formatBookable($tt, $event, $pricing, $today);
+                $items[] = $this->formatBookable($tt, $event, $pricing, $today)
+                    + ['bookable_online' => $scheduled->has($tt->id)];
             }
         }
 
