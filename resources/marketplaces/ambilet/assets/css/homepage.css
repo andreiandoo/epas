@@ -15,7 +15,7 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    height: 340px; /* mobile: vertical 2:3 posters */
+    height: 400px; /* mobile: vertical 2:3 posters, 3 visible */
     overflow: visible;
     perspective: 600px;
     pointer-events: none;
@@ -47,7 +47,7 @@
     cursor: pointer;
     transform:
         rotateY(calc(-10deg * var(--r)))
-        translateX(calc(-112px * var(--r)))
+        translateX(calc(-150px * var(--r)))
         scale(calc(1 - 0.08 * var(--abs, 0)));
     transition: all 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
@@ -86,8 +86,8 @@
     overflow: hidden;
     border-radius: 1rem;
     box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.5);
-    width: 214px;
-    height: 321px;
+    width: 250px;
+    height: 375px;
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     text-decoration: none;
     color: white;
@@ -312,8 +312,16 @@
     position: absolute;
     border-radius: 1rem;
     overflow: hidden;
-    width: 214px;
-    height: 321px;
+    width: 250px;
+    height: 375px;
+}
+
+/* Mobile shows only 3 posters: hide the outer skeletons */
+@media (max-width: 767px) {
+    .hero-skeleton-item:first-child,
+    .hero-skeleton-item:last-child {
+        display: none;
+    }
 }
 
 @media (min-width: 768px) {

@@ -133,6 +133,8 @@ const HeroSlider = {
     updatePositions() {
         const items = document.querySelectorAll('.hero-item');
         const total = this.slides.length;
+        // Mobile: 3 posters (center + one each side); desktop: 5.
+        const maxAbs = this.mobileQuery.matches ? 1 : 2;
 
         items.forEach((item, index) => {
             let r = index - this.currentIndex;
@@ -144,9 +146,9 @@ const HeroSlider = {
             item.style.setProperty('--r', r);
             item.style.setProperty('--abs', abs);
             item.style.zIndex = 10 - abs;
-            item.style.opacity = abs > 2 ? 0 : 1;
+            item.style.opacity = abs > maxAbs ? 0 : 1;
             item.style.filter = 'brightness(' + (1 - 0.15 * abs) + ')';
-            item.style.pointerEvents = abs > 2 ? 'none' : 'auto';
+            item.style.pointerEvents = abs > maxAbs ? 'none' : 'auto';
         });
 
         // Update dots
