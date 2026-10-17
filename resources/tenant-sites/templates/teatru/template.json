@@ -6,6 +6,7 @@
     "kind": "events",
     "status": "ready",
     "visibility": "public",
+    "preview_image": "preview.jpg",
     "motion": ["lenis", "gsap"],
 
     "theme": {
