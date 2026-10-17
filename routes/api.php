@@ -96,6 +96,11 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
         ->name('api.tenant-client-public.event.fight-card');
     Route::get('/fighters', [\App\Http\Controllers\Api\TenantClient\FightCardController::class, 'fighters'])
         ->name('api.tenant-client-public.fighters');
+    // Newsletterul tenantului (fanii unui artist …): abonare din site, dezabonare din linkul din email
+    Route::post('/newsletter/subscribe', [\App\Http\Controllers\Api\TenantClient\NewsletterController::class, 'subscribe'])
+        ->middleware('throttle:8,1')->name('api.tenant-client-public.newsletter.subscribe');
+    Route::post('/newsletter/unsubscribe', [\App\Http\Controllers\Api\TenantClient\NewsletterController::class, 'unsubscribe'])
+        ->middleware('throttle:20,1')->name('api.tenant-client-public.newsletter.unsubscribe');
 
     Route::get('/categories', [TenantClientController::class, 'categories'])
         ->name('api.tenant-client-public.categories');

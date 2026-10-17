@@ -552,6 +552,10 @@ class TenantClientController extends Controller
             'slug' => $event->slug,
             'description' => $event->getTranslation('short_description', $locale) ?? substr(strip_tags($event->getTranslation('description', $locale) ?? ''), 0, 150),
 
+            // Biletele vândute de alt organizator: site-ul trimite la link, fără coș
+            'external_ticket_url' => $event->external_ticket_url ?: null,
+            'external_ticket_label' => $event->external_ticket_label ?: null,
+
             // Status flags
             'is_sold_out' => $event->is_sold_out ?? false,
             'is_cancelled' => $event->is_cancelled ?? false,

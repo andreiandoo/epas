@@ -125,6 +125,13 @@
                         "text": "Iris grew up in Brașov, studied piano in Cluj and wrote her first songs on the night trains between the two cities.\n\nAfter two EPs and a year of club shows, Blue Hour is her first album and her first tour with the full band."
                     }
                 } },
+                { "type": "newsletter", "data": {
+                    "eyebrow": "Lista fanilor",
+                    "title": "Afli primul de datele noi",
+                    "text": "Biletele pentru concertele noi se pun întâi în vânzare pentru cei de pe listă. Un email pe lună, fără spam.",
+                    "button_label": "Mă abonez",
+                    "en": { "eyebrow": "Fan list", "title": "Be first to hear about new dates", "text": "Tickets for new shows go on sale to the list first. One email a month, no spam.", "button_label": "Sign me up" }
+                } },
                 { "type": "cta", "data": {
                     "eyebrow": "Turneu",
                     "title": "Ne vedem în sală",
@@ -202,6 +209,16 @@
                 { "name": "title", "type": "text", "label": "Titlu" },
                 { "name": "text", "type": "textarea", "label": "Text" },
                 { "name": "image", "type": "image", "label": "Fotografie" }
+            ]
+        },
+        "newsletter": {
+            "label": "Newsletter (lista fanilor)",
+            "icon": "heroicon-o-envelope",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
             ]
         },
         "cta": {

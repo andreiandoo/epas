@@ -216,6 +216,8 @@ class Event extends Model
         // location & links
         'suggested_venue_name',
         'address', 'website_url', 'facebook_url', 'event_website_url', 'video_url',
+        // bilete vândute în altă parte (site-ul tenantului trimite la link, fără coș)
+        'external_ticket_url', 'external_ticket_label',
         'marketplace_city_id', 'marketplace_event_category_id', 'manifestation_type',
 
         // content

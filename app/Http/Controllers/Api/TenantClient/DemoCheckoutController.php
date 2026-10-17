@@ -10,6 +10,7 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Seating\EventSeat;
 use App\Models\Seating\EventSeatingLayout;
+use App\Models\TenantNewsletterSubscriber;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\TicketType;
@@ -313,6 +314,20 @@ class DemoCheckoutController extends Controller
             });
 
             $order = $result['order'];
+
+            // Bifa „vreau noutăți” de la plată → abonat la newsletterul tenantului. După tranzacție:
+            // o eroare aici nu are voie să strice comanda.
+            if (! empty($validated['newsletter'])) {
+                try {
+                    TenantNewsletterSubscriber::subscribe($tenant, (string) $result['customer']->email, [
+                        'first_name' => $result['customer']->first_name, 'source' => 'checkout',
+                        'locale' => in_array($request->input('locale'), ['ro', 'en'], true) ? $request->input('locale') : 'ro',
+                        'consent_ip' => $request->header('X-Visitor-IP') ?: $request->ip(),
+                    ]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Checkout newsletter opt-in failed', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
+                }
+            }
 
             if (($result['account'] ?? null) === 'link') {
                 DemoStorefrontController::sendPasswordLink($tenant, $result['customer'], $resolved['domain_id'] ?? null);

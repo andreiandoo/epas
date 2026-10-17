@@ -101,6 +101,14 @@ switch ($action) {
         $path = '/tenant-client/gift-cards/' . rawurlencode(substr((string) ($_GET['code'] ?? ''), 0, 64));
         break;
 
+    // Newsletterul tenantului (NewsletterController): abonare din formular, dezabonare din linkul din email
+    case 'newsletter-subscribe':
+    case 'newsletter-unsubscribe':
+        $method = 'POST';
+        $path   = '/tenant-client/newsletter/' . ($action === 'newsletter-subscribe' ? 'subscribe' : 'unsubscribe');
+        $body   = json_decode(file_get_contents('php://input'), true) ?: [];
+        break;
+
     // Comenzile și biletele din browserul cumpărătorului, setarea parolei (DemoStorefrontController)
     case 'orders':
         $path = '/tenant-client/storefront/orders';

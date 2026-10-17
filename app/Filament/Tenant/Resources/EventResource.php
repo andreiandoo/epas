@@ -932,6 +932,16 @@ class EventResource extends Resource
 
             SC\Tabs\Tab::make('Bilete')->icon('heroicon-o-ticket')->schema([
 
+            // Bilete vândute de alt organizator (ex. un festival): site-ul trimite la link, fără coș
+            SC\Section::make('Bilete vândute în altă parte')
+                ->description('Pentru concertele la care biletele le vinde organizatorul (ex. un festival). Site-ul arată data și trimite la linkul de mai jos, fără coș. Gol = biletele se vând aici.')
+                ->collapsible()
+                ->collapsed(fn ($record) => empty($record?->external_ticket_url))
+                ->schema([
+                    Forms\Components\TextInput::make('external_ticket_url')->label('Link bilete')->url()->maxLength(500)->placeholder('https://…'),
+                    Forms\Components\TextInput::make('external_ticket_label')->label('Text buton')->maxLength(120)->placeholder('Bilete la festival'),
+                ])->columns(2),
+
             // TICKETS
             SC\Section::make('Bilete')
                 ->schema([

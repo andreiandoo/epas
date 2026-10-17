@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Tenant;
 use App\Models\TenantCustomerSubscription;
+use App\Models\TenantNewsletter;
+use App\Models\TenantNewsletterSubscriber;
 use App\Models\TenantSiteDemo;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
@@ -114,7 +116,18 @@ class DemoSitesReset extends Command
             }
             $this->line("  clienți creați de vizitatori: {$removed}");
 
-            // 3. Codurile de reducere: utilizările revin la zero
+            // 3. Abonații și campaniile de newsletter lăsate de vizitatori pe demo (adrese reale, nu le păstrăm)
+            if (Schema::hasTable('tenant_newsletter_subscribers')) {
+                $subs = TenantNewsletterSubscriber::where('tenant_id', $tenant->id)->where('created_at', '<', $cutoff);
+                $n = $subs->count();
+                if (! $dry) {
+                    $subs->delete();
+                    TenantNewsletter::where('tenant_id', $tenant->id)->where('created_at', '<', $cutoff)->delete();
+                }
+                $this->line("  abonați newsletter: {$n}");
+            }
+
+            // 4. Codurile de reducere: utilizările revin la zero
             if (Schema::hasTable('coupon_codes')) {
                 $coupons = CouponCode::where('tenant_id', $tenant->id)->where('current_uses', '>', 0)->get();
                 if (! $dry) {

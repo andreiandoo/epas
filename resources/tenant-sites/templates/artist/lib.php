@@ -43,12 +43,12 @@ function ar_event(string $slug): ?array {
     return $c[$slug];
 }
 
-/** Concertul din afiș: cel ales în setări sau următorul cu bilete în vânzare. */
+/** Concertul din afiș: cel ales în setări sau următorul cu bilete în vânzare aici (nu la alt organizator). */
 function ar_next(): ?array {
     $slug = trim((string) site('settings.featured_slug', ''));
     if ($slug === '') {
         foreach (ar_upcoming() as $ev) {
-            if (empty($ev['is_sold_out']) && empty($ev['is_cancelled'])) {
+            if (empty($ev['is_sold_out']) && empty($ev['is_cancelled']) && !ar_external($ev)) {
                 $slug = (string) $ev['slug'];
                 break;
             }
@@ -58,13 +58,22 @@ function ar_next(): ?array {
     return $slug !== '' ? ar_event($slug) : null;
 }
 
-/** Starea biletelor: [cod, etichetă] — on_sale, low, sold_out, cancelled, past. */
+/** Linkul de bilete al unui concert vândut de alt organizator (ex. un festival), dacă are. */
+function ar_external(array $ev): ?string {
+    $u = trim((string) ($ev['external_ticket_url'] ?? ''));
+    return preg_match('#^https?://#i', $u) ? $u : null;
+}
+
+/** Starea biletelor: [cod, etichetă] — on_sale, low, sold_out, external, cancelled, past. */
 function ar_status(array $ev): array {
     if (!empty($ev['is_cancelled'])) {
         return ['cancelled', t('Anulat')];
     }
     if (ar_is_past($ev)) {
         return ['past', t('A avut loc')];
+    }
+    if (ar_external($ev)) {
+        return ['external', trim((string) ($ev['external_ticket_label'] ?? '')) ?: t('Bilete la organizator')];
     }
     $left = $ev['tickets_left'] ?? null;
     if (!empty($ev['is_sold_out']) || ($left !== null && (int) $left <= 0)) {
@@ -178,6 +187,7 @@ function ar_row(array $ev, bool $past = false): string {
         'sold_out' => '<span class="ar-pill ar-pill--out">' . e($label) . '</span>',
         'cancelled' => '<span class="ar-pill ar-pill--out">' . e($label) . '</span>',
         'past' => '<span class="ar-pill">' . te('Detalii') . '</span>',
+        'external' => '<span class="ar-pill">' . te('Bilete la organizator') . '</span><span class="ar-btn ar-btn--sm ar-btn--ghost">' . te('Detalii') . ' ' . AR_ARROW . '</span>',
         'low' => '<span class="ar-pill ar-pill--hot">' . e($label) . '</span><span class="ar-btn ar-btn--sm">' . te('Bilete') . ' ' . AR_ARROW . '</span>',
         default => '<span class="ar-btn ar-btn--sm">' . te('Bilete') . ' ' . AR_ARROW . '</span>',
     };

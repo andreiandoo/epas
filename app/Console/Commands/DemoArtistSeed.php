@@ -27,9 +27,10 @@ use Illuminate\Support\Str;
 
 /**
  * Tenantul demo pentru ARTIST SOLO (template-ul artist, demo-artist.tics.ro):
- * „Iris Vântu”, o cântăreață inventată, în turneul „Ora albastră”: 8 concerte viitoare
+ * „Iris Vântu”, o cântăreață inventată, în turneul „Ora albastră”: 9 concerte viitoare
  * (cluburi cu acces general, o sală cu locuri numerotate pe hartă, unul sold out, unul
- * cu ultimele bilete) și 3 concerte trecute, RO + EN.
+ * cu ultimele bilete, unul la un festival cu biletele la organizator) și 3 trecute, RO + EN.
+ * Fără abonați demo la newsletter: o campanie de test ar pleca spre adrese inexistente.
  *
  *   php artisan demo:seed-artist
  *
@@ -81,7 +82,9 @@ class DemoArtistSeed extends Command
         foreach ($this->concerts() as $c) {
             $this->guarded('concert ' . $c['slug'], function () use ($tenant, $c, $venues, $layout, $seating, &$events) {
                 $ev = $this->seedConcert($tenant, $c, $venues[$c['venue']]);
-                if (! empty($c['seated']) && $layout) {
+                if (! empty($c['external'])) {
+                    // fără bilete aici: site-ul trimite la organizatorul festivalului
+                } elseif (! empty($c['seated']) && $layout) {
                     $this->seedSeatedTickets($tenant, $ev, $layout, $seating);
                 } elseif (empty($c['past'])) {
                     $this->seedTickets($ev, $c);
@@ -133,6 +136,9 @@ class DemoArtistSeed extends Command
             ['slug' => 'iris-vantu-chisinau-demo', 'city' => 'Chișinău', 'days' => 42, 'time' => '19:30', 'venue' => 'chisinau', 'photo' => '1524368535928-5b5e00ddc76b', 'price' => 139, 'cap' => 1500, 'sold' => 420],
             ['slug' => 'iris-vantu-budapesta-demo', 'city' => 'Budapesta', 'days' => 49, 'time' => '20:00', 'venue' => 'budapesta', 'photo' => '1470229722913-7c0e2dbbafd3', 'price' => 159, 'cap' => 700, 'sold' => 210],
             ['slug' => 'iris-vantu-viena-demo', 'city' => 'Viena', 'days' => 56, 'time' => '20:00', 'venue' => 'viena', 'photo' => '1459749411175-04bf5292ceea', 'price' => 169, 'cap' => 600, 'sold' => 600, 'soldout' => true],
+            // La un festival: biletele le vinde organizatorul festivalului (link extern, fără coș)
+            ['slug' => 'iris-vantu-festival-lumini-demo', 'city' => 'Alba Iulia', 'days' => 63, 'time' => '22:30', 'venue' => 'albaiulia', 'photo' => '1506157786151-b8491531f063',
+                'external' => ['https://example.com/festival-lumini/bilete', 'Bilete la Festivalul Lumini']],
             ['slug' => 'iris-vantu-brasov-demo', 'city' => 'Brașov', 'days' => 70, 'time' => '21:00', 'venue' => 'brasov', 'photo' => '1429962714451-bb934ecdc4ec', 'price' => 99, 'cap' => 3000, 'sold' => 150, 'open_air' => true],
         ];
     }
@@ -151,6 +157,7 @@ class DemoArtistSeed extends Command
             'chisinau' => ['arena-nord-chisinau-demo-artist', 'Arena Nord', 'North Arena', 'Chișinău', 'Chișinău', 'Str. Calea Orheiului 18, Chișinău', 'MD'],
             'budapesta' => ['kikoto-budapest-demo-artist', 'Kikötő Club', 'Kikötő Club', 'Budapesta', 'Budapest', 'Duna sétány 4, Budapest', 'HU'],
             'viena' => ['halle-sud-wien-demo-artist', 'Halle Süd', 'Halle Süd', 'Viena', 'Wien', 'Südbahnhofstraße 9, Wien', 'AT'],
+            'albaiulia' => ['scena-bastion-alba-iulia-demo-artist', 'Festivalul Lumini · Scena Bastion', 'Lumini Festival · Bastion Stage', 'Alba Iulia', 'Alba', 'Str. Bastionului 3, Alba Iulia', 'RO'],
             'brasov' => ['gradina-cetatii-brasov-demo-artist', 'Grădina Cetății', 'Citadel Garden', 'Brașov', 'Brașov', 'Str. Cetății 1, Brașov', 'RO'],
         ];
     }
@@ -344,7 +351,9 @@ class DemoArtistSeed extends Command
         $openAir = ! empty($c['open_air']);
         $payload = $this->only('events', [
             'tenant_id' => $tenant->id, 'slug' => $c['slug'], 'venue_id' => $venue->id,
-            'title' => ['ro' => self::NAME . ' · ' . $c['city'], 'en' => self::NAME . ' · ' . $cityEn],
+            'title' => ! empty($c['external'])
+                ? ['ro' => self::NAME . ' · Festivalul Lumini', 'en' => self::NAME . ' · Lumini Festival']
+                : ['ro' => self::NAME . ' · ' . $c['city'], 'en' => self::NAME . ' · ' . $cityEn],
             'subtitle' => ['ro' => 'Ora albastră Tour', 'en' => 'Blue Hour Tour'],
             'short_description' => [
                 'ro' => 'Turneul „Ora albastră” ajunge la ' . $vRo . ', ' . $c['city'] . ': tot albumul nou, live, plus piesele care au adus-o aici.',
@@ -365,6 +374,8 @@ class DemoArtistSeed extends Command
             'poster_url' => self::IMG . $c['photo'] . '?auto=format&fit=crop&w=1200&q=80',
             'hero_image_url' => self::IMG . $c['photo'] . '?auto=format&fit=crop&w=2000&q=80',
             'commission_rate' => 1.00, 'commission_mode' => 'included',
+            'external_ticket_url' => $c['external'][0] ?? null,
+            'external_ticket_label' => $c['external'][1] ?? null,
         ]);
         $ev ? $ev->update($payload) : ($ev = Event::create($payload));
         return $ev;

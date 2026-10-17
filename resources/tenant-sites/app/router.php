@@ -28,6 +28,7 @@ const TS_SHARED_ROUTES = [
     '/confidentialitate' => 'pages/privacy.php',
     '/termeni' => 'pages/terms.php',
     '/cookies' => 'pages/cookies.php',
+    '/dezabonare' => 'pages/unsubscribe.php',
     '/cont' => 'cont/index.php',
     '/api/proxy.php' => 'api/proxy.php',
 ];

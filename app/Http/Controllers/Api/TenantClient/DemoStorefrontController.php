@@ -305,7 +305,7 @@ class DemoStorefrontController extends Controller
     }
 
     /** Adresa site-ului public al tenantului (domeniul primar activ). */
-    private static function siteUrl(Tenant $tenant, ?int $domainId = null): ?string
+    public static function siteUrl(Tenant $tenant, ?int $domainId = null): ?string
     {
         $domain = ($domainId ? Domain::find($domainId) : null)
             ?: $tenant->domains()->where('is_active', true)->orderByDesc('is_primary')->first();
@@ -316,8 +316,9 @@ class DemoStorefrontController extends Controller
     /**
      * Cadrul comun al emailurilor: antet în culorile organizatorului, cu sigla lui, un buton și subsol.
      * Culorile și sigla vin din settings.storefront (brand_color, brand_dark, logo_url).
+     * Îl folosește și newsletterul tenantului (SendTenantNewsletterJob), cu linkul de dezabonare în $footerHtml.
      */
-    private static function mailLayout(Tenant $tenant, string $heading, string $bodyHtml, ?string $buttonLabel = null, ?string $buttonUrl = null, string $afterHtml = ''): string
+    public static function mailLayout(Tenant $tenant, string $heading, string $bodyHtml, ?string $buttonLabel = null, ?string $buttonUrl = null, string $afterHtml = '', string $footerHtml = ''): string
     {
         $cfg = is_array($tenant->settings) ? ($tenant->settings['storefront'] ?? []) : [];
         $dark = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($cfg['brand_dark'] ?? '')) ? $cfg['brand_dark'] : '#0B1030';
@@ -347,7 +348,7 @@ class DemoStorefrontController extends Controller
             . '</td></tr>'
             . '<tr><td style="padding:18px 30px 24px;border-top:1px solid #E3E9F5;font-size:12px;color:#7A84A8;line-height:1.5;">'
             . $name . ($site ? ' · <a href="' . e($site) . '" style="color:#7A84A8;">' . e(parse_url($site, PHP_URL_HOST)) . '</a>' : '')
-            . '<br>Bilete emise prin platforma Tixello.</td></tr>'
+            . '<br>Bilete emise prin platforma Tixello.' . ($footerHtml !== '' ? '<br>' . $footerHtml : '') . '</td></tr>'
             . '</table></td></tr></table></body></html>';
     }
 
