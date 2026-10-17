@@ -384,8 +384,11 @@ class Dashboard extends Page
         // Invitation abuse detection — events where projected commission
         // on free tickets exceeds commission earned from paid sales. Cached
         // 30 min inside the service. Manual bust via ?refresh_invite_abuse=1.
-        $invitationAbuse = app(\App\Services\Analytics\InvitationAbuseAnalyzer::class)
-            ->analyze($marketplaceId, request()->has('refresh_invite_abuse'));
+        // Only rendered for super-admins, so nobody else pays for it.
+        $invitationAbuse = $isSuperAdmin
+            ? app(\App\Services\Analytics\InvitationAbuseAnalyzer::class)
+                ->analyze($marketplaceId, request()->has('refresh_invite_abuse'))
+            : null;
 
         // Daily event sales report (super-admin only) — events that had
         // sales on the selected day, with same-day + all-time aggregates.
@@ -395,6 +398,7 @@ class Dashboard extends Page
         $dailyReportDate = null;
         $dailyReportMinDate = null;
         $dailyReportMaxDate = null;
+        $dailyReportVatRate = 0.0;
         if ($isSuperAdmin) {
             $maxDate = Carbon::now($tz)->format('Y-m-d');
             $minDate = Carbon::now($tz)->subDays(30)->format('Y-m-d');
@@ -407,6 +411,9 @@ class Dashboard extends Page
             // Shared per-day cache — same key the month chart reads, so the
             // chart bar and this table never diverge for the same day.
             $dailyEventReport = $this->dailyReportRowsCached($marketplaceId, $reqDate);
+            // VAT on the commission of that day (0 before the marketplace became
+            // a VAT payer). Applied in the view, so the cached rows stay as-is.
+            $dailyReportVatRate = $marketplace->vatRate(Carbon::createFromFormat('Y-m-d', $reqDate, $tz)->endOfDay());
         }
 
         return [
@@ -440,6 +447,7 @@ class Dashboard extends Page
             'dailyReportDate' => $dailyReportDate,
             'dailyReportMinDate' => $dailyReportMinDate,
             'dailyReportMaxDate' => $dailyReportMaxDate,
+            'dailyReportVatRate' => $dailyReportVatRate,
         ];
     }
 
@@ -482,13 +490,25 @@ class Dashboard extends Page
         );
 
         Cache::put("mp_dash_stats_v2_{$mid}", $this->computeStats($mid), $ttl);
-        Cache::put("mp_dash_month_{$mid}_{$ym}", $this->computeCurrentMonthStats($mid, $ym), $ttl);
-        Cache::put("mp_dash_today_v2_{$mid}", $this->computeTodayStats($mid), $ttl);
+        Cache::put("mp_dash_month_{$mid}_{$ym}", $this->computeCurrentMonthStats($mid, $ym, refresh: true), $ttl);
 
-        $featured = $this->computeFeaturedEventStats($mid);
-        if ($featured !== null) {
-            Cache::put('mp_event_stats_v3_' . self::FEATURED_EVENT_ID, $featured, $ttl);
-        }
+        // Today's report with fresh all-time totals per event: the report itself
+        // keeps its 60s TTL (still moving), but the expensive unbounded build per
+        // event stays warm, so a user request only pays the day-bounded builds.
+        $today = $now->format('Y-m-d');
+        Cache::put(
+            "mp_dash_daily_evt_v9_{$mid}_{$today}",
+            $this->computeDailyEventReport($mid, $today, refreshAllTime: true),
+            60
+        );
+        // Same short TTL as the report it sums, so the "Azi" cards and the table
+        // never disagree (cheap now: it reads the report from cache).
+        Cache::put("mp_dash_today_v2_{$mid}", $this->computeTodayStats($mid), 60);
+
+        $this->computeFeaturedEventStats($mid, refresh: true);
+
+        // Super-admin "Comisioane pierdute" block (30-min TTL inside the service).
+        app(\App\Services\Analytics\InvitationAbuseAnalyzer::class)->analyze($mid, true);
     }
 
     private function computeStats(int $marketplaceId): array
@@ -1089,7 +1109,7 @@ class Dashboard extends Page
         return ['labels' => $labels, 'data' => $data];
     }
 
-    private function computeCurrentMonthStats(int $marketplaceId, string $month = ''): array
+    private function computeCurrentMonthStats(int $marketplaceId, string $month = '', bool $refresh = false): array
     {
         $tz = 'Europe/Bucharest';
         $monthDate = $month ? Carbon::createFromFormat('Y-m', $month, $tz) : Carbon::now($tz);
@@ -1200,12 +1220,7 @@ class Dashboard extends Page
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->count();
 
-        // Payouts this month
-        $monthPayouts = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw("COALESCE(SUM(CASE WHEN status IN ('pending','approved','processing') THEN amount ELSE 0 END), 0) as pending")
-            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as paid")
-            ->first();
+        $vat = $this->computeMonthVat($marketplaceId, $monthDate, (float) $totalCommission, $refresh);
 
         // Average daily sales. For the in-progress month, divide by the days
         // elapsed so far (so a mid-month value isn't deflated by future empty
@@ -1223,12 +1238,82 @@ class Dashboard extends Page
             'total_commission' => $totalCommission,
             'tickets_sold' => $ticketsSold,
             'new_customers' => $newCustomers,
-            'payouts_pending' => (float) ($monthPayouts->pending ?? 0),
-            'payouts_paid' => (float) ($monthPayouts->paid ?? 0),
+            'vat' => $vat,
             'month_orders' => $monthOrders,
             'avg_daily_sales' => $avgDailySales,
             'avg_daily_sales_days' => $daysForAvg,
             'currency' => $this->marketplace->currency ?? 'RON',
+        ];
+    }
+
+    /**
+     * Marketplace VAT due for the month: VAT on the commission earned (on-top
+     * commission paid by the customer + included commission invoiced to the
+     * organizer, both at the marketplace rate), VAT on services, and the VAT
+     * snapshotted on orders for the return fee and the cultural card surcharge.
+     * Only sales from `vat_payer_since` onwards carry VAT.
+     *
+     * @return array{total: float, commission: float, services: float, other: float, rate: float, from_label: ?string}
+     */
+    private function computeMonthVat(int $marketplaceId, Carbon $monthDate, float $totalCommission, bool $refresh = false): array
+    {
+        $empty = ['total' => 0.0, 'commission' => 0.0, 'services' => 0.0, 'other' => 0.0, 'rate' => 0.0, 'from_label' => null];
+        $client = $this->marketplace;
+        if (!$client || !$client->vat_payer) {
+            return $empty;
+        }
+
+        $monthStart = $monthDate->copy()->startOfMonth();
+        $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay();
+        $since = $client->vatPayerSince();
+        if ($since && $since->gt($monthEnd)) {
+            return $empty;
+        }
+        $vatStart = ($since && $since->gt($monthStart)) ? Carbon::instance($since) : $monthStart->copy();
+        $rate = $client->vatRate($vatStart);
+        if ($rate <= 0) {
+            return $empty;
+        }
+
+        $fromUtc = $vatStart->copy()->utc();
+        $toUtc = $monthEnd->copy()->utc();
+
+        // Month fully under VAT → the month commission already computed. Only
+        // the month VAT started in needs its own (cached) partial build.
+        if ($vatStart->equalTo($monthStart)) {
+            $commissionBase = $totalCommission;
+        } else {
+            $key = "mp_month_comm_svc_v2_{$marketplaceId}_{$monthDate->format('Y-m')}_from_{$vatStart->format('Y-m-d')}";
+            if ($refresh) {
+                $commissionBase = $this->monthCommissionViaService($marketplaceId, $fromUtc, $toUtc);
+                Cache::put($key, $commissionBase, 1200);
+            } else {
+                $isPastMonth = $monthEnd->lt(Carbon::now('Europe/Bucharest')->startOfMonth());
+                $commissionBase = Cache::remember($key, $isPastMonth ? 86400 : 900,
+                    fn () => $this->monthCommissionViaService($marketplaceId, $fromUtc, $toUtc));
+            }
+        }
+        $commissionVat = round((float) $commissionBase * $rate / 100, 2);
+
+        $otherVat = (float) Order::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereNotIn('source', ['test_order', 'pos_test', 'external_import', 'legacy_import'])
+            ->whereBetween('created_at', [$fromUtc, $toUtc])
+            ->selectRaw("COALESCE(SUM(COALESCE((meta->>'insurance_vat')::numeric, 0) + COALESCE((meta->>'cultural_card_vat')::numeric, 0)), 0) as total")
+            ->value('total');
+
+        $servicesVat = (float) ServiceOrder::where('marketplace_client_id', $marketplaceId)
+            ->where('payment_status', 'paid')
+            ->whereBetween('paid_at', [$fromUtc, $toUtc])
+            ->sum('tax');
+
+        return [
+            'total' => round($commissionVat + $servicesVat + $otherVat, 2),
+            'commission' => $commissionVat,
+            'services' => round($servicesVat, 2),
+            'other' => round($otherVat, 2),
+            'rate' => $rate,
+            'from_label' => $vatStart->equalTo($monthStart) ? null : $vatStart->translatedFormat('d M'),
         ];
     }
 
@@ -1419,9 +1504,10 @@ class Dashboard extends Page
         // per-event daily report for today and sum its "Azi" columns so the two
         // panels can never disagree. The status breakdown (pending/failed/...)
         // below stays from the raw query — it's informational and not part of
-        // the paid-sales report.
+        // the paid-sales report. Same cache slot as the report table, so a page
+        // load builds today's report once, not twice.
         $todayDate = Carbon::now($tz)->toDateString();
-        $dailyRows = $this->computeDailyEventReport($marketplaceId, $todayDate);
+        $dailyRows = $this->dailyReportRowsCached($marketplaceId, $todayDate);
         $reportOrders = (int) array_sum(array_column($dailyRows, 'orders_day'));
         $reportTickets = (int) array_sum(array_column($dailyRows, 'tickets_day'));
         $reportRevenue = (float) array_sum(array_column($dailyRows, 'sales_day'));
@@ -1574,16 +1660,23 @@ class Dashboard extends Page
      * per-day averages, and today. Null when the event doesn't exist or isn't
      * this marketplace's. Cached 5 min (four SalesBreakdownService builds).
      */
-    private function computeFeaturedEventStats(int $marketplaceId): ?array
+    private function computeFeaturedEventStats(int $marketplaceId, bool $refresh = false): ?array
     {
         $event = Event::find(self::FEATURED_EVENT_ID);
         if (!$event || (int) $event->marketplace_client_id !== $marketplaceId) {
             return null;
         }
 
+        // The warm cron refreshes it (put, 20 min) so no user request pays the
+        // six SalesBreakdownService builds; 5 min if the cron is not running.
+        $key = 'mp_event_stats_v7_' . self::FEATURED_EVENT_ID;
+        if ($refresh) {
+            Cache::forget($key);
+        }
+
         return Cache::remember(
-            'mp_event_stats_v7_' . self::FEATURED_EVENT_ID,
-            300,
+            $key,
+            $refresh ? 1200 : 300,
             function () use ($event) {
                 $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
                 $tz = 'Europe/Bucharest';
@@ -1798,7 +1891,38 @@ class Dashboard extends Page
         return null;
     }
 
-    private function computeDailyEventReport(int $marketplaceId, string $date): array
+    /**
+     * All-time revenue + commission of one event (unbounded SalesBreakdownService
+     * build — the heaviest call of the daily report). Cached per event, so it is
+     * shared by every day the event sold on and by today's cards; the warm cron
+     * refreshes it for today's events.
+     *
+     * @return array{revenue: float, commission: float}
+     */
+    private function eventAllTimeTotals(Event $event, bool $refresh = false): array
+    {
+        $key = "mp_evt_alltime_v1_{$event->id}";
+        $compute = function () use ($event) {
+            $bd = app(\App\Services\Marketplace\SalesBreakdownService::class)->build($event);
+            $kept = (float) ($bd['total_commission_kept_from_refunds'] ?? 0);
+
+            return [
+                'revenue' => (float) $bd['total_revenue'] + $kept,
+                'commission' => (float) $bd['total_commission'] + $kept,
+            ];
+        };
+
+        if ($refresh) {
+            $totals = $compute();
+            Cache::put($key, $totals, 1200);
+
+            return $totals;
+        }
+
+        return Cache::remember($key, 600, $compute);
+    }
+
+    private function computeDailyEventReport(int $marketplaceId, string $date, bool $refreshAllTime = false): array
     {
         $tz = 'Europe/Bucharest';
         $dayStart = Carbon::createFromFormat('Y-m-d', $date, $tz)->startOfDay()->utc();
@@ -1908,10 +2032,7 @@ class Dashboard extends Page
             // All-time totals (no period bounds). Lifetime revenue uses the
             // service's per-event ticket valuation (an all-time order.total
             // allocation would have to scan the whole history).
-            $totalBd = $salesService->build($event);
-            $totalKept = (float) ($totalBd['total_commission_kept_from_refunds'] ?? 0);
-            $totalRevenue = (float) $totalBd['total_revenue'] + $totalKept;
-            $totalCommission = (float) $totalBd['total_commission'] + $totalKept;
+            ['revenue' => $totalRevenue, 'commission' => $totalCommission] = $this->eventAllTimeTotals($event, $refreshAllTime);
 
             // Display date — single_day uses event_date, range starts at
             // range_start_date, multi-day slot lists fall back to the

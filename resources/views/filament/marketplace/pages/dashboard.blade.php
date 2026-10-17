@@ -737,7 +737,7 @@
                                 <td class="px-3 py-2 text-right tabular-nums border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_day']) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_day']) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-semibold text-indigo-600 dark:text-indigo-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_day'], 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_day'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_day'], 2) }}@if(($dailyReportVatRate ?? 0) > 0)<span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">(TVA {{ number_format($row['commission_day'] * $dailyReportVatRate / 100, 2) }})</span>@endif</td>
                                 <td class="dr-total-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_total']) }}</td>
                                 <td class="dr-total-cell px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_total']) }}</td>
                                 <td class="dr-total-cell px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_total'], 2) }}</td>
@@ -781,7 +781,7 @@
                                 <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">{{ number_format($sumOrdersDay) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums text-gray-900 dark:text-white">{{ number_format($sumTicketsDay) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums font-bold text-indigo-800 dark:text-indigo-300">{{ number_format($sumSalesDay, 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-800 dark:text-emerald-300">{{ number_format($sumCommissionDay, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-800 dark:text-emerald-300">{{ number_format($sumCommissionDay, 2) }}@if(($dailyReportVatRate ?? 0) > 0)<span class="block text-[10px] font-normal text-gray-500 dark:text-gray-400">(TVA {{ number_format($sumCommissionDay * $dailyReportVatRate / 100, 2) }})</span>@endif</td>
                                 <td class="dr-total-cell px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700"></td>
                                 <td class="dr-total-cell px-3 py-2"></td>
                                 <td class="dr-total-cell px-3 py-2"></td>
@@ -1029,8 +1029,12 @@
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['month_orders']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Deconturi în așteptare</p>
-                    <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($monthStats['payouts_pending'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                    @php $mVat = $monthStats['vat'] ?? null; @endphp
+                    <p class="text-xs text-gray-500 dark:text-gray-400">TVA de plată @if(!empty($mVat['from_label']))<span class="text-gray-400">(din {{ $mVat['from_label'] }})</span>@endif</p>
+                    <p class="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($mVat['total'] ?? 0, 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                    @if(($mVat['total'] ?? 0) > 0)
+                    <p class="mt-0.5 text-[10px] text-gray-400">comision {{ number_format($mVat['commission'], 0) }} · servicii {{ number_format($mVat['services'], 0) }} · taxe retur/card cultural {{ number_format($mVat['other'], 0) }}</p>
+                    @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Media vânzări zilnice</p>
