@@ -11,6 +11,8 @@ if (!$ev) {
 }
 $past = ar_is_past($ev);
 [$code, $label] = ar_status($ev);
+$ext = ar_external($ev); // biletele le vinde alt organizator (ex. un festival)
+$extLink = $ext ? '<a href="' . e($ext) . '" target="_blank" rel="noopener" class="ar-btn ar-btn--lg">' . e($label) . ' <span aria-hidden="true">↗</span><span class="sr-only"> (' . te('se deschide într-o filă nouă') . ')</span></a>' : '';
 $dp = ar_date_parts($ev);
 $v = (array) ($ev['venue'] ?? []);
 $addr = trim(implode(', ', array_filter([$v['address'] ?? '', ar_city($ev)])));
@@ -29,7 +31,7 @@ $pageSchema = [
     ts_breadcrumb_schema([[t('Acasă'), '/'], [t('Turneu'), ts_link('events')], [ar_city($ev), ts_link('event', ['slug' => $ev['slug']])]]),
 ];
 $headSolid = false;
-$bodyClass = $past ? '' : 'ar-has-bar';
+$bodyClass = ($past || $ext) ? '' : 'ar-has-bar';
 include ts_layout('head');
 include ts_layout('header');
 ?>
@@ -51,6 +53,8 @@ include ts_layout('header');
             <span class="ar-pill ar-pill--light"><?= te('Concertul a avut loc') ?></span>
             <?php elseif ($code === 'sold_out'): ?>
             <span class="ar-pill ar-pill--out"><?= te('Sold out') ?></span>
+            <?php elseif ($ext): ?>
+            <?= str_replace('ar-btn ar-btn--lg', 'ar-btn ar-btn--light ar-btn--lg', $extLink) ?>
             <?php else: ?>
             <a href="#bilete" class="ar-btn ar-btn--light ar-btn--lg"><?= te('Alege biletele') ?> <?= AR_ARROW ?></a>
             <?php if ($from): ?><span class="ar-show__from"><?= te('de la') ?> <b><?= e(ar_money($from)) ?></b></span><?php endif; ?>
@@ -61,7 +65,20 @@ include ts_layout('header');
     </div>
 </section>
 
-<?php if (!$past): ?>
+<?php if (!$past && $ext): ?>
+<section class="ar-section" id="bilete" aria-labelledby="ar-tix-title">
+    <div class="ar-wrap">
+        <div class="ar-extbox">
+            <div>
+                <p class="ar-eyebrow"><?= te('Bilete') ?></p>
+                <h2 class="ar-h2" id="ar-tix-title"><?= te('Biletele le vinde organizatorul') ?></h2>
+                <p class="ar-lead"><?= te('Concertul face parte din programul {venue}. Biletele se cumpără direct de la organizator.', ['venue' => ar_venue($ev)]) ?></p>
+            </div>
+            <?= $extLink ?>
+        </div>
+    </div>
+</section>
+<?php elseif (!$past): ?>
 <section class="ar-section" id="bilete" aria-labelledby="ar-tix-title">
     <div class="ar-wrap">
         <div class="ar-head2">
@@ -73,6 +90,7 @@ include ts_layout('header');
         </div>
         <?php if ($code === 'sold_out'): ?>
         <p class="ar-empty"><?= te('Toate biletele pentru acest concert s-au vândut. Alege alt oraș din turneu.') ?></p>
+        <p><a href="/#newsletter" class="ar-btn ar-btn--ghost"><?= te('Anunță-mă de datele noi') ?> <?= AR_ARROW ?></a></p>
         <?php else: ?>
         <?php include TEMPLATE_DIR . '/layout/tickets.php'; ?>
         <?php endif; ?>
@@ -93,7 +111,7 @@ include ts_layout('header');
             <?php if ($start !== ''): ?><div><dt><?= te('Începe concertul') ?></dt><dd><?= e($start) ?></dd></div><?php endif; ?>
             <div><dt><?= te('Locația') ?></dt><dd><?= e(ar_venue($ev)) ?><?php if ($addr !== ''): ?><br><span><?= e($addr) ?></span><?php endif; ?>
                 <?php if ($mapUrl): ?><br><a href="<?= e($mapUrl) ?>" target="_blank" rel="noopener" class="ar-link"><?= te('Deschide harta') ?></a><?php endif; ?></dd></div>
-            <div><dt><?= te('Bilete') ?></dt><dd><?= te('Online, pe email, cu cod QR') ?></dd></div>
+            <div><dt><?= te('Bilete') ?></dt><dd><?= $ext ? te('La organizator') . ' · <a href="' . e($ext) . '" target="_blank" rel="noopener" class="ar-link">' . e(parse_url($ext, PHP_URL_HOST)) . '</a>' : te('Online, pe email, cu cod QR') ?></dd></div>
         </dl>
     </div>
 </section>
@@ -111,7 +129,7 @@ include ts_layout('header');
 </section>
 <?php endif; ?>
 
-<?php if (!$past && $code !== 'sold_out'): ?>
+<?php if (!$past && $code !== 'sold_out' && !$ext): ?>
 <div class="ar-mbar" data-ar-mbar>
     <div><small><?= te('Bilete de la') ?></small><b><?= $from ? e(ar_money($from)) : '—' ?></b></div>
     <a href="#bilete" class="ar-btn ar-btn--sm"><?= te('Alege biletele') ?></a>

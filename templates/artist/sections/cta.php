@@ -1,6 +1,6 @@
 <?php
 /** Îndemnul final, pe culoarea albumului: orașele turneului ca butoane rapide. */
-$list = array_slice(array_values(array_filter(ar_upcoming(), fn ($ev) => ar_status($ev)[0] !== 'sold_out')), 0, 6);
+$list = array_slice(array_values(array_filter(ar_upcoming(), fn ($ev) => !in_array(ar_status($ev)[0], ['sold_out', 'external'], true))), 0, 6);
 ?>
 <section class="ar-cta" aria-labelledby="ar-cta-title">
     <div class="ar-wrap" data-reveal>

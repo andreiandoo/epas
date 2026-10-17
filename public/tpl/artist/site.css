@@ -163,6 +163,7 @@
 @media (hover: none) { .ar-follow { display: none; } }
 
 /* albumul */
+.ar-release { overflow-x: clip; } /* vinilul care iese din copertă nu lărgește pagina pe mobil */
 .ar-release__grid { display: grid; gap: 56px; align-items: center; }
 @media (min-width: 960px) { .ar-release__grid { grid-template-columns: 1fr 1fr; gap: 88px; } }
 .ar-release__art { position: relative; aspect-ratio: 1; max-width: 560px; width: 82%; }
@@ -295,3 +296,27 @@
     .ar-marquee__track { animation: none; }
     .ar-row, .ar-btn, .ar-btn svg { transition: none; }
 }
+
+/* concert cu bilete la alt organizator */
+.ar-extbox { display: grid; gap: 28px; align-items: end; padding: 40px; border-radius: var(--r); background: rgb(var(--c-panel)); box-shadow: inset 0 0 0 1px rgb(var(--c-fg) / .08); }
+@media (min-width: 900px) { .ar-extbox { grid-template-columns: 1fr auto; padding: 48px 56px; } }
+@media (max-width: 640px) { .ar-extbox { padding: 26px; } .ar-extbox .ar-btn { width: 100%; white-space: normal; text-align: center; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* lista fanilor (newsletter) */
+.ar-news { background: rgb(var(--c-surface)); }
+.ar-news__grid { display: grid; gap: 40px; align-items: center; }
+@media (min-width: 960px) { .ar-news__grid { grid-template-columns: 1fr 1fr; gap: 80px; } }
+.ar-news__form { padding: 32px; border-radius: var(--r); background: rgb(var(--c-panel)); box-shadow: inset 0 0 0 1px rgb(var(--c-fg) / .08); }
+@media (max-width: 640px) { .ar-news__form { padding: 22px; } .ar-news__form .ar-btn { width: 100%; } }
+.ar-news__row { display: grid; gap: 14px; }
+@media (min-width: 560px) { .ar-news__row { grid-template-columns: .8fr 1.2fr; } }
+.ar-field { display: grid; gap: 6px; }
+.ar-field span { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(var(--c-fg) / .55); }
+.ar-field input { width: 100%; min-height: 50px; padding: 0 16px; border-radius: 14px; border: 0; background: rgb(var(--c-canvas)); box-shadow: inset 0 0 0 1px rgb(var(--c-fg) / .12); color: rgb(var(--c-fg)); font: inherit; font-size: 16px; }
+.ar-field input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--blue); }
+.ar-check { display: flex; gap: 12px; align-items: flex-start; margin: 18px 0; font-size: 14px; line-height: 1.5; color: rgb(var(--c-fg) / .72); cursor: pointer; }
+.ar-check input { width: 20px; height: 20px; margin-top: 1px; flex: none; accent-color: rgb(var(--c-primary)); }
+.ar-news__err { margin: 0 0 14px; font-size: 14px; color: rgb(var(--c-accent)); font-weight: 600; }
+.ar-news__done b { display: block; font-family: var(--f-display); font-weight: 800; text-transform: uppercase; font-size: 30px; letter-spacing: -.02em; color: var(--blue); }
+.ar-news__done p { margin: 10px 0 0; color: rgb(var(--c-fg) / .7); }

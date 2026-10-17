@@ -12,7 +12,7 @@
  */
 
 /** Paginile comenzii și ale contului: utile doar vizitatorului, nu motoarelor de căutare. */
-const TS_NOINDEX_PATHS = ['/cos', '/finalizare', '/confirmare', '/autentificare', '/inregistrare', '/recuperare-parola', '/parola-noua', '/cont'];
+const TS_NOINDEX_PATHS = ['/cos', '/finalizare', '/confirmare', '/autentificare', '/inregistrare', '/recuperare-parola', '/parola-noua', '/cont', '/dezabonare'];
 
 /** https://host — adresa de bază a site-ului curent. */
 function ts_base_url(): string {
@@ -190,6 +190,11 @@ function ts_event_schema(array $ev, array $o = []): array {
             'offerCount' => count($types),
             'availability' => 'https://schema.org/' . ($past ? 'Discontinued' : ($available ? 'InStock' : 'SoldOut')),
         ];
+    }
+    // Biletele le vinde alt organizator: oferta trimite la el
+    $ext = trim((string) ($ev['external_ticket_url'] ?? ''));
+    if (preg_match('#^https?://#i', $ext)) {
+        $s['offers'] = ['@type' => 'Offer', 'url' => $ext, 'availability' => 'https://schema.org/InStock'];
     }
     return $s;
 }

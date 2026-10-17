@@ -628,6 +628,30 @@
             });
         });
 
+        // Formularul de newsletter (comun): abonare cu acord explicit, în limba paginii.
+        // Markup-ul îl pune template-ul (ex. secțiunea newsletter a template-ului artist).
+        Alpine.data('newsletterForm', function () {
+            return {
+                email: '', first_name: '', consent: false, busy: false, done: false, error: '',
+                submit: async function () {
+                    this.error = '';
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.email.trim())) { this.error = t('Adresa de email nu pare corectă.'); return; }
+                    if (!this.consent) { this.error = t('Bifează acordul ca să te putem abona.'); return; }
+                    this.busy = true;
+                    try {
+                        var r = await fetch('/api/proxy.php?action=newsletter-subscribe', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: this.email.trim(), first_name: this.first_name.trim() || null, locale: locale(), consent: true })
+                        });
+                        var d = await r.json().catch(function () { return {}; });
+                        if (r.ok && d.success) { this.done = true; }
+                        else { this.error = r.status === 429 ? t('Prea multe încercări. Mai încearcă peste un minut.') : t('Nu te-am putut abona. Încearcă din nou.'); }
+                    } catch (e) { this.error = t('Conexiunea a eșuat. Încearcă din nou.'); }
+                    this.busy = false;
+                }
+            };
+        });
+
         // Bara de cookies (comună): alegerea se ține în browser și se transmite prin Consent Mode.
         // Markup-ul îl pune template-ul; „Setări cookies” trimite evenimentul site:cookie-settings.
         Alpine.data('cookieBar', function () {

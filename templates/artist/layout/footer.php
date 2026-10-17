@@ -3,7 +3,7 @@
 $footer = (array) site('footer', []);
 $next = null;
 foreach (ar_upcoming() as $ev) {
-    if (ar_status($ev)[0] !== 'sold_out') { $next = $ev; break; }
+    if (!in_array(ar_status($ev)[0], ['sold_out', 'external'], true)) { $next = $ev; break; }
 }
 $socials = array_filter(['Instagram' => $footer['instagram'] ?? '', 'TikTok' => $footer['tiktok'] ?? '', 'YouTube' => $footer['youtube'] ?? '', 'Facebook' => $footer['facebook'] ?? '']);
 ?>
@@ -21,7 +21,7 @@ $socials = array_filter(['Instagram' => $footer['instagram'] ?? '', 'TikTok' => 
                 <?php endif; ?>
             </div>
             <div class="ar-foot__cols">
-                <div><h4><?= e(SITE_NAME) ?></h4><a href="/turneu"><?= te('Turneu') ?></a><a href="/#muzica"><?= te('Muzică') ?></a><a href="/#despre"><?= te('Despre') ?></a></div>
+                <div><h4><?= e(SITE_NAME) ?></h4><a href="/turneu"><?= te('Turneu') ?></a><a href="/#muzica"><?= te('Muzică') ?></a><a href="/#despre"><?= te('Despre') ?></a><a href="/#newsletter"><?= te('Newsletter') ?></a></div>
                 <div><h4><?= te('Contul tău') ?></h4><a href="/cont/bilete"><?= te('Biletele mele') ?></a><a href="/cont/comenzi"><?= te('Comenzile mele') ?></a><a href="/cos"><?= te('Coșul meu') ?></a></div>
                 <div><h4><?= te('Contact') ?></h4>
                     <?php if (!empty($footer['email'])): ?><a href="mailto:<?= e($footer['email']) ?>"><?= e($footer['email']) ?></a><?php endif; ?>
