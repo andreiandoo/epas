@@ -170,6 +170,10 @@ class EventsController extends Controller
                             'id' => $event->venue->id,
                             'name' => $event->venue->getTranslation('name', $locale),
                             'city' => $event->venue->city,
+                            'country' => $event->venue->country,
+                            // coordonatele: hărțile și globul turneului din template-uri
+                            'latitude' => $event->venue->lat !== null ? (float) $event->venue->lat : null,
+                            'longitude' => $event->venue->lng !== null ? (float) $event->venue->lng : null,
                         ] : null,
 
                         // Media
@@ -709,6 +713,10 @@ class EventsController extends Controller
                             'id' => $event->venue->id,
                             'name' => $event->venue->getTranslation('name', $locale),
                             'city' => $event->venue->city,
+                            'country' => $event->venue->country,
+                            // coordonatele: hărțile și globul turneului din template-uri
+                            'latitude' => $event->venue->lat !== null ? (float) $event->venue->lat : null,
+                            'longitude' => $event->venue->lng !== null ? (float) $event->venue->lng : null,
                         ] : null,
 
                         // Media
