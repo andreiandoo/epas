@@ -148,5 +148,44 @@ function ts_head_assets(): string {
         . 'tailwind.config=c;})();</script>'
         . '<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>'
         . '<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>'
-        . '<style>' . ts_theme_css() . '</style>';
+        . '<style>' . ts_theme_css() . '</style>'
+        . ts_motion_assets();
+}
+
+/** Versiunile fixate ale bibliotecilor de animație (UI_RESOURCES.md: niciodată „latest”). */
+const TS_MOTION_LIBS = [
+    'lenis' => ['https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js'],
+    'gsap' => [
+        'https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js',
+        'https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js',
+    ],
+];
+
+/**
+ * Animațiile cerute de manifest (`"motion": ["lenis", "gsap"]`) + modulul comun
+ * public/assets/motion/ts-motion.js. Niciodată pe paginile comune (coș,
+ * checkout, cont): acolo contează doar viteza.
+ */
+function ts_motion_assets(): string {
+    $wanted = array_values(array_intersect((array) manifest('motion', []), array_keys(TS_MOTION_LIBS)));
+    if (!$wanted || defined('TS_SHARED_PAGE')) {
+        return '';
+    }
+    $html = '<style>html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!important}'
+        . '.lenis.lenis-stopped{overflow:hidden}</style>';
+    foreach ($wanted as $lib) {
+        foreach (TS_MOTION_LIBS[$lib] as $src) {
+            $html .= '<script defer src="' . e($src) . '"></script>';
+        }
+    }
+    $file = TS_ROOT . '/public/assets/motion/ts-motion.js';
+    $v = is_file($file) ? filemtime($file) : 1;
+    return $html . '<script defer src="/assets/motion/ts-motion.js?v=' . $v . '"></script>';
+}
+
+/** URL pentru un fișier al template-ului (templates/{slug}/assets → public/tpl/{slug}). */
+function ts_asset(string $path): string {
+    $path = ltrim($path, '/');
+    $file = TEMPLATE_DIR . '/assets/' . $path;
+    return '/tpl/' . TEMPLATE . '/' . $path . (is_file($file) ? '?v=' . filemtime($file) : '');
 }

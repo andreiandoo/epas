@@ -2,6 +2,11 @@
     "name": "Teatru clasic",
     "description": "Fundal întunecat, accente aurii și burgundy, tipografie serif. Pentru teatre, filarmonici, opere.",
     "version": 1,
+    "category": "Teatru & cultură",
+    "kind": "events",
+    "status": "ready",
+    "visibility": "public",
+    "motion": ["lenis", "gsap"],
 
     "theme": {
         "colors": {

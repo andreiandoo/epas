@@ -11,7 +11,7 @@ if (!$items) {
             <?= teatru_eyebrow($s['eyebrow'] ?? '') ?>
             <?php if (!empty($s['title'])): ?><h2 class="font-display text-4xl"><?= ts_md($s['title']) ?></h2><?php endif; ?>
         </div>
-        <div class="grid md:grid-cols-2 <?= count($items) > 2 ? 'lg:grid-cols-3' : '' ?> gap-8">
+        <div class="grid md:grid-cols-2 <?= count($items) > 2 ? 'lg:grid-cols-3' : '' ?> gap-8" data-stagger>
             <?php foreach ($items as $item): $facts = array_slice(array_filter((array) ($item['facts'] ?? []), fn ($f) => !empty($f['value'])), 0, 3); ?>
             <div class="bg-surface rounded-xl overflow-hidden">
                 <?php if (!empty($item['image'])): ?><img src="<?= e($item['image']) ?>" alt="<?= e($item['title']) ?>" loading="lazy" class="w-full h-64 object-cover"><?php endif; ?>

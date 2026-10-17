@@ -96,6 +96,31 @@ Test local: `php -S 127.0.0.1:8094 -t public public/index.php`, cu header-ul `Ho
    autentificare, plus clasele `btn-primary`, `btn-outline`, `btn-accent`, `show-card`, `divider-ornate`,
    definite în `app/theme.php`. Un template le poate redefini în `<head>`, după `ts_head_assets()`.
 
+7. **Câmpurile de catalog din manifest:**
+   - `category`: grupa din select și din galerie;
+   - `kind`: `events` / `leisure` / `competition`;
+   - `status`: `draft` (nu apare în select) / `beta` / `ready`;
+   - `visibility`: `public` sau `private` (template custom pentru un client, exclusiv cât îl folosește),
+     cu `"tenants": [id, …]` = cine îl poate alege. Template-urile custom stau în `templates/custom-{client}`;
+   - `preview_image`: fișier din `assets/`, folosit în galerie.
+8. **Animațiile:** `"motion": ["lenis", "gsap"]` încarcă smooth scroll-ul și GSAP ScrollTrigger (versiuni
+   fixate în `app/theme.php`), plus `public/assets/motion/ts-motion.js`. În markup:
+   - `data-reveal` (sau `="left|right|scale|fade"`), `data-reveal-delay`;
+   - `data-stagger`: copiii apar pe rând;
+   - `data-parallax="0.15"`.
+
+   Pe coș, checkout și cont nu se încarcă niciodată. Cu `prefers-reduced-motion` totul rămâne static.
+   Resursele de UI permise: `plans/mds/UI_RESOURCES.md`.
+9. **Fișierele proprii** (imagini, modele 3D, JS, fonturi) stau în `templates/{slug}/assets/` și se
+   folosesc cu `ts_asset('img/hero.webp')`. La deploy ajung în `public/tpl/{slug}/`.
+
+## Demo-uri live
+
+În core, la **Tenants → Demo-uri site**, alegi template-ul, tenantul demo (datele) și adresa
+`demo-{slug}.tics.ro`. Core creează domeniul și pornește checkout-ul demo pe tenant. Galeria cu toate
+demo-urile listate e pe `demo.tics.ro`. Pe pagina „Site” a unui tenant apare „Vezi demo live”
+lângă template.
+
 Ce se schimbă per tenant fără cod:
 - identitatea;
 - culorile și fonturile;

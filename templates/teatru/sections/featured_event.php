@@ -8,12 +8,12 @@ $url = ts_link('event', ['slug' => $featured['slug'] ?? '']);
 ?>
 <section class="py-24 px-4 lg:px-8 spotlight">
     <div class="max-w-7xl mx-auto">
-        <div class="text-center mb-16">
+        <div class="text-center mb-16" data-reveal>
             <?= teatru_eyebrow($s['eyebrow'] ?? '') ?>
             <?php if (!empty($s['title'])): ?><h2 class="font-display text-4xl lg:text-5xl"><?= ts_md($s['title']) ?></h2><?php endif; ?>
         </div>
         <div class="grid lg:grid-cols-2 gap-12 items-center">
-            <div class="relative">
+            <div class="relative" data-reveal="left">
                 <div class="absolute -inset-4 bg-gradient-to-r from-accent/20 to-primary/20 blur-2xl opacity-50"></div>
                 <img src="<?= e(teatru_ev_img($featured)) ?>" alt="<?= e($featured['title'] ?? '') ?>" class="relative rounded-lg w-full aspect-[4/5] object-cover border border-primary/20">
             </div>

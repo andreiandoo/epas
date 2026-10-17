@@ -11,7 +11,7 @@ if (!$items) {
             <?= teatru_eyebrow($s['eyebrow'] ?? '') ?>
             <?php if (!empty($s['title'])): ?><h2 class="font-display text-4xl"><?= ts_md($s['title']) ?></h2><?php endif; ?>
         </div>
-        <div class="space-y-8">
+        <div class="space-y-8" data-stagger>
             <?php foreach ($items as $i => $item): ?>
             <div class="timeline-item <?= $i < count($items) - 1 ? 'pb-8' : '' ?>">
                 <?php if (!empty($item['label'])): ?><p class="text-primary font-display text-2xl mb-2"><?= e($item['label']) ?></p><?php endif; ?>

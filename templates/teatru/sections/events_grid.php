@@ -16,7 +16,7 @@ $grid = array_slice($events, 0, $limit);
 ?>
 <section class="py-24 px-4 lg:px-8 bg-surface/50">
     <div class="max-w-7xl mx-auto">
-        <div class="flex items-center justify-between mb-12 gap-6">
+        <div class="flex items-center justify-between mb-12 gap-6" data-reveal>
             <div>
                 <?= teatru_eyebrow($s['eyebrow'] ?? '') ?>
                 <?php if (!empty($s['title'])): ?><h2 class="font-display text-4xl"><?= ts_md($s['title']) ?></h2><?php endif; ?>
@@ -26,7 +26,7 @@ $grid = array_slice($events, 0, $limit);
         <?php if (empty($grid)): ?>
             <p class="text-center text-muted py-12"><?= e($s['empty_text'] ?? 'Momentan nu sunt evenimente publicate.') ?></p>
         <?php else: ?>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8" data-stagger>
             <?php foreach ($grid as $ev): ?>
             <a href="<?= e(ts_link('event', ['slug' => $ev['slug'] ?? ''])) ?>" class="show-card rounded-lg overflow-hidden group">
                 <div class="relative aspect-[3/4]">
