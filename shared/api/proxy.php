@@ -96,6 +96,11 @@ switch ($action) {
         ]);
         break;
 
+    // Soldul unui card cadou după cod (pagina „Voucher”)
+    case 'voucher-verify':
+        $path = '/tenant-client/gift-cards/' . rawurlencode(substr((string) ($_GET['code'] ?? ''), 0, 64));
+        break;
+
     // Comenzile și biletele din browserul cumpărătorului, setarea parolei (DemoStorefrontController)
     case 'orders':
         $path = '/tenant-client/storefront/orders';
