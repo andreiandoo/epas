@@ -9,7 +9,7 @@ $pageDescription = $pageDescription ?? (site('branding.description') ?: 'Bilete 
 $pageImage       = $pageImage       ?? (site('branding.logo') ?: null);
 ?>
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="<?= ts_locale() ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">

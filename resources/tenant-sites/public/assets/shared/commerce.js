@@ -99,12 +99,24 @@
         }
     };
 
+    // Limba paginii (TS_CFG.locale) și traducerile textelor (TS_I18N: textul românesc → traducere)
+    function locale() { return (window.TS_CFG || {}).locale || 'ro'; }
+    function t(s, params) {
+        var d = window.TS_I18N || {};
+        var r = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s;
+        if (params) { Object.keys(params).forEach(function (k) { r = r.split('{' + k + '}').join(params[k]); }); }
+        return r;
+    }
     function lei(n) {
         n = Number(n) || 0;
-        var s = Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
-        return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' lei';
+        var en = locale() === 'en';
+        var s = Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', en ? '.' : ',');
+        return s.replace(/\B(?=(\d{3})+(?!\d))/g, en ? ',' : '.') + (en ? ' RON' : ' lei');
     }
-    function ticketsLabel(n) { return n === 1 ? '1 bilet' : (n < 20 ? n + ' bilete' : n + ' de bilete'); }
+    function ticketsLabel(n) {
+        if (locale() === 'en') { return n === 1 ? '1 ticket' : n + ' tickets'; }
+        return n === 1 ? '1 bilet' : (n < 20 ? n + ' bilete' : n + ' de bilete');
+    }
     function toast(msg) { window.dispatchEvent(new CustomEvent('site:toast', { detail: msg })); }
 
     // „14–15 noiembrie 2026” / „3 aprilie 2027” / „30 ianuarie – 1 februarie 2027”, din două date ISO
@@ -112,12 +124,12 @@
         if (!startIso) { return ''; }
         var day = function (iso) { var p = String(iso).slice(0, 10).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
         var a = day(startIso), b = endIso ? day(endIso) : a;
-        var full = { day: 'numeric', month: 'long', year: 'numeric' };
-        if (a.getTime() === b.getTime()) { return a.toLocaleDateString('ro-RO', full); }
+        var full = { day: 'numeric', month: 'long', year: 'numeric' }, loc = locale() === 'en' ? 'en-GB' : 'ro-RO';
+        if (a.getTime() === b.getTime()) { return a.toLocaleDateString(loc, full); }
         if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) {
-            return a.getDate() + '–' + b.toLocaleDateString('ro-RO', full);
+            return a.getDate() + '–' + b.toLocaleDateString(loc, full);
         }
-        return a.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }) + ' – ' + b.toLocaleDateString('ro-RO', full);
+        return a.toLocaleDateString(loc, { day: 'numeric', month: 'long' }) + ' – ' + b.toLocaleDateString(loc, full);
     }
 
     /* Tokenurile comenzilor plasate din acest browser: cu ele se descarcă biletele după plată,
@@ -159,7 +171,7 @@
         return local;
     }
 
-    window.TS = { Orders: Orders, pdfUrl: pdfUrl, Cart: Cart, Auth: Auth, lei: lei, toast: toast, quote: quote, ticketsLabel: ticketsLabel, MAX_PER_TYPE: MAX_PER_TYPE, HOLD_MS: HOLD_MS, SEAT_HOLD_MS: SEAT_HOLD_MS };
+    window.TS = { t: t, locale: locale, Orders: Orders, pdfUrl: pdfUrl, Cart: Cart, Auth: Auth, lei: lei, toast: toast, quote: quote, ticketsLabel: ticketsLabel, MAX_PER_TYPE: MAX_PER_TYPE, HOLD_MS: HOLD_MS, SEAT_HOLD_MS: SEAT_HOLD_MS };
 
     /* Comportament comun coșului și paginii de plată: sume, cod de reducere. */
     function pricing() {
@@ -187,7 +199,7 @@
                 var q = await quote(this.cart, this.cart.coupon_code);
                 // Codul salvat nu mai e valabil (expirat, coș schimbat): îl scoatem și spunem de ce
                 if (this.cart && this.cart.coupon_code && !q.coupon && !q.offline) {
-                    this.couponError = q.coupon_error || 'Codul de reducere nu mai este valabil.';
+                    this.couponError = q.coupon_error || t('Codul de reducere nu mai este valabil.');
                     this.couponOpen = true;
                     this.cart.coupon_code = null;
                     Cart.set(JSON.parse(JSON.stringify(this.cart)));
@@ -198,17 +210,17 @@
             applyCoupon: async function () {
                 var code = this.couponInput.trim().toUpperCase();
                 this.couponError = '';
-                if (!code) { this.couponError = 'Scrie codul de reducere.'; return; }
+                if (!code) { this.couponError = t('Scrie codul de reducere.'); return; }
                 this.couponBusy = true;
                 var q = await quote(this.cart, code);
                 this.couponBusy = false;
-                if (q.offline) { this.couponError = 'Codul nu a putut fi verificat. Încearcă din nou.'; return; }
-                if (!q.coupon) { this.couponError = q.coupon_error || 'Codul de reducere nu este valid.'; return; }
+                if (q.offline) { this.couponError = t('Codul nu a putut fi verificat. Încearcă din nou.'); return; }
+                if (!q.coupon) { this.couponError = q.coupon_error || t('Codul de reducere nu este valid.'); return; }
                 this.q = q;
                 this.cart.coupon_code = q.coupon.code;
                 Cart.set(JSON.parse(JSON.stringify(this.cart)));
                 this.couponInput = '';
-                toast('Cod aplicat: ai economisit ' + lei(q.discount) + '.');
+                toast(t('Cod aplicat: ai economisit {sum}.', { sum: lei(q.discount) }));
             },
             removeCoupon: function () {
                 this.cart.coupon_code = null;
@@ -261,7 +273,7 @@
                         self.timer = setTimeout(function () { self.show = false; }, 3400);
                     });
                     if (Cart.takeExpired()) {
-                        setTimeout(function () { toast('Timpul de rezervare a expirat. Alege din nou biletele.'); }, 600);
+                        setTimeout(function () { toast(t('Timpul de rezervare a expirat. Alege din nou biletele.')); }, 600);
                     }
                 }
             };
@@ -325,7 +337,7 @@
                 lei: lei, ticketsLabel: ticketsLabel,
                 save: function () {
                     var self = this;
-                    if (!this.count) { toast('Alege cel puțin un bilet.'); return; }
+                    if (!this.count) { toast(t('Alege cel puțin un bilet.')); return; }
                     var prev = Cart.get(), same = prev && prev.event.id === this.event.id;
                     Cart.set({
                         event: this.event,
@@ -371,7 +383,7 @@
                             var tier = tiers[st.price_tier_id];
                             var cents = st.price_cents != null ? st.price_cents : (tier ? tier.price_cents : null);
                             var price = cents != null ? cents / 100 : (st.price != null ? Number(st.price) : 0);
-                            var name = st.section_name || 'Sală', row = String(st.row_label || '');
+                            var name = st.section_name || t('Sală'), row = String(st.row_label || '');
                             var sec = map[name] || (map[name] = { name: name, rows: {} });
                             (sec.rows[row] || (sec.rows[row] = [])).push({
                                 seat_uid: st.seat_uid, seat: String(st.seat_label || ''), row: row, price: price,
@@ -422,15 +434,15 @@
                     return seat.price >= (this.priceLevels()[0] || 0) && this.priceLevels().length > 1 ? 'is-top' : '';
                 },
                 seatLabel: function (seat) {
-                    return this.active + ', rândul ' + seat.row + ', locul ' + seat.seat + ', ' + lei(seat.price)
-                        + (this.isSelected(seat) ? ', selectat' : (this.isTaken(seat) ? ', ocupat' : ''));
+                    return t('{section}, rândul {row}, locul {seat}, {price}', { section: this.active, row: seat.row, seat: seat.seat, price: lei(seat.price) })
+                        + (this.isSelected(seat) ? ', ' + t('selectat') : (this.isTaken(seat) ? ', ' + t('ocupat') : ''));
                 },
                 get total() { return this.selected.reduce(function (n, x) { return n + x.price; }, 0); },
                 toggle: async function (seat) {
                     if (this.busy || this.isTaken(seat)) { return; }
                     this.error = '';
                     if (this.isSelected(seat)) { return this.remove(seat.seat_uid); }
-                    if (this.selected.length >= this.max) { this.error = 'Poți alege cel mult ' + this.max + ' locuri pe comandă.'; return; }
+                    if (this.selected.length >= this.max) { this.error = t('Poți alege cel mult {n} locuri pe comandă.', { n: this.max }); return; }
                     this.busy = true;
                     try {
                         var r = await fetch('/api/proxy.php?action=hold', {
@@ -442,19 +454,19 @@
                         if (failed) {
                             var why = Array.isArray(d.failed) && d.failed[0] ? d.failed[0].reason : '';
                             if (why === 'max_holds_exceeded') {
-                                this.error = 'Ai atins numărul maxim de locuri pentru o comandă.';
+                                this.error = t('Ai atins numărul maxim de locuri pentru o comandă.');
                             } else {
                                 seat.status = 'held';
-                                this.error = 'Locul tocmai a fost luat de altcineva. Alege altul.';
+                                this.error = t('Locul tocmai a fost luat de altcineva. Alege altul.');
                             }
                         } else {
                             this.selected.push({
                                 seat_uid: seat.seat_uid, section: this.active, row: seat.row, seat: seat.seat, price: seat.price,
-                                label: this.active + ' · Rând ' + seat.row + ' · Loc ' + seat.seat
+                                label: t('{section} · Rând {row} · Loc {seat}', { section: this.active, row: seat.row, seat: seat.seat })
                             });
                             this.persist();
                         }
-                    } catch (e) { this.error = 'Conexiunea a eșuat. Încearcă din nou.'; }
+                    } catch (e) { this.error = t('Conexiunea a eșuat. Încearcă din nou.'); }
                     this.busy = false;
                 },
                 remove: function (uid) {
@@ -473,7 +485,7 @@
                     });
                 },
                 save: function () {
-                    if (!this.selected.length) { toast('Alege cel puțin un loc.'); return; }
+                    if (!this.selected.length) { toast(t('Alege cel puțin un loc.')); return; }
                     this.persist();
                     window.location.href = '/cos';
                 }
@@ -558,11 +570,11 @@
                 },
                 pay: async function () {
                     this.tried = true; this.error = '';
-                    if (this.bad('first_name') || this.bad('last_name')) { this.error = 'Completează prenumele și numele.'; return this.focusFirstBad(); }
-                    if (!this.emailOk()) { this.error = 'Adresa de email nu pare corectă.'; return this.focusFirstBad(); }
-                    if (!this.emailsMatch()) { this.error = 'Cele două adrese de email nu sunt identice. Verifică-le literă cu literă.'; return this.focusFirstBad(); }
-                    if (!this.passwordOk()) { this.error = 'Parola contului trebuie să aibă cel puțin 8 caractere.'; return this.focusFirstBad(); }
-                    if (!this.form.terms) { this.error = 'Trebuie să accepți termenii pentru a continua.'; return; }
+                    if (this.bad('first_name') || this.bad('last_name')) { this.error = t('Completează prenumele și numele.'); return this.focusFirstBad(); }
+                    if (!this.emailOk()) { this.error = t('Adresa de email nu pare corectă.'); return this.focusFirstBad(); }
+                    if (!this.emailsMatch()) { this.error = t('Cele două adrese de email nu sunt identice. Verifică-le literă cu literă.'); return this.focusFirstBad(); }
+                    if (!this.passwordOk()) { this.error = t('Parola contului trebuie să aibă cel puțin 8 caractere.'); return this.focusFirstBad(); }
+                    if (!this.form.terms) { this.error = t('Trebuie să accepți termenii pentru a continua.'); return; }
                     this.busy = true;
                     try {
                         var r = await fetch('/api/proxy.php?action=checkout', {
@@ -577,6 +589,7 @@
                                 password: (!this.user && this.form.create_account) ? this.form.password : null,
                                 newsletter: this.form.newsletter,
                                 payment_method: this.payMethod || 'card',
+                                locale: locale(),
                                 success_url: window.location.origin + '/confirmare',
                                 cancel_url: window.location.origin + '/finalizare?plata=anulata'
                             }))
@@ -588,9 +601,9 @@
                             window.location.href = d.redirect_url;
                             return;
                         }
-                        this.error = d.error || d.message || 'Comanda nu a putut fi plasată. Încearcă din nou.';
+                        this.error = d.error || d.message || t('Comanda nu a putut fi plasată. Încearcă din nou.');
                     } catch (e) {
-                        this.error = 'Conexiunea a eșuat. Verifică internetul și încearcă din nou.';
+                        this.error = t('Conexiunea a eșuat. Verifică internetul și încearcă din nou.');
                     }
                     this.busy = false;
                 },

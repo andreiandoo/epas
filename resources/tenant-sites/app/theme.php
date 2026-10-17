@@ -166,8 +166,8 @@ function ts_head_assets(): string {
  */
 function ts_commerce_assets(): string {
     $file = TS_ROOT . '/public/assets/shared/commerce.js';
-    $cfg = ['api' => API_BASE, 'host' => ts_host(), 'eventsUrl' => ts_link('events')];
-    return '<script>window.TS_CFG=' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';</script>'
+    $cfg = ['api' => API_BASE, 'host' => ts_host(), 'eventsUrl' => ts_link('events'), 'locale' => ts_locale()];
+    return '<script>window.TS_CFG=' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';window.TS_I18N=' . ts_js_catalog() . ';</script>'
         . '<script defer src="/assets/shared/commerce.js?v=' . (is_file($file) ? filemtime($file) : 1) . '"></script>';
 }
 

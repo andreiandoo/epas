@@ -15,7 +15,7 @@ $itemClass = fn (bool $active) => $active
 <!-- Mobile menu overlay -->
 <div x-cloak x-show="mobileMenu" x-transition.opacity class="fixed inset-0 z-[70] bg-canvas/98 p-5 lg:hidden overflow-y-auto">
     <div class="flex items-center justify-between">
-        <strong class="font-display text-2xl">Contul meu</strong>
+        <strong class="font-display text-2xl"><?= te('Contul meu') ?></strong>
         <button @click="mobileMenu=false" class="grid h-11 w-11 place-items-center rounded-full border border-fg/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button>
     </div>
     <nav class="mt-7 grid gap-1">
@@ -25,7 +25,7 @@ $itemClass = fn (bool $active) => $active
         <a href="<?= e($it['url']) ?>" class="<?= $itemClass($active) ?>"><?= $it['icon'] ?><span><?= e($it['label']) ?></span></a>
         <?php endforeach; ?>
         <?php endforeach; ?>
-        <a href="#" @click.prevent="logout()" class="mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-fg/40"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M10 17l5-5-5-5m5 5H3m12-9h5v18h-5"/></svg>Ieșire din cont</a>
+        <a href="#" @click.prevent="logout()" class="mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-fg/40"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M10 17l5-5-5-5m5 5H3m12-9h5v18h-5"/></svg><?= te('Ieșire din cont') ?></a>
     </nav>
 </div>
 
@@ -33,14 +33,14 @@ $itemClass = fn (bool $active) => $active
 <div x-cloak x-show="searchOpen" x-transition.opacity class="fixed inset-0 z-[80] bg-canvas/98 p-5 backdrop-blur-xl">
     <div class="mx-auto max-w-2xl pt-16">
         <div class="flex items-center justify-between">
-            <h2 class="font-display text-3xl">Caută</h2>
+            <h2 class="font-display text-3xl"><?= te('Caută') ?></h2>
             <button @click="searchOpen=false" class="grid h-11 w-11 place-items-center rounded-full border border-fg/10"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button>
         </div>
-        <input x-ref="search" x-model="query" class="input mt-7 text-lg" placeholder="Spectacol, comandă, ajutor...">
+        <input x-ref="search" x-model="query" class="input mt-7 text-lg" placeholder="<?= te('Spectacol, comandă, ajutor...') ?>">
         <div class="mt-5 grid gap-2">
-            <a href="/cont/bilete" class="card flex items-center justify-between p-4"><span>Biletele mele</span><span class="text-primary">→</span></a>
-            <a href="/cont/comenzi" class="card flex items-center justify-between p-4"><span>Comenzile mele</span><span class="text-primary">→</span></a>
-            <a href="/cont/ajutor" class="card flex items-center justify-between p-4"><span>Ajutor și suport</span><span class="text-primary">→</span></a>
+            <a href="/cont/bilete" class="card flex items-center justify-between p-4"><span><?= te('Biletele mele') ?></span><span class="text-primary">→</span></a>
+            <a href="/cont/comenzi" class="card flex items-center justify-between p-4"><span><?= te('Comenzile mele') ?></span><span class="text-primary">→</span></a>
+            <a href="/cont/ajutor" class="card flex items-center justify-between p-4"><span><?= te('Ajutor și suport') ?></span><span class="text-primary">→</span></a>
         </div>
     </div>
 </div>
@@ -51,7 +51,7 @@ $itemClass = fn (bool $active) => $active
 function accountShell(){
     return {
         mobileMenu:false, searchOpen:false, query:'', toast:'',
-        userName:'Cont client', userEmail:'—', firstName:'Cont', initials:'AP', token:null,
+        userName:TS.t('Cont client'), userEmail:'—', firstName:TS.t('Cont'), initials:'AP', token:null,
         auth(){ try { return JSON.parse(localStorage.getItem('site_auth')||'null'); } catch(e){ return null; } },
         init(){
             const a = this.auth();
@@ -65,14 +65,14 @@ function accountShell(){
         },
         setUser(u){
             if(!u) return;
-            this.userName = u.name || 'Cont client';
+            this.userName = u.name || TS.t('Cont client');
             this.userEmail = u.email || '';
             const parts = (u.name||'').trim().split(/\s+/);
-            this.firstName = parts[0] || 'Cont';
+            this.firstName = parts[0] || TS.t('Cont');
             this.initials = ((parts[0]?.[0]||'')+(parts[1]?.[0]||'')).toUpperCase() || 'C';
         },
         showToast(m){ this.toast=m; setTimeout(()=>this.toast='',2600); },
-        copy(t,m='Copiat'){ navigator.clipboard?.writeText(t); this.showToast(m); },
+        copy(t,m=TS.t('Copiat')){ navigator.clipboard?.writeText(t); this.showToast(m); },
         close(){ this.mobileMenu=false; this.searchOpen=false; },
         async logout(){
             try { await fetch('/api/proxy.php?action=logout',{method:'POST',headers:{'Authorization':'Bearer '+(this.token||'')}}); } catch(e){}

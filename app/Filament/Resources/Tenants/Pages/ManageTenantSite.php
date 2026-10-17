@@ -134,6 +134,9 @@ class ManageTenantSite extends Page
                     Forms\Components\Textarea::make('branding.description')->label('Descriere pentru Google')->rows(2)->maxLength(300),
                     $this->upload('branding.logo', 'Logo')->helperText('PNG/SVG cu fundal transparent; înlocuiește inițialele'),
                     $this->upload('branding.favicon', 'Favicon')->helperText('Pătrat, minim 64×64'),
+                    Forms\Components\CheckboxList::make('languages')->label('Limbile site-ului')
+                        ->options(['ro' => 'Română', 'en' => 'English'])->default(['ro'])->columns(2)
+                        ->helperText('Cu engleza bifată apare selectorul de limbă. Interfața, coșul și contul sunt traduse; textele scrise aici rămân cum le scrieți.'),
                 ]),
                 SC\Section::make('Subsol')->schema([
                     Forms\Components\Textarea::make('footer.text')->label('Text scurt')->rows(2)->columnSpanFull(),

@@ -4,10 +4,10 @@
  * diferă doar culorile și fonturile, din temă).
  * Variabile opționale: $pageTitle, $navActive (cheia item-ului activ din sidebar), $contExtraStyles.
  */
-$pageTitle = $pageTitle ?? ('Contul meu — ' . SITE_NAME);
+$pageTitle = $pageTitle ?? (t('Contul meu') . ' — ' . SITE_NAME);
 $navActive = $navActive ?? '';
 ?><!DOCTYPE html>
-<html lang="ro">
+<html lang="<?= ts_locale() ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -41,4 +41,4 @@ html{scroll-behavior:smooth}:focus-visible{outline:2px solid rgb(var(--c-primary
 </style>
 </head>
 <body class="antialiased" x-data="accountShell()" x-init="init()" @keydown.escape.window="close()">
-<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded bg-primary focus:px-4 focus:py-3 focus:text-canvas">Sari la conținut</a>
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded bg-primary focus:px-4 focus:py-3 focus:text-canvas"><?= te('Sari la conținut') ?></a>

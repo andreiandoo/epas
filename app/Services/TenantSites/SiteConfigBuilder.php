@@ -57,6 +57,7 @@ class SiteConfigBuilder
                 'youtube' => '',
             ],
             'pages' => $pages,
+            'languages' => ['ro'],
             // Câmpurile proprii ale template-ului (manifest "settings"), cu valorile implicite
             'settings' => collect($m['settings'] ?? [])->mapWithKeys(fn ($f) => [$f['name'] => $f['default'] ?? null])->all(),
         ];
@@ -141,6 +142,8 @@ class SiteConfigBuilder
             'footer' => $data['footer'] ?? [],
             'settings' => $this->resolveImages((array) ($data['settings'] ?? []), $m['settings'] ?? []),
             'pages' => $pages,
+            // Limbile site-ului: română mereu prima; engleza doar dacă e bifată
+            'languages' => array_values(array_unique(array_merge(['ro'], array_intersect((array) ($data['languages'] ?? ['ro']), ['ro', 'en'])))),
         ];
     }
 

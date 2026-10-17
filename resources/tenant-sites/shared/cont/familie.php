@@ -1,51 +1,51 @@
 <?php
 $navActive = 'family';
-$pageTitle = 'Cont de familie — ' . (defined('SITE_NAME') ? SITE_NAME : 'Contul meu');
+$pageTitle = t('Cont de familie') . ' — ' . (defined('SITE_NAME') ? SITE_NAME : t('Contul meu'));
 require __DIR__ . '/_inc/head.php';
 require __DIR__ . '/_inc/top.php';
 ?>
-<div class="mb-9"><p class="text-[11px] font-bold tracking-[.22em] text-primary-light">FAMILIE</p><h1 class="mt-3 font-display text-4xl leading-tight sm:text-5xl">Cont de familie</h1><p class="mt-3 max-w-3xl text-sm leading-7 text-fg/48 sm:text-base">Beneficiari, profiluri pentru copii, bilete și abonamente gestionate împreună.</p></div>
+<div class="mb-9"><p class="text-[11px] font-bold tracking-[.22em] text-primary-light"><?= te('FAMILIE') ?></p><h1 class="mt-3 font-display text-4xl leading-tight sm:text-5xl"><?= te('Cont de familie') ?></h1><p class="mt-3 max-w-3xl text-sm leading-7 text-fg/48 sm:text-base"><?= te('Beneficiari, profiluri pentru copii, bilete și abonamente gestionate împreună.') ?></p></div>
 <div x-data="familyPage()" x-init="load()">
-    <section class="grain relative overflow-hidden rounded-3xl border border-imaginario/25 bg-gradient-to-br from-imaginario/35 via-panel to-surface p-6 sm:p-8"><div class="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><span class="badge bg-imaginario/20 text-teal-100">CONT DE FAMILIE</span><h2 class="mt-4 font-display text-4xl" x-text="'Familia ' + (lastName() || 'mea')">Familia mea</h2><p class="mt-3 max-w-2xl text-sm leading-7 text-fg/48">Gestionează beneficiarii, biletele pentru copii și utilizarea abonamentelor de familie.</p></div><button @click="add=true" class="btn-primary self-start rounded-full px-5 py-3 text-sm font-bold">Adaugă membru</button></div></section>
+    <section class="grain relative overflow-hidden rounded-3xl border border-imaginario/25 bg-gradient-to-br from-imaginario/35 via-panel to-surface p-6 sm:p-8"><div class="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><span class="badge bg-imaginario/20 text-teal-100"><?= te('CONT DE FAMILIE') ?></span><h2 class="mt-4 font-display text-4xl" x-text="lastName() ? TS.t('Familia {name}', {name: lastName()}) : TS.t('Familia mea')"><?= te('Familia mea') ?></h2><p class="mt-3 max-w-2xl text-sm leading-7 text-fg/48"><?= te('Gestionează beneficiarii, biletele pentru copii și utilizarea abonamentelor de familie.') ?></p></div><button @click="add=true" class="btn-primary self-start rounded-full px-5 py-3 text-sm font-bold"><?= te('Adaugă membru') ?></button></div></section>
 
     <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <article class="card p-5"><div class="flex items-center gap-4"><span class="grid h-14 w-14 place-items-center rounded-full bg-accent font-display text-xl" x-text="initials">AP</span><div><h3 class="font-display text-xl" x-text="userName">Contul meu</h3><p class="text-xs text-fg/35">Administrator · adult</p></div></div><div class="mt-4 grid grid-cols-2 gap-2 text-center"><div class="rounded-xl bg-fg/[.025] p-3"><strong x-text="tickets.length">0</strong><p class="text-[10px] text-fg/35">bilete active</p></div><div class="rounded-xl bg-fg/[.025] p-3"><strong x-text="members.length + 1"></strong><p class="text-[10px] text-fg/35">membri</p></div></div></article>
+        <article class="card p-5"><div class="flex items-center gap-4"><span class="grid h-14 w-14 place-items-center rounded-full bg-accent font-display text-xl" x-text="initials">AP</span><div><h3 class="font-display text-xl" x-text="userName"><?= te('Contul meu') ?></h3><p class="text-xs text-fg/35"><?= te('Administrator · adult') ?></p></div></div><div class="mt-4 grid grid-cols-2 gap-2 text-center"><div class="rounded-xl bg-fg/[.025] p-3"><strong x-text="tickets.length">0</strong><p class="text-[10px] text-fg/35"><?= te('bilete active') ?></p></div><div class="rounded-xl bg-fg/[.025] p-3"><strong x-text="members.length + 1"></strong><p class="text-[10px] text-fg/35"><?= te('membri') ?></p></div></div></article>
 
         <template x-for="m in members" :key="m.id">
             <article class="card p-5" :class="m.relation==='child'?'border-imaginario/25':''">
-                <div class="flex items-center gap-4"><span class="grid h-14 w-14 place-items-center rounded-full font-display text-xl" :class="m.relation==='child'?'bg-imaginario/25':'bg-primary/25'" x-text="mInitials(m.name)"></span><div><h3 class="font-display text-xl" x-text="m.name"></h3><p class="text-xs text-fg/35" x-text="m.relation==='child'?'Copil · gestionat de administrator':'Adult · poate primi bilete'"></p></div></div>
+                <div class="flex items-center gap-4"><span class="grid h-14 w-14 place-items-center rounded-full font-display text-xl" :class="m.relation==='child'?'bg-imaginario/25':'bg-primary/25'" x-text="mInitials(m.name)"></span><div><h3 class="font-display text-xl" x-text="m.name"></h3><p class="text-xs text-fg/35" x-text="m.relation==='child'?TS.t('Copil · gestionat de administrator'):TS.t('Adult · poate primi bilete')"></p></div></div>
                 <div class="mt-4 flex gap-2">
-                    <span x-show="m.status==='invited'" class="badge bg-amber-500/10 text-amber-300 self-center">INVITAT</span>
-                    <button @click="remove(m)" class="btn-secondary flex-1 rounded-xl py-2 text-xs">Elimină</button>
+                    <span x-show="m.status==='invited'" class="badge bg-amber-500/10 text-amber-300 self-center"><?= te('INVITAT') ?></span>
+                    <button @click="remove(m)" class="btn-secondary flex-1 rounded-xl py-2 text-xs"><?= te('Elimină') ?></button>
                 </div>
             </article>
         </template>
 
         <article x-show="!loading && members.length===0" x-cloak class="card border-dashed border-fg/12 p-5 text-center">
-            <p class="text-sm text-fg/40">Niciun beneficiar adăugat încă.</p>
-            <button @click="add=true" class="btn-primary mt-3 rounded-full px-4 py-2 text-xs font-bold">Adaugă primul membru</button>
+            <p class="text-sm text-fg/40"><?= te('Niciun beneficiar adăugat încă.') ?></p>
+            <button @click="add=true" class="btn-primary mt-3 rounded-full px-4 py-2 text-xs font-bold"><?= te('Adaugă primul membru') ?></button>
         </article>
     </div>
 
-    <section class="card mt-7 p-5 sm:p-6"><div class="flex items-center justify-between"><div><h2 class="font-display text-2xl">Abonament Familie</h2><p class="mt-1 text-sm text-fg/38">Gestionează abonamentele partajate cu beneficiarii.</p></div><a href="/cont/abonamente" class="text-sm text-primary-light">Gestionează</a></div><div class="mt-5 grid gap-3 md:grid-cols-2"><div class="rounded-xl bg-fg/[.025] p-4"><strong class="text-sm">Beneficiari activi</strong><div class="mt-3 flex -space-x-2"><span class="grid h-9 w-9 place-items-center rounded-full border-2 border-panel bg-accent text-xs" x-text="initials"></span><template x-for="m in members.slice(0,4)" :key="m.id"><span class="grid h-9 w-9 place-items-center rounded-full border-2 border-panel text-xs" :class="m.relation==='child'?'bg-imaginario/40':'bg-primary/40'" x-text="mInitials(m.name)"></span></template></div></div><div class="rounded-xl bg-fg/[.025] p-4"><strong class="text-sm">Permisiuni</strong><p class="mt-2 text-xs leading-6 text-fg/38">Doar administratorul poate cumpăra, transfera sau solicita rambursări.</p></div></div></section>
+    <section class="card mt-7 p-5 sm:p-6"><div class="flex items-center justify-between"><div><h2 class="font-display text-2xl"><?= te('Abonament Familie') ?></h2><p class="mt-1 text-sm text-fg/38"><?= te('Gestionează abonamentele partajate cu beneficiarii.') ?></p></div><a href="/cont/abonamente" class="text-sm text-primary-light"><?= te('Gestionează') ?></a></div><div class="mt-5 grid gap-3 md:grid-cols-2"><div class="rounded-xl bg-fg/[.025] p-4"><strong class="text-sm"><?= te('Beneficiari activi') ?></strong><div class="mt-3 flex -space-x-2"><span class="grid h-9 w-9 place-items-center rounded-full border-2 border-panel bg-accent text-xs" x-text="initials"></span><template x-for="m in members.slice(0,4)" :key="m.id"><span class="grid h-9 w-9 place-items-center rounded-full border-2 border-panel text-xs" :class="m.relation==='child'?'bg-imaginario/40':'bg-primary/40'" x-text="mInitials(m.name)"></span></template></div></div><div class="rounded-xl bg-fg/[.025] p-4"><strong class="text-sm"><?= te('Permisiuni') ?></strong><p class="mt-2 text-xs leading-6 text-fg/38"><?= te('Doar administratorul poate cumpăra, transfera sau solicita rambursări.') ?></p></div></div></section>
 
-    <section class="card mt-7 p-5 sm:p-6"><h2 class="font-display text-2xl">Bilete ale familiei</h2>
-        <div x-show="tickets.length===0" class="mt-4 rounded-xl bg-fg/[.025] p-4 text-sm text-fg/40">Nu există bilete viitoare în cont.</div>
+    <section class="card mt-7 p-5 sm:p-6"><h2 class="font-display text-2xl"><?= te('Bilete ale familiei') ?></h2>
+        <div x-show="tickets.length===0" class="mt-4 rounded-xl bg-fg/[.025] p-4 text-sm text-fg/40"><?= te('Nu există bilete viitoare în cont.') ?></div>
         <div class="mt-4 grid gap-3">
             <template x-for="(t,i) in tickets" :key="i">
-                <div class="flex flex-col gap-3 rounded-xl bg-fg/[.025] p-4 sm:flex-row sm:items-center"><div class="flex-1"><strong x-text="t.event || 'Spectacol'"></strong><p class="text-xs text-fg/35" x-text="[dateStr(t.date), t.seat_label].filter(Boolean).join(' · ')"></p></div><a href="/cont/bilete" class="text-sm text-primary-light">Vezi biletele</a></div>
+                <div class="flex flex-col gap-3 rounded-xl bg-fg/[.025] p-4 sm:flex-row sm:items-center"><div class="flex-1"><strong x-text="t.event || TS.t('Spectacol')"></strong><p class="text-xs text-fg/35" x-text="[dateStr(t.date), t.seat_label].filter(Boolean).join(' · ')"></p></div><a href="/cont/bilete" class="text-sm text-primary-light"><?= te('Vezi biletele') ?></a></div>
             </template>
         </div>
     </section>
 
     <div x-cloak x-show="add" class="fixed inset-0 z-[90] grid place-items-center bg-canvas/90 p-5" @click.self="add=false">
-        <form @submit.prevent="submit()" class="card w-full max-w-md p-6"><div class="flex justify-between"><h3 class="font-display text-2xl">Adaugă membru</h3><button type="button" @click="add=false"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-            <label class="mt-5 block"><span class="label">Tip profil</span><select class="input" x-model="form.relation"><option value="adult">Adult cu email propriu</option><option value="child">Copil gestionat de administrator</option></select></label>
-            <label class="mt-4 block"><span class="label">Nume complet</span><input class="input" x-model="form.name" required></label>
+        <form @submit.prevent="submit()" class="card w-full max-w-md p-6"><div class="flex justify-between"><h3 class="font-display text-2xl"><?= te('Adaugă membru') ?></h3><button type="button" @click="add=false"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+            <label class="mt-5 block"><span class="label"><?= te('Tip profil') ?></span><select class="input" x-model="form.relation"><option value="adult"><?= te('Adult cu email propriu') ?></option><option value="child"><?= te('Copil gestionat de administrator') ?></option></select></label>
+            <label class="mt-4 block"><span class="label"><?= te('Nume complet') ?></span><input class="input" x-model="form.name" required></label>
             <label class="mt-4 block" x-show="form.relation==='adult'"><span class="label">Email</span><input type="email" class="input" x-model="form.email" placeholder="email@exemplu.ro"></label>
-            <label class="mt-4 block" x-show="form.relation==='child'"><span class="label">Data nașterii</span><input type="date" class="input" x-model="form.birthdate"></label>
+            <label class="mt-4 block" x-show="form.relation==='child'"><span class="label"><?= te('Data nașterii') ?></span><input type="date" class="input" x-model="form.birthdate"></label>
             <p x-show="err" x-text="err" class="mt-3 text-sm text-rose-300"></p>
-            <button :disabled="busy" class="btn-primary mt-5 w-full rounded-full px-5 py-3 font-bold disabled:opacity-40" x-text="busy?'Se salvează...':'Adaugă'"></button>
+            <button :disabled="busy" class="btn-primary mt-5 w-full rounded-full px-5 py-3 font-bold disabled:opacity-40" x-text="busy?TS.t('Se salvează...'):TS.t('Adaugă')"></button>
         </form>
     </div>
 </div>
@@ -57,7 +57,7 @@ function familyPage(){
         auth(){ try { return JSON.parse(localStorage.getItem('site_auth')||'null'); } catch(e){ return null; } },
         lastName(){ const n=(this.userName||'').trim().split(/\s+/); return n.length>1?n[n.length-1]:''; },
         mInitials(name){ return (name||'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?'; },
-        dateStr(iso){ if(!iso) return ''; try { return new Date(iso).toLocaleDateString('ro-RO',{day:'numeric',month:'long'}); } catch(e){ return ''; } },
+        dateStr(iso){ if(!iso) return ''; try { return new Date(iso).toLocaleDateString(TS.locale()==='en'?'en-GB':'ro-RO',{day:'numeric',month:'long'}); } catch(e){ return ''; } },
         async load(){
             const a=this.auth(); if(!a||!a.token){ this.loading=false; return; }
             const h={'Authorization':'Bearer '+a.token};
@@ -73,16 +73,16 @@ function familyPage(){
             try {
                 const r=await fetch('/api/proxy.php?action=acc-beneficiary-add',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.token},body:JSON.stringify(this.form)});
                 const d=await r.json().catch(()=>({}));
-                if(r.ok&&d.success){ this.add=false; this.form={relation:'adult',name:'',email:'',birthdate:''}; this.showToast('Membrul a fost adăugat'); await this.load(); }
-                else this.err=d.error||'Nu am putut adăuga membrul.';
-            } catch(e){ this.err='Eroare de conexiune.'; }
+                if(r.ok&&d.success){ this.add=false; this.form={relation:'adult',name:'',email:'',birthdate:''}; this.showToast(TS.t('Membrul a fost adăugat')); await this.load(); }
+                else this.err=d.error||TS.t('Nu am putut adăuga membrul.');
+            } catch(e){ this.err=TS.t('Eroare de conexiune.'); }
             this.busy=false;
         },
         async remove(m){
-            if(!confirm('Elimini pe '+m.name+' din cont?')) return;
+            if(!confirm(TS.t('Elimini pe {name} din cont?', {name: m.name}))) return;
             const a=this.auth();
             try { await fetch('/api/proxy.php?action=acc-beneficiary-remove&id='+m.id,{method:'DELETE',headers:{'Authorization':'Bearer '+a.token}}); } catch(e){}
-            this.members=this.members.filter(x=>x.id!==m.id); this.showToast('Membru eliminat');
+            this.members=this.members.filter(x=>x.id!==m.id); this.showToast(TS.t('Membru eliminat'));
         }
     };
 }

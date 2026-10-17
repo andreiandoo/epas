@@ -49,7 +49,11 @@ class TenantSiteController extends Controller
             ]);
             $site->setRelation('tenant', $domain->tenant);
 
-            return response()->json($builder->payload($site, $domain->domain, false) + ['demo' => true])
+            // Demo-urile sunt mereu în română și engleză
+            $payload = $builder->payload($site, $domain->domain, false);
+            $payload['languages'] = ['ro', 'en'];
+
+            return response()->json($payload + ['demo' => true])
                 ->header('Cache-Control', 'public, max-age=60');
         }
 

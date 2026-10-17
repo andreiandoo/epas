@@ -12,6 +12,7 @@ define('TS_TEMPLATES', TS_ROOT . '/templates');
 require TS_APP . '/config.php';
 require TS_APP . '/api.php';
 require TS_APP . '/site.php';
+require TS_APP . '/i18n.php';
 require TS_APP . '/theme.php';
 require TS_APP . '/render.php';
 require TS_APP . '/gallery.php';
