@@ -15,6 +15,7 @@ require TS_APP . '/site.php';
 require TS_APP . '/i18n.php';
 require TS_APP . '/theme.php';
 require TS_APP . '/render.php';
+require TS_APP . '/seo.php';
 require TS_APP . '/gallery.php';
 require TS_APP . '/demo_frame.php';
 require TS_SHARED . '/partials/commerce.php';

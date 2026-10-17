@@ -668,6 +668,8 @@ class TenantClientController extends Controller
                     'sales_start_at' => $type->sales_start_at?->toIso8601String(),
                     'sales_end_at' => $type->sales_end_at?->toIso8601String(),
                     'is_parking' => (bool) $type->is_parking,
+                    // Bilet cu loc numerotat (rânduri / secțiuni din harta sălii): se cumpără alegând locul pe hartă
+                    'has_seating' => $type->hasSeatingAssigned(),
                 ])->sortBy('sort_order')->values(),
             'genres' => $event->eventGenres->map(fn ($genre) => [
                 'name' => $genre->getTranslation('name', $locale),

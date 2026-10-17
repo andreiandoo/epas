@@ -10,6 +10,16 @@ $past = strtotime(substr((string) ($ev['start_date'] ?? ''), 0, 10) . ' 23:59') 
 $pageTitle = $ev['title'] . ' — ' . SITE_NAME;
 $pageDescription = strip_tags((string) ($ev['short_description'] ?? $ev['description'] ?? ''));
 $pageImage = $ev['poster_url'] ?? null;
+$fighters = [];
+foreach ($card as $b) {
+    foreach (['a', 'b'] as $k) {
+        $fighters[] = ['name' => (string) ($b[$k]['name'] ?? '')];
+    }
+}
+$pageSchema = [
+    ts_event_schema($ev, ['type' => 'SportsEvent', 'performers' => $fighters]),
+    ts_breadcrumb_schema([[t('Acasă'), '/'], [t('Gale'), ts_link('events')], [$ev['title'], ts_link('event', ['slug' => $ev['slug']])]]),
+];
 $h1 = true;
 $eyebrow = $past ? t('Gală disputată') : null;
 include ts_layout('head');

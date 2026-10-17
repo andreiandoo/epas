@@ -44,6 +44,10 @@ $isOn = function (string $url) use ($current): bool {
   @media(min-width:1024px){.nvh-account{display:inline-flex}}
   .nvh-cta{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;min-height:40px;padding:0 16px;border-radius:999px;background:rgb(var(--c-primary));color:rgb(var(--c-pine-950));font-size:13px;font-weight:800;text-decoration:none;box-shadow:0 18px 54px -24px rgb(var(--c-primary) / .58);transition:transform .2s ease}
   .nvh-cta:hover{transform:translateY(-2px)}
+  .nvh-cart{position:relative;width:40px;height:40px;flex:0 0 auto;display:grid;place-items:center;border:1px solid rgba(255,255,255,.15);border-radius:999px;color:#fff;text-decoration:none;transition:background .2s ease}
+  .nvh-cart:hover{background:rgba(255,255,255,.1)}
+  .nvh-cart b{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:rgb(var(--c-primary));color:rgb(var(--c-pine-950));font:800 11px/19px var(--f-body);text-align:center}
+  .nvh-cart b[hidden]{display:none}
   .nvh-burger{width:40px;height:40px;flex:0 0 auto;display:grid;place-items:center;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:transparent;color:#fff;cursor:pointer}
   @media(min-width:1160px){.nvh-burger{display:none}}
   .nvh-drawer{position:fixed;inset:0;z-index:130;visibility:hidden;pointer-events:none}
@@ -85,6 +89,8 @@ $isOn = function (string $url) use ($current): bool {
         <?= e($headerCta['label']) ?>
       </a>
       <?php endif; ?>
+      <?php // Coșul: deschide sertarul comun (chrome.js), contorul îl actualizează tot chrome.js ?>
+      <a class="nvh-cart" href="/cos" aria-label="Coșul meu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><b data-ts-cart-count hidden>0</b></a>
       <button class="nvh-burger" id="nvh-burger" type="button" aria-label="Deschide meniul"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
   </nav>

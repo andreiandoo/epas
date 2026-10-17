@@ -197,7 +197,9 @@ class ManageTenantSite extends Page
 
         foreach ($manifest['pages'] ?? [] as $key => $page) {
             $tabs[] = SC\Tabs\Tab::make('Pagina: ' . ($page['label'] ?? $key))->icon('heroicon-o-document')->schema([
-                Forms\Components\TextInput::make("pages.$key.title")->label('Titlul paginii (în tab-ul browserului)'),
+                Forms\Components\TextInput::make("pages.$key.title")->label('Titlul paginii (în tab-ul browserului și în Google)')->maxLength(70),
+                Forms\Components\Textarea::make("pages.$key.description")->label('Descrierea paginii în Google')->rows(2)->maxLength(300)
+                    ->helperText('Una-două fraze despre ce găsește vizitatorul pe pagină. Goală = descrierea site-ului.'),
                 Builder::make("pages.$key.sections")
                     ->label('Secțiuni (' . ($page['path'] ?? '') . ')')
                     ->blocks($this->blocks($manifest['sections'] ?? []))

@@ -78,6 +78,9 @@ function ts_dispatch(): void {
     if ($path === '/robots.txt') {
         ts_robots();
     }
+    if ($path === '/sitemap.xml') {
+        ts_sitemap();
+    }
     if ($path === '/favicon.svg' || $path === '/favicon.ico') {
         ts_favicon();
     }
@@ -150,10 +153,11 @@ function ts_run(string $file): void {
 
 function ts_robots(): void {
     header('Content-Type: text/plain; charset=utf-8');
-    if (SITE_PREVIEW) {
+    // Previzualizările și demo-urile (date inventate) nu se indexează
+    if (SITE_PREVIEW || site('demo')) {
         echo "User-agent: *\nDisallow: /\n";
     } else {
-        echo "User-agent: *\nDisallow: /cont\nDisallow: /cos\nDisallow: /finalizare\nDisallow: /confirmare\nDisallow: /api/\n";
+        echo "User-agent: *\nDisallow: /cont\nDisallow: /cos\nDisallow: /finalizare\nDisallow: /confirmare\nDisallow: /api/\n\nSitemap: " . ts_base_url() . "/sitemap.xml\n";
     }
     exit;
 }

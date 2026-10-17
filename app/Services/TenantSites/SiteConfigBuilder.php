@@ -121,6 +121,7 @@ class SiteConfigBuilder
             $pages[$key] = [
                 'path' => $m['pages'][$key]['path'] ?? '/' . $key,
                 'title' => $page['title'] ?? '',
+                'description' => trim((string) ($page['description'] ?? '')),
                 'sections' => $sections,
             ];
         }

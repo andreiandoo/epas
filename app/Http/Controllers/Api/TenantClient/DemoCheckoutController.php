@@ -8,6 +8,8 @@ use App\Models\Coupon\CouponCode;
 use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\Seating\EventSeat;
+use App\Models\Seating\EventSeatingLayout;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\TicketType;
@@ -140,6 +142,8 @@ class DemoCheckoutController extends Controller
                 $eventSeatingId = $validated['event_seating_id'] ?? null;
 
                 $beneficiaries = $validated['beneficiaries'] ?? [];
+                // Tipul de bilet al fiecărui loc, după rândul / secțiunea lui din hartă
+                $seatTt = $this->seatTicketTypes($event, array_column($seats, 'seat_uid'), $ticketTypes);
                 if (! empty($seats)) {
                     foreach ($seats as $idx => $seat) {
                         $priceCents = (int) round(((float) ($seat['price'] ?? 0)) * 100);
@@ -147,7 +151,7 @@ class DemoCheckoutController extends Controller
                         $seatUids[] = $seat['seat_uid'];
                         $ben = $beneficiaries[$idx] ?? null;
                         $ticketRows[] = [
-                            'ticket_type_id' => $priceToTt($priceCents),
+                            'ticket_type_id' => $seatTt[$seat['seat_uid']] ?? $priceToTt($priceCents),
                             'price_cents'    => $priceCents,
                             'meta'           => array_filter([
                                 'seat_uid'         => $seat['seat_uid'],
@@ -160,7 +164,9 @@ class DemoCheckoutController extends Controller
                             ], fn ($v) => $v !== null),
                         ];
                     }
-                } else {
+                }
+                // Biletele fără loc (peluză, acces general) pot veni în aceeași comandă cu locurile
+                if (! empty($items)) {
                     foreach ($items as $item) {
                         $tt = $ticketTypes->firstWhere('id', $item['ticket_type_id']) ?? TicketType::find($item['ticket_type_id']);
                         $qty = (int) $item['quantity'];
@@ -377,10 +383,13 @@ class DemoCheckoutController extends Controller
         if (empty($validated['items']) && empty($validated['seats'])) {
             return response()->json(['success' => false, 'error' => 'Coș gol'], 422);
         }
+        $seatTt = $this->seatTicketTypes($event, array_column($validated['seats'] ?? [], 'seat_uid'), $ticketTypes);
         foreach (($validated['seats'] ?? []) as $seat) {
             $priceCents = (int) round(((float) ($seat['price'] ?? 0)) * 100);
-            // Același tip de bilet pe care îl va primi locul la comandă: cel cu prețul cel mai apropiat
-            $tt = $ticketTypes->sortBy(fn ($t) => abs(((int) ($t->price_cents ?: (($t->price_max ?? 0) * 100))) - $priceCents))->first();
+            // Același tip de bilet pe care îl va primi locul la comandă: al rândului din hartă,
+            // altfel cel cu prețul cel mai apropiat
+            $tt = $ticketTypes->get($seatTt[$seat['seat_uid']] ?? 0)
+                ?? $ticketTypes->sortBy(fn ($t) => abs(((int) ($t->price_cents ?: (($t->price_max ?? 0) * 100))) - $priceCents))->first();
             $subtotalCents += $priceCents;
             $rows[] = ['ticket_type_id' => $tt?->id, 'price_cents' => $priceCents];
         }
@@ -447,6 +456,43 @@ class DemoCheckoutController extends Controller
      * Capacitatea trebuie să fie a acestui tip de bilet și să corespundă zilei.
      * Același calcul în quote() și store(), ca totalul afișat să fie cel încasat.
      */
+    /**
+     * seat_uid → ticket_type_id, din legăturile tipurilor de bilet cu rândurile hărții
+     * (ticket_type_seating_rows), apoi cu secțiunile (ticket_type_seating_sections).
+     * Locurile fără legătură lipsesc din rezultat (apelantul cade pe potrivirea după preț).
+     */
+    private function seatTicketTypes(Event $event, array $seatUids, $ticketTypes): array
+    {
+        if (! $seatUids || $ticketTypes->isEmpty()) {
+            return [];
+        }
+        $layoutIds = EventSeatingLayout::where('event_id', $event->id)->pluck('id');
+        $seats = EventSeat::whereIn('event_seating_id', $layoutIds)->whereIn('seat_uid', $seatUids)
+            ->get(['seat_uid', 'section_name', 'row_label']);
+        if ($seats->isEmpty()) {
+            return [];
+        }
+        $key = fn ($section, $row = null) => mb_strtolower(trim((string) $section)) . '|' . trim((string) $row);
+        $byRow = [];
+        $bySection = [];
+        foreach ($ticketTypes as $tt) {
+            foreach ($tt->seatingRows()->with('section:id,name')->get() as $row) {
+                $byRow[$key($row->section?->name, $row->label)] ??= $tt->id;
+            }
+            foreach ($tt->seatingSections()->get(['seating_sections.id', 'seating_sections.name']) as $sec) {
+                $bySection[$key($sec->name)] ??= $tt->id;
+            }
+        }
+        $out = [];
+        foreach ($seats as $s) {
+            $tt = $byRow[$key($s->section_name, $s->row_label)] ?? $bySection[$key($s->section_name)] ?? null;
+            if ($tt) {
+                $out[$s->seat_uid] = $tt;
+            }
+        }
+        return $out;
+    }
+
     private function leisureUnitPrice(TicketType $tt, array $item): int
     {
         $visitDate = CarbonImmutable::parse($item['visit_date'] ?? 'today');
