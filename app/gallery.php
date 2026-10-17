@@ -82,8 +82,8 @@ function ts_render_gallery(): void {
     .btn-line{border:1px solid var(--line);background:var(--surface);color:var(--ink)}
     .btn-line:hover{border-color:var(--ink-3)}
     /* hero */
-    .hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:center;padding:56px 0 88px}
-    .hero h1{font-size:clamp(40px,5.2vw,68px);line-height:1.02;letter-spacing:-.045em;font-weight:700;margin:0 0 22px;max-width:15ch;text-wrap:balance}
+    .hero{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,6fr);gap:56px;align-items:center;padding:56px 0 88px}
+    .hero h1{font-size:clamp(40px,4.6vw,64px);line-height:1.02;letter-spacing:-.045em;font-weight:700;margin:0 0 22px;max-width:15ch;text-wrap:balance}
     .hero p{font-size:19px;color:var(--ink-2);max-width:42ch;margin:0 0 32px}
     .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
     .shots{position:relative;aspect-ratio:16/12}
@@ -161,7 +161,7 @@ function ts_render_gallery(): void {
 
     <section class="hero">
         <div>
-            <h1 class="rv">Site-ul tău de bilete, gata de lansat.</h1>
+            <h1 class="rv">Site de bilete, gata de lansat.</h1>
             <p class="rv">Alege un template, pune-ți logo-ul și culorile. Vânzarea de bilete merge din prima zi.</p>
             <div class="hero-cta rv">
                 <a href="#template-uri" class="btn btn-accent">Vezi template-urile <i class="ph ph-arrow-down"></i></a>
