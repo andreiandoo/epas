@@ -89,7 +89,7 @@ include ts_layout('header');
                         <div><p class="font-display text-lg" x-text="cart.event.title"></p><p class="text-xs text-muted" x-text="[cart.event.date, cart.event.place].filter(Boolean).join(' · ')"></p></div>
                     </div>
                     <div class="space-y-1 text-sm mb-4">
-                        <template x-for="item in cart.items" :key="item.ticket_type_id"><div class="flex justify-between text-fg/70"><span x-text="item.qty + ' × ' + item.name"></span><span x-text="lei(item.qty * item.price)"></span></div></template>
+                        <template x-for="item in cart.items" :key="TS.Cart.lineKey(item)"><div class="flex justify-between text-fg/70"><span x-text="item.qty + ' × ' + item.name + ((item.when || item.visit_date) ? ' (' + (item.when || [item.visit_date, item.slot_time].filter(Boolean).join(' ')) + ')' : '')"></span><span x-text="lei(item.qty * item.price)"></span></div></template>
                         <template x-for="seat in cart.seats" :key="seat.seat_uid"><div class="flex justify-between text-fg/70"><span x-text="seat.label"></span><span x-text="lei(seat.price)"></span></div></template>
                     </div>
                     <?= ts_part_summary() ?>

@@ -29,11 +29,12 @@ include ts_layout('header');
                                 <p class="text-sm text-muted" x-text="[cart.event.date, cart.event.place].filter(Boolean).join(' · ')"></p>
                             </div>
                         </a>
-                        <template x-for="item in cart.items" :key="item.ticket_type_id">
+                        <template x-for="item in cart.items" :key="TS.Cart.lineKey(item)">
                             <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-primary/10">
                                 <div>
                                     <p class="font-semibold" x-text="item.name"></p>
                                     <p class="text-sm text-muted" x-text="lei(item.price) + ' / bilet'"></p>
+                                    <p class="text-sm text-primary" x-show="item.when || item.visit_date" x-text="item.when || [item.visit_date, item.slot_time].filter(Boolean).join(' · ')"></p>
                                 </div>
                                 <div class="flex items-center gap-4">
                                     <div class="ts-qty">

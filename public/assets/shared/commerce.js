@@ -3,7 +3,8 @@
    Portat din demo-ul competitie (resources/tenant-demos/competitie/assets/site.js).
    Toate template-urile îl folosesc; diferă doar aspectul, din temă.
 
-   site_cart = { event:{id,slug,title,date,place,poster,url}, items:[{ticket_type_id,name,price,qty}],
+   site_cart = { event:{id,slug,title,date,place,poster,url},
+                 items:[{ticket_type_id,name,price,qty, visit_date?,slot_time?,capacity_id?,duration_minutes?,when?}],
                  seats:[{seat_uid,label,section,row,seat,price}], event_seating_id:<int|null>,
                  expires_at:<ms>, coupon_code:<string|null> }
    La evenimentele cu locuri numerotate coșul ține `seats` (blocate pe server), nu `items`.
@@ -58,13 +59,20 @@
                 + (cart.seats || []).reduce(function (n, x) { return n + (Number(x.price) || 0); }, 0);
         },
         // Forma în care coșul pleacă spre server (calcul de preț și comandă)
+        // Cheia unei linii din coș: același tip de bilet poate apărea pe zile / intervale diferite
+        lineKey: function (i) { return [i.ticket_type_id, i.visit_date || '', i.slot_time || '', i.capacity_id || ''].join('|'); },
         payload: function (cart) {
             var out = { event_id: cart.event.id };
             if (cart.seats && cart.seats.length) {
                 out.event_seating_id = cart.event_seating_id;
                 out.seats = cart.seats.map(function (x) { return { seat_uid: x.seat_uid, price: x.price, label: x.label }; });
             } else {
-                out.items = cart.items.map(function (i) { return { ticket_type_id: i.ticket_type_id, quantity: i.qty }; });
+                // Rezervările (leisure) trimit și ziua, intervalul și capacitatea; core le verifică și le rezervă
+                out.items = cart.items.map(function (i) {
+                    var it = { ticket_type_id: i.ticket_type_id, quantity: i.qty };
+                    ['capacity_id', 'visit_date', 'slot_time', 'duration_minutes'].forEach(function (k) { if (i[k] != null && i[k] !== '') { it[k] = i[k]; } });
+                    return it;
+                });
             }
             return out;
         },
