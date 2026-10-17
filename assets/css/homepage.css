@@ -114,6 +114,34 @@
     }
 }
 
+/* Dimming for side slides: dark gradient from the outer edge, fades out
+   when the slide reaches the center */
+.hero-item-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+    background: rgba(3, 7, 18, 0.55);
+    transition: opacity 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.hero-item.is-left .hero-item-inner::after {
+    opacity: 1;
+    background: linear-gradient(to right, rgba(3, 7, 18, 0.92) 0%, rgba(3, 7, 18, 0.6) 55%, rgba(3, 7, 18, 0.35) 100%);
+}
+
+.hero-item.is-right .hero-item-inner::after {
+    opacity: 1;
+    background: linear-gradient(to left, rgba(3, 7, 18, 0.92) 0%, rgba(3, 7, 18, 0.6) 55%, rgba(3, 7, 18, 0.35) 100%);
+}
+
+.hero-item.is-center .hero-item-inner::after {
+    opacity: 0;
+}
+
 .hero-item-inner img {
     width: 100%;
     height: 100%;
