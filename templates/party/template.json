@@ -1,0 +1,195 @@
+{
+    "name": "Petrecere recurentă",
+    "description": "Pentru branduri de petreceri cu ediții tematice în mai multe orașe: globul disco 3D din afiș, valuri de preț, mese VIP pe hartă, pachete de grup, DJ rezidenți și galerii foto de la edițiile trecute.",
+    "version": 1,
+    "category": "Petreceri",
+    "kind": "events",
+    "status": "ready",
+    "visibility": "public",
+    "preview_image": "preview.jpg",
+    "motion": ["lenis", "gsap"],
+    "tailwind_preflight": true,
+
+    "settings": [
+        { "name": "featured_slug", "type": "text", "label": "Ediția din afiș (slug)", "default": "", "help": "Gol = următoarea ediție cu bilete" }
+    ],
+
+    "theme": {
+        "colors": {
+            "canvas": "#0A0A0D",
+            "surface": "#141419",
+            "panel": "#1B1B22",
+            "fg": "#F4F4F6",
+            "muted": "#9A9AA6",
+            "primary": "#FF2E7E",
+            "accent": "#C9CED6"
+        },
+        "fonts": {
+            "display": "Unbounded",
+            "body": "DM Sans"
+        }
+    },
+
+    "links": {
+        "events": "/petreceri",
+        "catalog": "/petreceri",
+        "event": "/petrecere/{slug}"
+    },
+
+    "routes": {
+        "/petreceri": "petreceri.php",
+        "/petrecere/{slug}": "petrecere.php",
+        "/galerie": "galerie.php"
+    },
+
+    "nav": [
+        { "label": "Petreceri", "url": "/petreceri" },
+        { "label": "Galerie", "url": "/galerie" },
+        { "label": "DJ", "url": "/#dj" },
+        { "label": "Întrebări", "url": "/#intrebari" }
+    ],
+
+    "header_cta": { "label": "Bilete", "url": "/petreceri" },
+
+    "pages": {
+        "home": {
+            "label": "Acasă",
+            "path": "/",
+            "title": "Petreceri cu muzica anilor ’90 și 2000",
+            "sections": [
+                { "type": "hero", "data": {
+                    "eyebrow": "Petreceri anii ’90 & 2000",
+                    "title": "Dă play la tinerețe.",
+                    "text": "Hiturile de pe casete, de la radio și de pe MTV, toată noaptea, în cluburile din țară. Tu știi versurile, noi avem playlistul.",
+                    "button_label": "Vezi petrecerile",
+                    "en": { "eyebrow": "’90s & 2000s parties", "title": "Press play on your youth.", "text": "The hits from tapes, radio and MTV, all night long, in clubs across the country. You know the lyrics, we have the playlist.", "button_label": "See the parties" }
+                } },
+                { "type": "editions", "data": {
+                    "eyebrow": "Urmează",
+                    "title": "Edițiile următoare",
+                    "limit": "6",
+                    "button_label": "Toate petrecerile",
+                    "en": { "eyebrow": "Coming up", "title": "Next editions", "button_label": "All parties" }
+                } },
+                { "type": "gallery", "data": {
+                    "eyebrow": "Galerie",
+                    "title": "Cum a fost",
+                    "button_label": "Toate albumele",
+                    "en": { "eyebrow": "Gallery", "title": "How it went", "button_label": "All albums" }
+                } },
+                { "type": "djs", "data": {
+                    "eyebrow": "La pupitru",
+                    "title": "DJ-ii rezidenți",
+                    "en": { "eyebrow": "On the decks", "title": "Resident DJs" }
+                } },
+                { "type": "faq", "data": {
+                    "eyebrow": "Întrebări",
+                    "title": "Înainte să vii",
+                    "faqs": [
+                        { "q": "De la ce vârstă pot intra?", "a": "De la 18 ani, cu actul de identitate la intrare." },
+                        { "q": "Ce înseamnă valurile de preț?", "a": "Primele bilete (early bird) sunt cele mai ieftine. Când se termină un val, se deschide următorul, puțin mai scump. La intrare, dacă mai sunt locuri, biletul costă cât ultimul val." },
+                        { "q": "Cum funcționează mesele?", "a": "Alegi locurile direct pe harta clubului: poți lua o masă întreagă pentru grup sau doar câteva locuri. Fiecare loc are biletul lui, cu nume." },
+                        { "q": "Există dress code?", "a": "Nu e obligatoriu, dar orice ai fi purtat în 1997 sau 2003 e binevenit. Cele mai bune ținute primesc un shot din partea casei." },
+                        { "q": "Pot da biletul altcuiva?", "a": "Da. Biletul are un cod QR; îl poți trimite pe telefon. Codul se scanează o singură dată, la intrare." }
+                    ],
+                    "en": {
+                        "eyebrow": "Questions",
+                        "title": "Before you come",
+                        "faqs": [
+                            { "q": "What’s the minimum age?", "a": "18, with ID at the door." },
+                            { "q": "What are price waves?", "a": "The first tickets (early bird) are the cheapest. When a wave sells out, the next one opens at a slightly higher price. At the door, if there’s space left, a ticket costs as much as the last wave." },
+                            { "q": "How do tables work?", "a": "Pick seats right on the club map: book a whole table for your group or just a few seats. Each seat has its own named ticket." },
+                            { "q": "Is there a dress code?", "a": "Not required, but anything you’d have worn in 1997 or 2003 is welcome. The best outfits get a shot on the house." },
+                            { "q": "Can I give my ticket to someone else?", "a": "Yes. The ticket has a QR code you can send by phone. It’s scanned once, at the door." }
+                        ]
+                    }
+                } },
+                { "type": "newsletter", "data": {
+                    "eyebrow": "Lista de petrecăreți",
+                    "title": "Early bird-ul se termină în câteva ore",
+                    "text": "Cei de pe listă află primii de edițiile noi și prind biletele cele mai ieftine.",
+                    "button_label": "Mă abonez",
+                    "en": { "eyebrow": "Party list", "title": "Early bird sells out in hours", "text": "People on the list hear about new editions first and get the cheapest tickets.", "button_label": "Sign me up" }
+                } },
+                { "type": "cta", "data": {
+                    "eyebrow": "Ne vedem pe ring",
+                    "title": "Rewind. Play. Dansează.",
+                    "button_label": "Alege petrecerea",
+                    "en": { "eyebrow": "See you on the floor", "title": "Rewind. Play. Dance.", "button_label": "Pick your party" }
+                } }
+            ]
+        }
+    },
+
+    "sections": {
+        "hero": {
+            "label": "Afișul (globul disco 3D)",
+            "icon": "heroicon-o-sparkles",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" },
+                { "name": "image", "type": "image", "label": "Imagine de rezervă", "help": "Pe telefoane slabe și cu animațiile oprite, în locul globului" }
+            ]
+        },
+        "editions": {
+            "label": "Edițiile următoare (din core)",
+            "icon": "heroicon-o-ticket",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "limit", "type": "text", "label": "Câte ediții arată" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "gallery": {
+            "label": "Galeria edițiilor trecute (din core)",
+            "icon": "heroicon-o-photo",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "djs": {
+            "label": "DJ-ii rezidenți (din core)",
+            "icon": "heroicon-o-musical-note",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" }
+            ]
+        },
+        "faq": {
+            "label": "Întrebări frecvente",
+            "icon": "heroicon-o-question-mark-circle",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "faqs", "type": "repeater", "label": "Întrebări", "fields": [
+                    { "name": "q", "type": "text", "label": "Întrebare" },
+                    { "name": "a", "type": "textarea", "label": "Răspuns" }
+                ] }
+            ]
+        },
+        "newsletter": {
+            "label": "Newsletter",
+            "icon": "heroicon-o-envelope",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "text", "type": "textarea", "label": "Text" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        },
+        "cta": {
+            "label": "Îndemn final",
+            "icon": "heroicon-o-megaphone",
+            "fields": [
+                { "name": "eyebrow", "type": "text", "label": "Supratitlu" },
+                { "name": "title", "type": "text", "label": "Titlu" },
+                { "name": "button_label", "type": "text", "label": "Buton — text" }
+            ]
+        }
+    }
+}
