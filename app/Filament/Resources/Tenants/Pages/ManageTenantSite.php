@@ -35,7 +35,7 @@ class ManageTenantSite extends Page
         'Playfair Display', 'Cormorant Garamond', 'Libre Baskerville', 'Lora', 'Merriweather', 'Fraunces',
         'DM Serif Display', 'Lato', 'DM Sans', 'Inter', 'Poppins', 'Montserrat', 'Raleway', 'Work Sans',
         'Nunito', 'Open Sans', 'Roboto', 'Space Grotesk', 'Syne', 'Oswald', 'Bebas Neue', 'Archivo',
-        'Barlow', 'Barlow Condensed', 'Anton',
+        'Barlow', 'Barlow Condensed', 'Anton', 'Unbounded',
     ];
 
     public const COLORS = [

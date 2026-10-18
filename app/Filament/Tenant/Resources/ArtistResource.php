@@ -44,7 +44,7 @@ class ArtistResource extends Resource
         $isTheater = (bool) ($tenant?->isTheater());
         $isCompetition = $tenant?->tenant_type === \App\Enums\TenantType::Competition;
         // Agențiile de artiști (și artiștii / trupele) au un roster: profil public + booking
-        $isRoster = in_array($tenant?->tenant_type, [\App\Enums\TenantType::Agency, \App\Enums\TenantType::Artist], true);
+        $isRoster = in_array($tenant?->tenant_type, [\App\Enums\TenantType::Agency, \App\Enums\TenantType::Artist, \App\Enums\TenantType::Festival], true);
 
         return $schema->schema([
             Forms\Components\Hidden::make('tenant_id')->default($tenant?->id),

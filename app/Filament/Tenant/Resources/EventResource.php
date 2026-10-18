@@ -231,7 +231,7 @@ class EventResource extends Resource
                         ->label('Artiști din roster')
                         ->relationship('tenantArtists', 'name', fn (Builder $query) => $query->where('tenant_id', auth()->user()->tenant?->id)->where(fn ($q) => $q->whereNull('role')->orWhere('role', '!=', 'fighter')))
                         ->multiple()->preload()->searchable()
-                        ->visible(in_array(auth()->user()->tenant?->tenant_type, [\App\Enums\TenantType::Agency, \App\Enums\TenantType::Artist], true))
+                        ->visible(in_array(auth()->user()->tenant?->tenant_type, [\App\Enums\TenantType::Agency, \App\Enums\TenantType::Artist, \App\Enums\TenantType::Festival], true))
                         ->helperText('Concertul apare pe pagina fiecărui artist ales.')
                         ->columnSpanFull(),
                 ]),
