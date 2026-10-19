@@ -398,6 +398,32 @@ class AccountingService
     }
 
     /**
+     * Cancel a fiscal invoice at the marketplace's accounting provider.
+     * Returns {success, message}; providers without cancel say so.
+     */
+    public function cancelMarketplaceInvoice(int $marketplaceClientId, string $externalRef): array
+    {
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+        if (!$connector) {
+            return ['success' => false, 'message' => 'Fără conector activ.'];
+        }
+        try {
+            $auth = json_decode(Crypt::decryptString($connector->auth), true);
+            $adapter = $this->getAdapter($connector->provider, $auth);
+            if (!method_exists($adapter, 'cancelInvoice')) {
+                return ['success' => false, 'message' => 'Programul de contabilitate nu permite anularea din Tixello.'];
+            }
+
+            return $adapter->cancelInvoice($externalRef);
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Get invoice PDF
      */
     public function getInvoicePdf(string $tenantId, string $externalRef): array

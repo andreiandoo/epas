@@ -117,6 +117,8 @@ class OblioAdapter implements AccountingAdapterInterface
 
         if ($method === 'GET') {
             $response = $request->get("{$this->baseUrl}{$endpoint}", $data);
+        } elseif ($method === 'PUT') {
+            $response = $request->put("{$this->baseUrl}{$endpoint}", $data);
         } else {
             $response = $request->post("{$this->baseUrl}{$endpoint}", $data);
         }
@@ -132,6 +134,8 @@ class OblioAdapter implements AccountingAdapterInterface
 
             if ($method === 'GET') {
                 $response = $request->get("{$this->baseUrl}{$endpoint}", $data);
+            } elseif ($method === 'PUT') {
+                $response = $request->put("{$this->baseUrl}{$endpoint}", $data);
             } else {
                 $response = $request->post("{$this->baseUrl}{$endpoint}", $data);
             }
@@ -667,6 +671,39 @@ class OblioAdapter implements AccountingAdapterInterface
                 'doc_type' => $docType,
             ]);
             return ['success' => false, 'message' => $e->getMessage(), 'supported' => true];
+        }
+    }
+
+    /**
+     * Cancel ("Anulează") a fiscal invoice at Oblio: the number stays used and
+     * the document is marked canceled, no credit note. Oblio refuses it when
+     * the invoice can no longer be canceled (e.g. already reported to SPV);
+     * then a storno has to be made in Oblio.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function cancelInvoice(string $externalRef): array
+    {
+        if (!$this->authenticated) {
+            return ['success' => false, 'message' => 'Nu este autentificat.'];
+        }
+
+        $parts = explode('/', $externalRef);
+        try {
+            $this->apiRequest('PUT', '/api/docs/invoice/cancel', [
+                'cif' => $this->cif,
+                'seriesName' => $parts[0] ?? $this->seriesName,
+                'number' => $parts[1] ?? $externalRef,
+            ]);
+
+            return ['success' => true, 'message' => 'Factura a fost anulată în Oblio.'];
+        } catch (\Exception $e) {
+            Log::warning('Oblio cancelInvoice failed', [
+                'error' => $e->getMessage(),
+                'external_ref' => $externalRef,
+            ]);
+
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 

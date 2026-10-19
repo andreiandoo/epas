@@ -416,6 +416,98 @@ class EditOrganizerInvoice extends EditRecord
                 }
             });
 
+        // "Corectează în Oblio" — an invoice already issued at Oblio can't be
+        // edited there, so: cancel it at Oblio (if still live), rebuild the
+        // content from the decont, send it again (new Oblio number; the old
+        // reference is archived). If Oblio refuses the cancel (e.g. already
+        // in SPV), the operator makes a storno in Oblio and presses again.
+        $correctInOblio = Actions\Action::make('correctInOblio')
+            ->label('Corectează în Oblio')
+            ->icon('heroicon-o-arrow-path')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Corectează factura în Oblio')
+            ->modalDescription(fn () => ($this->record->hasLiveOblioInvoice()
+                    ? 'Factura ' . ($this->record->meta['accounting']['invoice_number'] ?? $this->record->meta['accounting']['external_ref'] ?? '') . ' va fi ANULATĂ în Oblio, '
+                    : 'Factura e deja ' . ($this->record->oblioVoidLabel() ?? 'anulată') . ' în Oblio; ')
+                . "conținutul se reface din decontul {$this->record->payout?->reference} și se trimite din nou la Oblio, cu un număr NOU.")
+            ->visible(function () {
+                if (!$this->record->marketplace_payout_id || empty($this->record->meta['accounting']['external_ref'] ?? null)) {
+                    return false;
+                }
+                $marketplace = static::getMarketplaceClient();
+
+                return $marketplace && app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
+            })
+            ->action(function () {
+                $marketplace = static::getMarketplaceClient();
+                $wasPaid = $this->record->status === 'paid';
+                $paidAt = $this->record->paid_at;
+
+                // 1. Cancel at Oblio when still live.
+                $this->autoCheckOblioStatus('correct', silentUnchanged: true);
+                if ($this->record->hasLiveOblioInvoice()) {
+                    $cancel = app(AccountingService::class)->cancelMarketplaceInvoice(
+                        $marketplace->id,
+                        $this->record->meta['accounting']['external_ref']
+                    );
+                    if (!$cancel['success']) {
+                        Notification::make()
+                            ->title('Oblio nu a anulat factura')
+                            ->body($cancel['message'] . ' — fă storno în Oblio, apoi apasă din nou „Corectează în Oblio”.')
+                            ->danger()->persistent()->send();
+
+                        return;
+                    }
+                    $this->autoCheckOblioStatus('correct', silentUnchanged: true);
+                    if ($this->record->hasLiveOblioInvoice()) {
+                        Notification::make()
+                            ->title('Factura apare tot activă în Oblio')
+                            ->body('Verifică în Oblio și apasă din nou.')
+                            ->warning()->send();
+
+                        return;
+                    }
+                }
+
+                // 2. Rebuild the content from the decont.
+                try {
+                    $diff = $this->record->rebuildFromPayout();
+                } catch (\Throwable $e) {
+                    Notification::make()->title('Regenerarea a eșuat')->body($e->getMessage())->danger()->persistent()->send();
+
+                    return;
+                }
+
+                // 3. Send again (new number); the old reference goes to history.
+                $this->record->refresh();
+                $reason = match (true) {
+                    $this->record->isStornoedInOblio() => 'stornoed_in_oblio',
+                    $this->record->isCanceledInOblio() => 'canceled_in_oblio',
+                    $this->record->isDeletedInOblio() => 'deleted_in_oblio',
+                    default => 'resend',
+                };
+                $this->record->archiveCurrentOblioRef($reason);
+                $this->record->refresh();
+                $this->sendToAccounting($this->record, 'invoice');
+                $this->record->refresh();
+
+                if (!empty($this->record->meta['accounting']['external_ref'] ?? null)) {
+                    // A void reset 'paid' to outstanding; the corrected document stands for the same payment.
+                    if ($wasPaid && $this->record->status !== 'paid') {
+                        $this->record->update(['status' => 'paid', 'paid_at' => $paidAt ?? now()]);
+                    }
+                    Notification::make()
+                        ->title('Factură corectată')
+                        ->body(sprintf('Total %s → %s RON · nou în Oblio: %s',
+                            number_format($diff['old']['amount'], 2),
+                            number_format($diff['new']['amount'], 2),
+                            $this->record->meta['accounting']['invoice_number'] ?? $this->record->meta['accounting']['external_ref']))
+                        ->success()->persistent()->send();
+                }
+                $this->redirect(OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record]));
+            });
+
         $sendEfactura = Actions\Action::make('sendEfactura')
             ->label('Trimite în eFactura')
             ->icon('heroicon-o-paper-airplane')
@@ -521,6 +613,7 @@ class EditOrganizerInvoice extends EditRecord
                 $refreshAccountingPdf,
                 $checkOblioStatus,
                 $regenerateContent,
+                $correctInOblio,
             ])
                 ->label('Documente ▾')
                 ->icon('heroicon-o-document-text')
