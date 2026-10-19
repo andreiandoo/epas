@@ -794,7 +794,10 @@ class ViewPayout extends ViewRecord
                     // silently skipped the kept-commission lines. Invoice 3034
                     // came out empty. Forcing general_client on on_top prevents
                     // that class of misroute.
-                    $recipientType = $payout->commission_mode === 'added_on_top'
+                    // Same mode resolution as visible(): a payout without its own
+                    // commission_mode takes the event's (else it fell to the
+                    // organizer branch, VAT on the whole commission at today's rate).
+                    $recipientType = ($payout->commission_mode ?? $payout->event?->getEffectiveCommissionMode()) === 'added_on_top'
                         ? 'general_client'
                         : ($payout->invoice_recipient_type ?? 'organizer');
 
