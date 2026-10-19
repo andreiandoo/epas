@@ -74,6 +74,19 @@ class GeneralClientInvoiceVat
         // No start date = the rate applies to the whole decont.
         $taxedRows = $onTopRows($sinceUtc, null);
         $taxed = $sum($taxedRows);
+        // The decont snapshot is taken when the decont is created: a decont made
+        // during its last day misses that day's later sales (e.g. payout 3559,
+        // created the morning of 16.10 with period_end 16.10). When the live
+        // sales of the whole period exceed the snapshot, the taxed slice stops
+        // at the snapshot's moment.
+        $beforeLive = $sinceUtc ? $sum($onTopRows(null, $sinceUtc)) : 0.0;
+        if ($payout->created_at && abs($beforeLive + $taxed - $baseCommission) >= 0.01) {
+            $snapshotRows = $onTopRows($sinceUtc, $payout->created_at->copy()->utc()->addSecond());
+            if (abs($beforeLive + $sum($snapshotRows) - $baseCommission) < 0.01) {
+                $taxedRows = $snapshotRows;
+                $taxed = $sum($snapshotRows);
+            }
+        }
         if ($taxed > $baseCommission + 0.01) {
             // The decont snapshot holds less than the live sales: bill what it holds.
             $taxedRows = [];
