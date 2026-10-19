@@ -50,7 +50,7 @@ class DateAvailabilityController extends BaseController
         $month = $request->query('month');
 
         if ($date) {
-            return $this->singleDateAvailability($event, $date);
+            return $this->singleDateAvailability($event, $date, $client);
         }
 
         if ($month) {
@@ -63,7 +63,7 @@ class DateAvailabilityController extends BaseController
     /**
      * Full ticket type details for a single date.
      */
-    private function singleDateAvailability(Event $event, string $date): JsonResponse
+    private function singleDateAvailability(Event $event, string $date, \App\Models\MarketplaceClient $client): JsonResponse
     {
         $dateStr = $date;
 
