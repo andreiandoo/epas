@@ -74,18 +74,36 @@ class GeneralClientInvoiceVat
         // No start date = the rate applies to the whole decont.
         $taxedRows = $onTopRows($sinceUtc, null);
         $taxed = $sum($taxedRows);
-        // The decont snapshot is taken when the decont is created: a decont made
-        // during its last day misses that day's later sales (e.g. payout 3559,
-        // created the morning of 16.10 with period_end 16.10). When the live
-        // sales of the whole period exceed the snapshot, the taxed slice stops
-        // at the snapshot's moment.
-        $beforeLive = $sinceUtc ? $sum($onTopRows(null, $sinceUtc)) : 0.0;
-        if ($payout->created_at && abs($beforeLive + $taxed - $baseCommission) >= 0.01) {
-            $snapshotRows = $onTopRows($sinceUtc, $payout->created_at->copy()->utc()->addSecond());
-            if (abs($beforeLive + $sum($snapshotRows) - $baseCommission) < 0.01) {
-                $taxedRows = $snapshotRows;
-                $taxed = $sum($snapshotRows);
+        // The decont snapshot (ticket_breakdown) is taken when the decont is
+        // made or recalculated: a decont made during its last day misses that
+        // day's later sales (payout 3559, made the morning of 16.10 with
+        // period_end 16.10), and live sales of the period also differ from it
+        // through refunds and days shared with the previous decont. So the
+        // taxed slice is what sold from the start date up to the snapshot's
+        // moment, capped per ticket type at the snapshot's quantity.
+        $snapshotAt = $payout->updated_at ?? $payout->created_at;
+        $snapshot = $payout->ticket_breakdown ?? [];
+        if ($snapshotAt && !empty($snapshot)) {
+            $snapQty = [];
+            foreach ($snapshot as $s) {
+                $key = (int) ($s['ticket_type_id'] ?? 0) ?: (string) ($s['ticket_type_name'] ?? $s['name'] ?? '');
+                $snapQty[$key] = ($snapQty[$key] ?? 0) + (int) ($s['quantity'] ?? $s['qty'] ?? $s['tickets'] ?? 0);
             }
+            $taxedRows = [];
+            foreach ($onTopRows($sinceUtc, $snapshotAt->copy()->utc()->addSecond()) as $row) {
+                $key = (int) ($row['ticket_type_id'] ?? 0) ?: (string) ($row['ticket_type_name'] ?? '');
+                $qty = (int) ($row['qty'] ?? 0);
+                $keep = min($qty, $snapQty[$key] ?? 0);
+                if ($keep <= 0) {
+                    continue;
+                }
+                if ($keep < $qty) {
+                    $row['commission_amount'] = round((float) $row['commission_amount'] * $keep / $qty, 2);
+                    $row['qty'] = $keep;
+                }
+                $taxedRows[] = $row;
+            }
+            $taxed = $sum($taxedRows);
         }
         if ($taxed > $baseCommission + 0.01) {
             // The decont snapshot holds less than the live sales: bill what it holds.
@@ -97,7 +115,11 @@ class GeneralClientInvoiceVat
 
         $base = [];
         if ($before > 0.005) {
-            $beforeRows = $sinceUtc ? $onTopRows(null, $sinceUtc) : [];
+            // Snapshot minus the taxed tickets, per type; else the live pre-VAT sales.
+            $beforeRows = $this->snapshotMinus($snapshot ?? [], $taxedRows);
+            if (!$beforeRows || abs($sum($beforeRows) - $before) >= 0.01) {
+                $beforeRows = $sinceUtc ? $onTopRows(null, $sinceUtc) : [];
+            }
             if ($beforeRows && abs($sum($beforeRows) - $before) < 0.01) {
                 foreach ($beforeRows as $row) {
                     $base[] = $this->rowLine($row, 0.0, 'before');
@@ -205,6 +227,37 @@ class GeneralClientInvoiceVat
             'vat_rate' => $line['rate'],
             'vat_amount' => $line['vat'],
         ];
+    }
+
+    /** Snapshot rows (ticket_breakdown) less the taxed rows' quantities, as commission rows. */
+    protected function snapshotMinus(array $snapshot, array $taxedRows): array
+    {
+        $taxedQty = [];
+        foreach ($taxedRows as $row) {
+            $key = (int) ($row['ticket_type_id'] ?? 0) ?: (string) ($row['ticket_type_name'] ?? '');
+            $taxedQty[$key] = ($taxedQty[$key] ?? 0) + (int) ($row['qty'] ?? 0);
+        }
+        $rows = [];
+        foreach ($snapshot as $s) {
+            $key = (int) ($s['ticket_type_id'] ?? 0) ?: (string) ($s['ticket_type_name'] ?? $s['name'] ?? '');
+            $qty = (int) ($s['quantity'] ?? $s['qty'] ?? $s['tickets'] ?? 0);
+            $take = min($qty, $taxedQty[$key] ?? 0);
+            $taxedQty[$key] = ($taxedQty[$key] ?? 0) - $take;
+            $qty -= $take;
+            $per = (float) ($s['commission_per_ticket'] ?? 0);
+            if ($qty <= 0 || $per <= 0) {
+                continue;
+            }
+            $rows[] = [
+                'ticket_type_id' => $s['ticket_type_id'] ?? null,
+                'ticket_type_name' => (string) ($s['ticket_type_name'] ?? $s['name'] ?? ''),
+                'qty' => $qty,
+                'commission_per_ticket' => $per,
+                'commission_amount' => round($qty * $per, 2),
+            ];
+        }
+
+        return $rows;
     }
 
     /** One line from a per-ticket-type row: qty x commission per ticket when that is exact. */
