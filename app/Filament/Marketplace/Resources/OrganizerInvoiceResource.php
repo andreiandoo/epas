@@ -259,8 +259,12 @@ class OrganizerInvoiceResource extends Resource
                                     foreach ($items as $item) {
                                         $qty = (float) ($item['quantity'] ?? 1);
                                         $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                                        $lineTotal = (float) ($item['total'] ?? ($qty * $price));
-                                        $lineVat = round($lineTotal * $vatRate / 100, 2);
+                                        $lineTotal = (float) ($item['total'] ?? $item['amount'] ?? ($qty * $price));
+                                        // Lines split by VAT start date carry their own rate
+                                        // (a 0% line next to a 21% one); older items use the invoice rate.
+                                        $lineVat = isset($item['vat_amount'])
+                                            ? (float) $item['vat_amount']
+                                            : round($lineTotal * (float) ($item['vat_rate'] ?? $vatRate) / 100, 2);
                                         $lineGross = $lineTotal + $lineVat;
 
                                         $totalNet += $lineTotal;

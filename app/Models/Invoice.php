@@ -378,13 +378,13 @@ class Invoice extends Model
         if (!$payout) {
             throw new \RuntimeException('Decontul asociat nu mai există.');
         }
-        // The builder below makes the ORGANIZER invoice; a general-client
-        // (on-top commission) invoice would be replaced with organizer lines.
+        // General-client (on-top commission) invoices have their own builder;
+        // the POS builder below makes the ORGANIZER invoice.
         if (($this->meta['recipient_type'] ?? null) === 'general_client') {
-            throw new \RuntimeException('Factura către client general nu se regenerează de aici — anuleaz-o și generează-o din nou din decont.');
+            $result = $this->buildGeneralClientContent($payout);
+        } else {
+            $result = app(\App\Services\Invoicing\PosInvoiceContentBuilder::class)->build($payout);
         }
-
-        $result = app(\App\Services\Invoicing\PosInvoiceContentBuilder::class)->build($payout);
         if (isset($result['error'])) {
             throw new \RuntimeException($result['error']);
         }
@@ -415,6 +415,40 @@ class Invoice extends Model
                 'items_count' => count($result['items']),
             ],
         ];
+    }
+
+    /**
+     * Content of a general-client (Client Divers) invoice rebuilt from its
+     * decont, keeping the article name/description it was issued with.
+     */
+    protected function buildGeneralClientContent(MarketplacePayout $payout): array
+    {
+        $marketplace = $payout->marketplaceClient;
+        if (!$marketplace) {
+            return ['error' => 'Decontul nu are marketplace.'];
+        }
+
+        $meta = $this->meta ?? [];
+        $name = $meta['item_base']['name'] ?? null;
+        $description = $meta['item_base']['description'] ?? null;
+        if ($name === null || $description === null) {
+            // Invoices issued before item_base was stored: take the base line.
+            $first = collect($meta['items'] ?? [])
+                ->first(fn ($i) => !str_starts_with((string) ($i['name'] ?? ''), 'Comision reținut'));
+            $name ??= (string) ($first['name'] ?? 'Taxa ticketing pt bilete vândute online');
+            $description ??= trim(preg_replace('/ - bilete ".*"$/u', '', str_replace(
+                \App\Services\Invoicing\GeneralClientInvoiceVat::BEFORE_NOTE, '', (string) ($first['description'] ?? '')
+            )));
+        }
+
+        $result = app(\App\Services\Invoicing\GeneralClientInvoiceVat::class)
+            ->buildForPayout($payout, $marketplace, $name, $description);
+        if ($result['subtotal'] <= 0.005) {
+            return ['error' => 'Decontul nu are comisioane de facturat.'];
+        }
+        $this->meta = array_merge($meta, ['item_base' => ['name' => $name, 'description' => $description]]);
+
+        return $result;
     }
 
     /**
