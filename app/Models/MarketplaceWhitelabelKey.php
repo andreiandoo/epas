@@ -153,6 +153,12 @@ class MarketplaceWhitelabelKey extends Model
             return null;
         }
 
+        // Event sync for the organizer's own site. Read only, the controller
+        // limits it to this key's organizer.
+        if ($method === 'GET' && preg_match('#^whitelabel/sync/events(/\d+)?$#', $path)) {
+            return null;
+        }
+
         // Order lookup on the thank-you page (purchase tracking)
         if ($method === 'GET' && preg_match('#^orders/([^/]+)$#', $path, $m)) {
             $identifier = rawurldecode($m[1]);

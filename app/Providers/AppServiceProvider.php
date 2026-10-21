@@ -262,6 +262,9 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Ticket::observe(\App\Observers\TicketObserver::class);
         \App\Models\Event::observe(\App\Observers\EventObserver::class);
         \App\Models\Event::observe(\App\Observers\MarketplaceEventObserver::class);
+        // Organizer's own site (e.g. qfeel.ro) gets told when its events change
+        \App\Models\Event::observe(\App\Observers\WhitelabelSiteSyncObserver::class);
+        \App\Models\Performance::observe(\App\Observers\WhitelabelSiteSyncObserver::class);
         \App\Models\MarketplaceCustomer::observe(\App\Observers\MarketplaceCustomerObserver::class);
         \App\Models\MarketplaceOrganizer::observe(\App\Observers\MarketplaceOrganizerObserver::class);
         \App\Models\MediaLibrary::observe(\App\Observers\MediaLibraryObserver::class);

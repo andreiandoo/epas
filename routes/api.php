@@ -3031,6 +3031,15 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
         ->name('api.marketplace-client.marketplace-events.resource-availability');
 });
 
+// Organizer's own site pulls its events from here (whitelabel key only, read only)
+Route::prefix('marketplace-client/whitelabel/sync')->middleware(['throttle:60,1', 'marketplace.auth'])->group(function () {
+    Route::get('/events', [\App\Http\Controllers\Api\MarketplaceClient\WhitelabelSyncController::class, 'index'])
+        ->name('api.marketplace-client.whitelabel-sync.events');
+    Route::get('/events/{id}', [\App\Http\Controllers\Api\MarketplaceClient\WhitelabelSyncController::class, 'show'])
+        ->whereNumber('id')
+        ->name('api.marketplace-client.whitelabel-sync.event');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Marketplace Client Venue Owner API Routes

@@ -279,6 +279,14 @@ class OrganizerResource extends Resource
                                 ->placeholder('ex: https://site-organizator.ro')
                                 ->helperText('Domeniile unde organizatorul poate folosi widget-urile. iframe-ul va fi blocat pe alte domenii. Format: https://domeniu.ro sau *.domeniu.ro pentru toate subdomeniile')
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
+                            // Where we ping the organizer's own site when one of its events changes
+                            Forms\Components\TextInput::make('settings.site_sync_url')
+                                ->label('URL notificări site organizator')
+                                ->url()
+                                ->rule('starts_with:https://')
+                                ->placeholder('ex: https://qfeel.ro/wp-json/qfeel-manager/v1/ambilet/notify')
+                                ->helperText('Opțional. La fiecare modificare a unui eveniment al organizatorului, trimitem aici un semnal semnat cu cheia whitelabel, iar site-ul își citește singur datele. Doar https.')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
                         ]),
 
                                 ]), // end Tab 1 (Cont)
