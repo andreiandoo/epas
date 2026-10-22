@@ -3525,6 +3525,8 @@ class EventsController extends BaseController
                 ->whereNotNull('visitor_id')
                 ->whereIn('order_id', (clone $paidOrders)->select('orders.id')->toBase());
 
+            // A buyer went through cart, checkout and payment even when the event
+            // for that step was lost (the payment step leaves for the card processor).
             $bought = 'CASE WHEN b.visitor_id IS NOT NULL THEN 1 ELSE 0 END';
             $devices = \Illuminate\Support\Facades\DB::query()
                 ->fromSub($perVisitor, 'v')
@@ -3532,9 +3534,9 @@ class EventsController extends BaseController
                 ->where('v.s_view', 1)
                 ->selectRaw("COALESCE(v.device, 'unknown') as device,
                     COUNT(*) as visitors,
-                    SUM(v.s_cart) as cart,
-                    SUM(v.s_checkout) as checkout,
-                    SUM(v.s_payment) as payment,
+                    SUM(GREATEST(v.s_cart, {$bought})) as cart,
+                    SUM(GREATEST(v.s_checkout, {$bought})) as checkout,
+                    SUM(GREATEST(v.s_payment, {$bought})) as payment,
                     SUM({$bought}) as purchase,
                     SUM(CASE WHEN v.s_cart = 1 AND {$bought} = 0 THEN 1 ELSE 0 END) as abandoned,
                     SUM(CASE WHEN v.s_cart = 1 AND {$bought} = 0 THEN COALESCE(v.cart_total, v.cart_adds, 0) ELSE 0 END) as abandoned_value")
