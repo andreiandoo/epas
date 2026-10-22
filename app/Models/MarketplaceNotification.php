@@ -47,6 +47,7 @@ class MarketplaceNotification extends Model
     public const TYPE_PAYOUT_COMPLETED = 'payout_completed';
     public const TYPE_PAYOUT_REJECTED = 'payout_rejected';
     public const TYPE_DOCUMENT_GENERATED = 'document_generated';
+    public const TYPE_DOCUMENT_ACTION = 'document_action';
     public const TYPE_ADMIN_USER_ADDED = 'admin_user_added';
     public const TYPE_CUSTOMER_REGISTRATION = 'customer_registration';
     public const TYPE_SERVICE_ORDER = 'service_order';
@@ -77,6 +78,7 @@ class MarketplaceNotification extends Model
             self::TYPE_PAYOUT_COMPLETED => 'Plată Finalizată',
             self::TYPE_PAYOUT_REJECTED => 'Plată Respinsă',
             self::TYPE_DOCUMENT_GENERATED => 'Document Generat',
+            self::TYPE_DOCUMENT_ACTION => 'Documente de emis',
             self::TYPE_ADMIN_USER_ADDED => 'Admin Nou',
             self::TYPE_CUSTOMER_REGISTRATION => 'Client Nou',
             self::TYPE_SERVICE_ORDER => 'Comandă Servicii',
@@ -107,6 +109,7 @@ class MarketplaceNotification extends Model
             self::TYPE_PAYOUT_COMPLETED => 'heroicon-o-check-circle',
             self::TYPE_PAYOUT_REJECTED => 'heroicon-o-x-circle',
             self::TYPE_DOCUMENT_GENERATED => 'heroicon-o-document-text',
+            self::TYPE_DOCUMENT_ACTION => 'heroicon-o-document-text',
             self::TYPE_ADMIN_USER_ADDED => 'heroicon-o-user-plus',
             self::TYPE_CUSTOMER_REGISTRATION => 'heroicon-o-user',
             self::TYPE_SERVICE_ORDER => 'heroicon-o-shopping-cart',
@@ -137,6 +140,7 @@ class MarketplaceNotification extends Model
             self::TYPE_PAYOUT_COMPLETED => 'success',
             self::TYPE_PAYOUT_REJECTED => 'danger',
             self::TYPE_DOCUMENT_GENERATED => 'info',
+            self::TYPE_DOCUMENT_ACTION => 'warning',
             self::TYPE_ADMIN_USER_ADDED => 'success',
             self::TYPE_CUSTOMER_REGISTRATION => 'info',
             self::TYPE_SERVICE_ORDER => 'success',

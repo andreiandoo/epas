@@ -9,6 +9,9 @@ use App\Models\Event;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\MarketplaceTaxRegistry;
 use App\Models\OrganizerDocument;
+use App\Models\EventGeneratedDocument;
+use App\Services\Marketplace\EventDocumentFilingService;
+use App\Services\Marketplace\OrganizerFiscalDocuments;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -362,7 +365,7 @@ class DocumentController extends BaseController
         // Get all events for organizer from events table (Event model)
         $events = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
-            ->with(['venue', 'marketplaceCity'])
+            ->with(['venue', 'marketplaceCity', 'marketplaceClient'])
             ->orderBy('event_date', 'desc')
             ->get();
 
@@ -372,18 +375,23 @@ class DocumentController extends BaseController
             ->get()
             ->groupBy('event_id');
 
-        $eventsWithDocs = $events->map(function ($event) use ($documents) {
+        $attention = [];
+        try {
+            foreach (app(OrganizerFiscalDocuments::class)->attention($organizer) as $row) {
+                $attention[$row['event_id']] = $row['issue'];
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $eventsWithDocs = $events->map(function ($event) use ($documents, $attention) {
             $eventDocs = $documents->get($event->id, collect());
             $cerereAvizare = $eventDocs->firstWhere('document_type', 'cerere_avizare');
             $declaratieImpozite = $eventDocs->firstWhere('document_type', 'declaratie_impozite');
 
             // Map Event model status to document status labels
             // Check if event is past (ended)
-            $eventEndDate = $event->event_date;
-            if ($event->end_date) {
-                $eventEndDate = $event->end_date;
-            }
-            $isEnded = $eventEndDate && \Carbon\Carbon::parse($eventEndDate)->isPast();
+            $isEnded = $event->isPast();
 
             $status = $event->is_cancelled ? 'cancelled' :
                 ($isEnded ? 'ended' :
@@ -414,6 +422,7 @@ class DocumentController extends BaseController
                 'venue_city' => $venueCity,
                 'status' => $status,
                 'status_label' => $this->getStatusLabel($status),
+                'attention' => $attention[$event->id] ?? null,
                 'cerere_avizare' => $cerereAvizare ? [
                     'id' => $cerereAvizare->id,
                     'title' => $cerereAvizare->title,
@@ -594,6 +603,138 @@ class DocumentController extends BaseController
             ],
             'message' => 'Documentul a fost regenerat cu succes',
         ]);
+    }
+
+    /**
+     * Fiscal documents of one event: what can be generated now, deadlines,
+     * where they are filed, what was generated and filed, full history.
+     */
+    public function fiscalStatus(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $event = $this->organizerEvent($organizer, $eventId);
+        if (!$event) {
+            return $this->error('Evenimentul nu a fost gasit', 404);
+        }
+
+        return $this->success(app(OrganizerFiscalDocuments::class)->status($event));
+    }
+
+    /**
+     * Generate a group: the cerere de vizare, or impozit + PV together.
+     */
+    public function fiscalGenerate(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $validated = $request->validate([
+            'group' => 'required|in:' . OrganizerFiscalDocuments::GROUP_CERERE . ',' . OrganizerFiscalDocuments::GROUP_IMPOZIT_PV,
+        ]);
+        $event = $this->organizerEvent($organizer, $eventId);
+        if (!$event) {
+            return $this->error('Evenimentul nu a fost gasit', 404);
+        }
+
+        $service = app(OrganizerFiscalDocuments::class);
+        $result = $service->generate($event, $validated['group'], $organizer);
+        if (!$result['success']) {
+            return $this->error($result['message'], 422);
+        }
+
+        return $this->success(array_merge($service->status($event->fresh(['venue', 'marketplaceClient', 'marketplaceOrganizer'])), [
+            'message' => $result['message'],
+        ]));
+    }
+
+    /**
+     * The organizer confirms they filed the group with the city hall.
+     */
+    public function fiscalFiled(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $validated = $request->validate([
+            'group' => 'required|in:' . OrganizerFiscalDocuments::GROUP_CERERE . ',' . OrganizerFiscalDocuments::GROUP_IMPOZIT_PV,
+        ]);
+        $event = $this->organizerEvent($organizer, $eventId);
+        if (!$event) {
+            return $this->error('Evenimentul nu a fost gasit', 404);
+        }
+
+        $service = app(OrganizerFiscalDocuments::class);
+        $status = $service->status($event);
+        if ($organizer->marketplace_manages_documents) {
+            return $this->error('Documentele acestui eveniment le depunem noi.', 422);
+        }
+        if ($status['groups'][$validated['group']]['stale']) {
+            return $this->error('Cererea de vizare nu mai corespunde biletelor. Regenereaz-o întâi.', 422);
+        }
+
+        $result = app(EventDocumentFilingService::class)->confirmByOrganizer($event, $validated['group'], $organizer);
+        if (!$result['success']) {
+            return $this->error($result['message'], 422);
+        }
+        OrganizerFiscalDocuments::flushAttention($organizer->id);
+
+        return $this->success(array_merge($service->status($event), ['message' => $result['message']]));
+    }
+
+    /**
+     * Stream one fiscal document (ref "g{id}" = generated document,
+     * "o{id}" = older organizer document) after an ownership check.
+     */
+    public function fiscalFile(Request $request, string $ref)
+    {
+        $organizer = $this->requireOrganizer($request);
+        if (!preg_match('/^([go])(\d+)$/', $ref, $m)) {
+            return $this->error('Documentul nu a fost gasit', 404);
+        }
+
+        if ($m[1] === 'g') {
+            $doc = EventGeneratedDocument::where('id', (int) $m[2])
+                ->whereHas('template', fn ($q) => $q->whereIn('type', OrganizerFiscalDocuments::TYPES))
+                ->first();
+            $path = $doc?->file_path;
+            $name = $doc?->filename;
+        } else {
+            $doc = OrganizerDocument::where('id', (int) $m[2])
+                ->whereIn('document_type', OrganizerFiscalDocuments::TYPES)
+                ->first();
+            $path = $doc?->file_path;
+            $name = $doc?->file_name;
+        }
+
+        if (!$doc || !$doc->event_id || !$this->organizerEvent($organizer, (int) $doc->event_id)) {
+            return $this->error('Documentul nu a fost gasit', 404);
+        }
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            return $this->error('Fisierul nu este disponibil', 404);
+        }
+
+        return response(Storage::disk('public')->get($path), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . str_replace(['"', "\r", "\n"], '', $name ?: 'document.pdf') . '"',
+        ]);
+    }
+
+    /**
+     * Events whose fiscal documents need the organizer now (banner).
+     */
+    public function attention(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        if ($organizer->organizer_type === 'leisure') {
+            return $this->success(['items' => []]);
+        }
+
+        return $this->success(['items' => app(OrganizerFiscalDocuments::class)->attention($organizer)]);
+    }
+
+    protected function organizerEvent(MarketplaceOrganizer $organizer, int $eventId): ?Event
+    {
+        return Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with(['venue', 'marketplaceClient', 'marketplaceOrganizer'])
+            ->first();
     }
 
     /**

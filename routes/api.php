@@ -2316,6 +2316,21 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.documents.view');
         Route::post('/documents/{documentId}/regenerate', [OrganizerDocumentController::class, 'regenerate'])
             ->name('api.marketplace-client.organizer.documents.regenerate');
+        // Self-service fiscal documents (cerere vizare, impozit + PV distrugere)
+        Route::get('/documents/attention', [OrganizerDocumentController::class, 'attention'])
+            ->name('api.marketplace-client.organizer.documents.attention');
+        Route::get('/documents/fiscal/{eventId}', [OrganizerDocumentController::class, 'fiscalStatus'])
+            ->whereNumber('eventId')
+            ->name('api.marketplace-client.organizer.documents.fiscal');
+        Route::post('/documents/fiscal/{eventId}/generate', [OrganizerDocumentController::class, 'fiscalGenerate'])
+            ->whereNumber('eventId')
+            ->name('api.marketplace-client.organizer.documents.fiscal.generate');
+        Route::post('/documents/fiscal/{eventId}/filed', [OrganizerDocumentController::class, 'fiscalFiled'])
+            ->whereNumber('eventId')
+            ->name('api.marketplace-client.organizer.documents.fiscal.filed');
+        Route::get('/documents/file/{ref}', [OrganizerDocumentController::class, 'fiscalFile'])
+            ->where('ref', '[go][0-9]+')
+            ->name('api.marketplace-client.organizer.documents.file');
 
         // Invitations
         Route::get('/invitations', [OrganizerInvitationsController::class, 'index'])

@@ -307,6 +307,72 @@ class SeriesAllocator
             ->values();
     }
 
+    /**
+     * Hash of what the cerere de vizare declares: per declarable ticket type
+     * its name, prices, stock and series, plus every promo / coupon / batch
+     * tier with its allocation and discount. Sales are left out on purpose,
+     * so a new order never makes a cerere look outdated. Read-only — nothing
+     * is synced or written.
+     */
+    public function fiscalFingerprint(Event $event): string
+    {
+        $ticketTypes = $event->ticketTypes()->get()->filter(function (TicketType $tt) {
+            $meta = is_array($tt->meta ?? null) ? $tt->meta : [];
+
+            return $tt->is_declarable !== false
+                && ! $tt->isTestPos()
+                && $tt->name !== 'Invitatie'
+                && ! ($meta['is_invitation'] ?? false);
+        });
+        $ticketTypeIds = $event->ticketTypes()->pluck('id')->all();
+
+        $organizerPromos = $this->loadApplicableOrganizerPromos($event, $ticketTypeIds);
+        $couponCodes = $this->loadApplicableCouponCodes($event, $ticketTypeIds);
+        $couponBatches = $this->loadCouponBatches($event, $ticketTypeIds);
+
+        $rows = [];
+        foreach ($ticketTypes as $tt) {
+            $raw = $tt->getAttributes();
+            $stock = (int) ($tt->quota_total ?? 0);
+            $tiers = [];
+            foreach ($organizerPromos as $promo) {
+                if ($this->organizerPromoAppliesToType($promo, $tt, $event->id)) {
+                    $limit = (int) ($promo->usage_limit ?? 0);
+                    $tiers[] = ['p', (string) $promo->code, $limit > 0 ? min($limit, $stock) : $stock, (string) $promo->type, (string) $promo->value];
+                }
+            }
+            foreach ($couponCodes as $coupon) {
+                if ($this->couponAppliesToType($coupon, $tt, $event->id)) {
+                    $limit = (int) ($coupon->max_uses_total ?? 0);
+                    $tiers[] = ['c', (string) $coupon->code, $limit > 0 ? min($limit, $stock) : $stock, (string) $coupon->discount_type, (string) $coupon->discount_value];
+                }
+            }
+            foreach ($couponBatches as $batch) {
+                if ((int) $batch->ticket_type_id === (int) $tt->id && (int) $batch->issued_count > 0) {
+                    $tiers[] = ['b', (int) $batch->id, (int) $batch->issued_count];
+                }
+            }
+            sort($tiers);
+
+            $name = is_array($tt->name) ? json_encode($tt->name) : (string) $tt->name;
+            $rows[] = [
+                $name,
+                $raw['price_cents'] ?? null,
+                $raw['sale_price_cents'] ?? null,
+                $raw['display_price'] ?? null,
+                $stock,
+                (string) ($tt->series_start ?? ''),
+                (string) ($tt->series_end ?? ''),
+                (float) ($tt->discount_percent ?? 0),
+                (bool) ($tt->is_subscription ?? false),
+                $tiers,
+            ];
+        }
+        sort($rows);
+
+        return md5(json_encode($rows));
+    }
+
     // ============================================================
     // Internals
     // ============================================================

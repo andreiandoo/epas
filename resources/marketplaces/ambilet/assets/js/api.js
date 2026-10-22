@@ -530,6 +530,10 @@ const AmbiletAPI = {
         // Organizer documents (Cerere avizare, Declaratie impozite)
         if (endpoint === '/organizer/documents/events') return 'organizer.documents.events';
         if (endpoint === '/organizer/documents/generate') return 'organizer.documents.generate';
+        if (endpoint === '/organizer/documents/attention') return 'organizer.documents.attention';
+        if (endpoint.match(/\/organizer\/documents\/fiscal\/\d+\/generate$/)) return 'organizer.documents.fiscal.generate';
+        if (endpoint.match(/\/organizer\/documents\/fiscal\/\d+\/filed$/)) return 'organizer.documents.fiscal.filed';
+        if (endpoint.match(/\/organizer\/documents\/fiscal\/\d+$/)) return 'organizer.documents.fiscal';
         if (endpoint.match(/\/organizer\/documents\/event\/\d+$/)) return 'organizer.documents.for-event';
         if (endpoint.match(/\/organizer\/documents\/\d+\/download$/)) return 'organizer.documents.download';
         if (endpoint.match(/\/organizer\/documents\/\d+\/view$/)) return 'organizer.documents.view';
@@ -914,6 +918,10 @@ const AmbiletAPI = {
         }
 
         // Organizer documents endpoint - extract event ID or document ID
+        const organizerFiscalMatch = endpoint.match(/\/organizer\/documents\/fiscal\/(\d+)(?:\/(?:generate|filed))?$/);
+        if (organizerFiscalMatch) {
+            return `event_id=${encodeURIComponent(organizerFiscalMatch[1])}`;
+        }
         const organizerDocumentForEventMatch = endpoint.match(/\/organizer\/documents\/event\/(\d+)$/);
         if (organizerDocumentForEventMatch) {
             return `event_id=${encodeURIComponent(organizerDocumentForEventMatch[1])}`;

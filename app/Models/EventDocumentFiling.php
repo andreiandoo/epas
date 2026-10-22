@@ -18,6 +18,9 @@ class EventDocumentFiling extends Model
 
     public const METHOD_THIRD_PARTY = 'third_party';
 
+    /** The organizer filed it themselves and confirmed it from their account. */
+    public const METHOD_ORGANIZER = 'organizer';
+
     protected $fillable = [
         'marketplace_client_id',
         'event_id',
@@ -59,8 +62,10 @@ class EventDocumentFiling extends Model
 
     public function methodLabel(): string
     {
-        return $this->method === self::METHOD_THIRD_PARTY
-            ? 'terț' . ($this->third_party_name ? ' (' . $this->third_party_name . ')' : '')
-            : 'email';
+        return match ($this->method) {
+            self::METHOD_THIRD_PARTY => 'terț' . ($this->third_party_name ? ' (' . $this->third_party_name . ')' : ''),
+            self::METHOD_ORGANIZER => 'confirmare organizator',
+            default => 'email',
+        };
     }
 }

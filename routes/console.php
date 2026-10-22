@@ -1301,3 +1301,11 @@ Schedule::command('ops-board:digest --escalation')
     ->weekdays()
     ->at('08:30')
     ->timezone('Europe/Bucharest');
+
+// Organizer fiscal documents: one notice per problem (cerere missing or
+// outdated, impozit + PV due). Daily only to catch new problems — nothing
+// already announced is sent again.
+Schedule::command('organizer-documents:notify')
+    ->dailyAt('09:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping(30);

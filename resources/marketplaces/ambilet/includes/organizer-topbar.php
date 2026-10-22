@@ -231,6 +231,55 @@ $skipJsComponents = true;
     </div>
 </div>
 
+<?php if (($currentPage ?? '') !== 'documents'): ?>
+<div id="fiscal-docs-banner" class="hidden border-b" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.3);">
+    <div class="flex items-center justify-between gap-4 px-4 py-3 lg:px-8">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full" style="background:rgba(245,158,11,0.18);">
+                <svg class="w-5 h-5" fill="none" stroke="#F59E0B" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </div>
+            <div>
+                <p id="fiscal-docs-banner-title" class="text-sm font-semibold text-secondary">Ai documente fiscale de emis</p>
+                <p id="fiscal-docs-banner-text" class="text-xs text-muted">Cererea de vizare, impozitul sau PV-ul de distrugere al unui eveniment așteaptă după tine.</p>
+            </div>
+        </div>
+        <a id="fiscal-docs-banner-link" href="/organizator/documente" class="px-4 py-2 text-sm text-white rounded-lg whitespace-nowrap bg-primary hover:bg-primary-dark">
+            Vezi documentele
+        </a>
+    </div>
+</div>
+<script>
+(function() {
+    if (typeof AmbiletAPI === 'undefined') return;
+    try {
+        const org = JSON.parse(localStorage.getItem('ambilet_organizer_data') || 'null');
+        if (org && org.organizer_type === 'leisure') return;
+    } catch (e) {}
+    const labels = {
+        cerere_missing: 'cererea de vizare nu e generată',
+        cerere_stale: 'cererea de vizare trebuie regenerată',
+        impozit_pv_missing: 'impozitul și PV-ul de distrugere sunt de generat'
+    };
+    AmbiletAPI.get('/organizer/documents/attention').then(function(res) {
+        const items = (res && res.data && res.data.items) || [];
+        if (!items.length) return;
+        const el = document.getElementById('fiscal-docs-banner');
+        if (!el) return;
+        const first = items[0];
+        if (items.length === 1) {
+            document.getElementById('fiscal-docs-banner-title').textContent = first.event_name;
+            const label = labels[first.issue] || 'are documente de emis';
+            document.getElementById('fiscal-docs-banner-text').textContent = label.charAt(0).toUpperCase() + label.slice(1) + '.';
+            document.getElementById('fiscal-docs-banner-link').href = '/organizator/documente?event=' + encodeURIComponent(first.event_id);
+        } else {
+            document.getElementById('fiscal-docs-banner-title').textContent = items.length + ' evenimente au documente fiscale de emis';
+        }
+        el.classList.remove('hidden');
+    }).catch(function() {});
+})();
+</script>
+<?php endif; ?>
+
 <script>
 // Populate topbar with logged-in organizer data
 (function() {

@@ -238,6 +238,18 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\TicketType::created($flushByEventId);
         \App\Models\TicketType::updated($flushByEventId);
         \App\Models\TicketType::deleted($flushByEventId);
+
+        /* A change to what the cerere de vizare declares (price, stock,
+           series, discount) may make the organizer's cerere outdated —
+           checked a few minutes later, off the request. Sales only touch
+           quota_sold and never trigger it. */
+        $checkFiscalDocs = function ($tt) {
+            if ($tt->wasRecentlyCreated || ! $tt->exists || $tt->wasChanged(\App\Services\Marketplace\OrganizerFiscalDocuments::DECLARED_TICKET_FIELDS)) {
+                \App\Jobs\CheckEventFiscalDocumentsJob::schedule($tt->event_id ? (int) $tt->event_id : null);
+            }
+        };
+        \App\Models\TicketType::saved($checkFiscalDocs);
+        \App\Models\TicketType::deleted($checkFiscalDocs);
         \App\Models\Invoice::created(function ($inv) {
             if ($inv->marketplace_payout_id) {
                 $eventId = \App\Models\MarketplacePayout::whereKey($inv->marketplace_payout_id)->value('event_id');

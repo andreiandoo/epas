@@ -272,6 +272,15 @@ class EventGeneratedDocument extends Model
         // Get file size
         $fileSize = Storage::disk('public')->size($filePath);
 
+        // What the document declared, so a later change of prices / stock /
+        // codes can be spotted (see OrganizerFiscalDocuments::isStale).
+        $fingerprint = null;
+        try {
+            $fingerprint = app(\App\Services\Marketplace\SeriesAllocator::class)->fiscalFingerprint($event);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('EventGeneratedDocument: fingerprint failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
         // Create record
         $doc = self::create([
             'marketplace_client_id' => $marketplaceClientId,
@@ -288,6 +297,7 @@ class EventGeneratedDocument extends Model
                 'template_type' => $template->type,
                 'orientation' => $orientation,
                 'variables_used' => array_keys($variables),
+                'fingerprint' => $fingerprint,
             ],
         ]);
 
@@ -320,6 +330,7 @@ class EventGeneratedDocument extends Model
                     'source_id' => $doc->id,
                     'template_name' => $template->name,
                     'template_type' => $template->type,
+                    'fingerprint' => $fingerprint,
                 ],
                 'html_content' => null,
                 'issued_at' => now(),

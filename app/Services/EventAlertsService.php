@@ -88,13 +88,21 @@ class EventAlertsService
 
         // ── 2. Cerere vizare bilete: STALE (ticket types changed after generation) ──
         if ($cerereAvizareDoc) {
-            $lastTicketTypeUpdate = TicketType::where('event_id', $eventId)
-                ->max('updated_at');
+            $fingerprint = $cerereAvizareDoc->meta['fingerprint'] ?? null;
+            if ($fingerprint) {
+                // What the cerere declared vs what the tickets say now —
+                // sales don't count, only prices / stock / series / codes.
+                $isStale = !$isPast && !$event->is_cancelled
+                    && $fingerprint !== app(\App\Services\Marketplace\SeriesAllocator::class)->fiscalFingerprint($event);
+            } else {
+                $lastTicketTypeUpdate = TicketType::where('event_id', $eventId)
+                    ->max('updated_at');
+                $docTimestamp = $cerereAvizareDoc->created_at;
+                $isStale = $lastTicketTypeUpdate && $docTimestamp
+                    && strtotime((string) $lastTicketTypeUpdate) > $docTimestamp->timestamp;
+            }
 
-            $docTimestamp = $cerereAvizareDoc->created_at;
-
-            if ($lastTicketTypeUpdate && $docTimestamp
-                && strtotime((string) $lastTicketTypeUpdate) > $docTimestamp->timestamp) {
+            if ($isStale) {
                 $alerts[] = [
                     'type' => 'cerere_avizare_stale',
                     'title' => 'Cerere vizare bilete trebuie refăcută',

@@ -7,6 +7,7 @@ use App\Models\EventDocumentFiling;
 use App\Models\MarketplaceAdmin;
 use App\Models\MarketplaceEmailLog;
 use App\Models\MarketplaceEmailTemplate;
+use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceTaxRegistry;
 use App\Support\MarketplaceTz;
 use Illuminate\Support\Facades\DB;
@@ -219,6 +220,47 @@ class EventDocumentFilingService
         }
 
         $this->record($event, $status, $admin, EventDocumentFiling::METHOD_THIRD_PARTY);
+
+        return ['success' => true, 'message' => 'Depunere confirmată.'];
+    }
+
+    /**
+     * Record that the organizer filed the group with the city hall
+     * themselves and confirmed it from their account.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function confirmByOrganizer(Event $event, string $group, MarketplaceOrganizer $organizer): array
+    {
+        if (! static::available()) {
+            return ['success' => false, 'message' => 'Confirmarea depunerii nu este disponibilă momentan.'];
+        }
+
+        $status = $this->status($event, $group);
+        foreach ($status['rows'] as $row) {
+            if (! $row['document']) {
+                return ['success' => false, 'message' => 'Generează întâi ' . (count($status['rows']) > 1 ? 'toate documentele' : 'documentul') . '.'];
+            }
+        }
+        if ($status['filed']) {
+            return ['success' => false, 'message' => 'Depunerea este deja confirmată.'];
+        }
+
+        $now = now();
+        foreach ($status['rows'] as $type => $row) {
+            EventDocumentFiling::create([
+                'marketplace_client_id' => $event->marketplace_client_id,
+                'event_id' => $event->id,
+                'marketplace_tax_registry_id' => $status['registry']?->id,
+                'document_type' => $type,
+                'document_generated_at' => $row['document']['generated_at'],
+                'file_name' => $row['document']['file_name'],
+                'method' => EventDocumentFiling::METHOD_ORGANIZER,
+                'filed_by_id' => null,
+                'filed_by_name' => trim(($organizer->company_name ?: $organizer->name) . ' (organizator)'),
+                'filed_at' => $now,
+            ]);
+        }
 
         return ['success' => true, 'message' => 'Depunere confirmată.'];
     }

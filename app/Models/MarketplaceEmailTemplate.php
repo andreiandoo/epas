@@ -68,6 +68,7 @@ class MarketplaceEmailTemplate extends Model
         // Fiscal documents sent to the city hall
         'fiscal_cerere_avizare' => 'Primărie: Cerere vizare bilete',
         'fiscal_impozit_pv' => 'Primărie: Impozit + PV distrugere',
+        'organizer_fiscal_documents' => 'Organizator: documente fiscale de emis / regenerat',
         // Stock Alerts
         'stock_low_alert' => 'Low Stock Alert',
         // Gift Card Templates
@@ -285,6 +286,13 @@ class MarketplaceEmailTemplate extends Model
                 'organizer_tax_id' => 'Organizer tax ID (CUI)',
                 'registry_name' => 'City hall / tax registry name',
                 'documents_list' => 'Attached documents, comma separated',
+            ],
+            'organizer_fiscal_documents' => [
+                'organizer_name' => 'Organizer name',
+                'event_name' => 'Event name',
+                'notice_title' => 'What needs doing (short)',
+                'notice_message' => 'What needs doing, with where and by when',
+                'action_url' => 'Link to the organizer Documente page',
             ],
             default => [],
         };
