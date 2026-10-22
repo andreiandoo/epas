@@ -1807,6 +1807,12 @@ class DesignerSeatingLayout extends Page
 
         // Create new seats
         foreach ($seats as $seatData) {
+            // Another table in this section may clean to the same label
+            // (e.g. two "Masă 36"); fall back to the row id to stay unique.
+            $seatUid = $section->generateSeatUid($row->label, $seatData['label']);
+            if (SeatingSeat::where('seat_uid', $seatUid)->exists()) {
+                $seatUid .= '-R' . $row->id;
+            }
             SeatingSeat::create([
                 'row_id' => $row->id,
                 'label' => $seatData['label'],
@@ -1815,7 +1821,7 @@ class DesignerSeatingLayout extends Page
                 'y' => (int) $seatData['y'],
                 'angle' => 0,
                 'shape' => 'circle',
-                'seat_uid' => $section->generateSeatUid($row->label, $seatData['label']),
+                'seat_uid' => $seatUid,
             ]);
         }
 
