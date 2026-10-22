@@ -41,6 +41,7 @@
     let visitorId = null;
     let sessionId = null;
     let sessionStartTime = null;
+    let disabled = false;
 
     /**
      * Initialize the tracking library
@@ -55,6 +56,12 @@
 
         if (!config.marketplaceClientId) {
             console.error('[EPASTracking] marketplaceClientId is required');
+            return;
+        }
+
+        // Admin/organizer previews are not visits
+        if (new URLSearchParams(window.location.search).get('preview') === '1') {
+            disabled = true;
             return;
         }
 
@@ -92,16 +99,16 @@
             localStorage.setItem(STORAGE_KEY_VISITOR, visitorId);
         }
 
-        // Get or create session ID (session-based with timeout)
-        const sessionData = sessionStorage.getItem(STORAGE_KEY_SESSION);
-        if (sessionData) {
-            const parsed = JSON.parse(sessionData);
-            const elapsed = Date.now() - parsed.lastActivity;
-            if (elapsed < SESSION_TIMEOUT) {
+        // Get or create session ID. Kept per browser, not per tab, so links opened
+        // in a new tab stay in the same session (30 minutes of inactivity, as in GA).
+        // api.js reads and writes the same key.
+        try {
+            const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY_SESSION) || sessionStorage.getItem(STORAGE_KEY_SESSION) || 'null');
+            if (parsed && parsed.id && Date.now() - parsed.lastActivity < SESSION_TIMEOUT) {
                 sessionId = parsed.id;
                 sessionStartTime = parsed.startTime;
             }
-        }
+        } catch (e) {}
 
         if (!sessionId) {
             sessionId = generateUUID();
@@ -115,11 +122,13 @@
      * Update session activity timestamp
      */
     function updateSessionActivity() {
-        sessionStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify({
-            id: sessionId,
-            startTime: sessionStartTime,
-            lastActivity: Date.now()
-        }));
+        try {
+            localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify({
+                id: sessionId,
+                startTime: sessionStartTime,
+                lastActivity: Date.now()
+            }));
+        } catch (e) {}
     }
 
     /**
@@ -298,6 +307,7 @@
      * Track a custom event
      */
     function track(eventType, data = {}) {
+        if (disabled) return;
         updateSessionActivity();
         ensureFacebookCookies();
 

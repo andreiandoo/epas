@@ -74,10 +74,8 @@ const AmbiletAPI = {
         };
 
         // Same visitor id as tracking.js, so event page views are not counted as new visitors
-        try {
-            const visitorId = localStorage.getItem('epas_visitor_id');
-            if (visitorId) headers['X-Visitor-ID'] = visitorId;
-        } catch (e) {}
+        const visitorId = this.getVisitorId();
+        if (visitorId) headers['X-Visitor-ID'] = visitorId;
 
         // Add auth token if available
         const authToken = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
@@ -1188,22 +1186,58 @@ const AmbiletAPI = {
             // Ignore cookie access errors
         }
 
-        // Document referrer (if not same origin)
-        try {
-            const referrer = document.referrer;
-            if (referrer) {
-                const referrerUrl = new URL(referrer);
-                const currentUrl = new URL(window.location.href);
-                // Only include referrer if it's from a different domain
-                if (referrerUrl.hostname !== currentUrl.hostname) {
-                    trackingParams.referrer = referrer;
-                }
-            }
-        } catch (e) {
-            // Ignore URL parsing errors
-        }
+        // Same fields tracking.js records, for the fallback page view written when it is blocked
+        if (document.referrer) trackingParams.referrer = document.referrer;
+        trackingParams.page_url = window.location.href;
+        const sessionId = this.getTrackingSessionId();
+        if (sessionId) trackingParams.session_id = sessionId;
 
         return trackingParams;
+    },
+
+    _uuid() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    },
+
+    /**
+     * Visitor id shared with tracking.js (same key). Created here when missing,
+     * because the event page view call can run before tracking.js starts.
+     */
+    getVisitorId() {
+        try {
+            let id = localStorage.getItem('epas_visitor_id');
+            if (!id) {
+                id = this._uuid();
+                localStorage.setItem('epas_visitor_id', id);
+            }
+            return id;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * Session id shared with tracking.js: same key and format, 30 minutes of inactivity.
+     */
+    getTrackingSessionId() {
+        try {
+            const now = Date.now();
+            let data = JSON.parse(localStorage.getItem('epas_session_id') || 'null');
+            if (!data || !data.id || now - data.lastActivity >= 30 * 60 * 1000) {
+                data = { id: this._uuid(), startTime: now };
+            }
+            data.lastActivity = now;
+            localStorage.setItem('epas_session_id', JSON.stringify(data));
+            return data.id;
+        } catch (e) {
+            return null;
+        }
     },
 
     /**
@@ -1211,6 +1245,10 @@ const AmbiletAPI = {
      */
     async trackEventView(slug) {
         const trackingParams = this.getTrackingParams();
+        // tracking.js records the page view itself; the server then only counts the view
+        if (window.EPAS_TRACKING_ACTIVE && window.EPASTracking) {
+            trackingParams.tracked_by_js = 1;
+        }
         return this.post(`/events/${slug}/track-view`, trackingParams);
     },
 

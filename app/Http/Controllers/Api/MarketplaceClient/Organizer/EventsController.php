@@ -2960,9 +2960,15 @@ class EventsController extends BaseController
             $adminRule = $adminHost !== ''
                 ? "WHEN referrer LIKE '%://{$adminHost}/%' OR referrer LIKE '%://{$adminHost}' OR referrer LIKE '%://www.{$adminHost}/%' THEN 'Admin'"
                 : '';
+            // A page view counts as Facebook only when the visit itself came from
+            // Facebook: tracking.js also fills fbclid from the 90-day _fbc cookie,
+            // which is kept for purchase attribution.
             $sourceCase = "CASE
                 {$adminRule}
-                WHEN fbclid IS NOT NULL OR utm_source = 'facebook' THEN 'Facebook'
+                WHEN utm_source IN ('facebook', 'fb')
+                    OR referrer LIKE '%facebook.com%' OR referrer LIKE '%://fb.me%'
+                    OR (fbclid IS NOT NULL AND (event_type <> 'page_view' OR page_url IS NULL OR page_url LIKE '%fbclid=%'))
+                    THEN 'Facebook'
                 WHEN gclid IS NOT NULL OR utm_source = 'google' THEN 'Google'
                 WHEN utm_source = 'instagram' OR referrer LIKE '%instagram%' THEN 'Instagram'
                 WHEN ttclid IS NOT NULL OR utm_source = 'tiktok' THEN 'TikTok'
@@ -2972,8 +2978,9 @@ class EventsController extends BaseController
             END";
 
             $trafficSources = (clone $trackingQuery)
-                ->selectRaw("{$sourceCase} as source, COUNT(DISTINCT visitor_id) as visitors, SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END) as revenue")
+                ->selectRaw("{$sourceCase} as source, COUNT(DISTINCT CASE WHEN event_type = 'page_view' THEN visitor_id END) as visitors, SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END) as revenue")
                 ->groupByRaw($sourceCase)
+                ->havingRaw("COUNT(DISTINCT CASE WHEN event_type = 'page_view' THEN visitor_id END) > 0 OR SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END) > 0")
                 ->orderByDesc('visitors')
                 ->get()
                 ->toArray();

@@ -1707,11 +1707,20 @@ class MarketplaceEventsController extends BaseController
         // Increment views count
         $event->increment('views_count');
 
+        // The page's own tracking script records this page view; writing it here
+        // too counted every load twice. Only used as a fallback when that script
+        // is blocked.
+        if ($request->boolean('tracked_by_js')) {
+            return $this->success([
+                'views_count' => $event->views_count,
+            ]);
+        }
+
         // Create CoreCustomerEvent for analytics tracking
         // session_id is uuid; clients can send arbitrary tokens (sha256 hex,
         // legacy strings) which Postgres rejects with 22P02. Only trust UUIDs.
         $visitorId = $request->cookie('visitor_id') ?? $request->header('X-Visitor-ID') ?? Str::uuid()->toString();
-        $rawSessionId = $request->cookie('session_id') ?? $request->header('X-Session-ID');
+        $rawSessionId = $request->input('session_id') ?: ($request->cookie('session_id') ?? $request->header('X-Session-ID'));
         $sessionId = ($rawSessionId && Str::isUuid($rawSessionId)) ? $rawSessionId : Str::uuid()->toString();
 
         // Get location data from IP (uses multi-provider fallback: ipgeolocation.io -> ip-api.com -> ipwhois.io)
@@ -1731,10 +1740,10 @@ class MarketplaceEventsController extends BaseController
             'content_id' => $event->id,
             'content_type' => 'event',
             'content_name' => $event->getTranslation('title', $client->language ?? 'ro'),
-            'page_url' => $request->header('Referer'),
+            'page_url' => mb_substr((string) ($request->input('page_url') ?: $request->header('Referer')), 0, 2048) ?: null,
             'page_path' => '/bilete/' . $event->slug,
             // Referrer from frontend takes priority, fallback to HTTP header
-            'referrer' => $request->input('referrer') ?: $request->header('Referer'),
+            'referrer' => mb_substr((string) ($request->input('referrer') ?: $request->header('Referer')), 0, 2048) ?: null,
             // UTM parameters
             'utm_source' => $request->input('utm_source'),
             'utm_medium' => $request->input('utm_medium'),
