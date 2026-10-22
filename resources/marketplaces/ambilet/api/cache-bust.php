@@ -84,6 +84,21 @@ foreach ($slugs as $slug) {
     $result[] = $busted;
 }
 
+// 3) proxy.php ApiCache entries for whole actions (e.g. the homepage hero
+//    list `events.featured` after a banner is saved). Whitelisted so the
+//    token can't be used to wipe arbitrary cache files.
+$allowedActions = ['events.featured'];
+$apiCacheDir = dirname(__DIR__) . '/cache/api';
+$totalAction = 0;
+$actions = is_array($body['api_actions'] ?? null) ? $body['api_actions'] : [];
+foreach (array_intersect($allowedActions, $actions) as $action) {
+    // Same key sanitizing as ApiCache::getCacheKey()
+    $prefix = preg_replace('/[^a-zA-Z0-9_-]/', '_', $action) . '_';
+    foreach (glob($apiCacheDir . '/' . $prefix . '*.json') ?: [] as $f) {
+        if (@unlink($f)) $totalAction++;
+    }
+}
+
 echo json_encode([
     'success' => true,
     'busted' => $result,
@@ -91,5 +106,6 @@ echo json_encode([
         'page_cache' => $totalPage,
         'api_cached' => $totalApi,
         'slugs' => count($result),
+        'api_actions' => $totalAction,
     ],
 ]);

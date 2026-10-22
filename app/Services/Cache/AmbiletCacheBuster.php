@@ -81,6 +81,27 @@ class AmbiletCacheBuster
         $this->postSlugs($slugs, ['event_id' => $event->id]);
     }
 
+    /**
+     * Drop the cached homepage hero list (events.featured) after a hero
+     * banner is added, edited or removed. Same fire-and-forget delivery.
+     */
+    public function bustHomepageHero(): void
+    {
+        if (!$this->configured()) {
+            return;
+        }
+
+        $payload = ['api_actions' => ['events.featured']];
+
+        if (app()->runningInConsole()) {
+            $this->send([], ['hero_banners' => true], $payload);
+
+            return;
+        }
+
+        app()->terminating(fn () => $this->send([], ['hero_banners' => true], $payload));
+    }
+
     protected function configured(): bool
     {
         return (bool) config('services.ambilet.cache_bust_url')
@@ -116,7 +137,7 @@ class AmbiletCacheBuster
         app()->terminating(fn () => $this->send($slugs, $context));
     }
 
-    protected function send(array $slugs, array $context): void
+    protected function send(array $slugs, array $context, array $extra = []): void
     {
         try {
             $response = Http::timeout(15)
@@ -125,7 +146,7 @@ class AmbiletCacheBuster
                 ->post(config('services.ambilet.cache_bust_url'), [
                     'token' => config('services.ambilet.cache_bust_token'),
                     'slugs' => $slugs,
-                ]);
+                ] + $extra);
 
             if (!$response->successful()) {
                 Log::channel('marketplace')->warning('Ambilet cache bust returned non-2xx', $context + [
