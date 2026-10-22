@@ -3494,4 +3494,125 @@ class DesignerSeatingLayout extends Page
         $this->reloadSections();
         $this->dispatch('layout-updated', sections: $this->sections);
     }
+
+    /**
+     * Update table arrangement mode (sides vs around) and recalculate seat positions
+     */
+    public function updateTableArrangement($rowId, string $arrangement): void
+    {
+        $row = SeatingRow::with(['section', 'seats'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $metadata = $row->metadata ?? [];
+        if (!($metadata['is_table'] ?? false) || ($metadata['table_type'] ?? '') !== 'rect') {
+            return;
+        }
+
+        $metadata['arrangement'] = $arrangement;
+        $row->update(['metadata' => $metadata]);
+
+        // Recalculate seat positions with new arrangement
+        $this->recalcRectSeatPositions($row, $metadata);
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+    }
+
+    /**
+     * Recalculate rectangular table seat positions based on arrangement mode
+     */
+    private function recalcRectSeatPositions(SeatingRow $row, array $metadata): void
+    {
+        $centerX = (float) ($metadata['center_x'] ?? 50);
+        $centerY = (float) ($metadata['center_y'] ?? 50);
+        $tableWidth = (float) ($metadata['width'] ?? 80);
+        $tableHeight = (float) ($metadata['height'] ?? 30);
+        $seatSpacing = (float) ($metadata['seat_spacing'] ?? 20);
+        $arrangement = $metadata['arrangement'] ?? 'sides';
+        $tableGap = 15;
+
+        $seats = $row->seats()->orderBy('id')->get();
+        $seatCount = $seats->count();
+        if ($seatCount === 0) return;
+
+        $positions = $this->calcRectSeatPositions($seatCount, $centerX, $centerY, $tableWidth, $tableHeight, $seatSpacing, $arrangement, $tableGap);
+
+        foreach ($seats as $i => $seat) {
+            if (isset($positions[$i])) {
+                $seat->update(['x' => $positions[$i]['x'], 'y' => $positions[$i]['y']]);
+            }
+        }
+    }
+
+    /**
+     * Calculate seat positions for a rectangular table
+     */
+    private function calcRectSeatPositions(int $seatCount, float $centerX, float $centerY, float $tableWidth, float $tableHeight, float $seatSpacing, string $arrangement, float $tableGap = 15): array
+    {
+        $positions = [];
+
+        if ($arrangement === 'around') {
+            // Seats on all 4 sides
+            $endSeats = max(1, (int) floor($tableHeight / $seatSpacing));
+            $totalEndSeats = min($endSeats * 2, max(0, $seatCount - 2));
+            $sideSeats = $seatCount - $totalEndSeats;
+            $topSeats = (int) ceil($sideSeats / 2);
+            $bottomSeats = $sideSeats - $topSeats;
+            $leftEndSeats = (int) ceil($totalEndSeats / 2);
+            $rightEndSeats = $totalEndSeats - $leftEndSeats;
+
+            // Top side
+            if ($topSeats > 0) {
+                $topWidth = ($topSeats - 1) * $seatSpacing;
+                $topStartX = $centerX - $topWidth / 2;
+                for ($i = 0; $i < $topSeats; $i++) {
+                    $positions[] = ['x' => $topStartX + $i * $seatSpacing, 'y' => $centerY - $tableHeight / 2 - $tableGap];
+                }
+            }
+
+            // Right end
+            if ($rightEndSeats > 0) {
+                $rightHeight = ($rightEndSeats - 1) * $seatSpacing;
+                $rightStartY = $centerY - $rightHeight / 2;
+                for ($i = 0; $i < $rightEndSeats; $i++) {
+                    $positions[] = ['x' => $centerX + $tableWidth / 2 + $tableGap, 'y' => $rightStartY + $i * $seatSpacing];
+                }
+            }
+
+            // Bottom side (reversed)
+            if ($bottomSeats > 0) {
+                $bottomWidth = ($bottomSeats - 1) * $seatSpacing;
+                $bottomStartX = $centerX + $bottomWidth / 2;
+                for ($i = 0; $i < $bottomSeats; $i++) {
+                    $positions[] = ['x' => $bottomStartX - $i * $seatSpacing, 'y' => $centerY + $tableHeight / 2 + $tableGap];
+                }
+            }
+
+            // Left end (reversed)
+            if ($leftEndSeats > 0) {
+                $leftHeight = ($leftEndSeats - 1) * $seatSpacing;
+                $leftStartY = $centerY + $leftHeight / 2;
+                for ($i = 0; $i < $leftEndSeats; $i++) {
+                    $positions[] = ['x' => $centerX - $tableWidth / 2 - $tableGap, 'y' => $leftStartY - $i * $seatSpacing];
+                }
+            }
+        } else {
+            // "sides" - seats only on top and bottom
+            $seatsPerSide = (int) ceil($seatCount / 2);
+            $totalSeatsWidth = ($seatsPerSide - 1) * $seatSpacing;
+            $startX = $centerX - $totalSeatsWidth / 2;
+
+            for ($i = 0; $i < $seatsPerSide && count($positions) < $seatCount; $i++) {
+                $positions[] = ['x' => $startX + $i * $seatSpacing, 'y' => $centerY - $tableHeight / 2 - $tableGap];
+            }
+            for ($i = 0; $i < $seatsPerSide && count($positions) < $seatCount; $i++) {
+                $positions[] = ['x' => $startX + $i * $seatSpacing, 'y' => $centerY + $tableHeight / 2 + $tableGap];
+            }
+        }
+
+        return $positions;
+    }
 }
