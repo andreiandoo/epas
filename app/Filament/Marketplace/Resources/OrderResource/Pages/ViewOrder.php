@@ -26,13 +26,104 @@ class ViewOrder extends ViewRecord
                 ->color('gray')
                 ->url(fn () => route('marketplace.orders.dispute-evidence', ['order' => $this->record->id]), shouldOpenInNewTab: true),
 
+            Actions\Action::make('retry_refund')
+                ->label('Reîncearcă rambursarea automată')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->visible(fn () => $this->pendingRefund() !== null)
+                ->requiresConfirmation()
+                ->modalHeading('Reîncearcă rambursarea automată')
+                ->modalDescription(fn () => 'Trimite din nou cererea ' . $this->pendingRefund()?->reference . ' către procesatorul de plăți.')
+                ->action(function (): void {
+                    $refund = $this->pendingRefund();
+                    if (!$refund) {
+                        return;
+                    }
+                    $result = app(PaymentRefundService::class)->retryPendingRefund($refund);
+                    if ($result->success) {
+                        Notification::make()
+                            ->success()
+                            ->title('Rambursare procesată cu succes')
+                            ->body($result->refundId ? "Referință: {$result->refundId}" : null)
+                            ->send();
+                        $this->refreshFormData(['status', 'refund_status', 'refunded_amount']);
+                    } else {
+                        Notification::make()
+                            ->danger()
+                            ->title('Procesatorul a refuzat din nou')
+                            ->body(new HtmlString(e($result->error ?? '') . '<br><br>Fă rambursarea manual și apoi apasă „Finalizează rambursarea manuală”.'))
+                            ->persistent()
+                            ->send();
+                    }
+                }),
+
+            Actions\Action::make('complete_manual_refund')
+                ->label('Finalizează rambursarea manuală')
+                ->icon('heroicon-o-check-circle')
+                ->color('success')
+                ->visible(fn () => $this->pendingRefund() !== null)
+                ->modalHeading('Finalizează rambursarea manuală')
+                ->modalDescription(fn () => new HtmlString(
+                    'Folosește doar după ce banii au fost trimiși efectiv clientului.<br><br>'
+                    . app(PaymentRefundService::class)->manualRefundInstructions($this->pendingRefund())
+                ))
+                ->modalWidth('xl')
+                ->form([
+                    Forms\Components\Select::make('method')
+                        ->label('Cum ai rambursat')
+                        ->options([
+                            'original_payment' => 'Din panoul procesatorului (Netopia / Stripe)',
+                            'bank_transfer' => 'Transfer bancar',
+                            'manual' => 'Altă metodă (numerar etc.)',
+                        ])
+                        ->default('original_payment')
+                        ->required()
+                        ->live(),
+                    Forms\Components\TextInput::make('reference')
+                        ->label('Referința tranzacției')
+                        ->helperText('ID-ul rambursării din panoul procesatorului sau referința transferului bancar.')
+                        ->required(fn (Get $get) => $get('method') !== 'manual')
+                        ->maxLength(190),
+                    Forms\Components\Toggle::make('notify_customer')
+                        ->label('Trimite clientului emailul de rambursare')
+                        ->default(true),
+                    Forms\Components\Checkbox::make('confirm_sent')
+                        ->label('Confirm că suma a fost trimisă clientului.')
+                        ->accepted()
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    $refund = $this->pendingRefund();
+                    if (!$refund) {
+                        return;
+                    }
+                    $result = app(PaymentRefundService::class)->completeManualRefund(
+                        $refund,
+                        $data['method'],
+                        $data['reference'] ?? null,
+                        auth()->id(),
+                        (bool) ($data['notify_customer'] ?? true)
+                    );
+                    if ($result->success) {
+                        Notification::make()
+                            ->success()
+                            ->title('Rambursare finalizată')
+                            ->body("Cererea {$refund->reference} a fost marcată rambursată.")
+                            ->send();
+                        $this->refreshFormData(['status', 'refund_status', 'refunded_amount']);
+                    } else {
+                        Notification::make()->danger()->title('Eroare')->body($result->error)->send();
+                    }
+                }),
+
             Actions\Action::make('refund_order')
                 ->label('Rambursare')
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('danger')
                 ->visible(fn () => in_array($this->record->status, ['completed', 'paid', 'confirmed'])
                     && ($this->record->refund_status ?? 'none') !== 'full'
-                    && $this->record->source !== 'external_import')
+                    && $this->record->source !== 'external_import'
+                    && $this->pendingRefund() === null)
                 ->modalHeading('Rambursare comandă')
                 ->modalWidth('xl')
                 ->form(fn () => $this->getRefundFormSchema())
@@ -574,6 +665,30 @@ class ViewOrder extends ViewRecord
         return $schema;
     }
 
+    protected function pendingRefund(): ?\App\Models\MarketplaceRefundRequest
+    {
+        return app(PaymentRefundService::class)->pendingManualRefundFor($this->record);
+    }
+
+    public function getSubheading(): string|\Illuminate\Contracts\Support\Htmlable|null
+    {
+        $refund = $this->pendingRefund();
+        if (!$refund) {
+            return parent::getSubheading();
+        }
+
+        $amount = number_format((float) $refund->approved_amount, 2) . ' ' . ($refund->currency ?? 'RON');
+        $error = preg_replace('/^(Rambursarea automată a fost refuzată de procesator|Automatic refund requires manual processing): /u','', strtok((string) $refund->admin_notes, "\n"));
+
+        return new HtmlString(
+            '<div style="margin-top:8px;padding:14px 16px;border:1px solid #ef4444;background:#fef2f2;border-radius:10px;color:#7f1d1d;">'
+            . '<div style="font-weight:700;margin-bottom:4px;">Rambursare neterminată: ' . e($refund->reference) . ' — ' . e($amount) . '</div>'
+            . '<div style="font-size:12px;margin-bottom:8px;">Procesatorul de plăți a refuzat rambursarea, banii NU au ajuns la client. Motiv: <code>' . e($error) . '</code></div>'
+            . app(PaymentRefundService::class)->manualRefundInstructions($refund)
+            . '</div>'
+        );
+    }
+
     protected function processRefundAction(array $data): void
     {
         $order = $this->record;
@@ -611,9 +726,11 @@ class ViewOrder extends ViewRecord
             $this->refreshFormData(['status', 'refund_status', 'refunded_amount']);
         } elseif ($result->requiresManual) {
             Notification::make()
-                ->warning()
-                ->title('Rambursare înregistrată — procesare manuală necesară')
-                ->body($result->error ?? 'Procesarea automată nu este disponibilă. Procesează manual din panoul Netopia.')
+                ->danger()
+                ->title('Procesatorul a refuzat rambursarea — banii NU au plecat')
+                ->body(new HtmlString(
+                    e($result->error ?? '') . '<br><br>Biletele sunt încă valide. Urmează pașii din caseta roșie de sus a paginii.'
+                ))
                 ->persistent()
                 ->send();
         } else {

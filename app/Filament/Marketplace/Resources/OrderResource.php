@@ -627,9 +627,15 @@ class OrderResource extends Resource
                                 ->send();
                         } elseif ($result->requiresManual) {
                             \Filament\Notifications\Notification::make()
-                                ->warning()
-                                ->title('Procesare manuală necesară')
-                                ->body($result->error ?? '')
+                                ->danger()
+                                ->title('Procesatorul a refuzat rambursarea — banii NU au plecat')
+                                ->body(($record->order_number ?? '#' . $record->id) . ': ' . ($result->error ?? '') . ' Biletele sunt încă valide; deschide comanda pentru pașii de finalizare manuală.')
+                                ->actions([
+                                    \Filament\Actions\Action::make('open_order')
+                                        ->label('Deschide comanda')
+                                        ->url(static::getUrl('view', ['record' => $record])),
+                                ])
+                                ->persistent()
                                 ->send();
                         } else {
                             \Filament\Notifications\Notification::make()
@@ -834,6 +840,8 @@ class OrderResource extends Resource
                             $skipped = 0;
                             $skippedMultiEvent = 0;
                             $skippedMixed = 0;
+                            $manual = [];
+                            $errors = [];
 
                             foreach ($records as $order) {
                                 if (in_array($order->id, $mixedSkipIds, true)) {
@@ -853,23 +861,40 @@ class OrderResource extends Resource
                                     continue;
                                 }
                                 $result = $refundService->processOrderLevelRefund($order, $refundCommission, $reason, $reasonCat);
-                                if ($result->success || $result->requiresManual) {
+                                $label = $order->order_number ?? ('#' . $order->id);
+                                if ($result->success) {
                                     $success++;
+                                } elseif ($result->requiresManual) {
+                                    $manual[] = '<a href="' . e(static::getUrl('view', ['record' => $order])) . '" style="text-decoration:underline;">' . e($label) . '</a> — ' . e($result->error ?? '');
                                 } else {
                                     $failed++;
+                                    $errors[] = e($label) . ' — ' . e($result->error ?? '');
                                 }
                             }
 
                             $variantLabel = $refundCommission ? 'total' : 'fără comision';
                             $msg = "{$success} comenzi rambursate ({$variantLabel}).";
+                            if (count($manual) > 0) $msg .= ' ' . count($manual) . ' refuzate de procesator (banii NU au plecat).';
                             if ($failed > 0) $msg .= " {$failed} eșuate.";
                             if ($skipped > 0) $msg .= " {$skipped} ignorate (deja rambursate sau neplătite).";
                             if ($skippedMultiEvent > 0) $msg .= " {$skippedMultiEvent} sărite (bilete pe mai multe evenimente).";
                             if ($skippedMixed > 0) $msg .= " {$skippedMixed} sărite (tipuri de comision mixte — necesită refund per bilet).";
-                            \Filament\Notifications\Notification::make()
+
+                            $details = '';
+                            if ($manual) {
+                                $details .= '<div style="margin-top:6px;"><strong>De finalizat manual</strong> (biletele sunt încă valide; deschide fiecare comandă și urmează pașii din caseta roșie):<br>' . implode('<br>', $manual) . '</div>';
+                            }
+                            if ($errors) {
+                                $details .= '<div style="margin-top:6px;"><strong>Eșuate:</strong><br>' . implode('<br>', $errors) . '</div>';
+                            }
+
+                            $notification = \Filament\Notifications\Notification::make()
                                 ->title($msg)
-                                ->color($failed > 0 ? 'warning' : 'success')
-                                ->send();
+                                ->color(($manual || $failed > 0) ? 'danger' : 'success');
+                            if ($details !== '') {
+                                $notification->body(new HtmlString($details))->persistent();
+                            }
+                            $notification->send();
                         })
                         ->deselectRecordsAfterCompletion(),
                     // Hard-deletes every selected order regardless of status (the

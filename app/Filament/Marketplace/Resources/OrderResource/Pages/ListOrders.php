@@ -139,10 +139,22 @@ class ListOrders extends ListRecords
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'refunded')->count())
                 ->badgeColor('gray'),
+            'refund_manual' => Tab::make('De rambursat manual')
+                ->modifyQueryUsing(fn (Builder $query) => $this->pendingManualRefundScope($query))
+                ->badge(fn () => $this->pendingManualRefundScope($this->getResource()::getEloquentQuery())->count() ?: null)
+                ->badgeColor('danger'),
             'expired' => Tab::make('Expirate')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'expired'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'expired')->count())
                 ->badgeColor('gray'),
         ];
+    }
+
+    // Refunds the payment processor refused, waiting to be finished by hand
+    protected function pendingManualRefundScope(Builder $query): Builder
+    {
+        return $query->whereHas('refundRequests', fn ($q) => $q
+            ->where('status', 'approved')
+            ->whereHas('refundItems', fn ($i) => $i->where('status', 'pending')));
     }
 }

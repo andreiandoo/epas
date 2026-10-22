@@ -287,6 +287,18 @@ class RefundRequestResource extends Resource
                         ->requiresConfirmation()
                         ->modalDescription('Attempt to process refund automatically through the payment provider.')
                         ->action(function ($record) {
+                            // Operator-started refund the processor refused: same path as the order page
+                            $service = app(\App\Services\PaymentRefundService::class);
+                            if ($service->isPendingManualRefund($record)) {
+                                $result = $service->retryPendingRefund($record);
+                                Notification::make()
+                                    ->title($result->success ? 'Auto Refund Successful' : 'Auto Refund Failed')
+                                    ->body($result->success ? null : $result->error)
+                                    ->color($result->success ? 'success' : 'danger')
+                                    ->send();
+                                return;
+                            }
+
                             $success = $record->attemptAutoRefund();
                             if ($success) {
                                 // Send notification to customer
@@ -317,6 +329,16 @@ class RefundRequestResource extends Resource
                         ])
                         ->visible(fn ($record) => in_array($record->status, ['approved', 'failed']))
                         ->action(function ($record, array $data) {
+                            $service = app(\App\Services\PaymentRefundService::class);
+                            if ($service->isPendingManualRefund($record)) {
+                                $service->completeManualRefund($record, 'manual', $data['reference'] ?: null, auth()->id());
+                                Notification::make()
+                                    ->title('Marked as Refunded')
+                                    ->success()
+                                    ->send();
+                                return;
+                            }
+
                             $record->markRefunded($data['reference'], auth()->id());
 
                             // Send notification to customer

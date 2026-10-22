@@ -216,6 +216,16 @@ class PaymentRefundService
             return new RefundResult(success: false, error: 'Comanda nu este plătită. Refund imposibil.');
         }
 
+        // A refund the processor refused must be finished (or retried) first,
+        // otherwise the same money could be requested twice.
+        if ($pending = $this->pendingManualRefundFor($order)) {
+            return new RefundResult(
+                success: false,
+                error: "Există deja o rambursare neterminată ({$pending->reference}). Finalizeaz-o din pagina comenzii.",
+                refundRequestId: $pending->id
+            );
+        }
+
         // Load tickets
         $tickets = $order->tickets()->whereIn('id', $ticketIds)->get();
         if ($tickets->isEmpty()) {
@@ -365,87 +375,37 @@ class PaymentRefundService
                 return $processorResult;
             }
 
-            // If success or requires manual processing, update records
-            if ($processorResult->success) {
-                $refundRequest->update([
-                    'status' => $isFullRefund ? 'refunded' : 'partially_refunded',
-                    'payment_refund_id' => $processorResult->refundId,
-                    'payment_response' => $processorResult->response,
-                    'is_automatic' => true,
-                    'processed_at' => now(),
-                    'completed_at' => now(),
-                ]);
+            $processorResult->refundRequestId = $refundRequest->id;
 
-                // Update refund items
-                $refundRequest->refundItems()->update(['status' => 'refunded']);
-            } else {
-                // Manual processing needed
+            if (!$processorResult->success) {
+                // The processor refused: no money left, so the order, tickets and
+                // stock stay as they are. The request waits for the operator to
+                // retry or to refund by hand and confirm it.
                 $refundRequest->update([
                     'status' => 'approved',
-                    'admin_notes' => 'Automatic refund requires manual processing: ' . ($processorResult->error ?? ''),
+                    'is_automatic' => false,
+                    'admin_notes' => 'Rambursarea automată a fost refuzată de procesator: ' . ($processorResult->error ?? ''),
                 ]);
-            }
+                DB::commit();
 
-            // Update tickets
-            foreach ($tickets as $ticket) {
-                $ticket->update([
-                    'status' => 'refunded',
-                    'refund_status' => 'refunded',
-                    'is_cancelled' => true,
-                    'cancelled_at' => now(),
-                    'cancellation_reason' => "Refund: {$refundRequest->reference}",
+                Log::channel('marketplace')->warning('Refund refused by processor, waiting for manual completion', [
+                    'order_id' => $order->id,
                     'refund_request_id' => $refundRequest->id,
+                    'error' => $processorResult->error,
                 ]);
+
+                return $processorResult;
             }
 
-            // Update order
-            $newRefundedAmount = $alreadyRefundedAmount + $totalRefund;
-            $refundStatus = $isFullRefund ? 'full' : 'partial';
-            $order->update([
-                'refund_status' => $refundStatus,
-                'refunded_amount' => round($newRefundedAmount, 2),
-                'refunded_at' => now(),
-                'refund_amount' => round($newRefundedAmount, 2),
-                'refund_reason' => $reason,
+            $this->applyRefund($refundRequest, $tickets, $isFullRefund, [
+                'payment_refund_id' => $processorResult->refundId,
+                'payment_response' => $processorResult->response,
+                'is_automatic' => true,
             ]);
-
-            if ($isFullRefund) {
-                // Full refund: the Order::saved observer for status='refunded'
-                // invokes releaseSeatsAndRestoreStock() which decrements
-                // quota_sold for every order item AND stamps
-                // meta.stock_released_at so a repeat can't double-decrement.
-                // Calling releaseStockForTickets() here too would drop the
-                // counter twice for the same tickets (no guard on that path),
-                // producing OVER-count drift that inflates apparent
-                // availability and can enable oversell later.
-                $order->update(['status' => 'refunded']);
-            } else {
-                // Partial refund: the Order::saved observer branch for
-                // status='partially_refunded' is intentionally a no-op
-                // because only SOME tickets in the order are being
-                // refunded — we can't drop stock for the whole order.
-                // releaseStockForTickets() decrements only the ticket
-                // types of the specific $tickets being refunded (once).
-                $order->update(['status' => 'partially_refunded']);
-                $order->releaseStockForTickets($tickets);
-            }
 
             DB::commit();
 
-            // Send refund notification email (after commit, non-blocking)
-            try {
-                $client = $order->marketplaceClient;
-                if ($client) {
-                    $emailService = new \App\Services\MarketplaceEmailService($client);
-                    $emailService->sendRefundProcessedEmail($refundRequest);
-                }
-            } catch (\Throwable $emailError) {
-                Log::channel('marketplace')->warning('Failed to send refund email', [
-                    'order_id' => $order->id,
-                    'refund_id' => $refundRequest->id,
-                    'error' => $emailError->getMessage(),
-                ]);
-            }
+            $this->sendRefundEmail($refundRequest);
 
             return $processorResult;
 
@@ -511,6 +471,199 @@ class PaymentRefundService
         }
 
         return $this->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory);
+    }
+
+    /**
+     * Operator-started refund the processor refused, still waiting for the
+     * money to actually go out.
+     */
+    public function pendingManualRefundFor(Order $order): ?MarketplaceRefundRequest
+    {
+        return MarketplaceRefundRequest::where('order_id', $order->id)
+            ->where('status', MarketplaceRefundRequest::STATUS_APPROVED)
+            ->whereHas('refundItems', fn ($q) => $q->where('status', 'pending'))
+            ->latest('id')
+            ->first();
+    }
+
+    public function isPendingManualRefund(MarketplaceRefundRequest $refund): bool
+    {
+        return $refund->status === MarketplaceRefundRequest::STATUS_APPROVED
+            && $refund->refundItems()->where('status', 'pending')->exists();
+    }
+
+    /**
+     * Send a refused refund to the processor again; on success it is applied
+     * exactly like a first-time automatic refund.
+     */
+    public function retryPendingRefund(MarketplaceRefundRequest $refund): RefundResult
+    {
+        if (!$this->isPendingManualRefund($refund)) {
+            return new RefundResult(success: false, error: 'Rambursarea nu mai este în așteptare.');
+        }
+
+        $result = $this->processRefund($refund);
+        $result->refundRequestId = $refund->id;
+
+        if (!$result->success) {
+            $refund->update([
+                'admin_notes' => trim(($refund->admin_notes ?? '') . "\n\nReîncercare " . now()->format('Y-m-d H:i') . ': ' . ($result->error ?? '')),
+            ]);
+            return $result;
+        }
+
+        DB::transaction(fn () => $this->applyRefund($refund, $this->refundTickets($refund), $refund->type === 'full_refund', [
+            'payment_refund_id' => $result->refundId,
+            'payment_response' => $result->response,
+            'is_automatic' => true,
+        ]));
+
+        $this->sendRefundEmail($refund);
+
+        return $result;
+    }
+
+    /**
+     * The operator sent the money by hand (processor panel, bank transfer...)
+     * and confirms it here, so the order and tickets become refunded.
+     */
+    public function completeManualRefund(
+        MarketplaceRefundRequest $refund,
+        string $method,
+        ?string $reference,
+        ?int $processedBy = null,
+        bool $notifyCustomer = true
+    ): RefundResult {
+        if (!$this->isPendingManualRefund($refund)) {
+            return new RefundResult(success: false, error: 'Rambursarea nu mai este în așteptare.');
+        }
+
+        $note = 'Finalizată manual (' . $method . ')' . ($reference ? ", referință {$reference}" : '') . ' la ' . now()->format('Y-m-d H:i');
+
+        DB::transaction(fn () => $this->applyRefund($refund, $this->refundTickets($refund), $refund->type === 'full_refund', [
+            'payment_refund_id' => $reference ?: null,
+            'is_automatic' => false,
+            'refund_method' => $method,
+            'processed_by' => $processedBy,
+            'admin_notes' => trim(($refund->admin_notes ?? '') . "\n\n" . $note),
+        ]));
+
+        if ($notifyCustomer) {
+            $this->sendRefundEmail($refund);
+        }
+
+        return new RefundResult(success: true, refundId: $reference, refundRequestId: $refund->id);
+    }
+
+    protected function refundTickets(MarketplaceRefundRequest $refund)
+    {
+        return Ticket::whereIn('id', $refund->ticket_ids ?? [])->get();
+    }
+
+    /**
+     * Mark the request, its items, the tickets and the order as refunded and
+     * release the stock. Runs inside the caller's transaction.
+     */
+    protected function applyRefund(MarketplaceRefundRequest $refund, $tickets, bool $isFullRefund, array $requestFields): void
+    {
+        $order = $refund->order()->lockForUpdate()->first();
+
+        $refund->update(array_merge([
+            'status' => $isFullRefund ? 'refunded' : 'partially_refunded',
+            'processed_at' => now(),
+            'completed_at' => now(),
+        ], $requestFields));
+
+        $refund->refundItems()->update(['status' => 'refunded']);
+
+        // Refunds recorded before 2026-10-22 already flipped the tickets and the
+        // order even when the processor refused; don't count those twice.
+        $tickets = $tickets->reject(fn (Ticket $t) => (int) $t->refund_request_id === (int) $refund->id && $t->isRefunded())->values();
+        if ($tickets->isEmpty()) {
+            return;
+        }
+
+        foreach ($tickets as $ticket) {
+            $ticket->update([
+                'status' => 'refunded',
+                'refund_status' => 'refunded',
+                'is_cancelled' => true,
+                'cancelled_at' => now(),
+                'cancellation_reason' => "Refund: {$refund->reference}",
+                'refund_request_id' => $refund->id,
+            ]);
+        }
+
+        $newRefundedAmount = (float) ($order->refunded_amount ?? 0) + (float) $refund->approved_amount;
+        $order->update([
+            'refund_status' => $isFullRefund ? 'full' : 'partial',
+            'refunded_amount' => round($newRefundedAmount, 2),
+            'refunded_at' => now(),
+            'refund_amount' => round($newRefundedAmount, 2),
+            'refund_reason' => $refund->reason,
+        ]);
+
+        if ($isFullRefund) {
+            // Full refund: the Order::saved observer for status='refunded'
+            // invokes releaseSeatsAndRestoreStock() which decrements
+            // quota_sold for every order item AND stamps
+            // meta.stock_released_at so a repeat can't double-decrement.
+            // Calling releaseStockForTickets() here too would drop the
+            // counter twice for the same tickets (no guard on that path),
+            // producing OVER-count drift that inflates apparent
+            // availability and can enable oversell later.
+            $order->update(['status' => 'refunded']);
+        } else {
+            // Partial refund: the Order::saved observer branch for
+            // status='partially_refunded' is intentionally a no-op
+            // because only SOME tickets in the order are being
+            // refunded — we can't drop stock for the whole order.
+            // releaseStockForTickets() decrements only the ticket
+            // types of the specific $tickets being refunded (once).
+            $order->update(['status' => 'partially_refunded']);
+            $order->releaseStockForTickets($tickets);
+        }
+    }
+
+    protected function sendRefundEmail(MarketplaceRefundRequest $refund): void
+    {
+        // After commit, non-blocking
+        try {
+            $client = $refund->order?->marketplaceClient;
+            if ($client) {
+                $emailService = new \App\Services\MarketplaceEmailService($client);
+                $emailService->sendRefundProcessedEmail($refund);
+            }
+        } catch (\Throwable $emailError) {
+            Log::channel('marketplace')->warning('Failed to send refund email', [
+                'order_id' => $refund->order_id,
+                'refund_id' => $refund->id,
+                'error' => $emailError->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * What the operator has to do by hand when the processor refused.
+     */
+    public function manualRefundInstructions(MarketplaceRefundRequest $refund): string
+    {
+        $order = $refund->order;
+        $amount = number_format((float) $refund->approved_amount, 2) . ' ' . ($refund->currency ?? 'RON');
+        $orderRef = e($order?->payment_reference ?: $order?->order_number);
+        $processor = $refund->payment_processor ?? $order?->payment_processor;
+
+        $panelStep = match ($processor) {
+            'netopia' => "Intră în panoul Netopia (admin.netopia-payments.com) → Tranzacții → caută comanda <strong>{$orderRef}</strong> → Rambursare, suma <strong>{$amount}</strong>. Dacă Netopia nu permite, trimite banii prin transfer bancar în contul clientului.",
+            'stripe' => "Intră în Stripe → Payments → caută plata comenzii <strong>{$orderRef}</strong> → Refund, suma <strong>{$amount}</strong>.",
+            default => "Trimite clientului <strong>{$amount}</strong> pe aceeași cale prin care a plătit sau prin transfer bancar.",
+        };
+
+        return '<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;">'
+            . '<li>Încearcă întâi <strong>„Reîncearcă rambursarea automată”</strong> (uneori refuzul e temporar).</li>'
+            . '<li>Dacă tot nu merge: ' . $panelStep . '</li>'
+            . '<li>După ce banii au plecat, apasă <strong>„Finalizează rambursarea manuală”</strong> și trece referința tranzacției. Abia atunci biletele se anulează și clientul primește emailul.</li>'
+            . '</ol>';
     }
 
     /**
@@ -617,7 +770,8 @@ class RefundResult
         public ?string $refundId = null,
         public ?array $response = null,
         public bool $requiresManual = false,
-        public bool $isPending = false
+        public bool $isPending = false,
+        public ?int $refundRequestId = null
     ) {}
 
     public function toArray(): array
