@@ -2954,7 +2954,14 @@ class EventsController extends BaseController
         }
 
         if ($trackingQuery->exists()) {
+            // Previews opened from the marketplace admin come with the core host as
+            // referrer; the operator's browser can still carry an old _fbc cookie.
+            $adminHost = preg_replace('/[^a-z0-9.\-]/', '', $this->sourceHost((string) config('app.url')));
+            $adminRule = $adminHost !== ''
+                ? "WHEN referrer LIKE '%://{$adminHost}/%' OR referrer LIKE '%://{$adminHost}' OR referrer LIKE '%://www.{$adminHost}/%' THEN 'Admin'"
+                : '';
             $sourceCase = "CASE
+                {$adminRule}
                 WHEN fbclid IS NOT NULL OR utm_source = 'facebook' THEN 'Facebook'
                 WHEN gclid IS NOT NULL OR utm_source = 'google' THEN 'Google'
                 WHEN utm_source = 'instagram' OR referrer LIKE '%instagram%' THEN 'Instagram'
@@ -3420,6 +3427,9 @@ class EventsController extends BaseController
         }
         if ($marketplaceHost !== '' && ($host === $marketplaceHost || str_ends_with($host, '.' . $marketplaceHost))) {
             return '(internal)';
+        }
+        if ($host === $this->sourceHost((string) config('app.url'))) {
+            return '(admin)';
         }
 
         return $host;
