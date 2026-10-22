@@ -424,6 +424,91 @@ HTML;
     }
 
     /**
+     * Mark the contract as signed outside the platform (scan / email). Lifts the
+     * same gate as the e-signature. When a signed PDF is given it becomes the
+     * organizer's contract document; the generated unsigned one is kept in
+     * document_data for reference.
+     */
+    public function markSignedOffline(
+        MarketplaceOrganizer $organizer,
+        \DateTimeInterface $signedAt,
+        ?string $pdfPath = null,
+        ?string $note = null,
+        ?int $adminId = null,
+    ): bool {
+        try {
+            $existing = OrganizerDocument::where('marketplace_organizer_id', $organizer->id)
+                ->where('document_type', 'organizer_contract')
+                ->latest('id')
+                ->first();
+
+            $offline = [
+                'signed' => true,
+                'signed_offline' => true,
+                'signed_at' => \Illuminate\Support\Carbon::instance($signedAt)->toIso8601String(),
+                'marked_by_admin_id' => $adminId,
+                'marked_at' => now()->toIso8601String(),
+                'offline_note' => $note,
+            ];
+
+            $fileFields = [];
+            if ($pdfPath && Storage::disk('public')->exists($pdfPath)) {
+                $fileFields = [
+                    'file_path' => $pdfPath,
+                    'file_name' => basename($pdfPath),
+                    'file_size' => Storage::disk('public')->size($pdfPath),
+                ];
+                $offline['pdf_sha256'] = hash('sha256', Storage::disk('public')->get($pdfPath));
+            }
+
+            if ($existing) {
+                if ($fileFields && $existing->file_path !== $pdfPath) {
+                    $offline['unsigned_file_path'] = $existing->file_path;
+                }
+                $existing->update($fileFields + [
+                    'document_data' => array_merge($existing->document_data ?? [], $offline),
+                ]);
+            } elseif ($fileFields) {
+                // no notification email for a document the organizer sent us themselves
+                OrganizerDocument::$skipNotificationOnCreate = true;
+                try {
+                    OrganizerDocument::create($fileFields + [
+                        'marketplace_client_id' => $organizer->marketplace_client_id,
+                        'marketplace_organizer_id' => $organizer->id,
+                        'event_id' => null,
+                        'title' => 'Contract organizator (semnat offline)',
+                        'document_type' => 'organizer_contract',
+                        'document_data' => $offline,
+                        'issued_at' => $signedAt,
+                    ]);
+                } finally {
+                    OrganizerDocument::$skipNotificationOnCreate = false;
+                }
+            }
+
+            $organizer->forceFill([
+                'contract_signed_at' => $signedAt,
+                'contract_signed_ip' => null,
+                'contract_signed_user_agent' => 'offline' . ($adminId ? " (marcat de admin #{$adminId})" : ''),
+            ])->saveQuietly();
+
+            Log::info('markSignedOffline: organizer contract marked as signed offline', [
+                'organizer_id' => $organizer->id,
+                'admin_id' => $adminId,
+                'with_pdf' => (bool) $fileFields,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('markSignedOffline: failed', [
+                'organizer_id' => $organizer->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Wrap raw template HTML with a UTF-8 header + a diacritics-capable font so
      * DomPDF renders Romanian text correctly. Mirrors the inline logic in
      * generate().

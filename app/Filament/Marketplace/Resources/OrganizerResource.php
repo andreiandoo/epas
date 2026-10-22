@@ -631,8 +631,9 @@ class OrganizerResource extends Resource
                                     }
                                     $url = \Illuminate\Support\Facades\Storage::disk('public')->url($doc->file_path);
                                     $signed = ! empty($doc->document_data['signed'] ?? null);
+                                    $signedLabel = ! empty($doc->document_data['signed_offline'] ?? null) ? 'semnat offline' : 'semnat electronic';
                                     $badge = $signed
-                                        ? '<span style="margin-left:8px;font-size:11px;color:#059669;font-weight:600;">semnat electronic</span>'
+                                        ? '<span style="margin-left:8px;font-size:11px;color:#059669;font-weight:600;">' . $signedLabel . '</span>'
                                         : '<span style="margin-left:8px;font-size:11px;color:#d97706;font-weight:600;">nesemnat</span>';
 
                                     return new \Illuminate\Support\HtmlString(
@@ -1657,6 +1658,55 @@ class OrganizerResource extends Resource
                                 ? 'Reminder-ul de semnare a fost pus în coadă și va ajunge la organizator în câteva secunde.'
                                 : 'Nu a putut fi expediat (verifică email organizator + configurație SMTP marketplace).')
                             ->color($sent ? 'success' : 'warning')
+                            ->send();
+                    }),
+
+                // Contract signed outside the platform (email / scan). Same
+                // visibility as the reminder — only organizers that still owe
+                // a signature.
+                Action::make('mark_contract_signed_offline')
+                    ->label('Marchează contract semnat offline')
+                    ->icon('heroicon-o-document-check')
+                    ->color('success')
+                    ->modalHeading('Contract semnat în afara platformei')
+                    ->modalDescription('Folosește doar dacă organizatorul a semnat contractul pe email sau olograf. După salvare poate publica evenimente și cere deconturi.')
+                    ->modalSubmitActionLabel('Marchează semnat')
+                    ->schema([
+                        Forms\Components\DateTimePicker::make('signed_at')
+                            ->label('Data semnării')
+                            ->default(now())
+                            ->maxDate(now())
+                            ->seconds(false)
+                            ->required(),
+                        Forms\Components\FileUpload::make('signed_pdf')
+                            ->label('Contract semnat (PDF)')
+                            ->helperText('Recomandat: contractul primit pe email. Va înlocui contractul nesemnat din contul organizatorului.')
+                            ->disk('public')
+                            ->directory(fn (MarketplaceOrganizer $record) => 'organizer-documents/' . $record->id)
+                            ->acceptedFileTypes(['application/pdf'])
+                            ->maxSize(10240),
+                        Forms\Components\Textarea::make('note')
+                            ->label('Notă')
+                            ->placeholder('ex: semnat pe email, trimis de ... în data de ...')
+                            ->rows(2)
+                            ->maxLength(500),
+                    ])
+                    ->visible(fn (MarketplaceOrganizer $record): bool =>
+                        $record->isContractSignatureRequired() && !$record->hasSignedContract())
+                    ->action(function (MarketplaceOrganizer $record, array $data): void {
+                        $ok = app(OrganizerContractService::class)->markSignedOffline(
+                            $record,
+                            \Illuminate\Support\Carbon::parse($data['signed_at']),
+                            $data['signed_pdf'] ?? null,
+                            $data['note'] ?? null,
+                            Auth::id(),
+                        );
+                        Notification::make()
+                            ->title($ok ? 'Contract marcat ca semnat' : 'Nu s-a putut marca contractul')
+                            ->body($ok
+                                ? 'Organizatorul poate acum trimite evenimente spre aprobare.'
+                                : 'Verifică /admin/system-errors pentru detalii.')
+                            ->color($ok ? 'success' : 'danger')
                             ->send();
                     }),
 
