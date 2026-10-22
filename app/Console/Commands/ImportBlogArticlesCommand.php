@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Storage;
  * Source folder (default database/data/blog-import/{marketplace slug}):
  *   articole-lot-01.json, articole-lot-02.json, ...   arrays of articles
  *   images/{file}.webp|jpg                            cover + inline images
+ *   categories.json (optional)                        {"key": "Name", ...}; used instead of the
+ *                                                     built-in list, missing ones are created
  *
  *   php artisan blog:import-articles --marketplace=bileteonline
  *     [--path=DIR]          source folder
@@ -104,7 +106,17 @@ class ImportBlogArticlesCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         $update = (bool) $this->option('update');
         $only = array_filter(array_map('intval', explode(',', (string) $this->option('only'))));
-        $categories = $this->categoryIds($marketplace);
+        $categoryNames = self::CATEGORIES;
+        $ownCategories = File::exists($path . '/categories.json');
+        if ($ownCategories) {
+            $categoryNames = json_decode(preg_replace('/^\xEF\xBB\xBF/', '', File::get($path . '/categories.json')), true);
+            if (! is_array($categoryNames) || ! $categoryNames) {
+                $this->error('categories.json: invalid JSON.');
+
+                return self::FAILURE;
+            }
+        }
+        $categories = $this->categoryIds($marketplace, $categoryNames, $ownCategories, $lang, $dryRun);
 
         $articles = [];
         foreach ($files as $file) {
@@ -133,7 +145,7 @@ class ImportBlogArticlesCommand extends Command
             }
             if (! isset($categories[$row['category'] ?? ''])) {
                 $problems[] = "{$label}: category \"" . ($row['category'] ?? '') . '" has no match in the admin (expected "'
-                    . (self::CATEGORIES[$row['category'] ?? ''] ?? '?') . '")';
+                    . ($categoryNames[$row['category'] ?? ''] ?? '?') . '")';
             }
         }
         if ($problems) {
@@ -253,22 +265,42 @@ class ImportBlogArticlesCommand extends Command
             ?? MarketplaceClient::where('domain', 'like', '%' . $value . '%')->first();
     }
 
-    /** @return array<string,int> category key => blog_categories.id */
-    private function categoryIds(MarketplaceClient $marketplace): array
+    /**
+     * Category key => blog_categories.id. With $create, a category that has no match (by name or by slug = key)
+     * is created; on a dry run it maps to 0.
+     *
+     * @return array<string,int>
+     */
+    private function categoryIds(MarketplaceClient $marketplace, array $names, bool $create, string $lang, bool $dryRun): array
     {
         $normalize = fn ($name) => preg_replace('/[^a-z0-9]+/', '', mb_strtolower((string) $name));
 
         $byName = [];
+        $bySlug = [];
         foreach (BlogCategory::where('marketplace_client_id', $marketplace->id)->get() as $category) {
             foreach ((array) $category->name as $name) {
                 $byName[$normalize($name)] = $category->id;
             }
+            $bySlug[$category->slug] = $category->id;
         }
 
         $ids = [];
-        foreach (self::CATEGORIES as $key => $name) {
+        $order = 0;
+        foreach ($names as $key => $name) {
+            $order++;
             if (isset($byName[$normalize($name)])) {
                 $ids[$key] = $byName[$normalize($name)];
+            } elseif ($create && isset($bySlug[$key])) {
+                $ids[$key] = $bySlug[$key];
+            } elseif ($create) {
+                $this->line("  category \"{$name}\" ({$key}) " . ($dryRun ? 'would be created' : 'created'));
+                $ids[$key] = $dryRun ? 0 : BlogCategory::create([
+                    'marketplace_client_id' => $marketplace->id,
+                    'name' => [$lang => $name],
+                    'slug' => $key,
+                    'sort_order' => $order,
+                    'is_visible' => true,
+                ])->id;
             }
         }
 
