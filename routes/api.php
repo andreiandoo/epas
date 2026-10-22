@@ -1981,6 +1981,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.analytics');
         Route::get('/events/{event}/analytics/sources', [OrganizerEventsController::class, 'analyticsSources'])
             ->name('api.marketplace-client.organizer.events.analytics.sources');
+        Route::get('/events/{event}/analytics/insights', [OrganizerEventsController::class, 'analyticsInsights'])
+            ->name('api.marketplace-client.organizer.events.analytics.insights');
         Route::get('/events/{event}/staff-report', [OrganizerEventsController::class, 'staffReport'])
             ->name('api.marketplace-client.organizer.events.staff-report');
 

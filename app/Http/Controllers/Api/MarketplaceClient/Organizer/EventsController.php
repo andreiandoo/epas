@@ -2845,6 +2845,14 @@ class EventsController extends BaseController
             ->whereDate('created_at', today())
             ->count();
 
+        // Sales pace: tickets in the last 7 days and the 7 before, independent of the period
+        $ticketsLast7d = (int) (clone $validEventTicketsQuery())
+            ->where('created_at', '>=', now()->subDays(7))
+            ->count();
+        $ticketsPrev7d = (int) (clone $validEventTicketsQuery())
+            ->whereBetween('created_at', [now()->subDays(14), now()->subDays(7)])
+            ->count();
+
         // Capacity from ticket types
         $capacity = $event->ticketTypes()->whereRaw(\App\Support\TestPos::notTypeSql('ticket_types'))->sum('quota_total') ?: ($event->capacity ?? 0);
 
@@ -3141,6 +3149,8 @@ class EventsController extends BaseController
                 'refunds_total' => $refundsTotal,
                 'tickets_sold' => $ticketsSold,
                 'tickets_today' => $ticketsToday,
+                'tickets_last_7d' => $ticketsLast7d,
+                'tickets_prev_7d' => $ticketsPrev7d,
                 'capacity' => $capacity,
                 'page_views' => $pageViews,
                 'unique_visitors' => $uniqueVisitors,
@@ -3365,6 +3375,172 @@ class EventsController extends BaseController
             ],
             'truncated' => $entries->count() >= $sessionLimit,
             'range' => ['start' => $rangeStart->toIso8601String(), 'end' => $rangeEnd->toIso8601String()],
+        ]);
+    }
+
+    /**
+     * Funnel, abandoned carts, devices and the day/hour map for one event, from the
+     * tracking table (plus paid orders for the sales map). Same period and channel
+     * filters as the main analytics endpoint. Funnel steps only count visitors who
+     * viewed the event page in the period.
+     */
+    public function analyticsInsights(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $period = $request->input('period', '30d');
+        $channel = $request->input('channel');
+        if ($channel && !in_array($channel, ['marketplace', 'whitelabel'], true)) {
+            $channel = null;
+        }
+        $channelClause = function ($q) use ($channel) {
+            if ($channel === 'whitelabel') {
+                $q->where('channel', 'whitelabel');
+            } elseif ($channel === 'marketplace') {
+                $q->where(fn ($qq) => $qq->where('channel', '!=', 'whitelabel')->orWhereNull('channel'));
+            }
+        };
+
+        $now = now();
+        $eventCreatedAt = $event->created_at->copy()->startOfDay();
+        if ($request->input('start_date') && $request->input('end_date')) {
+            $rangeStart = Carbon::parse($request->input('start_date'))->startOfDay();
+            $rangeEnd = Carbon::parse($request->input('end_date'))->endOfDay();
+        } else {
+            $rangeEnd = $now;
+            $rangeStart = match ($period) {
+                '7d' => $now->copy()->subDays(7)->startOfDay(),
+                '90d' => $now->copy()->subDays(90)->startOfDay(),
+                'all' => $eventCreatedAt,
+                default => $now->copy()->subDays(30)->startOfDay(),
+            };
+        }
+        if ($rangeStart < $eventCreatedAt) {
+            $rangeStart = $eventCreatedAt;
+        }
+
+        $trackingModel = \App\Models\Platform\CoreCustomerEvent::class;
+        $tracking = function () use ($trackingModel, $event, $rangeStart, $rangeEnd, $channel, $channelClause) {
+            $q = $trackingModel::query()
+                ->where(fn ($w) => $w->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id))
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+            if ($channel) {
+                $channelClause($q);
+            }
+            return $q;
+        };
+
+        // One row per visitor with a flag per funnel step, then summed per device.
+        // Cart value of a visitor = the largest cart total seen (cart / checkout /
+        // payment step), or the sum of their add-to-cart values when none was seen.
+        $devices = [];
+        try {
+            $perVisitor = $tracking()
+                ->whereNotNull('visitor_id')
+                ->whereIn('event_type', ['page_view', 'add_to_cart', 'view_cart', 'begin_checkout', 'add_payment_info', 'purchase'])
+                ->selectRaw("visitor_id,
+                    MAX(CASE WHEN event_type = 'page_view' THEN device_type END) as device,
+                    MAX(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) as s_view,
+                    MAX(CASE WHEN event_type = 'add_to_cart' THEN 1 ELSE 0 END) as s_cart,
+                    MAX(CASE WHEN event_type = 'begin_checkout' THEN 1 ELSE 0 END) as s_checkout,
+                    MAX(CASE WHEN event_type = 'add_payment_info' THEN 1 ELSE 0 END) as s_payment,
+                    MAX(CASE WHEN event_type = 'purchase' THEN 1 ELSE 0 END) as s_purchase,
+                    MAX(CASE WHEN event_type IN ('view_cart', 'begin_checkout', 'add_payment_info') THEN event_value END) as cart_total,
+                    SUM(CASE WHEN event_type = 'add_to_cart' THEN event_value ELSE 0 END) as cart_adds")
+                ->groupBy('visitor_id');
+
+            $devices = \Illuminate\Support\Facades\DB::query()
+                ->fromSub($perVisitor, 'v')
+                ->where('s_view', 1)
+                ->selectRaw("COALESCE(device, 'unknown') as device,
+                    COUNT(*) as visitors,
+                    SUM(s_cart) as cart,
+                    SUM(s_checkout) as checkout,
+                    SUM(s_payment) as payment,
+                    SUM(s_purchase) as purchase,
+                    SUM(CASE WHEN s_cart = 1 AND s_purchase = 0 THEN 1 ELSE 0 END) as abandoned,
+                    SUM(CASE WHEN s_cart = 1 AND s_purchase = 0 THEN COALESCE(cart_total, cart_adds, 0) ELSE 0 END) as abandoned_value")
+                ->groupByRaw("COALESCE(device, 'unknown')")
+                ->get()
+                ->map(fn ($r) => [
+                    'device' => (string) $r->device,
+                    'visitors' => (int) $r->visitors,
+                    'cart' => (int) $r->cart,
+                    'checkout' => (int) $r->checkout,
+                    'payment' => (int) $r->payment,
+                    'purchase' => (int) $r->purchase,
+                    'abandoned' => (int) $r->abandoned,
+                    'abandoned_value' => round((float) $r->abandoned_value, 2),
+                ])
+                ->sortByDesc('visitors')
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            \Log::warning('analytics insights: funnel query failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
+        $sum = fn (string $key) => array_sum(array_column($devices, $key));
+
+        // Day of week (1 = Monday) x hour, in Romanian local time. Timestamps are stored in UTC.
+        $grid = function ($query, string $column): array {
+            $local = "(({$column} AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Bucharest')";
+            $cells = [];
+            foreach ($query->selectRaw("EXTRACT(ISODOW FROM {$local})::int as d, EXTRACT(HOUR FROM {$local})::int as h, COUNT(*) as c")
+                ->groupByRaw('1, 2')
+                ->get() as $row) {
+                $cells[] = [(int) $row->d, (int) $row->h, (int) $row->c];
+            }
+            return $cells;
+        };
+
+        $viewsGrid = [];
+        try {
+            $viewsGrid = $grid($tracking()->where('event_type', $trackingModel::TYPE_PAGE_VIEW)->toBase(), 'created_at');
+        } catch (\Throwable $e) {
+            \Log::warning('analytics insights: views grid failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
+        $ordersGrid = [];
+        try {
+            $ordersQuery = $event->orders()
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->whereIn('status', ['paid', 'completed'])
+                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+                ->when($channel, fn ($q) => $channelClause($q))
+                ->whereBetween('orders.created_at', [$rangeStart, $rangeEnd])
+                ->toBase();
+            $ordersQuery->orders = null;
+            $ordersGrid = $grid($ordersQuery, 'orders.created_at');
+        } catch (\Throwable $e) {
+            \Log::warning('analytics insights: orders grid failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
+        return $this->success([
+            'funnel' => [
+                ['step' => 'view', 'visitors' => $sum('visitors')],
+                ['step' => 'cart', 'visitors' => $sum('cart')],
+                ['step' => 'checkout', 'visitors' => $sum('checkout')],
+                ['step' => 'payment', 'visitors' => $sum('payment')],
+                ['step' => 'purchase', 'visitors' => $sum('purchase')],
+            ],
+            'abandoned' => [
+                'visitors' => $sum('abandoned'),
+                'value' => round((float) $sum('abandoned_value'), 2),
+            ],
+            'devices' => $devices,
+            'heatmap' => [
+                'views' => $viewsGrid,
+                'orders' => $ordersGrid,
+            ],
         ]);
     }
 
