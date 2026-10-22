@@ -2671,7 +2671,7 @@ class MarketplaceEventsController extends BaseController
         $commissionRate = (float) $organizer->getEffectiveCommissionRate();
 
         // Format upcoming events
-        $formattedUpcoming = $upcomingEvents->map(function ($event) use ($language, $commissionMode, $commissionRate) {
+        $formattedUpcoming = $upcomingEvents->map(function ($event) use ($language, $commissionMode, $commissionRate, $client) {
             $venue = $event->venue;
             $category = $event->marketplaceEventCategory;
             $eventDate = $event->event_date ?? $event->range_start_date;
