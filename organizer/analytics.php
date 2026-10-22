@@ -1513,7 +1513,9 @@ function renderFunnel() {
         if (!worst || lost > worst.lost) worst = { from: steps[i - 1].step, to: steps[i].step, lost: lost };
     }
     const bought = steps[steps.length - 1].visitors;
-    let text = formatNumber(bought) + ' din ' + formatNumber(top) + ' vizitatori au cumpărat (' + formatPercent(percentOf(bought, top)) + ').';
+    let text = formatNumber(bought) + ' din ' + formatNumber(top) + ' vizitatori au cumpărat (' + formatPercent(percentOf(bought, top)) + ')';
+    if (insightsData.orders) text += ', ' + formatNumber(insightsData.orders) + ' ' + (insightsData.orders === 1 ? 'comandă plătită' : 'comenzi plătite') + ' în perioadă';
+    text += '.';
     if (worst && worst.lost > 0) {
         text += ' Cei mai mulți se opresc între „' + labels[worst.from].toLowerCase() + '” și „' + labels[worst.to].toLowerCase() + '”.';
     }
@@ -1582,7 +1584,7 @@ function renderPace(data) {
     }
 
     let html = '<div class="text-3xl font-bold text-gray-900 tabular-nums">' + fmtRate(perDay) + '</div>'
-        + '<div class="text-xs text-gray-500">bilete pe zi, media ultimelor 7 zile (' + formatNumber(last7) + ' bilete)</div>'
+        + '<div class="text-xs text-gray-500">bilete pe zi, media ultimelor 7 zile (' + formatNumber(last7) + ' bilete). Nu depinde de perioada aleasă sus.</div>'
         + trend;
 
     const lines = [];
