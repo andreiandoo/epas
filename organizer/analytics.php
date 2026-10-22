@@ -234,6 +234,27 @@ $eventId = $_GET['event'] ?? null;
             </div>
         </div>
 
+        <!-- Funnel & Pace -->
+        <div class="grid gap-6 mb-6 lg:grid-cols-3">
+            <!-- Funnel -->
+            <div class="p-6 bg-white border border-gray-100 shadow-sm lg:col-span-2 rounded-2xl">
+                <h2 class="text-lg font-semibold text-gray-900">Pâlnia de vânzare</h2>
+                <p id="funnel-takeaway" class="mt-1 mb-4 text-xs text-gray-500"></p>
+                <div id="funnel-steps" class="space-y-3">
+                    <div class="py-6 text-sm text-center text-gray-400">Se încarcă...</div>
+                </div>
+                <div id="funnel-abandoned" class="hidden mt-5"></div>
+            </div>
+
+            <!-- Sales pace -->
+            <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
+                <h2 class="mb-4 text-lg font-semibold text-gray-900">Ritmul vânzărilor</h2>
+                <div id="pace-content">
+                    <div class="py-6 text-sm text-center text-gray-400">Se încarcă...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tickets & Campaign ROI -->
         <div class="grid gap-6 mb-6 lg:grid-cols-3">
             <!-- Ticket Performance Table -->
@@ -285,19 +306,54 @@ $eventId = $_GET['event'] ?? null;
             </div>
         </div>
 
+        <!-- Day/hour map & Devices -->
+        <div class="grid gap-6 mb-6 lg:grid-cols-3">
+            <!-- Heatmap -->
+            <div class="p-6 bg-white border border-gray-100 shadow-sm lg:col-span-2 rounded-2xl">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Când intră oamenii</h2>
+                        <p id="heatmap-takeaway" class="mt-1 text-xs text-gray-500"></p>
+                    </div>
+                    <div class="flex items-center p-1 bg-gray-100 rounded-xl" role="tablist">
+                        <button type="button" role="tab" onclick="setHeatmapMode('views')" data-heatmap-mode="views" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all">Vizualizări</button>
+                        <button type="button" role="tab" onclick="setHeatmapMode('orders')" data-heatmap-mode="orders" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all">Comenzi</button>
+                    </div>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <div id="heatmap-grid" style="min-width:560px">
+                        <div class="py-6 text-sm text-center text-gray-400">Se încarcă...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Devices -->
+            <div class="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
+                <h2 class="mb-4 text-lg font-semibold text-gray-900">Dispozitive</h2>
+                <div id="devices-list" class="space-y-4">
+                    <div class="py-6 text-sm text-center text-gray-400">Se încarcă...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Source links -->
         <div class="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">Linkuri și site-uri sursă</h2>
-                    <p class="text-xs text-gray-500">Linkul exact prin care au intrat vizitatorii, cu toți parametrii, și site-urile care i-au trimis</p>
-                </div>
-                <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
-                    <button type="button" onclick="setSourcesTab('links')" data-sources-tab="links" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-gray-900">Linkuri</button>
-                    <button type="button" onclick="setSourcesTab('domains')" data-sources-tab="domains" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-gray-500">Site-uri</button>
+                <h2 class="text-lg font-semibold text-gray-900">Linkuri și site-uri sursă</h2>
+                <div class="flex flex-wrap items-center gap-2" role="tablist">
+                    <button type="button" role="tab" onclick="setSourcesTab('links')" data-sources-tab="links" data-color="165,28,48" title="Adresa exactă pe care au deschis-o vizitatorii, cu parametrii ei (utm, fbclid etc.)" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors rounded-xl">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        Linkuri de intrare
+                        <span data-sources-count="links" class="px-1.5 py-0.5 text-[11px] leading-none rounded-md">0</span>
+                    </button>
+                    <button type="button" role="tab" onclick="setSourcesTab('domains')" data-sources-tab="domains" data-color="230,126,34" title="Site-ul de pe care au venit vizitatorii (Facebook, Google, alte site-uri)" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors rounded-xl">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        Site-uri care trimit vizitatori
+                        <span data-sources-count="domains" class="px-1.5 py-0.5 text-[11px] leading-none rounded-md">0</span>
+                    </button>
                 </div>
             </div>
-            <div id="sources-summary" class="mb-3 text-xs text-gray-500"></div>
+            <div id="sources-summary" class="hidden mb-3 text-xs text-gray-500"></div>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
@@ -648,8 +704,10 @@ async function loadAnalytics() {
         if (response.success) {
             eventData = response.data;
             updateDashboard(response.data);
+            renderPace(response.data);
         }
         loadSources();
+        loadInsights();
 
         // Load milestones/campaigns
         try {
@@ -1384,11 +1442,296 @@ function updateChangeIndicator(elementId, change) {
     el.className = `flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`;
 }
 
+// Funnel, sales pace, day/hour map and devices (brand colours as inline rgba,
+// the compiled Tailwind has no opacity variants for them)
+const BRAND_PRIMARY = '165,28,48';
+const BRAND_SECONDARY = '30,41,59';
+const BRAND_ACCENT = '230,126,34';
+const DAY_NAMES = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+const DAY_SHORT = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du'];
+
+let insightsData = null;
+let heatmapMode = 'views';
+
+async function loadInsights() {
+    if (!document.getElementById('funnel-steps')) return;
+    try {
+        const channelParam = currentChannel && currentChannel !== 'all' ? '&channel=' + encodeURIComponent(currentChannel) : '';
+        const response = await AmbiletAPI.get('/organizer/events/' + eventId + '/analytics/insights?period=' + currentPeriod + channelParam);
+        insightsData = response && response.success ? response.data : null;
+    } catch (e) {
+        insightsData = null;
+    }
+    renderFunnel();
+    renderHeatmap();
+    renderDevices();
+}
+
+function percentOf(part, whole) {
+    return whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0;
+}
+
+function formatPercent(value) {
+    return new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 1 }).format(value) + '%';
+}
+
+function renderFunnel() {
+    const box = document.getElementById('funnel-steps');
+    const takeaway = document.getElementById('funnel-takeaway');
+    const abandonedBox = document.getElementById('funnel-abandoned');
+    if (!box) return;
+
+    if (!insightsData) {
+        takeaway.textContent = '';
+        abandonedBox.classList.add('hidden');
+        box.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu am putut încărca pâlnia</div>';
+        return;
+    }
+
+    const labels = {
+        view: 'Au văzut pagina evenimentului',
+        cart: 'Au adăugat bilete în coș',
+        checkout: 'Au ajuns la checkout',
+        payment: 'Au completat datele de plată',
+        purchase: 'Au cumpărat'
+    };
+    const steps = insightsData.funnel || [];
+    const top = steps.length ? steps[0].visitors : 0;
+    if (!top) {
+        takeaway.textContent = '';
+        abandonedBox.classList.add('hidden');
+        box.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu există vizite în perioada selectată</div>';
+        return;
+    }
+
+    // Biggest drop between two consecutive steps
+    let worst = null;
+    for (let i = 1; i < steps.length; i++) {
+        const prev = steps[i - 1].visitors;
+        if (prev <= 0) continue;
+        const lost = 100 - percentOf(steps[i].visitors, prev);
+        if (!worst || lost > worst.lost) worst = { from: steps[i - 1].step, to: steps[i].step, lost: lost };
+    }
+    const bought = steps[steps.length - 1].visitors;
+    let text = formatNumber(bought) + ' din ' + formatNumber(top) + ' vizitatori au cumpărat (' + formatPercent(percentOf(bought, top)) + ').';
+    if (worst && worst.lost > 0) {
+        text += ' Cei mai mulți se opresc între „' + labels[worst.from].toLowerCase() + '” și „' + labels[worst.to].toLowerCase() + '”.';
+    }
+    takeaway.textContent = text;
+
+    box.innerHTML = steps.map(function (s, i) {
+        const width = Math.max(percentOf(s.visitors, top), s.visitors > 0 ? 1.5 : 0);
+        const alpha = Math.max(0.35, 1 - i * 0.15);
+        const prev = i > 0 ? steps[i - 1].visitors : 0;
+        const drop = i > 0 && prev > 0 ? 100 - percentOf(s.visitors, prev) : null;
+        const dropHtml = drop !== null && drop > 0
+            ? '<span class="text-[11px] font-medium" style="color: rgb(' + BRAND_PRIMARY + ')">−' + formatPercent(Math.round(drop * 10) / 10) + ' față de pasul anterior</span>'
+            : '';
+        return '<div>'
+            + '<div class="flex items-baseline justify-between gap-3 mb-1">'
+            + '<span class="text-sm text-gray-700">' + labels[s.step] + '</span>'
+            + '<span class="text-sm font-semibold text-gray-900 tabular-nums whitespace-nowrap">' + formatNumber(s.visitors) + ' <span class="font-normal text-gray-400">· ' + formatPercent(percentOf(s.visitors, top)) + '</span></span>'
+            + '</div>'
+            + '<div class="h-2 overflow-hidden bg-gray-100 rounded-full"><div class="h-full rounded-full" style="width:' + width + '%; background: rgba(' + BRAND_PRIMARY + ',' + alpha + ')"></div></div>'
+            + (dropHtml ? '<div class="mt-1">' + dropHtml + '</div>' : '')
+            + '</div>';
+    }).join('');
+
+    const ab = insightsData.abandoned || {};
+    if (ab.visitors > 0) {
+        abandonedBox.innerHTML = '<div class="flex items-center gap-3 p-4 rounded-xl" style="background: rgba(' + BRAND_ACCENT + ',0.08)">'
+            + '<div class="flex items-center justify-center flex-shrink-0 w-9 h-9 rounded-lg" style="background: rgba(' + BRAND_ACCENT + ',0.16); color: rgb(' + BRAND_ACCENT + ')">'
+            + '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'
+            + '</div>'
+            + '<div class="text-sm text-gray-700"><span class="font-semibold text-gray-900">' + formatNumber(ab.visitors) + ' ' + (ab.visitors === 1 ? 'coș abandonat' : 'coșuri abandonate') + '</span>'
+            + (ab.value > 0 ? ', în valoare de aproximativ <span class="font-semibold text-gray-900">' + formatCurrency(ab.value) + '</span>' : '')
+            + '<div class="text-xs text-gray-500">Vizitatori care au pus bilete în coș și nu au cumpărat</div></div>'
+            + '</div>';
+        abandonedBox.classList.remove('hidden');
+    } else {
+        abandonedBox.classList.add('hidden');
+    }
+}
+
+function renderPace(data) {
+    const box = document.getElementById('pace-content');
+    if (!box || !data || !data.overview) return;
+    const o = data.overview;
+    const last7 = o.tickets_last_7d || 0;
+    const prev7 = o.tickets_prev_7d || 0;
+    const perDay = last7 / 7;
+    const sold = o.tickets_sold || 0;
+    const capacity = o.capacity || 0;
+    const remaining = Math.max(0, capacity - sold);
+    const days = typeof o.days_until === 'number' ? o.days_until : null;
+    const fmtRate = function (v) {
+        return new Intl.NumberFormat('ro-RO', { maximumFractionDigits: v < 10 ? 1 : 0 }).format(v);
+    };
+
+    let trend = '';
+    if (prev7 > 0 || last7 > 0) {
+        const change = prev7 > 0 ? Math.round(((last7 - prev7) / prev7) * 100) : null;
+        const up = last7 >= prev7;
+        const arrow = up
+            ? '<path d="M5 10l7-7m0 0l7 7m-7-7v18"/>'
+            : '<path d="M19 14l-7 7m0 0l-7-7m7 7V3"/>';
+        const label = change === null ? 'față de 0 în săptămâna dinainte' : (change >= 0 ? '+' : '') + change + '% față de săptămâna dinainte';
+        trend = '<div class="flex items-center gap-1 mt-1 text-xs font-medium" style="color: rgb(' + (up ? BRAND_SECONDARY : BRAND_PRIMARY) + ')">'
+            + '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">' + arrow + '</svg>'
+            + label + '</div>';
+    }
+
+    let html = '<div class="text-3xl font-bold text-gray-900 tabular-nums">' + fmtRate(perDay) + '</div>'
+        + '<div class="text-xs text-gray-500">bilete pe zi, media ultimelor 7 zile (' + formatNumber(last7) + ' bilete)</div>'
+        + trend;
+
+    const lines = [];
+    if (days !== null && days < 0) {
+        lines.push('Evenimentul a avut loc.');
+    } else if (days !== null) {
+        if (capacity > 0) {
+            lines.push('Mai sunt <span class="font-semibold text-gray-900">' + formatNumber(remaining) + '</span> bilete din ' + formatNumber(capacity) + '.');
+            if (remaining > 0 && days > 0) {
+                lines.push('Ca să vinzi tot până la eveniment ai nevoie de <span class="font-semibold text-gray-900">' + fmtRate(remaining / days) + '</span> bilete pe zi.');
+            }
+        }
+        if (perDay > 0 && days > 0) {
+            if (capacity > 0 && remaining > 0) {
+                const daysToSellOut = Math.ceil(remaining / perDay);
+                if (daysToSellOut <= days) {
+                    const date = new Date(Date.now() + daysToSellOut * 86400000);
+                    lines.push('La ritmul actual, biletele se termină în aproximativ <span class="font-semibold text-gray-900">' + daysToSellOut + ' ' + (daysToSellOut === 1 ? 'zi' : 'zile') + '</span> (' + date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' }) + ').');
+                } else {
+                    const projected = Math.min(capacity, Math.round(sold + perDay * days));
+                    lines.push('La ritmul actual vei ajunge la aproximativ <span class="font-semibold text-gray-900">' + formatNumber(projected) + '</span> bilete până la eveniment (' + Math.round((projected / capacity) * 100) + '% din capacitate).');
+                }
+            } else if (capacity === 0) {
+                lines.push('La ritmul actual vei ajunge la aproximativ <span class="font-semibold text-gray-900">' + formatNumber(Math.round(sold + perDay * days)) + '</span> bilete până la eveniment.');
+            }
+        } else if (perDay === 0 && days > 0) {
+            lines.push('Nu s-a vândut niciun bilet în ultimele 7 zile.');
+        }
+    }
+
+    if (lines.length) {
+        html += '<div class="pt-4 mt-4 space-y-2 text-sm text-gray-600 border-t border-gray-100">'
+            + lines.map(function (l) { return '<p>' + l + '</p>'; }).join('')
+            + '</div>';
+    }
+    box.innerHTML = html;
+}
+
+function setHeatmapMode(mode) {
+    heatmapMode = mode;
+    renderHeatmap();
+}
+
+function renderHeatmap() {
+    const box = document.getElementById('heatmap-grid');
+    const takeaway = document.getElementById('heatmap-takeaway');
+    if (!box) return;
+
+    document.querySelectorAll('[data-heatmap-mode]').forEach(function (btn) {
+        const active = btn.dataset.heatmapMode === heatmapMode;
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-gray-900', active);
+        btn.classList.toggle('text-gray-500', !active);
+    });
+
+    if (!insightsData) {
+        takeaway.textContent = '';
+        box.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu am putut încărca datele</div>';
+        return;
+    }
+
+    const unit = heatmapMode === 'views' ? ['vizualizare', 'vizualizări'] : ['comandă', 'comenzi'];
+    const cells = (insightsData.heatmap || {})[heatmapMode] || [];
+    const values = {};
+    let max = 0;
+    let best = null;
+    cells.forEach(function (c) {
+        values[c[0] + '-' + c[1]] = c[2];
+        if (c[2] > max) { max = c[2]; best = c; }
+    });
+
+    if (!max) {
+        takeaway.textContent = '';
+        box.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu există ' + unit[1] + ' în perioada selectată</div>';
+        return;
+    }
+
+    const hourLabel = function (h) { return String(h).padStart(2, '0') + ':00'; };
+    takeaway.textContent = 'Cele mai multe ' + unit[1] + ': ' + DAY_NAMES[best[0] - 1].toLowerCase() + ', ' + hourLabel(best[1]) + '–' + hourLabel((best[1] + 1) % 24) + ' (ora României)';
+
+    const cols = 'grid-template-columns: 2rem repeat(24, minmax(0, 1fr)); gap: 3px;';
+    let html = '<div class="grid items-center" style="' + cols + '" role="img" aria-label="' + sourcesEsc(takeaway.textContent) + '">';
+    html += '<div></div>';
+    for (let h = 0; h < 24; h++) {
+        html += '<div class="text-[10px] text-center text-gray-400 tabular-nums">' + (h % 3 === 0 ? String(h).padStart(2, '0') : '') + '</div>';
+    }
+    for (let d = 1; d <= 7; d++) {
+        html += '<div class="text-[11px] font-medium text-gray-500">' + DAY_SHORT[d - 1] + '</div>';
+        for (let h = 0; h < 24; h++) {
+            const v = values[d + '-' + h] || 0;
+            const bg = v > 0 ? 'rgba(' + BRAND_PRIMARY + ',' + (0.12 + 0.88 * (v / max)).toFixed(2) + ')' : '#F1F5F9';
+            const tip = DAY_NAMES[d - 1] + ', ' + hourLabel(h) + '–' + hourLabel((h + 1) % 24) + ': ' + formatNumber(v) + ' ' + (v === 1 ? unit[0] : unit[1]);
+            html += '<div class="rounded-sm aspect-square" style="background:' + bg + '" title="' + tip + '"></div>';
+        }
+    }
+    html += '</div>';
+    html += '<div class="flex items-center justify-end gap-2 mt-3 text-[11px] text-gray-500">Puține'
+        + '<span class="inline-block w-24 h-2 rounded-full" style="background: linear-gradient(90deg, rgba(' + BRAND_PRIMARY + ',0.12), rgb(' + BRAND_PRIMARY + '))"></span>'
+        + 'Multe</div>';
+    box.innerHTML = html;
+}
+
+function renderDevices() {
+    const box = document.getElementById('devices-list');
+    if (!box) return;
+    if (!insightsData) {
+        box.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu am putut încărca datele</div>';
+        return;
+    }
+    const rows = (insightsData.devices || []).filter(function (d) { return d.visitors > 0; });
+    const total = rows.reduce(function (s, d) { return s + d.visitors; }, 0);
+    if (!total) {
+        box.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu există vizite în perioada selectată</div>';
+        return;
+    }
+
+    const meta = {
+        mobile: { label: 'Mobil', color: BRAND_PRIMARY, icon: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>' },
+        desktop: { label: 'Desktop', color: BRAND_SECONDARY, icon: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>' },
+        tablet: { label: 'Tabletă', color: BRAND_ACCENT, icon: '<rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>' },
+        unknown: { label: 'Necunoscut', color: '100,116,139', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
+    };
+
+    box.innerHTML = rows.map(function (d) {
+        const m = meta[d.device] || meta.unknown;
+        const share = percentOf(d.visitors, total);
+        const conv = percentOf(d.purchase, d.visitors);
+        return '<div>'
+            + '<div class="flex items-center gap-3 mb-2">'
+            + '<div class="flex items-center justify-center flex-shrink-0 w-9 h-9 rounded-lg" style="background: rgba(' + m.color + ',0.1); color: rgb(' + m.color + ')">'
+            + '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">' + m.icon + '</svg></div>'
+            + '<div class="flex-1 min-w-0">'
+            + '<div class="flex items-baseline justify-between gap-2"><span class="text-sm font-medium text-gray-800">' + m.label + '</span>'
+            + '<span class="text-sm font-semibold text-gray-900 tabular-nums">' + formatPercent(share) + '</span></div>'
+            + '<div class="text-xs text-gray-500">' + formatNumber(d.visitors) + ' ' + (d.visitors === 1 ? 'vizitator' : 'vizitatori') + ' · ' + formatNumber(d.purchase) + ' au cumpărat (' + formatPercent(conv) + ')</div>'
+            + '</div></div>'
+            + '<div class="h-2 overflow-hidden bg-gray-100 rounded-full"><div class="h-full rounded-full" style="width:' + share + '%; background: rgb(' + m.color + ')"></div></div>'
+            + '</div>';
+    }).join('');
+}
+
 let sourcesData = null;
 let sourcesTab = 'links';
 
 async function loadSources() {
     if (!document.getElementById('sources-table')) return;
+    paintSourcesTabs();
     try {
         const channelParam = currentChannel && currentChannel !== 'all' ? '&channel=' + encodeURIComponent(currentChannel) : '';
         const response = await AmbiletAPI.get('/organizer/events/' + eventId + '/analytics/sources?period=' + currentPeriod + channelParam);
@@ -1399,15 +1742,21 @@ async function loadSources() {
     renderSources();
 }
 
+// Links tab in primary, sites tab in accent: filled when active, tinted otherwise
+function paintSourcesTabs() {
+    document.querySelectorAll('[data-sources-tab]').forEach(function (btn) {
+        const active = btn.dataset.sourcesTab === sourcesTab;
+        const rgb = btn.dataset.color;
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.style.background = active ? 'rgb(' + rgb + ')' : 'rgba(' + rgb + ',0.08)';
+        btn.style.color = active ? '#fff' : 'rgb(' + rgb + ')';
+        const count = btn.querySelector('[data-sources-count]');
+        if (count) count.style.background = active ? 'rgba(255,255,255,0.22)' : 'rgba(' + rgb + ',0.14)';
+    });
+}
+
 function setSourcesTab(tab) {
     sourcesTab = tab;
-    document.querySelectorAll('[data-sources-tab]').forEach(function (btn) {
-        const active = btn.dataset.sourcesTab === tab;
-        btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('shadow-sm', active);
-        btn.classList.toggle('text-gray-900', active);
-        btn.classList.toggle('text-gray-500', !active);
-    });
     renderSources();
 }
 
@@ -1422,18 +1771,22 @@ function renderSources() {
     const summary = document.getElementById('sources-summary');
     const colName = document.getElementById('sources-col-name');
     if (!tbody) return;
-    colName.textContent = sourcesTab === 'links' ? 'Link de intrare' : 'Site sursă (referrer)';
+    colName.textContent = sourcesTab === 'links' ? 'Link de intrare' : 'Site sursă';
+    paintSourcesTabs();
+    document.querySelectorAll('[data-sources-count]').forEach(function (el) {
+        const list = sourcesData ? sourcesData[el.dataset.sourcesCount] : null;
+        el.textContent = formatNumber((list || []).length);
+    });
 
     if (!sourcesData) {
         summary.textContent = '';
+        summary.classList.add('hidden');
         tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu am putut încărca sursele</td></tr>';
         return;
     }
 
-    const totals = sourcesData.totals || {};
-    let text = formatNumber(totals.sessions || 0) + ' sesiuni în perioada selectată · ' + formatNumber(totals.orders_attributed || 0) + ' din ' + formatNumber(totals.orders || 0) + ' comenzi legate de o sursă';
-    if (sourcesData.truncated) text += ' · sunt analizate primele 50.000 de sesiuni';
-    summary.textContent = text;
+    summary.textContent = sourcesData.truncated ? 'Sunt analizate primele 50.000 de sesiuni din perioada selectată.' : '';
+    summary.classList.toggle('hidden', !sourcesData.truncated);
 
     const rows = (sourcesTab === 'links' ? sourcesData.links : sourcesData.domains) || [];
     if (!rows.length) {
