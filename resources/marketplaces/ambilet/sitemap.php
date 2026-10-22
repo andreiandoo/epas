@@ -8,6 +8,7 @@
  *   /sitemap-events.xml   -> /bilete/{slug}
  *   /sitemap-venues.xml   -> /locatie/{slug}
  *   /sitemap-artists.xml  -> /artist/{slug}
+ *   /sitemap-blog.xml     -> /blog/{slug} (with lastmod = publish date)
  *
  * Split by type because events churn constantly while the static pages barely
  * move. Google can then re-crawl the volatile file without re-reading the
@@ -37,7 +38,7 @@ const SITEMAP_MAX_PAGES    = 200;   // hard stop so a broken meta can't loop for
 const SITEMAP_MAX_URLS     = 50000; // sitemap protocol limit per file
 
 $type    = strtolower((string) ($_GET['type'] ?? 'index'));
-$allowed = ['index', 'pages', 'events', 'venues', 'artists'];
+$allowed = ['index', 'pages', 'events', 'venues', 'artists', 'blog'];
 
 if (!in_array($type, $allowed, true)) {
     http_response_code(404);
@@ -106,6 +107,7 @@ function build_sitemap(string $type): ?string
         case 'events':  return sitemap_urlset(sitemap_event_urls());
         case 'venues':  return sitemap_urlset(sitemap_venue_urls());
         case 'artists': return sitemap_urlset(sitemap_artist_urls());
+        case 'blog':    return sitemap_urlset(sitemap_blog_urls());
     }
 
     return null;
@@ -123,7 +125,7 @@ function sitemap_xml_escape(string $value): string
 
 function sitemap_index(): string
 {
-    $children = ['pages', 'events', 'venues', 'artists'];
+    $children = ['pages', 'events', 'venues', 'artists', 'blog'];
     $now      = gmdate('Y-m-d\TH:i:s\Z');
 
     $out  = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
@@ -289,6 +291,41 @@ function sitemap_venue_urls(): ?array
 function sitemap_artist_urls(): ?array
 {
     return sitemap_collect('/artists', '/artist/');
+}
+
+/**
+ * Published blog articles. The API only returns articles whose publish date has
+ * passed, so a scheduled one appears here on its day (within the cache TTL).
+ *
+ * @return array<int, array{loc: string, lastmod?: string}>|null
+ */
+function sitemap_blog_urls(): ?array
+{
+    $urls = [];
+    for ($page = 1; $page <= SITEMAP_MAX_PAGES; $page++) {
+        $response = api_get('/blog-articles', ['per_page' => 50, 'page' => $page]);
+        if (empty($response['success'])) {
+            error_log("Sitemap: /blog-articles page {$page} failed: " . ($response['error'] ?? 'unknown'));
+            return $page === 1 ? null : $urls;
+        }
+        foreach ((array) ($response['data'] ?? []) as $row) {
+            $slug = $row['slug'] ?? null;
+            if (!is_string($slug) || !preg_match('/^[a-z0-9-]+$/', $slug)) {
+                continue;
+            }
+            $url = ['loc' => sitemap_url('/blog/' . $slug)];
+            $ts = strtotime((string) ($row['published_at'] ?? ''));
+            if ($ts) {
+                $url['lastmod'] = gmdate('Y-m-d', $ts);
+            }
+            $urls[] = $url;
+        }
+        if ($page >= (int) ($response['meta']['last_page'] ?? 1)) {
+            break;
+        }
+    }
+
+    return $urls;
 }
 
 /**

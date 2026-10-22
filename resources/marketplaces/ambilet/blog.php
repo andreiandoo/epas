@@ -181,11 +181,15 @@ require_once __DIR__ . '/includes/header.php';
         <div class="bg-gradient-to-br from-slate-800 to-slate-700 rounded-3xl p-10 md:p-16 text-center relative overflow-hidden mb-16">
             <div class="absolute -top-[100px] -right-[100px] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(165,28,48,0.2),transparent_70%)] pointer-events-none"></div>
             <div class="relative z-10 max-w-lg mx-auto">
-                <h2 class="text-2xl md:text-[28px] font-extrabold text-white mb-3">Aboneaza-te la newsletter</h2>
-                <p class="text-base text-white/90 mb-8">Primeste cele mai noi articole si noutati direct in inbox.</p>
-                <form class="flex flex-col sm:flex-row gap-3">
-                    <input type="email" placeholder="Adresa ta de email" class="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-[15px] text-white placeholder:text-white/90 focus:outline-none focus:border-primary focus:bg-white/15">
-                    <button type="submit" class="px-7 py-4 bg-gradient-to-br from-primary to-red-600 rounded-xl text-[15px] font-bold text-white hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(165,28,48,0.4)] transition-all">Aboneaza-te</button>
+                <h2 class="text-2xl md:text-[28px] font-extrabold text-white mb-3">Abonează-te la newsletter</h2>
+                <p class="text-base text-white/90 mb-8">Primește cele mai noi articole și evenimente direct în inbox.</p>
+                <form data-newsletter>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <label class="sr-only" for="blogNl">Adresa de email</label>
+                        <input id="blogNl" type="email" name="email" required autocomplete="email" placeholder="Adresa ta de email" class="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-[15px] text-white placeholder:text-white/70 focus:outline-none focus:border-primary focus:bg-white/15">
+                        <button type="submit" class="px-7 py-4 bg-gradient-to-br from-primary to-red-600 rounded-xl text-[15px] font-bold text-white hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(165,28,48,0.4)] transition-all disabled:opacity-60">Abonează-te</button>
+                    </div>
+                    <p data-newsletter-msg class="hidden mt-3 text-sm" role="status"></p>
                 </form>
             </div>
         </div>
@@ -213,6 +217,7 @@ require_once __DIR__ . '/includes/header.php';
         </nav>
         <?php endif; ?>
     </main>
+    <?php blog_newsletter_script(); ?>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 <?php require_once __DIR__ . '/includes/scripts.php'; ?>
