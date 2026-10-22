@@ -191,6 +191,8 @@
     }
     if ($trackingClientId): ?>
     <script>
+    // Read by api.js: tracking.js records the event page view, track-view only counts it
+    window.EPAS_TRACKING_ACTIVE = true;
     document.addEventListener('DOMContentLoaded', function() {
         EPASTracking.init({
             apiUrl: '/api/tracking.php',

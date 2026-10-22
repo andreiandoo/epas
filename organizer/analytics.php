@@ -1206,12 +1206,13 @@ function updateTrafficSources(sources) {
 
     const icons = {
         'Facebook': '📘', 'Google': '🔍', 'Instagram': '📷', 'TikTok': '🎵',
-        'Direct': '🔗', 'Email': '📧', 'Other': '🌐'
+        'Direct': '🔗', 'Email': '📧', 'Admin': '🛠️', 'Other': '🌐'
     };
     const colors = {
         'Facebook': '#1877f2', 'Google': '#ea4335', 'Instagram': '#e4405f',
-        'TikTok': '#000000', 'Direct': '#6b7280', 'Email': '#f59e0b', 'Other': '#10b981'
+        'TikTok': '#000000', 'Direct': '#6b7280', 'Email': '#f59e0b', 'Admin': '#374151', 'Other': '#10b981'
     };
+    const labels = { 'Admin': 'Admin AmBilet' };
 
     const total = sources.reduce((sum, s) => sum + (s.visitors || 0), 0);
 
@@ -1226,7 +1227,7 @@ function updateTrafficSources(sources) {
             </div>
             <div class="flex-1">
                 <div class="flex items-center justify-between mb-1">
-                    <span class="text-sm font-medium text-gray-800">${s.source || 'Direct'}</span>
+                    <span class="text-sm font-medium text-gray-800">${labels[s.source] || s.source || 'Direct'}</span>
                     <span class="text-sm font-semibold text-gray-900">${formatNumber(s.visitors)}</span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -1440,7 +1441,7 @@ function renderSources() {
         return;
     }
 
-    const domainLabels = { '(direct)': 'Direct (fără site sursă)', '(internal)': 'Navigare internă pe site' };
+    const domainLabels = { '(direct)': 'Direct (fără site sursă)', '(internal)': 'Navigare internă pe site', '(admin)': 'Admin AmBilet' };
     tbody.innerHTML = rows.map(function (r) {
         let name;
         if (sourcesTab === 'links') {
