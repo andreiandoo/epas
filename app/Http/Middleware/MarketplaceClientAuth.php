@@ -102,11 +102,19 @@ class MarketplaceClientAuth
         // Log successful API call
         $this->logApiCall($request, $client);
 
-        // Update API call stats (async)
-        dispatch(function () use ($client) {
-            $client->touchApiCall();
-            $client->incrementApiCalls();
-        })->afterResponse();
+        // Update API call stats after the response, in one query. Stats only:
+        // a lock timeout on this hot row must never surface as an error.
+        $clientId = $client->id;
+        app()->terminating(function () use ($clientId) {
+            try {
+                MarketplaceClient::whereKey($clientId)->toBase()->update([
+                    'last_api_call_at' => now(),
+                    'api_calls_count' => DB::raw('api_calls_count + 1'),
+                ]);
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        });
 
         $response = $next($request);
 
