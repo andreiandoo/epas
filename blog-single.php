@@ -64,6 +64,21 @@ if ($categorySlug !== '') {
     }
 }
 
+// Newest articles from any category, minus this one and the sidebar ones.
+$recommended = [];
+$latestResp = api_cached('blog_latest', fn () => api_get('/blog-articles', ['per_page' => 10]), 600);
+$skip = array_merge([$article['slug']], array_column($related, 'slug'));
+foreach ((!empty($latestResp['success']) ? $latestResp['data'] : []) as $r) {
+    if (!in_array($r['slug'] ?? '', $skip, true) && count($recommended) < 3) {
+        $recommended[] = $r;
+    }
+}
+
+// Links to other sites open in a new tab.
+$content = preg_replace_callback('#<a\s([^>]*href="https?://(?!(?:www\.)?ambilet\.ro)[^"]+"[^>]*)>#i', function ($m) {
+    return stripos($m[1], 'target=') === false ? '<a ' . $m[1] . ' target="_blank" rel="noopener">' : $m[0];
+}, $content);
+
 $faqs = is_array($article['faqs'] ?? null) ? $article['faqs'] : [];
 
 $pageTitle = $article['title'] . ' - Blog';
@@ -99,65 +114,72 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
+    <!-- Reading progress -->
+    <div class="fixed top-0 left-0 right-0 h-1 z-[2002] pointer-events-none" aria-hidden="true">
+        <div id="blogProgress" class="h-full w-full origin-left scale-x-0 bg-gradient-to-r from-primary to-primary-light"></div>
+    </div>
+
     <!-- Article Hero -->
-    <section class="bg-gradient-to-br from-slate-800 to-slate-900 py-12 md:py-16 px-6 md:px-12 pb-20 relative overflow-hidden">
-        <div class="absolute -top-[200px] -right-[200px] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(165,28,48,0.15)_0%,transparent_70%)] pointer-events-none"></div>
-        <div class="max-w-3xl mx-auto relative z-10">
-            <!-- Breadcrumb -->
-            <nav class="flex items-center gap-2 mb-6" aria-label="Breadcrumb">
-                <a href="/" class="text-sm text-white/90 hover:text-white transition-colors">Acasă</a>
-                <span class="text-sm text-white/40">/</span>
-                <a href="/blog" class="text-sm text-white/90 hover:text-white transition-colors">Blog</a>
+    <header class="relative overflow-hidden bg-surface border-b border-border">
+        <?php if ($image): ?>
+        <img src="<?= htmlspecialchars($image) ?>" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover scale-125 blur-3xl opacity-25 pointer-events-none" width="1200" height="630">
+        <?php endif; ?>
+        <div class="absolute inset-0 bg-gradient-to-b from-surface/60 via-surface/85 to-surface pointer-events-none"></div>
+
+        <div class="relative max-w-6xl mx-auto px-6 md:px-12 pt-10 md:pt-14 pb-12 md:pb-16 grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-14 items-center">
+            <div class="min-w-0">
+                <!-- Breadcrumb -->
+                <nav class="flex flex-wrap items-center gap-2 mb-6 text-sm" aria-label="Breadcrumb">
+                    <a href="/" class="text-slate-500 hover:text-primary transition-colors">Acasă</a>
+                    <svg class="w-3.5 h-3.5 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="/blog" class="text-slate-500 hover:text-primary transition-colors">Blog</a>
+                </nav>
+
                 <?php if ($categoryName !== ''): ?>
-                <span class="text-sm text-white/40">/</span>
-                <a href="/blog?cat=<?= urlencode($categorySlug) ?>" class="text-sm text-white/80 hover:text-white transition-colors"><?= htmlspecialchars($categoryName) ?></a>
+                <a href="/blog?cat=<?= urlencode($categorySlug) ?>" class="inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 mb-5 rounded-full bg-primary/10 text-primary text-[13px] font-bold hover:bg-primary hover:text-white transition-colors">
+                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <?= htmlspecialchars($categoryName) ?>
+                </a>
                 <?php endif; ?>
-            </nav>
 
-            <?php if ($categoryName !== ''): ?>
-            <!-- Category Badge -->
-            <span class="inline-block px-3.5 py-1.5 bg-gradient-to-br from-primary to-red-600 rounded-md text-xs font-bold text-white uppercase tracking-wide mb-5"><?= htmlspecialchars($categoryName) ?></span>
-            <?php endif; ?>
+                <h1 class="text-[32px] md:text-[44px] lg:text-[50px] font-extrabold text-secondary leading-[1.08] tracking-tight mb-5 text-balance"><?= htmlspecialchars($article['title']) ?></h1>
 
-            <!-- Title -->
-            <h1 class="text-3xl md:text-[44px] font-extrabold text-white leading-tight mb-6 tracking-tight"><?= htmlspecialchars($article['title']) ?></h1>
+                <?php if (!empty($article['excerpt'])): ?>
+                <p class="text-lg md:text-xl text-slate-600 leading-relaxed mb-8 max-w-2xl"><?= htmlspecialchars($article['excerpt']) ?></p>
+                <?php endif; ?>
 
-            <!-- Author & Meta -->
-            <div class="flex flex-wrap items-center gap-4 md:gap-8">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-red-600 flex items-center justify-center text-base font-bold text-white">AB</div>
-                    <div>
-                        <div class="text-[15px] font-semibold text-white"><?= BLOG_AUTHOR ?></div>
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-3 pt-6 border-t border-slate-200/80">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-sm font-bold text-white ring-4 ring-white">AB</div>
+                        <span class="text-[15px] font-semibold text-secondary"><?= BLOG_AUTHOR ?></span>
                     </div>
-                </div>
-                <div class="flex items-center gap-5">
                     <?php if ($date !== ''): ?>
-                    <span class="flex items-center gap-1.5 text-sm text-white/90">
-                        <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span class="flex items-center gap-1.5 text-sm text-slate-500">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         <?= htmlspecialchars($date) ?>
                     </span>
                     <?php endif; ?>
-                    <span class="flex items-center gap-1.5 text-sm text-white/90">
-                        <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="flex items-center gap-1.5 text-sm text-slate-500">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <?= (int) ($article['read_time'] ?? 5) ?> min de citit
                     </span>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Article Image -->
-    <div class="max-w-4xl mx-auto -mt-10 px-6 md:px-12 relative z-10">
-        <div class="rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
-            <?php if ($image): ?>
-            <img src="<?= htmlspecialchars($image) ?>" alt="" class="w-full h-[280px] md:h-[450px] object-cover" width="1200" height="630" fetchpriority="high">
-            <?php else: ?>
-            <div class="h-[280px] md:h-[450px] bg-gradient-to-br from-primary to-red-800 flex items-center justify-center">
-                <svg class="w-16 h-16 md:w-20 md:h-20 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <div class="relative">
+                <div class="absolute -right-3 -bottom-3 md:-right-5 md:-bottom-5 w-full h-full rounded-[28px] bg-primary" aria-hidden="true"></div>
+                <div class="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-primary to-primary-dark aspect-[1200/630] shadow-[0_24px_60px_rgba(30,41,59,0.25)]">
+                    <?php if ($image): ?>
+                    <img src="<?= htmlspecialchars($image) ?>" alt="<?= htmlspecialchars($article['title']) ?>" class="w-full h-full object-cover" width="1200" height="630" fetchpriority="high">
+                    <?php else: ?>
+                    <div class="w-full h-full flex items-center justify-center">
+                        <svg class="w-16 h-16 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <?php endif; ?>
         </div>
-    </div>
+    </header>
 
     <!-- Article Layout -->
     <div class="max-w-6xl mx-auto px-6 md:px-12 py-12 md:py-16 grid lg:grid-cols-[1fr_300px] gap-12 md:gap-16">
@@ -253,12 +275,14 @@ require_once __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Newsletter -->
-            <div class="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-7">
+            <form data-newsletter class="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-7">
                 <h3 class="text-base font-bold text-white mb-5">Newsletter</h3>
-                <p class="text-sm text-white/90 mb-4">Primeste articole noi direct in inbox.</p>
-                <input type="email" placeholder="Email-ul tau" class="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder:text-white/90 mb-3 focus:outline-none focus:border-white/40">
-                <button class="w-full py-3.5 bg-gradient-to-br from-primary to-red-600 rounded-xl text-sm font-bold text-white hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(165,28,48,0.4)] transition-all">Aboneaza-te</button>
-            </div>
+                <p class="text-sm text-white/90 mb-4">Primește articole noi și evenimente direct în inbox.</p>
+                <label class="sr-only" for="blogNlSide">Adresa de email</label>
+                <input id="blogNlSide" type="email" name="email" required autocomplete="email" placeholder="Email-ul tău" class="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder:text-white/70 mb-3 focus:outline-none focus:border-white/40">
+                <button type="submit" class="w-full py-3.5 bg-gradient-to-br from-primary to-red-600 rounded-xl text-sm font-bold text-white hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(165,28,48,0.4)] transition-all disabled:opacity-60">Abonează-te</button>
+                <p data-newsletter-msg class="hidden mt-3 text-sm" role="status"></p>
+            </form>
 
             <?php if ($related): ?>
             <!-- Related Articles -->
@@ -285,6 +309,61 @@ require_once __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </aside>
     </div>
+
+    <?php if ($recommended): ?>
+    <!-- Recommended -->
+    <section class="bg-surface border-t border-border">
+        <div class="max-w-6xl mx-auto px-6 md:px-12 py-14 md:py-20">
+            <div class="flex items-end justify-between gap-4 mb-8">
+                <h2 class="text-2xl md:text-[28px] font-extrabold text-secondary">Articole recomandate</h2>
+                <a href="/blog" class="text-sm font-semibold text-primary hover:underline flex-shrink-0">Toate articolele</a>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+                <?php foreach ($recommended as $r):
+                    $rImage = blog_image_url($r['image_url'] ?? null);
+                ?>
+                <article class="group relative bg-white rounded-2xl overflow-hidden border border-slate-200 hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all">
+                    <div class="aspect-[1200/630] bg-gradient-to-br from-slate-200 to-slate-300 overflow-hidden">
+                        <?php if ($rImage): ?>
+                        <img src="<?= htmlspecialchars($rImage) ?>" alt="" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" width="1200" height="630" loading="lazy">
+                        <?php endif; ?>
+                    </div>
+                    <div class="p-6">
+                        <?php if (!empty($r['category']['name'])): ?>
+                        <span class="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded"><?= htmlspecialchars($r['category']['name']) ?></span>
+                        <?php endif; ?>
+                        <h3 class="mt-3 text-lg font-bold text-slate-800 leading-snug">
+                            <a href="<?= htmlspecialchars(blog_url($r['slug'])) ?>" class="group-hover:text-primary transition-colors after:absolute after:inset-0"><?= htmlspecialchars($r['title']) ?></a>
+                        </h3>
+                        <p class="mt-2 text-sm text-slate-500 leading-relaxed line-clamp-2"><?= htmlspecialchars($r['excerpt'] ?? '') ?></p>
+                    </div>
+                </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <script>
+    (function () {
+        var bar = document.getElementById('blogProgress');
+        var body = document.querySelector('article');
+        if (!bar || !body) return;
+        var tick = false;
+        function update() {
+            var rect = body.getBoundingClientRect();
+            var total = rect.height - window.innerHeight;
+            var p = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 1;
+            bar.style.transform = 'scaleX(' + p + ')';
+            tick = false;
+        }
+        window.addEventListener('scroll', function () {
+            if (!tick) { tick = true; requestAnimationFrame(update); }
+        }, { passive: true });
+        update();
+    })();
+    </script>
+    <?php blog_newsletter_script(); ?>
 
     <script>
     (function () {
