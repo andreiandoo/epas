@@ -43,14 +43,14 @@ class ListOrganizerLeads extends ListRecords
         return [
             'all' => Tab::make('Toate')->badge($safeCount(clone $base)),
             'new' => Tab::make('Noi')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', OrganizerLead::STATUS_NEW))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', OrganizerLead::STATUS_NEW))
                 ->badge($safeCount((clone $base)->where('status', OrganizerLead::STATUS_NEW)))
                 ->badgeColor('warning'),
             'contacted' => Tab::make('Contactate')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', OrganizerLead::STATUS_CONTACTED))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', OrganizerLead::STATUS_CONTACTED))
                 ->badge($safeCount((clone $base)->where('status', OrganizerLead::STATUS_CONTACTED))),
             'negotiation' => Tab::make('Negociere')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', [
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', [
                     OrganizerLead::STATUS_IN_NEGOTIATION,
                     OrganizerLead::STATUS_DEMO_SCHEDULED,
                 ]))
@@ -59,11 +59,11 @@ class ListOrganizerLeads extends ListRecords
                     OrganizerLead::STATUS_DEMO_SCHEDULED,
                 ]))),
             'won' => Tab::make('Acceptate')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('status', OrganizerLead::STATUS_ACCEPTED))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', OrganizerLead::STATUS_ACCEPTED))
                 ->badge($safeCount((clone $base)->where('status', OrganizerLead::STATUS_ACCEPTED)))
                 ->badgeColor('success'),
             'lost' => Tab::make('Pierdute')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', [
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', [
                     OrganizerLead::STATUS_REJECTED,
                     OrganizerLead::STATUS_GHOSTED,
                 ]))
