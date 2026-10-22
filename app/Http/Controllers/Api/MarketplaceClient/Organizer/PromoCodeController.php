@@ -168,36 +168,45 @@ class PromoCodeController extends BaseController
 
         // Check for code uniqueness
         $code = strtoupper($validated['code'] ?? Str::random(8));
-        $existingCode = MarketplaceOrganizerPromoCode::where('marketplace_client_id', $organizer->marketplace_client_id)
+        // withTrashed: deleted codes still hold the unique (client, code) index
+        $existingCode = MarketplaceOrganizerPromoCode::withTrashed()
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->where('code', $code)
-            ->exists();
+            ->first();
 
         if ($existingCode) {
-            return $this->error('A promo code with this code already exists', 422);
+            return $this->error($existingCode->trashed()
+                ? 'Codul a fost folosit de un cod promoțional șters. Alege alt cod.'
+                : 'Există deja un cod promoțional cu acest cod.', 422);
         }
 
-        $promoCode = MarketplaceOrganizerPromoCode::create([
-            'marketplace_client_id' => $organizer->marketplace_client_id,
-            'marketplace_organizer_id' => $organizer->id,
-            'marketplace_event_id' => $validated['event_id'] ?? null,
-            'code' => $code,
-            'name' => $validated['name'] ?? null,
-            'description' => $validated['description'] ?? null,
-            'type' => $validated['type'],
-            'value' => $validated['value'],
-            'applies_to' => $validated['applies_to'],
-            'ticket_type_id' => $validated['ticket_type_id'] ?? null,
-            'applicable_ticket_type_ids' => $validated['ticket_type_ids'] ?? null,
-            'min_purchase_amount' => $validated['min_purchase_amount'] ?? null,
-            'max_discount_amount' => $validated['max_discount_amount'] ?? null,
-            'min_tickets' => $validated['min_tickets'] ?? null,
-            'usage_limit' => $validated['usage_limit'] ?? null,
-            'usage_limit_per_customer' => $validated['usage_limit_per_customer'] ?? null,
-            'starts_at' => $validated['starts_at'] ?? null,
-            'expires_at' => $validated['expires_at'] ?? null,
-            'is_public' => $validated['is_public'] ?? false,
-            'status' => 'active',
-        ]);
+        try {
+            $promoCode = MarketplaceOrganizerPromoCode::create([
+                'marketplace_client_id' => $organizer->marketplace_client_id,
+                'marketplace_organizer_id' => $organizer->id,
+                'marketplace_event_id' => $validated['event_id'] ?? null,
+                'code' => $code,
+                'name' => $validated['name'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'type' => $validated['type'],
+                'value' => $validated['value'],
+                'applies_to' => $validated['applies_to'],
+                'ticket_type_id' => $validated['ticket_type_id'] ?? null,
+                'applicable_ticket_type_ids' => $validated['ticket_type_ids'] ?? null,
+                'min_purchase_amount' => $validated['min_purchase_amount'] ?? null,
+                'max_discount_amount' => $validated['max_discount_amount'] ?? null,
+                'min_tickets' => $validated['min_tickets'] ?? null,
+                'usage_limit' => $validated['usage_limit'] ?? null,
+                'usage_limit_per_customer' => $validated['usage_limit_per_customer'] ?? null,
+                'starts_at' => $validated['starts_at'] ?? null,
+                'expires_at' => $validated['expires_at'] ?? null,
+                'is_public' => $validated['is_public'] ?? false,
+                'status' => 'active',
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Double submit: the same code was created a moment ago
+            return $this->error('Există deja un cod promoțional cu acest cod.', 422);
+        }
 
         // Mirror to coupon_codes table so admin sees it in Coupon Codes list.
         // Always scope to the creating organizer so the code never bleeds onto
@@ -593,7 +602,7 @@ class PromoCodeController extends BaseController
 
             // Ensure uniqueness
             $attempts = 0;
-            while (MarketplaceOrganizerPromoCode::where('marketplace_client_id', $organizer->marketplace_client_id)
+            while (MarketplaceOrganizerPromoCode::withTrashed()->where('marketplace_client_id', $organizer->marketplace_client_id)
                 ->where('code', $code)
                 ->exists() && $attempts < 10) {
                 $code = $prefix . strtoupper(Str::random(8 - strlen($prefix)));
