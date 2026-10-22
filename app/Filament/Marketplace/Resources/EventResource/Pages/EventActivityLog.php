@@ -371,11 +371,11 @@ class EventActivityLog extends Page
         $attrs = $props->get('attributes', []);
         $name = $attrs['name'] ?? null;
         if (is_array($name)) {
-            $name = $name['ro'] ?? $name['en'] ?? reset($name);
+            $name = $this->extractTranslatableText($name);
         }
         if (!$name && $activity->subject) {
             $subjName = $activity->subject->name ?? null;
-            $name = is_array($subjName) ? ($subjName['ro'] ?? $subjName['en'] ?? reset($subjName)) : $subjName;
+            $name = is_array($subjName) ? $this->extractTranslatableText($subjName) : $subjName;
         }
         return $name ? (string) $name : 'bilet';
     }
@@ -791,10 +791,12 @@ class EventActivityLog extends Page
         }
 
         if (is_array($value)) {
-            $text = $value['ro'] ?? $value['en'] ?? (reset($value) ?: '');
-            if (is_array($text)) {
-                $text = reset($text) ?: '';
+            $text = $value['ro'] ?? $value['en'] ?? reset($value);
+            // Nested JSON (venue_config, slots…) can go several levels deep.
+            while (is_array($text)) {
+                $text = reset($text);
             }
+            $text = is_scalar($text) ? $text : '';
         } else {
             $text = (string) $value;
         }
