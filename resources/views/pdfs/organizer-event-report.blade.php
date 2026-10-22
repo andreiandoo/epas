@@ -127,12 +127,12 @@
                     <span><strong>Ora:</strong> {{ $event->start_time }}</span>
                 @endif
                 @if($event->venue)
-                    <span><strong>Locație:</strong> {{ $event->venue->name }}</span>
+                    <span><strong>Locație:</strong> {{ $event->venue->getTranslation('name', 'ro') ?: $event->venue->getTranslation('name', 'en') }}</span>
                 @elseif($event->venue_name)
                     <span><strong>Locație:</strong> {{ $event->venue_name }}</span>
                 @endif
                 @if($event->marketplaceCity)
-                    <span><strong>Oraș:</strong> {{ $event->marketplaceCity->name }}</span>
+                    <span><strong>Oraș:</strong> {{ $event->marketplaceCity->getTranslation('name', 'ro') ?: $event->marketplaceCity->getTranslation('name', 'en') }}</span>
                 @endif
             </div>
         </div>
