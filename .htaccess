@@ -884,7 +884,12 @@ RewriteRule ^dezabonare/?$ newsletter-unsubscribed.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^blog/?$ blog.php [L]
+RewriteRule ^blog/?$ blog.php [L,QSA]
+
+# /blog/{slug} -> blog-single.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^blog/([a-z0-9-]+)/?$ blog-single.php?slug=$1 [L,QSA]
 
 # Noutăți — marketplace-scoped changelog / product announcements.
 # /noutati                → list page
