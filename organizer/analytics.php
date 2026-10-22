@@ -21,6 +21,9 @@ $headExtra = '
     .leaflet-popup-pane { z-index: 4 !important; }
     .live-marker-pulse { animation: marker-pulse 2s ease-in-out infinite; }
     @keyframes marker-pulse { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
+    .sk { display: block; border-radius: 8px; background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 37%, #F1F5F9 63%); background-size: 400% 100%; animation: sk-shimmer 1.4s ease infinite; }
+    @keyframes sk-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+    @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 </style>
 ';
 $cssBundle = 'organizer';
@@ -697,7 +700,94 @@ function setupChannelButtons() {
     });
 }
 
+// Skeletons while data loads (first load and every period/channel change).
+// Each filled container is tagged with data-sk so a failed request can swap the
+// skeleton for a message instead of leaving it on screen.
+function skBar(width, height) {
+    return '<span class="sk" style="width:' + width + ';height:' + height + 'px"></span>';
+}
+
+function skList(rows) {
+    let html = '';
+    for (let i = 0; i < rows; i++) {
+        html += '<div class="flex items-center gap-3 py-2">'
+            + '<span class="sk" style="width:36px;height:36px;border-radius:10px;flex-shrink:0"></span>'
+            + '<div class="flex-1 space-y-2">' + skBar((70 - i * 7) + '%', 10) + skBar('40%', 8) + '</div>'
+            + skBar('48px', 12)
+            + '</div>';
+    }
+    return html;
+}
+
+function skTable(rows, cols) {
+    let html = '';
+    for (let i = 0; i < rows; i++) {
+        html += '<tr class="border-b border-gray-50">';
+        for (let c = 0; c < cols; c++) {
+            html += '<td class="py-3' + (c ? ' pl-3' : ' pr-4') + '">' + skBar(c ? '60%' : (85 - i * 10) + '%', 12) + '</td>';
+        }
+        html += '</tr>';
+    }
+    return html;
+}
+
+function skBars(rows) {
+    let html = '';
+    for (let i = 0; i < rows; i++) {
+        html += '<div class="space-y-2">' + skBar((45 - i * 4) + '%', 10) + skBar((100 - i * 16) + '%', 8) + '</div>';
+    }
+    return html;
+}
+
+function setSkeleton(id, kind, html) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.dataset.sk = kind;
+    el.innerHTML = html;
+}
+
+function showSkeletons() {
+    ['stat-revenue', 'stat-tickets', 'stat-views', 'stat-conversion', 'stat-days'].forEach(function (id) {
+        setSkeleton(id, 'value', skBar('60%', 28));
+    });
+    ['stat-unique', 'stat-event-date'].forEach(function (id) {
+        setSkeleton(id, 'value', skBar('50%', 10));
+    });
+    if (!mainChart) setSkeleton('mainChart', 'block', skBar('100%', 300));
+    setSkeleton('ticket-types-table', 'table:6', skTable(4, 6));
+    setSkeleton('campaigns-list', 'block', skList(3));
+    setSkeleton('traffic-sources', 'block', skList(5));
+    setSkeleton('locations-list', 'block', skList(5));
+    setSkeleton('recent-sales', 'block', skList(5));
+    setSkeleton('goals-list', 'block', skList(2));
+    setSkeleton('funnel-takeaway', 'value', skBar('70%', 10));
+    setSkeleton('funnel-steps', 'block', skBars(5));
+    setSkeleton('pace-content', 'block', skBar('40%', 32) + '<div class="mt-2">' + skBar('80%', 10) + '</div><div class="pt-4 mt-4 space-y-3 border-t border-gray-100">' + skBar('90%', 10) + skBar('75%', 10) + skBar('85%', 10) + '</div>');
+    setSkeleton('heatmap-takeaway', 'value', skBar('60%', 10));
+    setSkeleton('heatmap-grid', 'block', skBar('100%', 220));
+    setSkeleton('devices-list', 'block', skBars(3));
+    setSkeleton('sources-table', 'table:5', skTable(5, 5));
+    document.querySelector('main')?.setAttribute('aria-busy', 'true');
+}
+
+// Replaces skeletons still on screen in the given containers (request failed or returned nothing)
+function clearSkeletons(ids) {
+    ids.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el || !el.querySelector('.sk')) return;
+        const kind = el.dataset.sk || 'block';
+        if (kind === 'value') {
+            el.textContent = id.indexOf('stat-') === 0 ? '-' : '';
+        } else if (kind.indexOf('table:') === 0) {
+            el.innerHTML = '<tr><td colspan="' + kind.split(':')[1] + '" class="py-8 text-sm text-center text-gray-400">Nu am putut încărca datele</td></tr>';
+        } else {
+            el.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu am putut încărca datele</div>';
+        }
+    });
+}
+
 async function loadAnalytics() {
+    showSkeletons();
     try {
         const channelParam = currentChannel && currentChannel !== 'all' ? `&channel=${encodeURIComponent(currentChannel)}` : '';
         const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=${currentPeriod}${channelParam}`);
@@ -732,6 +822,9 @@ async function loadAnalytics() {
     } catch (error) {
         console.error('Error loading analytics:', error);
     }
+    clearSkeletons(['stat-revenue', 'stat-tickets', 'stat-views', 'stat-conversion', 'stat-days', 'stat-unique', 'stat-event-date',
+        'mainChart', 'ticket-types-table', 'campaigns-list', 'traffic-sources', 'locations-list', 'recent-sales', 'goals-list', 'pace-content']);
+    document.querySelector('main')?.removeAttribute('aria-busy');
 }
 
 function updateDashboard(data) {
@@ -1035,6 +1128,8 @@ function updateMainChart(chartData) {
 
     if (mainChart) {
         mainChart.destroy();
+    } else {
+        document.getElementById('mainChart').innerHTML = '';
     }
     mainChart = new ApexCharts(document.getElementById('mainChart'), options);
     mainChart.render();
