@@ -162,8 +162,10 @@ class BlogCategoryResource extends Resource
                         return $state ?? '-';
                     }),
 
-                Tables\Columns\TextColumn::make('article_count')
+                // Live count; the stored article_count column is never refreshed.
+                Tables\Columns\TextColumn::make('articles_count')
                     ->label('Articles')
+                    ->counts('articles')
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')

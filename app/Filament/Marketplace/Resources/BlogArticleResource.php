@@ -687,6 +687,7 @@ class BlogArticleResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('featured_image_url')
                     ->label('Image')
+                    ->disk('public')
                     ->circular(false)
                     ->size(50),
 
