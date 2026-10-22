@@ -228,6 +228,7 @@ const ThankYouPage = {
                 || order.event_id
                 || (Array.isArray(order.items) && order.items[0]?.marketplace_event_id)
                 || (Array.isArray(order.items) && order.items[0]?.event_id)
+                || (order.event && order.event.id)
                 || null;
             const total = parseFloat(order.total || order.total_amount || 0);
             const currency = order.currency || 'RON';

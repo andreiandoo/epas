@@ -3100,19 +3100,25 @@ class EventsController extends BaseController
         }
 
         // Recent sales
-        $recentSales = $scopedOrders()
-            ->orderBy('created_at', 'desc')
+        // Includes cart orders spanning several events; those show only this event's tickets
+        $recentOrders = $this->eventPaidOrders($event, $organizer)
+            ->when($channel, fn ($q) => $orderChannelClause($q))
+            ->with(['tickets', 'marketplaceCustomer'])
+            ->orderBy('orders.created_at', 'desc')
             ->limit(10)
-            ->get()
-            ->map(function ($order) {
+            ->get();
+        $recentAmounts = $this->eventOrderAmounts($recentOrders, $event->id);
+        $recentSales = $recentOrders->map(function ($order) use ($event, $recentAmounts) {
                 $customer = $order->marketplaceCustomer;
                 return [
                     'buyer_name' => $customer
                         ? $customer->first_name . ' ' . mb_substr((string) ($customer->last_name ?? ''), 0, 1) . '.'
                         : ($order->customer_name ?? 'Client'),
                     'time_ago' => $order->created_at->diffForHumans(),
-                    'amount' => (float) $order->total,
-                    'tickets' => $order->tickets->count(),
+                    'amount' => $recentAmounts[$order->id] ?? (float) $order->total,
+                    'tickets' => (int) $order->event_id === (int) $event->id
+                        ? $order->tickets->count()
+                        : $order->tickets->filter(fn ($t) => (int) $t->event_id === (int) $event->id || (int) $t->marketplace_event_id === (int) $event->id)->count(),
                 ];
             });
 
@@ -3259,37 +3265,53 @@ class EventsController extends BaseController
 
         $orders = collect();
         try {
-            $orders = $event->orders()
-                ->where('marketplace_organizer_id', $organizer->id)
-                ->whereIn('status', ['paid', 'completed'])
-                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            $orders = $this->eventPaidOrders($event, $organizer)
+                ->whereBetween('orders.created_at', [$rangeStart, $rangeEnd])
                 ->when($channel, fn ($q) => $channelClause($q))
-                ->get(['id', 'total']);
+                ->get(['orders.id', 'orders.total', 'orders.event_id']);
         } catch (\Throwable $e) {
             \Log::warning('analytics sources: orders query failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
         }
 
-        $orderSession = [];
+        $orderAmounts = $this->eventOrderAmounts($orders, $event->id);
+
+        // Every purchase row of an order: one is written by the server when the
+        // order is paid (its session has no page views), one by the thank-you page.
+        $orderPurchases = [];
         foreach ($orders->pluck('id')->chunk(1000) as $chunk) {
             try {
                 $trackingModel::query()
                     ->whereIn('order_id', $chunk->all())
                     ->where('event_type', $trackingModel::TYPE_PURCHASE)
-                    ->whereNotNull('session_id')
                     ->orderBy('created_at')
-                    ->get(['order_id', 'session_id'])
-                    ->each(function ($row) use (&$orderSession) {
-                        $orderSession[$row->order_id] ??= $row->session_id;
+                    ->get(['order_id', 'session_id', 'visitor_id', 'created_at'])
+                    ->each(function ($row) use (&$orderPurchases) {
+                        $orderPurchases[$row->order_id][] = $row;
                     });
             } catch (\Throwable $e) {
                 \Log::warning('analytics sources: purchase lookup failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
             }
         }
 
+        $entriesByVisitor = [];
+        foreach ($entries as $row) {
+            if ($row->visitor_id) {
+                $entriesByVisitor[$row->visitor_id][] = $row;
+            }
+        }
+
         // Sessions that bought but whose first event page view is outside the range:
         // used for attribution only, not counted as visits.
         $orderEntries = [];
-        $missingSessions = array_values(array_diff(array_unique(array_values($orderSession)), $entries->keys()->all()));
+        $purchaseSessions = [];
+        foreach ($orderPurchases as $rows) {
+            foreach ($rows as $p) {
+                if ($p->session_id) {
+                    $purchaseSessions[] = $p->session_id;
+                }
+            }
+        }
+        $missingSessions = array_values(array_diff(array_unique($purchaseSessions), $entries->keys()->all()));
         foreach (array_chunk($missingSessions, 1000) as $chunk) {
             try {
                 $trackingModel::query()
@@ -3333,24 +3355,50 @@ class EventsController extends BaseController
         $attributed = 0;
         $attributedRevenue = 0.0;
         foreach ($orders as $order) {
-            $session = $orderSession[$order->id] ?? null;
-            $row = $session ? ($entries->get($session) ?? $orderEntries[$session] ?? null) : null;
+            // Entry of the buying session; else the buyer's latest visit to the event
+            // before the purchase; else the first page of the buying session.
+            $purchases = $orderPurchases[$order->id] ?? [];
+            $row = null;
+            foreach ($purchases as $p) {
+                if ($p->session_id && $entries->has($p->session_id)) {
+                    $row = $entries->get($p->session_id);
+                    break;
+                }
+            }
+            if (!$row) {
+                foreach ($purchases as $p) {
+                    foreach ($entriesByVisitor[$p->visitor_id] ?? [] as $candidate) {
+                        if ($candidate->created_at <= $p->created_at && (!$row || $candidate->created_at > $row->created_at)) {
+                            $row = $candidate;
+                        }
+                    }
+                }
+            }
+            if (!$row) {
+                foreach ($purchases as $p) {
+                    if ($p->session_id && isset($orderEntries[$p->session_id])) {
+                        $row = $orderEntries[$p->session_id];
+                        break;
+                    }
+                }
+            }
             if (!$row) {
                 continue;
             }
+            $amount = $orderAmounts[$order->id] ?? (float) $order->total;
             $attributed++;
-            $attributedRevenue += (float) $order->total;
+            $attributedRevenue += $amount;
 
             $link = $this->sourceLink($row->page_url);
             if ($link) {
                 $links[$link['key']] ??= $link + $empty;
                 $links[$link['key']]['orders']++;
-                $links[$link['key']]['revenue'] += (float) $order->total;
+                $links[$link['key']]['revenue'] += $amount;
             }
             $domain = $this->sourceDomain($row->referrer, $marketplaceHost);
             $domains[$domain] ??= ['domain' => $domain] + $empty;
             $domains[$domain]['orders']++;
-            $domains[$domain]['revenue'] += (float) $order->total;
+            $domains[$domain]['revenue'] += $amount;
         }
 
         $finish = function (array $bucket): array {
@@ -3370,7 +3418,7 @@ class EventsController extends BaseController
                 'sessions' => $entries->count(),
                 'orders' => $orders->count(),
                 'orders_attributed' => $attributed,
-                'revenue' => round((float) $orders->sum('total'), 2),
+                'revenue' => round(array_sum($orderAmounts), 2),
                 'revenue_attributed' => round($attributedRevenue, 2),
             ],
             'truncated' => $entries->count() >= $sessionLimit,
@@ -3439,6 +3487,16 @@ class EventsController extends BaseController
             return $q;
         };
 
+        $paidOrders = $this->eventPaidOrders($event, $organizer)
+            ->whereBetween('orders.created_at', [$rangeStart, $rangeEnd])
+            ->when($channel, fn ($q) => $channelClause($q));
+        $paidOrdersCount = 0;
+        try {
+            $paidOrdersCount = (clone $paidOrders)->count();
+        } catch (\Throwable $e) {
+            \Log::warning('analytics insights: orders count failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
+
         // One row per visitor with a flag per funnel step, then summed per device.
         // Cart value of a visitor = the largest cart total seen (cart / checkout /
         // payment step), or the sum of their add-to-cart values when none was seen.
@@ -3446,30 +3504,41 @@ class EventsController extends BaseController
         try {
             $perVisitor = $tracking()
                 ->whereNotNull('visitor_id')
-                ->whereIn('event_type', ['page_view', 'add_to_cart', 'view_cart', 'begin_checkout', 'add_payment_info', 'purchase'])
+                ->whereIn('event_type', ['page_view', 'add_to_cart', 'view_cart', 'begin_checkout', 'add_payment_info'])
                 ->selectRaw("visitor_id,
                     MAX(CASE WHEN event_type = 'page_view' THEN device_type END) as device,
                     MAX(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) as s_view,
                     MAX(CASE WHEN event_type = 'add_to_cart' THEN 1 ELSE 0 END) as s_cart,
                     MAX(CASE WHEN event_type = 'begin_checkout' THEN 1 ELSE 0 END) as s_checkout,
                     MAX(CASE WHEN event_type = 'add_payment_info' THEN 1 ELSE 0 END) as s_payment,
-                    MAX(CASE WHEN event_type = 'purchase' THEN 1 ELSE 0 END) as s_purchase,
                     MAX(CASE WHEN event_type IN ('view_cart', 'begin_checkout', 'add_payment_info') THEN event_value END) as cart_total,
                     SUM(CASE WHEN event_type = 'add_to_cart' THEN event_value ELSE 0 END) as cart_adds")
                 ->groupBy('visitor_id');
 
+            // Buyers = visitors on a purchase row of one of this event's paid orders. The
+            // purchase rows themselves often carry no event id (thank-you page, server).
+            $buyers = $trackingModel::query()
+                ->toBase()
+                ->select('visitor_id')
+                ->distinct()
+                ->where('event_type', $trackingModel::TYPE_PURCHASE)
+                ->whereNotNull('visitor_id')
+                ->whereIn('order_id', (clone $paidOrders)->select('orders.id')->toBase());
+
+            $bought = 'CASE WHEN b.visitor_id IS NOT NULL THEN 1 ELSE 0 END';
             $devices = \Illuminate\Support\Facades\DB::query()
                 ->fromSub($perVisitor, 'v')
-                ->where('s_view', 1)
-                ->selectRaw("COALESCE(device, 'unknown') as device,
+                ->leftJoinSub($buyers, 'b', 'b.visitor_id', '=', 'v.visitor_id')
+                ->where('v.s_view', 1)
+                ->selectRaw("COALESCE(v.device, 'unknown') as device,
                     COUNT(*) as visitors,
-                    SUM(s_cart) as cart,
-                    SUM(s_checkout) as checkout,
-                    SUM(s_payment) as payment,
-                    SUM(s_purchase) as purchase,
-                    SUM(CASE WHEN s_cart = 1 AND s_purchase = 0 THEN 1 ELSE 0 END) as abandoned,
-                    SUM(CASE WHEN s_cart = 1 AND s_purchase = 0 THEN COALESCE(cart_total, cart_adds, 0) ELSE 0 END) as abandoned_value")
-                ->groupByRaw("COALESCE(device, 'unknown')")
+                    SUM(v.s_cart) as cart,
+                    SUM(v.s_checkout) as checkout,
+                    SUM(v.s_payment) as payment,
+                    SUM({$bought}) as purchase,
+                    SUM(CASE WHEN v.s_cart = 1 AND {$bought} = 0 THEN 1 ELSE 0 END) as abandoned,
+                    SUM(CASE WHEN v.s_cart = 1 AND {$bought} = 0 THEN COALESCE(v.cart_total, v.cart_adds, 0) ELSE 0 END) as abandoned_value")
+                ->groupByRaw("COALESCE(v.device, 'unknown')")
                 ->get()
                 ->map(fn ($r) => [
                     'device' => (string) $r->device,
@@ -3511,13 +3580,7 @@ class EventsController extends BaseController
 
         $ordersGrid = [];
         try {
-            $ordersQuery = $event->orders()
-                ->where('marketplace_organizer_id', $organizer->id)
-                ->whereIn('status', ['paid', 'completed'])
-                ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
-                ->when($channel, fn ($q) => $channelClause($q))
-                ->whereBetween('orders.created_at', [$rangeStart, $rangeEnd])
-                ->toBase();
+            $ordersQuery = (clone $paidOrders)->toBase();
             $ordersQuery->orders = null;
             $ordersGrid = $grid($ordersQuery, 'orders.created_at');
         } catch (\Throwable $e) {
@@ -3532,6 +3595,7 @@ class EventsController extends BaseController
                 ['step' => 'payment', 'visitors' => $sum('payment')],
                 ['step' => 'purchase', 'visitors' => $sum('purchase')],
             ],
+            'orders' => $paidOrdersCount,
             'abandoned' => [
                 'visitors' => $sum('abandoned'),
                 'value' => round((float) $sum('abandoned_value'), 2),
@@ -3542,6 +3606,55 @@ class EventsController extends BaseController
                 'orders' => $ordersGrid,
             ],
         ]);
+    }
+
+    /**
+     * Paid orders that hold tickets of this event: the event's own orders plus
+     * cart orders spanning several events (those have orders.event_id NULL).
+     */
+    private function eventPaidOrders(Event $event, $organizer): \Illuminate\Database\Eloquent\Builder
+    {
+        return Order::query()
+            ->whereIn('orders.status', ['paid', 'completed'])
+            ->tap(fn ($q) => \App\Support\TestPos::excludeOrders($q, 'orders.source'))
+            ->where(function ($q) use ($event, $organizer) {
+                $q->where(fn ($qq) => $qq->where('orders.event_id', $event->id)->where('orders.marketplace_organizer_id', $organizer->id))
+                    ->orWhereExists(fn ($t) => $t->selectRaw('1')
+                        ->from('tickets')
+                        ->whereColumn('tickets.order_id', 'orders.id')
+                        ->where(fn ($w) => $w->where('tickets.event_id', $event->id)->orWhere('tickets.marketplace_event_id', $event->id)));
+            });
+    }
+
+    /**
+     * Value of each order for this event: the order total for the event's own
+     * orders, the price of this event's tickets for orders spanning several events.
+     */
+    private function eventOrderAmounts($orders, int $eventId): array
+    {
+        $amounts = [];
+        $mixed = [];
+        foreach ($orders as $order) {
+            if ((int) $order->event_id === $eventId) {
+                $amounts[$order->id] = (float) $order->total;
+            } else {
+                $mixed[] = $order->id;
+                $amounts[$order->id] = 0.0;
+            }
+        }
+        foreach (array_chunk($mixed, 1000) as $chunk) {
+            \Illuminate\Support\Facades\DB::table('tickets')
+                ->whereIn('order_id', $chunk)
+                ->where(fn ($w) => $w->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                ->selectRaw('order_id, SUM(COALESCE(price, 0)) as amount')
+                ->groupBy('order_id')
+                ->get()
+                ->each(function ($r) use (&$amounts) {
+                    $amounts[$r->order_id] = (float) $r->amount;
+                });
+        }
+
+        return $amounts;
     }
 
     private function sourceHost(string $value): string
