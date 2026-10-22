@@ -115,12 +115,18 @@ class MarketplaceWhitelabelKey extends Model
         // Event page (also the seat map + live seat statuses)
         if ($method === 'GET' && preg_match('#^marketplace-events/([^/]+)$#', $path, $m)) {
             $identifier = rawurldecode($m[1]);
-            $owned = Event::where('marketplace_client_id', $this->marketplace_client_id)
-                ->where('marketplace_organizer_id', $this->marketplace_organizer_id)
+            $event = Event::where('marketplace_client_id', $this->marketplace_client_id)
                 ->where(is_numeric($identifier) ? 'id' : 'slug', $identifier)
-                ->exists();
+                ->first(['id', 'marketplace_organizer_id']);
 
-            return $owned ? null : 'event_not_owned';
+            if (!$event) {
+                // Bots probing the site's /{slug} catch-all (e.g. /info)
+                return 'event_not_found';
+            }
+
+            return (int) $event->marketplace_organizer_id === (int) $this->marketplace_organizer_id
+                ? null
+                : 'event_not_owned';
         }
 
         if ($method === 'POST' && $path === 'promo-codes/validate') {

@@ -160,7 +160,8 @@ class MarketplaceClientAuth
 
         $violation = $key->scopeViolation($request);
         if ($violation !== null) {
-            Log::warning('Whitelabel API key used outside its scope', [
+            // An unknown event is just a dead link / bot hit, not an access attempt
+            Log::log($violation === 'event_not_found' ? 'info' : 'warning', 'Whitelabel API key used outside its scope', [
                 'reason' => $violation,
                 'organizer_id' => $organizer->id,
                 'client_id' => $client->id,
