@@ -2836,7 +2836,8 @@ class EventsController extends BaseController
         if ($channel) {
             $trackingChannelClause($pageViewQuery);
         }
-        $pageViews = (int) $pageViewQuery->count();
+        $pageViews = (int) (clone $pageViewQuery)->count();
+        $uniqueVisitors = (int) (clone $pageViewQuery)->distinct()->count('visitor_id');
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
         // Tickets sold today (uses same broad filter as total count)
@@ -2881,10 +2882,9 @@ class EventsController extends BaseController
         $chartViews = [];
         $chartRawDates = [];
 
-        // First pass: collect daily ticket data to distribute views proportionally
+        // Daily ticket and revenue data
         $dailyData = [];
         $currentDate = $rangeStart->copy();
-        $totalDays = max(1, $rangeStart->diffInDays($rangeEnd) + 1);
 
         // Per-ticket-type net price for the daily revenue loop. Uses the net
         // actually realised per ticket (from SalesBreakdownService) rather than
@@ -2921,35 +2921,26 @@ class EventsController extends BaseController
             $currentDate->addDay();
         }
 
-        // Calculate views distribution based on ticket sales activity
-        // If no ticket activity, distribute views showing a cumulative growth pattern
-        $totalTicketsInRange = array_sum(array_column($dailyData, 'tickets'));
+        // Real page views per day (previously the total was spread over days by ticket sales)
+        $viewsByDay = [];
+        try {
+            $viewsByDay = (clone $pageViewQuery)
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+                ->selectRaw('DATE(created_at) as day, COUNT(*) as cnt')
+                ->groupByRaw('DATE(created_at)')
+                ->pluck('cnt', 'day')
+                ->mapWithKeys(fn ($cnt, $day) => [substr((string) $day, 0, 10) => (int) $cnt])
+                ->all();
+        } catch (\Throwable $e) {
+            \Log::warning('daily views query failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+        }
 
-        foreach ($dailyData as $index => $day) {
+        foreach ($dailyData as $day) {
             $chartLabels[] = $day['label'];
             $chartRawDates[] = $day['date'];
             $chartRevenue[] = $day['revenue'];
             $chartTickets[] = $day['tickets'];
-
-            // Distribute views proportionally to ticket sales, or show cumulative if no sales
-            if ($totalTicketsInRange > 0 && $day['tickets'] > 0) {
-                // Days with ticket sales get proportional views
-                $chartViews[] = max(1, intval($pageViews * ($day['tickets'] / $totalTicketsInRange)));
-            } elseif ($totalTicketsInRange === 0 && $pageViews > 0) {
-                // No ticket sales - show views as cumulative growth
-                // Distribute views with a gradual increase towards the end of the period
-                $progress = ($index + 1) / $totalDays;
-                $cumulativeViews = intval($pageViews * $progress);
-                $previousCumulative = $index > 0 ? intval($pageViews * ($index / $totalDays)) : 0;
-                $dailyViews = max(0, $cumulativeViews - $previousCumulative);
-                // Ensure at least some views show on the last day
-                if ($index === count($dailyData) - 1 && $dailyViews === 0 && $pageViews > 0) {
-                    $dailyViews = $pageViews - array_sum($chartViews);
-                }
-                $chartViews[] = max(0, $dailyViews);
-            } else {
-                $chartViews[] = 0;
-            }
+            $chartViews[] = $viewsByDay[$day['date']] ?? 0;
         }
 
         // Traffic sources from real tracking data (CoreCustomerEvent)
@@ -3138,7 +3129,7 @@ class EventsController extends BaseController
                 'tickets_today' => $ticketsToday,
                 'capacity' => $capacity,
                 'page_views' => $pageViews,
-                'unique_visitors' => $pageViews,
+                'unique_visitors' => $uniqueVisitors,
                 'live_visitors' => $liveVisitors,
                 'conversion_rate' => $conversionRate,
                 'revenue_change' => $revenueChange,
