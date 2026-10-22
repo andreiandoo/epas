@@ -417,7 +417,7 @@ class OrganizerFiscalDocuments
      * Events of the organizer whose documents need attention now, for the
      * banner on every organizer page. Cached for a few minutes.
      *
-     * @return array<int, array{event_id: int, event_name: string, issue: string}>
+     * @return array<int, array{event_id: int, event_name: string, issue: string, deadline: ?string}>
      */
     public function attention(MarketplaceOrganizer $organizer): array
     {
@@ -428,7 +428,13 @@ class OrganizerFiscalDocuments
             $out = [];
             foreach ($this->candidateEvents((int) $organizer->marketplace_client_id, $organizer->id) as $event) {
                 if ($issue = $this->issue($event)) {
-                    $out[] = ['event_id' => $event->id, 'event_name' => $this->text($event->title) ?: 'Eveniment', 'issue' => $issue['kind']];
+                    $deadline = $issue['kind'] === 'impozit_pv_missing' ? $this->taxDeadline($event) : $this->cerereDeadline($event);
+                    $out[] = [
+                        'event_id' => $event->id,
+                        'event_name' => $this->text($event->title) ?: 'Eveniment',
+                        'issue' => $issue['kind'],
+                        'deadline' => $deadline?->format('Y-m-d'),
+                    ];
                 }
             }
 
@@ -443,7 +449,7 @@ class OrganizerFiscalDocuments
 
     protected static function attentionKey(int $organizerId): string
     {
-        return 'organizer_fiscal_attention:v1:' . $organizerId;
+        return 'organizer_fiscal_attention:v2:' . $organizerId;
     }
 
     /**

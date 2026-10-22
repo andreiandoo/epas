@@ -235,7 +235,7 @@ $skipJsComponents = true;
 <div id="fiscal-docs-banner" class="hidden border-b" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.3);">
     <div class="flex items-center justify-between gap-4 px-4 py-3 lg:px-8">
         <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full" style="background:rgba(245,158,11,0.18);">
+            <div id="fiscal-docs-banner-icon" class="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full" style="background:rgba(245,158,11,0.18);">
                 <svg class="w-5 h-5" fill="none" stroke="#F59E0B" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </div>
             <div>
@@ -265,7 +265,21 @@ $skipJsComponents = true;
         if (!items.length) return;
         const el = document.getElementById('fiscal-docs-banner');
         if (!el) return;
+        // Outdated cerere is the most urgent, then a missing one, then impozit + PV.
+        const order = ['cerere_stale', 'cerere_missing', 'impozit_pv_missing'];
+        items.sort(function(a, b) { return order.indexOf(a.issue) - order.indexOf(b.issue); });
         const first = items[0];
+        const tones = {
+            cerere_stale: ['239,68,68', '#EF4444'],
+            cerere_missing: ['245,158,11', '#F59E0B'],
+            impozit_pv_missing: ['30,41,59', '#1E293B']
+        };
+        const tone = tones[first.issue] || tones.cerere_missing;
+        el.style.background = 'rgba(' + tone[0] + ',0.08)';
+        el.style.borderColor = 'rgba(' + tone[0] + ',0.3)';
+        const icon = document.getElementById('fiscal-docs-banner-icon');
+        icon.style.background = 'rgba(' + tone[0] + ',0.18)';
+        icon.querySelector('svg').setAttribute('stroke', tone[1]);
         if (items.length === 1) {
             document.getElementById('fiscal-docs-banner-title').textContent = first.event_name;
             const label = labels[first.issue] || 'are documente de emis';

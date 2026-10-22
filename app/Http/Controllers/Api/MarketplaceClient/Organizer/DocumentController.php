@@ -378,7 +378,7 @@ class DocumentController extends BaseController
         $attention = [];
         try {
             foreach (app(OrganizerFiscalDocuments::class)->attention($organizer) as $row) {
-                $attention[$row['event_id']] = $row['issue'];
+                $attention[$row['event_id']] = $row;
             }
         } catch (\Throwable $e) {
             report($e);
@@ -422,7 +422,8 @@ class DocumentController extends BaseController
                 'venue_city' => $venueCity,
                 'status' => $status,
                 'status_label' => $this->getStatusLabel($status),
-                'attention' => $attention[$event->id] ?? null,
+                'attention' => $attention[$event->id]['issue'] ?? null,
+                'attention_deadline' => $attention[$event->id]['deadline'] ?? null,
                 'cerere_avizare' => $cerereAvizare ? [
                     'id' => $cerereAvizare->id,
                     'title' => $cerereAvizare->title,

@@ -35,76 +35,96 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- Event Selector -->
-            <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
-                <label for="event-search-input" class="block mb-2 label">Selectează evenimentul</label>
-                <div class="relative w-full max-w-lg" id="event-dropdown-wrapper">
-                    <input type="text" id="event-search-input" class="w-full pr-10 input" placeholder="Caută eveniment..." autocomplete="off"
-                           onfocus="openEventDropdown()" oninput="filterEventDropdown()">
-                    <input type="hidden" id="event-selector" value="">
-                    <svg class="absolute w-5 h-5 -translate-y-1/2 pointer-events-none text-muted right-3 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    <div id="event-dropdown-list" class="absolute z-50 hidden w-full mt-1 overflow-y-auto bg-white border shadow-lg max-h-64 border-border rounded-xl"></div>
-                </div>
-                <div id="events-loading" class="mt-2 text-sm text-muted">Se încarcă evenimentele...</div>
-                <div id="attention-list" class="hidden mt-4"></div>
-            </div>
+            <!-- Needs attention: one card per problem, each with its own look and action -->
+            <section id="attention-section" class="hidden mb-6" aria-labelledby="attention-title">
+                <h2 id="attention-title" class="mb-3 text-sm font-semibold text-secondary">Necesită atenția ta</h2>
+                <div id="attention-list" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+            </section>
 
-            <!-- Selected event -->
-            <div id="event-detail-section" class="hidden">
-                <div id="event-detail-loading" class="hidden p-6 mb-6 text-sm bg-white border rounded-2xl border-border text-muted">Se încarcă documentele evenimentului...</div>
+            <div class="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
+                <!-- Events list -->
+                <aside id="events-panel" class="overflow-hidden bg-white border rounded-2xl border-border lg:sticky lg:top-4">
+                    <div class="p-4 border-b border-border">
+                        <div class="flex items-baseline justify-between mb-3">
+                            <h2 class="text-base font-bold text-secondary">Evenimente</h2>
+                            <span id="events-count" class="text-xs text-muted"></span>
+                        </div>
+                        <label for="event-search-input" class="sr-only">Caută eveniment</label>
+                        <input type="search" id="event-search-input" class="w-full input" placeholder="Caută după nume sau locație..." autocomplete="off" oninput="renderEventList()">
+                        <div id="event-filters" class="flex flex-wrap gap-1.5 mt-3" role="tablist" aria-label="Filtrează evenimentele"></div>
+                    </div>
+                    <div id="events-loading" class="p-4 text-sm text-muted">Se încarcă evenimentele...</div>
+                    <ul id="event-list" class="hidden overflow-y-auto divide-y divide-border max-h-[28rem] lg:max-h-[calc(100vh-14rem)]"></ul>
+                </aside>
 
-                <div id="event-detail-body" class="hidden">
-                    <!-- Event header + where to file -->
-                    <div class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
-                        <div class="p-6 border-b border-border">
-                            <div class="flex items-start gap-4">
-                                <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
-                                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <!-- Selected event -->
+                <section id="event-detail-section" class="min-w-0 scroll-mt-4" aria-live="polite">
+                    <div id="event-detail-empty" class="hidden p-10 text-center bg-white border border-dashed lg:block rounded-2xl border-border">
+                        <svg class="w-10 h-10 mx-auto mb-3 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <p class="text-sm font-semibold text-secondary">Alege un eveniment din listă</p>
+                        <p class="mt-1 text-sm text-muted">Vezi aici documentele lui, termenele și unde le depui.</p>
+                    </div>
+
+                    <button type="button" id="back-to-list" onclick="backToList()" class="hidden items-center gap-1.5 mb-4 text-sm font-semibold text-primary hover:underline lg:!hidden">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        Toate evenimentele
+                    </button>
+
+                    <div id="event-detail-loading" class="hidden p-6 mb-6 text-sm bg-white border rounded-2xl border-border text-muted">Se încarcă documentele evenimentului...</div>
+
+                    <div id="event-detail-body" class="hidden">
+                        <!-- Event header + where to file -->
+                        <div class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
+                            <div class="p-6 border-b border-border">
+                                <div class="flex items-start gap-4">
+                                    <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
+                                        <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h2 id="event-name" class="text-lg font-bold text-secondary"></h2>
+                                        <p id="event-meta" class="mt-1 text-sm text-muted"></p>
+                                    </div>
+                                    <span id="event-status-badge"></span>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <h2 id="event-name" class="text-lg font-bold text-secondary"></h2>
-                                    <p id="event-meta" class="mt-1 text-sm text-muted"></p>
-                                </div>
-                                <span id="event-status-badge"></span>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="mb-3 text-xs font-semibold tracking-wide uppercase text-muted">Unde se depun documentele</h3>
+                                <div id="registry-info" class="text-sm text-secondary"></div>
                             </div>
                         </div>
-                        <div class="p-6">
-                            <h3 class="mb-3 text-xs font-semibold tracking-wide uppercase text-muted">Unde se depun documentele</h3>
-                            <div id="registry-info" class="text-sm text-secondary"></div>
+
+                        <div id="manages-notice" class="hidden p-4 mb-6 text-sm border rounded-2xl bg-primary/5 border-primary/20 text-secondary">
+                            <strong>Documentele acestui eveniment le pregătim și le depunem noi.</strong>
+                            Le poți genera și descărca și tu oricând, dar nu e nevoie să le depui.
+                        </div>
+
+                        <div class="grid gap-6 mb-6 xl:grid-cols-2">
+                            <div id="group-cerere" class="p-6 transition-shadow duration-300 bg-white border rounded-2xl border-border scroll-mt-4"></div>
+                            <div id="group-impozit_pv" class="p-6 transition-shadow duration-300 bg-white border rounded-2xl border-border scroll-mt-4"></div>
+                        </div>
+
+                        <!-- History -->
+                        <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                            <div class="p-6 border-b border-border">
+                                <h2 class="text-lg font-bold text-secondary">Istoric documente</h2>
+                                <p class="mt-1 text-sm text-muted">Toate versiunile generate pentru acest eveniment. Le poți descărca oricând.</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-surface">
+                                        <tr>
+                                            <th class="px-6 py-3 text-sm font-semibold text-left text-secondary">Document</th>
+                                            <th class="px-6 py-3 text-sm font-semibold text-left text-secondary">Generat</th>
+                                            <th class="px-6 py-3 text-sm font-semibold text-left text-secondary">Versiune</th>
+                                            <th class="px-6 py-3 text-sm font-semibold text-right text-secondary">Descarcă</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="event-documents-list" class="divide-y divide-border"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-
-                    <div id="manages-notice" class="hidden p-4 mb-6 text-sm border rounded-2xl bg-primary/5 border-primary/20 text-secondary">
-                        <strong>Documentele acestui eveniment le pregătim și le depunem noi.</strong>
-                        Le poți genera și descărca și tu oricând, dar nu e nevoie să le depui.
-                    </div>
-
-                    <div class="grid gap-6 mb-6 lg:grid-cols-2">
-                        <div id="group-cerere" class="p-6 bg-white border rounded-2xl border-border"></div>
-                        <div id="group-impozit_pv" class="p-6 bg-white border rounded-2xl border-border"></div>
-                    </div>
-
-                    <!-- History -->
-                    <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                        <div class="p-6 border-b border-border">
-                            <h2 class="text-lg font-bold text-secondary">Istoric documente</h2>
-                            <p class="mt-1 text-sm text-muted">Toate versiunile generate pentru acest eveniment. Le poți descărca oricând.</p>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="bg-surface">
-                                    <tr>
-                                        <th class="px-6 py-3 text-sm font-semibold text-left text-secondary">Document</th>
-                                        <th class="px-6 py-3 text-sm font-semibold text-left text-secondary">Generat</th>
-                                        <th class="px-6 py-3 text-sm font-semibold text-left text-secondary">Versiune</th>
-                                        <th class="px-6 py-3 text-sm font-semibold text-right text-secondary">Descarcă</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="event-documents-list" class="divide-y divide-border"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                </section>
             </div>
         </main>
     </div>
@@ -113,27 +133,85 @@ $scriptsExtra = <<<'JS'
 <script>
 document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 
-const ISSUE_LABELS = {
-    cerere_missing: 'Cererea de vizare nu e generată',
-    cerere_stale: 'Cererea de vizare trebuie regenerată',
-    impozit_pv_missing: 'Impozitul și PV-ul de distrugere sunt de generat'
-};
 const ICON_DOWNLOAD = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
 const ICON_ALERT = '<svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>';
+const ICON_CLOCK = '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+
+// Each problem gets its own colour, icon, wording and action.
+const TONES = {
+    warning: {
+        card: 'border-warning/40 bg-warning/5',
+        icon: 'bg-warning/15 text-warning',
+        tag: 'bg-warning/15 text-secondary',
+        cta: 'bg-white border border-warning/50 text-secondary hover:bg-warning/10',
+        chip: 'bg-warning/15 text-secondary'
+    },
+    error: {
+        card: 'border-error/40 bg-error/5',
+        icon: 'bg-error/15 text-error',
+        tag: 'bg-error/15 text-error',
+        cta: 'bg-error text-white hover:bg-error/90',
+        chip: 'bg-error/10 text-error'
+    },
+    slate: {
+        card: 'border-secondary/20 bg-surface',
+        icon: 'bg-secondary text-white',
+        tag: 'bg-secondary/10 text-secondary',
+        cta: 'bg-secondary text-white hover:bg-secondary/90',
+        chip: 'bg-secondary/10 text-secondary'
+    }
+};
+const ISSUES = {
+    cerere_missing: {
+        tone: 'warning',
+        group: 'cerere',
+        tag: 'Înainte de eveniment',
+        short: 'Cerere de generat',
+        title: 'Generează cererea de vizare',
+        text: 'Evenimentul e publicat, dar cererea de vizare a biletelor nu e generată. O depui la primărie cu cel puțin 2 zile înainte de eveniment.',
+        cta: 'Generează cererea',
+        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'
+    },
+    cerere_stale: {
+        tone: 'error',
+        group: 'cerere',
+        tag: 'Biletele s-au schimbat',
+        short: 'De regenerat',
+        title: 'Regenerează cererea de vizare',
+        text: 'Ai schimbat prețul, stocul sau codurile de reducere după ce ai generat cererea. Versiunea veche nu mai e valabilă: regenereaz-o și depune-o din nou.',
+        cta: 'Regenerează cererea',
+        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>'
+    },
+    impozit_pv_missing: {
+        tone: 'slate',
+        group: 'impozit_pv',
+        tag: 'După eveniment',
+        short: 'Impozit + PV',
+        title: 'Închide evenimentul: impozit + PV',
+        text: 'Evenimentul s-a încheiat. Generează declarația de impozit și PV-ul de distrugere a biletelor și depune-le împreună la primărie.',
+        cta: 'Generează documentele',
+        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>'
+    }
+};
+const FILTERS = [
+    { key: 'all', label: 'Toate' },
+    { key: 'attention', label: 'De rezolvat' },
+    { key: 'upcoming', label: 'Viitoare' },
+    { key: 'ended', label: 'Încheiate' }
+];
 
 let eventsData = {};
 let eventsList = [];
+let activeFilter = 'all';
 let selectedEventId = null;
 let current = null;
 let busy = false;
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadEvents();
-    document.addEventListener('click', function(e) {
-        const wrapper = document.getElementById('event-dropdown-wrapper');
-        if (wrapper && !wrapper.contains(e.target)) closeEventDropdown();
-    });
-});
+document.addEventListener('DOMContentLoaded', loadEvents);
+
+function isDesktop() {
+    return window.matchMedia('(min-width: 1024px)').matches;
+}
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -142,14 +220,46 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-function formatDateShort(dateStr) {
-    if (!dateStr) return '';
+function parseDate(dateStr) {
+    if (!dateStr) return null;
     const date = new Date(String(dateStr).replace(' ', 'T'));
-    return isNaN(date) ? '' : date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return isNaN(date) ? null : date;
 }
 
-function isEventLive(ev) {
-    return ev.status === 'published';
+function formatDateShort(dateStr) {
+    const date = parseDate(dateStr);
+    return date ? date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+}
+
+// Days from today to a Y-m-d deadline (negative = passed).
+function daysUntil(ymd) {
+    if (!ymd) return null;
+    const p = String(ymd).split('-').map(Number);
+    const due = new Date(p[0], p[1] - 1, p[2]);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((due - today) / 86400000);
+}
+
+function deadlineText(ymd) {
+    const days = daysUntil(ymd);
+    if (days === null) return '';
+    const date = formatDateShort(ymd);
+    if (days < 0) return 'Termen depășit (' + date + ')';
+    if (days === 0) return 'Termen: azi, ' + date;
+    if (days === 1) return 'Termen: mâine, ' + date;
+    return 'Termen: ' + date + ' · mai ai ' + days + ' zile';
+}
+
+function issueOf(ev) {
+    if (!ev.attention || !ISSUES[ev.attention]) return null;
+    const issue = ISSUES[ev.attention];
+    const overdue = (daysUntil(ev.attention_deadline) ?? 1) < 0;
+    return { issue: issue, tone: overdue ? 'error' : issue.tone, overdue: overdue };
+}
+
+function isUpcoming(ev) {
+    return ev.status === 'published' || ev.status === 'draft';
 }
 
 async function loadEvents() {
@@ -159,96 +269,174 @@ async function loadEvents() {
         const events = (response.success && response.data.events) || [];
         if (!events.length) {
             loading.textContent = 'Nu ai încă evenimente.';
+            document.getElementById('event-detail-empty').classList.remove('lg:block');
             return;
         }
-        events.sort((a, b) => {
-            const aLive = isEventLive(a), bLive = isEventLive(b);
-            if (aLive !== bLive) return aLive ? -1 : 1;
-            const aDate = new Date(a.starts_at || 0), bDate = new Date(b.starts_at || 0);
-            return aLive ? aDate - bDate : bDate - aDate;
-        });
-        eventsData = {};
-        eventsList = [];
-        events.forEach(e => {
-            eventsData[e.id] = e;
-            const meta = [formatDateShort(e.starts_at), e.venue_name || ''].filter(Boolean).join(' · ');
-            eventsList.push({
-                id: e.id,
-                label: (e.attention ? '⚠ ' : '') + (e.name || 'Eveniment') + (meta ? ' — ' + meta : ''),
-                status: e.status_label || ''
-            });
-        });
+        setEvents(events);
         loading.classList.add('hidden');
-        renderAttention(events.filter(e => e.attention));
+        document.getElementById('event-list').classList.remove('hidden');
 
         const preselect = new URLSearchParams(window.location.search).get('event');
-        if (preselect && eventsData[preselect]) selectEvent(preselect);
+        if (preselect && eventsData[preselect]) {
+            selectEvent(preselect);
+        } else if (isDesktop()) {
+            const first = eventsList.find(e => e.attention) || eventsList.find(isUpcoming) || eventsList[0];
+            if (first) selectEvent(first.id, { scroll: false });
+        }
     } catch (error) {
         console.error('Error loading events:', error);
         loading.textContent = 'Nu am putut încărca evenimentele. Reîncarcă pagina.';
     }
 }
 
-function renderAttention(items) {
-    const box = document.getElementById('attention-list');
-    if (!items.length) { box.classList.add('hidden'); return; }
-    box.innerHTML = '<p class="mb-2 text-sm font-semibold text-secondary">Necesită atenția ta</p>' +
-        '<ul class="space-y-2">' + items.map(e =>
-            '<li><button type="button" onclick="selectEvent(\'' + e.id + '\')" class="flex items-center w-full gap-3 px-4 py-3 text-left transition-colors border rounded-xl border-warning/40 bg-warning/5 hover:bg-warning/10">' +
-            '<span class="text-warning">' + ICON_ALERT + '</span>' +
-            '<span class="flex-1 min-w-0"><span class="block text-sm font-semibold truncate text-secondary">' + escapeHtml(e.name) + '</span>' +
-            '<span class="block text-xs text-muted">' + escapeHtml(ISSUE_LABELS[e.attention] || '') + '</span></span>' +
-            '<span class="text-sm font-semibold text-primary">Deschide</span></button></li>'
-        ).join('') + '</ul>';
-    box.classList.remove('hidden');
+function setEvents(events) {
+    // Problems first, then upcoming (soonest first), then the rest (latest first).
+    const rank = e => e.attention ? 0 : (isUpcoming(e) ? 1 : 2);
+    events.sort((a, b) => {
+        if (rank(a) !== rank(b)) return rank(a) - rank(b);
+        const aDate = parseDate(a.starts_at) || 0, bDate = parseDate(b.starts_at) || 0;
+        return rank(a) === 2 ? bDate - aDate : aDate - bDate;
+    });
+    eventsData = {};
+    events.forEach(e => { eventsData[e.id] = e; });
+    eventsList = events;
+    document.getElementById('events-count').textContent = events.length + (events.length === 1 ? ' eveniment' : ' evenimente');
+    if (activeFilter === 'attention' && !events.some(e => e.attention)) activeFilter = 'all';
+    renderFilters();
+    renderEventList();
+    renderAttention();
 }
 
-function openEventDropdown() {
-    renderEventDropdown(eventsList);
-    document.getElementById('event-dropdown-list').classList.remove('hidden');
+function filterCount(key) {
+    if (key === 'attention') return eventsList.filter(e => e.attention).length;
+    if (key === 'upcoming') return eventsList.filter(isUpcoming).length;
+    if (key === 'ended') return eventsList.filter(e => e.status === 'ended').length;
+    return eventsList.length;
 }
 
-function closeEventDropdown() {
-    document.getElementById('event-dropdown-list').classList.add('hidden');
+function renderFilters() {
+    document.getElementById('event-filters').innerHTML = FILTERS.map(f => {
+        const count = filterCount(f.key);
+        if (f.key === 'attention' && !count) return '';
+        const active = f.key === activeFilter;
+        return '<button type="button" role="tab" aria-selected="' + active + '" onclick="setFilter(\'' + f.key + '\')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ' +
+            (active ? 'bg-secondary text-white' : 'bg-surface text-muted hover:text-secondary') + '">' +
+            escapeHtml(f.label) + ' <span class="' + (active ? 'text-white/70' : 'text-muted') + '">' + count + '</span></button>';
+    }).join('');
 }
 
-function filterEventDropdown() {
+function setFilter(key) {
+    activeFilter = key;
+    renderFilters();
+    renderEventList();
+}
+
+function renderEventList() {
     const query = document.getElementById('event-search-input').value.toLowerCase().trim();
-    renderEventDropdown(query ? eventsList.filter(e => e.label.toLowerCase().includes(query)) : eventsList);
-    document.getElementById('event-dropdown-list').classList.remove('hidden');
-}
-
-function renderEventDropdown(items) {
-    const list = document.getElementById('event-dropdown-list');
+    const items = eventsList.filter(e => {
+        if (activeFilter === 'attention' && !e.attention) return false;
+        if (activeFilter === 'upcoming' && !isUpcoming(e)) return false;
+        if (activeFilter === 'ended' && e.status !== 'ended') return false;
+        if (!query) return true;
+        return [e.name, e.venue_name, e.venue_city].filter(Boolean).join(' ').toLowerCase().includes(query);
+    });
+    const list = document.getElementById('event-list');
     if (!items.length) {
-        list.innerHTML = '<div class="px-4 py-3 text-sm text-muted">Niciun rezultat</div>';
+        list.innerHTML = '<li class="px-4 py-8 text-sm text-center text-muted">Niciun eveniment' + (query ? ' pentru „' + escapeHtml(query) + '”' : ' aici') + '.</li>';
         return;
     }
-    list.innerHTML = items.map(item =>
-        '<div class="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-primary/5 ' +
-        (String(item.id) === String(selectedEventId) ? 'bg-primary/10 font-semibold text-primary' : 'text-secondary') +
-        '" onclick="selectEvent(\'' + item.id + '\')"><span class="truncate">' + escapeHtml(item.label) + '</span>' +
-        '<span class="flex-shrink-0 text-xs text-muted">' + escapeHtml(item.status) + '</span></div>'
-    ).join('');
+    list.innerHTML = items.map(e => {
+        const date = parseDate(e.starts_at);
+        const selected = String(e.id) === String(selectedEventId);
+        const problem = issueOf(e);
+        const place = [e.venue_name, e.venue_city].filter(Boolean).join(', ');
+        const badge = problem
+            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-md ' + TONES[problem.tone].chip + '">' + escapeHtml(problem.overdue ? 'Întârziat' : problem.issue.short) + '</span>'
+            : '<span class="text-[11px] text-muted">' + escapeHtml(e.status_label || '') + '</span>';
+        return '<li><button type="button" onclick="selectEvent(\'' + e.id + '\')" ' + (selected ? 'aria-current="true" ' : '') +
+            'class="flex items-start w-full gap-3 px-4 py-3 text-left transition-colors border-l-4 ' +
+            (selected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-surface') + '">' +
+            '<span class="flex flex-col items-center justify-center flex-shrink-0 w-11 h-12 border rounded-lg border-border bg-white">' +
+            (date ? '<span class="text-base font-bold leading-none text-secondary">' + date.getDate() + '</span><span class="mt-0.5 text-[10px] font-semibold uppercase text-muted">' + escapeHtml(date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '')) + '</span>' : '<span class="text-xs text-muted">—</span>') +
+            '</span>' +
+            '<span class="flex-1 min-w-0">' +
+            '<span class="block text-sm font-semibold truncate ' + (selected ? 'text-primary' : 'text-secondary') + '">' + escapeHtml(e.name || 'Eveniment') + '</span>' +
+            '<span class="block text-xs truncate text-muted">' + escapeHtml([date ? date.getFullYear() : '', place].filter(Boolean).join(' · ')) + '</span>' +
+            '<span class="block mt-1">' + badge + '</span>' +
+            '</span></button></li>';
+    }).join('');
 }
 
-function selectEvent(id) {
-    document.getElementById('event-selector').value = id;
-    const item = eventsList.find(e => String(e.id) === String(id));
-    if (item) document.getElementById('event-search-input').value = item.label;
-    closeEventDropdown();
+function renderAttention() {
+    const section = document.getElementById('attention-section');
+    const items = eventsList.filter(e => issueOf(e));
+    if (!items.length) { section.classList.add('hidden'); return; }
+    document.getElementById('attention-list').innerHTML = items.map(e => {
+        const p = issueOf(e);
+        const t = TONES[p.tone];
+        const deadline = deadlineText(e.attention_deadline);
+        return '<article class="flex flex-col p-5 border rounded-2xl ' + t.card + '">' +
+            '<div class="flex items-start gap-3">' +
+            '<span class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-xl ' + t.icon + '">' + p.issue.icon + '</span>' +
+            '<div class="flex-1 min-w-0">' +
+            '<span class="inline-block px-2 py-0.5 mb-1 text-[11px] font-semibold rounded-md ' + (p.overdue ? TONES.error.tag : t.tag) + '">' + escapeHtml(p.overdue ? 'Termen depășit' : p.issue.tag) + '</span>' +
+            '<h3 class="text-sm font-bold text-secondary">' + escapeHtml(p.issue.title) + '</h3>' +
+            '<p class="text-xs font-semibold truncate text-muted">' + escapeHtml(e.name) + '</p>' +
+            '</div></div>' +
+            '<p class="flex-1 mt-3 text-sm text-secondary">' + escapeHtml(p.issue.text) + '</p>' +
+            '<div class="flex flex-wrap items-center justify-between gap-3 mt-4">' +
+            (deadline ? '<span class="inline-flex items-center gap-1.5 text-xs font-semibold ' + (p.overdue ? 'text-error' : 'text-secondary') + '">' + ICON_CLOCK + escapeHtml(deadline) + '</span>' : '<span></span>') +
+            '<button type="button" onclick="selectEvent(\'' + e.id + '\', { focus: \'' + p.issue.group + '\' })" class="btn btn-sm ' + t.cta + '">' + escapeHtml(p.issue.cta) + '</button>' +
+            '</div></article>';
+    }).join('');
+    section.classList.remove('hidden');
+}
+
+function selectEvent(id, opts) {
+    opts = opts || {};
     const url = new URL(window.location.href);
     url.searchParams.set('event', id);
     history.replaceState(null, '', url);
-    loadEventStatus(parseInt(id, 10));
+
+    selectedEventId = parseInt(id, 10);
+    renderEventList();
+
+    // Mobile: the list makes room for the details.
+    document.getElementById('events-panel').classList.add('hidden', 'lg:block');
+    document.getElementById('back-to-list').classList.remove('hidden');
+    document.getElementById('back-to-list').classList.add('flex');
+    document.getElementById('event-detail-empty').classList.remove('lg:block');
+
+    loadEventStatus(selectedEventId, opts);
+    if (opts.scroll !== false) revealDetail();
 }
 
-async function loadEventStatus(id) {
-    selectedEventId = id;
+function backToList() {
+    document.getElementById('events-panel').classList.remove('hidden');
+    document.getElementById('back-to-list').classList.add('hidden');
+    document.getElementById('back-to-list').classList.remove('flex');
+    document.getElementById('events-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function revealDetail() {
     const section = document.getElementById('event-detail-section');
+    const top = section.getBoundingClientRect().top;
+    if (!isDesktop() || top < 0 || top > window.innerHeight * 0.5) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function focusGroup(key) {
+    const box = document.getElementById('group-' + key);
+    if (!box) return;
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    box.classList.add('ring-2', 'ring-primary/40', 'shadow-lg');
+    setTimeout(() => box.classList.remove('ring-2', 'ring-primary/40', 'shadow-lg'), 2200);
+}
+
+async function loadEventStatus(id, opts) {
     const loading = document.getElementById('event-detail-loading');
     const body = document.getElementById('event-detail-body');
-    section.classList.remove('hidden');
     loading.textContent = 'Se încarcă documentele evenimentului...';
     loading.classList.remove('hidden');
     body.classList.add('hidden');
@@ -256,6 +444,7 @@ async function loadEventStatus(id) {
         const response = await AmbiletAPI.get('/organizer/documents/fiscal/' + id);
         if (selectedEventId !== id) return;
         render(response.data);
+        if (opts && opts.focus) focusGroup(opts.focus);
     } catch (error) {
         console.error('Error loading event documents:', error);
         loading.textContent = error.message || 'Nu am putut încărca documentele. Încearcă din nou.';
@@ -429,7 +618,7 @@ async function generateGroup(group, regenerate, button) {
         const response = await AmbiletAPI.post('/organizer/documents/fiscal/' + current.event.id + '/generate', { group: group });
         AmbiletNotifications.success(response.data.message || 'Gata.');
         render(response.data);
-        refreshAttention();
+        refreshEvents();
     } catch (error) {
         AmbiletNotifications.error(error.message || 'Generarea a eșuat. Încearcă din nou.');
         clearBusy(button);
@@ -448,7 +637,7 @@ async function confirmFiled(group, button) {
         const response = await AmbiletAPI.post('/organizer/documents/fiscal/' + current.event.id + '/filed', { group: group });
         AmbiletNotifications.success(response.data.message || 'Depunere confirmată.');
         render(response.data);
-        refreshAttention();
+        refreshEvents();
     } catch (error) {
         AmbiletNotifications.error(error.message || 'Nu am putut salva confirmarea.');
         clearBusy(button);
@@ -492,12 +681,11 @@ async function downloadDoc(ref, button) {
     }
 }
 
-async function refreshAttention() {
+async function refreshEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/documents/events');
         const events = (response.success && response.data.events) || [];
-        events.forEach(e => { eventsData[e.id] = e; });
-        renderAttention(events.filter(e => e.attention));
+        if (events.length) setEvents(events);
     } catch (e) {}
 }
 </script>
