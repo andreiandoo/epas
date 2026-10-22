@@ -35,12 +35,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- Needs attention: one card per problem, each with its own look and action -->
-            <section id="attention-section" class="hidden mb-6" aria-labelledby="attention-title">
-                <h2 id="attention-title" class="mb-3 text-sm font-semibold text-secondary">Necesită atenția ta</h2>
-                <div id="attention-list" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
-            </section>
-
             <div class="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
                 <!-- Events list -->
                 <aside id="events-panel" class="overflow-hidden bg-white border rounded-2xl border-border lg:sticky lg:top-4">
@@ -99,8 +93,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
 
                         <div class="grid gap-6 mb-6 xl:grid-cols-2">
-                            <div id="group-cerere" class="p-6 transition-shadow duration-300 bg-white border rounded-2xl border-border scroll-mt-4"></div>
-                            <div id="group-impozit_pv" class="p-6 transition-shadow duration-300 bg-white border rounded-2xl border-border scroll-mt-4"></div>
+                            <div id="group-cerere" class="p-6 bg-white border rounded-2xl border-border"></div>
+                            <div id="group-impozit_pv" class="p-6 bg-white border rounded-2xl border-border"></div>
                         </div>
 
                         <!-- History -->
@@ -135,69 +129,25 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
 
 const ICON_DOWNLOAD = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
 const ICON_ALERT = '<svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>';
-const ICON_CLOCK = '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
-
-// Each problem gets its own colour, icon, wording and action.
+// Each problem has its own colour, on the filters and on the events in the list.
 const TONES = {
-    warning: {
-        card: 'border-warning/40 bg-warning/5',
-        icon: 'bg-warning/15 text-warning',
-        tag: 'bg-warning/15 text-secondary',
-        cta: 'bg-white border border-warning/50 text-secondary hover:bg-warning/10',
-        chip: 'bg-warning/15 text-secondary'
-    },
-    error: {
-        card: 'border-error/40 bg-error/5',
-        icon: 'bg-error/15 text-error',
-        tag: 'bg-error/15 text-error',
-        cta: 'bg-error text-white hover:bg-error/90',
-        chip: 'bg-error/10 text-error'
-    },
-    slate: {
-        card: 'border-secondary/20 bg-surface',
-        icon: 'bg-secondary text-white',
-        tag: 'bg-secondary/10 text-secondary',
-        cta: 'bg-secondary text-white hover:bg-secondary/90',
-        chip: 'bg-secondary/10 text-secondary'
-    }
+    warning: { chip: 'bg-warning/15 text-secondary', dot: 'bg-warning', active: 'bg-warning text-white' },
+    error: { chip: 'bg-error/10 text-error', dot: 'bg-error', active: 'bg-error text-white' },
+    slate: { chip: 'bg-secondary/10 text-secondary', dot: 'bg-secondary', active: 'bg-secondary text-white' }
 };
 const ISSUES = {
-    cerere_missing: {
-        tone: 'warning',
-        group: 'cerere',
-        tag: 'Înainte de eveniment',
-        short: 'Cerere de generat',
-        title: 'Generează cererea de vizare',
-        text: 'Evenimentul e publicat, dar cererea de vizare a biletelor nu e generată. O depui la primărie cu cel puțin 2 zile înainte de eveniment.',
-        cta: 'Generează cererea',
-        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'
-    },
-    cerere_stale: {
-        tone: 'error',
-        group: 'cerere',
-        tag: 'Biletele s-au schimbat',
-        short: 'De regenerat',
-        title: 'Regenerează cererea de vizare',
-        text: 'Ai schimbat prețul, stocul sau codurile de reducere după ce ai generat cererea. Versiunea veche nu mai e valabilă: regenereaz-o și depune-o din nou.',
-        cta: 'Regenerează cererea',
-        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>'
-    },
-    impozit_pv_missing: {
-        tone: 'slate',
-        group: 'impozit_pv',
-        tag: 'După eveniment',
-        short: 'Impozit + PV',
-        title: 'Închide evenimentul: impozit + PV',
-        text: 'Evenimentul s-a încheiat. Generează declarația de impozit și PV-ul de distrugere a biletelor și depune-le împreună la primărie.',
-        cta: 'Generează documentele',
-        icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>'
-    }
+    cerere_missing: { tone: 'warning', short: 'Cerere de generat' },
+    cerere_stale: { tone: 'error', short: 'De regenerat' },
+    impozit_pv_missing: { tone: 'slate', short: 'Impozit + PV' }
 };
 const FILTERS = [
     { key: 'all', label: 'Toate' },
-    { key: 'attention', label: 'De rezolvat' },
     { key: 'upcoming', label: 'Viitoare' },
-    { key: 'ended', label: 'Încheiate' }
+    { key: 'ended', label: 'Încheiate' },
+    // Problem filters show up only when there is something to fix.
+    { key: 'cerere_missing', label: 'Cerere de generat', issue: true },
+    { key: 'cerere_stale', label: 'De regenerat', issue: true },
+    { key: 'impozit_pv_missing', label: 'Impozit + PV', issue: true }
 ];
 
 let eventsData = {};
@@ -239,16 +189,6 @@ function daysUntil(ymd) {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     return Math.round((due - today) / 86400000);
-}
-
-function deadlineText(ymd) {
-    const days = daysUntil(ymd);
-    if (days === null) return '';
-    const date = formatDateShort(ymd);
-    if (days < 0) return 'Termen depășit (' + date + ')';
-    if (days === 0) return 'Termen: azi, ' + date;
-    if (days === 1) return 'Termen: mâine, ' + date;
-    return 'Termen: ' + date + ' · mai ai ' + days + ' zile';
 }
 
 function issueOf(ev) {
@@ -301,14 +241,13 @@ function setEvents(events) {
     events.forEach(e => { eventsData[e.id] = e; });
     eventsList = events;
     document.getElementById('events-count').textContent = events.length + (events.length === 1 ? ' eveniment' : ' evenimente');
-    if (activeFilter === 'attention' && !events.some(e => e.attention)) activeFilter = 'all';
+    if (ISSUES[activeFilter] && !events.some(e => e.attention === activeFilter)) activeFilter = 'all';
     renderFilters();
     renderEventList();
-    renderAttention();
 }
 
 function filterCount(key) {
-    if (key === 'attention') return eventsList.filter(e => e.attention).length;
+    if (ISSUES[key]) return eventsList.filter(e => e.attention === key).length;
     if (key === 'upcoming') return eventsList.filter(isUpcoming).length;
     if (key === 'ended') return eventsList.filter(e => e.status === 'ended').length;
     return eventsList.length;
@@ -317,11 +256,15 @@ function filterCount(key) {
 function renderFilters() {
     document.getElementById('event-filters').innerHTML = FILTERS.map(f => {
         const count = filterCount(f.key);
-        if (f.key === 'attention' && !count) return '';
+        if (f.issue && !count) return '';
         const active = f.key === activeFilter;
-        return '<button type="button" role="tab" aria-selected="' + active + '" onclick="setFilter(\'' + f.key + '\')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ' +
-            (active ? 'bg-secondary text-white' : 'bg-surface text-muted hover:text-secondary') + '">' +
-            escapeHtml(f.label) + ' <span class="' + (active ? 'text-white/70' : 'text-muted') + '">' + count + '</span></button>';
+        const tone = f.issue ? TONES[ISSUES[f.key].tone] : null;
+        const cls = tone
+            ? (active ? tone.active : tone.chip + ' hover:opacity-80')
+            : (active ? 'bg-secondary text-white' : 'bg-surface text-muted hover:text-secondary');
+        return '<button type="button" role="tab" aria-selected="' + active + '" onclick="setFilter(\'' + f.key + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ' + cls + '">' +
+            (tone ? '<span class="w-2 h-2 rounded-full ' + (active ? 'bg-white' : tone.dot) + '"></span>' : '') +
+            escapeHtml(f.label) + ' <span class="' + (active ? 'text-white/70' : 'opacity-70') + '">' + count + '</span></button>';
     }).join('');
 }
 
@@ -334,7 +277,7 @@ function setFilter(key) {
 function renderEventList() {
     const query = document.getElementById('event-search-input').value.toLowerCase().trim();
     const items = eventsList.filter(e => {
-        if (activeFilter === 'attention' && !e.attention) return false;
+        if (ISSUES[activeFilter] && e.attention !== activeFilter) return false;
         if (activeFilter === 'upcoming' && !isUpcoming(e)) return false;
         if (activeFilter === 'ended' && e.status !== 'ended') return false;
         if (!query) return true;
@@ -367,31 +310,6 @@ function renderEventList() {
     }).join('');
 }
 
-function renderAttention() {
-    const section = document.getElementById('attention-section');
-    const items = eventsList.filter(e => issueOf(e));
-    if (!items.length) { section.classList.add('hidden'); return; }
-    document.getElementById('attention-list').innerHTML = items.map(e => {
-        const p = issueOf(e);
-        const t = TONES[p.tone];
-        const deadline = deadlineText(e.attention_deadline);
-        return '<article class="flex flex-col p-5 border rounded-2xl ' + t.card + '">' +
-            '<div class="flex items-start gap-3">' +
-            '<span class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-xl ' + t.icon + '">' + p.issue.icon + '</span>' +
-            '<div class="flex-1 min-w-0">' +
-            '<span class="inline-block px-2 py-0.5 mb-1 text-[11px] font-semibold rounded-md ' + (p.overdue ? TONES.error.tag : t.tag) + '">' + escapeHtml(p.overdue ? 'Termen depășit' : p.issue.tag) + '</span>' +
-            '<h3 class="text-sm font-bold text-secondary">' + escapeHtml(p.issue.title) + '</h3>' +
-            '<p class="text-xs font-semibold truncate text-muted">' + escapeHtml(e.name) + '</p>' +
-            '</div></div>' +
-            '<p class="flex-1 mt-3 text-sm text-secondary">' + escapeHtml(p.issue.text) + '</p>' +
-            '<div class="flex flex-wrap items-center justify-between gap-3 mt-4">' +
-            (deadline ? '<span class="inline-flex items-center gap-1.5 text-xs font-semibold ' + (p.overdue ? 'text-error' : 'text-secondary') + '">' + ICON_CLOCK + escapeHtml(deadline) + '</span>' : '<span></span>') +
-            '<button type="button" onclick="selectEvent(\'' + e.id + '\', { focus: \'' + p.issue.group + '\' })" class="btn btn-sm ' + t.cta + '">' + escapeHtml(p.issue.cta) + '</button>' +
-            '</div></article>';
-    }).join('');
-    section.classList.remove('hidden');
-}
-
 function selectEvent(id, opts) {
     opts = opts || {};
     const url = new URL(window.location.href);
@@ -407,7 +325,7 @@ function selectEvent(id, opts) {
     document.getElementById('back-to-list').classList.add('flex');
     document.getElementById('event-detail-empty').classList.remove('lg:block');
 
-    loadEventStatus(selectedEventId, opts);
+    loadEventStatus(selectedEventId);
     if (opts.scroll !== false) revealDetail();
 }
 
@@ -426,15 +344,7 @@ function revealDetail() {
     }
 }
 
-function focusGroup(key) {
-    const box = document.getElementById('group-' + key);
-    if (!box) return;
-    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    box.classList.add('ring-2', 'ring-primary/40', 'shadow-lg');
-    setTimeout(() => box.classList.remove('ring-2', 'ring-primary/40', 'shadow-lg'), 2200);
-}
-
-async function loadEventStatus(id, opts) {
+async function loadEventStatus(id) {
     const loading = document.getElementById('event-detail-loading');
     const body = document.getElementById('event-detail-body');
     loading.textContent = 'Se încarcă documentele evenimentului...';
@@ -444,7 +354,6 @@ async function loadEventStatus(id, opts) {
         const response = await AmbiletAPI.get('/organizer/documents/fiscal/' + id);
         if (selectedEventId !== id) return;
         render(response.data);
-        if (opts && opts.focus) focusGroup(opts.focus);
     } catch (error) {
         console.error('Error loading event documents:', error);
         loading.textContent = error.message || 'Nu am putut încărca documentele. Încearcă din nou.';
@@ -540,31 +449,32 @@ function renderGroup(key, g, data) {
         html += '<p class="p-3 mb-4 text-sm rounded-xl bg-surface text-muted">' + escapeHtml(g.blocked) + '</p>';
     }
 
-    // Documents of the group
+    // Documents of the group, each with its own action. Impozit + PV are always generated together.
+    const generateBtn = (label, primary) => '<button type="button" onclick="generateGroup(\'' + key + '\', ' + (g.generated ? 'true' : 'false') + ', this)" class="btn btn-sm ' +
+        (primary ? 'bg-primary text-white hover:bg-primary-dark' : 'bg-surface text-secondary hover:bg-gray-200') + '">' + label + '</button>';
     html += '<ul class="mb-4 space-y-2">' + g.types.map(t => {
         const doc = g.documents[t.type];
-        return '<li class="flex items-center justify-between gap-3 px-4 py-3 border rounded-xl border-border">' +
+        const buttons = [];
+        if (doc) {
+            buttons.push('<button type="button" onclick="downloadDoc(\'' + doc.ref + '\', this)" class="gap-1.5 btn btn-sm bg-primary/10 text-primary hover:bg-primary/20">' + ICON_DOWNLOAD + 'Descarcă</button>');
+            if (!g.blocked) buttons.push(generateBtn('Regenerează', g.stale));
+        } else if (!g.blocked) {
+            buttons.push(generateBtn('Generează', true));
+        }
+        return '<li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border rounded-xl ' + (g.stale && doc ? 'border-error/30' : 'border-border') + '">' +
             '<div class="min-w-0"><p class="text-sm font-semibold text-secondary">' + escapeHtml(t.label) + '</p>' +
             '<p class="text-xs text-muted">' + (doc ? 'Generat ' + escapeHtml(doc.generated_at) + (doc.by ? ' · ' + escapeHtml(doc.by) : '') : 'Negenerat') + '</p></div>' +
-            (doc ? '<button type="button" onclick="downloadDoc(\'' + doc.ref + '\', this)" class="gap-1.5 btn btn-sm bg-primary/10 text-primary hover:bg-primary/20">' + ICON_DOWNLOAD + 'Descarcă</button>' : '') +
+            (buttons.length ? '<div class="flex flex-wrap gap-2">' + buttons.join('') + '</div>' : '') +
             '</li>';
     }).join('') + '</ul>';
+    if (!g.blocked && g.types.length > 1) {
+        html += '<p class="mb-4 text-xs text-muted">Cele două documente se generează împreună.</p>';
+    }
 
-    // Actions
-    const actions = [];
-    if (!g.blocked) {
-        const label = g.generated
-            ? (isCerere ? 'Regenerează cererea' : 'Regenerează ambele')
-            : (isCerere ? 'Generează cererea' : (g.types.length > 1 ? 'Generează ambele' : 'Generează PV-ul'));
-        const primary = !g.generated || g.stale;
-        actions.push('<button type="button" onclick="generateGroup(\'' + key + '\', ' + (g.generated ? 'true' : 'false') + ', this)" class="btn btn-sm ' +
-            (primary ? 'bg-primary text-white hover:bg-primary-dark' : 'bg-surface text-secondary hover:bg-gray-200') + '">' + label + '</button>');
-    }
     if (g.can_confirm) {
-        actions.push('<button type="button" onclick="confirmFiled(\'' + key + '\', this)" class="btn btn-sm bg-success/10 text-success hover:bg-success/20">' +
-            (g.types.length > 1 ? 'Le-am depus' : 'Am depus-o') + '</button>');
+        html += '<button type="button" onclick="confirmFiled(\'' + key + '\', this)" class="btn btn-sm bg-success/10 text-success hover:bg-success/20">' +
+            (g.types.length > 1 ? 'Le-am depus' : 'Am depus-o') + '</button>';
     }
-    if (actions.length) html += '<div class="flex flex-wrap gap-2">' + actions.join('') + '</div>';
 
     if (g.filed && g.filed_at) {
         html += '<p class="mt-3 text-xs text-muted">Depunere confirmată pe ' + escapeHtml(g.filed_at) + (g.filed_by ? ' de ' + escapeHtml(g.filed_by) : '') + '.</p>';
