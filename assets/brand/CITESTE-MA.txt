@@ -1,0 +1,24 @@
+AmBilet.ro - materiale pentru organizatori
+===========================================
+
+Fisiere
+- ambilet-logo.*        varianta principala (rosu + alb), pentru fundal deschis
+- ambilet-logo-alb.*    alb, pentru fundal inchis, fotografii sau afise colorate
+- ambilet-logo-negru.*  negru, pentru tipar monocrom
+- SVG si PDF sunt vectoriale (tipar, orice marime). PNG: 3000 px latime, fundal transparent.
+
+Culori
+- Rosu logo      #790000   RGB 121, 0, 0
+- Alb logo       #FAFAF8   RGB 250, 250, 248
+- Rosu AmBilet   #A51C30   RGB 165, 28, 48
+- Ardezie        #1E293B   RGB 30, 41, 59
+- Portocaliu     #E67E22   RGB 230, 126, 34
+
+Reguli
+- Lasa in jurul logo-ului un spatiu liber cel putin cat inaltimea literei "A".
+- Marime minima: 25 mm latime la tipar, 100 px pe ecran.
+- Nu intinde, nu roti, nu recolora logo-ul si nu-i adauga umbre sau contur.
+- Text recomandat pe afis: "Bilete: ambilet.ro"
+
+Alte materiale: organizatori@ambilet.ro
+Presa: press@ambilet.ro
