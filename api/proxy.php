@@ -4341,6 +4341,39 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Self-service fiscal documents (cerere vizare, impozit + PV distrugere)
+    case 'organizer.documents.attention':
+        $method = 'GET';
+        $endpoint = '/organizer/documents/attention';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.fiscal':
+        $method = 'GET';
+        $eventId = (int) ($_GET['event_id'] ?? 0);
+        $endpoint = '/organizer/documents/fiscal/' . $eventId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.fiscal.generate':
+    case 'organizer.documents.fiscal.filed':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $eventId = (int) ($_GET['event_id'] ?? 0);
+        $endpoint = '/organizer/documents/fiscal/' . $eventId . ($action === 'organizer.documents.fiscal.generate' ? '/generate' : '/filed');
+        $requiresAuth = true;
+        // impozit + PV are rendered one after the other
+        $customTimeout = 90;
+        break;
+
+    case 'organizer.documents.file':
+        $method = 'GET';
+        $ref = preg_replace('/[^go0-9]/', '', (string) ($_GET['ref'] ?? ''));
+        $endpoint = '/organizer/documents/file/' . $ref;
+        $requiresAuth = true;
+        $rawResponse = true; // PDF binary stream
+        break;
+
     // ============================================
     // Organizer invitations (self-service PDF invite generation)
     // GET    /organizer/invitations               list batches (filter by event_id)
