@@ -288,16 +288,21 @@ $eventId = $_GET['event'] ?? null;
         <!-- Source links -->
         <div class="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">Linkuri și site-uri sursă</h2>
-                    <p class="text-xs text-gray-500">Linkul exact prin care au intrat vizitatorii, cu toți parametrii, și site-urile care i-au trimis</p>
-                </div>
-                <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
-                    <button type="button" onclick="setSourcesTab('links')" data-sources-tab="links" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-gray-900">Linkuri</button>
-                    <button type="button" onclick="setSourcesTab('domains')" data-sources-tab="domains" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all text-gray-500">Site-uri</button>
+                <h2 class="text-lg font-semibold text-gray-900">Linkuri și site-uri sursă</h2>
+                <div class="flex flex-wrap items-center gap-2" role="tablist">
+                    <button type="button" role="tab" onclick="setSourcesTab('links')" data-sources-tab="links" data-color="165,28,48" title="Adresa exactă pe care au deschis-o vizitatorii, cu parametrii ei (utm, fbclid etc.)" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors rounded-xl">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        Linkuri de intrare
+                        <span data-sources-count="links" class="px-1.5 py-0.5 text-[11px] leading-none rounded-md">0</span>
+                    </button>
+                    <button type="button" role="tab" onclick="setSourcesTab('domains')" data-sources-tab="domains" data-color="230,126,34" title="Site-ul de pe care au venit vizitatorii (Facebook, Google, alte site-uri)" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors rounded-xl">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        Site-uri care trimit vizitatori
+                        <span data-sources-count="domains" class="px-1.5 py-0.5 text-[11px] leading-none rounded-md">0</span>
+                    </button>
                 </div>
             </div>
-            <div id="sources-summary" class="mb-3 text-xs text-gray-500"></div>
+            <div id="sources-summary" class="hidden mb-3 text-xs text-gray-500"></div>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
@@ -1389,6 +1394,7 @@ let sourcesTab = 'links';
 
 async function loadSources() {
     if (!document.getElementById('sources-table')) return;
+    paintSourcesTabs();
     try {
         const channelParam = currentChannel && currentChannel !== 'all' ? '&channel=' + encodeURIComponent(currentChannel) : '';
         const response = await AmbiletAPI.get('/organizer/events/' + eventId + '/analytics/sources?period=' + currentPeriod + channelParam);
@@ -1399,15 +1405,21 @@ async function loadSources() {
     renderSources();
 }
 
+// Links tab in primary, sites tab in accent: filled when active, tinted otherwise
+function paintSourcesTabs() {
+    document.querySelectorAll('[data-sources-tab]').forEach(function (btn) {
+        const active = btn.dataset.sourcesTab === sourcesTab;
+        const rgb = btn.dataset.color;
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.style.background = active ? 'rgb(' + rgb + ')' : 'rgba(' + rgb + ',0.08)';
+        btn.style.color = active ? '#fff' : 'rgb(' + rgb + ')';
+        const count = btn.querySelector('[data-sources-count]');
+        if (count) count.style.background = active ? 'rgba(255,255,255,0.22)' : 'rgba(' + rgb + ',0.14)';
+    });
+}
+
 function setSourcesTab(tab) {
     sourcesTab = tab;
-    document.querySelectorAll('[data-sources-tab]').forEach(function (btn) {
-        const active = btn.dataset.sourcesTab === tab;
-        btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('shadow-sm', active);
-        btn.classList.toggle('text-gray-900', active);
-        btn.classList.toggle('text-gray-500', !active);
-    });
     renderSources();
 }
 
@@ -1422,18 +1434,22 @@ function renderSources() {
     const summary = document.getElementById('sources-summary');
     const colName = document.getElementById('sources-col-name');
     if (!tbody) return;
-    colName.textContent = sourcesTab === 'links' ? 'Link de intrare' : 'Site sursă (referrer)';
+    colName.textContent = sourcesTab === 'links' ? 'Link de intrare' : 'Site sursă';
+    paintSourcesTabs();
+    document.querySelectorAll('[data-sources-count]').forEach(function (el) {
+        const list = sourcesData ? sourcesData[el.dataset.sourcesCount] : null;
+        el.textContent = formatNumber((list || []).length);
+    });
 
     if (!sourcesData) {
         summary.textContent = '';
+        summary.classList.add('hidden');
         tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu am putut încărca sursele</td></tr>';
         return;
     }
 
-    const totals = sourcesData.totals || {};
-    let text = formatNumber(totals.sessions || 0) + ' sesiuni în perioada selectată · ' + formatNumber(totals.orders_attributed || 0) + ' din ' + formatNumber(totals.orders || 0) + ' comenzi legate de o sursă';
-    if (sourcesData.truncated) text += ' · sunt analizate primele 50.000 de sesiuni';
-    summary.textContent = text;
+    summary.textContent = sourcesData.truncated ? 'Sunt analizate primele 50.000 de sesiuni din perioada selectată.' : '';
+    summary.classList.toggle('hidden', !sourcesData.truncated);
 
     const rows = (sourcesTab === 'links' ? sourcesData.links : sourcesData.domains) || [];
     if (!rows.length) {
