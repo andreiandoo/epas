@@ -421,6 +421,11 @@ class OrganizerFiscalDocuments
      */
     public function attention(MarketplaceOrganizer $organizer): array
     {
+        // The marketplace handles these documents: nothing for the organizer to do.
+        if ($organizer->marketplace_manages_documents) {
+            return [];
+        }
+
         return Cache::remember(static::attentionKey($organizer->id), 600, function () use ($organizer) {
             if (! $this->marketplaceHasTemplates((int) $organizer->marketplace_client_id)) {
                 return [];

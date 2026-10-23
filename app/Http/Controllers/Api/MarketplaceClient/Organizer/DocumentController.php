@@ -441,6 +441,7 @@ class DocumentController extends BaseController
 
         return $this->success([
             'events' => $eventsWithDocs,
+            'manages_documents' => (bool) $organizer->marketplace_manages_documents,
             'debug' => [
                 'organizer_id' => $organizer->id,
                 'marketplace_client_id' => $organizer->marketplace_client_id,
@@ -633,6 +634,10 @@ class DocumentController extends BaseController
         $event = $this->organizerEvent($organizer, $eventId);
         if (!$event) {
             return $this->error('Evenimentul nu a fost gasit', 404);
+        }
+
+        if ($organizer->marketplace_manages_documents) {
+            return $this->error('Documentele acestui eveniment le pregătim noi.', 422);
         }
 
         $service = app(OrganizerFiscalDocuments::class);
