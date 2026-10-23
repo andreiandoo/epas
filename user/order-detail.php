@@ -70,28 +70,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Invoice Download (hidden by default, shown for confirmed orders) -->
+                    <!-- Facturi pe persoană juridică (ascuns până vine comanda; doar dacă facturarea pe firmă e activă) -->
                     <div class="hidden overflow-hidden bg-white border rounded-2xl border-border" id="invoice-section">
                         <div class="p-5 border-b border-border">
-                            <h2 class="font-semibold text-secondary">Documente</h2>
+                            <h2 class="font-semibold text-secondary">Factură pe firmă</h2>
                         </div>
-                        <div class="p-5">
-                            <div class="flex items-center justify-between p-4 border border-dashed rounded-xl bg-surface border-border">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex items-center justify-center w-10 h-10 bg-white border rounded-lg border-border">
-                                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-sm font-semibold text-secondary">Factura fiscala</h4>
-                                        <p class="text-xs text-muted" id="invoice-filename">---</p>
-                                    </div>
-                                </div>
-                                <button class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white border rounded-lg border-border text-secondary hover:border-primary hover:text-primary transition-colors" id="download-invoice-btn">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                    Descarca
-                                </button>
-                            </div>
-                        </div>
+                        <div class="flex flex-col gap-3 p-5" id="company-invoice-body"></div>
                     </div>
                 </div>
 
@@ -202,7 +186,6 @@ const OrderDetailPage = {
 
     setupEventListeners() {
         document.getElementById('download-pdf-btn').addEventListener('click', () => this.downloadPdf());
-        document.getElementById('download-invoice-btn').addEventListener('click', () => this.downloadInvoice());
         document.getElementById('refund-btn').addEventListener('click', () => this.requestRefund());
     },
 
@@ -264,7 +247,8 @@ const OrderDetailPage = {
         document.getElementById('payment-exp').textContent = order.payment_exp || '';
         document.getElementById('billing-address').innerHTML = '<strong class="block mb-1 font-semibold text-secondary">Adresa de facturare</strong>' + order.billing_address;
 
-        document.getElementById('invoice-filename').textContent = order.invoice_filename || 'Nu exista factura';
+        this.order = order;
+        this.renderCompanyInvoice(order.company_invoicing);
 
         document.getElementById('view-tickets-btn').href = '/cont/bilete?order=' + order.number;
 
@@ -292,7 +276,7 @@ const OrderDetailPage = {
         if (isPaidOrder) {
             document.getElementById('view-tickets-btn').classList.remove('hidden');
             document.getElementById('download-pdf-btn').classList.remove('hidden');
-            document.getElementById('invoice-section').classList.remove('hidden');
+            if (order.company_invoicing && order.company_invoicing.enabled) document.getElementById('invoice-section').classList.remove('hidden');
             document.getElementById('support-section').classList.remove('hidden');
         } else {
             console.log('Order is NOT paid - hiding tickets/pdf/invoice/support sections');
@@ -363,8 +347,71 @@ const OrderDetailPage = {
         AmbiletNotifications.info('Descarcarea PDF va incepe in curand...');
     },
 
-    downloadInvoice() {
-        AmbiletNotifications.info('Descarcarea facturii va incepe in curand...');
+    // ==================== FACTURĂ PE PERSOANĂ JURIDICĂ ====================
+    renderCompanyInvoice(ci) {
+        const body = document.getElementById('company-invoice-body');
+        if (!body || !ci || !ci.enabled) return;
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        const money = (v, cur) => Number(v || 0).toFixed(2) + ' ' + (cur || 'RON');
+        let html = '';
+
+        if (ci.invoices && ci.invoices.length) {
+            if (ci.company) {
+                html += '<p class="text-sm text-muted">Facturat către <strong class="text-secondary">' + esc(ci.company.name) + '</strong>, CUI ' + esc(ci.company.cui) + '</p>';
+            }
+            ci.invoices.forEach(inv => {
+                html += '<div class="flex items-center justify-between gap-3 p-4 border rounded-xl bg-surface border-border">'
+                    + '<div class="min-w-0"><h4 class="text-sm font-semibold text-secondary">' + esc(inv.subject) + ' · ' + esc(inv.issuer_name) + '</h4>'
+                    + '<p class="text-xs text-muted">' + esc(inv.status_label) + ' · ' + money(inv.amount, inv.currency) + '</p></div>'
+                    + (inv.has_document
+                        ? '<button type="button" class="flex-shrink-0 px-3 py-2 text-sm font-medium bg-white border rounded-lg border-border text-secondary hover:border-primary hover:text-primary" data-invoice="' + inv.id + '">Descarcă</button>'
+                        : '')
+                    + '</div>';
+            });
+        } else if (ci.can_request) {
+            const saved = ci.saved_company && ci.saved_company.cui ? ci.saved_company.cui : '';
+            html += '<p class="text-sm text-muted">Ai nevoie de factură pe firmă pentru această comandă? Introdu CUI-ul; datele firmei se preiau de la ANAF.</p>'
+                + '<div class="flex gap-2"><input type="text" id="ci-cui" maxlength="14" value="' + esc(saved) + '" placeholder="Ex: RO12345678" class="flex-1 min-w-0 px-4 py-3 uppercase border-2 input-field border-border rounded-xl focus:outline-none">'
+                + '<button type="button" id="ci-submit" class="btn btn-primary px-5 py-3 text-sm rounded-xl">Cere factura</button></div>'
+                + '<p id="ci-error" class="hidden text-sm text-primary" role="alert"></p>';
+        } else {
+            html += '<p class="text-sm text-muted">' + esc(ci.reason || 'Factura pe firmă nu se mai poate cere pentru această comandă.') + '</p>';
+        }
+
+        body.innerHTML = html;
+        body.querySelectorAll('[data-invoice]').forEach(btn => btn.addEventListener('click', () => this.downloadCompanyInvoice(btn.dataset.invoice, btn)));
+        const submit = document.getElementById('ci-submit');
+        if (submit) submit.addEventListener('click', () => this.requestCompanyInvoice());
+    },
+
+    async requestCompanyInvoice() {
+        const input = document.getElementById('ci-cui');
+        const btn = document.getElementById('ci-submit');
+        const err = document.getElementById('ci-error');
+        const cui = input.value.trim();
+        if (!cui) { input.focus(); return; }
+        err.classList.add('hidden');
+        btn.disabled = true;
+        try {
+            const res = await AmbiletAPI.post('/customer/orders/' + this.order.number + '/company-invoice', { cui });
+            AmbiletNotifications.success('Cererea a fost înregistrată. Factura pentru comision și servicii vine pe email în câteva minute.');
+            this.renderCompanyInvoice(res.data);
+        } catch (e) {
+            err.textContent = e.message || 'Cererea nu a putut fi înregistrată.';
+            err.classList.remove('hidden');
+            btn.disabled = false;
+        }
+    },
+
+    async downloadCompanyInvoice(id, btn) {
+        btn.disabled = true;
+        try {
+            await AmbiletAPI.downloadFile('/customer/orders/' + this.order.number + '/company-invoices/' + id + '/download', 'Factura-' + this.order.number + '.pdf');
+        } catch (e) {
+            AmbiletNotifications.error(e.message || 'Factura nu este disponibilă.');
+        } finally {
+            btn.disabled = false;
+        }
     },
 
     requestRefund() {

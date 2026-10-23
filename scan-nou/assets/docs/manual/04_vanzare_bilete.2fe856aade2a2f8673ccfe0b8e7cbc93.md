@@ -41,8 +41,8 @@ Repetă pentru mai multe bilete de același tip sau tipuri diferite.
 
 Sub grid apare **coșul** cu:
 - Fiecare tip: nume, preț unitar, cantitate, subtotal
-- Butoane − / + pentru cantitate
-- Butoane pentru șterge (dacă vrei să scoți)
+- Butoane − / + pentru cantitate. La `−` cantitatea coboară până la 0 și rămâi în coș; biletele cu 0 nu se vând
+- Dacă toate cantitățile sunt 0, butoanele de plată sunt inactive până adaugi ceva
 - **Total** jos + buton `Continuă →`
 
 <!-- SCREENSHOT: Vânzare cu 3 bilete diferite în coș + total vizibil -->
@@ -140,7 +140,9 @@ Dacă evenimentul are **claim URL**, apare și un **cod QR** — clientul îl sc
 <!-- SCREENSHOT: ecran verde Plată Reușită cu QR + sumă mare -->
 ![Plată reușită](./screenshots/04-success.png)
 
-**Alt buton opțional**: `Trimite pe email` — introduci emailul clientului și biletele merg direct pe adresa lui.
+**Clientul nu are telefon care scanează QR?** Sub cod apasă `Nu poate scana? Trimite pe email`. Clientul îți spune adresa, o scrii și apeși `Trimite Biletele`: primește pe email biletul în PDF și codurile. Cât timp scrii, ecranul nu se mai închide singur. `Înapoi la codul QR` te duce înapoi la cod, fără să trimită nimic.
+
+<!-- SCREENSHOT: fereastra Trimite Biletele pe Email cu adresa completată -->
 
 Tap `Finalizează` → te întorci la Vânzare, gata pentru următorul client.
 
@@ -165,7 +167,7 @@ Util să vezi rapid „azi am făcut 3500 lei".
 
 Dacă ești pe grid-ul de bilete și **ai deja bilete în coș**, jos-dreapta apare un **buton rotund roșu cu numărul** de bilete. Tap → sari direct la vederea Coș.
 
-Vederea coș are săgeată `←` sus-stânga pentru a te întoarce la grid.
+Vederea coș are butonul `← Vânzare` sus-stânga pentru a te întoarce la grid. Coșul rămâne cum l-ai lăsat.
 
 ---
 
@@ -190,6 +192,7 @@ Vederea coș are săgeată `←` sus-stânga pentru a te întoarce la grid.
 
 **„Clientul nu a primit QR-ul pe email"**
 - Ai introdus email corect? Verifică spam-ul clientului.
+- Dacă aplicația a afișat „Emailul nu a putut fi trimis", apasă din nou `Trimite Biletele`.
 - Dacă era offline: se trimite după sync. Verifică pastila galbenă din header ([cap. 6](./06_vanzare_offline.md)).
 
 **„Terminalul POS a aprobat dar am uitat să apăs Confirmă"**
