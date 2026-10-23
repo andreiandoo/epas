@@ -3517,13 +3517,21 @@ class EventsController extends BaseController
 
             // Buyers = visitors on a purchase row of one of this event's paid orders. The
             // purchase rows themselves often carry no event id (thank-you page, server).
-            $buyers = $trackingModel::query()
+            // One buyer per order: the thank-you page row (it has a device) wins over the
+            // server row, whose visitor id can differ.
+            $buyerPerOrder = $trackingModel::query()
                 ->toBase()
-                ->select('visitor_id')
-                ->distinct()
+                ->selectRaw('DISTINCT ON (order_id) order_id, visitor_id')
                 ->where('event_type', $trackingModel::TYPE_PURCHASE)
                 ->whereNotNull('visitor_id')
-                ->whereIn('order_id', (clone $paidOrders)->select('orders.id')->toBase());
+                ->whereIn('order_id', (clone $paidOrders)->select('orders.id')->toBase())
+                ->orderBy('order_id')
+                ->orderByRaw('(device_type IS NULL)')
+                ->orderBy('created_at');
+            $buyers = \Illuminate\Support\Facades\DB::query()
+                ->fromSub($buyerPerOrder, 'po')
+                ->select('po.visitor_id')
+                ->distinct();
 
             // A buyer went through cart, checkout and payment even when the event
             // for that step was lost (the payment step leaves for the card processor).
