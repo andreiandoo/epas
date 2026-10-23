@@ -14,11 +14,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <main class="flex-1 p-4 lg:p-8">
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-secondary">Documente fiscale</h1>
-                <p class="text-sm text-muted">Generează, descarcă și ține evidența documentelor pe care le depui la primărie pentru fiecare eveniment.</p>
+                <p id="page-intro" class="text-sm text-muted">Generează, descarcă și ține evidența documentelor pe care le depui la primărie pentru fiecare eveniment.</p>
+            </div>
+
+            <!-- The marketplace handles this organizer's documents -->
+            <div id="managed-banner" class="hidden gap-4 p-5 mb-6 border rounded-2xl bg-success/5 border-success/30">
+                <span class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-xl bg-success/15 text-success">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </span>
+                <div>
+                    <p class="text-sm font-bold text-secondary">AmBilet se ocupă de documentele tale fiscale</p>
+                    <p class="mt-1 text-sm text-secondary">Noi generăm cererile de vizare, declarațiile de impozit și PV-urile de distrugere a biletelor și tot noi le depunem la primărie. Nu trebuie să generezi sau să confirmi nimic. Aici le vezi și le descarci oricând.</p>
+                </div>
             </div>
 
             <!-- How it works -->
-            <div class="grid gap-4 mb-6 md:grid-cols-2">
+            <div id="how-it-works" class="grid gap-4 mb-6 md:grid-cols-2">
                 <div class="flex gap-3 p-4 bg-white border rounded-2xl border-border">
                     <span class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold rounded-full bg-primary/10 text-primary">1</span>
                     <div>
@@ -87,10 +98,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                         </div>
 
-                        <div id="manages-notice" class="hidden p-4 mb-6 text-sm border rounded-2xl bg-primary/5 border-primary/20 text-secondary">
-                            <strong>Documentele acestui eveniment le pregătim și le depunem noi.</strong>
-                            Le poți genera și descărca și tu oricând, dar nu e nevoie să le depui.
-                        </div>
 
                         <div class="grid gap-6 mb-6 xl:grid-cols-2">
                             <div id="group-cerere" class="p-6 bg-white border rounded-2xl border-border"></div>
@@ -156,6 +163,16 @@ let activeFilter = 'all';
 let selectedEventId = null;
 let current = null;
 let busy = false;
+let managed = false;
+
+// AmBilet prepares and files this organizer's documents: read-only page.
+function setManaged(on) {
+    managed = on;
+    document.getElementById('managed-banner').classList.toggle('hidden', !on);
+    document.getElementById('managed-banner').classList.toggle('flex', on);
+    document.getElementById('how-it-works').classList.toggle('hidden', on);
+    if (on) document.getElementById('page-intro').textContent = 'Documentele fiscale ale evenimentelor tale, pregătite și depuse de echipa AmBilet.';
+}
 
 document.addEventListener('DOMContentLoaded', loadEvents);
 
@@ -207,6 +224,7 @@ async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/documents/events');
         const events = (response.success && response.data.events) || [];
+        if (response.data && response.data.manages_documents) setManaged(true);
         if (!events.length) {
             loading.textContent = 'Nu ai încă evenimente.';
             document.getElementById('event-detail-empty').classList.remove('lg:block');
@@ -377,7 +395,7 @@ function render(data) {
     document.getElementById('event-status-badge').innerHTML = badge;
 
     document.getElementById('registry-info').innerHTML = renderRegistry(data.registry);
-    document.getElementById('manages-notice').classList.toggle('hidden', !data.manages_documents);
+    if (data.manages_documents) setManaged(true);
 
     renderGroup('cerere', data.groups.cerere, data);
     renderGroup('impozit_pv', data.groups.impozit_pv, data);
@@ -417,6 +435,8 @@ function renderGroup(key, g, data) {
     const box = document.getElementById('group-' + key);
     const title = isCerere ? 'Cerere de vizare a biletelor' : 'Impozit spectacole + PV distrugere bilete';
     const subtitle = isCerere ? 'Înainte de eveniment' : 'După eveniment · se generează și se depun împreună';
+
+    if (managed) return renderManagedGroup(box, title, subtitle, g);
 
     let status;
     if (g.stale) status = chip('Trebuie regenerată', 'error');
@@ -480,6 +500,32 @@ function renderGroup(key, g, data) {
         html += '<p class="mt-3 text-xs text-muted">Depunere confirmată pe ' + escapeHtml(g.filed_at) + (g.filed_by ? ' de ' + escapeHtml(g.filed_by) : '') + '.</p>';
     } else if (g.can_confirm) {
         html += '<p class="mt-3 text-xs text-muted">După ce depui ' + (g.types.length > 1 ? 'documentele' : 'cererea') + ' la primărie, apasă „' + (g.types.length > 1 ? 'Le-am depus' : 'Am depus-o') + '” ca să nu mai primești remindere.</p>';
+    }
+
+    box.innerHTML = html;
+}
+
+function renderManagedGroup(box, title, subtitle, g) {
+    let status;
+    if (g.filed) status = chip('Depus de AmBilet', 'success');
+    else if (g.generated) status = chip('Generat de AmBilet', 'success');
+    else status = chip('Se ocupă AmBilet', 'muted');
+
+    let html = '<div class="flex items-start justify-between gap-3 mb-4"><div>' +
+        '<p class="text-xs font-semibold tracking-wide uppercase text-muted">' + subtitle + '</p>' +
+        '<h3 class="mt-1 text-base font-bold text-secondary">' + title + '</h3></div>' + status + '</div>';
+
+    html += '<ul class="space-y-2">' + g.types.map(t => {
+        const doc = g.documents[t.type];
+        return '<li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border rounded-xl border-border">' +
+            '<div class="min-w-0"><p class="text-sm font-semibold text-secondary">' + escapeHtml(t.label) + '</p>' +
+            '<p class="text-xs text-muted">' + (doc ? 'Generat ' + escapeHtml(doc.generated_at) : 'Îl pregătește echipa AmBilet') + '</p></div>' +
+            (doc ? '<button type="button" onclick="downloadDoc(\'' + doc.ref + '\', this)" class="gap-1.5 btn btn-sm bg-primary/10 text-primary hover:bg-primary/20">' + ICON_DOWNLOAD + 'Descarcă</button>' : '') +
+            '</li>';
+    }).join('') + '</ul>';
+
+    if (g.filed && g.filed_at) {
+        html += '<p class="mt-3 text-xs text-muted">Depus la primărie pe ' + escapeHtml(g.filed_at) + '.</p>';
     }
 
     box.innerHTML = html;
