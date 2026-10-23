@@ -157,7 +157,7 @@ class PosInvoiceContentBuilder
 
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
-                'description' => trim('Servicii ticketing POS invitatii/bilete "' . $ticketTypeName . '"'
+                'description' => trim('Servicii ticketing POS bilete "' . $ticketTypeName . '"'
                     . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $displayQty,
                 'unit_price' => $displayUnit,

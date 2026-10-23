@@ -189,7 +189,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Taxa ticketing (POS)',
-                'description' => trim('Servicii ticketing POS invitatii/bilete "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
+                'description' => trim('Servicii ticketing POS bilete "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $comm,
                 'amount' => round($qty * $comm, 2),
