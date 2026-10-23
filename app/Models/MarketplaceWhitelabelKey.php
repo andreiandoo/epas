@@ -173,6 +173,20 @@ class MarketplaceWhitelabelKey extends Model
             return null;
         }
 
+        // Biletele în PDF pe pagina de mulțumire: doar comenzile organizatorului
+        if ($method === 'GET' && $path === 'tickets/download-pdf') {
+            $order = Order::where('marketplace_client_id', $this->marketplace_client_id)
+                ->where('order_number', (string) $request->query('order', ''))
+                ->first(['id', 'marketplace_organizer_id', 'event_id']);
+            if (!$order) {
+                return 'order_not_owned';
+            }
+            $organizerId = $order->marketplace_organizer_id
+                ?? Event::where('id', $order->event_id)->value('marketplace_organizer_id');
+
+            return (int) $organizerId === (int) $this->marketplace_organizer_id ? null : 'order_not_owned';
+        }
+
         // Order lookup on the thank-you page (purchase tracking)
         if ($method === 'GET' && preg_match('#^orders/([^/]+)$#', $path, $m)) {
             $identifier = rawurldecode($m[1]);
