@@ -151,6 +151,14 @@ class MarketplaceWhitelabelKey extends Model
             return $this->ownsEvents($eventIds) ? null : 'event_not_owned';
         }
 
+        // Factură pe persoană juridică: datele firmei după CUI, doar pentru
+        // evenimentele organizatorului
+        if ($method === 'POST' && $path === 'customer/company-invoice/lookup') {
+            $eventIds = array_map('intval', (array) $request->input('event_ids', []));
+
+            return $this->ownsEvents($eventIds) ? null : 'event_not_owned';
+        }
+
         // Seat holds
         if ($method === 'POST' && $path === 'customer/cart/items/with-seats') {
             return $this->ownsEvents([(int) $request->input('event_id')]) ? null : 'event_not_owned';

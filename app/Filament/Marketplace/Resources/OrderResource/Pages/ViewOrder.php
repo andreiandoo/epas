@@ -26,6 +26,8 @@ class ViewOrder extends ViewRecord
                 ->color('gray')
                 ->url(fn () => route('marketplace.orders.dispute-evidence', ['order' => $this->record->id]), shouldOpenInNewTab: true),
 
+            ...$this->companyInvoiceActions(),
+
             Actions\Action::make('retry_refund')
                 ->label('Reîncearcă rambursarea automată')
                 ->icon('heroicon-o-arrow-path')
@@ -663,6 +665,175 @@ class ViewOrder extends ViewRecord
             ->hidden(fn (Get $get) => $get('reason_category') !== 'other');
 
         return $schema;
+    }
+
+    /**
+     * Factură pe persoană juridică: cerere din partea operatorului, starea
+     * facturilor, reluarea emiterii, încărcarea facturii organizatorului în
+     * numele lui și retrimiterea către client.
+     */
+    protected function companyInvoiceActions(): array
+    {
+        $service = app(\App\Services\Invoicing\CompanyInvoiceService::class);
+        $rows = fn () => \App\Models\OrderCompanyInvoice::with(['organizer:id,name,company_name', 'invoice:id,number,meta'])
+            ->where('order_id', $this->record->id)->get();
+        $enabled = fn () => $service->isEnabled($this->record->marketplaceClient) && $this->record->source === 'marketplace';
+        $actor = fn () => 'admin:' . (auth('marketplace_admin')->id() ?? auth()->id());
+
+        return [
+            Actions\ActionGroup::make([
+                Actions\Action::make('company_invoice_request')
+                    ->label('Facturează pe persoană juridică')
+                    ->icon('heroicon-o-building-office')
+                    ->visible(fn () => $enabled() && $rows()->isEmpty())
+                    ->modalHeading('Factură pe persoană juridică')
+                    ->modalDescription(function () use ($service) {
+                        $reason = $service->ineligibleReason($this->record);
+
+                        return $reason
+                            ? new HtmlString('<span style="color:#b91c1c;">' . e($reason) . '</span>')
+                            : 'Datele firmei se iau de la ANAF după CUI. Platforma emite imediat factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.';
+                    })
+                    ->form([
+                        Forms\Components\TextInput::make('cui')
+                            ->label('CUI firmă')
+                            ->placeholder('RO12345678')
+                            ->default(fn () => $this->record->meta['company_billing']['cui'] ?? null)
+                            ->required()
+                            ->maxLength(20),
+                    ])
+                    ->modalSubmitActionLabel('Emite facturile')
+                    ->action(function (array $data) use ($service, $actor): void {
+                        try {
+                            $created = $service->requestForPaidOrder($this->record, $data['cui'], 'admin', $actor());
+                            Notification::make()->success()
+                                ->title('Cererea de factură a fost înregistrată')
+                                ->body(count($created) . ' factur' . (count($created) === 1 ? 'ă' : 'i') . ' de emis. Factura platformei pleacă automat la client în câteva minute.')
+                                ->send();
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()->danger()->title('Nu se poate factura pe firmă')->body($e->getMessage())->send();
+                        }
+                    }),
+
+                Actions\Action::make('company_invoice_status')
+                    ->label('Facturi pe firmă')
+                    ->icon('heroicon-o-document-text')
+                    ->visible(fn () => $rows()->isNotEmpty())
+                    ->modalHeading('Facturi pe persoană juridică')
+                    ->modalContent(fn () => new HtmlString($this->companyInvoiceTable($rows())))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Închide'),
+
+                Actions\Action::make('company_invoice_retry')
+                    ->label('Reia emiterea facturii platformei')
+                    ->icon('heroicon-o-arrow-path')
+                    ->visible(fn () => $rows()->contains(fn ($r) => $r->isMarketplace() && !$r->sent_to_customer_at))
+                    ->requiresConfirmation()
+                    ->action(function () use ($service, $rows): void {
+                        $row = $rows()->first(fn ($r) => $r->isMarketplace());
+                        try {
+                            $service->issueMarketplaceInvoice($row);
+                            $row->update(['last_error' => null]);
+                            Notification::make()->success()->title('Factura a fost emisă și trimisă clientului')->send();
+                        } catch (\Throwable $e) {
+                            $row->update(['last_error' => mb_substr($e->getMessage(), 0, 1000)]);
+                            Notification::make()->danger()->title('Emiterea a eșuat')->body($e->getMessage())->send();
+                        }
+                    }),
+
+                Actions\Action::make('company_invoice_upload')
+                    ->label('Încarcă factura organizatorului')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->visible(fn () => $rows()->contains(fn ($r) => !$r->isMarketplace() && in_array($r->status, ['requested', 'uploaded'], true)))
+                    ->form(fn () => [
+                        Forms\Components\Select::make('row_id')
+                            ->label('Organizator')
+                            ->options($rows()->filter(fn ($r) => !$r->isMarketplace() && in_array($r->status, ['requested', 'uploaded'], true))
+                                ->mapWithKeys(fn ($r) => [$r->id => ($r->organizer?->company_name ?: $r->organizer?->name ?: 'Organizator') . ' - ' . number_format((float) $r->amount, 2, ',', '.') . ' ' . $r->currency . ' (' . $r->statusLabel() . ')']))
+                            ->required(),
+                        Forms\Components\FileUpload::make('file')
+                            ->label('Factura (PDF)')
+                            ->disk('local')
+                            ->directory('company-invoices/tmp')
+                            ->acceptedFileTypes(['application/pdf'])
+                            ->maxSize(10240)
+                            ->storeFileNamesIn('file_name')
+                            ->required(),
+                    ])
+                    ->modalDescription('Factura pleacă imediat pe email la client, ca și cum ar fi încărcat-o organizatorul.')
+                    ->action(function (array $data) use ($service, $actor): void {
+                        $row = \App\Models\OrderCompanyInvoice::where('order_id', $this->record->id)->find($data['row_id']);
+                        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+                        if (!$row || !$disk->exists($data['file'])) {
+                            Notification::make()->danger()->title('Fișierul nu a fost găsit')->send();
+                            return;
+                        }
+                        $file = new \Illuminate\Http\UploadedFile($disk->path($data['file']), $data['file_name'] ?? 'factura.pdf', 'application/pdf', null, true);
+                        try {
+                            $service->storeOrganizerUpload($row, $file, $actor());
+                            Notification::make()->success()->title('Factura a fost trimisă clientului')->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->danger()->title('Factura a fost salvată, dar trimiterea a eșuat')->body($e->getMessage())->send();
+                        } finally {
+                            $disk->delete($data['file']);
+                        }
+                    }),
+
+                Actions\Action::make('company_invoice_resend')
+                    ->label('Retrimite facturile clientului')
+                    ->icon('heroicon-o-envelope')
+                    ->visible(fn () => $rows()->contains(fn ($r) => $r->hasDocument()))
+                    ->requiresConfirmation()
+                    ->modalDescription(fn () => 'Facturile disponibile pleacă din nou la ' . $this->record->customer_email . '.')
+                    ->action(function () use ($service, $rows): void {
+                        $sent = 0;
+                        $errors = [];
+                        foreach ($rows()->filter(fn ($r) => $r->hasDocument()) as $row) {
+                            try {
+                                $service->sendToCustomer($row);
+                                $sent++;
+                            } catch (\Throwable $e) {
+                                $errors[] = $e->getMessage();
+                            }
+                        }
+                        Notification::make()->{$errors ? 'warning' : 'success'}()
+                            ->title($sent . ' factur' . ($sent === 1 ? 'ă trimisă' : 'i trimise'))
+                            ->body($errors ? implode("\n", $errors) : null)
+                            ->send();
+                    }),
+            ])
+                ->label('Factură pe firmă')
+                ->icon('heroicon-o-building-office-2')
+                ->color('gray')
+                ->button()
+                ->visible(fn () => $enabled() || $rows()->isNotEmpty()),
+        ];
+    }
+
+    protected function companyInvoiceTable(\Illuminate\Support\Collection $rows): string
+    {
+        $company = $rows->first()?->company ?? [];
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $html = '<div style="font-size:13px;line-height:1.5;">'
+            . '<p><strong>' . e($company['name'] ?? '') . '</strong> · CUI ' . e(app(\App\Services\Invoicing\CompanyInvoiceService::class)->fiscalCode($company))
+            . ' · ' . e($company['reg_com'] ?? '') . '<br><span style="color:#6b7280;">' . e($company['address'] ?? '') . '</span></p>'
+            . '<table style="width:100%;border-collapse:collapse;margin-top:10px;">'
+            . '<tr style="text-align:left;border-bottom:1px solid #e5e7eb;"><th style="padding:6px;">Emitent</th><th style="padding:6px;">Stare</th><th style="padding:6px;text-align:right;">Sumă</th><th style="padding:6px;">Trimisă clientului</th></tr>';
+        foreach ($rows as $r) {
+            $issuer = $r->isMarketplace()
+                ? 'Platforma' . ($r->invoice ? ' · ' . e($r->invoice->meta['accounting']['invoice_number'] ?? $r->invoice->number) : '')
+                : e($r->organizer?->company_name ?: $r->organizer?->name ?: 'Organizator');
+            $html .= '<tr style="border-bottom:1px solid #f3f4f6;">'
+                . '<td style="padding:6px;">' . $issuer . '</td>'
+                . '<td style="padding:6px;">' . e($r->statusLabel())
+                . ($r->last_error ? '<br><span style="color:#b91c1c;font-size:12px;">' . e($r->last_error) . '</span>' : '') . '</td>'
+                . '<td style="padding:6px;text-align:right;">' . $fmt($r->amount) . ' ' . e($r->currency)
+                . ($r->vat_amount > 0 ? '<br><span style="color:#6b7280;font-size:12px;">din care TVA ' . $fmt($r->vat_amount) . '</span>' : '') . '</td>'
+                . '<td style="padding:6px;">' . ($r->sent_to_customer_at ? $r->sent_to_customer_at->format('d.m.Y H:i') : '—') . '</td>'
+                . '</tr>';
+        }
+
+        return $html . '</table></div>';
     }
 
     protected function pendingRefund(): ?\App\Models\MarketplaceRefundRequest

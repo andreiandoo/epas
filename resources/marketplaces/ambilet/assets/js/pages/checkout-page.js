@@ -83,6 +83,11 @@ const CheckoutPage = {
                 if (typeof AmbiletCart !== 'undefined' && AmbiletCart.setVatRate) AmbiletCart.setVatRate(this.vatRate);
                 if (this.vatRate > 0 && this.items?.length) this.renderSummary();
 
+                // Factură pe persoană juridică
+                if (response.data.company_invoice && response.data.company_invoice.enabled) {
+                    this.setupCompanyInvoice();
+                }
+
                 // Handle cultural card settings
                 if (response.data.cultural_card && response.data.cultural_card.enabled) {
                     this.culturalCardEnabled = true;
@@ -126,6 +131,85 @@ const CheckoutPage = {
             }
         } catch (error) {
             // Features endpoint optional — fall through silently
+        }
+    },
+
+    // ==================== FACTURĂ PE PERSOANĂ JURIDICĂ ====================
+    company: null,
+
+    setupCompanyInvoice() {
+        const section = document.getElementById('company-invoice-section');
+        if (!section) return;
+        section.classList.remove('hidden');
+        const input = document.getElementById('company-cui');
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); this.lookupCompany(); }
+        });
+        input.addEventListener('input', () => {
+            // alt CUI = trebuie verificat din nou
+            if (this.company && input.value.replace(/\s/g, '').toUpperCase().replace(/^RO/, '') !== String(this.company.cui)) {
+                this.company = null;
+                document.getElementById('company-card').classList.add('hidden');
+                document.getElementById('company-pf-note').classList.add('hidden');
+            }
+        });
+        // CUI-ul salvat în profil la o comandă anterioară
+        const user = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getUser() : null;
+        const savedCui = user?.settings?.company_billing?.cui;
+        if (savedCui) input.value = savedCui;
+    },
+
+    toggleCompanyInvoice() {
+        const on = document.getElementById('companyInvoiceCheckbox').checked;
+        document.getElementById('company-invoice-fields').classList.toggle('hidden', !on);
+        if (on) {
+            const input = document.getElementById('company-cui');
+            if (input.value.trim() && !this.company) this.lookupCompany();
+            else input.focus();
+        }
+    },
+
+    async lookupCompany() {
+        const input = document.getElementById('company-cui');
+        const btn = document.getElementById('company-cui-btn');
+        const err = document.getElementById('company-cui-error');
+        const card = document.getElementById('company-card');
+        const pfNote = document.getElementById('company-pf-note');
+        const cui = input.value.trim();
+        err.classList.add('hidden');
+        if (!cui) { input.focus(); return; }
+
+        btn.disabled = true;
+        const label = btn.textContent;
+        btn.textContent = '...';
+        try {
+            const eventIds = [...new Set(this.items.map(i => parseInt(i.eventId || i.event?.id, 10)).filter(Boolean))];
+            const res = await AmbiletAPI.post('/customer/company-invoice/lookup', { cui, event_ids: eventIds });
+            const c = res.data.company;
+            this.company = c;
+            const esc = (v) => String(v || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+            card.innerHTML = `<p class="font-semibold text-secondary">${esc(c.name)}</p>`
+                + `<p class="mt-1 text-muted">CUI ${esc(c.fiscal_code)}${c.reg_com ? ' · ' + esc(c.reg_com) : ''}</p>`
+                + `<p class="text-muted">${esc(c.address)}</p>`;
+            card.classList.remove('hidden');
+
+            const pf = res.data.organizers_without_invoice || [];
+            if (pf.length) {
+                const tpl = document.getElementById('company-invoice-section').dataset.pfNote || '%s';
+                pfNote.textContent = tpl.replace('%s', pf.join(', '));
+                pfNote.classList.remove('hidden');
+            } else {
+                pfNote.classList.add('hidden');
+            }
+        } catch (e) {
+            this.company = null;
+            card.classList.add('hidden');
+            pfNote.classList.add('hidden');
+            err.textContent = e.message || 'CUI-ul nu a putut fi verificat.';
+            err.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = label;
         }
     },
 
@@ -830,6 +914,15 @@ const CheckoutPage = {
             return false;
         }
 
+        // Factură pe firmă bifată: CUI-ul trebuie verificat
+        const companyBox = document.getElementById('companyInvoiceCheckbox');
+        if (companyBox && companyBox.checked && !this.company) {
+            const msg = document.getElementById('company-invoice-section')?.dataset.required || 'Verifică CUI-ul firmei.';
+            if (typeof AmbiletNotifications !== 'undefined') AmbiletNotifications.error(msg);
+            document.getElementById('company-cui')?.focus();
+            return false;
+        }
+
         return true;
     },
 
@@ -955,6 +1048,11 @@ const CheckoutPage = {
                 accept_terms: acceptTerms,
                 ...(leisureLocale ? { locale: leisureLocale } : {}),
             };
+
+            // Factură pe persoană juridică (firma verificată la ANAF)
+            if (this.company && document.getElementById('companyInvoiceCheckbox')?.checked) {
+                checkoutData.invoice_company = { cui: String(this.company.cui) };
+            }
 
             // Add promo code if applied
             const promo = AmbiletCart.getPromoCode();

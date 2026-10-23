@@ -1298,6 +1298,42 @@ switch ($action) {
         $endpoint = '/customer/checkout';
         break;
 
+    // ==================== FACTURĂ PE PERSOANĂ JURIDICĂ ====================
+
+    case 'company-invoice.lookup':
+        // fără cont: checkout-ul verifică CUI-ul la ANAF
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/company-invoice/lookup';
+        break;
+
+    case 'customer.order.company-invoice':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $orderId = $_GET['id'] ?? '';
+        if (!preg_match('/^[\w-]+$/', $orderId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $endpoint = '/customer/orders/' . urlencode($orderId) . '/company-invoice';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.order.company-invoice.download':
+        $method = 'GET';
+        $orderId = $_GET['id'] ?? '';
+        $invoiceId = (int) ($_GET['invoice'] ?? 0);
+        if (!preg_match('/^[\w-]+$/', $orderId) || $invoiceId <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order or invoice ID']);
+            exit;
+        }
+        $endpoint = '/customer/orders/' . urlencode($orderId) . '/company-invoices/' . $invoiceId . '/download';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
     case 'orders.pay':
         $orderId = $_GET['id'] ?? '';
         if (!$orderId) {
@@ -3360,6 +3396,29 @@ switch ($action) {
         $endpoint = '/organizer/documents/upload';
         $requiresAuth = true;
         $isMultipart = true;
+        break;
+
+    // Facturi pe firmă cerute de clienți (organizatorul încarcă factura biletelor)
+    case 'organizer.company-invoices':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status']) && preg_match('/^[a-z_]+$/', $_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/organizer/company-invoices' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.company-invoices.upload':
+        $method = 'POST';
+        $endpoint = '/organizer/company-invoices/' . (int) ($_GET['id'] ?? 0) . '/upload';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'organizer.company-invoices.file':
+        $method = 'GET';
+        $endpoint = '/organizer/company-invoices/' . (int) ($_GET['id'] ?? 0) . '/file';
+        $requiresAuth = true;
+        $rawResponse = true;
         break;
 
     // ==================== ORGANIZER NOTIFICATIONS ====================

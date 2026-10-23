@@ -36,6 +36,13 @@ class GeneralClientInvoiceVat
         $baseCommission = round($baseCommission, 2);
         $rate = $marketplace->vat_payer ? (float) data_get($marketplace->settings, 'tax.vat_rate', 21) : 0.0;
 
+        // Comisionul comenzilor facturate deja pe firmă (factură nominală) nu
+        // mai intră pe „Client Divers”. Gol când facturarea pe firmă e oprită.
+        $invoicedSeparately = app(CompanyInvoiceService::class)->invoicedOnTopRowsForPayout($payout);
+        if ($invoicedSeparately) {
+            $baseCommission = max(0.0, round($baseCommission - array_sum(array_column($invoicedSeparately, 'commission_amount')), 2));
+        }
+
         if ($rate <= 0) {
             return $this->result(
                 $baseCommission > 0.005 ? [$this->line($baseCommission, 0.0, 'before')] : [],
@@ -103,6 +110,10 @@ class GeneralClientInvoiceVat
                 }
                 $taxedRows[] = $row;
             }
+            $taxed = $sum($taxedRows);
+        }
+        if ($invoicedSeparately) {
+            $taxedRows = $this->withoutInvoiced($taxedRows, $invoicedSeparately);
             $taxed = $sum($taxedRows);
         }
         if ($taxed > $baseCommission + 0.01) {
@@ -227,6 +238,32 @@ class GeneralClientInvoiceVat
             'vat_rate' => $line['rate'],
             'vat_amount' => $line['vat'],
         ];
+    }
+
+    /** Rândurile pe tip de bilet minus comisionul facturat deja pe firmă (după numele tipului). */
+    protected function withoutInvoiced(array $rows, array $invoiced): array
+    {
+        $left = [];
+        foreach ($invoiced as $inv) {
+            $left[(string) $inv['ticket_type_name']] = ['qty' => (int) $inv['qty'], 'amount' => (float) $inv['commission_amount']];
+        }
+        $out = [];
+        foreach ($rows as $row) {
+            $name = (string) ($row['ticket_type_name'] ?? '');
+            if (isset($left[$name]) && $left[$name]['amount'] > 0.005) {
+                $take = min((float) ($row['commission_amount'] ?? 0), $left[$name]['amount']);
+                $takeQty = min((int) ($row['qty'] ?? 0), $left[$name]['qty']);
+                $row['commission_amount'] = round((float) $row['commission_amount'] - $take, 2);
+                $row['qty'] = (int) ($row['qty'] ?? 0) - $takeQty;
+                $left[$name]['amount'] -= $take;
+                $left[$name]['qty'] -= $takeQty;
+            }
+            if ((float) ($row['commission_amount'] ?? 0) > 0.005) {
+                $out[] = $row;
+            }
+        }
+
+        return $out;
     }
 
     /** Snapshot rows (ticket_breakdown) less the taxed rows' quantities, as commission rows. */

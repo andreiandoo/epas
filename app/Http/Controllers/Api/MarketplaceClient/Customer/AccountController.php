@@ -568,6 +568,8 @@ class AccountController extends BaseController
                 'refund_reason' => $refundReason,
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
+                // Factură pe persoană juridică: cerere + documente
+                'company_invoicing' => app(\App\Services\Invoicing\CompanyInvoiceService::class)->customerView($order),
             ],
         ];
 

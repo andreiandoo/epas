@@ -50,6 +50,8 @@ class Invoice extends Model
         'paid_at',
         'payment_method',
         'meta',
+        // factura marketplace-ului către o firmă, pentru o comandă (order_company_invoices)
+        'order_id',
     ];
 
     protected $casts = [
@@ -73,6 +75,11 @@ class Invoice extends Model
     public function marketplaceClient(): BelongsTo
     {
         return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function organizer(): BelongsTo

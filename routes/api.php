@@ -2479,6 +2479,17 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.billing-info');
         Route::get('/payment-methods', [OrganizerBillingController::class, 'paymentMethods'])
             ->name('api.marketplace-client.organizer.payment-methods');
+
+        // Facturi pe firmă cerute de clienți pentru biletele organizatorului
+        Route::get('/company-invoices', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\CompanyInvoiceController::class, 'index'])
+            ->name('api.marketplace-client.organizer.company-invoices');
+        Route::post('/company-invoices/{id}/upload', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\CompanyInvoiceController::class, 'upload'])
+            ->whereNumber('id')
+            ->middleware('throttle:30,1')
+            ->name('api.marketplace-client.organizer.company-invoices.upload');
+        Route::get('/company-invoices/{id}/file', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\CompanyInvoiceController::class, 'file'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.company-invoices.file');
     });
 });
 
@@ -2599,6 +2610,12 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.orders');
         Route::get('/orders/{order}', [CustomerAccountController::class, 'orderDetail'])
             ->name('api.marketplace-client.customer.orders.show');
+        Route::post('/orders/{order}/company-invoice', [\App\Http\Controllers\Api\MarketplaceClient\Customer\CompanyInvoiceController::class, 'request'])
+            ->middleware('throttle:10,1')
+            ->name('api.marketplace-client.customer.orders.company-invoice');
+        Route::get('/orders/{order}/company-invoices/{invoice}/download', [\App\Http\Controllers\Api\MarketplaceClient\Customer\CompanyInvoiceController::class, 'download'])
+            ->whereNumber('invoice')
+            ->name('api.marketplace-client.customer.orders.company-invoice.download');
         Route::get('/tickets', [CustomerAccountController::class, 'upcomingTickets'])
             ->name('api.marketplace-client.customer.tickets');
         Route::get('/tickets/all', [CustomerAccountController::class, 'allTickets'])
@@ -2855,6 +2872,10 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.checkout.summary');
     Route::post('/checkout', [App\Http\Controllers\Api\MarketplaceClient\Customer\CheckoutController::class, 'checkout'])
         ->name('api.marketplace-client.customer.checkout');
+    // Factură pe persoană juridică: datele firmei după CUI (ANAF), fără cont
+    Route::post('/company-invoice/lookup', [App\Http\Controllers\Api\MarketplaceClient\Customer\CompanyInvoiceController::class, 'lookup'])
+        ->middleware('throttle:20,1')
+        ->name('api.marketplace-client.customer.company-invoice.lookup');
 
     // Gift Cards (public - for purchasing and checking balance)
     Route::get('/gift-cards/options', [CustomerGiftCardController::class, 'options'])

@@ -68,6 +68,9 @@ class CheckoutController extends BaseController
             // See MarketplaceLoyaltyService: points never touch discount_amount, the organizer is paid in full.
             'points_to_use' => 'nullable|integer|min:0|max:10000000',
             'referral_code' => 'nullable|string|max:20',
+            // Factură pe persoană juridică (CUI românesc; restul datelor vin de la ANAF)
+            'invoice_company' => 'nullable|array',
+            'invoice_company.cui' => 'nullable|string|max:20',
         ]);
 
         // B6: Captura locale-ului efectiv pentru order-urile create in acest flow.
@@ -1604,6 +1607,20 @@ class CheckoutController extends BaseController
                 'currency' => $order->currency,
                 'expires_at' => $order->expires_at?->toIso8601String(),
             ]];
+
+            // Factură pe persoană juridică: firma se verifică la ANAF și se
+            // salvează pe comandă; facturile pornesc la plată. Nu oprește checkout-ul.
+            if (!$isTestOrder && is_array($request->input('invoice_company'))) {
+                try {
+                    app(\App\Services\Invoicing\CompanyInvoiceService::class)
+                        ->attachFromCheckout($order, $request->input('invoice_company'));
+                } catch (\Throwable $e) {
+                    Log::channel('marketplace')->warning('Company invoice attach failed', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             Log::channel('marketplace')->info('Checkout completed', [
                 'client_id' => $client->id,

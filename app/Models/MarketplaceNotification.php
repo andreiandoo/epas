@@ -60,6 +60,7 @@ class MarketplaceNotification extends Model
     public const TYPE_SERVICE_ORDER_INVOICE = 'service_order_invoice';
     public const TYPE_SERVICE_ORDER_RESULTS = 'service_order_results';
     public const TYPE_SERVICE_ORDER_STARTED = 'service_order_started';
+    public const TYPE_COMPANY_INVOICE_REQUEST = 'company_invoice_request';
 
     /**
      * Type labels for display
@@ -89,6 +90,7 @@ class MarketplaceNotification extends Model
             self::TYPE_SERVICE_ORDER_INVOICE => 'Factură Servicii',
             self::TYPE_SERVICE_ORDER_RESULTS => 'Rezultate Serviciu',
             self::TYPE_SERVICE_ORDER_STARTED => 'Serviciu Pornit',
+            self::TYPE_COMPANY_INVOICE_REQUEST => 'Factură cerută pe firmă',
         ];
     }
 
@@ -120,6 +122,7 @@ class MarketplaceNotification extends Model
             self::TYPE_SERVICE_ORDER_INVOICE => 'heroicon-o-document-currency-euro',
             self::TYPE_SERVICE_ORDER_RESULTS => 'heroicon-o-chart-bar',
             self::TYPE_SERVICE_ORDER_STARTED => 'heroicon-o-play',
+            self::TYPE_COMPANY_INVOICE_REQUEST => 'heroicon-o-document-arrow-up',
         ];
     }
 
@@ -151,6 +154,7 @@ class MarketplaceNotification extends Model
             self::TYPE_SERVICE_ORDER_INVOICE => 'info',
             self::TYPE_SERVICE_ORDER_RESULTS => 'success',
             self::TYPE_SERVICE_ORDER_STARTED => 'info',
+            self::TYPE_COMPANY_INVOICE_REQUEST => 'warning',
         ];
     }
 

@@ -37,7 +37,9 @@ class OrganizerInvoiceResource extends Resource
 
         return parent::getEloquentQuery()
             ->where('marketplace_client_id', $marketplaceAdmin?->marketplace_client_id)
-            ->whereNotNull('marketplace_organizer_id')
+            // + facturile platformei către firme, la comenzi (fără organizator)
+            ->where(fn (Builder $q) => $q->whereNotNull('marketplace_organizer_id')
+                ->orWhereRaw("(meta->>'recipient_type') = ?", [\App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE]))
             ->with(['payout:id,reference,event_id', 'payout.event:id,title']);
     }
 
@@ -200,8 +202,9 @@ class OrganizerInvoiceResource extends Resource
                                 $html .= '<hr style="border:none;border-top:1px solid currentColor;opacity:0.15;margin:20px 0;">';
 
                                 // ── CLIENT ──
-                                $isGeneralClient = ($record->meta['recipient_type'] ?? null) === 'general_client';
-                                $clientHeading = $isGeneralClient ? 'Client (general)' : 'Client (organizator)';
+                                $isOrderCompany = ($record->meta['recipient_type'] ?? null) === \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE;
+                                $isGeneralClient = ($record->meta['recipient_type'] ?? null) === 'general_client' || $isOrderCompany;
+                                $clientHeading = $isOrderCompany ? 'Client (firmă, comanda ' . e($record->meta['order_number'] ?? '') . ')' : ($isGeneralClient ? 'Client (general)' : 'Client (organizator)');
                                 $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">' . $clientHeading . '</h4>';
                                 $html .= '<table style="width:100%;">';
                                 $html .= $row('Nume', $warn($client['name'] ?? '', 'Nume'));
@@ -344,8 +347,8 @@ class OrganizerInvoiceResource extends Resource
                         // Resolve organizer / general-client name for the
                         // main line — same logic as before the merge.
                         $meta = $record->meta ?? [];
-                        $name = (($meta['recipient_type'] ?? null) === 'general_client')
-                            ? ($meta['client']['name'] ?? 'Client general')
+                        $name = in_array($meta['recipient_type'] ?? null, ['general_client', \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE], true)
+                            ? ($meta['client']['name'] ?? 'Client general') . (!empty($meta['order_number']) ? ' · comanda ' . $meta['order_number'] : '')
                             : ($state ?? '—');
 
                         // Event · decont-reference on the second line (from

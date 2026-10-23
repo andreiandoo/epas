@@ -349,6 +349,32 @@ class AccountingService
     }
 
     /**
+     * Trimite în SPV (e-Factura) o factură deja emisă la provider. Doar Oblio
+     * știe asta azi; pentru ceilalți întoarce ['supported' => false].
+     */
+    public function submitMarketplaceEFactura(int $marketplaceClientId, string $externalRef): array
+    {
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+        if (!$connector) {
+            return ['supported' => false];
+        }
+
+        $auth = json_decode(Crypt::decryptString($connector->auth), true);
+        $adapter = $this->getAdapter($connector->provider, $auth);
+        if (!$adapter instanceof \App\Services\Accounting\Adapters\OblioAdapter) {
+            return ['supported' => false];
+        }
+
+        // external_ref = "SERIE/NUMĂR"
+        [$series, $number] = array_pad(explode('/', $externalRef, 2), 2, '');
+
+        return ['supported' => true, 'result' => $adapter->submitToEFactura($series, $number)];
+    }
+
+    /**
      * Look up the live state of a marketplace invoice at the accounting
      * provider. Returns the adapter's getInvoiceStatus contract
      * (see AccountingAdapterInterface). Falls back to exists=null with a

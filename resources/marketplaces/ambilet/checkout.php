@@ -125,6 +125,27 @@ require_once __DIR__ . '/includes/header.php';
                                 <p class="mt-1 ml-8 text-xs text-muted"><?= htmlspecialchars(ct('create_account_hint')) ?></p>
                             </div>
                         </div>
+
+                        <!-- Factură pe persoană juridică (apare doar dacă e activă în Setări) -->
+                        <div id="company-invoice-section" class="hidden pt-5 mt-5 border-t border-border"
+                             data-pf-note="<?= htmlspecialchars(ct('company_invoice_pf_note')) ?>"
+                             data-required="<?= htmlspecialchars(ct('company_invoice_required')) ?>">
+                            <label class="flex items-center gap-3 cursor-pointer select-none">
+                                <input type="checkbox" id="companyInvoiceCheckbox" class="w-5 h-5 border-2 rounded accent-primary border-border" onchange="CheckoutPage.toggleCompanyInvoice()">
+                                <span class="text-sm font-medium text-secondary"><?= htmlspecialchars(ct('company_invoice_toggle')) ?></span>
+                            </label>
+                            <div id="company-invoice-fields" class="hidden mt-4">
+                                <label for="company-cui" class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('company_cui')) ?></label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="company-cui" inputmode="text" autocomplete="off" maxlength="14" class="flex-1 min-w-0 px-4 py-3 uppercase border-2 input-field border-border rounded-xl focus:outline-none" placeholder="<?= htmlspecialchars(ct('company_invoice_cui_placeholder')) ?>">
+                                    <button type="button" id="company-cui-btn" onclick="CheckoutPage.lookupCompany()" class="btn btn-primary px-5 py-3 text-sm rounded-xl"><?= htmlspecialchars(ct('company_invoice_check')) ?></button>
+                                </div>
+                                <p id="company-cui-error" class="hidden mt-2 text-sm text-primary" role="alert"></p>
+                                <div id="company-card" class="hidden p-4 mt-3 text-sm border rounded-xl bg-surface border-border" aria-live="polite"></div>
+                                <p id="company-pf-note" class="hidden mt-3 text-xs font-medium text-amber-600"></p>
+                                <p class="mt-2 text-xs text-muted"><?= htmlspecialchars(ct('company_invoice_hint')) ?></p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Beneficiaries Section -->

@@ -163,6 +163,10 @@ class ConfigController extends BaseController
             'loyalty'       => app(\App\Services\Gamification\MarketplaceLoyaltyService::class)->publicSettings($client),
             // the marketplace's own VAT, added to the commission charged on top of the price and to the insurance fee (0 = none)
             'marketplace_vat_rate' => $client->vatRate(),
+            // factură pe persoană juridică în checkout (Setări → Facturare pe firmă)
+            'company_invoice' => [
+                'enabled' => app(\App\Services\Invoicing\CompanyInvoiceService::class)->isEnabled($client),
+            ],
         ];
 
         return $this->success($features);

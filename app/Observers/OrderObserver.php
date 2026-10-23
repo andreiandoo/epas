@@ -121,6 +121,21 @@ class OrderObserver
                     }
                 });
 
+                // Factură pe firmă cerută în checkout: pornește la plată.
+                // No-op pentru comenzile fără meta.invoice_requested.
+                if (!empty($order->meta['invoice_requested'])) {
+                    DB::afterCommit(function () use ($order) {
+                        try {
+                            app(\App\Services\Invoicing\CompanyInvoiceService::class)->processPaidOrder($order->fresh());
+                        } catch (\Throwable $e) {
+                            Log::warning('Company invoice start failed', [
+                                'order_id' => $order->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    });
+                }
+
                 // Leisure: move the day/slot holds taken at checkout from
                 // reserved → sold. No-op for every non-leisure order, which
                 // never carries meta.leisure_capacity.

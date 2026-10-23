@@ -133,6 +133,14 @@ const AmbiletAPI = {
      * Convert endpoint to proxy action
      */
     getProxyAction(endpoint) {
+        // Factură pe persoană juridică (client + organizator)
+        if (endpoint === '/customer/company-invoice/lookup') return 'company-invoice.lookup';
+        if (/^\/customer\/orders\/[\w-]+\/company-invoice$/.test(endpoint)) return 'customer.order.company-invoice';
+        if (/^\/customer\/orders\/[\w-]+\/company-invoices\/\d+\/download$/.test(endpoint)) return 'customer.order.company-invoice.download';
+        if (endpoint === '/organizer/company-invoices') return 'organizer.company-invoices';
+        if (/^\/organizer\/company-invoices\/\d+\/upload$/.test(endpoint)) return 'organizer.company-invoices.upload';
+        if (/^\/organizer\/company-invoices\/\d+\/file$/.test(endpoint)) return 'organizer.company-invoices.file';
+
         // Unified multi-realm login (customer/organizer/venue-owner detection)
         if (endpoint === '/auth/multi-login') return 'auth.multi-login';
 
@@ -567,6 +575,14 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Factură pe persoană juridică
+        const ciDownload = endpoint.match(/^\/customer\/orders\/([\w-]+)\/company-invoices\/(\d+)\/download$/);
+        if (ciDownload) return `id=${encodeURIComponent(ciDownload[1])}&invoice=${encodeURIComponent(ciDownload[2])}`;
+        const ciRequest = endpoint.match(/^\/customer\/orders\/([\w-]+)\/company-invoice$/);
+        if (ciRequest) return `id=${encodeURIComponent(ciRequest[1])}`;
+        const ciOrganizer = endpoint.match(/^\/organizer\/company-invoices\/(\d+)\/(?:upload|file)$/);
+        if (ciOrganizer) return `id=${encodeURIComponent(ciOrganizer[1])}`;
+
         // Extract event ID + optional shift ID from leisure shifts CRUD
         const leisureShiftMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/shifts\/(\d+)/);
         if (leisureShiftMatch) {
@@ -2400,6 +2416,35 @@ const AmbiletAPI = {
  */
 AmbiletAPI.upload = async function(endpointPath, formData) {
     return AmbiletAPI._postMultipart(endpointPath, formData);
+};
+
+/**
+ * Descarcă un PDF printr-un endpoint autentificat (facturi pe firmă).
+ * Mesajul de eroare vine din JSON-ul API-ului când nu e PDF.
+ */
+AmbiletAPI.downloadFile = async function(endpointPath, fileName) {
+    const action = AmbiletAPI.getProxyAction(endpointPath);
+    const params = AmbiletAPI.getProxyParams(endpointPath);
+    if (!action) throw new APIError(`Unknown endpoint: ${endpointPath}`, 400);
+    const url = `${AmbiletAPI.getApiUrl()}?action=${action}${params ? '&' + params : ''}`;
+    const headers = {};
+    const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(url, { headers, credentials: 'same-origin' });
+    const type = res.headers.get('Content-Type') || '';
+    if (!res.ok || type.indexOf('application/pdf') === -1) {
+        let data = null;
+        try { data = await res.json(); } catch (_) { /* non-JSON */ }
+        throw new APIError((data && (data.message || data.error)) || 'Fișierul nu este disponibil.', res.status);
+    }
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName || 'factura.pdf';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => { URL.revokeObjectURL(link.href); link.remove(); }, 1000);
 };
 
 AmbiletAPI._postMultipart = async function(endpointPath, formData) {

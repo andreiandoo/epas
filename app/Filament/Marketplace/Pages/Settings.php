@@ -58,6 +58,7 @@ class Settings extends Page
                 'vat_payer' => (bool) $marketplace->vat_payer,
                 'vat_rate' => data_get($settings, 'tax.vat_rate', 21),
                 'vat_payer_since' => data_get($settings, 'tax.vat_payer_since'),
+                'company_invoicing_enabled' => (bool) data_get($settings, 'company_invoicing.enabled', false),
                 'tax_display_mode' => $marketplace->tax_display_mode ?? 'included',
                 'fixed_commission' => $marketplace->fixed_commission,
                 'address' => $marketplace->address,
@@ -345,6 +346,12 @@ class Settings extends Page
                                             ->default('included')
                                             ->helperText('Alegeți cum vor fi afișate taxele pe website: incluse în prețul biletului sau adăugate separat la checkout.')
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Aceasta setare afecteaza modul in care clientii vad preturile pe website.'),
+
+                                        Forms\Components\Toggle::make('company_invoicing_enabled')
+                                            ->label('Facturare pe persoană juridică')
+                                            ->helperText('Clientul poate cere factură pe firmă (CUI verificat la ANAF) în checkout, în cont sau prin operator. Platforma emite automat în contabilitate factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.')
+                                            ->onColor('success')
+                                            ->offColor('gray'),
 
                                         Forms\Components\TextInput::make('fixed_commission')
                                             ->label('Comision Fix')
@@ -1345,6 +1352,11 @@ class Settings extends Page
                 ? ($data['vat_payer_since'] ? \Carbon\Carbon::parse($data['vat_payer_since'])->toDateString() : null)
                 : data_get($settings, 'tax.vat_payer_since'),
         ]);
+        if (array_key_exists('company_invoicing_enabled', $data)) {
+            $settings['company_invoicing'] = array_merge($settings['company_invoicing'] ?? [], [
+                'enabled' => (bool) $data['company_invoicing_enabled'],
+            ]);
+        }
         $settings['invoice_preparer'] = $data['invoice_preparer'] ?? '';
         $settings['invoice_preparer_cnp'] = $data['invoice_preparer_cnp'] ?? '';
         $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';

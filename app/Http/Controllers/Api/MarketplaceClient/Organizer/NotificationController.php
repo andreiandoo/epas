@@ -270,6 +270,7 @@ class NotificationController extends BaseController
             MarketplaceNotification::TYPE_SERVICE_ORDER_INVOICE => 'Facturi servicii',
             MarketplaceNotification::TYPE_SERVICE_ORDER_RESULTS => 'Rezultate servicii',
             MarketplaceNotification::TYPE_SERVICE_ORDER_STARTED => 'Servicii pornite',
+            MarketplaceNotification::TYPE_COMPANY_INVOICE_REQUEST => 'Facturi cerute pe firmă',
             MarketplaceNotification::TYPE_PAYOUT_REQUEST => 'Cereri plată',
             MarketplaceNotification::TYPE_PAYOUT_APPROVED => 'Plăți aprobate',
             MarketplaceNotification::TYPE_PAYOUT_PROCESSING => 'Plăți în procesare',
