@@ -1256,16 +1256,30 @@ class OrdersController extends BaseController
             Customer::where('id', $order->customer_id)->update(['email' => $email]);
         }
 
-        // Send ticket email
+        foreach ($order->tickets as $ticket) {
+            if (empty($ticket->attendee_email)) {
+                $ticket->update(['attendee_email' => $email]);
+            }
+        }
+
+        // Buyer without a phone that can scan the QR: the operator types the
+        // email in the app. Close the QR claim so it can't be used twice.
+        $claim = PosTicketClaim::where('order_id', $order->id)->latest('id')->first();
+        if ($claim && $claim->isPending()) {
+            $claim->update(['email' => $email]);
+            $claim->markClaimed();
+        }
+
         try {
-            $this->sendPosTicketEmail($order, $email, $client);
+            $this->sendPosTicketEmail($order, $email, $client, $claim);
         } catch (\Throwable $e) {
             Log::error('Failed to send POS ticket email', [
                 'order_id' => $order->id,
                 'email' => $email,
                 'error' => $e->getMessage(),
             ]);
-            // Don't fail the request - email updated successfully even if send fails
+            // The operator is still with the buyer, so tell them it failed.
+            return $this->error('Emailul nu a putut fi trimis. Încearcă din nou.', 500);
         }
 
         return $this->success(null, 'Tickets sent to ' . $email);
@@ -1322,7 +1336,7 @@ class OrdersController extends BaseController
     /**
      * Send a simple ticket email for POS orders via marketplace transport
      */
-    private function sendPosTicketEmail(Order $order, string $email, $client): void
+    private function sendPosTicketEmail(Order $order, string $email, $client, ?PosTicketClaim $claim = null): void
     {
         $order->load(['tickets.ticketType', 'event']);
         $event = $order->event;
@@ -1360,9 +1374,24 @@ class OrdersController extends BaseController
             <p style='color:#999;font-size:12px;margin-top:30px;'>Trimis de " . e($marketplaceName) . "</p>
         </div>";
 
+        // Same PDF the buyer gets from the QR download page.
+        $attachments = [];
+        try {
+            $pdfClaim = $claim ?? new PosTicketClaim(['order_id' => $order->id, 'event_name' => $eventName]);
+            $pdf = \App\Http\Controllers\PosTicketClaimController::renderPdf($pdfClaim, $order);
+            $attachments[] = ['data' => $pdf['content'], 'name' => $pdf['filename'], 'mime' => 'application/pdf'];
+            $html = str_replace('Prezintă acest email sau codurile la intrare.', 'Biletele sunt atașate în PDF. Prezintă PDF-ul, acest email sau codurile la intrare.', $html);
+        } catch (\Throwable $e) {
+            Log::warning('POS ticket PDF failed, sending codes only', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $this->sendMarketplaceEmail($client, $email, $order->customer_name ?? 'Client', "Biletele tale - {$eventName}", $html, [
             'order_id' => $order->id,
             'template_slug' => 'pos_tickets',
+            'attachments' => $attachments,
         ]);
     }
 

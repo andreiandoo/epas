@@ -99,6 +99,10 @@ abstract class BaseController extends Controller
         $slug = $logExtra['template_slug'] ?? null;
         $useTransactional = EmailRouting::isTransactional($slug);
 
+        // Optional files: [['data' => string, 'name' => 'x.pdf', 'mime' => 'application/pdf']]
+        $attachments = $logExtra['attachments'] ?? [];
+        unset($logExtra['attachments']);
+
         $fromAddress = $useTransactional
             ? $client->getTransactionalEmailFromAddress()
             : $client->getEmailFromAddress();
@@ -131,6 +135,10 @@ abstract class BaseController extends Controller
                     ->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
                     ->subject($subject)
                     ->html($html);
+
+                foreach ($attachments as $file) {
+                    $email->attach($file['data'], $file['name'], $file['mime'] ?? null);
+                }
 
                 // Optional reply-to. Used by e.g. the venue contact form
                 // so the venue owner can hit "Reply" and reach the
@@ -198,8 +206,11 @@ abstract class BaseController extends Controller
             }
 
             // Fallback to Laravel default mailer
-            Mail::html($html, function ($message) use ($toEmail, $toName, $subject) {
+            Mail::html($html, function ($message) use ($toEmail, $toName, $subject, $attachments) {
                 $message->to($toEmail, $toName)->subject($subject);
+                foreach ($attachments as $file) {
+                    $message->attachData($file['data'], $file['name'], ['mime' => $file['mime'] ?? null]);
+                }
             });
             $log->markSent();
 

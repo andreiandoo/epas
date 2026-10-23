@@ -334,6 +334,23 @@ class PosTicketClaimController extends Controller
             $claim->markClaimed();
         }
 
+        $pdf = self::renderPdf($claim, $order);
+
+        return response($pdf['content'], 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $pdf['filename'] . '"',
+        ]);
+    }
+
+    /**
+     * Ticket PDF for a POS order. Also attached to the email the operator
+     * sends from the app when the buyer can't scan the QR.
+     *
+     * @return array{content: string, filename: string}
+     */
+    public static function renderPdf(PosTicketClaim $claim, Order $order): array
+    {
+        $order->loadMissing(['tickets.ticketType', 'event.venue', 'marketplaceClient']);
         $event = $order->event;
         $venue = $event?->venue;
         $client = $order->marketplaceClient;
@@ -384,7 +401,7 @@ class PosTicketClaimController extends Controller
         $safeName = str_replace(' ', '-', trim($safeName));
         $filename = 'bilet-' . mb_substr($safeName, 0, 30) . '.pdf';
 
-        return $pdf->download($filename);
+        return ['content' => $pdf->output(), 'filename' => $filename];
     }
 
     /**
