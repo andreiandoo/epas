@@ -211,11 +211,10 @@ class SeatingApiTest extends TestCase
     }
 
     /** @test */
-    public function can_confirm_purchase()
+    public function public_confirm_is_disabled()
     {
         $seatUids = array_slice($this->testSeats, 0, 2);
 
-        // Hold seats first
         $this->postJson('/api/public/seats/hold', [
             'event_seating_id' => $this->eventLayout->id,
             'seat_uids' => $seatUids,
@@ -223,48 +222,22 @@ class SeatingApiTest extends TestCase
             'X-Seating-Session' => $this->sessionUid,
         ]);
 
-        // Confirm purchase
+        // Fara plata nu se poate marca nimic ca vandut
         $response = $this->postJson('/api/public/seats/confirm', [
             'event_seating_id' => $this->eventLayout->id,
-            'seat_uids' => $seatUids,
-            'order_reference' => 'ORDER-123',
+            'seat_uids' => array_merge($seatUids, [$this->testSeats[3]]),
+            'amount_cents' => 0,
             'idempotency_key' => 'idem_' . uniqid(),
         ], [
             'X-Seating-Session' => $this->sessionUid,
         ]);
 
-        $response->assertOk()
-            ->assertJson([
-                'success' => true,
-                'confirmed' => 2,
-            ]);
+        $response->assertStatus(403);
 
-        // Verify seats are sold
         foreach ($seatUids as $seatUid) {
-            $seat = EventSeat::where('seat_uid', $seatUid)->first();
-            $this->assertEquals('sold', $seat->status);
-            $this->assertEquals('ORDER-123', $seat->order_reference);
+            $this->assertEquals('held', EventSeat::where('seat_uid', $seatUid)->first()->status);
         }
-    }
-
-    /** @test */
-    public function cannot_confirm_unheld_seats()
-    {
-        $seatUid = $this->testSeats[0];
-
-        $response = $this->postJson('/api/public/seats/confirm', [
-            'event_seating_id' => $this->eventLayout->id,
-            'seat_uids' => [$seatUid],
-            'order_reference' => 'ORDER-123',
-            'idempotency_key' => 'idem_' . uniqid(),
-        ], [
-            'X-Seating-Session' => $this->sessionUid,
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-            ]);
+        $this->assertEquals('available', EventSeat::where('seat_uid', $this->testSeats[3])->first()->status);
     }
 
     /** @test */

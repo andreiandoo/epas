@@ -671,11 +671,10 @@ class AnafAdapter implements AnafAdapterInterface
         // The actual implementation would use XMLSecurityDSig class
 
         $dom = new \DOMDocument();
-        // SECURITY FIX: Disable external entity loading to prevent XXE attacks
-        $previousValue = libxml_disable_entity_loader(true);
+        // XXE: PHP 8 nu încarcă entități externe implicit; fără LIBXML_NOENT
+        // (acela le substituie) și cu LIBXML_NONET (fără acces la rețea)
         libxml_use_internal_errors(true);
-        $dom->loadXML($xml, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_NOENT);
-        libxml_disable_entity_loader($previousValue);
+        $dom->loadXML($xml, LIBXML_NONET | LIBXML_NOCDATA);
 
         // Add signature placeholder comment
         $comment = $dom->createComment('XMLDSig signature would be added here in production using robrichards/xmlseclibs');

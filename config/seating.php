@@ -58,6 +58,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public Confirm Endpoint
+    |--------------------------------------------------------------------------
+    |
+    | POST /api/public/seats/confirm marks seats as sold with no payment
+    | check. Every real sale confirms seats server-side after payment
+    | (checkout, payment callbacks, invitations), so the public endpoint
+    | stays off.
+    |
+    */
+
+    'public_confirm_enabled' => env('SEATING_PUBLIC_CONFIRM_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Rate Limits
     |--------------------------------------------------------------------------
     |

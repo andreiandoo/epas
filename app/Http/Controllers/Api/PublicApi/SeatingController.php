@@ -245,6 +245,13 @@ class SeatingController extends Controller
      */
     public function confirmPurchase(Request $request): JsonResponse
     {
+        // Locurile se confirmă doar pe server, după plată
+        if (! config('seating.public_confirm_enabled', false)) {
+            return response()->json([
+                'error' => 'Seats are confirmed by checkout after payment',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'event_seating_id' => 'required|integer|exists:event_seating_layouts,id',
             'seat_uids' => 'required|array',
