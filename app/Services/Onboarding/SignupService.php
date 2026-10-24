@@ -141,7 +141,7 @@ class SignupService
     /** Pasul 7 (opțional): funcții în plus și site-ul făcut special. */
     public function saveExtras(Tenant $tenant, array $microserviceIds, bool $customSite): void
     {
-        $ids = Microservice::active()->whereIn('id', $microserviceIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $ids = Microservice::active()->where('signup_hidden', false)->whereIn('id', $microserviceIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
         $this->saveChoice($tenant, 'extras', ['microservices' => $ids, 'custom_site' => $customSite], 8);
         $this->applyCommission($tenant->fresh());
     }

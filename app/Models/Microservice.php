@@ -41,6 +41,7 @@ class Microservice extends Model
         'metadata',
         'raises_commission',
         'signup_featured',
+        'signup_hidden',
     ];
 
     protected $casts = [
@@ -57,6 +58,7 @@ class Microservice extends Model
         'metadata' => 'array',
         'raises_commission' => 'boolean',
         'signup_featured' => 'boolean',
+        'signup_hidden' => 'boolean',
     ];
 
     /**

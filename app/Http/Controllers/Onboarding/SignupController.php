@@ -502,7 +502,7 @@ class SignupController extends Controller
     /** Funcțiile din pasul 7: lista scurtă (signup_featured) și restul, la „Vezi toate”. */
     private function microserviceOptions(): array
     {
-        return Microservice::active()->orderByDesc('signup_featured')->orderBy('sort_order')->get()
+        return Microservice::active()->where('signup_hidden', false)->orderByDesc('signup_featured')->orderBy('sort_order')->get()
             ->map(function (Microservice $m) {
                 $features = $m->getTranslation('features', 'ro') ?: $m->getTranslation('features', 'en');
 

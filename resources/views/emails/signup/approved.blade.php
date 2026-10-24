@@ -8,7 +8,7 @@
     @php($extras = $tenant->signup_choices['extras'] ?? [])
     @php($chosen = \App\Models\Microservice::whereIn('id', $extras['microservices'] ?? [])->get())
     @if ($chosen->where('raises_commission', true)->isNotEmpty())
-        <p>Funcțiile incluse în comision sunt deja pornite: {{ $chosen->where('raises_commission', true)->map->display_label->implode(', ') }}.</p>
+        <p>Funcțiile plătite prin comision sunt deja pornite: {{ $chosen->where('raises_commission', true)->map->display_label->implode(', ') }}.</p>
     @endif
     @if ($chosen->where('raises_commission', false)->isNotEmpty())
         <p>Pe celelalte funcții alese ({{ $chosen->where('raises_commission', false)->map->display_label->implode(', ') }}) le activezi din panou, la Microservicii.</p>

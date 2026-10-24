@@ -159,6 +159,10 @@ class MicroserviceResource extends Resource
                     Forms\Components\Toggle::make('signup_featured')
                         ->label('Apare în lista scurtă la înscriere')
                         ->helperText('Restul microserviciilor active apar la „Vezi toate funcțiile”.'),
+
+                    Forms\Components\Toggle::make('signup_hidden')
+                        ->label('Ascuns la înscriere')
+                        ->helperText('Nu apare deloc la /inregistrare (ex. module interne sau pornite de noi).'),
                 ])->columns(3),
 
             SC\Section::make('Features')

@@ -11,7 +11,7 @@
     $methods = ['exclusive' => 'doar prin Tixello', 'mixed' => 'Tixello și alte canale', 'reseller' => 'revânzare'];
     $extras = $choices['extras'] ?? [];
     $extraNames = \App\Models\Microservice::whereIn('id', $extras['microservices'] ?? [])->get()
-        ->map(fn ($m) => $m->display_label . ($m->raises_commission ? ' (inclus în comision)' : ' (plătit separat)'))
+        ->map(fn ($m) => $m->display_label . ($m->raises_commission ? ' (+1 punct la comision)' : ' (plătit separat)'))
         ->implode(', ');
     $rows = [
         'Tip' => $tenant->tenant_type?->label() ?? '—',

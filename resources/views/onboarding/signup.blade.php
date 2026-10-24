@@ -390,6 +390,7 @@
             <div x-show="state.step === 'extras'" class="pb-24 sm:pb-0">
                 <h1 class="text-2xl font-bold mb-2">Ai nevoie de funcții în plus?</h1>
                 <p class="text-[color:var(--c-muted)] mb-5">Nu e obligatoriu. Contul vine deja cu tot ce trebuie ca să vinzi bilete. Bifează doar ce te ajută acum; restul le poți adăuga oricând din panou.</p>
+                <p class="text-sm text-[color:var(--c-muted)] mb-5">Funcțiile au două feluri de preț. Unele au abonament, pe lună sau o singură dată. Altele, marcate <strong class="text-[color:var(--c-text)]">„+1 punct la comision”</strong>, nu au abonament: dacă alegi măcar una, comisionul tău pe bilet crește cu un punct (de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%), oricâte dintre ele ai alege.</p>
 
                 {{-- Ce e inclus deja --}}
                 <div class="rounded-2xl border border-[color:var(--c-border)] bg-[color:var(--c-surface-2)] p-4 mb-6">
@@ -412,7 +413,7 @@
                         <span class="flex-1">
                             <span class="font-semibold block text-lg">Un site făcut special pentru tine</span>
                             <span class="text-sm text-[color:var(--c-muted)] block mt-1">În loc de un model gata făcut, îl construim noi pe brandul tău: design propriu și paginile de care ai nevoie. Te contactăm după aprobare ca să stabilim detaliile.</span>
-                            <span class="price-chip price-chip--commission mt-3">Inclus în comision</span>
+                            <span class="price-chip price-chip--commission mt-3">+1 punct la comision</span>
                         </span>
                         <span class="extra-check" aria-hidden="true" x-text="extras.custom_site ? '✓' : ''"></span>
                     </span>
@@ -478,7 +479,10 @@
                             <dt>
                                 <span class="font-semibold block">Comision pe bilet</span>
                                 <span class="text-[color:var(--c-muted)]">Din biletele vândute prin Tixello. Factura vine o dată la 30 de zile, doar dacă ai vândut ceva, cu termen de plată <span x-text="paymentTermsDays"></span> zile.</span>
-                                <span x-show="commissionPreview() > baseCommission()" class="text-[color:var(--c-muted)] block mt-1">Include: <span x-text="commissionItems().join(', ')"></span>.</span>
+                                <span x-show="commissionPreview() > baseCommission()" class="block mt-2 rounded-lg bg-[color:var(--c-primary)]/15 px-3 py-2">
+                                    De ce <span x-text="commissionPreview()"></span>% și nu <span x-text="baseCommission()"></span>%: ai ales <strong x-text="commissionItems().join(', ')"></strong>.
+                                    Pentru ele nu plătești abonament; costul lor e punctul în plus la comision, același oricâte ai alege. Dacă le debifezi, revii la <span x-text="baseCommission()"></span>%.
+                                </span>
                             </dt>
                             <dd class="text-right whitespace-nowrap">
                                 <span class="text-2xl font-bold" x-text="commissionPreview() + '%'"></span>
@@ -782,7 +786,7 @@
             },
 
             priceLabel(m) {
-                if (m.raises_commission) return 'Inclus în comision';
+                if (m.raises_commission) return '+1 punct la comision';
                 if (!m.price) return 'Gratuit';
                 return this.money(m.price, m.currency) + ({ monthly: ' / lună', one_time: ' o singură dată', usage: ' / utilizare' }[m.cycle] || '');
             },
