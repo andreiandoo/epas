@@ -40,9 +40,10 @@ class SignupMailer
 
         $payload = [
             'sender' => [
-                'name' => $settings->company_name ?? 'Tixello',
-                'email' => $settings->email ?? config('mail.from.address'),
+                'name' => config('onboarding.mail_from_name'),
+                'email' => config('onboarding.mail_from'),
             ],
+            'replyTo' => ['email' => config('onboarding.mail_reply_to')],
             'to' => array_map(fn ($email) => ['email' => $email], $recipients),
             'subject' => $subject,
             'htmlContent' => $html,
