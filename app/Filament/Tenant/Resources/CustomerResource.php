@@ -204,7 +204,10 @@ class CustomerResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([]);
+            ->filters([])
+            ->headerActions([
+                \App\Support\Tenant\TenantDataExport::action('Exportă clienții (CSV)', fn ($tenant) => \App\Support\Tenant\TenantDataExport::customers($tenant)),
+            ]);
     }
 
     public static function getPages(): array

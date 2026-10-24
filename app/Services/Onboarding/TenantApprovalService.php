@@ -101,9 +101,9 @@ class TenantApprovalService
         $existing = $tenant->microservices()->pluck('microservices.id');
         foreach ($included as $id) {
             if ($existing->contains($id)) {
-                $tenant->microservices()->updateExistingPivot($id, ['status' => 'active', 'activated_at' => now()]);
+                $tenant->microservices()->updateExistingPivot($id, ['status' => 'active', 'is_active' => true, 'activated_at' => now()]);
             } else {
-                $tenant->microservices()->attach($id, ['status' => 'active', 'activated_at' => now()]);
+                $tenant->microservices()->attach($id, ['status' => 'active', 'is_active' => true, 'activated_at' => now()]);
             }
         }
     }

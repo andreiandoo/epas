@@ -93,21 +93,8 @@ class NewsletterSubscriberResource extends Resource
                 ]),
             ])
             ->headerActions([
-                Action::make('export')->label('Export CSV')->icon('heroicon-o-arrow-down-tray')->color('gray')
-                    ->action(function () {
-                        $tenantId = auth()->user()->tenant?->id;
-                        return response()->streamDownload(function () use ($tenantId) {
-                            $out = fopen('php://output', 'w');
-                            fwrite($out, "\xEF\xBB\xBF");
-                            fputcsv($out, ['email', 'prenume', 'limba', 'sursa', 'stare', 'abonat_la', 'dezabonat_la']);
-                            TenantNewsletterSubscriber::where('tenant_id', $tenantId)->orderBy('id')->chunk(500, function ($rows) use ($out) {
-                                foreach ($rows as $r) {
-                                    fputcsv($out, [$r->email, $r->first_name, $r->locale, $r->source, $r->status, $r->subscribed_at?->format('Y-m-d H:i'), $r->unsubscribed_at?->format('Y-m-d H:i')]);
-                                }
-                            });
-                            fclose($out);
-                        }, 'abonati-newsletter-' . now()->format('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
-                    }),
+                // Exportul merge doar cu modulul „Export clienți”
+                \App\Support\Tenant\TenantDataExport::action('Export CSV', fn ($tenant) => \App\Support\Tenant\TenantDataExport::newsletterSubscribers($tenant)),
             ]);
     }
 

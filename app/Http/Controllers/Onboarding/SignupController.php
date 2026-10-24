@@ -306,6 +306,7 @@ class SignupController extends Controller
         }
 
         $this->signup->saveChoice($tenant, 'site', $choice, 5);
+        $this->signup->applyCommission($tenant->fresh());
 
         return response()->json(['state' => $this->state($tenant->fresh())]);
     }

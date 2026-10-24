@@ -288,22 +288,26 @@
             {{-- 4. Site --}}
             <form x-show="state.step === 'site'" @submit.prevent="saveSite()" novalidate>
                 <h1 class="text-2xl font-bold mb-2">Unde vor cumpăra oamenii bilete?</h1>
-                <p class="text-[color:var(--c-muted)] mb-6">Primești un site de bilete gata făcut, inclus în preț. Trebuie doar să alegi la ce adresă să fie. Îl pornim imediat după ce îți aprobăm contul.</p>
+                <p class="text-[color:var(--c-muted)] mb-6">Îți putem face un site de bilete gata de folosit. Alegi doar la ce adresă să fie, iar noi îl pornim imediat după ce îți aprobăm contul.</p>
                 <fieldset>
                     <legend class="sr-only">Adresa site-ului</legend>
                     <div class="grid sm:grid-cols-2 gap-3">
                         <label class="opt p-5" :data-on="site.mode === 'subdomain'">
                             <input type="radio" class="sr-only" value="subdomain" x-model="site.mode">
                             <span class="text-2xl block mb-2" aria-hidden="true">🎁</span>
-                            <span class="font-semibold block text-lg">Vreau o adresă gratuită</span>
-                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">N-ai nevoie de nimic în plus. Site-ul tău va fi la <strong class="text-[color:var(--c-text)]" x-text="(site.subdomain || 'numele-tau') + '.' + baseDomain"></strong>.</span>
-                            <span class="inline-block mt-3 text-xs font-semibold rounded-full px-2 py-1 bg-[color:var(--c-primary)]/20">Cel mai simplu</span>
+                            <span class="font-semibold block text-lg">Vreau o adresă de la voi</span>
+                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">N-ai nevoie de nimic în plus: nici domeniu, nici găzduire. Site-ul tău va fi la <strong class="text-[color:var(--c-text)]" x-text="(site.subdomain || 'numele-tau') + '.' + baseDomain"></strong>.</span>
+                            <span class="flex flex-wrap gap-2 mt-3">
+                                <span class="price-chip price-chip--commission">+1 punct la comision, fără abonament</span>
+                                <span class="price-chip">Cel mai simplu</span>
+                            </span>
                         </label>
                         <label class="opt p-5" :data-on="site.mode === 'own'">
                             <input type="radio" class="sr-only" value="own" x-model="site.mode">
                             <span class="text-2xl block mb-2" aria-hidden="true">🌐</span>
                             <span class="font-semibold block text-lg">Am deja un domeniu</span>
-                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">Ai deja o adresă de site, de exemplu <em>teatrulmeu.ro</em>? O legăm de site-ul de bilete. Îți explicăm pas cu pas ce ai de făcut, după aprobare.</span>
+                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">Ai deja o adresă de site, de exemplu <em>teatrulmeu.ro</em>? O legăm de vânzarea de bilete. Îți explicăm pas cu pas ce ai de făcut, după aprobare.</span>
+                            <span class="price-chip mt-3">Fără cost. Dacă vrei și un site din modelele noastre, +1 punct la comision</span>
                         </label>
                     </div>
                 </fieldset>
@@ -341,7 +345,9 @@
                 <h1 class="text-2xl font-bold mb-2">Cum vrei să arate site-ul?</h1>
                 <p class="text-[color:var(--c-muted)] mb-4">Alege modelul care seamănă cel mai mult cu ce organizezi. Cu „Vezi demo” deschizi un site complet, ca să vezi cum arată. Nu te încurca acum cu detaliile: logo-ul, pozele, culorile și textele le schimbi tu după aprobare.</p>
                 <p class="rounded-xl bg-[color:var(--c-primary)]/15 px-4 py-3 text-sm mb-6">
-                    <strong>Cât costă:</strong> site-ul din model nu are abonament. Comisionul tău pe bilet crește cu un punct, de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%.
+                    <strong>Cât costă:</strong>
+                    <span x-show="state.site?.mode === 'subdomain'">nimic în plus. Punctul la comision îl plătești deja pentru adresa de la noi, iar modelul e inclus.</span>
+                    <span x-show="state.site?.mode !== 'subdomain'">site-ul din model nu are abonament. Comisionul tău pe bilet crește cu un punct, de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%.</span>
                     Dacă vrei un site făcut în întregime pentru tine, îl găsești la pasul „Funcții în plus”.
                 </p>
                 <div class="grid sm:grid-cols-2 gap-4" role="radiogroup" aria-label="Modele de site">
@@ -394,7 +400,7 @@
             <div x-show="state.step === 'extras'" class="pb-24 sm:pb-0">
                 <h1 class="text-2xl font-bold mb-2">Ai nevoie de funcții în plus?</h1>
                 <p class="text-[color:var(--c-muted)] mb-5">Nu e obligatoriu. Contul vine deja cu tot ce trebuie ca să vinzi bilete. Bifează doar ce te ajută acum; restul le poți adăuga oricând din panou.</p>
-                <p class="text-sm text-[color:var(--c-muted)] mb-5">Funcțiile au două feluri de preț. Unele au abonament, pe lună sau o singură dată. Altele, marcate <strong class="text-[color:var(--c-text)]">„+1 punct la comision”</strong>, nu au abonament: dacă alegi măcar una, comisionul tău pe bilet crește cu un punct (de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%), oricâte dintre ele ai alege. Dacă ai ales deja un model de site, punctul ăsta îl plătești deja, deci funcțiile marcate nu te mai costă nimic în plus.</p>
+                <p class="text-sm text-[color:var(--c-muted)] mb-5">Funcțiile au două feluri de preț. Unele au abonament, pe lună sau o singură dată. Altele, marcate <strong class="text-[color:var(--c-text)]">„+1 punct la comision”</strong>, nu au abonament: dacă alegi măcar una, comisionul tău pe bilet crește cu un punct (de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%), oricâte dintre ele ai alege. Dacă ai ales adresa de la noi sau un model de site, punctul ăsta îl plătești deja, deci funcțiile marcate nu te mai costă nimic în plus.</p>
 
                 {{-- Ce e inclus deja --}}
                 <div class="rounded-2xl border border-[color:var(--c-border)] bg-[color:var(--c-surface-2)] p-4 mb-6">
@@ -792,7 +798,7 @@
 
             priceLabel(m) {
                 // Cu site din model, punctul în plus e deja plătit: funcțiile marcate nu mai costă nimic
-                if (m.raises_commission) return this.state.template ? 'Inclus, ai deja +1 punct' : '+1 punct la comision';
+                if (m.raises_commission) return (this.state.template || this.state.site?.mode === 'subdomain') ? 'Inclus, ai deja +1 punct' : '+1 punct la comision';
                 if (!m.price) return 'Gratuit';
                 return this.money(m.price, m.currency) + ({ monthly: ' / lună', one_time: ' o singură dată', usage: ' / utilizare' }[m.cycle] || '');
             },
@@ -803,6 +809,7 @@
                 const items = this.microservices.filter(m => m.raises_commission && this.isChosen(m)).map(m => m.name);
                 const tpl = this.templates.find(t => t.slug === this.state.template);
                 if (tpl) items.unshift('site-ul din modelul „' + tpl.name + '”');
+                if (this.state.site?.mode === 'subdomain') items.unshift('adresa ' + this.state.site.subdomain + '.' + this.baseDomain);
                 return items;
             },
 
