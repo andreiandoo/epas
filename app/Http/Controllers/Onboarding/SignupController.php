@@ -16,6 +16,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -26,13 +28,49 @@ use Illuminate\Validation\ValidationException;
  */
 class SignupController extends Controller
 {
+    // câmpul din formular => cheia din datele ANAF
+    private const ADDRESS_KEYS = ['address' => 'address', 'city' => 'city', 'state' => 'county', 'postal_code' => 'postal_code'];
+
+    private const MESSAGES = [
+        'required' => 'Completează câmpul :attribute.',
+        'required_if' => 'Completează câmpul :attribute.',
+        'email' => 'Adresa de email nu pare corectă.',
+        'unique' => ':Attribute e deja folosit.',
+        'string' => 'Câmpul :attribute nu e valid.',
+        'min' => ['string' => ':Attribute trebuie să aibă cel puțin :min caractere.', 'numeric' => ':Attribute nu poate fi mai mic de :min.'],
+        'max' => ['string' => ':Attribute poate avea cel mult :max caractere.', 'numeric' => ':Attribute nu poate fi mai mare de :max.'],
+        'confirmed' => 'Parolele nu sunt la fel.',
+        'accepted' => 'Trebuie să accepți :attribute.',
+        'digits' => ':Attribute are :digits cifre.',
+        'in' => 'Alege o variantă din listă.',
+        'integer' => ':Attribute trebuie să fie un număr.',
+        'regex' => ':Attribute nu pare corect.',
+    ];
+
+    private const ATTRIBUTES = [
+        'first_name' => 'prenumele', 'last_name' => 'numele', 'email' => 'emailul', 'phone' => 'telefonul',
+        'password' => 'parola', 'accept_terms' => 'termenii și politica de confidențialitate',
+        'code' => 'codul', 'tenant_type' => 'tipul de organizator', 'public_name' => 'numele public',
+        'work_method' => 'modul de vânzare', 'estimated_monthly_tickets' => 'numărul de bilete',
+        'legal_entity_type' => 'forma juridică', 'cui' => 'CUI-ul', 'cnp' => 'CNP-ul',
+        'id_series' => 'seria buletinului', 'id_number' => 'numărul buletinului', 'address' => 'adresa',
+        'city' => 'localitatea', 'state' => 'județul', 'postal_code' => 'codul poștal',
+        'mode' => 'varianta', 'subdomain' => 'adresa', 'domain' => 'domeniul', 'processor' => 'procesatorul',
+    ];
+
     public function __construct(
         private SignupService $signup,
         private AnafService $anaf,
         private CloudflareService $cloudflare,
+        private LocationService $locations,
     ) {}
 
-    public function show(LocationService $locations, TemplateRegistry $templates)
+    private function check(Request $request, array $rules, array $messages = []): array
+    {
+        return Validator::make($request->all(), $rules, $messages + self::MESSAGES, self::ATTRIBUTES)->validate();
+    }
+
+    public function show(TemplateRegistry $templates)
     {
         $tenant = $this->currentTenant();
         if (Auth::check() && ! $tenant) {
@@ -49,7 +87,7 @@ class SignupController extends Controller
                 ->reject(fn (TenantType $t) => $t === TenantType::TenantArtist)
                 ->map(fn (TenantType $t) => ['value' => $t->value, 'label' => $t->label()])
                 ->values(),
-            'counties' => $locations->getStates('ro'),
+            'counties' => $this->locations->getStates('ro'),
             'templates' => $this->templateOptions($templates),
             'processors' => collect(PaymentProcessorFactory::getAvailableProcessors())
                 ->map(fn ($p, $key) => ['value' => $key, 'label' => $p['name'] ?? $key])
@@ -65,7 +103,7 @@ class SignupController extends Controller
             return response()->json(['message' => 'Ești deja autentificat.'], 409);
         }
 
-        $data = $request->validate([
+        $data = $this->check($request, [
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'email' => 'required|email:rfc|max:190|unique:users,email',
@@ -73,7 +111,7 @@ class SignupController extends Controller
             'password' => 'required|string|min:8|max:190|confirmed',
             'accept_terms' => 'accepted',
         ], [
-            'email.unique' => 'Există deja un cont cu acest email. Intră în cont din /tenant/login.',
+            'email.unique' => 'Există deja un cont cu acest email. Intră în cont din pagina de autentificare.',
             'accept_terms.accepted' => 'Trebuie să accepți termenii și politica de confidențialitate.',
             'phone.regex' => 'Numărul de telefon nu pare corect.',
         ]);
@@ -95,7 +133,7 @@ class SignupController extends Controller
     public function verifyEmail(Request $request): JsonResponse
     {
         $tenant = $this->signupTenant();
-        $request->validate(['code' => 'required|digits:6']);
+        $this->check($request, ['code' => 'required|digits:6']);
 
         $result = $this->signup->verifyCode($request->user(), $request->input('code'));
         if ($result !== 'ok') {
@@ -129,10 +167,10 @@ class SignupController extends Controller
     public function organizer(Request $request): JsonResponse
     {
         $tenant = $this->signupTenant(requireVerified: true);
-        $data = $request->validate([
+        $data = $this->check($request, [
             'tenant_type' => ['required', Rule::in(array_map(fn ($t) => $t->value, TenantType::cases()))],
             'public_name' => 'required|string|min:2|max:120',
-            'work_method' => 'required|in:exclusive,mixed,reseller',
+            'work_method' => 'required|in:exclusive,mixed',
             'estimated_monthly_tickets' => 'nullable|integer|min:0|max:10000000',
         ]);
 
@@ -144,7 +182,7 @@ class SignupController extends Controller
     public function lookupCui(Request $request): JsonResponse
     {
         $this->signupTenant(requireVerified: true);
-        $request->validate(['cui' => 'required|string|max:20']);
+        $this->check($request, ['cui' => 'required|string|max:20']);
 
         $company = $this->findCompany($request->input('cui'));
 
@@ -157,13 +195,27 @@ class SignupController extends Controller
         $tenant = $this->signupTenant(requireVerified: true);
         $type = $request->input('legal_entity_type');
 
-        $rules = [
-            'legal_entity_type' => 'required|in:pf,pfa,srl',
+        $rules = ['legal_entity_type' => 'required|in:pf,pfa,srl'];
+        $company = null;
+        if ($type === 'srl' || $type === 'pfa') {
+            $this->check($request, $rules + ['cui' => 'required|string|max:20']);
+            $company = $this->findCompany((string) $request->input('cui'));
+        }
+
+        // Adresa: de la ANAF pentru firme; o cerem doar dacă ANAF nu o are
+        $addressRules = [
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:100',
             'postal_code' => 'nullable|string|max:12',
         ];
+        foreach (self::ADDRESS_KEYS as $field => $key) {
+            if (! empty($company[$key])) {
+                unset($addressRules[$field]);
+            }
+        }
+        $rules += $addressRules;
+
         if ($type === 'pf') {
             $rules += [
                 'cnp' => ['required', 'digits:13', function ($attr, $value, $fail) {
@@ -174,18 +226,20 @@ class SignupController extends Controller
                 'id_series' => ['required', 'regex:/^[A-Za-z]{2}$/'],
                 'id_number' => 'required|digits:6',
             ];
-        } else {
-            $rules['cui'] = 'required|string|max:20';
         }
 
-        $data = $request->validate($rules, [
+        $data = $this->check($request, $rules, [
             'id_series.regex' => 'Seria are două litere (ex. RX).',
             'id_number.digits' => 'Numărul are 6 cifre.',
         ]);
 
-        if ($type !== 'pf') {
-            // Denumirea, nr. Reg. Com. și TVA vin de la ANAF, nu din formular
-            $company = $this->findCompany($data['cui']);
+        if ($company) {
+            // Denumirea, nr. Reg. Com., TVA și adresa vin de la ANAF, nu din formular
+            foreach (self::ADDRESS_KEYS as $field => $key) {
+                if (! empty($company[$key])) {
+                    $data[$field] = $company[$key];
+                }
+            }
             $data['cui'] = $company['cui'];
             $data['company_name'] = $company['company_name'];
             $data['reg_com'] = $company['reg_com'];
@@ -212,7 +266,7 @@ class SignupController extends Controller
     public function site(Request $request): JsonResponse
     {
         $tenant = $this->signupTenant(requireVerified: true);
-        $data = $request->validate([
+        $data = $this->check($request, [
             'mode' => 'required|in:subdomain,own,later',
             'subdomain' => 'required_if:mode,subdomain|nullable|string|max:63',
             'domain' => ['required_if:mode,own', 'nullable', 'string', 'max:190'],
@@ -259,7 +313,7 @@ class SignupController extends Controller
     public function payments(Request $request): JsonResponse
     {
         $tenant = $this->signupTenant(requireVerified: true);
-        $request->validate([
+        $this->check($request, [
             'processor' => ['nullable', Rule::in(array_keys(PaymentProcessorFactory::getAvailableProcessors()))],
         ]);
 
@@ -333,6 +387,9 @@ class SignupController extends Controller
             'address' => $tenant->address,
             'city' => $tenant->city,
             'county' => $tenant->state,
+            'postal_code' => $tenant->postal_code,
+            'reg_com' => $tenant->reg_com,
+            'vat_payer' => (bool) $tenant->vat_payer,
             'site' => $site,
             'suggested_subdomain' => $tenant->onboarding_step >= 4 && ! $site
                 ? $this->signup->suggestSubdomain($tenant->public_name, $tenant->id)
@@ -358,15 +415,57 @@ class SignupController extends Controller
             throw ValidationException::withMessages(['cui' => 'Firma apare inactivă sau radiată la ANAF.']);
         }
 
+        $office = $company['raw_data']['adresa_sediu_social'] ?? [];
+        $street = self::commaBelow(trim(($office['sdenumire_Strada'] ?? '') . (! empty($office['snumar_Strada']) ? ' nr. ' . $office['snumar_Strada'] : '')));
+        $details = trim((string) ($office['sdetalii_Adresa'] ?? ''));
+
         return [
             'cui' => (string) $company['cui'],
             'company_name' => (string) $company['company_name'],
             'reg_com' => $company['reg_com'] ?: null,
             'vat_payer' => (bool) $company['vat_payer'],
-            'address' => $company['parsed_address']['street'] ?? $company['address'],
-            'city' => $company['city'],
-            'county' => $company['state'],
+            'address' => $street !== '' ? $street . ($details !== '' ? ', ' . $details : '') : self::commaBelow((string) $company['address']),
+            'city' => self::cleanLocality((string) ($office['sdenumire_Localitate'] ?? $company['city'] ?? '')),
+            'county' => $this->matchCounty((string) ($office['sdenumire_Judet'] ?? $company['state'] ?? '')),
+            'postal_code' => ! empty($office['scod_Postal']) ? str_pad((string) $office['scod_Postal'], 6, '0', STR_PAD_LEFT) : null,
         ];
+    }
+
+    /** Județul ANAF („MUNICIPIUL BUCUREŞTI”, „PRAHOVA”) → numele din lista noastră. */
+    private function matchCounty(string $anaf): ?string
+    {
+        $plain = fn (string $v) => strtolower(Str::ascii(self::commaBelow($v)));
+        $needle = $plain($anaf);
+        if ($needle === '') {
+            return null;
+        }
+        if (str_contains($needle, 'bucuresti')) {
+            $needle = 'bucharest';
+        }
+        foreach ($this->locations->getStates('ro') as $county) {
+            if ($plain($county) === $needle || str_contains($needle, $plain($county))) {
+                return $county;
+            }
+        }
+
+        return null;
+    }
+
+    /** „Mun. Ploieşti” → „Ploiești”; „Sector 6 Mun. Bucureşti” → „București, Sector 6”. */
+    private static function cleanLocality(string $value): string
+    {
+        $value = self::commaBelow(trim($value));
+        if (preg_match('/^(Sector\s+\d)\s+Mun\.\s*(.+)$/iu', $value, $m)) {
+            return trim($m[2]) . ', ' . $m[1];
+        }
+
+        return trim(preg_replace('/^(Mun\.|Municipiul|Oraş|Oraș|Or\.|Com\.|Comuna|Sat)\s+/iu', '', $value));
+    }
+
+    /** ANAF scrie cu sedilă (ş, ţ); corect e cu virgulă (ș, ț). */
+    private static function commaBelow(string $value): string
+    {
+        return strtr($value, ['ş' => 'ș', 'Ş' => 'Ș', 'ţ' => 'ț', 'Ţ' => 'Ț']);
     }
 
     private function templateOptions(TemplateRegistry $templates): array

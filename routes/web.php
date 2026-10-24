@@ -278,18 +278,18 @@ Route::get('/verify/{token}', function ($token) {
 Route::prefix('inregistrare')->name('signup.')->group(function () {
     $c = \App\Http\Controllers\Onboarding\SignupController::class;
     Route::get('/', [$c, 'show'])->name('show');
-    Route::post('/cont', [$c, 'account'])->middleware('throttle:5,10')->name('account');
+    Route::post('/cont', [$c, 'account'])->middleware('throttle:5,10,signup-account')->name('account');
     Route::middleware('auth')->group(function () use ($c) {
-        Route::post('/verificare', [$c, 'verifyEmail'])->middleware('throttle:10,1')->name('verify');
-        Route::post('/verificare/retrimite', [$c, 'resendCode'])->middleware('throttle:5,10')->name('resend');
-        Route::post('/organizator', [$c, 'organizer'])->middleware('throttle:30,1')->name('organizer');
-        Route::post('/cui', [$c, 'lookupCui'])->middleware('throttle:10,1')->name('cui');
-        Route::post('/facturare', [$c, 'billing'])->middleware('throttle:10,1')->name('billing');
-        Route::post('/subdomeniu', [$c, 'checkSubdomain'])->middleware('throttle:30,1')->name('subdomain');
-        Route::post('/site', [$c, 'site'])->middleware('throttle:20,1')->name('site');
-        Route::post('/template', [$c, 'template'])->middleware('throttle:20,1')->name('template');
-        Route::post('/plati', [$c, 'payments'])->middleware('throttle:20,1')->name('payments');
-        Route::post('/trimite', [$c, 'submit'])->middleware('throttle:5,1')->name('submit');
+        Route::post('/verificare', [$c, 'verifyEmail'])->middleware('throttle:10,1,signup-verify')->name('verify');
+        Route::post('/verificare/retrimite', [$c, 'resendCode'])->middleware('throttle:5,10,signup-resend')->name('resend');
+        Route::post('/organizator', [$c, 'organizer'])->middleware('throttle:30,1,signup-organizer')->name('organizer');
+        Route::post('/cui', [$c, 'lookupCui'])->middleware('throttle:10,1,signup-cui')->name('cui');
+        Route::post('/facturare', [$c, 'billing'])->middleware('throttle:10,1,signup-billing')->name('billing');
+        Route::post('/subdomeniu', [$c, 'checkSubdomain'])->middleware('throttle:30,1,signup-subdomain')->name('subdomain');
+        Route::post('/site', [$c, 'site'])->middleware('throttle:20,1,signup-site')->name('site');
+        Route::post('/template', [$c, 'template'])->middleware('throttle:20,1,signup-template')->name('template');
+        Route::post('/plati', [$c, 'payments'])->middleware('throttle:20,1,signup-payments')->name('payments');
+        Route::post('/trimite', [$c, 'submit'])->middleware('throttle:5,1,signup-submit')->name('submit');
     });
 });
 
