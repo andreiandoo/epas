@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 /**
@@ -90,7 +89,7 @@ class SignupService
             'sent_at' => now()->timestamp,
         ], now()->addMinutes(config('onboarding.code_ttl_minutes')));
 
-        Mail::to($user->email)->send(new SignupCodeMail($user, $code));
+        app(SignupMailer::class)->send($user->email, new SignupCodeMail($user, $code), 'signup_code', $user->ownedTenant?->id);
 
         return true;
     }
@@ -269,7 +268,7 @@ class SignupService
         }
 
         try {
-            Mail::to($recipients)->send(new TenantAwaitingApprovalMail($tenant));
+            app(SignupMailer::class)->send($recipients, new TenantAwaitingApprovalMail($tenant), 'signup_admin_notice', $tenant->id);
         } catch (\Throwable $e) {
             Log::error('Signup: anunțul de tenant nou nu a plecat', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
         }

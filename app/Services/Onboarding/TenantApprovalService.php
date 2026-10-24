@@ -16,7 +16,6 @@ use App\Services\TenantSites\SiteConfigBuilder;
 use App\Services\TenantSites\TemplateRegistry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Aprobarea / respingerea înscrierilor din coada „Tenanți de aprobat”. La aprobare
@@ -61,7 +60,7 @@ class TenantApprovalService
         $this->sendContract($tenant);
 
         try {
-            Mail::to($tenant->contact_email)->send(new TenantApprovedMail($tenant->fresh(['domains.verifications'])));
+            app(SignupMailer::class)->send($tenant->contact_email, new TenantApprovedMail($tenant->fresh(['domains.verifications'])), 'signup_approved', $tenant->id);
         } catch (\Throwable $e) {
             Log::error('Signup: emailul de aprobare nu a plecat', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
         }
@@ -82,7 +81,7 @@ class TenantApprovalService
         ]);
 
         try {
-            Mail::to($tenant->contact_email)->send(new TenantRejectedMail($tenant));
+            app(SignupMailer::class)->send($tenant->contact_email, new TenantRejectedMail($tenant), 'signup_rejected', $tenant->id);
         } catch (\Throwable $e) {
             Log::error('Signup: emailul de respingere nu a plecat', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
         }
@@ -165,8 +164,10 @@ class TenantApprovalService
     {
         try {
             $path = app(ContractPdfService::class)->generate($tenant);
-            Mail::to($tenant->contact_email)->send(new ContractMail($tenant, $path));
-            $tenant->update(['contract_sent_at' => now()]);
+            $name = 'Contract-' . ($tenant->contract_number ?? 'CTR-' . $tenant->id) . '.pdf';
+            if (app(SignupMailer::class)->send($tenant->contact_email, new ContractMail($tenant->fresh(), $path), 'contract', $tenant->id, [$name => $path])) {
+                $tenant->update(['contract_sent_at' => now()]);
+            }
         } catch (\Throwable $e) {
             Log::error('Signup: contractul nu s-a generat / trimis', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
         }
