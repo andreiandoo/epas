@@ -139,10 +139,10 @@ class SignupService
     }
 
     /** Pasul 7 (opțional): funcții în plus și site-ul făcut special. */
-    public function saveExtras(Tenant $tenant, array $microserviceIds, bool $customSite): void
+    public function saveExtras(Tenant $tenant, array $microserviceIds): void
     {
         $ids = Microservice::active()->where('signup_hidden', false)->whereIn('id', $microserviceIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $this->saveChoice($tenant, 'extras', ['microservices' => $ids, 'custom_site' => $customSite], 8);
+        $this->saveChoice($tenant, 'extras', ['microservices' => $ids], 8);
         $this->applyCommission($tenant->fresh());
     }
 
@@ -158,6 +158,14 @@ class SignupService
         $rate = $base + ($this->raisesCommission($tenant) ? 1 : 0);
 
         $tenant->update(['commission_rate' => $rate, 'plan' => ((int) $rate) . 'percent']);
+    }
+
+    /** A cerut site-ul făcut 100% de noi (pasul Template; înainte era la Funcții în plus). */
+    public static function wantsCustomSite(Tenant $tenant): bool
+    {
+        $choices = $tenant->signup_choices ?? [];
+
+        return ! empty($choices['template']['custom']) || ! empty($choices['extras']['custom_site']);
     }
 
     public function raisesCommission(Tenant $tenant): bool

@@ -316,11 +316,14 @@ class SignupController extends Controller
     {
         $tenant = $this->signupTenant(requireVerified: true);
         $slug = $request->input('slug');
-        if ($slug !== null && ! $templates->availableTo((string) $slug, $tenant->id)) {
+        $custom = $request->boolean('custom');
+        if (! $custom && $slug !== null && ! $templates->availableTo((string) $slug, $tenant->id)) {
             throw ValidationException::withMessages(['slug' => 'Template-ul nu e disponibil.']);
         }
 
-        $this->signup->saveChoice($tenant, 'template', $slug ? ['slug' => $slug] : null, 6);
+        // Site făcut 100% de noi: fără model, se plătește separat (custom_site_price)
+        $choice = $custom ? ['custom' => true] : ($slug ? ['slug' => $slug] : null);
+        $this->signup->saveChoice($tenant, 'template', $choice, 6);
         $this->signup->applyCommission($tenant->fresh());
 
         return response()->json(['state' => $this->state($tenant->fresh())]);
@@ -347,10 +350,9 @@ class SignupController extends Controller
         $data = $this->check($request, [
             'microservices' => 'nullable|array|max:100',
             'microservices.*' => 'integer',
-            'custom_site' => 'nullable|boolean',
         ]);
 
-        $this->signup->saveExtras($tenant, $data['microservices'] ?? [], (bool) ($data['custom_site'] ?? false));
+        $this->signup->saveExtras($tenant, $data['microservices'] ?? []);
 
         return response()->json(['state' => $this->state($tenant->fresh())]);
     }
@@ -427,6 +429,7 @@ class SignupController extends Controller
                 ? $this->signup->suggestSubdomain($tenant->public_name, $tenant->id)
                 : null,
             'template' => $choices['template']['slug'] ?? null,
+            'template_custom' => SignupService::wantsCustomSite($tenant),
             'processor' => $choices['payments']['processor'] ?? null,
             'extras' => $choices['extras'] ?? null,
             'commission_rate' => (float) $tenant->commission_rate,

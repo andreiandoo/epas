@@ -18,7 +18,7 @@
         'Metoda de lucru' => $methods[$tenant->work_method] ?? '—',
         'Comision' => rtrim(rtrim(number_format((float) $tenant->commission_rate, 2, ',', ''), '0'), ',') . '%',
         'Funcții în plus' => $extraNames ?: 'niciuna',
-        'Site făcut 100% custom' => ! empty($extras['custom_site']) ? 'DA, ' . config('onboarding.custom_site_price') . ' ' . config('onboarding.custom_site_currency') . ' o singură dată' : 'nu',
+        'Site făcut 100% custom' => \App\Services\Onboarding\SignupService::wantsCustomSite($tenant) ? 'DA, ' . config('onboarding.custom_site_price') . ' ' . config('onboarding.custom_site_currency') . ' o singură dată' : 'nu',
         'Bilete / lună (estimat)' => $tenant->estimated_monthly_tickets ?: '—',
         'Forma juridică' => $entity,
         'Denumire' => $tenant->company_name,
@@ -31,7 +31,7 @@
         'Contact' => trim($tenant->contact_first_name . ' ' . $tenant->contact_last_name) . ' · ' . $tenant->contact_email . ' · ' . $tenant->contact_phone,
         'Email confirmat' => $tenant->owner?->email_verified_at ? 'da, ' . $tenant->owner->email_verified_at->format('d.m.Y H:i') : 'nu',
         'Site' => $siteLabel,
-        'Template' => $choices['template']['slug'] ?? 'Mai târziu',
+        'Template' => $choices['template']['slug'] ?? (\App\Services\Onboarding\SignupService::wantsCustomSite($tenant) ? 'site făcut de noi' : 'Mai târziu'),
         'Procesator plăți' => $choices['payments']['processor'] ?? 'Nu știe încă',
         'Termeni acceptați' => $tenant->terms_accepted_at ? $tenant->terms_accepted_at->format('d.m.Y H:i') . ' · v' . $tenant->terms_version . ' · IP ' . $tenant->terms_ip : '—',
     ];

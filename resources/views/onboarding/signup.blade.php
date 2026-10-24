@@ -348,7 +348,6 @@
                     <strong>Cât costă:</strong>
                     <span x-show="state.site?.mode === 'subdomain'">nimic în plus. Punctul la comision îl plătești deja pentru adresa de la noi, iar modelul e inclus.</span>
                     <span x-show="state.site?.mode !== 'subdomain'">site-ul din model nu are abonament. Comisionul tău pe bilet crește cu un punct, de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%.</span>
-                    Dacă vrei un site făcut în întregime pentru tine, îl găsești la pasul „Funcții în plus”.
                 </p>
                 <div class="grid sm:grid-cols-2 gap-4" role="radiogroup" aria-label="Modele de site">
                     <template x-for="t in templates" :key="t.slug">
@@ -366,10 +365,19 @@
                         </div>
                     </template>
                 </div>
+                {{-- Ultima variantă, după modele: site-ul făcut de noi de la zero --}}
+                <div class="opt p-0 overflow-hidden mt-4" :data-on="template === '__custom'">
+                    <button type="button" role="radio" :aria-checked="template === '__custom'" @click="template = '__custom'" class="block w-full text-left p-5">
+                        <span class="text-xs uppercase tracking-wide text-[color:var(--c-muted)]">Nu găsești ce vrei?</span>
+                        <span class="font-semibold block text-lg mt-1">Îl facem de la zero, doar pentru tine</span>
+                        <span class="text-sm text-[color:var(--c-muted)] block mt-1">Design propriu, pe brandul tău, cu paginile de care ai nevoie. Te contactăm după aprobare ca să stabilim detaliile.</span>
+                        <span class="price-chip mt-3" x-text="money(customSite.price, customSite.currency) + ', plată unică'"></span>
+                    </button>
+                </div>
                 <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-3 mt-6">
                     <button type="button" class="btn btn-ghost" @click="back()">Înapoi</button>
                     <button type="button" class="btn btn-ghost underline underline-offset-4" @click="send('/inregistrare/template', { slug: null })">Aleg mai târziu</button>
-                    <button type="button" class="btn btn-primary flex-1" @click="template ? send('/inregistrare/template', { slug: template }) : (flash = 'Alege un model sau apasă „Aleg mai târziu”.')" :aria-busy="busy"><span x-show="busy" class="spin" aria-hidden="true"></span><span>Continuă</span></button>
+                    <button type="button" class="btn btn-primary flex-1" @click="template === '__custom' ? send('/inregistrare/template', { slug: null, custom: true }) : template ? send('/inregistrare/template', { slug: template }) : (flash = 'Alege un model sau apasă „Aleg mai târziu”.')" :aria-busy="busy"><span x-show="busy" class="spin" aria-hidden="true"></span><span>Continuă</span></button>
                 </div>
             </div>
 
@@ -413,21 +421,6 @@
                         </template>
                     </ul>
                 </div>
-
-                {{-- Site făcut special --}}
-                <button type="button" @click="extras.custom_site = !extras.custom_site" :aria-pressed="extras.custom_site"
-                        class="extra-card w-full text-left p-5 mb-4 relative overflow-hidden" :data-on="extras.custom_site">
-                    <span class="absolute inset-0 opacity-30 pointer-events-none" style="background: radial-gradient(circle at 90% 0%, var(--c-primary), transparent 60%);" aria-hidden="true"></span>
-                    <span class="relative flex gap-4 items-start">
-                        <span class="extra-icon text-2xl" aria-hidden="true">✨</span>
-                        <span class="flex-1">
-                            <span class="font-semibold block text-lg">Un site făcut 100% pentru tine</span>
-                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">În loc de un model gata făcut, îl construim noi de la zero, pe brandul tău: design propriu și paginile de care ai nevoie. Te contactăm după aprobare ca să stabilim detaliile.</span>
-                            <span class="price-chip mt-3" x-text="money(customSite.price, customSite.currency) + ' o singură dată'"></span>
-                        </span>
-                        <span class="extra-check" aria-hidden="true" x-text="extras.custom_site ? '✓' : ''"></span>
-                    </span>
-                </button>
 
                 {{-- Lista completă: căutare + categorii --}}
                 <div x-show="showAllMicroservices" class="mb-4 space-y-3">
@@ -530,12 +523,13 @@
                         <strong>Acum nu plătești nimic.</strong>
                         <span x-show="paidChosen('monthly').length || paidChosen('one_time').length" class="text-[color:var(--c-muted)]">Abonamentele le plătești cu cardul din panou, după aprobare, când le pornești.</span>
                         <span x-show="!paidChosen('monthly').length && !paidChosen('one_time').length" class="text-[color:var(--c-muted)]">Primul cost apare doar când vinzi bilete.</span>
+                        <span x-show="state.template_custom" class="text-[color:var(--c-muted)] block mt-1">Site-ul făcut de noi îl plătești abia după ce stabilim împreună ce conține.</span>
                     </p>
                 </section>
 
                 <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-3 mt-6">
                     <button type="button" class="btn btn-ghost" @click="back()">Înapoi</button>
-                    <button type="button" class="btn btn-ghost underline underline-offset-4" @click="send('/inregistrare/functii', { microservices: [], custom_site: false })">Nu am nevoie acum</button>
+                    <button type="button" class="btn btn-ghost underline underline-offset-4" @click="send('/inregistrare/functii', { microservices: [] })">Nu am nevoie acum</button>
                     <button type="button" class="btn btn-primary flex-1" @click="send('/inregistrare/functii', extras)" :aria-busy="busy"><span x-show="busy" class="spin" aria-hidden="true"></span><span>Continuă</span></button>
                 </div>
 
@@ -623,7 +617,7 @@
             site: { mode: 'subdomain', subdomain: '', domain: '' },
             template: null,
             processor: null,
-            extras: { microservices: [], custom_site: false },
+            extras: { microservices: [] },
             showAllMicroservices: false,
             msSearch: '',
             msCategory: 'Toate',
@@ -663,9 +657,10 @@
                 if (s.site) Object.assign(this.site, s.site.mode === 'later' ? { mode: 'subdomain' } : s.site);
                 if (!this.site.subdomain && s.suggested_subdomain) { this.site.subdomain = s.suggested_subdomain; this.subdomainStatus = 'free'; }
                 if (s.template) this.template = s.template;
+                else if (s.template_custom) this.template = '__custom';
                 if (s.processor) this.processor = s.processor;
                 else if (s.step === 'review') this.processor = 'none';
-                if (s.extras) this.extras = { microservices: (s.extras.microservices || []).map(Number), custom_site: !!s.extras.custom_site };
+                if (s.extras) this.extras = { microservices: (s.extras.microservices || []).map(Number) };
             },
 
             stepIndex() {
@@ -818,16 +813,16 @@
 
             paidChosen(cycle) {
                 const items = this.microservices.filter(m => !m.raises_commission && m.price > 0 && m.cycle === cycle && this.isChosen(m));
-                if (cycle === 'one_time' && this.extras.custom_site) {
+                if (cycle === 'one_time' && this.state.template_custom) {
                     items.unshift({ id: 'custom-site', name: 'Site făcut 100% pentru tine', price: this.customSite.price, currency: this.customSite.currency, cycle: 'one_time' });
                 }
                 return items;
             },
 
             // Totalul pe monede (unele prețuri sunt în lei, altele în euro)
-            sumLabel(cycle) {
+            sumLabel(cycle, withoutCustomSite = false) {
                 const totals = {};
-                this.paidChosen(cycle).forEach(m => { totals[m.currency] = (totals[m.currency] || 0) + m.price; });
+                this.paidChosen(cycle).filter(m => !(withoutCustomSite && m.id === 'custom-site')).forEach(m => { totals[m.currency] = (totals[m.currency] || 0) + m.price; });
                 return Object.entries(totals).map(([c, v]) => this.money(v, c)).join(' + ');
             },
 
@@ -853,7 +848,6 @@
 
             extrasSummary() {
                 const names = this.microservices.filter(m => (this.state.extras?.microservices || []).map(Number).includes(m.id)).map(m => m.name);
-                if (this.state.extras?.custom_site) names.unshift('Site făcut 100% pentru tine');
                 return names.length ? names.join(', ') : 'Niciuna';
             },
 
@@ -870,11 +864,11 @@
                     { label: 'Comision', value: (s.commission_rate ? s.commission_rate.toLocaleString('ro-RO') + '%' : '—') + (method ? ' · ' + method.label : ''), step: 'organizer' },
                     { label: 'Facturează', value: entity + (s.company_name ? ' · ' + s.company_name : ''), step: 'billing' },
                     { label: 'Site', value: site, step: 'site' },
-                    { label: 'Modelul site-ului', value: tpl ? tpl.name : 'Aleg mai târziu', step: 'template' },
+                    { label: 'Modelul site-ului', value: tpl ? tpl.name : (s.template_custom ? 'Făcut de noi de la zero (' + this.money(this.customSite.price, this.customSite.currency) + ')' : 'Aleg mai târziu'), step: 'template' },
                     { label: 'Plăți', value: proc ? proc.label : 'Nu am încă', step: 'payments' },
                     { label: 'Funcții în plus', value: this.extrasSummary(), step: 'extras' },
                     ...(this.paidChosen('monthly').length ? [{ label: 'Abonamente', value: this.sumLabel('monthly') + ' / lună, din panou', step: 'extras' }] : []),
-                    ...(this.paidChosen('one_time').length ? [{ label: 'Plăți unice', value: this.sumLabel('one_time') + ', din panou', step: 'extras' }] : []),
+                    ...(this.paidChosen('one_time').some(m => m.id !== 'custom-site') ? [{ label: 'Plăți unice', value: this.sumLabel('one_time', true) + ', din panou', step: 'extras' }] : []),
                 ];
             },
         };

@@ -13,7 +13,7 @@
     @if ($chosen->where('raises_commission', false)->isNotEmpty())
         <p>Pe celelalte funcții alese ({{ $chosen->where('raises_commission', false)->map->display_label->implode(', ') }}) le activezi din panou, la Microservicii.</p>
     @endif
-    @if (! empty($extras['custom_site']))
+    @if (\App\Services\Onboarding\SignupService::wantsCustomSite($tenant))
         <p>Pentru site-ul făcut 100% pentru tine ({{ config('onboarding.custom_site_price') }} {{ config('onboarding.custom_site_currency') }}, plată unică) te contactăm noi în zilele următoare.</p>
     @endif
 
