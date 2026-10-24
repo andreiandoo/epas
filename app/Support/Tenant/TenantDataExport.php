@@ -26,8 +26,17 @@ class TenantDataExport
         return $tenant !== null && $tenant->hasMicroservice(self::MICROSERVICE);
     }
 
+    /**
+     * Tenanții de dinainte de /inregistrare (approval_status null) își păstrează ce
+     * aveau: exportul abonaților la newsletter le merge și fără modul.
+     */
+    public static function legacyAllowed(?Tenant $tenant): bool
+    {
+        return $tenant !== null && $tenant->approval_status === null;
+    }
+
     /** Butonul din panou: fără modul, explică de unde se activează. */
-    public static function action(string $label, callable $export): Action
+    public static function action(string $label, callable $export, bool $keepForLegacy = false): Action
     {
         return Action::make('export')
             ->label($label)
@@ -35,7 +44,7 @@ class TenantDataExport
             ->color('gray')
             ->action(function () use ($export) {
                 $tenant = auth()->user()?->tenant;
-                if (! self::allowed($tenant)) {
+                if (! self::allowed($tenant) && ! ($keepForLegacy && self::legacyAllowed($tenant))) {
                     Notification::make()
                         ->warning()
                         ->title('Exportul merge cu modulul „Export clienți”')

@@ -93,8 +93,8 @@ class NewsletterSubscriberResource extends Resource
                 ]),
             ])
             ->headerActions([
-                // Exportul merge doar cu modulul „Export clienți”
-                \App\Support\Tenant\TenantDataExport::action('Export CSV', fn ($tenant) => \App\Support\Tenant\TenantDataExport::newsletterSubscribers($tenant)),
+                // Tenanții noi au nevoie de modulul „Export clienți”; cei existenți îl păstrează ca până acum
+                \App\Support\Tenant\TenantDataExport::action('Export CSV', fn ($tenant) => \App\Support\Tenant\TenantDataExport::newsletterSubscribers($tenant), keepForLegacy: true),
             ]);
     }
 
