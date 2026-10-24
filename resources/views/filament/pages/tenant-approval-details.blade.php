@@ -18,7 +18,7 @@
         'Metoda de lucru' => $methods[$tenant->work_method] ?? '—',
         'Comision' => rtrim(rtrim(number_format((float) $tenant->commission_rate, 2, ',', ''), '0'), ',') . '%',
         'Funcții în plus' => $extraNames ?: 'niciuna',
-        'Site făcut special' => ! empty($extras['custom_site']) ? 'DA, vrea site custom' : 'nu',
+        'Site făcut 100% custom' => ! empty($extras['custom_site']) ? 'DA, ' . config('onboarding.custom_site_price') . ' ' . config('onboarding.custom_site_currency') . ' o singură dată' : 'nu',
         'Bilete / lună (estimat)' => $tenant->estimated_monthly_tickets ?: '—',
         'Forma juridică' => $entity,
         'Denumire' => $tenant->company_name,

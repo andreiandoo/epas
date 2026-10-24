@@ -339,7 +339,11 @@
             {{-- 5. Template --}}
             <div x-show="state.step === 'template'">
                 <h1 class="text-2xl font-bold mb-2">Cum vrei să arate site-ul?</h1>
-                <p class="text-[color:var(--c-muted)] mb-6">Alege modelul care seamănă cel mai mult cu ce organizezi. Cu „Vezi demo” deschizi un site complet, ca să vezi cum arată. Nu te încurca acum cu detaliile: logo-ul, pozele, culorile și textele le schimbi tu după aprobare.</p>
+                <p class="text-[color:var(--c-muted)] mb-4">Alege modelul care seamănă cel mai mult cu ce organizezi. Cu „Vezi demo” deschizi un site complet, ca să vezi cum arată. Nu te încurca acum cu detaliile: logo-ul, pozele, culorile și textele le schimbi tu după aprobare.</p>
+                <p class="rounded-xl bg-[color:var(--c-primary)]/15 px-4 py-3 text-sm mb-6">
+                    <strong>Cât costă:</strong> site-ul din model nu are abonament. Comisionul tău pe bilet crește cu un punct, de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%.
+                    Dacă vrei un site făcut în întregime pentru tine, îl găsești la pasul „Funcții în plus”.
+                </p>
                 <div class="grid sm:grid-cols-2 gap-4" role="radiogroup" aria-label="Modele de site">
                     <template x-for="t in templates" :key="t.slug">
                         <div class="opt p-0 overflow-hidden" :data-on="template === t.slug">
@@ -390,7 +394,7 @@
             <div x-show="state.step === 'extras'" class="pb-24 sm:pb-0">
                 <h1 class="text-2xl font-bold mb-2">Ai nevoie de funcții în plus?</h1>
                 <p class="text-[color:var(--c-muted)] mb-5">Nu e obligatoriu. Contul vine deja cu tot ce trebuie ca să vinzi bilete. Bifează doar ce te ajută acum; restul le poți adăuga oricând din panou.</p>
-                <p class="text-sm text-[color:var(--c-muted)] mb-5">Funcțiile au două feluri de preț. Unele au abonament, pe lună sau o singură dată. Altele, marcate <strong class="text-[color:var(--c-text)]">„+1 punct la comision”</strong>, nu au abonament: dacă alegi măcar una, comisionul tău pe bilet crește cu un punct (de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%), oricâte dintre ele ai alege.</p>
+                <p class="text-sm text-[color:var(--c-muted)] mb-5">Funcțiile au două feluri de preț. Unele au abonament, pe lună sau o singură dată. Altele, marcate <strong class="text-[color:var(--c-text)]">„+1 punct la comision”</strong>, nu au abonament: dacă alegi măcar una, comisionul tău pe bilet crește cu un punct (de la <span x-text="baseCommission()"></span>% la <span x-text="baseCommission() + 1"></span>%), oricâte dintre ele ai alege. Dacă ai ales deja un model de site, punctul ăsta îl plătești deja, deci funcțiile marcate nu te mai costă nimic în plus.</p>
 
                 {{-- Ce e inclus deja --}}
                 <div class="rounded-2xl border border-[color:var(--c-border)] bg-[color:var(--c-surface-2)] p-4 mb-6">
@@ -411,9 +415,9 @@
                     <span class="relative flex gap-4 items-start">
                         <span class="extra-icon text-2xl" aria-hidden="true">✨</span>
                         <span class="flex-1">
-                            <span class="font-semibold block text-lg">Un site făcut special pentru tine</span>
-                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">În loc de un model gata făcut, îl construim noi pe brandul tău: design propriu și paginile de care ai nevoie. Te contactăm după aprobare ca să stabilim detaliile.</span>
-                            <span class="price-chip price-chip--commission mt-3">+1 punct la comision</span>
+                            <span class="font-semibold block text-lg">Un site făcut 100% pentru tine</span>
+                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">În loc de un model gata făcut, îl construim noi de la zero, pe brandul tău: design propriu și paginile de care ai nevoie. Te contactăm după aprobare ca să stabilim detaliile.</span>
+                            <span class="price-chip mt-3" x-text="money(customSite.price, customSite.currency) + ' o singură dată'"></span>
                         </span>
                         <span class="extra-check" aria-hidden="true" x-text="extras.custom_site ? '✓' : ''"></span>
                     </span>
@@ -585,7 +589,8 @@
             processors: @json($processors),
             microservices: @json($microservices),
             paymentTermsDays: @json($paymentTermsDays),
-            includedBasics: ['Site de bilete', 'Plăți online cu cardul', 'Bilete trimise pe email', 'Panou cu vânzări și rapoarte'],
+            customSite: @json($customSite),
+            includedBasics: ['Vânzare de bilete online', 'Plăți cu cardul', 'Bilete trimise pe email', 'Panou cu vânzări și rapoarte'],
             baseDomain: @json($baseDomain),
             steps: [
                 { key: 'account', label: 'Cont' }, { key: 'organizer', label: 'Ce organizezi' }, { key: 'billing', label: 'Cine facturează' },
@@ -786,7 +791,8 @@
             },
 
             priceLabel(m) {
-                if (m.raises_commission) return '+1 punct la comision';
+                // Cu site din model, punctul în plus e deja plătit: funcțiile marcate nu mai costă nimic
+                if (m.raises_commission) return this.state.template ? 'Inclus, ai deja +1 punct' : '+1 punct la comision';
                 if (!m.price) return 'Gratuit';
                 return this.money(m.price, m.currency) + ({ monthly: ' / lună', one_time: ' o singură dată', usage: ' / utilizare' }[m.cycle] || '');
             },
@@ -795,14 +801,21 @@
 
             commissionItems() {
                 const items = this.microservices.filter(m => m.raises_commission && this.isChosen(m)).map(m => m.name);
-                if (this.extras.custom_site) items.unshift('site făcut special');
+                const tpl = this.templates.find(t => t.slug === this.state.template);
+                if (tpl) items.unshift('site-ul din modelul „' + tpl.name + '”');
                 return items;
             },
 
             // 1% sau 2% + un punct dacă a ales ceva inclus în comision, o singură dată
             commissionPreview() { return this.baseCommission() + (this.commissionItems().length ? 1 : 0); },
 
-            paidChosen(cycle) { return this.microservices.filter(m => !m.raises_commission && m.price > 0 && m.cycle === cycle && this.isChosen(m)); },
+            paidChosen(cycle) {
+                const items = this.microservices.filter(m => !m.raises_commission && m.price > 0 && m.cycle === cycle && this.isChosen(m));
+                if (cycle === 'one_time' && this.extras.custom_site) {
+                    items.unshift({ id: 'custom-site', name: 'Site făcut 100% pentru tine', price: this.customSite.price, currency: this.customSite.currency, cycle: 'one_time' });
+                }
+                return items;
+            },
 
             // Totalul pe monede (unele prețuri sunt în lei, altele în euro)
             sumLabel(cycle) {
@@ -833,7 +846,7 @@
 
             extrasSummary() {
                 const names = this.microservices.filter(m => (this.state.extras?.microservices || []).map(Number).includes(m.id)).map(m => m.name);
-                if (this.state.extras?.custom_site) names.unshift('Site făcut special');
+                if (this.state.extras?.custom_site) names.unshift('Site făcut 100% pentru tine');
                 return names.length ? names.join(', ') : 'Niciuna';
             },
 

@@ -12,6 +12,10 @@ return [
     'mail_from_name' => env('SIGNUP_MAIL_FROM_NAME', 'Tixello'),
     'mail_reply_to' => env('SIGNUP_MAIL_REPLY_TO', 'contact@tixello.com'),
 
+    // Site-ul făcut 100% special (nu din modelele demo): plată unică, fără punct în plus la comision
+    'custom_site_price' => (float) env('SIGNUP_CUSTOM_SITE_PRICE', 500),
+    'custom_site_currency' => env('SIGNUP_CUSTOM_SITE_CURRENCY', 'EUR'),
+
     // Versiunea termenilor + politicii de confidențialitate acceptate la înscriere
     'terms_version' => env('SIGNUP_TERMS_VERSION', '2026-10'),
     'terms_url' => '/termeni-si-conditii',

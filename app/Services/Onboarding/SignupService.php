@@ -147,8 +147,9 @@ class SignupService
     }
 
     /**
-     * Comisionul: 1% sau 2% după modul de vânzare, plus un punct dacă a ales o funcție
-     * care ridică comisionul sau site-ul făcut special. Creșterea se aplică o singură dată.
+     * Comisionul: 1% sau 2% după modul de vânzare, plus un punct dacă are site din
+     * modelele demo sau a ales o funcție care ridică comisionul. Creșterea se aplică
+     * o singură dată. Site-ul făcut 100% special se plătește separat (custom_site_price).
      */
     public function applyCommission(Tenant $tenant): void
     {
@@ -160,11 +161,10 @@ class SignupService
 
     public function raisesCommission(Tenant $tenant): bool
     {
-        $extras = $tenant->signup_choices['extras'] ?? [];
-        if (! empty($extras['custom_site'])) {
+        if (! empty($tenant->signup_choices['template']['slug'])) {
             return true;
         }
-        $ids = $extras['microservices'] ?? [];
+        $ids = $tenant->signup_choices['extras']['microservices'] ?? [];
 
         return $ids && Microservice::whereIn('id', $ids)->where('raises_commission', true)->exists();
     }

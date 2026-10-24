@@ -106,6 +106,7 @@ class SignupController extends Controller
                 ->values(),
             'baseDomain' => $this->cloudflare->getBaseDomain(),
             'microservices' => $this->microserviceOptions(),
+            'customSite' => ['price' => (float) config('onboarding.custom_site_price'), 'currency' => config('onboarding.custom_site_currency')],
             'paymentTermsDays' => (int) (\App\Models\Setting::current()->default_payment_terms_days ?? 5),
         ]);
     }
@@ -319,6 +320,7 @@ class SignupController extends Controller
         }
 
         $this->signup->saveChoice($tenant, 'template', $slug ? ['slug' => $slug] : null, 6);
+        $this->signup->applyCommission($tenant->fresh());
 
         return response()->json(['state' => $this->state($tenant->fresh())]);
     }
