@@ -270,6 +270,31 @@ class TicketType extends Model
             }
         });
 
+        // meta.is_invitation / meta.is_test are set from code and have no form
+        // field. Filament saves only the meta keys bound to fields, so an event
+        // save dropped them and the "Invitatie" type showed up on the public
+        // page as a 0 lei ticket (event 4586). Keep them across meta rewrites.
+        static::updating(function ($model) {
+            if (!$model->isDirty('meta')) {
+                return;
+            }
+            $old = json_decode((string) $model->getRawOriginal('meta'), true);
+            if (!is_array($old)) {
+                return;
+            }
+            $meta = is_array($model->meta) ? $model->meta : [];
+            $restored = false;
+            foreach (['is_invitation', 'is_test'] as $key) {
+                if (!empty($old[$key]) && !array_key_exists($key, $meta)) {
+                    $meta[$key] = $old[$key];
+                    $restored = true;
+                }
+            }
+            if ($restored) {
+                $model->meta = $meta;
+            }
+        });
+
         // Refuse deletion if any order_item or ticket still references this type.
         // The DB also enforces this via the FK RESTRICT constraint, but raising a
         // readable exception here surfaces a clear admin-facing message before

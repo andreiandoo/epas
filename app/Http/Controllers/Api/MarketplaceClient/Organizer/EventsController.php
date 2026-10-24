@@ -197,7 +197,7 @@ class EventsController extends BaseController
         // as a plain (public, 0-lei) ticket type.
         [$paidTicketRows] = $this->splitFreeWithCodeRows($validated['ticket_types'] ?? []);
         if (isset($validated['ticket_types'])) {
-            $validated['ticket_types'] = $paidTicketRows;
+            $validated['ticket_types'] = $this->guardInvitationTicketRows(null, $paidTicketRows);
         }
         $freeTicketRows = [];
 
@@ -411,6 +411,16 @@ class EventsController extends BaseController
             }
         }
 
+        // Invitations are not ticket types. The form sends back every type it
+        // loaded, so the event's own "Invitatie" row is dropped here; if that
+        // was the only row, regular types are left alone.
+        if (!empty($validated['ticket_types'])) {
+            $validated['ticket_types'] = $this->guardInvitationTicketRows($event, $validated['ticket_types']);
+            if (empty($validated['ticket_types'])) {
+                unset($validated['ticket_types']);
+            }
+        }
+
         // Published/live events take the live-edit path: only safe fields, and
         // either applied directly (allow_live_edits) or parked as pending
         // changes for a marketplace admin to approve. Ticket-type restructuring
@@ -554,7 +564,11 @@ class EventsController extends BaseController
                 // types are excluded: they are upserted below by id/code and
                 // never deleted (with none on the event this is the exact
                 // legacy query).
-                $freeWithCodeTypeIds = $this->freeWithCodeTicketTypeIds($event);
+                // The invitation type (issued invitations hang on it) is kept too.
+                $freeWithCodeTypeIds = array_merge(
+                    $this->freeWithCodeTicketTypeIds($event),
+                    $this->invitationTicketTypeIds($event)
+                );
                 $event->ticketTypes()
                     ->when(!empty($freeWithCodeTypeIds), fn ($q) => $q->whereNotIn('id', $freeWithCodeTypeIds))
                     ->delete();
@@ -5456,6 +5470,8 @@ class EventsController extends BaseController
                     'checked_in' => $tt->isTestPos() ? 0 : $checkedIn,
                     'is_sold_out' => (bool) ($tt->is_sold_out ?? false),
                     'free_with_code' => $freeWithCode,
+                    // The edit form skips it (invitations come from "Invitații").
+                    'is_invitation' => (bool) ($tt->meta['is_invitation'] ?? false),
                 ];
                 });
             })(),
@@ -5547,6 +5563,62 @@ class EventsController extends BaseController
             }
         }
         return [$paid, $free];
+    }
+
+    /**
+     * Ids of the event's system invitation ticket types (meta.is_invitation).
+     */
+    protected function invitationTicketTypeIds(Event $event): array
+    {
+        return TicketType::where('event_id', $event->id)
+            ->get(['id', 'meta'])
+            ->filter(fn (TicketType $tt) => !empty($tt->meta['is_invitation']))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Organizers can't add invitations as ticket types: a 0 lei "Invitație"
+     * row is sold on the public page. Invitations are issued from the
+     * "Invitații" section instead.
+     *  - rows named like the event's system invitation type are dropped
+     *    (the edit form sends back every type it loaded);
+     *  - any other invitation-like name is refused with a 422, except on a
+     *    live event when the type already exists (live edit only appends new
+     *    names, so resending it changes nothing).
+     */
+    protected function guardInvitationTicketRows(?Event $event, array $rows): array
+    {
+        $plainName = function ($name): string {
+            if (is_array($name)) {
+                $name = $name['ro'] ?? $name['en'] ?? reset($name) ?: '';
+            }
+            return mb_strtolower(trim((string) $name));
+        };
+
+        $existing = $event ? TicketType::where('event_id', $event->id)->get(['id', 'name', 'meta']) : collect();
+        $systemNames = $existing->filter(fn ($tt) => !empty($tt->meta['is_invitation']))
+            ->map(fn ($tt) => $plainName($tt->name))->all();
+        $existingNames = $existing->map(fn ($tt) => $plainName($tt->name))->all();
+
+        $kept = [];
+        foreach ($rows as $i => $row) {
+            $name = $plainName($row['name'] ?? '');
+            if ($name !== '' && in_array($name, $systemNames, true)) {
+                continue;
+            }
+            if (str_contains(Str::ascii($name), 'invitat')
+                && !($event?->is_published && in_array($name, $existingNames, true))) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    "ticket_types.{$i}.name" => 'Invitațiile nu se adaugă ca tip de bilet, pentru că ar apărea la vânzare în pagina evenimentului. Le emiți din secțiunea Invitații.',
+                ]);
+            }
+            $kept[] = $row;
+        }
+
+        return $kept;
     }
 
     /**
