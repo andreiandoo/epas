@@ -113,6 +113,7 @@ class TenantPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
                 \App\Http\Middleware\SetTenantPanelLocale::class,
+                \App\Http\Middleware\EnsureTenantSignupState::class,
             ])
 
             // Custom assets (Tailwind utilities + custom skin)
@@ -136,6 +137,9 @@ class TenantPanelProvider extends PanelProvider
 
             // Custom topbar above fi-main but inside fi-main-ctn (same hook as Marketplace)
             ->renderHook('panels::page.start', fn (): string => view('filament.components.custom-topbar')->render())
+
+            // Banda „Contul tău e în verificare” pentru înscrierile noi
+            ->renderHook('panels::content.start', fn (): string => view('filament.components.tenant-approval-banner')->render())
 
             // Sidebar footer with support card
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render())

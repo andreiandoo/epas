@@ -274,6 +274,25 @@ Route::get('/verify/{token}', function ($token) {
     return redirect()->route('onboarding.verify', ['token' => $token]);
 });
 
+// Înscrierea nouă cu aprobare în core. /register rămâne pe fluxul vechi până la trecere.
+Route::prefix('inregistrare')->name('signup.')->group(function () {
+    $c = \App\Http\Controllers\Onboarding\SignupController::class;
+    Route::get('/', [$c, 'show'])->name('show');
+    Route::post('/cont', [$c, 'account'])->middleware('throttle:5,10')->name('account');
+    Route::middleware('auth')->group(function () use ($c) {
+        Route::post('/verificare', [$c, 'verifyEmail'])->middleware('throttle:10,1')->name('verify');
+        Route::post('/verificare/retrimite', [$c, 'resendCode'])->middleware('throttle:5,10')->name('resend');
+        Route::post('/organizator', [$c, 'organizer'])->middleware('throttle:30,1')->name('organizer');
+        Route::post('/cui', [$c, 'lookupCui'])->middleware('throttle:10,1')->name('cui');
+        Route::post('/facturare', [$c, 'billing'])->middleware('throttle:10,1')->name('billing');
+        Route::post('/subdomeniu', [$c, 'checkSubdomain'])->middleware('throttle:30,1')->name('subdomain');
+        Route::post('/site', [$c, 'site'])->middleware('throttle:20,1')->name('site');
+        Route::post('/template', [$c, 'template'])->middleware('throttle:20,1')->name('template');
+        Route::post('/plati', [$c, 'payments'])->middleware('throttle:20,1')->name('payments');
+        Route::post('/trimite', [$c, 'submit'])->middleware('throttle:5,1')->name('submit');
+    });
+});
+
 // Logout routes (support both GET and POST)
 Route::get('/admin/logout', function () {
     \Illuminate\Support\Facades\Auth::logout();

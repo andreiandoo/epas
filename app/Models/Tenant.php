@@ -94,7 +94,22 @@ class Tenant extends Model
         // legacy behaviour). Used by the marketplace panel to scope
         // list/edit views so each marketplace only sees its own rows.
         'created_by_marketplace_client_id',
+        'legal_entity_type',
+        'identity_data',
+        'approval_status',
+        'approval_submitted_at',
+        'approved_at',
+        'approved_by',
+        'rejected_at',
+        'rejected_reason',
+        'terms_accepted_at',
+        'terms_version',
+        'terms_ip',
+        'signup_choices',
     ];
+
+    // Datele de identificare (CNP, CI) nu ies niciodată la serializare
+    protected $hidden = ['identity_data'];
 
     protected $casts = [
         'tenant_type' => TenantType::class,
@@ -122,6 +137,12 @@ class Tenant extends Model
         'use_core_smtp' => 'boolean',
         'has_own_website' => 'boolean',
         'is_demo_shadow' => 'boolean',
+        'identity_data' => 'encrypted:array',
+        'approval_submitted_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'terms_accepted_at' => 'datetime',
+        'signup_choices' => 'array',
     ];
 
     public function contractTemplate(): BelongsTo
@@ -438,6 +459,18 @@ class Tenant extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /** Înscriere nouă trimisă și încă neaprobată. Tenanții vechi au approval_status = null. */
+    public function isAwaitingApproval(): bool
+    {
+        return $this->approval_status === 'pending';
+    }
+
+    /** Înscriere începută la /inregistrare, dar netrimisă spre aprobare. */
+    public function isSignupIncomplete(): bool
+    {
+        return $this->approval_status === 'incomplete';
     }
 
     /**

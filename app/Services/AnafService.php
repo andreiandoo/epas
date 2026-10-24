@@ -112,7 +112,10 @@ class AnafService
             'fax' => $general['fax'] ?? null,
             'vat_payer' => isset($company['inregistrare_scop_Tva']) &&
                           $company['inregistrare_scop_Tva']['scpTVA'] === true,
-            'is_active' => ($general['stare'] ?? '') === 'ACTIVA',
+            // v9 nu are „stare”: activă = nu e inactivă fiscal și nu e radiată
+            'is_active' => empty($company['stare_inactiv']['statusInactivi'])
+                && empty($company['stare_inactiv']['dataRadiere'])
+                && stripos((string) ($general['stare_inregistrare'] ?? ''), 'RADI') === false,
             'raw_data' => $company, // Keep raw data for reference
         ];
     }
