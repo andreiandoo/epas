@@ -428,7 +428,7 @@
                 this.hydrate();
                 if (this.state.step === 'verify') this.startResendTimer();
                 window.addEventListener('beforeunload', (e) => {
-                    if (this.state.step === 'account' && (this.account.email || this.account.first_name)) e.preventDefault();
+                    if (this.state.step === 'account' && !this.busy && (this.account.email || this.account.first_name)) e.preventDefault();
                 });
             },
 
@@ -473,9 +473,10 @@
                     const { ok, status, data } = await this.request(url, body);
                     if (ok && data.state) {
                         // După primul pas sesiunea e nouă: luăm tokenul CSRF proaspăt
-                        if (url === '/inregistrare/cont') return window.location.reload();
+                        if (data.csrf) document.querySelector('meta[name=csrf-token]').content = data.csrf;
                         this.state = data.state;
                         this.hydrate();
+                        if (this.state.step === 'verify') { this.startResendTimer(); this.$nextTick(() => this.$refs.code.focus()); }
                         window.scrollTo({ top: 0 });
                         return;
                     }

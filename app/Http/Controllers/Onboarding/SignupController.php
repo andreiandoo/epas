@@ -88,7 +88,8 @@ class SignupController extends Controller
             Log::error('Signup: codul de verificare nu a plecat', ['user_id' => $user->id, 'error' => $e->getMessage()]);
         }
 
-        return response()->json(['state' => $this->state($this->currentTenant())]);
+        // Sesiunea e nouă după login: pagina continuă cu tokenul CSRF proaspăt, fără reîncărcare
+        return response()->json(['state' => $this->state($this->currentTenant()), 'csrf' => csrf_token()]);
     }
 
     public function verifyEmail(Request $request): JsonResponse
