@@ -29,6 +29,17 @@ use Illuminate\Validation\ValidationException;
  */
 class SignupController extends Controller
 {
+    // Categoriile microserviciilor, pe înțelesul organizatorului
+    private const CATEGORY_LABELS = [
+        'sales' => 'Vânzare', 'bilete' => 'Vânzare', 'commerce' => 'Vânzare', 'distribution' => 'Vânzare', 'evenimente' => 'Vânzare',
+        'marketing' => 'Marketing', 'newsletter' => 'Marketing', 'crm' => 'Marketing',
+        'communication' => 'Comunicare', 'messaging' => 'Comunicare', 'notification' => 'Comunicare', 'support' => 'Comunicare', 'transactional' => 'Comunicare',
+        'payment' => 'Plăți', 'payment_processor' => 'Plăți', 'plati' => 'Plăți', 'rambursari' => 'Plăți',
+        'accounting' => 'Contabilitate', 'reporting' => 'Rapoarte',
+        'integration' => 'Integrări', 'integrations' => 'Integrări',
+        'leisure' => 'Agrement', 'operations' => 'Operațiuni', 'design' => 'Design', 'video' => 'Video',
+    ];
+
     // câmpul din formular => cheia din datele ANAF
     private const ADDRESS_KEYS = ['address' => 'address', 'city' => 'city', 'state' => 'county', 'postal_code' => 'postal_code'];
 
@@ -95,6 +106,7 @@ class SignupController extends Controller
                 ->values(),
             'baseDomain' => $this->cloudflare->getBaseDomain(),
             'microservices' => $this->microserviceOptions(),
+            'paymentTermsDays' => (int) (\App\Models\Setting::current()->default_payment_terms_days ?? 5),
         ]);
     }
 
@@ -491,16 +503,28 @@ class SignupController extends Controller
     private function microserviceOptions(): array
     {
         return Microservice::active()->orderByDesc('signup_featured')->orderBy('sort_order')->get()
-            ->map(fn (Microservice $m) => [
-                'id' => $m->id,
-                'name' => $m->display_label,
-                'text' => strip_tags((string) ($m->getTranslation('short_description', 'ro') ?: $m->getTranslation('short_description', 'en'))),
-                'price' => (float) $m->price,
-                'billing_cycle' => $m->billing_cycle,
-                'currency' => $m->currency ?: 'EUR',
-                'raises_commission' => (bool) $m->raises_commission,
-                'featured' => (bool) $m->signup_featured,
-            ])
+            ->map(function (Microservice $m) {
+                $features = $m->getTranslation('features', 'ro') ?: $m->getTranslation('features', 'en');
+
+                return [
+                    'id' => $m->id,
+                    'name' => $m->display_label,
+                    'text' => strip_tags((string) ($m->getTranslation('short_description', 'ro') ?: $m->getTranslation('short_description', 'en'))),
+                    'features' => array_slice(array_values(array_filter(array_map(fn ($f) => is_string($f) ? strip_tags($f) : null, (array) $features))), 0, 6),
+                    'icon' => $m->icon_image ? \Illuminate\Support\Facades\Storage::disk('public')->url($m->icon_image) : null,
+                    'category' => self::CATEGORY_LABELS[$m->category] ?? 'Altele',
+                    'price' => (float) $m->price,
+                    // one_time / usage / recurring; ciclul vechi rămâne rezervă
+                    'cycle' => match (true) {
+                        $m->pricing_model === 'one_time' || $m->billing_cycle === 'one_time' => 'one_time',
+                        $m->pricing_model === 'usage' || $m->billing_cycle === 'on_demand' => 'usage',
+                        default => 'monthly',
+                    },
+                    'currency' => $m->currency ?: 'EUR',
+                    'raises_commission' => (bool) $m->raises_commission,
+                    'featured' => (bool) $m->signup_featured,
+                ];
+            })
             ->values()
             ->all();
     }

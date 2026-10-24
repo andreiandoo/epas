@@ -39,6 +39,15 @@
         .opt[data-on="true"] { border-color: var(--c-primary); box-shadow: inset 0 0 0 1px var(--c-primary); }
         .spin { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .extra-card { border: 1px solid var(--c-border); border-radius: 16px; background: var(--c-surface-2); transition: border-color .15s ease-out, box-shadow .15s ease-out; }
+        .extra-card[data-on="true"] { border-color: var(--c-primary); box-shadow: inset 0 0 0 1px var(--c-primary), 0 8px 24px -12px rgba(124, 92, 255, .5); }
+        .extra-card > button:focus-visible, button.extra-card:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; border-radius: 16px; }
+        @media (hover: hover) { .extra-card:hover { border-color: #4a4a66; } .extra-card[data-on="true"]:hover { border-color: var(--c-primary); } }
+        .extra-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-primary); }
+        .extra-check { width: 24px; height: 24px; flex-shrink: 0; border-radius: 999px; border: 2px solid var(--c-border); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+        [data-on="true"] .extra-check { background: var(--c-primary); border-color: var(--c-primary); }
+        .price-chip { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 4px 10px; background: var(--c-surface); border: 1px solid var(--c-border); }
+        .price-chip--commission { background: rgba(124, 92, 255, .18); border-color: rgba(124, 92, 255, .45); }
         @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2s; } * { transition: none !important; } }
     </style>
 </head>
@@ -378,45 +387,151 @@
             </div>
 
             {{-- 7. Funcții în plus --}}
-            <div x-show="state.step === 'extras'">
+            <div x-show="state.step === 'extras'" class="pb-24 sm:pb-0">
                 <h1 class="text-2xl font-bold mb-2">Ai nevoie de funcții în plus?</h1>
-                <p class="text-[color:var(--c-muted)] mb-4">Ai deja tot ce trebuie ca să vinzi bilete: site, plăți, bilete pe email, scanare la intrare. Dacă vrei mai mult, bifează aici. Nu e obligatoriu, le poți adăuga oricând din panou.</p>
-                <div class="rounded-xl bg-[color:var(--c-surface-2)] border border-[color:var(--c-border)] p-4 text-sm mb-6">
-                    <p>Funcțiile marcate <strong>„incluse în comision”</strong> nu au preț separat. Dacă alegi măcar una, comisionul tău crește cu un punct, oricâte ai alege. Celelalte au prețul lor, scris lângă nume.</p>
-                    <p class="mt-2 font-semibold" role="status">Comisionul tău: <span x-text="commissionPreview() + '%'"></span> pe bilet</p>
+                <p class="text-[color:var(--c-muted)] mb-5">Nu e obligatoriu. Contul vine deja cu tot ce trebuie ca să vinzi bilete. Bifează doar ce te ajută acum; restul le poți adăuga oricând din panou.</p>
+
+                {{-- Ce e inclus deja --}}
+                <div class="rounded-2xl border border-[color:var(--c-border)] bg-[color:var(--c-surface-2)] p-4 mb-6">
+                    <p class="text-sm font-semibold mb-3">Inclus în cont, fără cost în plus</p>
+                    <ul class="flex flex-wrap gap-2 text-sm">
+                        <template x-for="item in includedBasics" :key="item">
+                            <li class="flex items-center gap-1.5 rounded-full bg-[color:var(--c-surface)] border border-[color:var(--c-border)] px-3 py-1.5">
+                                <span class="text-[color:var(--c-success)]" aria-hidden="true">✓</span><span x-text="item"></span>
+                            </li>
+                        </template>
+                    </ul>
                 </div>
 
-                <div class="grid gap-3">
-                    <label class="opt flex gap-3 items-start" :data-on="extras.custom_site">
-                        <input type="checkbox" class="mt-1 h-5 w-5 accent-[color:var(--c-primary)] shrink-0" x-model="extras.custom_site">
-                        <span>
-                            <span class="font-semibold block">Un site de bilete făcut special pentru tine</span>
-                            <span class="text-sm text-[color:var(--c-muted)] block">În loc de un model gata făcut, îți construim noi site-ul, pe brandul tău: design propriu, paginile de care ai nevoie.</span>
-                            <span class="inline-block mt-2 text-xs font-semibold rounded-full px-2 py-1 bg-[color:var(--c-primary)]/20">Inclus în comision</span>
+                {{-- Site făcut special --}}
+                <button type="button" @click="extras.custom_site = !extras.custom_site" :aria-pressed="extras.custom_site"
+                        class="extra-card w-full text-left p-5 mb-4 relative overflow-hidden" :data-on="extras.custom_site">
+                    <span class="absolute inset-0 opacity-30 pointer-events-none" style="background: radial-gradient(circle at 90% 0%, var(--c-primary), transparent 60%);" aria-hidden="true"></span>
+                    <span class="relative flex gap-4 items-start">
+                        <span class="extra-icon text-2xl" aria-hidden="true">✨</span>
+                        <span class="flex-1">
+                            <span class="font-semibold block text-lg">Un site făcut special pentru tine</span>
+                            <span class="text-sm text-[color:var(--c-muted)] block mt-1">În loc de un model gata făcut, îl construim noi pe brandul tău: design propriu și paginile de care ai nevoie. Te contactăm după aprobare ca să stabilim detaliile.</span>
+                            <span class="price-chip price-chip--commission mt-3">Inclus în comision</span>
                         </span>
-                    </label>
+                        <span class="extra-check" aria-hidden="true" x-text="extras.custom_site ? '✓' : ''"></span>
+                    </span>
+                </button>
+
+                {{-- Lista completă: căutare + categorii --}}
+                <div x-show="showAllMicroservices" class="mb-4 space-y-3">
+                    <label class="sr-only" for="ms-search">Caută o funcție</label>
+                    <input id="ms-search" type="search" class="field" placeholder="Caută o funcție, ex. facturi, newsletter, hartă locuri" x-model="msSearch">
+                    <div class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Categorii">
+                        <template x-for="cat in ['Toate', ...msCategories()]" :key="cat">
+                            <button type="button" class="shrink-0 rounded-full px-3 py-2 text-sm border transition-colors"
+                                    :class="msCategory === cat ? 'bg-[color:var(--c-primary)] border-[color:var(--c-primary)] text-white' : 'border-[color:var(--c-border)] text-[color:var(--c-muted)]'"
+                                    :aria-pressed="msCategory === cat" @click="msCategory = cat" x-text="cat"></button>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Carduri --}}
+                <div class="grid sm:grid-cols-2 gap-3">
                     <template x-for="m in visibleMicroservices()" :key="m.id">
-                        <label class="opt flex gap-3 items-start" :data-on="extras.microservices.includes(m.id)">
-                            <input type="checkbox" class="mt-1 h-5 w-5 accent-[color:var(--c-primary)] shrink-0" :value="m.id" x-model.number="extras.microservices">
-                            <span class="flex-1">
-                                <span class="font-semibold block" x-text="m.name"></span>
-                                <span class="text-sm text-[color:var(--c-muted)] block" x-show="m.text" x-text="m.text"></span>
-                                <span class="inline-block mt-2 text-xs font-semibold rounded-full px-2 py-1"
-                                      :class="m.raises_commission ? 'bg-[color:var(--c-primary)]/20' : 'bg-[color:var(--c-surface)] border border-[color:var(--c-border)]'"
-                                      x-text="priceLabel(m)"></span>
-                            </span>
-                        </label>
+                        <div class="extra-card flex flex-col" :data-on="isChosen(m)">
+                            <button type="button" class="text-left p-4 flex-1 flex gap-3 items-start" @click="toggleMicroservice(m)" :aria-pressed="isChosen(m)">
+                                <span class="extra-icon" aria-hidden="true">
+                                    <img x-show="m.icon" :src="m.icon" alt="" class="w-7 h-7 object-contain">
+                                    <span x-show="!m.icon" class="font-bold" x-text="m.name.charAt(0)"></span>
+                                </span>
+                                <span class="flex-1 min-w-0">
+                                    <span class="font-semibold block leading-snug" x-text="m.name"></span>
+                                    <span class="text-sm text-[color:var(--c-muted)] block mt-1" x-show="m.text" x-text="m.text"></span>
+                                    <span class="price-chip mt-3" :class="m.raises_commission && 'price-chip--commission'" x-text="priceLabel(m)"></span>
+                                </span>
+                                <span class="extra-check" aria-hidden="true" x-text="isChosen(m) ? '✓' : ''"></span>
+                            </button>
+                            <template x-if="m.features.length">
+                                <div class="border-t border-[color:var(--c-border)]">
+                                    <button type="button" class="w-full text-left px-4 py-3 text-sm text-[color:var(--c-muted)] flex justify-between"
+                                            @click="openDetails = openDetails === m.id ? null : m.id" :aria-expanded="openDetails === m.id">
+                                        <span>Ce primești</span><span aria-hidden="true" x-text="openDetails === m.id ? '−' : '+'"></span>
+                                    </button>
+                                    <ul x-show="openDetails === m.id" class="px-4 pb-4 space-y-1.5 text-sm">
+                                        <template x-for="f in m.features" :key="f">
+                                            <li class="flex gap-2"><span class="text-[color:var(--c-success)]" aria-hidden="true">•</span><span x-text="f"></span></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </template>
+                        </div>
                     </template>
                 </div>
-                <button type="button" x-show="microservices.some(m => !m.featured)" @click="showAllMicroservices = !showAllMicroservices"
-                        class="btn btn-ghost w-full mt-3 border border-dashed border-[color:var(--c-border)]" :aria-expanded="showAllMicroservices">
+                <p x-show="showAllMicroservices && !visibleMicroservices().length" class="text-sm text-[color:var(--c-muted)] text-center py-6">Nu am găsit nimic. Încearcă alt cuvânt sau altă categorie.</p>
+
+                <button type="button" x-show="microservices.some(m => !m.featured)" @click="showAllMicroservices = !showAllMicroservices; msSearch = ''; msCategory = 'Toate'"
+                        class="btn btn-ghost w-full mt-4 border border-dashed border-[color:var(--c-border)]" :aria-expanded="showAllMicroservices">
                     <span x-text="showAllMicroservices ? 'Arată doar cele mai folosite' : 'Vezi toate funcțiile (' + microservices.length + ')'"></span>
                 </button>
+
+                {{-- Ce plătești --}}
+                <section class="mt-8 rounded-2xl border border-[color:var(--c-border)] bg-[color:var(--c-surface-2)] overflow-hidden" aria-labelledby="cost-title">
+                    <h2 id="cost-title" class="px-5 pt-5 text-lg font-bold">Ce plătești</h2>
+                    <dl class="px-5 py-4 space-y-4 text-sm">
+                        <div class="flex justify-between gap-4">
+                            <dt>
+                                <span class="font-semibold block">Comision pe bilet</span>
+                                <span class="text-[color:var(--c-muted)]">Din biletele vândute prin Tixello. Factura vine o dată la 30 de zile, doar dacă ai vândut ceva, cu termen de plată <span x-text="paymentTermsDays"></span> zile.</span>
+                                <span x-show="commissionPreview() > baseCommission()" class="text-[color:var(--c-muted)] block mt-1">Include: <span x-text="commissionItems().join(', ')"></span>.</span>
+                            </dt>
+                            <dd class="text-right whitespace-nowrap">
+                                <span class="text-2xl font-bold" x-text="commissionPreview() + '%'"></span>
+                                <span x-show="commissionPreview() > baseCommission()" class="block text-xs text-[color:var(--c-muted)]" x-text="'în loc de ' + baseCommission() + '%'"></span>
+                            </dd>
+                        </div>
+                        <template x-if="paidChosen('monthly').length">
+                            <div class="flex justify-between gap-4 border-t border-[color:var(--c-border)] pt-4">
+                                <dt>
+                                    <span class="font-semibold block">Abonamente lunare</span>
+                                    <span class="text-[color:var(--c-muted)]" x-text="paidChosen('monthly').map(m => m.name).join(', ')"></span>
+                                </dt>
+                                <dd class="text-right whitespace-nowrap font-bold" x-text="sumLabel('monthly') + ' / lună'"></dd>
+                            </div>
+                        </template>
+                        <template x-if="paidChosen('one_time').length">
+                            <div class="flex justify-between gap-4 border-t border-[color:var(--c-border)] pt-4">
+                                <dt>
+                                    <span class="font-semibold block">O singură dată</span>
+                                    <span class="text-[color:var(--c-muted)]" x-text="paidChosen('one_time').map(m => m.name).join(', ')"></span>
+                                </dt>
+                                <dd class="text-right whitespace-nowrap font-bold" x-text="sumLabel('one_time')"></dd>
+                            </div>
+                        </template>
+                        <template x-if="paidChosen('usage').length">
+                            <div class="flex justify-between gap-4 border-t border-[color:var(--c-border)] pt-4">
+                                <dt>
+                                    <span class="font-semibold block">Plătești doar cât folosești</span>
+                                    <span class="text-[color:var(--c-muted)]" x-text="paidChosen('usage').map(m => m.name + ' (' + priceLabel(m) + ')').join(', ')"></span>
+                                </dt>
+                            </div>
+                        </template>
+                    </dl>
+                    <p class="px-5 py-4 text-sm bg-[color:var(--c-surface)] border-t border-[color:var(--c-border)]">
+                        <strong>Acum nu plătești nimic.</strong>
+                        <span x-show="paidChosen('monthly').length || paidChosen('one_time').length" class="text-[color:var(--c-muted)]">Abonamentele le plătești cu cardul din panou, după aprobare, când le pornești.</span>
+                        <span x-show="!paidChosen('monthly').length && !paidChosen('one_time').length" class="text-[color:var(--c-muted)]">Primul cost apare doar când vinzi bilete.</span>
+                    </p>
+                </section>
 
                 <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-3 mt-6">
                     <button type="button" class="btn btn-ghost" @click="back()">Înapoi</button>
                     <button type="button" class="btn btn-ghost underline underline-offset-4" @click="send('/inregistrare/functii', { microservices: [], custom_site: false })">Nu am nevoie acum</button>
                     <button type="button" class="btn btn-primary flex-1" @click="send('/inregistrare/functii', extras)" :aria-busy="busy"><span x-show="busy" class="spin" aria-hidden="true"></span><span>Continuă</span></button>
+                </div>
+
+                {{-- Bara de jos pe mobil: totalul rămâne la vedere --}}
+                <div class="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--c-border)] bg-[color:var(--c-surface)]/95 backdrop-blur px-4 py-3 flex items-center gap-3">
+                    <div class="flex-1 text-sm leading-tight">
+                        <span class="font-bold" x-text="commissionPreview() + '% comision'"></span>
+                        <span class="block text-[color:var(--c-muted)]" x-text="paidChosen('monthly').length ? sumLabel('monthly') + ' / lună' : 'fără abonamente'"></span>
+                    </div>
+                    <button type="button" class="btn btn-primary" @click="send('/inregistrare/functii', extras)" :aria-busy="busy">Continuă</button>
                 </div>
             </div>
 
@@ -465,6 +580,8 @@
             templates: @json($templates),
             processors: @json($processors),
             microservices: @json($microservices),
+            paymentTermsDays: @json($paymentTermsDays),
+            includedBasics: ['Site de bilete', 'Plăți online cu cardul', 'Bilete trimise pe email', 'Panou cu vânzări și rapoarte'],
             baseDomain: @json($baseDomain),
             steps: [
                 { key: 'account', label: 'Cont' }, { key: 'organizer', label: 'Ce organizezi' }, { key: 'billing', label: 'Cine facturează' },
@@ -493,6 +610,9 @@
             processor: null,
             extras: { microservices: [], custom_site: false },
             showAllMicroservices: false,
+            msSearch: '',
+            msCategory: 'Toate',
+            openDetails: null,
             company: null,
             code: '',
             errors: {},
@@ -639,22 +759,52 @@
                 return !!this.company && (!this.company.address || !this.company.city || !this.company.county);
             },
 
+            isChosen(m) { return this.extras.microservices.includes(m.id); },
+
+            toggleMicroservice(m) {
+                const i = this.extras.microservices.indexOf(m.id);
+                i === -1 ? this.extras.microservices.push(m.id) : this.extras.microservices.splice(i, 1);
+            },
+
+            msCategories() { return [...new Set(this.microservices.map(m => m.category))].sort((a, b) => a.localeCompare(b, 'ro')); },
+
+            // Lista scurtă + ce a bifat deja; „Vezi toate” deschide tot, cu căutare și categorii
             visibleMicroservices() {
-                return this.showAllMicroservices ? this.microservices : this.microservices.filter(m => m.featured || this.extras.microservices.includes(m.id));
+                if (!this.showAllMicroservices) return this.microservices.filter(m => m.featured || this.isChosen(m));
+                const q = this.msSearch.trim().toLowerCase();
+                return this.microservices.filter(m =>
+                    (this.msCategory === 'Toate' || m.category === this.msCategory) &&
+                    (!q || (m.name + ' ' + m.text).toLowerCase().includes(q)));
+            },
+
+            money(value, currency) {
+                return value.toLocaleString('ro-RO', { maximumFractionDigits: 2 }) + ' ' + (currency === 'RON' ? 'lei' : currency === 'EUR' ? '€' : currency);
             },
 
             priceLabel(m) {
                 if (m.raises_commission) return 'Inclus în comision';
                 if (!m.price) return 'Gratuit';
-                const cycle = { monthly: ' / lună', one_time: ' o singură dată', on_demand: ' la folosire' }[m.billing_cycle] || '';
-                return m.price.toLocaleString('ro-RO') + ' ' + (m.currency === 'RON' ? 'lei' : m.currency) + cycle;
+                return this.money(m.price, m.currency) + ({ monthly: ' / lună', one_time: ' o singură dată', usage: ' / utilizare' }[m.cycle] || '');
             },
 
-            // Ce comision vede organizatorul acum: 1% sau 2% + un punct dacă a ales ceva inclus în comision
-            commissionPreview() {
-                const base = this.state.work_method === 'exclusive' ? 1 : 2;
-                const raises = this.extras.custom_site || this.microservices.some(m => m.raises_commission && this.extras.microservices.includes(m.id));
-                return base + (raises ? 1 : 0);
+            baseCommission() { return this.state.work_method === 'exclusive' ? 1 : 2; },
+
+            commissionItems() {
+                const items = this.microservices.filter(m => m.raises_commission && this.isChosen(m)).map(m => m.name);
+                if (this.extras.custom_site) items.unshift('site făcut special');
+                return items;
+            },
+
+            // 1% sau 2% + un punct dacă a ales ceva inclus în comision, o singură dată
+            commissionPreview() { return this.baseCommission() + (this.commissionItems().length ? 1 : 0); },
+
+            paidChosen(cycle) { return this.microservices.filter(m => !m.raises_commission && m.price > 0 && m.cycle === cycle && this.isChosen(m)); },
+
+            // Totalul pe monede (unele prețuri sunt în lei, altele în euro)
+            sumLabel(cycle) {
+                const totals = {};
+                this.paidChosen(cycle).forEach(m => { totals[m.currency] = (totals[m.currency] || 0) + m.price; });
+                return Object.entries(totals).map(([c, v]) => this.money(v, c)).join(' + ');
             },
 
             saveSite() {
@@ -699,6 +849,8 @@
                     { label: 'Modelul site-ului', value: tpl ? tpl.name : 'Aleg mai târziu', step: 'template' },
                     { label: 'Plăți', value: proc ? proc.label : 'Nu am încă', step: 'payments' },
                     { label: 'Funcții în plus', value: this.extrasSummary(), step: 'extras' },
+                    ...(this.paidChosen('monthly').length ? [{ label: 'Abonamente', value: this.sumLabel('monthly') + ' / lună, din panou', step: 'extras' }] : []),
+                    ...(this.paidChosen('one_time').length ? [{ label: 'Plăți unice', value: this.sumLabel('one_time') + ', din panou', step: 'extras' }] : []),
                 ];
             },
         };
