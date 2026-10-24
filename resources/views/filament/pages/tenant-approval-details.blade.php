@@ -8,10 +8,17 @@
         default => 'Mai târziu',
     };
     $identity = $tenant->legal_entity_type === 'pf' ? ($tenant->identity_data ?? []) : [];
-    $methods = ['exclusive' => '1% · doar Tixello', 'mixed' => '2% · Tixello și alte canale', 'reseller' => '3% · revânzare'];
+    $methods = ['exclusive' => 'doar prin Tixello', 'mixed' => 'Tixello și alte canale', 'reseller' => 'revânzare'];
+    $extras = $choices['extras'] ?? [];
+    $extraNames = \App\Models\Microservice::whereIn('id', $extras['microservices'] ?? [])->get()
+        ->map(fn ($m) => $m->display_label . ($m->raises_commission ? ' (inclus în comision)' : ' (plătit separat)'))
+        ->implode(', ');
     $rows = [
         'Tip' => $tenant->tenant_type?->label() ?? '—',
         'Metoda de lucru' => $methods[$tenant->work_method] ?? '—',
+        'Comision' => rtrim(rtrim(number_format((float) $tenant->commission_rate, 2, ',', ''), '0'), ',') . '%',
+        'Funcții în plus' => $extraNames ?: 'niciuna',
+        'Site făcut special' => ! empty($extras['custom_site']) ? 'DA, vrea site custom' : 'nu',
         'Bilete / lună (estimat)' => $tenant->estimated_monthly_tickets ?: '—',
         'Forma juridică' => $entity,
         'Denumire' => $tenant->company_name,

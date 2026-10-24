@@ -289,6 +289,7 @@ Route::prefix('inregistrare')->name('signup.')->group(function () {
         Route::post('/site', [$c, 'site'])->middleware('throttle:20,1,signup-site')->name('site');
         Route::post('/template', [$c, 'template'])->middleware('throttle:20,1,signup-template')->name('template');
         Route::post('/plati', [$c, 'payments'])->middleware('throttle:20,1,signup-payments')->name('payments');
+        Route::post('/functii', [$c, 'extras'])->middleware('throttle:20,1,signup-extras')->name('extras');
         Route::post('/trimite', [$c, 'submit'])->middleware('throttle:5,1,signup-submit')->name('submit');
     });
 });

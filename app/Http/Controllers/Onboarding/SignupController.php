@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Onboarding;
 
 use App\Enums\TenantType;
 use App\Http\Controllers\Controller;
+use App\Models\Microservice;
 use App\Models\Tenant;
 use App\Models\TenantSiteDemo;
 use App\Services\AnafService;
@@ -93,6 +94,7 @@ class SignupController extends Controller
                 ->map(fn ($p, $key) => ['value' => $key, 'label' => $p['name'] ?? $key])
                 ->values(),
             'baseDomain' => $this->cloudflare->getBaseDomain(),
+            'microservices' => $this->microserviceOptions(),
         ]);
     }
 
@@ -323,6 +325,21 @@ class SignupController extends Controller
         return response()->json(['state' => $this->state($tenant->fresh())]);
     }
 
+    /** Pasul 7 (opțional): funcții în plus. */
+    public function extras(Request $request): JsonResponse
+    {
+        $tenant = $this->signupTenant(requireVerified: true);
+        $data = $this->check($request, [
+            'microservices' => 'nullable|array|max:100',
+            'microservices.*' => 'integer',
+            'custom_site' => 'nullable|boolean',
+        ]);
+
+        $this->signup->saveExtras($tenant, $data['microservices'] ?? [], (bool) ($data['custom_site'] ?? false));
+
+        return response()->json(['state' => $this->state($tenant->fresh())]);
+    }
+
     public function submit(Request $request): JsonResponse
     {
         $tenant = $this->signupTenant(requireVerified: true);
@@ -366,7 +383,7 @@ class SignupController extends Controller
             $tenant->approval_status === 'rejected' => 'rejected',
             $tenant->isAwaitingApproval() => 'submitted',
             ! $user?->email_verified_at => 'verify',
-            default => [2 => 'organizer', 3 => 'billing', 4 => 'site', 5 => 'template', 6 => 'payments'][(int) $tenant->onboarding_step] ?? 'review',
+            default => [2 => 'organizer', 3 => 'billing', 4 => 'site', 5 => 'template', 6 => 'payments', 7 => 'extras'][(int) $tenant->onboarding_step] ?? 'review',
         };
 
         $choices = $tenant->signup_choices ?? [];
@@ -396,6 +413,8 @@ class SignupController extends Controller
                 : null,
             'template' => $choices['template']['slug'] ?? null,
             'processor' => $choices['payments']['processor'] ?? null,
+            'extras' => $choices['extras'] ?? null,
+            'commission_rate' => (float) $tenant->commission_rate,
             'rejected_reason' => $tenant->approval_status === 'rejected' ? $tenant->rejected_reason : null,
         ];
     }
@@ -466,6 +485,24 @@ class SignupController extends Controller
     private static function commaBelow(string $value): string
     {
         return strtr($value, ['ş' => 'ș', 'Ş' => 'Ș', 'ţ' => 'ț', 'Ţ' => 'Ț']);
+    }
+
+    /** Funcțiile din pasul 7: lista scurtă (signup_featured) și restul, la „Vezi toate”. */
+    private function microserviceOptions(): array
+    {
+        return Microservice::active()->orderByDesc('signup_featured')->orderBy('sort_order')->get()
+            ->map(fn (Microservice $m) => [
+                'id' => $m->id,
+                'name' => $m->display_label,
+                'text' => strip_tags((string) ($m->getTranslation('short_description', 'ro') ?: $m->getTranslation('short_description', 'en'))),
+                'price' => (float) $m->price,
+                'billing_cycle' => $m->billing_cycle,
+                'currency' => $m->currency ?: 'EUR',
+                'raises_commission' => (bool) $m->raises_commission,
+                'featured' => (bool) $m->signup_featured,
+            ])
+            ->values()
+            ->all();
     }
 
     private function templateOptions(TemplateRegistry $templates): array

@@ -39,6 +39,8 @@ class Microservice extends Model
         'dependencies',
         'documentation_url',
         'metadata',
+        'raises_commission',
+        'signup_featured',
     ];
 
     protected $casts = [
@@ -53,6 +55,8 @@ class Microservice extends Model
         'required_env_vars' => 'array',
         'dependencies' => 'array',
         'metadata' => 'array',
+        'raises_commission' => 'boolean',
+        'signup_featured' => 'boolean',
     ];
 
     /**

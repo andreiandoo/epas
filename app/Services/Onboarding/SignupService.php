@@ -6,6 +6,7 @@ use App\Enums\TenantType;
 use App\Mail\Signup\SignupCodeMail;
 use App\Mail\Signup\TenantAwaitingApprovalMail;
 use App\Models\Domain;
+use App\Models\Microservice;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
@@ -133,6 +134,39 @@ class SignupService
             'estimated_monthly_tickets' => (int) ($data['estimated_monthly_tickets'] ?? 0),
             'onboarding_step' => max(3, (int) $tenant->onboarding_step),
         ]);
+
+        $this->applyCommission($tenant);
+    }
+
+    /** Pasul 7 (opțional): funcții în plus și site-ul făcut special. */
+    public function saveExtras(Tenant $tenant, array $microserviceIds, bool $customSite): void
+    {
+        $ids = Microservice::active()->whereIn('id', $microserviceIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $this->saveChoice($tenant, 'extras', ['microservices' => $ids, 'custom_site' => $customSite], 8);
+        $this->applyCommission($tenant->fresh());
+    }
+
+    /**
+     * Comisionul: 1% sau 2% după modul de vânzare, plus un punct dacă a ales o funcție
+     * care ridică comisionul sau site-ul făcut special. Creșterea se aplică o singură dată.
+     */
+    public function applyCommission(Tenant $tenant): void
+    {
+        $base = (float) (self::PLANS[$tenant->work_method]['commission_rate'] ?? self::PLANS['mixed']['commission_rate']);
+        $rate = $base + ($this->raisesCommission($tenant) ? 1 : 0);
+
+        $tenant->update(['commission_rate' => $rate, 'plan' => ((int) $rate) . 'percent']);
+    }
+
+    public function raisesCommission(Tenant $tenant): bool
+    {
+        $extras = $tenant->signup_choices['extras'] ?? [];
+        if (! empty($extras['custom_site'])) {
+            return true;
+        }
+        $ids = $extras['microservices'] ?? [];
+
+        return $ids && Microservice::whereIn('id', $ids)->where('raises_commission', true)->exists();
     }
 
     /** Pasul 3: cine facturează. Pentru SRL/PFA datele vin din ANAF, verificate în controller. */
@@ -250,7 +284,7 @@ class SignupService
             'payment_processor' => $tenant->signup_choices['payments']['processor'] ?? null,
             'onboarding_completed' => true,
             'onboarding_completed_at' => now(),
-            'onboarding_step' => 7,
+            'onboarding_step' => 9,
         ]);
 
         $this->notifyAdmins($tenant);

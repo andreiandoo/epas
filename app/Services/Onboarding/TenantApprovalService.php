@@ -7,6 +7,7 @@ use App\Mail\ContractMail;
 use App\Mail\Signup\TenantApprovedMail;
 use App\Mail\Signup\TenantRejectedMail;
 use App\Models\Domain;
+use App\Models\Microservice;
 use App\Models\Tenant;
 use App\Models\TenantSite;
 use App\Models\User;
@@ -49,6 +50,7 @@ class TenantApprovalService
 
             $domains = $this->createDomains($tenant);
             $this->createSiteDraft($tenant);
+            $this->activateIncludedMicroservices($tenant);
 
             return $domains;
         });
@@ -84,6 +86,25 @@ class TenantApprovalService
             app(SignupMailer::class)->send($tenant->contact_email, new TenantRejectedMail($tenant), 'signup_rejected', $tenant->id);
         } catch (\Throwable $e) {
             Log::error('Signup: emailul de respingere nu a plecat', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /** Cele care ridică comisionul sunt plătite prin comision, deci pornesc la aprobare. Restul le activează tenantul din panou. */
+    private function activateIncludedMicroservices(Tenant $tenant): void
+    {
+        $ids = $tenant->signup_choices['extras']['microservices'] ?? [];
+        if (! $ids) {
+            return;
+        }
+
+        $included = Microservice::whereIn('id', $ids)->where('raises_commission', true)->pluck('id');
+        $existing = $tenant->microservices()->pluck('microservices.id');
+        foreach ($included as $id) {
+            if ($existing->contains($id)) {
+                $tenant->microservices()->updateExistingPivot($id, ['status' => 'active', 'activated_at' => now()]);
+            } else {
+                $tenant->microservices()->attach($id, ['status' => 'active', 'activated_at' => now()]);
+            }
         }
     }
 

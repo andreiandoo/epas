@@ -377,7 +377,50 @@
                 </div>
             </div>
 
-            {{-- 7. Verifică și trimite --}}
+            {{-- 7. Funcții în plus --}}
+            <div x-show="state.step === 'extras'">
+                <h1 class="text-2xl font-bold mb-2">Ai nevoie de funcții în plus?</h1>
+                <p class="text-[color:var(--c-muted)] mb-4">Ai deja tot ce trebuie ca să vinzi bilete: site, plăți, bilete pe email, scanare la intrare. Dacă vrei mai mult, bifează aici. Nu e obligatoriu, le poți adăuga oricând din panou.</p>
+                <div class="rounded-xl bg-[color:var(--c-surface-2)] border border-[color:var(--c-border)] p-4 text-sm mb-6">
+                    <p>Funcțiile marcate <strong>„incluse în comision”</strong> nu au preț separat. Dacă alegi măcar una, comisionul tău crește cu un punct, oricâte ai alege. Celelalte au prețul lor, scris lângă nume.</p>
+                    <p class="mt-2 font-semibold" role="status">Comisionul tău: <span x-text="commissionPreview() + '%'"></span> pe bilet</p>
+                </div>
+
+                <div class="grid gap-3">
+                    <label class="opt flex gap-3 items-start" :data-on="extras.custom_site">
+                        <input type="checkbox" class="mt-1 h-5 w-5 accent-[color:var(--c-primary)] shrink-0" x-model="extras.custom_site">
+                        <span>
+                            <span class="font-semibold block">Un site de bilete făcut special pentru tine</span>
+                            <span class="text-sm text-[color:var(--c-muted)] block">În loc de un model gata făcut, îți construim noi site-ul, pe brandul tău: design propriu, paginile de care ai nevoie.</span>
+                            <span class="inline-block mt-2 text-xs font-semibold rounded-full px-2 py-1 bg-[color:var(--c-primary)]/20">Inclus în comision</span>
+                        </span>
+                    </label>
+                    <template x-for="m in visibleMicroservices()" :key="m.id">
+                        <label class="opt flex gap-3 items-start" :data-on="extras.microservices.includes(m.id)">
+                            <input type="checkbox" class="mt-1 h-5 w-5 accent-[color:var(--c-primary)] shrink-0" :value="m.id" x-model.number="extras.microservices">
+                            <span class="flex-1">
+                                <span class="font-semibold block" x-text="m.name"></span>
+                                <span class="text-sm text-[color:var(--c-muted)] block" x-show="m.text" x-text="m.text"></span>
+                                <span class="inline-block mt-2 text-xs font-semibold rounded-full px-2 py-1"
+                                      :class="m.raises_commission ? 'bg-[color:var(--c-primary)]/20' : 'bg-[color:var(--c-surface)] border border-[color:var(--c-border)]'"
+                                      x-text="priceLabel(m)"></span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+                <button type="button" x-show="microservices.some(m => !m.featured)" @click="showAllMicroservices = !showAllMicroservices"
+                        class="btn btn-ghost w-full mt-3 border border-dashed border-[color:var(--c-border)]" :aria-expanded="showAllMicroservices">
+                    <span x-text="showAllMicroservices ? 'Arată doar cele mai folosite' : 'Vezi toate funcțiile (' + microservices.length + ')'"></span>
+                </button>
+
+                <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-3 mt-6">
+                    <button type="button" class="btn btn-ghost" @click="back()">Înapoi</button>
+                    <button type="button" class="btn btn-ghost underline underline-offset-4" @click="send('/inregistrare/functii', { microservices: [], custom_site: false })">Nu am nevoie acum</button>
+                    <button type="button" class="btn btn-primary flex-1" @click="send('/inregistrare/functii', extras)" :aria-busy="busy"><span x-show="busy" class="spin" aria-hidden="true"></span><span>Continuă</span></button>
+                </div>
+            </div>
+
+            {{-- 8. Verifică și trimite --}}
             <div x-show="state.step === 'review'">
                 <h1 class="text-2xl font-bold mb-2">Verifică și trimite</h1>
                 <p class="text-[color:var(--c-muted)] mb-6">După ce trimiți, verificăm datele și îți scriem pe email, de obicei în aceeași zi lucrătoare.</p>
@@ -421,10 +464,11 @@
             counties: @json(array_values($counties)),
             templates: @json($templates),
             processors: @json($processors),
+            microservices: @json($microservices),
             baseDomain: @json($baseDomain),
             steps: [
                 { key: 'account', label: 'Cont' }, { key: 'organizer', label: 'Ce organizezi' }, { key: 'billing', label: 'Cine facturează' },
-                { key: 'site', label: 'Site' }, { key: 'template', label: 'Template' }, { key: 'payments', label: 'Plăți' }, { key: 'review', label: 'Trimite' },
+                { key: 'site', label: 'Site' }, { key: 'template', label: 'Template' }, { key: 'payments', label: 'Plăți' }, { key: 'extras', label: 'Funcții în plus' }, { key: 'review', label: 'Trimite' },
             ],
             workMethods: [
                 { value: 'exclusive', label: 'Doar prin Tixello', text: 'Toate biletele se vând prin noi: pe site-ul tău, la casă și la intrare.', fee: '1%' },
@@ -447,6 +491,8 @@
             site: { mode: 'subdomain', subdomain: '', domain: '' },
             template: null,
             processor: null,
+            extras: { microservices: [], custom_site: false },
+            showAllMicroservices: false,
             company: null,
             code: '',
             errors: {},
@@ -484,6 +530,7 @@
                 if (s.template) this.template = s.template;
                 if (s.processor) this.processor = s.processor;
                 else if (s.step === 'review') this.processor = 'none';
+                if (s.extras) this.extras = { microservices: (s.extras.microservices || []).map(Number), custom_site: !!s.extras.custom_site };
             },
 
             stepIndex() {
@@ -592,6 +639,24 @@
                 return !!this.company && (!this.company.address || !this.company.city || !this.company.county);
             },
 
+            visibleMicroservices() {
+                return this.showAllMicroservices ? this.microservices : this.microservices.filter(m => m.featured || this.extras.microservices.includes(m.id));
+            },
+
+            priceLabel(m) {
+                if (m.raises_commission) return 'Inclus în comision';
+                if (!m.price) return 'Gratuit';
+                const cycle = { monthly: ' / lună', one_time: ' o singură dată', on_demand: ' la folosire' }[m.billing_cycle] || '';
+                return m.price.toLocaleString('ro-RO') + ' ' + (m.currency === 'RON' ? 'lei' : m.currency) + cycle;
+            },
+
+            // Ce comision vede organizatorul acum: 1% sau 2% + un punct dacă a ales ceva inclus în comision
+            commissionPreview() {
+                const base = this.state.work_method === 'exclusive' ? 1 : 2;
+                const raises = this.extras.custom_site || this.microservices.some(m => m.raises_commission && this.extras.microservices.includes(m.id));
+                return base + (raises ? 1 : 0);
+            },
+
             saveSite() {
                 const body = { mode: this.site.mode };
                 if (this.site.mode === 'subdomain') body.subdomain = this.site.subdomain;
@@ -601,7 +666,7 @@
 
             // Înapoi doar vizual: pașii deja salvați se pot modifica și retrimite
             back() {
-                const order = ['organizer', 'billing', 'site', 'template', 'payments', 'review'];
+                const order = ['organizer', 'billing', 'site', 'template', 'payments', 'extras', 'review'];
                 const i = order.indexOf(this.state.step);
                 if (i > 0) this.goTo(order[i - 1]);
             },
@@ -610,6 +675,12 @@
                 this.errors = {}; this.flash = '';
                 this.state = { ...this.state, step };
                 window.scrollTo({ top: 0 });
+            },
+
+            extrasSummary() {
+                const names = this.microservices.filter(m => (this.state.extras?.microservices || []).map(Number).includes(m.id)).map(m => m.name);
+                if (this.state.extras?.custom_site) names.unshift('Site făcut special');
+                return names.length ? names.join(', ') : 'Niciuna';
             },
 
             reviewRows() {
@@ -622,11 +693,12 @@
                 const method = this.workMethods.find(m => m.value === s.work_method);
                 return [
                     { label: 'Organizator', value: (s.public_name || '—') + (s.tenant_type_label ? ' · ' + s.tenant_type_label : ''), step: 'organizer' },
-                    { label: 'Comision', value: method ? method.fee + ' · ' + method.label : '—', step: 'organizer' },
+                    { label: 'Comision', value: (s.commission_rate ? s.commission_rate.toLocaleString('ro-RO') + '%' : '—') + (method ? ' · ' + method.label : ''), step: 'organizer' },
                     { label: 'Facturează', value: entity + (s.company_name ? ' · ' + s.company_name : ''), step: 'billing' },
                     { label: 'Site', value: site, step: 'site' },
                     { label: 'Modelul site-ului', value: tpl ? tpl.name : 'Aleg mai târziu', step: 'template' },
                     { label: 'Plăți', value: proc ? proc.label : 'Nu am încă', step: 'payments' },
+                    { label: 'Funcții în plus', value: this.extrasSummary(), step: 'extras' },
                 ];
             },
         };

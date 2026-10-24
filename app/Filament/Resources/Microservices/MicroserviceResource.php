@@ -151,6 +151,14 @@ class MicroserviceResource extends Resource
                         ->label('Documentation URL')
                         ->url()
                         ->helperText('Link to documentation'),
+
+                    Forms\Components\Toggle::make('raises_commission')
+                        ->label('Ridică comisionul la înscriere')
+                        ->helperText('Ales la /inregistrare, crește comisionul cu 1 punct (1% → 2%, 2% → 3%) în loc să se plătească separat. Creșterea se aplică o singură dată.'),
+
+                    Forms\Components\Toggle::make('signup_featured')
+                        ->label('Apare în lista scurtă la înscriere')
+                        ->helperText('Restul microserviciilor active apar la „Vezi toate funcțiile”.'),
                 ])->columns(3),
 
             SC\Section::make('Features')
