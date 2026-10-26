@@ -1309,3 +1309,9 @@ Schedule::command('organizer-documents:notify')
     ->dailyAt('09:00')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping(30);
+
+// Termenele de păstrare din politica de confidențialitate (înscrieri netrimise 12 luni, jurnal emailuri 24 de luni)
+Schedule::command('privacy:prune')
+    ->dailyAt('04:20')
+    ->withoutOverlapping()
+    ->onOneServer();
