@@ -2,7 +2,6 @@
     $statLabels = [
         'sales' => 'vânzări prin Tixello',
         'tickets' => 'bilete emise',
-        'orders' => 'comenzi',
         'events' => 'evenimente',
         'buyers' => 'cumpărători',
     ];
@@ -64,10 +63,10 @@
             </div>
 
             @if ($stats)
-                <dl class="ob-in grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <dl class="ob-in grid grid-cols-2 lg:grid-cols-4 gap-3">
                     @foreach ($stats as $key => $value)
                         <div class="ob-glass px-4 py-4">
-                            <dd class="text-2xl sm:text-3xl font-bold stat-num"><span data-live="{{ $key }}">{{ number_format($value, 0, ',', '.') }}</span>@if ($key === 'sales')<span class="text-base font-semibold text-white/60"> lei</span>@endif</dd>
+                            <dd class="text-2xl sm:text-3xl font-bold stat-num"><span data-live="{{ $key }}">{{ number_format($value, 0, ',', '.') }}</span>@if ($key === 'sales')<span class="text-base font-semibold text-white/60"> €</span>@endif</dd>
                             <dt class="text-sm text-white/60 mt-0.5">{{ $statLabels[$key] ?? $key }}</dt>
                         </div>
                     @endforeach

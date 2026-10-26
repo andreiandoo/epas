@@ -23,19 +23,18 @@ class PlatformStats
 
     public function get(): array
     {
-        return Cache::remember('signup:platform-stats:v3', 30, function () {
+        return Cache::remember('signup:platform-stats:v4', 30, function () {
             return array_filter([
-                'sales' => $this->count(fn () => $this->salesRon()),
+                'sales' => $this->count(fn () => $this->salesEur()),
                 'tickets' => $this->count(fn () => Ticket::count()),
-                'orders' => $this->count(fn () => Order::count()),
                 'events' => $this->count(fn () => Event::count()),
                 'buyers' => $this->count(fn () => Customer::count() + MarketplaceCustomer::count()),
             ], fn ($v) => $v !== null && $v > 0);
         });
     }
 
-    /** Valoarea comenzilor plătite, în lei: euro convertiți la ultimul curs, ca în dashboard-ul din admin. */
-    private function salesRon(): int
+    /** Valoarea comenzilor plătite, în euro: lei convertiți la ultimul curs EUR/RON. */
+    private function salesEur(): int
     {
         $ron = (float) Order::whereIn('status', self::PAID)
             ->where(fn ($q) => $q->where('currency', 'RON')->orWhereNull('currency'))
@@ -43,7 +42,7 @@ class PlatformStats
         $eur = (float) Order::whereIn('status', self::PAID)->where('currency', 'EUR')->sum('total');
         $rate = (float) (ExchangeRate::getLatestRate('EUR', 'RON') ?: 5);
 
-        return (int) round($ron + $eur * $rate);
+        return (int) round($eur + $ron / $rate);
     }
 
     private function count(callable $query): ?int
