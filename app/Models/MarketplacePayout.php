@@ -1682,9 +1682,14 @@ class MarketplacePayout extends Model
      * `marketplace_payout_id`. Changed 2026-08-06 from event-wide to per-
      * payout after the operator confirmed each decont has its own invoice.
      *
+     * $ticketStillValid splits the rows for the included-mode organizer
+     * invoice: true = ticket still valid/used (already counted in the online
+     * commission, so it's a storno), false = ticket no longer valid (its
+     * commission is billed on its own line). Null = all rows.
+     *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
      */
-    public function getKeptCommissionRowsForPayout(?\Carbon\CarbonInterface $soldFrom = null, ?\Carbon\CarbonInterface $soldBefore = null): array
+    public function getKeptCommissionRowsForPayout(?\Carbon\CarbonInterface $soldFrom = null, ?\Carbon\CarbonInterface $soldBefore = null, ?bool $ticketStillValid = null): array
     {
         if (!$this->event_id || !$this->marketplace_organizer_id) {
             return [];
@@ -1698,6 +1703,8 @@ class MarketplacePayout extends Model
             ->where('commission_refunded', false)
             ->where('status', 'refunded')
             ->tap(fn ($q) => $this->scopeRefundItemsBySaleDate($q, $soldFrom, $soldBefore))
+            ->when($ticketStillValid === true, fn ($q) => $q->whereHas('ticket', fn ($t) => $t->whereIn('status', ['valid', 'used'])))
+            ->when($ticketStillValid === false, fn ($q) => $q->whereDoesntHave('ticket', fn ($t) => $t->whereIn('status', ['valid', 'used'])))
             ->with('ticketType:id,name')
             ->get();
 
@@ -1750,10 +1757,10 @@ class MarketplacePayout extends Model
         });
     }
 
-    public function getKeptCommissionTotalForPayout(): float
+    public function getKeptCommissionTotalForPayout(?bool $ticketStillValid = null): float
     {
         $total = 0.0;
-        foreach ($this->getKeptCommissionRowsForPayout() as $row) {
+        foreach ($this->getKeptCommissionRowsForPayout(null, null, $ticketStillValid) as $row) {
             $total += (float) $row['commission_amount'];
         }
         return round($total, 2);
@@ -1812,8 +1819,11 @@ class MarketplacePayout extends Model
      *   + POS commission          (already-existing behavior)
      *   + Online commission       (NEW — commission baked into ticket price)
      *   + Refunded commission     (full refunds where commission_refunded=true)
-     *   − Kept commission         (partial refunds where commission_refunded=false;
-     *                              already in Ambilet's treasury)
+     *   + Kept commission billed  (commission_refunded=false on tickets no longer
+     *                              valid — not in the online total, e.g. event 5062
+     *                              cancelled, payout 3616: 16.20 kept, nothing else)
+     *   − Kept commission         (commission_refunded=false on tickets still
+     *                              valid — already counted in online, storno)
      *
      * On-top mode:
      *   + POS commission
@@ -1833,9 +1843,10 @@ class MarketplacePayout extends Model
         $pos = $this->getPosCommissionTotal();
         $refunded = $this->getRefundedCommissionTotalForPayout();
         $online = $isIncluded ? $this->getOnlineIncludedCommissionTotalForPayout() : 0.0;
-        $kept = $isIncluded ? $this->getKeptCommissionTotalForPayout() : 0.0;
+        $kept = $isIncluded ? $this->getKeptCommissionTotalForPayout(true) : 0.0;
+        $keptBilled = $isIncluded ? $this->getKeptCommissionTotalForPayout(false) : 0.0;
 
-        $total = round($pos + $refunded + $online - $kept, 2);
+        $total = round($pos + $refunded + $online + $keptBilled - $kept, 2);
 
         return [
             'mode' => $mode,
@@ -1843,6 +1854,7 @@ class MarketplacePayout extends Model
             'pos' => round($pos, 2),
             'online' => round($online, 2),
             'refunded' => round($refunded, 2),
+            'kept_billed' => round($keptBilled, 2),
             'kept' => round($kept, 2),
             'total' => max(0.0, $total),
         ];
@@ -2089,7 +2101,8 @@ class MarketplacePayout extends Model
             $hasSomething = ($preview['total'] ?? 0) > 0.01
                 || $preview['pos'] > 0.01
                 || $preview['online'] > 0.01
-                || $preview['refunded'] > 0.01;
+                || $preview['refunded'] > 0.01
+                || $preview['kept_billed'] > 0.01;
 
             if ($hasSomething) {
                 $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
@@ -2102,6 +2115,9 @@ class MarketplacePayout extends Model
                 }
                 if ($preview['refunded'] > 0.01) {
                     $parts[] = 'comision pe rambursări integrale: ' . $fmt($preview['refunded']);
+                }
+                if ($preview['kept_billed'] > 0.01) {
+                    $parts[] = 'comision reținut din rambursări: ' . $fmt($preview['kept_billed']);
                 }
                 if ($preview['kept'] > 0.01) {
                     $parts[] = 'minus comision reținut din rambursări parțiale: −' . $fmt($preview['kept']);
