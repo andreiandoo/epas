@@ -7,8 +7,8 @@
 | doar odată cu textul.
 */
 return [
-    'version' => env('LEGAL_VERSION', '2026-10-26'),
-    'effective_date' => env('LEGAL_EFFECTIVE_DATE', '26 octombrie 2026'),
+    'version' => env('LEGAL_VERSION', '2026-10-27'),
+    'effective_date' => env('LEGAL_EFFECTIVE_DATE', '27 octombrie 2026'),
 
     // Unde scrie cineva pentru datele personale
     'privacy_email' => env('LEGAL_PRIVACY_EMAIL', 'contact@tixello.com'),
@@ -43,6 +43,14 @@ return [
             ['name' => 'Zoom, Slack', 'purpose' => 'Integrările cu aceste servicii, dacă le pornești.', 'location' => 'SUA; EU-US Data Privacy Framework'],
             ['name' => 'BunnyWay d.o.o. (Bunny.net)', 'purpose' => 'Găzduirea și redarea materialelor video, dacă folosești funcțiile video.', 'location' => 'Slovenia (UE)'],
         ],
+    ],
+
+    // Textele bifelor pentru contul de cumpărător Tixello. Se salvează exact așa în registrul
+    // acordurilor (tixello_buyer_consents); orice schimbare de text cere o versiune nouă.
+    'buyer_consents' => [
+        'version' => env('LEGAL_BUYER_CONSENT_VERSION', '2026-10-27'),
+        'account' => 'Păstrează biletele și în contul meu Tixello, ca să le am pe toate într-un singur loc, de la orice organizator care vinde prin Tixello.',
+        'marketing' => 'Vreau să primesc de la Tixello, pe email, recomandări de evenimente și oferte. Mă pot dezabona oricând.',
     ],
 
     // Autoritatea de supraveghere

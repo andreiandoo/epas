@@ -303,6 +303,20 @@ Route::get('/admin/logout', function () {
     return redirect('/');
 })->name('filament.admin.logout.get');
 
+// Contul de cumpărător Tixello: intrare cu link pe email, biletele de la toți organizatorii Tixello, acorduri
+Route::prefix('contul-meu')->name('buyer-account.')->group(function () {
+    $c = \App\Http\Controllers\BuyerAccount\BuyerAccountController::class;
+    Route::get('/', [$c, 'show'])->name('show');
+    Route::post('/link', [$c, 'sendLink'])->middleware('throttle:5,10,buyer-link')->name('link');
+    Route::get('/intra/{account}', [$c, 'login'])->middleware(['signed', 'throttle:20,1,buyer-login'])->name('login');
+    Route::get('/creare', [$c, 'createForm'])->middleware('signed')->name('create');
+    Route::post('/creare', [$c, 'create'])->middleware(['signed', 'throttle:10,1,buyer-create'])->name('create.store');
+    Route::post('/informari', [$c, 'marketing'])->middleware('throttle:20,1,buyer-marketing')->name('marketing');
+    Route::post('/sterge', [$c, 'destroy'])->middleware('throttle:5,1,buyer-delete')->name('destroy');
+    Route::post('/iesire', [$c, 'logout'])->name('logout');
+    Route::get('/dezabonare/{account}', [$c, 'unsubscribe'])->middleware('signed')->name('unsubscribe');
+});
+
 // Legal pages
 Route::get('/termeni-si-conditii', function () {
     return view('public.legal.terms');

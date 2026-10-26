@@ -62,6 +62,9 @@ class DemoCheckoutController extends Controller
             'create_account'    => 'nullable|boolean',
             'password'          => 'nullable|string|min:8',
             'newsletter'        => 'nullable|boolean',
+            // Bifele Tixello (operator separat): cont de cumpărător și recomandări de la Tixello
+            'tixello_account'   => 'nullable|boolean',
+            'tixello_marketing' => 'nullable|boolean',
             'payment_method'    => 'nullable|string|max:40',
             // Cod de reducere (coupon_codes al tenantului) — validat și calculat pe server.
             'coupon_code'       => 'nullable|string|max:50',
@@ -326,6 +329,19 @@ class DemoCheckoutController extends Controller
                     ]);
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('Checkout newsletter opt-in failed', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            if (! empty($validated['tixello_account']) || ! empty($validated['tixello_marketing'])) {
+                try {
+                    app(\App\Services\BuyerAccounts\TixelloBuyerAccountService::class)->fromCheckout(
+                        $tenant, $order,
+                        ['email' => $result['customer']->email, 'first_name' => $result['customer']->first_name, 'last_name' => $result['customer']->last_name],
+                        ! empty($validated['tixello_account']), ! empty($validated['tixello_marketing']),
+                        $request->header('X-Visitor-IP') ?: $request->ip(), $request->header('X-Visitor-UA') ?: $request->userAgent(),
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Checkout: acordul Tixello nu s-a salvat', ['tenant_id' => $tenant->id, 'order_id' => $order->id, 'error' => $e->getMessage()]);
                 }
             }
 

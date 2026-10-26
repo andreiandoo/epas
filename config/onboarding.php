@@ -17,7 +17,7 @@ return [
     'custom_site_currency' => env('SIGNUP_CUSTOM_SITE_CURRENCY', 'EUR'),
 
     // Versiunea termenilor + politicii de confidențialitate acceptate la înscriere
-    'terms_version' => env('SIGNUP_TERMS_VERSION', env('LEGAL_VERSION', '2026-10-26')),
+    'terms_version' => env('SIGNUP_TERMS_VERSION', env('LEGAL_VERSION', '2026-10-27')),
     'terms_url' => '/termeni-si-conditii',
     'privacy_url' => '/politica-confidentialitate',
 

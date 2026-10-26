@@ -83,8 +83,8 @@ class SignupMailer
                     'tenant_id' => $tenantId,
                     'recipient_email' => $email,
                     'subject' => $type === 'signup_code' ? 'Cod de verificare înscriere' : $subject,
-                    // Codul de verificare nu rămâne în log
-                    'body' => $type === 'signup_code' ? '[codul de verificare nu se păstrează]' : $html,
+                    // Codul și linkurile de intrare nu rămân în jurnal
+                    'body' => ($type === 'signup_code' || str_starts_with($type, 'buyer_account_')) ? '[conținut cu cod sau link de intrare, nepăstrat]' : $html,
                     'status' => $ok ? 'sent' : 'failed',
                     'sent_at' => $ok ? now() : null,
                     'failed_at' => $ok ? null : now(),

@@ -99,6 +99,8 @@
     <li>informări și recomandări de evenimente, trimise pe email sau prin alte canale pentru care ți-ai dat acordul.</li>
 </ul>
 <p>Temeiul e acordul tău (art. 6 alin. (1) lit. a GDPR), iar pentru cont, contractul (lit. b). Îți poți retrage acordul oricând, din linkul de dezabonare sau scriindu-ne. Retragerea nu afectează prelucrările făcute înainte.</p>
+<p>Contul îl vezi și îl gestionezi la <a href="{{ url('/contul-meu') }}">{{ preg_replace('#^https?://#', '', url('/contul-meu')) }}</a>: intri cu un link primit pe email, fără parolă. De acolo vezi biletele, pornești sau oprești recomandările și îți ștergi contul. În cont apar doar comenzile plătite cu aceeași adresă de email pe site-urile organizatorilor care vând prin Tixello.</p>
+<p>Pentru fiecare acord dat sau retras păstrăm dovada: textul exact al bifei și versiunea lui, data și ora, adresa IP, browserul și, dacă e cazul, organizatorul și comanda de la care l-ai dat.</p>
 <h3>4.3. Date agregate</h3>
 <p>Din datele de vânzare putem obține statistici agregate sau anonimizate, de exemplu numărul de bilete vândute pe categorii de evenimente sau pe orașe. Din ele nu poți fi identificat și nu mai sunt date personale.</p>
 
@@ -161,6 +163,7 @@
         <tr><td>Codul de confirmare a emailului</td><td>30 de minute; nu rămâne în jurnale</td></tr>
         <tr><td>Datele cumpărătorilor prelucrate pentru organizator</td><td>Cât decide organizatorul, cât timp contul lui e activ; după încetare, 30 de zile pentru export, apoi ștergere în cel mult 90 de zile, cu excepția celor pe care legea ne obligă să le păstrăm</td></tr>
         <tr><td>Contul de cumpărător Tixello și acordurile de informare</td><td>Până ștergi contul sau îți retragi acordul</td></tr>
+        <tr><td>Dovada acordurilor date sau retrase (registrul acordurilor)</td><td>Cât e activ acordul, apoi 3 ani de la retragere, ca să putem dovedi că l-ai dat</td></tr>
         <tr><td>Jurnalul emailurilor trimise</td><td>Cel mult 24 de luni</td></tr>
         <tr><td>Jurnalul de activitate din panou (acțiuni, exporturi)</td><td>Cât e activ contul, apoi 3 ani</td></tr>
         <tr><td>Jurnale tehnice ale serverului</td><td>Se rotesc automat; cel mult 12 luni</td></tr>
