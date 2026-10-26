@@ -107,7 +107,7 @@
                             <li class="flex gap-3"><i class="ph-bold ph-check text-[color:var(--accent)] mt-1" aria-hidden="true"></i> Site de bilete cu numele și culorile tale</li>
                             <li class="flex gap-3"><i class="ph-bold ph-check text-[color:var(--accent)] mt-1" aria-hidden="true"></i> Vânzare online, la casă și la intrare, în același cont</li>
                         </ul>
-                        <div class="flex flex-wrap items-center gap-4 mt-8">
+                        <div class="ob-path__actions flex flex-wrap items-center gap-4">
                             <button type="button" class="btn btn-primary ob-glow px-7" @click="startSignup()">Începe înscrierea aici <i class="ph ph-arrow-right" aria-hidden="true"></i></button>
                             <span class="text-sm text-white/60">de la 1% pe bilet</span>
                         </div>
@@ -134,7 +134,7 @@
                             <li class="flex gap-3"><i class="ph-bold ph-check text-[#1f9d72] mt-1" aria-hidden="true"></i> Pagina ta pe un marketplace de experiențe și atracții</li>
                             <li class="flex gap-3"><i class="ph-bold ph-check text-[#1f9d72] mt-1" aria-hidden="true"></i> Fără abonament lunar și fără taxă de instalare</li>
                         </ul>
-                        <div class="flex flex-wrap items-center gap-4 mt-8">
+                        <div class="ob-path__actions flex flex-wrap items-center gap-4">
                             <a href="https://bilete.online/autentificare?mode=register&amp;ca=venue" class="btn btn-leisure px-7" target="_blank" rel="noopener">Înscrie-te pe bilete.online <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
                             <a href="https://bilete.online/parteneri" class="link text-sm" target="_blank" rel="noopener">Cum funcționează</a>
                         </div>
