@@ -16,7 +16,7 @@
             preselectedModel: @json($preselectedModel),
 
             steps: [
-                { key: 'account', label: 'Cont' }, { key: 'organizer', label: 'Organizator' }, { key: 'billing', label: 'Facturare' },
+                { key: 'account', label: 'Cont' }, { key: 'organizer', label: 'Activitate' }, { key: 'billing', label: 'Facturare' },
                 { key: 'site', label: 'Site' }, { key: 'template', label: 'Aspect' }, { key: 'payments', label: 'Plăți' },
                 { key: 'extras', label: 'Funcții' }, { key: 'review', label: 'Trimite' },
             ],
@@ -40,7 +40,7 @@
                 account: { title: 'De ce îți cerem datele astea', items: [
                     { icon: 'ph-envelope-simple', lead: 'Emailul.', text: 'Pe el primești codul de confirmare, contractul și facturile.' },
                     { icon: 'ph-phone', lead: 'Telefonul.', text: 'Te sunăm doar dacă avem o întrebare când îți verificăm contul. Nu-l dăm nimănui.' },
-                    { icon: 'ph-lock-simple', lead: 'Parola.', text: 'Cu ea intri în panoul de organizator. O păstrăm criptată.' },
+                    { icon: 'ph-lock-simple', lead: 'Parola.', text: 'Cu ea intri în panoul Tixello. O păstrăm criptată.' },
                     { icon: 'ph-scales', lead: 'Acordul.', text: 'Păstrăm data și ora la care ai acceptat termenii, cum cere legea.' },
                 ] },
                 verify: { title: 'De ce un cod', items: [
@@ -48,7 +48,7 @@
                     { icon: 'ph-timer', lead: 'Codul ține 30 de minute.', text: 'Dacă a expirat, cere altul de sub buton.' },
                 ] },
                 organizer: { title: 'Ce facem cu răspunsurile', items: [
-                    { icon: 'ph-squares-four', lead: 'Tipul de evenimente.', text: 'Pornim panoul cu ce-ți trebuie. Un parc de agrement are nevoie de alte lucruri decât un teatru.' },
+                    { icon: 'ph-squares-four', lead: 'Ce faci.', text: 'Pornim panoul cu ce-ți trebuie. O filarmonică are nevoie de alte lucruri decât un festival.' },
                     { icon: 'ph-ticket', lead: 'Numele public.', text: 'Apare pe bilete, pe site și în emailurile primite de cumpărători.' },
                     { icon: 'ph-percent', lead: 'Unde vinzi.', text: 'De aici iese comisionul. Dacă vinzi doar prin Tixello, plătești mai puțin.' },
                     { icon: 'ph-chart-line-up', lead: 'Estimarea.', text: 'Nu te obligă la nimic. Ne ajută să știm de ce ai nevoie la început.' },
@@ -101,6 +101,10 @@
             subdomainStatus: '',
             resendIn: 0,
             showIntro: false,
+            rotatorWords: ['teatre', 'filarmonici', 'festivaluri', 'concerte', 'competiții', 'gale', 'cluburi'],
+            rotIndex: 0,
+            rotator: 'teatre',
+            rotKey: 0,
 
             init() {
                 document.getElementById('ob-boot')?.remove();
@@ -360,7 +364,7 @@
                 const proc = this.processors.find(p => p.value === s.processor);
                 const method = this.workMethods.find(m => m.value === s.work_method);
                 return [
-                    { label: 'Organizator', value: (s.public_name || '—') + (s.tenant_type_label ? ', ' + s.tenant_type_label.toLowerCase() : ''), step: 'organizer' },
+                    { label: 'Activitate', value: (s.public_name || '—') + (s.tenant_type_label ? ', ' + s.tenant_type_label.toLowerCase() : ''), step: 'organizer' },
                     { label: 'Comision', value: (s.commission_rate ? s.commission_rate.toLocaleString('ro-RO') + '% pe bilet' : '—') + (method ? ', ' + method.label.toLowerCase() : ''), step: 'organizer' },
                     { label: 'Contract pe', value: entity + (s.company_name ? ', ' + s.company_name : ''), step: 'billing' },
                     { label: 'Site', value: site, step: 'site' },
@@ -377,18 +381,38 @@
                 // Intrările sunt animații CSS (.ob-enter): conținutul nu depinde de bucla JS
                 if (this._introAnimated) return;
                 this._introAnimated = true;
-                document.querySelectorAll('.ob-in, .ob-shot').forEach((el, i) => { el.style.setProperty('--d', (i * 60) + 'ms'); el.classList.add('ob-enter'); });
-                if (reduceMotion) return;
-                if (window.gsap) {
-                    // Plutirea merge pe margin, ca să nu se bată cu tilt-ul (transform)
-                    gsap.to('.ob-shot', { marginTop: -10, duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1, stagger: .7, delay: 1.2 });
-                    document.querySelectorAll('[data-count]').forEach((el) => {
-                        const target = Number(el.dataset.count), o = { v: 0 };
-                        // Numărătoarea pornește de la cifra reală dacă animația nu rulează
-                        gsap.fromTo(o, { v: target * .6 }, { v: target, duration: 1.4, ease: 'power2.out', delay: .3, onUpdate: () => { el.textContent = Math.round(o.v).toLocaleString('ro-RO'); }, onComplete: () => { el.textContent = target.toLocaleString('ro-RO'); } });
-                    });
+                document.querySelectorAll('.ob-in').forEach((el, i) => { el.style.setProperty('--d', (i * 70) + 'ms'); el.classList.add('ob-enter'); });
+                if (!reduceMotion) {
+                    this._rotTimer = setInterval(() => { this.rotIndex = (this.rotIndex + 1) % this.rotatorWords.length; this.rotator = this.rotatorWords[this.rotIndex]; this.rotKey++; }, 2200);
                 }
-                if (finePointer && window.VanillaTilt) VanillaTilt.init(document.querySelectorAll('[data-tilt]'), { max: 5, speed: 700, scale: 1.01, gyroscope: false });
+                // Cifrele live: cerute din nou la 30 de secunde, doar cât prima pagină e deschisă
+                this._statsTimer = setInterval(() => { if (this.showIntro && !document.hidden) this.refreshStats(); }, 30000);
+            },
+            async refreshStats() {
+                try {
+                    const res = await fetch('/inregistrare/statistici', { headers: { Accept: 'application/json' } });
+                    const { stats } = await res.json();
+                    Object.entries(stats || {}).forEach(([key, value]) => {
+                        document.querySelectorAll('[data-live="' + key + '"]').forEach((el) => this.countTo(el, value));
+                    });
+                } catch (e) { /* rămân cifrele de acum */ }
+            },
+            countTo(el, target) {
+                const from = Number(el.textContent.replace(/[^0-9]/g, '')) || 0;
+                if (from === target) return;
+                const fmt = (v) => Math.round(v).toLocaleString('ro-RO');
+                if (reduceMotion) { el.textContent = fmt(target); return; }
+                const start = performance.now(), dur = 1200;
+                const tick = (now) => { const p = Math.min(1, (now - start) / dur); el.textContent = fmt(from + (target - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); };
+                requestAnimationFrame(tick);
+                // Dacă animația nu rulează (tab în fundal), cifra finală apare oricum
+                setTimeout(() => { el.textContent = fmt(target); }, dur + 300);
+            },
+            spot(e) {
+                if (reduceMotion || !finePointer) return;
+                const r = e.currentTarget.getBoundingClientRect();
+                e.currentTarget.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+                e.currentTarget.style.setProperty('--my', (e.clientY - r.top) + 'px');
             },
             animateStep() {
                 const el = this.$refs.stepBody;

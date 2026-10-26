@@ -1,7 +1,7 @@
 {{-- 1. Contul --}}
 <form x-show="state.step === 'account'" @submit.prevent="send('/inregistrare/cont', account)" novalidate>
     <h1 class="text-2xl sm:text-3xl font-bold">Să-ți facem contul</h1>
-    <p class="text-[color:var(--ink-2)] mt-2 mb-6">Cu el intri în panoul de organizator. După ce trimiți înscrierea, te mai întrebăm doar dacă ceva nu e clar.</p>
+    <p class="text-[color:var(--ink-2)] mt-2 mb-6">Cu el intri în panoul Tixello. După ce trimiți înscrierea, te mai întrebăm doar dacă ceva nu e clar.</p>
     <div class="grid sm:grid-cols-2 gap-4">
         <div>
             <label class="label" for="first_name">Prenume</label>
@@ -67,16 +67,16 @@
 
 {{-- 2. Organizatorul --}}
 <form x-show="state.step === 'organizer'" @submit.prevent="send('/inregistrare/organizator', organizer)" novalidate>
-    <h1 class="text-2xl sm:text-3xl font-bold">Spune-ne ce organizezi</h1>
+    <h1 class="text-2xl sm:text-3xl font-bold">Spune-ne despre activitatea ta</h1>
     <p class="text-[color:var(--ink-2)] mt-2 mb-6">Așa știm ce să-ți pregătim în panou. Poți schimba oricând.</p>
     <div class="grid sm:grid-cols-2 gap-4">
         <div>
-            <label class="label" for="tenant_type">Ce fel de evenimente faci?</label>
+            <label class="label" for="tenant_type">Ce faci?</label>
             <select id="tenant_type" class="field" x-model="organizer.tenant_type" :aria-invalid="!!errors.tenant_type">
                 <option value="">Alege…</option>
                 <template x-for="t in tenantTypes" :key="t.value"><option :value="t.value" x-text="t.label" :selected="t.value === organizer.tenant_type"></option></template>
             </select>
-            <p class="hint" x-show="!errors.tenant_type">Dacă faci mai multe, alege-l pe cel principal.</p>
+            <p class="hint" x-show="!errors.tenant_type">Dacă faci mai multe, alege-o pe cea principală. Ai un muzeu sau o locație de agrement? Pentru tine e <a href="https://bilete.online/autentificare?mode=register&amp;ca=venue" target="_blank" rel="noopener" class="underline text-[color:var(--ink)]">bilete.online</a>.</p>
             <template x-if="errors.tenant_type"><p class="err" x-text="errors.tenant_type"></p></template>
         </div>
         <div>

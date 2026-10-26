@@ -13,7 +13,7 @@
                     @yield('body')
                 </td></tr>
             </table>
-            <p style="font-size:12px;color:#8a8fa3;margin:16px 0 0;">Tixello · ticketing pentru organizatori</p>
+            <p style="font-size:12px;color:#8a8fa3;margin:16px 0 0;">Tixello · bilete pentru teatre, festivaluri, concerte și competiții</p>
         </td></tr>
     </table>
 </body>

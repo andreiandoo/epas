@@ -278,6 +278,7 @@ Route::get('/verify/{token}', function ($token) {
 Route::prefix('inregistrare')->name('signup.')->group(function () {
     $c = \App\Http\Controllers\Onboarding\SignupController::class;
     Route::get('/', [$c, 'show'])->name('show');
+    Route::get('/statistici', [$c, 'stats'])->middleware('throttle:60,1,signup-stats')->name('stats');
     Route::post('/cont', [$c, 'account'])->middleware('throttle:5,10,signup-account')->name('account');
     Route::middleware('auth')->group(function () use ($c) {
         Route::post('/verificare', [$c, 'verifyEmail'])->middleware('throttle:10,1,signup-verify')->name('verify');

@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Înscriere organizator · Tixello</title>
-    <meta name="description" content="Fă-ți contul de organizator Tixello: site de bilete, plată cu cardul și panou de vânzări. Comision de la 1% pe bilet, fără abonament lunar.">
+    <title>Înscriere · Tixello</title>
+    <meta name="description" content="Fă-ți contul Tixello: site de bilete, plată cu cardul și panou de vânzări pentru teatre, filarmonici, festivaluri și competiții. Comision de la 1% pe bilet, fără abonament lunar.">
     <link rel="icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,8 +16,6 @@
     {{-- Tailwind compilat doar pentru pagina asta: npm run build:signup --}}
     <link rel="stylesheet" href="{{ asset('css/onboarding-signup.css') }}?v={{ @filemtime(public_path('css/onboarding-signup.css')) }}">
     @include('onboarding.signup.styles')
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
     @include('onboarding.signup.script')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 </head>
@@ -25,11 +23,13 @@
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] btn btn-primary">Sari la formular</a>
 
 {{-- Până pornește Alpine: scheletul paginii, nu un ecran gol --}}
-<div id="ob-boot" class="max-w-6xl mx-auto px-4 sm:px-6 pt-6" aria-hidden="true">
+<div id="ob-boot" aria-hidden="true" @if (($state['step'] ?? '') === 'account') style="background:#0a0a0c; min-height:100svh; --surface-2: rgba(255,255,255,.07)" @endif>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
     <div class="skel h-8 w-28"></div>
     <div class="grid lg:grid-cols-2 gap-10 mt-14">
         <div class="space-y-4"><div class="skel h-6 w-48"></div><div class="skel h-14 w-full"></div><div class="skel h-14 w-4/5"></div><div class="skel h-20 w-full"></div><div class="skel h-12 w-52 rounded-full"></div></div>
         <div class="skel h-[360px] rounded-2xl"></div>
+    </div>
     </div>
 </div>
 
@@ -42,20 +42,21 @@
                 <a href="/" class="text-lg font-bold tracking-tight shrink-0">tixello</a>
                 {{-- Pașii: etichete pe ecran lat, bară de progres pe mobil --}}
                 <nav aria-label="Pașii înscrierii" class="flex-1 min-w-0">
+                    {{-- Generați pe server, în ordinea fixă; Alpine doar marchează pasul curent --}}
                     <ol class="hidden lg:flex items-center gap-1 text-sm">
-                        <template x-for="(s, i) in steps" :key="s.key">
+                        @foreach (['Cont', 'Activitate', 'Facturare', 'Site', 'Aspect', 'Plăți', 'Funcții', 'Trimite'] as $i => $label)
                             <li class="flex items-center gap-1">
-                                <span class="flex items-center gap-2 rounded-full px-3 py-1.5"
-                                      :class="i === stepIndex() ? 'bg-[color:var(--ink)] text-[color:var(--bg)] font-semibold' : (i < stepIndex() ? 'text-[color:var(--ink)]' : 'text-[color:var(--ink-3)]')"
-                                      :aria-current="i === stepIndex() ? 'step' : null">
+                                <span class="flex items-center gap-2 rounded-full px-2.5 py-1.5"
+                                      :class="{{ $i }} === stepIndex() ? 'bg-[color:var(--ink)] text-[color:var(--bg)] font-semibold' : ({{ $i }} < stepIndex() ? 'text-[color:var(--ink)]' : 'text-[color:var(--ink-3)]')"
+                                      :aria-current="{{ $i }} === stepIndex() ? 'step' : null">
                                     <span class="w-5 h-5 rounded-full grid place-items-center text-[11px] font-bold"
-                                          :class="i < stepIndex() ? 'bg-[color:var(--success)] text-white' : (i === stepIndex() ? 'bg-[color:var(--accent)] text-white' : 'border border-[color:var(--line)]')"
-                                          x-text="i < stepIndex() ? '✓' : i + 1"></span>
-                                    <span x-text="s.label"></span>
+                                          :class="{{ $i }} < stepIndex() ? 'bg-[color:var(--success)] text-white' : ({{ $i }} === stepIndex() ? 'bg-[color:var(--accent)] text-white' : 'border border-[color:var(--line)]')"
+                                          x-text="{{ $i }} < stepIndex() ? '✓' : '{{ $i + 1 }}'">{{ $i + 1 }}</span>
+                                    <span class="{{ $i > 0 ? 'hidden xl:inline' : '' }}" :class="{{ $i }} === stepIndex() && '!inline'">{{ $label }}</span>
                                 </span>
-                                <span x-show="i < steps.length - 1" class="w-3 h-px bg-[color:var(--line)]" aria-hidden="true"></span>
+                                @if ($i < 7)<span class="w-3 h-px bg-[color:var(--line)]" aria-hidden="true"></span>@endif
                             </li>
-                        </template>
+                        @endforeach
                     </ol>
                     <div class="lg:hidden" x-show="stepIndex() >= 0">
                         <p class="text-sm"><span class="text-[color:var(--ink-3)]" x-text="'Pasul ' + (stepIndex() + 1) + ' din ' + steps.length + ' · '"></span><span class="font-semibold" x-text="steps[stepIndex()]?.label"></span></p>

@@ -94,13 +94,40 @@
         background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 70%, transparent), transparent); animation: shimmer 1.3s infinite; }
     @keyframes shimmer { to { transform: translateX(100%); } }
 
-    /* ---------- Prima pagină */
-    .intro-glow { position: absolute; inset: -20% -10% auto; height: 70vh; pointer-events: none; filter: blur(60px); opacity: .55;
-        background: radial-gradient(40% 50% at 20% 30%, rgba(232, 73, 42, .35), transparent 70%), radial-gradient(35% 45% at 80% 20%, rgba(255, 170, 120, .3), transparent 70%); }
-    .shot { position: absolute; border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 40px 90px -40px rgb(var(--shadow) / .45); will-change: transform; }
-    .shot__bar { height: 26px; display: flex; gap: 6px; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); }
-    .shot__bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: block; }
-    .shot img { display: block; width: 100%; height: calc(100% - 26px); object-fit: cover; object-position: top; }
+    /* ---------- Prima pagină: hero întunecat cu peretele de site-uri demo */
+    .ob-hero { position: relative; overflow: hidden; isolation: isolate; background: #0a0a0c; color: #f4f4f1; --mx: 50%; --my: 30%; }
+    .ob-hero__spot { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+        background: radial-gradient(600px circle at var(--mx) var(--my), rgba(232, 73, 42, .16), transparent 60%); }
+    .ob-hero__aurora { position: absolute; inset: 0; z-index: 0; filter: blur(80px); opacity: .7; }
+    .ob-hero__aurora i { position: absolute; display: block; border-radius: 50%; }
+    .ob-hero__aurora i:nth-child(1) { width: 46vw; height: 46vw; left: -10vw; top: -14vw; background: #e8492a; opacity: .35; animation: ob-drift 18s ease-in-out infinite alternate; }
+    .ob-hero__aurora i:nth-child(2) { width: 38vw; height: 38vw; right: -8vw; top: 6vw; background: #ff9a5a; opacity: .22; animation: ob-drift 22s ease-in-out infinite alternate-reverse; }
+    .ob-hero__aurora i:nth-child(3) { width: 30vw; height: 30vw; left: 30vw; bottom: -14vw; background: #7a4dff; opacity: .18; animation: ob-drift 26s ease-in-out infinite alternate; }
+    @keyframes ob-drift { to { transform: translate(6vw, 4vw) scale(1.15); } }
+    .ob-wall { position: absolute; z-index: 1; top: -10%; left: 38%; width: 120%; display: flex; flex-direction: column; gap: 22px; opacity: .5;
+        transform: perspective(1600px) rotateX(24deg) rotateY(-18deg) rotateZ(-8deg); transform-origin: left top;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%, #000 80%, transparent); mask-image: linear-gradient(90deg, transparent, #000 30%, #000 80%, transparent); }
+    .ob-wall__row { display: flex; gap: 22px; width: max-content; animation: ob-marquee 70s linear infinite; }
+    .ob-wall__row.is-rev { animation-direction: reverse; animation-duration: 85s; }
+    .ob-wall__shot { width: 340px; aspect-ratio: 16 / 10; flex: none; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .1); background: #17171a; box-shadow: 0 30px 60px -30px #000; }
+    .ob-wall__shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+    @keyframes ob-marquee { to { transform: translateX(-50%); } }
+    .ob-hero__fade { position: absolute; inset: 0; z-index: 3; pointer-events: none;
+        background: linear-gradient(90deg, #0a0a0c 0%, rgba(10, 10, 12, .92) 34%, rgba(10, 10, 12, .35) 70%, rgba(10, 10, 12, .2)), linear-gradient(0deg, #0a0a0c, transparent 30%); }
+    @media (max-width: 1023px) {
+        .ob-wall { left: 0; top: 30%; opacity: .25; }
+        .ob-hero__fade { background: linear-gradient(0deg, #0a0a0c 10%, rgba(10, 10, 12, .85) 60%, rgba(10, 10, 12, .7)); }
+    }
+    .ob-glass { border-radius: 16px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); backdrop-filter: blur(12px); }
+    .ob-live { width: 8px; height: 8px; border-radius: 50%; background: #3ccf86; box-shadow: 0 0 0 0 rgba(60, 207, 134, .6); animation: ob-pulse 2s infinite; flex: none; }
+    @keyframes ob-pulse { 70% { box-shadow: 0 0 0 8px rgba(60, 207, 134, 0); } 100% { box-shadow: 0 0 0 0 rgba(60, 207, 134, 0); } }
+    .ob-rotator { display: inline-block; position: relative; }
+    .ob-rotator__word { display: inline-block; background: linear-gradient(90deg, #ff7a4d, #e8492a 45%, #ffb36b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .ob-rotator__word.is-in { animation: ob-word .55s var(--ease); }
+    @keyframes ob-word { from { opacity: 0; transform: translateY(.35em); filter: blur(6px); } }
+    .ob-glow { box-shadow: 0 18px 40px -12px rgba(232, 73, 42, .7); }
+    @media (hover: hover) { .ob-glow:hover { box-shadow: 0 0 0 6px rgba(232, 73, 42, .18), 0 22px 50px -12px rgba(232, 73, 42, .8); } }
+    @media (prefers-reduced-motion: reduce) { .ob-wall__row, .ob-hero__aurora i, .ob-live { animation: none !important; } }
     .stat-num { font-variant-numeric: tabular-nums; }
 
     /* ---------- Dialog „Ce primești” */

@@ -101,8 +101,9 @@ class SignupController extends Controller
 
         return view('onboarding.signup', [
             'state' => $this->state($tenant),
+            // Muzeele și agrementul se înscriu pe bilete.online
             'tenantTypes' => collect(TenantType::cases())
-                ->reject(fn (TenantType $t) => $t === TenantType::TenantArtist)
+                ->reject(fn (TenantType $t) => in_array($t, [TenantType::TenantArtist, TenantType::Museum, TenantType::Leisure], true))
                 ->map(fn (TenantType $t) => ['value' => $t->value, 'label' => $t->label()])
                 ->values(),
             'counties' => $this->locations->getStates('ro'),
@@ -114,9 +115,15 @@ class SignupController extends Controller
             'microservices' => $this->microserviceOptions(),
             'customSite' => ['price' => (float) config('onboarding.custom_site_price'), 'currency' => config('onboarding.custom_site_currency')],
             'paymentTermsDays' => (int) (\App\Models\Setting::current()->default_payment_terms_days ?? 5),
-            'stats' => collect($stats->get())->map(fn ($v) => \App\Services\Onboarding\PlatformStats::floor((int) $v))->all(),
+            'stats' => $stats->get(),
             'preselectedModel' => $request->session()->get('signup_model'),
         ]);
+    }
+
+    /** Cifrele de pe prima pagină, reîmprospătate de pagină la 30 de secunde. */
+    public function stats(\App\Services\Onboarding\PlatformStats $stats): JsonResponse
+    {
+        return response()->json(['stats' => $stats->get()])->header('Cache-Control', 'public, max-age=30');
     }
 
     /** Pasul 1: contul. */
@@ -191,7 +198,8 @@ class SignupController extends Controller
     {
         $tenant = $this->signupTenant(requireVerified: true);
         $data = $this->check($request, [
-            'tenant_type' => ['required', Rule::in(array_map(fn ($t) => $t->value, TenantType::cases()))],
+            // Muzeele și agrementul se înscriu pe bilete.online
+            'tenant_type' => ['required', Rule::in(array_map(fn ($t) => $t->value, array_filter(TenantType::cases(), fn ($t) => ! in_array($t, [TenantType::TenantArtist, TenantType::Museum, TenantType::Leisure], true))))],
             'public_name' => 'required|string|min:2|max:120',
             'work_method' => 'required|in:exclusive,mixed',
             'estimated_monthly_tickets' => 'nullable|integer|min:0|max:10000000',
