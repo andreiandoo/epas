@@ -1070,9 +1070,7 @@ class SalesBreakdownService
         } elseif ($modes->contains('added_on_top') || $modes->contains('on_top')) {
             $commissionMode = 'added_on_top';
         } else {
-            $commissionMode = method_exists($event, 'getEffectiveCommissionMode')
-                ? $event->getEffectiveCommissionMode()
-                : 'included';
+            $commissionMode = $event->getTicketTypesCommissionMode();
         }
 
         $grossSum = 0.0;

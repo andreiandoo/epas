@@ -767,6 +767,34 @@ class Event extends Model
     }
 
     /**
+     * Commission mode for a decont that has no valid tickets left to read it
+     * from (everything refunded). Ticket types can override the event's mode,
+     * so take it from them, same "dominant" rule as the payout breakdown: one
+     * mode → that mode, any on_top → added_on_top. Event 5062 / payout 3616:
+     * event fell back to 'included' while every ticket type was on_top.
+     */
+    public function getTicketTypesCommissionMode(): string
+    {
+        $default = $this->getEffectiveCommissionMode();
+
+        $modes = $this->ticketTypes()
+            ->get(['id', 'commission_type', 'commission_mode'])
+            ->map(fn ($tt) => $tt->getEffectiveCommission(null, $default)['mode'])
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($modes->count() === 1) {
+            return $modes->first();
+        }
+        if ($modes->contains('added_on_top') || $modes->contains('on_top')) {
+            return 'added_on_top';
+        }
+
+        return $default;
+    }
+
+    /**
      * Get effective commission rate (event's, marketplace organizer's, or tenant's default)
      */
     public function getEffectiveCommissionRate(): float

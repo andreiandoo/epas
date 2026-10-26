@@ -1892,9 +1892,7 @@ class MarketplacePayout extends Model
             $modes = collect($onlineBreakdown['per_type'])->pluck('commission_mode')->filter()->unique()->values();
             if ($modes->count() === 1) return $modes->first();
             if ($modes->contains('added_on_top') || $modes->contains('on_top')) return 'added_on_top';
-            return method_exists($event, 'getEffectiveCommissionMode')
-                ? $event->getEffectiveCommissionMode()
-                : 'included';
+            return $event->getTicketTypesCommissionMode();
         })();
 
         $newCommission = 0.0;

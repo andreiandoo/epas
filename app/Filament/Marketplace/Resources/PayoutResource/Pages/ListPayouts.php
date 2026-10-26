@@ -956,7 +956,7 @@ class ListPayouts extends ListRecords
                     $finalCommission = (float) ($data['commission_amount'] ?? 0);
                     $discountAmount = (float) ($data['discount_amount'] ?? 0);
                     $finalNet = $enteredNet;
-                    $commissionMode = $event?->getEffectiveCommissionMode() ?: 'included';
+                    $commissionMode = $event?->getTicketTypesCommissionMode() ?: 'included';
                 }
 
                 // Optional operator-provided overrides — leave series empty to
