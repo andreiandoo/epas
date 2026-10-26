@@ -1280,11 +1280,14 @@ class MarketplacePayout extends Model
     public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         // Regular invoice (commission billed for online ticket sales) — excludes POS-commission invoices
+        // Supplementary invoices (meta.supplement_of) bill an amount missed by
+        // an invoice already in SPV; they never stand in for the main one.
         return $this->hasOne(\App\Models\Invoice::class, 'marketplace_payout_id')
             ->where(function ($q) {
                 $q->whereNull('meta->is_pos_commission')
                     ->orWhere('meta->is_pos_commission', false);
-            });
+            })
+            ->whereNull('meta->supplement_of');
     }
 
     public function invoicesForPayout(): \Illuminate\Database\Eloquent\Relations\HasMany

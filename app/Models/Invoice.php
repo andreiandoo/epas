@@ -381,6 +381,11 @@ class Invoice extends Model
         if ($this->hasLiveOblioInvoice()) {
             throw new \RuntimeException('Factura este activă în Oblio — storno acolo întâi.');
         }
+        // A supplementary invoice carries only the difference; rebuilding it
+        // from the decont would re-bill everything the main invoice has.
+        if (!empty($this->meta['supplement_of'])) {
+            throw new \RuntimeException('Factura suplimentară nu se regenerează din decont.');
+        }
         $payout = $this->payout;
         if (!$payout) {
             throw new \RuntimeException('Decontul asociat nu mai există.');

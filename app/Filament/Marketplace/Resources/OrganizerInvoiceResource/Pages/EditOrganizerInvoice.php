@@ -386,7 +386,8 @@ class EditOrganizerInvoice extends EditRecord
             ->requiresConfirmation()
             ->modalHeading('Regenerează conținutul facturii')
             ->modalDescription(fn () => "Se vor reface articolele + sumele din decontul {$this->record->payout?->reference} pe baza vânzărilor curente. Factura NU va fi trimisă automat la Oblio — după regenerare folosește 'Retrimite Factură Fiscală'.")
-            ->visible(fn () => !$this->record->hasLiveOblioInvoice() && $this->record->marketplace_payout_id)
+            ->visible(fn () => !$this->record->hasLiveOblioInvoice() && $this->record->marketplace_payout_id
+                && empty($this->record->meta['supplement_of']))
             ->action(function () {
                 try {
                     $diff = $this->record->rebuildFromPayout();
@@ -432,7 +433,8 @@ class EditOrganizerInvoice extends EditRecord
                     : 'Factura e deja ' . ($this->record->oblioVoidLabel() ?? 'anulată') . ' în Oblio; ')
                 . "conținutul se reface din decontul {$this->record->payout?->reference} și se trimite din nou la Oblio, cu un număr NOU.")
             ->visible(function () {
-                if (!$this->record->marketplace_payout_id || empty($this->record->meta['accounting']['external_ref'] ?? null)) {
+                if (!$this->record->marketplace_payout_id || empty($this->record->meta['accounting']['external_ref'] ?? null)
+                    || !empty($this->record->meta['supplement_of'])) {
                     return false;
                 }
                 $marketplace = static::getMarketplaceClient();
