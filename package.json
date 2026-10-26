@@ -5,7 +5,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "build:signup": "tailwindcss -c resources/css/onboarding/tailwind.config.cjs -i resources/css/onboarding/signup.css -o public/css/onboarding-signup.css --minify"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.10",

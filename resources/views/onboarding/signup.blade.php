@@ -13,8 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
-    <script src="https://cdn.tailwindcss.com/3.4.5"></script>
-    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Geist', 'system-ui', 'sans-serif'] } } } };</script>
+    {{-- Tailwind compilat doar pentru pagina asta: npm run build:signup --}}
+    <link rel="stylesheet" href="{{ asset('css/onboarding-signup.css') }}?v={{ @filemtime(public_path('css/onboarding-signup.css')) }}">
     @include('onboarding.signup.styles')
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
@@ -33,7 +33,7 @@
     </div>
 </div>
 
-<div x-data="signup()" x-init="init()" x-cloak>
+<div x-data="signup()" x-cloak>
     @include('onboarding.signup.intro')
 
     <div x-show="!showIntro">

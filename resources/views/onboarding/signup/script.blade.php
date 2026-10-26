@@ -374,19 +374,26 @@
 
             // ---------- Mișcare (GSAP), doar dacă vizitatorul nu a cerut mișcare redusă
             animateIntro() {
-                if (reduceMotion || !window.gsap) return;
-                gsap.from('.ob-in', { y: 18, opacity: 0, duration: .7, ease: 'power3.out', stagger: .06 });
-                gsap.from('.ob-shot', { y: 40, opacity: 0, rotate: (i) => [-3, 2, -1][i] || 0, duration: 1, ease: 'power3.out', stagger: .12, delay: .15 });
-                gsap.to('.ob-shot', { y: '-=10', duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1, stagger: .7, delay: 1.2 });
-                document.querySelectorAll('[data-count]').forEach((el) => {
-                    const target = Number(el.dataset.count), o = { v: 0 };
-                    gsap.to(o, { v: target, duration: 1.6, ease: 'power2.out', delay: .3, onUpdate: () => { el.textContent = Math.round(o.v).toLocaleString('ro-RO'); } });
-                });
+                // Intrările sunt animații CSS (.ob-enter): conținutul nu depinde de bucla JS
+                if (this._introAnimated) return;
+                this._introAnimated = true;
+                document.querySelectorAll('.ob-in, .ob-shot').forEach((el, i) => { el.style.setProperty('--d', (i * 60) + 'ms'); el.classList.add('ob-enter'); });
+                if (reduceMotion) return;
+                if (window.gsap) {
+                    // Plutirea merge pe margin, ca să nu se bată cu tilt-ul (transform)
+                    gsap.to('.ob-shot', { marginTop: -10, duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1, stagger: .7, delay: 1.2 });
+                    document.querySelectorAll('[data-count]').forEach((el) => {
+                        const target = Number(el.dataset.count), o = { v: 0 };
+                        // Numărătoarea pornește de la cifra reală dacă animația nu rulează
+                        gsap.fromTo(o, { v: target * .6 }, { v: target, duration: 1.4, ease: 'power2.out', delay: .3, onUpdate: () => { el.textContent = Math.round(o.v).toLocaleString('ro-RO'); }, onComplete: () => { el.textContent = target.toLocaleString('ro-RO'); } });
+                    });
+                }
                 if (finePointer && window.VanillaTilt) VanillaTilt.init(document.querySelectorAll('[data-tilt]'), { max: 5, speed: 700, scale: 1.01, gyroscope: false });
             },
             animateStep() {
-                if (reduceMotion || !window.gsap || !this.$refs.stepBody) return;
-                gsap.fromTo(this.$refs.stepBody, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .35, ease: 'power2.out', clearProps: 'transform' });
+                const el = this.$refs.stepBody;
+                if (!el) return;
+                el.classList.remove('ob-enter'); void el.offsetWidth; el.classList.add('ob-enter');
             },
 
             // ---------- Bara de derulare peste conținut (doar mouse; pe touch rămâne cea nativă)

@@ -1,0 +1,4 @@
+/* Tailwind pentru /inregistrare. Se compilează cu: npm run build:signup (iese în public/css/onboarding-signup.css) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

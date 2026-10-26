@@ -113,6 +113,11 @@
         @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
     }
 
+    /* Intrări: animație CSS, pornește din starea vizibilă dacă nu rulează */
+    .ob-enter { animation: ob-enter .55s var(--ease) backwards; animation-delay: var(--d, 0ms); }
+    .ob-shot.ob-enter { animation-duration: .9s; }
+    @keyframes ob-enter { from { opacity: 0; transform: translateY(14px); } }
+
     @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     }
