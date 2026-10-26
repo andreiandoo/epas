@@ -880,21 +880,21 @@ $registerPublicRoutes = function ($prefix = '') {
 
     Route::group($groupOptions, function () use ($prefix) {
         Route::get('/', [\App\Http\Controllers\Public\HomeController::class, 'index'])->name($prefix ? '' : 'public.home');
-        Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about'])->name($prefix ? '' : 'public.about');
-        Route::get('/contact', [\App\Http\Controllers\Public\PageController::class, 'contact'])->name($prefix ? '' : 'public.contact');
+        Route::permanentRedirect('/about', '/')->name($prefix ? '' : 'public.about');
+        Route::permanentRedirect('/contact', '/')->name($prefix ? '' : 'public.contact');
 
-        Route::get('/events', [\App\Http\Controllers\Public\EventController::class, 'index'])->name($prefix ? '' : 'public.events.index');
+        Route::permanentRedirect('/events', '/')->name($prefix ? '' : 'public.events.index');
 
-        Route::get('/venues', [PublicVenueController::class, 'index'])->name($prefix ? '' : 'public.venues.index');
-        Route::get('/venue/{venue:slug}', [PublicVenueController::class, 'show'])->name($prefix ? '' : 'public.venues.show');
+        Route::permanentRedirect('/venues', '/')->name($prefix ? '' : 'public.venues.index');
+        Route::permanentRedirect('/venue/{venue}', '/')->name($prefix ? '' : 'public.venues.show');
 
-        Route::get('/compare/{country}/{slug}', [\App\Http\Controllers\Public\CompareController::class, 'show'])
+        Route::permanentRedirect('/compare/{country}/{slug}', '/')
             ->where('country', '[a-z]{2}')
             ->where('slug', '[a-z0-9\-]+')
             ->name($prefix ? '' : 'public.compare');
 
-        Route::get('/artists', [ArtistPublicController::class, 'index'])->name($prefix ? '' : 'public.artists.index');
-        Route::get('/artist/{slug}', [ArtistPublicController::class, 'show'])->name($prefix ? '' : 'public.artist.show');
+        Route::permanentRedirect('/artists', '/')->name($prefix ? '' : 'public.artists.index');
+        Route::permanentRedirect('/artist/{slug}', '/')->name($prefix ? '' : 'public.artist.show');
 
         // Smart EPK public pages — Modul 3 din Extended Artist
         Route::get('/epk/{artistSlug}', [\App\Http\Controllers\Public\EpkPublicController::class, 'show'])
@@ -912,27 +912,29 @@ $registerPublicRoutes = function ($prefix = '') {
     });
 };
 
+// core.tixello.com nu mai are site public: pagina principală are doar intrarea în cont și înscrierea.
+// Paginile vechi (despre, evenimente, locații, artiști, comparații) duc acolo; EPK și /api rămân.
 // Register routes WITHOUT locale prefix (e.g., /artist/slug)
 $registerPublicRoutes('');
 
 // Register routes WITH locale prefix (e.g., /en/artist/slug)
 foreach (['en', 'ro', 'de', 'fr', 'es'] as $locale) {
     Route::group(['prefix' => $locale, 'middleware' => 'set.locale'], function () use ($locale) {
-        Route::get('/', [\App\Http\Controllers\Public\HomeController::class, 'index']);
-        Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about']);
-        Route::get('/contact', [\App\Http\Controllers\Public\PageController::class, 'contact']);
+        Route::permanentRedirect('/', '/');
+        Route::permanentRedirect('/about', '/');
+        Route::permanentRedirect('/contact', '/');
 
-        Route::get('/events', [\App\Http\Controllers\Public\EventController::class, 'index']);
+        Route::permanentRedirect('/events', '/');
 
-        Route::get('/venues', [PublicVenueController::class, 'index']);
-        Route::get('/venue/{venue:slug}', [PublicVenueController::class, 'show']);
+        Route::permanentRedirect('/venues', '/');
+        Route::permanentRedirect('/venue/{venue}', '/');
 
-        Route::get('/compare/{country}/{slug}', [\App\Http\Controllers\Public\CompareController::class, 'show'])
+        Route::permanentRedirect('/compare/{country}/{slug}', '/')
             ->where('country', '[a-z]{2}')
             ->where('slug', '[a-z0-9\-]+');
 
-        Route::get('/artists', [ArtistPublicController::class, 'index']);
-        Route::get('/artist/{slug}', [ArtistPublicController::class, 'show']);
+        Route::permanentRedirect('/artists', '/');
+        Route::permanentRedirect('/artist/{slug}', '/');
 
         // Smart EPK public pages
         Route::get('/epk/{artistSlug}', [\App\Http\Controllers\Public\EpkPublicController::class, 'show']);
