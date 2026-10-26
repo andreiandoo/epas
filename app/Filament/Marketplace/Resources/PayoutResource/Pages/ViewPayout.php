@@ -1092,9 +1092,6 @@ class ViewPayout extends ViewRecord
                     if ($preview['refunded'] > 0.01) {
                         $parts[] = 'comision pe rambursări integrale: ' . $fmt($preview['refunded']);
                     }
-                    if ($preview['kept_billed'] > 0.01) {
-                        $parts[] = 'comision reținut din rambursări: ' . $fmt($preview['kept_billed']);
-                    }
                     if ($preview['kept'] > 0.01) {
                         $parts[] = 'minus comision reținut din rambursări parțiale (rămâne în vistieria Ambilet): −' . $fmt($preview['kept']);
                     }
@@ -1250,8 +1247,6 @@ class ViewPayout extends ViewRecord
         //       commission_refunded=false left Ambilet already holding the
         //       commission portion. Subtracting it here prevents double-
         //       billing the organizer for money Ambilet already has.
-        //       Only on tickets still valid; kept commission on tickets that
-        //       are no longer valid is billed on its own line instead.
         // Gated upstream by the button's visible() so we only reach here
         // after the event has finished and no prior organizer invoice exists.
         // POS billed for THIS payout's period (not event-wide) so leisure

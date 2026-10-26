@@ -27,8 +27,6 @@ use Carbon\Carbon;
  *   2. Refunded-ticket commission (full refunds with commission_refunded=true)
  *   3. Online commission included in ticket price (INCLUDED-mode events only)
  *   4. Kept-commission credit — negative (partial refunds without taxa)
- *   5. Kept commission billed — refunds without taxa on tickets no longer
- *      valid (INCLUDED-mode only)
  */
 class PosInvoiceContentBuilder
 {
@@ -51,15 +49,9 @@ class PosInvoiceContentBuilder
         );
         $refundedRows = $payout->getRefundedCommissionRowsForPayout();
         $onlineIncludedRows = $payout->getOnlineIncludedCommissionRowsForPayout();
-        // Included mode: kept commission on tickets that are no longer valid
-        // isn't in the online total, so it's billed (5) instead of stornoed (4).
-        $isIncluded = ($payout->commission_mode ?? $payout->event->getEffectiveCommissionMode() ?? 'included') !== 'added_on_top';
-        $keptRows = $isIncluded
-            ? $payout->getKeptCommissionRowsForPayout(null, null, true)
-            : $payout->getKeptCommissionRowsForPayout();
-        $keptBilledRows = $isIncluded ? $payout->getKeptCommissionRowsForPayout(null, null, false) : [];
+        $keptRows = $payout->getKeptCommissionRowsForPayout();
 
-        if (empty($posRows) && empty($refundedRows) && empty($onlineIncludedRows) && empty($keptRows) && empty($keptBilledRows)) {
+        if (empty($posRows) && empty($refundedRows) && empty($onlineIncludedRows) && empty($keptRows)) {
             return ['error' => 'Nu există comisioane de facturat'];
         }
 
@@ -256,29 +248,6 @@ class PosInvoiceContentBuilder
             ];
         }
 
-        // (5) Kept commission billed — refunded without taxa, ticket no longer valid
-        foreach ($keptBilledRows as $row) {
-            $qty = (int) ($row['qty'] ?? 0);
-            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
-            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
-            if ($qty <= 0 || $lineTotal <= 0) {
-                continue;
-            }
-            $subtotal += $lineTotal;
-            $ticketTypeName = (string) ($row['ticket_type_name'] ?? 'Bilet');
-
-            $items[] = [
-                'name' => 'Comision reținut din rambursare',
-                'description' => trim('Servicii ticketing bilete rambursate fără taxă "' . $ticketTypeName . '"'
-                    . $contractFragment . $decontFragment . $eventFragment),
-                'quantity' => $qty,
-                'unit_price' => $commPerTicket,
-                'amount' => $lineTotal,
-                '_cat' => 'kept_billed',
-                '_tt' => (int) ($row['ticket_type_id'] ?? 0),
-            ];
-        }
-
         if ($subtotal <= 0) {
             return ['error' => 'Nu există comisioane de facturat'];
         }
@@ -328,7 +297,7 @@ class PosInvoiceContentBuilder
         }
 
         // Commission per ticket type from sales on/after the start date.
-        $postAmounts = ['pos' => [], 'online' => [], 'refunded' => [], 'kept' => [], 'kept_billed' => []];
+        $postAmounts = ['pos' => [], 'online' => [], 'refunded' => [], 'kept' => []];
         $collect = function (string $cat, array $rows) use (&$postAmounts) {
             foreach ($rows as $row) {
                 $tt = (int) ($row['ticket_type_id'] ?? 0);
@@ -349,11 +318,7 @@ class PosInvoiceContentBuilder
         }
         $collect('online', $payout->getOnlineIncludedCommissionRowsBetween($sinceUtc, $end, exactBounds: true));
         $collect('refunded', $payout->getRefundedCommissionRowsForPayout($since));
-        $isIncluded = ($payout->commission_mode ?? $payout->event?->getEffectiveCommissionMode() ?? 'included') !== 'added_on_top';
-        $collect('kept', $payout->getKeptCommissionRowsForPayout($since, null, $isIncluded ? true : null));
-        if ($isIncluded) {
-            $collect('kept_billed', $payout->getKeptCommissionRowsForPayout($since, null, false));
-        }
+        $collect('kept', $payout->getKeptCommissionRowsForPayout($since));
 
         $out = [];
         $taxable = 0.0;
