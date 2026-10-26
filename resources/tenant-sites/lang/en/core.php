@@ -195,6 +195,9 @@ return [
     'Salvează alegerea' => 'Save my choice',
     'Doar necesare' => 'Necessary only',
     'Accept toate' => 'Accept all',
+    'Păstrează biletele și în contul meu Tixello, ca să le am pe toate într-un singur loc, de la orice organizator care vinde prin Tixello.' => 'Also keep my tickets in my Tixello account, so I have them all in one place, from any organiser selling through Tixello.',
+    'Vreau să primesc de la Tixello, pe email, recomandări de evenimente și oferte. Mă pot dezabona oricând.' => 'I want to receive event recommendations and offers from Tixello by email. I can unsubscribe at any time.',
+    'Cum folosește Tixello datele' => 'How Tixello uses your data',
 
     // Diverse
     'Limba' => 'Language',

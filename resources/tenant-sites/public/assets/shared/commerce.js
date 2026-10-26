@@ -533,7 +533,7 @@
             return Object.assign(pricing(), {
                 cart: null, lei: lei, busy: false, error: '', tried: false, pasteWarn: false, payMethod: 'card',
                 user: null, accountEmail: '',
-                form: { first_name: '', last_name: '', email: '', email2: '', phone: '', terms: false, newsletter: false, create_account: false, password: '' },
+                form: { first_name: '', last_name: '', email: '', email2: '', phone: '', terms: false, newsletter: false, tixello_account: false, tixello_marketing: false, create_account: false, password: '' },
                 init: function () {
                     this.cart = Cart.get();
                     this.refreshQuote();
@@ -599,6 +599,8 @@
                                 create_account: !this.user && this.form.create_account,
                                 password: (!this.user && this.form.create_account) ? this.form.password : null,
                                 newsletter: this.form.newsletter,
+                                tixello_account: this.form.tixello_account,
+                                tixello_marketing: this.form.tixello_marketing,
                                 payment_method: this.payMethod || 'card',
                                 locale: locale(),
                                 success_url: window.location.origin + '/confirmare',

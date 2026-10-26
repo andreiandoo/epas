@@ -169,7 +169,12 @@ function ts_visitor_ip(): ?string {
 
 function ts_visitor_headers(): array {
     $ip = ts_visitor_ip();
-    return $ip ? ['X-Forwarded-For: ' . $ip, 'X-Visitor-IP: ' . $ip] : [];
+    $headers = $ip ? ['X-Forwarded-For: ' . $ip, 'X-Visitor-IP: ' . $ip] : [];
+    $ua = trim(str_replace(["\r", "\n"], ' ', (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')));
+    if ($ua !== '') {
+        $headers[] = 'X-Visitor-UA: ' . substr($ua, 0, 255);
+    }
+    return $headers;
 }
 
 /**
