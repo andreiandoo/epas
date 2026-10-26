@@ -140,7 +140,7 @@ if (window.top !== window.self) { location.replace(<?= json_encode($src) ?>); }
         <button type="button" data-device="tablet" aria-label="Tabletă"><i class="ph ph-device-tablet"></i></button>
         <button type="button" data-device="mobile" aria-label="Telefon"><i class="ph ph-device-mobile"></i></button>
     </div>
-    <a class="cta" href="<?= e(DEMO_CTA_URL) ?>" target="_blank" rel="noopener"><i class="ph ph-rocket-launch"></i><span>Vreau acest site</span></a>
+    <a class="cta" href="<?= e(DEMO_CTA_URL . (!empty($current['template']) ? '?model=' . rawurlencode($current['template']) : '')) ?>" target="_blank" rel="noopener"><i class="ph ph-rocket-launch"></i><span>Vreau acest site</span></a>
     <a class="close" id="closeBar" href="<?= e($uri . (str_contains($uri, '?') ? '&' : '?') . '_nobar=1') ?>" aria-label="Închide bara" title="Închide bara"><i class="ph ph-x"></i></a>
 </header>
 <main class="stage" id="stage">
