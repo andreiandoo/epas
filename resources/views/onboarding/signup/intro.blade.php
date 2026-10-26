@@ -1,10 +1,10 @@
 @php
     $statLabels = [
+        'sales' => 'vânzări prin Tixello',
         'tickets' => 'bilete emise',
-        'orders' => 'comenzi plătite',
+        'orders' => 'comenzi',
         'events' => 'evenimente',
         'buyers' => 'cumpărători',
-        'accounts' => 'conturi active',
     ];
     $shots = array_values(array_filter(array_column($templates, 'preview')));
     // Peretele are nevoie de destule imagini ca să curgă fără goluri
@@ -67,7 +67,7 @@
                 <dl class="ob-in grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     @foreach ($stats as $key => $value)
                         <div class="ob-glass px-4 py-4">
-                            <dd class="text-2xl sm:text-3xl font-bold stat-num" data-live="{{ $key }}">{{ number_format($value, 0, ',', '.') }}</dd>
+                            <dd class="text-2xl sm:text-3xl font-bold stat-num"><span data-live="{{ $key }}">{{ number_format($value, 0, ',', '.') }}</span>@if ($key === 'sales')<span class="text-base font-semibold text-white/60"> lei</span>@endif</dd>
                             <dt class="text-sm text-white/60 mt-0.5">{{ $statLabels[$key] ?? $key }}</dt>
                         </div>
                     @endforeach
@@ -78,42 +78,84 @@
     </section>
 
     {{-- Ce vinzi: evenimente aici, atracții pe bilete.online --}}
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 py-14 lg:py-20" aria-labelledby="path-title">
-        <h2 id="path-title" class="text-3xl sm:text-4xl font-bold max-w-2xl">Ce vinzi?</h2>
-        <p class="text-[color:var(--ink-2)] mt-3 max-w-2xl">Avem două platforme, fiecare făcută pentru un fel de bilete. Alege-o pe cea potrivită și te înscrii acolo.</p>
-        <div class="grid md:grid-cols-2 gap-4 mt-8">
-            <div class="card p-6 sm:p-8 flex flex-col relative overflow-hidden">
-                <span class="absolute -right-10 -top-10 w-48 h-48 rounded-full opacity-60" style="background: radial-gradient(circle, var(--accent-soft), transparent 70%)" aria-hidden="true"></span>
-                <span class="icon-box" aria-hidden="true"><i class="ph ph-masks-theater"></i></span>
-                <h3 class="text-xl font-bold mt-4">Evenimente și spectacole</h3>
-                <p class="text-[color:var(--ink-2)] mt-2 flex-1">Teatre, filarmonici, opere, festivaluri, concerte, competiții, gale, cluburi și săli de spectacol. Bilete pe dată și oră, cu locuri numerotate dacă ai nevoie.</p>
-                <button type="button" class="btn btn-primary mt-6 self-start" @click="startSignup()">Începe înscrierea aici <i class="ph ph-arrow-right" aria-hidden="true"></i></button>
+    <section class="ob-paths" aria-labelledby="path-title">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
+            <div class="text-center max-w-2xl mx-auto">
+                <p class="text-sm font-semibold text-[color:var(--accent)]">Alege platforma potrivită</p>
+                <h2 id="path-title" class="text-4xl sm:text-5xl font-bold mt-3">Ce vinzi?</h2>
+                <p class="text-[color:var(--ink-2)] mt-4 text-lg">Avem două platforme, fiecare făcută pentru un alt fel de bilete. Te înscrii pe cea care se potrivește cu ce faci.</p>
             </div>
-            <div class="card p-6 sm:p-8 flex flex-col">
-                <span class="icon-box" aria-hidden="true"><i class="ph ph-tree-evergreen"></i></span>
-                <h3 class="text-xl font-bold mt-4">Muzee, agrement și activități</h3>
-                <p class="text-[color:var(--ink-2)] mt-2 flex-1">Muzee și expoziții, parcuri de distracții și de aventură, escape rooms, peșteri, tururi ghidate, ateliere. Pentru ele avem <strong class="text-[color:var(--ink)]">bilete.online</strong>, făcută special pentru atracții și experiențe.</p>
-                <div class="flex flex-wrap items-center gap-3 mt-6">
-                    <a href="https://bilete.online/autentificare?mode=register&amp;ca=venue" class="btn btn-line" target="_blank" rel="noopener">Înscrie-te pe bilete.online <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
-                    <a href="https://bilete.online/parteneri" class="link text-sm" target="_blank" rel="noopener">Cum funcționează</a>
-                </div>
-            </div>
-        </div>
 
-        <div class="grid md:grid-cols-3 gap-4 mt-14">
-            @foreach ([
-                ['ph-user-plus', 'Îți faci contul', 'Câteva minute. Dacă ai firmă, scrii doar CUI-ul, restul îl luăm de la ANAF.'],
-                ['ph-shield-check', 'Verificăm datele', 'Îți scriem pe email când e gata. Între timp poți pregăti evenimentele în panou.'],
-                ['ph-ticket', 'Pornești vânzarea', 'Site-ul și plata sunt pregătite. Adaugi evenimentul și biletele se pot cumpăra.'],
-            ] as $i => [$icon, $title, $text])
-                <div class="flex gap-4">
-                    <span class="w-10 h-10 shrink-0 rounded-full grid place-items-center font-bold bg-[color:var(--ink)] text-[color:var(--bg)]">{{ $i + 1 }}</span>
-                    <div>
-                        <p class="font-semibold">{{ $title }}</p>
-                        <p class="text-sm text-[color:var(--ink-2)] mt-1">{{ $text }}</p>
+            <div class="grid lg:grid-cols-2 gap-5 mt-12">
+                {{-- Evenimente și spectacole: rămâne aici --}}
+                <article class="ob-path ob-path--events">
+                    <div class="ob-path__media" aria-hidden="true">
+                        @foreach (array_slice($shots, 0, 3) as $i => $src)
+                            <div class="ob-path__shot ob-path__shot--{{ $i }}"><img src="{{ $src }}" alt="" loading="lazy"></div>
+                        @endforeach
                     </div>
-                </div>
-            @endforeach
+                    <div class="ob-path__body">
+                        <p class="ob-path__brand"><span class="w-2 h-2 rounded-full bg-[color:var(--accent)]"></span> Tixello</p>
+                        <h3 class="text-2xl sm:text-3xl font-bold mt-3">Evenimente și spectacole</h3>
+                        <ul class="flex flex-wrap gap-2 mt-4" aria-label="Pentru cine">
+                            @foreach (['Teatre', 'Filarmonici', 'Opere', 'Festivaluri', 'Concerte', 'Competiții', 'Gale', 'Cluburi'] as $tag)
+                                <li class="ob-tag">{{ $tag }}</li>
+                            @endforeach
+                        </ul>
+                        <ul class="mt-6 space-y-2.5 text-[15px]">
+                            <li class="flex gap-3"><i class="ph-bold ph-check text-[color:var(--accent)] mt-1" aria-hidden="true"></i> Bilete pe dată și oră, cu locuri numerotate pe hartă</li>
+                            <li class="flex gap-3"><i class="ph-bold ph-check text-[color:var(--accent)] mt-1" aria-hidden="true"></i> Site de bilete cu numele și culorile tale</li>
+                            <li class="flex gap-3"><i class="ph-bold ph-check text-[color:var(--accent)] mt-1" aria-hidden="true"></i> Vânzare online, la casă și la intrare, în același cont</li>
+                        </ul>
+                        <div class="flex flex-wrap items-center gap-4 mt-8">
+                            <button type="button" class="btn btn-primary ob-glow px-7" @click="startSignup()">Începe înscrierea aici <i class="ph ph-arrow-right" aria-hidden="true"></i></button>
+                            <span class="text-sm text-white/60">de la 1% pe bilet</span>
+                        </div>
+                    </div>
+                </article>
+
+                {{-- Muzee, agrement, activități: bilete.online --}}
+                <article class="ob-path ob-path--leisure">
+                    <div class="ob-path__media ob-path__icons" aria-hidden="true">
+                        @foreach (['ph-bank', 'ph-confetti', 'ph-mountains', 'ph-key', 'ph-compass', 'ph-paint-brush-broad', 'ph-tree-evergreen', 'ph-binoculars'] as $i => $icon)
+                            <span class="ob-path__icon" style="--i: {{ $i }}"><i class="ph {{ $icon }}"></i></span>
+                        @endforeach
+                    </div>
+                    <div class="ob-path__body">
+                        <p class="ob-path__brand"><span class="w-2 h-2 rounded-full bg-[#1f9d72]"></span> bilete.online</p>
+                        <h3 class="text-2xl sm:text-3xl font-bold mt-3">Muzee, agrement și activități</h3>
+                        <ul class="flex flex-wrap gap-2 mt-4" aria-label="Pentru cine">
+                            @foreach (['Muzee', 'Parcuri de distracții', 'Aventură', 'Escape rooms', 'Peșteri', 'Tururi ghidate', 'Ateliere', 'Ferme educative'] as $tag)
+                                <li class="ob-tag">{{ $tag }}</li>
+                            @endforeach
+                        </ul>
+                        <ul class="mt-6 space-y-2.5 text-[15px] text-[color:var(--ink)]">
+                            <li class="flex gap-3"><i class="ph-bold ph-check text-[#1f9d72] mt-1" aria-hidden="true"></i> Program pe zile și intervale orare, nu doar pe date fixe</li>
+                            <li class="flex gap-3"><i class="ph-bold ph-check text-[#1f9d72] mt-1" aria-hidden="true"></i> Pagina ta pe un marketplace de experiențe și atracții</li>
+                            <li class="flex gap-3"><i class="ph-bold ph-check text-[#1f9d72] mt-1" aria-hidden="true"></i> Fără abonament lunar și fără taxă de instalare</li>
+                        </ul>
+                        <div class="flex flex-wrap items-center gap-4 mt-8">
+                            <a href="https://bilete.online/autentificare?mode=register&amp;ca=venue" class="btn btn-leisure px-7" target="_blank" rel="noopener">Înscrie-te pe bilete.online <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                            <a href="https://bilete.online/parteneri" class="link text-sm" target="_blank" rel="noopener">Cum funcționează</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <ol class="grid md:grid-cols-3 gap-6 mt-16 relative">
+                <span class="hidden md:block absolute top-5 left-[16%] right-[16%] h-px bg-[color:var(--line)]" aria-hidden="true"></span>
+                @foreach ([
+                    ['Îți faci contul', 'Câteva minute. Dacă ai firmă, scrii doar CUI-ul, restul îl luăm de la ANAF.'],
+                    ['Verificăm datele', 'Îți scriem pe email când e gata. Între timp poți pregăti evenimentele în panou.'],
+                    ['Pornești vânzarea', 'Site-ul și plata sunt pregătite. Adaugi evenimentul și biletele se pot cumpăra.'],
+                ] as $i => [$title, $text])
+                    <li class="relative text-center md:px-6">
+                        <span class="relative z-10 mx-auto w-10 h-10 rounded-full grid place-items-center font-bold bg-[color:var(--ink)] text-[color:var(--bg)] ring-8 ring-[color:var(--bg)]">{{ $i + 1 }}</span>
+                        <p class="font-semibold mt-4">{{ $title }}</p>
+                        <p class="text-sm text-[color:var(--ink-2)] mt-1">{{ $text }}</p>
+                    </li>
+                @endforeach
+            </ol>
         </div>
     </section>
 </div>

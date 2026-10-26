@@ -130,6 +130,56 @@
     @media (prefers-reduced-motion: reduce) { .ob-wall__row, .ob-hero__aurora i, .ob-live { animation: none !important; } }
     .stat-num { font-variant-numeric: tabular-nums; }
 
+    /* ---------- Ce vinzi: două căi, două platforme */
+    .ob-paths { background: radial-gradient(60% 50% at 50% 0%, var(--accent-soft), transparent 70%), var(--bg); }
+    .ob-path { position: relative; overflow: hidden; border-radius: 28px; min-height: 560px; display: flex; flex-direction: column; justify-content: flex-end;
+        border: 1px solid var(--line); transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
+    @media (hover: hover) { .ob-path:hover { transform: translateY(-4px); box-shadow: 0 40px 80px -40px rgb(var(--shadow) / .55); } }
+    .ob-path__body { position: relative; z-index: 2; padding: 32px; }
+    @media (min-width: 640px) { .ob-path__body { padding: 40px; } }
+    .ob-path__brand { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: .02em; padding: 6px 12px; border-radius: 999px; }
+    .ob-tag { font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+    .ob-path__media { position: absolute; inset: 0 0 auto; height: 58%; z-index: 1; }
+
+    /* Evenimente: întunecat, cu site-urile demo înclinate */
+    .ob-path--events { background: #0e0e11; color: #f4f4f1; border-color: #24242a; }
+    .ob-path--events .ob-path__brand { background: rgba(255, 255, 255, .08); }
+    .ob-path--events .ob-tag { background: rgba(255, 255, 255, .07); color: rgba(255, 255, 255, .8); }
+    .ob-path--events .ob-path__media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14, 14, 17, .1), #0e0e11 92%); }
+    .ob-path__shot { position: absolute; width: 62%; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .12);
+        box-shadow: 0 30px 60px -20px #000; transition: transform .6s var(--ease); }
+    .ob-path__shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+    .ob-path__shot--0 { left: 6%; top: 12%; transform: rotate(-6deg); }
+    .ob-path__shot--1 { right: 4%; top: 4%; transform: rotate(5deg); z-index: 1; }
+    .ob-path__shot--2 { left: 24%; top: 34%; transform: rotate(-1deg); z-index: 2; }
+    @media (hover: hover) {
+        .ob-path--events:hover .ob-path__shot--0 { transform: rotate(-9deg) translate(-10px, -6px); }
+        .ob-path--events:hover .ob-path__shot--1 { transform: rotate(8deg) translate(10px, -8px); }
+        .ob-path--events:hover .ob-path__shot--2 { transform: rotate(0deg) translateY(-12px); }
+    }
+
+    /* Agrement: deschis, verde, cu activitățile ca iconițe care plutesc */
+    .ob-path--leisure { background: linear-gradient(160deg, #e9f7f1 0%, #f7fbf9 55%, var(--surface) 100%); border-color: #cfe9de; }
+    .ob-path--leisure .ob-path__brand { background: rgba(31, 157, 114, .12); color: #137a57; }
+    .ob-path--leisure .ob-tag { background: rgba(31, 157, 114, .1); color: #145c43; }
+    .ob-path--leisure h3 { color: #10241c; }
+    .ob-path__icons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 40px 40px 0; align-content: start; }
+    .ob-path__icon { aspect-ratio: 1; border-radius: 22px; display: grid; place-items: center; font-size: 34px; color: #1f9d72; background: #fff;
+        box-shadow: 0 18px 40px -24px rgba(16, 80, 58, .45); animation: ob-bob 6s ease-in-out infinite; animation-delay: calc(var(--i) * -.7s); }
+    .ob-path__icon:nth-child(even) { transform: translateY(14px); }
+    @keyframes ob-bob { 50% { translate: 0 -8px; } }
+    .btn-leisure { background: #1f9d72; color: #fff; }
+    @media (hover: hover) { .btn-leisure:hover { background: #188761; } }
+    @media (prefers-color-scheme: dark) {
+        .ob-path--leisure { background: linear-gradient(160deg, #0f2a21 0%, #13201b 60%, var(--surface) 100%); border-color: #1d3a2f; }
+        .ob-path--leisure h3, .ob-path--leisure .ob-path__body li { color: #eaf6f0; }
+        .ob-path--leisure .ob-path__brand { color: #7fe0b8; }
+        .ob-path--leisure .ob-tag { color: #bde9d6; }
+        .ob-path__icon { background: #17342a; color: #5fd3a5; }
+    }
+    @media (max-width: 639px) { .ob-path { min-height: 0; } .ob-path__media { position: relative; height: 220px; } .ob-path__icons { padding: 24px 24px 0; gap: 10px; } }
+    @media (prefers-reduced-motion: reduce) { .ob-path__icon { animation: none; } }
+
     /* ---------- Dialog „Ce primești” */
     dialog.sheet { border: 0; padding: 0; margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(440px, 100vw); background: var(--surface); color: var(--ink); box-shadow: -30px 0 80px -40px rgb(var(--shadow) / .5); }
     dialog.sheet::backdrop { background: rgb(0 0 0 / .45); backdrop-filter: blur(2px); }

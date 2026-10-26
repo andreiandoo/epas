@@ -4,18 +4,18 @@ namespace App\Services\Onboarding;
 
 use App\Models\Customer;
 use App\Models\Event;
-use App\Models\MarketplaceClient;
+use App\Models\ExchangeRate;
 use App\Models\MarketplaceCustomer;
 use App\Models\Order;
-use App\Models\Tenant;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Cifrele reale ale platformei pentru prima pagină a înscrierii, cu aceleași
- * definiții ca în dashboard-ul din admin (StatsOverview). Cache de 30 de secunde;
- * pagina le cere din nou singură. O cifră care nu se poate calcula lipsește.
+ * Cifrele reale ale platformei pentru prima pagină a înscrierii. Includ și datele
+ * istorice importate din vechiul Ambilet (orders.source = legacy_import), care stau
+ * în aceleași tabele. Cache de 30 de secunde; pagina le cere din nou singură.
+ * O cifră care nu se poate calcula lipsește.
  */
 class PlatformStats
 {
@@ -23,16 +23,27 @@ class PlatformStats
 
     public function get(): array
     {
-        return Cache::remember('signup:platform-stats:v2', 30, function () {
+        return Cache::remember('signup:platform-stats:v3', 30, function () {
             return array_filter([
-                // „Tickets issued” din admin: bilete valide din comenzi plătite
-                'tickets' => $this->count(fn () => Ticket::where('status', 'valid')->whereHas('order', fn ($q) => $q->whereIn('status', self::PAID))->count()),
-                'orders' => $this->count(fn () => Order::whereIn('status', self::PAID)->count()),
+                'sales' => $this->count(fn () => $this->salesRon()),
+                'tickets' => $this->count(fn () => Ticket::count()),
+                'orders' => $this->count(fn () => Order::count()),
                 'events' => $this->count(fn () => Event::count()),
                 'buyers' => $this->count(fn () => Customer::count() + MarketplaceCustomer::count()),
-                'accounts' => $this->count(fn () => Tenant::where('status', 'active')->where('is_demo_shadow', false)->count() + MarketplaceClient::where('status', 'active')->count()),
             ], fn ($v) => $v !== null && $v > 0);
         });
+    }
+
+    /** Valoarea comenzilor plătite, în lei: euro convertiți la ultimul curs, ca în dashboard-ul din admin. */
+    private function salesRon(): int
+    {
+        $ron = (float) Order::whereIn('status', self::PAID)
+            ->where(fn ($q) => $q->where('currency', 'RON')->orWhereNull('currency'))
+            ->sum('total');
+        $eur = (float) Order::whereIn('status', self::PAID)->where('currency', 'EUR')->sum('total');
+        $rate = (float) (ExchangeRate::getLatestRate('EUR', 'RON') ?: 5);
+
+        return (int) round($ron + $eur * $rate);
     }
 
     private function count(callable $query): ?int
