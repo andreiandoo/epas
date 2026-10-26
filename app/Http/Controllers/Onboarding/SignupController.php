@@ -82,8 +82,14 @@ class SignupController extends Controller
         return Validator::make($request->all(), $rules, $messages + self::MESSAGES, self::ATTRIBUTES)->validate();
     }
 
-    public function show(TemplateRegistry $templates)
+    public function show(Request $request, TemplateRegistry $templates, \App\Services\Onboarding\PlatformStats $stats)
     {
+        // Venit de pe un demo („Vreau acest site”): modelul rămâne ales până la pasul Template
+        $model = (string) $request->query('model', '');
+        if ($model !== '' && $templates->availableTo($model, null)) {
+            $request->session()->put('signup_model', $model);
+        }
+
         $tenant = $this->currentTenant();
         if (Auth::check() && ! $tenant) {
             // Cont existent care nu e o înscriere nouă: are deja panoul lui
@@ -108,6 +114,8 @@ class SignupController extends Controller
             'microservices' => $this->microserviceOptions(),
             'customSite' => ['price' => (float) config('onboarding.custom_site_price'), 'currency' => config('onboarding.custom_site_currency')],
             'paymentTermsDays' => (int) (\App\Models\Setting::current()->default_payment_terms_days ?? 5),
+            'stats' => collect($stats->get())->map(fn ($v) => \App\Services\Onboarding\PlatformStats::floor((int) $v))->all(),
+            'preselectedModel' => $request->session()->get('signup_model'),
         ]);
     }
 
@@ -508,7 +516,7 @@ class SignupController extends Controller
     /** Funcțiile din pasul 7: lista scurtă (signup_featured) și restul, la „Vezi toate”. */
     private function microserviceOptions(): array
     {
-        return Microservice::active()->where('signup_hidden', false)->orderByDesc('signup_featured')->orderBy('sort_order')->get()
+        return Microservice::active()->where('signup_hidden', false)->where('slug', 'not like', 'payment-%')->orderByDesc('signup_featured')->orderBy('sort_order')->get()
             ->map(function (Microservice $m) {
                 $features = $m->getTranslation('features', 'ro') ?: $m->getTranslation('features', 'en');
 
@@ -517,6 +525,7 @@ class SignupController extends Controller
                     'name' => $m->display_label,
                     'text' => strip_tags((string) ($m->getTranslation('short_description', 'ro') ?: $m->getTranslation('short_description', 'en'))),
                     'features' => array_slice(array_values(array_filter(array_map(fn ($f) => is_string($f) ? strip_tags($f) : null, (array) $features))), 0, 6),
+                    'description' => trim(strip_tags((string) ($m->getTranslation('description', 'ro') ?: $m->getTranslation('description', 'en')))),
                     'icon' => $m->icon_image ? \Illuminate\Support\Facades\Storage::disk('public')->url($m->icon_image) : null,
                     'category' => self::CATEGORY_LABELS[$m->category] ?? 'Altele',
                     'price' => (float) $m->price,

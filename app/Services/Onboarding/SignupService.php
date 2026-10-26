@@ -147,10 +147,10 @@ class SignupService
     }
 
     /**
-     * Comisionul: 1% sau 2% după modul de vânzare, plus un punct dacă ia subdomeniul
-     * nostru, un site din modelele demo sau o funcție care ridică comisionul. Creșterea
-     * se aplică o singură dată. Domeniul propriu fără model nu costă (îl găzduiește el);
-     * site-ul făcut 100% special se plătește separat (custom_site_price).
+     * Comisionul: 1% sau 2% după modul de vânzare, plus un punct dacă site-ul e găzduit
+     * de noi (subdomeniul nostru) sau a ales o funcție care ridică comisionul. Creșterea
+     * se aplică o singură dată. Modelul de site nu costă nimic în plus; site-ul făcut
+     * 100% de noi se plătește separat (custom_site_price).
      */
     public function applyCommission(Tenant $tenant): void
     {
@@ -171,7 +171,7 @@ class SignupService
     public function raisesCommission(Tenant $tenant): bool
     {
         $choices = $tenant->signup_choices ?? [];
-        if (($choices['site']['mode'] ?? null) === 'subdomain' || ! empty($choices['template']['slug'])) {
+        if (($choices['site']['mode'] ?? null) === 'subdomain') {
             return true;
         }
         $ids = $tenant->signup_choices['extras']['microservices'] ?? [];
