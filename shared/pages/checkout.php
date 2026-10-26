@@ -80,6 +80,14 @@ include ts_layout('header');
                             <span><?= t('Am citit și accept {terms} și {privacy}.', ['terms' => '<a href="/termeni" target="_blank" class="text-primary underline">' . te('termenii de vânzare') . '</a>', 'privacy' => '<a href="/confidentialitate" target="_blank" class="text-primary underline">' . te('politica de confidențialitate') . '</a>']) ?></span></label>
                         <label class="ts-check text-sm"><input type="checkbox" x-model="form.newsletter">
                             <span><?= te('Vreau să primesc pe email noutăți despre evenimentele {name}.', ['name' => SITE_NAME]) ?></span></label>
+                        <?php /* Bifele Tixello (operator separat); textul e cel din config/legal.php → buyer_consents */ ?>
+                        <div class="mt-2 border-t border-primary/10 pt-3 space-y-2">
+                            <label class="ts-check text-sm"><input type="checkbox" x-model="form.tixello_account">
+                                <span><?= te('Păstrează biletele și în contul meu Tixello, ca să le am pe toate într-un singur loc, de la orice organizator care vinde prin Tixello.') ?></span></label>
+                            <label class="ts-check text-sm"><input type="checkbox" x-model="form.tixello_marketing">
+                                <span><?= te('Vreau să primesc de la Tixello, pe email, recomandări de evenimente și oferte. Mă pot dezabona oricând.') ?>
+                                    <a href="https://core.tixello.com/politica-confidentialitate#cumparatori" target="_blank" rel="noopener" class="text-primary underline"><?= te('Cum folosește Tixello datele') ?></a></span></label>
+                        </div>
                     </section>
                 </div>
 
