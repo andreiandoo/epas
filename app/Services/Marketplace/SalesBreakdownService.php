@@ -435,6 +435,11 @@ class SalesBreakdownService
                     if ($organizerFloor > 0 && $unitPrice > 0 && $tt->allowsCommissionFloor() && $commPerTicket < $organizerFloor) {
                         $commPerTicket = $organizerFloor;
                     }
+                    // Bilet de 0 lei cu comision peste pret: conteaza comisionul
+                    // incasat efectiv la checkout (floor-ul organizatorului).
+                    if ($unitPrice <= 0 && in_array($mode, ['on_top', 'added_on_top'], true)) {
+                        $commPerTicket = max($commPerTicket, $this->chargedZeroPriceCommissionPerTicket($order, $tt));
+                    }
                     $commission = $commPerTicket * $validCount;
                 }
 
@@ -963,9 +968,13 @@ class SalesBreakdownService
                     'promo_meta' => $hasPromoOnThisTicket && $promoData ? $promoData : null,
                     'is_reduced' => $hasPromoOnThisTicket,
                     'qty' => 0,
+                    'charged_commission' => 0.0,
                 ];
             }
             $groups[$key]['qty']++;
+            if ((float) ($t->price ?? 0) <= 0 && $order && $t->ticketType) {
+                $groups[$key]['charged_commission'] += $this->chargedZeroPriceCommissionPerTicket($order, $t->ticketType);
+            }
         }
 
         $rows = [];
@@ -990,6 +999,11 @@ class SalesBreakdownService
             $commissionAmount = $commPerTicket * $qty;
             $mode = $effectiveCommission['mode'];
             $isOnTop = in_array($mode, ['on_top', 'added_on_top'], true);
+            // Bilete de 0 lei cu comision peste pret: comisionul incasat efectiv (vezi build()).
+            if ($commissionBase <= 0 && $isOnTop && $qty > 0 && $g['charged_commission'] > $commissionAmount) {
+                $commissionAmount = round($g['charged_commission'], 2);
+                $commPerTicket = round($commissionAmount / $qty, 2);
+            }
 
             // Gross / net use the displayed unit price (post-promo) so the
             // Net column reflects what actually reaches the organizer.
@@ -1046,6 +1060,37 @@ class SalesBreakdownService
         });
 
         return $rows;
+    }
+
+    /**
+     * Commission actually charged per ticket on a 0-lei ticket, read from the
+     * order's meta.commission_details (written at checkout). The organizer
+     * floor applies to 0-lei tickets only on some orders (not before July,
+     * not 11–15.09.2026), so recomputing it would over-count; the order is
+     * the source of truth. Lines carry only the ticket type name: match on
+     * it, else take the order's single 0-lei line. Event 4743: 2.50/ticket
+     * on "Acces" (0 lei, on_top), 95 lei that no decont counted.
+     */
+    public function chargedZeroPriceCommissionPerTicket(?Order $order, \App\Models\TicketType $tt): float
+    {
+        $details = is_array($order?->meta['commission_details'] ?? null) ? $order->meta['commission_details'] : [];
+        $lines = array_values(array_filter($details, fn ($d) => is_array($d)
+            && (float) ($d['unit_price'] ?? 0) <= 0
+            && (int) ($d['quantity'] ?? 0) > 0
+            && (float) ($d['commission_amount'] ?? 0) > 0));
+        if (empty($lines)) {
+            return 0.0;
+        }
+
+        $plainName = fn ($n) => is_array($n) ? (string) ($n['ro'] ?? $n['en'] ?? (reset($n) ?: '')) : (string) $n;
+        $ttName = mb_strtolower(trim($plainName($tt->name)));
+        $matched = array_values(array_filter($lines, fn ($d) => mb_strtolower(trim($plainName($d['ticket_type'] ?? ''))) === $ttName));
+        $line = count($matched) === 1 ? $matched[0] : (count($lines) === 1 ? $lines[0] : null);
+        if (!$line) {
+            return 0.0;
+        }
+
+        return round((float) $line['commission_amount'] / (int) $line['quantity'], 2);
     }
 
     /**

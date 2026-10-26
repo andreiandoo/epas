@@ -82,6 +82,16 @@ class TicketExportService
 
                     [$gross, $net, $commission] = $this->computeTicketAmounts($tt);
 
+                    // 0-lei ticket with on-top commission: show what checkout
+                    // actually charged (organizer floor), not the catalog 0.
+                    if ($tt && $order && $net !== null && $net <= 0 && ($tt->commission_mode ?? 'included') === 'added_on_top') {
+                        $charged = app(SalesBreakdownService::class)->chargedZeroPriceCommissionPerTicket($order, $tt);
+                        if ($charged > $commission) {
+                            $gross = $net + $charged;
+                            $commission = $charged;
+                        }
+                    }
+
                     // Final value AFTER any discount applied at checkout
                     // (per-ticket meta.discount_amount, or proportional fallback
                     // for legacy orders without meta). Reflects what the
