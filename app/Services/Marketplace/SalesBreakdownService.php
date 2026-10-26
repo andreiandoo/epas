@@ -332,6 +332,7 @@ class SalesBreakdownService
                             'ticket_type_id' => (int) $invTtId,
                             'unit_price' => 0.0,
                             'valid_count' => 0,
+                            'commission_count' => 0,
                             'gross' => 0.0,
                             'commission' => 0.0,
                             'commission_per_ticket' => 0.0,
@@ -451,6 +452,9 @@ class SalesBreakdownService
                     'tt' => $tt,
                     'ticket_type_id' => $ttId,
                     'valid_count' => $validCount,
+                    // Tickets that actually carry commission (0-lei tickets
+                    // without a charged floor don't), for per-ticket invoice lines.
+                    'commission_count' => $commission > 0.005 ? $validCount : 0,
                     'gross' => $gross,
                     'unit_price' => $unitPrice,
                     'commission' => $commission,
@@ -569,6 +573,7 @@ class SalesBreakdownService
                         'ticket_type_id' => $slice['ticket_type_id'],
                         'unit_price' => $slice['unit_price'],
                         'valid_count' => 0,
+                        'commission_count' => 0,
                         'gross' => 0.0,
                         'commission' => 0.0,
                         'commission_per_ticket' => 0.0,
@@ -582,6 +587,7 @@ class SalesBreakdownService
                     ];
                 }
                 $perType[$accumKey]['valid_count'] += $slice['valid_count'];
+                $perType[$accumKey]['commission_count'] += $slice['commission_count'];
                 $perType[$accumKey]['gross'] += $slice['gross'];
                 $perType[$accumKey]['commission'] += $slice['commission'];
                 $perType[$accumKey]['discount'] += $sliceDiscount;
@@ -702,6 +708,7 @@ class SalesBreakdownService
                 'gross' => round($gross, 2),
                 'commission_per_ticket' => $weightedCommissionPerTicket,
                 'commission_amount' => round($d['commission'], 2),
+                'commission_qty' => (int) ($d['commission_count'] ?? $qty),
                 'commission_mode' => (string) $d['mode'],
                 'commission_type' => $d['commission_type'],
                 'commission_rate' => $d['commission_rate'],

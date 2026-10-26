@@ -285,13 +285,21 @@ class GeneralClientInvoiceVat
             if ($qty <= 0 || $per <= 0) {
                 continue;
             }
-            $rows[] = [
+            $row = [
                 'ticket_type_id' => $s['ticket_type_id'] ?? null,
                 'ticket_type_name' => (string) ($s['ticket_type_name'] ?? $s['name'] ?? ''),
                 'qty' => $qty,
                 'commission_per_ticket' => $per,
                 'commission_amount' => round($qty * $per, 2),
             ];
+            // Untouched row with fewer commission-bearing tickets than valid
+            // ones (0-lei "Acces" on event 4743: 76 valid, floor charged on 38):
+            // keep the exact snapshot amount, carry the real count.
+            if ($take === 0 && isset($s['commission_qty'], $s['commission_amount'])) {
+                $row['commission_amount'] = round((float) $s['commission_amount'], 2);
+                $row['commission_qty'] = (int) $s['commission_qty'];
+            }
+            $rows[] = $row;
         }
 
         return $rows;
@@ -303,6 +311,11 @@ class GeneralClientInvoiceVat
         $net = round((float) ($row['commission_amount'] ?? 0), 2);
         $line = $this->line($net, $rate, $slice);
         $qty = (int) ($row['qty'] ?? 0);
+        // Bill per ticket that carried commission, not per valid ticket.
+        $commissionQty = (int) ($row['commission_qty'] ?? 0);
+        if ($commissionQty > 0 && $commissionQty < $qty) {
+            $qty = $commissionQty;
+        }
         if ($qty > 0) {
             $unit = round($net / $qty, 2);
             if (abs(round($unit * $qty, 2) - $net) < 0.005) {
