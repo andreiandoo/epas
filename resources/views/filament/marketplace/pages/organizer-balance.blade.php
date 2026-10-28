@@ -69,16 +69,21 @@
 
         {{-- Avansuri --}}
         @if($advances->isNotEmpty())
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+            <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex flex-wrap items-center justify-between gap-2 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <x-heroicon-o-arrow-trending-up class="w-5 h-5 text-gray-400" />
                         Avansuri
+                        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $advances->count() }})</span>
                     </h3>
-                    <span class="text-sm {{ $advanceOpen > 0 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-gray-500 dark:text-gray-400' }}">
-                        Avans nedecontat: {{ number_format($advanceOpen, 2, ',', '.') }} RON
+                    <span class="flex items-center gap-3">
+                        <span class="text-sm {{ $advanceOpen > 0 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-gray-500 dark:text-gray-400' }}">
+                            Avans nedecontat: {{ number_format($advanceOpen, 2, ',', '.') }} RON
+                        </span>
+                        <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
                     </span>
-                </div>
+                </button>
+                <div x-show="open" x-cloak>
                 <p class="px-6 pt-3 text-xs text-gray-500 dark:text-gray-400">
                     Avansul se scade din sold la înregistrare. Deconturile pe eveniment aprobate după aceea se compensează automat din el, cel mai vechi avans întâi; la plată se transferă doar restul.
                 </p>
@@ -125,6 +130,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
         @endif
 

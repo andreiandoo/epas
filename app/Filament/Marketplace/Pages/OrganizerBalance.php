@@ -445,8 +445,8 @@ class OrganizerBalance extends Page
             ->orderByDesc('created_at')
             ->get();
 
-        // Avansuri, cele mai vechi primele, cu ce deconturi au acoperit.
-        $advances = MarketplacePayout::advancesForOrganizer($this->organizerId);
+        // Avansuri, cel mai recent primul, cu ce deconturi au acoperit.
+        $advances = MarketplacePayout::advancesForOrganizer($this->organizerId)->reverse()->values();
 
         return [
             'organizer' => $this->organizer,

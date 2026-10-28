@@ -1065,7 +1065,11 @@ class MarketplacePayout extends Model
                 $payout->allocateFromAdvances();
             } elseif ($statusChanged) {
                 $payout->allocateFromAdvances();
+            } else {
+                return;
             }
+
+            $payout->completeIfCoveredByAdvance();
         });
 
         static::created(function ($payout) {
@@ -2231,6 +2235,21 @@ class MarketplacePayout extends Model
 
             return $covered;
         });
+    }
+
+    /**
+     * Decont acoperit integral din avans: banii au plecat deja odată cu
+     * avansul, nu mai e niciun transfer de făcut — se marchează finalizat.
+     */
+    public function completeIfCoveredByAdvance(): bool
+    {
+        if (!$this->canBeCompleted() || $this->advanceCoveredAmount() <= 0.004 || $this->cashAmount() > 0.004) {
+            return false;
+        }
+
+        $this->complete('Compensat integral din avans');
+
+        return true;
     }
 
     /** Eliberează avansul consumat de acest decont (respins / anulat / modificat). */
