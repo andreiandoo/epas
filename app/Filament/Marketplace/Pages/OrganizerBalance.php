@@ -178,6 +178,9 @@ class OrganizerBalance extends Page
                         return $payout;
                     });
 
+                    // Deconturile aprobate înainte de avans, cu rest de plată.
+                    MarketplacePayout::applyAdvancesToOpenPayouts($this->organizer->id);
+
                     $this->organizer->refresh();
 
                     $notification = Notification::make()

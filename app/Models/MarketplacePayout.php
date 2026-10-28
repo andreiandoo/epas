@@ -2185,7 +2185,7 @@ class MarketplacePayout extends Model
      * Acoperă decontul din avansurile organizatorului, cel mai vechi primul.
      * Doar deconturile pe eveniment se compensează (plățile fără eveniment
      * sunt ele însele avansuri / plăți la nivel de organizator). Idempotent:
-     * un decont deja compensat nu mai e atins. Întoarce suma compensată.
+     * acoperă doar ce lipsește. Întoarce suma compensată în total.
      */
     public function allocateFromAdvances(): float
     {
@@ -2210,11 +2210,15 @@ class MarketplacePayout extends Model
                 ->lockForUpdate()
                 ->get();
 
-            if ($advances->isEmpty() || $this->advanceAllocations()->exists()) {
-                return $this->advanceCoveredAmount();
+            // Un decont acoperit parțial se completează din avansurile
+            // înregistrate ulterior — se ia doar ce mai lipsește.
+            $covered = $this->advanceCoveredAmount();
+            $need = round($need - $covered, 2);
+
+            if ($advances->isEmpty() || $need <= 0.004) {
+                return $covered;
             }
 
-            $covered = 0.0;
             foreach ($advances as $advance) {
                 if ($need <= 0.004) {
                     break;
@@ -2235,6 +2239,30 @@ class MarketplacePayout extends Model
 
             return $covered;
         });
+    }
+
+    /**
+     * Avans nou: acoperă deconturile pe eveniment deja aprobate / în procesare
+     * care au rămas cu rest de plată, cele mai vechi întâi. Cele acoperite
+     * integral se finalizează.
+     */
+    public static function applyAdvancesToOpenPayouts(int $organizerId): void
+    {
+        if (!static::advancesEnabled()) {
+            return;
+        }
+
+        static::where('marketplace_organizer_id', $organizerId)
+            ->whereNotNull('event_id')
+            ->where(fn ($q) => $q->whereNull('source')->orWhere('source', '!=', static::SOURCE_ADVANCE))
+            ->whereIn('status', ['approved', 'processing'])
+            ->orderBy('approved_at')
+            ->orderBy('id')
+            ->get()
+            ->each(function (self $payout) {
+                $payout->allocateFromAdvances();
+                $payout->completeIfCoveredByAdvance();
+            });
     }
 
     /**
