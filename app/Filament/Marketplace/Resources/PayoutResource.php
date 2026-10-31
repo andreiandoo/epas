@@ -829,6 +829,7 @@ class PayoutResource extends Resource
                                         ->modalHeading('Șterge decontul')
                                         ->modalDescription('Decontul va fi mutat în coșul de gunoi (soft delete). Documentele asociate (PDF decont, factură, factură organizator) NU se șterg automat — ocupă-te de ele separat dacă e nevoie.')
                                         ->modalSubmitActionLabel('Da, șterge')
+                                        ->visible(fn ($record): bool => $record->status !== 'completed')
                                         ->action(function ($record, $livewire) {
                                             $record->delete();
                                             \Filament\Notifications\Notification::make()
@@ -1270,7 +1271,8 @@ class PayoutResource extends Resource
                     ->icon('heroicon-o-trash')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalDescription('Decontul va fi șters și valorile (sold, bilete decontate) vor fi returnate organizatorului.')
+                    ->modalDescription('Decontul va fi șters, iar suma rezervată va reveni în soldul organizatorului.')
+                    ->visible(fn (MarketplacePayout $record): bool => $record->status !== 'completed')
                     ->action(function (MarketplacePayout $record): void {
                         static::reversePayout($record);
                     }),
@@ -1282,7 +1284,7 @@ class PayoutResource extends Resource
                         ->icon('heroicon-o-trash')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalDescription('Deconturile selectate vor fi șterse și valorile returnate organizatorilor.')
+                        ->modalDescription('Deconturile selectate vor fi șterse, iar sumele rezervate vor reveni în soldul organizatorilor. Deconturile finalizate nu se șterg.')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
                             foreach ($records as $record) {
                                 static::reversePayout($record);
@@ -1314,29 +1316,28 @@ class PayoutResource extends Resource
      */
     public static function reversePayout(MarketplacePayout $payout): void
     {
+        // The money already left: reversing would restore the balance and allow a second payment.
+        if ($payout->status === 'completed') {
+            \Filament\Notifications\Notification::make()
+                ->title('Decontul finalizat nu poate fi șters')
+                ->body("Decontul {$payout->reference} a fost deja plătit.")
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         \DB::beginTransaction();
         try {
             $organizer = $payout->organizer;
 
-            // 1. Return balance to organizer if payout was approved/completed
-            if (in_array($payout->status, ['approved', 'processing', 'completed']) && $organizer) {
-                $organizer->returnPendingBalance($payout->amount);
+            // 1. Return the reserved cash to the organizer, then free the advance it consumed
+            if (in_array($payout->status, ['approved', 'processing']) && $organizer) {
+                $organizer->returnPendingBalance($payout->cashAmount());
             }
+            $payout->releaseAdvanceAllocations();
 
-            // 2. Reverse ticket_breakdown: decrement quota_sold on ticket types
-            $ticketBreakdown = $payout->ticket_breakdown ?? [];
-            foreach ($ticketBreakdown as $item) {
-                $ticketTypeId = $item['ticket_type_id'] ?? null;
-                $qty = $item['quantity'] ?? $item['tickets'] ?? 0;
-                if ($ticketTypeId && $qty > 0) {
-                    \DB::table('ticket_types')
-                        ->where('id', $ticketTypeId)
-                        ->where('quota_sold', '>=', $qty)
-                        ->decrement('quota_sold', $qty);
-                }
-            }
-
-            // 3. Delete decont document + PDF file
+            // 2. Delete decont document + PDF file
             $decont = $payout->decontDocument;
             if ($decont) {
                 if ($decont->file_path) {
@@ -1345,16 +1346,16 @@ class PayoutResource extends Resource
                 $decont->delete();
             }
 
-            // 4. Delete associated invoice
+            // 3. Delete associated invoice
             $invoice = $payout->invoice;
             if ($invoice) {
                 $invoice->delete();
             }
 
-            // 5. Delete transactions
+            // 4. Delete transactions
             $payout->transactions()->delete();
 
-            // 6. Delete the payout itself
+            // 5. Delete the payout itself
             $payout->delete();
 
             \DB::commit();
