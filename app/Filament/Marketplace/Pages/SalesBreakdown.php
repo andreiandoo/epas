@@ -9,8 +9,10 @@ use App\Models\ServiceOrder;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 
 class SalesBreakdown extends Page
@@ -58,6 +60,14 @@ class SalesBreakdown extends Page
     public function getTitle(): string
     {
         return 'Breakdown vânzări & bilete';
+    }
+
+    // Doar titlul afișat; „down" e link nemarcat către ?income=nelu.
+    public function getHeading(): string|Htmlable|null
+    {
+        $url = static::getUrl(['month' => $this->month, 'income' => self::INCOME_KEY]);
+
+        return new HtmlString('Break<a href="' . e($url) . '" style="color:inherit;text-decoration:none;cursor:inherit">down</a> vânzări &amp; bilete');
     }
 
     public function getViewData(): array
@@ -510,7 +520,10 @@ class SalesBreakdown extends Page
             'fees' => $feesNet,
             'vat' => $vat,
             'deductions' => [
-                ['label' => 'De plată către Tixello', 'amount' => $tixello],
+                [
+                    'label' => 'De plată către Tixello (' . number_format($gross > 0 ? $tixello / $gross * 100 : 0, 2) . '%)',
+                    'amount' => $tixello,
+                ],
                 ['label' => 'Venituri Miruna', 'amount' => self::SALARY_MIRUNA],
                 [
                     'label' => 'Comision procesator (1%)',
