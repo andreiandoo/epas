@@ -147,12 +147,11 @@ class ViewOrder extends ViewRecord
                             'confirmed' => 'Confirmată',
                             'completed' => 'Finalizată',
                             'cancelled' => 'Anulată',
-                            'refunded' => 'Rambursată',
-                            'partially_refunded' => 'Rambursată parțial',
                             'failed' => 'Eșuată',
                             'expired' => 'Expirată',
                         ])
                         ->default(fn () => $this->record->status)
+                        ->helperText('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.')
                         ->required(),
                     Forms\Components\Textarea::make('reason')
                         ->label('Reason for change (optional)')

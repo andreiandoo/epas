@@ -206,9 +206,8 @@ class OrderResource extends Resource
                                                 'confirmed' => 'Confirmată',
                                                 'completed' => 'Finalizată',
                                                 'cancelled' => 'Anulată',
-                                                'refunded' => 'Rambursată',
-                                                'partially_refunded' => 'Rambursată parțial',
                                             ])
+                                            ->helperText('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.')
                                             ->required(),
                                     ])
                                     ->action(fn ($record, array $data) => $record->update(['status' => $data['status']])),
@@ -293,7 +292,8 @@ class OrderResource extends Resource
                             ->tel()
                             ->maxLength(50),
                         Forms\Components\Select::make('status')
-                            ->options([
+                            // Refunded statuses are set only by the refund flow; a record already there keeps its value.
+                            ->options(fn ($record): array => collect([
                                 'pending' => 'În așteptare',
                                 'paid' => 'Plătit',
                                 'confirmed' => 'Confirmat',
@@ -303,7 +303,8 @@ class OrderResource extends Resource
                                 'partially_refunded' => 'Rambursat parțial',
                                 'failed' => 'Eșuat',
                                 'expired' => 'Expirat',
-                            ])
+                            ])->reject(fn (string $label, string $status): bool => in_array($status, ['refunded', 'partially_refunded'], true)
+                                && $status !== $record?->status)->all())
                             ->native(false)
                             ->required(),
                         Forms\Components\TextInput::make('total')
