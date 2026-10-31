@@ -95,7 +95,7 @@
 </div>
 @endif
 <div class="sticky top-0 z-20 px-4 py-3 mb-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700">
-    <div class="flex items-center justify-between max-w-full gap-4">
+    <div class="flex items-center justify-between max-w-full gap-4 ep-topbar-row" @if($panelType === 'marketplace') x-data="{ searchOpen: false }" @endif>
         {{-- Sidebar toggle. Mobile: open the drawer. Desktop: collapse/expand the
              sidebar to an icon-only rail. Filament's native isOpenDesktop state is
              inert in this build, so we drive a custom `ep-rail-collapsed` class on
@@ -113,7 +113,7 @@
         </button>
 
         {{-- Center: Global Search --}}
-        <div class="flex-1 hidden md:block">
+        <div class="flex-1 hidden md:block ep-mobile-search" @if($panelType === 'marketplace') x-bind:class="{ 'is-open': searchOpen }" @endif>
             <div class="epas-global-search">
                 <input
                     type="text"
@@ -136,6 +136,21 @@
 
         {{-- Right: Marketplace Switcher (for super-admins), Language Selector, Public Site Link & User Menu --}}
         <div class="flex items-center gap-3">
+            {{-- Search toggle, phones only (marketplace panel) --}}
+            @if($panelType === 'marketplace')
+                <button
+                    type="button"
+                    x-on:click="searchOpen = !searchOpen; if (searchOpen) $nextTick(() => document.getElementById('epas-global-search-input')?.focus())"
+                    x-bind:aria-expanded="searchOpen"
+                    class="items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg ep-mobile-search-btn shrink-0 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    aria-label="{{ __('Search') }}"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </button>
+            @endif
+
             {{-- Marketplace Switcher (only for super-admins in marketplace panel) --}}
             @if($isSuperAdminInMarketplace && count($marketplaceClients) > 0)
                 <div x-data="{ open: false }" class="relative">
@@ -480,6 +495,28 @@
      admin, marketplace and tenant panels (this partial renders on all three). --}}
 @verbatim
 <style>
+    /* Phones: the search is hidden by default and opens on its own row. */
+    .ep-mobile-search-btn {
+        display: none;
+    }
+    @media (max-width: 767px) {
+        body.fi-panel-marketplace .ep-mobile-search-btn {
+            display: flex;
+        }
+        body.fi-panel-marketplace .ep-topbar-row {
+            flex-wrap: wrap;
+        }
+        body.fi-panel-marketplace .ep-mobile-search.is-open {
+            display: block !important;
+            flex: 1 0 100%;
+            order: 3;
+        }
+        /* Under 16px iOS zooms the page on focus. */
+        body.fi-panel-marketplace .ep-mobile-search input {
+            font-size: 16px;
+        }
+    }
+
     @media (min-width: 1024px) {
         html.ep-rail-collapsed {
             --sidebar-width: 5rem;
