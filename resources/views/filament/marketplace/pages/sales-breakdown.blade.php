@@ -94,7 +94,12 @@
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach($inc['deductions'] as $row)
                             <div class="flex items-baseline justify-between gap-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">
-                                <span>{{ $row['label'] }}</span>
+                                <span>
+                                    {{ $row['label'] }}
+                                    @if(!empty($row['note']))
+                                        <span class="block text-[11px] leading-tight text-gray-500 dark:text-gray-400">{{ $row['note'] }}</span>
+                                    @endif
+                                </span>
                                 <span class="tabular-nums text-rose-600 dark:text-rose-400">&minus; {{ number_format($row['amount'], 2) }} {{ $d['currency'] }}</span>
                             </div>
                         @endforeach

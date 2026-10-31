@@ -409,7 +409,28 @@ class SalesBreakdown extends Page
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
                 ->selectRaw("COALESCE(SUM(COALESCE((meta->>'insurance_amount')::numeric, 0) - COALESCE((meta->>'insurance_vat')::numeric, 0) + COALESCE((meta->>'cultural_card_surcharge')::numeric, 0) - COALESCE((meta->>'cultural_card_vat')::numeric, 0)), 0) as total")
                 ->value('total');
-            $income = $this->buildIncome($marketplace, round($onlineTotal, 2), round($feesNet, 2));
+
+            // Baza comisionului de procesator = tot ce a trecut prin procesator
+            // în lună: comisionul nu se întoarce la refund, deci intră și
+            // comenzile rambursate. Se iau la valoarea comenzii, o singură dată;
+            // sumele din „Returnat prin procesator" nu se mai adaugă peste.
+            $partiallyRefundedTotal = (float) $scopeOrders(Order::query())
+                ->where('status', 'partially_refunded')
+                ->whereNotIn('source', $posSources)
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->sum('total');
+            // Serviciile plătite prin transfer bancar nu trec prin procesator.
+            $cardServicesTotal = (float) ServiceOrder::where('marketplace_client_id', $marketplaceId)
+                ->where('payment_status', 'paid')
+                ->where(fn ($q) => $q->whereNull('payment_method')->orWhere('payment_method', '<>', 'transfer'))
+                ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                ->sum('total');
+
+            $income = $this->buildIncome($marketplace, [
+                'online' => round($onlineTotal, 2),
+                'refunded' => round($refundedOrdersTotal + $partiallyRefundedTotal, 2),
+                'services' => round($cardServicesTotal, 2),
+            ], round($feesNet, 2));
         }
         $incomeQuery = $this->showIncome ? '&income=' . self::INCOME_KEY : '';
 
@@ -466,7 +487,7 @@ class SalesBreakdown extends Page
      * altfel Tixello (care ia și din servicii) și TVA-ul s-ar scădea din bani
      * care nu au fost numărați.
      */
-    private function buildIncome(MarketplaceClient $marketplace, float $onlineTotal, float $feesNet): array
+    private function buildIncome(MarketplaceClient $marketplace, array $processorBase, float $feesNet): array
     {
         [$billing, $monthStats] = Dashboard::monthFiguresFor($marketplace, $this->month);
 
@@ -476,7 +497,7 @@ class SalesBreakdown extends Page
         $gross = round($commission + $services + $feesNet + $vat, 2);
 
         $tixello = round((float) ($billing['grand_total'] ?? 0), 2);
-        $processor = round($onlineTotal * self::PROCESSOR_RATE / 100, 2);
+        $processor = round(array_sum($processorBase) * self::PROCESSOR_RATE / 100, 2);
         $afterCosts = round($gross - $tixello - self::SALARY_MIRUNA - $processor - self::SALARY_CATI - $vat, 2);
 
         $profitTax = round(max(0.0, $afterCosts) * self::PROFIT_TAX_RATE / 100, 2);
@@ -491,7 +512,14 @@ class SalesBreakdown extends Page
             'deductions' => [
                 ['label' => 'De plată către Tixello', 'amount' => $tixello],
                 ['label' => 'Venituri Miruna', 'amount' => self::SALARY_MIRUNA],
-                ['label' => 'Comision procesator (1% din încasat online)', 'amount' => $processor],
+                [
+                    'label' => 'Comision procesator (1%)',
+                    'amount' => $processor,
+                    'note' => 'din ' . number_format(array_sum($processorBase), 2)
+                        . ': online ' . number_format($processorBase['online'], 2)
+                        . ' · rambursate ' . number_format($processorBase['refunded'], 2)
+                        . ' · servicii ' . number_format($processorBase['services'], 2),
+                ],
                 ['label' => 'Venit Cati', 'amount' => self::SALARY_CATI],
                 ['label' => 'TVA de plată', 'amount' => $vat],
             ],
