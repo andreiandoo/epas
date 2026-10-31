@@ -5,11 +5,13 @@ namespace App\Filament\Marketplace\Pages;
 use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\Order;
+use App\Models\ServiceOrder;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Locked;
 
 class SalesBreakdown extends Page
 {
@@ -27,10 +29,22 @@ class SalesBreakdown extends Page
     // Month navigation is URL-based via plain <a href> links.
     public string $month = '';
 
+    // Secțiunea de profit apare doar cu ?income=nelu în link.
+    #[Locked]
+    public bool $showIncome = false;
+
+    private const INCOME_KEY = 'nelu';
+    private const SALARY_MIRUNA = 4500.0;
+    private const SALARY_CATI = 4000.0;
+    private const PROCESSOR_RATE = 1.0;
+    private const PROFIT_TAX_RATE = 16.0;
+    private const ACCOUNTING_FEE = 500.0;
+
     public function mount(): void
     {
         $admin = Auth::guard('marketplace_admin')->user();
         $this->marketplace = $admin?->marketplaceClient;
+        $this->showIncome = request()->query('income') === self::INCOME_KEY;
 
         $requested = request()->query('month');
         if (is_string($requested) && preg_match('/^\d{4}-\d{2}$/', $requested)) {
@@ -55,7 +69,8 @@ class SalesBreakdown extends Page
 
         $marketplaceId = (int) $marketplace->id;
         $tz = 'Europe/Bucharest';
-        $monthDate = Carbon::createFromFormat('Y-m', $this->month);
+        // '!' = ziua 1: fără el, pe 31 ale lunii, 2026-09 sărea în octombrie.
+        $monthDate = Carbon::createFromFormat('!Y-m', $this->month);
         $monthStart = $monthDate->copy()->startOfMonth()->shiftTimezone($tz)->utc();
         $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay()->shiftTimezone($tz)->utc();
         $currency = $marketplace->currency ?? 'RON';
@@ -386,17 +401,30 @@ class SalesBreakdown extends Page
         $processorAcceptedTotal = round($onlineTotal + $refundedOrdersTotal, 2);
         $processorAcceptedCount = $onlineOrderCount + $refundedOrdersCount;
 
+        $income = null;
+        if ($this->showIncome) {
+            // Taxa de retur + suplimentul card cultural, fără TVA.
+            $feesNet = (float) $scopeOrders(Order::query())
+                ->whereIn('status', $paidStatuses)
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->selectRaw("COALESCE(SUM(COALESCE((meta->>'insurance_amount')::numeric, 0) - COALESCE((meta->>'insurance_vat')::numeric, 0) + COALESCE((meta->>'cultural_card_surcharge')::numeric, 0) - COALESCE((meta->>'cultural_card_vat')::numeric, 0)), 0) as total")
+                ->value('total');
+            $income = $this->buildIncome($marketplace, round($onlineTotal, 2), round($feesNet, 2));
+        }
+        $incomeQuery = $this->showIncome ? '&income=' . self::INCOME_KEY : '';
+
         return [
             'marketplace' => $marketplace,
             'data' => [
                 'month' => $this->month,
                 'month_label' => $monthDate->translatedFormat('F Y'),
-                'prev_url' => url()->current() . '?month=' . $monthDate->copy()->subMonth()->format('Y-m'),
+                'prev_url' => url()->current() . '?month=' . $monthDate->copy()->subMonth()->format('Y-m') . $incomeQuery,
                 'next_url' => $monthDate->format('Y-m') === Carbon::now($tz)->format('Y-m')
                     ? null
-                    : url()->current() . '?month=' . $monthDate->copy()->addMonth()->format('Y-m'),
+                    : url()->current() . '?month=' . $monthDate->copy()->addMonth()->format('Y-m') . $incomeQuery,
                 'is_current_month' => $monthDate->format('Y-m') === Carbon::now($tz)->format('Y-m'),
                 'currency' => $currency,
+                'income' => $income,
 
                 // Block A — online
                 'online_total' => round($onlineTotal, 2),
@@ -428,6 +456,51 @@ class SalesBreakdown extends Page
                 'pos_ticket_count' => $posTicketTotal,
                 'pos_rows' => $posRows,
             ],
+        ];
+    }
+
+    /**
+     * Calculul de profit pe lună. Comisionul, TVA-ul și factura Tixello sunt
+     * aceleași cifre ca pe Dashboard. „Venituri brute" de pe Dashboard e doar
+     * comisionul, fără TVA; aici adunăm și servicii, taxe și TVA-ul colectat,
+     * altfel Tixello (care ia și din servicii) și TVA-ul s-ar scădea din bani
+     * care nu au fost numărați.
+     */
+    private function buildIncome(MarketplaceClient $marketplace, float $onlineTotal, float $feesNet): array
+    {
+        [$billing, $monthStats] = Dashboard::monthFiguresFor($marketplace, $this->month);
+
+        $commission = (float) ($monthStats['total_commission'] ?? 0);
+        $services = round((float) ($billing['services_total'] ?? 0) / ServiceOrder::TIXELLO_SHARE, 2);
+        $vat = (float) ($monthStats['vat']['total'] ?? 0);
+        $gross = round($commission + $services + $feesNet + $vat, 2);
+
+        $tixello = round((float) ($billing['grand_total'] ?? 0), 2);
+        $processor = round($onlineTotal * self::PROCESSOR_RATE / 100, 2);
+        $afterCosts = round($gross - $tixello - self::SALARY_MIRUNA - $processor - self::SALARY_CATI - $vat, 2);
+
+        $profitTax = round(max(0.0, $afterCosts) * self::PROFIT_TAX_RATE / 100, 2);
+        $final = round($afterCosts - $profitTax - self::ACCOUNTING_FEE, 2);
+
+        return [
+            'gross' => $gross,
+            'commission' => $commission,
+            'services' => $services,
+            'fees' => $feesNet,
+            'vat' => $vat,
+            'deductions' => [
+                ['label' => 'De plată către Tixello', 'amount' => $tixello],
+                ['label' => 'Venituri Miruna', 'amount' => self::SALARY_MIRUNA],
+                ['label' => 'Comision procesator (1% din încasat online)', 'amount' => $processor],
+                ['label' => 'Venit Cati', 'amount' => self::SALARY_CATI],
+                ['label' => 'TVA de plată', 'amount' => $vat],
+            ],
+            'after_costs' => $afterCosts,
+            'final_deductions' => [
+                ['label' => 'Impozit 16%', 'amount' => $profitTax],
+                ['label' => 'Contabilitate', 'amount' => self::ACCOUNTING_FEE],
+            ],
+            'final' => $final,
         ];
     }
 }

@@ -77,6 +77,57 @@
         </div>
 
         {{-- ================================================================ --}}
+        {{-- Profit lunar — doar cu ?income=nelu în link                       --}}
+        {{-- ================================================================ --}}
+        @if(!empty($d['income']))
+            @php $inc = $d['income']; @endphp
+            <div class="grid grid-cols-1 gap-3 mb-5 lg:grid-cols-2">
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Venituri și cheltuieli</h3>
+                    <div class="flex items-baseline justify-between gap-4 text-sm font-semibold text-gray-900 dark:text-white">
+                        <span>Total venituri brute</span>
+                        <span class="tabular-nums">{{ number_format($inc['gross'], 2) }} {{ $d['currency'] }}</span>
+                    </div>
+                    <p class="mt-0.5 mb-3 text-[11px] leading-tight text-gray-500 dark:text-gray-400">
+                        comision {{ number_format($inc['commission'], 2) }} &middot; servicii {{ number_format($inc['services'], 2) }} &middot; taxe retur/card cultural {{ number_format($inc['fees'], 2) }} &middot; TVA colectat {{ number_format($inc['vat'], 2) }}
+                    </p>
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($inc['deductions'] as $row)
+                            <div class="flex items-baseline justify-between gap-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">
+                                <span>{{ $row['label'] }}</span>
+                                <span class="tabular-nums text-rose-600 dark:text-rose-400">&minus; {{ number_format($row['amount'], 2) }} {{ $d['currency'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="flex items-baseline justify-between gap-4 pt-2 mt-2 text-base font-bold text-gray-900 border-t-2 border-gray-300 dark:text-white dark:border-gray-600">
+                        <span>Rămâne</span>
+                        <span class="tabular-nums {{ $inc['after_costs'] < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' }}">{{ number_format($inc['after_costs'], 2) }} {{ $d['currency'] }}</span>
+                    </div>
+                </div>
+
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">După impozit</h3>
+                    <div class="flex items-baseline justify-between gap-4 text-sm font-semibold text-gray-900 dark:text-white">
+                        <span>Rămas din calculul anterior</span>
+                        <span class="tabular-nums">{{ number_format($inc['after_costs'], 2) }} {{ $d['currency'] }}</span>
+                    </div>
+                    <div class="mt-3 divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($inc['final_deductions'] as $row)
+                            <div class="flex items-baseline justify-between gap-4 py-1.5 text-sm text-gray-700 dark:text-gray-300">
+                                <span>{{ $row['label'] }}</span>
+                                <span class="tabular-nums text-rose-600 dark:text-rose-400">&minus; {{ number_format($row['amount'], 2) }} {{ $d['currency'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="flex items-baseline justify-between gap-4 pt-2 mt-2 text-base font-bold text-gray-900 border-t-2 border-gray-300 dark:text-white dark:border-gray-600">
+                        <span>Rămâne</span>
+                        <span class="tabular-nums {{ $inc['final'] < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' }}">{{ number_format($inc['final'], 2) }} {{ $d['currency'] }}</span>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- ================================================================ --}}
         {{-- BLOCK A — ONLINE SALES per event (accordion, collapsed default)   --}}
         {{-- ================================================================ --}}
         <div x-data="{ open: false }" class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">

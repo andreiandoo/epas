@@ -108,6 +108,42 @@ class Dashboard extends Page
         return Cache::remember($cacheKey, $ttl, $compute);
     }
 
+    /**
+     * Tixello billing + month stats for a month, for other pages that must show
+     * the same figures as the dashboard (same snapshots and cache keys).
+     *
+     * @return array{0: array, 1: array} [billing, month stats]
+     */
+    public static function monthFiguresFor(MarketplaceClient $marketplace, string $month): array
+    {
+        $dash = new self();
+        $dash->marketplace = $marketplace;
+
+        return $dash->monthFigures((int) $marketplace->id, $month);
+    }
+
+    private function monthFigures(int $marketplaceId, string $month): array
+    {
+        $billingData = $this->monthValue('billing', $marketplaceId, $month, "mp_dash_billing_{$marketplaceId}_{$month}", 600, function () use ($marketplaceId, $month) {
+            return $this->computeMonthlyBilling($marketplaceId, $month);
+        });
+
+        $monthStats = $this->monthValue('month_stats', $marketplaceId, $month, "mp_dash_month_v2_{$marketplaceId}_{$month}", 300, function () use ($marketplaceId, $month) {
+            return $this->computeCurrentMonthStats($marketplaceId, $month);
+        });
+        // The VAT of the current month is refreshed every minute, apart from the
+        // month stats (up to 10 min old), so it follows today's sales.
+        if ($month === Carbon::now('Europe/Bucharest')->format('Y-m')) {
+            $monthStats['vat'] = Cache::remember(
+                "mp_dash_vat_v1_{$marketplaceId}_{$month}",
+                60,
+                fn () => $this->computeMonthVat($marketplaceId, Carbon::createFromFormat('!Y-m', $month, 'Europe/Bucharest'), (float) ($monthStats['total_commission'] ?? 0))
+            );
+        }
+
+        return [$billingData, $monthStats];
+    }
+
     public function getTitle(): string
     {
         return '';
@@ -302,22 +338,7 @@ class Dashboard extends Page
 
         // Selected month stats
         $month = $this->selectedMonth ?: Carbon::now('Europe/Bucharest')->format('Y-m');
-        $billingData = $this->monthValue('billing', $marketplaceId, $month, "mp_dash_billing_{$marketplaceId}_{$month}", 600, function () use ($marketplaceId, $month) {
-            return $this->computeMonthlyBilling($marketplaceId, $month);
-        });
-
-        $monthStats = $this->monthValue('month_stats', $marketplaceId, $month, "mp_dash_month_v2_{$marketplaceId}_{$month}", 300, function () use ($marketplaceId, $month) {
-            return $this->computeCurrentMonthStats($marketplaceId, $month);
-        });
-        // The VAT of the current month is refreshed every minute, apart from the
-        // month stats (up to 10 min old), so it follows today's sales.
-        if ($month === Carbon::now('Europe/Bucharest')->format('Y-m')) {
-            $monthStats['vat'] = Cache::remember(
-                "mp_dash_vat_v1_{$marketplaceId}_{$month}",
-                60,
-                fn () => $this->computeMonthVat($marketplaceId, Carbon::createFromFormat('!Y-m', $month, 'Europe/Bucharest'), (float) ($monthStats['total_commission'] ?? 0))
-            );
-        }
+        [$billingData, $monthStats] = $this->monthFigures($marketplaceId, $month);
 
         // Today stats (Romania timezone)
         $todayStats = Cache::remember("mp_dash_today_v2_{$marketplaceId}", 30, function () use ($marketplaceId) {
