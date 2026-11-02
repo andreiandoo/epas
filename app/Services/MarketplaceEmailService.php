@@ -29,16 +29,18 @@ class MarketplaceEmailService
      *
      * Falls back to a hardcoded subject/HTML when no DB template with $slug
      * exists, so notifications work out of the box without seeders.
+     * An explicit $recipient takes the place of the configured setting.
      */
     public function sendAdminNotification(
         string $slug,
         string $settingKey,
         array $variables,
         string $fallbackSubject,
-        string $fallbackHtml
+        string $fallbackHtml,
+        ?string $recipient = null
     ): bool {
         $settings = $this->marketplace->settings ?? [];
-        $recipient = $settings['admin_notifications'][$settingKey] ?? '';
+        $recipient = $recipient ?: ($settings['admin_notifications'][$settingKey] ?? '');
 
         if (!$recipient) {
             return false;

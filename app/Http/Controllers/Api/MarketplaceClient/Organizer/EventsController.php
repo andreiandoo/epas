@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Jobs\SendEventStatusAlertJob;
 use App\Models\Event;
 use App\Models\EventGoal;
 use App\Models\EventMilestone;
@@ -774,6 +775,8 @@ class EventsController extends BaseController
 
             DB::commit();
 
+            $this->sendStatusAlert($request, $event, $organizer, SendEventStatusAlertJob::ACTION_CANCELLED, $pendingOrders->count());
+
             $message = 'Eveniment anulat. ' . $pendingOrders->count() . ' comenzi neplătite au fost anulate.';
             if ($paidOrdersCount > 0) {
                 $message .= ' ' . $paidOrdersCount . ' comenzi plătite necesită decizie manuală de rambursare din panoul de administrare.';
@@ -850,6 +853,10 @@ class EventsController extends BaseController
 
             if (!empty($updateData)) {
                 $event->update($updateData);
+
+                if ($event->is_postponed && $event->wasChanged('is_postponed')) {
+                    $this->sendStatusAlert($request, $event, $organizer, SendEventStatusAlertJob::ACTION_POSTPONED);
+                }
             }
 
             return $this->success([
@@ -858,6 +865,31 @@ class EventsController extends BaseController
 
         } catch (\Exception $e) {
             return $this->error('Failed to update event status: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Queue the marketplace alert for a cancelled or postponed event. The
+     * organizer's action is already saved, so a queue failure must not fail it.
+     */
+    protected function sendStatusAlert(Request $request, Event $event, MarketplaceOrganizer $organizer, string $action, int $cancelledPendingOrders = 0): void
+    {
+        try {
+            $member = $this->currentTeamMember($request);
+
+            SendEventStatusAlertJob::dispatch($event->id, $action, [
+                'organizer' => $organizer->company_name ?: $organizer->name,
+                'organizer_email' => $organizer->email,
+                'organizer_phone' => $organizer->phone,
+                'member_name' => $member?->name,
+                'member_email' => $member?->email,
+            ], now()->toIso8601String(), $cancelledPendingOrders);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to queue event status alert', [
+                'event_id' => $event->id,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
