@@ -9,6 +9,7 @@ use App\Services\PaymentRefundService;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\HtmlString;
@@ -691,20 +692,69 @@ class ViewOrder extends ViewRecord
 
                         return $reason
                             ? new HtmlString('<span style="color:#b91c1c;">' . e($reason) . '</span>')
-                            : 'Datele firmei se iau de la ANAF după CUI. Platforma emite imediat factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.';
+                            : 'Introdu CUI-ul și caută firma la ANAF sau completează datele manual. Platforma emite imediat factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.';
+                    })
+                    ->fillForm(function (): array {
+                        $saved = $this->record->meta['company_billing']
+                            ?? data_get(MarketplaceCustomer::find($this->record->marketplace_customer_id)?->settings, 'company_billing', []);
+
+                        return array_intersect_key((array) $saved, array_flip(['cui', 'name', 'reg_com', 'address', 'city', 'county', 'vat_payer']));
                     })
                     ->form([
+                        Forms\Components\Hidden::make('verified_cui'),
                         Forms\Components\TextInput::make('cui')
                             ->label('CUI firmă')
                             ->placeholder('RO12345678')
-                            ->default(fn () => $this->record->meta['company_billing']['cui'] ?? null)
+                            ->helperText('Apasă lupa pentru datele de la ANAF. Dacă firma nu e găsită, completează manual câmpurile de mai jos.')
                             ->required()
-                            ->maxLength(20),
+                            ->maxLength(20)
+                            ->suffixAction(
+                                Actions\Action::make('anaf_lookup')
+                                    ->icon('heroicon-o-magnifying-glass')
+                                    ->tooltip('Caută la ANAF')
+                                    ->action(function (Get $get, Set $set) use ($service): void {
+                                        $set('verified_cui', null);
+                                        try {
+                                            $company = $service->lookupCompany((string) $get('cui'));
+                                        } catch (\InvalidArgumentException $e) {
+                                            Notification::make()->warning()->title('Firma nu a putut fi preluată de la ANAF')->body($e->getMessage() . ' Poți completa datele manual.')->send();
+                                            return;
+                                        }
+                                        foreach (['name', 'reg_com', 'address', 'city', 'county', 'vat_payer'] as $field) {
+                                            $set($field, $company[$field]);
+                                        }
+                                        $set('verified_cui', $company['cui']);
+                                        Notification::make()->success()->title('Date preluate de la ANAF')->body($company['name'])->send();
+                                    })
+                            ),
+                        Forms\Components\TextInput::make('name')
+                            ->label('Denumire firmă')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('reg_com')
+                            ->label('Nr. Registrul Comerțului')
+                            ->placeholder('J40/1234/2020')
+                            ->maxLength(50),
+                        Forms\Components\TextInput::make('address')
+                            ->label('Adresă')
+                            ->required()
+                            ->maxLength(500),
+                        Forms\Components\TextInput::make('city')
+                            ->label('Localitate')
+                            ->required()
+                            ->maxLength(120),
+                        Forms\Components\TextInput::make('county')
+                            ->label('Județ')
+                            ->required()
+                            ->maxLength(120),
+                        Forms\Components\Toggle::make('vat_payer')
+                            ->label('Plătitoare de TVA'),
                     ])
                     ->modalSubmitActionLabel('Emite facturile')
                     ->action(function (array $data) use ($service, $actor): void {
                         try {
-                            $created = $service->requestForPaidOrder($this->record, $data['cui'], 'admin', $actor());
+                            $company = $service->companyFromOperator($data);
+                            $created = $service->requestForPaidOrder($this->record, $company['cui'], 'admin', $actor(), $company);
                             Notification::make()->success()
                                 ->title('Cererea de factură a fost înregistrată')
                                 ->body(count($created) . ' factur' . (count($created) === 1 ? 'ă' : 'i') . ' de emis. Factura platformei pleacă automat la client în câteva minute.')

@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
  *   cere factura, o încarcă, iar noi o trimitem clientului. Organizatorul
  *   persoană fizică nu emite factură: rândul lui rămâne „not_applicable”.
  * - doar firme românești, cu CUI activ la ANAF; datele firmei vin de la ANAF.
+ *   Operatorul din admin le poate corecta sau completa manual.
  * - cererea se refuză dacă un decont al comenzii are deja factura
  *   „Client Divers” emisă (comisionul a fost facturat acolo).
  */
@@ -92,6 +93,34 @@ class CompanyInvoiceService
             'county' => (string) ($parsed['county'] ?? $data['state'] ?? ''),
             'country' => 'RO',
             'verified_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Datele firmei din formularul operatorului. Dacă CUI-ul a fost găsit la
+     * ANAF rămâne verificat, altfel firma e marcată „manual” și nu se mai
+     * verifică la emitere.
+     */
+    public function companyFromOperator(array $input): array
+    {
+        $cui = preg_replace('/^RO/', '', strtoupper(preg_replace('/\s+/', '', (string) ($input['cui'] ?? ''))));
+        if (!app(AnafService::class)->isValidCui($cui)) {
+            throw new \InvalidArgumentException('CUI-ul nu este valid. Folosește un CUI românesc (ex. 12345678 sau RO12345678).');
+        }
+
+        $verified = (string) ($input['verified_cui'] ?? '') === $cui;
+
+        return [
+            'name' => trim((string) ($input['name'] ?? '')),
+            'cui' => $cui,
+            'vat_payer' => (bool) ($input['vat_payer'] ?? false),
+            'reg_com' => trim((string) ($input['reg_com'] ?? '')),
+            'address' => trim((string) ($input['address'] ?? '')),
+            'city' => trim((string) ($input['city'] ?? '')),
+            'county' => trim((string) ($input['county'] ?? '')),
+            'country' => 'RO',
+            'verified_at' => $verified ? now()->toIso8601String() : null,
+            'manual' => !$verified,
         ];
     }
 
@@ -229,16 +258,17 @@ class CompanyInvoiceService
     /**
      * Cerere după cumpărare (contul clientului sau operatorul din admin).
      * Aruncă \InvalidArgumentException cu mesajul pentru utilizator.
+     * $company vine completat de operator; fără el, datele se iau de la ANAF.
      *
      * @return array<int, OrderCompanyInvoice>
      */
-    public function requestForPaidOrder(Order $order, string $cui, string $via, ?string $actor = null): array
+    public function requestForPaidOrder(Order $order, string $cui, string $via, ?string $actor = null, ?array $company = null): array
     {
         if ($reason = $this->ineligibleReason($order)) {
             throw new \InvalidArgumentException($reason);
         }
 
-        $company = $this->lookupCompany($cui);
+        $company ??= $this->lookupCompany($cui);
         $this->storeOnOrder($order, $company, $via, $actor);
 
         return $this->processPaidOrder($order->fresh());
@@ -289,7 +319,7 @@ class CompanyInvoiceService
 
         // Firma neverificată în checkout (ANAF picat): o verificăm acum
         $company = $meta['company_billing'];
-        if (empty($company['verified_at'])) {
+        if (empty($company['verified_at']) && empty($company['manual'])) {
             try {
                 $company = $this->lookupCompany((string) $company['cui']);
                 $meta['company_billing'] = $company;
