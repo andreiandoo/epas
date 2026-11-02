@@ -2415,17 +2415,10 @@ class MarketplaceTaxTemplate extends Model
                 $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
                 $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
             }
-            // Use breakdown qty (from this decont) over total event sold
-            if ($totalTicketsSold > 0) {
-                $variables['total_tickets_sold'] = $totalTicketsSold;
-            } elseif ($payout->gross_amount > 0 && !empty($events)) {
-                // Fallback: estimate from gross amount and average ticket price
-                $event = $events->first();
-                $avgPrice = $event?->ticketTypes->avg(fn ($tt) => $tt->price_cents > 0 ? $tt->price_cents / 100 : 0);
-                if ($avgPrice > 0) {
-                    $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
-                }
-            }
+            // On a decont the count comes only from its breakdown, even when it
+            // is 0 — never the lifetime event total set earlier (a POS-only
+            // society's zero decont printed 46327 on payout 3564).
+            $variables['total_tickets_sold'] = $totalTicketsSold;
             // Refunded tickets aggregate for the decont template (filling
             // section 2 — "Taxe pentru bilete returnate"). Sourced from
             // MarketplaceRefundItem rows attached to refund_requests that
