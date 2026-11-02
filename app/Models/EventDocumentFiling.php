@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A fiscal document of an event filed with the city hall — emailed, or
- * confirmed as filed through a third-party solution.
+ * confirmed as filed through a third-party solution or by hand.
  *
  * Rows are never deleted: a mistaken one is voided, and a document
  * regenerated after its filing simply stops being covered by it.
@@ -21,6 +21,9 @@ class EventDocumentFiling extends Model
     /** The organizer filed it themselves and confirmed it from their account. */
     public const METHOD_ORGANIZER = 'organizer';
 
+    /** An operator filed it outside the system and confirmed it here. */
+    public const METHOD_MANUAL = 'manual';
+
     protected $fillable = [
         'marketplace_client_id',
         'event_id',
@@ -32,6 +35,9 @@ class EventDocumentFiling extends Model
         'sent_to',
         'third_party_name',
         'email_log_id',
+        'registration_number',
+        'registration_number_at',
+        'registration_number_by_name',
         'filed_by_id',
         'filed_by_name',
         'filed_at',
@@ -41,6 +47,7 @@ class EventDocumentFiling extends Model
 
     protected $casts = [
         'document_generated_at' => 'datetime',
+        'registration_number_at' => 'datetime',
         'filed_at' => 'datetime',
         'voided_at' => 'datetime',
     ];
@@ -65,6 +72,7 @@ class EventDocumentFiling extends Model
         return match ($this->method) {
             self::METHOD_THIRD_PARTY => 'terț' . ($this->third_party_name ? ' (' . $this->third_party_name . ')' : ''),
             self::METHOD_ORGANIZER => 'confirmare organizator',
+            self::METHOD_MANUAL => 'depunere manuală',
             default => 'email',
         };
     }

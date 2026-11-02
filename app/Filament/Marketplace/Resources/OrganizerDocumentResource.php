@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Resources\OrganizerDocumentResource\Pages;
 use App\Filament\Marketplace\Resources\PayoutResource;
 use App\Models\MarketplacePayout;
 use App\Models\OrganizerDocument;
+use App\Services\Marketplace\EventDocumentFilingService;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -101,6 +102,41 @@ class OrganizerDocumentResource extends Resource
                                 </div>";
 
                                 return new HtmlString($html);
+                            }),
+                    ]),
+
+                // ── Filing with the city hall (fiscal documents only) ──
+                Section::make('Depunere la primărie')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->visible(fn ($record) => $record?->event
+                        && isset(EventDocumentFilingService::TYPE_LABELS[$record->document_type])
+                        && EventDocumentFilingService::available())
+                    ->schema([
+                        Forms\Components\Placeholder::make('document_filing')
+                            ->label('')
+                            ->content(function ($record) {
+                                if (!$record?->event) return '-';
+
+                                // Never let this block take the document page down with it.
+                                try {
+                                    $status = app(EventDocumentFilingService::class)->documentStatus($record->event, $record->document_type);
+                                } catch (\Throwable $e) {
+                                    report($e);
+
+                                    return 'Secțiunea de depunere nu a putut fi încărcată.';
+                                }
+
+                                if (!$status) {
+                                    return 'Documentul nu este necesar pentru acest eveniment.';
+                                }
+
+                                return new HtmlString(
+                                    view('filament.marketplace.components.organizer-document-filing', [
+                                        'document' => $record,
+                                        'event' => $record->event,
+                                        'status' => $status,
+                                    ])->render()
+                                );
                             }),
                     ]),
 

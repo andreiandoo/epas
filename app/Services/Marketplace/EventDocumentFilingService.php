@@ -48,10 +48,49 @@ class EventDocumentFilingService
 
     protected static ?bool $tableExists = null;
 
+    protected static ?bool $registrationColumn = null;
+
     /** False until the filings migration has run. */
     public static function available(): bool
     {
         return static::$tableExists ??= Schema::hasTable('event_document_filings');
+    }
+
+    /** False until the registration number migration has run. */
+    public static function registrationAvailable(): bool
+    {
+        return static::$registrationColumn ??= static::available()
+            && Schema::hasColumn('event_document_filings', 'registration_number');
+    }
+
+    /** The group a document type is filed with. */
+    public static function groupOf(string $type): string
+    {
+        return $type === 'cerere_avizare' ? self::GROUP_CERERE : self::GROUP_IMPOZIT_PV;
+    }
+
+    /**
+     * One document as the manual filing buttons need it, null when the event
+     * doesn't require this type (a cancelled event has no impozit).
+     *
+     * @return array{row: array, registry: ?MarketplaceTaxRegistry, recipient: ?string}|null
+     */
+    public function documentStatus(Event $event, string $type): ?array
+    {
+        if (! isset(self::TYPE_LABELS[$type])) {
+            return null;
+        }
+
+        $status = $this->status($event, static::groupOf($type));
+        if (! isset($status['rows'][$type])) {
+            return null;
+        }
+
+        return [
+            'row' => $status['rows'][$type],
+            'registry' => $status['registry'],
+            'recipient' => $status['recipient'],
+        ];
     }
 
     /**
@@ -225,6 +264,80 @@ class EventDocumentFilingService
     }
 
     /**
+     * Record that an operator filed one document by hand. Works whatever the
+     * registry and organizer settings say: those may not be filled in yet,
+     * and the document was filed anyway.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function confirmManual(Event $event, string $type, MarketplaceAdmin $admin): array
+    {
+        if (! static::available()) {
+            return ['success' => false, 'message' => 'Depunerea manuală nu este disponibilă momentan.'];
+        }
+
+        $status = $this->documentStatus($event, $type);
+        if (! $status) {
+            return ['success' => false, 'message' => 'Documentul nu este necesar pentru acest eveniment.'];
+        }
+        $row = $status['row'];
+        if (! $row['document']) {
+            return ['success' => false, 'message' => 'Generează întâi documentul.'];
+        }
+        if ($row['filed']) {
+            return ['success' => false, 'message' => 'Documentul este deja marcat ca depus.'];
+        }
+
+        EventDocumentFiling::create([
+            'marketplace_client_id' => $event->marketplace_client_id,
+            'event_id' => $event->id,
+            'marketplace_tax_registry_id' => $status['registry']?->id,
+            'document_type' => $type,
+            'document_generated_at' => $row['document']['generated_at'],
+            'file_name' => $row['document']['file_name'],
+            'method' => EventDocumentFiling::METHOD_MANUAL,
+            'filed_by_id' => $admin->id,
+            'filed_by_name' => $admin->name,
+            'filed_at' => now(),
+        ]);
+
+        return ['success' => true, 'message' => 'Depunere confirmată.'];
+    }
+
+    /**
+     * Save the number the city hall gave a filed document, on its current filing.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function saveRegistrationNumber(Event $event, string $type, string $number, MarketplaceAdmin $admin): array
+    {
+        if (! static::registrationAvailable()) {
+            return ['success' => false, 'message' => 'Numărul de înregistrare nu poate fi salvat momentan.'];
+        }
+
+        $number = trim($number);
+        if ($number === '' || mb_strlen($number) > 100) {
+            return ['success' => false, 'message' => 'Completează numărul de înregistrare (maximum 100 de caractere).'];
+        }
+
+        $row = $this->documentStatus($event, $type)['row'] ?? null;
+        if (! $row || ! $row['filed']) {
+            return ['success' => false, 'message' => 'Documentul nu este marcat ca depus.'];
+        }
+
+        EventDocumentFiling::valid()
+            ->where('event_id', $event->id)
+            ->whereKey($row['filing']['id'])
+            ->update([
+                'registration_number' => $number,
+                'registration_number_at' => now(),
+                'registration_number_by_name' => $admin->name,
+            ]);
+
+        return ['success' => true, 'message' => 'Număr de înregistrare salvat.'];
+    }
+
+    /**
      * Record that the organizer filed the group with the city hall
      * themselves and confirmed it from their account.
      *
@@ -285,7 +398,7 @@ class EventDocumentFilingService
     /**
      * Latest valid filing per event and document type.
      *
-     * @return array<int, array<string, array{filed_at: string, method: string, method_label: string, by: ?string, sent_to: ?string}>>
+     * @return array<int, array<string, array{id: int, filed_at: string, method: string, method_label: string, by: ?string, sent_to: ?string, registration_number: ?string}>>
      */
     public function currentFilings(array $eventIds): array
     {
@@ -302,11 +415,13 @@ class EventDocumentFilingService
         foreach ($filings as $filing) {
             // Ordered oldest first, so the last one written wins.
             $out[$filing->event_id][$filing->document_type] = [
+                'id' => $filing->id,
                 'filed_at' => $filing->filed_at->format('Y-m-d H:i:s'),
                 'method' => $filing->method,
                 'method_label' => $filing->methodLabel(),
                 'by' => $filing->filed_by_name,
                 'sent_to' => $filing->sent_to,
+                'registration_number' => $filing->registration_number,
             ];
         }
 

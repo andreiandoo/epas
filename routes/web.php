@@ -440,10 +440,27 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace/api')-
 
     // File an event's fiscal documents with the city hall: email them, confirm
     // a filing made through the registry's third-party solution, or undo one.
+    // One document at a time: confirm a manual filing, save its registration number.
     Route::post('/events/{eventId}/document-filing', function (int $eventId) {
         $admin = auth('marketplace_admin')->user();
         $event = \App\Models\Event::where('marketplace_client_id', $admin->marketplace_client_id)->findOrFail($eventId);
         $service = app(\App\Services\Marketplace\EventDocumentFilingService::class);
+
+        if (in_array(request()->input('action'), ['confirm_manual', 'registration_number'], true)) {
+            $type = (string) request()->input('document_type');
+
+            try {
+                $result = request()->input('action') === 'confirm_manual'
+                    ? $service->confirmManual($event, $type, $admin)
+                    : $service->saveRegistrationNumber($event, $type, (string) request()->input('registration_number'), $admin);
+
+                return response()->json($result, $result['success'] ? 200 : 422);
+            } catch (\Throwable $e) {
+                report($e);
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+        }
+
         $group = (string) request()->input('group');
         if (!isset($service::GROUPS[$group])) {
             return response()->json(['success' => false, 'message' => 'Grup de documente necunoscut.'], 422);

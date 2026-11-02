@@ -54,6 +54,14 @@ class OrganizerFiscalDocuments
     /** The "cerere missing" notice goes out once the event is this close. */
     public const CERERE_NOTICE_DAYS = 30;
 
+    /**
+     * Pus pe hold cat timp operatorii completeaza depunerile si bifele din
+     * sistem: fara email, notificari in cont si banner catre organizatori.
+     * Pe false repornesc; ce nu s-a anuntat inca pleaca o singura data, deci
+     * ruleaza intai organizer-documents:notify --dry-run.
+     */
+    public const NOTICES_ON_HOLD = true;
+
     protected static ?bool $noticesTable = null;
 
     public function __construct(
@@ -421,6 +429,10 @@ class OrganizerFiscalDocuments
      */
     public function attention(MarketplaceOrganizer $organizer): array
     {
+        if (self::NOTICES_ON_HOLD) {
+            return [];
+        }
+
         // The marketplace handles these documents: nothing for the organizer to do.
         if ($organizer->marketplace_manages_documents) {
             return [];
@@ -538,7 +550,7 @@ class OrganizerFiscalDocuments
      */
     public function notifyIfNeeded(Event $event): ?string
     {
-        if (! static::noticesAvailable()) {
+        if (self::NOTICES_ON_HOLD || ! static::noticesAvailable()) {
             return null;
         }
         $organizer = $event->marketplaceOrganizer;

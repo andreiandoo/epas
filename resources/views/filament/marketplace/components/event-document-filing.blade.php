@@ -54,7 +54,7 @@
                 @endif
             </div>
 
-            @foreach($g['rows'] as $row)
+            @foreach($g['rows'] as $type => $row)
                 <div style="margin-bottom:6px;">
                     <div style="font-weight:600;">{{ $row['label'] }}</div>
                     <div style="opacity:.75;font-size:12px;">
@@ -67,8 +67,18 @@
                             · {{ $row['filed'] ? 'depus' : 'versiunea anterioară depusă' }}
                             {{ Filing::stamp($row['filing']['filed_at'], $event) }}
                             prin {{ $row['filing']['method_label'] }}@if($row['filing']['by']), de {{ $row['filing']['by'] }}@endif
+                            @if($row['filed'] && $row['filing']['registration_number'])
+                                · nr. înregistrare <strong>{{ $row['filing']['registration_number'] }}</strong>
+                            @endif
                         @endif
                     </div>
+                    @include('filament.marketplace.components.document-filing-actions', [
+                        'event' => $event,
+                        'type' => $type,
+                        'row' => $row,
+                        'registry' => $registry,
+                        'recipient' => $g['recipient'],
+                    ])
                 </div>
             @endforeach
 
