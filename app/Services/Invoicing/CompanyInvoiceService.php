@@ -900,7 +900,7 @@ class CompanyInvoiceService
         $row->update(['sent_to_customer_at' => now()]);
     }
 
-    protected function sendEmail(?MarketplaceClient $client, string $to, ?string $toName, string $subject, string $html, ?string $attachment, ?string $attachmentName, array $log): void
+    public function sendEmail(?MarketplaceClient $client, string $to, ?string $toName, string $subject, string $html, ?string $attachment, ?string $attachmentName, array $log): void
     {
         if (!$client || (!$client->hasMailConfigured() && !$client->hasTransactionalMailConfigured())) {
             throw new \RuntimeException('Mail-ul marketplace-ului nu este configurat.');

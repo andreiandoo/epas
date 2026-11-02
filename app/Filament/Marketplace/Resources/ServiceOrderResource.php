@@ -470,6 +470,7 @@ class ServiceOrderResource extends Resource
                             ->maxLength(255),
                     ])
                     ->action(function (ServiceOrder $record, array $data): void {
+                        $record->payment_method = 'transfer'; // card payments confirm themselves
                         $record->markAsPaid($data['payment_reference']);
                     }),
 

@@ -56,6 +56,26 @@ class AccountingService
     }
 
     /**
+     * Provider and draft mode of the marketplace's active connector, or null.
+     *
+     * @return array{provider: string, draft: bool}|null
+     */
+    public function marketplaceConnector(int $marketplaceClientId): ?array
+    {
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+        if (!$connector) {
+            return null;
+        }
+
+        $auth = json_decode(Crypt::decryptString($connector->auth), true);
+
+        return ['provider' => (string) $connector->provider, 'draft' => (bool) ($auth['use_draft'] ?? false)];
+    }
+
+    /**
      * Issue invoice for marketplace context
      */
     public function issueMarketplaceInvoice(int $marketplaceClientId, string $orderRef, array $invoiceData): array

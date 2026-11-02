@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController;
+use App\Jobs\IssueServiceOrderInvoiceJob;
 use App\Jobs\SendNewsletterJob;
+use App\Services\Invoicing\ServiceOrderInvoiceService;
 use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -214,18 +216,27 @@ class ServiceOrder extends Model
             Log::error('ServiceOrder: VAT invoice not issued', ['service_order_id' => $this->id, 'error' => $e->getMessage()]);
         }
 
+        try {
+            if (app(ServiceOrderInvoiceService::class)->isEnabled($this->marketplaceClient)) {
+                IssueServiceOrderInvoiceJob::dispatch($this->id);
+            }
+        } catch (\Throwable $e) {
+            Log::error('ServiceOrder: invoice job not dispatched', ['service_order_id' => $this->id, 'error' => $e->getMessage()]);
+        }
+
         return $this;
     }
 
     /**
-     * Fiscal invoice from the marketplace to the organizer for a paid service
-     * carrying VAT (orders without VAT keep the previous behaviour: no
-     * invoice). Idempotent: config.invoice_id remembers it. Sent to the
-     * accounting provider from the invoice page, like the decont invoices.
+     * Fiscal invoice from the marketplace to the organizer for a paid service.
+     * Orders without VAT get one only when automatic invoicing is on. Idempotent:
+     * config.invoice_id remembers it. Sent to the accounting provider by
+     * IssueServiceOrderInvoiceJob when that's on, otherwise from the invoice page.
      */
     public function issueVatInvoice(): ?\App\Models\Invoice
     {
-        if ((float) $this->tax <= 0 || !$this->marketplace_organizer_id) {
+        $automatic = app(ServiceOrderInvoiceService::class)->isEnabled($this->marketplaceClient);
+        if (!$this->marketplace_organizer_id || (float) $this->total <= 0 || (!$automatic && (float) $this->tax <= 0)) {
             return null;
         }
         $config = $this->config ?? [];
@@ -245,6 +256,9 @@ class ServiceOrder extends Model
             'cui' => (string) ($d['tax_id'] ?? ''),
             'reg_com' => (string) ($d['registration'] ?? ''),
             'address' => implode(', ', array_filter([$d['address'] ?? null, $d['city'] ?? null, $d['county'] ?? null])),
+            'street' => (string) ($d['address'] ?? ''),
+            'city' => (string) ($d['city'] ?? ''),
+            'county' => (string) ($d['county'] ?? ''),
             'is_pf' => ($organizer->person_type ?? null) === 'pf',
         ];
 
@@ -254,9 +268,14 @@ class ServiceOrder extends Model
         $eventTitle = is_array($eventTitle) ? ($eventTitle['ro'] ?? (reset($eventTitle) ?: '')) : (string) ($eventTitle ?? '');
         $description = trim($this->order_number . ($eventTitle !== '' ? ', "' . $eventTitle . '"' : ''));
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($marketplace, $organizer, $client, $rate, $name, $description, $config) {
-            $last = \App\Models\Invoice::where('marketplace_client_id', $marketplace->id)->lockForUpdate()->orderByDesc('id')->first();
+        // Same lock as the company invoices. The number column is unique across
+        // marketplaces, so a number already taken elsewhere is skipped.
+        return \Illuminate\Support\Facades\Cache::lock('invoice-number-' . $marketplace->id, 15)->block(10, function () use ($marketplace, $organizer, $client, $rate, $name, $description, $config) {
+            $last = \App\Models\Invoice::where('marketplace_client_id', $marketplace->id)->orderByDesc('id')->first();
             $next = $last ? ((int) preg_replace('/\D/', '', $last->number) + 1) : 1;
+            while (\App\Models\Invoice::where('number', 'F-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT))->exists()) {
+                $next++;
+            }
 
             $invoice = \App\Models\Invoice::create([
                 'marketplace_client_id' => $marketplace->id,

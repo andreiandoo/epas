@@ -285,6 +285,11 @@ class OblioAdapter implements AccountingAdapterInterface
                 $payload['issuerCnp'] = $issuerCnp;
             }
 
+            // Already paid: collect the invoice in the same call
+            if (!empty($invoice['collect'])) {
+                $payload['collect'] = $invoice['collect'];
+            }
+
             // Diagnostic: log the exact client block that goes to Oblio so we
             // can confirm general_client invoices ship cif='vanzare online'
             // with save=0 + autocomplete=0. Remove after verification.

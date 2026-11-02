@@ -1332,6 +1332,7 @@ class PaymentController extends BaseController
                 return $this->netopiaResponse(0);
             }
 
+            $serviceOrder->payment_method = 'card'; // confirmed by the card processor
             $serviceOrder->markAsPaid($result['transaction_id'] ?? $result['payment_id'] ?? null);
             $serviceOrder->activate(); // marks event as featured
 
