@@ -559,7 +559,8 @@ class ListPayouts extends ListRecords
                                     $gross += $qty * ($unitPrice + $commPerTicket);
                                     $commission += $qty * $commPerTicket;
                                 }
-                                $discount = (float) ($get('discount_amount') ?? 0);
+                                $discount = MarketplacePayout::discountForSelection($updatedTickets);
+                                $set('discount_amount', number_format($discount, 2, '.', ''));
                                 $fees = (float) ($get('fees_amount') ?? 0);
                                 $set('gross_amount', number_format($gross, 2, '.', ''));
                                 $set('commission_amount', number_format($commission, 2, '.', ''));
@@ -667,19 +668,30 @@ class ListPayouts extends ListRecords
                         Forms\Components\Hidden::make('discount')->default('0'),
                         // Per-price tier breakdown — {price, qty}[] expanded by the PDF.
                         Forms\Components\Hidden::make('tiers')->default([]),
+                        // Remaining tickets oldest first; a partial qty reads its discount from here.
+                        Forms\Components\Hidden::make('slice')->default([]),
                         Forms\Components\Placeholder::make('label')
                             ->hiddenLabel()
-                            ->content(fn (Get $get) => new \Illuminate\Support\HtmlString(
-                                '<div class="flex items-center h-full py-2">' .
-                                '<span class="font-medium">' . e($get('ticket_type_name') ?? '') . '</span>' .
-                                '<span class="text-xs text-gray-400 ml-2">' . $get('available') . ' disponibile · ' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet · comision ' . number_format((float) ($get('commission_per_ticket') ?? 0), 2) . ' RON/bilet</span>' .
-                                '</div>'
-                            ))
+                            ->content(function (Get $get) {
+                                $discount = MarketplacePayout::discountForSelection([[
+                                    'qty' => $get('qty'),
+                                    'discount' => $get('discount'),
+                                    'slice' => $get('slice'),
+                                ]]);
+
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div class="flex items-center h-full py-2">' .
+                                    '<span class="font-medium">' . e($get('ticket_type_name') ?? '') . '</span>' .
+                                    '<span class="text-xs text-gray-400 ml-2">' . $get('available') . ' disponibile · ' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet · comision ' . number_format((float) ($get('commission_per_ticket') ?? 0), 2) . ' RON/bilet' . ($discount > 0 ? ' · discount ' . number_format($discount, 2) . ' RON' : '') . '</span>' .
+                                    '</div>'
+                                );
+                            })
                             ->columnSpan(2),
                         Forms\Components\TextInput::make('qty')
                             ->hiddenLabel()
                             ->numeric()
                             ->minValue(0)
+                            ->live(onBlur: true)
                             ->suffix('bilete')
                             ->columnSpan(1),
                     ])
@@ -711,7 +723,8 @@ class ListPayouts extends ListRecords
                                 $commission += $qty * $commPerTicket;
                             }
 
-                            $discount = (float) ($get('discount_amount') ?? 0);
+                            $discount = MarketplacePayout::discountForSelection($tickets);
+                            $set('discount_amount', number_format($discount, 2, '.', ''));
                             $fees = (float) ($get('fees_amount') ?? 0);
                             $set('gross_amount', number_format($gross, 2, '.', ''));
                             $set('commission_amount', number_format($commission, 2, '.', ''));

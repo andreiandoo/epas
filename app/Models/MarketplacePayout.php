@@ -246,6 +246,17 @@ class MarketplacePayout extends Model
             // Normalize the invariant here so every downstream consumer can
             // trust that tier-sum == qty.
             $tiers = is_array($item['tiers'] ?? null) ? $item['tiers'] : [];
+
+            // Partial selection: discount and tiers follow the tickets actually
+            // covered, not the whole remaining slice of this type.
+            $slice = is_array($item['slice'] ?? null) ? $item['slice'] : [];
+            $discount = (float) ($item['discount'] ?? 0);
+            if ($qty < self::sliceQty($slice)) {
+                $picked = self::pickFromSlice($slice, $qty);
+                $discount = $picked['discount'];
+                $tiers = $picked['tiers'];
+            }
+
             if (!empty($tiers)) {
                 $tierQty = [];
                 $tierSum = 0;
@@ -273,11 +284,12 @@ class MarketplacePayout extends Model
                 // Per-type promo discount surfaced by buildRemainingTicketsItems.
                 // Travels through every pass so the saved breakdown rows carry
                 // the real discount and the per-row Net final reflects it.
-                'discount' => (float) ($item['discount'] ?? 0),
+                'discount' => $discount,
                 // Per-price tier breakdown — list of {price, qty} sub-rows.
                 // Lets the PDF render "50lei*2+40lei*2" when a type was sold
                 // at mixed catalog/promo prices. Scaled with qty in Pass 3.
                 'tiers' => $tiers,
+                'slice' => $slice,
             ];
         }
 
@@ -290,6 +302,12 @@ class MarketplacePayout extends Model
             foreach ($rows as &$r) {
                 $oldQty = (int) $r['qty'];
                 $r['qty'] = max(0, (int) round($oldQty * $scale));
+                if ($r['qty'] > 0 && $r['qty'] <= self::sliceQty($r['slice'])) {
+                    $picked = self::pickFromSlice($r['slice'], $r['qty']);
+                    $r['discount'] = $picked['discount'];
+                    $r['tiers'] = $picked['tiers'];
+                    continue;
+                }
                 // Scale the per-row discount alongside qty so the proportion
                 // of promo reduction tracks the slice the operator is keeping.
                 $r['discount'] = round((float) ($r['discount'] ?? 0) * $scale, 2);
@@ -586,6 +604,22 @@ class MarketplacePayout extends Model
             }
             $discountForRemaining = round($discountForRemaining, 2);
 
+            // The remaining tickets oldest first, merged by paid price and
+            // discount. Later deconts take the newest tickets, so a partial
+            // decont covers the oldest ones; reading its discount from here
+            // keeps the total exact across deconts.
+            $slice = [];
+            foreach (array_reverse($latestPicked) as $pickedTicket) {
+                $effective = round((float) ($pickedTicket['effective'] ?? 0), 2);
+                $discount = round(max(0.0, (float) ($pickedTicket['catalog'] ?? 0) - $effective), 2);
+                $last = array_key_last($slice);
+                if ($last !== null && $slice[$last]['price'] === $effective && $slice[$last]['discount'] === $discount) {
+                    $slice[$last]['qty']++;
+                } else {
+                    $slice[] = ['price' => $effective, 'discount' => $discount, 'qty' => 1];
+                }
+            }
+
             // Commission on CATALOG — marketplace earns its full fee even
             // when the promo cuts the customer-paying side; the discount
             // comes out of the organizer's share.
@@ -608,10 +642,62 @@ class MarketplacePayout extends Model
                 'qty' => $remaining,
                 'discount' => $discountForRemaining,
                 'tiers' => $tiers,
+                'slice' => $slice,
             ];
         }
 
         return $items;
+    }
+
+    /** Number of tickets described by a `slice` from buildRemainingTicketsItems. */
+    public static function sliceQty(array $slice): int
+    {
+        return (int) array_sum(array_column($slice, 'qty'));
+    }
+
+    /**
+     * Discount and tiers of the oldest $qty tickets in a `slice`.
+     *
+     * @return array{discount: float, tiers: array<int, array{price: float, qty: int}>}
+     */
+    public static function pickFromSlice(array $slice, int $qty): array
+    {
+        $discount = 0.0;
+        $tierQty = [];
+        $left = $qty;
+        foreach ($slice as $run) {
+            if ($left <= 0) {
+                break;
+            }
+            $take = min($left, (int) ($run['qty'] ?? 0));
+            $price = (string) (float) ($run['price'] ?? 0);
+            $discount += $take * (float) ($run['discount'] ?? 0);
+            $tierQty[$price] = ($tierQty[$price] ?? 0) + $take;
+            $left -= $take;
+        }
+
+        return [
+            'discount' => round($discount, 2),
+            'tiers' => self::scaleTiers($tierQty, $qty, $qty),
+        ];
+    }
+
+    /** Total discount of a repeater selection, following each row's chosen qty. */
+    public static function discountForSelection(iterable $items): float
+    {
+        $total = 0.0;
+        foreach ($items as $item) {
+            $qty = (int) ($item['qty'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+            $slice = is_array($item['slice'] ?? null) ? $item['slice'] : [];
+            $total += $qty < self::sliceQty($slice)
+                ? self::pickFromSlice($slice, $qty)['discount']
+                : (float) ($item['discount'] ?? 0);
+        }
+
+        return round($total, 2);
     }
 
     /**

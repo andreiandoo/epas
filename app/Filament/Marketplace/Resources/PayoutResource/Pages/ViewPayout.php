@@ -335,6 +335,8 @@ class ViewPayout extends ViewRecord
                             // Per-price tier breakdown — {price, qty}[] that the PDF
                             // expands into "50lei*2+40lei*2" entries on row 1b.
                             \Filament\Forms\Components\Hidden::make('tiers')->default([]),
+                            // Set by the "bring tickets" buttons; a partial qty reads its discount from here.
+                            \Filament\Forms\Components\Hidden::make('slice')->default([]),
                             \Filament\Forms\Components\Hidden::make('ticket_type_name'),
                             \Filament\Forms\Components\Placeholder::make('row_label')
                                 ->hiddenLabel()
