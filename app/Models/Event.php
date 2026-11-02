@@ -1134,6 +1134,45 @@ class Event extends Model
     }
 
     /**
+     * Why the panel must not delete this event, or null when it can go.
+     * Goes past EventObserver::deleting: orders, tickets, payouts and child
+     * events only lose their event_id (SET NULL), the delete itself succeeds.
+     */
+    public function deletionBlocker(): ?string
+    {
+        if ($this->is_published) {
+            return 'Evenimentul este publicat. Retrage-l de la publicare întâi.';
+        }
+
+        $byEvent = fn ($q) => $q->where('event_id', $this->id)->orWhere('marketplace_event_id', $this->id);
+        $ticketTypeIds = \Illuminate\Support\Facades\DB::table('ticket_types')->where('event_id', $this->id)->pluck('id');
+
+        if (
+            \Illuminate\Support\Facades\DB::table('orders')->where($byEvent)->exists()
+            || \Illuminate\Support\Facades\DB::table('order_items')->whereIn('ticket_type_id', $ticketTypeIds)->exists()
+        ) {
+            return 'Evenimentul are comenzi.';
+        }
+
+        if (
+            \Illuminate\Support\Facades\DB::table('tickets')->where($byEvent)->exists()
+            || \Illuminate\Support\Facades\DB::table('tickets')->whereIn('ticket_type_id', $ticketTypeIds)->exists()
+        ) {
+            return 'Evenimentul are bilete.';
+        }
+
+        if (\Illuminate\Support\Facades\DB::table('marketplace_payouts')->where('event_id', $this->id)->exists()) {
+            return 'Evenimentul are deconturi.';
+        }
+
+        if ($this->children()->exists()) {
+            return 'Evenimentul are sub-evenimente.';
+        }
+
+        return null;
+    }
+
+    /**
      * Calculate total revenue for this event.
      *
      * Re-aligned 2026-06-14 (second pass) with the admin panel's "net

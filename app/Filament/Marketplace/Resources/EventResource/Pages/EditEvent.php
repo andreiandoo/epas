@@ -313,7 +313,15 @@ class EditEvent extends EditRecord
                 return redirect(EventResource::getUrl('edit', ['record' => $newEvent]));
             });
 
-        $actions[] = Actions\DeleteAction::make();
+        $actions[] = Actions\DeleteAction::make()
+            ->before(function (Actions\DeleteAction $action) {
+                $blocker = $this->record->deletionBlocker();
+
+                if ($blocker) {
+                    Notification::make()->title('Evenimentul nu poate fi șters')->body($blocker)->danger()->send();
+                    $action->cancel();
+                }
+            });
 
         return $actions;
     }

@@ -5,18 +5,21 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\OrganizerInvoiceResource\Pages;
 use App\Models\Invoice;
 use App\Models\MarketplaceOrganizer;
+use App\Support\Marketplace\SafeBulkDelete;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 
@@ -580,7 +583,15 @@ class OrganizerInvoiceResource extends Resource
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Închide'),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->before(function (DeleteAction $action, Invoice $record) {
+                        $blocker = $record->deletionBlocker();
+
+                        if ($blocker) {
+                            Notification::make()->title('Factura nu poate fi ștearsă')->body($blocker)->danger()->send();
+                            $action->cancel();
+                        }
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -588,8 +599,12 @@ class OrganizerInvoiceResource extends Resource
                         ->label('Șterge selectate')
                         ->requiresConfirmation()
                         ->modalHeading('Șterge facturile selectate')
-                        ->modalDescription('Ești sigur că vrei să ștergi facturile selectate? Acțiunea nu poate fi anulată.')
-                        ->modalSubmitActionLabel('Șterge'),
+                        ->modalDescription('Facturile achitate sau emise în contabilitate rămân. Celelalte se șterg definitiv.')
+                        ->modalSubmitActionLabel('Șterge')
+                        ->action(fn (Collection $records) => SafeBulkDelete::run(
+                            $records,
+                            fn (Invoice $invoice) => "#{$invoice->number}"
+                        )),
                 ]),
             ]);
     }

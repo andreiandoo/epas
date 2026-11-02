@@ -259,6 +259,23 @@ class Invoice extends Model
     }
 
     /**
+     * Why the panel must not delete this invoice, or null when it can go.
+     * A paid or issued document stays: it exists in the books, not only here.
+     */
+    public function deletionBlocker(): ?string
+    {
+        if ($this->status === 'paid') {
+            return 'Factura este achitată.';
+        }
+
+        if ($this->hasLiveOblioInvoice() || !empty(($this->meta['accounting_proforma']['external_ref'] ?? null))) {
+            return 'Factura este emisă în contabilitate. Storno sau șterge documentul acolo întâi.';
+        }
+
+        return null;
+    }
+
+    /**
      * Timestamp we last asked Oblio about this invoice's state, or null
      * if we never checked.
      */

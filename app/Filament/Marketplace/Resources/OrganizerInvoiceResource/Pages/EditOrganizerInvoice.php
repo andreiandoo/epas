@@ -591,6 +591,14 @@ class EditOrganizerInvoice extends EditRecord
             ->requiresConfirmation()
             ->modalHeading('Șterge factura')
             ->modalDescription(fn () => "Factura #{$this->record->number} va fi ștearsă. Această acțiune nu poate fi anulată.")
+            ->before(function (Actions\DeleteAction $action) {
+                $blocker = $this->record->deletionBlocker();
+
+                if ($blocker) {
+                    \Filament\Notifications\Notification::make()->title('Factura nu poate fi ștearsă')->body($blocker)->danger()->send();
+                    $action->cancel();
+                }
+            })
             ->successRedirectUrl(fn () => OrganizerInvoiceResource::getUrl('index'));
 
         return [

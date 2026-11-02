@@ -6703,7 +6703,12 @@ class EventResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
 
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->modalDescription('Se șterg doar evenimentele nepublicate, fără comenzi, bilete, deconturi sau sub-evenimente. Celelalte rămân.')
+                        ->action(fn (Collection $records) => \App\Support\Marketplace\SafeBulkDelete::run(
+                            $records,
+                            fn (Event $event) => $event->getTranslation('title') ?: "#{$event->id}"
+                        )),
                 ]),
             ])
             ->recordUrl(null)
