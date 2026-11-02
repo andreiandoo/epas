@@ -1882,6 +1882,8 @@ class MarketplacePayout extends Model
             return [
                 'is_on_top' => false,
                 'commission' => 0.0,
+                'to_invoice' => 0.0,
+                'invoiced' => [],
                 'kept' => 0.0,
                 'total' => 0.0,
             ];
@@ -1890,12 +1892,37 @@ class MarketplacePayout extends Model
         $commission = round((float) $this->getCommissionExclPos(), 2);
         $kept = round((float) $this->getKeptCommissionTotalForPayout(), 2);
 
+        // Orders already invoiced to a company leave the general-client invoice.
+        // `commission` stays gross: GeneralClientInvoiceVat::compute subtracts them itself.
+        $invoiced = app(\App\Services\Invoicing\CompanyInvoiceService::class)->invoicedSummaryForPayout($this);
+        $toInvoice = max(0.0, round($commission - array_sum(array_column($invoiced, 'commission_amount')), 2));
+
         return [
             'is_on_top' => true,
             'commission' => $commission,
+            'to_invoice' => $toInvoice,
+            'invoiced' => $invoiced,
             'kept' => $kept,
-            'total' => round($commission + $kept, 2),
+            'total' => round($toInvoice + $kept, 2),
         ];
+    }
+
+    /**
+     * Operator note for a preview with company invoices: what was already
+     * billed, to whom, and what is left for the general client. Amounts exclude VAT.
+     */
+    public static function invoicedSeparatelyNote(array $preview): string
+    {
+        if (empty($preview['invoiced'])) {
+            return '';
+        }
+
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.') . ' RON';
+        $parts = array_map(fn ($row) => $fmt($row['commission_amount']) . ' către ' . ($row['company'] ?: 'firmă')
+            . ' (' . ($row['invoice_number'] !== '' ? 'factura ' . $row['invoice_number'] . ', ' : '') . 'comanda ' . $row['order_number'] . ')', $preview['invoiced']);
+
+        return ' Deja facturat separat, fără TVA: ' . implode('; ', $parts) . '.'
+            . ' Din comisionul de ' . $fmt($preview['commission']) . ' al decontului se vor factura doar ' . $fmt($preview['to_invoice']) . ' fără TVA.';
     }
 
     /**
@@ -2153,14 +2180,15 @@ class MarketplacePayout extends Model
             if (($preview['total'] ?? 0) > 0.01) {
                 $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
                 $parts = [];
-                if ($preview['commission'] > 0.01) {
-                    $parts[] = 'comision online: ' . $fmt($preview['commission']);
+                if ($preview['to_invoice'] > 0.01) {
+                    $parts[] = 'comision online: ' . $fmt($preview['to_invoice']);
                 }
                 if ($preview['kept'] > 0.01) {
                     $parts[] = 'comision reținut din rambursări: ' . $fmt($preview['kept']);
                 }
                 $hint = 'Total de facturat (client general): ' . $fmt($preview['total'])
-                    . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '');
+                    . (!empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '')
+                    . self::invoicedSeparatelyNote($preview);
 
                 $steps[] = [
                     'key' => 'generate_invoice',

@@ -1005,30 +1005,9 @@ class CompanyInvoiceService
      */
     public function invoicedOnTopRowsForPayout(MarketplacePayout $payout): array
     {
-        if (!$payout->event_id || !$this->isEnabled($payout->marketplaceClient)) {
-            return [];
-        }
-        if (!\Illuminate\Support\Facades\Schema::hasTable('order_company_invoices')) {
-            return [];
-        }
-
-        $orders = Order::query()
-            ->where('marketplace_client_id', $payout->marketplace_client_id)
-            ->whereIn('id', OrderCompanyInvoice::where('issuer', OrderCompanyInvoice::ISSUER_MARKETPLACE)
-                ->whereIn('status', [OrderCompanyInvoice::STATUS_PENDING, OrderCompanyInvoice::STATUS_ISSUED])
-                ->select('order_id'))
-            ->where(fn ($q) => $q->where('event_id', $payout->event_id)
-                ->orWhereRaw("(meta->'event_ids')::jsonb @> ?::jsonb", [json_encode([(int) $payout->event_id])]))
-            ->when($payout->period_start, fn ($q) => $q->where('paid_at', '>=', $payout->period_start->copy()->startOfDay()))
-            ->when($payout->period_end, fn ($q) => $q->where('paid_at', '<=', $payout->period_end->copy()->endOfDay()))
-            ->get(['id', 'meta']);
-
         $rows = [];
-        foreach ($orders as $order) {
-            foreach ((array) ($order->meta['commission_details'] ?? []) as $d) {
-                if (!in_array($d['commission_mode'] ?? '', ['on_top', 'added_on_top', 'add_on_top'], true)) {
-                    continue;
-                }
+        foreach ($this->invoicedOrdersForPayout($payout) as $order) {
+            foreach ($this->onTopCommissionDetails($order) as $d) {
                 $name = (string) ($d['ticket_type'] ?? '');
                 $rows[$name]['ticket_type_name'] = $name;
                 $rows[$name]['qty'] = ($rows[$name]['qty'] ?? 0) + (int) ($d['quantity'] ?? 0);
@@ -1037,5 +1016,70 @@ class CompanyInvoiceService
         }
 
         return array_values($rows);
+    }
+
+    /**
+     * Același comision, pe comandă, ca operatorul să vadă cui i s-a facturat.
+     *
+     * @return array<int, array{order_number: string, company: string, invoice_number: string, commission_amount: float}>
+     */
+    public function invoicedSummaryForPayout(MarketplacePayout $payout): array
+    {
+        $orders = $this->invoicedOrdersForPayout($payout);
+        if ($orders->isEmpty()) {
+            return [];
+        }
+
+        $invoices = OrderCompanyInvoice::with('invoice:id,number,meta')
+            ->where('issuer', OrderCompanyInvoice::ISSUER_MARKETPLACE)
+            ->whereIn('order_id', $orders->pluck('id'))
+            ->get()
+            ->keyBy('order_id');
+
+        $summary = [];
+        foreach ($orders as $order) {
+            $row = $invoices->get($order->id);
+            $commission = array_sum(array_map(fn ($d) => (float) ($d['commission_amount'] ?? 0), $this->onTopCommissionDetails($order)));
+            if ($commission <= 0.005) {
+                continue;
+            }
+            $summary[] = [
+                'order_number' => (string) $order->order_number,
+                'company' => (string) ($row?->company['name'] ?? ''),
+                'invoice_number' => (string) ($row?->invoice?->meta['accounting']['invoice_number'] ?? $row?->invoice?->number ?? ''),
+                'commission_amount' => round($commission, 2),
+            ];
+        }
+
+        return $summary;
+    }
+
+    protected function onTopCommissionDetails(Order $order): array
+    {
+        return array_filter(
+            (array) ($order->meta['commission_details'] ?? []),
+            fn ($d) => in_array($d['commission_mode'] ?? '', ['on_top', 'added_on_top', 'add_on_top'], true)
+        );
+    }
+
+    protected function invoicedOrdersForPayout(MarketplacePayout $payout): \Illuminate\Support\Collection
+    {
+        if (!$payout->event_id || !$this->isEnabled($payout->marketplaceClient)) {
+            return collect();
+        }
+        if (!\Illuminate\Support\Facades\Schema::hasTable('order_company_invoices')) {
+            return collect();
+        }
+
+        return Order::query()
+            ->where('marketplace_client_id', $payout->marketplace_client_id)
+            ->whereIn('id', OrderCompanyInvoice::where('issuer', OrderCompanyInvoice::ISSUER_MARKETPLACE)
+                ->whereIn('status', [OrderCompanyInvoice::STATUS_PENDING, OrderCompanyInvoice::STATUS_ISSUED])
+                ->select('order_id'))
+            ->where(fn ($q) => $q->where('event_id', $payout->event_id)
+                ->orWhereRaw("(meta->'event_ids')::jsonb @> ?::jsonb", [json_encode([(int) $payout->event_id])]))
+            ->when($payout->period_start, fn ($q) => $q->where('paid_at', '>=', $payout->period_start->copy()->startOfDay()))
+            ->when($payout->period_end, fn ($q) => $q->where('paid_at', '<=', $payout->period_end->copy()->endOfDay()))
+            ->get(['id', 'order_number', 'meta']);
     }
 }

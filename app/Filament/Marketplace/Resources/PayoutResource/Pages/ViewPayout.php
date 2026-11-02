@@ -733,8 +733,8 @@ class ViewPayout extends ViewRecord
                     }
                     $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
                     $parts = [];
-                    if ($preview['commission'] > 0.01) {
-                        $parts[] = 'comision online: ' . $fmt($preview['commission']);
+                    if ($preview['to_invoice'] > 0.01) {
+                        $parts[] = 'comision online: ' . $fmt($preview['to_invoice']);
                     }
                     if ($preview['kept'] > 0.01) {
                         $parts[] = 'comision reținut la rambursări (rămas în vistieria Ambilet): ' . $fmt($preview['kept']);
@@ -755,7 +755,7 @@ class ViewPayout extends ViewRecord
                         // preview only
                     }
                     return 'Se va genera o factură către clientul general pentru comisioanele încasate pe acest decont: '
-                        . $fmt($preview['total']) . $breakdown . '.' . $vatNote;
+                        . $fmt($preview['total']) . $breakdown . '.' . \App\Models\MarketplacePayout::invoicedSeparatelyNote($preview) . $vatNote;
                 })
                 // Only appears on on_top payouts WITH something to bill: this
                 // action creates the general-client invoice for the commission
