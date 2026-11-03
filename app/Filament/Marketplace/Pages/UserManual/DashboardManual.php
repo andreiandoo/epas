@@ -179,38 +179,30 @@ class DashboardManual extends Page
                 ],
 
                 [
-                    'id' => 'top-organizers',
-                    'title' => ['ro' => 'Top organizatori', 'en' => 'Top organizers'],
+                    'id' => 'recently-published',
+                    'title' => ['ro' => 'Evenimente publicate recent', 'en' => 'Recently published events'],
                     'steps' => [
                         [
                             'text' => [
-                                'ro' => 'In partea de jos a Dashboard-ului gasesti tabelul "Top Organizatori" cu primii 5 organizatori dupa venituri.',
-                                'en' => 'At the bottom of the Dashboard you will find the "Top Organizers" table with the top 5 organizers by revenue.',
+                                'ro' => 'Sectiunea "Evenimente publicate recent" listeaza evenimentele publicate pe platforma in ultimele 7 zile, cele mai noi primele.',
+                                'en' => 'The "Recently published events" section lists the events published on the platform in the last 7 days, newest first.',
                             ],
                         ],
                         [
                             'text' => [
-                                'ro' => 'Tabelul arata: numele organizatorului, numarul de evenimente si veniturile totale.',
-                                'en' => 'The table shows: organizer name, number of events and total revenue.',
+                                'ro' => 'Pentru fiecare eveniment vezi organizatorul, data, locatia si cand a fost publicat.',
+                                'en' => 'For each event you see the organizer, date, venue and when it was published.',
                             ],
                         ],
                         [
                             'text' => [
-                                'ro' => 'Apasa pe un organizator pentru a vedea detaliile complete ale acestuia.',
-                                'en' => 'Click on an organizer to see their full details.',
+                                'ro' => 'Apasa pe titlu sau pe [Deschide] ca sa ajungi la pagina evenimentului din admin.',
+                                'en' => 'Click the title or [Deschide] to open the event page in the admin.',
                             ],
                         ],
                     ],
                     'fields' => [],
-                    'tips' => [
-                        [
-                            'text' => [
-                                'ro' => 'Top-ul se calculeaza pe baza veniturilor totale din comenzi confirmate. Un organizator cu multe evenimente mici poate depasi unul cu un singur eveniment mare.',
-                                'en' => 'The ranking is calculated based on total revenue from confirmed orders. An organizer with many small events can surpass one with a single large event.',
-                            ],
-                            'type' => 'info',
-                        ],
-                    ],
+                    'tips' => [],
                 ],
             ],
         ];

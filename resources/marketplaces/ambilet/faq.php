@@ -94,19 +94,24 @@ $faqs = [
     ],
     'refunds' => [
         [
-            'question' => 'Pot primi rambursare dacă nu mai pot participa?',
-            'answer' => '<p>Politica de rambursare depinde de fiecare eveniment și organizator:</p>
-                <ul class="pl-5 mt-3 space-y-2 list-disc">
-                    <li><strong>Majoritatea evenimentelor:</strong> Nu oferă rambursare, dar poți transfera biletul altei persoane</li>
-                    <li><strong>Unele evenimente:</strong> Permit rambursare până la o anumită dată (verifică termenii evenimentului)</li>
-                    <li><strong>Eveniment anulat:</strong> Primești rambursare automată 100%</li>
-                    <li><strong>Eveniment reprogramat:</strong> Biletul rămâne valid pentru noua dată sau poți solicita rambursare</li>
-                </ul>
-                <p class="mt-3">Verifică întotdeauna <strong class="text-secondary">Politica de rambursare</strong> afișată pe pagina evenimentului înainte de a cumpăra.</p>'
+            'question' => 'Pot returna biletul sau primi banii înapoi dacă nu mai pot participa?',
+            'answer' => '<p>Nu. Biletele achiziționate pentru eveniment sunt nereturnabile, în conformitate cu prevederile OUG nr. 34/2014, art. 16 lit. l), privind excepțiile de la dreptul de retragere pentru serviciile referitoare la activități de agrement, spectacole și concerte, atunci când contractul prevede o dată sau o perioadă specifică de executare.</p>
+                <p class="mt-3">În cazul în care cumpărătorul renunță, din orice motiv, la participarea la eveniment, contravaloarea biletului nu poate fi rambursată.</p>
+                <p class="mt-3">Dacă evenimentul permite, poți transfera biletul altei persoane din <a href="/account/tickets" class="font-medium text-primary">Biletele mele</a>.</p>'
+        ],
+        [
+            'question' => 'Ce se întâmplă dacă evenimentul este anulat?',
+            'answer' => '<p>Fac excepție situațiile în care evenimentul este anulat de organizator. În acest caz, rambursarea sumelor achitate se va realiza conform condițiilor comunicate de organizator și cu respectarea legislației aplicabile.</p>
+                <p class="mt-3">Te anunțăm pe email când evenimentul este anulat și îți spunem cum se face rambursarea.</p>'
+        ],
+        [
+            'question' => 'Se rambursează taxa de procesare?',
+            'answer' => '<p>Nu. Taxa de procesare/ticketing nu este rambursabilă, inclusiv în situația anulării evenimentului de către organizator.</p>
+                <p class="mt-3">Prin achiziționarea biletului, cumpărătorul declară că a luat cunoștință de <a href="/politica-retur" class="font-medium text-primary">politica de returnare și rambursare</a> și că este de acord cu prevederile acesteia.</p>'
         ],
         [
             'question' => 'Cât durează procesarea rambursării?',
-            'answer' => '<p>Timpul de procesare a rambursării variază:</p>
+            'answer' => '<p>Pentru evenimentele anulate, după ce rambursarea este procesată, banii ajung înapoi pe aceeași metodă de plată folosită la achiziție:</p>
                 <ul class="pl-5 mt-3 space-y-2 list-disc">
                     <li><strong>Procesare din partea noastră:</strong> 1-3 zile lucrătoare</li>
                     <li><strong>Returnare în cont:</strong> 5-14 zile lucrătoare (depinde de bancă)</li>

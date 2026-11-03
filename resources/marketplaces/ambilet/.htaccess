@@ -866,6 +866,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^politica-retur/?$ refund-policy.php [L]
 
+# /retur e linkul din checkout (bifa de termeni)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^retur/?$ refund-policy.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^accesabilitate/?$ accesibility.php [L]

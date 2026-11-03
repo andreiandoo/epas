@@ -336,6 +336,11 @@ class Dashboard extends Page
                 ->get();
         });
 
+        // Events published in the last 7 days (cached 5 min)
+        $recentlyPublishedEvents = Cache::remember("mp_dash_recent_published_{$marketplaceId}", 300, function () use ($marketplaceId) {
+            return $this->computeRecentlyPublishedEvents($marketplaceId);
+        });
+
         // Selected month stats
         $month = $this->selectedMonth ?: Carbon::now('Europe/Bucharest')->format('Y-m');
         [$billingData, $monthStats] = $this->monthFigures($marketplaceId, $month);
@@ -431,9 +436,8 @@ class Dashboard extends Page
             'chartData' => $chartData,
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
-            'topOrganizers' => $stats['topOrganizers'],
-            'topLiveEvents' => $stats['topLiveEvents'],
             'pendingReviewEvents' => $pendingReviewEvents,
+            'recentlyPublishedEvents' => $recentlyPublishedEvents,
             'pendingSupportTickets' => $pendingSupportTickets,
             'pendingSupportTicketsCount' => $pendingSupportTicketsCount,
             'pendingArtistAccounts' => $pendingArtistAccounts,
@@ -451,6 +455,55 @@ class Dashboard extends Page
             'chartMonthMeta' => $chartMonthMeta,
             'selectedMonth' => $month,
         ];
+    }
+
+    /**
+     * Events that went live in the last 7 days, newest first. There's no
+     * published_at column, so the publish moment comes from the activity log
+     * (is_published flipped to true); events without such an entry fall back
+     * to created_at. Only events touched in the window are candidates, which
+     * keeps the activity_log lookup on its subject index.
+     */
+    private function computeRecentlyPublishedEvents(int $marketplaceId): \Illuminate\Support\Collection
+    {
+        $since = Carbon::now()->subDays(7);
+
+        $candidates = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
+            ->where('updated_at', '>=', $since)
+            ->with(['marketplaceOrganizer:id,name', 'venue:id,name,city'])
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            return $candidates;
+        }
+
+        $publishedAt = [];
+        \Spatie\Activitylog\Models\Activity::query()
+            ->where('subject_type', (new Event)->getMorphClass())
+            ->whereIn('subject_id', $candidates->pluck('id'))
+            ->where('created_at', '>=', $since)
+            ->orderBy('id')
+            ->get(['subject_id', 'event', 'properties', 'created_at'])
+            ->each(function ($activity) use (&$publishedAt) {
+                $props = $activity->properties;
+                $now = $props['attributes']['is_published'] ?? null;
+                $was = $props['old']['is_published'] ?? null;
+                if ($now && ($activity->event === 'created' || ! $was)) {
+                    $publishedAt[$activity->subject_id] = $activity->created_at;
+                }
+            });
+
+        return $candidates
+            ->map(function ($event) use ($publishedAt, $since) {
+                $at = $publishedAt[$event->id] ?? ($event->created_at >= $since ? $event->created_at : null);
+                $event->published_moment = $at;
+
+                return $event;
+            })
+            ->filter(fn ($event) => $event->published_moment !== null)
+            ->sortByDesc('published_moment')
+            ->values();
     }
 
     /**
@@ -515,7 +568,6 @@ class Dashboard extends Page
 
     private function computeStats(int $marketplaceId): array
     {
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
         $today = Carbon::now()->startOfDay();
 
         // 1. Events - single query with conditional counts. whereNull(parent_id)
@@ -639,59 +691,6 @@ class Dashboard extends Page
             ->selectRaw("COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as completed")
             ->first();
 
-        // Top Organizers - reads from denormalized columns (fast)
-        $topOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'active')
-            ->orderByDesc('total_revenue')
-            ->limit(5)
-            ->get();
-
-        // Top Live Events
-        $topLiveEvents = Event::where('marketplace_client_id', $marketplaceId)
-            ->where('is_cancelled', false)
-            ->where(function ($query) use ($today) {
-                $query->where(function ($q) use ($today) {
-                    $q->where('duration_mode', 'single_day')->where('event_date', '>=', $today);
-                })->orWhere(function ($q) use ($today) {
-                    $q->where('duration_mode', 'range')->where('range_end_date', '>=', $today);
-                })->orWhere(function ($q) use ($today) {
-                    $q->whereNotIn('duration_mode', ['single_day', 'range'])->whereNotNull('multi_slots');
-                });
-            })
-            ->withCount(['tickets as sold_tickets_count' => function ($q) {
-                $q->whereIn('tickets.status', ['valid', 'used'])
-                    ->tap(fn ($q2) => \App\Support\TestPos::excludeTickets($q2, 'tickets.ticket_type_id'));
-            }])
-            ->get();
-
-        if ($topLiveEvents->isNotEmpty()) {
-            $liveEventIds = $topLiveEvents->pluck('id')->toArray();
-            // Include orders linked by marketplace_event_id OR event_id
-            $revenueByEvent = Order::where(function ($q) use ($marketplaceId, $liveEventIds) {
-                    $q->where('marketplace_client_id', $marketplaceId)
-                      ->orWhereIn('marketplace_event_id', $liveEventIds)
-                      ->orWhereIn('event_id', $liveEventIds);
-                })
-                ->where(function ($q) use ($liveEventIds) {
-                    $q->whereIn('marketplace_event_id', $liveEventIds)
-                      ->orWhereIn('event_id', $liveEventIds);
-                })
-                ->whereIn('status', $paidStatuses)
-                // Top-live-events revenue: live (current/upcoming) events have
-                // no legacy_import orders attached, so this matches the All
-                // Time treatment — leave legacy in for consistency.
-                ->whereNotIn('source', ['test_order', 'pos_test', 'external_import'])
-                ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
-                ->groupBy('eid')
-                ->pluck('rev', 'eid');
-
-            $topLiveEvents->each(function ($event) use ($revenueByEvent) {
-                $event->event_revenue = (float) ($revenueByEvent[$event->id] ?? 0);
-            });
-        }
-
-        $topLiveEvents = $topLiveEvents->sortByDesc('event_revenue')->take(5)->values();
-
         return [
             'cards' => [
                 'total_events' => (int) $eventStats->total,
@@ -725,8 +724,6 @@ class Dashboard extends Page
                 'pending_payouts_value' => (float) $payoutStats->pending,
                 'completed_payouts_value' => (float) $payoutStats->completed,
             ],
-            'topOrganizers' => $topOrganizers,
-            'topLiveEvents' => $topLiveEvents,
         ];
     }
 

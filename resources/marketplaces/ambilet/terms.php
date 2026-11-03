@@ -35,7 +35,7 @@ require_once __DIR__ . '/includes/header.php';
                     <line x1="8" y1="2" x2="8" y2="6"/>
                     <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                Ultima actualizare: 15 Ianuarie 2025
+                Ultima actualizare: 3 noiembrie 2026
             </span>
             <span class="flex items-center gap-1.5">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -232,17 +232,18 @@ require_once __DIR__ . '/includes/header.php';
                 Politica de rambursare
             </h2>
 
-            <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">6.1 Rambursări pentru evenimente anulate</h3>
-            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">În cazul anulării unui eveniment de către organizator, aveți dreptul la rambursarea integrală a sumei plătite, inclusiv taxele de serviciu. Rambursarea se face automat în termen de 14 zile lucrătoare.</p>
+            <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">6.1 Bilete nereturnabile</h3>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Biletele achiziționate pentru eveniment sunt nereturnabile, în conformitate cu prevederile OUG nr. 34/2014, art. 16 lit. l), privind excepțiile de la dreptul de retragere pentru serviciile referitoare la activități de agrement, spectacole și concerte, atunci când contractul prevede o dată sau o perioadă specifică de executare.</p>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">În cazul în care cumpărătorul renunță, din orice motiv, la participarea la eveniment, contravaloarea biletului nu poate fi rambursată.</p>
 
-            <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">6.2 Evenimente reprogramate</h3>
-            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Pentru evenimentele reprogramate, biletele rămân valabile pentru noua dată. Dacă nu puteți participa la noua dată, puteți solicita rambursarea în termen de 14 zile de la anunțul reprogramării.</p>
+            <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">6.2 Evenimente anulate</h3>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Fac excepție situațiile în care evenimentul este anulat de organizator. În acest caz, rambursarea sumelor achitate se va realiza conform condițiilor comunicate de organizator și cu respectarea legislației aplicabile.</p>
 
-            <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">6.3 Renunțări voluntare</h3>
-            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">În cazul renunțării voluntare la participare, politica de rambursare este stabilită de fiecare organizator în parte. Consultați descrierea evenimentului pentru detalii specifice.</p>
+            <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">6.3 Taxa de procesare</h3>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Taxa de procesare/ticketing nu este rambursabilă, inclusiv în situația anulării evenimentului de către organizator.</p>
 
             <div class="p-5 my-6 border-l-4 bg-red-50 border-primary rounded-r-xl">
-                <p class="text-[15px] leading-[1.8] text-red-900 mb-0"><strong class="text-primary">Atenție:</strong> Biletele nu pot fi returnate sau rambursate în ultimele 48 de ore înainte de eveniment, cu excepția cazurilor în care legea impune altfel.</p>
+                <p class="text-[15px] leading-[1.8] text-red-900 mb-0"><strong class="text-primary">Atenție:</strong> Prin achiziționarea biletului, cumpărătorul declară că a luat cunoștință de prezenta <a href="/politica-retur" class="text-primary underline">politică de returnare și rambursare</a> și că este de acord cu prevederile acesteia.</p>
             </div>
         </section>
 
@@ -320,7 +321,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- Print Section -->
         <div class="flex flex-col items-center justify-between gap-4 pt-8 mt-8 border-t border-gray-200 sm:flex-row">
             <div class="text-[13px] text-gray-400">
-                Ultima actualizare: 15 Ianuarie 2025 • Versiunea 2.1
+                Ultima actualizare: 3 noiembrie 2026 • Versiunea 2.2
             </div>
             <button onclick="window.print()" class="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-600 transition-all border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-900 hover:border-gray-900 hover:text-white">
                 <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
