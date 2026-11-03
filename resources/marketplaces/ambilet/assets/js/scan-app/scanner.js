@@ -130,6 +130,36 @@
       return false;
     }
 
+    var invertTick = false;
+
+    // Copy of the current frame with colours flipped. Some mail apps invert
+    // the whole email in dark mode, QR included (light code on dark ground),
+    // and BarcodeDetector only reads dark-on-light codes.
+    function invertedFrame() {
+      var w = videoEl.videoWidth;
+      var h = videoEl.videoHeight;
+      if (!w || !h) return null;
+      var scale = Math.min(1, 960 / Math.max(w, h));
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        ctx2d = canvas.getContext('2d', { willReadFrequently: true });
+      }
+      canvas.width = w;
+      canvas.height = h;
+      ctx2d.drawImage(videoEl, 0, 0, w, h);
+      var img = ctx2d.getImageData(0, 0, w, h);
+      var px = img.data;
+      for (var i = 0; i < px.length; i += 4) {
+        px[i] = 255 - px[i];
+        px[i + 1] = 255 - px[i + 1];
+        px[i + 2] = 255 - px[i + 2];
+      }
+      ctx2d.putImageData(img, 0, 0);
+      return canvas;
+    }
+
     async function detectFrame() {
       if (isPaused || !videoEl || videoEl.readyState < 2) return;
 
@@ -138,6 +168,16 @@
           var results = await detector.detect(videoEl);
           if (results && results.length) {
             handleDetection(results[0].rawValue, results[0].format);
+          } else {
+            // every other frame, try the inverted picture as well
+            invertTick = !invertTick;
+            var inv = invertTick ? invertedFrame() : null;
+            if (inv) {
+              var invResults = await detector.detect(inv);
+              if (invResults && invResults.length) {
+                handleDetection(invResults[0].rawValue, invResults[0].format);
+              }
+            }
           }
         } else if (useJsqr && jsqr) {
           var w = videoEl.videoWidth;
@@ -151,7 +191,7 @@
           canvas.height = h;
           ctx2d.drawImage(videoEl, 0, 0, w, h);
           var imgData = ctx2d.getImageData(0, 0, w, h);
-          var result = jsqr(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
+          var result = jsqr(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
           if (result && result.data) {
             handleDetection(result.data, 'qr_code');
           }

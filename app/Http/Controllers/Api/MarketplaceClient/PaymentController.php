@@ -851,10 +851,14 @@ class PaymentController extends BaseController
                 $seatDetails = $ticket->getSeatDetails();
                 $ticketSeries = $ticket->meta['ticket_series'] ?? null;
 
+                // The white quiet zone lives inside the image (qzone, in modules):
+                // dark-mode mail apps darken the email background but leave images alone.
                 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
-                    'size' => '180x180',
+                    'size' => '300x300',
                     'data' => $ticket->getVerifyUrl(),
-                    'color' => '1a1a2e',
+                    'color' => '000000',
+                    'bgcolor' => 'ffffff',
+                    'qzone' => '4',
                     'margin' => '0',
                     'format' => 'png',
                 ]);
@@ -863,8 +867,8 @@ class PaymentController extends BaseController
                 $ticketsHtml .= '<table style="width:100%;border-top:1px dashed #d0d0d0;" cellpadding="0" cellspacing="0"><tr>';
 
                 // Left: QR code
-                $ticketsHtml .= '<td style="padding:20px 20px 20px 24px;width:170px;vertical-align:top;text-align:center;">';
-                $ticketsHtml .= '<img src="' . $qrUrl . '" alt="QR Code" width="150" height="150" style="display:block;border:1px solid #eee;border-radius:8px;" />';
+                $ticketsHtml .= '<td style="padding:20px 20px 20px 24px;width:180px;vertical-align:top;text-align:center;">';
+                $ticketsHtml .= '<img src="' . $qrUrl . '" alt="QR Code" width="180" height="180" style="display:block;width:180px;height:180px;background:#ffffff;" />';
                 $ticketsHtml .= '<p style="margin:6px 0 0;font-size:12px;color:#666;font-family:monospace;">' . e($ticketCode) . '</p>';
                 if ($ticketSeries) {
                     $ticketsHtml .= '<p style="margin:2px 0 0;font-size:11px;color:#888;font-family:monospace;">Serie: ' . e($ticketSeries) . '</p>';
@@ -1221,10 +1225,13 @@ class PaymentController extends BaseController
             $ticketSeries = $ticket->meta['ticket_series'] ?? null;
             $seatDetails = $ticket->getSeatDetails();
 
+            // Quiet zone inside the image so the code still scans in dark mode
             $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
-                'size' => '180x180',
+                'size' => '300x300',
                 'data' => $ticket->getVerifyUrl(),
-                'color' => '1a1a2e',
+                'color' => '000000',
+                'bgcolor' => 'ffffff',
+                'qzone' => '4',
                 'margin' => '0',
                 'format' => 'png',
             ]);
@@ -1275,8 +1282,8 @@ class PaymentController extends BaseController
                 . $locationLine . $dateLine
                 . '</div>'
                 . '<table style="width:100%;" cellpadding="0" cellspacing="0"><tr>'
-                . '<td style="padding:20px 20px 20px 24px;width:170px;vertical-align:top;text-align:center;">'
-                . '<img src="' . $qrUrl . '" alt="QR Code" width="150" height="150" style="display:block;border:1px solid #eee;border-radius:8px;" />'
+                . '<td style="padding:20px 20px 20px 24px;width:180px;vertical-align:top;text-align:center;">'
+                . '<img src="' . $qrUrl . '" alt="QR Code" width="180" height="180" style="display:block;width:180px;height:180px;background:#ffffff;" />'
                 . '<p style="margin:6px 0 0;font-size:12px;color:#666;font-family:monospace;">' . e($ticketCode) . '</p>'
                 . $seriesQrLine
                 . '</td>'
