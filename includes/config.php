@@ -32,13 +32,18 @@ if (USE_STAGE_API) {
     define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
     define('STORAGE_URL', 'https://core.tixello.com/storage');
 }
-define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB');
+// The API key and the cache-bust token are read from data/secrets.php, a file that exists only on the server
+// (data/ is never touched by a deploy); see includes/secrets.example.php. Until that file is uploaded the values
+// below are used, so nothing breaks. After the upload: generate new values, put them in the file and delete the
+// fallbacks here (the repository is public, so these are already known).
+$ambiletSecrets = is_file(AMBILET_ROOT . '/data/secrets.php') ? (array) require AMBILET_ROOT . '/data/secrets.php' : [];
+define('API_KEY', (string) ($ambiletSecrets['api_key'] ?? 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'));
 define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
 // Shared secret for /api/cache-bust.php — verifies the POST is coming
 // from Tixello admin (which has the matching AMBILET_CACHE_BUST_TOKEN
 // in its env). Rotate by updating both sides simultaneously.
-define('CACHE_BUST_TOKEN', 'cb_a3K8Qm2vR9LpZx5TfYwH7nB4Js6DgEcUiVqOpW1XzMyN0kLrCh');
+define('CACHE_BUST_TOKEN', (string) ($ambiletSecrets['cache_bust_token'] ?? 'cb_a3K8Qm2vR9LpZx5TfYwH7nB4Js6DgEcUiVqOpW1XzMyN0kLrCh'));
 
 // CARTO basemaps (harti). Gol = tile-uri OpenStreetMap, fara cheie.
 define('CARTO_API_KEY', 'cb1_3jw5_1_d9521efce19fbe0388edad3c');

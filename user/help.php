@@ -76,7 +76,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <svg class="w-5 h-5 faq-icon text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div class="px-4 pb-4 faq-answer">
-                        <p class="text-sm text-muted">Politica de rambursare variaza in functie de eveniment si organizator. In general, rambursarile sunt posibile cu cel putin 7 zile inainte de eveniment. Daca evenimentul este anulat, vei primi automat rambursarea completa.</p>
+                        <p class="text-sm text-muted">Biletele sunt nereturnabile, conform OUG nr. 34/2014, art. 16 lit. l), iar dacă renunți la participare, din orice motiv, contravaloarea biletului nu se rambursează. Excepție face anularea evenimentului de către organizator: rambursarea se face conform condițiilor comunicate de organizator. Taxa de procesare/ticketing nu se rambursează, nici în caz de anulare. <a href="/politica-retur" class="text-primary">Vezi politica completă</a>.</p>
                     </div>
                 </div>
 
@@ -177,13 +177,13 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </div>
                 </a>
 
-                <a href="#" class="flex items-center gap-3 p-4 transition-colors bg-surface rounded-xl hover:bg-primary/5">
+                <a href="/politica-retur" class="flex items-center gap-3 p-4 transition-colors bg-surface rounded-xl hover:bg-primary/5">
                     <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-success/10">
                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <div>
                         <p class="text-sm font-medium text-secondary">Politica de rambursare</p>
-                        <p class="text-xs text-muted">Cand si cum</p>
+                        <p class="text-xs text-muted">Ce se ramburseaza si ce nu</p>
                     </div>
                 </a>
 

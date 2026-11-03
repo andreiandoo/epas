@@ -154,6 +154,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <p class="mt-1 text-xs text-muted"><span id="notes-count">0</span>/1000 caractere</p>
                         </div>
 
+                        <p class="text-xs leading-relaxed text-muted">Biletele sunt nereturnabile, conform OUG nr. 34/2014, art. 16 lit. l). Rambursarea se face doar dacă evenimentul este anulat de organizator, conform condițiilor comunicate de acesta. Taxa de procesare/ticketing nu este rambursabilă. <a href="/politica-retur" target="_blank" class="text-primary hover:underline">Politica de returnare și rambursare</a></p>
+
                         <!-- Refund Amount Summary -->
                         <div class="p-4 border border-dashed rounded-xl bg-surface border-border">
                             <div class="flex items-center justify-between">

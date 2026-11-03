@@ -1436,7 +1436,8 @@ async function loadEventForEdit(eventId) {
         updateSummaries();
 
         const allTicketTypes = Array.isArray(event.ticket_types) ? event.ticket_types : [];
-        event.ticket_types = allTicketTypes.filter(tt => !(tt && tt.free_with_code));
+        // Invitation type is issued from "Invitații", not edited here.
+        event.ticket_types = allTicketTypes.filter(tt => !(tt && (tt.free_with_code || tt.is_invitation)));
 
         if (event.ticket_types && event.ticket_types.length > 0) {
             const container = document.getElementById('ticket-types-container');

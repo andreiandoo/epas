@@ -280,7 +280,7 @@ require_once __DIR__ . '/includes/header.php';
                     </svg>
                     Cum pot solicita o rambursare?
                 </h3>
-                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a solicita o rambursare, accesează secțiunea "Comenzile mele" din cont, selectează comanda și apasă pe "Solicită rambursare". Verifică <a href="/termeni" class="text-primary">politica de rambursare</a> pentru detalii.</p>
+                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a solicita o rambursare, accesează secțiunea "Comenzile mele" din cont, selectează comanda și apasă pe "Solicită rambursare". Atenție: biletele sunt nereturnabile, iar rambursarea se face doar dacă evenimentul este anulat de organizator (fără taxa de procesare). Detalii în <a href="/politica-retur" class="text-primary">politica de returnare și rambursare</a>.</p>
             </div>
 
             <div class="bg-white rounded-[14px] p-6 border border-gray-200 hover:border-primary hover:shadow-md transition-all">

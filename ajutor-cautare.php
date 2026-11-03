@@ -36,14 +36,13 @@ function getIconSvg($iconName, $size = 'w-8 h-8') {
 // Helper to highlight search terms
 function highlightTerms($text, $query) {
     if (empty($query)) return htmlspecialchars($text);
-    $terms = preg_split('/\s+/', $query);
     $result = htmlspecialchars($text);
-    foreach ($terms as $term) {
-        if (strlen($term) >= 2) {
-            $result = preg_replace('/(' . preg_quote(htmlspecialchars($term), '/') . ')/iu', '<mark class="bg-yellow-200 text-yellow-900 rounded px-0.5">$1</mark>', $result);
-        }
-    }
-    return $result;
+    // O singura trecere, altfel termenii scurti (ex. "de") prind si markup-ul <mark> deja inserat
+    $terms = array_filter(preg_split('/\s+/', trim($query)), fn($t) => mb_strlen($t) >= 2);
+    if (!$terms) return $result;
+    usort($terms, fn($a, $b) => mb_strlen($b) - mb_strlen($a));
+    $pattern = implode('|', array_map(fn($t) => preg_quote(htmlspecialchars($t), '/'), $terms));
+    return preg_replace('/(' . $pattern . ')/iu', '<mark class="bg-yellow-200 text-yellow-900 rounded px-0.5">$1</mark>', $result);
 }
 $cssBundle = 'listing';
 ?>
