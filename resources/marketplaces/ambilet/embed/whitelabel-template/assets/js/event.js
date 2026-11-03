@@ -64,6 +64,12 @@
     }
 
     function render() {
+        if (event.is_cancelled) {
+            $types.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">Evenimentul a fost anulat. Biletele nu mai sunt disponibile.</div>';
+            if ($summary) $summary.style.display = 'none';
+            if ($addBtn) $addBtn.style.display = 'none';
+            return;
+        }
         if (!ticketTypes.length) {
             $types.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">Nu sunt bilete disponibile.</div>';
             return;
