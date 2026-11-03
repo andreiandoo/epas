@@ -2286,6 +2286,14 @@ class CheckoutController extends BaseController
                 continue;
             }
 
+            // Anularea lasă evenimentul publicat și tipurile de bilete active,
+            // deci fără blocajul ăsta un coș vechi sau o pagină din cache
+            // putea încă finaliza comanda.
+            if ($ticketType->event->is_cancelled) {
+                $errors[$key] = 'Evenimentul a fost anulat. Biletele nu mai sunt disponibile.';
+                continue;
+            }
+
             // Event-level Sold Out blocks every ticket type, including seating
             // events whose per-type is_sold_out was not cascaded yet (older data
             // toggled before the cascade shipped). Server-side backstop to the

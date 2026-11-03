@@ -69,6 +69,10 @@ class OrdersController extends BaseController
             return $this->error('Event not available', 400);
         }
 
+        if ($event->is_cancelled) {
+            return $this->error('Event has been cancelled', 400);
+        }
+
         // Derive tenant_id: prefer event's, then fallback chain
         $tenantId = $event->tenant_id;
         if (!$tenantId) {

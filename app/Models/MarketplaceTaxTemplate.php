@@ -939,6 +939,29 @@ class MarketplaceTaxTemplate extends Model
             $totalUnsoldSubscriptions = 0;
             $totalUnsoldSubscriptionsValue = 0;
 
+            // PV distrugere: seriile derivate (cod promo / cupon / lot) își
+            // numără singure vânzările. Ce s-a vândut pe ele nu mai stă pe
+            // seria părinte, altfel aceleași bilete apar vândute de două ori.
+            // Sync o singură dată aici, refolosit și de Phase B mai jos.
+            $pvAllocations = collect();
+            $pvCodeSoldByTt = [];
+            if ($event) {
+                try {
+                    app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
+                    $pvAllocations = app(\App\Services\Marketplace\SeriesAllocator::class)
+                        ->getForEvent($event);
+                } catch (\Throwable $e) {
+                    $pvAllocations = collect();
+                }
+                foreach ($pvAllocations as $pvAlloc) {
+                    if (($pvAlloc->discount_code ?? '') === '' || $pvAlloc->is_intrinsic_red) {
+                        continue;
+                    }
+                    $pvTtId = (int) $pvAlloc->ticket_type_id;
+                    $pvCodeSoldByTt[$pvTtId] = ($pvCodeSoldByTt[$pvTtId] ?? 0) + (int) $pvAlloc->qty_sold;
+                }
+            }
+
             if ($event->ticketTypes) {
                 // Helper: build the underline-blue series cell text. Reuses the
                 // parent's series prefix and numeric range, but injects an
@@ -1117,15 +1140,18 @@ class MarketplaceTaxTemplate extends Model
                         );
                     }
 
-                    // PV Distrugere: calculate unsold tickets with series range
-                    $unsold = max(0, $available - $sold);
+                    // PV Distrugere: calculate unsold tickets with series range.
+                    // Seria părinte = doar ce s-a vândut fără cod; vânzările cu
+                    // cod sunt scăzute pe rândurile lor derivate (Phase B).
+                    $parentSold = max(0, $sold - (int) ($pvCodeSoldByTt[(int) $ticketType->id] ?? 0));
+                    $unsold = max(0, $available - $parentSold);
                     if ($unsold > 0) {
                         $unsoldValue = $unsold * $price;
                         $unsoldSeriesDisplay = '-';
 
                         if ($seriesStart && $seriesEnd && preg_match('/^(.+-)(\d+)$/', $seriesEnd, $mEnd)) {
                             $seriesPrefix = $mEnd[1];
-                            $unsoldStartNum = $sold + 1;
+                            $unsoldStartNum = $parentSold + 1;
                             $padLen = strlen($mEnd[2]);
                             $unsoldSeriesStart = $seriesPrefix . str_pad($unsoldStartNum, $padLen, '0', STR_PAD_LEFT);
                             $unsoldSeriesDisplay = $unsoldSeriesStart . ' — ' . $seriesEnd;
@@ -1158,16 +1184,7 @@ class MarketplaceTaxTemplate extends Model
             // accounts for every series the organizer declared upfront —
             // even if those tickets are fabricated (no physical paper).
             if ($event) {
-                try {
-                    // Re-sync first so the promo/coupon/RED unsold rows use the
-                    // current allocation (qty_allocated = quota_total), matching
-                    // the always-sync the cerere-avizare tables now do.
-                    app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
-                    $pvAllocations = app(\App\Services\Marketplace\SeriesAllocator::class)
-                        ->getForEvent($event);
-                } catch (\Throwable $e) {
-                    $pvAllocations = collect();
-                }
+                // $pvAllocations was synced before the ticket types loop.
 
                 // Same discount-source lookup the cerere-avizare generator
                 // already does — we need the reduced unit price per tier
