@@ -144,6 +144,13 @@ require_once __DIR__ . '/includes/header.php';
                                 <div id="company-card" class="hidden p-4 mt-3 text-sm border rounded-xl bg-surface border-border" aria-live="polite"></div>
                                 <p id="company-pf-note" class="hidden mt-3 text-xs font-medium text-amber-600"></p>
                                 <p class="mt-2 text-xs text-muted"><?= htmlspecialchars(ct('company_invoice_hint')) ?></p>
+                                <!-- Doar pentru vizitatori fără cont: facturile se regăsesc în /cont/facturi -->
+                                <div id="company-account-nudge" class="hidden p-4 mt-4 text-sm border rounded-xl border-primary/20 bg-primary/5">
+                                    <p class="font-semibold text-secondary"><?= htmlspecialchars(ct('company_account_title')) ?></p>
+                                    <p class="mt-1 text-muted"><?= htmlspecialchars(ct('company_account_text')) ?></p>
+                                    <button type="button" id="company-account-btn" onclick="CheckoutPage.enableAccountForInvoices()" class="btn btn-primary px-4 py-2 mt-3 text-sm rounded-xl"><?= htmlspecialchars(ct('company_account_btn')) ?></button>
+                                    <p id="company-account-done" class="hidden mt-3 text-sm font-medium text-success" aria-live="polite"><?= htmlspecialchars(ct('company_account_done')) ?></p>
+                                </div>
                             </div>
                         </div>
                     </div>
