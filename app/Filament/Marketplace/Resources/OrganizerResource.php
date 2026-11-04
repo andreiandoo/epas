@@ -531,7 +531,8 @@ class OrganizerResource extends Resource
                                 ->live()
                                 ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
                                     // La prima activare pornește cu excepțiile implicite.
-                                    if ($state && $get('document_filing_exceptions') === null) {
+                                    // Select-ul multiplu pornește cu [] (nu null), deci verific golul.
+                                    if ($state && empty($get('document_filing_exceptions'))) {
                                         $set('document_filing_exceptions', self::defaultFilingExceptions());
                                     }
                                 })
@@ -552,6 +553,15 @@ class OrganizerResource extends Resource
                                         ->all();
                                 })
                                 ->default(fn () => self::defaultFilingExceptions())
+                                // Organizator cu bifa activă dar fără excepții salvate vreodată
+                                // (null în DB): pornește cu cele implicite.
+                                ->afterStateHydrated(function ($component, $state, ?MarketplaceOrganizer $record) {
+                                    if ($record && $record->marketplace_manages_documents
+                                        && $record->getRawOriginal('document_filing_exceptions') === null
+                                        && empty($state)) {
+                                        $component->state(self::defaultFilingExceptions());
+                                    }
+                                })
                                 ->helperText('Direcțiile fiscale unde nu putem depune în numele organizatorului. Pentru evenimentele de acolo documentele le putem genera, dar depunerea o face organizatorul.')
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('marketplace_manages_documents'))
                                 ->columnSpanFull(),
