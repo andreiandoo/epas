@@ -25,6 +25,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div>
                     <p class="text-sm font-bold text-secondary">AmBilet se ocupă de documentele tale fiscale</p>
                     <p class="mt-1 text-sm text-secondary">Noi generăm cererile de vizare, declarațiile de impozit și PV-urile de distrugere a biletelor și tot noi le depunem la primărie. Nu trebuie să generezi sau să confirmi nimic. Aici le vezi și le descarci oricând.</p>
+                    <p id="managed-exceptions" class="hidden mt-2 text-sm text-secondary"></p>
                 </div>
             </div>
 
@@ -34,7 +35,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <span class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold rounded-full bg-primary/10 text-primary">1</span>
                     <div>
                         <p class="text-sm font-semibold text-secondary">Înainte de eveniment: cererea de vizare</p>
-                        <p class="text-xs text-muted mt-0.5">După publicare o generezi și o depui la primărie cu cel puțin 2 zile înainte de eveniment. Dacă se schimbă prețul, stocul sau codurile de reducere ale biletelor, trebuie regenerată și depusă din nou.</p>
+                        <p class="text-xs text-muted mt-0.5">După publicare o generezi și o depui la primărie cu cel puțin 5 zile înainte de eveniment. Dacă se schimbă prețul, stocul sau codurile de reducere ale biletelor, trebuie regenerată și depusă din nou.</p>
                     </div>
                 </div>
                 <div class="flex gap-3 p-4 bg-white border rounded-2xl border-border">
@@ -164,13 +165,24 @@ let selectedEventId = null;
 let current = null;
 let busy = false;
 let managed = false;
+// Per eveniment: false la primăriile din excepții, unde depune organizatorul.
+let eventManaged = false;
 
 // AmBilet prepares and files this organizer's documents: read-only page.
-function setManaged(on) {
+function setManaged(on, exceptions) {
     managed = on;
     document.getElementById('managed-banner').classList.toggle('hidden', !on);
     document.getElementById('managed-banner').classList.toggle('flex', on);
-    document.getElementById('how-it-works').classList.toggle('hidden', on);
+    const hasExceptions = Array.isArray(exceptions) && exceptions.length > 0;
+    if (exceptions !== undefined) {
+        const ex = document.getElementById('managed-exceptions');
+        ex.classList.toggle('hidden', !hasExceptions);
+        if (hasExceptions) {
+            ex.innerHTML = '<strong>Excepție:</strong> la ' + exceptions.map(escapeHtml).join(', ') +
+                ' nu putem depune documentele în numele tău. Pentru evenimentele de acolo le poți genera aici (sau le generăm noi), dar depunerea o faci tu, apoi o confirmi pe pagina evenimentului.';
+        }
+    }
+    document.getElementById('how-it-works').classList.toggle('hidden', on && !hasExceptions);
     if (on) document.getElementById('page-intro').textContent = 'Documentele fiscale ale evenimentelor tale, pregătite și depuse de echipa AmBilet.';
 }
 
@@ -224,7 +236,7 @@ async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/documents/events');
         const events = (response.success && response.data.events) || [];
-        if (response.data && response.data.manages_documents) setManaged(true);
+        if (response.data && response.data.manages_documents) setManaged(true, response.data.filing_exceptions || []);
         if (!events.length) {
             loading.textContent = 'Nu ai încă evenimente.';
             document.getElementById('event-detail-empty').classList.remove('lg:block');
@@ -395,7 +407,7 @@ function render(data) {
     document.getElementById('event-status-badge').innerHTML = badge;
 
     document.getElementById('registry-info').innerHTML = renderRegistry(data.registry);
-    if (data.manages_documents) setManaged(true);
+    eventManaged = !!data.manages_documents;
 
     renderGroup('cerere', data.groups.cerere, data);
     renderGroup('impozit_pv', data.groups.impozit_pv, data);
@@ -436,7 +448,7 @@ function renderGroup(key, g, data) {
     const title = isCerere ? 'Cerere de vizare a biletelor' : 'Impozit spectacole + PV distrugere bilete';
     const subtitle = isCerere ? 'Înainte de eveniment' : 'După eveniment · se generează și se depun împreună';
 
-    if (managed) return renderManagedGroup(box, title, subtitle, g);
+    if (eventManaged) return renderManagedGroup(box, title, subtitle, g);
 
     let status;
     if (g.stale) status = chip('Trebuie regenerată', 'error');
@@ -453,7 +465,11 @@ function renderGroup(key, g, data) {
 
     if (g.deadline) {
         html += '<p class="mb-4 text-sm text-secondary">Termen de depunere: <strong>' + escapeHtml(g.deadline) + '</strong>' +
-            (isCerere ? ' <span class="text-muted">(cu 2 zile înainte de eveniment)</span>' : ' <span class="text-muted">(10 a lunii de după eveniment)</span>') + '</p>';
+            (isCerere ? ' <span class="text-muted">(cu 5 zile înainte de eveniment)</span>' : ' <span class="text-muted">(10 a lunii de după eveniment)</span>') + '</p>';
+    }
+
+    if (data && data.filing_exception) {
+        html += '<p class="p-3 mb-4 text-sm rounded-xl bg-warning/10 text-secondary">La această primărie nu putem depune documentele în numele tău. Le poți genera aici sau le generăm noi, dar depunerea o faci tu. După depunere apasă butonul de confirmare.</p>';
     }
 
     if (g.stale) {

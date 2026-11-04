@@ -204,7 +204,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Comision bilet rambursat integral',
-                'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
+                'description' => trim('Servicii ticketing bilete rambursate "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $comm,
                 'amount' => $lt,
@@ -219,7 +219,7 @@ class RebuildInvoiceItemDescriptions extends Command
             $tt = (string) ($row['ticket_type_name'] ?? 'Bilet');
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
-                'description' => trim('Servicii ticketing invitatii/bilete "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
+                'description' => trim('Servicii ticketing bilete "' . $tt . '"' . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $comm,
                 'amount' => $lt,

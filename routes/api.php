@@ -2610,6 +2610,8 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.orders');
         Route::get('/orders/{order}', [CustomerAccountController::class, 'orderDetail'])
             ->name('api.marketplace-client.customer.orders.show');
+        Route::get('/company-invoices', [\App\Http\Controllers\Api\MarketplaceClient\Customer\CompanyInvoiceController::class, 'index'])
+            ->name('api.marketplace-client.customer.company-invoices');
         Route::post('/orders/{order}/company-invoice', [\App\Http\Controllers\Api\MarketplaceClient\Customer\CompanyInvoiceController::class, 'request'])
             ->middleware('throttle:10,1')
             ->name('api.marketplace-client.customer.orders.company-invoice');

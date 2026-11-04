@@ -135,6 +135,7 @@ const AmbiletAPI = {
     getProxyAction(endpoint) {
         // Factură pe persoană juridică (client + organizator)
         if (endpoint === '/customer/company-invoice/lookup') return 'company-invoice.lookup';
+        if (endpoint === '/customer/company-invoices') return 'customer.company-invoices';
         if (/^\/customer\/orders\/[\w-]+\/company-invoice$/.test(endpoint)) return 'customer.order.company-invoice';
         if (/^\/customer\/orders\/[\w-]+\/company-invoices\/\d+\/download$/.test(endpoint)) return 'customer.order.company-invoice.download';
         if (endpoint === '/organizer/company-invoices') return 'organizer.company-invoices';

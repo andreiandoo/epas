@@ -157,11 +157,34 @@ const CheckoutPage = {
         const user = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getUser() : null;
         const savedCui = user?.settings?.company_billing?.cui;
         if (savedCui) input.value = savedCui;
+        document.getElementById('createAccountCheckbox')?.addEventListener('change', () => this.updateCompanyAccountNudge());
+    },
+
+    // Vizitator fără cont care cere factură pe firmă: îl îndemnăm să-și facă cont,
+    // ca să-și regăsească facturile în Contul meu → Facturi.
+    updateCompanyAccountNudge() {
+        const nudge = document.getElementById('company-account-nudge');
+        if (!nudge) return;
+        const user = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getUser() : null;
+        const on = document.getElementById('companyInvoiceCheckbox')?.checked;
+        const box = document.getElementById('createAccountCheckbox');
+        nudge.classList.toggle('hidden', !on || !!user || !box);
+        const done = !!box?.checked;
+        document.getElementById('company-account-btn').classList.toggle('hidden', done);
+        document.getElementById('company-account-done').classList.toggle('hidden', !done);
+    },
+
+    enableAccountForInvoices() {
+        const box = document.getElementById('createAccountCheckbox');
+        if (!box) return;
+        box.checked = true;
+        this.updateCompanyAccountNudge();
     },
 
     toggleCompanyInvoice() {
         const on = document.getElementById('companyInvoiceCheckbox').checked;
         document.getElementById('company-invoice-fields').classList.toggle('hidden', !on);
+        this.updateCompanyAccountNudge();
         if (on) {
             const input = document.getElementById('company-cui');
             if (input.value.trim() && !this.company) this.lookupCompany();
@@ -529,6 +552,7 @@ const CheckoutPage = {
                 }
                 const createAccountRow = document.getElementById('create-account-row');
                 if (createAccountRow) createAccountRow.classList.add('hidden');
+                CheckoutPage.updateCompanyAccountNudge();
             } else {
                 AmbiletNotifications.error(result.message || 'Email sau parola incorectă');
             }

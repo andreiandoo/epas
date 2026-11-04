@@ -497,6 +497,10 @@ RewriteRule ^cont/comenzi/?$ user/orders.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/facturi/?$ user/invoices.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cont/favorite/?$ user/watchlist.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f

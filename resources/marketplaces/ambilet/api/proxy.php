@@ -1307,6 +1307,12 @@ switch ($action) {
         $endpoint = '/customer/company-invoice/lookup';
         break;
 
+    case 'customer.company-invoices':
+        $method = 'GET';
+        $endpoint = '/customer/company-invoices';
+        $requiresAuth = true;
+        break;
+
     case 'customer.order.company-invoice':
         $method = 'POST';
         $body = file_get_contents('php://input');

@@ -380,9 +380,10 @@ class OrganizerFiscalDocuments
                 'filed_by' => $lastFiling['by'] ?? null,
                 'deadline' => $fmt($deadline),
                 'overdue' => $deadline && $today->gt($deadline) && ! $filing['filed'],
-                // Filed by the operators when the marketplace handles the documents.
+                // Filed by the operators when the marketplace handles the documents
+                // (except at the registries the organizer files with themselves).
                 'can_confirm' => $allGenerated && ! $filing['filed'] && ! $stale
-                    && ! $event->marketplaceOrganizer?->marketplace_manages_documents,
+                    && ! $event->marketplaceOrganizer?->marketplaceFilesFor($event),
             ];
         }
 
@@ -398,7 +399,8 @@ class OrganizerFiscalDocuments
                 'is_cancelled' => (bool) $event->is_cancelled,
                 'is_ended' => $ended,
             ],
-            'manages_documents' => (bool) $event->marketplaceOrganizer?->marketplace_manages_documents,
+            'manages_documents' => (bool) $event->marketplaceOrganizer?->marketplaceFilesFor($event),
+            'filing_exception' => (bool) $event->marketplaceOrganizer?->isFilingException($event),
             'registry' => $registry ? [
                 'name' => $registry->name,
                 'subname' => $registry->subname,
@@ -433,8 +435,9 @@ class OrganizerFiscalDocuments
             return [];
         }
 
-        // The marketplace handles these documents: nothing for the organizer to do.
-        if ($organizer->marketplace_manages_documents) {
+        // The marketplace handles these documents: nothing for the organizer to do,
+        // unless some events are at a registry the marketplace can't file with.
+        if ($organizer->marketplace_manages_documents && ! $organizer->filingExceptionRegistryIds()) {
             return [];
         }
 
@@ -444,6 +447,9 @@ class OrganizerFiscalDocuments
             }
             $out = [];
             foreach ($this->candidateEvents((int) $organizer->marketplace_client_id, $organizer->id) as $event) {
+                if ($organizer->marketplaceFilesFor($event)) {
+                    continue;
+                }
                 if ($issue = $this->issue($event)) {
                     $deadline = $issue['kind'] === 'impozit_pv_missing' ? $this->taxDeadline($event) : $this->cerereDeadline($event);
                     $out[] = [
@@ -554,7 +560,7 @@ class OrganizerFiscalDocuments
             return null;
         }
         $organizer = $event->marketplaceOrganizer;
-        if (! $organizer || $organizer->marketplace_manages_documents || $organizer->organizer_type === 'leisure') {
+        if (! $organizer || $organizer->marketplaceFilesFor($event) || $organizer->organizer_type === 'leisure') {
             return null;
         }
         if (! $event->is_published || $event->is_cancelled || ! $this->marketplaceHasTemplates((int) $event->marketplace_client_id)) {

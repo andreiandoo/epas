@@ -442,6 +442,15 @@ class DocumentController extends BaseController
         return $this->success([
             'events' => $eventsWithDocs,
             'manages_documents' => (bool) $organizer->marketplace_manages_documents,
+            // Primăriile unde depunerea rămâne la organizator, deși restul e la noi.
+            'filing_exceptions' => $organizer->marketplace_manages_documents && $organizer->filingExceptionRegistryIds()
+                ? \App\Models\MarketplaceTaxRegistry::whereIn('id', $organizer->filingExceptionRegistryIds())
+                    ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                    ->orderBy('name')
+                    ->get(['name', 'subname'])
+                    ->map(fn ($r) => trim($r->name . ($r->subname ? ' · ' . $r->subname : '')))
+                    ->values()
+                : [],
             'debug' => [
                 'organizer_id' => $organizer->id,
                 'marketplace_client_id' => $organizer->marketplace_client_id,
@@ -636,7 +645,7 @@ class DocumentController extends BaseController
             return $this->error('Evenimentul nu a fost gasit', 404);
         }
 
-        if ($organizer->marketplace_manages_documents) {
+        if ($organizer->marketplaceFilesFor($event)) {
             return $this->error('Documentele acestui eveniment le pregătim noi.', 422);
         }
 
@@ -667,7 +676,7 @@ class DocumentController extends BaseController
 
         $service = app(OrganizerFiscalDocuments::class);
         $status = $service->status($event);
-        if ($organizer->marketplace_manages_documents) {
+        if ($organizer->marketplaceFilesFor($event)) {
             return $this->error('Documentele acestui eveniment le depunem noi.', 422);
         }
         if ($status['groups'][$validated['group']]['stale']) {

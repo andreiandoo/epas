@@ -142,6 +142,7 @@ class EventDocumentFilingService
         $method = $registry?->submission_method;
         $blocked = match (true) {
             $event->marketplaceOrganizer?->marketplace_manages_documents === false => 'Organizatorul își gestionează singur documentele.',
+            (bool) $event->marketplaceOrganizer?->isFilingException($event) => 'La această direcție fiscală nu putem depune în numele organizatorului (excepție pe organizator). Documentele se pot genera, depunerea o face organizatorul.',
             ! $allGenerated => 'Generează întâi ' . (count($types) > 1 ? 'toate documentele' : 'documentul') . '.',
             ! $registry => 'Evenimentul nu are un registru fiscal asociat.',
             ! $method => 'Metoda de depunere nu e setată pe registrul fiscal.',

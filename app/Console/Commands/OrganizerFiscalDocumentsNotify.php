@@ -42,7 +42,7 @@ class OrganizerFiscalDocumentsNotify extends Command
         foreach ($marketplaceIds as $marketplaceId) {
             foreach ($documents->candidateEvents((int) $marketplaceId) as $event) {
                 $organizer = $event->marketplaceOrganizer;
-                if (! $organizer || $organizer->marketplace_manages_documents || $organizer->organizer_type === 'leisure') {
+                if (! $organizer || $organizer->marketplaceFilesFor($event) || $organizer->organizer_type === 'leisure') {
                     continue;
                 }
                 if ($dry) {

@@ -180,7 +180,7 @@ class PosInvoiceContentBuilder
 
             $items[] = [
                 'name' => 'Comision bilet rambursat integral',
-                'description' => trim('Servicii ticketing invitatii/bilete rambursate "' . $ticketTypeName . '"'
+                'description' => trim('Servicii ticketing bilete rambursate "' . $ticketTypeName . '"'
                     . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
@@ -215,7 +215,7 @@ class PosInvoiceContentBuilder
 
             $items[] = [
                 'name' => 'Comision online inclus în preț bilet',
-                'description' => trim('Servicii ticketing invitatii/bilete "' . $ticketTypeName . '"'
+                'description' => trim('Servicii ticketing bilete "' . $ticketTypeName . '"'
                     . $contractFragment . $decontFragment . $eventFragment),
                 'quantity' => $displayQty,
                 'unit_price' => $displayUnit,

@@ -42,7 +42,7 @@ class OpsBoardService
 {
     public const SLUG = 'ops-board';
 
-    public const CERERE_DAYS_BEFORE = 2;
+    public const CERERE_DAYS_BEFORE = 5;
 
     public const TAX_DUE_DAY = 10;
 
@@ -76,6 +76,9 @@ class OpsBoardService
     protected string $tz;
 
     protected Carbon $today;
+
+    /** Rândul curent e la o primărie unde depune organizatorul (excepție). */
+    protected bool $orgFiles = false;
 
     /**
      * @param  Carbon  $from  first day of the period
@@ -344,6 +347,8 @@ class OpsBoardService
         $ownDocuments = $event->marketplaceOrganizer?->marketplace_manages_documents === false;
         $theirs = $this->cell('na', 'La organizator');
         $registry = ($facts['registries'] ?? [])[$event->marketplace_tax_registry_id] ?? null;
+        // Primărie din excepțiile organizatorului: generăm noi, depune el.
+        $this->orgFiles = (bool) $event->marketplaceOrganizer?->isFilingException($event);
 
         $cells = [
             'cerere' => $ownDocuments ? $theirs : $this->cerereCell($event, $start, $ended, $cancelled, $docs, $facts, $docsUrl),
@@ -374,7 +379,7 @@ class OpsBoardService
             'cancelled' => $cancelled,
             'postponed' => (bool) $event->is_postponed,
             'url' => "/marketplace/events/{$event->id}/edit",
-            'filing' => $ownDocuments ? null : $this->filing($event, $facts['registries'] ?? []),
+            'filing' => $ownDocuments ? null : $this->filing($event, $facts['registries'] ?? [], $this->orgFiles),
             'cells' => $cells,
             'open_count' => count(array_filter($cells, fn ($c) => $c['open'])),
             'overdue_count' => count(array_filter($cells, fn ($c) => $c['overdue'])),
@@ -525,7 +530,7 @@ class OpsBoardService
      *
      * @return array{label: string, missing: bool, url: string}
      */
-    protected function filing(Event $event, array $registries): array
+    protected function filing(Event $event, array $registries, bool $orgFiles = false): array
     {
         $registry = $registries[$event->marketplace_tax_registry_id] ?? null;
         if (! $registry) {
@@ -533,6 +538,9 @@ class OpsBoardService
         }
 
         $url = "/marketplace/tax-registry/{$registry->id}/edit";
+        if ($orgFiles) {
+            return ['label' => $registry->name . ' · excepție, depune organizatorul', 'missing' => false, 'url' => "/marketplace/organizers/{$event->marketplaceOrganizer->id}/edit?tab=date-legale"];
+        }
         $method = $registry->submissionLabel();
 
         return $method
@@ -667,6 +675,11 @@ class OpsBoardService
 
         if ($filing && $filing['filed_at'] >= $generatedAt) {
             return $this->cell('done', 'Depus', $filing['method_label'] . ' · ' . $this->stamp($filing['filed_at']), null, false, false, $url);
+        }
+
+        // Nu putem depune noi la această primărie: nu e o sarcină a operatorilor.
+        if ($this->orgFiles) {
+            return $this->cell('generated', 'Generat', 'depune organizatorul', $due, false, false, $url);
         }
 
         $label = $filing ? 'De redepus' : 'De depus';

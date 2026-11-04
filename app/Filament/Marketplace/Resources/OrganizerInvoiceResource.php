@@ -26,7 +26,7 @@ use Illuminate\Support\HtmlString;
 class OrganizerInvoiceResource extends Resource
 {
     protected static ?string $model = Invoice::class;
-    protected static ?string $navigationLabel = 'Facturi Organizatori';
+    protected static ?string $navigationLabel = 'Facturi';
     protected static ?string $modelLabel = 'Factură';
     protected static ?string $pluralModelLabel = 'Facturi Organizatori';
 
@@ -43,7 +43,7 @@ class OrganizerInvoiceResource extends Resource
             // + facturile platformei către firme, la comenzi (fără organizator)
             ->where(fn (Builder $q) => $q->whereNotNull('marketplace_organizer_id')
                 ->orWhereRaw("(meta->>'recipient_type') = ?", [\App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE]))
-            ->with(['payout:id,reference,event_id', 'payout.event:id,title']);
+            ->with(['organizer', 'payout:id,reference,event_id', 'payout.event:id,title']);
     }
 
     public static function form(Schema $form): Schema
@@ -332,7 +332,13 @@ class OrganizerInvoiceResource extends Resource
                         // into a single cell to fit the table without
                         // horizontal scroll.
                         $like = '%' . $search . '%';
+                        // Facturile pe firmă (comenzi) n-au organizator: caut și
+                        // în firma din meta (nume, CUI) și în numărul comenzii.
+                        $jsonCond = $query->getConnection()->getDriverName() === 'pgsql'
+                            ? "((meta->'client'->>'name') ilike ? or (meta->'client'->>'cui') ilike ? or (meta->>'order_number') ilike ?)"
+                            : "(json_extract(meta, '$.client.name') like ? or json_extract(meta, '$.client.cui') like ? or json_extract(meta, '$.order_number') like ?)";
                         return $query
+                            ->orWhereRaw($jsonCond, [$like, $like, $like])
                             ->orWhereHas('organizer', fn ($q) => $q->where('name', 'ilike', $like))
                             ->orWhereHas('payout', fn ($q) => $q->where('reference', 'ilike', $like))
                             ->orWhereHas('payout.event', function ($q) use ($like) {
@@ -346,13 +352,22 @@ class OrganizerInvoiceResource extends Resource
                     })
                     ->sortable()
                     ->wrap()
+                    // Fără organizator (factură pe firmă) starea era null și
+                    // Filament nu mai apela formatStateUsing: celula ieșea goală.
+                    ->getStateUsing(fn (Invoice $record) => $record->organizer?->name
+                        ?? (($record->meta['client']['name'] ?? '') ?: '—'))
                     ->formatStateUsing(function ($state, $record) {
                         // Resolve organizer / general-client name for the
                         // main line — same logic as before the merge.
                         $meta = $record->meta ?? [];
+                        $isCompany = ($meta['recipient_type'] ?? null) === \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE;
                         $name = in_array($meta['recipient_type'] ?? null, ['general_client', \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE], true)
-                            ? ($meta['client']['name'] ?? 'Client general') . (!empty($meta['order_number']) ? ' · comanda ' . $meta['order_number'] : '')
+                            ? (($meta['client']['name'] ?? '') ?: 'Client general')
                             : ($state ?? '—');
+                        $companyLine = implode(' · ', array_filter([
+                            $isCompany && !empty($meta['client']['cui']) ? 'CUI ' . $meta['client']['cui'] : null,
+                            !empty($meta['order_number']) ? 'comanda ' . $meta['order_number'] : null,
+                        ]));
 
                         // Event · decont-reference on the second line (from
                         // the removed Eveniment/Decont column).
@@ -384,6 +399,10 @@ class OrganizerInvoiceResource extends Resource
 
                         $html = '<div>'
                             . '<div style="font-weight:500;">' . e($name) . '</div>';
+                        if ($companyLine !== '') {
+                            $html .= '<div style="font-size:11px; color:#6b7280; line-height:1.3;">'
+                                . e($companyLine) . '</div>';
+                        }
                         if ($eventLine !== '') {
                             $html .= '<div style="font-size:11px; color:#6b7280; line-height:1.3;">'
                                 . e($eventLine) . '</div>';
@@ -449,20 +468,31 @@ class OrganizerInvoiceResource extends Resource
                 // regenerating + resending. Sub-state comes from the
                 // model helpers so this column and the edit page can
                 // never disagree.
+                // Starea se verifică la Oblio când se deschide factura (sau din
+                // butonul „Verifică status Oblio”), nu prin cron. Facturile
+                // nedeschise de la emitere apar „Neverificată”.
                 Tables\Columns\TextColumn::make('oblio_void_state')
                     ->label('Stare Oblio')
                     ->badge()
-                    ->color('danger')
                     ->state(function (Invoice $record): ?string {
                         if ($record->isStornoedInOblio()) return 'stornoed';
                         if ($record->isCanceledInOblio()) return 'canceled';
                         if ($record->isDeletedInOblio())  return 'deleted';
-                        return null;
+                        $acc = $record->meta['accounting'] ?? [];
+                        if (empty($acc['external_ref'])) return null;
+                        return !empty($acc['status_check_at']) ? 'live' : 'unchecked';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'live' => 'success',
+                        'unchecked' => 'gray',
+                        default => 'danger',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'stornoed' => 'Storno-tă',
                         'canceled' => 'Anulată',
                         'deleted'  => 'Ștearsă',
+                        'live' => 'Activă',
+                        'unchecked' => 'Neverificată',
                         default    => $state,
                     })
                     ->tooltip(function (Invoice $record): ?string {
@@ -471,8 +501,13 @@ class OrganizerInvoiceResource extends Resource
                             ?? $meta['accounting']['canceled_at']
                             ?? $meta['accounting']['deleted_at']
                             ?? null;
-                        if (!$when) return null;
-                        return 'Detectat la ' . \Carbon\Carbon::parse($when)->format('d.m.Y H:i');
+                        if ($when) {
+                            return 'Detectat la ' . \Carbon\Carbon::parse($when)->format('d.m.Y H:i');
+                        }
+                        if (!empty($meta['accounting']['status_check_at'])) {
+                            return 'Verificat la ' . \Carbon\Carbon::parse($meta['accounting']['status_check_at'])->format('d.m.Y H:i');
+                        }
+                        return !empty($meta['accounting']['external_ref']) ? 'Se verifică la deschiderea facturii' : null;
                     })
                     ->placeholder('—'),
 
@@ -512,26 +547,6 @@ class OrganizerInvoiceResource extends Resource
                         'outstanding' => 'Neachitată',
                         default => $state,
                     }),
-
-                Tables\Columns\TextColumn::make('anafQueue.status')
-                    ->label('eFactura')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'accepted' => 'success',
-                        'submitted' => 'warning',
-                        'queued' => 'info',
-                        'rejected', 'error' => 'danger',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'queued' => 'În coadă',
-                        'submitted' => 'Trimisă',
-                        'accepted' => 'Acceptată',
-                        'rejected' => 'Respinsă',
-                        'error' => 'Eroare',
-                        default => '-',
-                    })
-                    ->placeholder('-'),
             ])
             ->defaultSort('issue_date', 'desc')
             ->filters([

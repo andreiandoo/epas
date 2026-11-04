@@ -528,6 +528,32 @@ class OrganizerResource extends Resource
                                 })
                                 ->helperText('Activ: cererea de vizare, impozitul și PV-ul de distrugere le pregătim și le depunem noi. Inactiv: rămân în grija organizatorului.')
                                 ->default(false)
+                                ->live()
+                                ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
+                                    // La prima activare pornește cu excepțiile implicite.
+                                    if ($state && $get('document_filing_exceptions') === null) {
+                                        $set('document_filing_exceptions', self::defaultFilingExceptions());
+                                    }
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\Select::make('document_filing_exceptions')
+                                ->label('Excepții de depunere')
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->options(function () {
+                                    $clientId = Auth::guard('marketplace_admin')->user()?->marketplace_client_id;
+
+                                    return \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $clientId)
+                                        ->orderBy('name')
+                                        ->get(['id', 'name', 'subname'])
+                                        ->mapWithKeys(fn ($r) => [$r->id => trim($r->name . ($r->subname ? ' · ' . $r->subname : ''))])
+                                        ->all();
+                                })
+                                ->default(fn () => self::defaultFilingExceptions())
+                                ->helperText('Direcțiile fiscale unde nu putem depune în numele organizatorului. Pentru evenimentele de acolo documentele le putem genera, dar depunerea o face organizatorul.')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('marketplace_manages_documents'))
                                 ->columnSpanFull(),
                         ]),
 
@@ -2295,6 +2321,18 @@ class OrganizerResource extends Resource
                 </div>
             </div>
         ");
+    }
+
+    /** Excepțiile implicite, doar cele care există în registrul marketplace-ului curent. */
+    protected static function defaultFilingExceptions(): array
+    {
+        $clientId = Auth::guard('marketplace_admin')->user()?->marketplace_client_id;
+
+        return \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $clientId)
+            ->whereIn('id', MarketplaceOrganizer::DEFAULT_FILING_EXCEPTION_REGISTRY_IDS)
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->all();
     }
 
     protected static function renderBankAccounts(?MarketplaceOrganizer $record): HtmlString

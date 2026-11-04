@@ -15,6 +15,9 @@ class MarketplaceOrganizer extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
+    /** Primariile unde implicit nu putem depune in numele organizatorului. */
+    public const DEFAULT_FILING_EXCEPTION_REGISTRY_IDS = [1, 7, 6];
+
     protected $fillable = [
         'marketplace_client_id',
         'email',
@@ -87,6 +90,7 @@ class MarketplaceOrganizer extends Authenticatable
         'proxy_authorization_file',
         'proxy_admin_id',
         'marketplace_manages_documents',
+        'document_filing_exceptions',
         'email_verified_at',
         'email_verification_token',
         'email_verification_expires_at',
@@ -196,6 +200,7 @@ class MarketplaceOrganizer extends Authenticatable
         'contract_signed_at' => 'datetime',
         'has_proxy_authorization' => 'boolean',
         'marketplace_manages_documents' => 'boolean',
+        'document_filing_exceptions' => 'array',
         'password' => 'hashed',
         'social_links' => 'array',
         'settings' => 'array',
@@ -227,6 +232,29 @@ class MarketplaceOrganizer extends Authenticatable
         'secondary_vat_rate' => 'decimal:2',
         'secondary_contract_date' => 'date',
     ];
+
+    /** @return int[] registrele fiscale unde marketplace-ul nu poate depune pentru organizator */
+    public function filingExceptionRegistryIds(): array
+    {
+        return array_values(array_map('intval', array_filter((array) ($this->document_filing_exceptions ?? []))));
+    }
+
+    /**
+     * Evenimentul e la o primărie din excepții: documentele le putem genera,
+     * dar depunerea rămâne la organizator.
+     */
+    public function isFilingException(?Event $event): bool
+    {
+        return $this->marketplace_manages_documents
+            && $event?->marketplace_tax_registry_id
+            && in_array((int) $event->marketplace_tax_registry_id, $this->filingExceptionRegistryIds(), true);
+    }
+
+    /** Marketplace-ul depune documentele acestui eveniment în numele organizatorului. */
+    public function marketplaceFilesFor(?Event $event): bool
+    {
+        return $this->marketplace_manages_documents && ! $this->isFilingException($event);
+    }
 
     /**
      * Returneaza datele juridice ale societatii emitente cerute (primary | secondary).

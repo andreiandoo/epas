@@ -76,6 +76,57 @@ class CompanyInvoiceController extends BaseController
         return $this->success($this->service->customerView($model->fresh()), 'Cererea de factură a fost înregistrată.');
     }
 
+    /**
+     * GET /customer/company-invoices
+     * Toate facturile pe firmă ale clientului, din toate comenzile: cele ale
+     * marketplace-ului (comision, servicii) și cele încărcate de organizatori.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $customer = $this->customer($request);
+        $client = $customer->marketplaceClient;
+
+        $rows = OrderCompanyInvoice::query()
+            ->with([
+                'order:id,order_number,marketplace_customer_id,created_at,paid_at,event_id',
+                'order.event:id,title',
+                'organizer:id,name,company_name',
+                'invoice:id,number,meta',
+            ])
+            ->whereHas('order', fn ($q) => $q->where('marketplace_customer_id', $customer->id))
+            ->where('status', '!=', OrderCompanyInvoice::STATUS_NOT_APPLICABLE)
+            ->orderByDesc('id')
+            ->limit(300)
+            ->get();
+
+        $text = fn ($v) => is_array($v) ? ($v['ro'] ?? $v['en'] ?? (reset($v) ?: '')) : (string) ($v ?? '');
+
+        return $this->success([
+            'invoices' => $rows->map(fn (OrderCompanyInvoice $r) => [
+                'id' => $r->id,
+                'order_number' => $r->order?->order_number,
+                'order_date' => ($r->order?->paid_at ?? $r->order?->created_at)?->format('d.m.Y'),
+                'event' => $text($r->order?->event?->title) ?: null,
+                'issuer' => $r->issuer,
+                'issuer_name' => $r->isMarketplace()
+                    ? ($client?->company_name ?: $client?->name)
+                    : ($r->organizer?->company_name ?: $r->organizer?->name),
+                'subject' => $r->isMarketplace() ? 'Comision și servicii' : 'Bilete',
+                'number' => $r->isMarketplace()
+                    ? ($r->invoice?->meta['accounting']['invoice_number'] ?? $r->invoice?->number)
+                    : null,
+                'company' => $r->company['name'] ?? null,
+                'status' => $r->status,
+                'status_label' => $r->isMarketplace() || $r->status !== OrderCompanyInvoice::STATUS_REQUESTED
+                    ? $r->statusLabel()
+                    : 'În așteptare de la organizator',
+                'amount' => (float) $r->amount,
+                'currency' => $r->currency,
+                'has_document' => $r->hasDocument(),
+            ])->values()->all(),
+        ]);
+    }
+
     /** GET /customer/orders/{order}/company-invoices/{invoice}/download */
     public function download(Request $request, string $order, int $invoice)
     {
